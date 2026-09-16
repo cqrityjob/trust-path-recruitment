@@ -305,7 +305,7 @@ group("3 · the career analysis gate reaches the rendering");
 // OFFER the card, and that the copy beside it calls the card guidance
 // rather than verification. Those were the right assertions while the card
 // was in the product. The owner's pilot review took it out — it is a sixth
-// shareable artefact competing with the Passport Card for "the thing you
+// shareable artefact competing with the Security Passport for "the thing you
 // show people" — so the group is inverted rather than deleted. The
 // strongest version of the old rule was "the card never claims to be
 // verification"; the strongest version now is "the card is not offered at

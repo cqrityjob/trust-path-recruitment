@@ -1,4 +1,4 @@
-// Security Passport — the Passport Card contract.
+// Security Passport — the Security Passport contract.
 //
 // ── THE CARD IS GENERATED, NOT AUTHORED ────────────────────────────────
 //
@@ -236,7 +236,7 @@ export function buildPassportCard(
   // This read `c.verifierName ?? c.issuerName`, and `PassportCard` prints the
   // result under the heading "Verified by". `issuerName` is
   // `claimed_issuer_name`: text the candidate typed into a form and which
-  // nobody has checked. So a Passport Card could state
+  // nobody has checked. So a Security Passport could state
   //
   //     Verified by
   //     BYA

@@ -90,7 +90,7 @@ export interface SocialExportStrings {
 }
 
 /** Guilloche-flavoured background: concentric hairline arcs, the engraving
- *  vocabulary the Passport Card already uses. Cheap in bytes, and it is what
+ *  vocabulary the Security Passport already uses. Cheap in bytes, and it is what
  *  makes an exported PNG recognisably the same object as the card on screen
  *  rather than a generic banner. */
 function engraving(width: number, height: number): string {

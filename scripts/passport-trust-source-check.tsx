@@ -855,16 +855,21 @@ group("GROUP 9 — the credential page and the recipient card, rendered");
         !wearsForbidden(enText) &&
         !wearsCurrentVerified(enText, "en"),
     );
-    const cardText = text(
-      sv(<RecipientPassportCard presentation={p} verifyUrl="cqrityjob.example/p/abc" />),
+    const cardMarkup = sv(
+      <RecipientPassportCard presentation={p} verifyUrl="cqrityjob.example/p/abc" />,
     );
+    const cardText = text(cardMarkup);
+    const identityText = text(cardMarkup.match(/<header>([\s\S]*?)<\/header>/)?.[1] ?? "");
     ck(
       `9.4 [${name}] the card says Dokumenterad and Granskad av, wears no Verifierad, derives no title`,
       cardText.includes(DOCUMENTED_SV) &&
         cardText.includes("Granskad av") &&
         !wearsCurrentVerified(cardText, "sv") &&
         !wearsForbidden(cardText) &&
-        cardText.includes(passportT("common.notStated", "sv")),
+        p.titles.length === 0 &&
+        identityText.includes("Fiktiv Innehavare") &&
+        !identityText.includes("Väktar") &&
+        !identityText.includes(passportT("common.notStated", "sv")),
     );
   }
   ck(

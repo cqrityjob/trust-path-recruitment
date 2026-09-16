@@ -6,10 +6,13 @@ export function PassportOwnership() {
   const { lang } = usePassportCopy();
   const copy = PASSPORT_OWNERSHIP[lang];
   return (
-    <section
+    <details
       aria-label={lang === "sv" ? "Profil, CV och Passport" : "Profile, CV and Passport"}
-      className="mb-6 rounded-xl border border-border bg-card p-4 text-sm leading-relaxed"
+      className="mt-8 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground"
     >
+      <summary className="min-h-11 cursor-pointer font-medium">
+        {lang === "sv" ? "Om ditt Passport, Profil och CV" : "About your Passport, Profile and CV"}
+      </summary>
       <p className="font-medium">{copy.passport}</p>
       <p className="mt-1 text-muted-foreground">{copy.private}</p>
       <div className="mt-3 flex flex-col gap-2">
@@ -20,6 +23,6 @@ export function PassportOwnership() {
           {copy.cv}
         </Link>
       </div>
-    </section>
+    </details>
   );
 }

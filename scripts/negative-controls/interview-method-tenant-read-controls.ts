@@ -307,13 +307,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
-    // The anchor tracks the list's CURRENT shape, which moves as migrations are
-    // applied and new ones become pending. Today it is EMPTY again: BESKT PR 6
-    // and PR 7 were applied by the official integration on merge and their
-    // hosted evidence is recorded, so both came off the list in that same
-    // change. The planted defect never changes: this APPLIED migration goes
-    // back on the frontier list, where a resolved name would hide the next
-    // genuinely stuck one.
+    // Plant an already-applied version into the empty pending frontier.
     find: "const expectedPending: string[] = [];",
     replace:
       'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',

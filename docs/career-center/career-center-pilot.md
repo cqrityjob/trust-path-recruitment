@@ -521,7 +521,7 @@ What moved behind a click, and what deliberately did not:
 | Routes 2–4                    | The first route is open; the rest are one keystroke away.                                                                                                                                                                                    |
 | "Vanliga vägar hit"           | A reader on a guide is asking where they can _go_.                                                                                                                                                                                           |
 | Related professions           | A reference list at the foot of the page.                                                                                                                                                                                                    |
-| The four trust cards          | The claim above them stays unfolded.                                                                                                                                                                                                         |
+| The four reference cards          | The claim above them stays unfolded.                                                                                                                                                                                                         |
 
 Nothing legal is folded. Formal requirements, the regulatory notice, the
 boundary note, the "not eligibility" line and the "a course guarantees nothing"

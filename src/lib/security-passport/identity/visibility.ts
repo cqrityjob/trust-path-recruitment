@@ -18,7 +18,7 @@ import type { Claim, IsoDate } from "../types";
 import type { DerivedTitle, ProfessionalIdentity, TitleRule } from "./types";
 
 /**
- * What everyone else may see: the Passport Card, the recipient page, the
+ * What everyone else may see: the Security Passport, the recipient page, the
  * employer's view of an application, the social image, the LinkedIn output.
  *
  * Every title here met its rule's own evidence bar. There is no argument that
@@ -74,7 +74,7 @@ export function derivePreviewIdentity(
  *
  * Belt and braces: `deriveVerifiedIdentity` cannot produce a self-declared
  * title, so in a correct program this filters nothing. It exists because the
- * cost of being wrong is a Passport Card asserting an appointment that was
+ * cost of being wrong is a Security Passport asserting an appointment that was
  * never checked, and one line of defence for that is not enough.
  */
 export function withoutSelfDeclared(identity: ProfessionalIdentity): ProfessionalIdentity {

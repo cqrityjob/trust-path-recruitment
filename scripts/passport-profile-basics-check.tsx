@@ -555,8 +555,8 @@ console.log("\nPLACEMENT -- Mitt Security Passport > Mina uppgifter");
   // Passport bugfix, and the tabs are a separate, reviewed decision.
   const shell = read("src/routes/_authenticated.passport.tsx");
   ck(
-    "the Passport navigation still has its four tabs",
-    (shell.match(/\{ to: "\/passport/g) ?? []).length === 4,
+    "the Passport navigation has six product destinations",
+    (shell.match(/to: "\/passport/g) ?? []).length === 6,
   );
 }
 
@@ -641,7 +641,7 @@ console.log("\nLANGUAGE -- both, and different from each other");
     "and the id it names is actually rendered, so a screen reader has something to read",
     described !== null && html.includes(`id="${described[1]}"`),
   );
-  ck("the help text itself is on the page", html.includes("Visas på ditt Passport Card"));
+  ck("the help text itself is on the page", html.includes("Visas på ditt Security Passport"));
 
   // It is a display title, not evidence. The owner's rule: do not confuse
   // the professional title with a Passport credential or certification.

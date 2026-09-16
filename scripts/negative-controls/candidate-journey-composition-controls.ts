@@ -91,9 +91,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the card starts rendering merit counts too, so one page states the same figure twice and the two can disagree",
     file: CARD,
-    find: 'import { CompactPassportCard } from "@/components/security-passport/CompactPassportCard";',
+    find: 'import { SecurityPassportPreview } from "@/components/security-passport/SecurityPassportPreview";',
     replace:
-      'import { meritFigures } from "@/lib/professional-identity/merit-figures";\nimport { CompactPassportCard } from "@/components/security-passport/CompactPassportCard";',
+      'import { meritFigures } from "@/lib/professional-identity/merit-figures";\nimport { SecurityPassportPreview } from "@/components/security-passport/SecurityPassportPreview";',
     guard: GUARD,
     expect: "does not restate meritFigures",
   },

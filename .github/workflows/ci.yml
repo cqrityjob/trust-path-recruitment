@@ -534,6 +534,9 @@ jobs:
       # refusal with no reason in it. This renders the candidate's panel and
       # asserts on the markup, because every one of them is a property of what
       # a person SEES.
+      - name: Passport product status truthfulness
+        run: bun run passport-product:check
+
       - name: Passport decision truthfulness check
         run: bun run passport-decision-truthfulness:check
       - name: Passport reviewer decision quality and trust attribution

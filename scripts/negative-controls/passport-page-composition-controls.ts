@@ -31,9 +31,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column is moved first in source, so at 375px a card preview pushes every merit off the first screen",
     file: INDEX,
-    find: '      <div className="min-w-0 flex-1 lg:order-2">',
+    find: '      <div className="min-w-0 flex flex-col gap-6">',
     replace:
-      '      <PassportSideColumn snapshot={snapshot} today="2026-09-15" />\n      <div className="min-w-0 flex-1 lg:order-2">',
+      '      <PassportSideColumn snapshot={snapshot} today="2026-09-15" />\n      <div className="min-w-0 flex flex-col gap-6">',
     guard: GUARD,
     expect: "the workspace comes first in source",
   },
@@ -52,9 +52,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the privacy summary starts writing the mode itself, so one setting gains a second writer and two pages can disagree",
     file: SIDE,
-    find: 'import { CompactPassportCard } from "./CompactPassportCard";',
+    find: 'import { SecurityPassportPreview } from "./SecurityPassportPreview";',
     replace:
-      'import { setPrivacyMode } from "@/lib/security-passport/passport.functions";\nimport { CompactPassportCard } from "./CompactPassportCard";',
+      'import { setPrivacyMode } from "@/lib/security-passport/passport.functions";\nimport { SecurityPassportPreview } from "./SecurityPassportPreview";',
     guard: GUARD,
     expect: "does NOT write the privacy mode",
   },
@@ -63,9 +63,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column loads the Passport itself instead of using the snapshot it is handed, adding a second request for the same data",
     file: SIDE,
-    find: 'import { CompactPassportCard } from "./CompactPassportCard";',
+    find: 'import { SecurityPassportPreview } from "./SecurityPassportPreview";',
     replace:
-      'import { getMyPassport } from "@/lib/security-passport/passport.functions";\nimport { CompactPassportCard } from "./CompactPassportCard";',
+      'import { getMyPassport } from "@/lib/security-passport/passport.functions";\nimport { SecurityPassportPreview } from "./SecurityPassportPreview";',
     guard: GUARD,
     expect: "the snapshot is passed in",
   },

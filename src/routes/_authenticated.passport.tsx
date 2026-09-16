@@ -15,7 +15,6 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { PassportOwnership } from "@/components/security-passport/PassportOwnership";
 
 export const Route = createFileRoute("/_authenticated/passport")({
@@ -31,45 +30,20 @@ export const Route = createFileRoute("/_authenticated/passport")({
   component: PassportShell,
 });
 
-/** ── FOUR TABS, AND WHY THE OTHER TWO LEFT ─────────────────────────────
- *
- * Six tabs asked the holder to understand the product's internal structure
- * before they could use it. Two of them were not destinations at all:
- *
- *   * "Kom igång" is a FIRST RUN, not a place. Once somebody has started,
- *     a permanent tab back into the guided flow is a second, parallel way to
- *     enter the same information — which is how a product ends up with two
- *     answers to "where does my employment live". It is still reachable at
- *     /passport/onboarding while onboarding is unfinished, and the overview
- *     links to it; it just stops being a standing navigation item.
- *
- *   * "Dela" is an ACTION on the thing you are looking at, not a section of
- *     the Passport. It belongs next to the card it shares, so it is reached
- *     from the overview and from Passport Card.
- *
- * What is left are the four things a holder actually navigates between: what
- * they have, what they can enter, what it looks like, and who can see it. */
-const NAV: readonly { to: string; labelKey: PassportCopyKey }[] = [
-  { to: "/passport", labelKey: "nav.overview" },
-  { to: "/passport/information", labelKey: "nav.information" },
-  { to: "/passport/card", labelKey: "nav.card" },
-  { to: "/passport/privacy", labelKey: "nav.privacy" },
+const NAV = [
+  { to: "/passport", sv: "Översikt", en: "Overview" },
+  { to: "/passport", hash: "merits", sv: "Meriter", en: "Credentials" },
+  { to: "/passport/credentials/new", sv: "Lägg till", en: "Add credential" },
+  { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },
+  { to: "/passport/card", sv: "Förhandsvisa och dela", en: "Preview and share" },
+  { to: "/passport/privacy", sv: "Delning och integritet", en: "Sharing & privacy" },
 ];
 
 function PassportShell() {
-  const { pt } = usePassportCopy();
-  const { pathname } = useLocation();
+  const { pt, lang } = usePassportCopy();
+  const { pathname, hash } = useLocation();
 
-  // ── THE FIRST RUN GETS A FOCUSED SHELL ──────────────────────────────
-  //
-  // /passport/onboarding is a short guided flow with unsaved answers in it,
-  // and the four tabs above it were both a distraction and a data-loss path:
-  // one click on "Mina uppgifter" mid-form and the draft was whatever the
-  // last debounce had managed. The route flushes on unmount and guards the
-  // browser's own unload, but the better fix is not to put the door there.
-  //
-  // The tabs come back the moment the first run is over, which is the moment
-  // there is something to navigate between.
+  // Keep initial setup focused; the product navigation returns afterwards.
   const firstRun = pathname === "/passport/onboarding";
 
   return (
@@ -79,26 +53,30 @@ function PassportShell() {
           window, so a holder opening their Passport met a screen of nothing
           before the first word. The whole product shell takes the tighter
           rhythm; the first run, which is a short form, takes it too. */}
-      <Section className="py-10 md:py-14">
+      <Section className="py-5 md:py-7">
         {firstRun ? null : (
           <nav aria-label={pt("card.brand")} className="mb-6 border-b border-border">
-            <ul className="-mb-px flex flex-wrap gap-1">
+            <ul className="-mb-px grid grid-cols-3 gap-1 sm:flex sm:flex-wrap">
               {NAV.map((item) => {
-                const active =
-                  item.to === "/passport" ? pathname === "/passport" : pathname.startsWith(item.to);
+                const active = item.hash
+                  ? pathname === item.to && hash === item.hash
+                  : item.to === "/passport"
+                    ? pathname === "/passport" && !hash
+                    : pathname.startsWith(item.to);
                 return (
-                  <li key={item.to}>
+                  <li key={item.to + (item.hash ?? "")}>
                     <Link
                       to={item.to}
+                      hash={item.hash}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "inline-flex h-11 items-center border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        "inline-flex min-h-11 w-full items-center justify-center border-b-2 px-2 text-center text-xs sm:w-auto sm:px-3 sm:text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                         active
                           ? "border-accent text-foreground"
                           : "border-transparent text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      {pt(item.labelKey)}
+                      {item[lang]}
                     </Link>
                   </li>
                 );
@@ -107,8 +85,8 @@ function PassportShell() {
           </nav>
         )}
 
-        {!firstRun && <PassportOwnership />}
         <Outlet />
+        {!firstRun && <PassportOwnership />}
       </Section>
     </SiteLayout>
   );

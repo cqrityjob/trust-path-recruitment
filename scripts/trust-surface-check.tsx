@@ -13,7 +13,7 @@
 //       CODE, truncated to four characters. Invisible while the only
 //       credentials were VU1/VU2/OV/SV — each of which IS its own
 //       `symbol_label` — and wrong the moment the Swedish truth model added
-//       four where they differ. The private overview, the Passport Card, the
+//       four where they differ. The private overview, the Security Passport, the
 //       recipient page and the exported PNG printed "SE_P", "OV_R", and
 //       "OV_T" for BOTH OV_TRAINING and OV_TRANSPORT.
 //
@@ -27,7 +27,7 @@
 //       one artefact a candidate posts publicly and cannot correct after.
 //
 //   L4  The My Career trust summary named markets by code — "SE · 4" — while
-//       the Passport Card two panels away said "Sverige" for the same market.
+//       the Security Passport two panels away said "Sverige" for the same market.
 //
 // ── WHY IT RENDERS RATHER THAN ONLY READS ──────────────────────────────
 //

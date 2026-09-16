@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Lock } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-import { CompactPassportCard } from "./CompactPassportCard";
+import { SecurityPassportPreview } from "./SecurityPassportPreview";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 
 const LINK =
@@ -40,7 +40,7 @@ export function PassportSideColumn({
         </h2>
         {/* The owner summary never creates or displays a share token. */}
         <div className="mt-2">
-          <CompactPassportCard snapshot={snapshot} today={today} metadata={metadata} />
+          <SecurityPassportPreview snapshot={snapshot} today={today} metadata={metadata} />
         </div>
         <Link to="/passport/card" data-cta="open-card" className={`${LINK} mt-2`}>
           {pt("side.openCard")}

@@ -1,0 +1,1116 @@
+{
+  "checked_on": "2026-09-16",
+  "project_read_only": "wrygicdfxwjnrugduxnt",
+  "inventory_count": 73,
+  "active_count": 22,
+  "selectable_count": 19,
+  "definitions": [
+    {
+      "code": "INTL_ACAMS_CAMS",
+      "name_sv": "Certified Anti-Money Laundering Specialist (CAMS)",
+      "name_en": "Certified Anti-Money Laundering Specialist (CAMS)",
+      "credential_class": "certification",
+      "domain": "financial_crime",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.acams.org/en/certifications/cams-certification",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig omcertifiering, fortbildning och medlemskap enligt ACAMS. Kontrollera aktuell status separat.",
+      "validity_en": "CAMS is maintained on a three-year recertification cycle with recertification credits earned within it. No official public holder-verification lookup was confirmed on review, so none is recorded.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ACAMS"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ACAMS"
+        }
+      }
+    },
+    {
+      "code": "INTL_ACFE_CFE",
+      "name_sv": "Certified Fraud Examiner (CFE)",
+      "name_en": "Certified Fraud Examiner (CFE)",
+      "credential_class": "certification",
+      "domain": "investigation",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.acfe.com/cfe-credential",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Årlig fortbildning och aktuellt medlemskap krävs enligt ACFE. Ett utbildningsdatum bevisar inte aktuell status.",
+      "validity_en": "The CFE credential is maintained by an ANNUAL continuing-education compliance obligation, not by a fixed multi-year expiry. The ACFE's Find a CFE directory is opt-in: absence from it is not evidence that a credential is invalid.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ACFE"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ACFE"
+        }
+      }
+    },
+    {
+      "code": "INTL_ASIS_APP",
+      "name_sv": "Associate Protection Professional (APP)",
+      "name_en": "Associate Protection Professional (APP)",
+      "credential_class": "certification",
+      "domain": "security_management",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.asisonline.org/certification/associate-protection-professional-app/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig omcertifiering med fortbildning enligt ASIS. Bevisets aktuella status måste kontrolleras separat.",
+      "validity_en": "ASIS board certifications are maintained on a three-year recertification cycle, with continuing professional education recorded through the issuer's own portal. The cycle is the programme's; it is not this holder's expiry date.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        }
+      }
+    },
+    {
+      "code": "INTL_ASIS_CPP",
+      "name_sv": "Certified Protection Professional (CPP)",
+      "name_en": "Certified Protection Professional (CPP)",
+      "credential_class": "certification",
+      "domain": "security_management",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.asisonline.org/certification/certified-protection-professional-cpp/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig omcertifiering med fortbildning enligt ASIS. Bevisets aktuella status måste kontrolleras separat.",
+      "validity_en": "ASIS board certifications are maintained on a three-year recertification cycle, with continuing professional education recorded through the issuer's own portal. The cycle is the programme's; it is not this holder's expiry date.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        }
+      }
+    },
+    {
+      "code": "INTL_ASIS_PCI",
+      "name_sv": "Professional Certified Investigator (PCI)",
+      "name_en": "Professional Certified Investigator (PCI)",
+      "credential_class": "certification",
+      "domain": "investigation",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.asisonline.org/certification/professional-certified-investigator-pci/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig omcertifiering med fortbildning enligt ASIS. Bevisets aktuella status måste kontrolleras separat.",
+      "validity_en": "ASIS board certifications are maintained on a three-year recertification cycle, with continuing professional education recorded through the issuer's own portal. The cycle is the programme's; it is not this holder's expiry date.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        }
+      }
+    },
+    {
+      "code": "INTL_ASIS_PSP",
+      "name_sv": "Physical Security Professional (PSP)",
+      "name_en": "Physical Security Professional (PSP)",
+      "credential_class": "certification",
+      "domain": "physical_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.asisonline.org/certification/physical-security-professional/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig omcertifiering med fortbildning enligt ASIS. Bevisets aktuella status måste kontrolleras separat.",
+      "validity_en": "ASIS board certifications are maintained on a three-year recertification cycle, with continuing professional education recorded through the issuer's own portal. The cycle is the programme's; it is not this holder's expiry date.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ASIS"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISACA_CISA",
+      "name_sv": "Certified Information Systems Auditor (CISA)",
+      "name_en": "Certified Information Systems Auditor (CISA)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isaca.org/credentialing/cisa",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Årliga krav och treårig fortbildningscykel enligt ISACA. Kontrollera aktuell status separat.",
+      "validity_en": "ISACA certifications carry an annual CPE minimum and an annual maintenance fee, alongside 120 CPE hours across a three-year reporting period. Annual standing can end BEFORE the three-year date printed on the certificate, so the printed date is not current standing.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISACA"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISACA"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISACA_CISM",
+      "name_sv": "Certified Information Security Manager (CISM)",
+      "name_en": "Certified Information Security Manager (CISM)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isaca.org/credentialing/cism",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Årliga krav och treårig fortbildningscykel enligt ISACA. Kontrollera aktuell status separat.",
+      "validity_en": "ISACA certifications carry an annual CPE minimum and an annual maintenance fee, alongside 120 CPE hours across a three-year reporting period. Annual standing can end BEFORE the three-year date printed on the certificate, so the printed date is not current standing.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISACA"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISACA"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISACA_CRISC",
+      "name_sv": "Certified in Risk and Information Systems Control (CRISC)",
+      "name_en": "Certified in Risk and Information Systems Control (CRISC)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isaca.org/credentialing/crisc",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Årliga krav och treårig fortbildningscykel enligt ISACA. Kontrollera aktuell status separat.",
+      "validity_en": "ISACA certifications carry an annual CPE minimum and an annual maintenance fee, alongside 120 CPE hours across a three-year reporting period. Annual standing can end BEFORE the three-year date printed on the certificate, so the printed date is not current standing.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISACA"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISACA"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISC2_CC",
+      "name_sv": "Certified in Cybersecurity (CC)",
+      "name_en": "Certified in Cybersecurity (CC)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isc2.org/certifications/cc",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig certifieringscykel med fortbildning och avgifter enligt ISC2. Ett cykeldatum bevisar inte aktuell status.",
+      "validity_en": "ISC2 certifications run on a three-year cycle AND carry a separate annual maintenance obligation. Both must be in good standing; either alone says nothing about the holder's current status. CPE totals are credential-specific.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISC2_CCSP",
+      "name_sv": "Certified Cloud Security Professional (CCSP)",
+      "name_en": "Certified Cloud Security Professional (CCSP)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isc2.org/certifications/ccsp",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig certifieringscykel med fortbildning och avgifter enligt ISC2. Ett cykeldatum bevisar inte aktuell status.",
+      "validity_en": "ISC2 certifications run on a three-year cycle AND carry a separate annual maintenance obligation. Both must be in good standing; either alone says nothing about the holder's current status. CPE totals are credential-specific.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISC2_CGRC",
+      "name_sv": "Certified in Governance, Risk and Compliance (CGRC)",
+      "name_en": "Certified in Governance, Risk and Compliance (CGRC)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isc2.org/certifications/cgrc",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig certifieringscykel med fortbildning och avgifter enligt ISC2. Ett cykeldatum bevisar inte aktuell status.",
+      "validity_en": "ISC2 certifications run on a three-year cycle AND carry a separate annual maintenance obligation. Both must be in good standing; either alone says nothing about the holder's current status. CPE totals are credential-specific.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISC2_CISSP",
+      "name_sv": "Certified Information Systems Security Professional (CISSP)",
+      "name_en": "Certified Information Systems Security Professional (CISSP)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isc2.org/certifications/cissp",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig certifieringscykel med fortbildning och avgifter enligt ISC2. Ett cykeldatum bevisar inte aktuell status.",
+      "validity_en": "ISC2 certifications run on a three-year cycle AND carry a separate annual maintenance obligation. Both must be in good standing; either alone says nothing about the holder's current status. CPE totals are credential-specific.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        }
+      }
+    },
+    {
+      "code": "INTL_ISC2_SSCP",
+      "name_sv": "Systems Security Certified Practitioner (SSCP)",
+      "name_en": "Systems Security Certified Practitioner (SSCP)",
+      "credential_class": "certification",
+      "domain": "information_security",
+      "scope": "global_professional",
+      "country": null,
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.isc2.org/certifications/sscp",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Treårig certifieringscykel med fortbildning och avgifter enligt ISC2. Ett cykeldatum bevisar inte aktuell status.",
+      "validity_en": "ISC2 certifications run on a three-year cycle AND carry a separate annual maintenance obligation. Both must be in good standing; either alone says nothing about the holder's current status. CPE totals are credential-specific.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        },
+        "verification_authority": {
+          "reference_kind": "issuer",
+          "existing_code": "ISC2"
+        }
+      }
+    },
+    {
+      "code": "OV",
+      "name_sv": "Ordningsvaktsförordnande",
+      "name_en": "Public Order Guard Appointment",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Förordnande är skilt från utbildning och gäller högst fem år. Transportutbildning ersätter inte polisens beslut om en transport.",
+      "validity_en": "Appointment is separate from training and lasts at most five years. Transport training does not replace the police decision for a transport.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        }
+      }
+    },
+    {
+      "code": "OV_REFRESHER",
+      "name_sv": "Fortbildning för ordningsvakter",
+      "name_en": "Public Order Guard Refresher Training",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Förordnande är skilt från utbildning och gäller högst fem år. Transportutbildning ersätter inte polisens beslut om en transport.",
+      "validity_en": "Appointment is separate from training and lasts at most five years. Transport training does not replace the police decision for a transport.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "training_provider": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        }
+      }
+    },
+    {
+      "code": "OV_TRAINING",
+      "name_sv": "Ordningsvaktsutbildning (grundutbildning)",
+      "name_en": "Public Order Guard Training",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Förordnande är skilt från utbildning och gäller högst fem år. Transportutbildning ersätter inte polisens beslut om en transport.",
+      "validity_en": "Appointment is separate from training and lasts at most five years. Transport training does not replace the police decision for a transport.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "training_provider": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        }
+      }
+    },
+    {
+      "code": "OV_TRANSPORT",
+      "name_sv": "Ordningsvakt — särskild utbildning för transport",
+      "name_en": "Public Order Guard — Special Transport Training",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Förordnande är skilt från utbildning och gäller högst fem år. Transportutbildning ersätter inte polisens beslut om en transport.",
+      "validity_en": "Appointment is separate from training and lasts at most five years. Transport training does not replace the police decision for a transport.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "training_provider": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        }
+      }
+    },
+    {
+      "code": "SE_PERSONNEL_APPROVAL",
+      "name_sv": "Personalgodkännande (bevakningsföretag)",
+      "name_en": "Personnel approval (authorised guarding company)",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": true,
+      "active": true,
+      "source": "https://www.lansstyrelsen.se/ostergotland/samhalle/tillstand-for-att-utova-verksamhet/bevakningsforetag.html",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Använd datum och villkor i det enskilda beviset. Saknat slutdatum betyder inte livslång giltighet.",
+      "validity_en": "Use the dates and conditions on the individual record; a missing expiry is not lifetime validity.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "SE_LANSSTYRELSEN"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "SE_LANSSTYRELSEN"
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        }
+      }
+    },
+    {
+      "code": "SV",
+      "name_sv": "Skyddsvaktsförordnande",
+      "name_en": "Protective Security Guard Appointment",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": false,
+      "active": true,
+      "source": "https://www.lansstyrelsen.se/download/18.4dec946918b853a3b1e4901/1698847159075/Ans%C3%B6kan%20om%20godk%C3%A4nnande%20av%20skyddsvakt%202023.pdf",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Civilt skyddsvaktsgodkännande gäller högst fem år och angiven anställning, uppdrag eller skyddsobjekt. Omfattning krävs; inte valbart utan stöd för detta.",
+      "validity_en": "Civilian protective-security-guard approval is limited to at most five years and the specified employment, assignment or protected sites. Scope remains required; not selectable without that support.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "SE_LANSSTYRELSEN"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "SE_LANSSTYRELSEN"
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_CCTV",
+      "name_sv": "SIA Licence — Public Space Surveillance (CCTV)",
+      "name_en": "SIA Licence — Public Space Surveillance (CCTV)",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_CP",
+      "name_sv": "SIA Licence — Close Protection",
+      "name_en": "SIA Licence — Close Protection",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_CVIT",
+      "name_sv": "SIA Licence — Cash and Valuables in Transit",
+      "name_en": "SIA Licence — Cash and Valuables in Transit",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_DS",
+      "name_sv": "SIA Licence — Door Supervision",
+      "name_en": "SIA Licence — Door Supervision",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_KH",
+      "name_sv": "SIA Licence — Key Holding",
+      "name_en": "SIA Licence — Key Holding",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_NFL",
+      "name_sv": "SIA Licence — Non-Front-Line",
+      "name_en": "SIA Licence — Non-Front-Line",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_SG",
+      "name_sv": "SIA Licence — Security Guarding",
+      "name_en": "SIA Licence — Security Guarding",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_LICENCE_VI",
+      "name_sv": "SIA Licence — Vehicle Immobilisation (Northern Ireland)",
+      "name_en": "SIA Licence — Vehicle Immobilisation (Northern Ireland)",
+      "credential_class": "regulated_authorisation",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": "GB-NI",
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/apply-for-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "SIA-licenser gäller tre år, utom fordonsblockering (endast Nordirland), som gäller ett år. Status kan ändras före slutdatum; kontrollera SIA:s register.",
+      "validity_en": "SIA licences last three years, except vehicle immobilisation (Northern Ireland only), which lasts one year. Status can change before expiry; check the SIA register.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "verification_authority": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_QUAL_CCTV",
+      "name_sv": "Licence-linked qualification — Public Space Surveillance",
+      "name_en": "Licence-linked qualification — Public Space Surveillance",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Examensutfärdare och godkänd utbildare är olika roller. SIA bedriver inte utbildningen. Kontrollera beviset och aktuella utbildningskrav för respektive licens.",
+      "validity_en": "Qualification awarding organisation and approved training provider are separate. SIA does not deliver training. Check the document and current licence-specific qualification requirements.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_QUAL_CP",
+      "name_sv": "Licence-linked qualification — Close Protection",
+      "name_en": "Licence-linked qualification — Close Protection",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Examensutfärdare och godkänd utbildare är olika roller. SIA bedriver inte utbildningen. Kontrollera beviset och aktuella utbildningskrav för respektive licens.",
+      "validity_en": "Qualification awarding organisation and approved training provider are separate. SIA does not deliver training. Check the document and current licence-specific qualification requirements.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_QUAL_CVIT",
+      "name_sv": "Licence-linked qualification — Cash and Valuables in Transit",
+      "name_en": "Licence-linked qualification — Cash and Valuables in Transit",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Examensutfärdare och godkänd utbildare är olika roller. SIA bedriver inte utbildningen. Kontrollera beviset och aktuella utbildningskrav för respektive licens.",
+      "validity_en": "Qualification awarding organisation and approved training provider are separate. SIA does not deliver training. Check the document and current licence-specific qualification requirements.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_QUAL_DS",
+      "name_sv": "Licence-linked qualification — Door Supervision",
+      "name_en": "Licence-linked qualification — Door Supervision",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Examensutfärdare och godkänd utbildare är olika roller. SIA bedriver inte utbildningen. Kontrollera beviset och aktuella utbildningskrav för respektive licens.",
+      "validity_en": "Qualification awarding organisation and approved training provider are separate. SIA does not deliver training. Check the document and current licence-specific qualification requirements.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_QUAL_SG",
+      "name_sv": "Licence-linked qualification — Security Guarding",
+      "name_en": "Licence-linked qualification — Security Guarding",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Examensutfärdare och godkänd utbildare är olika roller. SIA bedriver inte utbildningen. Kontrollera beviset och aktuella utbildningskrav för respektive licens.",
+      "validity_en": "Qualification awarding organisation and approved training provider are separate. SIA does not deliver training. Check the document and current licence-specific qualification requirements.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    },
+    {
+      "code": "UK_SIA_TOP_UP",
+      "name_sv": "SIA top-up / refresher training",
+      "name_en": "SIA top-up / refresher training",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "GB",
+      "region": null,
+      "selectable": false,
+      "active": false,
+      "source": "https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Examensutfärdare och godkänd utbildare är olika roller. SIA bedriver inte utbildningen. Kontrollera beviset och aktuella utbildningskrav för respektive licens.",
+      "validity_en": "Qualification awarding organisation and approved training provider are separate. SIA does not deliver training. Check the document and current licence-specific qualification requirements.",
+      "roles": {
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "GB_SIA"
+        },
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    },
+    {
+      "code": "VU1",
+      "name_sv": "Väktarutbildning 1 (VU1)",
+      "name_en": "Security Guard Training 1 (VU1)",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": false,
+      "active": true,
+      "source": "https://www.bya.se/yrken/vaktare-stationar-ronderande/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Utbildningsbevis från den faktiska auktoriserade utbildaren. VU1 följs av praktisk yrkesträning och VU2. Fortbildningskrav innebär inte att det historiska kursbeviset automatiskt löper ut.",
+      "validity_en": "Training record issued by the actual authorised training provider. VU1 is followed by practical training and VU2. Continuing training requirements do not imply automatic expiry of the historic course record.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    },
+    {
+      "code": "VU2",
+      "name_sv": "Väktarutbildning 2 (VU2)",
+      "name_en": "Security Guard Training 2 (VU2)",
+      "credential_class": "mandatory_training",
+      "domain": "security_operations",
+      "scope": "national_regulated",
+      "country": "SE",
+      "region": null,
+      "selectable": false,
+      "active": true,
+      "source": "https://www.bya.se/yrken/vaktare-stationar-ronderande/",
+      "checked_on": "2026-09-16",
+      "validity_sv": "Utbildningsbevis från den faktiska auktoriserade utbildaren. VU1 följs av praktisk yrkesträning och VU2. Fortbildningskrav innebär inte att det historiska kursbeviset automatiskt löper ut.",
+      "validity_en": "Training record issued by the actual authorised training provider. VU1 is followed by practical training and VU2. Continuing training requirements do not imply automatic expiry of the historic course record.",
+      "roles": {
+        "issuer": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "regulator": {
+          "reference_kind": "authority",
+          "existing_code": "SE_POLISMYNDIGHETEN"
+        },
+        "training_provider": {
+          "reference_kind": "document",
+          "existing_code": null
+        },
+        "verification_authority": {
+          "reference_kind": "document",
+          "existing_code": null
+        }
+      }
+    }
+  ],
+  "unchanged_inactive_codes": [
+    "AE_AZ_PSBD_LICENCE_BANKS",
+    "AE_AZ_PSBD_LICENCE_CIT",
+    "AE_AZ_PSBD_LICENCE_EVENT",
+    "AE_AZ_PSBD_LICENCE_GUARD",
+    "AE_AZ_PSBD_LICENCE_MANAGER",
+    "AE_AZ_PSBD_LICENCE_SUPERVISOR",
+    "AE_AZ_PSBD_LICENCE_TRAINER",
+    "AE_DU_BASIC_FIRE_SAFETY",
+    "AE_DU_BASIC_LIFE_SUPPORT",
+    "AE_DU_CASH_TRANSPORT_COURSE",
+    "AE_DU_EVENTS_COURSE",
+    "AE_DU_FITNESS_CHECKED",
+    "AE_DU_OPS_MANAGER_COURSE",
+    "AE_DU_PEOPLE_OF_DETERMINATION",
+    "AE_DU_SECURITY_MANAGER_COURSE",
+    "AE_DU_SIRA_CARD_BODYGUARD",
+    "AE_DU_SIRA_CARD_CONSULTANT",
+    "AE_DU_SIRA_CARD_EVENT_GUARD",
+    "AE_DU_SIRA_CARD_EXPERT",
+    "AE_DU_SIRA_CARD_GUARD",
+    "AE_DU_SIRA_CARD_HEAD_OF_SECURITY",
+    "AE_DU_SIRA_CARD_MONEY_TRANSPORT",
+    "AE_DU_SIRA_CARD_OPS_MANAGER",
+    "AE_DU_SIRA_CARD_SECURITY_MANAGER",
+    "AE_DU_SIRA_CARD_SUPERVISOR",
+    "AE_DU_SIRA_CARD_SYSTEMS_ENGINEER",
+    "AE_DU_SIRA_CARD_SYSTEMS_OPERATOR",
+    "AE_DU_SIRA_CARD_SYSTEMS_TECHNICIAN",
+    "AE_DU_SIRA_CARD_TRAINER",
+    "AE_DU_SIRA_CARD_WATCHMAN",
+    "AE_DU_SIRA_GUARD_COURSE",
+    "AE_DU_SPECIALIST_COURSE",
+    "AE_DU_SUPERVISOR_COURSE",
+    "AE_DU_SYSTEMS_ENGINEER_COURSE",
+    "AE_DU_SYSTEMS_OPERATOR_COURSE",
+    "AE_DU_SYSTEMS_TECHNICIAN_COURSE",
+    "AE_DU_TRAINER_COURSE"
+  ]
+}

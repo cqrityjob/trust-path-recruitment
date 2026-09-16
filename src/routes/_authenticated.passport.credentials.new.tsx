@@ -1,3 +1,4 @@
+import { uploadEvidence } from "@/lib/security-passport/evidence.functions";
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,6 +25,7 @@ function NewCredentialRoute() {
   const search = Route.useSearch();
   const load = useServerFn(getInternationalPassportMetadata);
   const save = useServerFn(saveInternationalCredential);
+  const upload = useServerFn(uploadEvidence);
   const readDraft = useServerFn(readApprovedCredentialDraft);
   const [draft, setDraft] = useState<InternationalCredentialInput | undefined>();
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
@@ -65,6 +67,7 @@ function NewCredentialRoute() {
           preselectCode={search.code}
           metadata={metadata}
           onSave={(data) => save({ data })}
+          onUpload={(claimId, file) => upload({ data: { ...file, claimId, periodId: null } })}
         />
       )}
     </div>

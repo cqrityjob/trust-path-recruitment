@@ -415,7 +415,7 @@ export function credentialSymbolMarkup(
    *  This used to read `label ?? code ?? "—"`. A credential whose code is not
    *  also its mark therefore printed the first four characters of a database
    *  enum — "SE_P" for SE_PERSONNEL_APPROVAL, "OV_T" for both OV_TRAINING and
-   *  OV_TRANSPORT — onto the private overview, the Passport Card, the
+   *  OV_TRANSPORT — onto the private overview, the Security Passport, the
    *  recipient page and the exported social PNG. A truncated identifier is
    *  not an abbreviation somebody approved, and two credentials sharing one
    *  mark is worse than no mark at all.

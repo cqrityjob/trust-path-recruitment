@@ -13,7 +13,7 @@
  *
  * ── 2. NO COMPONENT CARRIES ITS OWN MAPPING ────────────────────────────
  *
- * Before the engine existed, the Passport Card printed a stored string and the
+ * Before the engine existed, the Security Passport printed a stored string and the
  * server set that string to the literal "Väktare" for every holder who had
  * ever signed in — whether they held VU1, held nothing, or held a current
  * ordningsvaktsförordnande. The fix is only durable if the next component

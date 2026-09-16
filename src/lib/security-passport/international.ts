@@ -10,7 +10,7 @@ export const CREDENTIAL_CLASSES = {
     en: "Mandatory training credential",
   },
   occupational_card: { sv: "Yrkeslegitimation", en: "Occupational card" },
-  other_professional_credential: { sv: "Annat yrkesbevis", en: "Other professional credential" },
+  other_professional_credential: { sv: "Annan merit", en: "Other professional credential" },
 } as const;
 export type CredentialClass = keyof typeof CREDENTIAL_CLASSES;
 export interface CredentialDetails {

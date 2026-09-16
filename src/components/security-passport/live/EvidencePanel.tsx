@@ -279,12 +279,14 @@ export function EvidencePanel({
 
       {canAdd ? (
         <div className="mt-4">
-          <label
-            htmlFor="sp-evidence-file"
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => inputRef.current?.click()}
             className="inline-flex h-11 cursor-pointer items-center rounded-md border border-input px-4 text-sm font-medium text-foreground focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"
           >
             {busy === "upload" ? pt("ev.uploading") : pt("ev.add")}
-          </label>
+          </button>
           {/* The chosen file, while it is in flight. Without it the only
               feedback on a slow connection is a button that changed its
               label, which does not say whether the pick registered. */}
@@ -300,6 +302,7 @@ export function EvidencePanel({
           <input
             ref={inputRef}
             id="sp-evidence-file"
+            aria-label={pt("ev.add")}
             type="file"
             accept={ALLOWED.join(",")}
             disabled={busy !== null}
@@ -308,16 +311,7 @@ export function EvidencePanel({
               const file = e.target.files?.[0];
               if (file) void handleFile(file);
             }}
-            // `file:hidden` removes the browser's own button, so what is left
-            // is the filename text — and the input still sizes itself to its
-            // intrinsic ~291px whatever the container is. Beside the label at
-            // 375px that ran past the card and into horizontal page scroll.
-            //
-            // Sat on its own line and told to fill the width instead of
-            // sitting `ml-3` beside the label. Pre-existing, but this panel
-            // now renders during an open review too, so the state it happens
-            // in is no longer a rare one.
-            className="mt-2 block w-full max-w-full text-sm text-muted-foreground file:hidden"
+            className="sr-only"
           />
           <p id="sp-evidence-limits" className="mt-2 text-xs text-muted-foreground">
             {pt("ev.limits")}

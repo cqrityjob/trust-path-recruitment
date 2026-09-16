@@ -1,3 +1,4 @@
+import { CredentialDefinitionContext } from "@/components/security-passport/CredentialDefinitionContext";
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
 import {
@@ -497,12 +498,12 @@ function PassportEntryRoute() {
                 ? pt(`claims.type.${claim.claimType}` as PassportCopyKey)
                 : pt("claim.experienceTitle")}
             </p>
-            <h2
+            <h1
               className="mt-1 text-2xl font-semibold tracking-tight text-foreground"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {title}
-            </h2>
+            </h1>
           </div>
         </div>
 
@@ -511,7 +512,11 @@ function PassportEntryRoute() {
             <>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {pt("claims.issuer")}
+                  {isPassportCredential(claim)
+                    ? lang === "sv"
+                      ? "Organisation i din registrerade uppgift"
+                      : "Organisation in your recorded claim"
+                    : pt("claims.issuer")}
                 </dt>
                 <dd className="mt-0.5 text-sm text-foreground">{claim.issuerName}</dd>
               </div>
@@ -617,7 +622,7 @@ function PassportEntryRoute() {
         <section className="rounded-xl border border-border bg-card p-5">
           <p className="text-sm text-muted-foreground">
             {lang === "sv"
-              ? "Välj yrkesbevis, valfria uppgifter och giltighetstid innan du skapar en länk. Underlag delas inte automatiskt."
+              ? "Välj meriter, valfria uppgifter och giltighetstid innan du skapar en länk. Underlag delas inte automatiskt."
               : "Choose credentials, optional fields and expiry before creating a link. Evidence is not shared automatically."}
           </p>
           <Link
@@ -625,11 +630,15 @@ function PassportEntryRoute() {
             className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium"
           >
             {lang === "sv"
-              ? "Välj yrkesbevis och uppgifter att dela"
+              ? "Välj meriter och uppgifter att dela"
               : "Select credentials and permitted fields"}
           </Link>
         </section>
       ) : null}
+
+      {claim && isPassportCredential(claim) && (
+        <CredentialDefinitionContext code={claim.credentialCode} metadata={international} />
+      )}
 
       <VerificationPanel
         assertionLevel={subject.assertionLevel}
@@ -784,6 +793,9 @@ function PassportEntryRoute() {
               {isPassportCredential(claim) ? (
                 <InternationalCredentialForm
                   metadata={international}
+                  onUpload={(claimId, file) =>
+                    doUpload({ data: { ...file, claimId, periodId: null } })
+                  }
                   onSave={(data) => saveInternational({ data })}
                   key={claim.id}
                   initial={{

@@ -59,7 +59,7 @@ export function ProfessionCard({
       // in a three-column grid that leaves two empty cells in the last row,
       // rendered as bare grey blocks beside the final card. Bordered cards in
       // a normally gapped grid have no such artifact at any count, and match
-      // the entry-path and trust cards elsewhere on the page.
+      // the entry-path and reference cards elsewhere on the page.
       className="group relative flex h-full flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <div className="flex items-start justify-between">

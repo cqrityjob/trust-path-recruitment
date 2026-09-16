@@ -7,7 +7,7 @@ import { readCreateResult } from "./selected-sharing.functions";
 const selection = z
   .object({
     claimIds: z.array(z.string().uuid()).min(1).max(200),
-    permittedFields: z.array(z.enum(["holder_name", "identifier"])).max(2),
+    permittedFields: z.array(z.enum(["holder_name", "identifier", "profile_title"])).max(3),
     expiresDays: z.number().refine((v) => [7, 30, 90].includes(v)),
     locale: z.enum(["sv", "en"]),
   })

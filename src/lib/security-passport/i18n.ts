@@ -44,7 +44,7 @@ const sv = {
   "screen.onboarding": "Kom igång",
   "screen.overview": "Mitt Security Passport",
   "screen.timeline": "Erfarenhetslinje",
-  "screen.card": "Passport Card",
+  "screen.card": "Ditt Security Passport",
   "screen.share": "Dela",
   "screen.sharePanel": "Delningspanel (live)",
   "screen.shareHistory": "Delningshistorik",
@@ -55,7 +55,7 @@ const sv = {
   "screen.credentialForm": "Behörighetsformulär",
   "screen.credentialHistory": "Rättelse och versioner",
   "screen.linkedin": "LinkedIn-delning",
-  "screen.recipientCard": "Mottagarens Passport-kort",
+  "screen.recipientCard": "Mottagarens Security Passport",
   "screen.entries": "Mina uppgifter",
   "symbols.title": "CQrityjobs behörighetssymboler",
   "symbols.lead":
@@ -75,7 +75,7 @@ const sv = {
   // repeating a heading below it is the duplication this pass removes.
   "nav.overview": "Passportöversikt",
   "nav.onboarding": "Kom igång",
-  "nav.card": "Passport Card",
+  "nav.card": "Förhandsvisa och dela",
   "nav.credentials": "Behörigheter",
   "nav.privacy": "Integritet",
   "live.loading": "Hämtar ditt Security Passport …",
@@ -332,7 +332,7 @@ const sv = {
   // line below stating where the title actually appears.
   "onboarding.identity.headline": "Yrkestitel som visas",
   "onboarding.identity.headlineHelp":
-    "Visas på ditt Passport Card, i din översikt och för arbetsgivare du delar med. Till exempel \u201dVäktare\u201d eller \u201dSkyddsvakt\u201d \u2014 inte ditt namn.",
+    "Visas på ditt Security Passport. Du väljer i delningsflödet om yrkestiteln ska delas. Till exempel \u201dVäktare\u201d eller \u201dSkyddsvakt\u201d \u2014 inte ditt namn.",
   "onboarding.identity.why": "Det här är namnet och beskrivningen som syns när du delar något.",
 
   "onboarding.profession.title": "Yrke",
@@ -416,7 +416,7 @@ const sv = {
   "overview.sectionClaims": "Uppgifter",
   "overview.sectionSharing": "Delning",
   "overview.noClaims": "Inga uppgifter ännu.",
-  "overview.viewCard": "Visa Passport Card",
+  "overview.viewCard": "Öppna förhandsvisning",
   "overview.share": "Dela",
 
   // ── The workspace (PR #196) ──────────────────────────────────────────
@@ -530,7 +530,7 @@ const sv = {
   "ws.use.shareBody": "Skapa en länk du kan återkalla när du vill.",
   "ws.use.cv": "Skapa eller uppdatera CV",
   "ws.use.cvBody": "Dina meriter kan användas i ett CV på Min karriär.",
-  "ws.use.card": "Förhandsvisa ditt Passport-kort",
+  "ws.use.card": "Förhandsvisa och dela",
   "ws.use.cardBody": "Se hur dina meriter och deras status presenteras på kortet.",
 
   // ── Experience totals ────────────────────────────────────────────────
@@ -668,8 +668,8 @@ const sv = {
   "timeline.employmentType.temporary": "Visstid",
   "timeline.empty": "Ingen erfarenhet tillagd ännu.",
 
-  // ── Passport Card ────────────────────────────────────────────────────
-  "card.title": "Passport Card",
+  // ── Security Passport ────────────────────────────────────────────────────
+  "card.title": "Ditt Security Passport",
   "card.subtitle": "Yrkesidentitet och underlag",
   // The work location is a SEPARATE fact from the professional title, and the
   // card prints it under its own label for that reason. It used to be joined
@@ -878,7 +878,7 @@ const sv = {
   // The left column on /passport. It REPORTS; the pages it links to own the
   // controls, so there is one card renderer and one privacy writer.
   "side.cardTitle": "Så här ser ditt Passport ut",
-  "side.openCard": "Öppna Passport Card",
+  "side.openCard": "Öppna förhandsvisning",
   "side.openPrivacy": "Integritets- och delningsinställningar",
   "privacy.title": "Integritet och delning",
   "privacy.defaultTitle": "Privat som standard",
@@ -980,7 +980,7 @@ const sv = {
   "ev.uploading": "Laddar upp …",
   "ev.none": "Inga dokument ännu.",
   "ev.ceiling":
-    "Att ladda upp ett dokument gör uppgiften Dokument inlämnat. Det blir inte Verifierat förrän någon annan har granskat det.",
+    "Uppladdat underlag är inte verifierat mot källan. CQrityjobs dokumentgranskning gäller dokumentet; en källbekräftelse är en separat kontroll.",
   "ev.limits": "PDF, JPG, PNG eller HEIC. Högst 8 MB.",
   "ev.tooLarge": "Filen är för stor. Högst 8 MB.",
   "ev.badType": "Filtypen stöds inte. Använd PDF, JPG, PNG eller HEIC.",
@@ -1022,7 +1022,7 @@ const sv = {
   "ev.count": "dokument",
   "ver.title": "Verifiering",
   "ver.lead":
-    "Du kan aldrig verifiera dig själv. Verifiering görs av CQrityjob eller av en arbetsgivare som känner till anställningen.",
+    "CQrityjob granskar dokument. Arbetsgivarbekräftelse gäller enbart anställningar. Du kan inte verifiera dig själv.",
   "ver.request": "Begär verifiering",
   "ver.requestCq": "Låt CQrityjob granska dokumentationen",
   "ver.requestCqHelp":
@@ -1372,7 +1372,7 @@ const sv = {
   "ver.employer.notOnPlatformAlt":
     "Du kan i stället låta CQrityjob granska dokumentation som styrker anställningen — anställningsbevis, arbetsgivarintyg eller lönespecifikation. Alternativet finns ovanför.",
   "ver.employer.notOnPlatformClose": "Stäng",
-  "pkg.public_card.name": "Publikt Passport Card",
+  "pkg.public_card.name": "Publikt Security Passport",
   "pkg.public_card.purpose": "Ett kort som visar din yrkesroll och dina granskade behörigheter.",
   "pkg.verified_qualifications.name": "Granskade behörigheter",
   "pkg.verified_qualifications.purpose":
@@ -1527,7 +1527,7 @@ const sv = {
   "livecard.selfReportedTitle": "Egenrapporterat kort",
   "livecard.selfReportedBody":
     "Inget är verifierat ännu, så kortet visar ingen verifieringsstämpel och ingen milstolpe.",
-  "livecard.shareCta": "Dela kortet",
+  "livecard.shareCta": "Förhandsvisa och dela",
   "livecard.needShare": "Skapa en delningslänk för att kunna dela kortet.",
   "common.optional": "valfritt",
   "common.cancel": "Avbryt",
@@ -1592,7 +1592,7 @@ const sv = {
   "sel.existing.noRecovery":
     "En länk visas bara när den skapas. Vi sparar bara ett avtryck av den, så den kan inte visas igen — men du kan skapa en ny länk med exakt samma innehåll.",
   "sel.existing.someLapsed":
-    "Någon av meriterna i den här länken är inte längre aktuell och visas därför inte för mottagaren.",
+    "Någon av meriterna i den här länken är inte längre aktuell. Öppna mottagarvyn för att se vad som visas och dess aktuella status.",
   "sel.error.passport": "Vi kunde inte hämta ditt Security Passport just nu.",
   "sel.error.shares": "Vi kunde inte hämta dina delningslänkar just nu.",
   "sel.error.preview":
@@ -2108,7 +2108,7 @@ const sv = {
   "cred.category.appointment": "Tidsbegränsat förordnande",
   "cred.field.validFromHelp": "Endast om beslutet anger ett annat startdatum än beslutsdatumet.",
   "cred.docsNotApproval":
-    "Underlag är inte samma sak som godkännande. En uppladdad handling gör uppgiften dokumenterad — bara en genomförd kontroll kan göra den verifierad.",
+    "Varje resultat visar vad som kontrollerats och av vem. Dokumentgranskning bekräftar inte aktuell status hos utfärdaren.",
   "cred.evidenceNext":
     "När uppgiften är tillagd kan du ladda upp underlag och skicka den för kontroll.",
   "cred.addAction": "Lägg till behörighet",
@@ -2233,7 +2233,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.onboarding": "Get started",
   "screen.overview": "My Security Passport",
   "screen.timeline": "Experience timeline",
-  "screen.card": "Passport Card",
+  "screen.card": "Your Security Passport",
   "screen.share": "Share",
   "screen.sharePanel": "Share panel (live)",
   "screen.shareHistory": "Sharing history",
@@ -2244,7 +2244,7 @@ const en: Record<PassportCopyKey, string> = {
   "screen.credentialForm": "Credential form",
   "screen.credentialHistory": "Correction and versions",
   "screen.linkedin": "LinkedIn sharing",
-  "screen.recipientCard": "Recipient Passport card",
+  "screen.recipientCard": "Shared Security Passport",
   "screen.entries": "My information",
   "symbols.title": "The CQrityjob credential symbols",
   "symbols.lead":
@@ -2254,7 +2254,7 @@ const en: Record<PassportCopyKey, string> = {
   "symbols.withWord": "Mark with its status word",
   "nav.overview": "Passport overview",
   "nav.onboarding": "Get started",
-  "nav.card": "Passport Card",
+  "nav.card": "Preview and share",
   "nav.credentials": "Credentials",
   "nav.privacy": "Privacy",
   "live.loading": "Loading your Security Passport …",
@@ -2485,7 +2485,7 @@ const en: Record<PassportCopyKey, string> = {
   "onboarding.identity.name": "Name shown",
   "onboarding.identity.headline": "Displayed professional title",
   "onboarding.identity.headlineHelp":
-    "Shown on your Passport Card, in your overview, and to employers you share with. For example \u201cSecurity Officer\u201d or \u201cClose Protection Officer\u201d \u2014 not your name.",
+    "Shown on your Security Passport. Choose explicitly in the sharing flow whether to include your professional title. For example \u201cSecurity Officer\u201d or \u201cClose Protection Officer\u201d \u2014 not your name.",
   "onboarding.identity.why":
     "This is the name and description that appear when you share something.",
 
@@ -2572,7 +2572,7 @@ const en: Record<PassportCopyKey, string> = {
   "overview.sectionClaims": "Entries",
   "overview.sectionSharing": "Sharing",
   "overview.noClaims": "No entries yet.",
-  "overview.viewCard": "View Passport Card",
+  "overview.viewCard": "Open preview",
   "overview.share": "Share",
 
   // ── The workspace (PR #196) ──────────────────────────────────────────
@@ -2669,7 +2669,7 @@ const en: Record<PassportCopyKey, string> = {
   "ws.use.shareBody": "Create a link you can revoke whenever you like.",
   "ws.use.cv": "Create or update a CV",
   "ws.use.cvBody": "Your merits can be used in a CV under My Career.",
-  "ws.use.card": "Preview your Passport Card",
+  "ws.use.card": "Preview and share",
   "ws.use.cardBody": "See how your merits and their status are presented on the card.",
 
   "totals.title": "Experience by evidence",
@@ -2774,7 +2774,7 @@ const en: Record<PassportCopyKey, string> = {
   "timeline.employmentType.temporary": "Fixed-term",
   "timeline.empty": "No experience added yet.",
 
-  "card.title": "Passport Card",
+  "card.title": "Your Security Passport",
   "card.subtitle": "Professional identity and evidence",
   "card.workLabel": "Work country / jurisdiction",
   "card.locked":
@@ -2930,7 +2930,7 @@ const en: Record<PassportCopyKey, string> = {
     "Experience travels across borders. Eligibility does not.",
 
   "side.cardTitle": "What your Passport looks like",
-  "side.openCard": "Open Passport Card",
+  "side.openCard": "Open preview",
   "side.openPrivacy": "Privacy and sharing settings",
   "privacy.title": "Privacy and sharing",
   "privacy.defaultTitle": "Private by default",
@@ -3022,7 +3022,7 @@ const en: Record<PassportCopyKey, string> = {
   "ev.uploading": "Uploading …",
   "ev.none": "No documents yet.",
   "ev.ceiling":
-    "Uploading a document makes the entry Document provided. It does not become Verified until somebody else has reviewed it.",
+    "Uploaded evidence is not verified against its source. CQrityjob document review checks the document; source confirmation is a separate check.",
   "ev.limits": "PDF, JPG, PNG or HEIC. 8 MB maximum.",
   "ev.tooLarge": "That file is too large. 8 MB maximum.",
   "ev.badType": "That file type is not supported. Use PDF, JPG, PNG or HEIC.",
@@ -3051,7 +3051,7 @@ const en: Record<PassportCopyKey, string> = {
   "ev.count": "documents",
   "ver.title": "Verification",
   "ver.lead":
-    "You can never verify yourself. Verification is done by CQrityjob, or by an employer with direct knowledge of the employment.",
+    "CQrityjob reviews documents. Employer confirmation applies only to employment. You cannot verify yourself.",
   "ver.request": "Request verification",
   "ver.requestCq": "Have CQrityjob review the documentation",
   "ver.requestCqHelp":
@@ -3373,7 +3373,7 @@ const en: Record<PassportCopyKey, string> = {
   "ver.employer.notOnPlatformAlt":
     "You can instead have CQrityjob review documentation that supports the employment — a contract, an employer certificate or a payslip. That option is above.",
   "ver.employer.notOnPlatformClose": "Close",
-  "pkg.public_card.name": "Public Passport Card",
+  "pkg.public_card.name": "Public Security Passport",
   "pkg.public_card.purpose":
     "A card showing your professional role and your verified authorisations.",
   "pkg.verified_qualifications.name": "Reviewed qualifications",
@@ -3507,7 +3507,7 @@ const en: Record<PassportCopyKey, string> = {
   "livecard.selfReportedTitle": "Self-reported card",
   "livecard.selfReportedBody":
     "Nothing is verified yet, so the card shows no verification seal and no milestone.",
-  "livecard.shareCta": "Share this card",
+  "livecard.shareCta": "Preview and share",
   "livecard.needShare": "Create a share link to be able to share the card.",
   "common.optional": "optional",
   "common.cancel": "Cancel",
@@ -3568,7 +3568,7 @@ const en: Record<PassportCopyKey, string> = {
   "sel.existing.noRecovery":
     "A link is shown only when it is created. We store only a fingerprint of it, so it cannot be shown again — but you can create a new link with exactly the same contents.",
   "sel.existing.someLapsed":
-    "One of the merits in this link is no longer current, so the recipient does not see it.",
+    "One of the credentials in this link is no longer current. Open the recipient view to check what is shown and its current status.",
   "sel.error.passport": "We could not load your Security Passport just now.",
   "sel.error.shares": "We could not load your share links just now.",
   "sel.error.preview":
@@ -3993,7 +3993,7 @@ const en: Record<PassportCopyKey, string> = {
   "cred.field.validFromHelp":
     "Only if the decision states a start date other than the decision date.",
   "cred.docsNotApproval":
-    "Documentation is not the same as approval. An uploaded document makes an entry documented — only a completed check can make it verified.",
+    "Each result states what was checked and by whom. Document review does not confirm current standing with the issuer.",
   "cred.evidenceNext":
     "Once the entry is added you can upload documentation and submit it for checking.",
   "cred.addAction": "Add a credential",

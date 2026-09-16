@@ -292,7 +292,7 @@ console.log("\nGROUP 0c -- the symbol plate prints a governed mark, never a code
  * IS its `symbol_label`. The Swedish truth model added four where they
  * differ, and the plate started printing truncated database enums — "SE_P",
  * "OV_R", and "OV_T" for BOTH OV_TRAINING and OV_TRANSPORT — on the private
- * overview, the Passport Card, the recipient page and the exported PNG.
+ * overview, the Security Passport, the recipient page and the exported PNG.
  *
  * `credentialMark` is now the only way a code becomes a mark. It is a local
  * table (§33: no database read to format a label), so this pins it against

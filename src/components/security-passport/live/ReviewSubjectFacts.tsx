@@ -20,7 +20,7 @@
 // stated, against what the document says. It cannot be made if only one side
 // is on screen. So the issuer is labelled "as stated" and never presented as
 // a verified fact — the same distinction that, further downstream, kept
-// `claimed_issuer_name` out of the "Verified by" line on the Passport Card.
+// `claimed_issuer_name` out of the "Verified by" line on the Security Passport.
 //
 // ── IT LIVES IN ITS OWN FILE SO IT CAN BE RENDERED ─────────────────────
 //

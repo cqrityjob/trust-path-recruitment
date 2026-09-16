@@ -145,7 +145,7 @@ for (const lang of ["sv", "en"] as const) {
 }
 test("CV-only holder gets a credential empty state, not repeated onboarding", async ({ page }) => {
   const refusals = await mount(page, "/passport", "en", true);
-  await expect(page.locator("[data-credential-wallet]")).toContainText("No credentials here yet");
+  await expect(page.locator("[data-credential-wallet]")).toContainText("Your first credential");
   await expect(page).toHaveURL(/\/passport\/?$/);
   assertNoRefusals(refusals);
 });
@@ -154,22 +154,23 @@ test("closed catalogue selects approved definitions and never accepts custom met
 }) => {
   test.setTimeout(60_000);
   const refusals = await mount(page, "/passport/credentials/new");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByLabel("Search catalogue").fill("ASIS");
   const selector = page.getByLabel("Approved credential");
   await expect(selector.locator("option")).toHaveCount(4);
   await selector.selectOption("INTL_ASIS_CPP");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByLabel("Credential identifier (optional)")).toBeVisible();
   await expect(page.getByLabel("Original credential name", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Issuer (self-reported)", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("checkbox")).toHaveCount(0);
+  await page.getByRole("button", { name: "Back", exact: true }).click();
   await page.getByLabel("Search catalogue").fill("Unlisted custom credential");
   await expect(page.getByRole("status")).toHaveText(
     "Your credential is not currently available in CQrityjob Security Passport.",
   );
-  await page.getByRole("combobox", { name: "Scope", exact: true }).selectOption("national");
-  await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
-  await expect(selector.locator("option")).toHaveCount(1);
-  await expect(page.getByRole("button", { name: "Save as self-reported" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   assertNoRefusals(refusals);
 });
@@ -340,9 +341,13 @@ test("international add, correction successor and archive remain reachable", asy
     return route.fallback();
   });
 
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByLabel("Approved credential").selectOption("INTL_ASIS_CPP");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByLabel("Credential identifier (optional)").fill("ORIGINAL-1");
-  await page.getByRole("button", { name: "Save as self-reported", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(current.id));
   await expect(
     page.getByRole("link", { name: "Select credentials and permitted fields", exact: true }),
@@ -350,7 +355,8 @@ test("international add, correction successor and archive remain reachable", asy
   await page.getByRole("button", { name: "Correct this entry", exact: true }).click();
 
   await page.getByLabel("Credential identifier (optional)").fill("CORRECTED-2");
-  await page.getByRole("button", { name: "Save as self-reported", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
   await expect(page).toHaveURL(/f1900000-0000-4000-8000-000000000011/);
   await expect(page.locator("main")).toContainText("ASIS CPP");
   expect(writes).toHaveLength(2);
@@ -360,5 +366,56 @@ test("international add, correction successor and archive remain reachable", asy
   await page.getByRole("button", { name: "Archive this entry", exact: true }).click();
   await expect.poll(() => archived).toBe(true);
   await expect(page).toHaveURL(/\/passport\/?$/);
+  assertNoRefusals(refusals);
+});
+
+test("failed evidence attachment retries without creating a duplicate credential", async ({
+  page,
+}) => {
+  const refusals = await mount(page, "/passport/credentials/new");
+  let saves = 0,
+    uploads = 0;
+  await page.route("**/_serverFn/**", async (route) => {
+    const { exportOf } = await import("./support/public-entry-harness");
+    const name = exportOf(route.request().url());
+    if (name === "saveInternationalCredential") {
+      saves++;
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ result: { id: claim.id }, error: null, context: {} }),
+      });
+    }
+    if (name === "uploadEvidence") {
+      uploads++;
+      return route.fulfill({
+        status: uploads === 1 ? 500 : 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          uploads === 1
+            ? { error: "synthetic upload failure" }
+            : { result: { id: "fixture-evidence" }, error: null, context: {} },
+        ),
+      });
+    }
+    return route.fallback();
+  });
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByLabel("Approved credential").selectOption("INTL_ASIS_CPP");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "synthetic.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\nsynthetic test evidence"),
+  });
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await expect(page.locator("[data-international-credential-form]")).toContainText("synthetic.pdf");
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("The credential is saved");
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(claim.id));
+  expect(saves).toBe(1);
+  expect(uploads).toBe(2);
   assertNoRefusals(refusals);
 });

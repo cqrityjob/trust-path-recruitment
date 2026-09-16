@@ -1,0 +1,62 @@
+# Security Passport product finalization
+
+Branch: `codex/passport-product-finalization`, based on main `351dea8` (PR #257 included).
+
+## Product changes
+
+The Passport overview uses a responsive credential grid, Profile identity, factual counts and explicit review states. The long ownership explanation is a contextual disclosure. Six navigation destinations lead to overview, credentials, addition, verification, Security Passport preview and privacy.
+
+The five-step add flow uses the existing approved catalogue and strict instance-only writer. It filters scope, country/region, professional domain, class and organisation; reviews the holder's fields before saving; and attaches optional evidence through the existing private upload service. An attachment failure preserves the saved credential and retries only the attachment.
+
+Security Passport preview is a private navy preview with an empty initial selection. Its identity comes from Profile and is labelled accordingly. Selection in this private preview is not consent to a public disclosure: the existing sharing flow explicitly confirms the credentials, permitted fields and expiry. A QR is generated only from the newly created selective-disclosure URL, with the same expiry/revocation controls. Evidence is excluded. Name, certificate/licence number and Profile title are separate, default-off permissions. A shared Profile title is explicitly labelled as self-reported; opting in never changes an existing share. Photos are not disclosed.
+
+The recipient card retains the canonical trust model and now displays a subsequent credential revocation for an already pinned v2 selection. It never picks up replacement or unselected credentials. The earlier v1 disclosure contract is unchanged. Missing profile fields are omitted from the card instead of printing repeated “Not stated” text. A revoked holder-reported record never acquires a historical verified label.
+
+## Catalogue audit
+
+The read-only production audit found 73 definitions, 22 active and 19 currently selectable. `catalogue-audit.json` records every active definition and all 14 SIA entries, their names, classes, declared territories, roles, validity notes, sources and the source-check date (2026-09-16). The remaining inactive AE inventory is listed without claiming an audit of its legal requirements.
+
+Organisation roles reference the existing authority or certification-body records. No credential, issuer, authority, country, scope or jurisdiction identity is created or duplicated.
+
+- ASIS APP/CPP/PCI/PSP retain their existing ASIS issuer and programme identities. Certification and continuing maintenance are not a local licence. [Official programmes](https://www.asisonline.org/certification/), [recertification](https://www.asisonline.org/certification/recertification/).
+- ISC2 CC/CCSP/CGRC/CISSP/SSCP retain ISC2 and the official programme names. Certification-cycle dates are not evidence of current standing. [Official certifications](https://www.isc2.org/certifications).
+- ISACA CISA/CISM/CRISC retain ISACA. CPE-cycle dates are distinguished from the result of a current verification. [Official credentials](https://www.isaca.org/credentialing), [verification](https://www.isaca.org/credentialing/verify-a-certification).
+- ACFE CFE retains ACFE. Its continuing education and membership requirements are distinct from initial award; the public directory is voluntary. [CFE](https://www.acfe.com/cfe-credential), [maintenance](https://www.acfe.com/cfe-credential/continuing-professional-education-cpe-requirements/faq-cpe-compliance).
+- ACAMS CAMS retains ACAMS. No public verification lookup is invented. [CAMS](https://www.acams.org/en/certifications/cams-certification), [recertification](https://www.acams.org/en/certifications/recertification).
+- Swedish OV appointment and OV training/refresher/transport records distinguish the appointment from training. Police are the recorded authority and provider for these prescribed courses. Transport training is not a standing authorisation for every transport. [Police training and appointment](https://polisen.se/lagar-och-regler/ordningsvakter/utbildning-till-ordningsvakt/).
+- VU1/VU2 issuer/provider is the actual authorised training provider on the document. Police prescribe training; they are not automatically the issuer. BYA is evidence of a provider and course structure, not a universal attribution for every holder. [BYA training structure](https://www.bya.se/yrken/vaktare-stationar-ronderande/), [courses and refresher requirements](https://www.bya.se/kurser/).
+- Personnel approval and civilian SV approval reference Länsstyrelsen. SV remains scope-restricted and not selectable through a scope-free candidate flow. [Guarding companies and personnel](https://www.lansstyrelsen.se/ostergotland/samhalle/tillstand-for-att-utova-verksamhet/bevakningsforetag.html), [SV approval application](https://www.lansstyrelsen.se/download/18.4dec946918b853a3b1e4901/1698847159075/Ans%C3%B6kan%20om%20godk%C3%A4nnande%20av%20skyddsvakt%202023.pdf).
+- SIA licences reference SIA as issuer/regulator. Qualifications distinguish awarding body from training provider; SIA does not deliver training. Licences normally last three years, with the one-year Northern Ireland vehicle-immobilisation exception. [Licensing](https://www.gov.uk/guidance/apply-for-an-sia-licence), [training](https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence).
+
+Detail-page copy distinguishes document review from source confirmation. Review history dates a completed result by its decision date, with submission date used only when no decision date exists.
+
+Legacy holder-entered organisation strings are retained as personal history, labelled as such on detail pages, and no longer promoted to official catalogue facts in the wallet or v2 public payload.
+
+## Verified hosted schema and history
+
+`20261123090000_sp_credential_organisation_roles.sql` adds two catalogue extensions keyed to the existing credential types:
+
+- `sp_credential_organisation_roles`: separate issuer, regulator, training provider and verification authority, using foreign keys to existing organisations or an explicit document-specific role.
+- `sp_credential_definition_reviews`: domain, source URL, review date and bilingual validity guidance.
+
+Both tables have ENABLE/FORCE RLS and authenticated SELECT only. No candidate, anonymous or service-role table writes are granted. The existing private v2 payload function resolves official issuer identity from these roles and preserves subsequent revoked/expired state for previously selected claims. Its execute grants remain revoked.
+
+The migration also extends the immutable disclosure-field constraint and private selection validator to accept explicit Profile-title consent. No existing disclosure or application row is updated. The rollback restores both private functions and the previous field constraint, then drops the two new tables. It refuses if a title-consent policy exists, preserving share history. It is for disposable local verification, not production. No PR #257 migration contents were changed or reapplied to production. The owner-authorized application is verified as hosted `20260916190510`, with canonical alias `20261123090000` (NULL statements). The truthful ledger snapshot contains 295 rows. Release-state records the migration as applied; the generated-version marker contains comments only. Schema-first and deployment guards retain their existing enforcement. See `hosted-application.json` for checksums, before/after fingerprints and security results.
+
+VU1/VU2 and SV availability is unchanged; this release does not approve new training providers, remove required scope, activate UK/AE markets or broaden the catalogue gate. The application deliberately fails closed if the new metadata tables cannot be read.
+
+## Evidence and approval
+
+The screenshots use fictional Alex Morgan credentials, never production personal data. `screenshots/` includes both languages, desktop, 375px and 390px captures of the overview/wallet, all five addition steps, detail, Security Passport preview, recipient and sharing/privacy. Browser assertions check overflow, selected-only previews, no legacy Police issuer assertion, private fields and visible revocation.
+
+Explicit owner visual/product approval is still required. Do not merge or publish this branch solely because local checks pass. See `verification.json` for executed results and release blockers.
+
+## Owner correction and connection preflight
+
+The only product name is Security Passport. The private preview keeps `/passport/card` for compatibility; existing `/p/` shared links are unchanged. Navigation reads “Förhandsvisa och dela” / “Preview and share”, the heading “Ditt Security Passport” / “Your Security Passport”, and entry links “Öppna förhandsvisning” / “Open preview”. Public headings read “Delat Security Passport” / “Shared Security Passport”. The preview component is named `SecurityPassportPreview`.
+
+The credential flow uses broad merit/credential terminology, “Certifikats- eller licensnummer”, localized file buttons and an ISO date field with Swedish format guidance. It uses the shared calendar-date validator. Expiry/no-expiry remains controlled by the approved definition. Document review remains distinct from source confirmation; international recipients no longer see an unknown-jurisdiction placeholder.
+
+`hosted-preflight.json` records the connector-only read-only preflight, SQL checksum, ledger frontier, baseline counts and exact expected impact. That historical preflight recorded 293 entries through `20261122090000`, with neither new table present. The subsequent separately authorized application and canonical history alias are recorded in `hosted-application.json`: 293 → 294 → 295 entries, 36 exact reviews, 105 exact roles, unchanged baseline counts/digests and zero deletions. No migration SQL was reapplied; the stale project received zero calls. The corrected read-only seed/content and title-consent probes passed.
+
+`security_passport_organisation_roles_test.sql` proves actual RPC selection and persisted title consent. `passport-live-local.spec.ts` creates a dedicated unchecked credential and proves its code, title and private identifier are absent from the actual recipient server response and page. The real live tests also confirm share revocation. Screenshot evidence includes the default-off title checkbox and the explicitly shared, self-reported title.

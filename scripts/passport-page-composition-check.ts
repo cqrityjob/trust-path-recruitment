@@ -2,7 +2,7 @@
 //
 // ── WHAT THE SKETCH ASKS FOR ───────────────────────────────────────────
 //
-//   Left column   the Passport Card -- what another person sees -- with the
+//   Left column   the Security Passport -- what another person sees -- with the
 //                 integrity/privacy/sharing settings directly beneath it.
 //   Main column   "Mitt Security Passport", the two actions near the top
 //                 (add a credential, share the Passport), the registered
@@ -35,7 +35,7 @@ const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
 
 const INDEX = "src/routes/_authenticated.passport.index.tsx";
 const SIDE = "src/components/security-passport/PassportSideColumn.tsx";
-const WORKSPACE = "src/components/security-passport/PassportWorkspace.tsx";
+const WORKSPACE = "src/components/security-passport/CredentialWallet.tsx";
 const SHELL = "src/routes/_authenticated.passport.tsx";
 const PASSPORT_I18N = "src/lib/security-passport/i18n.ts";
 const APP_I18N = "src/i18n/dictionaries.ts";
@@ -62,10 +62,13 @@ console.log("\n1 · the two columns exist, and the sketch's left column is the l
 
 check(/<PassportSideColumn/.test(index), "the Passport page renders a side column");
 check(/<CredentialWallet/.test(index), "and the Passport workspace");
-check(/lg:flex-row/.test(index), "they sit side by side from lg upwards, as the sketch draws them");
 check(
-  /lg:order-1/.test(index) && /lg:order-2/.test(index),
-  "the sketch's left/right is restored by order at lg, not by a second markup",
+  /max-w-\[1280px\]/.test(index) && /lg:grid-cols-2/.test(index),
+  "the wallet uses the desktop width and supporting card/settings form a two-column region",
+);
+check(
+  !/lg:order-[12]/.test(index) && /md:grid-cols-2 xl:grid-cols-3/.test(workspace),
+  "the responsive wallet uses one markup and never reorders identity behind the credential list",
 );
 
 // SOURCE ORDER IS THE MOBILE ORDER. On a phone the holder's own record is
@@ -82,11 +85,11 @@ check(
 /* ------------------------------------------------------------------ */
 console.log("\n2 · the left column carries the card and the settings beneath it");
 
-check(/<CompactPassportCard/.test(side), "the side column renders the Passport Card");
+check(/<SecurityPassportPreview/.test(side), "the side column renders the Security Passport");
 check(/snapshot=\{snapshot\}/.test(side), "built from the canonical card builder");
 check(/data-passport-privacy-summary/.test(side), "and an integrity/privacy region");
 check(
-  side.indexOf("<CompactPassportCard") < side.indexOf("data-passport-privacy-summary"),
+  side.indexOf("<SecurityPassportPreview") < side.indexOf("data-passport-privacy-summary"),
   "with the settings BELOW the card, as the sketch places them",
 );
 check(
@@ -98,7 +101,7 @@ check(
 console.log("\n3 · one renderer, one writer — the summary reports, it does not duplicate");
 
 check(
-  (side.match(/<CompactPassportCard/g) ?? []).length === 1,
+  (side.match(/<SecurityPassportPreview/g) ?? []).length === 1,
   "exactly one card renderer in the side column",
 );
 check(
@@ -115,7 +118,7 @@ check(
 /* ------------------------------------------------------------------ */
 console.log("\n4 · the main column's two actions are near the top, once each");
 
-check(/<AddMeritChooser/.test(workspace), "add a credential is offered");
+check(/to="\/passport\/credentials\/new"/.test(workspace), "add a credential is offered");
 check(/data-cta="share"/.test(workspace), "and sharing the Passport");
 check(
   (workspace.match(/data-cta="share"/g) ?? []).length === 1,
@@ -123,14 +126,11 @@ check(
 );
 const headerEnd = workspace.indexOf("</header>");
 check(
-  headerEnd > 0 && workspace.indexOf("<AddMeritChooser") < headerEnd,
+  headerEnd > 0 && workspace.indexOf('to="/passport/credentials/new"') < headerEnd,
   "add a credential sits inside the page header, near the top",
 );
 check(headerEnd > 0 && workspace.indexOf('data-cta="share"') < headerEnd, "and so does share");
-check(
-  /pt\("overview\.title"\)/.test(workspace),
-  'the main column is headed "Mitt Security Passport"',
-);
+check(/identity\?\.displayName/.test(workspace), "the main column names the holder from Profile");
 
 /* ------------------------------------------------------------------ */
 console.log("\n5 · no label collides with another product's");

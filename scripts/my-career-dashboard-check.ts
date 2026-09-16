@@ -247,10 +247,10 @@ expect(
 {
   const cardPath = "src/components/professional-identity/OverviewPassportCard.tsx";
   const card = read(cardPath);
-  const compactPath = "src/components/security-passport/CompactPassportCard.tsx";
+  const compactPath = "src/components/security-passport/SecurityPassportPreview.tsx";
   const compact = read(compactPath);
   expect(
-    card.includes("<CompactPassportCard"),
+    card.includes("<SecurityPassportPreview"),
     "Overview mounts the canonical compact Passport card.",
   );
   expect(
@@ -276,12 +276,12 @@ expect(
     "The preview excludes CV employment, education, skills and languages.",
   );
   expect(
-    compact.includes("claims.slice(0, 3)"),
-    "The compact card previews at most three actual credentials.",
+    compact.includes("selectedIds.includes(c.id)") && compact.includes("selectedIds = []"),
+    "The compact card previews only explicitly selected credentials and starts empty.",
   );
   expect(compact.includes("snapshot.profileIdentity"), "Card identity comes from Profile.");
   expect(
-    compact.includes("currentCredentialVerification("),
+    compact.includes("credentialProductStatus("),
     "The card preserves verification provenance.",
   );
   for (const leak of ["evidenceUrl", "storage_path", "access_token", "createCredentialShare("]) {

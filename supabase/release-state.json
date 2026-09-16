@@ -7,6 +7,26 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261123090000_sp_credential_organisation_roles.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sp_credential_organisation_roles"
+        },
+        {
+          "kind": "table",
+          "object": "sp_credential_definition_reviews"
+        }
+      ],
+      "note": "Governed role links, official-source reviews and explicit default-off Profile-title consent applied once from pinned PR #258 head. Existing application/catalogue identities and data unchanged. Canonical history alias verified; no reapplication permitted.",
+      "verify": "Read-only: docs/passport/product-finalization/hosted-postflight.sql; results: docs/passport/product-finalization/hosted-application.json",
+      "rollback": "supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql",
+      "hostedVersion": "20260916190510",
+      "hostedName": "sp_credential_organisation_roles",
+      "evidenceSource": "Owner-authorized Supabase connector application to CQrityjob Production (wrygicdfxwjnrugduxnt). Canonical 20261123090000 maps to hosted 20260916190510 / sp_credential_organisation_roles. Pinned head d8bd02689fb5b4473b18940df309e0ede7fee0e7; SHA-256 c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62 matches hosted SQL. 36 review and 105 role rows match exactly; all 48 baseline counts/digests unchanged. RLS, grants, private functions and explicit title consent pass. Separate owner-authorized canonical version/name alias with NULL statements verified; ledger has 295 rows and original entries unchanged. Evidence: docs/passport/product-finalization/hosted-application.json"
+    },
+    {
       "file": "20261122090000_cv_owned_application_snapshot.sql",
       "hostedState": "applied",
       "introduces": [

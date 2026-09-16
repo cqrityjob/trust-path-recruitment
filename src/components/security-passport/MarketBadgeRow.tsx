@@ -23,7 +23,7 @@
 //
 // The badge used to PRINT that code. It is on the My Career trust summary,
 // where "SE · 4" was the only place in the product that named a market by its
-// identifier — the Passport Card and the other-markets panel both render the
+// identifier — the Security Passport and the other-markets panel both render the
 // same market through `marketDisplayName` and say "Sverige". One product
 // saying "SE" on one card and "Sverige" on the next is the kind of seam that
 // makes a trust surface feel unfinished, and a code is not a country.

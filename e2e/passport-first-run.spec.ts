@@ -778,7 +778,9 @@ test.describe("Security Passport — closed catalogue first run", () => {
     expect(db.calls.ensureFirstRunPassport).toBe(1);
     expect(db.events.filter((e) => e.type === "passport_created")).toHaveLength(1);
     expect(db.merits).toHaveLength(0);
-    await expect(page.getByRole("combobox", { name: "Godkänt yrkesbevis" })).toBeVisible();
+    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "Godkänd merit" })).toBeVisible();
     expect(db.calls.completeFirstMerit ?? 0).toBe(0);
   });
   test("existing profile with legacy draft cannot resume free-text capture", async ({ page }) => {
@@ -807,6 +809,8 @@ test.describe("Security Passport — closed catalogue first run", () => {
   test("unavailable catalogue offers no custom claim escape", async ({ page }) => {
     db.profile = profileOf();
     await mount(page, "/passport/credentials/new", "en");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByRole("status")).toHaveText(
       "Your credential is not currently available in CQrityjob Security Passport.",
     );

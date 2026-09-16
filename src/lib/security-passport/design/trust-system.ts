@@ -2,7 +2,7 @@
 //
 // ── THE OWNABLE IDEA: SECURITY-DOCUMENT ENGRAVING ──────────────────────
 //
-// The Passport Card borrows its visual language from the thing it actually
+// The Security Passport borrows its visual language from the thing it actually
 // is: an identity document. Guilloche line-work, engraved hairlines, a
 // debossed crest and a single metallic rule reserved for verified
 // recognition. That vocabulary is centuries old, instantly reads as

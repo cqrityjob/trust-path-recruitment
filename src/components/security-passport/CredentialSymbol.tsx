@@ -30,7 +30,7 @@ export interface CredentialSymbolProps {
   readonly state: CredentialPresentationState;
   /** Plate text. Taxonomy rows carry `symbol_label`; callers that hold one
    *  pass it. Callers that hold only a claim — the private overview, the
-   *  Passport Card, the recipient page, the social frame — pass nothing and
+   *  Security Passport, the recipient page, the social frame — pass nothing and
    *  the governed mark is resolved from the code by `credentialMark`.
    *
    *  It is NEVER derived from the code itself. See `credentialSymbolMarkup`:

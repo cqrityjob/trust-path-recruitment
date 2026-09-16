@@ -109,7 +109,7 @@ export function ClaimRow({
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
         {/* ── "—" IS A SENTINEL, NOT A LABEL ─────────────────────────────
             `issuerName` is `claimed_issuer_name ?? "—"` in the read model, and
-            that em dash is load-bearing elsewhere: the Passport Card filters
+            that em dash is load-bearing elsewhere: the Security Passport filters
             attributions on it and the correction form maps it back to an empty
             input. So it stays in the model and is translated HERE, where a
             reader sees it. A dash under "Utfärdare" reads as a value nobody

@@ -2,7 +2,7 @@
 //
 // ── ONE DERIVATION, ONE WAY OF SHOWING IT ──────────────────────────────
 //
-// Seven surfaces print a professional title: the overview, the Passport Card,
+// Seven surfaces print a professional title: the overview, the Security Passport,
 // the recipient page, the social frame, the LinkedIn output, the shared image
 // and the employer's view of an application. Each used to read a stored string
 // and format it however it liked.

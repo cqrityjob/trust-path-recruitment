@@ -219,7 +219,8 @@
     "negative-controls:public-header": "bun run scripts/negative-controls/public-header-controls.ts",
     "negative-controls:profile-section-navigation": "bun run scripts/negative-controls/profile-section-navigation-controls.ts",
     "negative-controls:overview-composition": "bun run scripts/negative-controls/overview-composition-controls.ts",
-    "negative-controls:profile-entry": "bun run scripts/negative-controls/profile-entry-controls.ts"
+    "negative-controls:profile-entry": "bun run scripts/negative-controls/profile-entry-controls.ts",
+    "passport-product:check": "bun run scripts/passport-product-check.ts"
   },
   "dependencies": {
     "embla-carousel-react": "^8.6.0",
