@@ -53,8 +53,8 @@ function NewCredentialRoute() {
     };
   }, [load, readDraft, search.draft]);
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      <Link to="/passport" className="inline-flex min-h-11 items-center underline">
+    <div className="mx-auto w-full max-w-3xl space-y-5">
+      <Link to="/passport" className="inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline">
         {pt("claim.back")}
       </Link>
       {failed ? (
