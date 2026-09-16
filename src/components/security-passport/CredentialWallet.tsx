@@ -1,5 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, FileCheck2, Globe2, MapPin, Plus, Lock, Share2, UserRound } from "lucide-react";
+import {
+  ArrowUpRight,
+  FileCheck2,
+  Globe2,
+  MapPin,
+  Plus,
+  Lock,
+  Share2,
+  UserRound,
+} from "lucide-react";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
 import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
@@ -66,7 +75,10 @@ export function CredentialWallet({
           aria-hidden="true"
           className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40"
         />
-        <div aria-hidden="true" className="absolute top-0 right-0 h-48 w-48 border-l border-primary-foreground/10 opacity-50" />
+        <div
+          aria-hidden="true"
+          className="absolute top-0 right-0 h-48 w-48 border-l border-primary-foreground/10 opacity-50"
+        />
         <div className="relative grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div className="min-w-0">
             <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.14em] text-primary-foreground/65">
@@ -114,29 +126,29 @@ export function CredentialWallet({
             {copy("Din professionella dokumentation", "Your professional records")}
           </p>
           <dl className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-5">
-          {[
-            [active.length, copy("Aktiva meriter", "Active credentials")],
-            [verified, copy("Granskade dokument", "Documents reviewed")],
-            [
-              active.filter((r) => r.status === "registered").length,
-              copy("Egna uppgifter", "Holder reported"),
-            ],
-            [expiring, copy("Utgår inom 30 dagar", "Expire within 30 days")],
-            [
-              reviews === null ? "—" : rows.filter((r) => reviews.has(r.claim.id)).length,
-              copy("Pågående granskningar", "Open reviews"),
-            ],
-          ].map(([value, label]) => (
-            <div
-              key={label}
-              className="min-w-0 border-primary-foreground/15 sm:border-l sm:pl-4 sm:first:border-l-0 sm:first:pl-0"
-            >
-              <dd className="text-xl font-semibold tabular-nums text-primary-foreground">
-                {value}
-              </dd>
-              <dt className="mt-1 text-xs leading-snug text-primary-foreground/55">{label}</dt>
-            </div>
-          ))}
+            {[
+              [active.length, copy("Aktiva meriter", "Active credentials")],
+              [verified, copy("Granskade dokument", "Documents reviewed")],
+              [
+                active.filter((r) => r.status === "registered").length,
+                copy("Egna uppgifter", "Holder reported"),
+              ],
+              [expiring, copy("Utgår inom 30 dagar", "Expire within 30 days")],
+              [
+                reviews === null ? "—" : rows.filter((r) => reviews.has(r.claim.id)).length,
+                copy("Pågående granskningar", "Open reviews"),
+              ],
+            ].map(([value, label]) => (
+              <div
+                key={label}
+                className="min-w-0 border-primary-foreground/15 sm:border-l sm:pl-4 sm:first:border-l-0 sm:first:pl-0"
+              >
+                <dd className="text-xl font-semibold tabular-nums text-primary-foreground">
+                  {value}
+                </dd>
+                <dt className="mt-1 text-xs leading-snug text-primary-foreground/55">{label}</dt>
+              </div>
+            ))}
           </dl>
         </div>
       </header>
@@ -221,26 +233,39 @@ export function CredentialWallet({
                         <>
                           <CredentialRecordFact
                             label={copy("Källa / utfärdare", "Source / issuer")}
-                            value={officialIssuer ||
+                            value={
+                              officialIssuer ||
                               (issuerRole?.document_specific
-                                ? copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
+                                ? copy(
+                                    "Utfärdare enligt dokumentet",
+                                    "Issuer recorded on the document",
+                                  )
                                 : definition?.issuer_name) ||
-                              copy("Officiell organisation behöver bekräftas", "Official organisation needs confirmation")}
+                              copy(
+                                "Officiell organisation behöver bekräftas",
+                                "Official organisation needs confirmation",
+                              )
+                            }
                           />
                           <CredentialRecordFact
                             label={copy("Jurisdiktion", "Jurisdiction")}
-                            value={global
-                              ? copy("Internationell", "International")
-                              : country(detail?.validity_jurisdiction_code || c.jurisdictionCode) ||
-                                copy("Område ej angivet", "Area not stated")}
+                            value={
+                              global
+                                ? copy("Internationell", "International")
+                                : country(
+                                    detail?.validity_jurisdiction_code || c.jurisdictionCode,
+                                  ) || copy("Område ej angivet", "Area not stated")
+                            }
                           />
                           <CredentialRecordFact
                             label={copy("Giltighet", "Validity")}
-                            value={c.validUntil
-                              ? credentialDate(c.validUntil, lang)
-                              : detail?.no_expiry
-                                ? copy("Utan utgångsdatum", "No expiry")
-                                : copy("Slutdatum inte angivet", "Expiry not stated")}
+                            value={
+                              c.validUntil
+                                ? credentialDate(c.validUntil, lang)
+                                : detail?.no_expiry
+                                  ? copy("Utan utgångsdatum", "No expiry")
+                                  : copy("Slutdatum inte angivet", "Expiry not stated")
+                            }
                           />
                         </>
                       }

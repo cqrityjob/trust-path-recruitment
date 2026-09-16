@@ -29,7 +29,10 @@ export function CredentialRecord({
       <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
       <div className="grid min-w-0 gap-4 p-4 pl-5 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:items-center sm:p-5 sm:pl-6">
         <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[var(--shadow-sm)]">
-          <div aria-hidden="true" className="absolute inset-1 rounded-md border border-primary-foreground/15" />
+          <div
+            aria-hidden="true"
+            className="absolute inset-1 rounded-md border border-primary-foreground/15"
+          />
           {symbol}
         </div>
         <div className="min-w-0">

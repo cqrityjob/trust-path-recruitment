@@ -104,12 +104,22 @@ export function SecurityPassportPreview({
       )}
       <div className="mt-6 grid grid-cols-2 gap-3 border-t border-primary-foreground/15 pt-4">
         <div className="rounded-md bg-primary-foreground/[0.07] p-3">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-primary-foreground/50">{copy("Integritet", "Privacy")}</p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium"><Lock size={12} aria-hidden="true" />{copy("Styrs av innehavaren", "Holder controlled")}</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-primary-foreground/50">
+            {copy("Integritet", "Privacy")}
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium">
+            <Lock size={12} aria-hidden="true" />
+            {copy("Styrs av innehavaren", "Holder controlled")}
+          </p>
         </div>
         <div className="rounded-md bg-primary-foreground/[0.07] p-3">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-primary-foreground/50">{copy("Tillitsnivå", "Trust state")}</p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium"><ShieldCheck size={12} aria-hidden="true" />{copy("Visas per merit", "Shown per credential")}</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-primary-foreground/50">
+            {copy("Tillitsnivå", "Trust state")}
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium">
+            <ShieldCheck size={12} aria-hidden="true" />
+            {copy("Visas per merit", "Shown per credential")}
+          </p>
         </div>
       </div>
       <footer className="mt-4 flex items-center justify-between gap-4 border-t border-primary-foreground/15 pt-4 text-xs text-primary-foreground/65">

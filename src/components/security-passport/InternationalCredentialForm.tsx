@@ -175,8 +175,14 @@ export function InternationalCredentialForm({
       className="overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-lg)]"
     >
       <header className="relative isolate overflow-hidden bg-primary p-5 text-primary-foreground sm:p-7">
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40" />
-        <div aria-hidden="true" className="absolute top-0 right-0 h-40 w-32 border-l border-primary-foreground/10" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute top-0 right-0 h-40 w-32 border-l border-primary-foreground/10"
+        />
         <p className="relative flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-primary-foreground/65">
           <FileCheck2 size={14} aria-hidden="true" />
           Security Passport
@@ -192,7 +198,10 @@ export function InternationalCredentialForm({
             "Your credential. Your evidence. Private until you share.",
           )}
         </p>
-        <ol aria-label={copy("Steg", "Steps")} className="relative mt-7 grid grid-cols-5 gap-2 border-t border-primary-foreground/15 pt-5">
+        <ol
+          aria-label={copy("Steg", "Steps")}
+          className="relative mt-7 grid grid-cols-5 gap-2 border-t border-primary-foreground/15 pt-5"
+        >
           {steps.map((label, i) => (
             <li key={label} aria-current={step === i + 1 ? "step" : undefined}>
               <span
@@ -427,7 +436,9 @@ export function InternationalCredentialForm({
             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {copy("Från den godkända katalogen", "From the approved catalogue")}
             </p>
-            <p className="mt-1 text-lg font-semibold">{selected[lang === "sv" ? "name_sv" : "name_en"]}</p>
+            <p className="mt-1 text-lg font-semibold">
+              {selected[lang === "sv" ? "name_sv" : "name_en"]}
+            </p>
             <p className="mt-1 text-sm">
               {selected.issuer_name} · {locationName(selected.region ?? selected.country)}
             </p>

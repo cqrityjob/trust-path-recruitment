@@ -526,15 +526,22 @@ function PassportShareRoute() {
   return (
     <div data-share-screen className="mx-auto w-full max-w-3xl space-y-7">
       <header className="relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-7">
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40" />
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-foreground/60">Security Passport</p>
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40"
+        />
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary-foreground/60">
+          Security Passport
+        </p>
         <h1
           className="mt-3 text-2xl font-semibold !text-primary-foreground sm:text-3xl"
           style={{ fontFamily: "var(--font-display)" }}
         >
           {pt("sel.title")}
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-primary-foreground/70">{pt("sel.lead")}</p>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-primary-foreground/70">
+          {pt("sel.lead")}
+        </p>
       </header>
 
       {/* ── After creation, the result takes the top of the screen ─── */}
@@ -554,7 +561,9 @@ function PassportShareRoute() {
       {/* ── 1 · What to share ──────────────────────────────────────── */}
       {!outcome ? (
         <section aria-labelledby="sel-choose">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">01</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            01
+          </p>
           <h2 id="sel-choose" className="mt-1 text-lg font-semibold text-foreground">
             {pt("sel.step.choose")}
           </h2>
@@ -617,7 +626,7 @@ function PassportShareRoute() {
                           htmlFor={id}
                           data-merit-option={key}
                           data-merit-caveat={caveat}
-                           className="flex min-h-[44px] cursor-pointer items-start gap-3 py-4"
+                          className="flex min-h-[44px] cursor-pointer items-start gap-3 py-4"
                         >
                           <input
                             id={id}
@@ -679,7 +688,9 @@ function PassportShareRoute() {
       {/* ── 2 · The recipient's view ───────────────────────────────── */}
       {!outcome && selectedCount > 0 ? (
         <section aria-labelledby="sel-preview">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">02</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            02
+          </p>
           <h2 id="sel-preview" className="mt-1 text-lg font-semibold text-foreground">
             {pt("sel.step.preview")}
           </h2>
@@ -700,7 +711,7 @@ function PassportShareRoute() {
             <div
               id="sel-preview-panel"
               data-share-preview
-               className="mt-4 overflow-x-auto rounded-lg border border-border bg-primary p-3 shadow-[var(--shadow-lg)] sm:p-5"
+              className="mt-4 overflow-x-auto rounded-lg border border-border bg-primary p-3 shadow-[var(--shadow-lg)] sm:p-5"
             >
               {previewState === "loading" ? (
                 <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>
@@ -724,7 +735,9 @@ function PassportShareRoute() {
       {/* ── 3 · Link settings ──────────────────────────────────────── */}
       {!outcome ? (
         <section aria-labelledby="sel-settings">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">03</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            03
+          </p>
           <h2 id="sel-settings" className="mt-1 text-lg font-semibold text-foreground">
             {pt("sel.step.settings")}
           </h2>
