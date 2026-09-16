@@ -1,109 +1,114 @@
-# CQrityjob Final UX/UI Product Polish
+# Security Passport Visual Correction Pass
 
-## Baseline and boundaries
+## Scope and baseline
 
-- Work on the current isolated preview branch `edit/edt-ea14b9b0-8155-445e-880f-31ca9276d48d` from accepted main `93906a528cf38a835b0c4e26e7adc36e94afbd7e`.
-- Keep the accepted generated Supabase types unchanged.
-- Do not modify or apply Supabase schema, migrations, RLS, grants, policies, RPCs, hosted data, auth/redirect rules, feature gates, governed catalogues, assessments, Interview Intelligence, BESKT, or BCP.
-- Do not merge, publish, or deploy. The editor Preview is the review surface.
-- Preserve Swedish and English parity and existing security/product truth.
+- Work only on isolated Preview branch `edit/edt-a34179ff-1ab2-4bc1-be58-7527a44a9535` at baseline `8a5549fb`.
+- Use the uploaded image only as a quality benchmark; do not copy its people, wording, claims, identifiers, QR treatment, certificates, or physical-card composition.
+- Keep all Supabase resources, migrations, RLS, grants, auth behavior, routes, governed catalogues, assessment logic, BESKT, BCP, sharing rules, and trust derivation unchanged.
+- Do not merge, publish, or deploy.
 
-## Phase 1 — Homepage and public entry
+## Current state
 
-Refine the first screen to explain CQrityjob immediately as one Security Career Intelligence Platform for individuals and employers.
+- The Passport overview is composed by `src/routes/_authenticated.passport.index.tsx`, `CredentialWallet`, `PassportSideColumn`, and `SecurityPassportPreview`.
+- The incorrect phrase “Ditt privata yrkespass / Your private professional passport” exists only in `CredentialWallet`.
+- Name and title already come from Profile; credentials and summaries already come from the existing Passport snapshot and governed metadata.
+- Credential status, lifecycle, review, issuer/source, jurisdiction, expiry, and actions are already derived by existing product logic and must remain unchanged.
+- The add flow is the existing five-step `InternationalCredentialForm`; saving and evidence upload remain separate existing operations.
+- The share screen already pins selected credentials, uses the real recipient payload for preview, limits expiry, excludes evidence/CV, and supports revocation/reissue. Those behaviors are frozen.
+- The homepage already uses a generic, non-fictional Passport anchor and keeps Career Discovery visible.
 
-- Make Security Passport the clearest trust product while preserving Career Discovery as a valid individual path.
-- Present one clear candidate action and one secondary employer action without making login dominant.
-- Replace the current large embedded sign-in treatment with a calm, compact account entry that keeps the governed `/login` and `/signup` routes unchanged.
-- Add a truthful visual Security Passport preview using only generic labels and existing trust states; no fake holder, credential, score, licence, or verification data.
-- Preserve the employer strip and connected Discover–Continue lifecycle, while tightening first-screen height and mobile hierarchy.
-- Refine `/employers`, shared header, compact menu, footer, `/login`, and `/signup` only where needed for a coherent entry experience.
+## Implementation
 
-## Phase 2 — Security Passport
+### 1. Product naming and Profile separation
 
-Improve presentation and navigation across the existing Passport journey without changing reads, writes, permissions, or governed content.
+- Remove “Ditt privata yrkespass / Your private professional passport”.
+- Keep “Security Passport” as the product name everywhere touched.
+- Label the holder name and professional title explicitly as Profile information without changing their source.
+- Add focused terminology guards so alternative Passport names cannot return.
 
-- Overview: clearer next action, credential grouping, attention/review visibility, status legend, and empty/loading/error states.
-- Add credential: stronger progress and catalogue framing; candidates still choose only approved credentials, issuers, markets, and jurisdictions.
-- Credential detail: separate trust state from lifecycle state and make evidence, review, correction, expiry, revocation, and dispute hierarchy easier to scan.
-- Preview and sharing: clarify the four-step flow, selected scope, optional fields, expiry, language, private-by-default behavior, revocation, and existing links.
-- Recipient view: improve authenticity hierarchy and readability while preserving fail-closed behavior and identical unavailable states.
-- Navigation: improve desktop and 375/390px usability while using “Security Passport” exclusively.
+### 2. Flagship overview
 
-Frozen distinctions remain explicit:
+- Recompose the overview header as a premium deep-navy identity and trust surface with clearer zones for Profile identity, privacy, credential summary, review summary, and sharing actions.
+- Replace dashboard-like metric tiles and administrative rows with a restrained passport/wallet hierarchy using the existing navy, trust-blue, off-white, Sora, and Manrope system.
+- Refine the side preview and privacy summary into one intentional share-preview area while preserving canonical links and privacy mode.
 
-- Self-reported
-- Evidence submitted
-- Document reviewed
-- Source verified
-- Expired
-- Revoked
+### 3. Premium credential records
 
-Document review will never be presented as issuer/source verification.
+- Strengthen `CredentialSymbol` presentation for real governed credentials, including APP, CPP, PSP, and other catalogue entries when present.
+- Present each credential as a distinctive professional record with its real name, source/issuer, jurisdiction, trust state, lifecycle state, expiry, and existing action.
+- Keep document review visually and verbally distinct from source verification; retain explicit Self-reported, Evidence submitted, Document reviewed, Source verified, Expired, and Revoked states.
+- Do not add credentials, issuers, identifiers, or claims.
 
-## Phase 3 — Complete platform UX
+### 4. Curated add-credential flow
 
-Apply the same visual system and next-action clarity to the remaining journeys, in contained batches:
+- Restyle the existing five-step flow with a premium Passport header, clearer progress rail, stronger selected states, refined catalogue/result treatment, and compact mobile spacing.
+- Keep the current steps, inputs, validation, catalogue filtering, save behavior, evidence rules, and navigation unchanged.
 
-1. Registration, login, role intent, and onboarding
-2. Candidate overview, Profile, CV, jobs, and applications
-3. Employer onboarding, overview, job creation, and application management
-4. Career Center and assessment entry/results presentation
-5. Empty, loading, error, and success states
-6. Footer, privacy, terms, and GDPR-facing pages
+### 5. Selective sharing and recipient preview
 
-Each batch will reuse existing components and tokens and will not alter authorization, data ownership, scoring, matching, or decision semantics.
+- Give the existing choose–preview–settings–create flow a consistent Passport visual frame.
+- Make selected scope, source/jurisdiction, trust state, holder-controlled privacy, expiry, selective disclosure, and revocability easier to scan.
+- Refine the real recipient preview and created-link panel without adding verification-like claims or changing selection, token, expiry, revoke, or reissue behavior.
 
-## Technical approach
+### 6. Homepage coherence
 
-- Reuse the existing Sora/Manrope typography, navy/trust-blue semantic tokens, shared buttons, cards, status components, and focus styles.
-- Add small presentation components only where repetition or clarity warrants them.
-- Keep route and server-function behavior intact; no package installs.
-- Avoid fake product records and generic cybersecurity imagery.
-- Keep cards compact, hierarchy strong, touch targets at least 44px, and layouts free of horizontal overflow.
-- Add focused deterministic/browser assertions for every corrected defect rather than weakening existing guards.
+- Make only the minimum visual adjustments to `HomePassportPreview` needed to match the corrected Passport surfaces.
+- Preserve the light editorial homepage, Career Discovery entrance, login hierarchy, routes, and navigation behavior.
 
-## Verification and evidence
+## Expected files
 
-Before changes, capture baseline screenshots in Preview for the requested pages that are reachable without protected production data. After each phase, capture matching screenshots.
+Primary presentation files:
 
-Test at minimum:
+- `src/components/security-passport/CredentialWallet.tsx`
+- `src/components/security-passport/SecurityPassportPreview.tsx`
+- `src/components/security-passport/PassportSideColumn.tsx`
+- `src/components/security-passport/CredentialSymbol.tsx`
+- `src/components/security-passport/InternationalCredentialForm.tsx`
+- `src/routes/_authenticated.passport.index.tsx`
+- `src/routes/_authenticated.passport.credentials.new.tsx`
+- `src/routes/_authenticated.passport.share.tsx`
+- `src/components/site/HomePassportPreview.tsx`
+- Passport SV/EN copy only where necessary
+- Focused Passport/homepage visual and terminology checks
 
-- Desktop, tablet, 390px, and 375px
-- Swedish and English
-- Keyboard focus, landmarks, heading order, accessible names, touch targets, overflow, reduced motion
-- Governed redirect destinations and signed-in routing behavior where a safe preview session is available
-- Console, hydration, and failed-network signals
-
-Run:
-
-- Type check
-- Lint
-- Production build
-- Public-entry browser suite and deterministic guards
-- Passport workspace, sharing, recipient, responsive/accessibility, catalogue, trust-source, and separation checks
-- Relevant candidate/employer journey checks for every changed area
+No server-function, database, generated-type, catalogue, assessment, BESKT, BCP, or auth files will be changed.
 
 ## Acceptance criteria
 
-- The homepage immediately answers what CQrityjob is, who it serves, and why Security Passport matters.
-- Candidate and employer paths are obvious; login is available but visually subordinate.
-- Passport states and sharing controls are understandable without overstating verification.
-- New users can distinguish Profile, CV, Security Passport, Career, jobs, and employer workspace, and can see the next recommended action.
-- Swedish and English remain aligned; 375px and 390px are first-class layouts.
-- No protected logic, hosted Supabase resource, generated type, migration, or security contract changes.
-- All changed journeys pass focused checks and visual review.
+- “Ditt privata yrkespass” and its English equivalent are absent.
+- Profile identity and Security Passport documentation are visibly distinct.
+- The overview reads as a premium professional Passport rather than a dashboard.
+- Existing APP/CPP/PSP or other real credentials receive a distinctive visual record treatment without invented data.
+- Trust and lifecycle states remain explicit and semantically correct.
+- Add credential and sharing visually belong to the same Passport product.
+- Homepage Passport anchor matches without a broader homepage redesign.
+- Swedish and English work at desktop, 390px, and 375px with no overlap or horizontal overflow.
+- Existing routes, actions, writes, permissions, and navigation behave unchanged.
 
-## Risks and rollback
+## Verification and screenshots
 
-- **Copy drift:** guard terminology and SV/EN keys together.
-- **False trust claims:** reuse existing trust-state presentation and source-of-truth labels.
-- **Mobile regressions:** verify fixed viewport evidence before reporting readiness.
-- **Protected-flow test limits:** use synthetic/local preview states only; report any journey that cannot be safely exercised.
-- **Rollback:** revert the isolated UX branch commits; no database rollback is required because no database change is permitted.
+Run focused static checks, changed-file lint, typecheck, and relevant Passport/homepage browser suites. If typecheck reports only the accepted generated nullable-RPC baseline mismatch, report it without touching protected logic.
 
-## Delivery
+Capture Preview evidence for:
 
-Provide branch and commit SHA, draft PR URL if repository write access permits it, exact changed files and pages, before/after gallery, tests and conclusions, remaining risks, and either `READY FOR OWNER REVIEW` or `FIX REQUIRED`.
+1. Security Passport overview — desktop
+2. Security Passport overview — mobile (390px and check 375px)
+3. Add credential flow
+4. Credential display with real ASIS-style catalogue credentials visible where the available Preview data supports it
+5. Share / recipient preview state
+6. Homepage Passport anchor
 
-Final status will state: **Not merged and not published.**
+Authenticated screenshots depend on a usable Preview session. If the unmanaged external authentication boundary prevents automated authenticated capture, verify public and local safe surfaces, preserve the blocker explicitly, and do not fabricate account data.
+
+## Regression risks and controls
+
+- **Trust overstatement:** reuse existing status derivation and labels; test document-reviewed versus source-verified separation.
+- **Catalogue drift:** presentation consumes existing metadata only; no hardcoded credential inventory.
+- **Share behavior regression:** retain handlers and payloads; test selection, preview, expiry, creation, revoke, and reissue controls.
+- **Mobile overflow:** test long Swedish/English labels, credential names, and action wrapping at 375/390px.
+- **Navigation drift:** preserve all canonical Passport and homepage destinations.
+- **Rollback:** revert this isolated visual branch; no database rollback is required.
+
+## Final report
+
+Report exact files changed, checks run and results, screenshot evidence, unresolved authentication limits, regression/security status, rollback method, branch and commit hash, and the exact final status: **Not merged and not published.**

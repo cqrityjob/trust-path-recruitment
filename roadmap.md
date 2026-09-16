@@ -10,8 +10,12 @@
 - [x] Desktop/tablet/390px/375px Preview evidence and accessibility checks
 - [x] Changed-file lint and focused homepage, header, candidate-journey and Passport regression suites
 - [x] Final owner-review report; branch remains unmerged and unpublished
-- [ ] Approved premium refinement: dark Passport anchor, editorial homepage, credential-record presentation
-- [ ] Premium refinement verification: SV/EN, desktop, 390px and 375px
+- [ ] Security Passport correction: terminology and Profile separation
+- [ ] Security Passport correction: flagship overview and premium credential records
+- [ ] Security Passport correction: add-credential and selective-sharing presentation
+- [ ] Homepage Passport anchor coherence only
+- [ ] Preview evidence: overview desktop/mobile, add credential, real ASIS-style credential display, share preview, homepage anchor
+- [ ] Verification: SV/EN, desktop, 390px, 375px, focused checks and browser smoke tests
 
 ## Frozen boundaries
 
