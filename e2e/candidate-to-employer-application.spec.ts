@@ -86,10 +86,18 @@ async function forceEnglish(page: Page) {
 }
 
 async function signIn(page: Page, loginPath: string, email: string, password: string) {
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(() => {
+    for (const key of Object.keys(localStorage))
+      if (/^sb-.*-auth-token$/.test(key)) localStorage.removeItem(key);
+  });
+  await page.goto("about:blank");
   await page.goto(loginPath);
-  await page.getByLabel("Email", { exact: false }).fill(email);
-  await page.getByLabel("Password", { exact: false }).fill(password);
-  await page.getByRole("button", { name: /log in|sign in/i }).click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.locator('form button[type="submit"]').click();
+  await page.waitForURL(/\/my-career/);
 }
 
 test.describe("H3.4A candidate-to-employer application flow", () => {
@@ -109,6 +117,7 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
 
     await page.goto(`/jobs/${JOB_SLUG}`);
     await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
+    const jobTitle = await page.getByRole("heading", { level: 1, includeHidden: true }).innerText();
 
     await page.getByLabel("Phone number", { exact: false }).fill("+46701234567");
     await page
@@ -123,27 +132,44 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
     await page.getByRole("button", { name: "Submit application" }).click();
 
     await expect(page.getByText("Application submitted")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Close" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Close", exact: true })
+      .first()
+      .click();
 
     // ---- 2. Candidate sees it in their own history ----
     await page.goto("/my-career/applications");
-    await expect(page.getByText("Submitted")).toBeVisible();
+    const candidateApplication = page.getByRole("listitem").filter({
+      has: page.locator(`a[href="/jobs/${JOB_SLUG}"]`),
+    });
+    await expect(candidateApplication).toHaveCount(1);
+    await expect(candidateApplication.getByText("Submitted", { exact: true })).toBeVisible();
 
     // ---- 3. Employer reviews it ----
     await page.context().clearCookies();
     await signIn(page, "/employer/login", EMPLOYER_EMAIL!, EMPLOYER_PASSWORD!);
-    await page.waitForURL(/\/employer/);
+    await page.waitForURL(/\/my-career/);
 
     await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
-    await expect(page.getByText("Submitted").first()).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Mark as reviewing" }).first().click();
-    await expect(page.getByText("Reviewing").first()).toBeVisible();
+    // The shared local tenant retains earlier synthetic applications. Never
+    // change its first row: prove the newly submitted vacancy's exact receipt.
+    const employerApplication = page.getByRole("listitem").filter({ hasText: jobTitle });
+    await expect(employerApplication).toHaveCount(1);
+    await expect(employerApplication.getByText("Submitted", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await employerApplication.getByRole("button", { name: "Change stage" }).click();
+    await page.getByRole("menuitem", { name: "Mark as reviewing" }).click();
+    await expect(employerApplication.getByText("Reviewing", { exact: true })).toBeVisible();
 
     // ---- 4. Candidate sees the updated status ----
     await page.context().clearCookies();
     await signIn(page, "/candidate/login", CANDIDATE_EMAIL!, CANDIDATE_PASSWORD!);
     await page.goto("/my-career/applications");
-    await expect(page.getByText("Reviewing").first()).toBeVisible({ timeout: 15_000 });
+    await expect(candidateApplication.getByText("Reviewing", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
 
@@ -179,7 +205,7 @@ test.describe("Candidate overview", () => {
   test("an application opens the candidate, and shows no Passport", async ({ page }) => {
     await forceEnglish(page);
     await signIn(page, "/employer/login", EMPLOYER_EMAIL!, EMPLOYER_PASSWORD!);
-    await page.waitForURL(/\/employer/);
+    await page.waitForURL(/\/my-career/);
 
     await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
 
@@ -201,7 +227,7 @@ test.describe("Candidate overview", () => {
 
     await expect(page.getByRole("heading", { name: "Application" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Assessment" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Interview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Interview", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Next step" })).toBeVisible();
 
     // Applying for a job is not consent to disclose a Passport. The section
@@ -235,7 +261,11 @@ test.describe("Candidate overview", () => {
     ).toHaveCount(0);
 
     // The decision is offered as named human actions, and never as a verdict.
-    await expect(page.getByText(/recommend|suitab|ranking|score|match/i)).toHaveCount(0);
+    const humanDecision =
+      "You decide how the application proceeds. The platform does not rank candidates and does not recommend hiring.";
+    await expect(page.getByText(humanDecision, { exact: true })).toBeVisible();
+    const visibleCopy = (await page.locator("main").innerText()).replace(humanDecision, "");
+    expect(visibleCopy).not.toMatch(/recommend|suitab|ranking|score|match/i);
 
     // Back the way we came.
     await page.getByRole("link", { name: "Back to applications" }).click();
@@ -254,7 +284,7 @@ test.describe("Candidate overview", () => {
     // Swedish copy, and no raw translation keys leaking through -- a missing
     // key renders as "employer.candidate.something", which t() returns
     // verbatim rather than throwing.
-    await expect(page.getByRole("heading", { name: "Ansökan" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ansökan", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Bedömning" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Nästa steg" })).toBeVisible();
     await expect(page.getByText(/employer\.candidate\./)).toHaveCount(0);
@@ -352,7 +382,11 @@ test.describe("Applying with a CQrityjob CV", () => {
     await expect(page.getByText("Application submitted")).toBeVisible({ timeout: 15_000 });
     // The confirmation reports what the SERVER recorded, not what was ticked.
     await expect(page.getByText("Your CQrityjob CV was sent with your application.")).toBeVisible();
-    await page.getByRole("button", { name: "Close" }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Close", exact: true })
+      .first()
+      .click();
 
     // ---- 3. The candidate's own history says which CV went ----
     await page.goto("/my-career/applications");
@@ -361,7 +395,7 @@ test.describe("Applying with a CQrityjob CV", () => {
     // ---- 4. The employer reads the submitted CV, on the candidate page ----
     await page.context().clearCookies();
     await signIn(page, "/employer/login", EMPLOYER_EMAIL!, EMPLOYER_PASSWORD!);
-    await page.waitForURL(/\/employer/);
+    await page.waitForURL(/\/my-career/);
 
     await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
     const firstCandidate = page.locator("main a[href*='/applications/']").first();
@@ -382,7 +416,7 @@ test.describe("Applying with a CQrityjob CV", () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await forceEnglish(page);
     await signIn(page, "/candidate/login", CANDIDATE_EMAIL!, CANDIDATE_PASSWORD!);
-    await page.goto(`/jobs/${JOB_SLUG_CV}`);
+    await page.goto(`/jobs/${process.env.E2E_JOB_SLUG_CV_PHONE ?? JOB_SLUG_CV}`);
     await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
 
     await expect(page.getByRole("radio", { name: "Use my CQrityjob CV" })).toBeVisible({

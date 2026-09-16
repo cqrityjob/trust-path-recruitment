@@ -79,23 +79,23 @@ INSERT INTO public.sp_claims (
   -- Added by the Swedish truth model (20260907091000): a skyddsvakt approval
   -- is limited to an employer, principal or protected object, and without
   -- saying which it reads as a general national licence.
-  authorisation_scope)
+  jurisdiction_code)
 VALUES
   ('d0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001',
-   'licence', 'OV', NULL, NULL, 'Ordningsvaktsförordnande', 'Syntetisk Myndighet',
-   current_date - 30, current_date + 365, 'verified', 'active', 'a0000000-0000-4000-8000-000000000002', now(), NULL),
+   'licence', 'OV', NULL, NULL, 'Ordningsvaktsförordnande', 'Polismyndigheten',
+   current_date - 30, current_date + 365, 'verified', 'active', 'a0000000-0000-4000-8000-000000000002', now(), 'SE'),
   -- Must NOT be disclosed: self-declared.
   ('d0000000-0000-4000-8000-000000000002', 'a0000000-0000-4000-8000-000000000001',
-   'training', 'VU1', NULL, NULL, 'Väktarutbildning 1 (VU1)', 'Syntetisk Skola',
-   current_date - 200, NULL, 'self_declared', 'active', NULL, NULL, NULL),
+   'training', 'OV_TRAINING', NULL, NULL, 'Ordningsvaktsutbildning (grundutbildning)', 'Polismyndigheten',
+   current_date - 200, NULL, 'self_declared', 'active', NULL, NULL, 'SE'),
   -- Must NOT be disclosed: verified but expired lifecycle.
   ('d0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000001',
-   'licence', 'SV', NULL, NULL, 'Skyddsvaktsförordnande', 'Syntetisk Myndighet',
+   'licence', 'SE_PERSONNEL_APPROVAL', NULL, NULL, 'Personalgodkännande (bevakningsföretag)', 'Länsstyrelsen',
    current_date - 800, current_date - 10, 'verified', 'expired', 'a0000000-0000-4000-8000-000000000002', now(),
-   'Skyddsobjekt: Syntetisk anläggning'),
+   'SE'),
   -- Must NOT be disclosed: verified but disputed.
   ('d0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000001',
-   'certification', NULL, NULL, NULL, 'Omtvistad certifiering', 'Syntetisk Utfärdare',
+   'certification', 'INTL_ASIS_CPP', NULL, NULL, 'Certified Protection Professional (CPP)', 'ASIS International',
    current_date - 100, NULL, 'verified', 'disputed', 'a0000000-0000-4000-8000-000000000002', now(), NULL),
   -- A VERIFIED language: proves the package already carries skill claims.
   ('d0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000001',
@@ -116,8 +116,7 @@ ON CONFLICT (id) DO NOTHING;
 -- holder_note are NOT added and must never be"). A comment does not fail a
 -- build; this does.
 UPDATE public.sp_claims
-   SET holder_note          = 'SYNTHETIC-HOLDER-NOTE-MUST-NOT-LEAK',
-       credential_reference = 'SYNTHETIC-DOCNR-MUST-NOT-LEAK'
+   SET credential_reference = 'SYNTHETIC-DOCNR-MUST-NOT-LEAK'
  WHERE id = 'd0000000-0000-4000-8000-000000000001';
 
 -- A raw evidence document for that same credential.
@@ -150,10 +149,10 @@ VALUES ('a0000000-0000-4000-8000-000000000006', 'Ingen Verifiering', 'SE')
 ON CONFLICT (holder_user_id) DO NOTHING;
 
 INSERT INTO public.sp_claims (
-  id, holder_user_id, claim_type, credential_code, title, issued_on,
+  id, holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, issued_on,
   assertion_level, lifecycle_state)
 VALUES ('d0000000-0000-4000-8000-000000000010', 'a0000000-0000-4000-8000-000000000006',
-        'training', 'VU1', 'Väktarutbildning 1 (VU1)', current_date - 100, 'self_declared', 'active')
+        'training', 'OV_TRAINING', 'Ordningsvaktsutbildning (grundutbildning)', 'Polismyndigheten', 'SE', current_date - 100, 'self_declared', 'active')
 ON CONFLICT (id) DO NOTHING;
 
 

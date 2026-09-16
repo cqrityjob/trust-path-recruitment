@@ -139,9 +139,9 @@ BEGIN
   RAISE NOTICE 'GROUP 3 -- Sweden is untouched (the regression that matters)';
   -- =====================================================================
 
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code, jurisdiction_code)
-  VALUES (_h1, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'SE');
-  RAISE NOTICE 'ok  3.1 a Swedish VU1 still saves exactly as before';
+  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code, jurisdiction_code, claimed_issuer_name)
+  VALUES (_h1, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'SE', 'Polismyndigheten');
+  RAISE NOTICE 'ok  3.1 an approved Swedish training claim records with its canonical authority';
 
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
@@ -164,7 +164,7 @@ BEGIN
   -- A free-text claim with no jurisdiction is still allowed: the market gate
   -- must not have quietly made jurisdiction mandatory on every row.
   INSERT INTO public.sp_claims (holder_user_id, claim_type, title)
-  VALUES (_h1, 'certification', 'Heta arbeten');
+  VALUES (_h1, 'training', 'Heta arbeten');
   RAISE NOTICE 'ok  3.4 a free-text claim with no jurisdiction is still accepted';
 
   -- =====================================================================
@@ -202,7 +202,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 4.2 an unreviewed market accepted a claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_MARKET_PACK_NOT_ACTIVE%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 4.2 wrong error for an inactive pack: %', _txt;
     END IF;
     RAISE NOTICE 'ok  4.2 an inactive market pack is refused as SP_MARKET_PACK_NOT_ACTIVE';
@@ -235,7 +235,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 5.1 a UAE-wide claim was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_REQUIRED%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.1 wrong error for a missing emirate: %', _txt;
     END IF;
     RAISE NOTICE 'ok  5.1 a UAE claim without an emirate is refused, not stored as national';
@@ -254,7 +254,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2 an unsupported emirate was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_NOT_SUPPORTED%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.2 wrong error for an unsupported emirate: %', _txt;
     END IF;
     RAISE NOTICE 'ok  5.2 Sharjah is refused as "not supported yet", not as a bad country';
@@ -278,7 +278,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2b an unreviewed Abu Dhabi pack accepted a claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_MARKET_PACK_NOT_ACTIVE%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.2b wrong error for Abu Dhabi: %', _txt;
     END IF;
     RAISE NOTICE 'ok  5.2b Abu Dhabi is refused as "pending legal review", never as Dubai';
@@ -296,7 +296,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 5.3 an unreviewed Dubai pack accepted a claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_MARKET_PACK_NOT_ACTIVE%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.3 wrong error for Dubai: %', _txt;
     END IF;
     RAISE NOTICE 'ok  5.3 Dubai is recognised, and refused only because it is unreviewed';

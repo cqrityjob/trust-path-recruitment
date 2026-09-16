@@ -1,3 +1,8 @@
+import { isPassportCredential } from "@/lib/security-passport/credential-passport";
+import {
+  createCredentialShare,
+  previewCredentialShare,
+} from "@/lib/security-passport/credential-sharing.functions";
 // Security Passport — "Dela Passport", as a decision rather than a button.
 //
 // ── WHAT THIS REPLACED, AND WHY ────────────────────────────────────────
@@ -82,9 +87,7 @@ import {
 import { hasCaveat, type ShareReviewCaveat } from "@/lib/security-passport/share-policy";
 import { shareErrorCode, type ShareErrorCode } from "@/lib/security-passport/share-errors";
 import {
-  createSelectedShare,
   listMyShares,
-  previewSelectedShare,
   replaceShare,
   revokeShare,
   type ShareRecord,
@@ -204,8 +207,8 @@ function PassportShareRoute() {
   const loadPassport = useServerFn(getMyPassport);
   const loadRequests = useServerFn(listMyVerificationRequests);
   const loadShares = useServerFn(listMyShares);
-  const doPreview = useServerFn(previewSelectedShare);
-  const doCreate = useServerFn(createSelectedShare);
+  const doPreview = useServerFn(previewCredentialShare);
+  const doCreate = useServerFn(createCredentialShare);
   const doRevoke = useServerFn(revokeShare);
 
   const [snapshot, setSnapshot] = useState<PassportSnapshot | null>(null);
@@ -216,6 +219,7 @@ function PassportShareRoute() {
   const [sharesState, setSharesState] = useState<LoadState>("loading");
 
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [permittedFields, setPermittedFields] = useState<("holder_name" | "identifier")[]>([]);
   const [expiryDays, setExpiryDays] = useState<number>(DEFAULT_EXPIRY_DAYS);
   const [shareLang, setShareLang] = useState<PassportLang>(lang);
 
@@ -298,8 +302,8 @@ function PassportShareRoute() {
   const selection: ShareSelectionModel | null = useMemo(() => {
     if (!snapshot) return null;
     return buildShareSelection({
-      claims: snapshot.holder.claims,
-      periods: snapshot.holder.periods,
+      claims: snapshot.holder.claims.filter(isPassportCredential),
+      periods: [],
       attention: reviewState === "available" ? attention : null,
       reviewState,
       now: new Date(),
@@ -341,7 +345,7 @@ function PassportShareRoute() {
     void doPreview({
       data: {
         claimIds: selectedIds.claimIds,
-        experienceIds: selectedIds.experienceIds,
+        permittedFields,
         expiresDays: expiryDays,
         locale: shareLang,
       },
@@ -358,7 +362,7 @@ function PassportShareRoute() {
     return () => {
       alive = false;
     };
-  }, [previewOpen, selectedCount, selectedIds, expiryDays, shareLang, doPreview]);
+  }, [previewOpen, selectedCount, selectedIds, expiryDays, shareLang, permittedFields, doPreview]);
 
   const previewPresentation = useMemo(
     () => (preview?.status === "active" ? buildRecipientPresentation(preview, today()) : null),
@@ -378,7 +382,7 @@ function PassportShareRoute() {
       const result = await doCreate({
         data: {
           claimIds: selectedIds.claimIds,
-          experienceIds: selectedIds.experienceIds,
+          permittedFields,
           expiresDays: expiryDays,
           locale: shareLang,
           requestKey: requestKey.current,
@@ -715,6 +719,36 @@ function PassportShareRoute() {
             {pt("sel.step.settings")}
           </h2>
           <div className="mt-3 space-y-5 rounded-xl border border-border bg-card p-5">
+            <fieldset>
+              <legend className="text-sm font-medium">
+                {lang === "sv" ? "Valfria uppgifter" : "Optional disclosed fields"}
+              </legend>
+              <p className="my-2 text-sm text-muted-foreground">
+                {lang === "sv"
+                  ? "Namn, utfärdare, omfattning, datum och status för valda yrkesbevis ingår alltid. Underlag och CV delas inte."
+                  : "Credential names, issuers, scope, dates and status are always included. Evidence and CV content are excluded."}
+              </p>
+              {(["holder_name", "identifier"] as const).map((field) => (
+                <label key={field} className="flex min-h-11 items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={permittedFields.includes(field)}
+                    onChange={(e) =>
+                      setPermittedFields((old) =>
+                        e.target.checked ? [...old, field] : old.filter((f) => f !== field),
+                      )
+                    }
+                  />
+                  {field === "holder_name"
+                    ? lang === "sv"
+                      ? "Mitt namn (enligt integritetsinställning)"
+                      : "My name (subject to privacy settings)"
+                    : lang === "sv"
+                      ? "Bevisnummer"
+                      : "Credential identifiers"}
+                </label>
+              ))}
+            </fieldset>
             <fieldset>
               <legend className="text-sm font-medium text-foreground">{pt("sc.expiry")}</legend>
               <div className="mt-2 flex flex-wrap gap-2">

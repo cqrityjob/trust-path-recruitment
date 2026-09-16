@@ -170,13 +170,13 @@ SELECT '91000000-0000-4000-8000-000000000001',
 
 -- ---- The Passport disclosure: one self-declared claim, one verified ----
 INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, assertion_level, lifecycle_state,
-                              verified_by_user_id, verified_at)
+                              verified_by_user_id, verified_at, credential_code, claimed_issuer_name)
 VALUES
   ('92000000-0000-4000-8000-000000000001','8a000000-0000-4000-8000-0000000000c1',
-   'training','Självdeklarerad kurs','self_declared','active', NULL, NULL),
+   'certification','Certified Protection Professional (CPP)','self_declared','active', NULL, NULL,'INTL_ASIS_CPP','ASIS International'),
   ('92000000-0000-4000-8000-000000000002','8a000000-0000-4000-8000-0000000000c1',
-   'certification','Verifierat certifikat','verified','active',
-   '8a000000-0000-4000-8000-0000000000b1', now());
+   'certification','Physical Security Professional (PSP)','verified','active',
+   '8a000000-0000-4000-8000-0000000000b1', now(),'INTL_ASIS_PSP','ASIS International');
 INSERT INTO public.sp_disclosures (id, holder_user_id, package_code, purpose, application_id, expires_at)
 VALUES ('93000000-0000-4000-8000-000000000001','8a000000-0000-4000-8000-0000000000c1',
         'verified_qualifications','recruitment','8d000000-0000-4000-8000-000000000001',

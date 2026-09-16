@@ -497,6 +497,41 @@
       "hostedName": "scp_trust_evidence_report_r3a_contract",
       "reason": "Applied and live on owner production under hosted version 20260906125945. scp_employer_report_v3 and scp_report_next_step have the reviewed posture; the latter is internal and has no authenticated EXECUTE. The file carries the hosted identity to prevent re-execution.",
       "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version='20260906125945';"
+    },
+    {
+      "file": "20261118100000_sp_international_passport_foundation.sql",
+      "hostedVersion": "20260916155430",
+      "hostedName": "sp_international_passport_foundation",
+      "reason": "Applied once to CQrityjob Production (wrygicdfxwjnrugduxnt) through the authenticated Supabase connector from pinned PR #257 head 01efb0731359de2a8939c37ded817f008459366d. Canonical 20261118100000 maps to hosted 20260916155430 / sp_international_passport_foundation. SHA-256 89a6d170bea44f57f28fd63be7e9e7219de0bfb0f26f1ef8cf65bc03f1103a7c. Direct-access provenance follows the existing hostedLedgerOverrides convention, not appliedThroughLovable. The canonical file remains unchanged at its required replay position. The generated-version file is a comment-only ledger marker. On 2026-09-16 owner-authorized history-only reconciliation added the canonical version/name alias with no SQL body, preserving the original hosted row. Do not re-execute migration SQL. Evidence: docs/passport/hosted-application-evidence/verification.json; local reconciliation: docs/release/2026-09-16-pr257-local-history-reconciliation.md.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20261118100000','20260916155430');"
+    },
+    {
+      "file": "20261119090000_sp_international_credential_wallet.sql",
+      "hostedVersion": "20260916155456",
+      "hostedName": "sp_international_credential_wallet",
+      "reason": "Applied once to CQrityjob Production (wrygicdfxwjnrugduxnt) through the authenticated Supabase connector from pinned PR #257 head 01efb0731359de2a8939c37ded817f008459366d. Canonical 20261119090000 maps to hosted 20260916155456 / sp_international_credential_wallet. SHA-256 c9870a981d8e743fcada8eae8e1695fb6362e26db913f2895576cb7c5544f651. Direct-access provenance follows the existing hostedLedgerOverrides convention, not appliedThroughLovable. The canonical file remains unchanged at its required replay position. The generated-version file is a comment-only ledger marker. On 2026-09-16 owner-authorized history-only reconciliation added the canonical version/name alias with no SQL body, preserving the original hosted row. Do not re-execute migration SQL. Evidence: docs/passport/hosted-application-evidence/verification.json; local reconciliation: docs/release/2026-09-16-pr257-local-history-reconciliation.md.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20261119090000','20260916155456');"
+    },
+    {
+      "file": "20261120090000_sp_credential_selective_sharing_v2.sql",
+      "hostedVersion": "20260916155521",
+      "hostedName": "sp_credential_selective_sharing_v2",
+      "reason": "Applied once to CQrityjob Production (wrygicdfxwjnrugduxnt) through the authenticated Supabase connector from pinned PR #257 head 01efb0731359de2a8939c37ded817f008459366d. Canonical 20261120090000 maps to hosted 20260916155521 / sp_credential_selective_sharing_v2. SHA-256 717c8119a4f32b484db92af6e1c9b5a621387d90142768413d7108c3c152d817. Direct-access provenance follows the existing hostedLedgerOverrides convention, not appliedThroughLovable. The canonical file remains unchanged at its required replay position. The generated-version file is a comment-only ledger marker. On 2026-09-16 owner-authorized history-only reconciliation added the canonical version/name alias with no SQL body, preserving the original hosted row. Do not re-execute migration SQL. Evidence: docs/passport/hosted-application-evidence/verification.json; local reconciliation: docs/release/2026-09-16-pr257-local-history-reconciliation.md.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20261120090000','20260916155521');"
+    },
+    {
+      "file": "20261121090000_sp_closed_credential_catalogue.sql",
+      "hostedVersion": "20260916155551",
+      "hostedName": "sp_closed_credential_catalogue",
+      "reason": "Applied once to CQrityjob Production (wrygicdfxwjnrugduxnt) through the authenticated Supabase connector from pinned PR #257 head 01efb0731359de2a8939c37ded817f008459366d. Canonical 20261121090000 maps to hosted 20260916155551 / sp_closed_credential_catalogue. SHA-256 b22d3fa2955d42583e113f2ab8fc0d70c47f9448c0f6f0d5dc99596eb35a3785. Direct-access provenance follows the existing hostedLedgerOverrides convention, not appliedThroughLovable. The canonical file remains unchanged at its required replay position. The generated-version file is a comment-only ledger marker. On 2026-09-16 owner-authorized history-only reconciliation added the canonical version/name alias with no SQL body, preserving the original hosted row. Do not re-execute migration SQL. Evidence: docs/passport/hosted-application-evidence/verification.json; local reconciliation: docs/release/2026-09-16-pr257-local-history-reconciliation.md.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20261121090000','20260916155551');"
+    },
+    {
+      "file": "20261122090000_cv_owned_application_snapshot.sql",
+      "hostedVersion": "20260916155620",
+      "hostedName": "cv_owned_application_snapshot",
+      "reason": "Applied once to CQrityjob Production (wrygicdfxwjnrugduxnt) through the authenticated Supabase connector from pinned PR #257 head 01efb0731359de2a8939c37ded817f008459366d. Canonical 20261122090000 maps to hosted 20260916155620 / cv_owned_application_snapshot. SHA-256 b5bd06661fef9dd5266ab362553a68d77583b8a4c8fd5fdc430a5a21c8139936. Direct-access provenance follows the existing hostedLedgerOverrides convention, not appliedThroughLovable. The canonical file remains unchanged at its required replay position. The generated-version file is a comment-only ledger marker. On 2026-09-16 owner-authorized history-only reconciliation added the canonical version/name alias with no SQL body, preserving the original hosted row. Do not re-execute migration SQL. Evidence: docs/passport/hosted-application-evidence/verification.json; local reconciliation: docs/release/2026-09-16-pr257-local-history-reconciliation.md.",
+      "verifyBeforeMerge": "SELECT version, name FROM supabase_migrations.schema_migrations WHERE version IN ('20261122090000','20260916155620');"
     }
   ],
   "appliedThroughLovable": [

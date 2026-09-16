@@ -30,7 +30,7 @@ test.skip(
   "Evidence is captured only against localhost.",
 );
 
-const OUT = "artifacts/employer-continuity-e1";
+const OUT = process.env.CONTINUITY_EVIDENCE_DIR ?? "artifacts/employer-continuity-e1";
 const PASSWORD = "LocalJourney!2026";
 const OWNER = "journey@local.test";
 const MEMBER = "interviewer@local.test";

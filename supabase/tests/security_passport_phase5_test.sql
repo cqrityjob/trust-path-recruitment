@@ -92,8 +92,8 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
   INSERT INTO public.sp_passport_profiles (holder_user_id, display_name, cig_profession_slug)
   VALUES (_h, 'P5 Holder', 'vaktare');
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, claimed_issuer_name)
-  VALUES (_h, 'licence', 'Väktarlegitimation (fiktiv)', 'Länsstyrelsen (fiktiv)');
+  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, claimed_issuer_name, credential_code)
+  VALUES (_h, 'certification', 'Certified Protection Professional (CPP)', 'ASIS International', 'INTL_ASIS_CPP');
   INSERT INTO public.sp_experience_periods (holder_user_id, employer_name, role_title, started_on, ended_on)
   VALUES (_h, 'P5 Employer AB (fiktiv)', 'Väktare', DATE '2019-01-01', DATE '2023-01-01');
   RESET ROLE;
@@ -297,8 +297,8 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
 
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title)
-  VALUES (_h, 'certification', 'Hjärt- och lungräddning (fiktiv)')
+  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code, claimed_issuer_name)
+  VALUES (_h, 'certification', 'Physical Security Professional (PSP)', 'INTL_ASIS_PSP', 'ASIS International')
   RETURNING id INTO _claim2;
 
   INSERT INTO storage.objects (bucket_id, name, owner)

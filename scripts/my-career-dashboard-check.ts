@@ -243,55 +243,51 @@ expect(
   `${routePath}: the visual Passport card comes first, then what it contains.`,
 );
 
-// ── WHAT IT CONTAINS, NOT ONLY WHAT STATE IT IS IN ───────────────────────
-//
-// Status totals describe the Passport; they never say what is in it. The
-// owner's correction requires an actual contents preview directly beneath
-// the card, and this asserts the totals cannot quietly become the whole
-// answer again.
+// The compact card owns the credential preview; totals remain secondary.
 {
-  const contentsPath = "src/components/professional-identity/OverviewPassportContents.tsx";
-  const contents = read(contentsPath);
+  const cardPath = "src/components/professional-identity/OverviewPassportCard.tsx";
+  const card = read(cardPath);
+  const compactPath = "src/components/security-passport/CompactPassportCard.tsx";
+  const compact = read(compactPath);
   expect(
-    routeCode.includes("<OverviewPassportContents"),
-    `${routePath}: the Passport column must show what the Passport contains, not only its totals.`,
+    card.includes("<CompactPassportCard"),
+    "Overview mounts the canonical compact Passport card.",
   );
   expect(
-    routeCode.indexOf("<OverviewPassportCard") < routeCode.indexOf("<OverviewPassportContents") &&
-      routeCode.indexOf("<OverviewPassportContents") < routeCode.indexOf("<PassportSummary"),
-    `${routePath}: card, then contents, then the totals as secondary support.`,
-  );
-  // The CANONICAL reader, not a new one.
-  expect(
-    contents.includes("listMyEntries"),
-    `${contentsPath}: the preview must read the canonical listMyEntries.`,
+    !routeCode.includes("<OverviewPassportContents"),
+    "Overview does not repeat the credential preview.",
   );
   expect(
-    !contents.includes("createServerFn"),
-    `${contentsPath}: the preview must not define a server function of its own.`,
+    card.includes("useServerFn(getMyPassport)"),
+    "Overview reads the canonical Passport snapshot.",
   );
-  // Real rows, and a truthful empty state rather than placeholder content.
+  expect(!card.includes("createServerFn"), "Overview defines no parallel reader or writer.");
   expect(
-    /data-overview-passport-contents="empty"/.test(contents) &&
-      /data-overview-passport-contents="ready"/.test(contents),
-    `${contentsPath}: the preview must distinguish a real empty Passport from a populated one.`,
+    card.includes('data-overview-passport-card="loading"') &&
+      card.includes('data-overview-passport-card="failed"'),
+    "Loading and failed reads stay distinct from empty state.",
   );
-  // Overview is a summary surface. Provenance belongs to the Passport.
-  //
-  // Comments are stripped first: the component's own note explains which
-  // provenance fields it deliberately does NOT render, and a raw search
-  // matches that explanation as readily as a regression.
-  const contentsCode = contents.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  for (const leak of [
-    "issuerName",
-    "verifierName",
-    "verificationMethod",
-    "evidenceUrl",
-    "reviewer",
-  ]) {
+  expect(
+    card.includes("if (!state.snapshot.profile) return null"),
+    "An unopened Passport is not fabricated.",
+  );
+  expect(
+    compact.includes("credentialPassportHolder(snapshot.holder)"),
+    "The preview excludes CV employment, education, skills and languages.",
+  );
+  expect(
+    compact.includes("claims.slice(0, 3)"),
+    "The compact card previews at most three actual credentials.",
+  );
+  expect(compact.includes("snapshot.profileIdentity"), "Card identity comes from Profile.");
+  expect(
+    compact.includes("currentCredentialVerification("),
+    "The card preserves verification provenance.",
+  );
+  for (const leak of ["evidenceUrl", "storage_path", "access_token", "createCredentialShare("]) {
     expect(
-      !contentsCode.includes(leak),
-      `${contentsPath}: ${leak} is Passport provenance and must not be rendered on Överskt.`,
+      !compact.includes(leak),
+      `${compactPath}: private evidence and share secrets do not belong in the summary.`,
     );
   }
 }

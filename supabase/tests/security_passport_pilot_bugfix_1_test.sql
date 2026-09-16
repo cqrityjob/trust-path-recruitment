@@ -105,36 +105,36 @@ BEGIN
        jurisdiction_code, valid_until, authorisation_scope, lifecycle_state)
     VALUES (%L,'licence','SV','Bajskorv','Polismyndigheten','SE',
             DATE '2030-01-01','Skyddsobjekt A (fiktivt)','active')$f$, _h),
-    'SP_CREDENTIAL_TITLE_CONTROLLED',
+    'SP_APPROVED_DEFINITION_REQUIRED',
     '1.4 Skyddsvaktsförordnande cannot be renamed by its holder');
 
   -- Not only the appointments: the courses were writable too.
   PERFORM pg_temp.must_fail(format($f$
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-    VALUES (%L,'training','VU1','Min egen kurs','SE','active')$f$, _h),
-    'SP_CREDENTIAL_TITLE_CONTROLLED',
+      (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+    VALUES (%L,'training','OV_TRAINING','Min egen kurs','Polismyndigheten','SE','active')$f$, _h),
+    'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.5 nor can Väktarutbildning 1');
 
   -- A DRAFT is refused too. A draft holding a renamed authorisation has
   -- already recorded the wrong thing.
   PERFORM pg_temp.must_fail(format($f$
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-    VALUES (%L,'training','VU1','Bajskorv','SE','draft')$f$, _h),
-    'SP_CREDENTIAL_TITLE_CONTROLLED',
+      (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+    VALUES (%L,'training','OV_TRAINING','Bajskorv','Polismyndigheten','SE','draft')$f$, _h),
+    'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.6 and a draft is refused on the same rule');
 
   -- POSITIVE CONTROLS: both of the credential's real names are accepted, so
   -- the rule is "the definition's name", not "Swedish only".
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-  VALUES (_h,'training','VU1','Väktarutbildning 1 (VU1)','SE','active');
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+  VALUES (_h,'training','OV_TRAINING','Ordningsvaktsutbildning (grundutbildning)','Polismyndigheten','SE','active');
   PERFORM pg_temp.ok(true, '1.7 POSITIVE CONTROL the Swedish name is accepted');
 
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-  VALUES (_h,'training','VU2','Security Guard Training 2 (VU2)','SE','active');
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+  VALUES (_h,'training','OV_REFRESHER','Public Order Guard Refresher Training','Polismyndigheten','SE','active');
   PERFORM pg_temp.ok(true, '1.8 POSITIVE CONTROL the English name is accepted');
 
 END $$;
@@ -143,27 +143,27 @@ END $$;
 -- the point. Disabled for exactly one statement so the "can it still be
 -- edited" assertion has something to edit.
 ALTER TABLE public.sp_claims DISABLE TRIGGER sp_claims_credential_rules_trg;
+ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
 INSERT INTO public.sp_claims
-  (id, holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
+  (id, holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
 VALUES ('bf100000-0000-0000-0000-0000000000c9','bf100000-0000-0000-0000-000000000001',
-        'training','VU1','Legacy fritext (fiktiv)','SE','active')
+        'training','OV_TRAINING','Legacy fritext (fiktiv)','Polismyndigheten','SE','active')
 ON CONFLICT (id) DO NOTHING;
 ALTER TABLE public.sp_claims ENABLE TRIGGER sp_claims_credential_rules_trg;
+ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
 
 DO $$
 DECLARE _c uuid := 'bf100000-0000-0000-0000-0000000000c9';
 BEGIN
-  UPDATE public.sp_claims SET credential_reference = 'REF-123' WHERE id = _c;
-  PERFORM pg_temp.ok(
-    (SELECT credential_reference FROM public.sp_claims WHERE id = _c) = 'REF-123',
-    '1.10 a legacy row with a free-text title is still editable in every other field');
-
+  PERFORM pg_temp.must_fail(format($f$
+    UPDATE public.sp_claims SET credential_reference='REF-123' WHERE id=%L$f$, _c),
+    'SP_GOVERNED_METADATA_IMMUTABLE', '1.10 a legacy malformed title must be canonical before personal changes');
   PERFORM pg_temp.must_fail(format($f$
     UPDATE public.sp_claims SET title = 'Något annat' WHERE id = %L$f$, _c),
-    'SP_CREDENTIAL_TITLE_CONTROLLED',
+    'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.11 but its title may only move TO the controlled one');
 
-  UPDATE public.sp_claims SET title = 'Väktarutbildning 1 (VU1)' WHERE id = _c;
+  UPDATE public.sp_claims SET title = 'Ordningsvaktsutbildning (grundutbildning)' WHERE id = _c;
   PERFORM pg_temp.ok(true, '1.12 POSITIVE CONTROL correcting it to the real name is allowed');
 END $$;
 
@@ -200,7 +200,7 @@ BEGIN
        jurisdiction_code, valid_until, lifecycle_state)
     VALUES (%L,'licence','UK_SIA_LICENCE_SG','SIA Licence — Security Guarding',
             'SIA','GB',DATE '2030-01-01','active')$f$, _h),
-    'SP_MARKET_PACK_NOT_ACTIVE',
+    'SP_APPROVED_DEFINITION_REQUIRED',
     '2.3 a UK regulated credential is still refused');
 
   PERFORM pg_temp.must_fail(format($f$
@@ -209,16 +209,16 @@ BEGIN
        jurisdiction_code, sub_jurisdiction_code, valid_until, lifecycle_state)
     VALUES (%L,'licence','AE_DU_SIRA_CARD_GUARD','SIRA card','SIRA','AE','AE-DU',
             DATE '2030-01-01','active')$f$, _h),
-    'SP_MARKET_PACK_NOT_ACTIVE',
+    'SP_APPROVED_DEFINITION_REQUIRED',
     '2.4 and so is a Dubai one');
 
   -- A regulated credential still cannot be filed in the wrong country, which
   -- is the claim the gate exists to refuse.
   PERFORM pg_temp.must_fail(format($f$
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-    VALUES (%L,'training','VU1','Väktarutbildning 1 (VU1)','GB','active')$f$, _h),
-    'SP_MARKET_PACK_NOT_ACTIVE',
+      (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+    VALUES (%L,'training','OV_TRAINING','Ordningsvaktsutbildning (grundutbildning)','Polismyndigheten','GB','active')$f$, _h),
+    'SP_GOVERNED_METADATA_IMMUTABLE',
     '2.5 a Swedish credential cannot be filed as a British one');
 END $$;
 
@@ -237,9 +237,9 @@ DECLARE
   _r record;
 BEGIN
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code,
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code,
      assertion_level, lifecycle_state, verified_by_user_id, verified_at)
-  VALUES (_h,'training','VU1','Väktarutbildning 1 (VU1)','SE',
+  VALUES (_h,'training','OV_TRAINING','Ordningsvaktsutbildning (grundutbildning)','Polismyndigheten','SE',
           'verified','active',_v, now())
   RETURNING id INTO _c;
 
@@ -301,8 +301,8 @@ DECLARE
   _row jsonb;
 BEGIN
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-  VALUES (_h,'training','VU2','Väktarutbildning 2 (VU2)','SE','active')
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+  VALUES (_h,'training','OV_REFRESHER','Fortbildning för ordningsvakter','Polismyndigheten','SE','active')
   RETURNING id INTO _c;
 
   SET LOCAL ROLE authenticated;
@@ -393,8 +393,8 @@ BEGIN
   VALUES (_v,'BF1 Verifier','SE') ON CONFLICT (holder_user_id) DO NOTHING;
 
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-  VALUES (_v,'training','VU1','Väktarutbildning 1 (VU1)','SE','active')
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+  VALUES (_v,'training','OV_TRAINING','Ordningsvaktsutbildning (grundutbildning)','Polismyndigheten','SE','active')
   RETURNING id INTO _c;
 
   SET LOCAL ROLE authenticated;
@@ -427,9 +427,9 @@ DECLARE
   _r record;
 BEGIN
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code,
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code,
      assertion_level, lifecycle_state, verified_by_user_id, verified_at)
-  VALUES (_h,'training','VU2','Väktarutbildning 2 (VU2)','SE',
+  VALUES (_h,'training','OV_REFRESHER','Fortbildning för ordningsvakter','Polismyndigheten','SE',
           'verified','active',_v, now())
   RETURNING id INTO _c;
 
@@ -463,8 +463,8 @@ DO $$
 DECLARE _h uuid := 'bf100000-0000-0000-0000-000000000001'; _c uuid;
 BEGIN
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-  VALUES (_h,'training','VU1','Väktarutbildning 1 (VU1)','SE','active')
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+  VALUES (_h,'training','OV_TRAINING','Ordningsvaktsutbildning (grundutbildning)','Polismyndigheten','SE','active')
   RETURNING id INTO _c;
 
   SET LOCAL ROLE authenticated;
@@ -483,8 +483,8 @@ DO $$
 DECLARE _h uuid := 'bf100000-0000-0000-0000-000000000001'; _c uuid;
 BEGIN
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, credential_code, title, jurisdiction_code, lifecycle_state)
-  VALUES (_h,'training','VU2','Väktarutbildning 2 (VU2)','SE','active')
+    (holder_user_id, claim_type, credential_code, title, claimed_issuer_name, jurisdiction_code, lifecycle_state)
+  VALUES (_h,'training','OV_REFRESHER','Fortbildning för ordningsvakter','Polismyndigheten','SE','active')
   RETURNING id INTO _c;
 
   INSERT INTO public.sp_verification_requests

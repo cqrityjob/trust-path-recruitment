@@ -583,7 +583,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (id, holder_user_id, claim_type, title, lifecycle_state)
   VALUES ('c9000000-0000-4000-8000-000000000001', _anna,
-          'certification', 'Snart tillbakadragen', 'active');
+          'training', 'Snart tillbakadragen', 'active');
 
   -- A CV that carries it HONESTLY: the id, the title and the (absent) issuer
   -- and dates all match the live row, so it verifies cleanly right up until
@@ -591,7 +591,7 @@ BEGIN
   UPDATE public.cv_documents
      SET source_bundle = jsonb_set(source_bundle, '{credentials}', jsonb_build_array(
            jsonb_build_object('id', 'c9000000-0000-4000-8000-000000000001',
-                              'claimType', 'certification',
+                              'claimType', 'training',
                               'title', 'Snart tillbakadragen',
                               'issuerName', NULL,
                               'issuedOn', NULL,

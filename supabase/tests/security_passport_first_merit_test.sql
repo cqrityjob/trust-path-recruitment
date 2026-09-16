@@ -511,6 +511,19 @@ BEGIN
     VALUES (_h, 'fm-kind-' || _kinds[_i] || '@example.test') ON CONFLICT (id) DO NOTHING;
     _op := ('fb000000-0000-0000-0000-00000000000' || _i)::uuid;
 
+    IF _kinds[_i] IN ('certification','licence') THEN
+      SET LOCAL ROLE authenticated;
+      PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+      PERFORM pg_temp.must_fail(format(
+        'SELECT * FROM public.sp_passport_complete_first_merit(%L,%L,%L,%L,NULL,DATE ''2023-05-01'',NULL,true)',
+        _op,_kinds[_i],'Custom credential','Candidate issuer'), 'SP_APPROVED_DEFINITION_REQUIRED',
+        format('5.%s custom %s first merit is prohibited',_i,_kinds[_i]));
+      RESET ROLE;
+      PERFORM pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_h),format('5.%s.1 refusal creates no claim',_i));
+      PERFORM pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_passport_profiles WHERE holder_user_id=_h),format('5.%s.2 refusal rolls back Passport creation',_i));
+      PERFORM pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_passport_events WHERE holder_user_id=_h),format('5.%s.3 refusal leaves no success audit receipt',_i));
+      CONTINUE;
+    END IF;
     SET LOCAL ROLE authenticated;
     PERFORM set_config('request.jwt.claim.sub', _h::text, true);
     SELECT subject_kind, subject_id, created INTO _k, _sid, _c
@@ -549,7 +562,7 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
   SELECT subject_id INTO _sid FROM public.sp_passport_complete_first_merit(
-    'fb000000-0000-0000-0000-0000000000ff'::uuid, 'certification', 'Med land',
+    'fb000000-0000-0000-0000-0000000000ff'::uuid, 'course', 'Med land',
     'Utfärdare (fiktiv)', 'SE', DATE '2023-05-01', NULL, true);
   RESET ROLE;
   PERFORM pg_temp.ok(

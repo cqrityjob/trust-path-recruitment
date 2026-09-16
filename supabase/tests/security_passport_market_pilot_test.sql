@@ -1,3 +1,4 @@
+-- Closed catalogue regression: pilot entitlements remain readable but never approve definitions.
 -- =============================================================================
 -- Security Passport — the internal-pilot market entitlement.
 --
@@ -18,7 +19,7 @@
 --
 -- A pilot flag is exactly the kind of change that quietly becomes a bypass.
 -- The cross-jurisdiction group below files every forbidden pairing the owner
--- named -- GB+VU1, GB+SIRA, AE-DU+OV, AE-DU+SIA, SE+SIA, SE+SIRA -- AS a fully
+-- named -- GB+OV_TRAINING, GB+SIRA, AE-DU+OV, AE-DU+SIA, SE+SIA, SE+SIRA -- AS a fully
 -- entitled pilot member of all three markets, which is the strongest position
 -- an attacker or a confused UI could ever occupy. All six must still fail.
 -- =============================================================================
@@ -37,8 +38,8 @@ END $$;
 /** Runs one INSERT as `_uid` and reports the SQLSTATE/message, or 'OK'. */
 CREATE OR REPLACE FUNCTION pg_temp.try_claim(
   _uid uuid, _code text, _title text, _jur text, _sub text, _type text,
-  _valid_until date DEFAULT NULL, _issuer text DEFAULT 'Fiktiv myndighet',
-  _scope text DEFAULT 'Fiktivt objekt')
+  _valid_until date DEFAULT NULL, _issuer text DEFAULT 'Polismyndigheten',
+  _scope text DEFAULT NULL)
 RETURNS text LANGUAGE plpgsql AS $$
 DECLARE _msg text;
 BEGIN
@@ -130,12 +131,12 @@ BEGIN
 
   _r := pg_temp.try_claim(_public, 'UK_SIA_LICENCE_DS',
         'SIA Licence — Door Supervision', 'GB', NULL, 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_MARKET_PACK_NOT_ACTIVE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '2.5 public user is refused a GB claim with SP_MARKET_PACK_NOT_ACTIVE (got ' || _r || ')');
 
   _r := pg_temp.try_claim(_public, 'AE_DU_SIRA_CARD_GUARD',
         'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_MARKET_PACK_NOT_ACTIVE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '2.6 public user is refused a Dubai claim (got ' || _r || ')');
 
   -- =====================================================================
@@ -209,28 +210,25 @@ BEGIN
   -- =====================================================================
   _r := pg_temp.try_claim(_gb_user, 'UK_SIA_LICENCE_DS',
         'SIA Licence — Door Supervision', 'GB', NULL, 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '5.1 the GB member registers an SIA Door Supervision licence (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+    '5.1 pilot membership cannot approve an SIA definition (got ' || _r || ')');
 
   _r := pg_temp.try_claim(_du_user, 'AE_DU_SIRA_CARD_GUARD',
         'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '5.2 the Dubai member registers a SIRA cadre card (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+    '5.2 pilot membership cannot approve a scoped Dubai card (got ' || _r || ')');
 
-  -- The claim keeps its OWN jurisdiction, which is the whole product model.
-  PERFORM pg_temp.ok(
-    (SELECT jurisdiction_code FROM public.sp_claims
-      WHERE holder_user_id = _du_user AND credential_code = 'AE_DU_SIRA_CARD_GUARD')
-      = 'AE'
-    AND (SELECT sub_jurisdiction_code FROM public.sp_claims
-          WHERE holder_user_id = _du_user AND credential_code = 'AE_DU_SIRA_CARD_GUARD')
-      = 'AE-DU',
-    '5.3 the Dubai claim is stored as AE / AE-DU, not flattened and not relabelled');
-
+  PERFORM pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_du_user),
+    '5.3 an unapproved Dubai definition creates no claim');
+  -- Historical pre-catalogue claim, seeded only as database owner for revocation coverage.
+  ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
+  PERFORM pg_temp.try_claim(_gb_user, 'UK_SIA_LICENCE_DS', 'SIA Licence — Door Supervision',
+    'GB', NULL, 'licence', '2030-01-01', 'Security Industry Authority', NULL);
+  ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
   -- Sweden still works for everybody, pilot member or not.
-  _r := pg_temp.try_claim(_se_user, 'VU1', 'Väktarutbildning 1 (VU1)',
+  _r := pg_temp.try_claim(_se_user, 'OV_TRAINING', 'Ordningsvaktsutbildning (grundutbildning)',
         'SE', NULL, 'training');
-  PERFORM pg_temp.ok(_r = 'OK', '5.4 a non-pilot user still registers VU1 in Sweden (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'OK', '5.4 a non-pilot user still registers OV_TRAINING in Sweden (got ' || _r || ')');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 6 -- CROSS-JURISDICTION, as a member of all three';
@@ -245,24 +243,24 @@ BEGIN
                  AND public.sp_market_access(_all_three, 'AE-DU') = 'pilot',
     '6.0 the probe user is a live pilot member of both markets');
 
-  _r := pg_temp.try_claim(_all_three, 'VU1', 'Väktarutbildning 1 (VU1)',
+  _r := pg_temp.try_claim(_all_three, 'OV_TRAINING', 'Ordningsvaktsutbildning (grundutbildning)',
         'GB', NULL, 'training');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_JURISDICTION_MISMATCH',
-    '6.1 GB + VU1 is refused (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
+    '6.1 GB + OV_TRAINING is refused (got ' || _r || ')');
 
   _r := pg_temp.try_claim(_all_three, 'AE_DU_SIRA_CARD_GUARD',
         'SIRA Security Cadre Card — Security Guard', 'GB', NULL, 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_JURISDICTION_MISMATCH',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '6.2 GB + SIRA is refused (got ' || _r || ')');
 
   _r := pg_temp.try_claim(_all_three, 'OV', 'Ordningsvaktsförordnande',
         'AE', 'AE-DU', 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_JURISDICTION_MISMATCH',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '6.3 Dubai + OV is refused (got ' || _r || ')');
 
   _r := pg_temp.try_claim(_all_three, 'UK_SIA_LICENCE_DS',
         'SIA Licence — Door Supervision', 'AE', 'AE-DU', 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_JURISDICTION_MISMATCH',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '6.4 Dubai + SIA is refused (got ' || _r || ')');
 
   -- ── 6.5 and 6.6 refuse EARLIER than 6.1-6.4, and that is correct ────
@@ -283,13 +281,13 @@ BEGIN
   _r := pg_temp.try_claim(_all_three, 'UK_SIA_LICENCE_CCTV',
         'SIA Licence — Public Space Surveillance (CCTV)', 'SE', NULL, 'licence', '2030-01-01');
   PERFORM pg_temp.ok(
-    _r IN ('SP_CREDENTIAL_JURISDICTION_MISMATCH', 'SP_CREDENTIAL_NOT_AVAILABLE'),
+    _r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '6.5 Sweden + SIA CCTV is refused (got ' || _r || ')');
 
   _r := pg_temp.try_claim(_all_three, 'AE_DU_SIRA_CARD_GUARD',
         'SIRA Security Cadre Card — Security Guard', 'SE', NULL, 'licence', '2030-01-01');
   PERFORM pg_temp.ok(
-    _r IN ('SP_CREDENTIAL_JURISDICTION_MISMATCH', 'SP_CREDENTIAL_NOT_AVAILABLE'),
+    _r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '6.6 Sweden + SIRA is refused (got ' || _r || ')');
 
   -- The pilot-credential gate is scoped to the market it belongs to: a GB
@@ -298,7 +296,7 @@ BEGIN
   -- GB credential still cannot be registered.
   _r := pg_temp.try_claim(_all_three, 'UK_SIA_LICENCE_KH',
         'SIA Licence — Key Holding', 'AE', 'AE-DU', 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_JURISDICTION_MISMATCH',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '6.7 a GB pilot credential cannot be filed inside the Dubai pilot (got ' || _r || ')');
 
   -- =====================================================================
@@ -308,8 +306,8 @@ BEGIN
     _r := pg_temp.try_claim(_ni_user, 'UK_SIA_LICENCE_VI',
           'SIA Licence — Vehicle Immobilisation (Northern Ireland)',
           'GB', 'GB-NI', 'licence', '2030-01-01');
-    PERFORM pg_temp.ok(_r = 'OK',
-      '7.1 the GB-NI member registers vehicle immobilisation (got ' || _r || ')');
+    PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+      '7.1 NI pilot membership cannot approve vehicle immobilisation (got ' || _r || ')');
 
     -- The same credential, filed in Great Britain rather than Northern
     -- Ireland, by a member of BOTH GB markets. The SIA does not license
@@ -320,7 +318,7 @@ BEGIN
     _r := pg_temp.try_claim(_ni_user, 'UK_SIA_LICENCE_VI',
           'SIA Licence — Vehicle Immobilisation (Northern Ireland)',
           'GB', NULL, 'licence', '2030-01-01');
-    PERFORM pg_temp.ok(_r = 'SP_SUB_JURISDICTION_NOT_SUPPORTED',
+    PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
       '7.2 the same licence is refused in ordinary Great Britain (got ' || _r || ')');
   ELSE
     RAISE NOTICE 'ok  7.1 GB-NI pack absent (20260914090000 unapplied); NI assertions skipped';
@@ -341,7 +339,7 @@ BEGIN
 
   _r := pg_temp.try_claim(_gb_user, 'UK_SIA_LICENCE_CCTV',
         'SIA Licence — Public Space Surveillance (CCTV)', 'GB', NULL, 'licence', '2030-01-01');
-  PERFORM pg_temp.ok(_r = 'SP_MARKET_PACK_NOT_ACTIVE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '8.2 a revoked member cannot register anything new (got ' || _r || ')');
 
   -- The point of section 9: evidence survives the entitlement.

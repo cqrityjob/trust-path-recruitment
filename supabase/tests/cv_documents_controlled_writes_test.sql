@@ -121,7 +121,7 @@ INSERT INTO public.sp_claims
    skill_code, skill_level,
    assertion_level, verified_by_user_id, verified_at, lifecycle_state) VALUES
   ('c0000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-00000000000a',
-   'certification', 'Väktarutbildning VU1', 'BYA', DATE '2019-04-01', DATE '2028-04-01', NULL, NULL,
+   'training', 'Väktarutbildning VU1', 'BYA', DATE '2019-04-01', DATE '2028-04-01', NULL, NULL,
    'verified', '50000000-0000-0000-0000-00000000000b', now(), 'active'),
   ('c0000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-00000000000a',
    'education', 'Gymnasieexamen', 'Malmö kommun', DATE '2018-06-01', NULL, NULL, NULL,
@@ -132,7 +132,7 @@ INSERT INTO public.sp_claims
   -- Unfinished work. The Passport keeps it out of its own lists and it must
   -- never reach a CV.
   ('c0000000-0000-0000-0000-000000000004', '50000000-0000-0000-0000-00000000000a',
-   'certification', 'Halvfärdig behörighet', NULL, NULL, NULL, NULL, NULL,
+   'training', 'Halvfärdig behörighet', NULL, NULL, NULL, NULL, NULL,
    'self_declared', NULL, NULL, 'draft');
 
 -- Every fact Karin owns, as the honest allowlist most groups start from.
@@ -825,10 +825,6 @@ SELECT pg_temp.ok(
 DO $$ BEGIN RAISE NOTICE 'GROUP P — privileges'; END $$;
 -- ═════════════════════════════════════════════════════════════════════════
 
--- PHASE 1 STILL GRANTS THE DIRECT WRITES. Asserted as it is, not as it will
--- be: a suite that asserted the locked-down state would fail here and go
--- green the moment phase 3 applied, which is exactly when nobody is looking.
--- The lockdown migration carries its own suite for the other half.
 SELECT pg_temp.ok(
   has_table_privilege('authenticated', 'public.cv_documents', 'SELECT')
   AND has_table_privilege('authenticated', 'public.cv_documents', 'INSERT')
@@ -1028,7 +1024,7 @@ BEGIN
     'U4 an untouched profile refreshes to the same identity, under lockdown too');
 
   -- Put it back for anything after this group; ROLLBACK would anyway.
-  GRANT INSERT, UPDATE, DELETE ON public.cv_documents TO authenticated;
+  -- Keep final lockdown intact; no temporary grant is introduced.
 END $$;
 
 -- And the delegation is load-bearing: if cv_save stopped being SECURITY

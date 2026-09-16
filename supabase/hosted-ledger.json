@@ -11,10 +11,10 @@
     "Refresh it by re-reading the ledger read-only and replacing versions[] whole.",
     "A stale snapshot is worse than none, so the check prints its age."
   ],
-  "source": "Supabase management API list_migrations, read-only",
+  "source": "Supabase connector list_migrations and read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-15T17:30:00Z",
-  "readBy": "Post-merge read-only verification for BESKT PR 6 and PR 7: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #254 merged to main as 25470f4e62b7ea3f0f7f360c5f4ae818b440a2f7 and PR #255 merged as 5e37060 (head f9e79da05cb3f842ccb8c3b19279d9ed3abecac5). 283 rows. The previous 281-row snapshot is proved unchanged rather than assumed: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261117090000 and 20261118090000 is 3959c7c2e0a9bb8d33f37b7de5058efc, which is exactly the digest of the previously committed 281-row file, so no earlier row was rewritten. Over all 283 rows production gives 6e7b26cd3c434345d1b9f29ffb637630. The two added rows carry the canonical identities 20261117090000 / bcp_conduct_prompts_and_report and 20261118090000 / beskt_governed_content_authoring -- each migration filename's own version and slug, not a generated uuid, so no canonical-to-hosted alias is required and a clean replay executes nothing twice. Both were applied automatically by the official Supabase GitHub integration on merge; this evidence session issued no hosted write and re-ran neither migration.",
+  "readAt": "2026-09-16T16:51:47.838600+00:00",
+  "readBy": "Owner-authorized PR #257 canonical history aliases, following PR #198. Five version/name-only rows inserted atomically through Supabase connector execute_sql with explicit project wrygicdfxwjnrugduxnt; statements NULL. Ledger 288 -> 293; all original 288 complete rows unchanged. Version/name digest 50f01cb436da2a3e1d8ae601c86fa3e0 -> 0f3837262ef76802e763ddcf935ba7fd. No migration SQL reapplied; no application schema/data changes. See docs/release/2026-09-16-pr257-local-history-verification.json.",
   "versions": [
     {
       "version": "20260716153446",
@@ -933,6 +933,26 @@
       "name": "security_hardening_contract"
     },
     {
+      "version": "20260916155430",
+      "name": "sp_international_passport_foundation"
+    },
+    {
+      "version": "20260916155456",
+      "name": "sp_international_credential_wallet"
+    },
+    {
+      "version": "20260916155521",
+      "name": "sp_credential_selective_sharing_v2"
+    },
+    {
+      "version": "20260916155551",
+      "name": "sp_closed_credential_catalogue"
+    },
+    {
+      "version": "20260916155620",
+      "name": "cv_owned_application_snapshot"
+    },
+    {
       "version": "20260917090000",
       "name": "superadmin_permanent_account_deletion"
     },
@@ -1147,6 +1167,26 @@
     {
       "version": "20261118090000",
       "name": "beskt_governed_content_authoring"
+    },
+    {
+      "version": "20261118100000",
+      "name": "sp_international_passport_foundation"
+    },
+    {
+      "version": "20261119090000",
+      "name": "sp_international_credential_wallet"
+    },
+    {
+      "version": "20261120090000",
+      "name": "sp_credential_selective_sharing_v2"
+    },
+    {
+      "version": "20261121090000",
+      "name": "sp_closed_credential_catalogue"
+    },
+    {
+      "version": "20261122090000",
+      "name": "cv_owned_application_snapshot"
     }
   ]
 }

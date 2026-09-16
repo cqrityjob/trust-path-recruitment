@@ -1,36 +1,9 @@
-// The Passport's left column — what another person sees, and who may see it.
-//
-// ── WHY THESE TWO THINGS, TOGETHER, HERE ───────────────────────────────
-//
-// The owner's sketch puts the Passport Card at the top left of the Passport
-// page and the integrity/privacy settings directly beneath it. That pairing
-// is the argument: the card is the thing a recipient looks at, and the
-// privacy mode decides whose name is on it. Reading one without the other
-// leaves the holder guessing what they are actually handing over.
-//
-// Before this, both lived only behind tabs. A holder had to leave the page
-// that lists their merits, look at the card, go back, open a third tab to
-// find out which identity it carries, and hold all three in their head.
-//
-// ── PREVIEW, NOT A SECOND CARD PAGE ────────────────────────────────────
-//
-// This renders the SAME `DirectionC` from the SAME `buildPassportCard`, off
-// the snapshot the page has already read -- no second request, and no
-// second card renderer that could drift from the first. /passport/card
-// stays the canonical full view and this links to it; the privacy box
-// states the current mode and links to /passport/privacy, which stays the
-// canonical editor.
-//
-// So there is one card renderer, one privacy writer, and one place to
-// change each -- the summary here reports, it does not duplicate the
-// controls.
-
+import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, Lock } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-import { buildPassportCard } from "@/lib/security-passport/card";
-import { DirectionC } from "@/components/security-passport/card/DirectionC";
+import { CompactPassportCard } from "./CompactPassportCard";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 
 const LINK =
@@ -39,18 +12,18 @@ const LINK =
 export function PassportSideColumn({
   snapshot,
   today,
+  metadata,
   className = "",
 }: {
   snapshot: PassportSnapshot;
   /** Injected so the guard can render a fixed day rather than "now". */
   today: string;
+  metadata?: InternationalPassportMetadata;
   className?: string;
 }) {
   const { pt } = usePassportCopy();
   const profile = snapshot.profile;
   if (!profile) return null;
-
-  const card = buildPassportCard(snapshot.holder, today);
 
   return (
     <aside
@@ -65,12 +38,9 @@ export function PassportSideColumn({
         >
           {pt("side.cardTitle")}
         </h2>
-        {/* WHAT A RECIPIENT SEES. The private card carries no live token: a
-            token belongs to a SHARE, not to the holder, and minting one here
-            would create a durable public address nobody chose to create. The
-            same reasoning /passport/card already records. */}
+        {/* The owner summary never creates or displays a share token. */}
         <div className="mt-2">
-          <DirectionC card={card} verifyUrl="cqrityjob.se/passport" />
+          <CompactPassportCard snapshot={snapshot} today={today} metadata={metadata} />
         </div>
         <Link to="/passport/card" data-cta="open-card" className={`${LINK} mt-2`}>
           {pt("side.openCard")}

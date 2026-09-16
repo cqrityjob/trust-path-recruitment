@@ -326,7 +326,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 6.1 a UAE-wide claim was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_REQUIRED%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 6.1 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  6.1 the UAE cannot be named without an emirate';
@@ -342,7 +342,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 6.2 an unsupported emirate was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_NOT_SUPPORTED%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 6.2 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  6.2 Fujairah is refused, and never answered with Dubai';
@@ -358,7 +358,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 6.3 an unreviewed Abu Dhabi pack accepted a claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_MARKET_PACK_NOT_ACTIVE%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 6.3 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  6.3 Abu Dhabi is refused as pending review, never as Dubai';
@@ -382,13 +382,13 @@ BEGIN
 
   -- 7.1  GB claim + Swedish VU1
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code)
-    VALUES (_h, 'training', 'Väktargrundutbildning', 'VU1', 'GB');
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    SELECT _h,claim_type,name_en,code,'GB',NULL,issuer_name,current_date+365
+    FROM public.sp_approved_credential_catalogue WHERE code='OV_TRAINING';
     RAISE EXCEPTION 'ASSERTION FAILED: 7.1 a Swedish VU1 was filed as a UK claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_JURISDICTION_MISMATCH%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.1 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.1 GB claim + VU1 is refused as a jurisdiction mismatch';
@@ -396,15 +396,13 @@ BEGIN
 
   -- 7.2  AE-DU claim + Swedish Skyddsvakt
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
-    VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'AE', 'AE-DU',
-            'Länsstyrelsen', current_date + 365, 'Fictional site');
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    SELECT _h,claim_type,name_en,code,'AE','AE-DU',issuer_name,current_date+365
+    FROM public.sp_approved_credential_catalogue WHERE code='OV';
     RAISE EXCEPTION 'ASSERTION FAILED: 7.2 a Swedish skyddsvakt was filed as a Dubai claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_JURISDICTION_MISMATCH%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.2 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.2 AE-DU claim + Skyddsvakt is refused';
@@ -412,15 +410,13 @@ BEGIN
 
   -- 7.3  SE claim + SIA Door Supervision
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       claimed_issuer_name, valid_until, credential_reference)
-    VALUES (_h, 'licence', 'SIA Door Supervision', 'UK_SIA_LICENCE_DS', 'SE',
-            'Security Industry Authority', current_date + 365, '1234567812345678');
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    SELECT _h,claim_type,name_en,code,'SE',NULL,issuer_name,current_date+365
+    FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_LICENCE_DS';
     RAISE EXCEPTION 'ASSERTION FAILED: 7.3 an SIA licence was filed as a Swedish claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_JURISDICTION_MISMATCH%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.3 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.3 SE claim + SIA Door Supervision is refused';
@@ -428,15 +424,13 @@ BEGIN
 
   -- 7.4  GB claim + SIRA Security Guard
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       claimed_issuer_name, valid_until, authorisation_scope, credential_reference)
-    VALUES (_h, 'licence', 'SIRA Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'GB',
-            'SIRA', current_date + 700, 'Fictional LLC', 'ABC-1234');
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    SELECT _h,claim_type,name_en,code,'GB',NULL,issuer_name,current_date+365
+    FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
     RAISE EXCEPTION 'ASSERTION FAILED: 7.4 a SIRA cadre card was filed as a UK claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_JURISDICTION_MISMATCH%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.4 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.4 GB claim + SIRA Security Guard is refused';
@@ -444,15 +438,13 @@ BEGIN
 
   -- 7.5  AE-DU claim + SIA CCTV licence
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       sub_jurisdiction_code, claimed_issuer_name, valid_until, credential_reference)
-    VALUES (_h, 'licence', 'SIA CCTV', 'UK_SIA_LICENCE_CCTV', 'AE', 'AE-DU',
-            'Security Industry Authority', current_date + 365, '1234567812345678');
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    SELECT _h,claim_type,name_en,code,'AE','AE-DU',issuer_name,current_date+365
+    FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_LICENCE_CCTV';
     RAISE EXCEPTION 'ASSERTION FAILED: 7.5 an SIA licence was filed as a Dubai claim';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_JURISDICTION_MISMATCH%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.5 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.5 AE-DU claim + SIA CCTV is refused';
@@ -462,16 +454,13 @@ BEGIN
   -- code, different regulator — the refusal the jurisdiction check alone
   -- cannot make, and the reason sub-jurisdiction exists.
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       sub_jurisdiction_code, claimed_issuer_name, valid_until,
-       authorisation_scope, credential_reference)
-    VALUES (_h, 'licence', 'SIRA card in Abu Dhabi', 'AE_DU_SIRA_CARD_SUPERVISOR',
-            'AE', 'AE-AZ', 'SIRA', current_date + 700, 'Fictional LLC', 'ABC-1234');
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    SELECT _h,claim_type,name_en,code,'AE','AE-AZ',issuer_name,current_date+365
+    FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SUPERVISOR_COURSE';
     RAISE EXCEPTION 'ASSERTION FAILED: 7.6 a Dubai card was filed against Abu Dhabi';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_NOT_SUPPORTED%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.6 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.6 a SIRA card cannot be filed against Abu Dhabi';
@@ -487,7 +476,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 7.7 an Abu Dhabi licence was filed against Dubai';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_NOT_SUPPORTED%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.7 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.7 and an Abu Dhabi licence cannot be filed against Dubai';
@@ -495,15 +484,13 @@ BEGIN
 
   -- 7.8  Northern Ireland's licence cannot be recorded as a Great Britain one.
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       claimed_issuer_name, valid_until, credential_reference)
-    VALUES (_h, 'licence', 'Vehicle immobilisation', 'UK_SIA_LICENCE_VI', 'GB',
-            'Security Industry Authority', current_date + 365, '1234567812345678');
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    SELECT _h,claim_type,name_en,code,'GB',NULL,issuer_name,current_date+365
+    FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_LICENCE_VI';
     RAISE EXCEPTION 'ASSERTION FAILED: 7.8 a Northern Ireland licence was filed as Great Britain';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_NOT_SUPPORTED%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 7.8 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  7.8 vehicle immobilisation cannot be claimed outside Northern Ireland';

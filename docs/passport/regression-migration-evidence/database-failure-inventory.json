@@ -1,0 +1,544 @@
+[
+  {
+    "id": 1,
+    "suite": "Admin Control Center lifecycle",
+    "originalFailure": "psql:supabase/tests/admin_lifecycle_test.sql:123: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/admin_lifecycle_test.sql",
+      "assertions": 145
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 2,
+    "suite": "CQrityjob CV application source",
+    "originalFailure": "psql:supabase/tests/job_application_cv_source_test.sql:616: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use CV-owned course facts; explicitly reject direct CV fabrication under final lockdown while preserving value-based corruption, isolation and refresh checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/job_application_cv_source_test.sql",
+      "assertions": 47
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 3,
+    "suite": "cv_documents controlled write path",
+    "originalFailure": "psql:supabase/tests/cv_documents_controlled_writes_test.sql:136: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom certification fixture violated the closed catalogue. The runner intentionally rolls CV lockdown back for phase-1 submission integrity tests; final lockdown is tested separately later.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Replace generic certifications with CV-owned training; retain phase-1 fabrication and submission rejection tests plus final-lockdown and RPC tests.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/cv_documents_controlled_writes_test.sql",
+      "assertions": 79
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 4,
+    "suite": "employer final-report basis",
+    "originalFailure": "psql:supabase/tests/scp_iv_report_basis_integrity_test.sql:179: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/scp_iv_report_basis_integrity_test.sql",
+      "assertions": 120
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 5,
+    "suite": "Security Passport application disclosure",
+    "originalFailure": "psql:supabase/tests/sp_application_passport_test.sql:104: ERROR:  SP_GOVERNED_METADATA_IMMUTABLE",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/sp_application_passport_test.sql",
+      "assertions": 0
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 6,
+    "suite": "Security Passport Phase 2",
+    "originalFailure": "psql:supabase/tests/security_passport_phase2_test.sql:231: ERROR:  ASSERTION FAILED: 2.4 holder cannot insert an already-VERIFIED claim -- failed, but with the wrong error: SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase2_test.sql",
+      "assertions": 43
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 7,
+    "suite": "Security Passport Phase 5",
+    "originalFailure": "psql:supabase/tests/security_passport_phase5_test.sql:108: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase5_test.sql",
+      "assertions": 56
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 8,
+    "suite": "Security Passport three-market foundation",
+    "originalFailure": "psql:supabase/tests/security_passport_three_market_foundation_test.sql:521: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_three_market_foundation_test.sql",
+      "assertions": 44
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 9,
+    "suite": "Security Passport Phase 6",
+    "originalFailure": "psql:supabase/tests/security_passport_phase6_test.sql:209: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Retired VU1/VU2/SV/custom creation fixtures and a global trust assertion that included other suites’ rows.",
+    "productDefect": "No schema defect; fixtures and assertion scope migrated.",
+    "requiredCorrection": "Use canonical approved claims; deny definition/issuer/scope tampering; preserve correction history, trust reset, attribution, private fields and ownership checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase6_test.sql",
+      "assertions": 24
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 10,
+    "suite": "Security Passport Phase 6b",
+    "originalFailure": "psql:supabase/tests/security_passport_phase6b_test.sql:108: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Retired issuer/note/definition-edit expectations; investigation also reproduced a legacy correction RPC that could switch approved definitions.",
+    "productDefect": "FIXED: successor INSERT now preserves holder, claim type and governed definition, including legacy correction RPC.",
+    "requiredCorrection": "Use canonical approved claims; deny definition/issuer/scope tampering; preserve correction history, trust reset, attribution, private fields and ownership checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase6b_test.sql",
+      "assertions": 39
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 11,
+    "suite": "Security Passport Phase 7",
+    "originalFailure": "psql:supabase/tests/security_passport_phase7_test.sql:149: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase7_test.sql",
+      "assertions": 83
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 12,
+    "suite": "Security Passport Phase 8",
+    "originalFailure": "psql:supabase/tests/security_passport_phase8_test.sql:146: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase8_test.sql",
+      "assertions": 41
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 13,
+    "suite": "Security Passport Phase 10",
+    "originalFailure": "psql:supabase/tests/security_passport_phase10_test.sql:189: ERROR:  SP_GOVERNED_METADATA_IMMUTABLE",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase10_test.sql",
+      "assertions": 67
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 14,
+    "suite": "Security Passport Swedish truth model",
+    "originalFailure": "psql:supabase/tests/security_passport_sweden_truth_model_test.sql:243: ERROR:  SP_GOVERNED_METADATA_IMMUTABLE",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_sweden_truth_model_test.sql",
+      "assertions": 23
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 15,
+    "suite": "Security Passport UK market pack",
+    "originalFailure": "psql:supabase/tests/security_passport_uk_market_pack_test.sql:248: ERROR:  ASSERTION FAILED: 1.5 wrong error: SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_uk_market_pack_test.sql",
+      "assertions": 23
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 16,
+    "suite": "Security Passport disclosure holder jurisdiction",
+    "originalFailure": "psql:supabase/tests/security_passport_disclosure_holder_jurisdiction_test.sql:156: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_disclosure_holder_jurisdiction_test.sql",
+      "assertions": 11
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 17,
+    "suite": "Security Passport pilot bug fix #1",
+    "originalFailure": "psql:supabase/tests/security_passport_pilot_bugfix_1_test.sql:140: ERROR:  ASSERTION FAILED: 1.4 Skyddsvaktsförordnande cannot be renamed by its holder -- wrong error: SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_pilot_bugfix_1_test.sql",
+      "assertions": 52
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 18,
+    "suite": "Security Passport internal-pilot entitlement",
+    "originalFailure": "psql:supabase/tests/security_passport_market_pilot_test.sql:399: ERROR:  ASSERTION FAILED: 2.5 public user is refused a GB claim with SP_MARKET_PACK_NOT_ACTIVE (got SP_APPROVED_DEFINITION_REQUIRED)",
+    "retiredOpenModel": true,
+    "rootCause": "Legacy tests treated pilot membership as permission to create claims from inactive/unapproved definitions.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Deny new pilot claims even for entitled users; keep real-role membership privacy and revocation assertions. Seed historical rows as database owner only for retained-row visibility. Test definition and territory immutability on an approved positive control.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_market_pilot_test.sql",
+      "assertions": 44
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 19,
+    "suite": "Security Passport pilot catalogue visibility",
+    "originalFailure": "psql:supabase/tests/security_passport_pilot_catalogue_visibility_test.sql:430: ERROR:  ASSERTION FAILED: 3.6 THE FIX: the GB member registers a GB licence as authenticated (got SP_APPROVED_DEFINITION_REQUIRED)",
+    "retiredOpenModel": true,
+    "rootCause": "Legacy tests treated pilot membership as permission to create claims from inactive/unapproved definitions.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Deny new pilot claims even for entitled users; keep real-role membership privacy and revocation assertions. Seed historical rows as database owner only for retained-row visibility. Test definition and territory immutability on an approved positive control.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_pilot_catalogue_visibility_test.sql",
+      "assertions": 57
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 20,
+    "suite": "Security Passport pilot write path",
+    "originalFailure": "psql:supabase/tests/security_passport_pilot_write_path_test.sql:340: ERROR:  ASSERTION FAILED: 0.1 a Swedish holder records VU1 (got SP_APPROVED_DEFINITION_REQUIRED)",
+    "retiredOpenModel": true,
+    "rootCause": "Legacy tests treated pilot membership as permission to create claims from inactive/unapproved definitions.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Deny new pilot claims even for entitled users; keep real-role membership privacy and revocation assertions. Seed historical rows as database owner only for retained-row visibility. Test definition and territory immutability on an approved positive control.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_pilot_write_path_test.sql",
+      "assertions": 30
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 21,
+    "suite": "Security Passport global professional certification",
+    "originalFailure": "psql:supabase/tests/security_passport_global_certification_test.sql:1354: ERROR:  ASSERTION FAILED: 0.1 a Swedish holder records VU1 (got SP_APPROVED_DEFINITION_REQUIRED)",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_global_certification_test.sql",
+      "assertions": 162
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 22,
+    "suite": "Security Passport governed issuer",
+    "originalFailure": "psql:supabase/tests/security_passport_governed_issuer_test.sql:279: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_governed_issuer_test.sql",
+      "assertions": 28
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 23,
+    "suite": "global certification rollback fixture",
+    "originalFailure": "psql:supabase/tests/security_passport_global_certification_rollback_fixture.sql:95: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Historical rollback ran while the four pending Passport units still depended on the global catalogue; earlier suites had adopted its definitions.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Clone the pristine local schema, unwind four pending units, prove old catalogue rollback preservation/refusal, then reapply and rerun closed catalogue. Preserve the main test database.",
+    "status": "passed in complete database runner",
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 24,
+    "suite": "global certification rollback",
+    "originalFailure": "psql:supabase/rollback/20261111090000_sp_global_professional_certifications_rollback.sql:290: ERROR:  cannot drop table sp_certification_definitions because other objects depend on it",
+    "retiredOpenModel": false,
+    "rootCause": "Historical rollback ran while the four pending Passport units still depended on the global catalogue; earlier suites had adopted its definitions.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Clone the pristine local schema, unwind four pending units, prove old catalogue rollback preservation/refusal, then reapply and rerun closed catalogue. Preserve the main test database.",
+    "status": "passed in complete database runner",
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 25,
+    "suite": "global certification rollback data safety",
+    "originalFailure": "psql:supabase/tests/security_passport_global_certification_rollback_assert.sql:101: ERROR:  ASSERTION FAILED: R3 the three free-text rows are still free text",
+    "retiredOpenModel": false,
+    "rootCause": "Historical rollback ran while the four pending Passport units still depended on the global catalogue; earlier suites had adopted its definitions.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Clone the pristine local schema, unwind four pending units, prove old catalogue rollback preservation/refusal, then reapply and rerun closed catalogue. Preserve the main test database.",
+    "status": "passed in complete database runner",
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 26,
+    "suite": "global certification rollback refusal",
+    "originalFailure": "FAIL: the rollback did not refuse once a holder's certification referenced it (rc 3, 14 definitions left).",
+    "retiredOpenModel": false,
+    "rootCause": "Historical rollback ran while the four pending Passport units still depended on the global catalogue; earlier suites had adopted its definitions.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Clone the pristine local schema, unwind four pending units, prove old catalogue rollback preservation/refusal, then reapply and rerun closed catalogue. Preserve the main test database.",
+    "status": "passed in complete database runner",
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 27,
+    "suite": "Security Passport Dubai market pack",
+    "originalFailure": "psql:supabase/tests/security_passport_uae_dubai_market_pack_test.sql:298: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_uae_dubai_market_pack_test.sql",
+      "assertions": 25
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 28,
+    "suite": "Security Passport rollback data safety",
+    "originalFailure": "psql:supabase/tests/security_passport_rollback_data_safety_test.sql:141: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_rollback_data_safety_test.sql",
+      "assertions": 7
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 29,
+    "suite": "Security Passport scope disclosure boundary",
+    "originalFailure": "psql:supabase/tests/security_passport_scope_disclosure_boundary_test.sql:177: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 30,
+    "suite": "Security Passport legacy scope correction",
+    "originalFailure": "psql:supabase/tests/security_passport_legacy_scope_correction_test.sql:238: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Legacy test required candidate-defined issuer and scope edits on grandfathered SV records.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Require denial and atomic preservation for unapproved historical corrections; retain historical read/withdraw, cross-holder denial, and approved personal correction version/trust-reset controls.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_legacy_scope_correction_test.sql",
+      "assertions": 23
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 31,
+    "suite": "Security Passport jurisdiction catalogue",
+    "originalFailure": "psql:supabase/tests/security_passport_jurisdiction_catalogue_test.sql:560: ERROR:  ASSERTION FAILED: 6.1 wrong error: SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_jurisdiction_catalogue_test.sql",
+      "assertions": 41
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 32,
+    "suite": "Security Passport trust boundaries",
+    "originalFailure": "psql:supabase/tests/security_passport_trust_boundary_test.sql:231: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_trust_boundary_test.sql",
+      "assertions": 55
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 33,
+    "suite": "Security Passport trust-source containment",
+    "originalFailure": "psql:supabase/tests/security_passport_trust_source_containment_test.sql:204: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_trust_source_containment_test.sql",
+      "assertions": 42
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 34,
+    "suite": "Security Passport employer employment verification",
+    "originalFailure": "psql:supabase/tests/security_passport_employer_verification_test.sql:299: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Custom/unapproved fixture claims prevented execution of the existing lifecycle, RLS, trust or disclosure assertions.",
+    "productDefect": "No production defect found in this suite; obsolete fixture/contract.",
+    "requiredCorrection": "Use existing approved definitions and canonical issuers; retain real-role boundary assertions. Retired free-text certification creation now has an explicit denial assertion.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_employer_verification_test.sql",
+      "assertions": 73
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 35,
+    "suite": "Security Passport concurrent decision (setup)",
+    "originalFailure": "psql:supabase/tests/security_passport_decision_race_test.sql:97: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 36,
+    "suite": "Security Passport first merit",
+    "originalFailure": "psql:supabase/tests/security_passport_first_merit_test.sql:558: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Legacy first-merit certification/licence payloads created custom definitions without governed IDs.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Retain CV employment, education and course atomicity; replace custom credential positives with denials and assert rollback of claim, profile and audit receipt. Update runner mandatory labels without lowering assertion floors.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_first_merit_test.sql",
+      "assertions": 117
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 37,
+    "suite": "Security Passport selected-merit sharing",
+    "originalFailure": "psql:supabase/tests/security_passport_selected_sharing_test.sql:135: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
+    "retiredOpenModel": true,
+    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
+    "productDefect": "No product defect found; retired fixture or contract.",
+    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
+    "status": "passed in complete database runner",
+    "validation": {
+      "file": "supabase/tests/security_passport_selected_sharing_test.sql",
+      "assertions": 122
+    },
+    "combinedEvidence": "database-full.log.gz"
+  },
+  {
+    "id": 38,
+    "suite": "pilot bug fix #1 rollback (data loss)",
+    "originalFailure": "FAIL: the rollback destroyed data (claims=0, dispute events=0).",
+    "retiredOpenModel": false,
+    "rootCause": "Cascading missing pilot bugfix fixtures after its obsolete claim setup failed.",
+    "productDefect": "No schema, RLS, RPC or registration defect; legacy fixture or runner dependency ordering.",
+    "requiredCorrection": "Use governed Swedish fixtures; keep existing claim and dispute event preservation checks.",
+    "status": "passed in complete database runner",
+    "combinedEvidence": "database-full.log.gz"
+  }
+]

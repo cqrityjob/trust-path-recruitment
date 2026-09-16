@@ -106,8 +106,8 @@ BEGIN
      jurisdiction_code, issued_on, valid_until, credential_reference, holder_note,
      assertion_level, verified_by_user_id, verified_at)
   VALUES
-    (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'Väktarskolan Fiktiv AB',
-     'SE', DATE '2024-03-01', NULL, 'P7-REF-VU1-SECRET', 'P7 privat anteckning VU1',
+    (_h, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'Polismyndigheten',
+     'SE', DATE '2024-03-01', NULL, 'P7-REF-VU1-SECRET', NULL,
      'verified', _v, now());
 
   -- The OV is taken through the REAL workflow — submitted by the holder,
@@ -118,13 +118,13 @@ BEGIN
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
      jurisdiction_code, issued_on, valid_until, credential_reference, holder_note)
   VALUES
-    (_h, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Fiktiva Myndigheten',
-     'SE', DATE '2025-01-10', DATE '2028-01-09', 'P7-REF-OV-SECRET', 'P7 privat anteckning OV');
+    (_h, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten',
+     'SE', DATE '2025-01-10', DATE '2028-01-09', 'P7-REF-OV-SECRET', NULL);
 
   -- Never disclosed: not verified, whatever their codes say.
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, issued_on)
-  VALUES (_h, 'training', 'Väktarutbildning 2 (VU2)', 'VU2', 'Väktarskolan Fiktiv AB', DATE '2025-06-01');
+    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, issued_on, jurisdiction_code)
+  VALUES (_h, 'training', 'Fortbildning för ordningsvakter', 'OV_REFRESHER', 'Polismyndigheten', DATE '2025-06-01', 'SE');
 
   -- An appointment must carry an end date (Phase 6 trigger), so this fixture
   -- is complete in every respect EXCEPT being verified. That is the point:
@@ -135,10 +135,10 @@ BEGIN
   -- national licence. What this fixture is FOR is unchanged.
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
-     issued_on, valid_until, assertion_level, authorisation_scope)
-  VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Fiktiva Myndigheten',
+     issued_on, valid_until, assertion_level, jurisdiction_code)
+  VALUES (_h, 'licence', 'Personalgodkännande (bevakningsföretag)', 'SE_PERSONNEL_APPROVAL', 'Länsstyrelsen',
           DATE '2025-07-01', DATE '2028-06-30', 'document_provided',
-          'Skyddsobjekt: Fiktiv anläggning');
+          'SE');
 
   -- Periods carry no verifier-attribution columns; the decision lives in
   -- sp_verification_decisions. The level is what the disclosure filters on.
@@ -184,10 +184,10 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
      issued_on, valid_until, assertion_level, verified_by_user_id, verified_at,
-     authorisation_scope)
-  VALUES (_o, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Fiktiva Myndigheten',
+     jurisdiction_code)
+  VALUES (_o, 'licence', 'Personalgodkännande (bevakningsföretag)', 'SE_PERSONNEL_APPROVAL', 'Länsstyrelsen',
           DATE '2025-02-02', DATE '2028-02-01', 'verified', _v, now(),
-          'Skyddsobjekt: Fiktiv anläggning');
+          'SE');
 END $$;
 
 -- =============================================================================
@@ -205,7 +205,7 @@ BEGIN
     INTO _codes
     FROM jsonb_array_elements(_payload->'verified_claims') c;
 
-  PERFORM pg_temp.ok(_codes @> ARRAY['VU1'], '1.2 a verified VU1 discloses its code');
+  PERFORM pg_temp.ok(_codes @> ARRAY['OV_TRAINING'], '1.2 a verified VU1 discloses its code');
   PERFORM pg_temp.ok(_codes @> ARRAY['OV'],  '1.3 a verified OV discloses its code');
   PERFORM pg_temp.ok(array_length(_codes, 1) = 2,
     '1.4 exactly the two verified-active claims carry codes');
@@ -356,16 +356,16 @@ DECLARE
   _old uuid; _new uuid; _payload jsonb;
 BEGIN
   SELECT id INTO _old FROM public.sp_claims
-   WHERE holder_user_id = _h AND credential_code = 'VU1' AND lifecycle_state = 'active';
+   WHERE holder_user_id = _h AND credential_code = 'OV_TRAINING' AND lifecycle_state = 'active';
 
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
   SELECT public.sp_correct_claim(
     -- The title is the definition's, unchanged by the correction; what this
     -- correction changes is the provider and the dates.
-    _old, 'Väktarutbildning 1 (VU1)', 'Väktarskolan Fiktiv AB', 'SE',
-    DATE '2024-03-02', DATE '2024-03-02', NULL, 'p7 rättelse', 'VU1',
-    'P7-REF-VU1-SECRET', 'P7 privat anteckning VU1') INTO _new;
+    _old, 'Ordningsvaktsutbildning (grundutbildning)', 'Polismyndigheten', 'SE',
+    DATE '2024-03-02', DATE '2024-03-02', NULL, 'p7 rättelse', 'OV_TRAINING',
+    'P7-REF-VU1-SECRET', NULL) INTO _new;
   RESET ROLE;
 
   PERFORM pg_temp.ok(

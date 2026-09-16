@@ -28,7 +28,7 @@ import {
 } from "../../src/lib/professional-identity/fixtures/career-home-fixtures";
 import type { HomePresentationInput } from "../../src/lib/professional-identity/home-presentation";
 export const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-export const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+export const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 export const USER_ID = "00000000-0000-4000-8000-000000000001";
 
 // ── THREE IDENTIFIER DOMAINS, THREE VISIBLY DIFFERENT UUIDS ───────────
@@ -50,18 +50,26 @@ export function passportSnapshot(f: HomeFixture) {
   const claims = id.state === "ready" ? id.identity.claims : [];
   const periods = id.state === "ready" ? id.identity.employment : [];
   return {
-    profile: {
+    profileIdentity: {
       displayName: "Amina Karlsson",
-      headline: "Väktare",
-      cigProfessionSlug: "vaktare",
-      jurisdictionCode: "SE",
-      subJurisdictionCode: null,
-      workLocationConfirmedAt: "2026-01-01T00:00:00Z",
-      privacyMode: "private",
-      onboardingState: "complete",
-      onboardingStep: 0,
-      onboardingAnswers: {},
+      titleSv: "Väktare",
+      titleEn: "Security guard",
     },
+    profile:
+      id.state === "ready" && !id.identity.hasPassport
+        ? null
+        : {
+            displayName: "Amina Karlsson",
+            headline: "Väktare",
+            cigProfessionSlug: "vaktare",
+            jurisdictionCode: "SE",
+            subJurisdictionCode: null,
+            workLocationConfirmedAt: "2026-01-01T00:00:00Z",
+            privacyMode: "private",
+            onboardingState: "complete",
+            onboardingStep: 0,
+            onboardingAnswers: {},
+          },
     holder: {
       id: USER_ID,
       displayName: "Amina Karlsson",
@@ -98,8 +106,9 @@ export function passportSnapshot(f: HomeFixture) {
         credentialCode: null,
         skillCode: null,
         skillLevel: c.skillLevel,
-        title: c.title,
-        claimedIssuerName: c.issuerName,
+        titleSv: c.title,
+        titleEn: c.title,
+        issuerName: c.issuerName,
         jurisdictionCode: "SE",
         subJurisdictionCode: null,
         authorisationScope: null,
@@ -251,6 +260,33 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
       report: null,
     }),
     getMyPassport: ok(passportSnapshot(f)),
+    listMyEntries:
+      i.identity.state === "ready"
+        ? ok({
+            experience: passportSnapshot(f).holder.periods.map((p) => ({
+              ...p,
+              verifierName: null,
+              verificationMethod: null,
+              editable: p.assertionLevel === "self_declared",
+            })),
+            claims: passportSnapshot(f).holder.claims.map((c) => ({
+              ...c,
+              title: c.titleEn,
+              verifierName: null,
+              verificationMethod: null,
+              editable: c.assertionLevel === "self_declared" && c.lifecycleState === "active",
+            })),
+          })
+        : identity,
+    getMySecurityCareerProfile: ok(null),
+    listSkillTypes: ok([]),
+    listJurisdictions: ok([{ code: "SE", nameSv: "Sverige", nameEn: "Sweden" }]),
+    getInternationalPassportMetadata: ok({
+      details: [],
+      verificationEvents: [],
+      jurisdictions: [],
+      issuers: [],
+    }),
     ensureMyPassport: ok({ created: false }),
     getRegulatedCredentialAvailability: ok({
       state: "open",
@@ -350,7 +386,7 @@ export async function mount(
   });
 
   // Supabase: the auth "who am I" call, and the two direct REST reads.
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     const url = route.request().url();
     if (url.includes("/auth/v1/user")) {
       return route.fulfill({

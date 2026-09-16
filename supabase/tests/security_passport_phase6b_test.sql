@@ -24,7 +24,7 @@ SET client_min_messages TO NOTICE;
 CREATE OR REPLACE FUNCTION pg_temp.ok(cond boolean, label text) RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
-  IF NOT cond THEN RAISE EXCEPTION 'ASSERTION FAILED: %', label; END IF;
+  IF cond IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %', label; END IF;
   RAISE NOTICE 'ok  %', label;
 END $$;
 
@@ -56,307 +56,115 @@ INSERT INTO public.sp_passport_profiles (holder_user_id, display_name)
 VALUES ('f6b00000-0000-0000-0000-000000000001','P6B Holder (fiktiv)')
 ON CONFLICT (holder_user_id) DO NOTHING;
 
--- =============================================================================
-\echo '    GROUP 1 -- the credential fields survive a correction'
--- =============================================================================
-DO $$
-DECLARE
-  _h uuid := 'f6b00000-0000-0000-0000-000000000001';
-  _old uuid; _new uuid; _r public.sp_claims%ROWTYPE;
+
+-- Fixture privilege is limited to seeding starting trust; all mutations under
+-- test run as authenticated. Every fixture resolves an existing approved row.
+CREATE FUNCTION pg_temp.governed_claim(_holder uuid,_code text,_level text DEFAULT 'self_declared',_reference text DEFAULT 'OLD') RETURNS uuid
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+DECLARE _id uuid;
 BEGIN
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
-     credential_reference, holder_note, issued_on)
-  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'Nordvakt (fiktiv)',
-          'CERT-1001', 'Tog kursen på plats i Malmö.', DATE '2023-05-01')
-  RETURNING id INTO _old;
-
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-
-  -- Correct only the title. Everything else is resubmitted unchanged, which is
-  -- what the pre-filled correction form does.
-  SELECT public.sp_correct_claim(
-    _old, 'Väktarutbildning 1 (VU1)', 'Nordvakt (fiktiv)', NULL,
-    DATE '2023-05-01', DATE '2023-05-01', NULL, 'Rättade benämningen',
-    'VU1', 'CERT-1001', 'Tog kursen på plats i Malmö.') INTO _new;
-  RESET ROLE;
-
-  SELECT * INTO _r FROM public.sp_claims WHERE id = _new;
-
-  PERFORM pg_temp.ok(_r.credential_code = 'VU1',
-    '1.1 the credential code survives a correction');
-  PERFORM pg_temp.ok(_r.credential_reference = 'CERT-1001',
-    '1.2 the credential reference survives a correction');
-  PERFORM pg_temp.ok(_r.holder_note = 'Tog kursen på plats i Malmö.',
-    '1.3 the holder note survives a correction');
-  PERFORM pg_temp.ok(_r.version_no = 2 AND _r.supersedes_id = _old,
-    '1.4 the corrected version is version 2 and points at what it replaced');
-  PERFORM pg_temp.ok(_r.lifecycle_state = 'active',
-    '1.5 the corrected version is the active one');
-
-  -- History, not deletion.
-  PERFORM pg_temp.ok(
-    (SELECT lifecycle_state FROM public.sp_claims WHERE id = _old) = 'superseded',
-    '1.6 the previous version is marked superseded');
-  PERFORM pg_temp.ok(
-    (SELECT count(*) FROM public.sp_claims WHERE id = _old) = 1,
-    '1.7 the previous version is preserved as immutable history, not deleted');
-  PERFORM pg_temp.ok(
-    (SELECT credential_reference FROM public.sp_claims WHERE id = _old) = 'CERT-1001',
-    '1.8 the previous version keeps its own field values');
+ INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,claimed_issuer_name,jurisdiction_code,sub_jurisdiction_code,credential_reference,valid_until,assertion_level,verified_by_user_id,verified_at)
+ SELECT _holder,d.claim_type,d.name_sv,d.code,d.issuer_name,d.country,d.region,_reference,DATE '2030-01-01',_level,
+ CASE WHEN _level='verified' THEN 'f6b00000-0000-0000-0000-000000000009'::uuid END,
+ CASE WHEN _level='verified' THEN now() END
+ FROM public.sp_approved_credential_catalogue d WHERE code=_code RETURNING id INTO _id;
+ IF _id IS NULL THEN RAISE EXCEPTION 'Missing governed fixture'; END IF;
+ RETURN _id;
+END $$;
+CREATE FUNCTION pg_temp.correct_personal(_id uuid,_reference text,_expiry date DEFAULT '2030-01-01') RETURNS uuid
+LANGUAGE plpgsql AS $$
+DECLARE c public.sp_claims%ROWTYPE;
+BEGIN
+ SELECT * INTO STRICT c FROM public.sp_claims WHERE id=_id;
+ RETURN public.sp_correct_claim(c.id,c.title,c.claimed_issuer_name,c.jurisdiction_code,c.issued_on,c.valid_from,_expiry,'Corrected identifier',c.credential_code,_reference,NULL,NULL,NULL,c.sub_jurisdiction_code,NULL);
 END $$;
 
--- =============================================================================
-\echo '    GROUP 2 -- explicit replacement is possible, invention is not'
--- =============================================================================
-DO $$
-DECLARE
-  _h uuid := 'f6b00000-0000-0000-0000-000000000001';
-  _old uuid; _new uuid; _r public.sp_claims%ROWTYPE;
-BEGIN
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, credential_reference, holder_note)
-  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'CERT-2002', 'gammal anteckning')
-  RETURNING id INTO _old;
-
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-
-  -- Deliberately change the code, the reference and the note.
-  SELECT public.sp_correct_claim(
-    _old, 'Väktarutbildning 2 (VU2)', NULL, NULL, NULL, NULL, NULL,
-    'Det var VU2, inte VU1',
-    'VU2', 'CERT-3003', NULL) INTO _new;
-  RESET ROLE;
-
-  SELECT * INTO _r FROM public.sp_claims WHERE id = _new;
-  PERFORM pg_temp.ok(_r.credential_code = 'VU2',
-    '2.1 the credential code can be explicitly replaced with a supported code');
-  PERFORM pg_temp.ok(_r.credential_reference = 'CERT-3003',
-    '2.2 the credential reference can be explicitly updated');
-  PERFORM pg_temp.ok(_r.holder_note IS NULL,
-    '2.3 the holder note can be explicitly cleared');
-
-  -- An unsupported code is refused by the taxonomy, through the correction path
-  -- exactly as through the insert path.
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  PERFORM pg_temp.must_fail(
-    format('SELECT public.sp_correct_claim(%L, ''x'', NULL, NULL, NULL, NULL, NULL, ''r'', ''NOTREAL'', NULL, NULL)', _new),
-    '', '2.4 a correction cannot invent an unsupported credential code');
-  RESET ROLE;
+\echo '    GROUP 1 -- governed identity and personal fields survive correction'
+DO $$ DECLARE h uuid:='f6b00000-0000-0000-0000-000000000001'; old_id uuid; new_id uuid; r public.sp_claims%ROWTYPE; BEGIN
+ old_id:=pg_temp.governed_claim(h,'INTL_ASIS_CPP','self_declared','CERT-1001');
+ SET LOCAL ROLE authenticated; PERFORM set_config('request.jwt.claim.sub',h::text,true);
+ new_id:=pg_temp.correct_personal(old_id,'CERT-1001'); RESET ROLE;
+ SELECT * INTO r FROM public.sp_claims WHERE id=new_id;
+ PERFORM pg_temp.ok(r.credential_code='INTL_ASIS_CPP','1.1 definition survives correction');
+ PERFORM pg_temp.ok(r.credential_reference='CERT-1001','1.2 reference survives correction');
+ PERFORM pg_temp.ok(r.holder_note IS NULL,'1.3 no unapproved candidate field is introduced');
+ PERFORM pg_temp.ok(r.version_no=2 AND r.supersedes_id=old_id,'1.4 version and predecessor are retained');
+ PERFORM pg_temp.ok(r.lifecycle_state='active','1.5 successor is active');
+ PERFORM pg_temp.ok((SELECT lifecycle_state='superseded' FROM public.sp_claims WHERE id=old_id),'1.6 predecessor is superseded');
+ PERFORM pg_temp.ok((SELECT count(*)=1 FROM public.sp_claims WHERE id=old_id),'1.7 predecessor remains as history');
+ PERFORM pg_temp.ok((SELECT credential_reference='CERT-1001' FROM public.sp_claims WHERE id=old_id),'1.8 predecessor retains its own fields');
 END $$;
 
--- =============================================================================
-\echo '    GROUP 3 -- verification does not survive a material correction'
--- =============================================================================
-DO $$
-DECLARE
-  _h uuid := 'f6b00000-0000-0000-0000-000000000001';
-  _v uuid := 'f6b00000-0000-0000-0000-000000000009';
-  _old uuid; _new uuid; _r public.sp_claims%ROWTYPE; _detail jsonb;
-BEGIN
-  -- A verified OV, attributed, exactly as sp_verifier_decide would leave it.
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
-     credential_reference, holder_note, valid_until,
-     assertion_level, verified_by_user_id, verified_at)
-  VALUES (_h, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten',
-          'DNR-4004', 'min anteckning', DATE '2027-12-31',
-          'verified', _v, now())
-  RETURNING id INTO _old;
-
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  -- Materially different: the reference now names a different decision.
-  SELECT public.sp_correct_claim(
-    _old, 'Ordningsvaktsförordnande', 'Polismyndigheten', NULL,
-    NULL, NULL, DATE '2027-12-31', 'Fel diarienummer',
-    'OV', 'DNR-9999', 'min anteckning') INTO _new;
-  RESET ROLE;
-
-  SELECT * INTO _r FROM public.sp_claims WHERE id = _new;
-  PERFORM pg_temp.ok(_r.assertion_level = 'self_declared',
-    '3.1 a materially corrected claim drops back to self_declared');
-  PERFORM pg_temp.ok(_r.verified_by_user_id IS NULL AND _r.verified_at IS NULL,
-    '3.2 the verifier attribution does not follow a materially corrected claim');
-
-  -- It must re-enter the normal workflow rather than arriving pre-approved.
-  PERFORM pg_temp.ok(_r.assertion_level <> 'verified',
-    '3.3 the corrected version must be reviewed again to become verified');
-
-  SELECT detail INTO _detail FROM public.sp_passport_events
-   WHERE subject_id = _new AND event_type = 'claim_corrected';
-  PERFORM pg_temp.ok((_detail->>'verification_reset')::boolean,
-    '3.4 the audit event records that verification was reset');
-  PERFORM pg_temp.ok(_detail->>'previous_assertion_level' = 'verified',
-    '3.5 the audit event records what the level was before');
+\echo '    GROUP 2 -- personal replacement is allowed; definition replacement is not'
+DO $$ DECLARE h uuid:='f6b00000-0000-0000-0000-000000000001'; old_id uuid; new_id uuid; BEGIN
+ old_id:=pg_temp.governed_claim(h,'INTL_ASIS_CPP');
+ SET LOCAL ROLE authenticated; PERFORM set_config('request.jwt.claim.sub',h::text,true);
+ PERFORM pg_temp.must_fail(format('SELECT public.sp_correct_claim(%L,''Physical Security Professional (PSP)'',''ASIS International'',NULL,NULL,NULL,NULL,''switch'',''INTL_ASIS_PSP'',NULL,NULL)',old_id),'SP_DEFINITION_IMMUTABLE','2.1 even another approved definition cannot replace this claim definition');
+ new_id:=pg_temp.correct_personal(old_id,'CERT-3003');
+ PERFORM pg_temp.ok((SELECT credential_reference='CERT-3003' FROM public.sp_claims WHERE id=new_id),'2.2 personal reference can be updated');
+ PERFORM pg_temp.ok((SELECT holder_note IS NULL FROM public.sp_claims WHERE id=new_id),'2.3 unapproved holder note stays absent');
+ PERFORM pg_temp.must_fail(format('SELECT public.sp_correct_claim(%L,''x'',NULL,NULL,NULL,NULL,NULL,''invent'',''NOTREAL'',NULL,NULL)',new_id),'SP_DEFINITION_IMMUTABLE','2.4 correction cannot invent a definition');
+ PERFORM pg_temp.must_fail(format('SELECT public.sp_correct_claim(%L,''Certified Protection Professional (CPP)'',''Fake issuer'',NULL,NULL,NULL,NULL,''issuer'',''INTL_ASIS_CPP'',NULL,NULL)',new_id),'SP_GOVERNED_METADATA_IMMUTABLE','2.5 correction cannot redefine the issuer');
+ RESET ROLE;
 END $$;
 
--- =============================================================================
-\echo '    GROUP 4 -- a non-material correction keeps a legitimate decision'
--- =============================================================================
-DO $$
-DECLARE
-  _h uuid := 'f6b00000-0000-0000-0000-000000000001';
-  _v uuid := 'f6b00000-0000-0000-0000-000000000009';
-  _old uuid; _new uuid; _r public.sp_claims%ROWTYPE;
-BEGIN
-  -- authorisation_scope arrived with the Swedish truth model (20260907091000).
-  -- Carrying it here is not incidental to this suite: the correction below
-  -- does not pass a scope, so it also proves the scope is carried FORWARD
-  -- rather than dropped — which is what would otherwise make correcting a
-  -- skyddsvakt approval impossible.
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name,
-     credential_reference, holder_note, valid_until, authorisation_scope,
-     assertion_level, verified_by_user_id, verified_at)
-  VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Polismyndigheten',
-          'DNR-5005', 'första anteckning', DATE '2028-01-31',
-          'Skyddsobjekt: Syntetisk anläggning',
-          'verified', _v, now())
-  RETURNING id INTO _old;
-
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  -- ONLY the holder's own private note changes. The credential is untouched,
-  -- so the verifier's decision is still about this exact fact.
-  SELECT public.sp_correct_claim(
-    _old, 'Skyddsvaktsförordnande', 'Polismyndigheten', NULL,
-    NULL, NULL, DATE '2028-01-31', 'Skrev om min anteckning',
-    'SV', 'DNR-5005', 'omskriven anteckning') INTO _new;
-  RESET ROLE;
-
-  SELECT * INTO _r FROM public.sp_claims WHERE id = _new;
-  PERFORM pg_temp.ok(_r.assertion_level = 'verified',
-    '4.1 editing only the private note does not reset verification');
-  PERFORM pg_temp.ok(_r.verified_by_user_id = _v AND _r.verified_at IS NOT NULL,
-    '4.2 a surviving verified level still names who decided it and when');
-  PERFORM pg_temp.ok(_r.holder_note = 'omskriven anteckning',
-    '4.3 the note itself is updated');
-  PERFORM pg_temp.ok(_r.authorisation_scope = 'Skyddsobjekt: Syntetisk anläggning',
-    '4.4 the scope is carried forward by a correction that did not mention it');
+\echo '    GROUP 3 -- material personal correction resets verification'
+DO $$ DECLARE h uuid:='f6b00000-0000-0000-0000-000000000001'; old_id uuid; new_id uuid; r public.sp_claims%ROWTYPE; detail jsonb; BEGIN
+ old_id:=pg_temp.governed_claim(h,'OV','verified','DNR-4004');
+ SET LOCAL ROLE authenticated; PERFORM set_config('request.jwt.claim.sub',h::text,true);
+ new_id:=pg_temp.correct_personal(old_id,'DNR-9999'); RESET ROLE;
+ SELECT * INTO r FROM public.sp_claims WHERE id=new_id;
+ PERFORM pg_temp.ok(r.assertion_level='self_declared','3.1 material correction resets trust');
+ PERFORM pg_temp.ok(r.verified_by_user_id IS NULL AND r.verified_at IS NULL,'3.2 verifier attribution cannot transfer');
+ PERFORM pg_temp.ok(r.assertion_level<>'verified','3.3 successor must be reviewed again');
+ SELECT e.detail INTO detail FROM public.sp_passport_events e WHERE subject_id=new_id AND event_type='claim_corrected';
+ PERFORM pg_temp.ok((detail->>'verification_reset')::boolean,'3.4 audit records verification reset');
+ PERFORM pg_temp.ok(detail->>'previous_assertion_level'='verified','3.5 audit records previous trust');
 END $$;
 
--- =============================================================================
-\echo '    GROUP 5 -- documentation does not follow either'
--- =============================================================================
-DO $$
-DECLARE
-  _h uuid := 'f6b00000-0000-0000-0000-000000000001';
-  _old uuid; _new uuid; _lvl text;
-BEGIN
-  -- DOCUMENT_PROVIDED is a statement that a file is attached to THIS row.
-  -- Evidence points at a claim id, and the new version has a new id.
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, assertion_level)
-  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'document_provided')
-  RETURNING id INTO _old;
-
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  -- The correction changes the TRAINING PROVIDER, which is material.
-  --
-  -- It used to change the title instead, and from 20260910090000 it cannot:
-  -- a governed credential is named by its definition, so the one field this
-  -- fixture was editing is now the one field a correction may not touch. The
-  -- assertion is unchanged — a material correction does not carry
-  -- DOCUMENT_PROVIDED onto a row no evidence points at — only its subject is.
-  SELECT public.sp_correct_claim(
-    _old, 'Väktarutbildning 1 (VU1)', 'Väktarskolan Fiktiv AB', NULL, NULL, NULL, NULL,
-    'Bytte bevis', 'VU1', NULL, NULL) INTO _new;
-  RESET ROLE;
-
-  SELECT assertion_level INTO _lvl FROM public.sp_claims WHERE id = _new;
-  PERFORM pg_temp.ok(_lvl = 'self_declared',
-    '5.1 DOCUMENT_PROVIDED does not follow a materially corrected claim');
+\echo '    GROUP 4 -- governed scope and unapproved notes cannot be corrected'
+DO $$ DECLARE h uuid:='f6b00000-0000-0000-0000-000000000001'; old_id uuid; new_id uuid; r public.sp_claims%ROWTYPE; BEGIN
+ old_id:=pg_temp.governed_claim(h,'OV','verified','DNR-5005');
+ SET LOCAL ROLE authenticated; PERFORM set_config('request.jwt.claim.sub',h::text,true);
+ PERFORM pg_temp.must_fail(format('SELECT public.sp_correct_claim(%L,''Ordningsvaktsförordnande'',''Polismyndigheten'',''SE'',NULL,NULL,''2030-01-01'',''note'',''OV'',''DNR-5005'',''unapproved note'')',old_id),'SP_GOVERNED_METADATA_IMMUTABLE','4.1 candidate cannot add an unapproved note');
+ PERFORM pg_temp.must_fail(format('UPDATE public.sp_claims SET authorisation_scope=''custom scope'' WHERE id=%L',old_id),'SP_GOVERNED_METADATA_IMMUTABLE','4.2 candidate cannot change governed scope');
+ new_id:=pg_temp.correct_personal(old_id,'DNR-5005'); RESET ROLE;
+ SELECT * INTO r FROM public.sp_claims WHERE id=new_id;
+ PERFORM pg_temp.ok(r.assertion_level='verified' AND r.verified_by_user_id='f6b00000-0000-0000-0000-000000000009'::uuid AND r.verified_at IS NOT NULL,'4.3 identical facts retain their legitimate attributed legacy decision');
+ PERFORM pg_temp.ok(r.holder_note IS NULL AND r.authorisation_scope IS NULL,'4.4 denied metadata never reaches the successor');
 END $$;
 
--- =============================================================================
-\echo '    GROUP 6 -- the holder still cannot assign an approved state'
--- =============================================================================
-DO $$
-DECLARE
-  _h uuid := 'f6b00000-0000-0000-0000-000000000001';
-  _old uuid; _new uuid; _lvl text; _args text;
-BEGIN
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h, 'training', 'Väktarutbildning 2 (VU2)', 'VU2')
-  RETURNING id INTO _old;
-
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  -- Corrects the training provider. The title is the definition's and stays
-  -- so; from 20260910090000 a governed credential cannot be renamed by anyone.
-  SELECT public.sp_correct_claim(
-    _old, 'Väktarutbildning 2 (VU2)', 'Väktarskolan Fiktiv AB', NULL, NULL, NULL, NULL,
-    'r', 'VU2', NULL, NULL) INTO _new;
-  RESET ROLE;
-
-  SELECT assertion_level INTO _lvl FROM public.sp_claims WHERE id = _new;
-  PERFORM pg_temp.ok(_lvl = 'self_declared',
-    '6.1 a correction never raises trust');
-
-  -- Structural, not behavioural: the function has no parameter through which a
-  -- caller could ask for an assertion level at all.
-  SELECT pg_get_function_arguments(p.oid) INTO _args
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-   WHERE n.nspname = 'public' AND p.proname = 'sp_correct_claim';
-  PERFORM pg_temp.ok(position('assertion' IN _args) = 0,
-    '6.2 sp_correct_claim exposes no assertion_level parameter');
-  PERFORM pg_temp.ok(position('verified' IN _args) = 0,
-    '6.3 sp_correct_claim exposes no verifier attribution parameter');
-
-  -- And the direct route is still shut.
-  PERFORM pg_temp.must_fail(
-    format('UPDATE public.sp_claims SET assertion_level = ''verified'' WHERE id = %L', _new),
-    'SP_TRUST_FIELD_IMMUTABLE',
-    '6.4 the holder cannot set verified by direct update');
+\echo '    GROUP 5 -- documentation does not transfer across material correction'
+DO $$ DECLARE h uuid:='f6b00000-0000-0000-0000-000000000001'; old_id uuid; new_id uuid; BEGIN
+ old_id:=pg_temp.governed_claim(h,'INTL_ASIS_CPP','document_provided');
+ SET LOCAL ROLE authenticated; PERFORM set_config('request.jwt.claim.sub',h::text,true);
+ new_id:=pg_temp.correct_personal(old_id,'NEW'); RESET ROLE;
+ PERFORM pg_temp.ok((SELECT assertion_level='self_declared' FROM public.sp_claims WHERE id=new_id),'5.1 document-provided does not follow material correction');
+ PERFORM pg_temp.ok((SELECT assertion_level='document_provided' FROM public.sp_claims WHERE id=old_id),'5.2 historical documentation status remains on its original version');
 END $$;
 
--- =============================================================================
-\echo '    GROUP 7 -- the existing guards are unchanged'
--- =============================================================================
-DO $$
-DECLARE
-  _h uuid := 'f6b00000-0000-0000-0000-000000000001';
-  _other uuid := 'f6b00000-0000-0000-0000-000000000002';
-  _claim uuid; _superseded uuid;
-BEGIN
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h, 'training', 'Väktarutbildning 1 (VU1)', 'VU1')
-  RETURNING id INTO _claim;
-
-  -- Somebody else's Passport stays somebody else's.
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _other::text, true);
-  PERFORM pg_temp.must_fail(
-    format('SELECT public.sp_correct_claim(%L, ''stolen'', NULL, NULL, NULL, NULL, NULL, ''r'', ''VU1'', NULL, NULL)', _claim),
-    'SP_NOT_HOLDER',
-    '7.1 a non-holder cannot correct a claim');
-  RESET ROLE;
-
-  -- A superseded version is history and cannot be re-corrected.
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  SELECT public.sp_correct_claim(
-    _claim, 'Väktarutbildning 1 (VU1)', 'Väktarskolan Fiktiv AB', NULL, NULL, NULL, NULL,
-    'r', 'VU1', NULL, NULL)
-    INTO _superseded;
-  PERFORM pg_temp.must_fail(
-    format('SELECT public.sp_correct_claim(%L, ''again'', NULL, NULL, NULL, NULL, NULL, ''r'', ''VU1'', NULL, NULL)', _claim),
-    'SP_CLAIM_NOT_CORRECTABLE',
-    '7.2 a superseded version cannot be corrected again');
-
-  -- The Phase 6 taxonomy rules still bind the corrected row.
-  PERFORM pg_temp.must_fail(
-    format('SELECT public.sp_correct_claim(%L, ''OV utan slutdatum'', ''Polismyndigheten'', NULL, NULL, NULL, NULL, ''r'', ''OV'', NULL, NULL)', _superseded),
-    '',
-    '7.3 a correction cannot turn a claim into an appointment with no end date');
-  RESET ROLE;
+\echo '    GROUP 6 -- no holder command can assign approved trust'
+DO $$ DECLARE h uuid:='f6b00000-0000-0000-0000-000000000001'; old_id uuid; new_id uuid; args text; BEGIN
+ old_id:=pg_temp.governed_claim(h,'INTL_ASIS_PSP');
+ SET LOCAL ROLE authenticated; PERFORM set_config('request.jwt.claim.sub',h::text,true);
+ new_id:=pg_temp.correct_personal(old_id,'NEW');
+ PERFORM pg_temp.ok((SELECT assertion_level='self_declared' FROM public.sp_claims WHERE id=new_id),'6.1 correction never raises trust');
+ SELECT pg_get_function_arguments(p.oid) INTO args FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='sp_correct_claim';
+ PERFORM pg_temp.ok(position('assertion' IN args)=0,'6.2 correction exposes no assertion-level argument');
+ PERFORM pg_temp.ok(position('verified' IN args)=0,'6.3 correction exposes no verifier attribution argument');
+ PERFORM pg_temp.must_fail(format('UPDATE public.sp_claims SET assertion_level=''verified'' WHERE id=%L',new_id),'SP_TRUST_FIELD_IMMUTABLE','6.4 direct promotion remains forbidden'); RESET ROLE;
 END $$;
 
+\echo '    GROUP 7 -- ownership, stale-version and validity guards remain enforced'
+DO $$ DECLARE h uuid:='f6b00000-0000-0000-0000-000000000001'; old_id uuid; new_id uuid; BEGIN
+ old_id:=pg_temp.governed_claim(h,'OV');
+ SET LOCAL ROLE authenticated; PERFORM set_config('request.jwt.claim.sub','f6b00000-0000-0000-0000-000000000002',true);
+ PERFORM pg_temp.must_fail(format('SELECT public.sp_correct_claim(%L,''stolen'',NULL,NULL,NULL,NULL,NULL,''r'',''OV'',NULL,NULL)',old_id),'SP_NOT_HOLDER','7.1 another holder cannot correct a claim');
+ PERFORM set_config('request.jwt.claim.sub',h::text,true);
+ new_id:=pg_temp.correct_personal(old_id,'NEW');
+ PERFORM pg_temp.must_fail(format('SELECT pg_temp.correct_personal(%L,''AGAIN'')',old_id),'SP_CLAIM_NOT_CORRECTABLE','7.2 superseded history cannot be corrected again');
+ PERFORM pg_temp.must_fail(format('SELECT pg_temp.correct_personal(%L,''NEW'',NULL)',new_id),'SP_CREDENTIAL_REQUIRES_VALID_UNTIL','7.3 correction cannot erase required expiry'); RESET ROLE;
+END $$;
 -- =============================================================================
 \echo '    GROUP 8 -- audit history stays attributable and append-only'
 -- =============================================================================

@@ -1,3 +1,10 @@
+import { isPassportCredential } from "@/lib/security-passport/credential-passport";
+import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
+import {
+  getInternationalPassportMetadata,
+  saveInternationalCredential,
+  type InternationalPassportMetadata,
+} from "@/lib/security-passport/international.functions";
 // Security Passport — one entry, and everything that can happen to it.
 //
 // A qualification and an employment period share this page because they
@@ -18,7 +25,6 @@ import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-r
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { publicShareUrl } from "@/lib/security-passport/public-origin";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import {
   getEvidenceViewUrl,
@@ -56,8 +62,6 @@ import {
 import { CredentialVersionHistory } from "@/components/security-passport/CredentialVersionHistory";
 import { LifecycleChip, LifecycleNote } from "@/components/security-passport/LifecycleChip";
 import { EvidencePanel } from "@/components/security-passport/live/EvidencePanel";
-import { CredentialShareActions } from "@/components/security-passport/live/CredentialShareActions";
-import { createCredentialDisclosure } from "@/lib/security-passport/disclosure.functions";
 import { VerificationPanel } from "@/components/security-passport/live/VerificationPanel";
 import type { EmployerSearchState } from "@/components/security-passport/live/EmployerConfirmationPicker";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
@@ -83,6 +87,9 @@ function PassportEntryRoute() {
   const { kind, entryId } = useParams({ from: "/_authenticated/passport/entry/$kind/$entryId" });
   const isClaim = kind === "claim";
 
+  const saveInternational = useServerFn(saveInternationalCredential);
+  const loadInternational = useServerFn(getInternationalPassportMetadata);
+  const [international, setInternational] = useState<InternationalPassportMetadata | null>(null);
   const loadPassport = useServerFn(getMyPassport);
   const loadEvidence = useServerFn(listMyEvidence);
   const loadRequests = useServerFn(listMyVerificationRequests);
@@ -94,7 +101,6 @@ function PassportEntryRoute() {
   const doWithdrawRequest = useServerFn(withdrawVerificationRequest);
   const doDispute = useServerFn(raiseDispute);
   const doArchive = useServerFn(archiveCredential);
-  const doShareCredential = useServerFn(createCredentialDisclosure);
   const doCorrect = useServerFn(correctClaim);
   const loadVersions = useServerFn(listClaimVersions);
   const loadCredentialTypes = useServerFn(listCredentialTypes);
@@ -106,8 +112,6 @@ function PassportEntryRoute() {
   const [decisions, setDecisions] = useState<readonly VerificationDecisionRecord[]>([]);
   const [credentialTypes, setCredentialTypes] = useState<readonly CredentialType[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [credentialShareUrl, setCredentialShareUrl] = useState<string | null>(null);
-  const [sharingBusy, setSharingBusy] = useState(false);
   const [versions, setVersions] = useState<readonly ClaimVersion[]>([]);
   const [correcting, setCorrecting] = useState(false);
   const [correctionPrefill, setCorrectionPrefill] = useState<{
@@ -126,7 +130,7 @@ function PassportEntryRoute() {
     // anyway, which is worse than no retry at all.
     setError(null);
     try {
-      const [snap, ev, reqs, types] = await Promise.all([
+      const [snap, ev, reqs, types, metadata] = await Promise.all([
         loadPassport({ data: undefined }),
         loadEvidence({ data: undefined }),
         loadRequests({ data: undefined }),
@@ -134,7 +138,9 @@ function PassportEntryRoute() {
         // taxonomy rather than a list here, so a credential that becomes
         // scoped later asks for it without a code change.
         loadCredentialTypes({ data: undefined }),
+        loadInternational({ data: undefined }),
       ]);
+      setInternational(metadata);
       setSnapshot(snap);
       setEvidence(ev);
       setRequests(reqs.requests);
@@ -149,11 +155,13 @@ function PassportEntryRoute() {
       console.error("[passport] entry load failed", err);
       setError(pt("live.readError"));
     }
-  }, [loadPassport, loadEvidence, loadRequests, loadCredentialTypes, pt]);
+  }, [loadPassport, loadEvidence, loadRequests, loadCredentialTypes, loadInternational, pt]);
 
   useEffect(() => {
+    setCorrecting(false);
+    setCorrectionPrefill(null);
     void refresh();
-  }, [refresh]);
+  }, [refresh, entryId]);
 
   // The version chain is claim-only and loaded separately: it is history,
   // and a failure to load it must not take down the entry itself.
@@ -395,6 +403,7 @@ function PassportEntryRoute() {
       ).scope ?? false)
     : false;
 
+  const internationalDetail = international?.details.find((d) => d.claim_id === entryId);
   const mayCorrect =
     claim !== null &&
     (validity.effectiveState === "active" || validity.effectiveState === "expired");
@@ -604,42 +613,22 @@ function PassportEntryRoute() {
         }}
       />
 
-      {/* A verified, current credential can be shared on its own — the
-          holder should not have to disclose their whole Passport to prove
-          one qualification. Shown for claims only: an employment period is
-          not a credential somebody puts on LinkedIn. */}
-      {claim ? (
-        <CredentialShareActions
-          subject={{
-            title,
-            issuer: claim.issuerName === "—" ? null : claim.issuerName,
-            issuedOn: claim.issuedOn,
-            validUntil: claim.validUntil,
-            shareable: claim.assertionLevel === "verified" && validity.effectiveState === "active",
-          }}
-          shareUrl={credentialShareUrl}
-          busy={sharingBusy}
-          onCreateLink={() => {
-            setSharingBusy(true);
-            setError(null);
-            void doShareCredential({
-              data: {
-                claimId: entryId,
-                expiresDays: 30,
-                purpose: null,
-                recipientHint: null,
-              },
-            })
-              .then((r) => {
-                setCredentialShareUrl(publicShareUrl(r.token));
-              })
-              .catch((err: unknown) => {
-                console.error("[passport] credential share failed", err);
-                setError(pt("common.error"));
-              })
-              .finally(() => setSharingBusy(false));
-          }}
-        />
+      {claim && isPassportCredential(claim) ? (
+        <section className="rounded-xl border border-border bg-card p-5">
+          <p className="text-sm text-muted-foreground">
+            {lang === "sv"
+              ? "Välj yrkesbevis, valfria uppgifter och giltighetstid innan du skapar en länk. Underlag delas inte automatiskt."
+              : "Choose credentials, optional fields and expiry before creating a link. Evidence is not shared automatically."}
+          </p>
+          <Link
+            to="/passport/share"
+            className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium"
+          >
+            {lang === "sv"
+              ? "Välj yrkesbevis och uppgifter att dela"
+              : "Select credentials and permitted fields"}
+          </Link>
+        </section>
       ) : null}
 
       <VerificationPanel
@@ -792,18 +781,37 @@ function PassportEntryRoute() {
           </h3>
           {correcting && correctionPrefill && claim ? (
             <div className="mt-3">
-              <CredentialCorrectionForm
-                requiresScope={correctionRequiresScope}
-                claim={claim}
-                privateFields={correctionPrefill}
-                busy={correctionBusy}
-                serverError={correctionError}
-                onSubmit={(values) => void submitCorrection(values)}
-                onCancel={() => {
-                  setCorrecting(false);
-                  setCorrectionPrefill(null);
-                }}
-              />
+              {isPassportCredential(claim) ? (
+                <InternationalCredentialForm
+                  metadata={international}
+                  onSave={(data) => saveInternational({ data })}
+                  key={claim.id}
+                  initial={{
+                    claim_id: claim.id,
+                    version: claim.versionNo,
+                    definition_code: claim.credentialCode ?? "",
+                    market_country: claim.jurisdictionCode ?? "",
+                    market_region: claim.subJurisdictionCode ?? "",
+                    identifier: correctionPrefill.credentialReference ?? "",
+                    issued_on: claim.issuedOn ?? "",
+                    valid_until: claim.validUntil ?? "",
+                    no_expiry: internationalDetail?.no_expiry ?? null,
+                  }}
+                />
+              ) : (
+                <CredentialCorrectionForm
+                  requiresScope={correctionRequiresScope}
+                  claim={claim}
+                  privateFields={correctionPrefill}
+                  busy={correctionBusy}
+                  serverError={correctionError}
+                  onSubmit={(values) => void submitCorrection(values)}
+                  onCancel={() => {
+                    setCorrecting(false);
+                    setCorrectionPrefill(null);
+                  }}
+                />
+              )}
             </div>
           ) : (
             <>

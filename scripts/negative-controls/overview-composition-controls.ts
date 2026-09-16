@@ -84,27 +84,25 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "no CSS reordering",
   },
 
-  // ---- The contents preview is replaced by counts alone --------------------
+  // The canonical compact card must keep a bounded credential preview.
   {
     id: "OV-NC-CONTENTS-REPLACED-BY-COUNTS",
-    defect:
-      "the Passport column stops showing what the Passport CONTAINS and offers only status totals, which describe its state and never its contents",
-    file: ROUTE,
-    find: '          <OverviewPassportContents lang={lang as Lang} className="mt-5" />',
-    replace: "",
+    defect: "the card stops showing the actual credentials and leaves counts alone",
+    file: "src/components/security-passport/CompactPassportCard.tsx",
+    find: "claims.slice(0, 3)",
+    replace: "claims.slice(0, 0)",
     guard: DASH,
-    expect: "must show what the Passport contains",
+    expect: "previews at most three actual credentials",
   },
   {
-    id: "OV-NC-CONTENTS-BEFORE-CARD",
-    defect:
-      "the contents preview is moved above the card, so the column no longer reads card-then-contents",
+    id: "OV-NC-DUPLICATED-CONTENTS",
+    defect: "a second credential preview repeats the same records below the compact card",
     file: ROUTE,
-    find: "          <OverviewPassportCard lang={lang as Lang} />\n\n          {/* WHAT IS IN IT",
+    find: "          <OverviewPassportCard lang={lang as Lang} />",
     replace:
-      "          <OverviewPassportContents lang={lang as Lang} />\n          <OverviewPassportCard lang={lang as Lang} />\n\n          {/* WHAT IS IN IT",
+      "          <OverviewPassportContents lang={lang as Lang} />\n          <OverviewPassportCard lang={lang as Lang} />",
     guard: DASH,
-    expect: "card, then contents, then the totals",
+    expect: "does not repeat the credential preview",
   },
 
   // ---- The column split loses its meaning ----------------------------------

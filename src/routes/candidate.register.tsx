@@ -14,7 +14,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { unifiedAuthHref } from "@/lib/auth/legacy-entry";
 
 export const Route = createFileRoute("/candidate/register")({
-  ssr: false,
+  // Resolve this URL-only redirect on the server before client hydration.
   beforeLoad: ({ location }) => {
     throw redirect({ href: unifiedAuthHref("signup", location.searchStr ?? ""), replace: true });
   },

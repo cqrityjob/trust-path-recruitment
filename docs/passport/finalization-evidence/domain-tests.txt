@@ -1,0 +1,25 @@
+bun test v1.3.14 (0d9b296a)
+
+scripts/passport-finalization.test.ts:
+(pass) credential-only Passport ownership > certification/null [0.86ms]
+(pass) credential-only Passport ownership > licence/null
+(pass) credential-only Passport ownership > training/VU1
+(pass) credential-only Passport ownership > specialisation/SV
+(pass) credential-only Passport ownership > training/null [0.03ms]
+(pass) credential-only Passport ownership > specialisation/null
+(pass) credential-only Passport ownership > education/null
+(pass) credential-only Passport ownership > professional_membership/null
+(pass) credential-only Passport ownership > projection preserves CV source rows [0.36ms]
+(pass) international identity, locale and review expiry > seven classes translated [0.06ms]
+(pass) international identity, locale and review expiry > missing expiry remains unknown [2.25ms]
+(pass) international identity, locale and review expiry > canonical title updates and clears [0.81ms]
+(pass) international identity, locale and review expiry > review approved/2027-01-01 [0.07ms]
+(pass) international identity, locale and review expiry > review approved/2025-01-01
+(pass) international identity, locale and review expiry > review revoked/null
+(pass) international identity, locale and review expiry > review rejected/null
+(pass) international identity, locale and review expiry > no event cannot sustain verified status [0.04ms]
+(pass) international identity, locale and review expiry > an approval never promotes a self-reported claim [0.02ms]
+
+ 18 pass
+ 0 fail
+Ran 18 tests across 1 file. [76.00ms]

@@ -499,8 +499,17 @@ test.describe("the public homepage", () => {
 
   for (const cta of CTAS) {
     test(`${cta.name} reaches ${cta.url} and can be left again`, async ({ page }) => {
-      const root = page.locator(cta.scope);
-      await root.getByRole("link", { name: cta.label, exact: false }).first().click();
+      const menu = page.getByRole("button", { name: /Öppna meny|Open menu/ });
+      if (cta.scope === "header" && (await menu.isVisible())) await menu.click();
+      const root =
+        cta.scope === "header"
+          ? page.locator("header").filter({ visible: true })
+          : page.locator(cta.scope);
+      await root
+        .getByRole("link", { name: cta.label, exact: false })
+        .filter({ visible: true })
+        .first()
+        .click();
       await page.waitForURL(`**${cta.url}`, { timeout: 15_000 });
       expect(new URL(page.url()).pathname).toBe(cta.url);
 
@@ -705,9 +714,16 @@ test.describe("the public homepage", () => {
 
   // H18 ─────────────────────────────────────────────────────────────────
   test("switching language preserves the current route", async ({ page }) => {
-    await page.locator("header").getByRole("link", { name: "Om oss" }).first().click();
+    const menu = page.getByRole("button", { name: /Öppna meny|Open menu/ });
+    if (await menu.isVisible()) await menu.click();
+    await page
+      .locator("header")
+      .getByRole("link", { name: "Om oss" })
+      .filter({ visible: true })
+      .first()
+      .click();
     await page.waitForURL("**/about");
-    await page.getByRole("button", { name: /^en$/i }).first().click();
+    await page.getByRole("button", { name: /^en$/i }).filter({ visible: true }).first().click();
     await page.waitForTimeout(400);
     expect(new URL(page.url()).pathname).toBe("/about");
     expect(await page.evaluate(() => document.documentElement.lang)).toBe("en");

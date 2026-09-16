@@ -61,7 +61,7 @@ import { omittedFacts } from "../../src/lib/professional-identity/cv/selection";
 import { computeCvReadiness } from "../../src/lib/professional-identity/cv/readiness";
 
 export const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-export const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+export const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 export const USER_ID = "00000000-0000-4000-8000-0000000000c1";
 export const ACCOUNT_EMAIL = "karin.wallin@example.test";
 
@@ -615,7 +615,7 @@ export async function signedIn(page: Page, model: ServerModel, opts: Options = {
 
   // Nothing may reach the real project. Every request to it is answered here,
   // and the only one the client makes with a planted session is the user read.
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     if (route.request().url().includes("/auth/v1/user")) {
       return route.fulfill({
         status: 200,

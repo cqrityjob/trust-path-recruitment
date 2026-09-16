@@ -68,10 +68,9 @@ test.describe("Security Passport — responsive and keyboard", () => {
     ).toBeLessThanOrEqual(1);
   });
 
-  test("every interactive control meets the 44px touch target", async ({ page }, testInfo) => {
+  test("every interactive control meets the 44px touch target", async ({ page }) => {
     // Desktop pointers are precise; fingers are not. Only enforced on the
     // mobile projects, where the control is actually touched.
-    test.skip(testInfo.project.name === "chromium", "Touch targets are a mobile concern.");
 
     const undersized = await page.evaluate(() => {
       const sel = 'a[href], button, select, input:not([type="hidden"]), textarea, [tabindex="0"]';
@@ -93,7 +92,7 @@ test.describe("Security Passport — responsive and keyboard", () => {
       el.focus();
       return document.activeElement === el;
     });
-    test.skip(first === null, "No focusable control on this surface.");
+    expect(first, "The surface must expose a keyboard control").not.toBeNull();
     expect(first).toBe(true);
 
     // Ten tabs is enough to leave any single control group; the point is that
@@ -122,7 +121,7 @@ test.describe("Security Passport — responsive and keyboard", () => {
 
   test("status is carried by words, not colour alone", async ({ page }) => {
     const texts = await statusTexts(page);
-    test.skip(texts.length === 0, "No status-bearing elements on this surface.");
+    expect(texts.length, "The fixture must render status-bearing elements").toBeGreaterThan(0);
     // Each status element must say something. A swatch with an empty label is
     // exactly the colour-only signal the design rules forbid.
     for (const t of texts) {

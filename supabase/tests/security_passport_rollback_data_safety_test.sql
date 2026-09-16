@@ -28,6 +28,8 @@ BEGIN
   -- =====================================================================
   RAISE NOTICE 'GROUP 1 -- both shapes of scoped row exist';
   -- =====================================================================
+  -- Owner-only historical fixtures; final guard restored before rollback probes.
+  ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
   -- A modern scoped approval.
   INSERT INTO public.sp_claims
     (id, holder_user_id, claim_type, title, credential_code, jurisdiction_code,
@@ -51,6 +53,7 @@ BEGIN
   VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'SE',
           'Länsstyrelsen', current_date + 300, 'Skyddsobjekt: Rättad', _legacy, 2);
 
+  ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _h
      AND authorisation_scope IS NOT NULL AND length(btrim(authorisation_scope)) > 0;
@@ -134,8 +137,10 @@ BEGIN
   -- =====================================================================
   RAISE NOTICE 'GROUP 5 -- cleanup';
   -- =====================================================================
+  ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
   UPDATE public.sp_claims SET supersedes_id = NULL WHERE holder_user_id = _h;
   DELETE FROM public.sp_claims WHERE holder_user_id = _h;
+  ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
   DELETE FROM auth.users WHERE id = _h;
   RAISE NOTICE 'ok  5.1 suite data removed';
 END $$;

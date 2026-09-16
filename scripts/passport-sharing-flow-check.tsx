@@ -216,7 +216,7 @@ ck(
 );
 ck(
   "2.4 the preview payload comes from the server, through the live builder",
-  /previewSelectedShare/.test(route) &&
+  /previewCredentialShare/.test(route) &&
     /sp_preview_selected_disclosure/.test(functions) &&
     /RETURN public\.sp_selected_merits_payload\(/.test(migration),
 );

@@ -238,6 +238,8 @@ export const completeFirstMerit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => completionInput.parse(data))
   .handler(async ({ context, data }): Promise<FirstMeritResult> => {
+    if (data.meritKind === "certification" || data.meritKind === "licence")
+      throw new Error("SP_APPROVED_DEFINITION_REQUIRED");
     const { supabase } = context;
 
     const { data: rows, error } = await supabase.rpc("sp_passport_complete_first_merit", {

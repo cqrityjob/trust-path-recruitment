@@ -25,6 +25,8 @@
 import { execFileSync } from "node:child_process";
 import { test, expect, type Page } from "@playwright/test";
 
+test.use({ actionTimeout: 30_000 });
+
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
 const BASE = process.env.E2E_BASE_URL ?? "";
 
@@ -332,8 +334,11 @@ test("A–D,G · capture, refresh, double actions, later material, locked report
   await page.goto(`/employer/${JOURNEY.slug}/interview-intelligence/${caseId}/report`);
   const finalise = page.getByRole("button", { name: /Slutför rapporten|Complete the report/ });
   await expect(finalise).toBeVisible({ timeout: 30_000 });
+  await expect(finalise).toBeDisabled();
+  await page.getByRole("button", { name: /Förhandsgranska rapporten|Preview the report/i }).click();
+  await expect(finalise).toBeEnabled();
   await finalise.dblclick();
-  await expect(page.locator("main")).toContainText(/Rapport klar|Report complete/, {
+  await expect(page.locator("main")).toContainText(/Rapport fastställd|Report finalised/, {
     timeout: 45_000,
   });
   await expect(page.locator("main")).toContainText(/Slutlig och oföränderlig|Final and immutable/);
@@ -369,7 +374,7 @@ test("A–D,G · capture, refresh, double actions, later material, locked report
   );
   psql(`UPDATE public.scp_interview_cases SET title = title || ' (ändrad)' WHERE id = '${caseId}'`);
   await page.reload();
-  await expect(page.locator("main")).toContainText(/Rapport klar|Report complete/, {
+  await expect(page.locator("main")).toContainText(/Rapport fastställd|Report finalised/, {
     timeout: 45_000,
   });
   const docAfter = await page.locator("main article").first().innerText();
@@ -462,7 +467,9 @@ test("F · another employer opening the case URL is refused, and sees none of th
     });
     text = await page.locator("body").innerText();
     expect(text).not.toContain("kontrollerade dörren innan larm");
-    expect(text).not.toMatch(/Bekräftat underlag|Confirmed material|Rapport klar|Report complete/);
+    expect(text).not.toMatch(
+      /Bekräftat underlag|Confirmed material|Rapport fastställd|Report finalised/,
+    );
   }
 });
 

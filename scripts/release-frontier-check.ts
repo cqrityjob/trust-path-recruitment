@@ -139,11 +139,20 @@ const hostedLedgerMarkers = [
   "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
   "20260907064849_0bb96516-c1eb-4178-8e9e-60bde13071dd.sql",
   "20260908043205_b315714c-89df-4610-9dd0-7b55207229a7.sql",
+  "20260916155430_sp_international_passport_foundation.sql",
+  "20260916155456_sp_international_credential_wallet.sql",
+  "20260916155521_sp_credential_selective_sharing_v2.sql",
+  "20260916155551_sp_closed_credential_catalogue.sql",
+  "20260916155620_cv_owned_application_snapshot.sql",
 ];
 const parked = [
   "20261022090000_scp_vaktare_v1_content_review.sql",
   "20261023090000_scp_vaktare_v1_self_report_quality.sql",
 ];
+
+// PR #257: all five Passport/CV migrations have verified hosted application.
+// Their generated identities are pinned above as non-executable markers.
+// Numeric history parity remains enforced independently by deploy-plan:check.
 
 const active = new Set(readdirSync(migrationsDir).filter((file) => file.endsWith(".sql")));
 const pending = state.frontier

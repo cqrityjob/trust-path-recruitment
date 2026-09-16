@@ -118,9 +118,9 @@ VALUES ('ad100000-0000-0000-0000-000000000012','ad100000-1111-0000-0000-00000000
 
 -- The holder's own Passport claim: the user-side blocker, and the row that
 -- anonymisation must leave completely untouched.
-INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, lifecycle_state)
+INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, lifecycle_state, credential_code, claimed_issuer_name)
 VALUES ('ad100000-6666-0000-0000-000000000061','ad100000-0000-0000-0000-000000000012',
-        'certification','Väktarutbildning del 1','active');
+        'certification','Certified Protection Professional (CPP)','active','INTL_ASIS_CPP','ASIS International');
 
 -- REVIEWER: assessment history that is not an assignment.
 INSERT INTO public.scp_employer_reviewers (employer_id, user_id)
@@ -554,7 +554,7 @@ SELECT pg_temp.ok(
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.sp_claims
     WHERE holder_user_id = 'ad100000-0000-0000-0000-000000000012'
-      AND title = 'Väktarutbildning del 1') = 1,
+      AND title = 'Certified Protection Professional (CPP)') = 1,
   'N7 anonymisation does NOT touch verified Passport evidence');
 
 SELECT pg_temp.ok(
@@ -1012,9 +1012,9 @@ SELECT 'ad100000-6666-0000-0000-0000000000b1','ad100000-4444-0000-0000-000000000
   FROM public.scp_report_versions rv ORDER BY rv.id LIMIT 1;
 
 -- The holder's own Security Passport, and one disclosure of it to the employer.
-INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, lifecycle_state)
+INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, lifecycle_state, credential_code, claimed_issuer_name)
 VALUES ('ad100000-7777-0000-0000-0000000000b1','ad100000-0000-0000-0000-0000000000b1',
-        'certification','Väktarutbildning del 1','active');
+        'certification','Certified Protection Professional (CPP)','active','INTL_ASIS_CPP','ASIS International');
 
 INSERT INTO public.sp_evidence (holder_user_id, claim_id, storage_path, file_name, mime_type, size_bytes)
 VALUES ('ad100000-0000-0000-0000-0000000000b1','ad100000-7777-0000-0000-0000000000b1',

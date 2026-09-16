@@ -1,0 +1,9 @@
+sp_credential_classes|7
+sp_credential_jurisdictions|11
+sp_credential_definition_metadata|0
+sp_credential_definition_jurisdictions|0
+sp_credential_adapter_mappings|0
+sp_credential_details|0
+sp_evidence_extractions|0
+sp_credential_disclosure_policy|0
+sp_credential_share_events|0

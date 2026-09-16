@@ -254,12 +254,16 @@ const en = dictionaries.en as Record<string, string>;
 
     // Swedish "svar behöver granskas" is genuinely identical in both forms.
     // English, for the same row, is not ("response needs" / "responses need").
-    // So identical is allowed, but never in both languages at once: that is
-    // the shape a copy-paste leaves behind.
+    // The account queue suffix has no count-bearing noun or verb: both
+    // "att hantera" and "to handle" are grammatical for every count. Keep
+    // that exact invariant pair explicit; all other pairs must differ.
     const svSame = sv[`${base}.one`] === sv[`${base}.other`];
     const enSame = en[`${base}.one`] === en[`${base}.other`];
     expect(
-      !(svSame && enSame),
+      !(svSame && enSame) ||
+        (base === "account.context.reviewerPending" &&
+          sv[`${base}.one`] === "att hantera" &&
+          en[`${base}.one`] === "to handle"),
       `C: "${base}" has the same text for one and many in BOTH languages ` +
         `("${sv[`${base}.one`]}" / "${en[`${base}.one`]}"). That is what a ` +
         `pasted plural looks like, and it puts "1 nya ansökningar" back on the board.`,

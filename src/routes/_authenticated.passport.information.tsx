@@ -1,32 +1,5 @@
-// Security Passport — "Mina uppgifter": where a holder actually enters things.
-//
-// ── WHY THIS PAGE EXISTS ───────────────────────────────────────────────
-//
-// Before Phase 8 the only way into the Passport was a thirteen-step wizard in
-// which seven steps rendered explanatory text and a Continue button, and in
-// which NOTHING reached a domain table: every answer went into a JSON blob on
-// the profile. A holder could complete the whole thing and still have an
-// empty Passport. This page is the repair.
-//
-// It is a grouped surface rather than a longer wizard because the content is
-// list-shaped, not question-shaped: a career is several employments, several
-// courses, several certificates. A wizard asks each question once; a person
-// needs to add five jobs, come back next week and add a sixth.
-//
-// ── WHAT BELONGS WHERE ─────────────────────────────────────────────────
-//
-// The four supported credentials (VU1, VU2, OV, SV) are NOT entered here.
-// They have their own taxonomy-driven form with their own rules, and this
-// section links to it. Everything else — employment, education, courses,
-// certifications, specialisations, memberships — is entered here, into the
-// real tables, through entries.functions.ts.
-//
-// ── EVERY ENTRY OFFERS ITS NEXT STEP ───────────────────────────────────
-//
-// A saved entry is self-declared and says so. Immediately beside it are the
-// two things a holder can do about that: attach documentation, or ask for it
-// to be checked. Without those the page would be a data-entry chore with no
-// visible point.
+// Credential management. Profile/CV facts retain their canonical editors.
+// Legacy anchors link to those editors without reproducing employment data.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -131,10 +104,7 @@ const GENERAL_PROFILE_ROUTE = "/my-career/profile" as const;
  *  restated, so a section added there appears in the row automatically and
  *  the two cannot drift. */
 const PASSPORT_CLAIM_SECTIONS: readonly { kind: FreeClaimKind; titleKey: PassportCopyKey }[] = [
-  { kind: "training", titleKey: "claims.type.training" },
   { kind: "certification", titleKey: "claims.type.certification" },
-  { kind: "specialisation", titleKey: "claims.type.specialisation" },
-  { kind: "professional_membership", titleKey: "claims.type.professional_membership" },
 ];
 
 const SECTION_LINKS: readonly PassportSectionLink[] = [
@@ -438,6 +408,9 @@ function PassportInformationRoute() {
     if (typeof window === "undefined") return;
     const moved: Readonly<Record<string, string>> = {
       "#sp-education": "profile-education",
+      "#sp-training": "profile-training",
+      "#sp-specialisation": "profile-specialisation",
+      "#sp-professional_membership": "profile-professional_membership",
       "#sp-languages": "profile-languages",
       "#sp-skills": "profile-skills",
     };
@@ -629,7 +602,15 @@ function PassportInformationRoute() {
           </ul>
         )}
 
-        {isEditingThis ? (
+        {section.kind === "certification" ? (
+          <button
+            type="button"
+            className="mt-4 min-h-11 underline"
+            onClick={() => void navigate({ to: "/passport/credentials/new" })}
+          >
+            {pt("entry.add")}
+          </button>
+        ) : isEditingThis ? (
           <div className="mt-4 rounded-lg border border-accent/40 bg-secondary/30 p-4">
             <ClaimEntryForm
               draft={editing.draft}
@@ -912,59 +893,6 @@ function PassportInformationRoute() {
         title={pt("info.employment")}
         lead={pt("info.employmentLead")}
       >
-        {experience.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{pt("entry.none")}</p>
-        ) : (
-          <ul className="space-y-2">
-            {experience.map((e) => (
-              <li key={e.id} className="rounded-lg border border-border p-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground">
-                      {e.roleTitle} · {e.employerName}
-                    </p>
-                    <p className="mt-0.5 text-sm tabular-nums text-muted-foreground">
-                      {formatPeriodRange(e.startedOn, e.endedOn, lang)}
-                    </p>
-                    <span className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <AssertionChip
-                        level={e.assertionLevel as AssertionLevel}
-                        // An EMPLOYMENT: the one subject an employer
-                        // confirmation may source-confirm.
-                        provenance={{ ...e, subjectKind: "employment" }}
-                        size="sm"
-                      />
-                      <LifecycleChip state={e.lifecycleState as LifecycleState} />
-                    </span>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => openEntry("experience", e.id)}
-                      className="inline-flex h-11 items-center rounded-md border border-input px-3 text-sm font-medium text-foreground hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                      {pt("entry.documentAndVerify")}
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──
-            Adding, editing and removing a period is now done on the
-            canonical profile workspace. What stays here is what this
-            section is for and what the owner kept explicitly: the
-            periods themselves, their assertion level and lifecycle,
-            and "Underlag och kontroll" — documenting, source
-            confirmation, verification requests and reviewer decisions,
-            against these same rows.
-
-            The section, its id and its deep links are untouched:
-            `#sp-employment` is still a real section, still linked from
-            elsewhere, and still where PR #246's retired-anchor
-            redirects land. */}
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
           <Link
             to="/my-career/profile"

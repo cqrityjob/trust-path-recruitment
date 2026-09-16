@@ -1,0 +1,122 @@
+[
+  {
+    "file": "browser-full.log.gz",
+    "uncompressedSha256": "51245e7e43286aabdebabb4f5b28dca48426b0a537dc8cb1e190fe41ccddca3d",
+    "bytes": 732314
+  },
+  {
+    "file": "build.log.gz",
+    "uncompressedSha256": "f7c0effa8df327f3bedd984754c54ea41c62fa475527b61a9943962ec89c0bc5",
+    "bytes": 370851
+  },
+  {
+    "file": "changed-lint.log.gz",
+    "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "file": "check-scripts-full.log.gz",
+    "uncompressedSha256": "7d070bf92b8c4506694182e8af03c6fb85714437a586b036afd421e148d51a9f",
+    "bytes": 723744
+  },
+  {
+    "file": "database-full.log.gz",
+    "uncompressedSha256": "130b2b6f88b02e294555809bd127ee7f5b4bbf235b4577032ea220d9eb8d9261",
+    "bytes": 184813
+  },
+  {
+    "file": "docker-replay.log.gz",
+    "uncompressedSha256": "15008a6a2b3c4cb134bc4f1c26b2410eadf24e666ca16c365726ba318bb7e211",
+    "bytes": 17347
+  },
+  {
+    "file": "domain.log.gz",
+    "uncompressedSha256": "3240741a4b0dd9d8d368086ae8c5d58a223467856173a69c04e71950d16dfc5f",
+    "bytes": 1577
+  },
+  {
+    "file": "finalisation-rpc.log.gz",
+    "uncompressedSha256": "71931ee663422f7196f7255088f66de477a1decaa042b0c1fa694ae2cfc4ee65",
+    "bytes": 750
+  },
+  {
+    "file": "hosted-release-gate.log.gz",
+    "uncompressedSha256": "cdec3148ae0b8b36eed1177b85fb528f3f416e22433297e62dd824655f7fd978",
+    "bytes": 4474
+  },
+  {
+    "file": "lint-final.log.gz",
+    "uncompressedSha256": "a25319df39cef4cdcf6fd2db232dcf90ed42b68d80bc28cbc0e93e7c0e53f4cd",
+    "bytes": 25544274
+  },
+  {
+    "file": "live-api.log.gz",
+    "uncompressedSha256": "0a4e21b523b7a4bad22f2d7f27afe7c731c58ea88c128d9f5b32888c44677e3d",
+    "bytes": 1808
+  },
+  {
+    "file": "live-beskt-preparation.log.gz",
+    "uncompressedSha256": "194cde15dbbc036aade2ed1f180857a529de29411656b1e4c642ad06b74e74d3",
+    "bytes": 3693
+  },
+  {
+    "file": "live-beskt-tool.log.gz",
+    "uncompressedSha256": "5e76462223dc6f894c27d5f09e5848088d057c665487a207392fbef7da2ade77",
+    "bytes": 3992
+  },
+  {
+    "file": "live-browser.log.gz",
+    "uncompressedSha256": "b08099b84705eb9271d4389a2a3188f27e56802863ef7e054eafe32864c3926e",
+    "bytes": 1038
+  },
+  {
+    "file": "live-continuity-setup.log.gz",
+    "uncompressedSha256": "4f034a94b954cb0bfef4258ad6cc8b94be3f12e09c9573f70d98f92559e7f9a3",
+    "bytes": 411
+  },
+  {
+    "file": "live-employer-report.log.gz",
+    "uncompressedSha256": "a683b1287e15a8e7013c31abf0623263055e679fbe0317832afb4cf7a2f5482a",
+    "bytes": 30819
+  },
+  {
+    "file": "main-baseline-browser.log.gz",
+    "uncompressedSha256": "ec2518b285df60a2a95bd55c0a71f4c25223f0e328399036fa9df15197e9366d",
+    "bytes": 6244
+  },
+  {
+    "file": "migration-order.log.gz",
+    "uncompressedSha256": "e73d93edc19a4fb6bc2ae366f5931e63ec06508d4186ca44b04483741493454d",
+    "bytes": 229
+  },
+  {
+    "file": "negative-controls.log.gz",
+    "uncompressedSha256": "233a83fc91374f34f2b7f6f5eabbde63d29cba8e3251b1bad9b81ce758ef38e5",
+    "bytes": 244883
+  },
+  {
+    "file": "release-frontier.log.gz",
+    "uncompressedSha256": "6a8144b967bb9506a499d5ce3a4641c6dec60e0a7a484866178ddc50b5bd38e6",
+    "bytes": 420
+  },
+  {
+    "file": "report-immutability.log.gz",
+    "uncompressedSha256": "88cf823bca6f36558dee326912ed87f6ab49b6e1c1b973cbcaba60cebcacac20",
+    "bytes": 511
+  },
+  {
+    "file": "scripts-typecheck.log.gz",
+    "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  {
+    "file": "sql-security.log.gz",
+    "uncompressedSha256": "bf1ea5b6c15e9444ff0435611722a42abc22ec52a707999c25d9e256b577d8ca",
+    "bytes": 463
+  },
+  {
+    "file": "typecheck.log.gz",
+    "uncompressedSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  }
+]

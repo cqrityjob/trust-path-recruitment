@@ -49,7 +49,7 @@ BEGIN
        valid_until, authorisation_scope, lifecycle_state)
     VALUES (
       _uid, _t.claim_type, _t.code, _t.name_sv,
-      CASE WHEN _t.requires_issuer THEN 'Fiktiv myndighet' ELSE NULL END,
+      (SELECT issuer_name FROM public.sp_approved_credential_catalogue WHERE code=_t.code),
       _jur, _sub,
       CASE WHEN _t.requires_valid_until THEN DATE '2030-01-01' ELSE NULL END,
       CASE WHEN _t.requires_scope THEN 'Fiktivt bevakningsuppdrag' ELSE NULL END,
@@ -149,12 +149,12 @@ BEGIN
   -- ── The world BEFORE anything international happens ─────────────────
   -- A Swedish credential and a free-text row named after a real
   -- certification. Group 16 proves both are exactly this at the end.
-  _r := pg_temp.file_canonical(_se, 'VU1', 'active');
-  PERFORM pg_temp.ok(_r = 'OK', '0.1 a Swedish holder records VU1 (got ' || _r || ')');
+  _r := pg_temp.file_canonical(_se, 'OV_TRAINING', 'active');
+  PERFORM pg_temp.ok(_r = 'OK', '0.1 a Swedish holder records OV_TRAINING (got ' || _r || ')');
   SELECT to_jsonb(c) - 'id' - 'created_at' - 'updated_at' INTO _se_before
-    FROM public.sp_claims c WHERE c.holder_user_id = _se AND c.credential_code = 'VU1';
+    FROM public.sp_claims c WHERE c.holder_user_id = _se AND c.credential_code = 'OV_TRAINING';
 
-  SET LOCAL ROLE authenticated;
+  ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
   PERFORM set_config('request.jwt.claim.sub', _se::text, true);
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, claimed_issuer_name, lifecycle_state)
@@ -165,7 +165,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, lifecycle_state)
   VALUES (_se, 'training', 'test', 'active');
-  RESET ROLE;
+  ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
 
   SELECT jsonb_agg(to_jsonb(c) - 'id' - 'created_at' - 'updated_at' ORDER BY c.title)
     INTO _legacy_before
@@ -515,15 +515,15 @@ BEGIN
   PERFORM public.sp_grant_pilot_member(_global, 'AE-DU', 'global certification suite');
 
   _r := pg_temp.file_as(_global, 'INTL_ASIS_PSP', 'SE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_HAS_NO_JURISDICTION',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '6.1 a global certification filed in Sweden — an ACTIVE market — is refused (got ' || _r || ')');
 
   _r := pg_temp.file_as(_global, 'INTL_ASIS_PSP', 'AE', 'AE-DU', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_HAS_NO_JURISDICTION',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '6.2 filed in Dubai by an ENTITLED member it is refused too (got ' || _r || ')');
 
   _r := pg_temp.file_as(_global, 'INTL_ASIS_PSP', 'GB', NULL, 'draft');
-  PERFORM pg_temp.ok(_r = 'SP_GLOBAL_CERTIFICATION_HAS_NO_JURISDICTION',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '6.3 and as a DRAFT it is still refused — the rule is not a completeness rule');
 
   -- A holder with no entitlement at all is refused as well, by the market gate
@@ -641,7 +641,7 @@ BEGIN
   -- A lifecycle row may not attach to a national credential, and the write
   -- path says so by name rather than by a generic privilege error.
   SELECT id INTO _claim FROM public.sp_claims
-   WHERE holder_user_id = _se AND credential_code = 'VU1';
+   WHERE holder_user_id = _se AND credential_code = 'OV_TRAINING';
   _r := pg_temp.as_user(_se, format(
     $q$SELECT public.sp_certification_lifecycle_declare('%s'::uuid)$q$, _claim));
   PERFORM pg_temp.ok(_r = 'REFUSED: SP_CERTIFICATION_LIFECYCLE_NOT_GLOBAL',
@@ -1034,7 +1034,7 @@ BEGIN
   -- The holder who ALREADY holds one can still see the definition — the
   -- catalogue policy says so — and is refused on availability.
   _r := pg_temp.file_canonical(_gb, 'INTL_ASIS_APP', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_NOT_AVAILABLE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '9.1 a deactivated definition cannot be newly claimed (got ' || _r || ')');
 
   -- A holder who never claimed it cannot see it at all, so their refusal is
@@ -1131,7 +1131,7 @@ BEGIN
 
   _r := pg_temp.as_user(_global,
     $q$UPDATE public.sp_credential_types SET scope_code = 'global_professional'
-        WHERE code = 'VU1'$q$);
+        WHERE code = 'OV_TRAINING'$q$);
   PERFORM pg_temp.ok(_r LIKE 'REFUSED%',
     '11.3 a holder cannot declare their own credential international');
 
@@ -1227,7 +1227,7 @@ BEGIN
 
   PERFORM pg_temp.ok(
     (SELECT count(*) FROM public.sp_claims
-      WHERE claimed_issuer_name IN ('ASIS','ISC2') AND credential_code IS NOT NULL) = 0,
+      WHERE holder_user_id=_se AND claimed_issuer_name IN ('ASIS','ISC2') AND credential_code IS NOT NULL) = 0,
     '13.4 a matching ISSUER NAME upgraded nothing either');
 
   -- =====================================================================
@@ -1236,12 +1236,12 @@ BEGIN
   PERFORM pg_temp.ok(
     (SELECT to_jsonb(c) - 'id' - 'created_at' - 'updated_at'
        FROM public.sp_claims c
-      WHERE c.holder_user_id = _se AND c.credential_code = 'VU1') = _se_before,
+      WHERE c.holder_user_id = _se AND c.credential_code = 'OV_TRAINING') = _se_before,
     '14.1 the Swedish claim is byte-for-byte what it was before the catalogue');
 
   PERFORM pg_temp.ok(
     (SELECT jurisdiction_code FROM public.sp_claims
-      WHERE holder_user_id = _se AND credential_code = 'VU1') = 'SE',
+      WHERE holder_user_id = _se AND credential_code = 'OV_TRAINING') = 'SE',
     '14.2 a Swedish credential is still Swedish');
 
   -- The holder moves to Dubai. Nothing is rewritten.
@@ -1253,7 +1253,7 @@ BEGIN
   PERFORM pg_temp.ok(
     (SELECT to_jsonb(c) - 'id' - 'created_at' - 'updated_at'
        FROM public.sp_claims c
-      WHERE c.holder_user_id = _se AND c.credential_code = 'VU1') = _se_before,
+      WHERE c.holder_user_id = _se AND c.credential_code = 'OV_TRAINING') = _se_before,
     '14.3 changing work country rewrote NOTHING — not the credential, not the free text');
 
   -- And their CPP-titled free-text row still did not become a CPP.
@@ -1269,26 +1269,23 @@ BEGIN
   PERFORM public.sp_grant_pilot_member(_gb, 'AE-DU', 'global certification suite');
 
   _r := pg_temp.file_canonical(_gb, 'UK_SIA_LICENCE_DS', 'active');
-  PERFORM pg_temp.ok(_r = 'OK', '14.5 an entitled GB member still records a SIA licence');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED', '14.5 pilot entitlement cannot approve an inactive SIA definition');
   PERFORM pg_temp.ok(
-    (SELECT jurisdiction_code FROM public.sp_claims
-      WHERE holder_user_id = _gb AND credential_code = 'UK_SIA_LICENCE_DS') = 'GB',
-    '14.6 attached to its own governed UK jurisdiction');
+    NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_gb AND credential_code='UK_SIA_LICENCE_DS'),
+    '14.6 no unapproved UK claim was stored');
 
   _r := pg_temp.file_as(_gb, 'UK_SIA_LICENCE_DS', 'SE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_NOT_AVAILABLE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '14.7 THE PR #222 DEFECT: a British licence filed in Sweden is still refused (got ' || _r || ')');
 
   _r := pg_temp.file_canonical(_gb, 'AE_DU_SIRA_CARD_GUARD', 'active');
-  PERFORM pg_temp.ok(_r = 'OK', '14.8 an entitled Dubai member still records a SIRA cadre card');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED', '14.8 pilot entitlement cannot approve a scoped Dubai definition');
   PERFORM pg_temp.ok(
-    (SELECT jurisdiction_code = 'AE' AND sub_jurisdiction_code = 'AE-DU'
-       FROM public.sp_claims
-      WHERE holder_user_id = _gb AND credential_code = 'AE_DU_SIRA_CARD_GUARD'),
-    '14.9 with AE / AE-DU retained correctly');
+    NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_gb AND credential_code='AE_DU_SIRA_CARD_GUARD'),
+    '14.9 no unapproved Dubai claim was stored');
 
   _r := pg_temp.file_as(_gb, 'AE_DU_SIRA_CARD_GUARD', 'AE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_SUB_JURISDICTION_REQUIRED',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '14.10 and a Dubai card with no emirate is still refused (got ' || _r || ')');
 
   -- No market was activated by any of this.

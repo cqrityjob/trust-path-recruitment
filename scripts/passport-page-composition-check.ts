@@ -61,11 +61,8 @@ const workspace = code(read(WORKSPACE));
 console.log("\n1 · the two columns exist, and the sketch's left column is the left column");
 
 check(/<PassportSideColumn/.test(index), "the Passport page renders a side column");
-check(/<PassportWorkspace/.test(index), "and the Passport workspace");
-check(
-  /lg:flex-row/.test(index),
-  "they sit side by side from lg upwards, as the sketch draws them",
-);
+check(/<CredentialWallet/.test(index), "and the Passport workspace");
+check(/lg:flex-row/.test(index), "they sit side by side from lg upwards, as the sketch draws them");
 check(
   /lg:order-1/.test(index) && /lg:order-2/.test(index),
   "the sketch's left/right is restored by order at lg, not by a second markup",
@@ -74,7 +71,7 @@ check(
 // SOURCE ORDER IS THE MOBILE ORDER. On a phone the holder's own record is
 // what they came for; a card preview above it pushes every merit off the
 // first screen. So the workspace must come FIRST in source.
-const wsIdx = index.indexOf("<PassportWorkspace");
+const wsIdx = index.indexOf("<CredentialWallet");
 const sideIdx = index.indexOf("<PassportSideColumn");
 check(wsIdx >= 0 && sideIdx >= 0, "both are rendered at all");
 check(
@@ -85,19 +82,15 @@ check(
 /* ------------------------------------------------------------------ */
 console.log("\n2 · the left column carries the card and the settings beneath it");
 
-check(/<DirectionC/.test(side), "the side column renders the Passport Card");
-check(/buildPassportCard/.test(side), "built from the canonical card builder");
+check(/<CompactPassportCard/.test(side), "the side column renders the Passport Card");
+check(/snapshot=\{snapshot\}/.test(side), "built from the canonical card builder");
+check(/data-passport-privacy-summary/.test(side), "and an integrity/privacy region");
 check(
-  /data-passport-privacy-summary/.test(side),
-  "and an integrity/privacy region",
-);
-check(
-  side.indexOf("<DirectionC") < side.indexOf("data-passport-privacy-summary"),
+  side.indexOf("<CompactPassportCard") < side.indexOf("data-passport-privacy-summary"),
   "with the settings BELOW the card, as the sketch places them",
 );
 check(
-  /share\.privacy\.\$\{profile\.privacyMode\}/.test(side) ||
-    /share\.privacy\.\$\{/.test(side),
+  /share\.privacy\.\$\{profile\.privacyMode\}/.test(side) || /share\.privacy\.\$\{/.test(side),
   "the privacy region states the mode actually in force, not a generic sentence",
 );
 
@@ -105,17 +98,14 @@ check(
 console.log("\n3 · one renderer, one writer — the summary reports, it does not duplicate");
 
 check(
-  (side.match(/<DirectionC/g) ?? []).length === 1,
+  (side.match(/<CompactPassportCard/g) ?? []).length === 1,
   "exactly one card renderer in the side column",
 );
 check(
   !/setPrivacyMode/.test(side),
   "the side column does NOT write the privacy mode — the page that owns it does",
 );
-check(
-  /to="\/passport\/privacy"/.test(side),
-  "it links to the canonical privacy editor instead",
-);
+check(/to="\/passport\/privacy"/.test(side), "it links to the canonical privacy editor instead");
 check(/to="\/passport\/card"/.test(side), "and to the canonical full card view");
 check(
   !/getMyPassport/.test(side),
@@ -136,10 +126,7 @@ check(
   headerEnd > 0 && workspace.indexOf("<AddMeritChooser") < headerEnd,
   "add a credential sits inside the page header, near the top",
 );
-check(
-  headerEnd > 0 && workspace.indexOf('data-cta="share"') < headerEnd,
-  "and so does share",
-);
+check(headerEnd > 0 && workspace.indexOf('data-cta="share"') < headerEnd, "and so does share");
 check(
   /pt\("overview\.title"\)/.test(workspace),
   'the main column is headed "Mitt Security Passport"',
@@ -180,10 +167,7 @@ for (const m of side.matchAll(/className=\{?`?([^`"}]*min-h-11[^`"}]*)`?\}?/g)) 
   void m;
 }
 check(/min-h-11/.test(side), "its controls carry a 44px minimum target");
-check(
-  /focus-visible:outline/.test(side),
-  "and a visible keyboard focus state",
-);
+check(/focus-visible:outline/.test(side), "and a visible keyboard focus state");
 check(
   /aria-labelledby="sp-side-card-heading"/.test(side) &&
     /aria-labelledby="sp-side-privacy-heading"/.test(side),

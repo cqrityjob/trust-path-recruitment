@@ -43,7 +43,7 @@ import {
 } from "../src/lib/security-passport/credentials";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
-const SUPABASE_REF = "wrygicdfxwjnrugduxnt";
+const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
 const USER_ID = "00000000-0000-4000-8000-0000000003a1";
 const ADMIN_ID = "00000000-0000-4000-8000-0000000000ad";
 const SHOT_DIR = process.env.PASSPORT_SHOTS ?? "";
@@ -454,6 +454,39 @@ async function mount(
     serverCalls.push(name);
     switch (name) {
       /* ── the holder's Passport ─────────────────────────────────────── */
+      case "getInternationalPassportMetadata":
+        return ok(route, {
+          definitions: [
+            {
+              code: "OV",
+              name_sv: "Ordningsvaktsförordnande",
+              name_en: "Public Order Guard Appointment",
+              credential_class: "regulated_authorisation",
+              scope_code: "national_regulated",
+              country: "SE",
+              region: null,
+              issuer_id: "polis",
+              issuer_name: "Polismyndigheten",
+              requires_valid_until: true,
+              allows_no_expiry: false,
+            },
+          ],
+          details: [],
+          verificationEvents: [],
+          jurisdictions: ["SE", "GB", "AE"].map((code) => ({
+            code,
+            jurisdiction_type: "national",
+            country_code: code,
+            name_sv: code,
+            name_en: code,
+          })),
+          issuers: [],
+        });
+      case "saveInternationalCredential": {
+        const data = payloadOf(route);
+        savedPayloads.push(data);
+        return ok(route, { id: "approved-saved" });
+      }
       case "getMyPassport":
         return ok(route, {
           profile: {
@@ -711,7 +744,7 @@ async function mount(
     }
   });
 
-  await page.route(`https://${SUPABASE_REF}.supabase.co/**`, async (route) => {
+  await page.route(/^https?:\/\/[^/]+\/(?:auth|rest)\/v1\//, async (route) => {
     if (route.request().url().includes("/auth/v1/user")) {
       return route.fulfill({
         status: 200,
@@ -902,10 +935,11 @@ test.describe("three markets — the fixture screen", () => {
     expect(overflow, `the page scrolls sideways by ${overflow}px`).toBeLessThanOrEqual(1);
   });
 
-  test("no horizontal overflow at 200% zoom", async ({ page }, info) => {
+  test("no horizontal overflow at 200% zoom", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     // Browser zoom on a desktop window: 1280px at 200% is a 640px layout.
     // A phone is already at its own scale, so this is a desktop concern.
-    test.skip(info.project.name !== "chromium", "200% zoom is a desktop concern.");
+
     await openHarness(page, "sv");
     await page.evaluate(() => {
       (document.documentElement.style as unknown as { zoom: string }).zoom = "2";
@@ -917,8 +951,7 @@ test.describe("three markets — the fixture screen", () => {
     );
   });
 
-  test("every action meets the 44px minimum", async ({ page }, info) => {
-    test.skip(info.project.name === "chromium", "Touch targets are a mobile concern.");
+  test("every action meets the 44px minimum", async ({ page }) => {
     await openHarness(page, "sv");
     const small = await page.evaluate(() =>
       [...document.querySelectorAll("[data-credential-code], [data-market-action]")]
@@ -954,64 +987,24 @@ test.describe("three markets — the fixture screen", () => {
 test.describe("three markets — the write path", () => {
   test.describe.configure({ timeout: 120_000 });
 
-  /** Fill what the taxonomy asks of this credential, by field id so the
-   *  scenario reads the same in both languages. */
-  async function fill(page: Page, opts: { issuer?: string; validUntil?: string; scope?: string }) {
-    if (opts.issuer !== undefined) await page.locator("#sp-cred-issuerName").fill(opts.issuer);
-    if (opts.validUntil !== undefined) {
-      await page.locator("#sp-cred-validUntil").fill(opts.validUntil);
-    }
-    if (opts.scope !== undefined) {
-      await page.locator("#sp-cred-authorisationScope").fill(opts.scope);
-    }
-  }
-
-  const noGenericError = async (page: Page) => {
-    // The sentence the holder actually met. A successful write must not
-    // produce it, and neither must a successful draft save.
-    await expect(page.getByText(/Något gick fel|Something went wrong/)).toHaveCount(0);
-  };
-
-  test("A · THE DEFECT: a British licence reached by ?code= saves, in GB", async ({ page }) => {
+  test("A · pilot GB deep link cannot select an unapproved definition", async ({ page }) => {
     await mount(
       page,
       { availability: AVAIL.gbPilot, work: { jurisdictionCode: "GB", subJurisdictionCode: null } },
-      "sv",
+      "en",
       "/passport/credentials/new?code=UK_SIA_LICENCE_DS",
     );
     await expect(
-      page.getByRole("radio", { name: /^SIA Licence — Door Supervision\s/ }),
-    ).toBeChecked({ timeout: 30_000 });
-    await fill(page, { issuer: "Security Industry Authority", validUntil: "2030-01-01" });
-
-    // ── Save draft ───────────────────────────────────────────────────
-    await page.getByRole("button", { name: "Spara utkast" }).click();
-    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
-    // The PAYLOAD: the draft the browser sent carried the credential's own
-    // market, not `emptyCredentialDraft()`'s "SE". This is the assertion the
-    // defect fails.
-    expect(savedPayloads[0]!.jurisdictionCode).toBe("GB");
-    // The ROW the server mapping makes of it, which the trigger judges.
-    expect(savedRows[0]).toMatchObject({
-      credential_code: "UK_SIA_LICENCE_DS",
-      jurisdiction_code: "GB",
-      sub_jurisdiction_code: null,
-      lifecycle_state: "draft",
-    });
-    await noGenericError(page);
-
-    // ── Add to the Passport ──────────────────────────────────────────
-    await page.getByRole("button", { name: "Lägg till i passet" }).click();
-    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(2);
-    expect(savedRows[1]).toMatchObject({
-      credential_code: "UK_SIA_LICENCE_DS",
-      jurisdiction_code: "GB",
-      sub_jurisdiction_code: null,
-      lifecycle_state: "active",
-    });
-    await noGenericError(page);
-    expect(pageErrors).toEqual([]);
-    expect(unmatched.filter((u) => u !== "getEntryDetail")).toEqual([]);
+      page.getByRole("combobox", { name: "Approved credential", exact: true }),
+    ).toHaveValue("");
+    await page.getByRole("combobox", { name: "Scope", exact: true }).selectOption("national");
+    await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
+    await expect(page.getByRole("status")).toContainText(
+      "Your credential is not currently available",
+    );
+    await expect(page.locator("form")).toHaveCount(0);
+    expect(savedPayloads).toEqual([]);
+    expect(unmatched).toEqual([]);
   });
 
   test("A2 · and the saved British licence is there after a reload", async ({ page }) => {
@@ -1044,7 +1037,7 @@ test.describe("three markets — the write path", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("B · THE DEFECT: a Dubai cadre card reached by ?code= saves, in AE / AE-DU", async ({
+  test("B · Dubai pilot deep link cannot create a scoped candidate credential", async ({
     page,
   }) => {
     await mount(
@@ -1056,31 +1049,14 @@ test.describe("three markets — the write path", () => {
       "en",
       "/passport/credentials/new?code=AE_DU_SIRA_CARD_GUARD",
     );
-    await expect(
-      page.getByRole("radio", { name: /^SIRA Security Cadre Card — Security Guard\s/ }),
-    ).toBeChecked({ timeout: 30_000 });
-    // A cadre card asks for all three, the scope included.
-    await fill(page, {
-      issuer: "Security Industry Regulatory Agency",
-      validUntil: "2030-01-01",
-      scope: "Fictional security company",
-    });
-
-    await page.getByRole("button", { name: "Add to my Passport" }).click();
-    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
-    // The payload carries Dubai's country — never "SE" — and the row the
-    // server builds carries the EMIRATE, which the old write path never
-    // wrote at all.
-    expect(savedPayloads[0]!.jurisdictionCode).toBe("AE");
-    expect(savedRows[0]).toMatchObject({
-      credential_code: "AE_DU_SIRA_CARD_GUARD",
-      jurisdiction_code: "AE",
-      sub_jurisdiction_code: "AE-DU",
-      authorisation_scope: "Fictional security company",
-      lifecycle_state: "active",
-    });
-    await noGenericError(page);
-    expect(pageErrors).toEqual([]);
+    await page.getByRole("combobox", { name: "Scope", exact: true }).selectOption("national");
+    await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("AE");
+    await expect(page.getByRole("status")).toContainText(
+      "Your credential is not currently available",
+    );
+    await expect(page.getByLabel(/Issuer|Authorisation scope/)).toHaveCount(0);
+    await expect(page.locator("form")).toHaveCount(0);
+    expect(savedPayloads).toEqual([]);
   });
 
   test("B2 · and the saved Dubai card is on the Passport after a reload", async ({ page }) => {
@@ -1114,79 +1090,46 @@ test.describe("three markets — the write path", () => {
     expect(pageErrors).toEqual([]);
   });
 
-  test("C · the same holds for a credential chosen by hand, with no ?code=", async ({ page }) => {
-    // Great Britain, chosen from the form's own catalogue.
-    await mount(
-      page,
-      { availability: AVAIL.gbPilot, work: { jurisdictionCode: "GB", subJurisdictionCode: null } },
-      "sv",
-      "/passport/credentials/new",
-    );
+  test("C · changing market clears a governed selection and prevents stale save", async ({
+    page,
+  }) => {
+    await mount(page, { availability: AVAIL.se }, "en", "/passport/credentials/new?code=OV");
+    await expect(
+      page.getByRole("combobox", { name: "Approved credential", exact: true }),
+    ).toHaveValue("OV");
+    await page.getByLabel("Valid until", { exact: true }).fill("2030-01-01");
+    await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
+    await expect(
+      page.getByRole("combobox", { name: "Approved credential", exact: true }),
+    ).toHaveValue("");
+    await expect(page.locator("form")).toHaveCount(0);
+    expect(savedPayloads).toEqual([]);
+    await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("SE");
     await page
-      .getByRole("radio", { name: /^SIA Licence — Door Supervision\s/ })
-      .check({ force: true, timeout: 30_000 });
-    await fill(page, { issuer: "Security Industry Authority", validUntil: "2030-01-01" });
-    await page.getByRole("button", { name: "Lägg till i passet" }).click();
-    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
-    expect(savedPayloads[0]!.jurisdictionCode).toBe("GB");
-    expect(savedRows[0]).toMatchObject({
-      credential_code: "UK_SIA_LICENCE_DS",
-      jurisdiction_code: "GB",
-      sub_jurisdiction_code: null,
-    });
-    await noGenericError(page);
-
-    // Dubai, chosen from the form's own catalogue — and then CHANGED to a
-    // course, which is the path that used to leave the previous choice's
-    // fields behind.
-    await mount(
-      page,
-      {
-        availability: AVAIL.duPilot,
-        work: { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" },
-      },
-      "sv",
-      "/passport/credentials/new",
-    );
-    await page
-      .getByRole("radio", { name: /^SIRA Security Cadre Card — Security Guard\s/ })
-      .check({ force: true, timeout: 30_000 });
-    await fill(page, { issuer: "SIRA", validUntil: "2030-01-01", scope: "Fiktivt uppdrag" });
-    await page.getByRole("radio", { name: /^SIRA Security Guard course\s/ }).check({ force: true });
-    await page.getByRole("button", { name: "Lägg till i passet" }).click();
-    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
-    expect(savedRows[0]).toMatchObject({
-      credential_code: "AE_DU_SIRA_GUARD_COURSE",
-      jurisdiction_code: "AE",
-      sub_jurisdiction_code: "AE-DU",
-      // The card's expiry and scope went with the card.
-      valid_until: null,
-      authorisation_scope: null,
-    });
-    await noGenericError(page);
-    expect(pageErrors).toEqual([]);
+      .getByRole("combobox", { name: "Approved credential", exact: true })
+      .selectOption("OV");
+    await expect(page.getByLabel("Valid until", { exact: true })).toHaveValue("");
   });
 
-  test("E · a Swedish credential is untouched by any of this", async ({ page }) => {
-    await mount(
-      page,
-      { availability: AVAIL.se, work: { jurisdictionCode: "SE", subJurisdictionCode: null } },
-      "sv",
-      "/passport/credentials/new?code=OV",
-    );
-    await expect(page.getByRole("radio", { name: /^Ordningsvaktsförordnande\s/ })).toBeChecked({
-      timeout: 30_000,
+  test("E · Swedish approved definition sends only personal fields and governed market", async ({
+    page,
+  }) => {
+    await mount(page, { availability: AVAIL.se }, "sv", "/passport/credentials/new?code=OV");
+    await expect(
+      page.getByRole("combobox", { name: "Godkänt yrkesbevis", exact: true }),
+    ).toHaveValue("OV");
+    await expect(page.getByLabel(/Utfärdare|Omfattning av/)).toHaveCount(0);
+    await page.getByLabel("Giltig till", { exact: true }).fill("2030-01-01");
+    await page.getByRole("button", { name: /Spara/ }).click();
+    await expect.poll(() => savedPayloads.length).toBe(1);
+    expect(savedPayloads[0]).toMatchObject({
+      definition_code: "OV",
+      market_country: "SE",
+      market_region: "",
+      valid_until: "2030-01-01",
     });
-    await fill(page, { issuer: "Fiktiva Polismyndigheten", validUntil: "2029-06-30" });
-    await page.getByRole("button", { name: "Lägg till i passet" }).click();
-    await expect.poll(() => savedRows.length, { timeout: 30_000 }).toBe(1);
-    expect(savedPayloads[0]!.jurisdictionCode).toBe("SE");
-    expect(savedRows[0]).toMatchObject({
-      credential_code: "OV",
-      jurisdiction_code: "SE",
-      sub_jurisdiction_code: null,
-    });
-    await noGenericError(page);
+    for (const forbidden of ["title", "issuerName", "authorisationScope", "credential_class"])
+      expect(savedPayloads[0]).not.toHaveProperty(forbidden);
     expect(pageErrors).toEqual([]);
   });
 });
@@ -1222,16 +1165,13 @@ test.describe("three markets — the real routes", () => {
     expect(unmatched).toEqual([]);
     await shoot(page, "sv-information-gb-pilot", info.project.name);
 
-    // Choosing one lands on the form with that credential preselected.
     await section.locator('[data-credential-code="UK_SIA_LICENCE_DS"]').click();
-    await expect(page).toHaveURL(/\/passport\/credentials\/new\?code=UK_SIA_LICENCE_DS/);
+    await expect(page).toHaveURL(/credentials\/new\?code=UK_SIA_LICENCE_DS/);
     await expect(
-      page.getByRole("radio", { name: /^SIA Licence — Door Supervision\s/ }),
-    ).toBeChecked({
-      timeout: 30_000,
-    });
-    await expect(page.getByLabel(/Gäller till \(obligatoriskt/)).toBeVisible();
-    await shoot(page, "sv-form-gb-licence-preselected", info.project.name);
+      page.getByRole("combobox", { name: "Godkänt yrkesbevis", exact: true }),
+    ).toHaveValue("");
+    await expect(page.locator("form")).toHaveCount(0);
+    expect(savedPayloads).toEqual([]);
   });
 
   test("a Dubai pilot holder gets 30 choices, 15/15, with a search field", async ({
@@ -1261,18 +1201,13 @@ test.describe("three markets — the real routes", () => {
     await expect(section.locator("h2")).toContainText("Dubai");
     await shoot(page, "en-information-dubai-pilot", info.project.name);
 
-    // A cadre card asks for issuer, expiry and scope; a course asks for none of the last two.
     await section.locator('[data-credential-code="AE_DU_SIRA_CARD_GUARD"]').click();
     await expect(
-      page.getByRole("radio", { name: /^SIRA Security Cadre Card — Security Guard\s/ }),
-    ).toBeChecked({ timeout: 30_000 });
-    await expect(page.getByLabel(/Valid until \(required/)).toBeVisible();
-    await expect(
-      page.getByLabel(/Scope of authorisation|Authorisation scope|scope/i).first(),
-    ).toBeVisible();
-    await page.getByRole("radio", { name: /^SIRA Security Guard course\s/ }).check({ force: true });
-    await expect(page.getByLabel(/Valid until/)).toHaveCount(0);
-    await shoot(page, "en-form-dubai-course-selected", info.project.name);
+      page.getByRole("combobox", { name: "Approved credential", exact: true }),
+    ).toHaveValue("");
+    await expect(page.getByLabel(/Authorisation scope/)).toHaveCount(0);
+    await expect(page.locator("form")).toHaveCount(0);
+    expect(savedPayloads).toEqual([]);
   });
 
   test("Northern Ireland shows Vehicle Immobilisation alone", async ({ page }) => {
@@ -1490,25 +1425,13 @@ test.describe("three markets — the real routes", () => {
         "/passport",
       );
       await expect(page.locator("[data-passport-workspace]")).toBeVisible({ timeout: 30_000 });
-      await expect(page.locator('[data-market-overview="ready"]')).toBeVisible({ timeout: 30_000 });
-      await expect(page.locator("[data-market-card]")).toHaveCount(3);
-      await expect(page.locator('[data-market-card="GB"]')).toHaveAttribute(
-        "data-holder-access",
-        "pilot",
-      );
-      await expect(
-        page.locator('[data-market-card="GB"] [data-market-action="add"]'),
-      ).toBeVisible();
-      await expect(
-        page.locator('[data-market-card="AE-DU"] [data-market-action="choose"]'),
-      ).toBeVisible();
-      await expect(page.locator("[data-market-headline]")).toContainText(
-        lang === "sv" ? "Ett Security Passport" : "One Security Passport",
-      );
-      // All four records are on the page, each under its own name.
-      for (const id of ["c-se-ov", "c-gb-ds", "c-gb-qds", "c-du-guard"]) {
-        await expect(page.locator(`[data-merit-row="${id}"]`)).toBeVisible();
-      }
+      await expect(page.locator("[data-market-card]")).toHaveCount(0);
+      await expect(page.locator("[data-credential-wallet] [data-credential-row]")).toHaveCount(4);
+      for (const id of ["c-se-ov", "c-gb-ds", "c-gb-qds", "c-du-guard"])
+        await expect(
+          page.locator(`[data-credential-wallet] a[href="/passport/entry/claim/${id}"]`),
+        ).toBeVisible();
+      expect(serverCalls).not.toContain("listPassportMarketOverview");
       expect(unmatched).toEqual([]);
       expect(pageErrors).toEqual([]);
       await shoot(page, `${lang}-overview-three-markets`, info.project.name);
@@ -1518,11 +1441,10 @@ test.describe("three markets — the real routes", () => {
   test("a failed market read costs the cards and nothing else", async ({ page }) => {
     await mount(page, { marketsFail: true }, "sv", "/passport");
     await expect(page.locator("[data-passport-workspace]")).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator('[data-market-overview="failed"]')).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator('[data-market-overview="failed"] [role="alert"]')).toContainText(
-      /kunde inte hämtas/,
-    );
+    await expect(page.locator("[data-credential-wallet]")).toBeVisible();
     await expect(page.locator("[data-market-card]")).toHaveCount(0);
+    expect(serverCalls).not.toContain("listPassportMarketOverview");
+    expect(pageErrors).toEqual([]);
   });
 
   for (const lang of ["sv", "en"] as const) {

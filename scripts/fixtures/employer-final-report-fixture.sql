@@ -47,6 +47,10 @@
 --        -f scripts/fixtures/employer-final-report-fixture.sql
 
 \set ON_ERROR_STOP on
+\if :{?e4_suffix}
+\else
+\set e4_suffix ''
+\endif
 
 DO $$
 BEGIN
@@ -250,13 +254,13 @@ ON CONFLICT (id) DO NOTHING;
 -- 4. The Passport disclosure: one self-declared claim, one verified claim,
 --    shared to each application.
 -- ---------------------------------------------------------------------------
-INSERT INTO public.sp_claims (id, holder_user_id, claim_type, title, assertion_level, lifecycle_state,
+INSERT INTO public.sp_claims (id, holder_user_id, claim_type, credential_code, title, claimed_issuer_name, assertion_level, lifecycle_state,
                               verified_by_user_id, verified_at)
 VALUES
   ('e4000000-0000-4000-8000-00000000d001', 'e4000000-0000-4000-8000-0000000000c1',
-   'training', 'Självdeklarerad kurs', 'self_declared', 'active', NULL, NULL),
+   'certification', 'INTL_ASIS_CPP', 'Certified Protection Professional (CPP)', 'ASIS International', 'self_declared', 'active', NULL, NULL),
   ('e4000000-0000-4000-8000-00000000d002', 'e4000000-0000-4000-8000-0000000000c1',
-   'certification', 'Verifierat certifikat', 'verified', 'active',
+   'certification', 'INTL_ASIS_PSP', 'Physical Security Professional (PSP)', 'ASIS International', 'verified', 'active',
    '9e000000-0000-4000-8000-000000000002', now())
 ON CONFLICT (id) DO NOTHING;
 INSERT INTO public.sp_disclosures (id, holder_user_id, package_code, purpose, application_id, expires_at)
@@ -369,6 +373,7 @@ BEGIN
   --     which is not the path under walk. Dated BEFORE the assessments,
   --     because material confirmed after an assessment is -- correctly -- a
   --     blocker.
+  IF _disclosure IS NOT NULL THEN
   INSERT INTO public.scp_interview_case_sources
     (case_id, source_kind, label, content_text, purpose_code, lawful_basis_note,
      disclosure_id, origin, provided_by)
@@ -384,6 +389,8 @@ BEGIN
     (case_id, question_id, origin, source_passage_id, excerpt, confirmed_by, confirmed_at)
   VALUES (_case, _q1, 'human_authored', _pp2, 'Verifierat certifikat (Passport).', _owner, now() - interval '2 minutes'),
          (_case, _q1, 'human_authored', _pp1, 'Självdeklarerad kurs (Passport).', _owner, now() - interval '3 minutes');
+
+  END IF;
 
   -- (b) An unresolved DIFFERENCE between two sources, confirmed by a human
   --     and not resolved -- a difference, never a judgement about honesty.
@@ -402,12 +409,12 @@ END $$;
 -- substitute :'name' inside a dollar-quoted DO block.
 CREATE TEMP TABLE e4_cases (lang text PRIMARY KEY, id uuid NOT NULL);
 INSERT INTO e4_cases
-SELECT 'sv', pg_temp.e4_walk('E4 evidens · Väktare Väst',
+SELECT 'sv', pg_temp.e4_walk('E4 evidens · Väktare Väst' || :'e4_suffix',
                              'e4000000-0000-4000-8000-00000000ff01',
                              'e4000000-0000-4000-8000-00000000aa01',
                              'e4000000-0000-4000-8000-00000000d101');
 INSERT INTO e4_cases
-SELECT 'en', pg_temp.e4_walk('E4 evidence · Guard East',
+SELECT 'en', pg_temp.e4_walk('E4 evidence · Guard East' || :'e4_suffix',
                              'e4000000-0000-4000-8000-00000000ff02',
                              'e4000000-0000-4000-8000-00000000aa02',
                              'e4000000-0000-4000-8000-00000000d102');

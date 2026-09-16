@@ -7,6 +7,147 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261122090000_cv_owned_application_snapshot.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "cv_owned_application_snapshot"
+        },
+        {
+          "kind": "function",
+          "object": "sp_submit_application_with_cv_source"
+        }
+      ],
+      "note": "Real local API regression found invoker submission calling revoked private CV helpers. Owner-checked read wrapper preserves private helpers and application RLS. Hosted application verified; numeric history alignment remains release-blocking.",
+      "rollback": "supabase/rollback/20261122090000_cv_owned_application_snapshot_rollback.sql",
+      "evidenceSource": "Owner-authorized Supabase connector application to CQrityjob Production (wrygicdfxwjnrugduxnt), verified 2026-09-16T15:58:33.795Z. Exact PR #257 pinned head 01efb0731359de2a8939c37ded817f008459366d SQL; SHA-256 b5bd06661fef9dd5266ab362553a68d77583b8a4c8fd5fdc430a5a21c8139936. Canonical 20261122090000 maps exactly once to hosted 20260916155620 / cv_owned_application_snapshot. Applied in dependency order with per-migration verification before proceeding. Committed read-only postflight passed; all 38 baseline table counts and content digests unchanged. Profile 13, CV 3, Passport profiles 3, claims 42, evidence 10, verification requests/decisions 9/9. Zero deletions; ASIS CPP/PSP/PCI identities unchanged. Evidence: docs/passport/hosted-application-evidence/verification.json. Numeric migration-history alignment remains release-blocking; this evidence never authorizes re-execution.",
+      "hostedVersion": "20260916155620",
+      "hostedName": "cv_owned_application_snapshot",
+      "verify": "Read-only: docs/passport/phase-2-evidence/post-apply-verification.sql and docs/passport/hosted-application-evidence/read-only-verification.sql. Results: docs/passport/hosted-application-evidence/verification.json. No production mutation or rollback tests."
+    },
+    {
+      "file": "20261121090000_sp_closed_credential_catalogue.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "object": "sp_approved_credential_catalogue",
+          "kind": "view"
+        },
+        {
+          "object": "allows_no_expiry",
+          "kind": "column",
+          "table": "sp_credential_types"
+        },
+        {
+          "object": "sp_closed_catalogue_claim_guard",
+          "kind": "function"
+        },
+        {
+          "object": "sp_closed_catalogue_details_guard",
+          "kind": "function"
+        }
+      ],
+      "note": "Closed catalogue owner decision. Reuses existing definitions/issuers. No personal rows changed or deleted. Hosted application verified; numeric history alignment remains release-blocking.",
+      "rollback": "supabase/rollback/20261121090000_sp_closed_credential_catalogue_rollback.sql",
+      "evidenceSource": "Owner-authorized Supabase connector application to CQrityjob Production (wrygicdfxwjnrugduxnt), verified 2026-09-16T15:58:33.795Z. Exact PR #257 pinned head 01efb0731359de2a8939c37ded817f008459366d SQL; SHA-256 b22d3fa2955d42583e113f2ab8fc0d70c47f9448c0f6f0d5dc99596eb35a3785. Canonical 20261121090000 maps exactly once to hosted 20260916155551 / sp_closed_credential_catalogue. Applied in dependency order with per-migration verification before proceeding. Committed read-only postflight passed; all 38 baseline table counts and content digests unchanged. Profile 13, CV 3, Passport profiles 3, claims 42, evidence 10, verification requests/decisions 9/9. Zero deletions; ASIS CPP/PSP/PCI identities unchanged. Evidence: docs/passport/hosted-application-evidence/verification.json. Numeric migration-history alignment remains release-blocking; this evidence never authorizes re-execution.",
+      "hostedVersion": "20260916155551",
+      "hostedName": "sp_closed_credential_catalogue",
+      "verify": "Read-only: docs/passport/phase-2-evidence/post-apply-verification.sql and docs/passport/hosted-application-evidence/read-only-verification.sql. Results: docs/passport/hosted-application-evidence/verification.json. No production mutation or rollback tests."
+    },
+    {
+      "file": "20261120090000_sp_credential_selective_sharing_v2.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "object": "sp_credential_disclosure_policy",
+          "kind": "table"
+        },
+        {
+          "object": "sp_credential_share_events",
+          "kind": "table"
+        },
+        {
+          "object": "sp_create_credential_disclosure_v2",
+          "kind": "function"
+        },
+        {
+          "object": "sp_preview_credential_disclosure_v2",
+          "kind": "function"
+        }
+      ],
+      "note": "Credential-only selected fields with private evidence, v1 compatibility and append-only access history. Hosted application verified; numeric history alignment remains release-blocking.",
+      "verify": "Read-only: docs/passport/phase-2-evidence/post-apply-verification.sql and docs/passport/hosted-application-evidence/read-only-verification.sql. Results: docs/passport/hosted-application-evidence/verification.json. No production mutation or rollback tests.",
+      "rollback": "supabase/rollback/20261120090000_sp_credential_selective_sharing_v2_rollback.sql",
+      "evidenceSource": "Owner-authorized Supabase connector application to CQrityjob Production (wrygicdfxwjnrugduxnt), verified 2026-09-16T15:58:33.795Z. Exact PR #257 pinned head 01efb0731359de2a8939c37ded817f008459366d SQL; SHA-256 717c8119a4f32b484db92af6e1c9b5a621387d90142768413d7108c3c152d817. Canonical 20261120090000 maps exactly once to hosted 20260916155521 / sp_credential_selective_sharing_v2. Applied in dependency order with per-migration verification before proceeding. Committed read-only postflight passed; all 38 baseline table counts and content digests unchanged. Profile 13, CV 3, Passport profiles 3, claims 42, evidence 10, verification requests/decisions 9/9. Zero deletions; ASIS CPP/PSP/PCI identities unchanged. Evidence: docs/passport/hosted-application-evidence/verification.json. Numeric migration-history alignment remains release-blocking; this evidence never authorizes re-execution.",
+      "hostedVersion": "20260916155521",
+      "hostedName": "sp_credential_selective_sharing_v2"
+    },
+    {
+      "file": "20261119090000_sp_international_credential_wallet.sql",
+      "hostedState": "applied",
+      "introduces": [
+        {
+          "object": "sp_save_international_credential",
+          "kind": "function"
+        },
+        {
+          "object": "sp_passport_session_active",
+          "kind": "function"
+        },
+        {
+          "object": "sp_passport_session_write_guard",
+          "kind": "function"
+        }
+      ],
+      "note": "Atomic owner-only international credential create/correction. Hosted application verified; numeric history alignment remains release-blocking.",
+      "verify": "Read-only: docs/passport/phase-2-evidence/post-apply-verification.sql and docs/passport/hosted-application-evidence/read-only-verification.sql. Results: docs/passport/hosted-application-evidence/verification.json. No production mutation or rollback tests.",
+      "rollback": "supabase/rollback/20261119090000_sp_international_credential_wallet_rollback.sql",
+      "evidenceSource": "Owner-authorized Supabase connector application to CQrityjob Production (wrygicdfxwjnrugduxnt), verified 2026-09-16T15:58:33.795Z. Exact PR #257 pinned head 01efb0731359de2a8939c37ded817f008459366d SQL; SHA-256 c9870a981d8e743fcada8eae8e1695fb6362e26db913f2895576cb7c5544f651. Canonical 20261119090000 maps exactly once to hosted 20260916155456 / sp_international_credential_wallet. Applied in dependency order with per-migration verification before proceeding. Committed read-only postflight passed; all 38 baseline table counts and content digests unchanged. Profile 13, CV 3, Passport profiles 3, claims 42, evidence 10, verification requests/decisions 9/9. Zero deletions; ASIS CPP/PSP/PCI identities unchanged. Evidence: docs/passport/hosted-application-evidence/verification.json. Numeric migration-history alignment remains release-blocking; this evidence never authorizes re-execution.",
+      "hostedVersion": "20260916155456",
+      "hostedName": "sp_international_credential_wallet"
+    },
+    {
+      "file": "20261118100000_sp_international_passport_foundation.sql",
+      "hostedState": "applied",
+      "evidenceSource": "Owner-authorized Supabase connector application to CQrityjob Production (wrygicdfxwjnrugduxnt), verified 2026-09-16T15:58:33.795Z. Exact PR #257 pinned head 01efb0731359de2a8939c37ded817f008459366d SQL; SHA-256 89a6d170bea44f57f28fd63be7e9e7219de0bfb0f26f1ef8cf65bc03f1103a7c. Canonical 20261118100000 maps exactly once to hosted 20260916155430 / sp_international_passport_foundation. Applied in dependency order with per-migration verification before proceeding. Committed read-only postflight passed; all 38 baseline table counts and content digests unchanged. Profile 13, CV 3, Passport profiles 3, claims 42, evidence 10, verification requests/decisions 9/9. Zero deletions; ASIS CPP/PSP/PCI identities unchanged. Evidence: docs/passport/hosted-application-evidence/verification.json. Numeric migration-history alignment remains release-blocking; this evidence never authorizes re-execution.",
+      "introduces": [
+        {
+          "object": "sp_credential_classes",
+          "kind": "table"
+        },
+        {
+          "object": "sp_credential_jurisdictions",
+          "kind": "table"
+        },
+        {
+          "object": "sp_credential_definition_metadata",
+          "kind": "table"
+        },
+        {
+          "object": "sp_credential_definition_jurisdictions",
+          "kind": "table"
+        },
+        {
+          "object": "sp_credential_adapter_mappings",
+          "kind": "table"
+        },
+        {
+          "object": "sp_credential_details",
+          "kind": "table"
+        },
+        {
+          "object": "sp_evidence_extractions",
+          "kind": "table"
+        }
+      ],
+      "note": "International Passport additive metadata; no existing personal rows changed. Fable recovery waived by owner.",
+      "verify": "Read-only: docs/passport/phase-2-evidence/post-apply-verification.sql and docs/passport/hosted-application-evidence/read-only-verification.sql. Results: docs/passport/hosted-application-evidence/verification.json. No production mutation or rollback tests.",
+      "rollback": "supabase/rollback/20261118100000_sp_international_passport_foundation_rollback.sql",
+      "hostedVersion": "20260916155430",
+      "hostedName": "sp_international_passport_foundation"
+    },
+    {
       "file": "20261117090000_bcp_conduct_prompts_and_report.sql",
       "hostedState": "applied",
       "evidenceSource": "Applied to owner production wrygicdfxwjnrugduxnt by the official Supabase GitHub integration when PR #254 merged to main as 25470f4e62b7ea3f0f7f360c5f4ae818b440a2f7 (approved head 1a8ae727b3fbc723ee458ef7e57dc1e856d0cb13); the integration applied it automatically on merge, so no hosted write was issued from this evidence session and the migration was never re-run. Verified read-only on 2026-09-15 through the Supabase management API; every statement below is a read. RECORDED IDENTITY: supabase_migrations.schema_migrations carries version 20261117090000, name bcp_conduct_prompts_and_report -- the canonical filename's own version and slug, not a generated uuid, so no canonical-to-hosted alias is required and a clean replay executes nothing twice. LEDGER: supabase/hosted-ledger.json was refreshed from the same read and proved faithful rather than assumed -- md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261117090000 and 20261118090000 is 3959c7c2e0a9bb8d33f37b7de5058efc, exactly the digest of the previously committed 281-row file, so no earlier row was rewritten; over all 283 rows production and the committed file both give 6e7b26cd3c434345d1b9f29ffb637630. TABLE: public.bcp_conduct_reports carries relrowsecurity AND relforcerowsecurity; it has ZERO policies whose cmd is not SELECT; the count of INSERT, UPDATE, DELETE and TRUNCATE privileges held by anon, authenticated, service_role and PUBLIC combined is 0, so no client role holds table DML, service_role included, and every write goes through the governed function; has_table_privilege('anon', ...) is false. The immutability trigger bcp_conduct_reports_immutable is installed and not internal, and the partial unique index bcp_conduct_reports_one_final_per_session_idx exists, so at most one final report per session holds under concurrency. FUNCTIONS: all nine exist with exactly the surface the migration declares. The six client-facing functions (bcp_conduct_topic_prompts, bcp_conduct_report_blockers, bcp_conduct_preview_report, bcp_conduct_finalise_report, bcp_conduct_final_report, bcp_conduct_report_versions) are SECURITY DEFINER with a pinned search_path, executable by authenticated and not by anon. bcp_conduct_build_report_basis is SECURITY DEFINER, pinned, and executable by NEITHER anon NOR authenticated -- the unguarded basis builder is reachable only from inside the functions that check case authority first. bcp_conduct_basis_hash is NOT prosecdef, provolatile 'i' (IMMUTABLE) and pinned, exactly as a pure hash should be. bcp_guard_conduct_report is executable by no client role at all -- not anon, not authenticated, not service_role -- so PostgREST does not publish an invariant-checker as a callable API. VOCABULARY: bcp_events admits conduct_report_finalised, re-read from pg_constraint rather than assumed, and the rebuilt CHECK still admits assignment_created, case_linked and conduct_panel_revealed, so no PR 3, PR 4 or PR 5A member was dropped. NO SEED AND NO JUDGEMENT: public.bcp_conduct_reports holds zero rows, zero conduct_report_finalised events are on the ledger, and public.beskt_prompts still carries exactly its one governance policy with anon unable to read it. No row was inserted, updated or deleted; no test user, employer, case or report was created; production still holds 0 BESKT method versions, 0 governance grants and 0 pilot grants.",

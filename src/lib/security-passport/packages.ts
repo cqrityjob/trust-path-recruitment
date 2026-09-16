@@ -209,6 +209,7 @@ export interface RecipientClaim {
    *  from. It is server-authored and FK-constrained, unlike `title`, which
    *  the holder types — deriving a symbol from the title would let a holder
    *  choose the mark a stranger sees. */
+  readonly credential_identifier?: string | null;
   readonly credential_code: string | null;
   readonly issuer: string | null;
   readonly jurisdiction: string | null;

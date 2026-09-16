@@ -1,0 +1,191 @@
+{
+  "implementationHead": "f1a3f6d8a3dc09aa13c3941878ff6492ea6776df",
+  "originMain": "6fc986af315ff30de4909efb1a076afd39bbd069",
+  "fullBrowserSourceHead": "f46eae25a284cf78cf4918e2e3fdd26426cd8a6f",
+  "applicationScriptBrowserDifferenceSinceFullRun": "NONE",
+  "hostedChanges": "NONE",
+  "productionDeletions": "NONE",
+  "recommendation": "FIX REQUIRED",
+  "artifacts": [
+    {
+      "file": "branch-files-changed.txt",
+      "bytes": 6730,
+      "sha256": "d5b1182978fcc3143e0179611b7b0c07760ed92bc1a0904f09046ae76c2ffcc3"
+    },
+    {
+      "file": "browser-failures.md",
+      "bytes": 31174,
+      "sha256": "b8d378b5d55c8d02bfaac610f6a96bf4ab8855bf765bd564ce333f8976a1a5fc"
+    },
+    {
+      "file": "browser-full.log.gz",
+      "bytes": 79486,
+      "sha256": "3cfcb04c93cf66bcb32871cc135d9016d0cc3281f43e0a2ac6794c6b39b6f6b5"
+    },
+    {
+      "file": "browser-results.json",
+      "bytes": 578335,
+      "sha256": "d3817aef16845788fe1870d16a37c718bbf081acd05a5d8a5747d3a472a04038"
+    },
+    {
+      "file": "build.log.gz",
+      "bytes": 40737,
+      "sha256": "f714515796605cf16f59a5f7f8dfdb82f7f45c0225ea42a9361488a9f9023b21"
+    },
+    {
+      "file": "changed-lint.json",
+      "bytes": 2909,
+      "sha256": "8f78163dbcb13e4b5f059c8649d7266ded9bfda8fa3e03b13163614542963658"
+    },
+    {
+      "file": "changed-lint.log.gz",
+      "bytes": 20,
+      "sha256": "abfbb86f9f5ddfbd9fc1a72c43ab384702ce8bae86b60f3324748485e235e61e"
+    },
+    {
+      "file": "check-scripts-full.log.gz",
+      "bytes": 162924,
+      "sha256": "6646c1bdd60f8293c40cadecf13c413361e58b4ed155c0146dc598f7207ca005"
+    },
+    {
+      "file": "check-scripts.json",
+      "bytes": 10713,
+      "sha256": "cd7a8c0d87888b04f46ead9443ec3e4756c13a81828831d919c9b0e0e0f41a2e"
+    },
+    {
+      "file": "closed-catalogue-sql.log.gz",
+      "bytes": 1357,
+      "sha256": "634201bef308c2acd7c4d216bd151c0227e40caa937cb66a63ee29ba7cc36375"
+    },
+    {
+      "file": "commits.txt",
+      "bytes": 2688,
+      "sha256": "f0068c3b784d7418c407871ef26057fec3fe05213cc5aed5e6effecc8de14f76"
+    },
+    {
+      "file": "database-full.log.gz",
+      "bytes": 31967,
+      "sha256": "ad55069539dc8f5a3443c31aad0445456bfd019dcb9580295dafcba868e4a5c6"
+    },
+    {
+      "file": "database-summary.json",
+      "bytes": 11915,
+      "sha256": "e6102441014ef53a5986893e004ae25f3ba497d3e186250b911463928bab5405"
+    },
+    {
+      "file": "domain.log.gz",
+      "bytes": 475,
+      "sha256": "cfefb1075c18ec34335bfee899e022aae1470d3128dccdde9ed90941e0bb1023"
+    },
+    {
+      "file": "files-changed.txt",
+      "bytes": 1263,
+      "sha256": "b7bd6299b8cd56b6ed067dd36fb199eb288c242fb2e20b033e488b29acf7e5b8"
+    },
+    {
+      "file": "fixture-browser-focused.log.gz",
+      "bytes": 1043,
+      "sha256": "8f8ba785e1d863d0332dde86ea7f04a644c31cf3caf5ba7dc2949d19feb3f8fc"
+    },
+    {
+      "file": "interview-finalisation.log.gz",
+      "bytes": 480,
+      "sha256": "d2940d67419ce95edf9e60710ab0d74dc604356cba32846329da4d928f649821"
+    },
+    {
+      "file": "interview-history.log.gz",
+      "bytes": 261,
+      "sha256": "89fe99deb0b65d19ba14e5c0a4742267af93eb593cea4b18e17b3e582f7adaed"
+    },
+    {
+      "file": "lint-comparison.json",
+      "bytes": 503,
+      "sha256": "4af20645e728883c83f3e2756201ccf7e46cb1c6ac891a5886bbd2389ed2efe2"
+    },
+    {
+      "file": "live-api-results.json",
+      "bytes": 3754,
+      "sha256": "b213dd52c9aa93b4f70ceded65e359f96acd6835e4eb1c2062ede0e09559e9a8"
+    },
+    {
+      "file": "live-api.log.gz",
+      "bytes": 935,
+      "sha256": "cfbff26399115fa9a533ea637f88e0183e91af632cb34952b29a2167e337c44a"
+    },
+    {
+      "file": "live-browser.log.gz",
+      "bytes": 333,
+      "sha256": "91f514ff67ae342c43d18593178a51a87ae8af437a5a2271d39727c7dffb81af"
+    },
+    {
+      "file": "migration-duplicates.log.gz",
+      "bytes": 146,
+      "sha256": "35ba58cc57b841b8bd9998484976f1fa789401f7c030370a028333e4ff7fee47"
+    },
+    {
+      "file": "migration-order.log.gz",
+      "bytes": 172,
+      "sha256": "8c7331ed221ef990587433cb834fd64f6a17a59032c56974461a17ad9e51a9a1"
+    },
+    {
+      "file": "negative-controls.json",
+      "bytes": 2857,
+      "sha256": "8055e5c1a3ca52d8459e9926b82df16a472396e23b67259207f839cb1f989204"
+    },
+    {
+      "file": "negative-controls.log.gz",
+      "bytes": 57620,
+      "sha256": "480a2f00fe7c9e2d915a2496aee0bddbc6892e5e678b480ef04c540c3d4fbb0d"
+    },
+    {
+      "file": "release-frontier.log.gz",
+      "bytes": 211,
+      "sha256": "dbb02d5c80d563c3c32d4dbbdbfc2e634df59d437f339330b76e4938592b4972"
+    },
+    {
+      "file": "repository-lint.log.gz",
+      "bytes": 715969,
+      "sha256": "bdfe873e75a261a1e4beb033cf6d417fb043e5dc05693d92f0a61ede700c15f4"
+    },
+    {
+      "file": "roundtrip.json",
+      "bytes": 1313,
+      "sha256": "21cf2d5954918746a2988ee7f056ff1c53bcb6c4dd246ebc961a49d3276d0979"
+    },
+    {
+      "file": "roundtrip.log.gz",
+      "bytes": 297,
+      "sha256": "176a5f0b798a20e726bbdc1183fb13cdd696dd3a7ae2481ba914476c6f648db6"
+    },
+    {
+      "file": "scripts-typecheck.log.gz",
+      "bytes": 20,
+      "sha256": "abfbb86f9f5ddfbd9fc1a72c43ab384702ce8bae86b60f3324748485e235e61e"
+    },
+    {
+      "file": "selector-1440.png",
+      "bytes": 132891,
+      "sha256": "34af3b66c71f6a25b647f282b3abbd586be61e92657b352248fd70524b006083"
+    },
+    {
+      "file": "selector-375.png",
+      "bytes": 122378,
+      "sha256": "585f64b678e0ad0133c18666e47dfbae8b862fe042111f3564bc7728ccf2a4dc"
+    },
+    {
+      "file": "selector-390.png",
+      "bytes": 121925,
+      "sha256": "47dd8d2b06dee51b2d7ac438fbcc56a173133369dea42bd173193d6322801e84"
+    },
+    {
+      "file": "sql-security.log.gz",
+      "bytes": 273,
+      "sha256": "d0d0e69a77c8cf9fbe35be1a62edd76694a58fc15381c50d08babe02fb33a8a8"
+    },
+    {
+      "file": "typecheck.log.gz",
+      "bytes": 20,
+      "sha256": "abfbb86f9f5ddfbd9fc1a72c43ab384702ce8bae86b60f3324748485e235e61e"
+    }
+  ]
+}

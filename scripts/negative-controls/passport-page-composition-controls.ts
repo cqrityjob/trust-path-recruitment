@@ -21,7 +21,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column stops rendering, so the card and the privacy settings go back behind tabs and the sketch's left column disappears",
     file: INDEX,
-    find: "        <PassportSideColumn",
+    find: "      <PassportSideColumn",
     replace: "        <NoSideColumn",
     guard: GUARD,
     expect: "the Passport page renders a side column",
@@ -31,9 +31,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column is moved first in source, so at 375px a card preview pushes every merit off the first screen",
     file: INDEX,
-    find: '      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 lg:flex-row lg:items-start">\n        <div className="min-w-0 flex-1 lg:order-2">',
+    find: '      <div className="min-w-0 flex-1 lg:order-2">',
     replace:
-      '      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 lg:flex-row lg:items-start">\n        <PassportSideColumn snapshot={snapshot} today={today()} />\n        <div className="min-w-0 flex-1 lg:order-2">',
+      '      <PassportSideColumn snapshot={snapshot} today="2026-09-15" />\n      <div className="min-w-0 flex-1 lg:order-2">',
     guard: GUARD,
     expect: "the workspace comes first in source",
   },
@@ -42,7 +42,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the integrity settings move above the card, so the holder reads who may see it before seeing what it is",
     file: SIDE,
-    find: '      data-passport-privacy-summary\n',
+    find: "      data-passport-privacy-summary\n",
     replace: "",
     guard: GUARD,
     expect: "an integrity/privacy region",
@@ -52,9 +52,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the privacy summary starts writing the mode itself, so one setting gains a second writer and two pages can disagree",
     file: SIDE,
-    find: "import { buildPassportCard } from \"@/lib/security-passport/card\";",
+    find: 'import { CompactPassportCard } from "./CompactPassportCard";',
     replace:
-      "import { setPrivacyMode } from \"@/lib/security-passport/passport.functions\";\nimport { buildPassportCard } from \"@/lib/security-passport/card\";",
+      'import { setPrivacyMode } from "@/lib/security-passport/passport.functions";\nimport { CompactPassportCard } from "./CompactPassportCard";',
     guard: GUARD,
     expect: "does NOT write the privacy mode",
   },
@@ -63,9 +63,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column loads the Passport itself instead of using the snapshot it is handed, adding a second request for the same data",
     file: SIDE,
-    find: "import { buildPassportCard } from \"@/lib/security-passport/card\";",
+    find: 'import { CompactPassportCard } from "./CompactPassportCard";',
     replace:
-      "import { getMyPassport } from \"@/lib/security-passport/passport.functions\";\nimport { buildPassportCard } from \"@/lib/security-passport/card\";",
+      'import { getMyPassport } from "@/lib/security-passport/passport.functions";\nimport { CompactPassportCard } from "./CompactPassportCard";',
     guard: GUARD,
     expect: "the snapshot is passed in",
   },

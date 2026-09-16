@@ -1,0 +1,2600 @@
+{
+  "fixtureStats": {
+    "startTime": "2026-09-16T12:38:20.831Z",
+    "duration": 1472462.652,
+    "expected": 1179,
+    "skipped": 258,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "fixtureCases": 1437,
+  "liveExecutions": 258,
+  "liveFailures": [],
+  "skippedDefaultCases": 258,
+  "coveredByLive": 258,
+  "remainingSkips": [],
+  "combinedUniquePassed": 1437,
+  "combinedFailures": 0,
+  "skipReconciliation": [
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 180,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 1 · the library names the method and states its real state",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 204,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 2 · the employer starts a preparation from an existing application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 266,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 3 · the candidate reads the notice before anything can be answered",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 337,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 4 · answering, saving, leaving and resuming",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 472,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 5 · review, correct, and submit once",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 562,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 6 · the employer reads back the basis, and nothing it interprets",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 589,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 7 · a wrong candidate and a wrong employer are both refused",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 635,
+      "project": "chromium",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 8 · a wrong assignment is cancelled and correctly replaced",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 180,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 1 · the library names the method and states its real state",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 204,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 2 · the employer starts a preparation from an existing application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 266,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 3 · the candidate reads the notice before anything can be answered",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 337,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 4 · answering, saving, leaving and resuming",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 472,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 5 · review, correct, and submit once",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 562,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 6 · the employer reads back the basis, and nothing it interprets",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 589,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 7 · a wrong candidate and a wrong employer are both refused",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 635,
+      "project": "mobile-375",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 8 · a wrong assignment is cancelled and correctly replaced",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 180,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 1 · the library names the method and states its real state",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 204,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 2 · the employer starts a preparation from an existing application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 266,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 3 · the candidate reads the notice before anything can be answered",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 337,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 4 · answering, saving, leaving and resuming",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 472,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 5 · review, correct, and submit once",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 562,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 6 · the employer reads back the basis, and nothing it interprets",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 589,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 7 · a wrong candidate and a wrong employer are both refused",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-candidate-preparation.spec.ts",
+      "line": 635,
+      "project": "mobile-390",
+      "title": "beskt-candidate-preparation.spec.ts > BESKT candidate preparation — the routed journey > 8 · a wrong assignment is cancelled and correctly replaced",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 222,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 1 · the case overview carries the BESKT module, gated by the server",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 248,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 2 · the module opens inside the case and names what it is bound to",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 279,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 3 · the bound digests are disclosed rather than asserted",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 298,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 4 · the submitted preparation is shown whole, and neutrally",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 332,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 5 · nothing on the interviewer's surface can edit the candidate's words",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 347,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 6 · the session opens, and an empty position cannot be locked",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 371,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 7 · the themes are the database's, with their exact identity on screen",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 403,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 8 · one theme is documented in eight separate fields",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 446,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 9 · the save is reported only after the server has confirmed it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 474,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 10 · a correction needs a reason and creates a new version",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 499,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 11 · the history keeps every version, with who wrote it and when",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 518,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 12 · a verification is requested, then updated, and the history is kept",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 555,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 13 · an open verification need is never rendered as a conclusion",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 582,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 14 · locking is confirmed through a described dialog",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 616,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 15 · the locked position is read-only and shows its own facts",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 648,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 16 · the second assessor sees nothing of the first — not even over the wire",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 714,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 17 · the second assessor documents and locks their own position",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 760,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 18 · the two positions are shown side by side, factually, with no total",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 790,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 19 · reopening needs a reason, and nothing is lost by it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 824,
+      "project": "chromium",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 20 · the panel reveals, records a disagreement, and refuses an outsider",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 222,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 1 · the case overview carries the BESKT module, gated by the server",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 248,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 2 · the module opens inside the case and names what it is bound to",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 279,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 3 · the bound digests are disclosed rather than asserted",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 298,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 4 · the submitted preparation is shown whole, and neutrally",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 332,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 5 · nothing on the interviewer's surface can edit the candidate's words",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 347,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 6 · the session opens, and an empty position cannot be locked",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 371,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 7 · the themes are the database's, with their exact identity on screen",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 403,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 8 · one theme is documented in eight separate fields",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 446,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 9 · the save is reported only after the server has confirmed it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 474,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 10 · a correction needs a reason and creates a new version",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 499,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 11 · the history keeps every version, with who wrote it and when",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 518,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 12 · a verification is requested, then updated, and the history is kept",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 555,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 13 · an open verification need is never rendered as a conclusion",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 582,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 14 · locking is confirmed through a described dialog",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 616,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 15 · the locked position is read-only and shows its own facts",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 648,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 16 · the second assessor sees nothing of the first — not even over the wire",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 714,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 17 · the second assessor documents and locks their own position",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 760,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 18 · the two positions are shown side by side, factually, with no total",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 790,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 19 · reopening needs a reason, and nothing is lost by it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 824,
+      "project": "mobile-375",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 20 · the panel reveals, records a disagreement, and refuses an outsider",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 222,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 1 · the case overview carries the BESKT module, gated by the server",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 248,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 2 · the module opens inside the case and names what it is bound to",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 279,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 3 · the bound digests are disclosed rather than asserted",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 298,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 4 · the submitted preparation is shown whole, and neutrally",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 332,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 5 · nothing on the interviewer's surface can edit the candidate's words",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 347,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 6 · the session opens, and an empty position cannot be locked",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 371,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 7 · the themes are the database's, with their exact identity on screen",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 403,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 8 · one theme is documented in eight separate fields",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 446,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 9 · the save is reported only after the server has confirmed it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 474,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 10 · a correction needs a reason and creates a new version",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 499,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 11 · the history keeps every version, with who wrote it and when",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 518,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 12 · a verification is requested, then updated, and the history is kept",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 555,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 13 · an open verification need is never rendered as a conclusion",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 582,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 14 · locking is confirmed through a described dialog",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 616,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 15 · the locked position is read-only and shows its own facts",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 648,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 16 · the second assessor sees nothing of the first — not even over the wire",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 714,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 17 · the second assessor documents and locks their own position",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 760,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 18 · the two positions are shown side by side, factually, with no total",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 790,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 19 · reopening needs a reason, and nothing is lost by it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "beskt-interview-tool.spec.ts",
+      "line": 824,
+      "project": "mobile-390",
+      "title": "beskt-interview-tool.spec.ts > BESKT interview tool — the routed journey > 20 · the panel reveals, records a disagreement, and refuses an outsider",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 109,
+      "project": "chromium",
+      "title": "candidate-to-employer-application.spec.ts > H3.4A candidate-to-employer application flow > candidate applies, employer reviews, candidate sees the status change",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 109,
+      "project": "mobile-375",
+      "title": "candidate-to-employer-application.spec.ts > H3.4A candidate-to-employer application flow > candidate applies, employer reviews, candidate sees the status change",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 109,
+      "project": "mobile-390",
+      "title": "candidate-to-employer-application.spec.ts > H3.4A candidate-to-employer application flow > candidate applies, employer reviews, candidate sees the status change",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 192,
+      "project": "chromium",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > an application opens the candidate, and shows no Passport",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 262,
+      "project": "chromium",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > the candidate page works in Swedish",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 290,
+      "project": "chromium",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > the candidate page does not scroll sideways on a phone",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 192,
+      "project": "mobile-375",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > an application opens the candidate, and shows no Passport",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 262,
+      "project": "mobile-375",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > the candidate page works in Swedish",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 290,
+      "project": "mobile-375",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > the candidate page does not scroll sideways on a phone",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 192,
+      "project": "mobile-390",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > an application opens the candidate, and shows no Passport",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 262,
+      "project": "mobile-390",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > the candidate page works in Swedish",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 290,
+      "project": "mobile-390",
+      "title": "candidate-to-employer-application.spec.ts > Candidate overview > the candidate page does not scroll sideways on a phone",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 343,
+      "project": "chromium",
+      "title": "candidate-to-employer-application.spec.ts > Applying with a CQrityjob CV > the candidate applies with their saved CV and the employer reads it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 402,
+      "project": "chromium",
+      "title": "candidate-to-employer-application.spec.ts > Applying with a CQrityjob CV > the CV choice is usable on a phone",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 343,
+      "project": "mobile-375",
+      "title": "candidate-to-employer-application.spec.ts > Applying with a CQrityjob CV > the candidate applies with their saved CV and the employer reads it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 402,
+      "project": "mobile-375",
+      "title": "candidate-to-employer-application.spec.ts > Applying with a CQrityjob CV > the CV choice is usable on a phone",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 343,
+      "project": "mobile-390",
+      "title": "candidate-to-employer-application.spec.ts > Applying with a CQrityjob CV > the candidate applies with their saved CV and the employer reads it",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "candidate-to-employer-application.spec.ts",
+      "line": 402,
+      "project": "mobile-390",
+      "title": "candidate-to-employer-application.spec.ts > Applying with a CQrityjob CV > the CV choice is usable on a phone",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 179,
+      "project": "chromium",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > anonymous run survives account creation and is saved",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 264,
+      "project": "chromium",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > a second account cannot claim the same result",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 312,
+      "project": "chromium",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > English, and the small viewport",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 179,
+      "project": "mobile-375",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > anonymous run survives account creation and is saved",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 264,
+      "project": "mobile-375",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > a second account cannot claim the same result",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 312,
+      "project": "mobile-375",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > English, and the small viewport",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 179,
+      "project": "mobile-390",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > anonymous run survives account creation and is saved",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 264,
+      "project": "mobile-390",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > a second account cannot claim the same result",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "career-discovery-conversion.spec.ts",
+      "line": 312,
+      "project": "mobile-390",
+      "title": "career-discovery-conversion.spec.ts > Career Discovery conversion (skipped) > English, and the small viewport",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 422,
+      "project": "chromium",
+      "title": "employer-final-report-evidence.spec.ts > 01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 517,
+      "project": "chromium",
+      "title": "employer-final-report-evidence.spec.ts > 08 · a member: the whole report, and not the act",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 531,
+      "project": "chromium",
+      "title": "employer-final-report-evidence.spec.ts > 09 · the candidate is denied, and is not told a report exists",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 551,
+      "project": "chromium",
+      "title": "employer-final-report-evidence.spec.ts > 10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 625,
+      "project": "chromium",
+      "title": "employer-final-report-evidence.spec.ts > 14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 688,
+      "project": "chromium",
+      "title": "employer-final-report-evidence.spec.ts > 16-17 · SWEDISH MOBILE 375 · version 2 and the history it kept",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 422,
+      "project": "mobile-375",
+      "title": "employer-final-report-evidence.spec.ts > 01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 517,
+      "project": "mobile-375",
+      "title": "employer-final-report-evidence.spec.ts > 08 · a member: the whole report, and not the act",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 531,
+      "project": "mobile-375",
+      "title": "employer-final-report-evidence.spec.ts > 09 · the candidate is denied, and is not told a report exists",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 551,
+      "project": "mobile-375",
+      "title": "employer-final-report-evidence.spec.ts > 10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 625,
+      "project": "mobile-375",
+      "title": "employer-final-report-evidence.spec.ts > 14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 688,
+      "project": "mobile-375",
+      "title": "employer-final-report-evidence.spec.ts > 16-17 · SWEDISH MOBILE 375 · version 2 and the history it kept",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 422,
+      "project": "mobile-390",
+      "title": "employer-final-report-evidence.spec.ts > 01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 517,
+      "project": "mobile-390",
+      "title": "employer-final-report-evidence.spec.ts > 08 · a member: the whole report, and not the act",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 531,
+      "project": "mobile-390",
+      "title": "employer-final-report-evidence.spec.ts > 09 · the candidate is denied, and is not told a report exists",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 551,
+      "project": "mobile-390",
+      "title": "employer-final-report-evidence.spec.ts > 10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 625,
+      "project": "mobile-390",
+      "title": "employer-final-report-evidence.spec.ts > 14-15 · ENGLISH DESKTOP 1440 · the immutable report, read in English",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-final-report-evidence.spec.ts",
+      "line": 688,
+      "project": "mobile-390",
+      "title": "employer-final-report-evidence.spec.ts > 16-17 · SWEDISH MOBILE 375 · version 2 and the history it kept",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 70,
+      "project": "chromium",
+      "title": "employer-process-continuity-evidence.spec.ts > 01-06 · the Swedish desktop walk",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 117,
+      "project": "chromium",
+      "title": "employer-process-continuity-evidence.spec.ts > 07 · a member, and the work they are not offered",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 124,
+      "project": "chromium",
+      "title": "employer-process-continuity-evidence.spec.ts > 08 · a failed read, named rather than zeroed",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 146,
+      "project": "chromium",
+      "title": "employer-process-continuity-evidence.spec.ts > 09 · nothing started, and no funnel",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 153,
+      "project": "chromium",
+      "title": "employer-process-continuity-evidence.spec.ts > 10 · the English mobile journey at 375",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 70,
+      "project": "mobile-375",
+      "title": "employer-process-continuity-evidence.spec.ts > 01-06 · the Swedish desktop walk",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 117,
+      "project": "mobile-375",
+      "title": "employer-process-continuity-evidence.spec.ts > 07 · a member, and the work they are not offered",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 124,
+      "project": "mobile-375",
+      "title": "employer-process-continuity-evidence.spec.ts > 08 · a failed read, named rather than zeroed",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 146,
+      "project": "mobile-375",
+      "title": "employer-process-continuity-evidence.spec.ts > 09 · nothing started, and no funnel",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 153,
+      "project": "mobile-375",
+      "title": "employer-process-continuity-evidence.spec.ts > 10 · the English mobile journey at 375",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 70,
+      "project": "mobile-390",
+      "title": "employer-process-continuity-evidence.spec.ts > 01-06 · the Swedish desktop walk",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 117,
+      "project": "mobile-390",
+      "title": "employer-process-continuity-evidence.spec.ts > 07 · a member, and the work they are not offered",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 124,
+      "project": "mobile-390",
+      "title": "employer-process-continuity-evidence.spec.ts > 08 · a failed read, named rather than zeroed",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 146,
+      "project": "mobile-390",
+      "title": "employer-process-continuity-evidence.spec.ts > 09 · nothing started, and no funnel",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity-evidence.spec.ts",
+      "line": 153,
+      "project": "mobile-390",
+      "title": "employer-process-continuity-evidence.spec.ts > 10 · the English mobile journey at 375",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 91,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > job -> applications -> Candidate 360 keeps one candidate, job and application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 124,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > the interview is reached with context and returns to the same application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 155,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > browser back and forward preserve the context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 91,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > job -> applications -> Candidate 360 keeps one candidate, job and application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 124,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > the interview is reached with context and returns to the same application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 155,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > browser back and forward preserve the context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 91,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > job -> applications -> Candidate 360 keeps one candidate, job and application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 124,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > the interview is reached with context and returns to the same application",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 155,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · the recruitment spine > browser back and forward preserve the context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 173,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > report material is not a finalised report",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 207,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > a standalone interview cannot be mistaken for a linked one",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 218,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > nothing started says so, and does not invent a funnel",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 231,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > no URL on the page carries a name or an address",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 173,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > report material is not a finalised report",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 207,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > a standalone interview cannot be mistaken for a linked one",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 218,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > nothing started says so, and does not invent a funnel",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 231,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > no URL on the page carries a name or an address",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 173,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > report material is not a finalised report",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 207,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > a standalone interview cannot be mistaken for a linked one",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 218,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > nothing started says so, and does not invent a funnel",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 231,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · the distinctions > no URL on the page carries a name or an address",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 247,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · truthfulness > a member is not offered work the database would refuse",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 256,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · truthfulness > a failed read is not rendered as zero",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 247,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · truthfulness > a member is not offered work the database would refuse",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 256,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · truthfulness > a failed read is not rendered as zero",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 247,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · truthfulness > a member is not offered work the database would refuse",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 256,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · truthfulness > a failed read is not rendered as zero",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 291,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · responsive, English, and the keyboard > the English mobile journey keeps context and the primary action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 320,
+      "project": "chromium",
+      "title": "employer-process-continuity.spec.ts > E1 · responsive, English, and the keyboard > the primary action takes visible keyboard focus",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 291,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · responsive, English, and the keyboard > the English mobile journey keeps context and the primary action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 320,
+      "project": "mobile-375",
+      "title": "employer-process-continuity.spec.ts > E1 · responsive, English, and the keyboard > the primary action takes visible keyboard focus",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 291,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · responsive, English, and the keyboard > the English mobile journey keeps context and the primary action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "employer-process-continuity.spec.ts",
+      "line": 320,
+      "project": "mobile-390",
+      "title": "employer-process-continuity.spec.ts > E1 · responsive, English, and the keyboard > the primary action takes visible keyboard focus",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 169,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > A · an interview opened from an application inherits its full context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 195,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > A · the governed Q1–Q8 pack is unchanged by the briefing",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 221,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > K · going back and clicking again opens the same case, never a second one",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 244,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > B+G · an unreleased assessment is never shown, and the interview still works",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 273,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > C · an uploaded CV keeps the briefing functional and is named as what it is",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 297,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > D · another employer cannot reach this application's interview context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > viewport 375 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > viewport 768 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > viewport 1440 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 383,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > owner · a ready report offers the finalise action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 404,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > member · a ready report shows who must approve, and no button",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > viewport 375 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > viewport 768 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "chromium",
+      "title": "interview-context-bridge.spec.ts > viewport 1440 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 169,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > A · an interview opened from an application inherits its full context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 195,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > A · the governed Q1–Q8 pack is unchanged by the briefing",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 221,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > K · going back and clicking again opens the same case, never a second one",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 244,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > B+G · an unreleased assessment is never shown, and the interview still works",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 273,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > C · an uploaded CV keeps the briefing functional and is named as what it is",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 297,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > D · another employer cannot reach this application's interview context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > viewport 375 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > viewport 768 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > viewport 1440 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 383,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > owner · a ready report offers the finalise action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 404,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > member · a ready report shows who must approve, and no button",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > viewport 375 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > viewport 768 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "mobile-375",
+      "title": "interview-context-bridge.spec.ts > viewport 1440 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 169,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > A · an interview opened from an application inherits its full context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 195,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > A · the governed Q1–Q8 pack is unchanged by the briefing",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 221,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > K · going back and clicking again opens the same case, never a second one",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 244,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > B+G · an unreleased assessment is never shown, and the interview still works",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 273,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > C · an uploaded CV keeps the briefing functional and is named as what it is",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 297,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > D · another employer cannot reach this application's interview context",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > viewport 375 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > viewport 768 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 332,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > viewport 1440 · the briefing stays scannable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 383,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > owner · a ready report offers the finalise action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 404,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > member · a ready report shows who must approve, and no button",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > viewport 375 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > viewport 768 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-context-bridge.spec.ts",
+      "line": 438,
+      "project": "mobile-390",
+      "title": "interview-context-bridge.spec.ts > viewport 1440 · the member's waiting state is readable and does not overflow",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 175,
+      "project": "chromium",
+      "title": "interview-evidence-reliability.spec.ts > A–D,G · capture, refresh, double actions, later material, locked report",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 394,
+      "project": "chromium",
+      "title": "interview-evidence-reliability.spec.ts > E · the same candidate in a second interview starts with nothing from the first",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 444,
+      "project": "chromium",
+      "title": "interview-evidence-reliability.spec.ts > F · another employer opening the case URL is refused, and sees none of the material",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "chromium",
+      "title": "interview-evidence-reliability.spec.ts > V · 375px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "chromium",
+      "title": "interview-evidence-reliability.spec.ts > V · 768px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "chromium",
+      "title": "interview-evidence-reliability.spec.ts > V · 1440px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 175,
+      "project": "mobile-375",
+      "title": "interview-evidence-reliability.spec.ts > A–D,G · capture, refresh, double actions, later material, locked report",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 394,
+      "project": "mobile-375",
+      "title": "interview-evidence-reliability.spec.ts > E · the same candidate in a second interview starts with nothing from the first",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 444,
+      "project": "mobile-375",
+      "title": "interview-evidence-reliability.spec.ts > F · another employer opening the case URL is refused, and sees none of the material",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "mobile-375",
+      "title": "interview-evidence-reliability.spec.ts > V · 375px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "mobile-375",
+      "title": "interview-evidence-reliability.spec.ts > V · 768px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "mobile-375",
+      "title": "interview-evidence-reliability.spec.ts > V · 1440px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 175,
+      "project": "mobile-390",
+      "title": "interview-evidence-reliability.spec.ts > A–D,G · capture, refresh, double actions, later material, locked report",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 394,
+      "project": "mobile-390",
+      "title": "interview-evidence-reliability.spec.ts > E · the same candidate in a second interview starts with nothing from the first",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 444,
+      "project": "mobile-390",
+      "title": "interview-evidence-reliability.spec.ts > F · another employer opening the case URL is refused, and sees none of the material",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "mobile-390",
+      "title": "interview-evidence-reliability.spec.ts > V · 375px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "mobile-390",
+      "title": "interview-evidence-reliability.spec.ts > V · 768px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-evidence-reliability.spec.ts",
+      "line": 485,
+      "project": "mobile-390",
+      "title": "interview-evidence-reliability.spec.ts > V · 1440px · long material, editing, assessment and the report never scroll sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 138,
+      "project": "chromium",
+      "title": "interview-recruiter-workflow.spec.ts > A · from the application: plan, context visible, four stages, one action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 188,
+      "project": "chromium",
+      "title": "interview-recruiter-workflow.spec.ts > B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Rapport with one action each",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 383,
+      "project": "chromium",
+      "title": "interview-recruiter-workflow.spec.ts > E · a member sees the ready state, no finalise button, and a way back to the candidate",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "chromium",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 375 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "chromium",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 768 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "chromium",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 1440 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 138,
+      "project": "mobile-375",
+      "title": "interview-recruiter-workflow.spec.ts > A · from the application: plan, context visible, four stages, one action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 188,
+      "project": "mobile-375",
+      "title": "interview-recruiter-workflow.spec.ts > B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Rapport with one action each",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 383,
+      "project": "mobile-375",
+      "title": "interview-recruiter-workflow.spec.ts > E · a member sees the ready state, no finalise button, and a way back to the candidate",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "mobile-375",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 375 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "mobile-375",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 768 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "mobile-375",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 1440 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 138,
+      "project": "mobile-390",
+      "title": "interview-recruiter-workflow.spec.ts > A · from the application: plan, context visible, four stages, one action",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 188,
+      "project": "mobile-390",
+      "title": "interview-recruiter-workflow.spec.ts > B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Rapport with one action each",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 383,
+      "project": "mobile-390",
+      "title": "interview-recruiter-workflow.spec.ts > E · a member sees the ready state, no finalise button, and a way back to the candidate",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "mobile-390",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 375 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "mobile-390",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 768 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "interview-recruiter-workflow.spec.ts",
+      "line": 415,
+      "project": "mobile-390",
+      "title": "interview-recruiter-workflow.spec.ts > F · viewport 1440 · every stage screen stays usable and never scrolls sideways",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "passport-live-local.spec.ts",
+      "line": 15,
+      "project": "chromium",
+      "title": "passport-live-local.spec.ts > real owner adds and selectively shares a credential, recipient loses access on revocation",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "passport-live-local.spec.ts",
+      "line": 15,
+      "project": "mobile-375",
+      "title": "passport-live-local.spec.ts > real owner adds and selectively shares a credential, recipient loses access on revocation",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    },
+    {
+      "file": "passport-live-local.spec.ts",
+      "line": 15,
+      "project": "mobile-390",
+      "title": "passport-live-local.spec.ts > real owner adds and selectively shares a credential, recipient loses access on revocation",
+      "outcome": "skipped",
+      "result": "skipped",
+      "classification": "required release coverage",
+      "liveResult": "passed"
+    }
+  ]
+}

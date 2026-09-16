@@ -1,0 +1,25 @@
+{
+  "baseline": {
+    "tracked": {
+      "error": 1010,
+      "warning": 74
+    },
+    "historical": {
+      "error": 98253,
+      "warning": 395
+    }
+  },
+  "final": {
+    "tracked": {
+      "error": 1006,
+      "warning": 74
+    },
+    "historical": {
+      "error": 98253,
+      "warning": 395
+    }
+  },
+  "newFindings": [],
+  "baselineSha256": "705727af4fe1a6151396657933a54456ed4d5502b137bd1fbeb6d45e8cde40f1",
+  "finalSha256": "a25319df39cef4cdcf6fd2db232dcf90ed42b68d80bc28cbc0e93e7c0e53f4cd"
+}

@@ -161,53 +161,69 @@ test.describe("/my-career — the real route", () => {
     await expect(page.locator('[data-hub-module="discovery"]')).toBeVisible();
   });
 
-  test("6 · a pending emailed invitation appears during the same visit", async ({ page }) => {
-    let listed = 0;
-    const invited = work({
-      workId: "att-invited",
-      deadline: "2026-09-15T23:59:00Z",
-      progressDone: 0,
-    });
-    await mount(page, "eight_unverified", {
-      overrides: {
-        claimAssessmentInvitations: ok({ bound: 1, expired: 0 }),
-        // First list: nothing yet. After the claim bound one, the refetch sees it.
-        listAcademyWork: async (route) => {
-          listed += 1;
-          return route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              result: listed === 1 ? [] : [invited],
-              error: null,
-              context: {},
-            }),
-          });
+  for (const path of ["/my-career", "/academy"])
+    test(`6 · a pending emailed invitation appears during the same visit on ${path}`, async ({
+      page,
+    }) => {
+      let listed = 0;
+      const invited = work({
+        workId: "att-invited",
+        deadline: new Date(Date.now() + 2 * 86_400_000).toISOString(),
+        progressDone: 0,
+      });
+      await mount(page, "eight_unverified", {
+        path,
+        ready: path === "/academy" ? "main h1" : "[data-career-header]",
+        overrides: {
+          getLearningFormForModule: ok(null),
+          claimAssessmentInvitations: ok({ bound: 1, expired: 0 }),
+          // First list: nothing yet. After the claim bound one, the refetch sees it.
+          listAcademyWork: async (route) => {
+            listed += 1;
+            const initialRead = listed === 1;
+            // The invitation claim wins the race against the pre-claim list.
+            // A refresh must not reuse that still-pending, now stale request.
+            if (initialRead) await new Promise((resolve) => setTimeout(resolve, 500));
+            return route.fulfill({
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({
+                result: initialRead ? [] : [invited],
+                error: null,
+                context: {},
+              }),
+            });
+          },
+          getMyAssessmentHistory: ok([
+            history({ attemptId: "att-invited", lifecycleState: "invited" }),
+          ]),
         },
-        getMyAssessmentHistory: ok([
-          history({ attemptId: "att-invited", lifecycleState: "invited" }),
-        ]),
-      },
+      });
+      if (path === "/academy") {
+        await expect(page.locator('main a[href="/academy/att-invited"]')).toBeVisible();
+        await expect(page.locator("main")).toContainText("Nordväkt AB");
+        expect(listed).toBeGreaterThanOrEqual(2);
+        return;
+      }
+      // The claimed invitation is an open test with a deadline, so it becomes
+      // the recommended step on THIS visit — no reload, no second visit.
+      await expect(page.locator("[data-primary-cta]")).toHaveAttribute(
+        "href",
+        "/academy/att-invited",
+        { timeout: 10_000 },
+      );
+      expect(listed).toBeGreaterThanOrEqual(2);
+      await expect(page.locator('[data-next-action="primary"] [data-primary-meta]')).toContainText(
+        "Begärt av Nordväkt AB",
+      );
+      // #211: the tests LIST left the overview for /academy, which is the
+      // page that owns it; that the list does not then pretend the test does
+      // not exist is asserted against the component, over these same
+      // fixtures, by my-career-premium-overview:check. What this spec still
+      // proves is the part that is timing and cannot be proved statically:
+      // the claim ran, the list was refetched, and the invitation became the
+      // recommended step on THIS visit.
     });
-    // The claimed invitation is an open test with a deadline, so it becomes
-    // the recommended step on THIS visit — no reload, no second visit.
-    await expect(page.locator("[data-primary-cta]")).toHaveAttribute(
-      "href",
-      "/academy/att-invited",
-      { timeout: 10_000 },
-    );
-    expect(listed).toBeGreaterThanOrEqual(2);
-    await expect(page.locator('[data-next-action="primary"] [data-primary-meta]')).toContainText(
-      "Begärt av Nordväkt AB",
-    );
-    // #211: the tests LIST left the overview for /academy, which is the
-    // page that owns it; that the list does not then pretend the test does
-    // not exist is asserted against the component, over these same
-    // fixtures, by my-career-premium-overview:check. What this spec still
-    // proves is the part that is timing and cannot be proved statically:
-    // the claim ran, the list was refetched, and the invitation became the
-    // recommended step on THIS visit.
-  });
 
   test("7 · a recruitment test names the requesting organisation and the role, never an employer of the applicant", async ({
     page,
@@ -595,6 +611,10 @@ test.describe("/my-career — the real route", () => {
   }
 
   test("15b · 200% zoom (640px logical): no overflow, one primary CTA", async ({ page }) => {
+    // Exercise the render/commit window that previously let initial router
+    // hydration update Transitioner before mount. afterEach rejects the warning.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
     await page.setViewportSize({ width: 640, height: 900 });
     await mount(page, "eight_unverified");
     const overflow = await page.evaluate(
@@ -633,6 +653,12 @@ test.describe("/my-career — the real route", () => {
 
     // Tab from the top of the document until the first navigation item has
     // focus. A navigation a keyboard cannot get to is not navigation.
+    if (test.info().project.name !== "chromium") {
+      await page
+        .getByRole("button", { name: /Öppna meny|Open menu|Meny|Menu/ })
+        .first()
+        .click();
+    }
     await page.evaluate(() => document.body.focus());
     let reached = false;
     for (let i = 0; i < 40 && !reached; i += 1) {
@@ -653,7 +679,7 @@ test.describe("/my-career — the real route", () => {
 
     // And the rest of the owner's five follow, in the sketch order, on
     // plain Tab.
-    for (const key of ["passport", "jobs", "career", "assessments"]) {
+    for (const key of ["passport", "cv", "jobs", "career", "assessments"]) {
       await page.keyboard.press("Tab");
       await expect
         .poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-nav-key")))
@@ -885,29 +911,17 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     const region = page.locator("[data-overview-passport-region]");
     await expect(region).toBeVisible({ timeout: 30_000 });
 
-    const contents = region.locator("[data-overview-passport-contents]");
+    const contents = region.locator("[data-compact-passport-card]");
     await expect(contents).toHaveCount(1);
-    // It resolved to a real state rather than sitting in its skeleton.
-    await expect(contents).toHaveAttribute(/data-overview-passport-contents/, /ready|empty/, {
-      timeout: 30_000,
-    });
-
-    // Populated fixture: real rows, each carrying a title and a status —
-    // and every row is a claim the fixture actually holds.
-    const rows = contents.locator("[data-passport-content-row]");
-    expect(await rows.count(), "a populated Passport must show its contents").toBeGreaterThan(0);
+    const rows = contents.locator("li");
+    expect(await rows.count()).toBeGreaterThan(0);
+    expect(await rows.count()).toBeLessThanOrEqual(3);
     await expect(rows.first()).not.toBeEmpty();
-
-    // Provenance stays on the Passport: no issuer, verifier or evidence
-    // link leaks onto Överskt.
+    await expect(region.locator("[data-overview-passport-contents]")).toHaveCount(0);
     await expect(region.locator('a[href*="/passport/entry/"]')).toHaveCount(0);
-
-    // It sits between the card and the totals.
     const cardY = (await region.locator("[data-overview-passport-card]").boundingBox())!.y;
-    const contentsY = (await contents.boundingBox())!.y;
     const totalsY = (await region.locator("[data-passport-summary]").boundingBox())!.y;
-    expect(cardY).toBeLessThan(contentsY);
-    expect(contentsY).toBeLessThan(totalsY);
+    expect(cardY).toBeLessThan(totalsY);
   });
 
   test("the Passport column holds one card, one summary and one way in", async ({ page }) => {

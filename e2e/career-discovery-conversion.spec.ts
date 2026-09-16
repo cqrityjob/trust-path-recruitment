@@ -89,10 +89,19 @@ test.describe(
         .getByLabel(/^Lösenord$|^Password$/)
         .first()
         .fill(account.password);
+      const response = page.waitForResponse(
+        (r) => r.url().includes("/auth/v1/signup") && r.request().method() === "POST",
+      );
       await page.getByRole("button", { name: /^Skapa konto$|^Create account$/ }).click();
-      await expect(page.getByText(/Kolla din inkorg|Check your inbox/i)).toBeVisible({
-        timeout: 60_000,
-      });
+      expect((await response).ok(), "Real Auth must accept the registration").toBe(true);
+      await expect
+        .poll(
+          async () =>
+            (await page.getByText(/Kolla din inkorg|Check your inbox/i).isVisible()) ||
+            new URL(page.url()).pathname === "/my-career",
+          { timeout: 60_000 },
+        )
+        .toBe(true);
     }
 
     /** Sign in with an existing account. */
@@ -119,6 +128,30 @@ test.describe(
       const needsForm = await emailField.isVisible({ timeout: 8_000 }).catch(() => false);
       if (needsForm) await signIn(page, account);
       await page.waitForURL(/\/my-career/, { timeout: 60_000 });
+    }
+
+    async function openSavedReport(page: Page, expectedId?: string) {
+      await page.waitForURL(
+        (u) =>
+          u.pathname.includes("/report/") ||
+          (u.pathname === "/my-career" && u.searchParams.has("savedReport")),
+        { timeout: 60_000 },
+      );
+      if (new URL(page.url()).pathname === "/my-career") {
+        await expect(page.getByTestId("career-discovery-claim-saved")).toBeVisible();
+        const link = page.getByTestId("career-discovery-claim-open-report");
+        if (expectedId)
+          await expect(link).toHaveAttribute(
+            "href",
+            "/security-career-assessment/report/" + expectedId,
+          );
+        await link.click();
+      }
+      await page.waitForURL(/\/security-career-assessment\/report\//, { timeout: 60_000 });
+      if (expectedId)
+        expect(new URL(page.url()).pathname).toBe(
+          "/security-career-assessment/report/" + expectedId,
+        );
     }
 
     /** Register, then come back the way a real candidate does: through a
@@ -174,10 +207,10 @@ test.describe(
 
       // 6-8 · register, return through a different tab, land on the report.
       const returned = await registerAndReturn(context, page, account, claimUrl);
-      await returned.waitForURL(/\/security-career-assessment\/report\//, { timeout: 60_000 });
+      await openSavedReport(returned);
 
       // 9 · it says so, once, where it happened — and it is the SAME result.
-      await expect(returned.getByTestId("cd-claim-saved")).toBeVisible();
+      await expect(returned.getByTestId("cd-pattern-name")).toBeVisible();
       await expect(returned.getByTestId("cd-pattern-name")).toHaveText(anonymousPattern);
       const reportUrl = returned.url();
       const snapshotId = reportUrl.split("/report/")[1].split("?")[0];
@@ -195,7 +228,7 @@ test.describe(
       // Back onto the claim URL — the state that used to say "your result is
       // gone" seconds after it had been saved.
       await returned.goto(claimUrl);
-      await returned.waitForURL(new RegExp(`/report/${snapshotId}`), { timeout: 30_000 });
+      await openSavedReport(returned, snapshotId);
 
       // ── THE SAME CLAIM, PRESENTED TWICE ──────────────────────────────
       //
@@ -210,7 +243,7 @@ test.describe(
         window.localStorage.removeItem("cqj:discovery:v31:claimed-result:v1");
       }, raw);
       await returned.goto(claimUrl);
-      await returned.waitForURL(new RegExp(`/report/${snapshotId}`), { timeout: 60_000 });
+      await openSavedReport(returned, snapshotId);
       await expect(returned.locator("body")).toContainText(/Career DNA/, { timeout: 30_000 });
 
       // 14-16 · log out, log back in, the result is still there.
@@ -246,7 +279,7 @@ test.describe(
       const staged = await stagedClaim(vPage);
       const claimUrl = `/security-career-assessment?claim=${encodeURIComponent(staged.token)}`;
       const ownerTab = await registerAndReturn(victim, vPage, owner, claimUrl);
-      await ownerTab.waitForURL(/\/security-career-assessment\/report\//, { timeout: 60_000 });
+      await openSavedReport(ownerTab);
 
       // A different person, a different browser, holding a copy of everything.
       const thief = await browser.newContext({ locale: "sv-SE" });
@@ -320,8 +353,8 @@ test.describe(
         const { token } = await stagedClaim(page);
         const claimUrl = `/security-career-assessment?claim=${encodeURIComponent(token)}`;
         const returned = await registerAndReturn(context, page, account, claimUrl);
-        await returned.waitForURL(/\/security-career-assessment\/report\//, { timeout: 60_000 });
-        await expect(returned.getByTestId("cd-claim-saved")).toBeVisible();
+        await openSavedReport(returned);
+        await expect(returned.getByTestId("cd-pattern-name")).toBeVisible();
 
         await context.close();
       }

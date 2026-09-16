@@ -111,6 +111,11 @@ export function RecipientCredentialList({
             </div>
 
             <LifecycleNote state={c.lifecycle} />
+            {c.credentialIdentifier && (
+              <p className="mt-2 break-all text-sm">
+                {lang === "sv" ? "Bevisnummer" : "Credential identifier"}: {c.credentialIdentifier}
+              </p>
+            )}
 
             {/* The same component the card uses, so the public page and the
                 employer's application view cannot drift into two readings

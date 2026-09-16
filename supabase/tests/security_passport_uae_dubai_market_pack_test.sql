@@ -56,70 +56,40 @@ BEGIN
   UPDATE public.sp_credential_types SET is_active = true WHERE market_pack_code = 'AE-DU';
   UPDATE public.sp_professional_titles SET is_active = true WHERE market_pack_code = 'AE-DU';
 
-  -- The card records normally in Dubai.
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-     sub_jurisdiction_code, claimed_issuer_name, valid_until,
-     credential_reference, authorisation_scope)
-  VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE',
-          'AE-DU', 'Security Industry Regulatory Agency', current_date + 700,
-          'SIRA-2026-004417', 'Fictional Security Services LLC');
-  RAISE NOTICE 'ok  2.1 POSITIVE CONTROL a Dubai cadre card records normally';
-
-  -- With the pack live, a UAE claim with no emirate is STILL refused. This is
-  -- the assertion that matters most in the whole suite: activating Dubai must
-  -- not activate the country.
-  --
-  -- The probe names a CREDENTIAL_CODE, and from 20260910090000 that is
-  -- load-bearing. The market gate governs which REGULATED credentials may be
-  -- registered; it used to run on every claim carrying a jurisdiction, which
-  -- is how a British driving licence became unrecordable because the UK
-  -- SECURITY pack is unreviewed. What must never soften is this: a SIRA cadre
-  -- card cannot be recorded as UAE-wide, and it still cannot.
+  -- A reviewed market does not approve candidate-defined scope. Cards remain
+  -- withheld; approved training provides the positive regional write control.
   BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       claimed_issuer_name, valid_until, authorisation_scope)
-    VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard',
-            'AE_DU_SIRA_CARD_GUARD', 'AE', 'SIRA', current_date + 700,
-            'Fictional Security Services LLC');
-    RAISE EXCEPTION 'ASSERTION FAILED: 2.2 a UAE-wide claim was accepted';
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until,authorisation_scope)
+    VALUES(_h,'licence','SIRA Security Cadre Card — Security Guard','AE_DU_SIRA_CARD_GUARD','AE','AE-DU','Security Industry Regulatory Agency',current_date+700,'Candidate company');
+    RAISE EXCEPTION 'ASSERTION FAILED: candidate scoped card accepted';
   EXCEPTION WHEN check_violation THEN
-    GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_SUB_JURISDICTION_REQUIRED%' THEN
-      RAISE EXCEPTION 'ASSERTION FAILED: 2.2 wrong error: %', _txt;
-    END IF;
-    RAISE NOTICE 'ok  2.2 MUTATION: opening Dubai does not make the UAE a jurisdiction';
+    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
+    RAISE NOTICE 'ok  2.0 candidate-scope card remains withheld after pack approval';
   END;
-
-  -- And the other six emirates remain unsupported, distinguishably.
-  FOR _txt IN SELECT code FROM public.sp_sub_jurisdictions
-               WHERE jurisdiction_code = 'AE' AND code <> 'AE-DU' LOOP
+  INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+  SELECT _h,claim_type,name_en,code,country,region,issuer_name,current_date+700 FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
+  IF NOT FOUND THEN RAISE EXCEPTION 'ASSERTION FAILED: approved regional training unavailable'; END IF;
+  RAISE NOTICE 'ok  2.1 POSITIVE CONTROL approved Dubai training records with its governed emirate and issuer';
+  BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name)
+    SELECT _h,claim_type,name_en,code,country,issuer_name FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
+    RAISE EXCEPTION 'ASSERTION FAILED: missing emirate accepted';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM<>'SP_GOVERNED_METADATA_IMMUTABLE' THEN RAISE; END IF;
+    RAISE NOTICE 'ok  2.2 an approved Dubai credential cannot become UAE-wide';
+  END;
+  FOR _txt IN SELECT code FROM public.sp_sub_jurisdictions WHERE jurisdiction_code='AE' AND code<>'AE-DU' LOOP
     BEGIN
-      INSERT INTO public.sp_claims
-        (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-         sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
-      VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard',
-              'AE_DU_SIRA_CARD_GUARD', 'AE', _txt,
-              'SIRA', current_date + 700, 'Fictional Security Services LLC');
-      RAISE EXCEPTION 'ASSERTION FAILED: 2.3 % was accepted', _txt;
+      INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name)
+      SELECT _h,claim_type,name_en,code,country,_txt,issuer_name FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
+      RAISE EXCEPTION 'ASSERTION FAILED: wrong emirate accepted';
     EXCEPTION WHEN check_violation THEN
-      NULL;
+      IF SQLERRM<>'SP_GOVERNED_METADATA_IMMUTABLE' THEN RAISE; END IF;
     END;
   END LOOP;
-  RAISE NOTICE 'ok  2.3 MUTATION: all six other emirates are still refused as unsupported';
-
-  -- A Dubai credential cannot be filed against another emirate either.
-  BEGIN
-    INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-       sub_jurisdiction_code, claimed_issuer_name, valid_until, authorisation_scope)
-    VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Guard', 'AE_DU_SIRA_CARD_GUARD', 'AE',
-            'AE-AZ', 'SIRA', current_date + 700, 'Fictional LLC');
-    RAISE EXCEPTION 'ASSERTION FAILED: 2.4 a Dubai card was filed against Abu Dhabi';
-  EXCEPTION WHEN check_violation THEN
-    RAISE NOTICE 'ok  2.4 a SIRA cadre card cannot be recorded for another emirate';
-  END;
+  RAISE NOTICE 'ok  2.3 all six other emirates are refused for the approved Dubai definition';
+  IF EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_h AND sub_jurisdiction_code<>'AE-DU') THEN RAISE EXCEPTION 'ASSERTION FAILED: wrong-emirate row remains'; END IF;
+  RAISE NOTICE 'ok  2.4 refused territorial writes leave no claims in another emirate';
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 3 -- the card is not the courses';
@@ -150,7 +120,7 @@ BEGIN
   INSERT INTO public.sp_claims
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      sub_jurisdiction_code, claimed_issuer_name)
-  SELECT _h, 'training', ct.name_en, ct.code, 'AE', 'AE-DU', 'Certified Training Centre LLC'
+  SELECT _h, 'training', ct.name_en, ct.code, 'AE', 'AE-DU', 'Security Industry Regulatory Agency'
     FROM public.sp_credential_types ct
    WHERE ct.market_pack_code = 'AE-DU' AND ct.claim_type = 'training';
   RAISE NOTICE 'ok  3.3 POSITIVE CONTROL every SIRA course records on its own';
@@ -168,7 +138,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 4.1 a cadre card with no employing company was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_REQUIRES_SCOPE%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 4.1 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  4.1 a cadre card must name the licensed company it is tied to';
@@ -182,7 +152,7 @@ BEGIN
 
   -- The hint must never have been turned into a stored expiry.
   IF EXISTS (SELECT 1 FROM public.sp_claims
-              WHERE holder_user_id = _h AND credential_code = 'AE_DU_SIRA_CARD_GUARD'
+              WHERE holder_user_id = _h AND credential_code = 'AE_DU_SIRA_GUARD_COURSE' AND valid_until IS NOT NULL
                 AND valid_until <> current_date + 700) THEN
     RAISE EXCEPTION 'ASSERTION FAILED: 4.3 a validity hint overwrote the stated expiry';
   END IF;
@@ -203,12 +173,12 @@ BEGIN
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name, holder_note)
     VALUES (_h, 'certification', 'Fitness requirement checked', 'AE_DU_FITNESS_CHECKED',
-            'AE', 'AE-DU', 'Approved Clinic LLC',
+            'AE', 'AE-DU', 'Security Industry Regulatory Agency',
             'Passed despite noted blood pressure finding');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2 a medical note was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_NARROW_RESULT_ONLY%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 5.2 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  5.2 MUTATION: no medical detail can be attached to the fitness check';
@@ -219,7 +189,7 @@ BEGIN
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name)
     VALUES (_h, 'certification', 'Medically cleared after review', 'AE_DU_FITNESS_CHECKED',
-            'AE', 'AE-DU', 'Approved Clinic LLC');
+            'AE', 'AE-DU', 'Security Industry Regulatory Agency');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.3 a free-text medical title was accepted';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  5.3 MUTATION: the title must be the controlled label, not a finding';
@@ -229,7 +199,7 @@ BEGIN
     (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
      sub_jurisdiction_code, claimed_issuer_name)
   VALUES (_h, 'certification', 'Fitness requirement checked', 'AE_DU_FITNESS_CHECKED',
-          'AE', 'AE-DU', 'Approved Clinic LLC');
+          'AE', 'AE-DU', 'Security Industry Regulatory Agency');
   RAISE NOTICE 'ok  5.4 POSITIVE CONTROL the checked result itself records normally';
 
   -- A fitness check derives NOTHING. It is a recorded fact, not a status:

@@ -973,8 +973,10 @@ group("T14 · the page order, and the Passport early");
       !route.includes("listMyAcademyWork"),
   );
   ck(
-    "the list is refetched only when the claim bound something",
-    /if \(bound > 0\) void refetchWork\(\);/.test(route),
+    "a bound invitation cancels the pre-claim list before fetching its new state",
+    /if \(bound > 0\) \{/.test(route) &&
+      route.includes('.cancelQueries({ queryKey: ["academy", "work"], exact: true })') &&
+      route.includes(".then(() => refetchWork())"),
   );
 }
 

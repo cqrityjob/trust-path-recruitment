@@ -1,0 +1,54 @@
+{
+  "baseline": "6fbf4f61edc006bfc33749d65f7348cc7a47fd0e",
+  "branch": "codex/passport-finalization",
+  "testedImplementationHead": "1a043ea91514af530376a47d5c64c908d040462c",
+  "hostedChanges": "NONE",
+  "productionDeletions": "NONE",
+  "localEnvSha256": "d14e60e4d818a8d32eb2a82f0c5cdd1aa3dc8d3a485c37309e818666f3610a11",
+  "tests": {
+    "migrationReplay": 284,
+    "databaseReportedAssertions": 6618,
+    "databasePassSummaryGroups": 118,
+    "newSchemaSuites": {
+      "foundation": 16,
+      "wallet": 12,
+      "sharingV2": 27,
+      "passes": "each before and after rollback/reapply"
+    },
+    "domainTests": 18,
+    "checkScripts": 42,
+    "failedCheckScripts": [],
+    "controlledMutations": 25,
+    "browserTests": 105,
+    "browserInternational": 21,
+    "browserProfileCvV1": 84,
+    "browserViewports": [
+      "desktop",
+      "375px",
+      "390px"
+    ],
+    "browserBackend": "Server functions stubbed and hosted calls intercepted. Database/RLS tests use real local PostgreSQL 16.14.",
+    "typecheck": "PASS",
+    "scriptsTypecheck": "PASS",
+    "changedFileLint": "0 errors, 0 warnings",
+    "productionBuild": "PASS",
+    "hostedReleaseGate": "EXPECTED BLOCK: 3 pending migrations"
+  },
+  "evidence": {
+    "lint-final.log.gz": {
+      "uncompressedSha256": "705727af4fe1a6151396657933a54456ed4d5502b137bd1fbeb6d45e8cde40f1"
+    },
+    "database-final.log.gz": {
+      "uncompressedSha256": "1827eabb7ef66084cff90696e098784e3cbab97262b884f5350249eacf2c4b75"
+    },
+    "international-browser.log.gz": {
+      "uncompressedSha256": "c69098356175c1d3c33bcb470ef16a60b214d66ad51f9a44bac2c9c8c87f2139"
+    },
+    "profile-cv-v1-browser.log.gz": {
+      "uncompressedSha256": "cfabf567afd38e3d70ddc56fd5411c8d8567717ca4f864c1ad9a30f5662d21d6"
+    },
+    "build-final.log.gz": {
+      "uncompressedSha256": "ebab71e3dfc4aded55be2d3846778f235423d14430035fffd729126010627ee6"
+    }
+  }
+}

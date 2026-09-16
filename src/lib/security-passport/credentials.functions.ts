@@ -385,12 +385,21 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
         : await typeQuery.eq("pilot_state", "internal_pilot");
     if (error) throw new Error(error.message);
 
+    // The final catalogue decision applies to every selectable surface,
+    // including older market panels. Pilot visibility is not claim approval.
+    const approved = await supabase
+      .from("sp_approved_credential_catalogue" as never)
+      .select("code");
+    if (approved.error) throw new Error("Credential catalogue unavailable");
+    const approvedCodes = new Set(
+      (approved.data as unknown as { code: string }[]).map((r) => r.code),
+    );
     return {
       state: access === "production" ? "open" : "open_pilot",
       jurisdictionCode,
       subJurisdictionCode,
       marketPackCode: pack.code,
-      types: (data ?? []).map(toCredentialType),
+      types: (data ?? []).filter((r) => approvedCodes.has(r.code)).map(toCredentialType),
     };
   });
 

@@ -180,10 +180,15 @@ group("1 · the entry route passes the catalogue for open AND open_pilot");
     ) && (route.match(/if \(seq !== availabilitySeq\.current\) return;/g) ?? []).length >= 3,
   );
 
+  ck(
+    "closed add flow uses the governed approved catalogue",
+    code(read("src/lib/security-passport/international.functions.ts")).includes(
+      'from("sp_approved_credential_catalogue"',
+    ),
+  );
   // Nobody else decides "may a list be offered" with a comparison of its
   // own: every surface that gates a catalogue asks the shared predicate.
   for (const f of [
-    "src/routes/_authenticated.passport.credentials.new.tsx",
     "src/components/security-passport/MarketCredentialSection.tsx",
     "src/components/security-passport/PassportOverview.tsx",
   ]) {

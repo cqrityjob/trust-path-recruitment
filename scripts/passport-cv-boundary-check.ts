@@ -86,13 +86,20 @@ console.log("\n1 · the Passport keeps only security-relevant claim kinds");
 const passportTable = /const PASSPORT_CLAIM_SECTIONS[^[]*\[([\s\S]*?)\];/.exec(info)?.[1] ?? "";
 check(passportTable.length > 0, "the Passport credential table exists");
 
-for (const kind of ["training", "certification", "specialisation", "professional_membership"]) {
+for (const kind of ["certification"]) {
   check(
     new RegExp(`"${kind}"`).test(passportTable),
     `${kind} stays a Passport credential — it is security-relevant`,
   );
 }
-for (const kind of ["education", "language", "practical_skill"]) {
+for (const kind of [
+  "education",
+  "language",
+  "practical_skill",
+  "training",
+  "specialisation",
+  "professional_membership",
+]) {
   check(
     !new RegExp(`"${kind}"`).test(passportTable),
     `${kind} is NOT a Passport credential section`,
@@ -167,12 +174,19 @@ console.log("\n4 · exactly one editor per claim kind");
 
 // Each kind must be editable in exactly one place. This is the assertion
 // that would catch "moved the UI but left the old one behind".
-for (const kind of ["education", "language", "practical_skill"]) {
+for (const kind of [
+  "education",
+  "language",
+  "practical_skill",
+  "training",
+  "specialisation",
+  "professional_membership",
+]) {
   const onPassport = new RegExp(`"${kind}"`).test(passportTable);
   const onProfile = new RegExp(`"${kind}"`).test(profileEditor);
   check(!onPassport && onProfile, `${kind} is edited on the profile and nowhere else`);
 }
-for (const kind of ["training", "certification", "specialisation", "professional_membership"]) {
+for (const kind of ["certification"]) {
   check(
     !new RegExp(`"${kind}"`).test(profileEditor),
     `${kind} did NOT follow them — security credentials stay in the Passport`,
@@ -331,8 +345,8 @@ check(
 // key: that key appears twice on this page, so a page-wide search stayed
 // true with the employment one removed — which a negative control caught.
 check(
-  /onClick=\{\(\) => openEntry\("experience", e\.id\)\}/.test(infoRaw),
-  "and it still offers documenting and verification against those same rows",
+  infoRaw.includes('to="/my-career/profile"') && !infoRaw.includes('openEntry("experience", e.id)'),
+  "employment anchor points to the canonical profile without rendering CV history",
 );
 
 // 1 · The authoring editor is mounted on the profile, and only there.

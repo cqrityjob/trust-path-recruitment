@@ -458,7 +458,7 @@ function ProfilePage() {
 
               <Link
                 to="/passport"
-                className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
+                className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
               >
                 {L(COPY.openPassport, l)}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />

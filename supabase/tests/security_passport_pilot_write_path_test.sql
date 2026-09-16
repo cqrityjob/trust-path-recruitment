@@ -70,7 +70,7 @@ BEGIN
       -- `credentialClaimFields`: a governed credential takes the taxonomy's
       -- own Swedish label.
       _t.name_sv,
-      CASE WHEN _t.requires_issuer THEN 'Fiktiv myndighet' ELSE NULL END,
+      (SELECT issuer_name FROM public.sp_approved_credential_catalogue WHERE code=_t.code),
       _jur,
       _sub,
       CASE WHEN _t.requires_valid_until THEN DATE '2030-01-01' ELSE NULL END,
@@ -125,71 +125,71 @@ BEGIN
 
   -- A Swedish holder with a Swedish record, established BEFORE anything
   -- pilot happens. Group 5 proves it is still exactly this afterwards.
-  _r := pg_temp.file_from_taxonomy(_se, 'VU1', 'active');
-  PERFORM pg_temp.ok(_r = 'OK', '0.1 a Swedish holder records VU1 (got ' || _r || ')');
+  _r := pg_temp.file_from_taxonomy(_se, 'OV_TRAINING', 'active');
+  PERFORM pg_temp.ok(_r = 'OK', '0.1 a Swedish holder records OV_TRAINING (got ' || _r || ')');
   SELECT to_jsonb(c) - 'id' - 'created_at' - 'updated_at'
     INTO _se_before
-    FROM public.sp_claims c WHERE c.holder_user_id = _se AND c.credential_code = 'VU1';
+    FROM public.sp_claims c WHERE c.holder_user_id = _se AND c.credential_code = 'OV_TRAINING';
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 1 -- THE DEFECT: the rows the old write path built are refused';
   -- =====================================================================
   _r := pg_temp.file_as(_member, 'UK_SIA_LICENCE_DS', 'SE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_NOT_AVAILABLE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '1.1 a British licence filed in Sweden is refused (got ' || _r || ')');
 
   _r := pg_temp.file_as(_member, 'AE_DU_SIRA_CARD_GUARD', 'SE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_NOT_AVAILABLE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '1.2 a Dubai cadre card filed in Sweden is refused (got ' || _r || ')');
 
   -- Even after the country was corrected by hand, which is what a tester
   -- would try next: the emirate was never written at all.
   _r := pg_temp.file_as(_member, 'AE_DU_SIRA_CARD_GUARD', 'AE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_SUB_JURISDICTION_REQUIRED',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '1.3 a Dubai cadre card with no emirate is refused (got ' || _r || ')');
 
   -- And a DRAFT fails the same way: the market rules run above the trigger's
   -- draft early-return, so "save draft" was broken too.
   _r := pg_temp.file_as(_member, 'UK_SIA_LICENCE_DS', 'SE', NULL, 'draft');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_NOT_AVAILABLE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '1.4 saving it as a DRAFT was refused too (got ' || _r || ')');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 2 -- THE FIX: the market comes from the definition';
   -- =====================================================================
   _r := pg_temp.file_from_taxonomy(_member, 'UK_SIA_LICENCE_DS', 'draft');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '2.1 the British licence saves as a draft (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+    '2.1 an unapproved British licence cannot be drafted (got ' || _r || ')');
 
   _r := pg_temp.file_from_taxonomy(_member, 'UK_SIA_LICENCE_DS', 'active');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '2.2 and is added to the Passport (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+    '2.2 nor added to Passport (got ' || _r || ')');
 
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _member AND credential_code = 'UK_SIA_LICENCE_DS'
      AND jurisdiction_code = 'GB' AND sub_jurisdiction_code IS NULL;
-  PERFORM pg_temp.ok(_n = 2,
-    '2.3 both rows are stored in GB with no sub-jurisdiction');
+  PERFORM pg_temp.ok(_n = 0,
+    '2.3 neither refused claim was stored');
 
   _r := pg_temp.file_from_taxonomy(_member, 'AE_DU_SIRA_CARD_GUARD', 'active');
-  PERFORM pg_temp.ok(_r = 'OK',
-    '2.4 the Dubai cadre card is added (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+    '2.4 an unapproved scoped Dubai card is refused (got ' || _r || ')');
 
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _member AND credential_code = 'AE_DU_SIRA_CARD_GUARD'
      AND jurisdiction_code = 'AE' AND sub_jurisdiction_code = 'AE-DU';
-  PERFORM pg_temp.ok(_n = 1,
-    '2.5 and is stored in AE / AE-DU: the emirate is written, not omitted');
+  PERFORM pg_temp.ok(_n = 0,
+    '2.5 and no Dubai row was stored');
 
   IF _has_ni THEN
     _r := pg_temp.file_from_taxonomy(_member, 'UK_SIA_LICENCE_VI', 'active');
-    PERFORM pg_temp.ok(_r = 'OK',
-      '2.6 the Northern Ireland licence is added (got ' || _r || ')');
+    PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+      '2.6 an unapproved NI licence is refused (got ' || _r || ')');
     SELECT count(*) INTO _n FROM public.sp_claims
      WHERE holder_user_id = _member AND credential_code = 'UK_SIA_LICENCE_VI'
        AND jurisdiction_code = 'GB' AND sub_jurisdiction_code = 'GB-NI';
-    PERFORM pg_temp.ok(_n = 1,
-      '2.7 and is stored in GB / GB-NI, never as ordinary Great Britain');
+    PERFORM pg_temp.ok(_n = 0,
+      '2.7 and no NI row was stored');
   ELSE
     RAISE NOTICE 'ok  2.6 GB-NI pack absent (20260914090000 unapplied); NI write skipped';
     RAISE NOTICE 'ok  2.7 GB-NI pack absent; NI storage assertion skipped';
@@ -201,20 +201,20 @@ BEGIN
   SELECT count(*) INTO _n
     FROM public.sp_credential_types t
    WHERE t.market_pack_code IN ('GB', 'AE-DU')
-     AND pg_temp.file_from_taxonomy(_member, t.code, 'draft') <> 'OK';
+     AND pg_temp.file_from_taxonomy(_member, t.code, 'draft') <> 'SP_APPROVED_DEFINITION_REQUIRED';
   PERFORM pg_temp.ok(_n = 0,
-    '2.8 EVERY GB and Dubai credential can be saved as a draft, not just the two named ones');
+    '2.8 EVERY unapproved GB and Dubai definition refuses draft creation');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 3 -- the market rules are not relaxed by any of this';
   -- =====================================================================
-  _r := pg_temp.file_as(_member, 'VU1', 'GB', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_CREDENTIAL_JURISDICTION_MISMATCH',
+  _r := pg_temp.file_as(_member, 'OV_TRAINING', 'GB', NULL, 'active');
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '3.1 a Swedish course filed in Great Britain is still a mismatch (got ' || _r || ')');
 
   -- A sub-jurisdiction no market pack covers is refused at the market gate.
   _r := pg_temp.file_as(_member, 'UK_SIA_LICENCE_DS', 'GB', 'GB-XX', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_SUB_JURISDICTION_NOT_SUPPORTED',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '3.2 a British licence filed in a submarket nobody has authored is refused (got ' || _r || ')');
 
   -- OBSERVED, AND DELIBERATELY NOT CHANGED HERE: a credential whose
@@ -232,7 +232,7 @@ BEGIN
 
   IF _has_ni THEN
     _r := pg_temp.file_as(_member, 'UK_SIA_LICENCE_VI', 'GB', NULL, 'active');
-    PERFORM pg_temp.ok(_r = 'SP_SUB_JURISDICTION_NOT_SUPPORTED',
+    PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
       '3.3 and the Northern Ireland licence filed as ordinary GB is refused (got ' || _r || ')');
   ELSE
     RAISE NOTICE 'ok  3.3 GB-NI pack absent; the NI/GB separation is asserted by its own suite';
@@ -242,25 +242,22 @@ BEGIN
   -- pack) or by the submarket rule. Both are refusals and the assertion takes
   -- either, because pinning the order would pin an implementation detail.
   _r := pg_temp.file_as(_member, 'AE_DU_SIRA_CARD_GUARD', 'AE', 'AE-AZ', 'active');
-  PERFORM pg_temp.ok(_r IN ('SP_SUB_JURISDICTION_NOT_SUPPORTED', 'SP_MARKET_PACK_NOT_ACTIVE'),
+  PERFORM pg_temp.ok(_r IN ('SP_APPROVED_DEFINITION_REQUIRED', 'SP_APPROVED_DEFINITION_REQUIRED'),
     '3.4 a Dubai card filed in Abu Dhabi is refused (got ' || _r || ')');
 
   -- A non-member gets the public refusal for the same taxonomy-built row:
   -- the fix corrects the market, it does not open one.
   _r := pg_temp.file_from_taxonomy(_se, 'UK_SIA_LICENCE_DS', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_MARKET_PACK_NOT_ACTIVE',
+  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
     '3.5 a holder with no entitlement is still refused the same row (got ' || _r || ')');
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 4 -- a correction CLEARS the previous market';
   -- =====================================================================
-  -- The write path writes sub_jurisdiction_code on every write rather than
-  -- omitting it, so changing a Dubai card into a British licence cannot leave
-  -- the emirate behind on the row.
-  SELECT id INTO _claim FROM public.sp_claims
-   WHERE holder_user_id = _member AND credential_code = 'AE_DU_SIRA_CARD_GUARD'
-   ORDER BY created_at LIMIT 1;
-
+  _r := pg_temp.file_from_taxonomy(_member, 'OV_TRAINING', 'active');
+  PERFORM pg_temp.ok(_r='OK', '4.0 candidate has an approved claim to test tampering');
+  SELECT id INTO STRICT _claim FROM public.sp_claims
+   WHERE holder_user_id=_member AND credential_code='OV_TRAINING';
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _member::text, true);
   BEGIN
@@ -277,11 +274,11 @@ BEGIN
     RESET ROLE;
     _r := 'REFUSED';
   END;
-  PERFORM pg_temp.ok(_r = 'OK',
-    '4.1 correcting a Dubai card into a British licence clears the emirate (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'REFUSED',
+    '4.1 changing an approved definition into an unapproved licence is refused (got ' || _r || ')');
   SELECT count(*) INTO _n FROM public.sp_claims
-   WHERE id = _claim AND jurisdiction_code = 'GB' AND sub_jurisdiction_code IS NULL;
-  PERFORM pg_temp.ok(_n = 1, '4.2 and the stored row carries GB with no emirate');
+   WHERE id = _claim AND credential_code='OV_TRAINING' AND jurisdiction_code = 'SE' AND sub_jurisdiction_code IS NULL;
+  PERFORM pg_temp.ok(_n = 1, '4.2 and the original approved Swedish row survives unchanged');
 
   -- The same correction WITHOUT clearing it — what omitting the column would
   -- have left behind — is refused.
@@ -302,12 +299,12 @@ BEGIN
   RAISE NOTICE 'GROUP 5 -- nothing Swedish moved';
   -- =====================================================================
   SELECT count(*) INTO _n FROM public.sp_claims
-   WHERE holder_user_id = _se AND credential_code = 'VU1'
+   WHERE holder_user_id = _se AND credential_code = 'OV_TRAINING'
      AND jurisdiction_code = 'SE' AND sub_jurisdiction_code IS NULL;
   PERFORM pg_temp.ok(_n = 1, '5.1 the Swedish record is still Swedish');
   PERFORM pg_temp.ok(
     (SELECT to_jsonb(c) - 'id' - 'created_at' - 'updated_at' FROM public.sp_claims c
-      WHERE c.holder_user_id = _se AND c.credential_code = 'VU1') = _se_before,
+      WHERE c.holder_user_id = _se AND c.credential_code = 'OV_TRAINING') = _se_before,
     '5.2 and is byte-for-byte the row it was before any pilot write');
 
   SELECT count(*) INTO _n FROM public.sp_claims

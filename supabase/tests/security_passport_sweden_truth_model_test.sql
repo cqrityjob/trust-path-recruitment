@@ -43,8 +43,8 @@ BEGIN
   RAISE NOTICE 'ok  1.3 none of the three training credentials invents an expiry';
 
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, jurisdiction_code)
-  VALUES (_h, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'SE');
+    (holder_user_id, claim_type, title, credential_code, jurisdiction_code, claimed_issuer_name)
+  VALUES (_h, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'SE', 'Polismyndigheten');
   RAISE NOTICE 'ok  1.4 somebody who has done the course can now record exactly that';
 
   -- The whole point: the course carries no eligibility and no title.
@@ -76,7 +76,7 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 2.2 a note was accepted on a narrow-result credential';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_NARROW_RESULT_ONLY%' THEN
+    IF _txt NOT LIKE 'SP_GOVERNED_METADATA_IMMUTABLE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 2.2 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  2.2 register commentary cannot be attached to a personnel approval';
@@ -145,43 +145,34 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 3.2 an unscoped skyddsvakt approval was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_CREDENTIAL_REQUIRES_SCOPE%' THEN
+    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 3.2 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  3.2 without its scope the approval is refused, not stored as general';
   END;
 
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-     claimed_issuer_name, valid_until, authorisation_scope)
-  VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'SE',
-          'Länsstyrelsen', current_date + 300, 'Skyddsobjekt: Hamnen');
-  RAISE NOTICE 'ok  3.3 POSITIVE CONTROL the same approval, scoped, stores normally';
-
-  -- Grandfathering. Skyddsvakt claims exist from before this column did, and
-  -- the trigger fires on UPDATE as well as INSERT — so an unconditional rule
-  -- would have frozen those rows: no correction, no verification, no expiry,
-  -- refused over a field the form never asked for. Asserted by writing a row
-  -- the way the old schema did and then updating it.
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
-     claimed_issuer_name, valid_until, authorisation_scope, lifecycle_state)
-  VALUES (_h, 'licence', 'Skyddsvaktsförordnande', 'SV', 'SE',
-          'Länsstyrelsen', current_date + 300, NULL, 'draft');
-
-  UPDATE public.sp_claims
-     SET valid_until = current_date + 400
-   WHERE holder_user_id = _h AND credential_code = 'SV' AND authorisation_scope IS NULL;
-  RAISE NOTICE 'ok  3.4 a pre-existing scopeless approval can still be corrected';
-
-  -- But a scope that IS recorded cannot be taken away.
   BEGIN
-    UPDATE public.sp_claims
-       SET authorisation_scope = NULL
-     WHERE holder_user_id = _h AND authorisation_scope = 'Skyddsobjekt: Hamnen';
-    RAISE EXCEPTION 'ASSERTION FAILED: 3.5 a recorded scope was removed';
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name,valid_until,authorisation_scope)
+    VALUES(_h,'licence','Skyddsvaktsförordnande','SV','SE','Länsstyrelsen',current_date+300,'Candidate scope');
+    RAISE EXCEPTION 'ASSERTION FAILED: candidate-defined scope accepted';
   EXCEPTION WHEN check_violation THEN
-    RAISE NOTICE 'ok  3.5 a scope that was recorded cannot be removed later';
+    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
+    RAISE NOTICE 'ok  3.3 candidate cannot make SV selectable by supplying scope';
+  END;
+  BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name,lifecycle_state)
+    VALUES(_h,'licence','Skyddsvaktsförordnande','SV','SE','Länsstyrelsen','draft');
+    RAISE EXCEPTION 'ASSERTION FAILED: draft bypass accepted';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
+    RAISE NOTICE 'ok  3.4 drafts cannot bypass governed scope requirements';
+  END;
+  BEGIN
+    UPDATE public.sp_claims SET authorisation_scope='Candidate scope' WHERE holder_user_id=_h AND credential_code='OV_TRAINING';
+    RAISE EXCEPTION 'ASSERTION FAILED: candidate scope added to approved definition';
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM<>'SP_GOVERNED_METADATA_IMMUTABLE' THEN RAISE; END IF;
+    RAISE NOTICE 'ok  3.5 approved scope cannot be redefined on a claim';
   END;
 
   -- =====================================================================

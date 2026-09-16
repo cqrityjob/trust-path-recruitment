@@ -1,0 +1,500 @@
+{
+  "exitCode": 0,
+  "failedSuites": [],
+  "originalFailuresResolved": 38,
+  "replayedMigrations": 287,
+  "reportedAssertionTotals": [
+    {
+      "count": 16,
+      "text": "16 assertions passed: Passport international_foundation (before rollback/reapply)"
+    },
+    {
+      "count": 18,
+      "text": "18 assertions passed: Passport international_wallet (before rollback/reapply)"
+    },
+    {
+      "count": 27,
+      "text": "27 assertions passed: Passport credential_sharing_v2 (before rollback/reapply)"
+    },
+    {
+      "count": 99,
+      "text": "99 assertions passed: Passport closed_catalogue (before rollback/reapply)"
+    },
+    {
+      "count": 16,
+      "text": "16 assertions passed: Passport international_foundation (after rollback/reapply)"
+    },
+    {
+      "count": 18,
+      "text": "18 assertions passed: Passport international_wallet (after rollback/reapply)"
+    },
+    {
+      "count": 27,
+      "text": "27 assertions passed: Passport credential_sharing_v2 (after rollback/reapply)"
+    },
+    {
+      "count": 99,
+      "text": "99 assertions passed: Passport closed_catalogue (after rollback/reapply)"
+    },
+    {
+      "count": 162,
+      "text": "ok  162 assertions passed"
+    },
+    {
+      "count": 132,
+      "text": "ok  132 Career Discovery assertions passed"
+    },
+    {
+      "count": 64,
+      "text": "ok  64 Career Discovery v3.1 assertions passed"
+    },
+    {
+      "count": 58,
+      "text": "ok  58 Career Discovery v3.1 completion assertions passed"
+    },
+    {
+      "count": 28,
+      "text": "ok  28 public v3.1 flow assertions passed"
+    },
+    {
+      "count": 84,
+      "text": "ok  84 personal layer assertions passed"
+    },
+    {
+      "count": 21,
+      "text": "ok  21 CD calibration access assertions passed"
+    },
+    {
+      "count": 52,
+      "text": "ok  52 Competency Graph assertions passed"
+    },
+    {
+      "count": 39,
+      "text": "ok  39 Academy assertions passed"
+    },
+    {
+      "count": 62,
+      "text": "ok  62 content assertions passed"
+    },
+    {
+      "count": 19,
+      "text": "ok  19 Phase 2 assertions passed"
+    },
+    {
+      "count": 106,
+      "text": "ok  106 journey assertions passed"
+    },
+    {
+      "count": 105,
+      "text": "ok  105 Vaktare journey assertions passed"
+    },
+    {
+      "count": 34,
+      "text": "ok  34 purpose-governance assertions passed"
+    },
+    {
+      "count": 57,
+      "text": "ok  57 report audience assertions passed"
+    },
+    {
+      "count": 24,
+      "text": "ok  24 report evidence-scope assertions passed"
+    },
+    {
+      "count": 60,
+      "text": "ok  60 recruitment brief assertions passed"
+    },
+    {
+      "count": 80,
+      "text": "ok  80 recruitment journey assertions passed"
+    },
+    {
+      "count": 70,
+      "text": "ok  70 lifecycle bridge assertions passed"
+    },
+    {
+      "count": 47,
+      "text": "ok  47 pilot security-gate assertions passed"
+    },
+    {
+      "count": 70,
+      "text": "ok  70 employer response-reviewer assertions passed"
+    },
+    {
+      "count": 36,
+      "text": "ok  36 person identity spine assertions passed"
+    },
+    {
+      "count": 36,
+      "text": "ok  36 workforce lifecycle E2E assertions passed"
+    },
+    {
+      "count": 19,
+      "text": "ok  19 standard recruitment availability assertions passed"
+    },
+    {
+      "count": 60,
+      "text": "ok  60 option-order integrity assertions passed"
+    },
+    {
+      "count": 21,
+      "text": "ok  21 language contract assertions passed"
+    },
+    {
+      "count": 45,
+      "text": "ok  45 content library assertions passed"
+    },
+    {
+      "count": 45,
+      "text": "ok  45 training journey assertions passed"
+    },
+    {
+      "count": 18,
+      "text": "ok  18 people model assertions passed"
+    },
+    {
+      "count": 26,
+      "text": "ok  26 employer onboarding assertions passed"
+    },
+    {
+      "count": 73,
+      "text": "ok  73 Role Interview Pack assertions passed"
+    },
+    {
+      "count": 85,
+      "text": "ok  85 Interview Intelligence runtime assertions passed"
+    },
+    {
+      "count": 99,
+      "text": "ok  99 Interview Intelligence integrity assertions passed"
+    },
+    {
+      "count": 75,
+      "text": "ok  75 CQrity TRUST assertions passed"
+    },
+    {
+      "count": 50,
+      "text": "ok  50 open pilot entitlement assertions passed"
+    },
+    {
+      "count": 32,
+      "text": "ok  32 interview start-contract assertions passed"
+    },
+    {
+      "count": 27,
+      "text": "ok  27 AI gate and provenance assertions passed"
+    },
+    {
+      "count": 63,
+      "text": "ok  63 Interview Copilot assertions passed"
+    },
+    {
+      "count": 62,
+      "text": "ok  62 TRUST conduct layer assertions passed"
+    },
+    {
+      "count": 24,
+      "text": "ok  24 tenant isolation assertions passed"
+    },
+    {
+      "count": 123,
+      "text": "ok  123 interview-method library tenant-read assertions passed"
+    },
+    {
+      "count": 19,
+      "text": "ok  19 outstanding-reviews operator-only assertions passed"
+    },
+    {
+      "count": 72,
+      "text": "ok  72 interview evidence reliability assertions passed"
+    },
+    {
+      "count": 192,
+      "text": "ok  192 TRUST evidence report R0 assertions passed"
+    },
+    {
+      "count": 25,
+      "text": "ok  25 facet-resolution assertions passed"
+    },
+    {
+      "count": 80,
+      "text": "ok  80 TRUST evidence report R3A assertions passed"
+    },
+    {
+      "count": 15,
+      "text": "ok  15 R2A expand-phase assertions passed"
+    },
+    {
+      "count": 27,
+      "text": "ok  27 R2A continuity assertions passed"
+    },
+    {
+      "count": 33,
+      "text": "ok  33 R2A-3 contract assertions passed"
+    },
+    {
+      "count": 29,
+      "text": "ok  29 job lifecycle assertions passed"
+    },
+    {
+      "count": 145,
+      "text": "ok  145 admin lifecycle assertions passed"
+    },
+    {
+      "count": 69,
+      "text": "ok  69 canonical Professional Profile assertions passed"
+    },
+    {
+      "count": 16,
+      "text": "ok  16 canonical Professional Profile contract assertions passed"
+    },
+    {
+      "count": 35,
+      "text": "ok  35 CV documents privacy assertions passed"
+    },
+    {
+      "count": 47,
+      "text": "ok  47 CQrityjob CV application source assertions passed"
+    },
+    {
+      "count": 79,
+      "text": "ok  79 cv_documents controlled-write-path assertions passed"
+    },
+    {
+      "count": 27,
+      "text": "ok  27 admin assignment cancellation assertions passed"
+    },
+    {
+      "count": 31,
+      "text": "ok  31 E2 issuer participant-preview assertions passed"
+    },
+    {
+      "count": 121,
+      "text": "ok  121 employer final-report basis assertions passed"
+    },
+    {
+      "count": 442,
+      "text": "ok  442 BESKT governed-content assertions passed"
+    },
+    {
+      "count": 65,
+      "text": "ok  65 BESKT content-authoring assertions passed"
+    },
+    {
+      "count": 247,
+      "text": "ok  247 BESKT candidate-preparation assertions passed"
+    },
+    {
+      "count": 47,
+      "text": "ok  47 BESKT interview-case bridge assertions passed"
+    },
+    {
+      "count": 93,
+      "text": "ok  93 BESKT interview-conduct assertions passed"
+    },
+    {
+      "count": 69,
+      "text": "ok  69 BESKT prompts-and-report assertions passed"
+    },
+    {
+      "count": 51,
+      "text": "ok  51 rollback assertions passed"
+    },
+    {
+      "count": 14,
+      "text": "ok  14 job archive assertions passed"
+    },
+    {
+      "count": 48,
+      "text": "ok  48 self-publication assertions passed"
+    },
+    {
+      "count": 36,
+      "text": "36 assertions passed"
+    },
+    {
+      "count": 7,
+      "text": "7 surface assertions passed"
+    },
+    {
+      "count": 43,
+      "text": "ok  43 application-disclosure assertions passed"
+    },
+    {
+      "count": 303,
+      "text": "ok  303 skill/language taxonomy assertions passed"
+    },
+    {
+      "count": 44,
+      "text": "ok  44 Security Passport assertions passed"
+    },
+    {
+      "count": 41,
+      "text": "ok  41 Security Passport Phase 3/4 assertions passed"
+    },
+    {
+      "count": 57,
+      "text": "ok  57 Security Passport Phase 5 assertions passed"
+    },
+    {
+      "count": 44,
+      "text": "ok  44 three-market foundation assertions passed"
+    },
+    {
+      "count": 24,
+      "text": "ok  24 Security Passport Phase 6 assertions passed"
+    },
+    {
+      "count": 40,
+      "text": "ok  40 Security Passport Phase 6b assertions passed"
+    },
+    {
+      "count": 83,
+      "text": "ok  83 Security Passport Phase 7 assertions passed"
+    },
+    {
+      "count": 41,
+      "text": "ok  41 Security Passport Phase 8 assertions passed"
+    },
+    {
+      "count": 67,
+      "text": "ok  67 Security Passport Phase 10 assertions passed"
+    },
+    {
+      "count": 50,
+      "text": "ok  50 Security Passport Phase 11 assertions passed"
+    },
+    {
+      "count": 23,
+      "text": "ok  23 Swedish truth model assertions passed"
+    },
+    {
+      "count": 23,
+      "text": "ok  23 UK market pack assertions passed"
+    },
+    {
+      "count": 15,
+      "text": "ok  15 UK title rule assertions passed"
+    },
+    {
+      "count": 11,
+      "text": "ok  11 disclosure holder jurisdiction assertions passed"
+    },
+    {
+      "count": 52,
+      "text": "ok  52 pilot bug fix #1 assertions passed"
+    },
+    {
+      "count": 15,
+      "text": "ok  15 work country assertions passed"
+    },
+    {
+      "count": 44,
+      "text": "ok  44 internal-pilot entitlement assertions passed"
+    },
+    {
+      "count": 57,
+      "text": "ok  57 pilot catalogue visibility assertions passed"
+    },
+    {
+      "count": 30,
+      "text": "ok  30 pilot write-path assertions passed"
+    },
+    {
+      "count": 162,
+      "text": "ok  162 global certification assertions passed"
+    },
+    {
+      "count": 28,
+      "text": "ok  28 governed-issuer assertions passed"
+    },
+    {
+      "count": 15,
+      "text": "ok  15 rollback data-safety assertions passed"
+    },
+    {
+      "count": 25,
+      "text": "ok  25 Dubai market pack assertions passed"
+    },
+    {
+      "count": 59,
+      "text": "ok  59 security hardening assertions passed"
+    },
+    {
+      "count": 20,
+      "text": "ok  20 expand-phase assertions passed"
+    },
+    {
+      "count": 7,
+      "text": "ok  7 rollback data-safety assertions passed"
+    },
+    {
+      "count": 12,
+      "text": "ok  12 scope disclosure boundary assertions passed"
+    },
+    {
+      "count": 23,
+      "text": "ok  23 legacy scope correction assertions passed"
+    },
+    {
+      "count": 55,
+      "text": "ok  55 trust boundary assertions passed"
+    },
+    {
+      "count": 42,
+      "text": "ok  42 trust-source containment assertions passed"
+    },
+    {
+      "count": 32,
+      "text": "ok  32 internal note privacy assertions passed"
+    },
+    {
+      "count": 57,
+      "text": "ok  57 Passport reviewer role assertions passed"
+    },
+    {
+      "count": 73,
+      "text": "ok  73 employer employment verification assertions passed"
+    },
+    {
+      "count": 34,
+      "text": "ok  34 employer matching and eligibility assertions passed"
+    },
+    {
+      "count": 8,
+      "text": "ok  8 concurrent-decision assertions passed"
+    },
+    {
+      "count": 117,
+      "text": "ok  117 first-merit assertions passed"
+    },
+    {
+      "count": 11,
+      "text": "ok  11 concurrent first-merit assertions passed"
+    },
+    {
+      "count": 14,
+      "text": "ok  14 two-ops race assertions passed"
+    },
+    {
+      "count": 122,
+      "text": "ok  122 selected-merit sharing assertions passed"
+    },
+    {
+      "count": 25,
+      "text": "ok  25 share-gateway assertions passed"
+    },
+    {
+      "count": 34,
+      "text": "ok  34 cv_documents lockdown assertions passed"
+    },
+    {
+      "count": 4,
+      "text": "ok  4 post-rollback correction assertions passed"
+    }
+  ],
+  "reportedPassingAssertions": 6980,
+  "hostedChanges": "NONE",
+  "productionChanges": "NONE",
+  "note": "Counts sum explicit reported assertion totals, not unnumbered shell checks. Local historical rollback uses isolated clones."
+}

@@ -67,6 +67,7 @@ export interface RecipientCredential {
   readonly key: string;
   readonly title: string;
   /** Taxonomy code, or null for a free-text credential. */
+  readonly credentialIdentifier?: string | null;
   readonly code: string | null;
   /** Derived from the two axes plus the calendar. Never stored. */
   readonly presentation: CredentialPresentationState;
@@ -314,6 +315,7 @@ export function buildRecipientPresentation(
       key: presentationKeyOf(c, index, "c"),
       title: c.title,
       code: c.credential_code,
+      credentialIdentifier: c.credential_identifier ?? null,
       presentation,
       lifecycle: validity.effectiveState,
       assertion,

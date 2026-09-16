@@ -26,8 +26,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
-const code = (s: string): string =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const code = (s: string): string => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const HOME = "src/routes/index.tsx";
 const LOGIN = "src/routes/login.tsx";
@@ -96,7 +95,7 @@ const card = code(read(OVERVIEW_CARD));
 check(/<OverviewPassportCard/.test(overview), "Överskt mounts the Passport card");
 check(/<PassportSummary/.test(overview), "and keeps the Passport summary");
 check(
-  /buildPassportCard/.test(card) && /<DirectionC/.test(card),
+  /<CompactPassportCard/.test(card) && /snapshot=\{state.snapshot\}/.test(card),
   "the card is the same builder and the same presentation the Passport page renders",
 );
 check(/getMyPassport/.test(card), "read through the canonical getMyPassport");
@@ -112,10 +111,7 @@ for (const figures of ["meritFigures", "countMerits", "MeritCounts"]) {
     `the card does not restate ${figures} — PassportSummary above it owns the counts`,
   );
 }
-check(
-  !/\b\d{1,3}\s*%/.test(card),
-  "and it invents no completion percentage",
-);
+check(!/\b\d{1,3}\s*%/.test(card), "and it invents no completion percentage");
 
 /* ------------------------------------------------------------------ */
 console.log("\n2 · the Passport section row is links, never tabs");

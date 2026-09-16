@@ -1,0 +1,58 @@
+$ bun run scripts/release-parity-check.ts --release
+release-parity-check: 284 canonical migrations
+  evidence baseline:  20260925090000 (Official Supabase GitHub integration on owner project wrygicdfxwjnrugduxnt)
+  at the frontier:    46
+  not yet applied:    3
+  unverified:         0
+
+RELEASE SEQUENCE — apply in this order, hosted, before deploying:
+
+   1. 20261118090000_sp_international_passport_foundation.sql  [pending]
+      International Passport additive metadata; no existing personal rows changed.
+   2. 20261119090000_sp_international_credential_wallet.sql  [pending]
+      Atomic owner-only international credential create/correction.
+   3. 20261120090000_sp_credential_selective_sharing_v2.sql  [pending]
+      Credential-only selected fields with private evidence, v1 compatibility and append-only access history.
+
+  Then update supabase/release-state.json (hostedState -> applied), and, for a
+  migration applied through the Lovable mechanism, record the generated version
+  in supabase/migrations-policy.json's appliedThroughLovable as usual.
+
+RELEASE BLOCKERS — this code cannot be deployed against the current hosted schema:
+
+  - src/lib/security-passport/credential-sharing.functions.ts:37 depends on function "sp_create_credential_disclosure_v2", introduced by
+    20261120090000_sp_credential_selective_sharing_v2.sql (hostedState: pending).
+  - src/lib/security-passport/credential-sharing.functions.ts:20 depends on function "sp_preview_credential_disclosure_v2", introduced by
+    20261120090000_sp_credential_selective_sharing_v2.sql (hostedState: pending).
+  - src/lib/security-passport/international.functions.ts:109 depends on function "sp_save_international_credential", introduced by
+    20261119090000_sp_international_credential_wallet.sql (hostedState: pending).
+  - src/lib/security-passport/international.functions.ts:29 depends on table "sp_credential_jurisdictions", introduced by
+    20261118090000_sp_international_passport_foundation.sql (hostedState: pending).
+  - src/lib/security-passport/international.functions.ts:24 depends on table "sp_credential_details", introduced by
+    20261118090000_sp_international_passport_foundation.sql (hostedState: pending).
+
+release-parity-check FAILED (6 issue(s)):
+  - src/lib/security-passport/credential-sharing.functions.ts:37 depends on function "sp_create_credential_disclosure_v2", introduced by
+    20261120090000_sp_credential_selective_sharing_v2.sql (hostedState: pending).
+    Deploying this reproduces the job-publishing outage: the application asks
+    the database for something that is not there.
+  - src/lib/security-passport/credential-sharing.functions.ts:20 depends on function "sp_preview_credential_disclosure_v2", introduced by
+    20261120090000_sp_credential_selective_sharing_v2.sql (hostedState: pending).
+    Deploying this reproduces the job-publishing outage: the application asks
+    the database for something that is not there.
+  - src/lib/security-passport/international.functions.ts:109 depends on function "sp_save_international_credential", introduced by
+    20261119090000_sp_international_credential_wallet.sql (hostedState: pending).
+    Deploying this reproduces the job-publishing outage: the application asks
+    the database for something that is not there.
+  - src/lib/security-passport/international.functions.ts:29 depends on table "sp_credential_jurisdictions", introduced by
+    20261118090000_sp_international_passport_foundation.sql (hostedState: pending).
+    Deploying this reproduces the job-publishing outage: the application asks
+    the database for something that is not there.
+  - src/lib/security-passport/international.functions.ts:24 depends on table "sp_credential_details", introduced by
+    20261118090000_sp_international_passport_foundation.sql (hostedState: pending).
+    Deploying this reproduces the job-publishing outage: the application asks
+    the database for something that is not there.
+  - --release: 3 migration(s) are not applied on the hosted database.
+    A release may not proceed with an unapplied canonical migration. Work through
+    the sequence above, then re-run.
+error: script "release-parity:check" exited with code 1
