@@ -90,27 +90,27 @@ export function CredentialWallet({
                 .join("") || "CQ"}
             </div>
             <div className="min-w-0">
-            <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.14em] text-primary-foreground/65">
-              <Lock size={12} aria-hidden="true" />
-              Security Passport
-            </p>
-            <h1
-              id="credential-wallet-heading"
-              className="break-words text-3xl font-semibold !text-primary-foreground sm:text-[2.75rem]"
-            >
-              {identity?.displayName || copy("Mitt Security Passport", "My Security Passport")}
-            </h1>
-            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-primary-foreground/80">
-              {title ||
-                copy(
-                  "Komplettera din yrkestitel i Profil",
-                  "Add your professional title in Profile",
-                )}{" "}
-              <span className="inline-flex items-center gap-1 text-xs text-primary-foreground/55">
-                <UserRound size={12} aria-hidden="true" />
-                {copy("från Profil", "from Profile")}
-              </span>
-            </p>
+              <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.14em] text-primary-foreground/65">
+                <Lock size={12} aria-hidden="true" />
+                Security Passport
+              </p>
+              <h1
+                id="credential-wallet-heading"
+                className="break-words text-3xl font-semibold !text-primary-foreground sm:text-[2.75rem]"
+              >
+                {identity?.displayName || copy("Mitt Security Passport", "My Security Passport")}
+              </h1>
+              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-primary-foreground/80">
+                {title ||
+                  copy(
+                    "Komplettera din yrkestitel i Profil",
+                    "Add your professional title in Profile",
+                  )}{" "}
+                <span className="inline-flex items-center gap-1 text-xs text-primary-foreground/55">
+                  <UserRound size={12} aria-hidden="true" />
+                  {copy("från Profil", "from Profile")}
+                </span>
+              </p>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">

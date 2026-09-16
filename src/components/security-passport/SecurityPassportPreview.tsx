@@ -35,7 +35,10 @@ export function SecurityPassportPreview({
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary-foreground/40"
       />
-      <div aria-hidden="true" className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-40 opacity-20" />
+      <div
+        aria-hidden="true"
+        className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-40 opacity-20"
+      />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
         <div>
           <p className="text-lg font-semibold tracking-tight">CQrityjob</p>
@@ -95,7 +98,9 @@ export function SecurityPassportPreview({
                   <span className="block break-words text-sm font-semibold">
                     {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
                   </span>
-                  <span className="mt-1 block text-xs text-primary-foreground/65">{state.label[lang]}</span>
+                  <span className="mt-1 block text-xs text-primary-foreground/65">
+                    {state.label[lang]}
+                  </span>
                 </span>
               </li>
             );

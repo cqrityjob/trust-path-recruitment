@@ -27,14 +27,20 @@ export function CredentialRecord({
       )}
     >
       <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
-      <div aria-hidden="true" className="passport-grid pointer-events-none absolute inset-y-0 left-0 w-28 opacity-25" />
+      <div
+        aria-hidden="true"
+        className="passport-grid pointer-events-none absolute inset-y-0 left-0 w-28 opacity-25"
+      />
       <div className="grid min-w-0 gap-5 p-4 pl-5 sm:grid-cols-[5.25rem_minmax(0,1fr)_auto] sm:items-center sm:p-6 sm:pl-7">
         <div className="passport-signature relative flex h-[5.25rem] w-[5.25rem] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[var(--shadow-md)] ring-1 ring-accent/25">
           <div
             aria-hidden="true"
             className="absolute inset-1 rounded-md border border-primary-foreground/20"
           />
-          <div aria-hidden="true" className="absolute bottom-2 left-2 h-1.5 w-1.5 rounded-full bg-accent" />
+          <div
+            aria-hidden="true"
+            className="absolute bottom-2 left-2 h-1.5 w-1.5 rounded-full bg-accent"
+          />
           {symbol}
         </div>
         <div className="min-w-0">
@@ -50,9 +56,7 @@ export function CredentialRecord({
         </div>
         <div className="min-w-0 sm:max-w-44 sm:text-right">{states}</div>
       </div>
-      <div className="border-t border-border/70 bg-secondary/40 px-5 sm:pl-[7.75rem]">
-        {action}
-      </div>
+      <div className="border-t border-border/70 bg-secondary/40 px-5 sm:pl-[7.75rem]">{action}</div>
     </article>
   );
 }
