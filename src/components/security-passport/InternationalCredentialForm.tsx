@@ -635,12 +635,14 @@ export function InternationalCredentialForm({
           <button
             type="button"
             className="min-h-11 text-sm underline"
-            onClick={() =>
+            onClick={() => {
+              const claimId = savedId.current;
+              if (!claimId) return;
               void navigate({
                 to: "/passport/entry/$kind/$entryId",
-                params: { kind: "claim", entryId: savedId.current! },
-              })
-            }
+                params: { kind: "claim", entryId: claimId },
+              });
+            }}
           >
             {copy("Öppna sparad merit", "Open saved credential")}
           </button>

@@ -15,9 +15,9 @@
 - [x] Security Passport product identity: globally coherent, profession-neutral credential wallet system
 - [x] Security Passport correction: add-credential and selective-sharing presentation
 - [x] Homepage Passport anchor coherence only
-- [ ] Preview evidence: overview desktop/mobile, add credential, real ASIS-style credential display, share preview, homepage anchor
+- [ ] Preview evidence: overview desktop/mobile, add credential, real credential display, share preview, homepage anchor — blocked by unavailable authenticated Preview and missing browser system library
 - [ ] Owner visual gate: prove at least one real Preview credential uses the premium record system, or report the data limitation
-- [ ] Verification: SV/EN, desktop, 390px, 375px, focused checks and browser smoke tests
+- [ ] Verification: focused static safeguards pass; SV/EN desktop, 390px, 375px browser smoke tests remain blocked by the Preview environment
 
 ## Frozen boundaries
 
