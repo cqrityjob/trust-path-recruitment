@@ -4,6 +4,8 @@
 
 - Work only on isolated Preview branch `edit/edt-a34179ff-1ab2-4bc1-be58-7527a44a9535` at baseline `8a5549fb`.
 - Use the uploaded image only as a quality benchmark; do not copy its people, wording, claims, identifiers, QR treatment, certificates, or physical-card composition.
+- Treat this pass as the foundation of a standalone, globally recognizable Security Passport product identity—not merely a polished CQrityjob feature.
+- Build one profession-neutral visual system that can scale across countries, jurisdictions, frontline and senior security professions, national licences, international certifications, employer-issued credentials, education, training, and future verified professional records.
 - Keep all Supabase resources, migrations, RLS, grants, auth behavior, routes, governed catalogues, assessment logic, BESKT, BCP, sharing rules, and trust derivation unchanged.
 - Do not merge, publish, or deploy.
 
@@ -31,11 +33,13 @@
 - Recompose the overview header as a premium deep-navy identity and trust surface with clearer zones for Profile identity, privacy, credential summary, review summary, and sharing actions.
 - Replace dashboard-like metric tiles and administrative rows with a restrained passport/wallet hierarchy using the existing navy, trust-blue, off-white, Sora, and Manrope system.
 - Refine the side preview and privacy summary into one intentional share-preview area while preserving canonical links and privacy mode.
+- Establish a distinctive Passport visual signature that remains internationally relevant, credible to employers, accessible to frontline personnel, and premium enough for senior professionals.
 
 ### 3. Premium credential records
 
 - Strengthen `CredentialSymbol` presentation for real governed credentials, including APP, CPP, PSP, and other catalogue entries when present.
 - Present each credential as a distinctive professional record with its real name, source/issuer, jurisdiction, trust state, lifecycle state, expiry, and existing action.
+- Use a reusable credential-record system driven by existing metadata rather than hardcoding the design around ASIS, Sweden, or any single credential class.
 - Keep document review visually and verbally distinct from source verification; retain explicit Self-reported, Evidence submitted, Document reviewed, Source verified, Expired, and Revoked states.
 - Do not add credentials, issuers, identifiers, or claims.
 
@@ -79,6 +83,8 @@ No server-function, database, generated-type, catalogue, assessment, BESKT, BCP,
 - Profile identity and Security Passport documentation are visibly distinct.
 - The overview reads as a premium professional Passport rather than a dashboard.
 - Existing APP/CPP/PSP or other real credentials receive a distinctive visual record treatment without invented data.
+- National, international, employer-issued, education, and training credentials can share the same visual grammar while retaining their own metadata and jurisdictions.
+- The experience communicates a holder's professional identity in the security industry, not merely certificate storage; this remains an internal design objective, not unsupported public marketing copy.
 - Trust and lifecycle states remain explicit and semantically correct.
 - Add credential and sharing visually belong to the same Passport product.
 - Homepage Passport anchor matches without a broader homepage redesign.
