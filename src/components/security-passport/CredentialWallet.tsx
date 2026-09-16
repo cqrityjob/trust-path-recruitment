@@ -70,24 +70,33 @@ export function CredentialWallet({
       data-credential-wallet
       className="min-w-0 space-y-8"
     >
-      <header className="relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-8">
+      <header className="passport-signature relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-8 lg:p-9">
         <div
           aria-hidden="true"
           className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40"
         />
         <div
           aria-hidden="true"
-          className="absolute top-0 right-0 h-48 w-48 border-l border-primary-foreground/10 opacity-50"
+          className="passport-grid absolute top-0 right-0 h-full w-52 border-l border-primary-foreground/10 opacity-25"
         />
-        <div className="relative grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="min-w-0">
+        <div className="relative grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+          <div className="grid min-w-0 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-5">
+            <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 text-xl font-semibold text-primary-foreground shadow-[var(--shadow-md)] sm:h-[5.5rem] sm:w-[5.5rem] sm:text-2xl">
+              {identity?.displayName
+                ?.split(" ")
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((name) => name[0])
+                .join("") || "CQ"}
+            </div>
+            <div className="min-w-0">
             <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.14em] text-primary-foreground/65">
               <Lock size={12} aria-hidden="true" />
               Security Passport
             </p>
             <h1
               id="credential-wallet-heading"
-              className="break-words text-3xl font-semibold !text-primary-foreground sm:text-[2.5rem]"
+              className="break-words text-3xl font-semibold !text-primary-foreground sm:text-[2.75rem]"
             >
               {identity?.displayName || copy("Mitt Security Passport", "My Security Passport")}
             </h1>
@@ -102,6 +111,7 @@ export function CredentialWallet({
                 {copy("från Profil", "from Profile")}
               </span>
             </p>
+            </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
             <Link
@@ -121,11 +131,11 @@ export function CredentialWallet({
             </Link>
           </div>
         </div>
-        <div className="relative mt-8 border-t border-primary-foreground/15 pt-5">
-          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/50">
+        <div className="relative mt-8 border-t border-primary-foreground/15 pt-4">
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/45">
             {copy("Din professionella dokumentation", "Your professional records")}
           </p>
-          <dl className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-5">
+          <dl className="flex flex-wrap gap-x-5 gap-y-2">
             {[
               [active.length, copy("Aktiva meriter", "Active credentials")],
               [verified, copy("Granskade dokument", "Documents reviewed")],
@@ -141,12 +151,12 @@ export function CredentialWallet({
             ].map(([value, label]) => (
               <div
                 key={label}
-                className="min-w-0 border-primary-foreground/15 sm:border-l sm:pl-4 sm:first:border-l-0 sm:first:pl-0"
+                className="flex min-w-0 items-baseline gap-2 border-primary-foreground/15 sm:border-l sm:pl-5 sm:first:border-l-0 sm:first:pl-0"
               >
-                <dd className="text-xl font-semibold tabular-nums text-primary-foreground">
+                <dd className="text-sm font-semibold tabular-nums text-primary-foreground/90">
                   {value}
                 </dd>
-                <dt className="mt-1 text-xs leading-snug text-primary-foreground/55">{label}</dt>
+                <dt className="text-[11px] leading-snug text-primary-foreground/45">{label}</dt>
               </div>
             ))}
           </dl>
