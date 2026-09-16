@@ -611,6 +611,10 @@ test.describe("/my-career — the real route", () => {
   }
 
   test("15b · 200% zoom (640px logical): no overflow, one primary CTA", async ({ page }) => {
+    // Exercise the render/commit window that previously let initial router
+    // hydration update Transitioner before mount. afterEach rejects the warning.
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
     await page.setViewportSize({ width: 640, height: 900 });
     await mount(page, "eight_unverified");
     const overflow = await page.evaluate(
