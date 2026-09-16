@@ -124,7 +124,7 @@ DECLARE
 BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  FOREACH _kind IN ARRAY ARRAY['education','training','certification','specialisation','professional_membership'] LOOP
+  FOREACH _kind IN ARRAY ARRAY['education','training','specialisation','professional_membership'] LOOP
     INSERT INTO public.sp_claims (holder_user_id, claim_type, title, claimed_issuer_name, issued_on)
     VALUES (_h, _kind, 'P8 ' || _kind || ' (fiktiv)', 'P8 Utfärdare (fiktiv)', DATE '2024-05-01');
   END LOOP;
@@ -132,7 +132,7 @@ BEGIN
 
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _h AND credential_code IS NULL;
-  PERFORM pg_temp.ok(_n = 5, format('2.1 all five free-text claim kinds store (got %s)', _n));
+  PERFORM pg_temp.ok(_n = 4, format('2.1 four CV-owned free-text claim kinds store (got %s)', _n));
 
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _h AND assertion_level <> 'self_declared';
@@ -142,7 +142,13 @@ BEGIN
   -- appear on something no taxonomy rule ever checked.
   SELECT count(*) INTO _n FROM public.sp_claims
    WHERE holder_user_id = _h AND credential_code IS NOT NULL;
-  PERFORM pg_temp.ok(_n = 0, '2.3 no free-text claim carries a credential code');
+  PERFORM pg_temp.ok(_n = 0, '2.3 no free-text CV claim carries a credential code');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.must_fail(format('INSERT INTO public.sp_claims(holder_user_id,claim_type,title) VALUES(%L,''certification'',''Custom'')',_h),'SP_APPROVED_DEFINITION_REQUIRED','2.4 custom certifications are prohibited');
+  INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,claimed_issuer_name)
+  VALUES(_h,'certification','Certified Protection Professional (CPP)','INTL_ASIS_CPP','ASIS International');
+  RESET ROLE;
+  PERFORM pg_temp.ok((SELECT count(*)=1 FROM public.sp_claims WHERE holder_user_id=_h AND credential_code='INTL_ASIS_CPP'),'2.5 governed certification reuses an existing definition');
 END $$;
 
 -- =============================================================================
@@ -284,7 +290,7 @@ DECLARE
   _claim uuid; _req uuid; _r public.sp_claims%ROWTYPE;
 BEGIN
   SELECT id INTO _claim FROM public.sp_claims
-   WHERE holder_user_id = _h AND claim_type = 'training' LIMIT 1;
+   WHERE holder_user_id = _h AND credential_code = 'INTL_ASIS_CPP' LIMIT 1;
 
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
@@ -379,8 +385,8 @@ BEGIN
   -- A second verified credential, so "only one is disclosed" is a real test
   -- rather than true by there being nothing else.
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, claimed_issuer_name, issued_on)
-  VALUES (_h, 'certification', 'P8 Andra certifieringen (fiktiv)', 'P8 Organ (fiktiv)', DATE '2024-01-01')
+    (holder_user_id, claim_type, title, claimed_issuer_name, issued_on, credential_code)
+  VALUES (_h, 'certification', 'Physical Security Professional (PSP)', 'ASIS International', DATE '2024-01-01', 'INTL_ASIS_PSP')
   RETURNING id INTO _second;
 
   SET LOCAL ROLE authenticated;
@@ -411,7 +417,7 @@ BEGIN
   PERFORM pg_temp.ok(
     (_payload->'verified_claims'->0->>'id')::uuid = _target,
     '7.4 and it is the one that was shared');
-  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Andra certifieringen%',
+  PERFORM pg_temp.ok(_payload::text NOT LIKE '%Physical Security Professional%',
     '7.5 the holder''s other verified credential is NOT disclosed');
   PERFORM pg_temp.ok(jsonb_array_length(_payload->'verified_experience') = 0,
     '7.6 a credential share carries no employment');

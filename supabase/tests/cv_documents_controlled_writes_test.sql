@@ -121,7 +121,7 @@ INSERT INTO public.sp_claims
    skill_code, skill_level,
    assertion_level, verified_by_user_id, verified_at, lifecycle_state) VALUES
   ('c0000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-00000000000a',
-   'certification', 'Väktarutbildning VU1', 'BYA', DATE '2019-04-01', DATE '2028-04-01', NULL, NULL,
+   'training', 'Väktarutbildning VU1', 'BYA', DATE '2019-04-01', DATE '2028-04-01', NULL, NULL,
    'verified', '50000000-0000-0000-0000-00000000000b', now(), 'active'),
   ('c0000000-0000-0000-0000-000000000002', '50000000-0000-0000-0000-00000000000a',
    'education', 'Gymnasieexamen', 'Malmö kommun', DATE '2018-06-01', NULL, NULL, NULL,
@@ -132,7 +132,7 @@ INSERT INTO public.sp_claims
   -- Unfinished work. The Passport keeps it out of its own lists and it must
   -- never reach a CV.
   ('c0000000-0000-0000-0000-000000000004', '50000000-0000-0000-0000-00000000000a',
-   'certification', 'Halvfärdig behörighet', NULL, NULL, NULL, NULL, NULL,
+   'training', 'Halvfärdig behörighet', NULL, NULL, NULL, NULL, NULL,
    'self_declared', NULL, NULL, 'draft');
 
 -- Every fact Karin owns, as the honest allowlist most groups start from.
@@ -155,11 +155,23 @@ DO $$ BEGIN RAISE NOTICE 'GROUP N — the hole is open in phase 1, and the bound
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.as_holder('50000000-0000-0000-0000-00000000000a');
 
--- ── N1. THE DOOR IS STILL OPEN, AND THAT IS THE DESIGN ─────────────────
+-- ── N1. FINAL LOCKDOWN AND HISTORICAL CORRUPTION ─────────────────────
 --
--- Nothing is re-granted here. This is the privilege 20261010090000 left in
--- place and phase 1 deliberately does not take away, because the published
--- application depends on it.
+-- Candidate writes must fail. Seed the historical corruption as the database
+-- owner only after proving that denial; submission must reject it too.
+SELECT pg_temp.must_fail($attack$INSERT INTO public.cv_documents (owner_user_id, title, source_bundle)
+VALUES ('50000000-0000-0000-0000-00000000000a', 'Fabricated',
+        jsonb_build_object(
+          'identity',   jsonb_build_object('displayName', 'Karin Wallin'),
+          'employment', jsonb_build_array(jsonb_build_object(
+                          'id', 'ffffffff-0000-0000-0000-000000000001',
+                          'employerName', 'Säkerhetspolisen',
+                          'roleTitle',    'Operativ chef',
+                          'startedOn',    '2011-01-01')),
+          'education',  '[]'::jsonb));$attack$, 'permission denied', 'N0 direct candidate CV fabrication is denied under final lockdown');
+RESET ROLE;
+-- Privileged fixture represents corrupted historical data: the submission
+-- boundary must still reject it even when it predates the write lockdown.
 INSERT INTO public.cv_documents (owner_user_id, title, source_bundle)
 VALUES ('50000000-0000-0000-0000-00000000000a', 'Fabricated',
         jsonb_build_object(
@@ -176,7 +188,7 @@ RESET ROLE;
 SELECT pg_temp.ok(
   (SELECT source_bundle #>> '{employment,0,employerName}' FROM public.cv_documents
     WHERE title = 'Fabricated') = 'Säkerhetspolisen',
-  'N1 in phase 1 a holder CAN still write an employment that never happened');
+  'N1 privileged historical corruption fixture carries the forged employment');
 
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM public.sp_experience_periods
@@ -825,16 +837,13 @@ SELECT pg_temp.ok(
 DO $$ BEGIN RAISE NOTICE 'GROUP P — privileges'; END $$;
 -- ═════════════════════════════════════════════════════════════════════════
 
--- PHASE 1 STILL GRANTS THE DIRECT WRITES. Asserted as it is, not as it will
--- be: a suite that asserted the locked-down state would fail here and go
--- green the moment phase 3 applied, which is exactly when nobody is looking.
--- The lockdown migration carries its own suite for the other half.
+-- The final combined schema retains SELECT and closes every direct write.
 SELECT pg_temp.ok(
   has_table_privilege('authenticated', 'public.cv_documents', 'SELECT')
-  AND has_table_privilege('authenticated', 'public.cv_documents', 'INSERT')
-  AND has_table_privilege('authenticated', 'public.cv_documents', 'UPDATE')
-  AND has_table_privilege('authenticated', 'public.cv_documents', 'DELETE'),
-  'P1 phase 1 leaves the published application''s direct writes intact');
+  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'INSERT')
+  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'UPDATE')
+  AND NOT has_table_privilege('authenticated', 'public.cv_documents', 'DELETE'),
+  'P1 final schema permits reads but prohibits direct candidate CV writes');
 
 SELECT pg_temp.ok(
   NOT has_table_privilege('authenticated', 'public.cv_documents', 'TRUNCATE'),
@@ -1028,7 +1037,7 @@ BEGIN
     'U4 an untouched profile refreshes to the same identity, under lockdown too');
 
   -- Put it back for anything after this group; ROLLBACK would anyway.
-  GRANT INSERT, UPDATE, DELETE ON public.cv_documents TO authenticated;
+  -- Keep final lockdown intact; no temporary grant is introduced.
 END $$;
 
 -- And the delegation is load-bearing: if cv_save stopped being SECURITY

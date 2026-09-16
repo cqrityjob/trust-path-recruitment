@@ -215,8 +215,8 @@ BEGIN
 
   -- Inserting a pre-verified claim is refused by the INSERT policy.
   PERFORM pg_temp.must_fail(
-    'INSERT INTO public.sp_claims (holder_user_id, claim_type, title, assertion_level) '
-    || 'VALUES (''a0000000-0000-0000-0000-000000000001'', ''licence'', ''X'', ''verified'')',
+    'INSERT INTO public.sp_claims (holder_user_id, claim_type, title, assertion_level, credential_code, claimed_issuer_name) '
+    || 'VALUES (''a0000000-0000-0000-0000-000000000001'', ''certification'', ''Certified Protection Professional (CPP)'', ''verified'', ''INTL_ASIS_CPP'', ''ASIS International'')',
     'row-level security',
     '2.4 holder cannot insert an already-VERIFIED claim');
 
@@ -247,15 +247,15 @@ END $$;
 -- write, because the CHECK constraint has no role.
 SELECT pg_temp.must_fail(
   'INSERT INTO public.sp_claims (holder_user_id, claim_type, title, assertion_level, '
-  || 'verified_by_user_id, verified_at) VALUES ('
-  || '''a0000000-0000-0000-0000-000000000001'', ''licence'', ''Self-verified'', ''verified'', '
-  || '''a0000000-0000-0000-0000-000000000001'', now())',
+  || 'verified_by_user_id, verified_at, credential_code, claimed_issuer_name) VALUES ('
+  || '''a0000000-0000-0000-0000-000000000001'', ''certification'', ''Certified Protection Professional (CPP)'', ''verified'', '
+  || '''a0000000-0000-0000-0000-000000000001'', now(), ''INTL_ASIS_CPP'', ''ASIS International'')',
   'sp_claim_no_self_verification',
   '2.7 a claim verified by its own holder is impossible at row level');
 
 SELECT pg_temp.must_fail(
-  'INSERT INTO public.sp_claims (holder_user_id, claim_type, title, assertion_level) '
-  || 'VALUES (''a0000000-0000-0000-0000-000000000002'', ''licence'', ''Unattributed'', ''verified'')',
+  'INSERT INTO public.sp_claims (holder_user_id, claim_type, title, assertion_level, credential_code, claimed_issuer_name) '
+  || 'VALUES (''a0000000-0000-0000-0000-000000000002'', ''certification'', ''Certified Protection Professional (CPP)'', ''verified'', ''INTL_ASIS_CPP'', ''ASIS International'')',
   'sp_claim_verified_is_attributed',
   '2.8 a VERIFIED claim with no verifier is impossible at row level');
 

@@ -135,23 +135,18 @@ ON CONFLICT DO NOTHING;
 -- holder's own INSERT policy would mean re-testing the evidence workflow in
 -- every group. Nothing being asserted below runs with these privileges -- every
 -- boundary test sets ROLE authenticated first.
-CREATE OR REPLACE FUNCTION pg_temp.new_claim(_holder uuid, _code text DEFAULT 'VU1')
+CREATE OR REPLACE FUNCTION pg_temp.new_claim(_holder uuid, _code text DEFAULT 'OV_TRAINING')
 RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE _claim uuid;
 BEGIN
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, assertion_level,
-     lifecycle_state, claimed_issuer_name, valid_from, valid_until)
-  -- claim_type and title both come from the taxonomy row, never from this
-  -- fixture: sp_claims_credential_rules refuses a claim that disagrees with
-  -- its own credential definition, which is the correct behaviour and not
-  -- something a test should be routing around.
-  VALUES (_holder,
-          (SELECT claim_type FROM public.sp_credential_types WHERE code = _code),
-          (SELECT name_sv FROM public.sp_credential_types WHERE code = _code),
-          _code, 'document_provided', 'active',
-          'Fiktiv utbildningsanordnare', DATE '2026-01-01', DATE '2027-12-31')
+    (holder_user_id,claim_type,title,credential_code,assertion_level,lifecycle_state,
+     claimed_issuer_name,valid_from,valid_until,jurisdiction_code,sub_jurisdiction_code)
+  SELECT _holder,d.claim_type,d.name_sv,d.code,'document_provided','active',
+    d.issuer_name,DATE '2026-01-01',DATE '2027-12-31',d.country,d.region
+  FROM public.sp_approved_credential_catalogue d WHERE d.code=_code
   RETURNING id INTO _claim;
+  IF _claim IS NULL THEN RAISE EXCEPTION 'Missing approved fixture definition'; END IF;
   RETURN _claim;
 END $$;
 
@@ -182,7 +177,7 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
 
-  _vu1 := pg_temp.new_claim(_h, 'VU1');
+  _vu1 := pg_temp.new_claim(_h, 'OV_TRAINING');
   _period := pg_temp.new_period(_h);
 
   -- 1.1 The legitimate shape still works, unchanged.
@@ -237,7 +232,7 @@ DO $$
 DECLARE _h uuid := 'cb000000-0000-0000-0000-000000000001'; _claim uuid; _period uuid;
 BEGIN
   SELECT id INTO _claim FROM public.sp_claims
-   WHERE holder_user_id = _h AND credential_code = 'VU1' LIMIT 1;
+   WHERE holder_user_id = _h AND credential_code = 'OV_TRAINING' LIMIT 1;
 
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
@@ -281,7 +276,7 @@ BEGIN
   PERFORM public.sp_submit_for_verification(
     (SELECT id FROM public.sp_claims
       WHERE holder_user_id='cb000000-0000-0000-0000-000000000001'
-        AND credential_code='VU1' LIMIT 1),
+        AND credential_code='OV_TRAINING' LIMIT 1),
     NULL, 'cqrityjob_review', NULL);
   RESET ROLE;
   PERFORM pg_temp.ok(true,
