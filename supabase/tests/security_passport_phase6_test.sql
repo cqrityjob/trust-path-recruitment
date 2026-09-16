@@ -59,27 +59,24 @@ BEGIN
   END IF;
   RAISE NOTICE 'ok  1.5 no expiry requirement is invented for VU1/VU2';
 
-  RAISE NOTICE 'GROUP 2 -- qualifications record honestly';
-
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h1, 'training', 'Väktarutbildning 1 (VU1)', 'VU1');
-  RAISE NOTICE 'ok  2.1 VU1 accepted with no valid_until';
-
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h1, 'training', 'Väktarutbildning 2 (VU2)', 'VU2');
-  SELECT count(*) INTO _n FROM public.sp_claims
-   WHERE holder_user_id = _h1 AND credential_code IN ('VU1', 'VU2');
-  IF _n <> 2 THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: 2.2 VU1 and VU2 must coexist, found % row(s)', _n;
-  END IF;
-  RAISE NOTICE 'ok  2.2 adding VU2 does not overwrite or supersede VU1';
+  RAISE NOTICE 'GROUP 2 -- approved qualifications record honestly';
+  INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,claimed_issuer_name,jurisdiction_code)
+  SELECT _h1,claim_type,name_sv,code,issuer_name,country FROM public.sp_approved_credential_catalogue
+   WHERE code IN ('OV_TRAINING','OV_REFRESHER');
+  SELECT count(*) INTO _n FROM public.sp_claims WHERE holder_user_id=_h1 AND credential_code IN ('OV_TRAINING','OV_REFRESHER') AND valid_until IS NULL;
+  IF _n<>2 THEN RAISE EXCEPTION 'ASSERTION FAILED: approved independent training claims without invented expiry'; END IF;
+  RAISE NOTICE 'ok  2.1 approved training accepted without inventing expiry';
+  RAISE NOTICE 'ok  2.2 adding another approved training definition preserves the first';
+  IF EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV')) THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: unresolved issuer/scope definitions exposed'; END IF;
+  RAISE NOTICE 'ok  2.3 definitions without governed issuer/scope are withheld';
 
   RAISE NOTICE 'GROUP 3 -- appointments cannot be misrepresented';
 
   BEGIN
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, claimed_issuer_name)
-    VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten');
+      (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, jurisdiction_code)
+    VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten', 'SE');
     RAISE EXCEPTION 'ASSERTION FAILED: 3.1 an appointment was accepted with no end date';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  3.1 a time-limited appointment is refused without valid_until';
@@ -87,36 +84,32 @@ BEGIN
 
   BEGIN
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, valid_until)
-    VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', '2027-01-01');
+      (holder_user_id, claim_type, title, credential_code, valid_until, jurisdiction_code)
+    VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', '2027-01-01', 'SE');
     RAISE EXCEPTION 'ASSERTION FAILED: 3.2 an appointment was accepted with no authority';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  3.2 an appointment is refused without an appointing authority';
   END;
 
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, valid_until)
-  VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten', '2027-01-01');
+    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, valid_until, jurisdiction_code)
+  VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'Polismyndigheten', '2027-01-01', 'SE');
   RAISE NOTICE 'ok  3.3 a complete appointment is accepted';
 
-  -- authorisation_scope arrived with the Swedish truth model (20260907091000):
-  -- a skyddsvakt approval is limited to an employer, principal or protected
-  -- object, and an approval shown without saying which reads as a general
-  -- national licence. What this assertion is ABOUT -- that skyddsvakt and
-  -- ordningsvakt are separate claims -- is unchanged.
-  INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, claimed_issuer_name, valid_until,
-     authorisation_scope)
-  VALUES (_h1, 'licence', 'Skyddsvaktsförordnande', 'SV', 'Polismyndigheten', '2027-06-30',
-          'Skyddsobjekt: Syntetisk anläggning');
-  RAISE NOTICE 'ok  3.4 skyddsvakt is a separate appointment claim from ordningsvakt';
+  BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,claimed_issuer_name,jurisdiction_code,valid_until,authorisation_scope)
+    VALUES(_h1,'licence','Skyddsvaktsförordnande','SV','Polismyndigheten','SE','2027-06-30','Candidate scope');
+    RAISE EXCEPTION 'ASSERTION FAILED: candidate-defined scope accepted';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'ok  3.4 unresolved scope-bearing definition cannot create a claim';
+  END;
 
   RAISE NOTICE 'GROUP 4 -- drafts can be saved half-finished';
 
   -- Save-and-resume would be impossible if the rules bound a draft.
   INSERT INTO public.sp_claims
-    (holder_user_id, claim_type, title, credential_code, lifecycle_state)
-  VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'draft');
+    (holder_user_id, claim_type, title, credential_code, lifecycle_state, claimed_issuer_name, jurisdiction_code)
+  VALUES (_h1, 'licence', 'Ordningsvaktsförordnande', 'OV', 'draft', 'Polismyndigheten', 'SE');
   RAISE NOTICE 'ok  4.1 a draft appointment saves without the mandatory fields';
 
   -- ...but promoting that draft to a real claim must still be refused.
@@ -142,29 +135,31 @@ BEGIN
     INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
     VALUES (_h1, 'training', 'invented', 'NOTREAL');
     RAISE EXCEPTION 'ASSERTION FAILED: 5.2 an unknown credential code was accepted';
-  EXCEPTION WHEN foreign_key_violation THEN
+  EXCEPTION WHEN check_violation THEN
+    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
     RAISE NOTICE 'ok  5.2 an unknown credential code is refused';
   END;
 
-  -- A free-text claim is not claiming to be one of the four and is not bound
-  -- by their rules -- otherwise Phase 6 would have broken every existing row.
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title)
-  VALUES (_h1, 'certification', 'Some unrelated course');
-  RAISE NOTICE 'ok  5.3 a claim with no credential code is unaffected';
+  BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title) VALUES(_h1,'certification','Custom');
+    RAISE EXCEPTION 'ASSERTION FAILED: custom credential accepted';
+  EXCEPTION WHEN check_violation THEN
+    RAISE NOTICE 'ok  5.3 a custom certification is prohibited';
+  END;
 
   RAISE NOTICE 'GROUP 6 -- Phase 6 opened no new route to VERIFIED';
 
   BEGIN
     INSERT INTO public.sp_claims
-      (holder_user_id, claim_type, title, credential_code, assertion_level)
-    VALUES (_h1, 'training', 'Väktarutbildning 1 (VU1)', 'VU1', 'verified');
+      (holder_user_id, claim_type, title, credential_code, assertion_level, claimed_issuer_name, jurisdiction_code)
+    VALUES (_h1, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'verified', 'Polismyndigheten', 'SE');
     RAISE EXCEPTION 'ASSERTION FAILED: 6.1 a holder self-asserted VERIFIED on a coded claim';
   EXCEPTION WHEN check_violation THEN
     RAISE NOTICE 'ok  6.1 a coded claim still cannot be born VERIFIED';
   END;
 
   IF EXISTS (SELECT 1 FROM public.sp_claims
-              WHERE credential_code IS NOT NULL AND assertion_level <> 'self_declared') THEN
+              WHERE holder_user_id IN (_h1,_h2) AND credential_code IS NOT NULL AND assertion_level <> 'self_declared') THEN
     RAISE EXCEPTION 'ASSERTION FAILED: 6.2 a coded claim reached a higher assertion level';
   END IF;
   RAISE NOTICE 'ok  6.2 every coded claim written here is still self_declared';
@@ -194,8 +189,8 @@ BEGIN
 
   RAISE NOTICE 'GROUP 8 -- cross-holder isolation is unchanged';
 
-  INSERT INTO public.sp_claims (holder_user_id, claim_type, title, credential_code)
-  VALUES (_h2, 'training', 'Väktarutbildning 1 (VU1)', 'VU1');
+  INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,claimed_issuer_name,jurisdiction_code)
+  SELECT _h2,claim_type,name_sv,code,issuer_name,country FROM public.sp_approved_credential_catalogue WHERE code='OV_TRAINING';
   SELECT count(*) INTO _n FROM public.sp_claims WHERE holder_user_id = _h2;
   IF _n <> 1 THEN
     RAISE EXCEPTION 'ASSERTION FAILED: 8.1 second holder sees % rows, expected 1', _n;

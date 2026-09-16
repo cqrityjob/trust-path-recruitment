@@ -59,6 +59,15 @@ BEGIN
  IF TG_OP='UPDATE' AND public.sp_is_passport_credential(OLD.claim_type,OLD.credential_code)
    AND (NEW.claim_type IS DISTINCT FROM OLD.claim_type OR NEW.credential_code IS DISTINCT FROM OLD.credential_code)
  THEN RAISE EXCEPTION 'SP_DEFINITION_IMMUTABLE' USING ERRCODE='23514'; END IF;
+ -- Legacy correction RPCs insert a successor rather than UPDATE the old row.
+ -- The successor must still describe the same holder and governed definition.
+ IF NEW.supersedes_id IS NOT NULL AND EXISTS (
+   SELECT 1 FROM public.sp_claims previous WHERE previous.id=NEW.supersedes_id
+   AND public.sp_is_passport_credential(previous.claim_type,previous.credential_code)
+   AND (NEW.holder_user_id IS DISTINCT FROM previous.holder_user_id
+     OR NEW.claim_type IS DISTINCT FROM previous.claim_type
+     OR NEW.credential_code IS DISTINCT FROM previous.credential_code)
+ ) THEN RAISE EXCEPTION 'SP_DEFINITION_IMMUTABLE' USING ERRCODE='23514'; END IF;
  IF NOT public.sp_is_passport_credential(NEW.claim_type,NEW.credential_code) THEN RETURN NEW; END IF;
  -- PostgreSQL accepts infinity as a date. It must not bypass governed no-expiry.
  IF NOT isfinite(NEW.issued_on) OR NOT isfinite(NEW.valid_from) OR NOT isfinite(NEW.valid_until)

@@ -46,6 +46,8 @@ SELECT pg_temp.denied($q$UPDATE public.sp_credential_details SET issuing_country
 SELECT pg_temp.denied($q$UPDATE public.sp_credential_details SET validity_jurisdiction_code='SE'$q$,'detail validity jurisdiction tampering rejected');
 SELECT pg_temp.denied($q$UPDATE public.sp_credential_details SET no_expiry=true$q$,'direct no-expiry tampering rejected');
 SELECT pg_temp.denied($q$SELECT public.sp_correct_claim(id,'Custom',claimed_issuer_name,NULL,NULL,NULL,NULL,'Test',credential_code,NULL,NULL) FROM public.sp_claims WHERE holder_user_id=auth.uid() LIMIT 1$q$,'legacy correction RPC cannot alter governed name');
+SELECT pg_temp.denied($q$SELECT public.sp_correct_claim(id,'Physical Security Professional (PSP)','ASIS International',NULL,NULL,NULL,NULL,'Switch definition','INTL_ASIS_PSP',NULL,NULL) FROM public.sp_claims WHERE holder_user_id=auth.uid() AND credential_code='INTL_ASIS_CPP'$q$,'legacy correction RPC cannot replace the selected definition');
+SELECT pg_temp.ok((SELECT count(*)=1 FROM public.sp_claims WHERE holder_user_id=auth.uid() AND credential_code='INTL_ASIS_CPP' AND lifecycle_state='active'),'refused definition correction preserves the original active claim');
 DO $$ DECLARE t text; privilege text; BEGIN
  FOREACH t IN ARRAY ARRAY['sp_credential_types','sp_authorities','sp_jurisdictions','sp_sub_jurisdictions','sp_market_packs',
  'sp_credential_scopes','sp_certification_definitions','sp_certification_issuers','sp_certification_issuer_aliases','sp_certification_sources',

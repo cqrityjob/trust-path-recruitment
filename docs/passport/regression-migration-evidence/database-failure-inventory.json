@@ -108,20 +108,28 @@
     "suite": "Security Passport Phase 6",
     "originalFailure": "psql:supabase/tests/security_passport_phase6_test.sql:209: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
     "retiredOpenModel": true,
-    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
-    "productDefect": "Not established; preserve the security assertion behind the failing fixture",
-    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
-    "status": "investigating"
+    "rootCause": "Retired VU1/VU2/SV/custom creation fixtures and a global trust assertion that included other suites’ rows.",
+    "productDefect": "No schema defect; fixtures and assertion scope migrated.",
+    "requiredCorrection": "Use canonical approved claims; deny definition/issuer/scope tampering; preserve correction history, trust reset, attribution, private fields and ownership checks.",
+    "status": "isolated suite passed",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase6_test.sql",
+      "assertions": 24
+    }
   },
   {
     "id": 10,
     "suite": "Security Passport Phase 6b",
     "originalFailure": "psql:supabase/tests/security_passport_phase6b_test.sql:108: ERROR:  SP_APPROVED_DEFINITION_REQUIRED",
     "retiredOpenModel": true,
-    "rootCause": "Fixture or expected command admits metadata/definitions prohibited by the closed catalogue. Inspect each assertion before replacement.",
-    "productDefect": "Not established; preserve the security assertion behind the failing fixture",
-    "requiredCorrection": "Use an approved definition for positive claims; convert open-model positives to explicit rejection assertions; preserve trust, ownership, privacy and lifecycle checks.",
-    "status": "investigating"
+    "rootCause": "Retired issuer/note/definition-edit expectations; investigation also reproduced a legacy correction RPC that could switch approved definitions.",
+    "productDefect": "FIXED: successor INSERT now preserves holder, claim type and governed definition, including legacy correction RPC.",
+    "requiredCorrection": "Use canonical approved claims; deny definition/issuer/scope tampering; preserve correction history, trust reset, attribution, private fields and ownership checks.",
+    "status": "isolated suite passed",
+    "validation": {
+      "file": "supabase/tests/security_passport_phase6b_test.sql",
+      "assertions": 39
+    }
   },
   {
     "id": 11,
