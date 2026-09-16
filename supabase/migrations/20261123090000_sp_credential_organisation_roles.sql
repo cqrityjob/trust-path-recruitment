@@ -173,19 +173,45 @@ INSERT INTO public.sp_credential_organisation_roles VALUES ('VU2','regulator',(S
 INSERT INTO public.sp_credential_organisation_roles VALUES ('VU2','training_provider',NULL,NULL,true,'https://www.bya.se/yrken/vaktare-stationar-ronderande/','2026-09-16');
 INSERT INTO public.sp_credential_organisation_roles VALUES ('VU2','verification_authority',NULL,NULL,true,'https://www.bya.se/yrken/vaktare-stationar-ronderande/','2026-09-16');
 
+-- Existing immutable disclosure permissions stay unchanged. Title disclosure is opt-in.
+ALTER TABLE public.sp_credential_disclosure_policy DROP CONSTRAINT sp_credential_disclosure_policy_permitted_fields_check;
+ALTER TABLE public.sp_credential_disclosure_policy ADD CONSTRAINT sp_credential_disclosure_policy_permitted_fields_check CHECK (permitted_fields <@ ARRAY['holder_name','identifier','profile_title']::text[] AND array_position(permitted_fields,NULL) IS NULL);
+CREATE OR REPLACE FUNCTION public.sp_assert_credential_selection(_ids uuid[],_fields text[]) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED'; END IF;
+ IF NOT public.sp_passport_session_active() THEN RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE='42501'; END IF;
+ IF coalesce(cardinality(_ids),0) NOT BETWEEN 1 AND 200 OR array_position(_ids,NULL) IS NOT NULL
+ OR _fields IS NULL OR cardinality(_fields)>3 OR array_position(_fields,NULL) IS NOT NULL
+ OR NOT _fields <@ ARRAY['holder_name','identifier','profile_title']::text[] THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_SELECTION'; END IF;
+ -- Row locks prevent correction/revocation changing selection during issuance.
+ PERFORM 1 FROM public.sp_claims c WHERE c.id=ANY(_ids) ORDER BY c.id FOR SHARE;
+ IF EXISTS(SELECT 1 FROM unnest(_ids) AS selected(id) WHERE NOT EXISTS(
+   SELECT 1 FROM public.sp_claims c WHERE c.id=selected.id AND c.holder_user_id=auth.uid()
+    AND c.lifecycle_state='active' AND public.sp_is_passport_credential(c.claim_type,c.credential_code)))
+ THEN RAISE EXCEPTION 'SP_CREDENTIAL_NOT_SHAREABLE'; END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.sp_assert_credential_selection(uuid[],text[]) FROM PUBLIC,anon,authenticated,service_role;
+
 CREATE OR REPLACE FUNCTION public.sp_credential_payload_v2(_holder uuid,_ids uuid[],_fields text[],_purpose text,_locale text,_expires timestamptz,_created timestamptz)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
-DECLARE _p public.sp_passport_profiles%ROWTYPE; _name text;
+DECLARE _p public.sp_passport_profiles%ROWTYPE; _name text; _profile_title text;
 BEGIN
  SELECT * INTO _p FROM public.sp_passport_profiles WHERE holder_user_id=_holder;
  IF NOT FOUND THEN RETURN jsonb_build_object('status','unavailable'); END IF;
  SELECT display_name INTO _name FROM public.profiles WHERE id=_holder;
+ IF 'profile_title'=ANY(_fields) THEN
+ SELECT coalesce(nullif(btrim(CASE WHEN _locale='sv' THEN p.title_sv ELSE p.title_en END),''),nullif(btrim(c.current_profession_other),''))
+ INTO _profile_title FROM public.security_career_profiles c
+ LEFT JOIN public.cig_professions p ON p.slug=c.current_profession_slug AND p.content_status='published'
+ WHERE c.user_id=_holder;
+ END IF;
  RETURN jsonb_build_object('status','active','package','selected_merits','schema_version',2,'focus','passport',
  'purpose',_purpose,'locale',_locale,'expires_at',_expires,'authorised_at',_created,
  'holder',CASE WHEN NOT 'holder_name'=ANY(_fields) OR _p.privacy_mode='anonymous' THEN NULL
    WHEN _p.privacy_mode='initials' THEN regexp_replace(coalesce(_name,''),'(\S)\S*','\1.','g') ELSE _name END,
  'privacy_mode',CASE WHEN 'holder_name'=ANY(_fields) THEN _p.privacy_mode ELSE 'anonymous' END,
- 'profession_slug',NULL,'jurisdiction',NULL,'sub_jurisdiction',NULL,
+ 'profile_title',_profile_title,'profession_slug',NULL,'jurisdiction',NULL,'sub_jurisdiction',NULL,
  'verified_experience','[]'::jsonb,'verified_experience_days',0,
  'last_updated',(SELECT max(updated_at) FROM public.sp_claims WHERE holder_user_id=_holder AND id=ANY(_ids)),
  'verified_claims',coalesce((SELECT jsonb_agg(jsonb_build_object(

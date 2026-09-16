@@ -2694,7 +2694,7 @@ console.log("\n11 · current trust after revocation (PR 9 blockers B1/B2)");
 
     const cardSrc = read("src/lib/security-passport/card.ts");
     ck(
-      "11.29 the Passport Card's own state is a present-tense claim",
+      "11.29 the Security Passport's own state is a present-tense claim",
       // The periods are mapped to declare their subject first -- an employer
       // confirmation source-confirms an employment and nothing else -- and
       // the lifecycle-aware predicate is what the state is built from.

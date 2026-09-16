@@ -78,7 +78,7 @@ function FirstRunRoute() {
   return (
     <section className="mx-auto max-w-2xl space-y-4 rounded-xl border p-5">
       <h2 className="text-xl font-semibold">
-        {lang === "sv" ? "Lägg till ett godkänt yrkesbevis" : "Add an approved credential"}
+        {lang === "sv" ? "Lägg till en godkänd merit" : "Add an approved credential"}
       </h2>
       <p>
         {lang === "sv"

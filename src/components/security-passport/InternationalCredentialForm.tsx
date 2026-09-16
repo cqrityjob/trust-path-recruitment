@@ -1,3 +1,4 @@
+import { CredentialDateInput } from "./CredentialDateInput";
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Globe2, MapPin, ArrowRight, Lock, Check } from "lucide-react";
@@ -56,6 +57,7 @@ export function InternationalCredentialForm({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   // Saving the claim and attaching evidence are separate existing secure operations.
   // A failed attachment retries only that attachment, never creates another claim.
   const savedId = useRef<string | null>(null);
@@ -115,7 +117,7 @@ export function InternationalCredentialForm({
   const steps = [
     copy("Omfattning", "Scope"),
     copy("Plats och kategori", "Location & category"),
-    copy("Yrkesbevis", "Credential"),
+    copy("Merit", "Credential"),
     copy("Dina uppgifter", "Your details"),
     copy("Granska och spara", "Review & save"),
   ];
@@ -154,7 +156,7 @@ export function InternationalCredentialForm({
       setError(
         savedId.current
           ? copy(
-              "Yrkesbeviset är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna yrkesbeviset.",
+              "Meriten är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna meriten.",
               "The credential is saved, but the document could not be attached. Retry or open the credential.",
             )
           : copy(
@@ -176,12 +178,12 @@ export function InternationalCredentialForm({
         <p className="text-xs uppercase tracking-[.18em] text-cyan-200">Security Passport</p>
         <h2 className="mt-3 text-2xl font-semibold !text-white">
           {initial
-            ? copy("Ändra yrkesbevis", "Edit credential")
-            : copy("Lägg till yrkesbevis", "Add credential")}
+            ? copy("Ändra merit", "Edit credential")
+            : copy("Lägg till merit", "Add credential")}
         </h2>
         <p className="mt-2 text-sm text-slate-300">
           {copy(
-            "Ditt yrkesbevis. Ditt underlag. Privat tills du delar.",
+            "Din merit. Ditt underlag. Privat tills du delar.",
             "Your credential. Your evidence. Private until you share.",
           )}
         </p>
@@ -244,7 +246,7 @@ export function InternationalCredentialForm({
                           "Certifications from professional organisations.",
                         )
                       : copy(
-                          "Yrkesbevis för ett visst land eller område.",
+                          "Meriter för ett visst land eller område.",
                           "Credentials for a particular country or region.",
                         )}
                   </span>
@@ -328,7 +330,7 @@ export function InternationalCredentialForm({
               </select>
             </label>
             <label>
-              {copy("Typ av yrkesbevis", "Credential class")}
+              {copy("Typ av meriter", "Credential class")}
               <select
                 className={inputClass}
                 value={category}
@@ -383,7 +385,7 @@ export function InternationalCredentialForm({
               />
             </label>
             <label className="block">
-              {copy("Godkänt yrkesbevis", "Approved credential")}
+              {copy("Godkänd merit", "Approved credential")}
               <select
                 required
                 className={inputClass}
@@ -393,7 +395,7 @@ export function InternationalCredentialForm({
                   setFile(null);
                 }}
               >
-                <option value="">{copy("Välj yrkesbevis", "Select credential")}</option>
+                <option value="">{copy("Välj merit", "Select credential")}</option>
                 {visible.map((d) => (
                   <option key={d.code} value={d.code}>
                     {d[lang === "sv" ? "name_sv" : "name_en"]} — {d.issuer_name}
@@ -404,7 +406,7 @@ export function InternationalCredentialForm({
             {!visible.length && (
               <p role="status" className="rounded-xl bg-muted p-4 text-sm">
                 {copy(
-                  "Ditt yrkesbevis är för närvarande inte tillgängligt i CQrityjob Security Passport.",
+                  "Din merit är för närvarande inte tillgängligt i CQrityjob Security Passport.",
                   "Your credential is not currently available in CQrityjob Security Passport.",
                 )}
               </p>
@@ -435,7 +437,10 @@ export function InternationalCredentialForm({
         {step === 4 && selected && (
           <div className="grid gap-5 sm:grid-cols-2">
             <label className="sm:col-span-2">
-              {copy("Bevisnummer (valfritt)", "Credential identifier (optional)")}
+              {copy(
+                "Certifikats- eller licensnummer (valfritt)",
+                "Credential identifier (optional)",
+              )}
               <input
                 className={inputClass}
                 maxLength={120}
@@ -445,23 +450,23 @@ export function InternationalCredentialForm({
             </label>
             <label>
               {copy("Utfärdad", "Issued")}
-              <input
-                type="date"
+              <CredentialDateInput
+                lang={lang}
                 className={inputClass}
                 value={draft.issued_on}
-                onChange={(e) => setDraft({ ...draft, issued_on: e.target.value })}
+                onChange={(value) => setDraft({ ...draft, issued_on: value })}
               />
             </label>
             <label>
               {copy("Giltig till", "Valid until")}
-              <input
-                type="date"
+              <CredentialDateInput
+                lang={lang}
                 className={inputClass}
                 min={draft.issued_on || undefined}
                 required={selected.requires_valid_until}
                 disabled={draft.no_expiry === true}
                 value={draft.valid_until}
-                onChange={(e) => setDraft({ ...draft, valid_until: e.target.value })}
+                onChange={(value) => setDraft({ ...draft, valid_until: value })}
               />
             </label>
             {selected.allows_no_expiry && !selected.requires_valid_until && (
@@ -483,12 +488,14 @@ export function InternationalCredentialForm({
                 )}
               </label>
             )}
-            <label className="rounded-xl border border-dashed border-border p-4 sm:col-span-2">
+            <div className="rounded-xl border border-dashed border-border p-4 sm:col-span-2">
               {copy("Dokument (valfritt)", "Evidence (optional)")}
               <input
+                ref={fileInput}
+                aria-label={copy("Dokument (valfritt)", "Evidence (optional)")}
                 type="file"
                 accept="application/pdf,image/jpeg,image/png,image/heic"
-                className="mt-3 block w-full min-w-0 text-sm"
+                className="sr-only"
                 onChange={(e) => {
                   const f = e.target.files?.[0] ?? null;
                   if (
@@ -511,6 +518,18 @@ export function InternationalCredentialForm({
                   }
                 }}
               />
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className="min-h-11 rounded-lg border border-input px-4 text-sm"
+                  onClick={() => fileInput.current?.click()}
+                >
+                  {copy("Välj fil", "Choose file")}
+                </button>
+                <span className="min-w-0 break-all text-sm">
+                  {file?.name ?? copy("Ingen fil vald", "No file chosen")}
+                </span>
+              </div>
               <span className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                 <Lock size={12} aria-hidden="true" />
                 {copy(
@@ -518,14 +537,14 @@ export function InternationalCredentialForm({
                   "Private evidence. Up to 8 MB. Not included in the share link.",
                 )}
               </span>
-            </label>
+            </div>
           </div>
         )}
         {step === 5 && selected && (
           <>
             <dl className="grid grid-cols-2 gap-4 text-sm">
               {[
-                [copy("Bevisnummer", "Identifier"), draft.identifier],
+                [copy("Certifikats- eller licensnummer", "Identifier"), draft.identifier],
                 [copy("Utfärdad", "Issued"), draft.issued_on],
                 [
                   copy("Slutdatum", "Expiry"),
@@ -553,7 +572,7 @@ export function InternationalCredentialForm({
         {step >= 4 && definitions && !selected && (
           <p role="status">
             {copy(
-              "Yrkesbeviset är inte tillgängligt för nya uppgifter.",
+              "Meriten är inte tillgänglig för nya uppgifter.",
               "This definition is unavailable for new claims or corrections.",
             )}
           </p>
@@ -587,7 +606,7 @@ export function InternationalCredentialForm({
             {busy
               ? copy("Sparar…", "Saving…")
               : step === 5
-                ? copy("Spara yrkesbevis", "Save credential")
+                ? copy("Spara merit", "Save credential")
                 : copy("Fortsätt", "Continue")}
             <ArrowRight size={16} aria-hidden="true" />
           </button>
@@ -603,7 +622,7 @@ export function InternationalCredentialForm({
               })
             }
           >
-            {copy("Öppna sparat yrkesbevis", "Open saved credential")}
+            {copy("Öppna sparad merit", "Open saved credential")}
           </button>
         )}
       </form>

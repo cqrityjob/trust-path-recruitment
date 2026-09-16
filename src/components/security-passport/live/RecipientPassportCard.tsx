@@ -96,6 +96,20 @@ export function RecipientPassportCard({
           >
             {holderName}
           </h2>
+          {presentation.profileTitle && (
+            <p
+              className="mt-2 text-sm"
+              style={{ color: TRUST_PALETTE.inkMuted }}
+              data-shared-profile-title
+            >
+              {presentation.profileTitle}
+              <span className="mt-1 block text-xs">
+                {lang === "sv"
+                  ? "Yrkestitel från Profil · egen uppgift"
+                  : "Profile title · self-reported"}
+              </span>
+            </p>
+          )}
           {(presentation.titles.length > 0 || presentation.jurisdiction) && (
             <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
               {[

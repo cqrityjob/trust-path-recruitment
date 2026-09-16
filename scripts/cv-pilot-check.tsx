@@ -18,7 +18,7 @@
 // Nothing about the code looked wrong. `validity.ts` states the Passport's
 // rule — expiry is DERIVED at read time and never stored, because anything
 // that writes `lifecycle_state = 'expired'` on the day a licence lapses is a
-// scheduled job that can stop running — and the Passport Card, the recipient
+// scheduled job that can stop running — and the Security Passport, the recipient
 // page, the social card, the attention list and the entry page all apply
 // `validityOf` accordingly. The CV read `lifecycle_state` straight off
 // `sp_claims`, where a lapsed credential is still `active` and still

@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight } from "lucide-react";
-import { CompactPassportCard } from "@/components/security-passport/CompactPassportCard";
+import { SecurityPassportPreview } from "@/components/security-passport/SecurityPassportPreview";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { L, type Lang } from "./copy";
@@ -102,7 +102,7 @@ export function OverviewPassportCard({
           minting one here would create a durable public address nobody
           chose to create — the same reasoning /passport/card records. */}
       <div className="mt-2">
-        <CompactPassportCard snapshot={state.snapshot} today={today} />
+        <SecurityPassportPreview snapshot={state.snapshot} today={today} />
       </div>
       <Link to="/passport/card" data-cta="overview-open-card" className={`${LINK} mt-2`}>
         {pt("side.openCard")}

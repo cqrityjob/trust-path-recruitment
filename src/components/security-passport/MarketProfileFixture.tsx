@@ -342,7 +342,7 @@ export function MarketProfileFixture() {
 
       <Panel
         id="screen-d"
-        title={note("D — Passport Card, en marknad", "D — Passport Card, one market")}
+        title={note("D — Security Passport, en marknad", "D — Security Passport, one market")}
         note={note(
           "Innehavare i Sverige med fyra verifierade svenska behörigheter.",
           "A Sweden-based holder with four verified Swedish credentials.",
@@ -355,7 +355,10 @@ export function MarketProfileFixture() {
 
       <Panel
         id="screen-e"
-        title={note("E — Passport Card, flera marknader", "E — Passport Card, several markets")}
+        title={note(
+          "E — Security Passport, flera marknader",
+          "E — Security Passport, several markets",
+        )}
         note={note(
           "Fyra verifierade i Sverige, två i Dubai, aktuell arbetsmarknad Dubai. Marknaderna redovisas var för sig — aldrig blandat.",
           "Four verified in Sweden, two in Dubai, current work market Dubai. Markets are stated separately — never mixed.",

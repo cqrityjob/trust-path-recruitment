@@ -622,7 +622,7 @@ function PassportEntryRoute() {
         <section className="rounded-xl border border-border bg-card p-5">
           <p className="text-sm text-muted-foreground">
             {lang === "sv"
-              ? "Välj yrkesbevis, valfria uppgifter och giltighetstid innan du skapar en länk. Underlag delas inte automatiskt."
+              ? "Välj meriter, valfria uppgifter och giltighetstid innan du skapar en länk. Underlag delas inte automatiskt."
               : "Choose credentials, optional fields and expiry before creating a link. Evidence is not shared automatically."}
           </p>
           <Link
@@ -630,7 +630,7 @@ function PassportEntryRoute() {
             className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium"
           >
             {lang === "sv"
-              ? "Välj yrkesbevis och uppgifter att dela"
+              ? "Välj meriter och uppgifter att dela"
               : "Select credentials and permitted fields"}
           </Link>
         </section>

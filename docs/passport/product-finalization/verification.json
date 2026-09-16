@@ -1,5 +1,5 @@
 {
-  "verified_at_utc": "2026-09-16T18:04:24.512342+00:00",
+  "verified_at_utc": "2026-09-16T18:52:27.503380+00:00",
   "branch": "codex/passport-product-finalization",
   "base_main": "351dea8",
   "production": {
@@ -24,7 +24,8 @@
     {
       "name": "production-build",
       "result": "PASS",
-      "log_sha256": "2e2d6b57c23935817d07683f41832a7e9b3505db527f57dce0fcdd635f9835fb"
+      "log_sha256": "6e88dd9817a19648eaab7338a9fef36c038efd1ee872e38d8765628fba99d7ae",
+      "method": "Final source snapshot in isolated local checkout to avoid disrupting browser capture."
     },
     {
       "name": "app-typecheck",
@@ -39,7 +40,7 @@
     {
       "name": "changed-file-lint",
       "result": "PASS",
-      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      "log_sha256": "78a8ff874b4d563660969882c97d0105c899fe04b1641ae13d86884de6ab95d8"
     },
     {
       "name": "admin-employer-status-guard:check",
@@ -199,7 +200,7 @@
     {
       "name": "passport-separation:check",
       "result": "PASS",
-      "log_sha256": "c84fc6ad54de33c75d16eddc0b96bec1bc6c72ef94af6cddd925a756dd3db268"
+      "log_sha256": "e4e7d5f20937dd0009412474d014f151e55c070f8c13825d3c5e776b53ae8f15"
     },
     {
       "name": "application-dialog-scroll:check",
@@ -224,7 +225,7 @@
     {
       "name": "career-profession-bridge:check",
       "result": "PASS",
-      "log_sha256": "6c668d12989124a677659c3193c20686dbad953ce03dbd6d842c6b2a8e78064f"
+      "log_sha256": "0ad1f7b6244d4ad77c595c690cb82f65a1bb3cbfcebf7d64e91f42a8911f69b8"
     },
     {
       "name": "employer-taxonomy:check",
@@ -254,7 +255,7 @@
     {
       "name": "trust-surface:check",
       "result": "PASS",
-      "log_sha256": "860372ae367597a29822040846e330bbebf4cc7b115f79007a4e5035d3263b73"
+      "log_sha256": "d719d0d5b27d4c7e0554bade5fb98748504706327e0f155e8c0b0fc8908ec6d1"
     },
     {
       "name": "career-discovery-v31-professions:check",
@@ -423,13 +424,13 @@
     },
     {
       "name": "schema-first-release:check",
-      "result": "BLOCKED_EXPECTED_PENDING_HOSTED_SCHEMA",
+      "result": "BLOCKED_EXPECTED_PENDING_SCHEMA",
       "log_sha256": "5094cf2c58c89d52e7c189272d73884aa12e18458f9f193c2e30509560ccd9b7"
     },
     {
       "name": "release-parity:check",
       "result": "PASS",
-      "log_sha256": "1f3a297801b9db5ecefa0548078484749c9f14b0abc0270cd92e0aac0b275918"
+      "log_sha256": "823f459c63181bd82be573ce0a7cabebbf629b69f220006c0a8829fd8d431965"
     },
     {
       "name": "release-frontier:check",
@@ -449,7 +450,7 @@
     {
       "name": "passport-title-derivation:check",
       "result": "PASS",
-      "log_sha256": "b824c7371096ba3536e881b1c1aebfe0d2126e50a4c4c1ec8d28270ff5e3c629"
+      "log_sha256": "c9ebadff0db7838289ddfb158473d8772fcbe8af2d457a7d4b5ab40139272191"
     },
     {
       "name": "passport-identity-engine:check",
@@ -459,7 +460,7 @@
     {
       "name": "passport-persona-journey:check",
       "result": "PASS",
-      "log_sha256": "e85c67ec0d57432178a4b2100cb8cafa709fc68fed898b15b3d4b3a6383964cd"
+      "log_sha256": "a904ce7f389ca7764843d02ed763a5f497b6827408f1223414cfd759344895d1"
     },
     {
       "name": "passport-credential-form:check",
@@ -469,7 +470,7 @@
     {
       "name": "passport-date-validation:check",
       "result": "PASS",
-      "log_sha256": "ef8f92ff6847614236abefd38ad5e1edd19c2334a8e07dff7bd41a525dc3fff7"
+      "log_sha256": "c75158cde0ee28f1f7d15cfa13899c15798f7c3a8852d928b009961fcd7b68db"
     },
     {
       "name": "passport-pilot-bugfix:check",
@@ -519,7 +520,7 @@
     {
       "name": "passport-regulatory-claim:check",
       "result": "PASS",
-      "log_sha256": "5c127c138a1713e663853681833c80916e3061f2c5158526bd99b8bc7517948f"
+      "log_sha256": "5074d14523b30d2d8c74b7d67e52086cebf81954097b9bd7f2a25232b95cd9f1"
     },
     {
       "name": "passport-scope-surface:check",
@@ -674,7 +675,7 @@
     {
       "name": "interview-ai-eval:check",
       "result": "PASS",
-      "log_sha256": "607cdd237c93b91d19dd3bda16dc5ee36168925d68d6aad0365e3ba0a80ba9ce"
+      "log_sha256": "fc14c063817fe2152f6e6b2b9eca7e78f24b95b885cf7fa807b239077e4f5c09"
     },
     {
       "name": "interview-ux-contract:check",
@@ -729,7 +730,7 @@
     {
       "name": "professional-identity:check",
       "result": "PASS",
-      "log_sha256": "99d0b770ff615a7c6bb5acfce9a9a3a7591e7011de4578f6d8eb179a7cfb8983"
+      "log_sha256": "02b5b17235a2729d4c2e70b692524069221c8c1d455acceb8259d9ddfe63e473"
     },
     {
       "name": "cv-application-source:check",
@@ -779,7 +780,7 @@
     {
       "name": "passport-page-composition:check",
       "result": "PASS",
-      "log_sha256": "d0ba97d6f87893c6aeca72d39e025e67956c36116c351e1e93ef80ae7ce1a655"
+      "log_sha256": "26c884e24d71379ac0d06aad8e50b867727a969f0108c5235b897c9dcaf8bb9e"
     },
     {
       "name": "passport-product:check",
@@ -788,24 +789,29 @@
     },
     {
       "name": "deploy-plan:gate",
-      "result": "BLOCKED_EXPECTED_PENDING_HOSTED_SCHEMA",
+      "result": "BLOCKED_EXPECTED_PENDING_SCHEMA",
       "log_sha256": "2670256c8a22c53df638fc82e8a0371644587c4d8b4941fac6430a8739ddc146"
     }
   ],
   "database": {
     "result": "PASS",
-    "command": "PGHOST=127.0.0.1 PGPORT=55439 PGUSER=postgres TEST_DB=passport_product_final bash scripts/db-test.sh",
     "migration_files_replayed": 294,
-    "full_rls_and_historical_rollback_reapply": "PASS",
-    "new_role_suite_assertions": 17,
-    "new_role_rollback_reapply_on_disposable_local_supabase": "PASS",
-    "note": "Full replay ran the initial 13 role assertions before and after rollback; the four additional payload-disclosure assertions then passed in the 17-assertion suite and a separate rollback/reapply on local port 55422."
+    "clean_replay_and_full_rls_rollback_suite_log_sha256": "465433a827a1e78b92b1bd509d68fe645720797bea6d496beccec262e9d89de5",
+    "organisation_role_and_consent_assertions_each_round": 22,
+    "rounds": [
+      "before rollback/reapply",
+      "after rollback/reapply"
+    ],
+    "actual_rollback_refuses_title_consent": true,
+    "rollback_refusal_log_sha256": "c422d04e79058fa442a41c42bff921878bbf55d8ca053775aa07fb87b4c3390a",
+    "local_stack_only": true
   },
   "negative_controls": {
     "result": "PASS",
     "suites": 30,
     "mutations_detected": 1064,
-    "method": "Clean isolated local clone, same changes overlaid; no guard bypass. Initial stale frontier anchors were updated to preserve the real pending migration and plant an already-applied extra version. Every suite passed; all mutated files restored byte-for-byte.",
+    "method": "Fresh isolated local clone with final source overlay; every mutated file restored, no guard bypass.",
+    "log_sha256": "387d21847a1cbc6f492ff9c706b571dc2e475aa55a0bf2272bb021c910d57418",
     "suite_results": [
       "negative-controls:p0a: all 6 mutations were detected, every file restored byte-for-byte, working tree clean.",
       "negative-controls:share-gateway-schema: all 4 mutations were detected, every file restored byte-for-byte, working tree clean.",
@@ -840,44 +846,40 @@
     ]
   },
   "browser": {
-    "all_passport_command": "E2E_BASE_URL=http://127.0.0.1:3119 playwright test 'e2e/passport-.*spec.ts' --workers=3 --project=chromium --project=mobile-375 --project=mobile-390",
-    "initial_full_run": {
-      "passed": 513,
-      "failed": 6,
-      "skipped": 3
+    "all_passport_command": "E2E_BASE_URL=http://127.0.0.1:3119 playwright test 'passport-' --workers=3",
+    "full_run": {
+      "passed": 520,
+      "failed": 2,
+      "skipped": 3,
+      "log_sha256": "09090678c72795818dc1fb7d05f9a142a7e14049cf8727359a07066fe79e0e52"
     },
-    "resolved_failures": [
-      "One status-copy expectation updated to the new registered label.",
-      "The credential detail primary heading was corrected to h1.",
-      "Two language expectations now use governed canonical names instead of legacy holder titles.",
-      "Two visual captures were rerun after build completion with deterministic readiness waits."
-    ],
-    "workspace_rerun": {
-      "passed": 12,
-      "failed": 0
-    },
-    "final_visual_rerun": {
-      "passed": 6,
-      "failed": 0
-    },
-    "evidence_upload_retry": {
+    "swedish_save_selector_correction": {
       "passed": 3,
       "failed": 0,
-      "assertion": "One credential save, two upload attempts; private upload failure does not duplicate the claim."
+      "reason": "The browser expectation still used the plural save label after the one-credential wizard was corrected to singular. All three viewport save-path tests passed after correcting the expectation.",
+      "log_sha256": "28907244f5f2ac682ca0116bd021c17752454554816a5d1b3559d7ce0f0b72c0"
     },
     "live_local_browser": {
       "passed": 3,
       "failed": 0,
       "origin": "https://127.0.0.1:3120",
-      "coverage": "Real owner creates credential, selective share, QR gateway, recipient access and revocation at desktop/375/390."
+      "coverage": "Real Auth/Storage/API creation, dedicated unchecked selectable credential absent from actual recipient payload AND page, default-off Profile title, secure share gateway and revocation.",
+      "log_sha256": "476658011643b1ccb596e1ed4eccd42076bebcf7ae146b1c2d4c783a42cb8210"
     },
-    "skipped_reason": "The three live tests intentionally skip in the stubbed suite; all three passed separately against real local Auth/Storage/API.",
-    "effective_result": "All exercised scenarios pass after the listed corrections and targeted reruns; no claim of a single uninterrupted zero-failure full run."
+    "skipped_reason": "Three live-stack tests skip in the stubbed suite and pass separately with explicit local-stack opt-in.",
+    "failed_cases_rerun": {
+      "passed": 2,
+      "failed": 0,
+      "command": "playwright test 'passport-' --last-failed --workers=2",
+      "log_sha256": "fdf8b2ad9760866ee926f5ca21c9d93a2d209855e1078eae85588d7693d6cc9a"
+    },
+    "effective_result": "All 522 exercised scenarios pass after the stale Swedish selector was corrected and both failed cases rerun; three local-live cases passed separately. This is not a claim of one uninterrupted zero-failure run."
   },
   "live_auth_storage_api": {
     "result": "PASS",
     "assertions": 41,
-    "production_access": false
+    "production_access": false,
+    "log_sha256": "243e8d5fe8f50dfc7882440c7cc2e3bf2efde515673edff02fb57ab5ec094a17"
   },
   "visual": {
     "result": "PASS",
@@ -900,53 +902,109 @@
     "fixture": "Fictional Alex Morgan; no production personal data"
   },
   "changed_source_sha256": {
-    "e2e/passport-first-run.spec.ts": "a8a64e06f7da3a8ac71ff99c38fd2485ed2ba627a0a9599bee03a7d4b9697505",
+    "e2e/passport-first-run.spec.ts": "4ee45e6cbdbc265d66981b17fb498b917c5b58d2c13da7230f0dd4041b591cf4",
     "e2e/passport-international.spec.ts": "4694ec655b481a9f1de6c569992cf30a99b89f9d7efe7f07ed0a9b61fcf4757d",
-    "e2e/passport-live-local.spec.ts": "981ed7770f58bd7b621d64291eb2af52c916ad4514206bbe6cd7c4953b56efe0",
-    "e2e/passport-product-visual.spec.ts": "5aba2123c4c0259506b02f2ae983dcc24cf6e6e3a2df46982ba98abb33789886",
-    "e2e/passport-three-market.spec.ts": "1dd9fc4c7d32bb32a2bc303ec151380262d02c69fc40de2786c3ff303cb875df",
-    "e2e/passport-workspace.spec.ts": "616c4fc5bfa2d2b81387db263a078b44f98df077eb0d641db71aff6b7e293476",
+    "e2e/passport-live-local.spec.ts": "3f089cdf3fbe34d32a8f4177f87bac6b074df4b8d6fe4175abf0573d28d96f39",
+    "e2e/passport-product-visual.spec.ts": "5eac6595cc81f76617919184a0d7bceef7b5a771e6345e1b4c15d491e08f05b7",
+    "e2e/passport-three-market.spec.ts": "9ae1a29606b3bec7cda1c211ba6dc033e7e7173eec808309b24b3b6a2728901c",
+    "e2e/passport-workspace.spec.ts": "85ad3e8c7b79a91b19e87930ce97b69f9e4136f02c127fb593ceff7e96968f4a",
+    "scripts/candidate-journey-composition-check.ts": "6df0e38b02f40e543fbbd6511decf472b85eec7193c2dbcb9b8926a5a02b4aa7",
+    "scripts/cv-pilot-check.tsx": "0b956daa694d92a66b6a3883c2eab97686ac146fec8787e40078b04fa9d84c27",
     "scripts/db-test.sh": "f7aa690f11a9d8f309dbd03fb1436e2ccb4fffee0e800bd2cd70a6691a29224a",
-    "scripts/my-career-dashboard-check.ts": "e5843ae75a0abbce9a858d83c748498f1168dc796c375e67d1ec3e1e80984d5c",
+    "scripts/my-career-dashboard-check.ts": "5740999cfff5c6d14b627814413567eeb788e28085710bc2e6db7fc75f897861",
+    "scripts/my-career-experience-check.tsx": "d96044a791d132d36d187847c4e4a0f8582548f49c133902d21b8111b3746ff2",
     "scripts/negative-controls/beskt-candidate-preparation-controls.ts": "eeab808d61e4bdaf26cabe654f189a88253c140305933fdc53811ed33b074284",
     "scripts/negative-controls/beskt-conduct-report-controls.ts": "98e1d7035fa31e03276eab8cb574a9d4790dc5a3f80a28267340cc337f888a2d",
     "scripts/negative-controls/beskt-content-authoring-controls.ts": "0b48a58f76a292a87d0270160de161e453e83ed18ed8b83f22268a2e2eb20de8",
     "scripts/negative-controls/beskt-interview-case-bridge-controls.ts": "7c88308ada18ed2259b08ef930d4f7bcd7f08ff0d0991d6f7601f839d26f8750",
     "scripts/negative-controls/beskt-interview-conduct-controls.ts": "bdf976bb96848b0aa1bf00de7a158f5893f1a2cd060783cacc1ed39cecf2d200",
+    "scripts/negative-controls/candidate-journey-composition-controls.ts": "d2a185c783bfcff409d9f0bfcfa3c197ae8641ebff9657a77afe1882a9cd7167",
     "scripts/negative-controls/interview-method-tenant-read-controls.ts": "2ae9bd9f8ce9e652cfc8f4e2ab0d73fc248ba707b78531badfda98a5975d6d1b",
-    "scripts/negative-controls/overview-composition-controls.ts": "903f79050bc898e86b6bf83a63d93c695917d76788e5d1b0063671b1af2cfece",
-    "scripts/negative-controls/passport-page-composition-controls.ts": "651fd74906380dfb00b23b1a50e3a9a6b221a3e4e318446358f77d7dacb22b75",
-    "scripts/passport-page-composition-check.ts": "35ba901add17ba4be2adb0434924fa2365cea54d293ba420a481aeb43e29c21f",
+    "scripts/negative-controls/overview-composition-controls.ts": "a534adc69d5bc3aac3d57a02502729c4c2a129c6dd9e13c6c2c285b92bf26190",
+    "scripts/negative-controls/passport-page-composition-controls.ts": "cb985084a3d192a97ba80ab0c652e102d8e931cbda1b31534a6ca399c45ba4f3",
+    "scripts/passport-credential-form-check.ts": "e2f31ebcc42bbba1742521a93b1e8ef39c4e51fd2f4c9906c368e69d10407d26",
+    "scripts/passport-fixture-check.ts": "65cd10ee9a981bdb25aa62fb6ebf333c08da1a9a59357f370d38ffc9d489944b",
+    "scripts/passport-page-composition-check.ts": "c09f1eeb1847093296bdfed708673734a78dc33caff8d3a37c123547aba2914d",
+    "scripts/passport-persona-journey-check.ts": "01fa89dec4a8241e2e774211dbcc87955ba38854aa00b16e4b2f2163624e4116",
     "scripts/passport-product-check.ts": "3cac70dc9ffe4b20a08bf33a3c1b4f6ce12dc845014aa3b56f21524944a82baf",
-    "scripts/passport-profile-basics-check.tsx": "56ed32931bde3b51d5774a001691ce18f5ca7c554e1efd5550033fb3547e2e1e",
+    "scripts/passport-profile-basics-check.tsx": "4d818574ceeb8bd33aaef246d9fc85173c93759fec40d77e930b39f0860523ce",
+    "scripts/passport-title-derivation-check.ts": "0ebaeec9f35d3d85666d7791f9edaedb64995fed7815adb145987df093b8ca58",
     "scripts/passport-trust-source-check.tsx": "c2bcb7290a87ff0dab42feef677815d0328ab46c46ea892109f3b42fe3828476",
+    "scripts/professional-identity-check.ts": "a3f70e9533bc2f67dc1fb4a11c7ef6b745a76539e1e72b02e1befa16ddf9eca2",
     "scripts/release-frontier-check.ts": "383bf9ce9dfc23d7638a4470136d0f719364cdd83d07a2f562e8bdeb39045755",
-    "src/components/security-passport/CompactPassportCard.tsx": "a1f56f9998c4a468aad47e4d8a825543257e4fc64c29c1ff62f20ab5969dc240",
-    "src/components/security-passport/CredentialDefinitionContext.tsx": "daa82855ebf9060ea35b9007ef4b27431ecd5c231c95f3b019e403a8cc00b6f8",
-    "src/components/security-passport/CredentialWallet.tsx": "d21d49eed4676b5533b1ff5e03ec5767208218a1c662885ebd8f13de715c2b80",
-    "src/components/security-passport/InternationalCredentialForm.tsx": "ac81682bd4d843b406200a3b66dd61ff2da1dc83cbd8fd4dc2fa9619886a67e6",
+    "scripts/trust-surface-check.tsx": "dcaa34f7b933964f6e7607ac539b02db61005d8b1a4e020e6ab61b295128f113",
+    "src/components/career-center/ProfessionCard.tsx": "52a55b008ebbca0f575005d06c851848afdf152960c6f01bfba78734ffb6a2b6",
+    "src/components/professional-identity/OverviewPassportCard.tsx": "87c307a158d17d7434a39dbc25c864e4bccb34695b05d7a3dadc78608f02f4a5",
+    "src/components/security-passport/ClaimRow.tsx": "20936268eac316ed6cb33624abd81a7a466722f0457359167145e5c8fa8a0d1c",
+    "src/components/security-passport/CredentialDateInput.tsx": "e0b81f7cdd76881a4dd6a604582299151831a027954e6557d4a3f6928364eaee",
+    "src/components/security-passport/CredentialDefinitionContext.tsx": "61c8c7af85c7db69eee962654961341a332e358abd99ccdb092a47e4225d1ff4",
+    "src/components/security-passport/CredentialSymbol.tsx": "5a0fb16691c6ac7938953e1459a60a9458ddefd2af54ee4ad3b7f1a0db92a271",
+    "src/components/security-passport/CredentialWallet.tsx": "b9fd7e7b26c77b647af06e1ca982645df73b9f07379ff95c48d39fce71552d64",
+    "src/components/security-passport/InternationalCredentialForm.tsx": "97b2645f3de654e0e0a341e203e55187738db7afbbbb53b5828253c4bbd88d07",
+    "src/components/security-passport/MarketBadgeRow.tsx": "68280b98d3d5d5354a3cef3a6c6238e6f27b81be83bb3cd4b849aa33835a44f3",
+    "src/components/security-passport/MarketProfileFixture.tsx": "6a326f610745d7c274fafc992f2ebbe11c64dfd7a58f971fe71a3b7e265a4a07",
+    "src/components/security-passport/PassportCard.tsx": "ed6954ed512fe7f21bf435313f5cb4f009e24b46bcbc50b1ac64e8119fbea0a4",
     "src/components/security-passport/PassportOwnership.tsx": "e23f164c96951ac6eb728c0bf87100412292e532287dd7f10008762ff94ca34d",
+    "src/components/security-passport/PassportSideColumn.tsx": "88ed96131f7e4ac663c8ad1d61747cd2e5488d5fadf9047a5523420dde3b5d93",
     "src/components/security-passport/SecureShareQr.tsx": "0a3e1703c0182b8af28756f9ca0940f3e60f76c71eea68eee33f6cda4450c384",
-    "src/components/security-passport/live/RecipientPassportCard.tsx": "d4f60af83bb00d58be2c856cb32ca6e664fa8932faffacbcbcc5cf569d4215cb",
+    "src/components/security-passport/SecurityPassportPreview.tsx": "941b0fb5a8c63701e409f478c23dda25703102563788b59673a1687ba4521092",
+    "src/components/security-passport/live/EvidencePanel.tsx": "9758c247640eb1e149da9d4e876c392792d8396a471fb2e479094b0cc880f72c",
+    "src/components/security-passport/live/RecipientCredentialList.tsx": "6c800fbb7c0ffc34d8f8ad70f4d00e17514434906f80c0e4f3a9b2f5d79898f9",
+    "src/components/security-passport/live/RecipientPassportCard.tsx": "4adf0bee473bcf34a8599e558fa6c780aa11a739e2f0e6a8c55936f4215733b4",
+    "src/components/security-passport/live/RecipientPassportView.tsx": "4fe02c4842f60e8402ce8c0fca707cd694bdad4b172cd1f3173056382c572cef",
+    "src/components/security-passport/live/ReviewSubjectFacts.tsx": "f0ccf4e86599b9c0baceb740fa9e9d07def931b7a7ddc03c18ed2b1209518b45",
     "src/components/security-passport/live/VerificationPanel.tsx": "2c385c85b5ef0ba310ecab135d24d8b8ba1955f6704f6cde8b071cf9b4c6a2b0",
-    "src/lib/security-passport/i18n.ts": "669830e8ccc263f424a5cee8f0f186901d20c6486a43cfb1460f73370acdfd7d",
+    "src/lib/professional-identity/cv/trust-annotations.ts": "2956d51e91f626cc6dd0df8fb0f04b43f5b2ad2328d78b81cd8b16448b1d5cd2",
+    "src/lib/security-passport/card.ts": "6371c33dfdac4db96f6f21f7443204951803bf1b85881a3f2f3d1ebdd6f98f4a",
+    "src/lib/security-passport/credential-sharing.functions.ts": "0bd05245983667e1e1c7351ae02b3b59b1267348b560cf4e3493be304558754f",
+    "src/lib/security-passport/credentials.ts": "55729f7566999ad22519c65c599af08fc7b33b66d320473d0c03febb2b3e6238",
+    "src/lib/security-passport/design/credential-symbols.ts": "5db82fd45a6de566095c97b266e142c129823699f591ba4a95d16a44da74c753",
+    "src/lib/security-passport/design/trust-system.ts": "92965a2a0bda122615dfa37bdb78dd196c6c334116412dc61e675361c3142b04",
+    "src/lib/security-passport/format.ts": "14d7454db139635080998e59b9ac8bc6972c4f1e82c5b9276806faaa250eafe7",
+    "src/lib/security-passport/i18n.ts": "7cb055a04fd1f2f503d88887a21cc02a77893ee95ebdda8f7af3df5536f5c717",
+    "src/lib/security-passport/identity/presentation.ts": "17ff5c9cbff8f608a5a9bf4c92df9de987e143e3c475fee9ca03be2f1c683785",
+    "src/lib/security-passport/identity/visibility.ts": "b73e6d1f9e97f5615ffc20ffae7c94259f44b338d5fe556c6ece15ba96f03dd6",
     "src/lib/security-passport/international.functions.ts": "8f6a1df573bf74475a1430a7e7c9633e70cd03c15ae43c4da49e822a43ed228a",
+    "src/lib/security-passport/international.ts": "621d1189486353c55f45f3a36f0f00045b96ae0bd6301d6d855d94ba94bc6962",
+    "src/lib/security-passport/market-profiles.ts": "4057d6387dd1c34ee69ffb935c2493928dde77de205e555310dab3e2d81e3ecd",
+    "src/lib/security-passport/onboarding.ts": "992a392320273060d4d78ed0cf45253a579b4db024e1873fdf8ce2cc0c08d349",
+    "src/lib/security-passport/packages.ts": "6575a2c744cd9feb06da23528a7956651a67173b9e975f9bc03cedc4df709fc3",
+    "src/lib/security-passport/passport.functions.ts": "464404c34892653b27fa7af1d209c5a81c26c565934e3534542d12d1e2917457",
     "src/lib/security-passport/product-status.ts": "23c6ed48845cfa3658a36cead8a956effae909764ab0a5bd7acb903a623fb43f",
+    "src/lib/security-passport/recipient-presentation.ts": "e25c9ae32f17e6c25cba908e298cf7e9851a828f26e9b31a015bd25b943f51f7",
+    "src/lib/security-passport/social-export.ts": "09239411c1253fe2eeba5c98c59d5056b26df41bf53cd3698cdce4ebe6e1c385",
+    "src/lib/security-passport/social.ts": "1582e34c26a6d06aa81b0e65bf33563a4f03b69703a99f90b42452b059342fb9",
     "src/lib/security-passport/use-qr.ts": "125bffedad86ddf035ae3361f143bb5505dfeee73ba74e400f7f4b51af1a1f3b",
-    "src/routes/_authenticated.passport.card.tsx": "5bc8dc2e2414e961ec271e0bf6a838af50560f38233e0ebeee6db15a48be5e50",
+    "src/routes/_authenticated.my-career.career-card.tsx": "b0f29078bfd02bfa717db37552b7e3444110bfd273e00b203d967d8c8782cdf9",
+    "src/routes/_authenticated.passport.card.tsx": "04dfa5123f89c90614aa2b7e9e1098f94f0b0e6e3cbc360f18ae7dfb6f6cc08e",
     "src/routes/_authenticated.passport.credentials.new.tsx": "088656037d9beff0a3b32e269328e8f9f7b3e5220d40ecdf39acc2f5981b2d5d",
-    "src/routes/_authenticated.passport.entry.$kind.$entryId.tsx": "ca13d8c432b21ef285e4b8733da7ea7c950d1cae9e3cab874e79bda75ede41d8",
-    "src/routes/_authenticated.passport.index.tsx": "a86a5f97a61f17eee2adc9ce03bf9c6bb535e1f1172f7d7d47f426fdb86a17ed",
-    "src/routes/_authenticated.passport.share.tsx": "7bd6cafdc916f678d71eacf7836063f76c225a5db8a029bb0ae9424dc38d1c30",
-    "src/routes/_authenticated.passport.tsx": "cc4f90debcb423a959d8925e6a282ad684d5d70c8c11a3092a1ac0589eb43595",
-    "supabase/migrations/20261123090000_sp_credential_organisation_roles.sql": "47069140175906d7c0eb4fc167c6997daa05896d5bb819f5bce48eda40fd46e8",
-    "supabase/release-state.json": "fd04026455bf222201ba678876fffdc3b09ff50bfe42cf9e447ba87dd408a990",
-    "supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql": "08f3f1fc3056d5acada9c66735feb4600418daaab31bab09be14dd6d95c23553",
-    "supabase/tests/security_passport_organisation_roles_test.sql": "8d0a5c44620fc236edbbde85457584dd828810d4b752ac2a77527fcbd5c44af9"
+    "src/routes/_authenticated.passport.entry.$kind.$entryId.tsx": "ccdb60649bfe113777e790ca568d70879bb1aab1ba49fc2907a3766d40d92e70",
+    "src/routes/_authenticated.passport.index.tsx": "03e5b6bd718142ee60b99d496e9dca33209b8700689a95ad4d8118df1204c856",
+    "src/routes/_authenticated.passport.onboarding.tsx": "b5322cea8ceda18d58478f5fcd365e2acac77355648a735c063cf8fe963e2f19",
+    "src/routes/_authenticated.passport.share.tsx": "af96167953775348a91a9ba5f02a3cba9942b6057f3f6e72ba8ddabf7971ac2c",
+    "src/routes/_authenticated.passport.tsx": "89c4b991c99be87f8a236013c906d567886beee8921897af8714f140156e8e49",
+    "src/routes/career-center.index.tsx": "86318aed7bbbcc51c411d03fcdde17357a6f26c2c389602beddb2340c2866f64",
+    "supabase/migrations/20261123090000_sp_credential_organisation_roles.sql": "c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62",
+    "supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql": "393799609192cdbfef8e61749370cac11e06d5cc281b7e5666024eba3a2de892",
+    "supabase/tests/security_passport_organisation_roles_test.sql": "a558657c6a19ba64b1b916f66c4e16624f5efcc004f00164214300daa486aaee"
   },
   "presentation_followup": {
     "copy": "Document review and source confirmation explicitly separated in Swedish and English.",
     "history": "Completed review history uses decision date; submission date is retained as fallback when undecided.",
     "verification": "149 deterministic checks rerun: 148 pass, schema-first blocked as expected; deployment gate also correctly blocked. Changed-file lint and production build pass. Final visual rerun 6/6 includes different submission/decision dates and coherent private evidence/review fixtures. Decision truthfulness guard passes."
+  },
+  "revision": "PR 258 owner naming, product and hosted-preflight correction",
+  "local_totals": {
+    "passed": 152,
+    "expected_blocks": 2,
+    "deterministic_passed": 148,
+    "deterministic_schema_gate_blocked": 1
+  },
+  "hosted_preflight": "hosted-preflight.json",
+  "naming": {
+    "retired_brand_occurrences_in_working_repository_text": 0,
+    "user_facing_occurrences": 0,
+    "legacy_preview_route": "/passport/card retained; existing shared links unchanged",
+    "preview_component": "SecurityPassportPreview"
   }
 }

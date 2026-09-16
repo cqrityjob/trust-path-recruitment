@@ -307,6 +307,7 @@ for (const lang of ["en", "sv"] as const) {
       focus: "passport",
       locale: lang,
       holder: "Alex Morgan",
+      profile_title: lang === "sv" ? "Säkerhetschef" : "Security Manager",
       privacy_mode: "full_name",
       profession_slug: null,
       jurisdiction: null,
@@ -382,13 +383,26 @@ for (const lang of ["en", "sv"] as const) {
     await capture("add-filters");
     await next();
     await page
-      .getByLabel(lang === "sv" ? "Godkänt yrkesbevis" : "Approved credential")
+      .getByLabel(lang === "sv" ? "Godkänd merit" : "Approved credential")
       .selectOption("INTL_ASIS_CPP");
     await capture("add-catalogue");
     await next();
     await page
-      .getByLabel(lang === "sv" ? "Bevisnummer (valfritt)" : "Credential identifier (optional)")
+      .getByLabel(
+        lang === "sv"
+          ? "Certifikats- eller licensnummer (valfritt)"
+          : "Credential identifier (optional)",
+      )
       .fill("DEMO-ONLY-123");
+    await expect(
+      page.getByRole("button", { name: lang === "sv" ? "Välj fil" : "Choose file", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByPlaceholder(lang === "sv" ? "ÅÅÅÅ-MM-DD" : "YYYY-MM-DD")).toHaveCount(2);
+    const issued = page.getByLabel(lang === "sv" ? "Utfärdad" : "Issued", { exact: true });
+    await issued.fill("2026-02-30");
+    await next();
+    await expect(issued).toBeVisible();
+    await issued.fill("2026-01-01");
     await capture("add-details");
     await next();
     await capture("add-review");
@@ -403,9 +417,16 @@ for (const lang of ["en", "sv"] as const) {
     );
     await page.getByRole("checkbox").nth(0).check();
     await page.getByRole("checkbox").nth(1).check();
-    await capture("trust-card");
+    await capture("passport-preview");
     await page.goto(`${base}/passport/share`);
     await expect(page.locator("[data-share-screen]")).toBeVisible();
+    await expect(
+      page.getByLabel(
+        lang === "sv"
+          ? "Min yrkestitel från Profil (egen uppgift)"
+          : "My professional title from Profile (self-reported)",
+      ),
+    ).not.toBeChecked();
     await capture("sharing");
     await page.goto(`${base}/passport/privacy`);
     await expect(page.locator("main")).toContainText(lang === "sv" ? "Integritet" : "Privacy");

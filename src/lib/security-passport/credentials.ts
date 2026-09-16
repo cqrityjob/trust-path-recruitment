@@ -143,7 +143,7 @@ export function controlledTitle(type: CredentialType, lang: "sv" | "en"): string
  * invisible while the only credentials were VU1, VU2, OV and SV, whose
  * `symbol_label` happens to equal their code. The Swedish truth model
  * (20260907091000) added four whose codes are nothing a reader should see,
- * and the private overview, the Passport Card, the recipient page and the
+ * and the private overview, the Security Passport, the recipient page and the
  * exported social frame all render a claim WITHOUT a label in hand:
  *
  *     SE_PERSONNEL_APPROVAL -> "SE_P"     OV_TRAINING  -> "OV_T"

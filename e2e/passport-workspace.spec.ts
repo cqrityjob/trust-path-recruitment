@@ -714,7 +714,7 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     await expect(rows(page)).toHaveCount(1);
     await expect(rows(page)).toContainText(/Egen|Registrerat|Tillagd/i);
-    await expect(wallet(page).getByRole("link", { name: "Lägg till yrkesbevis" })).toHaveAttribute(
+    await expect(wallet(page).getByRole("link", { name: "Lägg till meriter" })).toHaveAttribute(
       "href",
       "/passport/credentials/new",
     );

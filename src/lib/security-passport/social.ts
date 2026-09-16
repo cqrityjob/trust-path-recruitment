@@ -16,7 +16,7 @@
 //
 // ── WHAT IS DELIBERATELY ABSENT, AND WHY ───────────────────────────────
 //
-// Issuer and verifier attribution appear on the full Passport Card and on
+// Issuer and verifier attribution appear on the full Security Passport and on
 // the verification page, but NOT here. For a Väktare, the issuer of a
 // verified employment credential IS an employer, so publishing issuers
 // publishes an employment history — which the owner's brief prohibits on a
@@ -169,7 +169,7 @@ export function buildSocialCard(
   const recognition = recognitionFor(totals);
 
   // Verified AND currently valid. An expired credential is honest content
-  // on the Passport Card, where its state is shown beside it — but a social
+  // on the Security Passport, where its state is shown beside it — but a social
   // image cannot carry that qualification reliably once it is cached, so it
   // is simply not published.
   //

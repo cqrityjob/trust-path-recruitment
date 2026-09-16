@@ -780,7 +780,7 @@ test.describe("Security Passport — closed catalogue first run", () => {
     expect(db.merits).toHaveLength(0);
     await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
     await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await expect(page.getByRole("combobox", { name: "Godkänt yrkesbevis" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Godkänd merit" })).toBeVisible();
     expect(db.calls.completeFirstMerit ?? 0).toBe(0);
   });
   test("existing profile with legacy draft cannot resume free-text capture", async ({ page }) => {

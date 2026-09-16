@@ -304,6 +304,8 @@ export interface RecipientPayloadActive {
   readonly checked_at?: string | null;
   readonly last_updated: string;
   readonly holder: string | null;
+  /** Profile-supplied title, only with explicit disclosure consent. */
+  readonly profile_title?: string | null;
   readonly privacy_mode: string;
   readonly profession_slug: string | null;
   readonly jurisdiction: string;

@@ -533,7 +533,7 @@ assert(
    The defect this defends: the onboarding country step offered Sweden and
    nothing else, because it was built from the ACTIVE market packs. A holder
    working in Dubai could not say so, `sp_passport_profiles.jurisdiction_code`
-   kept its `DEFAULT 'SE'`, and their Passport Card then told every reader they
+   kept its `DEFAULT 'SE'`, and their Security Passport then told every reader they
    were in Sweden — the product asserting a false country about a real person.
 
    The two questions are independent and must stay that way:

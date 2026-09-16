@@ -412,7 +412,7 @@ function CareerCenterHub() {
             {t("cc.trust.subtitle")}
           </p>
         </div>
-        {/* Four trust cards are reference material: a reader who wants to know
+        {/* Four reference cards are reference material: a reader who wants to know
             how the content is built asks for it. The claim itself — that we
             publish only sourced, dated, jurisdictioned guides — stays above,
             unfolded, because that is the part that has to be seen. */}
@@ -425,13 +425,16 @@ function CareerCenterHub() {
             />
           </summary>
           <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <TrustCard titleKey="cc.trust.sources.title" bodyKey="cc.trust.sources.body" />
-            <TrustCard
+            <ReferenceCard titleKey="cc.trust.sources.title" bodyKey="cc.trust.sources.body" />
+            <ReferenceCard
               titleKey="cc.trust.jurisdiction.title"
               bodyKey="cc.trust.jurisdiction.body"
             />
-            <TrustCard titleKey="cc.trust.reviewed.title" bodyKey="cc.trust.reviewed.body" />
-            <TrustCard titleKey="cc.trust.regulatory.title" bodyKey="cc.trust.regulatory.body" />
+            <ReferenceCard titleKey="cc.trust.reviewed.title" bodyKey="cc.trust.reviewed.body" />
+            <ReferenceCard
+              titleKey="cc.trust.regulatory.title"
+              bodyKey="cc.trust.regulatory.body"
+            />
           </div>
           <p className="mt-8 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             {t("cc.trust.closing")}
@@ -539,7 +542,13 @@ function TestFact({ children }: { children: React.ReactNode }) {
   );
 }
 
-function TrustCard({ titleKey, bodyKey }: { titleKey: TranslationKey; bodyKey: TranslationKey }) {
+function ReferenceCard({
+  titleKey,
+  bodyKey,
+}: {
+  titleKey: TranslationKey;
+  bodyKey: TranslationKey;
+}) {
   const { t } = useT();
   return (
     <div className="rounded-xl border border-border bg-card p-6">

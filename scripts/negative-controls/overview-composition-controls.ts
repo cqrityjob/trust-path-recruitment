@@ -88,7 +88,7 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "OV-NC-UNSELECTED-CREDENTIALS-DISCLOSED",
     defect: "the card automatically includes credentials the holder did not select",
-    file: "src/components/security-passport/CompactPassportCard.tsx",
+    file: "src/components/security-passport/SecurityPassportPreview.tsx",
     find: "selectedIds.includes(c.id)",
     replace: "Boolean(c.id)",
     guard: DASH,

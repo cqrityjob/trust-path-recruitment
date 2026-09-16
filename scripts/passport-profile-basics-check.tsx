@@ -641,7 +641,7 @@ console.log("\nLANGUAGE -- both, and different from each other");
     "and the id it names is actually rendered, so a screen reader has something to read",
     described !== null && html.includes(`id="${described[1]}"`),
   );
-  ck("the help text itself is on the page", html.includes("Visas på ditt Passport Card"));
+  ck("the help text itself is on the page", html.includes("Visas på ditt Security Passport"));
 
   // It is a display title, not evidence. The owner's rule: do not confuse
   // the professional title with a Passport credential or certification.

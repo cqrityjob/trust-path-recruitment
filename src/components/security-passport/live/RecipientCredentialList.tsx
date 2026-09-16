@@ -113,7 +113,8 @@ export function RecipientCredentialList({
             <LifecycleNote state={c.lifecycle} />
             {c.credentialIdentifier && (
               <p className="mt-2 break-all text-sm">
-                {lang === "sv" ? "Bevisnummer" : "Credential identifier"}: {c.credentialIdentifier}
+                {lang === "sv" ? "Certifikats- eller licensnummer" : "Credential identifier"}:{" "}
+                {c.credentialIdentifier}
               </p>
             )}
 

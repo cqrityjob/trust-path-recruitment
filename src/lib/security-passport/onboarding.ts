@@ -139,7 +139,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     // from the ACTIVE market packs. That silently conflated two independent
     // facts, and the conflation was not harmless: a holder working in Dubai
     // had no way to say so, `sp_passport_profiles.jurisdiction_code` kept its
-    // `DEFAULT 'SE'`, and their Passport Card then told every reader they were
+    // `DEFAULT 'SE'`, and their Security Passport then told every reader they were
     // in Sweden. The product asserted a false country about a real person.
     //
     // The two questions are now answered separately:

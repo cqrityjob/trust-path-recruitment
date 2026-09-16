@@ -1124,7 +1124,7 @@ test.describe("three markets — the write path", () => {
     await expect(page.getByLabel(/Utfärdare|Omfattning av/)).toHaveCount(0);
     await page.getByLabel("Giltig till", { exact: true }).fill("2030-01-01");
     await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await page.getByRole("button", { name: /Spara yrkesbevis/ }).click();
+    await page.getByRole("button", { name: "Spara merit", exact: true }).click();
     await expect.poll(() => savedPayloads.length).toBe(1);
     expect(savedPayloads[0]).toMatchObject({
       definition_code: "OV",
@@ -1173,9 +1173,9 @@ test.describe("three markets — the real routes", () => {
     await expect(page).toHaveURL(/credentials\/new\?code=UK_SIA_LICENCE_DS/);
     await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
     await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await expect(
-      page.getByRole("combobox", { name: "Godkänt yrkesbevis", exact: true }),
-    ).toHaveValue("");
+    await expect(page.getByRole("combobox", { name: "Godkänd merit", exact: true })).toHaveValue(
+      "",
+    );
     await expect(
       page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
     ).toBeDisabled();

@@ -52,9 +52,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the privacy summary starts writing the mode itself, so one setting gains a second writer and two pages can disagree",
     file: SIDE,
-    find: 'import { CompactPassportCard } from "./CompactPassportCard";',
+    find: 'import { SecurityPassportPreview } from "./SecurityPassportPreview";',
     replace:
-      'import { setPrivacyMode } from "@/lib/security-passport/passport.functions";\nimport { CompactPassportCard } from "./CompactPassportCard";',
+      'import { setPrivacyMode } from "@/lib/security-passport/passport.functions";\nimport { SecurityPassportPreview } from "./SecurityPassportPreview";',
     guard: GUARD,
     expect: "does NOT write the privacy mode",
   },
@@ -63,9 +63,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column loads the Passport itself instead of using the snapshot it is handed, adding a second request for the same data",
     file: SIDE,
-    find: 'import { CompactPassportCard } from "./CompactPassportCard";',
+    find: 'import { SecurityPassportPreview } from "./SecurityPassportPreview";',
     replace:
-      'import { getMyPassport } from "@/lib/security-passport/passport.functions";\nimport { CompactPassportCard } from "./CompactPassportCard";',
+      'import { getMyPassport } from "@/lib/security-passport/passport.functions";\nimport { SecurityPassportPreview } from "./SecurityPassportPreview";',
     guard: GUARD,
     expect: "the snapshot is passed in",
   },

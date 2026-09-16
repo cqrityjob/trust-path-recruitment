@@ -97,7 +97,7 @@ function PassportWorkspaceRoute() {
       </div>
     );
   if (!snapshot || !metadata || !snapshot.profile)
-    return <p role="status">{lang === "sv" ? "Läser yrkesbevis…" : "Loading credentials…"}</p>;
+    return <p role="status">{lang === "sv" ? "Läser meriter…" : "Loading credentials…"}</p>;
   return (
     <div data-passport-workspace className="mx-auto flex max-w-[1280px] flex-col gap-8">
       <div className="min-w-0 flex flex-col gap-6">

@@ -95,7 +95,7 @@ const card = code(read(OVERVIEW_CARD));
 check(/<OverviewPassportCard/.test(overview), "Överskt mounts the Passport card");
 check(/<PassportSummary/.test(overview), "and keeps the Passport summary");
 check(
-  /<CompactPassportCard/.test(card) && /snapshot=\{state.snapshot\}/.test(card),
+  /<SecurityPassportPreview/.test(card) && /snapshot=\{state.snapshot\}/.test(card),
   "the card is the same builder and the same presentation the Passport page renders",
 );
 check(/getMyPassport/.test(card), "read through the canonical getMyPassport");

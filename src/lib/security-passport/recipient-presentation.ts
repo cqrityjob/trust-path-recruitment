@@ -153,6 +153,7 @@ export interface RecipientExperience {
 
 export interface RecipientPresentation {
   readonly holderLabel: string | null;
+  readonly profileTitle?: string | null;
   readonly privacyMode: string;
   readonly professionSlug: string | null;
   /** What the DISCLOSED credentials support, derived here by the same engine
@@ -403,6 +404,7 @@ export function buildRecipientPresentation(
 
   return {
     holderLabel: payload.holder,
+    profileTitle: payload.profile_title ?? null,
     privacyMode: payload.privacy_mode,
     professionSlug: payload.profession_slug,
     titles: toPublicTitles(identity),

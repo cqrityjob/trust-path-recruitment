@@ -86,7 +86,7 @@ export function CredentialWallet({
             className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
           >
             <Plus size={17} aria-hidden="true" />
-            {copy("Lägg till yrkesbevis", "Add credential")}
+            {copy("Lägg till meriter", "Add credential")}
           </Link>
           <Link
             to="/passport/share"
@@ -99,7 +99,7 @@ export function CredentialWallet({
       </header>
       <dl className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
-          [active.length, copy("Aktiva yrkesbevis", "Active credentials")],
+          [active.length, copy("Aktiva meriter", "Active credentials")],
           [verified, copy("Granskade dokument", "Documents reviewed")],
           [
             active.filter((r) => r.status === "registered").length,
@@ -127,11 +127,11 @@ export function CredentialWallet({
       {!claims.length && (
         <div className="rounded-2xl border border-dashed border-border p-8">
           <h2 className="text-xl font-semibold">
-            {copy("Ditt första yrkesbevis", "Your first credential")}
+            {copy("Din första merit", "Your first credential")}
           </h2>
           <p className="mt-2 text-muted-foreground">
             {copy(
-              "Välj ett yrkesbevis från katalogen och lägg till ditt underlag. Allt förblir privat tills du delar.",
+              "Välj en merit från katalogen och lägg till ditt underlag. Allt förblir privat tills du delar.",
               "Choose a credential from the catalogue and add your evidence. Everything stays private until you share.",
             )}
           </p>
@@ -161,7 +161,7 @@ export function CredentialWallet({
             </h2>
             <ul
               className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
-              aria-label={copy("Yrkesbevis", "Credentials")}
+              aria-label={copy("Meriter", "Credentials")}
             >
               {group.map((row) => {
                 const c = row.claim;
@@ -242,7 +242,7 @@ export function CredentialWallet({
                         ? copy("Lägg till underlag", "Add evidence")
                         : row.status === "clarification"
                           ? copy("Komplettera uppgifter", "Provide information")
-                          : copy("Öppna yrkesbevis", "View credential")}
+                          : copy("Öppna meriter", "View credential")}
                       <ArrowUpRight size={16} aria-hidden="true" />
                     </Link>
                   </li>
@@ -254,7 +254,7 @@ export function CredentialWallet({
       })}
       <p className="text-xs leading-relaxed text-muted-foreground">
         {copy(
-          "Ett aktuellt datum är inte en verifiering. Granskning gäller det enskilda yrkesbeviset och dess dokumenterade omfattning.",
+          "Ett aktuellt datum är inte en verifiering. Granskning gäller det enskilda meriten och dess dokumenterade omfattning.",
           "A current date is not verification. Review applies to the individual credential and its documented scope.",
         )}
       </p>

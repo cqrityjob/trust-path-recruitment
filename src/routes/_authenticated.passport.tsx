@@ -32,10 +32,10 @@ export const Route = createFileRoute("/_authenticated/passport")({
 
 const NAV = [
   { to: "/passport", sv: "Översikt", en: "Overview" },
-  { to: "/passport", hash: "merits", sv: "Yrkesbevis", en: "Credentials" },
+  { to: "/passport", hash: "merits", sv: "Meriter", en: "Credentials" },
   { to: "/passport/credentials/new", sv: "Lägg till", en: "Add credential" },
   { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },
-  { to: "/passport/card", sv: "Trust Card", en: "Trust Card" },
+  { to: "/passport/card", sv: "Förhandsvisa och dela", en: "Preview and share" },
   { to: "/passport/privacy", sv: "Delning och integritet", en: "Sharing & privacy" },
 ];
 

@@ -12,7 +12,7 @@
 // `toPeriod` / `toClaim` convert database rows into exactly the
 // `ExperiencePeriod` and `Claim` types the fixture prototype used. That is
 // not ceremony: it means the interval-union calculation, the recognition
-// ladder and the Passport Card model — all of which were reviewed and are
+// ladder and the Security Passport model — all of which were reviewed and are
 // covered by scripts/passport-fixture-check.ts — operate on live data
 // unchanged, rather than being reimplemented against a second shape where
 // they could quietly disagree.
@@ -279,7 +279,7 @@ function toClaim(row: ClaimRow, provenance: ProvenanceMap): Claim {
     // was not merely incomplete: `buildPassportCard` computed its "Verified
     // by" line as `verifierName ?? issuerName`, so a permanently-null
     // verifier meant that heading ALWAYS resolved to `claimed_issuer_name`
-    // -- a string the candidate typed. A Passport Card could print
+    // -- a string the candidate typed. A Security Passport could print
     //
     //     Verified by
     //     BYA

@@ -66,7 +66,7 @@
 // and never stored, because anything that writes `lifecycle_state =
 // 'expired'` on the day a licence lapses is a job that can stop running and
 // leave a dead licence reading VERIFIED · ACTIVE. Every other surface
-// applies `validityOf` accordingly: the Passport Card, the recipient page,
+// applies `validityOf` accordingly: the Security Passport, the recipient page,
 // the social card, the attention list, the entry page.
 //
 // The CV did not. It read `lifecycleState` straight off `sp_claims`, where

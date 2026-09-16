@@ -39,6 +39,10 @@ test("real owner adds and selectively shares a credential, recipient loses acces
     global: { headers: { Authorization: `Bearer ${owner.session.access_token}` } },
     auth: { persistSession: false },
   });
+  const excluded = await db.rpc("sp_save_international_credential", {
+    _input: { definition_code: "INTL_ASIS_APP", identifier: "UNCHECKED-BROWSER-SECRET" },
+  });
+  expect(excluded.error).toBeNull();
   await page.addInitScript((session) => {
     localStorage.setItem("sb-127-auth-token", JSON.stringify(session));
     localStorage.setItem("cqrityjob.lang", "en");
@@ -84,6 +88,11 @@ test("real owner adds and selectively shares a credential, recipient loses acces
   await page.goto(`${base}/passport/share`);
   const selection = page.locator(`[data-merit-option="claim:${claimId}"]`);
   await selection.locator('input[type="checkbox"]').check();
+  const unchecked = page.locator(`[data-merit-option="claim:${excluded.data}"]`);
+  await expect(unchecked.locator('input[type="checkbox"]')).not.toBeChecked();
+  await expect(
+    page.getByLabel("My professional title from Profile (self-reported)"),
+  ).not.toBeChecked();
   await expect(page.getByLabel("My name (subject to privacy settings)")).not.toBeChecked();
   await expect(page.getByLabel("Credential identifiers", { exact: true })).not.toBeChecked();
   await page.getByLabel("Credential identifiers", { exact: true }).check();
@@ -109,10 +118,29 @@ test("real owner adds and selectively shares a credential, recipient loses acces
       }
       return route.continue();
     });
+    // Capture the real server-function response, not a mocked recipient fixture.
+    const responses: string[] = [];
+    recipient.on("response", async (response) => {
+      if (response.request().resourceType() === "fetch") {
+        try {
+          responses.push(await response.text());
+        } catch {
+          /* Navigation may cancel unrelated requests. */
+        }
+      }
+    });
     await recipient.goto(link);
     await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 30_000 });
     await expect(recipient.locator("main")).toContainText(title, { timeout: 30_000 });
     await expect(recipient.locator("main")).toContainText("BROWSER-OPTIONAL");
+    await expect.poll(() => responses.some((body) => body.includes("BROWSER-OPTIONAL"))).toBe(true);
+    const payload = responses.find((body) => body.includes("BROWSER-OPTIONAL"))!;
+    expect(payload).not.toContain("UNCHECKED-BROWSER-SECRET");
+    expect(payload).not.toContain("INTL_ASIS_APP");
+    expect(payload).not.toContain("INTL_ASIS_PSP");
+    expect(payload).not.toContain("Local Profile Title");
+    await expect(recipient.locator("main")).not.toContainText("Associate Protection Professional");
+    await expect(recipient.locator("main")).not.toContainText("UNCHECKED-BROWSER-SECRET");
     await expect(recipient.locator("main")).not.toContainText("Local Profile Title");
     await expect(recipient.locator("main")).not.toContainText("PRIVATE CV ONLY");
     await expect(recipient.locator("main")).not.toContainText("Local Permit Beta");

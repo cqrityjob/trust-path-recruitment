@@ -247,10 +247,10 @@ expect(
 {
   const cardPath = "src/components/professional-identity/OverviewPassportCard.tsx";
   const card = read(cardPath);
-  const compactPath = "src/components/security-passport/CompactPassportCard.tsx";
+  const compactPath = "src/components/security-passport/SecurityPassportPreview.tsx";
   const compact = read(compactPath);
   expect(
-    card.includes("<CompactPassportCard"),
+    card.includes("<SecurityPassportPreview"),
     "Overview mounts the canonical compact Passport card.",
   );
   expect(

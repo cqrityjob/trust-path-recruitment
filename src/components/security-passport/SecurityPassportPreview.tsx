@@ -6,7 +6,7 @@ import type { InternationalPassportMetadata } from "@/lib/security-passport/inte
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
 
 /** Owner-only preview. Selection does not create a share or disclose anything. */
-export function CompactPassportCard({
+export function SecurityPassportPreview({
   snapshot,
   today,
   metadata,
@@ -63,7 +63,7 @@ export function CompactPassportCard({
         </div>
         <div className="min-w-0">
           <h2 className="break-words text-2xl font-medium tracking-tight !text-white">
-            {identity?.displayName || copy("Mitt Trust Card", "My Trust Card")}
+            {identity?.displayName || copy("Ditt Security Passport", "Your Security Passport")}
           </h2>
           <p className="mt-1 break-words text-sm text-slate-200">
             {title || copy("Lägg till yrkestitel i Profil", "Add a professional title in Profile")}
@@ -96,7 +96,7 @@ export function CompactPassportCard({
           </p>
           <p className="mt-1 text-sm leading-relaxed text-slate-300">
             {copy(
-              "Välj vilka yrkesbevis som ska ingå innan du delar.",
+              "Välj vilka meriter som ska ingå innan du delar.",
               "Choose the credentials to include before sharing.",
             )}
           </p>
@@ -104,10 +104,10 @@ export function CompactPassportCard({
       )}
       <footer className="mt-6 flex items-center justify-between gap-4 border-t border-white/15 pt-4 text-xs text-slate-300">
         <span>
-          {claims.length} {copy("valda yrkesbevis", "selected credentials")}
+          {claims.length} {copy("valda meriter", "selected credentials")}
         </span>
         <span className="flex items-center gap-2">
-          Trust Card <ArrowUpRight size={14} aria-hidden="true" />
+          {copy("Förhandsvisning", "Preview")} <ArrowUpRight size={14} aria-hidden="true" />
         </span>
       </footer>
     </article>

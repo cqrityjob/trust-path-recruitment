@@ -4,11 +4,11 @@ Branch: `codex/passport-product-finalization`, based on main `351dea8` (PR #257 
 
 ## Product changes
 
-The Passport overview uses a responsive credential grid, Profile identity, factual counts and explicit review states. The long ownership explanation is a contextual disclosure. Six navigation destinations lead to overview, credentials, addition, verification, Trust Card and privacy.
+The Passport overview uses a responsive credential grid, Profile identity, factual counts and explicit review states. The long ownership explanation is a contextual disclosure. Six navigation destinations lead to overview, credentials, addition, verification, Security Passport preview and privacy.
 
 The five-step add flow uses the existing approved catalogue and strict instance-only writer. It filters scope, country/region, professional domain, class and organisation; reviews the holder's fields before saving; and attaches optional evidence through the existing private upload service. An attachment failure preserves the saved credential and retries only the attachment.
 
-Trust Card is a private navy preview with an empty initial selection. Its identity comes from Profile and is labelled accordingly. Selection in this private preview is not consent to a public disclosure: the existing sharing flow explicitly confirms the credentials, permitted fields and expiry. A QR is generated only from the newly created selective-disclosure URL, with the same expiry/revocation controls. Neither evidence nor a credential number is automatically disclosed. No photo or professional title is added to the public payload without an existing disclosure permission.
+Security Passport preview is a private navy preview with an empty initial selection. Its identity comes from Profile and is labelled accordingly. Selection in this private preview is not consent to a public disclosure: the existing sharing flow explicitly confirms the credentials, permitted fields and expiry. A QR is generated only from the newly created selective-disclosure URL, with the same expiry/revocation controls. Evidence is excluded. Name, certificate/licence number and Profile title are separate, default-off permissions. A shared Profile title is explicitly labelled as self-reported; opting in never changes an existing share. Photos are not disclosed.
 
 The recipient card retains the canonical trust model and now displays a subsequent credential revocation for an already pinned v2 selection. It never picks up replacement or unselected credentials. The earlier v1 disclosure contract is unchanged. Missing profile fields are omitted from the card instead of printing repeated “Not stated” text. A revoked holder-reported record never acquires a historical verified label.
 
@@ -41,12 +41,22 @@ Legacy holder-entered organisation strings are retained as personal history, lab
 
 Both tables have ENABLE/FORCE RLS and authenticated SELECT only. No candidate, anonymous or service-role table writes are granted. The existing private v2 payload function resolves official issuer identity from these roles and preserves subsequent revoked/expired state for previously selected claims. Its execute grants remain revoked.
 
-The rollback restores the previous private payload and drops only these two new tables. It is for disposable local verification, not production. No PR #257 migration contents were changed or reapplied to production. The committed hosted ledger is untouched. Release-state truthfully records the new migration as **pending**; the schema-first and empty-deploy-plan gates must block application release until separately approved hosted application and verification.
+The migration also extends the immutable disclosure-field constraint and private selection validator to accept explicit Profile-title consent. No existing disclosure or application row is updated. The rollback restores both private functions and the previous field constraint, then drops the two new tables. It refuses if a title-consent policy exists, preserving share history. It is for disposable local verification, not production. No PR #257 migration contents were changed or reapplied to production. The committed hosted ledger is untouched. Release-state truthfully records the new migration as **pending**; the schema-first and empty-deploy-plan gates must block application release until separately approved hosted application and verification.
 
 VU1/VU2 and SV availability is unchanged; this release does not approve new training providers, remove required scope, activate UK/AE markets or broaden the catalogue gate. The application deliberately fails closed if the new metadata tables cannot be read.
 
 ## Evidence and approval
 
-The screenshots use fictional Alex Morgan credentials, never production personal data. `screenshots/` includes both languages, desktop, 375px and 390px captures of the overview/wallet, all five addition steps, detail, Trust Card, recipient and sharing/privacy. Browser assertions check overflow, selected-only previews, no legacy Police issuer assertion, private fields and visible revocation.
+The screenshots use fictional Alex Morgan credentials, never production personal data. `screenshots/` includes both languages, desktop, 375px and 390px captures of the overview/wallet, all five addition steps, detail, Security Passport preview, recipient and sharing/privacy. Browser assertions check overflow, selected-only previews, no legacy Police issuer assertion, private fields and visible revocation.
 
 Explicit owner visual/product approval is still required. Do not merge or publish this branch solely because local checks pass. See `verification.json` for executed results and release blockers.
+
+## Owner correction and connection preflight
+
+The only product name is Security Passport. The private preview keeps `/passport/card` for compatibility; existing `/p/` shared links are unchanged. Navigation reads “Förhandsvisa och dela” / “Preview and share”, the heading “Ditt Security Passport” / “Your Security Passport”, and entry links “Öppna förhandsvisning” / “Open preview”. Public headings read “Delat Security Passport” / “Shared Security Passport”. The preview component is named `SecurityPassportPreview`.
+
+The credential flow uses broad merit/credential terminology, “Certifikats- eller licensnummer”, localized file buttons and an ISO date field with Swedish format guidance. It uses the shared calendar-date validator. Expiry/no-expiry remains controlled by the approved definition. Document review remains distinct from source confirmation; international recipients no longer see an unknown-jurisdiction placeholder.
+
+`hosted-preflight.json` records the connector-only read-only preflight, SQL checksum, ledger frontier, baseline counts and exact expected impact. The production ledger has 293 entries through `20261122090000`; no equivalent migration or new role/review table exists. Hosted writes and stale-project calls are zero. Owner approval is required before any application of this pending migration.
+
+`security_passport_organisation_roles_test.sql` proves actual RPC selection and persisted title consent. `passport-live-local.spec.ts` creates a dedicated unchecked credential and proves its code, title and private identifier are absent from the actual recipient server response and page. The real live tests also confirm share revocation. Screenshot evidence includes the default-off title checkbox and the explicitly shared, self-reported title.

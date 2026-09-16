@@ -220,7 +220,9 @@ function PassportShareRoute() {
   const [sharesState, setSharesState] = useState<LoadState>("loading");
 
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const [permittedFields, setPermittedFields] = useState<("holder_name" | "identifier")[]>([]);
+  const [permittedFields, setPermittedFields] = useState<
+    ("holder_name" | "identifier" | "profile_title")[]
+  >([]);
   const [expiryDays, setExpiryDays] = useState<number>(DEFAULT_EXPIRY_DAYS);
   const [shareLang, setShareLang] = useState<PassportLang>(lang);
 
@@ -633,7 +635,9 @@ function PassportShareRoute() {
                               {lang === "sv" ? merit.titleSv : merit.titleEn}
                             </span>
                             <span className="mt-0.5 block text-sm text-muted-foreground">
-                              {merit.organisation ?? pt("common.notStated")}
+                              {merit.kind === "claim" && merit.organisation
+                                ? `${lang === "sv" ? "Uppgiven utfärdare" : "Holder-stated issuer"}: ${merit.organisation}`
+                                : (merit.organisation ?? pt("common.notStated"))}
                               {" · "}
                               {meritDates(merit, lang, pt)}
                             </span>
@@ -726,10 +730,10 @@ function PassportShareRoute() {
               </legend>
               <p className="my-2 text-sm text-muted-foreground">
                 {lang === "sv"
-                  ? "Namn, utfärdare, omfattning, datum och status för valda yrkesbevis ingår alltid. Underlag och CV delas inte."
+                  ? "Namn, utfärdare, omfattning, datum och status för valda meriter ingår alltid. Underlag och CV delas inte."
                   : "Credential names, issuers, scope, dates and status are always included. Evidence and CV content are excluded."}
               </p>
-              {(["holder_name", "identifier"] as const).map((field) => (
+              {(["holder_name", "identifier", "profile_title"] as const).map((field) => (
                 <label key={field} className="flex min-h-11 items-center gap-2 text-sm">
                   <input
                     type="checkbox"
@@ -744,9 +748,13 @@ function PassportShareRoute() {
                     ? lang === "sv"
                       ? "Mitt namn (enligt integritetsinställning)"
                       : "My name (subject to privacy settings)"
-                    : lang === "sv"
-                      ? "Bevisnummer"
-                      : "Credential identifiers"}
+                    : field === "profile_title"
+                      ? lang === "sv"
+                        ? "Min yrkestitel från Profil (egen uppgift)"
+                        : "My professional title from Profile (self-reported)"
+                      : lang === "sv"
+                        ? "Certifikats- eller licensnummer"
+                        : "Credential identifiers"}
                 </label>
               ))}
             </fieldset>

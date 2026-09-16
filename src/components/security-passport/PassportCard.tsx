@@ -1,4 +1,4 @@
-// The Passport Card — a locked credential artifact.
+// The Security Passport — a locked credential artifact.
 //
 // ── HOW IT DIFFERS FROM CAREER CARD, CONCRETELY ────────────────────────
 //

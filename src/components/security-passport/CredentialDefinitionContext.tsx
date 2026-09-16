@@ -24,7 +24,7 @@ export function CredentialDefinitionContext({
       className="rounded-2xl border border-border bg-secondary/30 p-5"
     >
       <h2 className="text-lg font-semibold">
-        {lang === "sv" ? "Om yrkesbeviset" : "About this credential"}
+        {lang === "sv" ? "Om meriten" : "About this credential"}
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">
         {lang === "sv"

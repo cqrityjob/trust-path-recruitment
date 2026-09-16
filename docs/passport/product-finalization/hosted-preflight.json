@@ -1,0 +1,91 @@
+{
+  "checked_at_utc": "2026-09-16T18:40:01.156750+00:00",
+  "operation": "READ ONLY; hosted application awaits explicit owner approval",
+  "project": {
+    "name": "CQrityjob Production",
+    "ref": "wrygicdfxwjnrugduxnt",
+    "status": "ACTIVE_HEALTHY",
+    "region": "eu-central-1"
+  },
+  "migration": {
+    "filename": "supabase/migrations/20261123090000_sp_credential_organisation_roles.sql",
+    "canonical_version": "20261123090000",
+    "sha256": "c05fdadc1ad96543cbcb979a6c39d7b9866615ae957a8fa7925889723334db62",
+    "already_applied": false,
+    "equivalent_found": false
+  },
+  "hosted_ledger": {
+    "count": 293,
+    "frontier": "20261122090000",
+    "md5_sorted_full_rows": "7d231b2f2537f266ffb4f475c2fa4895",
+    "digest_method": "md5(string_agg(row_to_json(m)::text,E'\\n' ORDER BY version))",
+    "equivalence_checks": [
+      "canonical version",
+      "organisation_roles migration name",
+      "definition_reviews object in stored statements",
+      "profile_title in stored statements",
+      "both new tables absent"
+    ]
+  },
+  "before_counts": {
+    "profiles": 13,
+    "cv_documents": 3,
+    "sp_passport_profiles": 3,
+    "sp_claims": 42,
+    "sp_evidence": 10,
+    "sp_verification_requests": 9,
+    "sp_verification_decisions": 9,
+    "sp_disclosures": 32,
+    "sp_credential_disclosure_policy": 0,
+    "sp_credential_types": 73,
+    "sp_certification_issuers": 5,
+    "sp_authorities": 5,
+    "security_career_profiles": 3,
+    "cig_professions": 69
+  },
+  "expected_impact": {
+    "new_tables": [
+      "sp_credential_definition_reviews",
+      "sp_credential_organisation_roles"
+    ],
+    "new_definition_review_rows": 36,
+    "new_organisation_role_rows": 105,
+    "rls": "ENABLE and FORCE, authenticated SELECT only, no direct client writes",
+    "new_indexes": 2,
+    "primary_key_indexes": 2,
+    "new_select_policies": 2,
+    "replaced_private_functions": [
+      "sp_credential_payload_v2",
+      "sp_assert_credential_selection"
+    ],
+    "constraint_change": "Allow profile_title as a third explicit opt-in disclosure field; preserve existing immutable policy rows.",
+    "payload_change": "Governed issuer roles, retained selected revoked/expired credentials, Profile title only with explicit consent. Existing v1 contract unchanged.",
+    "existing_application_rows_changed": 0,
+    "existing_catalogue_identity_rows_changed": 0,
+    "production_data_deletions": 0,
+    "auth_or_storage_changes": 0
+  },
+  "before_schema": {
+    "organisation_roles": null,
+    "definition_reviews": null,
+    "allowed_disclosure_fields": [
+      "holder_name",
+      "identifier"
+    ],
+    "selection_function_md5": "33cab2f8812dcd8474e1001bebf5d5b9",
+    "payload_function_md5": "424e22c0903ffb79391b729d810ed1a9"
+  },
+  "hosted_writes": 0,
+  "hosted_migration_applications": 0,
+  "stale_or_excluded_project_calls": 0,
+  "supabase_cli_calls": 0,
+  "merge_or_publication": false,
+  "ledger_rechecked_at_utc": "2026-09-16T18:49:48.260699+00:00",
+  "ledger_recheck": {
+    "count": 293,
+    "frontier": "20261122090000",
+    "md5_sorted_full_rows": "7d231b2f2537f266ffb4f475c2fa4895",
+    "equivalent_count": 0,
+    "unchanged": true
+  }
+}

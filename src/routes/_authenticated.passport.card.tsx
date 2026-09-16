@@ -9,14 +9,14 @@ import { credentialPassportHolder } from "@/lib/security-passport/credential-pas
 import { Lock } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
-import { CompactPassportCard } from "@/components/security-passport/CompactPassportCard";
+import { SecurityPassportPreview } from "@/components/security-passport/SecurityPassportPreview";
 
 export const Route = createFileRoute("/_authenticated/passport/card")({
   ssr: false,
-  component: PassportCardRoute,
+  component: PassportPreviewRoute,
 });
 
-function PassportCardRoute() {
+function PassportPreviewRoute() {
   const { pt, lang } = usePassportCopy();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const load = useServerFn(getMyPassport);
@@ -57,7 +57,7 @@ function PassportCardRoute() {
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-start">
       <div className="w-full lg:sticky lg:top-28">
-        <CompactPassportCard
+        <SecurityPassportPreview
           selectedIds={selectedIds}
           metadata={metadata ?? undefined}
           snapshot={snapshot}
@@ -70,7 +70,9 @@ function PassportCardRoute() {
           <p className="text-xs uppercase tracking-[.16em] text-muted-foreground">
             Security Passport
           </p>
-          <h1 className="mt-2 text-3xl font-semibold">Trust Card</h1>
+          <h1 className="mt-2 text-3xl font-semibold">
+            {lang === "sv" ? "Ditt Security Passport" : "Your Security Passport"}
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {lang === "sv"
               ? "Förhandsvisa ditt urval. Välj sedan uppgifter, mottagarvy och giltighetstid i delningsflödet."
@@ -109,7 +111,7 @@ function PassportCardRoute() {
           </span>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
             {lang === "sv"
-              ? "Sammanfattningen visar yrkesbevis. Ditt aktuella yrke kommer från Profil och är en egen uppgift."
+              ? "Sammanfattningen visar meriter. Ditt aktuella yrke kommer från Profil och är en egen uppgift."
               : "This summary shows credentials. Your current professional title comes from Profile and is self-reported."}
           </p>
           <Link

@@ -133,7 +133,7 @@ export function formatDuration(days: number, lang: PassportLang): string {
 /** "A", "A och B", "A, B och C" — and the English equivalent.
  *
  *  Joining every element with "och" produced "Nordvakt AB och Datacenter Syd
- *  AB och Nordic Security Institute" on the Passport Card, which is wrong in
+ *  AB och Nordic Security Institute" on the Security Passport, which is wrong in
  *  both languages. Attribution is the part of a credential a reader scans
  *  hardest, so it should not read as broken. */
 export function formatNameList(names: readonly string[], lang: PassportLang): string {

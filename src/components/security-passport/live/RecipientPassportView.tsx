@@ -142,24 +142,35 @@ function RecipientPassportBody({
             label={pt("rec.holder")}
             value={presentation.holderLabel ?? pt("rec.anonymousHolder")}
           />
-          <Row
-            label={pt("rec.profession")}
-            value={joinTitles(presentation.titles, lang, pt("common.notStated"))}
-          />
+          {presentation.profileTitle && (
+            <Row
+              label={
+                lang === "sv"
+                  ? "Yrkestitel från Profil · egen uppgift"
+                  : "Profile title · self-reported"
+              }
+              value={presentation.profileTitle}
+            />
+          )}
+          {presentation.titles.length > 0 && (
+            <Row label={pt("rec.profession")} value={joinTitles(presentation.titles, lang, "")} />
+          )}
           {presentation.eligibility.length > 0 ? (
             <Row
               label={pt("identity.eligibility")}
               value={joinTitles(presentation.eligibility, lang, pt("common.notStated"))}
             />
           ) : null}
-          <Row
-            label={pt("rec.jurisdiction")}
-            value={formatWorkLocation(
-              presentation.jurisdiction,
-              presentation.subJurisdiction,
-              lang,
-            )}
-          />
+          {presentation.jurisdiction && (
+            <Row
+              label={pt("rec.jurisdiction")}
+              value={formatWorkLocation(
+                presentation.jurisdiction,
+                presentation.subJurisdiction,
+                lang,
+              )}
+            />
+          )}
           {presentation.purpose ? (
             <Row label={pt("rec.purpose")} value={presentation.purpose} />
           ) : null}

@@ -5,7 +5,7 @@
 // The owner's pilot review decided the Career Card is not part of the
 // pilot: it is a shareable export of a career result, and the pilot's job
 // is to get one candidate cleanly through Passport, CV, jobs, career and
-// tests. A sixth shareable artefact competing with the Passport Card for
+// tests. A sixth shareable artefact competing with the Security Passport for
 // "the thing you show people" is exactly the duplication this pass
 // removes.
 //

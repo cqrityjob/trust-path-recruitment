@@ -382,7 +382,7 @@ for (const pkg of DISCLOSURE_PACKAGES) {
 }
 
 // ---------------------------------------------------------------------------
-// 12. Passport Card is derived and locked
+// 12. Security Passport is derived and locked
 // ---------------------------------------------------------------------------
 {
   const empty = buildPassportCard(personaById("career-discovery-only"), EVAL);
@@ -596,11 +596,11 @@ for (const pkg of DISCLOSURE_PACKAGES) {
         );
       }
 
-      // (d) The milestone is verified-only and matches the Passport Card.
+      // (d) The milestone is verified-only and matches the Security Passport.
       const cardModel = buildPassportCard(persona, EVAL);
       expect(
         social.milestoneYears === cardModel.recognition.earnedYears,
-        `${persona.id}/${mode}: social milestone disagrees with the Passport Card.`,
+        `${persona.id}/${mode}: social milestone disagrees with the Security Passport.`,
       );
 
       // (e) The verify destination must not embed the holder's id.

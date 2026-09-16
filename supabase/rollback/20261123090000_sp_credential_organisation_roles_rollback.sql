@@ -1,5 +1,27 @@
 -- Local/test rollback only. No application rows are touched.
 BEGIN;
+-- Refuse rollback if a new title consent exists; never mutate disclosure history.
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM public.sp_credential_disclosure_policy WHERE 'profile_title'=ANY(permitted_fields)) THEN RAISE EXCEPTION 'SP_TITLE_CONSENT_PREVENTS_ROLLBACK'; END IF; END $$;
+ALTER TABLE public.sp_credential_disclosure_policy DROP CONSTRAINT sp_credential_disclosure_policy_permitted_fields_check;
+ALTER TABLE public.sp_credential_disclosure_policy ADD CONSTRAINT sp_credential_disclosure_policy_permitted_fields_check CHECK (permitted_fields <@ ARRAY['holder_name','identifier']::text[] AND array_position(permitted_fields,NULL) IS NULL);
+CREATE OR REPLACE FUNCTION public.sp_assert_credential_selection(_ids uuid[],_fields text[]) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
+BEGIN
+ IF auth.uid() IS NULL THEN RAISE EXCEPTION 'SP_NOT_AUTHENTICATED'; END IF;
+ IF NOT public.sp_passport_session_active() THEN RAISE EXCEPTION 'SP_SESSION_REVOKED' USING ERRCODE='42501'; END IF;
+ IF coalesce(cardinality(_ids),0) NOT BETWEEN 1 AND 200 OR array_position(_ids,NULL) IS NOT NULL
+ OR _fields IS NULL OR cardinality(_fields)>2 OR array_position(_fields,NULL) IS NOT NULL
+ OR NOT _fields <@ ARRAY['holder_name','identifier']::text[] THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_SELECTION'; END IF;
+ -- Row locks prevent correction/revocation changing selection during issuance.
+ PERFORM 1 FROM public.sp_claims c WHERE c.id=ANY(_ids) ORDER BY c.id FOR SHARE;
+ IF EXISTS(SELECT 1 FROM unnest(_ids) AS selected(id) WHERE NOT EXISTS(
+   SELECT 1 FROM public.sp_claims c WHERE c.id=selected.id AND c.holder_user_id=auth.uid()
+    AND c.lifecycle_state='active' AND public.sp_is_passport_credential(c.claim_type,c.credential_code)))
+ THEN RAISE EXCEPTION 'SP_CREDENTIAL_NOT_SHAREABLE'; END IF;
+END $$;
+REVOKE ALL ON FUNCTION public.sp_assert_credential_selection(uuid[],text[]) FROM PUBLIC,anon,authenticated,service_role;
+
+
 CREATE OR REPLACE FUNCTION public.sp_credential_payload_v2(_holder uuid,_ids uuid[],_fields text[],_purpose text,_locale text,_expires timestamptz,_created timestamptz)
 RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
 DECLARE _p public.sp_passport_profiles%ROWTYPE; _name text;

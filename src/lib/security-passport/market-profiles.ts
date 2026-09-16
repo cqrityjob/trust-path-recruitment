@@ -136,7 +136,7 @@ function isPending(c: MarketScopedClaim): boolean {
  *
  *  ── DETERMINISM IS A REQUIREMENT, NOT A NICETY ───────────────────────
  *
- *  The Passport Card, the compact card and the employer disclosure all render
+ *  The Security Passport, the compact card and the employer disclosure all render
  *  this list, and a holder who sees Sweden first on one surface and Dubai first
  *  on another has been shown two different documents about themselves. The
  *  order is therefore total and content-derived — never insertion order, never
