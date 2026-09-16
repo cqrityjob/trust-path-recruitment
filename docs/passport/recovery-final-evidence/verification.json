@@ -1,0 +1,67 @@
+{
+  "status": "LOCAL_GATES_PASSED",
+  "originMain": "6fc986af315ff30de4909efb1a076afd39bbd069",
+  "applicationAndSchemaSourceCommit": "623dfd4d2b7345fa4c4a3ddd54f934240093af6d",
+  "receiptFixtureAndCiRegistrationCommit": "dfdd046f6f6d66a4320c3025501896041c16aa94",
+  "sourceAndSchemaUnchangedSince623dfd4": true,
+  "database": {
+    "migrationReplay": 288,
+    "unexplainedFailingSuites": 0,
+    "originalFailingSuitesResolved": 38,
+    "passportAssertionsBeforeAndAfterRollback": 320,
+    "cvRepairAssertionsBeforeAndAfterRollback": 38
+  },
+  "browser": {
+    "fixturePassed": 1179,
+    "fixtureFailed": 0,
+    "fixtureSkipped": 258,
+    "livePassed": 258,
+    "liveFailed": 0,
+    "liveSkipped": 0,
+    "uniquePassed": 1437,
+    "remainingSkips": 0,
+    "flaky": 0
+  },
+  "realApi": {
+    "passed": 41,
+    "failed": 0
+  },
+  "realPassportBrowser": {
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  "mutations": {
+    "detected": 1064,
+    "groups": 30,
+    "filesRestored": true
+  },
+  "typechecks": "PASS",
+  "productionBuild": "PASS",
+  "changedFileLint": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "repositoryWideLint": {
+    "newFindings": 0,
+    "baselineErrors": 1117,
+    "finalErrors": 1002,
+    "baselineWarnings": 74,
+    "finalWarnings": 74,
+    "excludedFromCounts": "Unchanged historical worktree findings, separately retained in lint-comparison.json"
+  },
+  "deterministicChecks": {
+    "passed": 149,
+    "expectedSchemaDeploymentBlock": 1
+  },
+  "passportMigrations": [
+    "20261118100000_sp_international_passport_foundation.sql",
+    "20261119090000_sp_international_credential_wallet.sql",
+    "20261120090000_sp_credential_selective_sharing_v2.sql",
+    "20261121090000_sp_closed_credential_catalogue.sql"
+  ],
+  "additionalCvRepairMigration": "20261122090000_cv_owned_application_snapshot.sql",
+  "hostedChanges": "NONE",
+  "productionChanges": "NONE",
+  "deploymentGate": "BLOCKED: five pending hosted migrations; no hosted write, merge or deploy authorized"
+}

@@ -1,0 +1,52 @@
+{
+  "exitCode": 0,
+  "migrationsApplied": 288,
+  "failedSuites": [],
+  "passportAssertions": [
+    {
+      "count": 16,
+      "suite": "international_foundation (before rollback/reapply)"
+    },
+    {
+      "count": 18,
+      "suite": "international_wallet (before rollback/reapply)"
+    },
+    {
+      "count": 27,
+      "suite": "credential_sharing_v2 (before rollback/reapply)"
+    },
+    {
+      "count": 99,
+      "suite": "closed_catalogue (before rollback/reapply)"
+    },
+    {
+      "count": 16,
+      "suite": "international_foundation (after rollback/reapply)"
+    },
+    {
+      "count": 18,
+      "suite": "international_wallet (after rollback/reapply)"
+    },
+    {
+      "count": 27,
+      "suite": "credential_sharing_v2 (after rollback/reapply)"
+    },
+    {
+      "count": 99,
+      "suite": "closed_catalogue (after rollback/reapply)"
+    }
+  ],
+  "passportAssertionTotal": 320,
+  "cvRepairAssertions": [
+    {
+      "count": 19,
+      "phase": "(before rollback/reapply)"
+    },
+    {
+      "count": 19,
+      "phase": "(after rollback/reapply)"
+    }
+  ],
+  "cvRepairTotal": 38,
+  "originalFailingSuitesResolved": 38
+}

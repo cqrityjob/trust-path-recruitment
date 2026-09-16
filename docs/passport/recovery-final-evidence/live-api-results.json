@@ -1,0 +1,166 @@
+[
+  {
+    "name": "Real GoTrue identities and sessions",
+    "pass": true
+  },
+  {
+    "name": "Owner creates Passport profile through RLS",
+    "pass": true
+  },
+  {
+    "name": "Owner creates two credentials over real RPC",
+    "pass": true
+  },
+  {
+    "name": "Closed catalogue rejects custom and unknown definitions over RPC",
+    "pass": true
+  },
+  {
+    "name": "Governed metadata cannot be injected through RPC",
+    "pass": true
+  },
+  {
+    "name": "Wrong-market definition and unapproved no-expiry fail closed",
+    "pass": true
+  },
+  {
+    "name": "Candidate cannot write governed catalogue or issuers over REST",
+    "pass": true
+  },
+  {
+    "name": "Direct claim REST cannot alter governed identity or territory",
+    "pass": true
+  },
+  {
+    "name": "Inactive and deprecated definitions are unavailable over real RPC",
+    "pass": true
+  },
+  {
+    "name": "ASIS selection retains exactly the existing definitions and issuer",
+    "pass": true
+  },
+  {
+    "name": "Other candidate cannot read claims or metadata",
+    "pass": true
+  },
+  {
+    "name": "Employer has a real local tenant membership",
+    "pass": true
+  },
+  {
+    "name": "Employer cannot read private Passport",
+    "pass": true
+  },
+  {
+    "name": "Other candidate cannot correct owner claim",
+    "pass": true
+  },
+  {
+    "name": "Candidate cannot promote verification through RPC",
+    "pass": true
+  },
+  {
+    "name": "Candidate cannot promote verification through REST",
+    "pass": true
+  },
+  {
+    "name": "Profile and CV remain independent canonical records",
+    "pass": true
+  },
+  {
+    "name": "Private evidence bucket and owner-path upload",
+    "pass": true
+  },
+  {
+    "name": "Owner attaches real Storage evidence",
+    "pass": true
+  },
+  {
+    "name": "Another user cannot list or download evidence",
+    "pass": true
+  },
+  {
+    "name": "Altered owner path denied on upload",
+    "pass": true
+  },
+  {
+    "name": "Create v2 share selecting only Alpha with identifier consent",
+    "pass": true
+  },
+  {
+    "name": "Anonymous cannot enumerate claims or invoke private builders",
+    "pass": true
+  },
+  {
+    "name": "Real Edge Function issues secure handoff",
+    "pass": true
+  },
+  {
+    "name": "One-use handoff consumed through real gateway RPC",
+    "pass": true
+  },
+  {
+    "name": "Recipient sees selected fields and no other credential or storage path",
+    "pass": true
+  },
+  {
+    "name": "Employer cannot obtain evidence signed URL from claim disclosure",
+    "pass": true
+  },
+  {
+    "name": "Signed owner evidence URL expires",
+    "pass": true
+  },
+  {
+    "name": "Expired JWT fails closed at API",
+    "pass": true
+  },
+  {
+    "name": "Token tampering fails closed at Edge Function",
+    "pass": true
+  },
+  {
+    "name": "Revocation invalidates current recipient session immediately",
+    "pass": true
+  },
+  {
+    "name": "Revoked share cannot obtain a fresh gateway handoff",
+    "pass": true
+  },
+  {
+    "name": "Access and revocation audit events contain no secrets",
+    "pass": true
+  },
+  {
+    "name": "Second candidate can create own credential before logout",
+    "pass": true
+  },
+  {
+    "name": "Other candidate uploads own evidence before logout",
+    "pass": true
+  },
+  {
+    "name": "GoTrue revoked refresh token rejected",
+    "pass": true
+  },
+  {
+    "name": "Revoked access JWT cannot mutate Passport via direct REST/RPC",
+    "pass": true
+  },
+  {
+    "name": "Revoked access JWT cannot read or sign private evidence",
+    "pass": true
+  },
+  {
+    "name": "Expired package and session fail closed with audit",
+    "pass": true
+  },
+  {
+    "name": "Archive preserves private evidence ownership",
+    "pass": true
+  },
+  {
+    "name": "Corrections preserve version history",
+    "pass": true
+  }
+]

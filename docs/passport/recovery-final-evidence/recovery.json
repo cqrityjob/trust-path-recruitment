@@ -1,0 +1,29 @@
+{
+  "checkpoint": "aa092fb1d79cdfb995ad3785eb96778546e0382d",
+  "recoveredHead": "c2eb0b0",
+  "recoveredCommits": [
+    "c2eb0b049b4f66112ce92b100c26cc86cc00f9b2 Complete initial route loading before mounting the client router",
+    "783cfd4c16f12aeafdd6c404926add463016e4cf Track the CV submission dependency in the schema-first release gate",
+    "3bc13dc1f8b710a8d5561c34f7daa25e4766411b Bound each Career Center navigation within full tour budgets",
+    "e7cb39ff12c17e854143e0b705d97586df184011 Refresh claimed invitations after cancelling the pre-claim read",
+    "b0eacb64a471cf540d3ca9046633b481fd797cf9 Reconcile the pending release frontier with the CV repair",
+    "179b5092a0aaa9e5b8d94e731e95f24c62a553b3 Recover skipped local browser journeys with governed fixtures",
+    "da9b541dbb3a31639b56793555babb96902dae19 Repair authenticated CV submission without exposing private helpers",
+    "1813d32b9bda16d45fea3b4c07892b5fc22dbab5 Migrate Passport browser regressions to the governed wallet contract",
+    "9c0e41c32b14836c107e3501a887867f28691855 test(passport): migrate all legacy database regressions to governed catalogue",
+    "7427afb279b13fdf9710c88947d1d4ef22618687 fix(passport): preserve governed definition through legacy corrections",
+    "da53f6ca27b381f27302bc17b42af9fe0a753312 test(passport): migrate lifecycle CV and trust fixtures to governed claims"
+  ],
+  "recoveredUnstaged": [
+    "docs/passport/regression-migration-evidence/README.md",
+    "docs/passport/regression-migration-evidence/browser-failure-inventory.json"
+  ],
+  "recoveredStaged": [],
+  "recoveredUntracked": [],
+  "preservedStash": "stash@{0}: On main: pre-sync-audit working tree snapshot",
+  "originMain": "6fc986af315ff30de4909efb1a076afd39bbd069",
+  "mergeResult": "Already up to date; no history rewrite",
+  "verifiedSourceHead": "623dfd4d2b7345fa4c4a3ddd54f934240093af6d",
+  "hostedChanges": "NONE",
+  "productionChanges": "NONE"
+}
