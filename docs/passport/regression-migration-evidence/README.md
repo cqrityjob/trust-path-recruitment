@@ -33,6 +33,22 @@ No skipped case is counted as passing without a separate execution.
   and live facts, then returns the privacy-filtered snapshot. Application
   insertion stays SECURITY INVOKER; private helpers remain ungranted. Nineteen
   SQL assertions run both before and after its rollback/reapply.
+- An emailed assignment could be claimed while the pre-claim work-list request
+  was still in flight. React Query reused that stale request for `refetch` and
+  the invitation remained invisible. Overview and Academy now cancel the exact
+  in-flight work query before refetching. The delayed-response regression proves
+  both routes on all three browser projects (18 focused repeated cases).
+- CPU-throttled initial hydration could complete the client-only route load
+  between TanStack Router `Transitioner`'s render and commit, causing a React
+  update-before-mount error. The client entry awaits that existing initial load
+  before mounting React. It does not perform an extra load, suppress console
+  errors, or change authentication. The existing 200% zoom case now throttles
+  CPU to exercise this race on all three browser projects.
+
+The two multi-page Career Center tours need a total budget that covers every
+navigation and viewport. They now have a 90-second total budget, with a stricter
+20-second limit for each navigation. No guide, layout, zoom or accessibility
+assertion was removed.
 
 ## Migration order
 

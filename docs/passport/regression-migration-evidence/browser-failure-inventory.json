@@ -8,10 +8,10 @@
     "status": "corrected; passed complete or focused rerun",
     "durationMs": 30583,
     "error": "Test timeout of 30000ms exceeded.",
-    "rootCause": "Cold full-run timeout; no reproducible product failure.",
-    "correction": "Retained both link traversal and real 200% zoom assertions; both pass in the complete rerun.",
+    "rootCause": "The complete multi-page guide and viewport tours exceeded their shared 30-second test budget under concurrent release verification; individual navigations and layout assertions succeeded.",
+    "correction": "Each of the two multi-page tours has a 90-second total budget and a stricter 20-second per-navigation timeout. All link, viewport, accessibility and real 200% zoom assertions remain.",
     "retiredOpenModel": false,
-    "evidence": "passport-regression-browser-full-1.log"
+    "evidence": "passport-career-tour-repaired.log: six project cases pass; final complete-run evidence recorded separately."
   },
   {
     "file": "career-center-pilot.spec.ts",
@@ -22,10 +22,10 @@
     "status": "corrected; passed complete or focused rerun",
     "durationMs": 30249,
     "error": "Test timeout of 30000ms exceeded.",
-    "rootCause": "Cold full-run timeout; no reproducible product failure.",
-    "correction": "Retained both link traversal and real 200% zoom assertions; both pass in the complete rerun.",
+    "rootCause": "The complete multi-page guide and viewport tours exceeded their shared 30-second test budget under concurrent release verification; individual navigations and layout assertions succeeded.",
+    "correction": "Each of the two multi-page tours has a 90-second total budget and a stricter 20-second per-navigation timeout. All link, viewport, accessibility and real 200% zoom assertions remain.",
     "retiredOpenModel": false,
-    "evidence": "passport-regression-browser-full-1.log"
+    "evidence": "passport-career-tour-repaired.log: six project cases pass; final complete-run evidence recorded separately."
   },
   {
     "file": "my-career-home.spec.ts",
