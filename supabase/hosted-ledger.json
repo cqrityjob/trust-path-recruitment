@@ -11,10 +11,10 @@
     "Refresh it by re-reading the ledger read-only and replacing versions[] whole.",
     "A stale snapshot is worse than none, so the check prints its age."
   ],
-  "source": "Supabase management API list_migrations, read-only",
+  "source": "Supabase connector list_migrations and read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-15T17:30:00Z",
-  "readBy": "Post-merge read-only verification for BESKT PR 6 and PR 7: supabase_migrations.schema_migrations read on owner production wrygicdfxwjnrugduxnt after PR #254 merged to main as 25470f4e62b7ea3f0f7f360c5f4ae818b440a2f7 and PR #255 merged as 5e37060 (head f9e79da05cb3f842ccb8c3b19279d9ed3abecac5). 283 rows. The previous 281-row snapshot is proved unchanged rather than assumed: md5(string_agg(version || ':' || name, ',' ORDER BY version)) over production's rows excluding 20261117090000 and 20261118090000 is 3959c7c2e0a9bb8d33f37b7de5058efc, which is exactly the digest of the previously committed 281-row file, so no earlier row was rewritten. Over all 283 rows production gives 6e7b26cd3c434345d1b9f29ffb637630. The two added rows carry the canonical identities 20261117090000 / bcp_conduct_prompts_and_report and 20261118090000 / beskt_governed_content_authoring -- each migration filename's own version and slug, not a generated uuid, so no canonical-to-hosted alias is required and a clean replay executes nothing twice. Both were applied automatically by the official Supabase GitHub integration on merge; this evidence session issued no hosted write and re-ran neither migration.",
+  "readAt": "2026-09-16T15:58:33.795Z",
+  "readBy": "Owner-authorized PR #257 controlled connector application from pinned head 01efb0731359de2a8939c37ded817f008459366d. Exactly five reviewed migrations applied in dependency order, individually verified. Ledger 283 -> 288; original 283 entries unchanged. Before digest 6e7b26cd3c434345d1b9f29ffb637630; after digest 50f01cb436da2a3e1d8ae601c86fa3e0. Generated versions are actual hosted identities, not canonical alias rows. See docs/passport/hosted-application-evidence/verification.json. No additional migration, history repair, deletion, rollback, Auth change or Storage object change. Release remains blocked by numeric migration-history parity.",
   "versions": [
     {
       "version": "20260716153446",
@@ -933,6 +933,26 @@
       "name": "security_hardening_contract"
     },
     {
+      "version": "20260916155430",
+      "name": "sp_international_passport_foundation"
+    },
+    {
+      "version": "20260916155456",
+      "name": "sp_international_credential_wallet"
+    },
+    {
+      "version": "20260916155521",
+      "name": "sp_credential_selective_sharing_v2"
+    },
+    {
+      "version": "20260916155551",
+      "name": "sp_closed_credential_catalogue"
+    },
+    {
+      "version": "20260916155620",
+      "name": "cv_owned_application_snapshot"
+    },
+    {
       "version": "20260917090000",
       "name": "superadmin_permanent_account_deletion"
     },
@@ -1147,6 +1167,53 @@
     {
       "version": "20261118090000",
       "name": "beskt_governed_content_authoring"
+    }
+  ],
+  "canonicalToHostedMappings": [
+    {
+      "canonicalVersion": "20261118100000",
+      "canonicalFile": "20261118100000_sp_international_passport_foundation.sql",
+      "hostedVersion": "20260916155430",
+      "hostedName": "sp_international_passport_foundation",
+      "sha256": "89a6d170bea44f57f28fd63be7e9e7219de0bfb0f26f1ef8cf65bc03f1103a7c",
+      "evidence": "docs/passport/hosted-application-evidence/verification.json",
+      "doNotReExecute": true
+    },
+    {
+      "canonicalVersion": "20261119090000",
+      "canonicalFile": "20261119090000_sp_international_credential_wallet.sql",
+      "hostedVersion": "20260916155456",
+      "hostedName": "sp_international_credential_wallet",
+      "sha256": "c9870a981d8e743fcada8eae8e1695fb6362e26db913f2895576cb7c5544f651",
+      "evidence": "docs/passport/hosted-application-evidence/verification.json",
+      "doNotReExecute": true
+    },
+    {
+      "canonicalVersion": "20261120090000",
+      "canonicalFile": "20261120090000_sp_credential_selective_sharing_v2.sql",
+      "hostedVersion": "20260916155521",
+      "hostedName": "sp_credential_selective_sharing_v2",
+      "sha256": "717c8119a4f32b484db92af6e1c9b5a621387d90142768413d7108c3c152d817",
+      "evidence": "docs/passport/hosted-application-evidence/verification.json",
+      "doNotReExecute": true
+    },
+    {
+      "canonicalVersion": "20261121090000",
+      "canonicalFile": "20261121090000_sp_closed_credential_catalogue.sql",
+      "hostedVersion": "20260916155551",
+      "hostedName": "sp_closed_credential_catalogue",
+      "sha256": "b22d3fa2955d42583e113f2ab8fc0d70c47f9448c0f6f0d5dc99596eb35a3785",
+      "evidence": "docs/passport/hosted-application-evidence/verification.json",
+      "doNotReExecute": true
+    },
+    {
+      "canonicalVersion": "20261122090000",
+      "canonicalFile": "20261122090000_cv_owned_application_snapshot.sql",
+      "hostedVersion": "20260916155620",
+      "hostedName": "cv_owned_application_snapshot",
+      "sha256": "b5bd06661fef9dd5266ab362553a68d77583b8a4c8fd5fdc430a5a21c8139936",
+      "evidence": "docs/passport/hosted-application-evidence/verification.json",
+      "doNotReExecute": true
     }
   ]
 }
