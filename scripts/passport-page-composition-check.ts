@@ -67,7 +67,10 @@ check(
   "the wallet uses the desktop width and supporting card/settings form a two-column region",
 );
 check(
-  !/lg:order-[12]/.test(index) && /divide-y divide-border/.test(workspace),
+  !/lg:order-[12]/.test(index) &&
+    /data-premium-credential-record/.test(
+      read("src/components/security-passport/CredentialRecord.tsx"),
+    ),
   "the responsive wallet uses one markup and never reorders identity behind the credential list",
 );
 

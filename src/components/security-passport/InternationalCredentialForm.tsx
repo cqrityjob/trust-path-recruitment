@@ -1,7 +1,7 @@
 import { CredentialDateInput } from "./CredentialDateInput";
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Globe2, MapPin, ArrowRight, Lock, Check } from "lucide-react";
+import { Globe2, MapPin, ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
 import type {
   InternationalCredentialInput,
   InternationalPassportMetadata,
@@ -113,7 +113,7 @@ export function InternationalCredentialForm({
     setError(null);
   };
   const inputClass =
-    "mt-2 block min-h-12 w-full rounded-xl border border-input bg-background px-3 text-sm";
+    "mt-2 block min-h-12 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
   const steps = [
     copy("Omfattning", "Scope"),
     copy("Plats och kategori", "Location & category"),
@@ -172,26 +172,40 @@ export function InternationalCredentialForm({
   return (
     <section
       data-international-credential-form
-      className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
+      className="overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-lg)]"
     >
-      <header className="bg-[#0b1b2c] p-5 text-white sm:p-7">
-        <p className="text-xs uppercase tracking-[.18em] text-cyan-200">Security Passport</p>
-        <h2 className="mt-3 text-2xl font-semibold !text-white">
+      <header className="relative isolate overflow-hidden bg-primary p-5 text-primary-foreground sm:p-7">
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute top-0 right-0 h-40 w-32 border-l border-primary-foreground/10"
+        />
+        <p className="relative flex items-center gap-2 text-xs font-semibold uppercase tracking-[.16em] text-primary-foreground/65">
+          <FileCheck2 size={14} aria-hidden="true" />
+          Security Passport
+        </p>
+        <h2 className="relative mt-3 text-2xl font-semibold !text-primary-foreground">
           {initial
             ? copy("Ändra merit", "Edit credential")
             : copy("Lägg till merit", "Add credential")}
         </h2>
-        <p className="mt-2 text-sm text-slate-300">
+        <p className="relative mt-2 text-sm text-primary-foreground/70">
           {copy(
             "Din merit. Ditt underlag. Privat tills du delar.",
             "Your credential. Your evidence. Private until you share.",
           )}
         </p>
-        <ol aria-label={copy("Steg", "Steps")} className="mt-6 grid grid-cols-5 gap-2">
+        <ol
+          aria-label={copy("Steg", "Steps")}
+          className="relative mt-7 grid grid-cols-5 gap-2 border-t border-primary-foreground/15 pt-5"
+        >
           {steps.map((label, i) => (
             <li key={label} aria-current={step === i + 1 ? "step" : undefined}>
               <span
-                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${step === i + 1 ? "bg-cyan-200 font-bold text-slate-900" : "border border-white/25 text-slate-300"}`}
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-xs ${step === i + 1 ? "bg-primary-foreground font-bold text-primary" : step > i + 1 ? "border border-accent bg-accent/20 text-primary-foreground" : "border border-primary-foreground/25 text-primary-foreground/65"}`}
               >
                 {step > i + 1 ? <Check size={14} aria-hidden="true" /> : i + 1}
               </span>
@@ -201,16 +215,19 @@ export function InternationalCredentialForm({
         </ol>
       </header>
       <form
-        className="space-y-5 p-5 sm:p-7"
+        className="space-y-6 p-5 sm:p-7"
         onSubmit={(e) => {
           e.preventDefault();
           if (step < 5) setStep(step + 1);
           else void save();
         }}
       >
-        <h3 className="text-lg font-semibold">
-          {step}. {steps[step - 1]}
-        </h3>
+        <div className="border-b border-border pb-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            {copy("Professionell dokumentation", "Professional record")}
+          </p>
+          <h3 className="mt-1 text-xl font-semibold">{steps[step - 1]}</h3>
+        </div>
         {step === 1 && (
           <div className="grid gap-3 sm:grid-cols-2">
             {["international", "national"].map((value) => {
@@ -218,7 +235,7 @@ export function InternationalCredentialForm({
               return (
                 <label
                   key={value}
-                  className={`cursor-pointer rounded-2xl border p-5 ${scope === value ? "border-blue-600 bg-blue-50" : "border-border"}`}
+                  className={`cursor-pointer rounded-lg border p-5 transition-colors ${scope === value ? "border-accent bg-accent/5" : "border-border bg-background"}`}
                 >
                   <input
                     type="radio"
@@ -414,11 +431,14 @@ export function InternationalCredentialForm({
           </>
         )}
         {step >= 4 && selected && (
-          <div className="rounded-2xl bg-secondary/60 p-4">
-            <p className="text-xs text-muted-foreground">
+          <div className="relative overflow-hidden rounded-lg border border-border bg-secondary/40 p-5 pl-6">
+            <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {copy("Från den godkända katalogen", "From the approved catalogue")}
             </p>
-            <p className="mt-1 font-semibold">{selected[lang === "sv" ? "name_sv" : "name_en"]}</p>
+            <p className="mt-1 text-lg font-semibold">
+              {selected[lang === "sv" ? "name_sv" : "name_en"]}
+            </p>
             <p className="mt-1 text-sm">
               {selected.issuer_name} · {locationName(selected.region ?? selected.country)}
             </p>
@@ -488,7 +508,7 @@ export function InternationalCredentialForm({
                 )}
               </label>
             )}
-            <div className="rounded-xl border border-dashed border-border p-4 sm:col-span-2">
+            <div className="rounded-lg border border-dashed border-border bg-secondary/20 p-4 sm:col-span-2">
               {copy("Dokument (valfritt)", "Evidence (optional)")}
               <input
                 ref={fileInput}
@@ -521,7 +541,7 @@ export function InternationalCredentialForm({
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
-                  className="min-h-11 rounded-lg border border-input px-4 text-sm"
+                  className="min-h-11 rounded-md border border-input bg-background px-4 text-sm"
                   onClick={() => fileInput.current?.click()}
                 >
                   {copy("Välj fil", "Choose file")}
@@ -542,7 +562,7 @@ export function InternationalCredentialForm({
         )}
         {step === 5 && selected && (
           <>
-            <dl className="grid grid-cols-2 gap-4 text-sm">
+            <dl className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-secondary/30 p-5 text-sm sm:grid-cols-2">
               {[
                 [copy("Certifikats- eller licensnummer", "Identifier"), draft.identifier],
                 [copy("Utfärdad", "Issued"), draft.issued_on],
@@ -560,7 +580,7 @@ export function InternationalCredentialForm({
                 </div>
               ))}
             </dl>
-            <p className="rounded-xl border border-border p-4 text-sm">
+            <p className="rounded-lg border border-border p-4 text-sm">
               {copy(
                 "Sparas som registrerat av innehavaren. Ett bifogat dokument är underlag, inte en verifiering.",
                 "Saved as registered by holder. An attached document is evidence, not verification.",
@@ -587,7 +607,7 @@ export function InternationalCredentialForm({
             <button
               type="button"
               disabled={busy}
-              className="min-h-11 rounded-xl border border-border px-5 text-sm"
+              className="min-h-11 rounded-md border border-border px-5 text-sm"
               onClick={() => {
                 setStep(step - 1);
                 setError(null);
@@ -601,7 +621,7 @@ export function InternationalCredentialForm({
           <button
             type="submit"
             disabled={busy || !definitions || (step >= 3 && !selected)}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
             {busy
               ? copy("Sparar…", "Saving…")
@@ -615,12 +635,14 @@ export function InternationalCredentialForm({
           <button
             type="button"
             className="min-h-11 text-sm underline"
-            onClick={() =>
+            onClick={() => {
+              const claimId = savedId.current;
+              if (!claimId) return;
               void navigate({
                 to: "/passport/entry/$kind/$entryId",
-                params: { kind: "claim", entryId: savedId.current! },
-              })
-            }
+                params: { kind: "claim", entryId: claimId },
+              });
+            }}
           >
             {copy("Öppna sparad merit", "Open saved credential")}
           </button>

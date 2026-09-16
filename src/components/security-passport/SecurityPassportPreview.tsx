@@ -1,4 +1,4 @@
-import { Lock, ArrowUpRight } from "lucide-react";
+import { Lock, ArrowUpRight, ShieldCheck, UserRound } from "lucide-react";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -33,22 +33,22 @@ export function SecurityPassportPreview({
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary-foreground/40"
       />
-      <header className="flex flex-wrap items-start justify-between gap-4">
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
         <div>
           <p className="text-lg font-semibold tracking-tight">CQrityjob</p>
           <p className="mt-1 text-xs tracking-[.16em] text-primary-foreground/65">
             SECURITY PASSPORT
           </p>
         </div>
-        <span className="flex items-center gap-1.5 rounded-full bg-primary-foreground/10 px-3 py-1.5 text-xs text-primary-foreground/80">
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-primary-foreground/15 bg-primary-foreground/10 px-3 py-1.5 text-xs text-primary-foreground/80">
           <Lock size={12} aria-hidden="true" />
           {copy("Privat förhandsvisning", "Private preview")}
         </span>
       </header>
-      <div className="my-7 flex items-center gap-4">
+      <div className="my-7 grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-4">
         <div
           aria-hidden="true"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/10 text-xl font-medium text-primary-foreground"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-primary-foreground/15 bg-primary-foreground/10 text-xl font-medium text-primary-foreground"
         >
           {identity?.displayName
             ?.split(" ")
@@ -64,8 +64,9 @@ export function SecurityPassportPreview({
           <p className="mt-1 break-words text-sm text-primary-foreground/80">
             {title || copy("Lägg till yrkestitel i Profil", "Add a professional title in Profile")}
           </p>
-          <p className="mt-1 text-xs text-primary-foreground/55">
-            {copy("Uppgifter från din profil", "Information from your profile")}
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-primary-foreground/55">
+            <UserRound size={12} aria-hidden="true" />
+            {copy("Profiluppgifter", "Profile information")}
           </p>
         </div>
       </div>
@@ -101,7 +102,27 @@ export function SecurityPassportPreview({
           </p>
         </div>
       )}
-      <footer className="mt-6 flex items-center justify-between gap-4 border-t border-primary-foreground/15 pt-4 text-xs text-primary-foreground/65">
+      <div className="mt-6 grid grid-cols-2 gap-3 border-t border-primary-foreground/15 pt-4">
+        <div className="rounded-md bg-primary-foreground/[0.07] p-3">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-primary-foreground/50">
+            {copy("Integritet", "Privacy")}
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium">
+            <Lock size={12} aria-hidden="true" />
+            {copy("Styrs av innehavaren", "Holder controlled")}
+          </p>
+        </div>
+        <div className="rounded-md bg-primary-foreground/[0.07] p-3">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-primary-foreground/50">
+            {copy("Tillitsnivå", "Trust state")}
+          </p>
+          <p className="mt-1 flex items-center gap-1.5 text-xs font-medium">
+            <ShieldCheck size={12} aria-hidden="true" />
+            {copy("Visas per merit", "Shown per credential")}
+          </p>
+        </div>
+      </div>
+      <footer className="mt-4 flex items-center justify-between gap-4 border-t border-primary-foreground/15 pt-4 text-xs text-primary-foreground/65">
         <span>
           {claims.length} {copy("valda meriter", "selected credentials")}
         </span>
