@@ -698,6 +698,10 @@ test.describe("personal-data read states", () => {
 
 test.describe("structure and access", () => {
   test("every internal Career Center link lands on a published guide", async ({ page }) => {
+    // This tours many separate pages, each including network-idle settling.
+    // Bound each navigation while giving the complete tour its own budget.
+    test.setTimeout(90_000);
+    page.setDefaultNavigationTimeout(20_000);
     await stubServerFns(page, BASE_REPLIES);
     await page.goto(`${HUB}?all=1&from=security-officer`, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-path-from]");
@@ -779,6 +783,9 @@ test.describe("structure and access", () => {
   });
 
   test("1440, 640, 375 and real 200% zoom hold without horizontal scroll", async ({ page }) => {
+    // Several page loads and real browser zoom changes share this test.
+    test.setTimeout(90_000);
+    page.setDefaultNavigationTimeout(20_000);
     await stubServerFns(page, BASE_REPLIES);
 
     await page.setViewportSize({ width: 1440, height: 900 });
