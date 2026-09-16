@@ -40,10 +40,19 @@ No skipped case is counted as passing without a separate execution.
   both routes on all three browser projects (18 focused repeated cases).
 - CPU-throttled initial hydration could complete the client-only route load
   between TanStack Router `Transitioner`'s render and commit, causing a React
-  update-before-mount error. The client entry awaits that existing initial load
-  before mounting React. It does not perform an extra load, suppress console
-  errors, or change authentication. The existing 200% zoom case now throttles
-  CPU to exercise this race on all three browser projects.
+  update-before-mount error. Recovery verification found that awaiting the load
+  before mounting also discarded client-only Suspense boundaries and caused
+  login hydration mismatches. The client entry now commits the initial mount
+  synchronously, preserving those boundaries before asynchronous loading ends.
+  Subsequent navigation retains normal router scheduling. The existing 200%
+  zoom case throttles CPU, and `client-hydration.spec.ts` checks direct and
+  legacy login, both languages, retained form input and absence of React errors
+  on all three browser projects.
+- Legacy auth URL redirects now run on the server, since they need only the
+  validated URL and no browser session. This prevents redirecting to a different
+  client-only route while the original server document is still hydrating.
+  Browser tests verify all five compatibility URLs return HTTP redirects,
+  retain a safe Passport return path and refuse external return destinations.
 
 The two multi-page Career Center tours need a total budget that covers every
 navigation and viewport. They now have a 90-second total budget, with a stricter
@@ -74,6 +83,12 @@ BESKT preparation fixtures seeded. The local Vite server uses those local
 credentials with `VITE_JOBS_ENABLED=true`, `VITE_EMPLOYER_PORTAL_ENABLED=true`
 and `VITE_PASSPORT_LOCAL_INTEGRATION=1`. These process-only flags do not edit
 repository or hosted environment bindings.
+Both `SUPABASE_URL` and `VITE_SUPABASE_URL` must point at the task-local API.
+Set both publishable-key variables from its local `ANON_KEY`, and the server-only
+`SUPABASE_SERVICE_ROLE_KEY` from its local `SERVICE_ROLE_KEY`. Never prefix the
+service-role variable with `VITE_`. Omitting the server-only override inherits
+the unrelated `.env.local` Storage credential and invalidates live submission
+results.
 
 The private CLI status environment file is `/private/tmp/passport-phase2-status.env`.
 It contains credentials and **must not be committed or included in evidence**.
@@ -111,6 +126,10 @@ The fixture-only complete browser run uses `http://127.0.0.1:3119`, with
 `HUB_SHOTS`, `CV_SHOTS`, `PASSPORT_LEGACY_SHOTS` outside the repository. Its
 explicitly gated local cases are reconciled against the separate live runs,
 not silently excluded from the aggregate.
+Its server must explicitly use the `.env` Supabase reference expected by the
+intercepted fixtures, rather than inheriting the unrelated `.env.local` reference.
+These are process-only overrides; fixtures intercept backend calls and never
+obtain a real hosted session.
 
 Full database verification uses `scripts/db-test.sh` on a disposable database.
 It proves the final schema first, then walks historical releases in dependency

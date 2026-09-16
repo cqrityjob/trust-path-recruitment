@@ -17,7 +17,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { unifiedAuthHref } from "@/lib/auth/legacy-entry";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
+  // Resolve this URL-only redirect on the server before client hydration.
   head: () => ({
     meta: [{ title: "Logga in — CQrityjob" }, { name: "robots", content: "noindex, nofollow" }],
   }),
