@@ -13,6 +13,10 @@
         {
           "kind": "function",
           "object": "cv_owned_application_snapshot"
+        },
+        {
+          "kind": "function",
+          "object": "sp_submit_application_with_cv_source"
         }
       ],
       "note": "Real local API regression found invoker submission calling revoked private CV helpers. Owner-checked read wrapper preserves private helpers and application RLS. Hosted changes NOT authorised.",
