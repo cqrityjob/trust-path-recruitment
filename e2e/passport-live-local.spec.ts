@@ -64,13 +64,20 @@ test("real owner adds and selectively shares a credential, recipient loses acces
     "mobile-390": "INTL_ISACA_CISM",
   };
   const code = definitionCodes[testInfo.project.name as keyof typeof definitionCodes];
-  await page.getByRole("link", { name: "Add credential", exact: true }).click();
+  await page
+    .locator("[data-credential-wallet]")
+    .getByRole("link", { name: "Add credential", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   const selector = page.getByLabel("Approved credential");
   await selector.selectOption(code);
   const title = (await selector.locator(`option[value="${code}"]`).textContent())!.split(" — ")[0];
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page.getByLabel("Original credential name", { exact: true })).toHaveCount(0);
   await page.getByLabel("Credential identifier (optional)").fill("BROWSER-OPTIONAL");
-  await page.getByRole("button", { name: "Save as self-reported", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
   await expect(page).toHaveURL(/\/passport\/entry\/claim\//, { timeout: 30_000 });
   await expect(page.locator("main")).toContainText(title);
   const claimId = new URL(page.url()).pathname.split("/").pop()!;

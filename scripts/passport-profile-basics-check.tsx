@@ -555,8 +555,8 @@ console.log("\nPLACEMENT -- Mitt Security Passport > Mina uppgifter");
   // Passport bugfix, and the tabs are a separate, reviewed decision.
   const shell = read("src/routes/_authenticated.passport.tsx");
   ck(
-    "the Passport navigation still has its four tabs",
-    (shell.match(/\{ to: "\/passport/g) ?? []).length === 4,
+    "the Passport navigation has six product destinations",
+    (shell.match(/to: "\/passport/g) ?? []).length === 6,
   );
 }
 

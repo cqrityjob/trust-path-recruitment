@@ -35,7 +35,7 @@ const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
 
 const INDEX = "src/routes/_authenticated.passport.index.tsx";
 const SIDE = "src/components/security-passport/PassportSideColumn.tsx";
-const WORKSPACE = "src/components/security-passport/PassportWorkspace.tsx";
+const WORKSPACE = "src/components/security-passport/CredentialWallet.tsx";
 const SHELL = "src/routes/_authenticated.passport.tsx";
 const PASSPORT_I18N = "src/lib/security-passport/i18n.ts";
 const APP_I18N = "src/i18n/dictionaries.ts";
@@ -62,10 +62,13 @@ console.log("\n1 · the two columns exist, and the sketch's left column is the l
 
 check(/<PassportSideColumn/.test(index), "the Passport page renders a side column");
 check(/<CredentialWallet/.test(index), "and the Passport workspace");
-check(/lg:flex-row/.test(index), "they sit side by side from lg upwards, as the sketch draws them");
 check(
-  /lg:order-1/.test(index) && /lg:order-2/.test(index),
-  "the sketch's left/right is restored by order at lg, not by a second markup",
+  /max-w-\[1280px\]/.test(index) && /lg:grid-cols-2/.test(index),
+  "the wallet uses the desktop width and supporting card/settings form a two-column region",
+);
+check(
+  !/lg:order-[12]/.test(index) && /md:grid-cols-2 xl:grid-cols-3/.test(workspace),
+  "the responsive wallet uses one markup and never reorders identity behind the credential list",
 );
 
 // SOURCE ORDER IS THE MOBILE ORDER. On a phone the holder's own record is
@@ -115,7 +118,7 @@ check(
 /* ------------------------------------------------------------------ */
 console.log("\n4 · the main column's two actions are near the top, once each");
 
-check(/<AddMeritChooser/.test(workspace), "add a credential is offered");
+check(/to="\/passport\/credentials\/new"/.test(workspace), "add a credential is offered");
 check(/data-cta="share"/.test(workspace), "and sharing the Passport");
 check(
   (workspace.match(/data-cta="share"/g) ?? []).length === 1,
@@ -123,14 +126,11 @@ check(
 );
 const headerEnd = workspace.indexOf("</header>");
 check(
-  headerEnd > 0 && workspace.indexOf("<AddMeritChooser") < headerEnd,
+  headerEnd > 0 && workspace.indexOf('to="/passport/credentials/new"') < headerEnd,
   "add a credential sits inside the page header, near the top",
 );
 check(headerEnd > 0 && workspace.indexOf('data-cta="share"') < headerEnd, "and so does share");
-check(
-  /pt\("overview\.title"\)/.test(workspace),
-  'the main column is headed "Mitt Security Passport"',
-);
+check(/identity\?\.displayName/.test(workspace), "the main column names the holder from Profile");
 
 /* ------------------------------------------------------------------ */
 console.log("\n5 · no label collides with another product's");

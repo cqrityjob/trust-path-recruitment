@@ -5,6 +5,7 @@ import {
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
 import { Lock } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/_authenticated/passport/card")({
 
 function PassportCardRoute() {
   const { pt, lang } = usePassportCopy();
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const load = useServerFn(getMyPassport);
   const loadMetadata = useServerFn(getInternationalPassportMetadata);
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
@@ -53,9 +55,10 @@ function PassportCardRoute() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 lg:flex-row lg:items-start">
-      <div className="w-full lg:w-[380px] lg:shrink-0">
+    <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="w-full lg:sticky lg:top-28">
         <CompactPassportCard
+          selectedIds={selectedIds}
           metadata={metadata ?? undefined}
           snapshot={snapshot}
           today={new Date().toISOString().slice(0, 10)}
@@ -63,6 +66,42 @@ function PassportCardRoute() {
       </div>
 
       <div className="min-w-0 flex-1 space-y-4">
+        <header>
+          <p className="text-xs uppercase tracking-[.16em] text-muted-foreground">
+            Security Passport
+          </p>
+          <h1 className="mt-2 text-3xl font-semibold">Trust Card</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {lang === "sv"
+              ? "Förhandsvisa ditt urval. Välj sedan uppgifter, mottagarvy och giltighetstid i delningsflödet."
+              : "Preview your selection. Then choose fields, recipient preview and expiry in the sharing flow."}
+          </p>
+        </header>
+        <fieldset className="rounded-2xl border border-border bg-card p-5">
+          <legend className="px-2 text-sm font-semibold">
+            {lang === "sv" ? "Välj för privat förhandsvisning" : "Select for private preview"}
+          </legend>
+          <div className="divide-y divide-border">
+            {credentialPassportHolder(snapshot.holder).claims.map((c) => (
+              <label key={c.id} className="flex min-h-14 items-center gap-3 py-3 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(c.id)}
+                  onChange={(e) =>
+                    setSelectedIds(
+                      e.target.checked
+                        ? [...selectedIds, c.id]
+                        : selectedIds.filter((id) => id !== c.id),
+                    )
+                  }
+                />
+                <span className="break-words">
+                  {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
         <section className="rounded-xl border border-border bg-card p-5">
           <span className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
             <Lock aria-hidden="true" className="h-3 w-3" />

@@ -1,3 +1,4 @@
+import { CredentialDefinitionContext } from "@/components/security-passport/CredentialDefinitionContext";
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
 import {
@@ -497,12 +498,12 @@ function PassportEntryRoute() {
                 ? pt(`claims.type.${claim.claimType}` as PassportCopyKey)
                 : pt("claim.experienceTitle")}
             </p>
-            <h2
+            <h1
               className="mt-1 text-2xl font-semibold tracking-tight text-foreground"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {title}
-            </h2>
+            </h1>
           </div>
         </div>
 
@@ -511,7 +512,11 @@ function PassportEntryRoute() {
             <>
               <div>
                 <dt className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {pt("claims.issuer")}
+                  {isPassportCredential(claim)
+                    ? lang === "sv"
+                      ? "Organisation i din registrerade uppgift"
+                      : "Organisation in your recorded claim"
+                    : pt("claims.issuer")}
                 </dt>
                 <dd className="mt-0.5 text-sm text-foreground">{claim.issuerName}</dd>
               </div>
@@ -630,6 +635,10 @@ function PassportEntryRoute() {
           </Link>
         </section>
       ) : null}
+
+      {claim && isPassportCredential(claim) && (
+        <CredentialDefinitionContext code={claim.credentialCode} metadata={international} />
+      )}
 
       <VerificationPanel
         assertionLevel={subject.assertionLevel}
@@ -784,6 +793,9 @@ function PassportEntryRoute() {
               {isPassportCredential(claim) ? (
                 <InternationalCredentialForm
                   metadata={international}
+                  onUpload={(claimId, file) =>
+                    doUpload({ data: { ...file, claimId, periodId: null } })
+                  }
                   onSave={(data) => saveInternational({ data })}
                   key={claim.id}
                   initial={{

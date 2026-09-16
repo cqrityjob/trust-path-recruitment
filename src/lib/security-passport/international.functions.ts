@@ -7,7 +7,27 @@ import type {
   CredentialVerificationEvent,
 } from "./international";
 
+export interface CredentialOrganisationRole {
+  credential_code: string;
+  role: "issuer" | "regulator" | "training_provider" | "verification_authority";
+  authority_id: string | null;
+  certification_issuer_id: string | null;
+  document_specific: boolean;
+  source_url: string;
+  checked_on: string;
+}
+export interface CredentialDefinitionReview {
+  credential_code: string;
+  professional_domain: string;
+  source_url: string;
+  checked_on: string;
+  validity_sv: string;
+  validity_en: string;
+}
 export interface InternationalPassportMetadata {
+  definitionScopes?: readonly { code: string; scope_code: string | null }[];
+  organisationRoles?: readonly CredentialOrganisationRole[];
+  definitionReviews?: readonly CredentialDefinitionReview[];
   definitions?: readonly ApprovedCredentialDefinition[];
   details: readonly CredentialDetails[];
   verificationEvents: readonly CredentialVerificationEvent[];
@@ -18,39 +38,64 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<InternationalPassportMetadata> => {
     const db = context.supabase;
-    const [catalogue, details, jurisdictions, authorities, issuers, requests, decisions] =
-      await Promise.all([
-        db.from("sp_approved_credential_catalogue" as never).select("*"),
-        // New schema stays explicitly pending in release-state.json. RLS resolves
-        // claim ownership; there is no caller-provided holder or service client.
-        db
-          .from("sp_credential_details" as never)
-          .select(
-            "claim_id,credential_class,original_language,issuing_country_code,issuing_jurisdiction_code,validity_jurisdiction_code,no_expiry",
-          ),
-        db
-          .from("sp_credential_jurisdictions" as never)
-          .select("code,jurisdiction_type,country_code,subdivision_code,name_sv,name_en"),
-        db.from("sp_authorities").select("id,name_local,official_url").eq("is_active", true),
-        db
-          .from("sp_certification_issuers")
-          .select("id,display_name,official_url,public_verification_url")
-          .eq("is_active", true),
-        db.from("sp_verification_requests").select("id,claim_id"),
-        db
-          .from("sp_verification_decisions")
-          .select("request_id,decision,decided_at,valid_until")
-          .order("decided_at", { ascending: true }),
-      ]);
+    const [
+      catalogue,
+      details,
+      jurisdictions,
+      authorities,
+      issuers,
+      requests,
+      decisions,
+      roles,
+      definitionReviews,
+      scopes,
+    ] = await Promise.all([
+      db.from("sp_approved_credential_catalogue" as never).select("*"),
+      // New schema stays explicitly pending in release-state.json. RLS resolves
+      // claim ownership; there is no caller-provided holder or service client.
+      db
+        .from("sp_credential_details" as never)
+        .select(
+          "claim_id,credential_class,original_language,issuing_country_code,issuing_jurisdiction_code,validity_jurisdiction_code,no_expiry",
+        ),
+      db
+        .from("sp_credential_jurisdictions" as never)
+        .select("code,jurisdiction_type,country_code,subdivision_code,name_sv,name_en"),
+      db.from("sp_authorities").select("id,name_local,official_url").eq("is_active", true),
+      db
+        .from("sp_certification_issuers")
+        .select("id,display_name,official_url,public_verification_url")
+        .eq("is_active", true),
+      db.from("sp_verification_requests").select("id,claim_id"),
+      db
+        .from("sp_verification_decisions")
+        .select("request_id,decision,decided_at,valid_until")
+        .order("decided_at", { ascending: true }),
+      db.from("sp_credential_organisation_roles" as never).select("*"),
+      db.from("sp_credential_definition_reviews" as never).select("*"),
+      db.from("sp_credential_types").select("code,scope_code"),
+    ]);
     if (
-      [details, jurisdictions, authorities, issuers, requests, decisions, catalogue].some(
-        (r) => r.error,
-      )
+      [
+        details,
+        jurisdictions,
+        authorities,
+        issuers,
+        requests,
+        decisions,
+        catalogue,
+        roles,
+        definitionReviews,
+        scopes,
+      ].some((r) => r.error)
     ) {
       throw new Error("International Passport metadata unavailable");
     }
     const claimOf = new Map((requests.data ?? []).map((r) => [r.id, r.claim_id]));
     return {
+      definitionScopes: scopes.data as unknown as { code: string; scope_code: string | null }[],
+      organisationRoles: roles.data as unknown as CredentialOrganisationRole[],
+      definitionReviews: definitionReviews.data as unknown as CredentialDefinitionReview[],
       definitions: catalogue.data as unknown as ApprovedCredentialDefinition[],
       verificationEvents: (decisions.data ?? []).flatMap((d) => {
         const claimId = claimOf.get(d.request_id);

@@ -1,109 +1,114 @@
+import { Lock, ArrowUpRight } from "lucide-react";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
-import {
-  credentialPassportHolder,
-  PASSPORT_OWNERSHIP,
-} from "@/lib/security-passport/credential-passport";
+import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { validityOf } from "@/lib/security-passport/validity";
 import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
-import {
-  credentialDate,
-  credentialClass,
-  CREDENTIAL_CLASSES,
-  currentCredentialVerification,
-} from "@/lib/security-passport/international";
-import { AssertionChip } from "./AssertionChip";
-import { LifecycleChip } from "./LifecycleChip";
+import { credentialProductStatus } from "@/lib/security-passport/product-status";
 
-/** Private summary. Recipient content is separately authorised by a share policy. */
+/** Owner-only preview. Selection does not create a share or disclose anything. */
 export function CompactPassportCard({
   snapshot,
   today,
   metadata,
+  selectedIds = [],
 }: {
   snapshot: PassportSnapshot;
   today: string;
   metadata?: InternationalPassportMetadata;
+  selectedIds?: readonly string[];
 }) {
   const { lang } = usePassportCopy();
   const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
-  const claims = credentialPassportHolder(snapshot.holder).claims.map((c) =>
-    currentCredentialVerification(c, metadata?.verificationEvents ?? [], today),
+  const claims = credentialPassportHolder(snapshot.holder).claims.filter((c) =>
+    selectedIds.includes(c.id),
   );
   const identity = snapshot.profileIdentity;
   const title = lang === "sv" ? identity?.titleSv : identity?.titleEn;
   return (
     <article
       data-compact-passport-card
-      className="min-w-0 overflow-hidden rounded-xl border border-border bg-card"
+      className="relative isolate min-w-0 overflow-hidden rounded-3xl border border-slate-500 bg-[#0b1b2c] p-6 text-white shadow-xl sm:p-8"
     >
-      <header className="border-b border-border bg-secondary/40 p-4">
-        <p className="text-xs font-semibold uppercase tracking-widest">Security Passport</p>
-        <h2 className="mt-2 break-words text-lg font-semibold">
-          {identity?.displayName || copy("Mitt Passport", "My Passport")}
-        </h2>
-        <p className="mt-1 break-words text-sm">{title || PASSPORT_OWNERSHIP[lang].noTitle}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{PASSPORT_OWNERSHIP[lang].titleSource}</p>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-10"
+        style={{
+          backgroundImage:
+            "repeating-radial-gradient(ellipse at 120% 0%, transparent 0px, transparent 18px, #7dd3fc 19px, transparent 20px)",
+        }}
+      />
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-2xl font-semibold tracking-tight">
+            <span className="text-cyan-200">CQ</span>rityjob
+          </p>
+          <p className="mt-1 text-xs tracking-[.16em] text-slate-300">SECURITY PASSPORT</p>
+        </div>
+        <span className="flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs text-slate-200">
+          <Lock size={12} aria-hidden="true" />
+          {copy("Privat förhandsvisning", "Private preview")}
+        </span>
       </header>
-      <ul className="divide-y divide-border">
-        {claims.slice(0, 3).map((c) => {
-          const detail = metadata?.details.find((d) => d.claim_id === c.id);
-          const territory = metadata?.jurisdictions.find(
-            (j) => j.code === detail?.validity_jurisdiction_code,
-          );
-          const state = validityOf(c.lifecycleState, c.validUntil, today).effectiveState;
-          return (
-            <li className="space-y-2 p-4" key={c.id}>
-              <h3 className="break-words text-sm font-semibold">
-                {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
-              </h3>
-              <p className="text-xs">
-                {CREDENTIAL_CLASSES[credentialClass(c, detail)][lang]} ·{" "}
-                {territory
-                  ? lang === "sv"
-                    ? territory.name_sv
-                    : territory.name_en
-                  : c.jurisdictionCode ||
-                    copy("Jurisdiktion inte angiven", "Jurisdiction not stated")}
-              </p>
-              <p className="break-words text-xs">
-                {copy("Utfärdare", "Issuer")}: {c.issuerName || copy("Inte angivet", "Not stated")}
-              </p>
-              <p className="text-xs">
-                {copy("Giltig till", "Valid until")}:{" "}
-                {!c.validUntil && detail?.no_expiry === true
-                  ? copy("Uttryckligen utan utgångsdatum", "Explicitly no expiry")
-                  : credentialDate(c.validUntil, lang)}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <AssertionChip
-                  level={c.assertionLevel}
-                  lifecycleState={state}
-                  provenance={{ ...c, subjectKind: "credential" }}
-                  size="sm"
-                />
-                <LifecycleChip state={state} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <footer className="space-y-2 border-t border-border p-4 text-xs text-muted-foreground">
-        <p>
-          {claims.length} {copy("yrkesbevis i plånboken", "credentials in the wallet")}
-        </p>
-        <p>
-          {copy(
-            "Privat sammanfattning. Välj yrkesbevis och fält innan du delar. Underlag delas inte automatiskt.",
-            "Private summary. Select credentials and fields before sharing. Evidence is not shared automatically.",
-          )}
-        </p>
-        <p>
-          {copy(
-            "Status gäller angiven omfattning och giltighet. Inget generellt eller internationellt godkännande.",
-            "Status covers the recorded scope and validity. It does not establish general or international acceptance.",
-          )}
-        </p>
+      <div className="my-8 flex items-center gap-4">
+        <div
+          aria-hidden="true"
+          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/30 bg-white/5 text-2xl font-light text-cyan-100"
+        >
+          {identity?.displayName
+            ?.split(" ")
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((n) => n[0])
+            .join("") || "CQ"}
+        </div>
+        <div className="min-w-0">
+          <h2 className="break-words text-2xl font-medium tracking-tight !text-white">
+            {identity?.displayName || copy("Mitt Trust Card", "My Trust Card")}
+          </h2>
+          <p className="mt-1 break-words text-sm text-slate-200">
+            {title || copy("Lägg till yrkestitel i Profil", "Add a professional title in Profile")}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            {copy("Uppgifter från din profil", "Information from your profile")}
+          </p>
+        </div>
+      </div>
+      {claims.length ? (
+        <ul className="space-y-3 border-t border-white/15 pt-4">
+          {claims.map((c) => {
+            const state = credentialProductStatus(c, metadata?.verificationEvents ?? [], today);
+            return (
+              <li key={c.id} className="flex items-start justify-between gap-3">
+                <span className="min-w-0 break-words text-sm">
+                  {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+                </span>
+                <span className="max-w-[45%] shrink-0 text-right text-xs text-cyan-100">
+                  {state.label[lang]}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-white/25 bg-white/5 p-4">
+          <p className="text-sm font-medium">
+            {copy("Ditt urval. Din kontroll.", "Your selection. Your control.")}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-slate-300">
+            {copy(
+              "Välj vilka yrkesbevis som ska ingå innan du delar.",
+              "Choose the credentials to include before sharing.",
+            )}
+          </p>
+        </div>
+      )}
+      <footer className="mt-6 flex items-center justify-between gap-4 border-t border-white/15 pt-4 text-xs text-slate-300">
+        <span>
+          {claims.length} {copy("valda yrkesbevis", "selected credentials")}
+        </span>
+        <span className="flex items-center gap-2">
+          Trust Card <ArrowUpRight size={14} aria-hidden="true" />
+        </span>
       </footer>
     </article>
   );

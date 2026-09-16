@@ -31,9 +31,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column is moved first in source, so at 375px a card preview pushes every merit off the first screen",
     file: INDEX,
-    find: '      <div className="min-w-0 flex-1 lg:order-2">',
+    find: '      <div className="min-w-0 flex flex-col gap-6">',
     replace:
-      '      <PassportSideColumn snapshot={snapshot} today="2026-09-15" />\n      <div className="min-w-0 flex-1 lg:order-2">',
+      '      <PassportSideColumn snapshot={snapshot} today="2026-09-15" />\n      <div className="min-w-0 flex flex-col gap-6">',
     guard: GUARD,
     expect: "the workspace comes first in source",
   },

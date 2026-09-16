@@ -99,9 +99,16 @@ function PassportWorkspaceRoute() {
   if (!snapshot || !metadata || !snapshot.profile)
     return <p role="status">{lang === "sv" ? "Läser yrkesbevis…" : "Loading credentials…"}</p>;
   return (
-    <div data-passport-workspace className="mx-auto flex max-w-[1180px] flex-col gap-6 lg:flex-row">
-      <div className="min-w-0 flex-1 lg:order-2">
+    <div data-passport-workspace className="mx-auto flex max-w-[1280px] flex-col gap-8">
+      <div className="min-w-0 flex flex-col gap-6">
         <ScrollToHashOnceReady />
+        <CredentialWallet
+          snapshot={snapshot}
+          metadata={metadata}
+          reviews={reviews}
+          reviewState={reviewState}
+          now={new Date().toISOString().slice(0, 10)}
+        />
         <section id="attention" aria-labelledby="attention-heading" tabIndex={-1}>
           <h2 id="attention-heading" className="sr-only">
             {pt("att.title")}
@@ -130,19 +137,12 @@ function PassportWorkspaceRoute() {
             }
           />
         </section>
-        <CredentialWallet
-          snapshot={snapshot}
-          metadata={metadata}
-          reviews={reviews}
-          reviewState={reviewState}
-          now={new Date().toISOString().slice(0, 10)}
-        />
       </div>
       <PassportSideColumn
         metadata={metadata}
         snapshot={snapshot}
         today={new Date().toISOString().slice(0, 10)}
-        className="lg:order-1"
+        className="lg:!w-full lg:grid lg:grid-cols-2 lg:items-start lg:gap-6"
       />
     </div>
   );

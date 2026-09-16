@@ -1,3 +1,4 @@
+import { SecureShareQr } from "@/components/security-passport/SecureShareQr";
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import {
   createCredentialShare,
@@ -964,6 +965,8 @@ function CreatedPanel({
           {pt(outcome.previousRevoked ? "sel.reissue.previousRevoked" : "sel.reissue.previousKept")}
         </p>
       ) : null}
+
+      {shareUrl && <SecureShareQr url={shareUrl} />}
 
       <label htmlFor="sel-link" className="mt-4 block text-sm font-medium text-foreground">
         {pt("sel.created.link")}

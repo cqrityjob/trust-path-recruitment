@@ -994,15 +994,16 @@ test.describe("three markets — the write path", () => {
       "en",
       "/passport/credentials/new?code=UK_SIA_LICENCE_DS",
     );
-    await expect(
-      page.getByRole("combobox", { name: "Approved credential", exact: true }),
-    ).toHaveValue("");
-    await page.getByRole("combobox", { name: "Scope", exact: true }).selectOption("national");
+    await page.getByRole("radio", { name: /National or regional/ }).check();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByRole("status")).toContainText(
       "Your credential is not currently available",
     );
-    await expect(page.locator("form")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
+    ).toBeDisabled();
     expect(savedPayloads).toEqual([]);
     expect(unmatched).toEqual([]);
   });
@@ -1049,13 +1050,17 @@ test.describe("three markets — the write path", () => {
       "en",
       "/passport/credentials/new?code=AE_DU_SIRA_CARD_GUARD",
     );
-    await page.getByRole("combobox", { name: "Scope", exact: true }).selectOption("national");
+    await page.getByRole("radio", { name: /National or regional/ }).check();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("AE");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByRole("status")).toContainText(
       "Your credential is not currently available",
     );
     await expect(page.getByLabel(/Issuer|Authorisation scope/)).toHaveCount(0);
-    await expect(page.locator("form")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
+    ).toBeDisabled();
     expect(savedPayloads).toEqual([]);
   });
 
@@ -1094,20 +1099,20 @@ test.describe("three markets — the write path", () => {
     page,
   }) => {
     await mount(page, { availability: AVAIL.se }, "en", "/passport/credentials/new?code=OV");
-    await expect(
-      page.getByRole("combobox", { name: "Approved credential", exact: true }),
-    ).toHaveValue("OV");
     await page.getByLabel("Valid until", { exact: true }).fill("2030-01-01");
+    await page.getByRole("button", { name: "Back", exact: true }).click();
+    await expect(page.getByLabel("Approved credential")).toHaveValue("OV");
+    await page.getByRole("button", { name: "Back", exact: true }).click();
     await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
-    await expect(
-      page.getByRole("combobox", { name: "Approved credential", exact: true }),
-    ).toHaveValue("");
-    await expect(page.locator("form")).toHaveCount(0);
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await expect(page.getByLabel("Approved credential")).toHaveValue("");
+    await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
     expect(savedPayloads).toEqual([]);
+    await page.getByRole("button", { name: "Back", exact: true }).click();
     await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("SE");
-    await page
-      .getByRole("combobox", { name: "Approved credential", exact: true })
-      .selectOption("OV");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByLabel("Approved credential").selectOption("OV");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(page.getByLabel("Valid until", { exact: true })).toHaveValue("");
   });
 
@@ -1115,12 +1120,11 @@ test.describe("three markets — the write path", () => {
     page,
   }) => {
     await mount(page, { availability: AVAIL.se }, "sv", "/passport/credentials/new?code=OV");
-    await expect(
-      page.getByRole("combobox", { name: "Godkänt yrkesbevis", exact: true }),
-    ).toHaveValue("OV");
+    await expect(page.getByLabel("Giltig till", { exact: true })).toBeVisible();
     await expect(page.getByLabel(/Utfärdare|Omfattning av/)).toHaveCount(0);
     await page.getByLabel("Giltig till", { exact: true }).fill("2030-01-01");
-    await page.getByRole("button", { name: /Spara/ }).click();
+    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+    await page.getByRole("button", { name: /Spara yrkesbevis/ }).click();
     await expect.poll(() => savedPayloads.length).toBe(1);
     expect(savedPayloads[0]).toMatchObject({
       definition_code: "OV",
@@ -1167,10 +1171,14 @@ test.describe("three markets — the real routes", () => {
 
     await section.locator('[data-credential-code="UK_SIA_LICENCE_DS"]').click();
     await expect(page).toHaveURL(/credentials\/new\?code=UK_SIA_LICENCE_DS/);
+    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
+    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
     await expect(
       page.getByRole("combobox", { name: "Godkänt yrkesbevis", exact: true }),
     ).toHaveValue("");
-    await expect(page.locator("form")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
+    ).toBeDisabled();
     expect(savedPayloads).toEqual([]);
   });
 
@@ -1202,11 +1210,15 @@ test.describe("three markets — the real routes", () => {
     await shoot(page, "en-information-dubai-pilot", info.project.name);
 
     await section.locator('[data-credential-code="AE_DU_SIRA_CARD_GUARD"]').click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await expect(
       page.getByRole("combobox", { name: "Approved credential", exact: true }),
     ).toHaveValue("");
     await expect(page.getByLabel(/Authorisation scope/)).toHaveCount(0);
-    await expect(page.locator("form")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /^(Continue|Fortsätt)$/, exact: true }),
+    ).toBeDisabled();
     expect(savedPayloads).toEqual([]);
   });
 

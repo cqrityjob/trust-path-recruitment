@@ -34,7 +34,7 @@ import { CredentialSymbol } from "../CredentialSymbol";
 /** Tones for the status word ON THE CARD's navy ground. Distinct from the
  *  theme-surface tones used elsewhere; both are supplementary to the word. */
 const CARD_WORD_TONE: Record<string, string> = {
-  verified: TRUST_PALETTE.goldBright,
+  verified: "#a5f3fc",
   documented: TRUST_PALETTE.ink,
   self_declared: TRUST_PALETTE.inkMuted,
   draft: TRUST_PALETTE.inkMuted,
@@ -57,8 +57,8 @@ export function RecipientPassportCard({
   className?: string;
 }) {
   const { pt, lang } = usePassportCopy();
-  const rim = TRUST_PALETTE.gold;
-  const rimBright = TRUST_PALETTE.goldBright;
+  const rim = "#65b8c4";
+  const rimBright = "#a5f3fc";
 
   const holderName = presentation.holderLabel ?? pt("rec.anonymousHolder");
   // The HOLDER's work location, emirate included. The card is the artefact a
@@ -96,11 +96,16 @@ export function RecipientPassportCard({
           >
             {holderName}
           </h2>
-          <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
-            {joinTitles(presentation.titles, lang, pt("common.notStated"))}
-            <span aria-hidden="true"> · </span>
-            <span style={{ color: TRUST_PALETTE.ink }}>{jurisdiction}</span>
-          </p>
+          {(presentation.titles.length > 0 || presentation.jurisdiction) && (
+            <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
+              {[
+                presentation.titles.length ? joinTitles(presentation.titles, lang, "") : null,
+                presentation.jurisdiction ? jurisdiction : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          )}
         </header>
 
         <EligibilityLine titles={presentation.eligibility} withNote={false} className="mt-4" />
@@ -144,7 +149,7 @@ export function RecipientPassportCard({
                   key={c.key}
                   className="flex items-start gap-3 rounded-md px-3 py-2.5"
                   style={{
-                    background: isCurrent ? "rgba(183,146,85,0.12)" : "transparent",
+                    background: isCurrent ? "rgba(103,232,249,0.08)" : "transparent",
                     border: `1px solid ${isCurrent ? rim : TRUST_PALETTE.amber}`,
                   }}
                 >
@@ -175,15 +180,19 @@ export function RecipientPassportCard({
                           >
                             {pt(`lifecycle.${c.lifecycle}` as const)}
                           </span>
-                          <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
-                            ·
-                          </span>
-                          <span
-                            className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-                            style={{ color: TRUST_PALETTE.inkMuted }}
-                          >
-                            {pt("assertion.verified.historical")}
-                          </span>
+                          {c.assertion === "verified" && (
+                            <>
+                              <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
+                                ·
+                              </span>
+                              <span
+                                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                                style={{ color: TRUST_PALETTE.inkMuted }}
+                              >
+                                {pt("assertion.verified.historical")}
+                              </span>
+                            </>
+                          )}
                         </>
                       ) : (
                         <span

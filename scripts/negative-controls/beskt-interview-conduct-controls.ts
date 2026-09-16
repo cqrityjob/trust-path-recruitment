@@ -637,15 +637,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
-    // The anchor tracks the list's CURRENT shape, which moves as migrations are
-    // applied and new ones become pending. Today it is EMPTY again: BESKT PR 6
-    // and PR 7 were applied by the official integration on merge and their
-    // hosted evidence is recorded, so both came off the list in that same
-    // change. The planted defect never changes: this APPLIED migration goes
-    // back on the frontier list, where a resolved name would hide the next
-    // genuinely stuck one.
-    find: "const expectedPending: string[] = [];",
-    replace: 'const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql"];',
+    // Track the genuinely pending product migration while planting an already-applied version.
+    find: 'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql"];',
+    replace:
+      'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql","20261113090000_bcp_interview_conduct.sql"];',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },

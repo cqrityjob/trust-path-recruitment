@@ -163,16 +163,16 @@ psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
-    for passport_migration in 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
+    for passport_migration in 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
       psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
     done
-    for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue; do
+    for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue 20261123090000_sp_credential_organisation_roles; do
       psql_q -d "$TEST_DB" -f "supabase/migrations/${passport_migration}.sql" >/dev/null
     done
   fi
@@ -4755,7 +4755,7 @@ TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
-for passport_migration in 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
+for passport_migration in 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
   psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
 done
 # The rollback contract is not "the objects disappear". It is "the objects
@@ -4855,7 +4855,7 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
 # Restore the latest issuer guard and all dependent Passport units, then prove
 # the closed contract again before discarding this isolated rollback database.
 psql_q -d "$TEST_DB" -f supabase/migrations/20261114090000_sp_global_certification_governed_issuer.sql >/dev/null
-for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue; do
+for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue 20261123090000_sp_credential_organisation_roles; do
   psql_q -d "$TEST_DB" -f "supabase/migrations/${passport_migration}.sql" >/dev/null
 done
 psql_q -d "$TEST_DB" -f supabase/tests/security_passport_closed_catalogue_test.sql >/dev/null
@@ -6131,6 +6131,7 @@ fi
 
 # The schema foundation must be independently reversible without touching an
 # existing disclosure, then safely re-applicable for the remaining suites.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261120090000_sp_credential_selective_sharing_v2_rollback.sql >/dev/null
 echo "==> Proving share-gateway rollback and re-apply"
 SPGW_DISCLOSURE_BEFORE="$(psql -Atq -d "$TEST_DB" -c "SELECT count(*) FROM public.sp_disclosures WHERE id='e7100000-0000-4000-8000-000000000001'")"

@@ -5,8 +5,8 @@
 // card image is self-contained — a QR that needs a network fetch would be a
 // blank square in exactly the situation the card exists for.
 //
-// Encodes a FIXTURE destination only. Phase 1B claims no production route
-// and no live verification endpoint.
+// Encodes the supplied destination. Live callers pass only a newly created
+// selective-disclosure URL; this hook never mints a token or broadens access.
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";

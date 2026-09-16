@@ -868,9 +868,9 @@ const MUTATIONS: readonly Mutation[] = [
     file: FRONTIER,
     // Applied now, so the defect inverts: the anchor is the empty list Prettier
     // produces when nothing is pending.
-    find: "const expectedPending: string[] = [];",
+    find: 'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql"];',
     replace:
-      'const expectedPending: string[] = ["20261117090000_bcp_conduct_prompts_and_report.sql"];',
+      'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql","20261117090000_bcp_conduct_prompts_and_report.sql"];',
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },

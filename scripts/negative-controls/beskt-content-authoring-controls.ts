@@ -669,9 +669,9 @@ const MUTATIONS: readonly Mutation[] = [
     // on the owner-level pending list would contradict release-state.json,
     // which records it as applied with hosted evidence. The anchor is the
     // empty list Prettier produces when nothing is pending.
-    find: "const expectedPending: string[] = [];",
+    find: 'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql"];',
     replace:
-      'const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql"];',
+      'const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql","20261118090000_beskt_governed_content_authoring.sql"];',
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },

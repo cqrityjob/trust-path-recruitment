@@ -7,6 +7,23 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261123090000_sp_credential_organisation_roles.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sp_credential_organisation_roles"
+        },
+        {
+          "kind": "table",
+          "object": "sp_credential_definition_reviews"
+        }
+      ],
+      "note": "Product finalization: governed role links and official-source audit. New schema deliberately not applied. Application deployment requires separately approved schema-first application and hosted verification. No personal-data backfill.",
+      "verify": "supabase/tests/security_passport_organisation_roles_test.sql (local only); production approval and read-only postflight still required.",
+      "rollback": "supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql"
+    },
+    {
       "file": "20261122090000_cv_owned_application_snapshot.sql",
       "hostedState": "applied",
       "introduces": [

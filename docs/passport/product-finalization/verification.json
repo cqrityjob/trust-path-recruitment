@@ -1,0 +1,945 @@
+{
+  "verified_at_utc": "2026-09-16T17:54:50.418703+00:00",
+  "branch": "codex/passport-product-finalization",
+  "base_main": "351dea8",
+  "production": {
+    "writes": 0,
+    "migration_applications": 0,
+    "data_changes": 0,
+    "deletions": 0,
+    "pr_257_migrations_unchanged": true,
+    "hosted_ledger_unchanged": true,
+    "stale_cli_project_calls": 0
+  },
+  "release": {
+    "pending_migrations": [
+      "20261123090000_sp_credential_organisation_roles.sql"
+    ],
+    "recommendation": "FIX REQUIRED",
+    "hosted_application_authorised": false,
+    "owner_visual_approval": "PENDING",
+    "reason": "Schema-first release and empty deploy-plan gates correctly reject application code until the separately authorised hosted migration has been applied and verified. Explicit owner visual approval also remains required."
+  },
+  "checks": [
+    {
+      "name": "production-build",
+      "result": "PASS",
+      "log_sha256": "ef02fa0fd7c386c29029a302e101bd764b91e9343516257dded612d1986ce19e"
+    },
+    {
+      "name": "app-typecheck",
+      "result": "PASS",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "scripts-typecheck",
+      "result": "PASS",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "changed-file-lint",
+      "result": "PASS",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "admin-employer-status-guard:check",
+      "result": "PASS",
+      "log_sha256": "d09dfbddb033134a3deeaf97754f838a6fb4b5a58f877c714a2d4d5cf70b0d5b"
+    },
+    {
+      "name": "public-assessment-auth:check",
+      "result": "PASS",
+      "log_sha256": "e17c102091f01ab4baba0d69059bb921d0d517b091d0ac80da42223274d96123"
+    },
+    {
+      "name": "passport-error-scope:check",
+      "result": "PASS",
+      "log_sha256": "5ed850436e753cc27f629046de2f932b20d8655d8a67b03a90098267fdfe00c5"
+    },
+    {
+      "name": "passport-reviewer-decision:check",
+      "result": "PASS",
+      "log_sha256": "9baa94814f8b19fda5b22aaa9dc2beae7c0dd3d8af98f82d3a5a79f02f74b6a7"
+    },
+    {
+      "name": "passport-employer-verification:check",
+      "result": "PASS",
+      "log_sha256": "739ecee4518060cafadbbae25a9af8abcc26e64ec1bc6b004240b559618e9371"
+    },
+    {
+      "name": "passport-employer-matching:check",
+      "result": "PASS",
+      "log_sha256": "168a2eb94915ed2529431892409b18ce9db4e8a15a0ca46d4cc78e71a6c2f5a4"
+    },
+    {
+      "name": "passport-decision-truthfulness:check",
+      "result": "PASS",
+      "log_sha256": "d12bd022bc2efb5c8535982368e56fa2263bba0a78bb0215e74508613693ab68"
+    },
+    {
+      "name": "passport-trust-source:check",
+      "result": "PASS",
+      "log_sha256": "e47e7f00f11901bd6fbb610f9b6a708d3d5ed5be14130dc4569c027bcaf458d6"
+    },
+    {
+      "name": "passport-sharing-flow:check",
+      "result": "PASS",
+      "log_sha256": "49c2c5a822906064e704af388c0f462eec9ce382677ea82bbed0edc5b618016a"
+    },
+    {
+      "name": "my-career-gate:check",
+      "result": "PASS",
+      "log_sha256": "5c149af0b7bc6f8ac19a8824243f10c7832bb5dd6f7ea3ee3f94c26a950aeaf0"
+    },
+    {
+      "name": "my-career-dashboard:check",
+      "result": "PASS",
+      "log_sha256": "14622fc104b4804479f9083fe1d633c8f9312697bac7a518c24c021ad33896b4"
+    },
+    {
+      "name": "profile-section-navigation:check",
+      "result": "PASS",
+      "log_sha256": "398bdb2d2baa405f038ddfefad64bb9e6032e1be43fea71b223b78977d6b2f77"
+    },
+    {
+      "name": "my-career-experience:check",
+      "result": "PASS",
+      "log_sha256": "ce48f7d03a6f1a2e4e1f3ada0b426480c77f9b445da81ccb9f131a25320b23b6"
+    },
+    {
+      "name": "my-career-premium-overview:check",
+      "result": "PASS",
+      "log_sha256": "23164644754e60474921e75171b5f6e103a44948d8c5b56be32e5e6a2ebd1f37"
+    },
+    {
+      "name": "passport-share-transport:check",
+      "result": "PASS",
+      "log_sha256": "98305983a21e731dd2391cbfb051b65ca98761d60ea65f6bedc2c8a4bbf779c3"
+    },
+    {
+      "name": "interview-method-tenant-read:check",
+      "result": "PASS",
+      "log_sha256": "ca4fb0cac386a917facd38665d382545ce4c09e2daaebbbda7ef6f1d9e6535c4"
+    },
+    {
+      "name": "cd-outstanding-reviews:check",
+      "result": "PASS",
+      "log_sha256": "948656d9197195dfae7323f85515859cf068514b992e202fb986075dbd87b78a"
+    },
+    {
+      "name": "beskt-architecture:check",
+      "result": "PASS",
+      "log_sha256": "4a073f4457a40ea1d462354ffaf9434d234735b9294ec525c9ba9da8dd3809a1"
+    },
+    {
+      "name": "beskt-governed-content:check",
+      "result": "PASS",
+      "log_sha256": "7752fc4e42a55f178fb1afbda9f8fb90ba14c67a2cc491f985fd506fcad9b5c7"
+    },
+    {
+      "name": "beskt-conduct-report:check",
+      "result": "PASS",
+      "log_sha256": "60e4f83ac5890bc24b01cfb300a08e0de0410f82f0d099ad91c7e1e83fae5588"
+    },
+    {
+      "name": "beskt-content-authoring:check",
+      "result": "PASS",
+      "log_sha256": "4ef292fb273cb5368a27ebc0f1fa1b91a1cd0304740c0b0dca3442392decf500"
+    },
+    {
+      "name": "beskt-candidate-preparation:check",
+      "result": "PASS",
+      "log_sha256": "5178f672c1f6bcbd56084dfbe7d1ed982dcf004785b25475b18f25a9b86f8307"
+    },
+    {
+      "name": "beskt-interview-case-bridge:check",
+      "result": "PASS",
+      "log_sha256": "42f113251abb13f01e7e910e69e164cb1c08de40795422575bfd396b1b0e1347"
+    },
+    {
+      "name": "beskt-interview-conduct:check",
+      "result": "PASS",
+      "log_sha256": "15af4f796e0629a0b10bfc790304b711ef1221e9dba8617b3cabcea792154766"
+    },
+    {
+      "name": "beskt-interview-tool:check",
+      "result": "PASS",
+      "log_sha256": "89779414d89005c54302687ee9816ed4e8f86870f04a8ee48a1fcf22a8b462c4"
+    },
+    {
+      "name": "beskt-notice-copy:check",
+      "result": "PASS",
+      "log_sha256": "f4f63094d72af5082fb98625b913a7a62ecbe102df2409250f5a07533572544f"
+    },
+    {
+      "name": "beskt-candidate-preparation-render:check",
+      "result": "PASS",
+      "log_sha256": "019f38b8f3e8611b7e78843ce9f3aadca2f71600ec47976e643f1aefe0baef88"
+    },
+    {
+      "name": "passport-share-gateway-transport:check",
+      "result": "PASS",
+      "log_sha256": "a7a6dbebda30c73fcbf1351e34d773e4c4b366d0916ad486d0594e646e06f7ed"
+    },
+    {
+      "name": "passport-share-gateway-schema:check",
+      "result": "PASS",
+      "log_sha256": "9ed962cae76c74d9d57588d140142df0da0cf7c286158c1c142d4172b6adb848"
+    },
+    {
+      "name": "passport-skill-contract:check",
+      "result": "PASS",
+      "log_sha256": "8d9c748920e94fc29c3c68a6527b3e15a609bf3df9456e7d675a27157156993a"
+    },
+    {
+      "name": "v31-evidence-payload:check",
+      "result": "PASS",
+      "log_sha256": "01f78fdf6e0085aba21debcd42738a795cbb4afb63e63e117cf6f335fbd4897a"
+    },
+    {
+      "name": "passport-separation:check",
+      "result": "PASS",
+      "log_sha256": "c84fc6ad54de33c75d16eddc0b96bec1bc6c72ef94af6cddd925a756dd3db268"
+    },
+    {
+      "name": "application-dialog-scroll:check",
+      "result": "PASS",
+      "log_sha256": "a9dbb06286aff2a093eb317326244891397fe3f5075b8bf2eb8429bc932d57e4"
+    },
+    {
+      "name": "kg:check",
+      "result": "PASS",
+      "log_sha256": "918d26400f1082186b9f2b54cff5217cd4c0bfece9d012ad06d739d44eb576dd"
+    },
+    {
+      "name": "career-discovery:check",
+      "result": "PASS",
+      "log_sha256": "3436a9ddbd54993d844dde4a1e5f162d31dfbe087718e06d4c659071d438b9ce"
+    },
+    {
+      "name": "cie:check",
+      "result": "PASS",
+      "log_sha256": "4bb76634f05b0637135e34281f88ae2dcaef7be372a484b877920047444d3e31"
+    },
+    {
+      "name": "career-profession-bridge:check",
+      "result": "PASS",
+      "log_sha256": "6c668d12989124a677659c3193c20686dbad953ce03dbd6d842c6b2a8e78064f"
+    },
+    {
+      "name": "employer-taxonomy:check",
+      "result": "PASS",
+      "log_sha256": "9ac862886cb46826d8b4abb6258811abdcb68860814e46dee2ac7aeace4238a6"
+    },
+    {
+      "name": "invitation-email-guard:check",
+      "result": "PASS",
+      "log_sha256": "92f67509ef5498893dc26cfe89b6354a809a979ed16e18d1d166e7f228d3dbd8"
+    },
+    {
+      "name": "passport-fixture:check",
+      "result": "PASS",
+      "log_sha256": "5e50da621529acbb6897af34059fdba2042f8260066ee7f91d340e59ed5a05c8"
+    },
+    {
+      "name": "passport-first-run:check",
+      "result": "PASS",
+      "log_sha256": "0e539f2f8870d640cba6c1ace17f1f0588cd52e7210f1ab976826d289cd2fefb"
+    },
+    {
+      "name": "passport-workspace:check",
+      "result": "PASS",
+      "log_sha256": "6b3df32a10a100eec692588dcf139e2fc6a311840c270ea9c9e877ca382a9a95"
+    },
+    {
+      "name": "trust-surface:check",
+      "result": "PASS",
+      "log_sha256": "860372ae367597a29822040846e330bbebf4cc7b115f79007a4e5035d3263b73"
+    },
+    {
+      "name": "career-discovery-v31-professions:check",
+      "result": "PASS",
+      "log_sha256": "1d8de2dea2fa424ce8b4408a3a6958e5f0154348984e47cf063b9629a5287ade"
+    },
+    {
+      "name": "career-discovery-v31-golden-personas:check",
+      "result": "PASS",
+      "log_sha256": "c8bba3251375d0910cad3eb714b7b8361f6db3062c2881a22f1de0e578e76e3e"
+    },
+    {
+      "name": "career-discovery-recommendation:check",
+      "result": "PASS",
+      "log_sha256": "6ea7f85ee2118ebaccca05602ada04243870c64f35ea699b50f5d067544fb67d"
+    },
+    {
+      "name": "career-discovery-profession-differentiation:check",
+      "result": "PASS",
+      "log_sha256": "912fdc2c8b946475ef43038d602b3a698a2cd2c7c072d1a5188ca85d13f8088d"
+    },
+    {
+      "name": "career-discovery-claim:check",
+      "result": "PASS",
+      "log_sha256": "55f3de8e220840189501c014a46657f84778b8bbbc893cfe0fb9a562a229b583"
+    },
+    {
+      "name": "career-discovery-conversion:check",
+      "result": "PASS",
+      "log_sha256": "fb42a075c3f57b29ba455911bd3ff48c64adf2beb2df6506095b19152b65df89"
+    },
+    {
+      "name": "career-discovery-canonical-result:check",
+      "result": "PASS",
+      "log_sha256": "d8af42f021335560b60c1c6a3926e21efe65cb7d276f5a47da0beb6aec7165f7"
+    },
+    {
+      "name": "career-discovery-recommendation-integrity:check",
+      "result": "PASS",
+      "log_sha256": "8e8bd70071954b72605bace95e4be64ca06b8ba6e9c547b26185d897a982e16f"
+    },
+    {
+      "name": "career-journey:check",
+      "result": "PASS",
+      "log_sha256": "a1c64e6627c2dcc18127127d0fbbaf3e1927f731958084bbb5587e81f1bcc312"
+    },
+    {
+      "name": "career-discovery-career-card:check",
+      "result": "PASS",
+      "log_sha256": "660e07c3369ec84e055fb23eca276d65c313e9f0d1cfbc9996316ee5144ef08a"
+    },
+    {
+      "name": "prepilot-candidate-surface:check",
+      "result": "PASS",
+      "log_sha256": "08b4d45392bb6f4bf86a3885f0005c20df26c2bc16bbb61cb0167486d5990885"
+    },
+    {
+      "name": "academy-parity:check",
+      "result": "PASS",
+      "log_sha256": "d55c85c208fa58ccd1d48f6e26a84dc0260abd32669a45b56fcb46e4541af399"
+    },
+    {
+      "name": "career-discovery-report:check",
+      "result": "PASS",
+      "log_sha256": "2ae0d518dc3435b81644fff631b784269b74b93379b9bbff24a06620fe481337"
+    },
+    {
+      "name": "question-library:check",
+      "result": "PASS",
+      "log_sha256": "75e6967bc45a7524d31ca121b0d537c23b8cb387e7c502547d12357bf862f99b"
+    },
+    {
+      "name": "employer-job-form:check",
+      "result": "PASS",
+      "log_sha256": "3197203390c19bc3eb6bbd0286cfd9ee071dac274b7bba6c6f0af898da3a968b"
+    },
+    {
+      "name": "security-competency-separation:check",
+      "result": "PASS",
+      "log_sha256": "ad98dc973957ea558627f4c1d1dc3628a9b34430777e6b9dbc921d77e82b1abd"
+    },
+    {
+      "name": "career-discovery-v31:check",
+      "result": "PASS",
+      "log_sha256": "0ebdf965b23904965e8676721b945c8b75251c91e71cd8ea6e18fb0b74fcc439"
+    },
+    {
+      "name": "career-discovery-v32-content:check",
+      "result": "PASS",
+      "log_sha256": "f6bd491da3114789e355bad3cd4cb857a7ec3c792c6b0445f5110595467e8ee9"
+    },
+    {
+      "name": "career-discovery-v32-equivalence:check",
+      "result": "PASS",
+      "log_sha256": "25573b11e3a22b9e2c49585323ef4664a6363d46e7f57e2296db0e9e234c96fe"
+    },
+    {
+      "name": "assessment-assignment:check",
+      "result": "PASS",
+      "log_sha256": "7024fd438164d58a18b8e8adeee3483cc8e4369d51ae431b8698249ddcf0e240"
+    },
+    {
+      "name": "assessment-reliability:check",
+      "result": "PASS",
+      "log_sha256": "9b47d54a346f80b96888f075570060521d571fb4659bc6100d77f1eb0d4ffc27"
+    },
+    {
+      "name": "assessment-panels-render:check",
+      "result": "PASS",
+      "log_sha256": "ce05935c730c28deedf5cf2a38a5451a1c32422e239052f90dc1778321c20db1"
+    },
+    {
+      "name": "assessment-language-contract:check",
+      "result": "PASS",
+      "log_sha256": "8ee9eb5b264d2f3ad50d45089fbbf0220a8b433dd0e43b0225136f5984eb672d"
+    },
+    {
+      "name": "vaktare-pilot-truth:check",
+      "result": "PASS",
+      "log_sha256": "96fe24bfbb35f58d363b3e62f2587662cf6ea68907c1be93ad2c964b521f0796"
+    },
+    {
+      "name": "vaktare-content-quality:check",
+      "result": "PASS",
+      "log_sha256": "a08551c24091779514e64a3e38f5042bc2a64587f744fa51714cf138e1680860"
+    },
+    {
+      "name": "vaktare-self-report-quality:check",
+      "result": "PASS",
+      "log_sha256": "c9becb80f20619062e84663fee983f67bdef69f3d41e45d199f15ccfd03f361a"
+    },
+    {
+      "name": "trust-evidence-report:check",
+      "result": "PASS",
+      "log_sha256": "68a36d00c19b7c065f023259f68c0556abe411605446dfccb70567257e3cf2c4"
+    },
+    {
+      "name": "trust-next-step-parity:check",
+      "result": "PASS",
+      "log_sha256": "c8c3b3efbe4a712cd5d3f9b8624e39247807ec93b6c1208dc7066e5e7daf6370"
+    },
+    {
+      "name": "legacy-assessment-routes:check",
+      "result": "PASS",
+      "log_sha256": "a7c0e1e26cfd9080b28a6c1e07f3cb13d8229b3921b5b4bb6fca69639a5f94be"
+    },
+    {
+      "name": "deploy-plan:check",
+      "result": "PASS",
+      "log_sha256": "e51acadb409694e40db687df5b455bb1ec5110e80dcd1c3e53efa304f667b67c"
+    },
+    {
+      "name": "deploy-plan-negative:check",
+      "result": "PASS",
+      "log_sha256": "4ba5acab7e133c61f7a6f39c7831553a7828e7d9d2108c4817ffbb6e6c84ecde"
+    },
+    {
+      "name": "migrations:check",
+      "result": "PASS",
+      "log_sha256": "310049e010a715942f6dfbd3b56122520368941bb7d61d030a2e09912bf30bff"
+    },
+    {
+      "name": "migrations-duplicate:check",
+      "result": "PASS",
+      "log_sha256": "0e2dcaa8cc293f98bc2d0ce383d7c0e365c6a0e1daf1ef6494b7eba48e8bccb0"
+    },
+    {
+      "name": "schema-first-release:check",
+      "result": "BLOCKED_EXPECTED_PENDING_HOSTED_SCHEMA",
+      "log_sha256": "5094cf2c58c89d52e7c189272d73884aa12e18458f9f193c2e30509560ccd9b7"
+    },
+    {
+      "name": "release-parity:check",
+      "result": "PASS",
+      "log_sha256": "1f3a297801b9db5ecefa0548078484749c9f14b0abc0270cd92e0aac0b275918"
+    },
+    {
+      "name": "release-frontier:check",
+      "result": "PASS",
+      "log_sha256": "b9117b88cd8fd0d09f3084a82d8f56fec3a4b3c75d81ee7072c956ad398475b1"
+    },
+    {
+      "name": "auth-provider-target:check",
+      "result": "PASS",
+      "log_sha256": "b51140275daf1322c307350e296ee8c77c8dd8f5fc38fe4aff3d02425186ac33"
+    },
+    {
+      "name": "backend-target-lock:check",
+      "result": "PASS",
+      "log_sha256": "7c5ba05f0a513cd927f642cc7c4de8886141bab74f3ec1fcb6e55c3f3537d152"
+    },
+    {
+      "name": "passport-title-derivation:check",
+      "result": "PASS",
+      "log_sha256": "b824c7371096ba3536e881b1c1aebfe0d2126e50a4c4c1ec8d28270ff5e3c629"
+    },
+    {
+      "name": "passport-identity-engine:check",
+      "result": "PASS",
+      "log_sha256": "10f6d5cfe049a2326082437156fb92d3f655e4f87a36986d14c48174235121f0"
+    },
+    {
+      "name": "passport-persona-journey:check",
+      "result": "PASS",
+      "log_sha256": "e85c67ec0d57432178a4b2100cb8cafa709fc68fed898b15b3d4b3a6383964cd"
+    },
+    {
+      "name": "passport-credential-form:check",
+      "result": "PASS",
+      "log_sha256": "fff9a17123becb26d4ab6e8ab5bb73633189194e217e2d98cbf154d80fe75d2f"
+    },
+    {
+      "name": "passport-date-validation:check",
+      "result": "PASS",
+      "log_sha256": "ef8f92ff6847614236abefd38ad5e1edd19c2334a8e07dff7bd41a525dc3fff7"
+    },
+    {
+      "name": "passport-pilot-bugfix:check",
+      "result": "PASS",
+      "log_sha256": "f33cb587e16409bb2da56ae5d34cea24e03dd46b24804230f0fdf8cee44a704a"
+    },
+    {
+      "name": "passport-profile-basics:check",
+      "result": "PASS",
+      "log_sha256": "b10653a27b665799303b2ce61c69ed42fc074997b969a81eaa3394816e59c55a"
+    },
+    {
+      "name": "passport-market-profiles:check",
+      "result": "PASS",
+      "log_sha256": "b70f3c6690744dafce68995fefa7e7a81e2261498aa8b6272cbb3e2d2fc21434"
+    },
+    {
+      "name": "passport-market-catalogue:check",
+      "result": "PASS",
+      "log_sha256": "360f8eda23558b595fc38e9df46e2eb313540140195638f3db8a67f3a090ed5b"
+    },
+    {
+      "name": "passport-schema-drift:check",
+      "result": "PASS",
+      "log_sha256": "96d6136c0921c669ba1484ba9e6f20e6a2452e3d866d00776b19a66c33706b77"
+    },
+    {
+      "name": "passport-global-certification:check",
+      "result": "PASS",
+      "log_sha256": "a4997d6f3de545569e2632df752c47e6fd8af062b22b3e303876f8f730c90fb7"
+    },
+    {
+      "name": "passport-private-reference:check",
+      "result": "PASS",
+      "log_sha256": "f88bc1d6bee6eb654ab5e33f0aa1a2eda355623ea527fe39732c8e494c26f4bd"
+    },
+    {
+      "name": "passport-classifier-behaviour:check",
+      "result": "PASS",
+      "log_sha256": "f3ce007ce3354e2770dbb2c5d10e492b6fe35afec34ca887237b24dde72bfd13"
+    },
+    {
+      "name": "passport-governed-issuer:check",
+      "result": "PASS",
+      "log_sha256": "dd2f47cb41a53e61cc185ec13bb67aa1858ff2e11896fab80842851ca547dda4"
+    },
+    {
+      "name": "passport-regulatory-claim:check",
+      "result": "PASS",
+      "log_sha256": "5c127c138a1713e663853681833c80916e3061f2c5158526bd99b8bc7517948f"
+    },
+    {
+      "name": "passport-scope-surface:check",
+      "result": "PASS",
+      "log_sha256": "d2e45b67f1bc337504e1d2cd02ef7e0893c3d2e6adfcc856cb5718bb01f22b85"
+    },
+    {
+      "name": "mcp-exposure:check",
+      "result": "PASS",
+      "log_sha256": "6f59493c3980082dc5b99f09177dec4e2346e62a5395ddd5bb2ac5e36c8648b0"
+    },
+    {
+      "name": "admin-portal:check",
+      "result": "PASS",
+      "log_sha256": "05c3d79dc95cf3d3a4c675fdaa10158425afefeca8df8e0156117fe70cb85ff2"
+    },
+    {
+      "name": "admin-lifecycle:check",
+      "result": "PASS",
+      "log_sha256": "b8a544824f5026dfab33fa2a8edc3a490106f8a1d4981dcbec1d35bfe5485a01"
+    },
+    {
+      "name": "admin-error-contract:check",
+      "result": "PASS",
+      "log_sha256": "e80cfa22412cd05071e96ffa8359c8a922ee18ab2fc86114cec425a7b378f6a4"
+    },
+    {
+      "name": "review-contribution:check",
+      "result": "PASS",
+      "log_sha256": "2e213414e6cd9e45d7e3aeccc49bac797cf671b3cd51fc395b6edcb62f7d1cba"
+    },
+    {
+      "name": "employer-process-continuity:check",
+      "result": "PASS",
+      "log_sha256": "0c9f687385bfcd8e430084362e240ae6ca3699f8d5c3dac3456cec080a541546"
+    },
+    {
+      "name": "employer-assessment-release:check",
+      "result": "PASS",
+      "log_sha256": "e0d12ff5e2a9a7cc20eef3c864c0768088dc6db440e9e786a54e024159d8611d"
+    },
+    {
+      "name": "employer-final-report:check",
+      "result": "PASS",
+      "log_sha256": "dcf26f62ac252f48255ba31587087bb6064bafb09ef78186d9f7ec665efdab02"
+    },
+    {
+      "name": "interview-context-governance:check",
+      "result": "PASS",
+      "log_sha256": "6b4fc35f7c40890e3504bcdde2d502a25cbff718cc78ab5f5f335b68a31e878b"
+    },
+    {
+      "name": "employer-recruitment-flow:check",
+      "result": "PASS",
+      "log_sha256": "e85fd7186c53541eb93adc5d936d20dab29b1031b5cf439f5fcc2ef17be3c095"
+    },
+    {
+      "name": "employer-journey:check",
+      "result": "PASS",
+      "log_sha256": "3c0437114cd0d691a6b82f33ba83d4a2b7f3fd498c5299bb69f4a752298c3c6b"
+    },
+    {
+      "name": "employer-registration:check",
+      "result": "PASS",
+      "log_sha256": "8a06bd78be5dc1cea15681153e1a932677fe9d24a42bbb4935b251234dfc01b4"
+    },
+    {
+      "name": "employer-library-purpose:check",
+      "result": "PASS",
+      "log_sha256": "5619e6dc44bed18edc7d25ab91da6cb8a34eb385c0dbfb6aa1b8405e7c3c6bab"
+    },
+    {
+      "name": "employer-decision-error:check",
+      "result": "PASS",
+      "log_sha256": "fa12507016c0dc8b69398fd359c7a1301d0b1000397a01060265c262970e22ec"
+    },
+    {
+      "name": "employer-job-lifecycle:check",
+      "result": "PASS",
+      "log_sha256": "4014d81da94f15a15a9cedcbd765f361f25882bac7038c86a1ef0db1da7cb962"
+    },
+    {
+      "name": "employer-hire-continuity:check",
+      "result": "PASS",
+      "log_sha256": "504da8f4922ecbf364686bc1f57c817abe7c8cfad391afc65fcc7128f3b4883a"
+    },
+    {
+      "name": "employer-other-taxonomy:check",
+      "result": "PASS",
+      "log_sha256": "f45e5c7bbb6def82ab12be1235a781707f6c181df0451b4aa58e4bfb49f04a67"
+    },
+    {
+      "name": "review-proposal-contract:check",
+      "result": "PASS",
+      "log_sha256": "90371c09254914dd5732f9fa5e346c456012db4b08b441dd1df082c4bfb9055f"
+    },
+    {
+      "name": "candidate-notification:check",
+      "result": "PASS",
+      "log_sha256": "4b64e68707f0232e2c85eed0192937d096d6d00291743d27c618299035f8c189"
+    },
+    {
+      "name": "emma-uat:check",
+      "result": "PASS",
+      "log_sha256": "066a484da65228018eefc2e8889920fd0e3b2182fa90f37084957b6a0ec8cad2"
+    },
+    {
+      "name": "passport-recipient-card:check",
+      "result": "PASS",
+      "log_sha256": "b0020c76e8bc3d9cb0a6852221f660453ce22ff93fe487eb30ea5b1fc59a7e9e"
+    },
+    {
+      "name": "header-entry:check",
+      "result": "PASS",
+      "log_sha256": "59ea734403c00a7f4c276b8b0632891a1682fbc9ad03d0a44a55f6971d6cca99"
+    },
+    {
+      "name": "employer-landing:check",
+      "result": "PASS",
+      "log_sha256": "f7a6afb16cb844c5eedbee081fe530c78bc7dd5e5514d03b2bb36a7a75ffdec6"
+    },
+    {
+      "name": "public-homepage:check",
+      "result": "PASS",
+      "log_sha256": "81a550b3ebc79185cd0419f3dc63c70772df684fc1b144c0eb4925c35f381315"
+    },
+    {
+      "name": "recruitment-decision-support:check",
+      "result": "PASS",
+      "log_sha256": "fa1c9d26c486f538a57bc2845683284c9f905fa71a3557c2256b9b7c0b1affe7"
+    },
+    {
+      "name": "recruitment-report-render:check",
+      "result": "PASS",
+      "log_sha256": "b6d3db24cef7b452b284b085a9146cedebcb473dd63f61b8cb037e0a5e4e788f"
+    },
+    {
+      "name": "sql-security:check",
+      "result": "PASS",
+      "log_sha256": "c5c4f55f8ef825436b9a30dfdcc4af31142a04a77064d8341c191e35b9ed7342"
+    },
+    {
+      "name": "interview-pack-contract:check",
+      "result": "PASS",
+      "log_sha256": "9a72b4ab1878dcb5386f4e9a7042d60fdc137f52b6669c98195f215b84c0d82a"
+    },
+    {
+      "name": "interview-pack-render:check",
+      "result": "PASS",
+      "log_sha256": "06563c6a2a5528d89090174161ef009b8e9c9a12184b699a7c648b6fb11b0cda"
+    },
+    {
+      "name": "interview-ai-eval:check",
+      "result": "PASS",
+      "log_sha256": "1944ec7897563bccfa865728c791026e91b9a470d8b1faa40dc5612f11e6c29a"
+    },
+    {
+      "name": "interview-ux-contract:check",
+      "result": "PASS",
+      "log_sha256": "122c0e1c30a3a42dff10f429bc99b963902dfda03a8740163712f26041acaedb"
+    },
+    {
+      "name": "interview-runtime-contract:check",
+      "result": "PASS",
+      "log_sha256": "e95b865e920d3722fb0cbaed5026a4bed41cd5087b9a84bdbe9a9807972f5088"
+    },
+    {
+      "name": "interview-context-bridge:check",
+      "result": "PASS",
+      "log_sha256": "ab34da34773de1f521c97839bebe41463fe4e77696172b5b7d9848b23cf24dc0"
+    },
+    {
+      "name": "interview-finalisation-capability:check",
+      "result": "PASS",
+      "log_sha256": "4873b5775f41188de299639f76a3f607137700ed9811f9313aad3cb20555aa38"
+    },
+    {
+      "name": "interview-recruiter-workflow:check",
+      "result": "PASS",
+      "log_sha256": "1e59ce3e175e4527bd254c191761be710abfc3fd6c8e0527c5ea6fe8946e4ceb"
+    },
+    {
+      "name": "interview-ai-provider:check",
+      "result": "PASS",
+      "log_sha256": "144d178a4cde5d9eed3691850522caad211b66d2e6f55e79d47ded9c74f6b7e8"
+    },
+    {
+      "name": "interview-evidence-reliability:check",
+      "result": "PASS",
+      "log_sha256": "9fa619e1be4751e03611b638c062055e38dd97b895e7f18022dffbcf28cf9694"
+    },
+    {
+      "name": "interview-gold-independence:check",
+      "result": "PASS",
+      "log_sha256": "be0dffeb28a37062f713c0c8c15f484d3317833c35c539f34b644d8afc97fb6e"
+    },
+    {
+      "name": "recruitment-assessment-ux:check",
+      "result": "PASS",
+      "log_sha256": "c8f05cb189b5f08388d8a04b141258a6919b286cf36f7b5f897fab5f1ac87a67"
+    },
+    {
+      "name": "career-center:check",
+      "result": "PASS",
+      "log_sha256": "ee5d2a73671216497b1f5aea466fb368d9e12ebcef9addf1b9f1dee101dc3d22"
+    },
+    {
+      "name": "professional-identity:check",
+      "result": "PASS",
+      "log_sha256": "99d0b770ff615a7c6bb5acfce9a9a3a7591e7011de4578f6d8eb179a7cfb8983"
+    },
+    {
+      "name": "cv-application-source:check",
+      "result": "PASS",
+      "log_sha256": "71d30d9a91483ca119ba997e78e4e03440209939ca32e48200298b6dd55f4388"
+    },
+    {
+      "name": "cv-pilot:check",
+      "result": "PASS",
+      "log_sha256": "6b5324d00069dc978af3260bbab963d9f39b4f1e2cccf66ccd1d8e9ab5638440"
+    },
+    {
+      "name": "cv-provider-minimisation:check",
+      "result": "PASS",
+      "log_sha256": "fab8757fde911d7b18264981c9678cbc5e51f16dbe1b919d85509dbf655fe3a8"
+    },
+    {
+      "name": "candidate-app-navigation:check",
+      "result": "PASS",
+      "log_sha256": "6cb4cd80cce06ed2ee2308bd6e34ce4daa460657a564c8986331a2e6e321ec44"
+    },
+    {
+      "name": "candidate-navigation-canon:check",
+      "result": "PASS",
+      "log_sha256": "1c97daa1ee18eb85eff6379a5ade8dba7e91a526ad3d4cd41041481b6939f58e"
+    },
+    {
+      "name": "account-confirmation:check",
+      "result": "PASS",
+      "log_sha256": "d8c3c42cba96faef6f34d201a1b3c746fc83085f352f4a0ef8ca5d1d91812a5e"
+    },
+    {
+      "name": "candidate-journey-composition:check",
+      "result": "PASS",
+      "log_sha256": "801f223f8590fdcd93fdc4aadf5449c12694f619f47c110547d692cc773f7af2"
+    },
+    {
+      "name": "candidate-destination-composition:check",
+      "result": "PASS",
+      "log_sha256": "6ec4169b6d05d5423f2e2e93a205377cf0c9e3e05ef9b48b7052eeb6c68db687"
+    },
+    {
+      "name": "passport-cv-boundary:check",
+      "result": "PASS",
+      "log_sha256": "e740792e4ead3e2bb284b947302fa57bb849e6f22a8d955268ed1a554e113f40"
+    },
+    {
+      "name": "passport-page-composition:check",
+      "result": "PASS",
+      "log_sha256": "d0ba97d6f87893c6aeca72d39e025e67956c36116c351e1e93ef80ae7ce1a655"
+    },
+    {
+      "name": "passport-product:check",
+      "result": "PASS",
+      "log_sha256": "cfd8f198fb120edd1abbadd474af86b3400a79f9b4e5cb00422fd83acc0c489b"
+    },
+    {
+      "name": "deploy-plan:gate",
+      "result": "BLOCKED_EXPECTED_PENDING_HOSTED_SCHEMA",
+      "log_sha256": "2670256c8a22c53df638fc82e8a0371644587c4d8b4941fac6430a8739ddc146"
+    }
+  ],
+  "database": {
+    "result": "PASS",
+    "command": "PGHOST=127.0.0.1 PGPORT=55439 PGUSER=postgres TEST_DB=passport_product_final bash scripts/db-test.sh",
+    "migration_files_replayed": 294,
+    "full_rls_and_historical_rollback_reapply": "PASS",
+    "new_role_suite_assertions": 17,
+    "new_role_rollback_reapply_on_disposable_local_supabase": "PASS",
+    "note": "Full replay ran the initial 13 role assertions before and after rollback; the four additional payload-disclosure assertions then passed in the 17-assertion suite and a separate rollback/reapply on local port 55422."
+  },
+  "negative_controls": {
+    "result": "PASS",
+    "suites": 30,
+    "mutations_detected": 1064,
+    "method": "Clean isolated local clone, same changes overlaid; no guard bypass. Initial stale frontier anchors were updated to preserve the real pending migration and plant an already-applied extra version. Every suite passed; all mutated files restored byte-for-byte.",
+    "suite_results": [
+      "negative-controls:p0a: all 6 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:share-gateway-schema: all 4 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:share-gateway-transport: all 4 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:candidate-navigation-canon: all 14 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:account-confirmation: all 10 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:passport-cv-boundary: all 18 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:passport-page-composition: all 7 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:candidate-destination-composition: all 17 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:candidate-journey-composition: all 15 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:employer-continuity: all 33 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:negative-controls:assessment-release: all 34 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:negative-controls:interview-governance: all 40 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:final-report: all 151 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-architecture: all 18 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-governed-content: all 151 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-candidate-preparation: all 92 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-interview-case-bridge: all 53 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-interview-conduct: all 64 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-interview-tool: all 41 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-conduct-report: all 73 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:beskt-content-authoring: all 57 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:global-certification: all 52 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:classifier-behaviour: all 11 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:governed-issuer: all 7 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:interview-method-tenant-read: all 28 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:cd-outstanding-reviews: all 15 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:public-header: all 7 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:overview-composition: all 9 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:profile-entry: all 16 mutations were detected, every file restored byte-for-byte, working tree clean.",
+      "negative-controls:profile-section-navigation: all 17 mutations were detected, every file restored byte-for-byte, working tree clean."
+    ]
+  },
+  "browser": {
+    "all_passport_command": "E2E_BASE_URL=http://127.0.0.1:3119 playwright test 'e2e/passport-.*spec.ts' --workers=3 --project=chromium --project=mobile-375 --project=mobile-390",
+    "initial_full_run": {
+      "passed": 513,
+      "failed": 6,
+      "skipped": 3
+    },
+    "resolved_failures": [
+      "One status-copy expectation updated to the new registered label.",
+      "The credential detail primary heading was corrected to h1.",
+      "Two language expectations now use governed canonical names instead of legacy holder titles.",
+      "Two visual captures were rerun after build completion with deterministic readiness waits."
+    ],
+    "workspace_rerun": {
+      "passed": 12,
+      "failed": 0
+    },
+    "final_visual_rerun": {
+      "passed": 6,
+      "failed": 0
+    },
+    "evidence_upload_retry": {
+      "passed": 3,
+      "failed": 0,
+      "assertion": "One credential save, two upload attempts; private upload failure does not duplicate the claim."
+    },
+    "live_local_browser": {
+      "passed": 3,
+      "failed": 0,
+      "origin": "https://127.0.0.1:3120",
+      "coverage": "Real owner creates credential, selective share, QR gateway, recipient access and revocation at desktop/375/390."
+    },
+    "skipped_reason": "The three live tests intentionally skip in the stubbed suite; all three passed separately against real local Auth/Storage/API.",
+    "effective_result": "All exercised scenarios pass after the listed corrections and targeted reruns; no claim of a single uninterrupted zero-failure full run."
+  },
+  "live_auth_storage_api": {
+    "result": "PASS",
+    "assertions": 41,
+    "production_access": false
+  },
+  "visual": {
+    "result": "PASS",
+    "owner_approval": "PENDING",
+    "screenshots": 66,
+    "languages": [
+      "sv",
+      "en"
+    ],
+    "viewports": [
+      "desktop 1280",
+      "375",
+      "390"
+    ],
+    "additional_layout_assertions": [
+      "720 tablet",
+      "1440 desktop"
+    ],
+    "gallery": "visual-review.html",
+    "fixture": "Fictional Alex Morgan; no production personal data"
+  },
+  "changed_source_sha256": {
+    "e2e/passport-first-run.spec.ts": "a8a64e06f7da3a8ac71ff99c38fd2485ed2ba627a0a9599bee03a7d4b9697505",
+    "e2e/passport-international.spec.ts": "4694ec655b481a9f1de6c569992cf30a99b89f9d7efe7f07ed0a9b61fcf4757d",
+    "e2e/passport-live-local.spec.ts": "981ed7770f58bd7b621d64291eb2af52c916ad4514206bbe6cd7c4953b56efe0",
+    "e2e/passport-three-market.spec.ts": "1dd9fc4c7d32bb32a2bc303ec151380262d02c69fc40de2786c3ff303cb875df",
+    "e2e/passport-workspace.spec.ts": "616c4fc5bfa2d2b81387db263a078b44f98df077eb0d641db71aff6b7e293476",
+    "scripts/db-test.sh": "f7aa690f11a9d8f309dbd03fb1436e2ccb4fffee0e800bd2cd70a6691a29224a",
+    "scripts/my-career-dashboard-check.ts": "e5843ae75a0abbce9a858d83c748498f1168dc796c375e67d1ec3e1e80984d5c",
+    "scripts/negative-controls/beskt-candidate-preparation-controls.ts": "eeab808d61e4bdaf26cabe654f189a88253c140305933fdc53811ed33b074284",
+    "scripts/negative-controls/beskt-conduct-report-controls.ts": "98e1d7035fa31e03276eab8cb574a9d4790dc5a3f80a28267340cc337f888a2d",
+    "scripts/negative-controls/beskt-content-authoring-controls.ts": "0b48a58f76a292a87d0270160de161e453e83ed18ed8b83f22268a2e2eb20de8",
+    "scripts/negative-controls/beskt-interview-case-bridge-controls.ts": "7c88308ada18ed2259b08ef930d4f7bcd7f08ff0d0991d6f7601f839d26f8750",
+    "scripts/negative-controls/beskt-interview-conduct-controls.ts": "bdf976bb96848b0aa1bf00de7a158f5893f1a2cd060783cacc1ed39cecf2d200",
+    "scripts/negative-controls/interview-method-tenant-read-controls.ts": "2ae9bd9f8ce9e652cfc8f4e2ab0d73fc248ba707b78531badfda98a5975d6d1b",
+    "scripts/negative-controls/overview-composition-controls.ts": "903f79050bc898e86b6bf83a63d93c695917d76788e5d1b0063671b1af2cfece",
+    "scripts/negative-controls/passport-page-composition-controls.ts": "651fd74906380dfb00b23b1a50e3a9a6b221a3e4e318446358f77d7dacb22b75",
+    "scripts/passport-page-composition-check.ts": "35ba901add17ba4be2adb0434924fa2365cea54d293ba420a481aeb43e29c21f",
+    "scripts/passport-profile-basics-check.tsx": "56ed32931bde3b51d5774a001691ce18f5ca7c554e1efd5550033fb3547e2e1e",
+    "scripts/passport-trust-source-check.tsx": "c2bcb7290a87ff0dab42feef677815d0328ab46c46ea892109f3b42fe3828476",
+    "scripts/release-frontier-check.ts": "383bf9ce9dfc23d7638a4470136d0f719364cdd83d07a2f562e8bdeb39045755",
+    "src/components/security-passport/CompactPassportCard.tsx": "a1f56f9998c4a468aad47e4d8a825543257e4fc64c29c1ff62f20ab5969dc240",
+    "src/components/security-passport/CredentialWallet.tsx": "d21d49eed4676b5533b1ff5e03ec5767208218a1c662885ebd8f13de715c2b80",
+    "src/components/security-passport/InternationalCredentialForm.tsx": "ac81682bd4d843b406200a3b66dd61ff2da1dc83cbd8fd4dc2fa9619886a67e6",
+    "src/components/security-passport/PassportOwnership.tsx": "e23f164c96951ac6eb728c0bf87100412292e532287dd7f10008762ff94ca34d",
+    "src/components/security-passport/live/RecipientPassportCard.tsx": "d4f60af83bb00d58be2c856cb32ca6e664fa8932faffacbcbcc5cf569d4215cb",
+    "src/lib/security-passport/international.functions.ts": "8f6a1df573bf74475a1430a7e7c9633e70cd03c15ae43c4da49e822a43ed228a",
+    "src/lib/security-passport/use-qr.ts": "125bffedad86ddf035ae3361f143bb5505dfeee73ba74e400f7f4b51af1a1f3b",
+    "src/routes/_authenticated.passport.card.tsx": "5bc8dc2e2414e961ec271e0bf6a838af50560f38233e0ebeee6db15a48be5e50",
+    "src/routes/_authenticated.passport.credentials.new.tsx": "088656037d9beff0a3b32e269328e8f9f7b3e5220d40ecdf39acc2f5981b2d5d",
+    "src/routes/_authenticated.passport.entry.$kind.$entryId.tsx": "ca13d8c432b21ef285e4b8733da7ea7c950d1cae9e3cab874e79bda75ede41d8",
+    "src/routes/_authenticated.passport.index.tsx": "a86a5f97a61f17eee2adc9ce03bf9c6bb535e1f1172f7d7d47f426fdb86a17ed",
+    "src/routes/_authenticated.passport.share.tsx": "7bd6cafdc916f678d71eacf7836063f76c225a5db8a029bb0ae9424dc38d1c30",
+    "src/routes/_authenticated.passport.tsx": "cc4f90debcb423a959d8925e6a282ad684d5d70c8c11a3092a1ac0589eb43595",
+    "supabase/release-state.json": "fd04026455bf222201ba678876fffdc3b09ff50bfe42cf9e447ba87dd408a990",
+    "e2e/passport-product-visual.spec.ts": "c9082f9ef53fa6d7334485b61fd1c1b48d8df5ae986cf3f89499659c1bf0922b",
+    "scripts/passport-product-check.ts": "3cac70dc9ffe4b20a08bf33a3c1b4f6ce12dc845014aa3b56f21524944a82baf",
+    "src/components/security-passport/CredentialDefinitionContext.tsx": "daa82855ebf9060ea35b9007ef4b27431ecd5c231c95f3b019e403a8cc00b6f8",
+    "src/components/security-passport/SecureShareQr.tsx": "0a3e1703c0182b8af28756f9ca0940f3e60f76c71eea68eee33f6cda4450c384",
+    "src/lib/security-passport/product-status.ts": "23c6ed48845cfa3658a36cead8a956effae909764ab0a5bd7acb903a623fb43f",
+    "supabase/migrations/20261123090000_sp_credential_organisation_roles.sql": "47069140175906d7c0eb4fc167c6997daa05896d5bb819f5bce48eda40fd46e8",
+    "supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql": "08f3f1fc3056d5acada9c66735feb4600418daaab31bab09be14dd6d95c23553",
+    "supabase/tests/security_passport_organisation_roles_test.sql": "8d0a5c44620fc236edbbde85457584dd828810d4b752ac2a77527fcbd5c44af9"
+  }
+}

@@ -86,13 +86,13 @@ const MUTATIONS: readonly Mutation[] = [
 
   // The canonical compact card must keep a bounded credential preview.
   {
-    id: "OV-NC-CONTENTS-REPLACED-BY-COUNTS",
-    defect: "the card stops showing the actual credentials and leaves counts alone",
+    id: "OV-NC-UNSELECTED-CREDENTIALS-DISCLOSED",
+    defect: "the card automatically includes credentials the holder did not select",
     file: "src/components/security-passport/CompactPassportCard.tsx",
-    find: "claims.slice(0, 3)",
-    replace: "claims.slice(0, 0)",
+    find: "selectedIds.includes(c.id)",
+    replace: "Boolean(c.id)",
     guard: DASH,
-    expect: "previews at most three actual credentials",
+    expect: "previews only explicitly selected credentials",
   },
   {
     id: "OV-NC-DUPLICATED-CONTENTS",

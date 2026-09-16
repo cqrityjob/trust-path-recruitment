@@ -713,7 +713,7 @@ test.describe("Security Passport — governed wallet regression", () => {
     await mount(page, JUST_ADDED);
     await ready(page);
     await expect(rows(page)).toHaveCount(1);
-    await expect(rows(page)).toContainText(/Egen|Registrerad|Tillagd/i);
+    await expect(rows(page)).toContainText(/Egen|Registrerat|Tillagd/i);
     await expect(wallet(page).getByRole("link", { name: "Lägg till yrkesbevis" })).toHaveAttribute(
       "href",
       "/passport/credentials/new",
@@ -740,7 +740,7 @@ test.describe("Security Passport — governed wallet regression", () => {
   test("4 pending review is stated without a verification promise", async ({ page }) => {
     await mount(page, IN_REVIEW, "en");
     await ready(page);
-    await expect(rows(page)).toContainText("Pending review");
+    await expect(rows(page)).toContainText("Under review");
     await expect(rows(page)).not.toContainText("Source-confirmed");
   });
   test("5 reviewer question names and opens its own credential", async ({ page }) => {
@@ -782,7 +782,7 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     await expect(rows(page)).toHaveCount(5);
     await expect(page.getByText("Review status unavailable", { exact: true })).toHaveCount(1);
-    await expect(wallet(page)).not.toContainText("Pending review");
+    await expect(wallet(page)).not.toContainText("Under review");
   });
   test("9 failed Passport read retries without losing navigation", async ({ page }) => {
     const state = { ...JUST_ADDED, passportFails: true };
@@ -820,16 +820,18 @@ test.describe("Security Passport — governed wallet regression", () => {
       await mount(page, { ...JUST_ADDED, claims: [claim({ lifecycleState: state })] }, "en");
       await ready(page);
       await expect(rows(page)).toHaveCount(1);
-      await expect(rows(page)).toContainText(new RegExp(state, "i"));
+      await expect(rows(page)).toContainText(
+        new RegExp(state === "superseded" ? "Replaced" : state, "i"),
+      );
     });
   test("empty credentials preserve CV privacy and offer approved add flow", async ({ page }) => {
     await mount(page, { claims: [], periods: [period()], requests: [] }, "en");
     await ready(page);
-    await expect(wallet(page)).toContainText("No credentials here yet");
+    await expect(wallet(page)).toContainText("Your first credential");
     await expect(rows(page)).toHaveCount(0);
     await wallet(page).getByRole("link", { name: "Add credential" }).click();
     await expect(page.getByRole("heading", { name: "Add credential" })).toBeVisible();
-    await expect(page.getByRole("combobox", { name: "Scope", exact: true })).toBeVisible();
+    await expect(page.getByRole("radio", { name: /^International/ })).toBeVisible();
     await noErrors();
   });
   for (const target of [
@@ -873,7 +875,7 @@ test.describe("Security Passport — governed wallet regression", () => {
     await mount(page, TWO_UNREVIEWED, "en");
     await ready(page);
     await expect(rows(page)).toHaveCount(2);
-    await expect(wallet(page)).not.toContainText("Pending review");
+    await expect(wallet(page)).not.toContainText("Under review");
     await expect(rows(page).first()).not.toContainText("Source-confirmed");
   });
   test("failed read does not invent pending or clarification status", async ({ page }) => {
@@ -881,20 +883,20 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     await expect(rows(page)).toHaveCount(3);
     await expect(wallet(page)).toContainText("Review status unavailable");
-    await expect(wallet(page)).not.toContainText("Clarification requested");
+    await expect(wallet(page)).not.toContainText("More information needed");
   });
   test("healthy control distinguishes pending and clarification", async ({ page }) => {
     await mount(page, REVIEW_STATE_UP, "en");
     await ready(page);
-    await expect(wallet(page)).toContainText("Pending review");
-    await expect(wallet(page)).toContainText("Clarification requested");
+    await expect(wallet(page)).toContainText("Under review");
+    await expect(wallet(page)).toContainText("More information needed");
   });
   test("slow review read shows loading then real states, never failure", async ({ page }) => {
     await mount(page, SLOW_REVIEW, "en");
     await ready(page);
     await expect(page.locator("[data-review-read-status]")).toHaveText("Loading review status…");
     await expect(wallet(page)).not.toContainText("Review status unavailable");
-    await expect(wallet(page)).toContainText("Pending review", { timeout: 10000 });
+    await expect(wallet(page)).toContainText("Under review", { timeout: 10000 });
     await expect(page.locator("[data-review-read-status]")).toHaveCount(0);
   });
   for (const anchor of ["attention", "merits"])
@@ -913,9 +915,9 @@ test.describe("Security Passport — governed wallet regression", () => {
       await expect(wallet(page)).toContainText(
         lang === "sv" ? "Säkerhetsanalytiker" : "Security analyst",
       );
-      await expect(wallet(page)).toContainText(
-        lang === "sv" ? "Skyddsvaktsutbildning" : "Protective security training",
-      );
+      await expect(wallet(page)).toContainText("Certified Protection Professional (CPP)");
+      await expect(wallet(page)).toContainText(lang === "sv" ? "Internationellt" : "International");
+      await expect(wallet(page)).not.toContainText("Protective security training");
       await expect(page.locator("[data-compact-passport-card]")).toContainText("Nina Lindqvist");
     });
   test("private summary never creates a link or exposes a QR token", async ({ page }) => {
@@ -927,7 +929,7 @@ test.describe("Security Passport — governed wallet regression", () => {
         '[data-compact-passport-card] a[href*="token"], [data-compact-passport-card] canvas',
       ),
     ).toHaveCount(0);
-    await expect(page.locator("[data-compact-passport-card] li")).toHaveCount(3);
+    await expect(page.locator("[data-compact-passport-card] li")).toHaveCount(0);
   });
   test("all workspace controls have 44px targets and visible keyboard focus", async ({ page }) => {
     await mount(page, MIXED, "en");
@@ -957,12 +959,11 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     await wallet(page).getByRole("link", { name: "Add credential" }).focus();
     await page.keyboard.press("Enter");
-    const international = page.getByRole("combobox", { name: "Scope", exact: true });
+    const international = page.getByRole("radio", { name: /^International/ });
     await expect(international).toBeVisible();
     await international.focus();
-    await page.keyboard.press("Home");
-    await page.keyboard.press("Enter");
-    await expect(international).toHaveValue("international");
+    await page.keyboard.press("Space");
+    await expect(international).toBeChecked();
     await noErrors();
   });
   for (const width of [1440, 720, 390, 375])

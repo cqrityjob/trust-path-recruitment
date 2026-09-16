@@ -105,8 +105,8 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // enough, and an applied migration left on this list would mask the next
 // genuinely stuck one.
 //
-// No active migration remains pending.
-const expectedPending: string[] = [];
+// Product schema is reviewed locally; hosted application has not been authorised.
+const expectedPending: string[] = ["20261123090000_sp_credential_organisation_roles.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
