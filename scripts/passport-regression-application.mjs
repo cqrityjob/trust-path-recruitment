@@ -91,7 +91,15 @@ function good(r) {
             "','" +
             stamp.slice(-5) +
             i +
-            "','Syntetisk väktare','Synthetic guard','published','internal',now(),now()+interval '30 days');",
+            "','Syntetisk väktare " +
+            stamp +
+            "-" +
+            i +
+            "','Synthetic guard " +
+            stamp +
+            "-" +
+            i +
+            "','published','internal',now(),now()+interval '30 days');",
         )
         .join("\n") +
       "COMMIT;";

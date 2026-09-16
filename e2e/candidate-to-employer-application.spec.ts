@@ -117,6 +117,7 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
 
     await page.goto(`/jobs/${JOB_SLUG}`);
     await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
+    const jobTitle = await page.getByRole("heading", { level: 1, includeHidden: true }).innerText();
 
     await page.getByLabel("Phone number", { exact: false }).fill("+46701234567");
     await page
@@ -139,7 +140,11 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
 
     // ---- 2. Candidate sees it in their own history ----
     await page.goto("/my-career/applications");
-    await expect(page.getByText("Submitted")).toBeVisible();
+    const candidateApplication = page.getByRole("listitem").filter({
+      has: page.locator(`a[href="/jobs/${JOB_SLUG}"]`),
+    });
+    await expect(candidateApplication).toHaveCount(1);
+    await expect(candidateApplication.getByText("Submitted", { exact: true })).toBeVisible();
 
     // ---- 3. Employer reviews it ----
     await page.context().clearCookies();
@@ -147,16 +152,24 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
     await page.waitForURL(/\/my-career/);
 
     await page.goto(`/employer/${EMPLOYER_SLUG}/applications`);
-    await expect(page.getByText("Submitted").first()).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Change stage" }).first().click();
+    // The shared local tenant retains earlier synthetic applications. Never
+    // change its first row: prove the newly submitted vacancy's exact receipt.
+    const employerApplication = page.getByRole("listitem").filter({ hasText: jobTitle });
+    await expect(employerApplication).toHaveCount(1);
+    await expect(employerApplication.getByText("Submitted", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await employerApplication.getByRole("button", { name: "Change stage" }).click();
     await page.getByRole("menuitem", { name: "Mark as reviewing" }).click();
-    await expect(page.getByText("Reviewing").first()).toBeVisible();
+    await expect(employerApplication.getByText("Reviewing", { exact: true })).toBeVisible();
 
     // ---- 4. Candidate sees the updated status ----
     await page.context().clearCookies();
     await signIn(page, "/candidate/login", CANDIDATE_EMAIL!, CANDIDATE_PASSWORD!);
     await page.goto("/my-career/applications");
-    await expect(page.getByText("Reviewing").first()).toBeVisible({ timeout: 15_000 });
+    await expect(candidateApplication.getByText("Reviewing", { exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 });
 

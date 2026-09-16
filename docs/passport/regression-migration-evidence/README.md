@@ -53,6 +53,11 @@ No skipped case is counted as passing without a separate execution.
   client-only route while the original server document is still hydrating.
   Browser tests verify all five compatibility URLs return HTTP redirects,
   retain a safe Passport return path and refuse external return destinations.
+- Repeated employer-receipt runs exposed a fixture ambiguity: the legacy test
+  changed the first inbox row, which could belong to an earlier synthetic
+  application. Local vacancies now have unique titles; the test requires exactly
+  that employer row and checks the same vacancy in the candidate's history.
+  It no longer accepts an unrelated application's reviewing state as evidence.
 
 The two multi-page Career Center tours need a total budget that covers every
 navigation and viewport. They now have a 90-second total budget, with a stricter
@@ -121,6 +126,8 @@ for these live browser files, and explicit PostgreSQL loopback variables for
 the repository. Career Discovery uses `E2E_CD_LOCAL=1` with the same base URL.
 The Passport live browser uses the HTTPS loopback proxy and real local share
 Edge Function described in the earlier Phase 2 evidence.
+It requires `PASSPORT_LIVE_LOCAL=1` (not `E2E_PASSPORT_LOCAL`); verify three
+executed passes rather than accepting a successful process with three skips.
 
 The fixture-only complete browser run uses `http://127.0.0.1:3119`, with
 `HUB_SHOTS`, `CV_SHOTS`, `PASSPORT_LEGACY_SHOTS` outside the repository. Its
