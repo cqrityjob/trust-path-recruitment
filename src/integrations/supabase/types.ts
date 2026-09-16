@@ -1140,6 +1140,122 @@ export type Database = {
           },
         ]
       }
+      bcp_conduct_reports: {
+        Row: {
+          assignment_id: string
+          basis_hash: string
+          bound_answers_content_hash: string
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_response_id: string
+          case_id: string
+          content_hash: string
+          content_hash_algorithm: string
+          created_at: string
+          employer_id: string
+          finalised_at: string
+          finalised_by: string
+          id: string
+          operation_id: string
+          payload: Json
+          session_id: string
+          status: string
+          version_number: number
+        }
+        Insert: {
+          assignment_id: string
+          basis_hash: string
+          bound_answers_content_hash: string
+          bound_content_hash: string
+          bound_method_version_id: string
+          bound_response_id: string
+          case_id: string
+          content_hash: string
+          content_hash_algorithm?: string
+          created_at?: string
+          employer_id: string
+          finalised_at?: string
+          finalised_by: string
+          id?: string
+          operation_id: string
+          payload: Json
+          session_id: string
+          status: string
+          version_number: number
+        }
+        Update: {
+          assignment_id?: string
+          basis_hash?: string
+          bound_answers_content_hash?: string
+          bound_content_hash?: string
+          bound_method_version_id?: string
+          bound_response_id?: string
+          case_id?: string
+          content_hash?: string
+          content_hash_algorithm?: string
+          created_at?: string
+          employer_id?: string
+          finalised_at?: string
+          finalised_by?: string
+          id?: string
+          operation_id?: string
+          payload?: Json
+          session_id?: string
+          status?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_reports_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_reports_bound_method_version_id_fkey"
+            columns: ["bound_method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_reports_bound_response_id_fkey"
+            columns: ["bound_response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_reports_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_reports_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_reports_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bcp_conduct_sessions: {
         Row: {
           assignment_id: string
@@ -13788,6 +13904,13 @@ export type Database = {
             foreignKeyName: "sp_certification_definitions_credential_code_fkey"
             columns: ["credential_code"]
             isOneToOne: true
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_certification_definitions_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: true
             referencedRelation: "sp_credential_types"
             referencedColumns: ["code"]
           },
@@ -13797,6 +13920,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sp_certification_issuers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_certification_definitions_replaced_by_code_fkey"
+            columns: ["replaced_by_code"]
+            isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "sp_certification_definitions_replaced_by_code_fkey"
@@ -13953,6 +14083,13 @@ export type Database = {
             foreignKeyName: "sp_certification_sources_credential_code_fkey"
             columns: ["credential_code"]
             isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_certification_sources_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
             referencedRelation: "sp_credential_types"
             referencedColumns: ["code"]
           },
@@ -14102,6 +14239,13 @@ export type Database = {
             foreignKeyName: "sp_claims_credential_code_fkey"
             columns: ["credential_code"]
             isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_claims_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
             referencedRelation: "sp_credential_types"
             referencedColumns: ["code"]
           },
@@ -14132,6 +14276,429 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sp_claims"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_credential_adapter_mappings: {
+        Row: {
+          adapter_namespace: string
+          adapter_version: string
+          created_at: string
+          credential_code: string
+          external_identifier: string
+          id: string
+          mapping: Json
+        }
+        Insert: {
+          adapter_namespace: string
+          adapter_version: string
+          created_at?: string
+          credential_code: string
+          external_identifier: string
+          id?: string
+          mapping?: Json
+        }
+        Update: {
+          adapter_namespace?: string
+          adapter_version?: string
+          created_at?: string
+          credential_code?: string
+          external_identifier?: string
+          id?: string
+          mapping?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_adapter_mappings_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_adapter_mappings_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_credential_classes: {
+        Row: {
+          code: string
+          name_en: string
+          name_sv: string
+        }
+        Insert: {
+          code: string
+          name_en: string
+          name_sv: string
+        }
+        Update: {
+          code?: string
+          name_en?: string
+          name_sv?: string
+        }
+        Relationships: []
+      }
+      sp_credential_definition_jurisdictions: {
+        Row: {
+          credential_code: string
+          jurisdiction_code: string
+          relation: string
+          reviewed_on: string
+          source_url: string
+        }
+        Insert: {
+          credential_code: string
+          jurisdiction_code: string
+          relation: string
+          reviewed_on: string
+          source_url: string
+        }
+        Update: {
+          credential_code?: string
+          jurisdiction_code?: string
+          relation?: string
+          reviewed_on?: string
+          source_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_definition_jurisdictions_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_definition_jurisdictions_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_definition_jurisdictions_jurisdiction_code_fkey"
+            columns: ["jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_credential_definition_metadata: {
+        Row: {
+          created_at: string
+          credential_class: string
+          credential_code: string
+          deprecated_at: string | null
+          description: string | null
+          external_revision: string | null
+          original_language: string | null
+          original_name: string
+          schema_version: number
+        }
+        Insert: {
+          created_at?: string
+          credential_class: string
+          credential_code: string
+          deprecated_at?: string | null
+          description?: string | null
+          external_revision?: string | null
+          original_language?: string | null
+          original_name: string
+          schema_version?: number
+        }
+        Update: {
+          created_at?: string
+          credential_class?: string
+          credential_code?: string
+          deprecated_at?: string | null
+          description?: string | null
+          external_revision?: string | null
+          original_language?: string | null
+          original_name?: string
+          schema_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_definition_metadata_credential_class_fkey"
+            columns: ["credential_class"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_classes"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_definition_metadata_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: true
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_definition_metadata_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: true
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_credential_definition_reviews: {
+        Row: {
+          checked_on: string
+          credential_code: string
+          professional_domain: string
+          source_url: string
+          validity_en: string
+          validity_sv: string
+        }
+        Insert: {
+          checked_on: string
+          credential_code: string
+          professional_domain: string
+          source_url: string
+          validity_en: string
+          validity_sv: string
+        }
+        Update: {
+          checked_on?: string
+          credential_code?: string
+          professional_domain?: string
+          source_url?: string
+          validity_en?: string
+          validity_sv?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_definition_reviews_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: true
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_definition_reviews_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: true
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_credential_details: {
+        Row: {
+          claim_id: string
+          created_at: string
+          credential_class: string
+          issuing_country_code: string | null
+          issuing_jurisdiction_code: string | null
+          no_expiry: boolean | null
+          original_language: string | null
+          schema_version: number
+          updated_at: string
+          validity_jurisdiction_code: string | null
+        }
+        Insert: {
+          claim_id: string
+          created_at?: string
+          credential_class: string
+          issuing_country_code?: string | null
+          issuing_jurisdiction_code?: string | null
+          no_expiry?: boolean | null
+          original_language?: string | null
+          schema_version?: number
+          updated_at?: string
+          validity_jurisdiction_code?: string | null
+        }
+        Update: {
+          claim_id?: string
+          created_at?: string
+          credential_class?: string
+          issuing_country_code?: string | null
+          issuing_jurisdiction_code?: string | null
+          no_expiry?: boolean | null
+          original_language?: string | null
+          schema_version?: number
+          updated_at?: string
+          validity_jurisdiction_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_details_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: true
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_credential_details_credential_class_fkey"
+            columns: ["credential_class"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_classes"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_details_issuing_country_code_fkey"
+            columns: ["issuing_country_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_details_issuing_jurisdiction_code_fkey"
+            columns: ["issuing_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_details_validity_jurisdiction_code_fkey"
+            columns: ["validity_jurisdiction_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_credential_disclosure_policy: {
+        Row: {
+          created_at: string
+          disclosure_id: string
+          permitted_fields: string[]
+          schema_version: number
+        }
+        Insert: {
+          created_at?: string
+          disclosure_id: string
+          permitted_fields?: string[]
+          schema_version?: number
+        }
+        Update: {
+          created_at?: string
+          disclosure_id?: string
+          permitted_fields?: string[]
+          schema_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_disclosure_policy_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: true
+            referencedRelation: "sp_disclosures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_credential_jurisdictions: {
+        Row: {
+          code: string
+          country_code: string | null
+          is_active: boolean
+          jurisdiction_type: string
+          name_en: string
+          name_original: string
+          name_sv: string
+          source_url: string | null
+          subdivision_code: string | null
+        }
+        Insert: {
+          code: string
+          country_code?: string | null
+          is_active?: boolean
+          jurisdiction_type: string
+          name_en: string
+          name_original: string
+          name_sv: string
+          source_url?: string | null
+          subdivision_code?: string | null
+        }
+        Update: {
+          code?: string
+          country_code?: string | null
+          is_active?: boolean
+          jurisdiction_type?: string
+          name_en?: string
+          name_original?: string
+          name_sv?: string
+          source_url?: string | null
+          subdivision_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_jurisdictions_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_jurisdictions_subdivision_code_fkey"
+            columns: ["subdivision_code"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_credential_organisation_roles: {
+        Row: {
+          authority_id: string | null
+          certification_issuer_id: string | null
+          checked_on: string
+          credential_code: string
+          document_specific: boolean
+          role: string
+          source_url: string
+        }
+        Insert: {
+          authority_id?: string | null
+          certification_issuer_id?: string | null
+          checked_on: string
+          credential_code: string
+          document_specific?: boolean
+          role: string
+          source_url: string
+        }
+        Update: {
+          authority_id?: string | null
+          certification_issuer_id?: string | null
+          checked_on?: string
+          credential_code?: string
+          document_specific?: boolean
+          role?: string
+          source_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_organisation_roles_authority_id_fkey"
+            columns: ["authority_id"]
+            isOneToOne: false
+            referencedRelation: "sp_authorities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_credential_organisation_roles_certification_issuer_id_fkey"
+            columns: ["certification_issuer_id"]
+            isOneToOne: false
+            referencedRelation: "sp_certification_issuers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_credential_organisation_roles_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_organisation_roles_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -14168,8 +14735,38 @@ export type Database = {
         }
         Relationships: []
       }
+      sp_credential_share_events: {
+        Row: {
+          disclosure_id: string
+          event_type: string
+          id: string
+          occurred_at: string
+        }
+        Insert: {
+          disclosure_id: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+        }
+        Update: {
+          disclosure_id?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_share_events_disclosure_id_fkey"
+            columns: ["disclosure_id"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_disclosure_policy"
+            referencedColumns: ["disclosure_id"]
+          },
+        ]
+      }
       sp_credential_types: {
         Row: {
+          allows_no_expiry: boolean
           authority_id: string | null
           category: string
           claim_type: string
@@ -14200,6 +14797,7 @@ export type Database = {
           typical_validity_months: number | null
         }
         Insert: {
+          allows_no_expiry?: boolean
           authority_id?: string | null
           category: string
           claim_type: string
@@ -14230,6 +14828,7 @@ export type Database = {
           typical_validity_months?: number | null
         }
         Update: {
+          allows_no_expiry?: boolean
           authority_id?: string | null
           category?: string
           claim_type?: string
@@ -14501,6 +15100,75 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "sp_experience_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_evidence_extractions: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          document_country: string | null
+          document_language: string | null
+          evidence_id: string
+          extraction_status: string
+          human_review_state: string
+          id: string
+          model_version: string | null
+          original_source: string
+          process_version: string
+          proposed_fields: Json
+          retention_state: string
+          sensitivity: string
+          source_fingerprint: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          document_country?: string | null
+          document_language?: string | null
+          evidence_id: string
+          extraction_status: string
+          human_review_state?: string
+          id?: string
+          model_version?: string | null
+          original_source: string
+          process_version: string
+          proposed_fields?: Json
+          retention_state: string
+          sensitivity: string
+          source_fingerprint: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          document_country?: string | null
+          document_language?: string | null
+          evidence_id?: string
+          extraction_status?: string
+          human_review_state?: string
+          id?: string
+          model_version?: string | null
+          original_source?: string
+          process_version?: string
+          proposed_fields?: Json
+          retention_state?: string
+          sensitivity?: string
+          source_fingerprint?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_evidence_extractions_document_country_fkey"
+            columns: ["document_country"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_evidence_extractions_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "sp_evidence"
             referencedColumns: ["id"]
           },
         ]
@@ -15991,6 +16659,52 @@ export type Database = {
         }
         Relationships: []
       }
+      sp_approved_credential_catalogue: {
+        Row: {
+          allows_no_expiry: boolean | null
+          claim_type: string | null
+          code: string | null
+          country: string | null
+          credential_class: string | null
+          issuer_id: string | null
+          issuer_name: string | null
+          maintenance_summary_en: string | null
+          name_en: string | null
+          name_sv: string | null
+          official_url: string | null
+          original_language: string | null
+          reference_pattern: string | null
+          region: string | null
+          requires_valid_until: boolean | null
+          scope_code: string | null
+          typical_validity_months: number | null
+          verification_mode: string | null
+          verification_url: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_types_jurisdiction_code_fkey"
+            columns: ["country"]
+            isOneToOne: false
+            referencedRelation: "sp_jurisdictions"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_types_scope_code_fkey"
+            columns: ["scope_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_scopes"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_types_sub_jurisdiction_code_fkey"
+            columns: ["region"]
+            isOneToOne: false
+            referencedRelation: "sp_sub_jurisdictions"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
     }
     Functions: {
       account_deletion_only_released: {
@@ -16142,11 +16856,25 @@ export type Database = {
       }
       bcp_canonical_answers: { Args: { _response_id: string }; Returns: Json }
       bcp_case_preparation_basis: { Args: { _case_id: string }; Returns: Json }
+      bcp_conduct_basis_hash: { Args: { _payload: Json }; Returns: string }
+      bcp_conduct_build_report_basis: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
       bcp_conduct_can_read_session: {
         Args: { _session_id: string }
         Returns: boolean
       }
       bcp_conduct_entry_history: { Args: { _entry_id: string }; Returns: Json }
+      bcp_conduct_final_report: { Args: { _session_id: string }; Returns: Json }
+      bcp_conduct_finalise_report: {
+        Args: {
+          _expected_basis_hash: string
+          _operation_id: string
+          _session_id: string
+        }
+        Returns: Json
+      }
       bcp_conduct_join_session: {
         Args: {
           _operation_id: string
@@ -16171,16 +16899,14 @@ export type Database = {
         Args: { _operation_id: string; _session_id: string }
         Returns: Json
       }
+      bcp_conduct_preview_report: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
       bcp_conduct_record_resolution: {
         Args: {
-          // Nullable in the SQL signature, and the generator does not carry
-          // that through. The table's shape constraint REQUIRES a null here:
-          // an agreed resolution must have divergent_statement IS NULL and a
-          // disagreed one must carry the divergent words, and an empty string
-          // satisfies neither. Restored by hand, as PR #236 restored
-          // scp_iv_finalise_previewed_report for the same reason.
-          _agreed_statement: string | null
-          _divergent_statement: string | null
+          _agreed_statement: string
+          _divergent_statement: string
           _expected_revision: number
           _item_key: string
           _operation_id: string
@@ -16210,6 +16936,17 @@ export type Database = {
         }
         Returns: Json
       }
+      bcp_conduct_report_blockers: {
+        Args: { _session_id: string }
+        Returns: {
+          code: string
+          message: string
+        }[]
+      }
+      bcp_conduct_report_versions: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
       bcp_conduct_reveal_panel: {
         Args: {
           _expected_revision: number
@@ -16231,6 +16968,10 @@ export type Database = {
       }
       bcp_conduct_start_session: {
         Args: { _link_id: string; _operation_id: string }
+        Returns: Json
+      }
+      bcp_conduct_topic_prompts: {
+        Args: { _session_id: string }
         Returns: Json
       }
       bcp_conduct_workspace: { Args: { _session_id: string }; Returns: Json }
@@ -16390,6 +17131,78 @@ export type Database = {
           sequence_position: number
         }[]
       }
+      beskt_author_activation_requirement: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _requirement: Json
+        }
+        Returns: Json
+      }
+      beskt_author_evidence_anchor: {
+        Args: {
+          _anchor: Json
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      beskt_author_exposure_profile: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _profile: Json
+        }
+        Returns: Json
+      }
+      beskt_author_item: {
+        Args: {
+          _expected_revision: number
+          _item: Json
+          _method_version_id: string
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      beskt_author_observation_field: {
+        Args: {
+          _expected_revision: number
+          _field: Json
+          _method_version_id: string
+          _operation_id: string
+        }
+        Returns: Json
+      }
+      beskt_author_prompt: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _prompt: Json
+        }
+        Returns: Json
+      }
+      beskt_author_routing_rule: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _rule: Json
+        }
+        Returns: Json
+      }
+      beskt_author_section: {
+        Args: {
+          _expected_revision: number
+          _method_version_id: string
+          _operation_id: string
+          _section: Json
+        }
+        Returns: Json
+      }
       beskt_can_read_version: {
         Args: { _method_version_id: string }
         Returns: boolean
@@ -16397,6 +17210,27 @@ export type Database = {
       beskt_canonical_content: {
         Args: { _method_version_id: string }
         Returns: Json
+      }
+      beskt_content_commit: {
+        Args: {
+          _created: boolean
+          _event: string
+          _family: string
+          _gate: Json
+          _key: string
+          _operation_id: string
+          _request_hash: string
+          _row_id: string
+        }
+        Returns: Json
+      }
+      beskt_content_gate: {
+        Args: { _expected_revision: number; _method_version_id: string }
+        Returns: Json
+      }
+      beskt_content_reject_unknown_keys: {
+        Args: { _allowed: string[]; _family: string; _payload: Json }
+        Returns: undefined
       }
       beskt_create_method: {
         Args: {
@@ -16418,6 +17252,16 @@ export type Database = {
           _source_reference: string
           _summary_en?: string
           _summary_sv?: string
+        }
+        Returns: Json
+      }
+      beskt_delete_content: {
+        Args: {
+          _expected_revision: number
+          _family: string
+          _key: string
+          _method_version_id: string
+          _operation_id: string
         }
         Returns: Json
       }
@@ -16799,6 +17643,10 @@ export type Database = {
       cv_normalise_contact: { Args: { _contact: Json }; Returns: Json }
       cv_normalise_presentation: {
         Args: { _bundle: Json; _presentation: Json }
+        Returns: Json
+      }
+      cv_owned_application_snapshot: {
+        Args: { _document_id: string }
         Returns: Json
       }
       cv_refresh_from_profile: {
@@ -17777,6 +18625,10 @@ export type Database = {
         Args: { _employer_id: string }
         Returns: boolean
       }
+      scp_iv_employer_may_read_method: {
+        Args: { _method_id: string }
+        Returns: boolean
+      }
       scp_iv_employer_may_read_pack: {
         Args: { _pack_version_id: string }
         Returns: boolean
@@ -17805,7 +18657,11 @@ export type Database = {
         }[]
       }
       scp_iv_finalise_previewed_report: {
-        Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }
+        Args: {
+          _case_id: string
+          _draft_run_id: string
+          _expected_basis_hash: string
+        }
         Returns: string
       }
       scp_iv_finalise_report: {
@@ -18391,6 +19247,10 @@ export type Database = {
         Args: { _claim_id: string; _reason: string }
         Returns: undefined
       }
+      sp_assert_credential_selection: {
+        Args: { _fields: string[]; _ids: string[] }
+        Returns: undefined
+      }
       sp_assert_share_inputs: {
         Args: {
           _expires_days: number
@@ -18452,6 +19312,18 @@ export type Database = {
         }
         Returns: string
       }
+      sp_create_credential_disclosure_v2: {
+        Args: {
+          _claim_ids: string[]
+          _expires_days: number
+          _fields: string[]
+          _locale: string
+          _purpose: string
+          _recipient_hint: string
+          _request_key: string
+        }
+        Returns: Json
+      }
       sp_create_disclosure: {
         Args: {
           _expires_days: number
@@ -18473,7 +19345,23 @@ export type Database = {
         }
         Returns: Json
       }
+      sp_credential_payload_v2: {
+        Args: {
+          _created: string
+          _expires: string
+          _fields: string[]
+          _holder: string
+          _ids: string[]
+          _locale: string
+          _purpose: string
+        }
+        Returns: Json
+      }
       sp_disclosure_payload: { Args: { _disclosure_id: string }; Returns: Json }
+      sp_disclosure_payload_v1: {
+        Args: { _disclosure_id: string }
+        Returns: Json
+      }
       sp_dispute_queue: { Args: never; Returns: Json }
       sp_employer_attestation_queue: {
         Args: { _employer_id: string }
@@ -18495,6 +19383,10 @@ export type Database = {
       sp_grant_pilot_member: {
         Args: { _market_pack_code: string; _note?: string; _user_id: string }
         Returns: undefined
+      }
+      sp_is_passport_credential: {
+        Args: { _code: string; _type: string }
+        Returns: boolean
       }
       sp_is_pilot_member: {
         Args: { _market_pack_code: string; _user_id: string }
@@ -18545,6 +19437,17 @@ export type Database = {
           repaired: boolean
         }[]
       }
+      sp_passport_session_active: { Args: never; Returns: boolean }
+      sp_preview_credential_disclosure_v2: {
+        Args: {
+          _claim_ids: string[]
+          _expires_days: number
+          _fields: string[]
+          _locale: string
+          _purpose: string
+        }
+        Returns: Json
+      }
       sp_preview_selected_disclosure: {
         Args: {
           _claim_ids: string[]
@@ -18567,6 +19470,14 @@ export type Database = {
         }
         Returns: Json
       }
+      sp_replace_selected_disclosure_v1: {
+        Args: {
+          _disclosure_id: string
+          _request_key: string
+          _revoke_previous: boolean
+        }
+        Returns: Json
+      }
       sp_resolve_dispute: {
         Args: {
           _claim_id: string
@@ -18580,6 +19491,10 @@ export type Database = {
       sp_revoke_pilot_member: {
         Args: { _market_pack_code: string; _user_id: string }
         Returns: undefined
+      }
+      sp_save_international_credential: {
+        Args: { _input: Json }
+        Returns: string
       }
       sp_selected_merits_payload: {
         Args: {
