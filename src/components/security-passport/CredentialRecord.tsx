@@ -51,6 +51,8 @@ export function CredentialRecord({
         <div className="min-w-0 sm:max-w-44 sm:text-right">{states}</div>
       </div>
       <div className="border-t border-border/70 bg-secondary/40 px-5 sm:pl-[7.75rem]">
+        {action}
+      </div>
     </article>
   );
 }
