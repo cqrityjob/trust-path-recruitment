@@ -4,6 +4,8 @@ import { credentialPassportHolder } from "@/lib/security-passport/credential-pas
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
+import { CredentialSymbol } from "./CredentialSymbol";
+import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
 
 /** Owner-only preview. Selection does not create a share or disclose anything. */
 export function SecurityPassportPreview({
@@ -27,11 +29,15 @@ export function SecurityPassportPreview({
   return (
     <article
       data-compact-passport-card
-      className="relative isolate min-w-0 overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-6"
+      className="passport-signature relative isolate min-w-0 overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] ring-1 ring-accent/20 sm:p-6"
     >
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary-foreground/40"
+      />
+      <div
+        aria-hidden="true"
+        className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-40 opacity-20"
       />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
         <div>
@@ -45,10 +51,10 @@ export function SecurityPassportPreview({
           {copy("Privat förhandsvisning", "Private preview")}
         </span>
       </header>
-      <div className="my-7 grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-4">
+      <div className="my-8 grid grid-cols-[4.25rem_minmax(0,1fr)] items-center gap-4">
         <div
           aria-hidden="true"
-          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-primary-foreground/15 bg-primary-foreground/10 text-xl font-medium text-primary-foreground"
+          className="flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 text-xl font-semibold text-primary-foreground shadow-[var(--shadow-md)]"
         >
           {identity?.displayName
             ?.split(" ")
@@ -71,19 +77,30 @@ export function SecurityPassportPreview({
         </div>
       </div>
       {claims.length ? (
-        <ul className="space-y-3 border-t border-primary-foreground/15 pt-4">
+        <ul className="space-y-3 border-t border-primary-foreground/15 pt-5">
           {claims.map((c) => {
             const state = credentialProductStatus(c, metadata?.verificationEvents ?? [], today);
             return (
               <li
                 key={c.id}
-                className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-l-2 border-primary-foreground/25 pl-3"
+                className="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3 rounded-lg border border-primary-foreground/15 bg-primary-foreground/[0.07] p-3"
               >
-                <span className="min-w-0 break-words text-sm font-medium">
-                  {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+                <span className="passport-signature flex h-11 w-11 items-center justify-center rounded-md bg-primary ring-1 ring-primary-foreground/15">
+                  <CredentialSymbol
+                    code={c.credentialCode}
+                    state={credentialPresentationOf(c, state.lifecycle)}
+                    name={lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+                    decorative
+                    size={34}
+                  />
                 </span>
-                <span className="max-w-[45%] shrink-0 text-right text-xs text-primary-foreground/80">
-                  {state.label[lang]}
+                <span className="min-w-0">
+                  <span className="block break-words text-sm font-semibold">
+                    {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+                  </span>
+                  <span className="mt-1 block text-xs text-primary-foreground/65">
+                    {state.label[lang]}
+                  </span>
                 </span>
               </li>
             );

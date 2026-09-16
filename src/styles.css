@@ -59,6 +59,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-passport-line: var(--passport-line);
+  --color-passport-glow: var(--passport-glow);
   --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
 }
@@ -89,6 +91,8 @@
   --accent-foreground: oklch(0.988 0.003 95);
   --accent-hover: oklch(0.43 0.108 246); /* #12568C */
   --gold: oklch(0.72 0.075 78); /* #B79255 restrained gold */
+  --passport-line: oklch(0.72 0.105 235 / 0.22);
+  --passport-glow: oklch(0.72 0.105 235 / 0.18);
   --surface-subtle: oklch(0.965 0.012 245);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
@@ -132,6 +136,8 @@
   --muted-foreground: oklch(0.704 0.04 256.788);
   --accent: oklch(0.279 0.041 260.031);
   --accent-foreground: oklch(0.984 0.003 247.858);
+  --passport-line: oklch(0.72 0.105 235 / 0.18);
+  --passport-glow: oklch(0.72 0.105 235 / 0.14);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.984 0.003 247.858);
   --border: oklch(1 0 0 / 10%);
@@ -150,6 +156,31 @@
   --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.551 0.027 264.364);
+}
+
+@utility passport-signature {
+  background-image:
+    linear-gradient(115deg, transparent 0 64%, var(--passport-glow) 64.2%, transparent 64.8%),
+    repeating-linear-gradient(
+      135deg,
+      transparent 0,
+      transparent 18px,
+      var(--passport-line) 19px,
+      transparent 20px
+    );
+  background-size:
+    100% 100%,
+    220px 220px;
+  background-position:
+    center,
+    right top;
+}
+
+@utility passport-grid {
+  background-image:
+    linear-gradient(var(--passport-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--passport-line) 1px, transparent 1px);
+  background-size: 22px 22px;
 }
 
 /* ---------------------------------------------------------------------
@@ -197,7 +228,10 @@
   font-weight: 400;
   font-display: swap;
   src: url("/fonts/sora-400.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -206,7 +240,10 @@
   font-weight: 500;
   font-display: swap;
   src: url("/fonts/sora-500.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -215,7 +252,10 @@
   font-weight: 600;
   font-display: swap;
   src: url("/fonts/sora-600.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -224,7 +264,10 @@
   font-weight: 700;
   font-display: swap;
   src: url("/fonts/sora-700.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -233,7 +276,10 @@
   font-weight: 400;
   font-display: swap;
   src: url("/fonts/manrope-400.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -242,7 +288,10 @@
   font-weight: 500;
   font-display: swap;
   src: url("/fonts/manrope-500.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -251,7 +300,10 @@
   font-weight: 600;
   font-display: swap;
   src: url("/fonts/manrope-600.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @font-face {
@@ -260,7 +312,10 @@
   font-weight: 700;
   font-display: swap;
   src: url("/fonts/manrope-700.woff2") format("woff2");
-  unicode-range: U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  unicode-range:
+    U+0000-00FF, U+0100-017F, U+0180-024F, U+0259, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+1E00-1EFF, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
 }
 
 @layer base {

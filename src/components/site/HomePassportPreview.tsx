@@ -24,7 +24,7 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
   return (
     <article
       aria-label={t("home.markets.eyebrow")}
-      className="relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-7"
+      className="passport-signature relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] ring-1 ring-accent/20 sm:p-7"
       data-home-passport-preview
       data-home-entry="passport"
     >
@@ -34,7 +34,7 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-0 right-0 -z-10 h-56 w-40 border-l border-primary-foreground/10 opacity-60"
+        className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-44 border-l border-primary-foreground/10 opacity-20"
       />
 
       <header className="flex items-start justify-between gap-4 border-b border-primary-foreground/15 pb-5">

@@ -22,16 +22,24 @@ export function CredentialRecord({
     <article
       data-premium-credential-record
       className={cn(
-        "group relative isolate overflow-hidden rounded-lg border border-border/80 bg-card shadow-[var(--shadow-xs)] transition-shadow hover:shadow-[var(--shadow-md)]",
+        "group relative isolate overflow-hidden rounded-lg border border-border/70 bg-card shadow-[var(--shadow-sm)] transition-[box-shadow,transform] duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-lg)] motion-reduce:transform-none",
         className,
       )}
     >
       <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
-      <div className="grid min-w-0 gap-4 p-4 pl-5 sm:grid-cols-[4.5rem_minmax(0,1fr)_auto] sm:items-center sm:p-5 sm:pl-6">
-        <div className="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[var(--shadow-sm)]">
+      <div
+        aria-hidden="true"
+        className="passport-grid pointer-events-none absolute inset-y-0 left-0 w-28 opacity-25"
+      />
+      <div className="grid min-w-0 gap-5 p-4 pl-5 sm:grid-cols-[5.25rem_minmax(0,1fr)_auto] sm:items-center sm:p-6 sm:pl-7">
+        <div className="passport-signature relative flex h-[5.25rem] w-[5.25rem] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[var(--shadow-md)] ring-1 ring-accent/25">
           <div
             aria-hidden="true"
-            className="absolute inset-1 rounded-md border border-primary-foreground/15"
+            className="absolute inset-1 rounded-md border border-primary-foreground/20"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute bottom-2 left-2 h-1.5 w-1.5 rounded-full bg-accent"
           />
           {symbol}
         </div>
@@ -39,16 +47,16 @@ export function CredentialRecord({
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {eyebrow}
           </div>
-          <h3 className="mt-1 break-words text-lg font-semibold leading-snug text-foreground">
+          <h3 className="mt-1 max-w-[32rem] break-words text-xl font-semibold leading-snug text-foreground">
             {title}
           </h3>
-          <div className="mt-3 grid min-w-0 gap-x-6 gap-y-2 text-sm text-muted-foreground sm:grid-cols-2">
+          <div className="mt-4 grid min-w-0 gap-x-8 gap-y-3 text-sm text-muted-foreground sm:grid-cols-2">
             {metadata}
           </div>
         </div>
         <div className="min-w-0 sm:max-w-44 sm:text-right">{states}</div>
       </div>
-      <div className="border-t border-border/70 bg-secondary/30 px-5 sm:pl-[6.5rem]">{action}</div>
+      <div className="border-t border-border/70 bg-secondary/40 px-5 sm:pl-[7.75rem]">{action}</div>
     </article>
   );
 }
