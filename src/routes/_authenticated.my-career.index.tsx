@@ -21,7 +21,6 @@ import { NextBestAction } from "@/components/professional-identity/NextBestActio
 import { PassportSummary } from "@/components/professional-identity/PassportSummary";
 import { HubStatusGrid } from "@/components/professional-identity/HubStatusGrid";
 import { OverviewPassportCard } from "@/components/professional-identity/OverviewPassportCard";
-import { OverviewPassportContents } from "@/components/professional-identity/OverviewPassportContents";
 import { RecentActivity } from "@/components/professional-identity/RecentActivity";
 import { LinkEarlierResult } from "@/components/professional-identity/LinkEarlierResult";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
@@ -609,18 +608,12 @@ function MyCareerPage() {
             this is its verification state, this is where I open it. */}
         <aside
           className="min-w-0 lg:col-span-4"
-          aria-labelledby="overview-passport-contents-heading"
+          aria-label={lang === "sv" ? "Mitt Security Passport" : "My Security Passport"}
           data-overview-passport-region
         >
           <OverviewPassportCard lang={lang as Lang} />
 
-          {/* WHAT IS IN IT, directly beneath the card — read from the same
-              canonical listMyEntries the Passport page and the profile
-              read. The totals below are secondary: they say what STATE
-              the Passport is in and never what it holds, which is the
-              owner's correction. */}
-          <OverviewPassportContents lang={lang as Lang} className="mt-5" />
-
+          {/* The compact card previews actual credentials; these totals describe their status. */}
           <PassportSummary
             className="mt-4"
             passport={model.passport}

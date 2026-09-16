@@ -285,7 +285,7 @@ export function EmploymentHistoryEditor({ className = "" }: { className?: string
         <Link
           to="/passport/information"
           hash="sp-employment"
-          className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           data-employment-evidence-link
         >
           {pt("info.employment")} — {pt("entry.documentAndVerify")}

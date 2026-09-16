@@ -48,12 +48,12 @@ function claim(over: Partial<Claim> = {}): Claim {
   return {
     id: "c-1",
     claimType: "certification",
-    credentialCode: null,
+    credentialCode: "INTL_ASIS_CPP",
     skillCode: null,
     skillLevel: null,
-    titleSv: "Väktarutbildning grundkurs",
-    titleEn: "Security officer foundation course",
-    issuerName: "BYA",
+    titleSv: "Certified Protection Professional (CPP)",
+    titleEn: "Certified Protection Professional (CPP)",
+    issuerName: "ASIS International",
     jurisdictionCode: "SE",
     subJurisdictionCode: null,
     authorisationScope: null,
@@ -130,7 +130,7 @@ interface Scenario {
 
 /** Just after the first run: one merit, recorded by the holder, nothing else. */
 const JUST_ADDED: Scenario = {
-  claims: [],
+  claims: [claim()],
   periods: [period()],
   requests: [],
 };
@@ -370,6 +370,11 @@ const boom = (route: Route, message: string) =>
 
 function snapshotOf(s: Scenario) {
   return {
+    profileIdentity: {
+      displayName: "Nina Lindqvist",
+      titleSv: "Säkerhetsanalytiker",
+      titleEn: "Security analyst",
+    },
     profile: s.noProfile
       ? null
       : {
@@ -459,7 +464,34 @@ async function mount(
     const name = exportOf(route.request().url()) ?? "?";
     switch (name) {
       case "getInternationalPassportMetadata":
-        return ok(route, { details: [], verificationEvents: [], jurisdictions: [], issuers: [] });
+        return ok(route, {
+          definitions: [
+            {
+              code: "INTL_ASIS_CPP",
+              name_sv: "Certified Protection Professional (CPP)",
+              name_en: "Certified Protection Professional (CPP)",
+              credential_class: "certification",
+              scope_code: "global_professional",
+              country: null,
+              region: null,
+              issuer_id: "asis",
+              issuer_name: "ASIS International",
+              requires_valid_until: false,
+              allows_no_expiry: false,
+            },
+          ],
+          details: [],
+          verificationEvents: scenario.claims
+            .filter((c) => c.assertionLevel === "verified")
+            .map((c) => ({
+              claimId: c.id,
+              result: "approved",
+              decidedAt: "2026-06-01",
+              validUntil: null,
+            })),
+          jurisdictions: [],
+          issuers: [],
+        });
       case "getMyPassport":
         if (scenario.passportFails) return boom(route, "read failed");
         return ok(route, snapshotOf(scenario));
@@ -667,854 +699,302 @@ async function shoot(page: Page, name: string) {
    The scenarios
    ══════════════════════════════════════════════════════════════════════ */
 
-test.describe("Security Passport — the workspace", () => {
-  test.describe.configure({ timeout: 90_000 });
+const wallet = (page: Page) => page.locator("[data-credential-wallet]");
+const rows = (page: Page) => wallet(page).locator("[data-credential-row]");
+async function noErrors() {
+  expect(pageErrors).toEqual([]);
+  expect(unmatched).toEqual([]);
+}
 
-  test("1 · one recorded merit reads as registered, and asks for one more", async ({ page }) => {
+test.describe("Security Passport — governed wallet regression", () => {
+  test("1 registered credential stays self-declared and offers a governed next credential", async ({
+    page,
+  }) => {
     await mount(page, JUST_ADDED);
     await ready(page);
-
-    // One H1, and it names the product.
-    await expect(page.locator("h1")).toHaveCount(1);
-    await expect(page.locator("h1")).toHaveText("Mitt Security Passport");
-
-    // The ladder, with the merit on the bottom rung and nothing above it.
-    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
-      "data-count",
-      "1",
+    await expect(rows(page)).toHaveCount(1);
+    await expect(rows(page)).toContainText(/Egen|Registrerad|Tillagd/i);
+    await expect(wallet(page).getByRole("link", { name: "Lägg till yrkesbevis" })).toHaveAttribute(
+      "href",
+      "/passport/credentials/new",
     );
-    await expect(page.locator('[data-status-tile="documented"]')).toHaveAttribute(
-      "data-count",
-      "0",
-    );
-    await expect(page.locator('[data-status-tile="source-confirmed"]')).toHaveAttribute(
-      "data-count",
-      "0",
-    );
-    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute("data-count", "0");
-
-    // Exactly one recommended step, and it retires on a stated condition.
-    await expect(page.locator("[data-next-step]")).toHaveCount(1);
-    await expect(page.locator("[data-next-step]")).toHaveAttribute(
-      "data-next-step",
-      "add_more_merits",
-    );
-    await expect(page.locator("[data-next-step-cta]")).toHaveAttribute(
-      "data-retires-when",
-      "a second current merit is recorded",
-    );
-
-    // The merit itself, listed with its status.
-    await expect(page.locator('[data-merit-row="p-1"]')).toBeVisible();
-    await expect(page.locator('[data-merit-row="p-1"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "added_by_you",
-    );
-
-    // Empty categories are not rendered.
-    await expect(page.locator('[data-merit-group="in-review"]')).toHaveCount(0);
-    await expect(page.locator('[data-merit-group="archived"]')).toHaveCount(0);
-    await expect(page.locator('[data-merit-group="drafts"]')).toHaveCount(0);
-
-    expect(pageErrors).toEqual([]);
-    await shoot(page, "just-added-sv-1440");
+    await noErrors();
   });
-
-  test("2 · a document review reads as documented, never as source-confirmed", async ({ page }) => {
-    await mount(page, DOCUMENTED);
+  test("2 document review is documented and never an issuer confirmation", async ({ page }) => {
+    await mount(page, DOCUMENTED, "en");
     await ready(page);
-
-    await expect(page.locator('[data-status-tile="documented"]')).toHaveAttribute(
-      "data-count",
-      "1",
-    );
-    await expect(page.locator('[data-status-tile="source-confirmed"]')).toHaveAttribute(
-      "data-count",
-      "0",
-    );
-    await expect(page.locator('[data-merit-row="c-1"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "documented",
-    );
-    await expect(page.locator('[data-merit-row="c-1"]')).toContainText("Dokumenterad");
-    await expect(page.locator('[data-merit-row="c-1"]')).not.toContainText("Källbekräftad");
-    expect(pageErrors).toEqual([]);
+    await expect(rows(page)).toContainText(/Document/);
+    await expect(rows(page)).not.toContainText("Source-confirmed");
   });
-
-  test("3 · an employer confirmation reads as source-confirmed", async ({ page }) => {
-    await mount(page, SOURCE_CONFIRMED);
+  test("3 employer-confirmed employment belongs to CV and cannot raise credential trust", async ({
+    page,
+  }) => {
+    await mount(page, SOURCE_CONFIRMED, "en");
     await ready(page);
-
-    await expect(page.locator('[data-status-tile="source-confirmed"]')).toHaveAttribute(
-      "data-count",
-      "1",
+    await expect(wallet(page)).not.toContainText("Nordic Security AB");
+    await expect(rows(page)).not.toContainText("Source-confirmed");
+    await expect(page.locator("[data-compact-passport-card]")).not.toContainText(
+      "Nordic Security AB",
     );
-    await expect(page.locator('[data-merit-row="p-1"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "verified",
-    );
-    await expect(page.locator('[data-merit-row="p-1"]')).toContainText("Källbekräftad");
-    expect(pageErrors).toEqual([]);
   });
-
-  test("4 · an open review is a status, never the recommended action", async ({ page }) => {
-    await mount(page, IN_REVIEW);
+  test("4 pending review is stated without a verification promise", async ({ page }) => {
+    await mount(page, IN_REVIEW, "en");
     await ready(page);
-
-    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute("data-count", "1");
-    await expect(
-      page.locator('[data-merit-group="in-review"] [data-merit-row="c-1"]'),
-    ).toBeVisible();
-    // The step is about something else entirely — never "wait".
-    await expect(page.locator("[data-next-step]")).not.toHaveAttribute(
-      "data-next-step",
-      "verification_requested",
-    );
-    expect(pageErrors).toEqual([]);
+    await expect(rows(page)).toContainText("Pending review");
+    await expect(rows(page)).not.toContainText("Source-confirmed");
   });
-
-  test("5 · a reviewer's question outranks everything and opens that entry", async ({ page }) => {
+  test("5 reviewer question names and opens its own credential", async ({ page }) => {
     await mount(page, CLARIFICATION);
     await ready(page);
-
-    await expect(page.locator("[data-next-step]")).toHaveAttribute(
-      "data-next-step",
-      "respond_to_clarification",
+    const attention = page.locator("#attention");
+    await expect(attention).toContainText("Vi behöver ett intyg");
+    await expect(attention.getByRole("link", { name: "Öppna uppgiften" })).toHaveAttribute(
+      "href",
+      "/passport/entry/claim/c-1",
     );
-    const cta = page.locator("[data-next-step-cta]");
-    await expect(cta).toHaveAttribute("href", "/passport/entry/claim/c-1");
-    await expect(cta).toHaveAttribute(
-      "data-retires-when",
-      "the holder has answered and the request leaves clarification_requested",
-    );
-    // The reviewer's own message reaches the holder, in the attention region.
-    await expect(page.locator("#attention")).toContainText("kursens omfattning");
-    // And the merit itself says what state it is in.
-    await expect(page.locator('[data-merit-row="c-1"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "clarification_needed",
-    );
-    expect(pageErrors).toEqual([]);
-    await shoot(page, "clarification-sv-1440");
+    await attention.getByRole("link", { name: "Öppna uppgiften" }).click();
+    await expect(page).toHaveURL(/\/passport\/entry\/claim\/c-1$/);
+    await noErrors();
   });
-
-  test("6 · an archived merit is history, and is never counted as current", async ({ page }) => {
-    await mount(page, ARCHIVED);
+  test("6 historical expiry remains visible and is never current verification", async ({
+    page,
+  }) => {
+    await mount(page, ARCHIVED, "en");
     await ready(page);
-
-    await expect(
-      page.locator('[data-merit-group="archived"] [data-merit-row="c-old"]'),
-    ).toBeVisible();
-    // One employment is the only CURRENT merit; the expired credential is not
-    // on any rung of the ladder.
-    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
-      "data-count",
-      "1",
-    );
-    await expect(page.locator('[data-status-tile="documented"]')).toHaveAttribute(
-      "data-count",
-      "0",
-    );
-    expect(pageErrors).toEqual([]);
+    await expect(rows(page)).toContainText(/Expired|Past/);
+    await expect(rows(page)).not.toContainText("Source-confirmed");
   });
-
-  test("7 · several states at once, each in exactly one group", async ({ page }) => {
-    await mount(page, MIXED);
+  test("7 mixed states retain each credential exactly once and exclude employment", async ({
+    page,
+  }) => {
+    await mount(page, MIXED, "en");
     await ready(page);
-
-    await expect(
-      page.locator('[data-merit-group="drafts"] [data-draft-row="c-draft"]'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-merit-group="in-review"] [data-merit-row="c-open"]'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-merit-group="archived"] [data-merit-row="c-old"]'),
-    ).toBeVisible();
-    await expect(
-      page.locator('[data-merit-group="current"] [data-merit-row="c-doc"]'),
-    ).toBeVisible();
-
-    // No merit appears twice.
-    for (const id of ["c-doc", "c-open", "c-ask", "c-old", "p-1", "p-2"]) {
-      await expect(page.locator(`[data-merit-row="${id}"]`)).toHaveCount(1);
-    }
-
-    // The counts and the list describe the same merits.
-    await expect(page.locator('[data-status-tile="documented"]')).toHaveAttribute(
-      "data-count",
-      "1",
-    );
-    await expect(page.locator('[data-status-tile="source-confirmed"]')).toHaveAttribute(
-      "data-count",
-      "1",
-    );
-    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute("data-count", "2");
-    expect(pageErrors).toEqual([]);
-    await shoot(page, "mixed-sv-1440");
+    await expect(rows(page)).toHaveCount(5);
+    for (const c of MIXED.claims)
+      await expect(wallet(page).locator(`a[href="/passport/entry/claim/${c.id}"]`)).toHaveCount(1);
+    await expect(wallet(page)).not.toContainText("Nordic Security AB");
+    await expect(wallet(page)).not.toContainText("Väktarbolaget Syd AB");
   });
-
-  test("8 · a failed verification read costs its figures, not the page", async ({ page }) => {
-    await mount(page, VERIFICATION_DOWN);
+  test("8 failed review read preserves credentials and explains uncertainty once", async ({
+    page,
+  }) => {
+    await mount(page, VERIFICATION_DOWN, "en");
     await ready(page);
-
-    // The merits still render — the Passport read succeeded.
-    await expect(page.locator('[data-merit-row="c-doc"]')).toBeVisible();
-    // The review-derived figure says it could not be read. Never 0.
-    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute(
-      "data-count",
-      "unknown",
-    );
-    // And no step is recommended on a standing nobody could read.
-    await expect(page.locator("[data-next-step]")).toHaveAttribute("data-next-step", "unavailable");
-    await expect(page.locator("[data-next-step] [data-retry]")).toBeVisible();
-    expect(pageErrors).toEqual([]);
-    await shoot(page, "verification-down-sv-1440");
+    await expect(rows(page)).toHaveCount(5);
+    await expect(page.getByText("Review status unavailable", { exact: true })).toHaveCount(1);
+    await expect(wallet(page)).not.toContainText("Pending review");
   });
-
-  test("9 · a failed Passport read says so and offers a retry", async ({ page }) => {
-    await mount(page, { ...JUST_ADDED, passportFails: true });
-    await expect(page.getByRole("alert")).toContainText("Security Passport", {
-      timeout: 30_000,
-    });
-    await expect(page.getByRole("button", { name: "Försök igen" })).toBeVisible();
-    expect(pageErrors).toEqual([]);
+  test("9 failed Passport read retries without losing navigation", async ({ page }) => {
+    const state = { ...JUST_ADDED, passportFails: true };
+    await mount(page, state, "en");
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(wallet(page)).toHaveCount(0);
+    state.passportFails = false;
+    await page.getByRole("button", { name: /Try again|Retry/ }).click();
+    await ready(page);
+    await expect(rows(page)).toHaveCount(1);
+    await noErrors();
   });
-
-  /* ────────────────────────────────────────────────────────────────
-     10 · THE DEAD-END CONTRACT, PROVED BY CLICKING
-     ────────────────────────────────────────────────────────────────
-     An HTTP 200 for a route is not proof that a button works. It says the
-     server would serve a document; it says nothing about whether the click
-     navigates, whether the page renders, whether it renders the RIGHT
-     object, or whether the person can get back. Each scenario below presses
-     the control a person would press and then asserts all four.
-     ──────────────────────────────────────────────────────────────── */
-
-  /** Everything that must be true of any page a Passport CTA lands on. */
-  async function landed(
-    page: Page,
-    expected: { url: RegExp; heading?: RegExp; contains?: (string | RegExp)[] },
-  ) {
-    await page.waitForURL(expected.url, { timeout: 30_000 });
-
-    // Not a login wall. The stub keeps a session, so being bounced to
-    // sign-in means the destination is not reachable for a signed-in holder.
-    expect(page.url()).not.toMatch(/\/(login|signin|signup)\b/);
-
-    // Not a not-found page, and not a placeholder.
-    const body = await page.locator("main, body").first().innerText();
-    for (const dud of [
-      "404",
-      "Sidan finns inte",
-      "Page not found",
-      "Kommer snart",
-      "Coming soon",
-      "Not implemented",
-    ]) {
-      expect(body, `placeholder "${dud}" on ${page.url()}`).not.toContain(dud);
-    }
-
-    if (expected.heading) {
-      await expect(page.getByRole("heading", { name: expected.heading }).first()).toBeVisible({
-        timeout: 30_000,
+  const forbidden = ["employment", "education", "language", "practical_skill", "membership"];
+  for (const kind of forbidden)
+    test(`ownership — ${kind} remains outside credential wallet`, async ({ page }) => {
+      await mount(page, {
+        ...JUST_ADDED,
+        claims: [
+          claim(),
+          claim({
+            id: "cv-only",
+            claimType: kind,
+            credentialCode: null,
+            titleSv: "PRIVATE CV FACT",
+            titleEn: "PRIVATE CV FACT",
+          }),
+        ],
       });
-    }
-    for (const needle of expected.contains ?? []) {
-      await expect(page.locator("body")).toContainText(needle, { timeout: 30_000 });
-    }
-
-    // A CLEAR ROUTE BACK TO THE PASSPORT.
-    //
-    // Reachable, not merely present in the DOM: `.first()` on this selector
-    // resolves to the site header's link, which is real but collapsed into
-    // the menu sheet at phone widths. A link nobody can see is not a route
-    // back, and a link one tap inside a labelled menu is — so the assertion
-    // accepts either, and fails when neither is true.
-    const backHome = page.locator('a[href="/passport"]');
-    const anyVisible = async () => {
-      const n = await backHome.count();
-      for (let i = 0; i < n; i += 1) if (await backHome.nth(i).isVisible()) return true;
-      return false;
-    };
-    if (!(await anyVisible())) {
-      await page.locator("[aria-controls='site-menu']").first().click();
-      await expect(page.locator("#site-menu")).toBeVisible();
-    }
-    expect(await anyVisible(), `no reachable route back to /passport from ${page.url()}`).toBe(
-      true,
-    );
-
-    expect(pageErrors, `page errors on ${page.url()}`).toEqual([]);
-  }
-
-  /** Open the add-merit chooser and click one of its three options. */
-  async function chooseMerit(page: Page, kind: "employment" | "education" | "credential") {
-    await page.locator('[data-cta="add-merit"]').click();
-    await expect(page.locator(`[data-add-merit="${kind}"]`)).toBeVisible();
-    await page.locator(`[data-add-merit="${kind}"]`).click();
-  }
-
-  test("10a · Add merit → employment lands on the employment section", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await chooseMerit(page, "employment");
-    await landed(page, {
-      url: /\/passport\/information#sp-employment$/,
-      heading: /Mina uppgifter/,
+      await ready(page);
+      await expect(rows(page)).toHaveCount(1);
+      await expect(page.locator("[data-passport-workspace]")).not.toContainText("PRIVATE CV FACT");
     });
-    // The SECTION, not merely the page: the anchor is resolved and focused
-    // once the sections exist, which the browser cannot do on its own here.
-    await expect(page.locator("#sp-employment")).toHaveAttribute(
-      "data-hash-target",
-      "sp-employment",
-    );
-    await expect(page.locator("#sp-employment")).toContainText("Lägg till anställning");
-  });
-
-  test("10b · Add merit → education lands on the education section", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await chooseMerit(page, "education");
-    await landed(page, {
-      url: /\/passport\/information#sp-education$/,
-      heading: /Mina uppgifter/,
+  for (const state of ["draft", "disputed", "revoked", "superseded", "expired"])
+    test(`lifecycle — ${state} is explicitly marked`, async ({ page }) => {
+      await mount(page, { ...JUST_ADDED, claims: [claim({ lifecycleState: state })] }, "en");
+      await ready(page);
+      await expect(rows(page)).toHaveCount(1);
+      await expect(rows(page)).toContainText(new RegExp(state, "i"));
     });
-    await expect(page.locator("#sp-education")).toHaveAttribute("data-hash-target", "sp-education");
-    await expect(page.locator("#sp-education")).toContainText("Utbildning");
-  });
-
-  test("10c · Add merit → authorisation lands on the credential form", async ({ page }) => {
-    await mount(page, MIXED);
+  test("empty credentials preserve CV privacy and offer approved add flow", async ({ page }) => {
+    await mount(page, { claims: [], periods: [period()], requests: [] }, "en");
     await ready(page);
-    await chooseMerit(page, "credential");
-    await landed(page, {
-      url: /\/passport\/credentials\/new$/,
-      heading: /Lägg till behörighet eller utbildning/,
+    await expect(wallet(page)).toContainText("No credentials here yet");
+    await expect(rows(page)).toHaveCount(0);
+    await wallet(page).getByRole("link", { name: "Add credential" }).click();
+    await expect(page.getByRole("heading", { name: "Add credential" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Scope", exact: true })).toBeVisible();
+    await noErrors();
+  });
+  for (const target of [
+    { name: "Select and share", url: "/passport/share", heading: /Share|Select/ },
+    { name: "Add credential", url: "/passport/credentials/new", heading: /Add credential/ },
+  ])
+    test(`navigation — ${target.name} loads its real destination`, async ({ page }) => {
+      await mount(page, JUST_ADDED, "en");
+      await ready(page);
+      await wallet(page).getByRole("link", { name: target.name }).click();
+      await expect(page).toHaveURL(new RegExp(target.url + "$"));
+      await expect(
+        page.getByRole("heading").filter({ hasText: target.heading }).first(),
+      ).toBeVisible();
+      await noErrors();
     });
-  });
-
-  test("10d · Share Passport lands on the sharing centre", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await page.locator('[data-cta="share"]').click();
-    // "Dela ditt Security Passport" since PR #197 — the screen names the
-    // product, because a holder arriving from the overview has to recognise
-    // what they are about to send.
-    await landed(page, { url: /\/passport\/share$/, heading: /Dela ditt Security Passport/ });
-  });
-
-  test("10e · the CV link lands on the CV list", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await page.locator('[data-use-link="cv"]').click();
-    await landed(page, { url: /\/my-career\/cv$/, heading: /CV/ });
-  });
-
-  test("10f · the recipient view lands on the Passport Card", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await page.locator('[data-use-link="card"]').click();
-    await landed(page, { url: /\/passport\/card$/ });
-    // The card itself, not merely the route: the article the recipient sees.
-    await expect(page.getByRole("article", { name: "Security Passport" })).toBeVisible();
-    // And the tab that names where we are.
-    await expect(page.locator('a[href="/passport/card"][aria-current="page"]')).toBeVisible();
-  });
-
-  test("10g · a merit row opens THAT merit, not the route family", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await page.locator('[data-merit-row="c-doc"]').click();
-    await landed(page, {
-      url: /\/passport\/entry\/claim\/c-doc$/,
-      contains: ["Väktarutbildning grundkurs"],
+  for (const id of ["c-doc", "c-draft", "c-old"])
+    test(`details — ${id} opens the selected record`, async ({ page }) => {
+      await mount(page, MIXED, "en");
+      await ready(page);
+      await wallet(page).locator(`a[href="/passport/entry/claim/${id}"]`).click();
+      await expect(page).toHaveURL(new RegExp("/passport/entry/claim/" + id + "$"));
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await noErrors();
     });
-    // The CORRECT object: a neighbouring merit's title must not be here.
-    await expect(page.locator("body")).not.toContainText("Skyddsvaktsutbildning");
-  });
-
-  test("10h · an employment row opens that employment", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await page.locator('[data-merit-row="p-2"]').click();
-    await landed(page, {
-      url: /\/passport\/entry\/experience\/p-2$/,
-      contains: ["Ordningsvakt", "Väktarbolaget Syd AB"],
-    });
-  });
-
-  test("10i · a draft resumes IN the form, carrying its id", async ({ page }) => {
-    await mount(page, MIXED);
-    await ready(page);
-    await page.locator('[data-draft-row="c-draft"]').click();
-    await landed(page, {
-      url: /\/passport\/credentials\/new\?draft=c-draft$/,
-      heading: /Lägg till behörighet eller utbildning/,
-    });
-  });
-
-  test("10j · a reviewer's question opens the merit it is about", async ({ page }) => {
-    await mount(page, CLARIFICATION);
-    await ready(page);
-    await expect(page.locator("[data-next-step]")).toHaveAttribute(
-      "data-next-step",
-      "respond_to_clarification",
-    );
-    await page.locator("[data-next-step-cta]").click();
-    await landed(page, {
-      url: /\/passport\/entry\/claim\/c-1$/,
-      contains: ["Väktarutbildning grundkurs"],
-    });
-  });
-
-  test("10k · a refused request opens the merit it decided", async ({ page }) => {
+  test("rejected review preserves explanation and correction destination", async ({ page }) => {
     await mount(page, REJECTED);
     await ready(page);
-    await expect(page.locator("[data-next-step]")).toHaveAttribute(
-      "data-next-step",
-      "review_verification_outcome",
+    await expect(page.locator("#attention")).toContainText(
+      "Underlaget visar inte kursens omfattning.",
     );
-    await page.locator("[data-next-step-cta]").click();
-    await landed(page, {
-      url: /\/passport\/entry\/claim\/c-1$/,
-      contains: ["Väktarutbildning grundkurs"],
-    });
+    await expect(page.locator('#attention a[href="/passport/entry/claim/c-1"]')).toBeVisible();
   });
-
-  test("10l · several questions open the attention region, which is really there", async ({
-    page,
-  }) => {
+  test("multiple questions link separately to their subjects", async ({ page }) => {
     await mount(page, TWO_QUESTIONS);
     await ready(page);
-    await expect(page.locator("[data-next-step-cta]")).toHaveAttribute(
-      "href",
-      "/passport#attention",
-    );
-    await page.locator("[data-next-step-cta]").click();
-    await expect(page.locator("#attention")).toBeVisible();
-    await expect(page.locator("#attention")).toContainText("Hjärt- och lungräddning");
-    await expect(page.locator("#attention")).toContainText("Skyddsvaktsutbildning");
-    expect(pageErrors).toEqual([]);
+    for (const id of ["c-a", "c-b"])
+      await expect(page.locator(`#attention a[href="/passport/entry/claim/${id}"]`)).toBeVisible();
   });
-
-  test("10m · asking for verification opens the merits list, which is really there", async ({
-    page,
-  }) => {
-    await mount(page, TWO_UNREVIEWED);
+  test("unreviewed claims cannot be described as pending or verified", async ({ page }) => {
+    await mount(page, TWO_UNREVIEWED, "en");
     await ready(page);
-    await expect(page.locator("[data-next-step]")).toHaveAttribute(
-      "data-next-step",
-      "submit_passport_verification",
-    );
-    await expect(page.locator("[data-next-step-cta]")).toHaveAttribute("href", "/passport#merits");
-    await page.locator("[data-next-step-cta]").click();
-    await expect(page.locator("#merits")).toBeVisible();
-    await expect(page.locator('[data-merit-group="current"]')).toBeVisible();
-    expect(pageErrors).toEqual([]);
+    await expect(rows(page)).toHaveCount(2);
+    await expect(wallet(page)).not.toContainText("Pending review");
+    await expect(rows(page).first()).not.toContainText("Source-confirmed");
   });
-
-  test("10n · REGRESSION: a failed review read never shows a pending merit as ordinary", async ({
-    page,
-  }) => {
-    // The control first: with the read answering, the three merits really are
-    // three different things, so the scenario is not asserting a tautology.
-    await mount(page, REVIEW_STATE_UP);
+  test("failed read does not invent pending or clarification status", async ({ page }) => {
+    await mount(page, REVIEW_STATE_DOWN, "en");
     await ready(page);
-    await expect(
-      page.locator('[data-merit-group="in-review"] [data-merit-row="c-pending"]'),
-    ).toBeVisible();
-    await expect(page.locator('[data-merit-row="c-ask"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "clarification_needed",
-    );
-    await expect(page.locator('[data-merit-row="c-plain"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "added_by_you",
-    );
-    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
-      "data-count",
-      "1",
-    );
-
-    // Now the read fails.
-    await mount(page, REVIEW_STATE_DOWN);
-    await ready(page);
-
-    // Not one of them is described as an ordinary registered merit.
-    for (const id of ["c-pending", "c-ask", "c-plain"]) {
-      await expect(
-        page.locator(`[data-merit-row="${id}"] [data-merit-status]`),
-        id,
-      ).toHaveAttribute("data-merit-status", "unknown");
-    }
-    // There is no "current merits" group to be mistaken for one, and no
-    // "under review" group falsely asserting the opposite.
-    await expect(page.locator('[data-merit-group="current"]')).toHaveCount(0);
-    await expect(page.locator('[data-merit-group="in-review"]')).toHaveCount(0);
-    // They are under a heading that names the reason, in words.
-    await expect(page.locator('[data-merit-group="review-unknown"]')).toBeVisible();
-    await expect(page.locator('[data-merit-group="review-unknown"]')).toContainText(
-      "Granskningsstatus kunde inte läsas",
-    );
-    // Both review-derived figures are unknown, never a number.
-    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
-      "data-count",
-      "unknown",
-    );
-    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute(
-      "data-count",
-      "unknown",
-    );
-    // And nothing is recommended off the back of it.
-    await expect(page.locator("[data-next-step]")).toHaveAttribute("data-next-step", "unavailable");
-    // The settled word appears nowhere on the page.
-    await expect(page.locator("[data-passport-workspace]")).not.toContainText("Egen uppgift");
-    expect(pageErrors).toEqual([]);
-    await shoot(page, "review-state-down-sv-1440");
+    await expect(rows(page)).toHaveCount(3);
+    await expect(wallet(page)).toContainText("Review status unavailable");
+    await expect(wallet(page)).not.toContainText("Clarification requested");
   });
-
-  test("10o · an intrinsically known standing survives the same failure", async ({ page }) => {
-    await mount(page, VERIFICATION_DOWN);
+  test("healthy control distinguishes pending and clarification", async ({ page }) => {
+    await mount(page, REVIEW_STATE_UP, "en");
     await ready(page);
-    // A CQrityjob document review and an employer confirmation are functions
-    // of stored provenance, not of the request table.
-    await expect(page.locator('[data-merit-row="c-doc"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "documented",
-    );
-    await expect(page.locator('[data-merit-row="p-1"] [data-merit-status]')).toHaveAttribute(
-      "data-merit-status",
-      "verified",
-    );
-    await expect(page.locator('[data-status-tile="documented"]')).toHaveAttribute(
-      "data-count",
-      "1",
-    );
-    await expect(page.locator('[data-status-tile="source-confirmed"]')).toHaveAttribute(
-      "data-count",
-      "1",
-    );
-    expect(pageErrors).toEqual([]);
+    await expect(wallet(page)).toContainText("Pending review");
+    await expect(wallet(page)).toContainText("Clarification requested");
   });
-
-  test("10p · the add-another-merit step OPENS the chooser, in place", async ({ page }) => {
-    await mount(page, JUST_ADDED);
+  test("slow review read shows loading then real states, never failure", async ({ page }) => {
+    await mount(page, SLOW_REVIEW, "en");
     await ready(page);
-    await expect(page.locator("[data-next-step]")).toHaveAttribute(
-      "data-next-step",
-      "add_more_merits",
-    );
-    // Collapsed to begin with: a disclosure that is already open is not a
-    // proof that pressing the step opened it.
-    await expect(page.locator("[data-add-merit-chooser]")).not.toHaveAttribute("open", /.*/);
-
-    await page.locator("[data-next-step-cta]").click();
-
-    // The URL says where we went, the chooser is open, and the keyboard is
-    // on it — not at the top of a long page the person must now search.
-    await expect(page).toHaveURL(/\/passport#add-merit$/);
-    await expect(page.locator("#add-merit")).toHaveAttribute("data-hash-target", "add-merit");
-    await expect(page.locator("[data-add-merit-chooser]")).toHaveAttribute("open", /.*/);
-    await expect(page.locator('[data-cta="add-merit"]')).toBeFocused();
-
-    // All three options are visible and each is a real destination.
-    for (const kind of ["employment", "education", "credential"] as const) {
-      await expect(page.locator(`[data-add-merit="${kind}"]`)).toBeVisible();
-    }
-
-    // And one of them works from here, with a way back.
-    await page.locator('[data-add-merit="education"]').click();
-    await landed(page, {
-      url: /\/passport\/information#sp-education$/,
-      heading: /Mina uppgifter/,
-    });
+    await expect(page.locator("[data-review-read-status]")).toHaveText("Loading review status…");
+    await expect(wallet(page)).not.toContainText("Review status unavailable");
+    await expect(wallet(page)).toContainText("Pending review", { timeout: 10000 });
+    await expect(page.locator("[data-review-read-status]")).toHaveCount(0);
   });
-
-  // ── SAME-PAGE FRAGMENT NAVIGATION ────────────────────────────────────
-  //
-  // Pressed while already on /passport, these change the fragment and fire
-  // no document load at all. Before the correction they moved the address
-  // bar and nothing else.
-  for (const spec of [
-    { anchor: "attention", scenario: () => TWO_QUESTIONS, step: "respond_to_clarification" },
-    { anchor: "merits", scenario: () => TWO_UNREVIEWED, step: "submit_passport_verification" },
-  ] as const) {
-    test(`10q · a same-page click on #${spec.anchor} resolves, focuses and scrolls`, async ({
-      page,
-    }) => {
-      await mount(page, spec.scenario());
+  for (const anchor of ["attention", "merits"])
+    test(`deep link #${anchor} has a labelled focusable target`, async ({ page }) => {
+      await mount(page, MIXED, "en", `/passport#${anchor}`);
       await ready(page);
-      await expect(page.locator("[data-next-step]")).toHaveAttribute("data-next-step", spec.step);
-      // Nothing has resolved yet — the page was opened without a fragment.
-      await expect(page.locator(`#${spec.anchor}`)).not.toHaveAttribute("data-hash-target", /.*/);
-
-      await page.locator("[data-next-step-cta]").click();
-
-      await expect(page).toHaveURL(new RegExp(`/passport#${spec.anchor}$`));
-      const target = page.locator(`#${spec.anchor}`);
-      await expect(target).toHaveAttribute("data-hash-target", spec.anchor);
-      await expect(target).toBeFocused();
-      await expect(target).toBeInViewport();
-      // Exactly one element answers to that id, so "the correct unique
-      // target" is a fact rather than the first of several.
-      expect(await page.locator(`[id="${spec.anchor}"]`).count()).toBe(1);
-      expect(pageErrors).toEqual([]);
+      const region = page.locator("#" + anchor);
+      await expect(region).toBeVisible();
+      await expect(region).toHaveAttribute("aria-labelledby", /.+/);
+      await expect(region).toHaveAttribute("tabindex", "-1");
     });
-  }
-
-  test("10r · a slow but healthy review read never announces a failure", async ({ page }) => {
-    await mount(page, SLOW_REVIEW);
-    await ready(page);
-
-    // While it is in flight: a polite status, no alert, no retry, and the
-    // figures keep their headings.
-    await expect(page.locator("[data-next-step]")).toHaveAttribute("data-next-step", "loading");
-    await expect(page.locator("[data-next-step] [data-retry]")).toHaveCount(0);
-    await expect(page.locator("[data-passport-workspace]")).not.toContainText(
-      "Vi kunde inte läsa dina granskningar",
-    );
-    await expect(page.locator('[data-status-tile="registered"]')).toContainText("Registrerade");
-    await expect(page.locator('[data-status-tile="registered"]')).toHaveAttribute(
-      "data-review-state",
-      "loading",
-    );
-
-    // And when it answers, the page settles into the real state.
-    await expect(page.locator('[data-status-tile="in-review"]')).toHaveAttribute(
-      "data-count",
-      "2",
-      { timeout: 20_000 },
-    );
-    await expect(page.locator("[data-next-step]")).toHaveAttribute(
-      "data-next-step",
-      "respond_to_clarification",
-    );
-    expect(pageErrors).toEqual([]);
-  });
-
-  test("10s · a failed review read is explained once, not in two blocks", async ({ page }) => {
-    await mount(page, VERIFICATION_DOWN);
-    await ready(page);
-    const failureSentence = "Vi kunde inte läsa dina granskningar";
-    await expect(page.locator("[data-next-step]")).toContainText(failureSentence);
-    // The outcomes panel used to print its own version underneath.
-    const body = await page.locator("[data-passport-workspace]").innerText();
-    expect(body.split("Vi kunde inte hämta dina verifieringar just nu").length - 1).toBe(0);
-    await expect(page.locator("[data-next-step] [data-retry]")).toBeVisible();
-    expect(pageErrors).toEqual([]);
-  });
-
-  // One test per anchor, deliberately: two `goto`s that differ only in the
-  // fragment are a same-document navigation, so the route never remounts and
-  // the second arrival would be asserted against the first one's effect.
-  for (const anchor of ["attention", "merits"] as const) {
-    test(`11 · the career home's /passport#${anchor} link lands on a real region`, async ({
-      page,
-    }) => {
-      await mount(page, MIXED, "sv", `/passport#${anchor}`);
+  for (const lang of ["sv", "en"] as const)
+    test(`language — ${lang} uses translated titles and Profile identity`, async ({ page }) => {
+      await mount(page, MIXED, lang);
       await ready(page);
-      await expect(page.locator(`#${anchor}`)).toHaveAttribute("data-hash-target", anchor);
-      await expect(page.locator(`#${anchor}`)).toBeVisible();
+      await expect(wallet(page)).toContainText(
+        lang === "sv" ? "Säkerhetsanalytiker" : "Security analyst",
+      );
+      await expect(wallet(page)).toContainText(
+        lang === "sv" ? "Skyddsvaktsutbildning" : "Protective security training",
+      );
+      await expect(page.locator("[data-compact-passport-card]")).toContainText("Nina Lindqvist");
     });
-  }
-
-  test("12 · English is fully translated, including the merit titles", async ({ page }) => {
+  test("private summary never creates a link or exposes a QR token", async ({ page }) => {
     await mount(page, MIXED, "en");
     await ready(page);
-
-    await expect(page.locator("h1")).toHaveText("My Security Passport");
-    await expect(page.locator('[data-status-tile="registered"]')).toContainText("Registered");
-    await expect(page.locator('[data-status-tile="source-confirmed"]')).toContainText(
-      "Source-confirmed",
-    );
-    await expect(page.locator('[data-merit-row="c-doc"]')).toContainText(
-      "Security officer foundation course",
-    );
-    await expect(page.locator('[data-merit-row="c-doc"]')).toContainText("Documented");
-    // The one place that used to fall back to Swedish: the attention list.
-    await expect(page.locator("#attention")).toContainText("Cardiopulmonary resuscitation");
-
-    const swedishOnly = ["Mitt Security Passport", "Dokumenterad", "Källbekräftad", "Registrerade"];
-    const body = (await page.locator("[data-passport-workspace]").innerText()).toLowerCase();
-    for (const word of swedishOnly) expect(body).not.toContain(word.toLowerCase());
-
-    await shoot(page, "mixed-en-1440");
+    await expect(page.locator("[data-passport-privacy-summary]")).toBeVisible();
+    await expect(
+      page.locator(
+        '[data-compact-passport-card] a[href*="token"], [data-compact-passport-card] canvas',
+      ),
+    ).toHaveCount(0);
+    await expect(page.locator("[data-compact-passport-card] li")).toHaveCount(3);
   });
-
-  test("13 · every interactive control is big enough and shows its focus", async ({ page }) => {
-    await mount(page, MIXED);
+  test("all workspace controls have 44px targets and visible keyboard focus", async ({ page }) => {
+    await mount(page, MIXED, "en");
     await ready(page);
-
-    // EVERY interactive kind, not just links and buttons: a summary is a
-    // control, and it was the one this page added.
-    const SELECTOR =
-      "[data-passport-workspace] a, [data-passport-workspace] button, " +
-      "[data-passport-workspace] summary, [data-passport-workspace] input, " +
-      "[data-passport-workspace] select, [data-passport-workspace] textarea, " +
-      '[data-passport-workspace] [role="button"], [data-passport-workspace] [tabindex]:not([tabindex="-1"])';
-
-    // Open the chooser first, so its options are audited too.
-    await page.locator('[data-cta="add-merit"]').click();
-    await expect(page.locator('[data-add-merit="employment"]')).toBeVisible();
-
-    const boxes = await page.evaluate((selector) => {
-      return [...document.querySelectorAll(selector)]
-        .map((el) => {
-          const r = el.getBoundingClientRect();
-          return {
-            w: Math.round(r.width),
-            h: Math.round(r.height),
-            tag: el.tagName.toLowerCase(),
-            text: (el.textContent ?? "").trim().slice(0, 40),
-          };
-        })
-        .filter((b) => b.w > 0 && b.h > 0);
-    }, SELECTOR);
-    expect(boxes.length, "no interactive controls found").toBeGreaterThan(8);
-    // The summary really is in the audit, rather than the selector silently
-    // matching nothing.
-    expect(
-      boxes.some((b) => b.tag === "summary"),
-      "no <summary> audited",
-    ).toBe(true);
-    for (const b of boxes) {
-      expect(b.h, `height of <${b.tag}> "${b.text}"`).toBeGreaterThanOrEqual(44);
-      expect(b.w, `width of <${b.tag}> "${b.text}"`).toBeGreaterThanOrEqual(44);
+    const controls = page.locator("[data-passport-workspace] a, [data-passport-workspace] button");
+    expect(await controls.count()).toBeGreaterThan(6);
+    for (const el of await controls.all()) {
+      if (!(await el.isVisible())) continue;
+      const b = await el.boundingBox();
+      expect(b!.height).toBeGreaterThanOrEqual(44);
+      expect(b!.width).toBeGreaterThanOrEqual(44);
+      await el.focus();
+      await expect(el).toBeFocused();
+      expect(
+        await el.evaluate((n) => {
+          const s = getComputedStyle(n);
+          return s.outlineStyle !== "none" || s.boxShadow !== "none";
+        }),
+      ).toBe(true);
     }
-
-    // Every tab stop paints a focus indicator.
-    const withoutRing = await page.evaluate((selector) => {
-      const out: string[] = [];
-      for (const el of [...document.querySelectorAll(selector)] as HTMLElement[]) {
-        if (!el.offsetParent && el.tagName !== "SUMMARY") continue;
-        el.focus();
-        const s = getComputedStyle(el);
-        const ring =
-          s.outlineStyle !== "none" ||
-          s.boxShadow !== "none" ||
-          getComputedStyle(el, ":focus-visible").outlineStyle !== "none";
-        if (!ring) out.push(`${el.tagName}: ${(el.textContent ?? "").trim().slice(0, 40)}`);
-      }
-      return out;
-    }, SELECTOR);
-    expect(withoutRing, "controls with no visible focus indicator").toEqual([]);
-
-    // One H1.
     await expect(page.locator("h1")).toHaveCount(1);
   });
-
-  test("13b · the merit chooser is operable from the keyboard alone", async ({ page }) => {
-    await mount(page, MIXED);
+  test("keyboard alone reaches and activates the approved credential selector", async ({
+    page,
+  }) => {
+    await mount(page, JUST_ADDED, "en");
     await ready(page);
-
-    const summary = page.locator('[data-cta="add-merit"]');
-    const box = await summary.boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(44);
-    expect(box!.height).toBeGreaterThanOrEqual(44);
-
-    // Focus it without a pointer, open it with the keyboard, and check the
-    // panel it reveals is neither empty nor unreachable.
-    await summary.focus();
-    await expect(summary).toBeFocused();
-    await expect(page.locator("[data-add-merit-chooser]")).not.toHaveAttribute("open", /.*/);
+    await wallet(page).getByRole("link", { name: "Add credential" }).focus();
     await page.keyboard.press("Enter");
-    await expect(page.locator("[data-add-merit-chooser]")).toHaveAttribute("open", /.*/);
-
-    const options = page.locator("[data-add-merit]");
-    await expect(options).toHaveCount(3);
-    for (let i = 0; i < 3; i += 1) await expect(options.nth(i)).toBeVisible();
-
-    // Tab reaches the first option, and Enter follows it.
-    await page.keyboard.press("Tab");
-    await expect(page.locator('[data-add-merit="employment"]')).toBeFocused();
+    const international = page.getByRole("combobox", { name: "Scope", exact: true });
+    await expect(international).toBeVisible();
+    await international.focus();
+    await page.keyboard.press("Home");
     await page.keyboard.press("Enter");
-    await landed(page, {
-      url: /\/passport\/information#sp-employment$/,
-      heading: /Mina uppgifter/,
-    });
+    await expect(international).toHaveValue("international");
+    await noErrors();
   });
+  for (const width of [1440, 720, 390, 375])
+    for (const lang of ["sv", "en"] as const)
+      test(`layout — ${width}px ${lang} preserves readable wallet without overflow`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await mount(page, MIXED, lang);
+        await ready(page);
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+        await expect(rows(page)).toHaveCount(5);
+        await expect(page.locator("h1")).toHaveCount(1);
+        await shoot(page, `wallet-${lang}-${width}`);
+      });
 });
 
-/* ══════════════════════════════════════════════════════════════════════
-   Real phone widths, and 200% zoom
-   ══════════════════════════════════════════════════════════════════════ */
-
-test.describe("Security Passport — the workspace at small widths", () => {
-  test.describe.configure({ timeout: 90_000 });
-
-  test("14 · nothing overflows horizontally at 375px", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await mount(page, MIXED);
-    await ready(page);
-    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await shoot(page, "mixed-sv-375");
-  });
-
-  test("15 · nor at 375px in English", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await mount(page, MIXED, "en");
-    await ready(page);
-    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await shoot(page, "mixed-en-375");
-  });
-
-  test("16 · nor for a Passport with one merit at 375px", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await mount(page, JUST_ADDED);
-    await ready(page);
-    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await shoot(page, "just-added-sv-375");
-  });
-
-  test("17 · nor at 200% zoom, which is 720 CSS pixels wide", async ({ page }) => {
-    // WCAG 1.4.10: 1440 at 200% is a 720px viewport. Emulated as the width
-    // rather than by a zoom setting, which is what a browser actually does.
-    await page.setViewportSize({ width: 720, height: 900 });
-    await mount(page, MIXED);
-    await ready(page);
-    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await shoot(page, "mixed-sv-720-zoom200");
-  });
-});
-
-/* ══════════════════════════════════════════════════════════════════════
-   Review screenshots
-   ══════════════════════════════════════════════════════════════════════
-   Only when PASSPORT_SHOTS names a directory. No assertions: the point is
-   to photograph the same fixtures on both sides of a change, so the block
-   must also run against code that does not have this page yet.
-
-     PASSPORT_SHOTS=docs/passport/workspace PASSPORT_SHOTS_TAG=after \
-       E2E_BASE_URL=http://127.0.0.1:3100 bun run e2e:workspace
-   ────────────────────────────────────────────────────────────────────── */
-
-test.describe("Security Passport — review screenshots", () => {
-  test.skip(!SHOT_DIR, "set PASSPORT_SHOTS to capture review screenshots");
-  test.describe.configure({ timeout: 240_000 });
-
-  const STATES = [
-    { name: "mixed", scenario: () => MIXED, widths: [1440, 375, 720] },
-    { name: "clarification", scenario: () => CLARIFICATION, widths: [1440, 375] },
-    { name: "review-read-failed", scenario: () => VERIFICATION_DOWN, widths: [1440, 375] },
-    { name: "just-added", scenario: () => JUST_ADDED, widths: [1440] },
-  ] as const;
-
-  for (const state of STATES) {
-    for (const width of state.widths) {
-      for (const lang of ["sv", "en"] as const) {
-        // 720 CSS pixels is 1440 at 200% zoom — WCAG 1.4.10, emulated as the
-        // width, which is what a browser actually does.
-        const suffix = width === 720 ? "720-zoom200" : String(width);
-        test(`shot · ${state.name} ${lang} ${suffix}`, async ({ page }) => {
-          await page.setViewportSize({ width, height: width < 600 ? 812 : 900 });
-          await mount(page, state.scenario(), lang);
-          // Not `ready()`: this block also runs against the page this PR
-          // replaces, which has no workspace marker at all.
-          await page.waitForTimeout(4500);
-          await shoot(page, `${state.name}-${lang}-${suffix}`);
-        });
-      }
-    }
-  }
-});
+// Former screenshot-only skips now assert the rendered state at every capture.
+for (const state of [
+  { name: "mixed", scenario: MIXED, widths: [1440, 375, 720] },
+  { name: "clarification", scenario: CLARIFICATION, widths: [1440, 375] },
+  { name: "review-read-failed", scenario: VERIFICATION_DOWN, widths: [1440, 375] },
+  { name: "just-added", scenario: JUST_ADDED, widths: [1440] },
+])
+  for (const width of state.widths)
+    for (const lang of ["sv", "en"] as const)
+      test(`review evidence — ${state.name} ${lang} ${width}`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await mount(page, state.scenario, lang);
+        await ready(page);
+        await expect(rows(page)).toHaveCount(state.scenario.claims.length);
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+        await noErrors();
+        await shoot(page, `${state.name}-${lang}-${width}`);
+      });

@@ -165,7 +165,7 @@ test.describe("/my-career — the real route", () => {
     let listed = 0;
     const invited = work({
       workId: "att-invited",
-      deadline: "2026-09-15T23:59:00Z",
+      deadline: new Date(Date.now() + 2 * 86_400_000).toISOString(),
       progressDone: 0,
     });
     await mount(page, "eight_unverified", {
@@ -633,6 +633,12 @@ test.describe("/my-career — the real route", () => {
 
     // Tab from the top of the document until the first navigation item has
     // focus. A navigation a keyboard cannot get to is not navigation.
+    if (test.info().project.name !== "chromium") {
+      await page
+        .getByRole("button", { name: /Öppna meny|Open menu|Meny|Menu/ })
+        .first()
+        .click();
+    }
     await page.evaluate(() => document.body.focus());
     let reached = false;
     for (let i = 0; i < 40 && !reached; i += 1) {
@@ -653,7 +659,7 @@ test.describe("/my-career — the real route", () => {
 
     // And the rest of the owner's five follow, in the sketch order, on
     // plain Tab.
-    for (const key of ["passport", "jobs", "career", "assessments"]) {
+    for (const key of ["passport", "cv", "jobs", "career", "assessments"]) {
       await page.keyboard.press("Tab");
       await expect
         .poll(() => page.evaluate(() => document.activeElement?.getAttribute("data-nav-key")))
@@ -885,29 +891,17 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     const region = page.locator("[data-overview-passport-region]");
     await expect(region).toBeVisible({ timeout: 30_000 });
 
-    const contents = region.locator("[data-overview-passport-contents]");
+    const contents = region.locator("[data-compact-passport-card]");
     await expect(contents).toHaveCount(1);
-    // It resolved to a real state rather than sitting in its skeleton.
-    await expect(contents).toHaveAttribute(/data-overview-passport-contents/, /ready|empty/, {
-      timeout: 30_000,
-    });
-
-    // Populated fixture: real rows, each carrying a title and a status —
-    // and every row is a claim the fixture actually holds.
-    const rows = contents.locator("[data-passport-content-row]");
-    expect(await rows.count(), "a populated Passport must show its contents").toBeGreaterThan(0);
+    const rows = contents.locator("li");
+    expect(await rows.count()).toBeGreaterThan(0);
+    expect(await rows.count()).toBeLessThanOrEqual(3);
     await expect(rows.first()).not.toBeEmpty();
-
-    // Provenance stays on the Passport: no issuer, verifier or evidence
-    // link leaks onto Överskt.
+    await expect(region.locator("[data-overview-passport-contents]")).toHaveCount(0);
     await expect(region.locator('a[href*="/passport/entry/"]')).toHaveCount(0);
-
-    // It sits between the card and the totals.
     const cardY = (await region.locator("[data-overview-passport-card]").boundingBox())!.y;
-    const contentsY = (await contents.boundingBox())!.y;
     const totalsY = (await region.locator("[data-passport-summary]").boundingBox())!.y;
-    expect(cardY).toBeLessThan(contentsY);
-    expect(contentsY).toBeLessThan(totalsY);
+    expect(cardY).toBeLessThan(totalsY);
   });
 
   test("the Passport column holds one card, one summary and one way in", async ({ page }) => {

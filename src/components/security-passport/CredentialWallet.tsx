@@ -43,9 +43,17 @@ export function CredentialWallet({
     return j ? (lang === "sv" ? j.name_sv : j.name_en) : code || copy("Inte angivet", "Not stated");
   };
   return (
-    <section data-credential-wallet className="min-w-0 space-y-5">
+    <section
+      id="merits"
+      aria-labelledby="credential-wallet-heading"
+      tabIndex={-1}
+      data-credential-wallet
+      className="min-w-0 space-y-5"
+    >
       <header>
-        <h1 className="text-2xl font-semibold">{copy("Mina yrkesbevis", "My credentials")}</h1>
+        <h1 id="credential-wallet-heading" className="text-2xl font-semibold">
+          {copy("Mina yrkesbevis", "My credentials")}
+        </h1>
         <p className="mt-2 text-lg">{title || PASSPORT_OWNERSHIP[lang].noTitle}</p>
         <p className="mt-1 text-xs text-muted-foreground">{PASSPORT_OWNERSHIP[lang].titleSource}</p>
         <div className="mt-4 flex flex-wrap gap-3">
@@ -71,6 +79,13 @@ export function CredentialWallet({
           )}
         </p>
       ) : null}
+      {reviews === null && (
+        <p role="status" data-review-read-status className="text-sm">
+          {reviewState === "loading"
+            ? copy("Läser granskningsstatus…", "Loading review status…")
+            : copy("Granskningsstatus kunde inte läsas", "Review status unavailable")}
+        </p>
+      )}
       <ul className="grid gap-3" aria-label={copy("Yrkesbevis", "Credentials")}>
         {holder.claims.map((original) => {
           const c = currentCredentialVerification(original, metadata.verificationEvents, now);
@@ -88,14 +103,16 @@ export function CredentialWallet({
                 <CredentialSymbol
                   code={c.credentialCode}
                   state={state}
-                  name={c.titleSv}
+                  name={lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
                   decorative
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-medium text-muted-foreground">
                     {CREDENTIAL_CLASSES[credentialClass(c, d)][lang]}
                   </p>
-                  <h2 className="break-words text-base font-semibold">{c.titleSv}</h2>
+                  <h2 className="break-words text-base font-semibold">
+                    {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+                  </h2>
                   <p className="mt-1 break-words text-sm">
                     {copy("Utfärdare", "Issuer")}: {c.issuerName}
                   </p>
@@ -127,20 +144,12 @@ export function CredentialWallet({
                       size="sm"
                     />
                     <LifecycleChip state={validity.effectiveState} />
-                    {reviews === null ? (
+                    {review && (
                       <span className="text-xs">
-                        {reviewState === "loading"
-                          ? copy("Läser granskningsstatus…", "Loading review status…")
-                          : copy("Granskningsstatus kunde inte läsas", "Review status unavailable")}
+                        {review === "pending"
+                          ? copy("Väntar på granskning", "Pending review")
+                          : copy("Komplettering begärd", "Clarification requested")}
                       </span>
-                    ) : (
-                      review && (
-                        <span className="text-xs">
-                          {review === "pending"
-                            ? copy("Väntar på granskning", "Pending review")
-                            : copy("Komplettering begärd", "Clarification requested")}
-                        </span>
-                      )
                     )}
                   </div>
                   <Link

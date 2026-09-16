@@ -70,7 +70,19 @@ export function InternationalCredentialForm({
         .includes(search.toLocaleLowerCase().trim())
     );
   });
-  const clearSelection = () => setDraft((d) => ({ ...d, definition_code: "", no_expiry: null }));
+  // Instance details belong to one definition. Never carry an identifier or
+  // validity date across a change of catalogue selection or market.
+  const selectDefinition = (code = "") =>
+    setDraft({
+      definition_code: code,
+      market_country: "",
+      market_region: "",
+      identifier: "",
+      issued_on: "",
+      valid_until: "",
+      no_expiry: null,
+    });
+  const clearSelection = () => selectDefinition();
   const inputClass =
     "mt-1 block min-h-11 w-full rounded-md border border-input bg-background px-3 text-sm";
   async function submit(e: React.FormEvent) {
@@ -192,9 +204,7 @@ export function InternationalCredentialForm({
             <select
               className={inputClass}
               value={draft.definition_code}
-              onChange={(e) =>
-                setDraft({ ...draft, definition_code: e.target.value, no_expiry: null })
-              }
+              onChange={(e) => selectDefinition(e.target.value)}
             >
               <option value="">{copy("Välj yrkesbevis", "Select credential")}</option>
               {visible.map((d) => (

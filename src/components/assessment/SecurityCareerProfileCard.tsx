@@ -259,7 +259,7 @@ export function SecurityCareerProfileCard() {
       <button
         type="button"
         onClick={openEditor}
-        className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
         {rows.length > 0 ? t("sca.scp.summary.edit") : t("sca.scp.summary.fillIn")}

@@ -136,6 +136,7 @@ test.describe("PR #211 · the hub", () => {
         // this stub table does not otherwise cover.
         prepareMyCv: ok({ ready: false, missing: [] }),
         listMyApplicationDisclosures: ok([]),
+        listMyBesktPreparations: ok([]),
       },
     });
     await settled(page);
@@ -161,11 +162,11 @@ test.describe("PR #211 · the hub", () => {
     // length, so this is longest-prefix resolution proved in a browser
     // rather than only in the guard's unit cases.
     for (const [navKey, url, shot] of [
-      ["overview", "/my-career/cv", "10-cv-list-1440-sv"],
+      ["cv", "/my-career/cv", "10-cv-list-1440-sv"],
       ["jobs", "/my-career/applications", "12-applications-1440-sv"],
     ] as const) {
       await page.goto(url);
-      await settled(page);
+      await expect(page.locator("h1")).toBeVisible();
       await page.waitForTimeout(800);
 
       const desktopNav = page.locator('[data-candidate-app-nav="desktop"]');

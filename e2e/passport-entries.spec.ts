@@ -9,7 +9,7 @@
 
 import { expect, test, type Page } from "@playwright/test";
 
-const EVIDENCE = "docs/passport-credential-ui-evidence";
+const EVIDENCE = process.env.PASSPORT_LEGACY_SHOTS ?? "docs/passport-credential-ui-evidence";
 
 async function openHarness(page: Page, screen: string, lang?: "sv" | "en") {
   await page.goto("/dev/security-passport");

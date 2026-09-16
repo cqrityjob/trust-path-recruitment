@@ -50,18 +50,26 @@ export function passportSnapshot(f: HomeFixture) {
   const claims = id.state === "ready" ? id.identity.claims : [];
   const periods = id.state === "ready" ? id.identity.employment : [];
   return {
-    profile: {
+    profileIdentity: {
       displayName: "Amina Karlsson",
-      headline: "Väktare",
-      cigProfessionSlug: "vaktare",
-      jurisdictionCode: "SE",
-      subJurisdictionCode: null,
-      workLocationConfirmedAt: "2026-01-01T00:00:00Z",
-      privacyMode: "private",
-      onboardingState: "complete",
-      onboardingStep: 0,
-      onboardingAnswers: {},
+      titleSv: "Väktare",
+      titleEn: "Security guard",
     },
+    profile:
+      id.state === "ready" && !id.identity.hasPassport
+        ? null
+        : {
+            displayName: "Amina Karlsson",
+            headline: "Väktare",
+            cigProfessionSlug: "vaktare",
+            jurisdictionCode: "SE",
+            subJurisdictionCode: null,
+            workLocationConfirmedAt: "2026-01-01T00:00:00Z",
+            privacyMode: "private",
+            onboardingState: "complete",
+            onboardingStep: 0,
+            onboardingAnswers: {},
+          },
     holder: {
       id: USER_ID,
       displayName: "Amina Karlsson",

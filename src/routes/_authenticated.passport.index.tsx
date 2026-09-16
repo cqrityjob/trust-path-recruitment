@@ -99,7 +99,7 @@ function PassportWorkspaceRoute() {
   if (!snapshot || !metadata || !snapshot.profile)
     return <p role="status">{lang === "sv" ? "Läser yrkesbevis…" : "Loading credentials…"}</p>;
   return (
-    <div className="mx-auto flex max-w-[1180px] flex-col gap-6 lg:flex-row">
+    <div data-passport-workspace className="mx-auto flex max-w-[1180px] flex-col gap-6 lg:flex-row">
       <div className="min-w-0 flex-1 lg:order-2">
         <ScrollToHashOnceReady />
         <section id="attention" aria-labelledby="attention-heading" tabIndex={-1}>
@@ -111,8 +111,9 @@ function PassportWorkspaceRoute() {
             showClear={false}
             showUnavailable={false}
             titleOf={(item) =>
-              snapshot.holder.claims.find((c) => c.id === item.subjectId)?.titleSv ??
-              pt("att.entryRemoved")
+              snapshot.holder.claims.find((c) => c.id === item.subjectId)?.[
+                lang === "sv" ? "titleSv" : "titleEn"
+              ] ?? pt("att.entryRemoved")
             }
             hrefOf={(item) => `/passport/entry/claim/${item.subjectId}`}
           />

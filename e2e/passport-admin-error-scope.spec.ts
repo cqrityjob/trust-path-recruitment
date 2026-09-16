@@ -20,8 +20,63 @@
 // component and its real handlers rather than a stub of them.
 
 import { expect, test, type Page } from "@playwright/test";
+import {
+  installBoundary,
+  assertNoRefusals,
+  observeSupabaseStorageKey,
+  plantSession,
+  type Refusals,
+} from "./support/public-entry-harness";
+let refusals: Refusals;
+const review = {
+  id: "review-fixture",
+  status: "pending",
+  submittedAt: "2026-09-01T12:00:00Z",
+  subjectType: "claim",
+  holderName: "Fixture Candidate",
+  title: "Certified Protection Professional (CPP)",
+  claimType: "certification",
+  issuer: "ASIS International",
+  employer: null,
+  jurisdiction: null,
+  assertion: "self_declared",
+  lifecycle: "active",
+  evidenceCount: 1,
+  isSelf: false,
+};
+const detail = {
+  ...review,
+  claim: {
+    id: "claim-fixture",
+    claimType: "certification",
+    title: review.title,
+    issuer: review.issuer,
+    credentialCode: "INTL_ASIS_CPP",
+    credentialReference: "FIXTURE-001",
+    jurisdictionCode: null,
+    subJurisdictionCode: null,
+    authorisationScope: null,
+    issuedOn: "2025-01-01",
+    validFrom: null,
+    validUntil: "2030-01-01",
+    assertion: "self_declared",
+    lifecycle: "active",
+    versionNo: 1,
+  },
+  period: null,
+  evidence: [
+    {
+      id: "evidence-fixture",
+      fileName: "cpp.pdf",
+      mimeType: "application/pdf",
+      uploadedAt: review.submittedAt,
+    },
+  ],
+  previousVersions: [],
+  priorDecisions: [],
+};
 
-const EVIDENCE = "docs/passport-credential-ui-evidence";
+const EVIDENCE = process.env.ADMIN_SHOTS ?? "/private/tmp/passport-admin-error-evidence";
 
 /** The generic message that used to appear page-wide for any failure. */
 const GLOBAL_GENERIC = /Något gick fel|Something went wrong/;
@@ -46,22 +101,33 @@ async function failServerFnMatching(page: Page, needle: RegExp) {
 }
 
 test.describe("admin verification queue — failures stay where they happen", () => {
-  // Unauthenticated visitors are redirected by the admin guard, so these run
-  // against the dev harness copy of the queue when one is available and are
-  // otherwise skipped rather than reported as passing.
   test.beforeEach(async ({ page }) => {
-    const res = await page.goto("/admin/passport-verification");
-    test.skip(
-      !res || res.status() >= 400,
-      "admin queue not reachable without an authenticated admin session",
-    );
+    refusals = await installBoundary(page, {
+      adminCountPendingEmployers: 0,
+      adminWhoAmI: { isAdmin: true, isSuperadmin: false },
+      passportVerifierWhoAmI: { isVerifier: true },
+      listVerifierQueue: [review],
+      getVerifierRequestDetail: detail,
+      listDisputeQueue: [],
+      passportReviewCounts: { open: 1, clarification: 0, total: 1 },
+      countMyAcademyWork: { total: 0, actionable: 0 },
+      countMyReviewQueue: 1,
+      listMyEmployerWorkspaces: [],
+      trackV31FunnelEvent: { recorded: false },
+    });
+    const key = await observeSupabaseStorageKey(page);
+    await plantSession(page, key);
+    await page.evaluate(() => localStorage.setItem("cqrityjob.lang", "en"));
+    await page.goto("/admin/passport-verification");
+    await expect(page.getByRole("button", { name: "Open request" }).first()).toBeVisible();
   });
+  test.afterEach(() => assertNoRefusals(refusals));
 
   test("a failing evidence link does not produce a page-wide error", async ({ page }) => {
     await failServerFnMatching(page, /evidenceId/);
 
-    const openCase = page.getByRole("button", { name: /Öppna ärendet|Open the review/ }).first();
-    test.skip(!(await openCase.isVisible().catch(() => false)), "no review in the queue to open");
+    const openCase = page.getByRole("button", { name: /Öppna ärendet|Open request/ }).first();
+    await expect(openCase).toBeVisible();
     await openCase.click();
 
     const openDoc = page.getByRole("button", { name: /^Öppna$|^Open$/ }).first();
@@ -85,8 +151,8 @@ test.describe("admin verification queue — failures stay where they happen", ()
   test("a failing review detail scopes to that review, not the queue", async ({ page }) => {
     await failServerFnMatching(page, /requestId/);
 
-    const openCase = page.getByRole("button", { name: /Öppna ärendet|Open the review/ }).first();
-    test.skip(!(await openCase.isVisible().catch(() => false)), "no review in the queue to open");
+    const openCase = page.getByRole("button", { name: /Öppna ärendet|Open request/ }).first();
+    await expect(openCase).toBeVisible();
     await openCase.click();
 
     await expect(
@@ -104,7 +170,8 @@ test.describe("admin verification queue — failures stay where they happen", ()
     await page.reload();
 
     const queueError = page.getByText(/Kön kunde inte hämtas|The queue could not be loaded/);
-    if (await queueError.isVisible().catch(() => false)) {
+    await expect(queueError).toBeVisible();
+    {
       await expect(page.getByRole("button", { name: /Försök igen|Try again/ })).toBeVisible();
       // Still not the old generic page-wide string.
       await expect(page.getByText(GLOBAL_GENERIC)).toHaveCount(0);
@@ -130,7 +197,8 @@ test.describe("admin verification queue — failures stay where they happen", ()
 
     await page.reload();
     const retry = page.getByRole("button", { name: /Försök igen|Try again/ });
-    if (await retry.isVisible().catch(() => false)) {
+    await expect(retry).toBeVisible();
+    {
       await retry.click();
       await expect(
         page.getByText(/Kön kunde inte hämtas|The queue could not be loaded/),

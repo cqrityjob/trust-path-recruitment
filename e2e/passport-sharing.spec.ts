@@ -43,12 +43,12 @@ const SHOT_TAG = process.env.PASSPORT_SHOTS_TAG ?? "after";
 const CLAIM_SHAREABLE = {
   id: "c-vu1",
   claimType: "training",
-  credentialCode: "VU1",
+  credentialCode: "OV_TRAINING",
   skillCode: null,
   skillLevel: null,
-  titleSv: "Väktarutbildning 1 (VU1)",
-  titleEn: "Security Guard Training 1 (VU1)",
-  issuerName: "Utbildaren AB (fiktiv)",
+  titleSv: "Ordningsvaktsutbildning (grundutbildning)",
+  titleEn: "Public Order Guard Basic Training",
+  issuerName: "Polismyndigheten",
   jurisdictionCode: "SE",
   subJurisdictionCode: null,
   authorisationScope: null,
@@ -69,9 +69,10 @@ const CLAIM_SHAREABLE = {
 const CLAIM_SELF_REPORTED = {
   ...CLAIM_SHAREABLE,
   id: "c-self",
-  credentialCode: null,
-  titleSv: "Egen anteckning (fiktiv)",
-  titleEn: "Own note (fictional)",
+  claimType: "certification",
+  credentialCode: "INTL_ASIS_CPP",
+  titleSv: "Certified Protection Professional (CPP)",
+  titleEn: "Certified Protection Professional (CPP)",
   assertionLevel: "self_declared",
   verifierName: null,
   verificationMethod: null,
@@ -377,11 +378,18 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
         if (scenario.sharesFail) return boom(route, "share read failed");
         return ok(route, scenario.shares ?? []);
 
-      case "previewSelectedShare":
+      case "previewCredentialShare":
         if (scenario.previewFails) return boom(route, "preview failed");
-        return ok(route, recipientPayload(scenario.lang === "en" ? "en" : "sv"));
+        return ok(route, {
+          ...recipientPayload(scenario.lang === "en" ? "en" : "sv"),
+          schema_version: 2,
+          holder: null,
+          privacy_mode: "anonymous",
+          verified_experience: [],
+          verified_experience_days: 0,
+        });
 
-      case "createSelectedShare": {
+      case "createCredentialShare": {
         createCalls += 1;
         lastCreateBody = route.request().postData() ?? "";
         if (scenario.createFails) return boom(route, "create failed");
@@ -493,14 +501,14 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await expect(page.locator("h1")).toHaveCount(1);
 
     // The two groups that have something in them, and no empty third.
-    await expect(page.locator('[data-share-group="employment"]')).toBeVisible();
+    await expect(page.locator('[data-share-group="employment"]')).toHaveCount(0);
     await expect(page.locator('[data-share-group="qualification"]')).toBeVisible();
     await expect(page.locator('[data-share-group="authorisation"]')).toHaveCount(0);
 
     // EVERY current merit, at whatever standing it has — including the one
     // nobody has checked. Drafts and archived rows are never offered.
     await expect(page.locator('[data-merit-option="claim:c-vu1"]')).toBeVisible();
-    await expect(page.locator('[data-merit-option="experience:p-nordvakt"]')).toBeVisible();
+    await expect(page.locator('[data-merit-option="experience:p-nordvakt"]')).toHaveCount(0);
     await expect(page.locator('[data-merit-option="claim:c-self"]')).toBeVisible();
     await expect(page.locator('[data-merit-option="claim:c-draft"]')).toHaveCount(0);
     await expect(page.locator('[data-merit-option="claim:c-old"]')).toHaveCount(0);
@@ -515,9 +523,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await expect(
       page.locator('[data-merit-option="claim:c-vu1"] [data-merit-status]'),
     ).toHaveAttribute("data-merit-status", "documented");
-    await expect(
-      page.locator('[data-merit-option="experience:p-nordvakt"] [data-merit-status]'),
-    ).toHaveAttribute("data-merit-status", "verified");
+    await expect(page.locator("[data-share-screen]")).not.toContainText("Nordvakt AB (fiktiv)");
     // The self-declared one wears its own word, so the list itself keeps the
     // holder from thinking everything on it is checked.
     await expect(
@@ -533,7 +539,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await shareReady(page);
 
     await page.locator('[data-merit-option="claim:c-vu1"] input').check();
-    await page.locator('[data-merit-option="experience:p-nordvakt"] input').check();
+    await page.locator('[data-merit-option="claim:c-self"] input').check();
     await expect(page.locator("[data-share-cta]")).toBeEnabled();
 
     await page.getByRole("button", { name: /Förhandsgranska mottagarens vy/ }).click();
@@ -546,15 +552,14 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await expect(
       page.locator('[data-share-preview] [data-recipient-credential="c1"]'),
     ).toBeVisible();
-    await expect(page.locator("[data-share-preview] [data-recipient-employment]")).toHaveCount(1);
+    await expect(page.locator("[data-share-preview] [data-recipient-employment]")).toHaveCount(0);
     await expect(page.locator("[data-share-preview]")).not.toContainText("Påbörjat utkast");
     await expect(page.locator("[data-share-preview]")).not.toContainText("Gammal utbildning");
 
     // The trust words the recipient reads.
     await expect(page.locator("[data-share-preview]")).toContainText("Vad orden betyder");
-    await expect(page.locator("[data-share-preview]")).toContainText(
-      "Anställningen är bekräftad av Nordvakt AB (fiktiv)",
-    );
+    await expect(page.locator("[data-share-preview]")).not.toContainText("Nordvakt AB (fiktiv)");
+    await expect(page.locator("[data-share-preview]")).not.toContainText("Selma Delare (fiktiv)");
     // A CQrityjob review is never dressed as source confirmation, and the
     // holder's own entry is never dressed as either.
     await expect(
@@ -718,7 +723,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await shareReady(page);
 
     // Reach the first checkbox by keyboard alone and tick it with Space.
-    const box = page.locator('[data-merit-option="experience:p-nordvakt"] input');
+    const box = page.locator('[data-merit-option="claim:c-self"] input');
     await box.focus();
     await expect(box).toBeFocused();
     await page.keyboard.press("Space");
@@ -808,7 +813,7 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await mount(page, "/passport/share", { lang: "en", shares: [SHARE_ROW] });
     await shareReady(page);
     await expect(page.locator("h1")).toHaveText("Share your Security Passport");
-    await expect(page.locator("[data-share-screen]")).toContainText("Employment");
+    await expect(page.locator("[data-share-screen]")).not.toContainText("Employment");
     await expect(page.locator("[data-share-screen]")).toContainText(
       "Training, courses and certificates",
     );

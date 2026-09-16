@@ -54,7 +54,9 @@ export function CompactPassportCard({
           const state = validityOf(c.lifecycleState, c.validUntil, today).effectiveState;
           return (
             <li className="space-y-2 p-4" key={c.id}>
-              <h3 className="break-words text-sm font-semibold">{c.titleSv}</h3>
+              <h3 className="break-words text-sm font-semibold">
+                {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+              </h3>
               <p className="text-xs">
                 {CREDENTIAL_CLASSES[credentialClass(c, detail)][lang]} ·{" "}
                 {territory
