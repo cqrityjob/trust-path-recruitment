@@ -77,15 +77,15 @@ test.skip(
 // previews again, finalises, reloads and reads back a corrected version.
 test.describe.configure({ timeout: 240_000 });
 
-const OUT = "artifacts/employer-final-report-e4";
+const OUT = process.env.E4_EVIDENCE_DIR ?? "artifacts/employer-final-report-e4";
 const PASSWORD = "LocalJourney!2026";
 const OWNER = "journey@local.test";
 const MEMBER = "interviewer@local.test";
 const CANDIDATE = "kandidat@local.test";
 const OWNER_ID = "9e000000-0000-4000-8000-000000000001";
 const SLUG = "journey-ab";
-const TITLE_SV = "E4 evidens · Väktare Väst";
-const TITLE_EN = "E4 evidence · Guard East";
+const TITLE_SV = "E4 evidens · Väktare Väst" + (process.env.E4_FIXTURE_SUFFIX ?? "");
+const TITLE_EN = "E4 evidence · Guard East" + (process.env.E4_FIXTURE_SUFFIX ?? "");
 
 /* ---- The local database, and only the local database ------------------ */
 //

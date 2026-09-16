@@ -46,7 +46,7 @@ const JOURNEY = {
   /** An uploaded PDF CV, not a CQrityjob CV. */
   appExternalCv: "e67aba08-88a9-4ca6-8042-895290ba0d64",
   /** A case whose report is already final. */
-  reportedCase: "d4a40c8c-4e61-4934-af24-cc2de60bba31",
+  reportedCase: process.env.E2E_REPORTED_CASE ?? "d4a40c8c-4e61-4934-af24-cc2de60bba31",
 };
 
 const OUTSIDER = { email: "outsider@local.test", slug: "konkurrenten-ab" };
@@ -373,7 +373,7 @@ for (const [label, width, height] of [
 // SAME case.
 
 /** A journey case walked to report-ready (zero blockers, not yet locked). */
-const READY_CASE = "047ce788-ea6a-4fe2-9fb1-c08c920926db";
+const READY_CASE = process.env.E2E_READY_CASE ?? "047ce788-ea6a-4fe2-9fb1-c08c920926db";
 const INTERVIEWER = "interviewer@local.test";
 
 function reportUrl(caseId: string) {
@@ -393,6 +393,8 @@ test("owner · a ready report offers the finalise action", async ({ page }) => {
   // And the action, because this person may take it.
   const finalise = page.getByRole("button", { name: /Slutför rapporten|Complete the report/i });
   await expect(finalise).toBeVisible();
+  await expect(finalise).toBeDisabled();
+  await page.getByRole("button", { name: /Förhandsgranska rapporten|Preview the report/i }).click();
   await expect(finalise).toBeEnabled();
 
   // The owner is NOT shown the waiting state.

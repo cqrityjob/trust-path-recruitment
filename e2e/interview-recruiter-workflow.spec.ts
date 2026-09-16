@@ -23,6 +23,8 @@
 
 import { test, expect, type Page } from "@playwright/test";
 
+test.use({ actionTimeout: 30_000 });
+
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
 const BASE = process.env.E2E_BASE_URL ?? "";
 
@@ -44,7 +46,7 @@ const UI = {
 const JOURNEY = { email: "journey@local.test", slug: "journey-ab" };
 const INTERVIEWER = "interviewer@local.test";
 /** A journey case walked to report-ready (zero blockers, not yet locked). */
-const READY_CASE = "047ce788-ea6a-4fe2-9fb1-c08c920926db";
+const READY_CASE = process.env.E2E_READY_CASE ?? "047ce788-ea6a-4fe2-9fb1-c08c920926db";
 
 /** Words that belong to the engine, the method's navigation, or the old
  *  product name. None may appear in the visible text of a recruiter screen.
@@ -347,25 +349,27 @@ test("B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Ra
 
   // ---- Rapport: the material, then the one irreversible action --------
   await expectJourney(page, "Rapport");
-  await expect(page.locator("main")).toContainText(/Rapport redo|Report ready/);
+  await expect(page.locator("main")).toContainText(/Rapportunderlag redo|Report material ready/);
   await expect(
     page.getByRole("heading", { name: /Rapportunderlag|Report material/ }),
   ).toBeVisible();
-  await expect(page.locator("main")).toContainText(
-    /Underlag och bedömning per krav|Material and assessment by requirement/,
-  );
   await expect(page.locator("main")).toContainText(
     /Underlaget är komplett|The material is complete/,
   );
   await expectRecruiterScreen(page, "report (ready, owner)");
   const finalise = page.getByRole("button", { name: /Slutför rapporten|Complete the report/ });
   await expect(finalise).toBeVisible();
+  await expect(finalise).toBeDisabled();
+  await page.getByRole("button", { name: /Förhandsgranska rapporten|Preview the report/i }).click();
   await expect(finalise).toBeEnabled();
+  await expect(page.locator("main")).toContainText(
+    /Bekräftat underlag per krav|Confirmed evidence by requirement/,
+  );
   // Still confirmed as irreversible, in words, beside the button.
   await expect(page.locator("main")).toContainText(/oföränderlig|immutable/);
   expect(await primaryCount(page), "report ready: one primary action").toBe(1);
   await finalise.click();
-  await expect(page.locator("main")).toContainText(/Rapport klar|Report complete/, {
+  await expect(page.locator("main")).toContainText(/Rapport fastställd|Report finalised/, {
     timeout: 45_000,
   });
   await expect(page.locator("main")).toContainText(/Slutlig och oföränderlig|Final and immutable/);

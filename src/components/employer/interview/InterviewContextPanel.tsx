@@ -316,7 +316,7 @@ export function InterviewContextPanel({
           <Link
             to="/employer/$employerSlug/applications/$applicationId"
             params={{ employerSlug, applicationId }}
-            className="text-sm font-medium text-accent hover:underline"
+            className="inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
           >
             {t("iic.openApplication")}
           </Link>
