@@ -200,24 +200,22 @@ export function CredentialWallet({
                   <li key={c.id} data-credential-row className="min-w-0">
                     <CredentialRecord
                       symbol={
-                      <CredentialSymbol
-                        code={c.credentialCode}
-                        state={credentialPresentationOf(c, row.lifecycle)}
-                        name={lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
-                        decorative
-                        size={52}
-                        className="relative z-10"
-                      />
+                        <CredentialSymbol
+                          code={c.credentialCode}
+                          state={credentialPresentationOf(c, row.lifecycle)}
+                          name={lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
+                          decorative
+                          size={52}
+                          className="relative z-10"
+                        />
                       }
-                      eyebrow={
-                        {CREDENTIAL_CLASSES[credentialClass(c, detail)][lang]}
-                      }
+                      eyebrow={CREDENTIAL_CLASSES[credentialClass(c, detail)][lang]}
                       title={
-                        {definition
+                        definition
                           ? definition[lang === "sv" ? "name_sv" : "name_en"]
                           : lang === "sv"
                             ? c.titleSv
-                            : c.titleEn || c.titleSv}
+                            : c.titleEn || c.titleSv
                       }
                       metadata={
                         <>
@@ -257,16 +255,16 @@ export function CredentialWallet({
                       }
                       action={
                         <Link
-                      to="/passport/entry/$kind/$entryId"
-                      params={{ kind: "claim", entryId: c.id }}
-                      className="flex min-h-11 items-center justify-between gap-2 text-sm font-semibold text-accent"
-                    >
-                      {row.status === "registered"
-                        ? copy("Lägg till underlag", "Add evidence")
-                        : row.status === "clarification"
-                          ? copy("Komplettera uppgifter", "Provide information")
-                          : copy("Öppna meriter", "View credential")}
-                      <ArrowUpRight size={16} aria-hidden="true" />
+                          to="/passport/entry/$kind/$entryId"
+                          params={{ kind: "claim", entryId: c.id }}
+                          className="flex min-h-11 items-center justify-between gap-2 text-sm font-semibold text-accent"
+                        >
+                          {row.status === "registered"
+                            ? copy("Lägg till underlag", "Add evidence")
+                            : row.status === "clarification"
+                              ? copy("Komplettera uppgifter", "Provide information")
+                              : copy("Öppna meriter", "View credential")}
+                          <ArrowUpRight size={16} aria-hidden="true" />
                         </Link>
                       }
                     />
