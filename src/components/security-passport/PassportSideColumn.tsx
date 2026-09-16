@@ -29,12 +29,12 @@ export function PassportSideColumn({
     <aside
       data-passport-side-column
       aria-labelledby="sp-side-card-heading"
-      className={`w-full space-y-4 lg:w-[340px] lg:shrink-0 ${className}`}
+      className={`w-full space-y-5 lg:w-[340px] lg:shrink-0 ${className}`}
     >
       <section>
         <h2
           id="sp-side-card-heading"
-          className="text-sm font-semibold tracking-tight text-foreground"
+          className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground"
         >
           {pt("side.cardTitle")}
         </h2>
@@ -51,7 +51,7 @@ export function PassportSideColumn({
       {/* ── Integrity, privacy and sharing ───────────────────────────── */}
       <section
         aria-labelledby="sp-side-privacy-heading"
-        className="rounded-xl border border-border bg-card p-4"
+        className="rounded-lg border border-border bg-card p-4"
         data-passport-privacy-summary
       >
         <h2

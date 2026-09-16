@@ -27,24 +27,20 @@ export function SecurityPassportPreview({
   return (
     <article
       data-compact-passport-card
-      className="relative isolate min-w-0 overflow-hidden rounded-3xl border border-slate-500 bg-[#0b1b2c] p-6 text-white shadow-xl sm:p-8"
+      className="relative isolate min-w-0 overflow-hidden rounded-xl border border-primary-foreground/20 bg-primary p-6 text-primary-foreground shadow-[var(--shadow-lg)]"
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 opacity-10"
-        style={{
-          backgroundImage:
-            "repeating-radial-gradient(ellipse at 120% 0%, transparent 0px, transparent 18px, #7dd3fc 19px, transparent 20px)",
-        }}
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-36 bg-primary-foreground/[0.04]"
       />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-2xl font-semibold tracking-tight">
-            <span className="text-cyan-200">CQ</span>rityjob
+          <p className="text-2xl font-semibold tracking-tight">CQrityjob</p>
+          <p className="mt-1 text-xs tracking-[.16em] text-primary-foreground/65">
+            SECURITY PASSPORT
           </p>
-          <p className="mt-1 text-xs tracking-[.16em] text-slate-300">SECURITY PASSPORT</p>
         </div>
-        <span className="flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs text-slate-200">
+        <span className="flex items-center gap-1.5 rounded-full border border-primary-foreground/20 px-3 py-1.5 text-xs text-primary-foreground/80">
           <Lock size={12} aria-hidden="true" />
           {copy("Privat förhandsvisning", "Private preview")}
         </span>
@@ -52,7 +48,7 @@ export function SecurityPassportPreview({
       <div className="my-8 flex items-center gap-4">
         <div
           aria-hidden="true"
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/30 bg-white/5 text-2xl font-light text-cyan-100"
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-primary-foreground/25 bg-primary-foreground/5 text-xl font-light text-primary-foreground"
         >
           {identity?.displayName
             ?.split(" ")
@@ -62,19 +58,19 @@ export function SecurityPassportPreview({
             .join("") || "CQ"}
         </div>
         <div className="min-w-0">
-          <h2 className="break-words text-2xl font-medium tracking-tight !text-white">
+          <h2 className="break-words text-xl font-medium tracking-tight !text-primary-foreground">
             {identity?.displayName || copy("Ditt Security Passport", "Your Security Passport")}
           </h2>
-          <p className="mt-1 break-words text-sm text-slate-200">
+          <p className="mt-1 break-words text-sm text-primary-foreground/80">
             {title || copy("Lägg till yrkestitel i Profil", "Add a professional title in Profile")}
           </p>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-primary-foreground/55">
             {copy("Uppgifter från din profil", "Information from your profile")}
           </p>
         </div>
       </div>
       {claims.length ? (
-        <ul className="space-y-3 border-t border-white/15 pt-4">
+        <ul className="space-y-3 border-t border-primary-foreground/15 pt-4">
           {claims.map((c) => {
             const state = credentialProductStatus(c, metadata?.verificationEvents ?? [], today);
             return (
@@ -82,7 +78,7 @@ export function SecurityPassportPreview({
                 <span className="min-w-0 break-words text-sm">
                   {lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
                 </span>
-                <span className="max-w-[45%] shrink-0 text-right text-xs text-cyan-100">
+                <span className="max-w-[45%] shrink-0 text-right text-xs text-primary-foreground/80">
                   {state.label[lang]}
                 </span>
               </li>
@@ -90,11 +86,11 @@ export function SecurityPassportPreview({
           })}
         </ul>
       ) : (
-        <div className="rounded-2xl border border-dashed border-white/25 bg-white/5 p-4">
+        <div className="rounded-lg border border-dashed border-primary-foreground/25 bg-primary-foreground/5 p-4">
           <p className="text-sm font-medium">
             {copy("Ditt urval. Din kontroll.", "Your selection. Your control.")}
           </p>
-          <p className="mt-1 text-sm leading-relaxed text-slate-300">
+          <p className="mt-1 text-sm leading-relaxed text-primary-foreground/70">
             {copy(
               "Välj vilka meriter som ska ingå innan du delar.",
               "Choose the credentials to include before sharing.",
@@ -102,7 +98,7 @@ export function SecurityPassportPreview({
           </p>
         </div>
       )}
-      <footer className="mt-6 flex items-center justify-between gap-4 border-t border-white/15 pt-4 text-xs text-slate-300">
+      <footer className="mt-6 flex items-center justify-between gap-4 border-t border-primary-foreground/15 pt-4 text-xs text-primary-foreground/65">
         <span>
           {claims.length} {copy("valda meriter", "selected credentials")}
         </span>

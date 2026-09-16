@@ -71,7 +71,7 @@ function Module({
     <section
       aria-labelledby={`hub-${moduleKey}-heading`}
       data-hub-module={moduleKey}
-      className="flex min-w-0 flex-col rounded-xl border border-border bg-card p-4"
+      className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-4 shadow-xs"
     >
       <h3
         id={`hub-${moduleKey}-heading`}

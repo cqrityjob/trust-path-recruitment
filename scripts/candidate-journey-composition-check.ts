@@ -4,11 +4,9 @@
 //
 // Three compositions, each with one way to get it wrong that looks right:
 //
-//   0. The public landing page mounts a working login panel. The failure
-//      mode is a SECOND authentication implementation — a copied form with
-//      its own handlers, drifting from /login's the first time either is
-//      touched. So: one implementation, two mount points, asserted by
-//      counting where the sign-in call actually lives.
+//   0. The public landing page stays product-led and routes returning users
+//      to the canonical login page. The failure mode is a SECOND authentication
+//      implementation copied into the homepage.
 //
 //   1. Överskt shows the real Passport card. The failure mode is a second
 //      Passport model, or a card that repeats the figures PassportSummary
@@ -50,9 +48,10 @@ const form = code(read(AUTH_FORM));
 const panel = code(read(AUTH_PANEL));
 
 /* ------------------------------------------------------------------ */
-console.log("\n0 · the landing page has a working login panel, and only one auth flow");
+console.log("\n0 · the landing page stays product-led, with only one auth flow");
 
-check(/<UnifiedAuthPanel mode="signin" \/>/.test(home), "/ mounts the auth panel");
+check(!/UnifiedAuthPanel/.test(home), "/ does not embed the full authentication form");
+check(/to="\/login"/.test(home), "/ routes returning users to the canonical login page");
 check(/<UnifiedAuthPanel mode=\{mode\} \/>/.test(form), "and /login mounts the same component");
 check(
   /export function UnifiedAuthForm/.test(form),
@@ -71,20 +70,9 @@ for (const call of ["signInWithPassword", "signInWithOAuth", "signUp("]) {
   const inHome = home.includes(call);
   check(
     inPanel && !inForm && !inHome,
-    `${call} lives in the panel and nowhere else — one implementation, two mount points`,
+    `${call} lives in the panel and nowhere else — one implementation`,
   );
 }
-
-// The panel navigates an authenticated visitor to their workspace. Right
-// on /login; on / it would eject somebody from the public homepage.
-check(
-  /useSignedIn\(\) === false/.test(home),
-  "the panel renders only for a visitor confirmed signed OUT",
-);
-check(
-  !/useSignedIn\(\) !== true/.test(home),
-  "and 'not yet known' is not treated as signed out, which would flash a form",
-);
 
 /* ------------------------------------------------------------------ */
 console.log("\n1 · Överskt shows the real card, and says each thing once");
