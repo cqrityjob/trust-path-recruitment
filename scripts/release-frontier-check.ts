@@ -152,6 +152,7 @@ expectedPending.push(
   "20261119090000_sp_international_credential_wallet.sql",
   "20261120090000_sp_credential_selective_sharing_v2.sql",
   "20261121090000_sp_closed_credential_catalogue.sql",
+  "20261122090000_cv_owned_application_snapshot.sql",
 );
 
 const active = new Set(readdirSync(migrationsDir).filter((file) => file.endsWith(".sql")));
