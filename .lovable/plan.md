@@ -1,70 +1,109 @@
-# Preview runtime repair after the latest main merge — diagnosis and minimum safe sequence
+# CQrityjob Final UX/UI Product Polish
 
-Read-only inspection only. Nothing was edited, applied, written or deployed.
+## Baseline and boundaries
 
-## Error 1 — "Missing Supabase environment variable(s): SUPABASE_SERVICE_ROLE_KEY"
+- Work on the current isolated preview branch `edit/edt-ea14b9b0-8155-445e-880f-31ca9276d48d` from accepted main `93906a528cf38a835b0c4e26e7adc36e94afbd7e`.
+- Keep the accepted generated Supabase types unchanged.
+- Do not modify or apply Supabase schema, migrations, RLS, grants, policies, RPCs, hosted data, auth/redirect rules, feature gates, governed catalogues, assessments, Interview Intelligence, BESKT, or BCP.
+- Do not merge, publish, or deploy. The editor Preview is the review surface.
+- Preserve Swedish and English parity and existing security/product truth.
 
-Classification: **(a) server environment / backend binding — not a code defect, not a migration issue.**
+## Phase 1 — Homepage and public entry
 
-Evidence:
-- `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_URL` are both present in the current build environment (checked by presence only, never printed).
-- The message text comes from `src/integrations/supabase/client.server.ts`, which reads the key inside `createSupabaseAdminClient()` at first use, server-side only. That file is generated and correct.
-- Every `supabaseAdmin` use in the codebase is a dynamic `await import(...)` inside a server handler, so nothing leaks into the browser bundle. Spot-checked across `src/lib/**` — no top-level import in a `*.functions.ts` or route file.
+Refine the first screen to explain CQrityjob immediately as one Security Career Intelligence Platform for individuals and employers.
 
-Meaning: the failure is a runtime process that was started before the managed backend env was (re)bound, i.e. a stale server process env — the same class of failure resolved earlier by re-binding the managed backend secrets. No secret needs to be invented, pasted or committed.
+- Make Security Passport the clearest trust product while preserving Career Discovery as a valid individual path.
+- Present one clear candidate action and one secondary employer action without making login dominant.
+- Replace the current large embedded sign-in treatment with a calm, compact account entry that keeps the governed `/login` and `/signup` routes unchanged.
+- Add a truthful visual Security Passport preview using only generic labels and existing trust states; no fake holder, credential, score, licence, or verification data.
+- Preserve the employer strip and connected Discover–Continue lifecycle, while tightening first-screen height and mobile hierarchy.
+- Refine `/employers`, shared header, compact menu, footer, `/login`, and `/signup` only where needed for a coherent entry experience.
 
-## Error 2 — "column sp_market_packs.pilot_state does not exist"
+## Phase 2 — Security Passport
 
-Classification: **(b) unapplied canonical migration.** Code on main is ahead of the hosted database.
+Improve presentation and navigation across the existing Passport journey without changing reads, writes, permissions, or governed content.
 
-Confirmed against the hosted database:
-- `public.sp_market_packs` columns: no `pilot_state`.
-- `sp_market_access`, `sp_is_pilot_member`, `sp_grant_pilot_member`, `sp_revoke_pilot_member`: none exist.
-- `public.sp_pilot_members`: does not exist.
+- Overview: clearer next action, credential grouping, attention/review visibility, status legend, and empty/loading/error states.
+- Add credential: stronger progress and catalogue framing; candidates still choose only approved credentials, issuers, markets, and jurisdictions.
+- Credential detail: separate trust state from lifecycle state and make evidence, review, correction, expiry, revocation, and dispute hierarchy easier to scan.
+- Preview and sharing: clarify the four-step flow, selected scope, optional fields, expiry, language, private-by-default behavior, revocation, and existing links.
+- Recipient view: improve authenticity hierarchy and readability while preserving fail-closed behavior and identical unavailable states.
+- Navigation: improve desktop and 375/390px usability while using “Security Passport” exclusively.
 
-The consumer is `src/lib/security-passport/credentials.functions.ts`, which selects `pilot_state` and calls `sp_market_access`. Both are introduced only by canonical `supabase/migrations/20260915090000_sp_market_pilot_entitlement.sql`.
+Frozen distinctions remain explicit:
 
-### This is not an isolated gap
+- Self-reported
+- Evidence submitted
+- Document reviewed
+- Source verified
+- Expired
+- Revoked
 
-The hosted database is behind main by the whole tail of the frontier. `supabase/release-state.json` already records 11 files as `pending`, and independent hosted probes agree with it:
+Document review will never be presented as issuer/source verification.
 
-| Canonical file | Hosted probe |
-| --- | --- |
-| 20260909090000_jobs_delete_unpublished_draft | pending (per release-state) |
-| 20260909093000_application_status_notifications | `job_applications.notified_at` absent, `jase_record_notification` absent |
-| 20260909094000_job_audit_vocabulary_lifecycle | pending (per release-state) |
-| 20260910091000_cd_v31_content_v3_question_refinement | pending (per release-state) |
-| 20260911090000_admin_control_center_lifecycle | `admin_person_overview` absent |
-| 20260912090000_cd_ranking_guard_recommendation | pending (per release-state) |
-| 20260913090000_cd_v31_content_v4_context_intent_separation | pending (per release-state) |
-| 20260913091000_cd_career_context_other_profession | `cd_sessions.current_profession_other` absent |
-| 20260913092000_cig_security_leadership_professions | pending (per release-state) |
-| 20260914090000_sp_uk_vehicle_immobilisation | no immobilisation credential type |
-| 20260914091000_sp_uae_dubai_cadre_catalogue | pending (per release-state) |
-| 20260914092000_sp_uae_abu_dhabi_market_pack | no `AE-AZ` market pack row |
-| 20260915090000_sp_market_pilot_entitlement | `pilot_state` / pilot functions / `sp_pilot_members` absent |
+## Phase 3 — Complete platform UX
 
-Applying only 20260915090000 would clear the visible error and leave the rest of that list as latent SAVE/READ failures of exactly the class the parity guard was created for. Governance state today: `SE` active/grandfathered, `GB` and `AE-DU` inactive/pending — unchanged, and none of these migrations activates them (20260915090000 aborts if GB/AE-DU are no longer `pending`/inactive).
+Apply the same visual system and next-action clarity to the remaining journeys, in contained batches:
 
-## Error 3 — none found
+1. Registration, login, role intent, and onboarding
+2. Candidate overview, Profile, CV, jobs, and applications
+3. Employer onboarding, overview, job creation, and application management
+4. Career Center and assessment entry/results presentation
+5. Empty, loading, error, and success states
+6. Footer, privacy, terms, and GDPR-facing pages
 
-No third defect. `read_runtime_errors` returned no captured errors for the service-role message, so both reports come from server-side logs rather than a client crash.
+Each batch will reuse existing components and tokens and will not alter authorization, data ownership, scoring, matching, or decision semantics.
 
-## Minimum safe sequence
+## Technical approach
 
-Order matters: 1 before 2, because the pilot Passport paths need a working server env to be verifiable at all.
+- Reuse the existing Sora/Manrope typography, navy/trust-blue semantic tokens, shared buttons, cards, status components, and focus styles.
+- Add small presentation components only where repetition or clarity warrants them.
+- Keep route and server-function behavior intact; no package installs.
+- Avoid fake product records and generic cybersecurity imagery.
+- Keep cards compact, hierarchy strong, touch targets at least 44px, and layouts free of horizontal overflow.
+- Add focused deterministic/browser assertions for every corrected defect rather than weakening existing guards.
 
-1. **Re-bind the managed backend env** (`supabase--rebind_secrets`), then restart the preview server process and re-check the failing page. No code change, no secret entered by hand, nothing exposed to the browser. Stop and report if the key is still missing after a restart.
-2. **Apply the pending canonical migrations in version order, one tracked Lovable migration per file, verbatim** — 20260909090000 → 20260915090000, in the table order above. No `db push`, no rewriting, no merging files, no ledger edits. After each: verify the objects that file introduces (the `verify` query in `release-state.json` where present) and confirm holder/candidate row counts are unchanged.
-3. **Re-assert governance after 20260914092000 and 20260915090000**: `GB`, `AE-DU` (and new `AE-AZ`) must remain `is_active = false`, `legal_review_state = 'pending'`, `legal_reviewed_by` NULL, with `pilot_state` left at its default `closed` and `sp_pilot_members` empty unless the owner separately grants a tester.
-4. **Reconcile the repository**: update each applied entry in `supabase/release-state.json` to `applied` with its hosted generated version/UUID as `evidenceSource` (`appliedThroughLovable` mapping), and run `scripts/release-parity-check.ts` plus `scripts/migration-safety-check.ts` until clean.
-5. **Verify** the previously failing surfaces: Passport credential/market surface (the `pilot_state` path), employer job save/publish, admin control-center pages, Career Discovery session start. Type-check and the relevant guard scripts.
-6. **No publish.** Production deployment stays out of scope until the owner approves separately.
+## Verification and evidence
 
-Rollback: each of these files has a matching `supabase/rollback/*_rollback.sql`; per-file rollback is possible in reverse order. Step 1 is non-destructive and needs no rollback.
+Before changes, capture baseline screenshots in Preview for the requested pages that are reachable without protected production data. After each phase, capture matching screenshots.
 
-## Risk notes
+Test at minimum:
 
-- Two of the pending files carry content-version bumps for Career Discovery (`20260910091000`, `20260913090000`) and one changes the ranking guard (`20260912090000`). Existing stored reports must be spot-checked for unchanged output after they land; that is the only part of this sequence that touches assessment behaviour.
-- `20260911090000_admin_control_center_lifecycle` introduces deletion/anonymisation functions. Verify their access control (admin-only, denial case) before considering that step complete.
-- Applying 13 files is more than the reported symptom requires; the smaller alternative (20260915090000 only) is available but leaves known-broken surfaces. Say which you prefer.
+- Desktop, tablet, 390px, and 375px
+- Swedish and English
+- Keyboard focus, landmarks, heading order, accessible names, touch targets, overflow, reduced motion
+- Governed redirect destinations and signed-in routing behavior where a safe preview session is available
+- Console, hydration, and failed-network signals
+
+Run:
+
+- Type check
+- Lint
+- Production build
+- Public-entry browser suite and deterministic guards
+- Passport workspace, sharing, recipient, responsive/accessibility, catalogue, trust-source, and separation checks
+- Relevant candidate/employer journey checks for every changed area
+
+## Acceptance criteria
+
+- The homepage immediately answers what CQrityjob is, who it serves, and why Security Passport matters.
+- Candidate and employer paths are obvious; login is available but visually subordinate.
+- Passport states and sharing controls are understandable without overstating verification.
+- New users can distinguish Profile, CV, Security Passport, Career, jobs, and employer workspace, and can see the next recommended action.
+- Swedish and English remain aligned; 375px and 390px are first-class layouts.
+- No protected logic, hosted Supabase resource, generated type, migration, or security contract changes.
+- All changed journeys pass focused checks and visual review.
+
+## Risks and rollback
+
+- **Copy drift:** guard terminology and SV/EN keys together.
+- **False trust claims:** reuse existing trust-state presentation and source-of-truth labels.
+- **Mobile regressions:** verify fixed viewport evidence before reporting readiness.
+- **Protected-flow test limits:** use synthetic/local preview states only; report any journey that cannot be safely exercised.
+- **Rollback:** revert the isolated UX branch commits; no database rollback is required because no database change is permitted.
+
+## Delivery
+
+Provide branch and commit SHA, draft PR URL if repository write access permits it, exact changed files and pages, before/after gallery, tests and conclusions, remaining risks, and either `READY FOR OWNER REVIEW` or `FIX REQUIRED`.
+
+Final status will state: **Not merged and not published.**
