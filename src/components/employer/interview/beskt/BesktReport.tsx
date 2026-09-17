@@ -351,7 +351,7 @@ function PanelBlock({ d }: { d: BesktReportDocumentData }) {
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-mono text-xs text-foreground">{r.itemKey}</span>
-                  <Chip tone="neutral" srPrefix={t("beskt.report.panel.outcome")}>
+                  <Chip tone="neutral" srPrefix={t("beskt.conduct.panel.resolution.kind")}>
                     {kindKey ? t(kindKey) : (r.resolutionKind ?? "—")}
                   </Chip>
                   <span className="text-xs text-muted-foreground">
