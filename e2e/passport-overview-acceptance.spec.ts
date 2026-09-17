@@ -312,6 +312,27 @@ for (const lang of ["sv", "en"] as const) {
       await expect(shields(page)).toHaveCount(3);
       const threeHeight = (await card(page).boundingBox())!.height;
 
+      // ONE claim-specific link per credential on the whole overview, and it
+      // is the row's. The next step and "Needs attention" name a credential;
+      // they do not link to it. No .first(): a second link must FAIL here.
+      for (const c of THREE) {
+        const link = page.locator(`a[href="/passport/entry/claim/${c.id}"]`);
+        await expect(link).toHaveCount(1);
+        await expect(link).toBeVisible();
+        await expect(
+          page.locator(`[data-credential-row] a[href="/passport/entry/claim/${c.id}"]`),
+        ).toHaveCount(1);
+      }
+      await expect(page.locator("[data-passport-panel] a[href*='/passport/entry/']")).toHaveCount(
+        0,
+      );
+      const step = page.locator('[data-cta="next-step"]');
+      await expect(step).toHaveCount(1);
+      await expect(step).toHaveAttribute("href", /\/passport#attention$/);
+      // Still says WHICH credential, and the expiring one is still named.
+      await expect(page.locator("[data-passport-next-step]")).toContainText(CPP.titleEn);
+      await expect(page.locator(`[data-passport-expiring-item="${OV.id}"]`)).toBeVisible();
+
       // 14 · exactly one Add credential on the page, in the panel.
       await expect(
         page

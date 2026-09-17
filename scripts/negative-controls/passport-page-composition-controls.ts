@@ -155,6 +155,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "exactly ONE Add credential",
   },
   {
+    id: "PPC-NC-NEXT-STEP-DUPLICATES-THE-ROW-LINK",
+    defect:
+      "the next step links straight to the claim again, so the overview shows two identical 'Add evidence' actions for one credential — the strict-mode failure of PR #263",
+    file: SIDE,
+    find: '                {next.title}\n              </p>\n              <Link\n                to="/passport"\n                hash="attention"\n',
+    replace:
+      '                {next.title}\n              </p>\n              <Link\n                to="/passport/entry/$kind/$entryId"\n                params={{ kind: "claim", entryId: next.claimId }}\n',
+    guard: GUARD,
+    expect: "the side column links to NO claim",
+  },
+  {
     id: "PPC-NC-FIFTH-TAB",
     defect: "Add credential comes back as a tab, so the four tabs are five",
     file: "src/routes/_authenticated.passport.tsx",

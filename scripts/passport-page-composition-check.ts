@@ -224,6 +224,24 @@ check(
   "source order is card, panel, privacy, collection — which is the order on a phone",
 );
 
+check(
+  !/passport\/entry/.test(side) && !/entryId/.test(side),
+  "the side column links to NO claim — the credential row owns the one claim-specific link",
+);
+check(
+  (side.match(/data-cta="next-step"/g) ?? []).length === 3 &&
+    (
+      side.match(
+        /to="\/passport"\s+hash="attention"\s+className=\{`\$\{PRIMARY\} mt-4`\}\s+data-cta="next-step"/g,
+      ) ?? []
+    ).length === 2,
+  "its clarify and evidence steps go to the Verification section of this page, not to the claim",
+);
+check(
+  (workspace.match(/to="\/passport\/entry\/\$kind\/\$entryId"/g) ?? []).length === 1,
+  "and the wallet renders exactly one claim link per credential row",
+);
+
 /* ------------------------------------------------------------------ */
 console.log("\n4b · who the person is comes from the Profile; the card never renames them");
 

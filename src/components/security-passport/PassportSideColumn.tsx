@@ -18,6 +18,19 @@
 //   2. WHO CAN SEE IT the privacy mode, reported here and changed on the page
 //                     that owns it, and the way into Preview and share.
 //
+// ── ONE LINK PER CREDENTIAL, AND IT IS THE ROW'S ───────────────────────
+//
+// This column is mounted INSIDE the wallet, beside the credential rows. Each
+// row already carries the one claim-specific link for its credential ("Add
+// evidence", "Provide information", "View credential"). A second link to the
+// same claim from here put two identical actions on one screen, and which of
+// the two a reader — or a test — meant became a guess.
+//
+// So nothing in this column links to a claim. The next step NAMES the
+// credential and sends the reader to the Verification section of this page
+// (`/passport#attention`); what needs attention names the credential and its
+// date, as text. The row does the rest. A guard asserts the absence.
+//
 // ── NO SERVER TIER ─────────────────────────────────────────────────────
 //
 // The route owns every read, as every Passport component does and as
@@ -152,8 +165,8 @@ export function PassportSideColumn({
                 {next.title}
               </p>
               <Link
-                to="/passport/entry/$kind/$entryId"
-                params={{ kind: "claim", entryId: next.claimId }}
+                to="/passport"
+                hash="attention"
                 className={`${PRIMARY} mt-4`}
                 data-cta="next-step"
               >
@@ -180,8 +193,8 @@ export function PassportSideColumn({
                     )}
               </p>
               <Link
-                to="/passport/entry/$kind/$entryId"
-                params={{ kind: "claim", entryId: next.claimId }}
+                to="/passport"
+                hash="attention"
                 className={`${PRIMARY} mt-4`}
                 data-cta="next-step"
               >
@@ -244,16 +257,15 @@ export function PassportSideColumn({
           <ul className="mt-2 space-y-1.5">
             {expiring.map((row) => (
               <li key={row.claim.id} className="rounded-md bg-card px-3">
-                <Link
-                  to="/passport/entry/$kind/$entryId"
-                  params={{ kind: "claim", entryId: row.claim.id }}
-                  className={`${LINK} w-full justify-between gap-3 font-medium text-foreground`}
+                <p
+                  data-passport-expiring-item={row.claim.id}
+                  className="flex min-h-11 items-center justify-between gap-3 text-sm font-medium text-foreground"
                 >
                   <span className="min-w-0 break-words">{titleOf(row)}</span>
                   <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground">
                     {copy("Utgår", "Expires")} {credentialDate(row.claim.validUntil!, lang)}
                   </span>
-                </Link>
+                </p>
               </li>
             ))}
           </ul>
