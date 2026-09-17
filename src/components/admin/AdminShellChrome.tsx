@@ -45,7 +45,8 @@ export type AdminNavSection =
   | "audit"
   | "data"
   | "passportVerification"
-  | "interviewRolePacks";
+  | "interviewRolePacks"
+  | "besktMethods";
 
 export interface AdminShellChromeProps {
   activeSection: AdminNavSection;
@@ -118,6 +119,15 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
       key: "interviewRolePacks",
       labelKey: "admin.nav.interviewRolePacks",
       to: "/admin/interview-role-packs",
+    },
+    // BESKT method governance. A PLATFORM destination for the same reason the
+    // role-pack builder is one: authoring, the five review gates and the
+    // pilot grants are the platform's work, not an employer's. The employer
+    // sees only what a live pilot grant makes assignable.
+    {
+      key: "besktMethods",
+      labelKey: "admin.nav.besktMethods",
+      to: "/admin/beskt-methods",
     },
   ];
 

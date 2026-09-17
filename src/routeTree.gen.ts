@@ -88,6 +88,7 @@ import { Route as AuthenticatedAdminFeedbackRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminEmployersRouteImport } from './routes/_authenticated.admin.employers'
 import { Route as AuthenticatedAdminDataRouteImport } from './routes/_authenticated.admin.data'
 import { Route as AuthenticatedAdminCareerDiscoveryPreviewRouteImport } from './routes/_authenticated.admin.career-discovery-preview'
+import { Route as AuthenticatedAdminBesktMethodsRouteImport } from './routes/_authenticated.admin.beskt-methods'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated.admin.audit'
 import { Route as AuthenticatedAdminAssignmentsRouteImport } from './routes/_authenticated.admin.assignments'
 import { Route as AuthenticatedAdminAssessmentsRouteImport } from './routes/_authenticated.admin.assessments'
@@ -102,6 +103,7 @@ import { Route as AuthenticatedAdminResultsIndexRouteImport } from './routes/_au
 import { Route as AuthenticatedAdminJobsIndexRouteImport } from './routes/_authenticated.admin.jobs.index'
 import { Route as AuthenticatedAdminInterviewRolePacksIndexRouteImport } from './routes/_authenticated.admin.interview-role-packs.index'
 import { Route as AuthenticatedAdminEmployersIndexRouteImport } from './routes/_authenticated.admin.employers.index'
+import { Route as AuthenticatedAdminBesktMethodsIndexRouteImport } from './routes/_authenticated.admin.beskt-methods.index'
 import { Route as AuthenticatedAdminAssignmentsIndexRouteImport } from './routes/_authenticated.admin.assignments.index'
 import { Route as AuthenticatedAdminAssessmentsIndexRouteImport } from './routes/_authenticated.admin.assessments.index'
 import { Route as AuthenticatedAdminApplicationsIndexRouteImport } from './routes/_authenticated.admin.applications.index'
@@ -129,6 +131,8 @@ import { Route as AuthenticatedAdminJobsIdRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminInterviewRolePacksNewRouteImport } from './routes/_authenticated.admin.interview-role-packs.new'
 import { Route as AuthenticatedAdminEmployersEmployerIdRouteImport } from './routes/_authenticated.admin.employers.$employerId'
 import { Route as AuthenticatedAdminCandidateReportsRunIdRouteImport } from './routes/_authenticated.admin.candidate-reports.$runId'
+import { Route as AuthenticatedAdminBesktMethodsNewRouteImport } from './routes/_authenticated.admin.beskt-methods.new'
+import { Route as AuthenticatedAdminBesktMethodsMethodVersionIdRouteImport } from './routes/_authenticated.admin.beskt-methods.$methodVersionId'
 import { Route as AuthenticatedAdminAssignmentsAssignmentIdRouteImport } from './routes/_authenticated.admin.assignments.$assignmentId'
 import { Route as AuthenticatedAdminAssessmentsAssessmentIdRouteImport } from './routes/_authenticated.admin.assessments.$assessmentId'
 import { Route as AuthenticatedAdminApplicationsApplicationIdRouteImport } from './routes/_authenticated.admin.applications.$applicationId'
@@ -603,6 +607,12 @@ const AuthenticatedAdminCareerDiscoveryPreviewRoute =
     path: '/career-discovery-preview',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBesktMethodsRoute =
+  AuthenticatedAdminBesktMethodsRouteImport.update({
+    id: '/beskt-methods',
+    path: '/beskt-methods',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminAuditRoute = AuthenticatedAdminAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -685,6 +695,12 @@ const AuthenticatedAdminEmployersIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedAdminEmployersRoute,
+  } as any)
+const AuthenticatedAdminBesktMethodsIndexRoute =
+  AuthenticatedAdminBesktMethodsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAdminBesktMethodsRoute,
   } as any)
 const AuthenticatedAdminAssignmentsIndexRoute =
   AuthenticatedAdminAssignmentsIndexRouteImport.update({
@@ -847,6 +863,18 @@ const AuthenticatedAdminCandidateReportsRunIdRoute =
     id: '/candidate-reports/$runId',
     path: '/candidate-reports/$runId',
     getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminBesktMethodsNewRoute =
+  AuthenticatedAdminBesktMethodsNewRouteImport.update({
+    id: '/new',
+    path: '/new',
+    getParentRoute: () => AuthenticatedAdminBesktMethodsRoute,
+  } as any)
+const AuthenticatedAdminBesktMethodsMethodVersionIdRoute =
+  AuthenticatedAdminBesktMethodsMethodVersionIdRouteImport.update({
+    id: '/$methodVersionId',
+    path: '/$methodVersionId',
+    getParentRoute: () => AuthenticatedAdminBesktMethodsRoute,
   } as any)
 const AuthenticatedAdminAssignmentsAssignmentIdRoute =
   AuthenticatedAdminAssignmentsAssignmentIdRouteImport.update({
@@ -1202,6 +1230,7 @@ export interface FileRoutesByFullPath {
   '/admin/assessments': typeof AuthenticatedAdminAssessmentsRouteWithChildren
   '/admin/assignments': typeof AuthenticatedAdminAssignmentsRouteWithChildren
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/admin/beskt-methods': typeof AuthenticatedAdminBesktMethodsRouteWithChildren
   '/admin/career-discovery-preview': typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   '/admin/data': typeof AuthenticatedAdminDataRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
@@ -1242,6 +1271,8 @@ export interface FileRoutesByFullPath {
   '/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
   '/admin/assessments/$assessmentId': typeof AuthenticatedAdminAssessmentsAssessmentIdRoute
   '/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
+  '/admin/beskt-methods/$methodVersionId': typeof AuthenticatedAdminBesktMethodsMethodVersionIdRoute
+  '/admin/beskt-methods/new': typeof AuthenticatedAdminBesktMethodsNewRoute
   '/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/admin/interview-role-packs/new': typeof AuthenticatedAdminInterviewRolePacksNewRoute
@@ -1269,6 +1300,7 @@ export interface FileRoutesByFullPath {
   '/admin/applications/': typeof AuthenticatedAdminApplicationsIndexRoute
   '/admin/assessments/': typeof AuthenticatedAdminAssessmentsIndexRoute
   '/admin/assignments/': typeof AuthenticatedAdminAssignmentsIndexRoute
+  '/admin/beskt-methods/': typeof AuthenticatedAdminBesktMethodsIndexRoute
   '/admin/employers/': typeof AuthenticatedAdminEmployersIndexRoute
   '/admin/interview-role-packs/': typeof AuthenticatedAdminInterviewRolePacksIndexRoute
   '/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
@@ -1389,6 +1421,8 @@ export interface FileRoutesByTo {
   '/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
   '/admin/assessments/$assessmentId': typeof AuthenticatedAdminAssessmentsAssessmentIdRoute
   '/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
+  '/admin/beskt-methods/$methodVersionId': typeof AuthenticatedAdminBesktMethodsMethodVersionIdRoute
+  '/admin/beskt-methods/new': typeof AuthenticatedAdminBesktMethodsNewRoute
   '/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/admin/interview-role-packs/new': typeof AuthenticatedAdminInterviewRolePacksNewRoute
@@ -1414,6 +1448,7 @@ export interface FileRoutesByTo {
   '/admin/applications': typeof AuthenticatedAdminApplicationsIndexRoute
   '/admin/assessments': typeof AuthenticatedAdminAssessmentsIndexRoute
   '/admin/assignments': typeof AuthenticatedAdminAssignmentsIndexRoute
+  '/admin/beskt-methods': typeof AuthenticatedAdminBesktMethodsIndexRoute
   '/admin/employers': typeof AuthenticatedAdminEmployersIndexRoute
   '/admin/interview-role-packs': typeof AuthenticatedAdminInterviewRolePacksIndexRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsIndexRoute
@@ -1513,6 +1548,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/assessments': typeof AuthenticatedAdminAssessmentsRouteWithChildren
   '/_authenticated/admin/assignments': typeof AuthenticatedAdminAssignmentsRouteWithChildren
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
+  '/_authenticated/admin/beskt-methods': typeof AuthenticatedAdminBesktMethodsRouteWithChildren
   '/_authenticated/admin/career-discovery-preview': typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   '/_authenticated/admin/data': typeof AuthenticatedAdminDataRoute
   '/_authenticated/admin/employers': typeof AuthenticatedAdminEmployersRouteWithChildren
@@ -1553,6 +1589,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/applications/$applicationId': typeof AuthenticatedAdminApplicationsApplicationIdRoute
   '/_authenticated/admin/assessments/$assessmentId': typeof AuthenticatedAdminAssessmentsAssessmentIdRoute
   '/_authenticated/admin/assignments/$assignmentId': typeof AuthenticatedAdminAssignmentsAssignmentIdRoute
+  '/_authenticated/admin/beskt-methods/$methodVersionId': typeof AuthenticatedAdminBesktMethodsMethodVersionIdRoute
+  '/_authenticated/admin/beskt-methods/new': typeof AuthenticatedAdminBesktMethodsNewRoute
   '/_authenticated/admin/candidate-reports/$runId': typeof AuthenticatedAdminCandidateReportsRunIdRoute
   '/_authenticated/admin/employers/$employerId': typeof AuthenticatedAdminEmployersEmployerIdRoute
   '/_authenticated/admin/interview-role-packs/new': typeof AuthenticatedAdminInterviewRolePacksNewRoute
@@ -1580,6 +1618,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/applications/': typeof AuthenticatedAdminApplicationsIndexRoute
   '/_authenticated/admin/assessments/': typeof AuthenticatedAdminAssessmentsIndexRoute
   '/_authenticated/admin/assignments/': typeof AuthenticatedAdminAssignmentsIndexRoute
+  '/_authenticated/admin/beskt-methods/': typeof AuthenticatedAdminBesktMethodsIndexRoute
   '/_authenticated/admin/employers/': typeof AuthenticatedAdminEmployersIndexRoute
   '/_authenticated/admin/interview-role-packs/': typeof AuthenticatedAdminInterviewRolePacksIndexRoute
   '/_authenticated/admin/jobs/': typeof AuthenticatedAdminJobsIndexRoute
@@ -1679,6 +1718,7 @@ export interface FileRouteTypes {
     | '/admin/assessments'
     | '/admin/assignments'
     | '/admin/audit'
+    | '/admin/beskt-methods'
     | '/admin/career-discovery-preview'
     | '/admin/data'
     | '/admin/employers'
@@ -1719,6 +1759,8 @@ export interface FileRouteTypes {
     | '/admin/applications/$applicationId'
     | '/admin/assessments/$assessmentId'
     | '/admin/assignments/$assignmentId'
+    | '/admin/beskt-methods/$methodVersionId'
+    | '/admin/beskt-methods/new'
     | '/admin/candidate-reports/$runId'
     | '/admin/employers/$employerId'
     | '/admin/interview-role-packs/new'
@@ -1746,6 +1788,7 @@ export interface FileRouteTypes {
     | '/admin/applications/'
     | '/admin/assessments/'
     | '/admin/assignments/'
+    | '/admin/beskt-methods/'
     | '/admin/employers/'
     | '/admin/interview-role-packs/'
     | '/admin/jobs/'
@@ -1866,6 +1909,8 @@ export interface FileRouteTypes {
     | '/admin/applications/$applicationId'
     | '/admin/assessments/$assessmentId'
     | '/admin/assignments/$assignmentId'
+    | '/admin/beskt-methods/$methodVersionId'
+    | '/admin/beskt-methods/new'
     | '/admin/candidate-reports/$runId'
     | '/admin/employers/$employerId'
     | '/admin/interview-role-packs/new'
@@ -1891,6 +1936,7 @@ export interface FileRouteTypes {
     | '/admin/applications'
     | '/admin/assessments'
     | '/admin/assignments'
+    | '/admin/beskt-methods'
     | '/admin/employers'
     | '/admin/interview-role-packs'
     | '/admin/jobs'
@@ -1989,6 +2035,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/assessments'
     | '/_authenticated/admin/assignments'
     | '/_authenticated/admin/audit'
+    | '/_authenticated/admin/beskt-methods'
     | '/_authenticated/admin/career-discovery-preview'
     | '/_authenticated/admin/data'
     | '/_authenticated/admin/employers'
@@ -2029,6 +2076,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/applications/$applicationId'
     | '/_authenticated/admin/assessments/$assessmentId'
     | '/_authenticated/admin/assignments/$assignmentId'
+    | '/_authenticated/admin/beskt-methods/$methodVersionId'
+    | '/_authenticated/admin/beskt-methods/new'
     | '/_authenticated/admin/candidate-reports/$runId'
     | '/_authenticated/admin/employers/$employerId'
     | '/_authenticated/admin/interview-role-packs/new'
@@ -2056,6 +2105,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/applications/'
     | '/_authenticated/admin/assessments/'
     | '/_authenticated/admin/assignments/'
+    | '/_authenticated/admin/beskt-methods/'
     | '/_authenticated/admin/employers/'
     | '/_authenticated/admin/interview-role-packs/'
     | '/_authenticated/admin/jobs/'
@@ -2693,6 +2743,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCareerDiscoveryPreviewRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/beskt-methods': {
+      id: '/_authenticated/admin/beskt-methods'
+      path: '/beskt-methods'
+      fullPath: '/admin/beskt-methods'
+      preLoaderRoute: typeof AuthenticatedAdminBesktMethodsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/audit': {
       id: '/_authenticated/admin/audit'
       path: '/audit'
@@ -2790,6 +2847,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/employers/'
       preLoaderRoute: typeof AuthenticatedAdminEmployersIndexRouteImport
       parentRoute: typeof AuthenticatedAdminEmployersRoute
+    }
+    '/_authenticated/admin/beskt-methods/': {
+      id: '/_authenticated/admin/beskt-methods/'
+      path: '/'
+      fullPath: '/admin/beskt-methods/'
+      preLoaderRoute: typeof AuthenticatedAdminBesktMethodsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminBesktMethodsRoute
     }
     '/_authenticated/admin/assignments/': {
       id: '/_authenticated/admin/assignments/'
@@ -2979,6 +3043,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/candidate-reports/$runId'
       preLoaderRoute: typeof AuthenticatedAdminCandidateReportsRunIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/beskt-methods/new': {
+      id: '/_authenticated/admin/beskt-methods/new'
+      path: '/new'
+      fullPath: '/admin/beskt-methods/new'
+      preLoaderRoute: typeof AuthenticatedAdminBesktMethodsNewRouteImport
+      parentRoute: typeof AuthenticatedAdminBesktMethodsRoute
+    }
+    '/_authenticated/admin/beskt-methods/$methodVersionId': {
+      id: '/_authenticated/admin/beskt-methods/$methodVersionId'
+      path: '/$methodVersionId'
+      fullPath: '/admin/beskt-methods/$methodVersionId'
+      preLoaderRoute: typeof AuthenticatedAdminBesktMethodsMethodVersionIdRouteImport
+      parentRoute: typeof AuthenticatedAdminBesktMethodsRoute
     }
     '/_authenticated/admin/assignments/$assignmentId': {
       id: '/_authenticated/admin/assignments/$assignmentId'
@@ -3338,6 +3416,27 @@ const AuthenticatedAdminAssignmentsRouteWithChildren =
     AuthenticatedAdminAssignmentsRouteChildren,
   )
 
+interface AuthenticatedAdminBesktMethodsRouteChildren {
+  AuthenticatedAdminBesktMethodsMethodVersionIdRoute: typeof AuthenticatedAdminBesktMethodsMethodVersionIdRoute
+  AuthenticatedAdminBesktMethodsNewRoute: typeof AuthenticatedAdminBesktMethodsNewRoute
+  AuthenticatedAdminBesktMethodsIndexRoute: typeof AuthenticatedAdminBesktMethodsIndexRoute
+}
+
+const AuthenticatedAdminBesktMethodsRouteChildren: AuthenticatedAdminBesktMethodsRouteChildren =
+  {
+    AuthenticatedAdminBesktMethodsMethodVersionIdRoute:
+      AuthenticatedAdminBesktMethodsMethodVersionIdRoute,
+    AuthenticatedAdminBesktMethodsNewRoute:
+      AuthenticatedAdminBesktMethodsNewRoute,
+    AuthenticatedAdminBesktMethodsIndexRoute:
+      AuthenticatedAdminBesktMethodsIndexRoute,
+  }
+
+const AuthenticatedAdminBesktMethodsRouteWithChildren =
+  AuthenticatedAdminBesktMethodsRoute._addFileChildren(
+    AuthenticatedAdminBesktMethodsRouteChildren,
+  )
+
 interface AuthenticatedAdminEmployersRouteChildren {
   AuthenticatedAdminEmployersEmployerIdRoute: typeof AuthenticatedAdminEmployersEmployerIdRoute
   AuthenticatedAdminEmployersIndexRoute: typeof AuthenticatedAdminEmployersIndexRoute
@@ -3449,6 +3548,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAssessmentsRoute: typeof AuthenticatedAdminAssessmentsRouteWithChildren
   AuthenticatedAdminAssignmentsRoute: typeof AuthenticatedAdminAssignmentsRouteWithChildren
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
+  AuthenticatedAdminBesktMethodsRoute: typeof AuthenticatedAdminBesktMethodsRouteWithChildren
   AuthenticatedAdminCareerDiscoveryPreviewRoute: typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   AuthenticatedAdminDataRoute: typeof AuthenticatedAdminDataRoute
   AuthenticatedAdminEmployersRoute: typeof AuthenticatedAdminEmployersRouteWithChildren
@@ -3471,6 +3571,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAssignmentsRoute:
     AuthenticatedAdminAssignmentsRouteWithChildren,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
+  AuthenticatedAdminBesktMethodsRoute:
+    AuthenticatedAdminBesktMethodsRouteWithChildren,
   AuthenticatedAdminCareerDiscoveryPreviewRoute:
     AuthenticatedAdminCareerDiscoveryPreviewRoute,
   AuthenticatedAdminDataRoute: AuthenticatedAdminDataRoute,
