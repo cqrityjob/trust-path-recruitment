@@ -15,7 +15,10 @@
  */
 import { runControls, type Mutation } from "./runner";
 
-const HEADER = "src/components/professional-identity/CareerPageHeader.tsx";
+// The "Edit Profile" control is the Profile card's one button since the
+// 2026-09-17 refinement; it was a text link in CareerPageHeader before.
+const HEADER = "src/components/professional-identity/OverviewSurfaces.tsx";
+const CV_PAGE = "src/routes/_authenticated.my-career.cv.index.tsx";
 const EDITOR = "src/components/professional-identity/EmploymentHistoryEditor.tsx";
 const BASICS = "src/components/professional-identity/ProfileBasicsSection.tsx";
 const PROFILE = "src/routes/_authenticated.my-career.profile.tsx";
@@ -32,9 +35,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Overview button carries the quick-edit intent again, so it reopens the limited dialog instead of the complete workspace",
     file: HEADER,
-    find: '<Link to="/my-career/profile" data-edit-details className={LINK}>',
+    find: '<Link to="/my-career/profile" data-edit-details className={ACTION}>',
     replace:
-      '<Link to="/my-career/profile?edit=profession#career-profile" data-edit-details className={LINK}>',
+      '<Link to="/my-career/profile?edit=profession#career-profile" data-edit-details className={ACTION}>',
     guard: DASH,
     expect: "no quick-edit intent",
   },
@@ -43,8 +46,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the button points at the Security Passport, sending somebody who wants to edit their education to the wrong product",
     file: HEADER,
-    find: '<Link to="/my-career/profile" data-edit-details className={LINK}>',
-    replace: '<Link to="/passport/information" data-edit-details className={LINK}>',
+    find: '<Link to="/my-career/profile" data-edit-details className={ACTION}>',
+    replace: '<Link to="/passport/information" data-edit-details className={ACTION}>',
     guard: DASH,
     expect: "must navigate to the complete profile workspace",
   },
@@ -53,8 +56,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the control loses its data-edit-details hook, so nothing can assert where it goes and the destination can drift unobserved",
     file: HEADER,
-    find: '<Link to="/my-career/profile" data-edit-details className={LINK}>',
-    replace: '<Link to="/my-career/profile" className={LINK}>',
+    find: '<Link to="/my-career/profile" data-edit-details className={ACTION}>',
+    replace: '<Link to="/my-career/profile" className={ACTION}>',
     guard: DASH,
     expect: "must carry data-edit-details",
   },
@@ -65,7 +68,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the profile stops owning the general claim kinds, which is how general education and languages end up being edited inside the Security Passport again",
     file: CLAIMS,
-    find: '  { kind: "education", titleKey: "claims.type.education", anchor: "profile-education" },',
+    find: '  { kind: "education", titleKey: "claims.type.education", anchor: "cv-education" },',
     replace: "",
     guard: BOUNDARY,
     expect: "education",
@@ -86,14 +89,15 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PE-NC-EMPLOYMENT-EDITOR-UNMOUNTED",
     defect:
-      "the profile stops mounting the canonical employment editor, so the authoring moved out of the Passport and landed nowhere",
-    file: PROFILE,
-    // Repointed: the defaultCountry prop was removed when the editor took
-    // over resolving the CONFIRMED work country itself.
-    find: "<EmploymentHistoryEditor />",
-    replace: "",
+      "the CV page stops mounting the canonical employment editor, so the authoring moved out of the Passport and landed nowhere",
+    file: CV_PAGE,
+    // Repointed twice: the defaultCountry prop was removed when the editor
+    // took over resolving the CONFIRMED work country itself, and the mount
+    // moved from the Profile page to the CV page with the Profile/CV split.
+    find: "<EmploymentHistoryEditor",
+    replace: "<NoEmploymentEditor",
     guard: BOUNDARY,
-    expect: "mounted on /my-career/profile",
+    expect: "mounted on /my-career/cv",
   },
   {
     id: "PE-NC-EMPLOYMENT-SECOND-IMPLEMENTATION",
@@ -135,7 +139,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "            data-employment-authoring-link",
     replace: '            onClick={() => openEntry("experience", e.id)}',
     guard: BOUNDARY,
-    expect: "employment anchor points to the canonical profile without rendering CV history",
+    expect: "points to the CV's employment editor without rendering CV history",
   },
 
   // ---- The destination map points general information back at the Passport --
@@ -144,10 +148,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the employment destination points at the Passport again, so every recommendation and summary sends the candidate to the wrong product to edit ordinary work history",
     file: DESTINATIONS,
-    find: '  employment: { owner: "profile", href: "/my-career/profile#profile-employment" },',
+    find: '  employment: { owner: "cv", href: "/my-career/cv#cv-employment" },',
     replace: '  employment: { owner: "passport", href: "/passport/information#sp-employment" },',
     guard: BOUNDARY,
-    expect: "the employment destination is the profile workspace",
+    expect: "the employment destination is the CV",
   },
 
   // ---- Basics and work country go back to the Passport ---------------------
@@ -178,7 +182,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the profile stops mounting the basics section, so the editors left the Passport and landed nowhere",
     file: PROFILE,
-    find: "                <ProfileBasicsSection />",
+    find: "              <ProfileBasicsSection />",
     replace: "",
     guard: BOUNDARY,
     expect: "edited on /my-career/profile",

@@ -59,6 +59,8 @@ const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
 const { CareerPageHeader } =
   await import("../src/components/professional-identity/CareerPageHeader");
+const { OverviewProfileCard } =
+  await import("../src/components/professional-identity/OverviewSurfaces");
 const { NextBestAction } = await import("../src/components/professional-identity/NextBestAction");
 const { PassportSummary } = await import("../src/components/professional-identity/PassportSummary");
 const { CareerDirectionSection } =
@@ -132,6 +134,17 @@ function renderPage(input: HomePresentationInput) {
     m,
     html:
       render(<CareerPageHeader profile={m.profile} onRetry={retry} />) +
+      // The Profile card states who the person is since the identity row
+      // left the header; mounted here exactly as the route mounts it.
+      render(
+        <OverviewProfileCard
+          profile={m.profile}
+          displayName={
+            input.identity.state === "ready" ? input.identity.identity.displayName : null
+          }
+          onRetry={retry}
+        />,
+      ) +
       render(<NextBestAction next={m.nextAction} onRetry={retry} />) +
       render(<PassportSummary passport={m.passport} onRetry={retry} />) +
       render(<CareerDirectionSection career={m.career} onRetry={retry} />) +
@@ -800,14 +813,16 @@ group("T12 · basic details, never a percentage; the name rule");
   const { m, html } = renderPage(fixture("eight_unverified"));
   ck("an answered basic profile is complete", m.profile.state === "ready" && m.profile.complete);
   ck(
-    'the header says "Grunduppgifter ifyllda"',
+    'the Profile card says "Grunduppgifter ifyllda"',
     html.includes("Grunduppgifter ifyllda") && !html.includes("Grundprofil komplett"),
   );
   ck("and never a percentage", !/%/.test(html.slice(0, html.indexOf("data-next-best-action"))));
   ck(
-    "the identity row is role, country and the way to edit them",
-    html.includes("Väktare med inriktning mot larm och teknik · Sverige") &&
-      html.includes("Redigera mina uppgifter"),
+    "the Profile card is role, country and the way to edit them",
+    html.includes("Väktare med inriktning mot larm och teknik") &&
+      html.includes(">Sverige<") &&
+      html.includes("Redigera profil") &&
+      /href="\/my-career\/profile"[^>]*data-edit-details/.test(html),
   );
   ck("the h1 is the brief's heading", html.includes("Din karriär, Amina"));
   const noName = buildCareerHomeViewModel(
@@ -905,6 +920,8 @@ group("T14 · the page order, and the Passport early");
   // reading order the correction asks for, and source order still is it.
   const order = [
     "<CareerPageHeader",
+    "<OverviewProfileCard",
+    "<OverviewCvCard",
     "<NextBestAction",
     "<HubStatusGrid",
     "<LinkEarlierResult",

@@ -32,6 +32,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ProfileBasicsCard,
@@ -71,6 +72,7 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
   const { pt } = usePassportCopy();
   const { lang } = useT();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const loadProfile = useServerFn(getMyPassport);
   const loadEntries = useServerFn(listMyEntries);
@@ -137,7 +139,44 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
       .catch(() => {});
   }, [refresh, loadEntries]);
 
-  if (!basics || !country) return null;
+  // ── A FAILED READ SAYS SO ───────────────────────────────────────────
+  //
+  // This returned null until both reads had answered -- including when the
+  // read had FAILED, because the error was only rendered further down, past
+  // this guard. On the Profile page that meant the name-and-title editor was
+  // simply absent, with nothing saying why and nothing to press. Found by
+  // walking the page against a backend whose read refused.
+  if (!basics || !country) {
+    return (
+      // No anchor here: `#profile-basics` is rendered exactly once, by the
+      // ready branch below, and the page's ScrollToHashOnceReady waits for it.
+      <section
+        aria-label={pt("basics.compactTitle")}
+        data-profile-basics-state={error ? "failed" : "loading"}
+        className={className}
+      >
+        {error ? (
+          <div role="alert" className="rounded-xl border border-border bg-card p-5">
+            <p className="text-sm text-destructive">{error}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                void refresh();
+              }}
+              className="mt-3 inline-flex min-h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {pt("live.retry")}
+            </button>
+          </div>
+        ) : (
+          <p role="status" className="text-sm text-muted-foreground">
+            {pt("common.loading")}
+          </p>
+        )}
+      </section>
+    );
+  }
 
   const answers: Record<string, string> = {
     "identity.displayName": basics.displayName,
@@ -185,30 +224,48 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
           {error}
         </p>
       )}
-      {notice && !error && (
-        <p role="status" className="mb-3 text-sm text-muted-foreground">
-          {notice}
-        </p>
-      )}
 
-      <ProfileBasicsCard
-        answers={answers}
-        displayAnswers={displayAnswers}
-        declaredAccurateAt={basics.declaredAccurateAt}
-        onSave={async (patch: ProfileBasicsPatch) => {
-          setNotice(null);
-          setError(null);
-          await saveBasics({ data: patch });
-          if (await refresh()) setNotice(pt("basics.savedNotice"));
-        }}
-        // The profession's canonical editor is the career profile on this
-        // same page. The card never writes it.
-        onEditProfession={() => void navigate({ to: CAREER_PROFILE_ROUTE, hash: "career-profile" })}
-        onEditWorkCountry={() => focusById("profile-work-country")}
-        onEditCurrentRole={() => focusById("profile-employment")}
-      />
+      {/* The compact editor: the two answers this card writes, with Save and
+          Cancel. The delegated three are not repeated as rows, because their
+          canonical editors are mounted on this same page (work country
+          below, profession in the career profile) or on the CV (current
+          role, which is an employment record). */}
+      <div className="rounded-xl border border-border bg-card p-5 md:p-6">
+        <ProfileBasicsCard
+          variant="compact"
+          answers={answers}
+          displayAnswers={displayAnswers}
+          declaredAccurateAt={basics.declaredAccurateAt}
+          onSave={async (patch: ProfileBasicsPatch) => {
+            setNotice(null);
+            setError(null);
+            await saveBasics({ data: patch });
+            // Read back before the card reports success, and tell every
+            // surface that prints the name or the title -- the Profile
+            // header above, My Career, the Passport -- that it changed.
+            if (!(await refresh())) throw new Error("basics read-back failed");
+            void queryClient.invalidateQueries({ queryKey: ["professional-identity"] });
+          }}
+          // The profession's canonical editor is the career profile on this
+          // same page. The card never writes it.
+          onEditProfession={() =>
+            void navigate({ to: CAREER_PROFILE_ROUTE, hash: "career-profile" })
+          }
+          onEditWorkCountry={() => focusById("profile-work-country")}
+          // The current role is an employment record, and employment is CV
+          // content: its editor is on the CV page, not further down this one.
+          onEditCurrentRole={() => void navigate({ to: "/my-career/cv", hash: "cv-employment" })}
+        />
+      </div>
 
       <div id="profile-work-country" className="mt-6 scroll-mt-24" data-profile-work-country>
+        {/* Beside the card that was saved, not at the top of a section the
+            reader has scrolled past. */}
+        {notice && !error && (
+          <p role="status" className="mb-3 text-sm text-muted-foreground">
+            {notice}
+          </p>
+        )}
         <WorkCountryCard
           jurisdictionCode={country.jurisdictionCode}
           subJurisdictionCode={country.subJurisdictionCode}
@@ -217,7 +274,10 @@ export function ProfileBasicsSection({ className = "" }: { className?: string })
             setNotice(null);
             setError(null);
             await saveCountry({ data: { workCountry: value } });
-            if (await refresh()) setNotice(pt("basics.savedNotice"));
+            if (await refresh()) {
+              setNotice(pt("basics.savedNotice"));
+              void queryClient.invalidateQueries({ queryKey: ["professional-identity"] });
+            }
           }}
         />
       </div>

@@ -1516,6 +1516,15 @@ jobs:
       - name: Profile section navigation browser suite
         run: bun run e2e:profile-nav
 
+      # Profile, CV and Security Passport as three surfaces: My Career names
+      # all three with one action each, the Profile's and the CV's editors
+      # add, change, save and cancel through the canonical writers, /passport
+      # shows exactly ONE Passport, and nothing overflows at 390 or 375. Same
+      # server, same stubbed boundary -- it proves the UI sends the right
+      # write and re-reads, and claims nothing about persistence.
+      - name: Profile, CV and Passport surfaces browser suite
+        run: bun run e2e:surfaces
+
       - name: Server log
         if: failure()
         run: cat /tmp/dev-server.log

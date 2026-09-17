@@ -22,74 +22,95 @@ const CLAIMS = "src/components/professional-identity/GeneralProfileClaims.tsx";
 const GUARD = "profile-section-navigation:check";
 
 const MUTATIONS: readonly Mutation[] = [
-  // ---- The original defect, restored --------------------------------------
+  // ---- The dead label comes back ------------------------------------------
   {
-    id: "PSN-NC-PROFILE-ROWS-INERT",
+    id: "PSN-NC-DEAD-LABEL-RESTORED",
     defect:
-      "the overview withholds the link again when the section is profile-owned, which is the defect this whole change exists to remove: nine of ten rows become inert",
+      "the Profile page labels a section 'Edited here' again beside something that is not a control, which is the defect the owner's refinement removed",
     file: ROUTE,
-    find: '                  if (owner === "profile") {',
-    replace: '                  if (owner === "profile" && owner !== "profile") {',
+    find: '  ownedCv: c("Tillhör ditt CV", "Belongs to your CV"),',
+    replace:
+      '  ownedCv: c("Tillhör ditt CV", "Belongs to your CV"),\n  ownedHere: c("Redigeras här", "Edited here"),',
     guard: GUARD,
-    expect: "renders the link as the row itself",
+    expect: "no dead ownership label",
   },
 
-  // ---- Completion starts gating navigation again --------------------------
+  // ---- Career history gets a second editing home ---------------------------
   {
-    id: "PSN-NC-DONE-GATES-THE-ROW",
+    id: "PSN-NC-CV-EDITOR-BACK-ON-PROFILE",
     defect:
-      "a completed profile section stops being openable, which is precisely when somebody wants to go and correct what they entered",
+      "the employment editor is mounted on the Profile page again, so career history has two editing homes and the Profile/CV split is gone",
     file: ROUTE,
-    find: '                  if (owner === "profile") {',
-    replace: '                  if (owner === "profile" && !done) {',
+    find: "              <ProfileBasicsSection />",
+    replace: "              <ProfileBasicsSection />\n              <EmploymentHistoryEditor />",
     guard: GUARD,
-    expect: "never consults `done`",
+    expect: "exactly one editing home",
+  },
+  {
+    id: "PSN-NC-CV-SECTION-ROUTED-TO-PROFILE",
+    defect:
+      "the contract sends 'add your employment' to the Profile page, where the editor no longer is: the recommendation can never be retired",
+    file: DESTINATIONS,
+    find: '  employment: { owner: "cv", href: "/my-career/cv#cv-employment" },',
+    replace: '  employment: { owner: "cv", href: "/my-career/profile#cv-employment" },',
+    guard: GUARD,
+    expect: "employment is edited on /my-career/cv",
   },
 
-  // ---- Truthful completeness presentation is dropped ----------------------
+  // ---- Completion starts gating an editor ----------------------------------
   {
-    id: "PSN-NC-COMPLETENESS-PRESENTATION-LOST",
+    id: "PSN-NC-COMPLETION-GATES-THE-EDITOR",
     defect:
-      "the row stops distinguishing filled from unfilled, so navigation was bought by giving up the status the overview exists to show",
+      "the name-and-title editor is only mounted while something is missing, so a completed profile can no longer be corrected -- precisely when somebody wants to",
     file: ROUTE,
-    find: "                  const done = completeness.completedSections.includes(section);",
-    replace: "                  const isDone = completeness.completedSections.includes(section);",
+    find: "              <ProfileBasicsSection />",
+    replace: "              {missing.length > 0 && <ProfileBasicsSection />}",
     guard: GUARD,
-    expect: "truthful completeness presentation was not removed",
+    expect: "<ProfileBasicsSection is mounted unconditionally",
   },
 
   // ---- A second source of truth for the destination -----------------------
   {
     id: "PSN-NC-TARGET-NOT-FROM-CONTRACT",
     defect:
-      "the route stops deriving its destination from SECTION_DESTINATIONS, so the overview and the recommendation ladder can disagree about where a section is edited",
+      "the route stops deriving its destination from SECTION_DESTINATIONS, so the shortcut and the recommendation ladder can disagree about where a section is edited",
     file: ROUTE,
     find: "                  const target = sectionLinkTarget(section);",
     replace:
       '                  const target = { to: "/my-career/profile", search: undefined, hash: undefined };',
     guard: GUARD,
-    expect: "derives its targets from the shared contract",
+    expect: "derive their targets from the shared contract",
   },
   {
     id: "PSN-NC-ANCHOR-RESPELLED-IN-ROUTE",
     defect:
       "an anchor is written again in the route beside the link, which is the second source of truth that drifts the first time a section moves",
     file: ROUTE,
-    find: "                          aria-label={L(SECTION_TITLE[section], l)}",
+    find: "                        data-section-link={section}",
     replace:
-      '                          aria-label={L(SECTION_TITLE[section], l)}\n                          data-anchor="profile-employment"',
+      '                        data-section-link={section}\n                        data-anchor="profile-basics"',
     guard: GUARD,
-    expect: "does not re-spell #profile-employment",
+    expect: "the Profile route does not re-spell #profile-basics",
   },
   {
     id: "PSN-NC-HASH-DROPPED-FROM-LINK",
     defect:
-      "the link stops carrying the fragment, so every row lands at the top of the page instead of at its section — the URL changes and nothing else does",
+      "the link stops carrying the fragment, so every shortcut lands at the top of the page instead of at its field — the URL changes and nothing else does",
     file: ROUTE,
-    find: "                          hash={target.hash}\n                          aria-label=",
-    replace: "                          aria-label=",
+    find: "                        hash={target.hash}\n                        data-section-link={section}",
+    replace: "                        data-section-link={section}",
     guard: GUARD,
     expect: "built from that target, part by part",
+  },
+  {
+    id: "PSN-NC-SHORTCUTS-OFFER-CV-SECTIONS",
+    defect:
+      "the Profile's 'missing' list stops filtering on ownership, so it asks for an education on the page that cannot record one",
+    file: ROUTE,
+    find: '          SECTION_DESTINATIONS[section].owner === "profile" &&',
+    replace: "",
+    guard: GUARD,
+    expect: "offers only what the Profile owns",
   },
 
   // ---- The parser silently loses a part of the destination ----------------
@@ -123,16 +144,16 @@ const MUTATIONS: readonly Mutation[] = [
     find: '<div id="profile-work-country" className="mt-6 scroll-mt-24" data-profile-work-country>',
     replace: '<div className="mt-6 scroll-mt-24" data-profile-work-country>',
     guard: GUARD,
-    expect: "no rendered id= anywhere on the surface",
+    expect: "no rendered id= anywhere on the owning surface",
   },
   {
     id: "PSN-NC-ANCHOR-DUPLICATED",
     defect:
       "a second element claims the employment anchor, so which section the link reaches depends on document order rather than on intent",
-    file: BASICS,
-    find: '<div id="profile-work-country" className="mt-6 scroll-mt-24" data-profile-work-country>',
+    file: CLAIMS,
+    find: "    <div className={`space-y-4 ${className}`} data-general-profile-claims>",
     replace:
-      '<div id="profile-employment" className="mt-6 scroll-mt-24" data-profile-work-country>',
+      '    <div id="cv-employment" className={`space-y-4 ${className}`} data-general-profile-claims>',
     guard: GUARD,
     expect: "rendered 2 times",
   },
@@ -141,10 +162,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the languages anchor is dropped from the table that feeds the shell, which is the indirection the guard's first draft could not see at all",
     file: CLAIMS,
-    find: '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "profile-languages" },',
+    find: '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "cv-languages" },',
     replace: '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "gone" },',
     guard: GUARD,
-    expect: "no rendered id= anywhere on the surface",
+    expect: "no rendered id= anywhere on the owning surface",
   },
 
   // ---- The reader lands under the fixed header ----------------------------
@@ -169,24 +190,36 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "carries a scroll offset",
   },
 
+  // ---- A profile-owned anchor drifts onto the wrong page ------------------
+  {
+    id: "PSN-NC-ANCHOR-ON-THE-WRONG-SURFACE",
+    defect:
+      "the work-country anchor only exists on the CV surface, so the Profile's link has a live id on a page it does not point at",
+    file: DESTINATIONS,
+    find: '  location: { owner: "profile", href: "/my-career/profile#profile-work-country" },',
+    replace: '  location: { owner: "profile", href: "/my-career/profile#cv-languages" },',
+    guard: GUARD,
+    expect: "#cv-languages is rendered exactly once on the profile surface",
+  },
+
   // ---- The target stops being reachable by hand or by keyboard ------------
   {
     id: "PSN-NC-TARGET-UNDER-44PX",
     defect:
-      "the row link drops its 44px minimum, so on a phone the overview becomes a column of targets too small to hit",
+      "the shortcut drops its 44px minimum, so on a phone the missing-field links become targets too small to hit",
     file: ROUTE,
-    find: "flex min-h-[44px] flex-col justify-center p-4",
-    replace: "flex flex-col justify-center p-4",
+    find: 'className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md border border-dashed',
+    replace: 'className="inline-flex items-center gap-1.5 rounded-md border border-dashed',
     guard: GUARD,
     expect: "declares a 44px minimum",
   },
   {
     id: "PSN-NC-FOCUS-RING-LOST",
     defect:
-      "the row link loses its visible focus state, so a keyboard user tabbing the overview cannot see where they are",
+      "the shortcut loses its visible focus state, so a keyboard user tabbing the page cannot see where they are",
     file: ROUTE,
-    find: "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-    replace: "focus-visible:outline-none",
+    find: "hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+    replace: "hover:bg-accent/10 focus-visible:outline-none",
     guard: GUARD,
     expect: "keyboard focus is visible",
   },
@@ -195,20 +228,20 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PSN-NC-LABEL-HARDCODED",
     defect:
-      "the accessible name becomes a Swedish literal, so an English reader hears the wrong language and the existing copy table is bypassed",
+      "the shortcut's text becomes a Swedish literal, so an English reader reads the wrong language and the authored pair is bypassed",
     file: ROUTE,
-    find: "                          aria-label={L(SECTION_TITLE[section], l)}",
-    replace: '                          aria-label="Avsnitt"',
+    find: "                        {L(ADD_LABEL[section]!, l)}",
+    replace: "                        Lägg till",
     guard: GUARD,
-    expect: "named from the section title",
+    expect: "named from a bilingual pair",
   },
   {
     id: "PSN-NC-ROW-HOOK-LOST",
     defect:
-      "the per-section hook disappears, so the browser suite can no longer address a specific overview row and its proof goes dark",
+      "the per-section hook disappears, so the browser suite can no longer address a specific shortcut and its proof goes dark",
     file: ROUTE,
-    find: '                          data-section-link={section}\n                          className="flex min-h-[44px]',
-    replace: '                          className="flex min-h-[44px]',
+    find: "                        data-section-link={section}\n",
+    replace: "",
     guard: GUARD,
     expect: "carries a stable hook naming its section",
   },

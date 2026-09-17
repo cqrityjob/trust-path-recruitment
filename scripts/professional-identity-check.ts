@@ -848,28 +848,47 @@ console.log("\n2c · the /my-career surfaces");
   const seam = read("src/lib/professional-identity/identity.functions.ts");
 
   // ── B3 · no audited heading may fall back to the stored slug ───────
+  //
+  // The Profile PAGE stopped printing the profession and the location itself
+  // when its section index was removed (2026-09-17): its hero -- the identity
+  // header above -- states them, and the career home's Profile card states
+  // them on Overview. So the page is held to "never the slug", and the card
+  // is held to the same resolvers the header is.
+  const surfaces = read("src/components/professional-identity/OverviewSurfaces.tsx");
+  ck(
+    "the identity header resolves the profession through professionLabel",
+    header.includes("professionLabel("),
+  );
+  ck(
+    "the Overview Profile card resolves it through homeRoleTitle, which wraps professionLabel",
+    surfaces.includes("homeRoleTitle(profile, l)") &&
+      /export function homeRoleTitle[\s\S]{0,200}professionLabel\(/.test(snapshotModel),
+  );
   for (const [name, src] of [
     ["the identity header", header],
     ["/my-career/profile", profilePage],
+    ["the Overview Profile card", surfaces],
   ] as const) {
-    ck(`${name} resolves the profession through professionLabel`, src.includes("professionLabel("));
     ck(`${name} never renders currentProfessionSlug`, !src.includes("currentProfessionSlug"));
   }
+  ck(
+    "/my-career/profile states the person through the identity header, not a second rendering",
+    /<ProfessionalIdentityHeader[\s\S]{0,120}variant="profile"/.test(profilePage),
+  );
   ck(
     "the profile card's summary does not fall back to the slug either",
     !/\?\?\s*draft\.currentProfessionSlug|:\s*draft\.currentProfessionSlug\)/.test(profileCard),
   );
 
   // ── M5 · the sub-jurisdiction reaches the formatter ────────────────
-  for (const [name, src] of [
-    ["the identity header", header],
-    ["/my-career/profile", profilePage],
-  ] as const) {
-    ck(
-      `${name} formats the work location with its sub-jurisdiction`,
-      /formatWorkLocation\(\s*identity\.workCountry,\s*identity\.workSubJurisdiction/.test(src),
-    );
-  }
+  ck(
+    "the identity header formats the work location with its sub-jurisdiction",
+    /formatWorkLocation\(\s*identity\.workCountry,\s*identity\.workSubJurisdiction/.test(header),
+  );
+  ck(
+    "the Overview Profile card formats the work location with its sub-jurisdiction",
+    /formatWorkLocation\(\s*profile\.workCountry,\s*profile\.workSubJurisdiction/.test(surfaces),
+  );
 
   // ── B2 · one label, one number ─────────────────────────────────────
   //
@@ -2906,7 +2925,13 @@ console.log("\n12 · candidate dead ends");
   // The surface roots a recommendation must never settle for: landing on one
   // of these means the person is told to go somewhere and then left to find
   // the editor themselves, which is the defect this section exists to catch.
-  const FRONT_DOORS = ["/my-career", "/my-career/profile", "/passport", "/passport/information"];
+  const FRONT_DOORS = [
+    "/my-career",
+    "/my-career/profile",
+    "/my-career/cv",
+    "/passport",
+    "/passport/information",
+  ];
 
   const holder = identity({
     displayName: "Ola Nord",
@@ -2923,7 +2948,7 @@ console.log("\n12 · candidate dead ends");
   // Requirement B moved employment-history AUTHORING to the canonical
   // profile workspace. The Passport keeps its employment section as a real
   // section for evidence, provenance and verification, but the editor that
-  // actually answers "add your work experience" now lives on the profile.
+  // actually answers "add your work experience" now lives on the CV page.
   // The rule under test is unchanged -- a recommendation lands on the editor
   // that answers it, never on a surface's front door -- so only the owning
   // section moved, and the destination moved with it.
@@ -2939,8 +2964,8 @@ console.log("\n12 · candidate dead ends");
     holderHref === SECTION_DESTINATIONS.employment.href,
   );
   ck(
-    "12.11a and that canonical destination is the profile workspace's employment editor",
-    SECTION_DESTINATIONS.employment.href === "/my-career/profile#profile-employment",
+    "12.11a and that canonical destination is the CV's employment editor",
+    SECTION_DESTINATIONS.employment.href === "/my-career/cv#cv-employment",
   );
   ck(
     "12.11b which is an anchored editor, never a surface's front door",

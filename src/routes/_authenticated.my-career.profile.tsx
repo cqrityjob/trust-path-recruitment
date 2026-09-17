@@ -1,54 +1,59 @@
-// The Professional Profile — one page, one writer per fact.
+// Profile — who am I now?
 //
-// ── WHY THIS PAGE EDITS SO LITTLE ITSELF ───────────────────────────────
+// ── THREE SURFACES, ONE QUESTION EACH ──────────────────────────────────
 //
-// Because most of what a professional profile contains is already owned by
-// a product that has better rules for it than a profile form could, and
-// building a second editor here would recreate exactly the defect
-// 20261007090000 was written to remove: two surfaces writing one fact, with
-// nothing keeping them in step.
+// A candidate's information lives on exactly three surfaces, and each one
+// answers a single question:
 //
-//   current status, profession, experience band
-//       -> security_career_profiles, the CANONICAL self-reported profile.
-//          Edited HERE, through the existing card and its existing dialog.
+//   Profile            who am I now?
+//                      name, professional title, work country, current
+//                      situation and profession.            → THIS PAGE
 //
-//   employment history
-//       -> sp_experience_periods. Dated, evidence-bearing, reviewable rows
-//          with an assertion level. A coarse "years of experience" band and
-//          a dated employment record answer different questions and must not
-//          be merged -- the migration says so in as many words.
+//   CV                 what have I done?
+//                      employment, education, courses, skills, languages
+//                      and the CV documents built from them. → /my-career/cv
 //
-//   education, certifications, languages, practical skills
-//       -> sp_claims, each carrying its own assertion level and lifecycle.
-//          A claim is a thing somebody may later verify; a profile field is
-//          not.
+//   Security Passport  which professional security credentials can I
+//                      document and selectively share?       → /passport
 //
-//   work country
-//       -> sp_passport_profiles.jurisdiction_code. It carries a confirmation
-//          timestamp and decides which regulated credentials a holder may
-//          even claim. Copying it into a self-reported profile would create
-//          the second writer this whole architecture exists to prevent.
+// This page used to be all three at once: a ten-row index that labelled
+// each row "edited here" without being a control, the Passport's six-step
+// basics card, and every CV editor below that — 6 200 pixels at 1440. A
+// person who came to correct their title had to find it among their
+// education, and a person looking for their employment history found it on
+// the page that holds their name.
 //
-// So this page is the INDEX over a person's professional identity: it shows
-// every section, says who owns each one and how complete it is, edits the
-// canonical row directly, and hands the rest to the Passport. That is not a
-// missing feature. It is the reason a candidate can trust what the tick
-// means.
+// So this page now holds ONLY what the Profile owns, and every piece of it
+// is a working editor with its own save. The CV and the Passport appear as
+// two summaries with one way in each. Nothing here is a label pretending
+// to be a button.
 //
-// ── WHAT IS SELF-REPORTED AND WHAT IS NOT ──────────────────────────────
+// ── ONE WRITER PER FACT — UNCHANGED ────────────────────────────────────
 //
-// Stated per section, not once at the top where it can be scrolled past. A
-// verification mark appears only where `isVerifiedClaim` is true, which is
-// an authorised verifier's decision and nothing else.
+// No storage moved and no server function is new:
+//
+//   name, professional title   sp_passport_profiles  savePassportBasics
+//   work country               sp_passport_profiles  setWorkCountry
+//   situation, profession,     security_career_profiles
+//   experience band                                   upsertMySecurityCareerProfile
+//
+// The Security Passport DISPLAYS the name and the title and sends the
+// holder here to change them. It has no editor for either.
+//
+// ── WHAT IS SELF-REPORTED ──────────────────────────────────────────────
+//
+// Everything on this page. The header says so, and the career profile card
+// repeats it beside its own save. Verification is the Passport's word.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, BadgeCheck, CircleDashed, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, IdCard, Plus } from "lucide-react";
 import { Container } from "@/components/site/Container";
 import { SecurityCareerProfileCard } from "@/components/assessment/SecurityCareerProfileCard";
 import { ProfessionalIdentityHeader } from "@/components/professional-identity/ProfessionalIdentityHeader";
-import { c, L, Lf, type Copy, type Lang } from "@/components/professional-identity/copy";
+import { c, cp, L, Lp, type Copy, type Lang } from "@/components/professional-identity/copy";
 import { useT } from "@/i18n/context";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
 import {
@@ -59,460 +64,342 @@ import {
   SECTION_DESTINATIONS,
   sectionLinkTarget,
 } from "@/lib/professional-identity/profile-destinations";
-import { GeneralProfileClaims } from "@/components/professional-identity/GeneralProfileClaims";
-import { EmploymentHistoryEditor } from "@/components/professional-identity/EmploymentHistoryEditor";
 import { ProfileBasicsSection } from "@/components/professional-identity/ProfileBasicsSection";
+import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
 import {
-  CREDENTIAL_CLAIM_TYPES,
   EDUCATION_CLAIM_TYPES,
   LANGUAGE_CLAIM_TYPES,
   SKILL_CLAIM_TYPES,
   claimsOfType,
-  isVerifiedClaim,
-  professionLabel,
-  type IdentityClaim,
   type ProfessionalIdentityV1,
 } from "@/lib/professional-identity/types";
-// Same reason as the header: the work location belongs to the Passport, and
-// only its own formatter keeps the emirate attached to the country.
-import { formatWorkLocation } from "@/lib/security-passport/format";
-// The experience BAND is a stored enum -- "1-3", "10+", "<1". The catalogue
-// that owns those ids owns their labels too, and it is the same one the
-// editor on this page offers, so the row and the form can never disagree.
-import {
-  currentStatusOptions,
-  yearsOfExperienceOptions,
-} from "@/lib/security-career-profile/options";
 
 export const Route = createFileRoute("/_authenticated/my-career/profile")({
   ssr: false,
   head: () => ({
-    meta: [{ title: "Min profil — CQrityjob" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Profil — CQrityjob" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: ProfilePage,
 });
 
 const COPY = {
+  back: c("Min karriär", "My Career"),
   loading: c("Hämtar din profil…", "Loading your profile…"),
   failed: c("Din profil kunde inte hämtas just nu.", "Your profile could not be loaded right now."),
   retryLabel: c("Försök igen", "Try again"),
-  sections: c("Din profil, avsnitt för avsnitt", "Your profile, section by section"),
+  missingHeading: c("Det här saknas i din profil", "Missing from your profile"),
   editableHeading: c("Det du fyller i själv", "What you fill in yourself"),
   editableLede: c(
-    "Den här delen skriver du, och du kan ändra den när som helst. Ingenting här är granskat av någon annan.",
-    "You write this part, and you can change it whenever you like. Nothing here has been reviewed by anybody else.",
+    "Varje del nedan kan du ändra direkt och spara. Ingenting här är granskat av någon annan.",
+    "You can change and save each part below. Nothing here has been reviewed by anybody else.",
   ),
-  ownedHere: c("Redigeras här", "Edited here"),
+  situationHeading: c("Nuvarande situation och yrke", "Current situation and profession"),
+  situationLede: c(
+    "Var du står i yrket just nu. Används för att visa relevanta jobb och karriärvägar.",
+    "Where you are in your working life right now. Used to show relevant jobs and career paths.",
+  ),
+  situationEdit: c("Ändra situation och yrke", "Edit situation and profession"),
+  elsewhereHeading: c("Finns på andra ställen", "Kept elsewhere"),
+  elsewhereLede: c(
+    "Din karriärhistorik och dina säkerhetsmeriter har egna sidor, så att varje uppgift bara finns på ett ställe.",
+    "Your career history and your security credentials have pages of their own, so that every fact exists in one place only.",
+  ),
+  ownedCv: c("Tillhör ditt CV", "Belongs to your CV"),
   ownedPassport: c("Tillhör Security Passport", "Belongs to the Security Passport"),
-  ownedDiscovery: c("Tillhör Career Discovery", "Belongs to Career Discovery"),
-  openPassport: c("Öppna Security Passport", "Open the Security Passport"),
-  openDiscovery: c("Gör Career Discovery", "Take Career Discovery"),
-  empty: c("Inte ifyllt ännu", "Not filled in yet"),
-  itemCount: c("{0} registrerade", "{0} recorded"),
-  verifiedNote: c("Verifierat av en behörig granskare.", "Verified by an authorised reviewer."),
-  declaredNote: c(
-    "Självrapporterat. Ingen har granskat det.",
-    "Self-reported. Nobody has reviewed it.",
+  cvTitle: c("CV", "CV"),
+  cvQuestion: c("Vad har jag gjort?", "What have I done?"),
+  cvBody: c(
+    "Anställningar, utbildning, språk och färdigheter – och de CV-dokument som byggs av dem.",
+    "Employment, education, languages and skills – and the CV documents built from them.",
   ),
-  // ── WHERE EACH FACT BELONGS, AND WHERE IT IS EDITED ─────────────────
-  //
-  // These are two different questions, and this sentence used to answer
-  // only the second -- "education and languages live in the Security
-  // Passport" -- which the owner's review read, correctly, as the product
-  // calling CV facts Passport content.
-  //
-  // They are edited with the Passport because the fact is stored exactly
-  // once, as an sp_claims row, which is what lets it carry a document and a
-  // review. That is a storage and review argument, not a claim about what
-  // kind of fact it is. The Passport page now says the same thing from its
-  // own side, under "Profil- och CV-uppgifter".
-  generalSection: c("Profil- och CV-uppgifter", "Profile and CV information"),
-  generalSectionLead: c(
-    "Utbildning, språk och färdigheter — körkort inräknat. De fyller ditt CV automatiskt. Uppgiften lagras en enda gång, så det du skriver här är samma uppgift som kan dokumenteras och granskas i ditt Security Passport.",
-    "Education, languages and skills — driving licence among them. They fill your CV automatically. The fact is stored exactly once, so what you write here is the same record that can be documented and reviewed in your Security Passport.",
+  cvEdit: c("Redigera CV", "Edit CV"),
+  passportTitle: c("Security Passport", "Security Passport"),
+  passportQuestion: c(
+    "Vilka säkerhetsmeriter kan jag dokumentera och dela?",
+    "Which security credentials can I document and share?",
   ),
-  whySplit: c(
-    "Anställningar och säkerhetsintyg är bevisning i ditt Security Passport och redigeras där. Utbildning, språk och färdigheter hör till din profil och ditt CV, redigeras här nedan och är inte säkerhetsbevisning. Uppgiften lagras en enda gång oavsett var du skriver den, så den kan dokumenteras och granskas i Passportet utan att finnas på två ställen.",
-    "Employment and security credentials are evidence in your Security Passport and are edited there. Education, languages and skills belong to your profile and CV, are edited below, and are not security evidence. The fact is stored exactly once wherever you enter it, so it can be documented and reviewed in the Passport without existing in two places.",
+  passportBody: c(
+    "Certifieringar, licenser och behörigheter med underlag, granskning och delning. Ditt namn och din yrkestitel visas där, men ändras här.",
+    "Certifications, licences and authorisations with evidence, review and sharing. Your name and professional title are shown there, but changed here.",
   ),
+  passportOpen: c("Öppna Security Passport", "Open Security Passport"),
+  employment: cp(c("{0} anställning", "{0} employment"), c("{0} anställningar", "{0} employments")),
+  education: cp(
+    c("{0} utbildning", "{0} education entry"),
+    c("{0} utbildningar", "{0} education entries"),
+  ),
+  languages: cp(c("{0} språk", "{0} language"), c("{0} språk", "{0} languages")),
+  skills: cp(c("{0} färdighet", "{0} skill"), c("{0} färdigheter", "{0} skills")),
+  cvEmpty: c("Inget tillagt ännu", "Nothing added yet"),
 } as const;
 
-const SECTION_TITLE: Readonly<Record<CompletenessSection, Copy>> = {
-  situation: c("Din situation", "Your situation"),
-  identity: c("Namn och yrkestitel", "Name and professional title"),
-  profession: c("Nuvarande yrke", "Current profession"),
-  experience: c("Erfarenhet", "Experience"),
-  location: c("Land", "Country"),
-  employment: c("Anställningar", "Employment"),
-  education: c("Utbildning", "Education"),
-  skills: c("Färdigheter", "Skills"),
-  languages: c("Språk", "Languages"),
-  careerDirection: c("Karriärriktning", "Career direction"),
+/** What a missing Profile section ASKS for. An invitation that leads to the
+ *  field, never a status word: "Not filled in yet" beside a row with no
+ *  control is what this page was corrected for. Only the sections the
+ *  Profile owns appear here -- a missing education is the CV's to ask for. */
+const ADD_LABEL: Partial<Readonly<Record<CompletenessSection, Copy>>> = {
+  identity: c(
+    "Lägg till namn och nuvarande yrkestitel",
+    "Add your name and current professional title",
+  ),
+  location: c("Lägg till landet där du arbetar", "Add the country where you work"),
+  situation: c("Lägg till din nuvarande situation", "Add your current situation"),
+  profession: c("Lägg till ditt nuvarande yrke", "Add your current profession"),
+  experience: c("Lägg till din erfarenhet", "Add your experience"),
 };
 
-// Who writes each section, and where. Read from the shared contract rather
-// than restated here: this page had its own copy of the ownership map, and a
-// second copy is how the page and the recommendation start disagreeing about
-// where a person should be sent for the same missing field.
+/**
+ * The CV-content anchors this page used to carry.
+ *
+ * `#profile-employment`, `#profile-education` and the rest were real ids
+ * here for a short while and are in browser histories and in any
+ * recommendation issued before the editors moved. A fragment that matches
+ * no element fails silently -- the page opens at the top and the reader
+ * hunts for a section that is gone -- so they are redirected to the CV,
+ * exactly as /passport/information redirects its own retired anchors.
+ */
+const RETIRED_CV_SECTIONS: ReadonlySet<string> = new Set([
+  "employment",
+  "education",
+  "training",
+  "specialisation",
+  "professional_membership",
+  "languages",
+  "skills",
+]);
 
-/** A verification mark, or an explicit statement that there is not one.
- *  Never nothing: silence next to a credential reads as approval. */
-function ClaimRow({ claim, lang }: { claim: IdentityClaim; lang: Lang }) {
-  const verified = isVerifiedClaim(claim);
-  return (
-    <li className="flex items-start gap-2 py-1.5">
-      {verified ? (
-        <BadgeCheck
-          className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--gold)]"
-          aria-hidden="true"
-        />
-      ) : (
-        <CircleDashed
-          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-      )}
-      <span className="min-w-0">
-        <span className="block truncate text-sm text-foreground">{claim.title}</span>
-        <span className="block text-xs text-muted-foreground">
-          {L(verified ? COPY.verifiedNote : COPY.declaredNote, lang)}
-        </span>
-      </span>
-    </li>
-  );
+/** `#profile-<name>` → the CV's anchor for the same section, or null. The
+ *  new anchor is DERIVED from the old one rather than written out beside it:
+ *  the destination contract is the only place an anchor is spelled, and a
+ *  guard holds this file to that. */
+function retiredCvAnchor(hash: string): string | null {
+  const name = /^#profile-(.+)$/.exec(hash)?.[1];
+  return name && RETIRED_CV_SECTIONS.has(name) ? `cv-${name}` : null;
 }
 
-function summarise(
-  identity: ProfessionalIdentityV1,
-  section: CompletenessSection,
-  lang: Lang,
-): { text: string; claims: readonly IdentityClaim[] } {
-  const count = (types: readonly string[]) => claimsOfType(identity.claims, types);
-  switch (section) {
-    case "situation": {
-      // The stored enum is never printed. `currentStatusOptions` is the same
-      // catalogue the editor offers, so the row and the form say the same
-      // word -- the rule this page already applies to profession and to the
-      // experience band.
-      const status = identity.currentStatus;
-      const statusLabel = status
-        ? currentStatusOptions.find((o) => o.id === status)?.label[lang]
-        : undefined;
-      return {
-        text: statusLabel ?? L(COPY.empty, lang),
-        claims: [],
-      };
-    }
-    case "identity":
-      return { text: identity.headline ?? L(COPY.empty, lang), claims: [] };
-    case "profession":
-      // Never the stored slug: `vaktare` is an identifier, and printing it
-      // here told a person their current profession was a database key.
-      return { text: professionLabel(identity, lang) ?? L(COPY.empty, lang), claims: [] };
-    case "experience": {
-      // Never the bare id. This row printed "1-3", which is the value stored
-      // in `years_of_experience` rather than anything a person wrote or would
-      // recognise -- the same class of leak as rendering a profession slug.
-      const band = identity.yearsOfExperience;
-      const label = band
-        ? (yearsOfExperienceOptions.find((o) => o.id === band)?.label[lang] ?? null)
-        : null;
-      return { text: label ?? L(COPY.empty, lang), claims: [] };
-    }
-    case "location":
-      // Dubai, not "AE". The sub-jurisdiction travels with the country so a
-      // holder in one emirate is never rendered as a UAE-wide claim.
-      return {
-        text: identity.workCountry
-          ? formatWorkLocation(identity.workCountry, identity.workSubJurisdiction, lang)
-          : identity.accountCountry
-            ? formatWorkLocation(identity.accountCountry, null, lang)
-            : L(COPY.empty, lang),
-        claims: [],
-      };
-    case "employment":
-      return {
-        text:
-          identity.employment.length > 0
-            ? Lf(COPY.itemCount, lang, identity.employment.length)
-            : L(COPY.empty, lang),
-        claims: [],
-      };
-    case "education":
-      return { text: "", claims: count(EDUCATION_CLAIM_TYPES) };
-    case "skills":
-      return { text: "", claims: count(SKILL_CLAIM_TYPES) };
-    case "languages":
-      return { text: "", claims: count(LANGUAGE_CLAIM_TYPES) };
-    case "careerDirection":
-      return {
-        text: identity.discovery.hasCompletedReport
-          ? L(c("Genomförd", "Completed"), lang)
-          : L(COPY.empty, lang),
-        claims: [],
-      };
-  }
+const PRIMARY =
+  "inline-flex min-h-11 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const SECONDARY =
+  "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+function cvSummary(identity: ProfessionalIdentityV1, l: Lang): string {
+  const parts = [
+    [identity.employment.length, COPY.employment],
+    [claimsOfType(identity.claims, EDUCATION_CLAIM_TYPES).length, COPY.education],
+    [claimsOfType(identity.claims, LANGUAGE_CLAIM_TYPES).length, COPY.languages],
+    [claimsOfType(identity.claims, SKILL_CLAIM_TYPES).length, COPY.skills],
+  ] as const;
+  const stated = parts.filter(([n]) => n > 0).map(([n, copy]) => Lp(copy, l, n));
+  return stated.length > 0 ? stated.join(" · ") : L(COPY.cvEmpty, l);
 }
 
 function ProfilePage() {
   const { lang } = useT();
   const l = lang as Lang;
+  const navigate = useNavigate();
   const load = useServerFn(getMyProfessionalIdentity);
   const query = useQuery({
     queryKey: ["professional-identity"],
     queryFn: () => load(),
     staleTime: 60_000,
   });
-  // Reloading the page is not a retry a person should have to think of, and
-  // this page's own error copy used to ask for exactly that.
+  // Reloading the page is not a retry a person should have to think of.
   const retry = () => void query.refetch();
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const target = retiredCvAnchor(window.location.hash);
+    if (target) void navigate({ to: "/my-career/cv", hash: target, replace: true });
+  }, [navigate]);
+
   const identity = query.data;
-  // Once per render, not once per row: the map below called this for every
-  // section it drew.
   const completeness = identity ? computeProfileCompleteness(identity) : null;
+  // Missing AND the Profile's own. The order is the completeness order, so
+  // the list reads top-down the way the editors below are laid out.
+  const missing = completeness
+    ? completeness.applicableSections.filter(
+        (section) =>
+          SECTION_DESTINATIONS[section].owner === "profile" &&
+          !completeness.completedSections.includes(section) &&
+          ADD_LABEL[section],
+      )
+    : [];
 
   return (
-    <>
-      <Container className="py-10 md:py-14">
-        {query.isPending && <p className="text-sm text-muted-foreground">{L(COPY.loading, l)}</p>}
+    <Container className="py-8 md:py-12">
+      {/* The editors mount after their own reads answer, so a deep link such
+          as #profile-basics names an element that does not exist yet when
+          the page first renders. This waits for it. */}
+      <ScrollToHashOnceReady />
+      <Link
+        to="/my-career"
+        className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        data-back-to-career
+      >
+        <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+        {L(COPY.back, l)}
+      </Link>
 
-        {query.isError && (
-          <div role="alert" className="max-w-2xl rounded-xl border border-border bg-card p-6">
-            <p className="text-sm text-destructive">{L(COPY.failed, l)}</p>
-            <button
-              type="button"
-              onClick={retry}
-              className="mt-3 inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[color:var(--primary-hover)]"
-            >
-              {L(COPY.retryLabel, l)}
-            </button>
-          </div>
-        )}
+      {query.isPending && (
+        <p className="mt-4 text-sm text-muted-foreground">{L(COPY.loading, l)}</p>
+      )}
 
-        {identity && completeness && (
-          <div className="space-y-8">
-            {/* `variant="profile"` is what makes this page announce itself.
-                It used to mount the dashboard's own hero unchanged, so the
-                first screen of /my-career/profile was the first screen of
-                /my-career with the cards removed — a person who clicked
-                "View profile" had no way to tell they had gone anywhere.
-                The hero owns the page's only <h1>, so naming the page has
-                to happen there rather than by adding a second heading. */}
-            <ProfessionalIdentityHeader
-              identity={identity}
-              variant="profile"
-              showProfileLink={false}
-              onRetry={retry}
-            />
+      {query.isError && (
+        <div role="alert" className="mt-4 max-w-2xl rounded-xl border border-border bg-card p-6">
+          <p className="text-sm text-destructive">{L(COPY.failed, l)}</p>
+          <button type="button" onClick={retry} className={`${PRIMARY} mt-3`}>
+            {L(COPY.retryLabel, l)}
+          </button>
+        </div>
+      )}
 
-            {/* The canonical row's own editor, unchanged: same component,
-                same draft shape, same save call as /my-career. It is
-                designed to sit in a dashboard grid cell, so it carries no
-                surface of its own -- given one here, it reads as loose text
-                between two cards.
+      {identity && completeness && (
+        <div className="mt-2 space-y-10">
+          {/* `variant="profile"` names the page in the only <h1>, then states
+              the person: name, title, experience and country. */}
+          <ProfessionalIdentityHeader
+            identity={identity}
+            variant="profile"
+            showProfileLink={false}
+            onRetry={retry}
+          />
 
-                Given a heading of its own, though. "Which of this can I
-                actually change" is the first question this page has to
-                answer, and the ownership labels in the index below answer it
-                one row at a time -- which is precise but is not a first
-                impression. */}
-            <section aria-labelledby="editable-heading">
+          {/* ── WHAT IS MISSING, AS ACTIONS ─────────────────────────────
+              Each row is a link to the field itself, resolved from the one
+              destination contract, so "add your professional title" lands
+              on the input and not at the top of a page. Rendered only when
+              something is missing. */}
+          {missing.length > 0 && (
+            <section aria-labelledby="missing-heading" data-profile-missing>
               <h2
-                id="editable-heading"
+                id="missing-heading"
                 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
               >
-                {L(COPY.editableHeading, l)}
+                {L(COPY.missingHeading, l)}
               </h2>
-              <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
-                {L(COPY.editableLede, l)}
-              </p>
-              <div className="mt-4 rounded-xl border border-border bg-card p-6 md:p-8">
-                <SecurityCareerProfileCard />
-              </div>
-            </section>
-
-            <section aria-labelledby="sections-heading">
-              <h2
-                id="sections-heading"
-                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
-              >
-                {L(COPY.sections, l)}
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                {L(COPY.whySplit, l)}
-              </p>
-
-              <ul className="mt-5 divide-y divide-border rounded-xl border border-border bg-card">
-                {/* Only the sections this person is actually asked. The
-                    profession and experience follow-ups are not put to
-                    somebody outside the industry -- the editor does not
-                    render them -- so drawing them here as unfilled rows
-                    would list two permanent failures against a profile that
-                    has answered everything it was asked. */}
-                {completeness.applicableSections.map((section) => {
-                  const { owner } = SECTION_DESTINATIONS[section];
-                  const { text, claims } = summarise(identity, section, l);
-                  const done = completeness.completedSections.includes(section);
-                  // ── EVERY SECTION THIS PAGE OWNS IS REACHABLE ───────
-                  //
-                  // The index used to render a link only when
-                  // `!done && owner !== "profile"`. Nine of the ten rows
-                  // are profile-owned, so the overview named where to go
-                  // and then left the reader to scroll a long page for it
-                  // -- and a section that was already filled in could not
-                  // be opened at all, which is precisely when somebody
-                  // wants to go and correct it.
-                  //
-                  // A profile-owned row is now itself the link, done or
-                  // not. Non-profile rows keep the behaviour they had:
-                  // this change is the profile's own navigation, not a
-                  // redesign of how Career Discovery is offered.
-                  const rowBody = (
-                    <>
-                      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                        <h3 className="text-sm font-semibold text-foreground">
-                          {L(SECTION_TITLE[section], l)}
-                        </h3>
-                        <span className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
-                          {L(
-                            owner === "profile"
-                              ? COPY.ownedHere
-                              : owner === "passport"
-                                ? COPY.ownedPassport
-                                : COPY.ownedDiscovery,
-                            l,
-                          )}
-                        </span>
-                      </div>
-
-                      {claims.length > 0 ? (
-                        <ul className="mt-2">
-                          {claims.map((claim) => (
-                            <ClaimRow key={claim.id} claim={claim} lang={l} />
-                          ))}
-                        </ul>
-                      ) : (
-                        <p
-                          className={
-                            done
-                              ? "mt-1.5 text-sm text-foreground"
-                              : "mt-1.5 text-sm text-muted-foreground"
-                          }
-                        >
-                          {text || L(COPY.empty, l)}
-                        </p>
-                      )}
-                    </>
-                  );
-
-                  // The destination split into the parts a router link
-                  // takes, derived from SECTION_DESTINATIONS rather than
-                  // written again here: three of these carry `?edit=` as
-                  // well as an anchor, and a hand-built `to` string would
-                  // be a second place the route is spelled.
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {missing.map((section) => {
                   const target = sectionLinkTarget(section);
-
-                  if (owner === "profile") {
-                    return (
-                      <li key={section}>
-                        <Link
-                          to={target.to}
-                          search={target.search}
-                          hash={target.hash}
-                          aria-label={L(SECTION_TITLE[section], l)}
-                          data-section-link={section}
-                          className="flex min-h-[44px] flex-col justify-center p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-[-2px] md:p-5"
-                        >
-                          {rowBody}
-                        </Link>
-                      </li>
-                    );
-                  }
-
                   return (
-                    <li key={section} className="p-4 md:p-5">
-                      {rowBody}
-                      {/* The section's OWN destination, not its product's
-                          front door. "Add your work experience" that lands
-                          at the top of a long Passport page leaves the
-                          person to find the section themselves, which is
-                          the same errand the recommendation was supposed to
-                          have done for them. */}
-                      {!done && (
-                        <Link
-                          to={target.to}
-                          search={target.search}
-                          hash={target.hash}
-                          data-section-link={section}
-                          className="mt-2.5 inline-flex min-h-[44px] items-center gap-1.5 text-xs font-semibold text-accent underline-offset-4 hover:underline"
-                        >
-                          {L(owner === "passport" ? COPY.openPassport : COPY.openDiscovery, l)}
-                          <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                        </Link>
-                      )}
+                    <li key={section}>
+                      <Link
+                        to={target.to}
+                        search={target.search}
+                        hash={target.hash}
+                        data-section-link={section}
+                        className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md border border-dashed border-accent/50 bg-accent/5 px-3.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                        {L(ADD_LABEL[section]!, l)}
+                      </Link>
                     </li>
                   );
                 })}
               </ul>
-
-              <Link
-                to="/passport"
-                className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
-              >
-                {L(COPY.openPassport, l)}
-                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              </Link>
             </section>
+          )}
 
-            {/* ── THE GENERAL FACTS, EDITED WHERE THEY BELONG ───────────
-                Education, languages and practical skills (driving licence
-                among them) used to be edited inside /passport/information,
-                which is what made a candidate go to the Security Passport
-                to record their degree. The editors live here now.
+          {/* ── THE EDITORS ─────────────────────────────────────────────
+              Three, each the canonical editor of its own rows and each
+              with its own save: name and title, work country, and the
+              career profile. */}
+          <section aria-labelledby="editable-heading">
+            <h2
+              id="editable-heading"
+              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+            >
+              {L(COPY.editableHeading, l)}
+            </h2>
+            <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+              {L(COPY.editableLede, l)}
+            </p>
 
-                The ROWS did not move and must not: each is still one
-                `sp_claims` row, written by the same server functions, and
-                the CV goes on projecting exactly those records. What moved
-                is where the candidate is asked. */}
-            <section aria-labelledby="general-profile-heading" className="mt-8">
-              <h2
-                id="general-profile-heading"
-                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
-              >
-                {L(COPY.generalSection, l)}
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                {L(COPY.generalSectionLead, l)}
+            <div className="mt-5">
+              <ProfileBasicsSection />
+            </div>
+
+            <div className="mt-6 rounded-xl border border-border bg-card p-5 md:p-6">
+              <h3 className="text-base font-semibold tracking-tight text-foreground">
+                {L(COPY.situationHeading, l)}
+              </h3>
+              <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+                {L(COPY.situationLede, l)}
               </p>
-              {/* ── BASIC INFORMATION AND WORK COUNTRY (owner, 2026-09-14) ─
-                  Moved here from /passport/information. Neither is security
-                  evidence, and editing them should never have required
-                  opening the Security Passport. Same cards, same writers,
-                  same rows. */}
               <div className="mt-5">
-                <ProfileBasicsSection />
+                <SecurityCareerProfileCard editLabel={L(COPY.situationEdit, l)} />
               </div>
+            </div>
+          </section>
 
-              <div className="mt-8 border-t border-border pt-8">
-                <GeneralProfileClaims />
-              </div>
+          {/* ── THE OTHER TWO SURFACES ──────────────────────────────────
+              Summaries with one way in each. Nothing is editable here, and
+              nothing here looks as though it were. */}
+          <section aria-labelledby="elsewhere-heading">
+            <h2
+              id="elsewhere-heading"
+              className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+            >
+              {L(COPY.elsewhereHeading, l)}
+            </h2>
+            <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">
+              {L(COPY.elsewhereLede, l)}
+            </p>
 
-              {/* ── EMPLOYMENT HISTORY, AUTHORED HERE (owner, 2026-09-14) ──
-                  Adding, editing and removing a period moved to this
-                  workspace with the owner's correction. Documenting and
-                  verifying a period did NOT: that stays on the Passport's
-                  `#sp-employment` section, against these same rows, and
-                  the editor links there rather than growing controls of
-                  its own. One record, one writer, two responsibilities in
-                  the two places that own them. */}
-              <div className="mt-8 border-t border-border pt-8">
-                <EmploymentHistoryEditor />
-              </div>
-            </section>
-          </div>
-        )}
-      </Container>
-    </>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <article
+                className="flex flex-col rounded-xl border border-border bg-card p-5 md:p-6"
+                data-profile-surface="cv"
+              >
+                <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                  {L(COPY.ownedCv, l)}
+                </p>
+                <h3 className="mt-2 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+                  <FileText className="h-4 w-4 text-accent" aria-hidden="true" />
+                  {L(COPY.cvTitle, l)}
+                  <span className="font-normal text-muted-foreground">
+                    — {L(COPY.cvQuestion, l)}
+                  </span>
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {L(COPY.cvBody, l)}
+                </p>
+                <p className="mt-3 text-sm font-medium text-foreground" data-cv-summary>
+                  {cvSummary(identity, l)}
+                </p>
+                <div className="mt-auto pt-5">
+                  <Link to="/my-career/cv" className={SECONDARY} data-cta="profile-edit-cv">
+                    {L(COPY.cvEdit, l)}
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+              </article>
+
+              <article
+                className="flex flex-col rounded-xl border border-border bg-card p-5 md:p-6"
+                data-profile-surface="passport"
+              >
+                <p className="text-[11px] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                  {L(COPY.ownedPassport, l)}
+                </p>
+                <h3 className="mt-2 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
+                  <IdCard className="h-4 w-4 text-accent" aria-hidden="true" />
+                  {L(COPY.passportTitle, l)}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">{L(COPY.passportQuestion, l)}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {L(COPY.passportBody, l)}
+                </p>
+                <div className="mt-auto pt-5">
+                  <Link to="/passport" className={SECONDARY} data-cta="profile-open-passport">
+                    {L(COPY.passportOpen, l)}
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                </div>
+              </article>
+            </div>
+          </section>
+        </div>
+      )}
+    </Container>
   );
 }

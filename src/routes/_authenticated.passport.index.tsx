@@ -141,9 +141,13 @@ function PassportWorkspaceRoute() {
           />
         </section>
       </div>
+      {/* No second Passport here. The wallet's identity surface IS the
+          Passport on this page; the recipient-style rendering lives under
+          Preview and share. This column is the next step and who can see. */}
       <PassportSideColumn
         metadata={metadata}
         snapshot={snapshot}
+        reviews={reviews}
         today={new Date().toISOString().slice(0, 10)}
         className="lg:sticky lg:top-28 lg:!w-full"
       />

@@ -1,21 +1,27 @@
 /**
- * Overview mounts the canonical compact Passport card from getMyPassport.
- * The card owns its bounded credential preview; the route renders no second list.
- * Loading and failure remain distinct from an empty or unopened Passport.
+ * The Security Passport on the career home — the third candidate surface,
+ * beside the Profile and CV cards, as a read-only summary.
+ *
+ * Overview mounts the canonical compact Passport card from getMyPassport, in
+ * its `summary` variant: the holder's name and title (which come from the
+ * Profile and are edited there), the first few credentials they hold, and a
+ * count of the rest. The card owns its bounded credential preview; the route
+ * renders no second list. Loading and failure remain distinct from an empty
+ * or unopened Passport.
+ *
+ * It is a PREVIEW and a shortcut. Nothing is edited here, no credential is
+ * added here, and no share is created here. The one way in -- "Open Security
+ * Passport" -- is PassportSummary's, directly below in the same region, so
+ * this component carries no link of its own.
  */
 import { useEffect, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight } from "lucide-react";
+import { IdCard } from "lucide-react";
 import { SecurityPassportPreview } from "@/components/security-passport/SecurityPassportPreview";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
-import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { L, type Lang } from "./copy";
 import { PASSPORT } from "./home-copy";
 import { Failed } from "./home-primitives";
-
-const LINK =
-  "inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 type State =
   | { status: "loading" }
@@ -32,7 +38,6 @@ export function OverviewPassportCard({
   today?: string;
   className?: string;
 }) {
-  const { pt } = usePassportCopy();
   const load = useServerFn(getMyPassport);
   const [state, setState] = useState<State>({ status: "loading" });
 
@@ -53,7 +58,7 @@ export function OverviewPassportCard({
   if (state.status === "loading") {
     return (
       <section
-        aria-label={pt("side.cardTitle")}
+        aria-label="Security Passport"
         className={className}
         data-overview-passport-card="loading"
         aria-busy="true"
@@ -66,7 +71,7 @@ export function OverviewPassportCard({
   if (state.status === "failed") {
     return (
       <section
-        aria-label={pt("side.cardTitle")}
+        aria-label="Security Passport"
         className={className}
         data-overview-passport-card="failed"
       >
@@ -92,22 +97,25 @@ export function OverviewPassportCard({
       className={className}
       data-overview-passport-card="ready"
     >
+      {/* Same heading pattern as the Profile and CV cards beside it: the
+          surface's name, then the one question it answers. */}
       <h2
         id="overview-passport-card-heading"
-        className="text-sm font-semibold tracking-tight text-foreground"
+        className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground"
+        style={{ fontFamily: "var(--font-display)" }}
       >
-        {pt("side.cardTitle")}
+        <span className="text-accent" aria-hidden="true">
+          <IdCard className="h-5 w-5" />
+        </span>
+        Security Passport
       </h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">{L(PASSPORT.question, lang)}</p>
       {/* No live token. A token belongs to a SHARE, not to the holder, and
           minting one here would create a durable public address nobody
-          chose to create — the same reasoning /passport/card records. */}
-      <div className="mt-2">
-        <SecurityPassportPreview snapshot={state.snapshot} today={today} />
+          chose to create — the same reasoning the sharing flow records. */}
+      <div className="mt-4">
+        <SecurityPassportPreview snapshot={state.snapshot} today={today} variant="summary" />
       </div>
-      <Link to="/passport/card" data-cta="overview-open-card" className={`${LINK} mt-2`}>
-        {pt("side.openCard")}
-        <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-      </Link>
     </section>
   );
 }

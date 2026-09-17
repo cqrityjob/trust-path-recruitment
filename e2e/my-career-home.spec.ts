@@ -466,9 +466,11 @@ test.describe("/my-career — the real route", () => {
     }));
     expect(focused.id).toBe("attention");
     expect(focused.inRegion).toBe(true);
-    // The region is scrolled into view rather than left above the fold.
-    const top = await region.evaluate((el) => el.getBoundingClientRect().top);
-    expect(top).toBeLessThan(200);
+    // The region is scrolled into view rather than left off screen. Asserted
+    // as "in the viewport", not as a pixel offset from the top: a Passport
+    // page short enough to fit the window cannot scroll at all, and the
+    // region is then on screen wherever it happens to sit.
+    await expect(region).toBeInViewport();
   });
 
   for (const lang of ["sv", "en"] as const) {
@@ -699,10 +701,13 @@ test.describe("/my-career — the real route", () => {
     const hrefs = await page
       .locator("[data-hub-go]")
       .evaluateAll((els) => els.map((e) => e.getAttribute("href")));
-    expect(hrefs).toHaveLength(4);
+    // Three status modules. The CV was the fourth; it is one of the three
+    // candidate SURFACES now, with its own card and its own "Edit CV".
+    expect(hrefs).toHaveLength(3);
     expect(hrefs.every((h) => typeof h === "string" && h.startsWith("/"))).toBe(true);
-    // No two modules offer the same destination: four modules, four places.
-    expect(new Set(hrefs).size).toBe(4);
+    // No two modules offer the same destination: three modules, three places.
+    expect(new Set(hrefs).size).toBe(3);
+    await expect(page.locator("[data-edit-cv]")).toHaveAttribute("href", "/my-career/cv");
   });
 
   for (const f of FIXTURES) {
@@ -742,6 +747,17 @@ test.describe("/my-career — the real route", () => {
    rather than a placeholder, and that a holder with no Passport gets no
    empty card. */
 
+/** The Profile and CV pages mount editors the career-home stub table does not
+ *  answer for. Empty is right here: what is under test is where the editors
+ *  ARE, not what they hold. */
+const CONTENT_EDITOR_STUBS = {
+  getMySecurityCareerProfile: ok(null),
+  listMyEntries: ok({ experience: [], claims: [] }),
+  listJurisdictions: ok([]),
+  listSkillTypes: ok([]),
+  prepareMyCv: ok({ readiness: { state: "ready", missingFields: [], satisfiedFields: [] } }),
+};
+
 test.describe("image 1 — the Passport card on Överskt", () => {
   test("the card and the summary both render, and the card is not a placeholder", async ({
     page,
@@ -767,7 +783,7 @@ test.describe("image 1 — the Passport card on Överskt", () => {
   });
 
   // ── ONE BUTTON, ONE CANONICAL PLACE ─────────────────────────────────
-  test('"Redigera mina uppgifter" opens the complete workspace, not the limited dialog', async ({
+  test('"Edit Profile" opens the complete Profile page, not the limited dialog', async ({
     page,
   }) => {
     await mount(page, "general_jobs");
@@ -785,15 +801,18 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     // It NAVIGATED. A dialog opening over Overview is the defect.
     await expect(page.locator('[role="dialog"]')).toHaveCount(0);
 
-    // And the page it landed on offers the sections rather than a few fields.
-    await expect(page.locator("#sections-heading")).toBeVisible({ timeout: 20_000 });
+    // And the page it landed on holds the Profile's editors rather than a
+    // few fields in a dialog.
+    await expect(page.locator("[data-profile-basics]")).toBeVisible({ timeout: 20_000 });
   });
 
-  // ── THE RELOCATED EDITORS ARE ALL ON THE ONE PAGE ───────────────────
+  // ── THE RELOCATED EDITORS, EACH ON THE SURFACE THAT OWNS IT ─────────
   //
-  // The owner's list: basic information, work country and employment
-  // history must be reachable from /my-career/profile, and evidence and
-  // verification must stay in the Passport.
+  // The owner's 2026-09-14 list put basic information, work country and
+  // employment history on /my-career/profile. The 2026-09-17 refinement
+  // split that page by question: Profile (who am I now) keeps basics and
+  // work country, and the CV (what have I done) takes employment and the
+  // general claims. Evidence and verification stay in the Passport.
   //
   // What this suite CANNOT prove is the write round trip. The harness
   // answers every server function from a stub table by route
@@ -801,22 +820,31 @@ test.describe("image 1 — the Passport card on Överskt", () => {
   // testing the stub, not persistence. That proof belongs to a suite with
   // a real backend and is not claimed here.
   for (const lang of ["sv", "en"] as const) {
-    test(`${lang}: basics, work country and employment are all editable on the profile`, async ({
+    test(`${lang}: basics and work country are editable on the Profile, career history on the CV`, async ({
       page,
     }) => {
       await mount(page, "general_jobs", {
         lang,
         path: "/my-career/profile",
-        ready: "#sections-heading",
+        ready: "[data-profile-basics]",
+        overrides: CONTENT_EDITOR_STUBS,
       });
 
-      // One page, three editors, each with its own anchor.
+      // The Profile's editors, each with its own anchor -- and none of the CV's.
       await expect(page.locator("[data-profile-basics]")).toHaveCount(1);
       await expect(page.locator("[data-profile-work-country]")).toHaveCount(1);
-      await expect(page.locator("[data-profile-employment]")).toHaveCount(1);
+      await expect(page.locator("#career-profile")).toHaveCount(1);
+      await expect(page.locator("[data-cv-employment]")).toHaveCount(0);
 
-      // And the general claim editors that were already here.
-      await expect(page.locator("#profile-education")).toHaveCount(1);
+      // Evidence and verification did NOT follow the editors across.
+      await expect(page.locator("main [data-request-verification]")).toHaveCount(0);
+      await expect(page.locator('main a[href*="/passport/entry/"]')).toHaveCount(0);
+
+      // Career history is one link away, on the CV page.
+      await page.locator('[data-cta="profile-edit-cv"]').click();
+      await page.waitForURL("**/my-career/cv");
+      await expect(page.locator("[data-cv-employment]")).toHaveCount(1);
+      await expect(page.locator("#cv-education")).toHaveCount(1);
 
       // Evidence and verification did NOT follow the editors across.
       const main = page.locator("main");
@@ -825,10 +853,11 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     });
   }
 
-  test("the profile's employment editor points at the Passport for evidence", async ({ page }) => {
+  test("the CV's employment editor points at the Passport for evidence", async ({ page }) => {
     await mount(page, "general_jobs", {
-      path: "/my-career/profile",
-      ready: "#sections-heading",
+      path: "/my-career/cv",
+      ready: "[data-cv-content]",
+      overrides: CONTENT_EDITOR_STUBS,
     });
     const link = page.locator("[data-employment-evidence-link]");
     await expect(link).toHaveCount(1);
@@ -841,7 +870,8 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await mount(page, "general_jobs", {
       path: "/my-career/profile",
-      ready: "#sections-heading",
+      ready: "[data-profile-basics]",
+      overrides: CONTENT_EDITOR_STUBS,
     });
     const small = await page.locator("main").evaluate((root) => {
       const out: string[] = [];
@@ -936,15 +966,28 @@ test.describe("image 1 — the Passport card on Överskt", () => {
     await expect(page.locator("[data-passport-summary]")).toHaveCount(1);
     await expect(region.locator('[data-cta="overview-open-passport"]')).toHaveCount(1);
 
-    // The add-a-merit destination belongs to the Passport page.
-    await expect(page.locator('a[href*="/passport/credentials/new"]')).toHaveCount(0);
+    // The add-a-merit destination belongs to the Passport page: the Passport
+    // column offers none. (The recommended next step may still name it as its
+    // own secondary action; that is the ladder's, not this column's.)
+    await expect(region.locator('a[href*="/passport/credentials/new"]')).toHaveCount(0);
   });
 
-  test("the card links to the canonical full view", async ({ page }) => {
+  test("the Passport column has ONE way in, and it opens the Passport", async ({ page }) => {
     await mount(page, "general_jobs");
-    const link = page.locator('[data-cta="overview-open-card"]');
-    await expect(link).toBeVisible({ timeout: 30_000 });
-    await expect(link).toHaveAttribute("href", /\/passport\/card$/);
+    const region = page.locator("[data-overview-passport-region]");
+    await expect(region).toBeVisible({ timeout: 30_000 });
+    // "Open preview" used to stand here too, pointing at /passport/card --
+    // a second preview whose selection the sharing flow never received. The
+    // recipient's view lives under Preview and share, inside the Passport.
+    await expect(region.locator("a")).toHaveCount(1);
+    await expect(region.locator('[data-cta="overview-open-passport"]')).toHaveAttribute(
+      "href",
+      "/passport",
+    );
+    await expect(region.locator("[data-compact-passport-card]")).toHaveAttribute(
+      "data-passport-card-variant",
+      "summary",
+    );
   });
 
   test("a holder with no Passport gets no empty card", async ({ page }) => {

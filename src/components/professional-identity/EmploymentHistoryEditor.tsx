@@ -42,6 +42,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { Briefcase } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listMyEntries,
@@ -67,7 +68,16 @@ import { useT } from "@/i18n/context";
 const CONTROL =
   "inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
-export function EmploymentHistoryEditor({ className = "" }: { className?: string }) {
+export function EmploymentHistoryEditor({
+  className = "",
+  onChanged,
+}: {
+  className?: string;
+  /** Called after a write has been read back. The editor owns no cache, so
+   *  the page that mounts it says which of ITS reads the write made stale --
+   *  the CV's readiness, the identity summary. */
+  onChanged?: () => void;
+}) {
   const { pt } = usePassportCopy();
   const { lang } = useT();
   const load = useServerFn(listMyEntries);
@@ -140,7 +150,10 @@ export function EmploymentHistoryEditor({ className = "" }: { className?: string
         },
       });
       setDraft(null);
-      if (await refresh()) setNotice(pt("entry.saved"));
+      if (await refresh()) {
+        setNotice(pt("entry.saved"));
+        onChanged?.();
+      }
     } catch (err) {
       console.error("[profile] employment save failed", err);
       setError(pt("common.error"));
@@ -155,7 +168,10 @@ export function EmploymentHistoryEditor({ className = "" }: { className?: string
     setError(null);
     try {
       await doRemove({ data: { kind: "experience", id } });
-      if (await refresh()) setNotice(pt("entry.saved"));
+      if (await refresh()) {
+        setNotice(pt("entry.saved"));
+        onChanged?.();
+      }
     } catch (err) {
       console.error("[profile] employment remove failed", err);
       setError(pt("common.error"));
@@ -166,18 +182,19 @@ export function EmploymentHistoryEditor({ className = "" }: { className?: string
 
   return (
     <section
-      id="profile-employment"
-      aria-labelledby="profile-employment-heading"
-      data-profile-employment
+      id="cv-employment"
+      aria-labelledby="cv-employment-heading"
+      data-cv-employment
       // The section overview links straight here, so the anchor carries its
       // own scroll offset: without it the fixed header lands on top of the
       // heading the reader was sent to.
       className={`scroll-mt-24 ${className}`}
     >
       <h3
-        id="profile-employment-heading"
-        className="text-sm font-semibold tracking-tight text-foreground"
+        id="cv-employment-heading"
+        className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground"
       >
+        <Briefcase className="h-4 w-4 text-primary" aria-hidden="true" />
         {pt("info.employment")}
       </h3>
       <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">

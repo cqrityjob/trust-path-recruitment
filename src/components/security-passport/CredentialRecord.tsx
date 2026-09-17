@@ -31,8 +31,14 @@ export function CredentialRecord({
         aria-hidden="true"
         className="passport-grid pointer-events-none absolute inset-y-0 left-0 w-28 opacity-25"
       />
-      <div className="grid min-w-0 gap-5 p-4 pl-5 sm:grid-cols-[5.25rem_minmax(0,1fr)_auto] sm:items-center sm:p-6 sm:pl-7">
-        <div className="passport-signature relative flex h-[5.25rem] w-[5.25rem] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[var(--shadow-md)] ring-1 ring-accent/25">
+      {/* ── COMPACT ON A PHONE ─────────────────────────────────────────
+          The mark sits BESIDE the name at every width. Stacked above it, one
+          record ran to 320px at 390 -- mark, then name, then three facts one
+          per line -- and a wallet of five was a screen and a half of
+          scrolling per credential. Two columns of facts, states on their own
+          row beneath. */}
+      <div className="grid min-w-0 grid-cols-[3.75rem_minmax(0,1fr)] gap-x-4 gap-y-4 p-4 pl-5 sm:grid-cols-[5.25rem_minmax(0,1fr)_auto] sm:items-center sm:gap-x-5 sm:gap-y-4 sm:p-6 sm:pl-7">
+        <div className="passport-signature relative flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center rounded-lg bg-primary shadow-[var(--shadow-md)] ring-1 ring-accent/25 sm:row-span-2 sm:h-[5.25rem] sm:w-[5.25rem]">
           <div
             aria-hidden="true"
             className="absolute inset-1 rounded-md border border-primary-foreground/20"
@@ -43,18 +49,21 @@ export function CredentialRecord({
           />
           {symbol}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 self-center sm:self-end">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {eyebrow}
           </div>
-          <h3 className="mt-1 max-w-[32rem] break-words text-xl font-semibold leading-snug text-foreground">
+          <h3 className="mt-1 max-w-[32rem] break-words text-lg font-semibold leading-snug text-foreground sm:text-xl">
             {title}
           </h3>
-          <div className="mt-4 grid min-w-0 gap-x-8 gap-y-3 text-sm text-muted-foreground sm:grid-cols-2">
-            {metadata}
-          </div>
         </div>
-        <div className="min-w-0 sm:max-w-44 sm:text-right">{states}</div>
+        {/* Full width under the mark on a phone; under the name from `sm`. */}
+        <div className="col-span-2 grid min-w-0 grid-cols-2 gap-x-4 gap-y-3 text-sm text-muted-foreground sm:col-span-1 sm:col-start-2 sm:self-start sm:gap-x-8">
+          {metadata}
+        </div>
+        <div className="col-span-2 min-w-0 sm:col-span-1 sm:col-start-3 sm:row-span-2 sm:row-start-1 sm:max-w-44 sm:text-right">
+          {states}
+        </div>
       </div>
       <div className="border-t border-border/70 bg-secondary/40 px-5 sm:pl-[7.75rem]">{action}</div>
     </article>

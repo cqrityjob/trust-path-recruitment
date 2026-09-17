@@ -1,13 +1,21 @@
-// The Security Passport page, composed to the owner's sketch 2.
+// The Security Passport page: exactly ONE Passport.
 //
-// ── WHAT THE SKETCH ASKS FOR ───────────────────────────────────────────
+// ── WHAT THE OWNER ASKED FOR (2026-09-17) ──────────────────────────────
 //
-//   Left column   the Security Passport -- what another person sees -- with the
-//                 integrity/privacy/sharing settings directly beneath it.
-//   Main column   "Mitt Security Passport", the two actions near the top
-//                 (add a credential, share the Passport), the registered
-//                 documents and their truthful verification state, and the
-//                 rest of the Passport below that.
+//   Main column   the ONE premium Passport identity surface, the two
+//                 actions near the top (add a credential, preview and
+//                 share), and the credential wallet with each record's
+//                 truthful trust and lifecycle state.
+//   Side column   the next step, and the privacy/sharing status. NOT a
+//                 second Passport.
+//
+// The earlier sketch put a complete compact Passport card in the side
+// column, directly beside the large identity surface that already states
+// the holder's name and title. Two Passports on the page that IS the
+// Passport -- and the second was an empty selection. The recipient-style
+// rendering belongs to Preview and share, where a selection exists for it
+// to show, so this guard now asserts its ABSENCE here as firmly as it used
+// to assert its presence.
 //
 // ── WHY THIS READS SOURCE ──────────────────────────────────────────────
 //
@@ -86,14 +94,50 @@ check(
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n2 · the left column carries the card and the settings beneath it");
+console.log("\n2 · ONE Passport: the side column is a next step and a sharing status");
 
-check(/<SecurityPassportPreview/.test(side), "the side column renders the Security Passport");
-check(/snapshot=\{snapshot\}/.test(side), "built from the canonical card builder");
+const PREVIEW = "src/components/security-passport/SecurityPassportPreview.tsx";
+const SHARE = "src/routes/_authenticated.passport.share.tsx";
+const CARD_ROUTE = "src/routes/_authenticated.passport.card.tsx";
+check(
+  !/SecurityPassportPreview/.test(side) && !/SecurityPassportPreview/.test(index),
+  "no second Passport card beside the identity surface — not in the side column, not in the route",
+);
+check(
+  !/RecipientPassportView|PassportCard\b/.test(side + index),
+  "and no recipient-style rendering on the overview either",
+);
+check(
+  (workspace.match(/<h1\b/g) ?? []).length === 1 && !/<h1\b/.test(side),
+  "the identity surface owns the page's only h1",
+);
+check(
+  /data-passport-next-step=\{next\.kind\}/.test(side),
+  "the side column opens with the next step",
+);
+check(
+  /credentialProductStatus\(/.test(side) &&
+    /credentialPassportHolder\(snapshot\.holder\)/.test(side),
+  "derived from the SAME status function and the same claims as the wallet rows",
+);
 check(/data-passport-privacy-summary/.test(side), "and an integrity/privacy region");
 check(
-  side.indexOf("<SecurityPassportPreview") < side.indexOf("data-passport-privacy-summary"),
-  "with the settings BELOW the card, as the sketch places them",
+  side.indexOf("data-passport-next-step") < side.indexOf("data-passport-privacy-summary"),
+  "with the sharing status BELOW the next step",
+);
+check(
+  /RecipientPassportView/.test(code(read(SHARE))),
+  "the recipient-style Passport lives under Preview and share",
+);
+check(
+  /redirect\(\{ to: "\/passport\/share", replace: true \}\)/.test(code(read(CARD_ROUTE))) &&
+    !/SecurityPassportPreview/.test(code(read(CARD_ROUTE))),
+  "and the retired /passport/card sends its visitors there rather than being a second preview",
+);
+check(
+  /variant = "preview"/.test(code(read(PREVIEW))) &&
+    /variant === "summary"/.test(code(read(PREVIEW))),
+  "the compact card distinguishes a selection preview from the My Career summary",
 );
 check(
   /share\.privacy\.\$\{profile\.privacyMode\}/.test(side) || /share\.privacy\.\$\{/.test(side),
@@ -101,18 +145,23 @@ check(
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n3 · one renderer, one writer — the summary reports, it does not duplicate");
+console.log("\n3 · one writer — the summary reports, it does not duplicate");
 
-check(
-  (side.match(/<SecurityPassportPreview/g) ?? []).length === 1,
-  "exactly one card renderer in the side column",
-);
 check(
   !/setPrivacyMode/.test(side),
   "the side column does NOT write the privacy mode — the page that owns it does",
 );
 check(/to="\/passport\/privacy"/.test(side), "it links to the canonical privacy editor instead");
-check(/to="\/passport\/card"/.test(side), "and to the canonical full card view");
+check(
+  /to="\/passport\/share"/.test(side) && !/to="\/passport\/card"/.test(side + workspace),
+  "and to Preview and share — never to the retired second preview",
+);
+check(
+  /\{ to: "\/passport\/share", sv: "Förhandsvisa och dela", en: "Preview and share" \}/.test(
+    code(read(SHELL)),
+  ),
+  "the Passport navigation's Preview and share opens the sharing flow",
+);
 check(
   !/getMyPassport/.test(side),
   "it reads nothing of its own: the snapshot is passed in, so there is no second request",
@@ -134,6 +183,17 @@ check(
 );
 check(headerEnd > 0 && workspace.indexOf('data-cta="share"') < headerEnd, "and so does share");
 check(/identity\?\.displayName/.test(workspace), "the main column names the holder from Profile");
+// Displayed here, edited there. The Passport has no editor for the name or
+// the title, and says where the editor is.
+check(
+  /to="\/my-career\/profile"\s+hash="profile-basics"\s+data-cta="edit-in-profile"/.test(workspace),
+  "and sends the holder to the Profile to change the name or the title",
+);
+check(
+  !/<(input|textarea|select)\b/.test(workspace) &&
+    !/savePassportBasics/.test(workspace + side + index),
+  "the Passport overview holds no editor for a Profile fact",
+);
 
 /* ------------------------------------------------------------------ */
 console.log("\n5 · no label collides with another product's");
@@ -169,10 +229,17 @@ console.log("\n6 · the side column is reachable and operable");
 for (const m of side.matchAll(/className=\{?`?([^`"}]*min-h-11[^`"}]*)`?\}?/g)) {
   void m;
 }
-check(/min-h-11/.test(side), "its controls carry a 44px minimum target");
+// EVERY control class, not "min-h-11 appears somewhere": the column has two
+// (a text link and the next step's button), and a file-wide search stayed
+// true with either one shrunk.
+const controlClasses = [...side.matchAll(/const (LINK|PRIMARY) =\s*"([^"]+)"/g)];
+check(
+  controlClasses.length === 2 && controlClasses.every((m) => /\bmin-h-11\b/.test(m[2]!)),
+  "its controls carry a 44px minimum target",
+);
 check(/focus-visible:outline/.test(side), "and a visible keyboard focus state");
 check(
-  /aria-labelledby="sp-side-card-heading"/.test(side) &&
+  /aria-labelledby="sp-side-next-heading"/.test(side) &&
     /aria-labelledby="sp-side-privacy-heading"/.test(side),
   "both regions are labelled, so a screen-reader user is told what they are",
 );

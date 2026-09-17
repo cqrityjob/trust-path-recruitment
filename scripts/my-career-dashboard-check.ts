@@ -318,7 +318,7 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
-// 3b. "Redigera mina uppgifter" leads to the complete workspace
+// 3b. "Edit Profile" leads to the complete workspace
 // ---------------------------------------------------------------------------
 // It used to carry `?edit=profession#career-profile`, which opened the
 // limited quick-edit dialog holding a few career-profile fields: a person
@@ -330,13 +330,17 @@ expect(
 // completeness ladder still deep-links to it for the profession/experience
 // gap, which is a legitimate flow with its own destination. What is
 // asserted is what THIS control does.
+//
+// The control moved with the owner's 2026-09-17 refinement: it was a text
+// link beside the identity line in CareerPageHeader, and is now the Profile
+// card's one button in OverviewSurfaces. Same hook, same rule.
 {
-  const headerPath = "src/components/professional-identity/CareerPageHeader.tsx";
+  const headerPath = "src/components/professional-identity/OverviewSurfaces.tsx";
   const headerSrc = read(headerPath);
   const editLink = /<Link\s+to=\{?"?([^"'>}]+)"?\}?\s+data-edit-details/.exec(headerSrc);
   expect(
     editLink !== null,
-    `${headerPath}: the "Redigera mina uppgifter" control must carry data-edit-details.`,
+    `${headerPath}: the "Edit Profile" control must carry data-edit-details.`,
   );
   expect(
     editLink?.[1] === "/my-career/profile",
@@ -353,6 +357,55 @@ expect(
     open !== -1 && !/\bsearch=|\bhash=|edit=/.test(element),
     `${headerPath}: it must carry no quick-edit intent — no search, hash or edit ` +
       `parameter on that link (found: ${element || "no matching link"}).`,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 3c. Three surfaces, one action each, and none of them an editor
+// ---------------------------------------------------------------------------
+// Profile (who am I now), CV (what have I done) and the Security Passport.
+// The overview names all three and navigates; the page that owns a fact
+// edits it. A form control in any of these files would make the overview a
+// second editor, which is the duplication this whole change removed.
+{
+  const surfacesPath = "src/components/professional-identity/OverviewSurfaces.tsx";
+  const surfaces = code(read(surfacesPath));
+  expect(
+    /<OverviewProfileCard/.test(routeCode) && /<OverviewCvCard/.test(routeCode),
+    `${routePath}: Overview must present the Profile and the CV as surfaces of their own.`,
+  );
+  expect(
+    routeCode.indexOf("<CareerPageHeader") < routeCode.indexOf("<OverviewProfileCard") &&
+      routeCode.indexOf("<OverviewProfileCard") < routeCode.indexOf("<OverviewCvCard") &&
+      routeCode.indexOf("<OverviewCvCard") < routeCode.indexOf("<OverviewPassportCard"),
+    `${routePath}: source order is reading order — Profile, then CV, then the Passport.`,
+  );
+  expect(
+    /<Link to="\/my-career\/cv" data-edit-cv/.test(surfaces),
+    `${surfacesPath}: the CV card's one action must open the canonical CV page.`,
+  );
+  expect(
+    /sectionLinkTarget\(section\)/.test(surfaces),
+    `${surfacesPath}: a missing fact must link to the field through the destination contract.`,
+  );
+  for (const file of [
+    surfacesPath,
+    "src/components/professional-identity/OverviewPassportCard.tsx",
+    "src/components/professional-identity/PassportSummary.tsx",
+  ]) {
+    const src = code(read(file));
+    expect(
+      !/<(input|textarea|select|form)\b/.test(src) &&
+        !/useServerFn\((save|set|upsert|remove)/.test(src),
+      `${file}: Overview summarises and navigates — it must hold no form control and no writer.`,
+    );
+  }
+  expect(
+    /variant="summary"/.test(
+      code(read("src/components/professional-identity/OverviewPassportCard.tsx")),
+    ),
+    "OverviewPassportCard: the Passport on Overview is the holder's SUMMARY, never an empty " +
+      "selection asking to be filled on a page where nothing can be selected.",
   );
 }
 

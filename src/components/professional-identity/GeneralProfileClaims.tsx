@@ -40,23 +40,23 @@ import type { AssertionLevel, LifecycleState } from "@/lib/security-passport/typ
  *  `training` and a security certificate is `certification`, and both stay
  *  in the Passport. */
 const CV_CLAIM_KINDS = [
-  { kind: "education", titleKey: "claims.type.education", anchor: "profile-education" },
-  { kind: "training", titleKey: "claims.type.training", anchor: "profile-training" },
+  { kind: "education", titleKey: "claims.type.education", anchor: "cv-education" },
+  { kind: "training", titleKey: "claims.type.training", anchor: "cv-training" },
   {
     kind: "specialisation",
     titleKey: "claims.type.specialisation",
-    anchor: "profile-specialisation",
+    anchor: "cv-specialisation",
   },
   {
     kind: "professional_membership",
     titleKey: "claims.type.professional_membership",
-    anchor: "profile-professional_membership",
+    anchor: "cv-professional_membership",
   },
 ] as const;
 
 const SKILL_SECTIONS = [
-  { kind: "language" as const, titleKey: "info.languages" as const, anchor: "profile-languages" },
-  { kind: "practical_skill" as const, titleKey: "info.skills" as const, anchor: "profile-skills" },
+  { kind: "language" as const, titleKey: "info.languages" as const, anchor: "cv-languages" },
+  { kind: "practical_skill" as const, titleKey: "info.skills" as const, anchor: "cv-skills" },
 ];
 
 function SectionShell({
@@ -85,7 +85,15 @@ function SectionShell({
   );
 }
 
-export function GeneralProfileClaims({ className = "" }: { className?: string }) {
+export function GeneralProfileClaims({
+  className = "",
+  onChanged,
+}: {
+  className?: string;
+  /** Called after a write has been read back, so the mounting page can
+   *  refresh the reads it owns. */
+  onChanged?: () => void;
+}) {
   const { pt } = usePassportCopy();
   const navigate = useNavigate();
 
@@ -157,7 +165,10 @@ export function GeneralProfileClaims({ className = "" }: { className?: string })
         },
       });
       setEditing(null);
-      if (await refresh()) setNotice(pt("entry.saved"));
+      if (await refresh()) {
+        setNotice(pt("entry.saved"));
+        onChanged?.();
+      }
     } catch (err) {
       console.error("[profile] claim save failed", err);
       setError(pt("common.error"));
@@ -187,7 +198,10 @@ export function GeneralProfileClaims({ className = "" }: { className?: string })
         },
       });
       setSkillDrafts((prev) => ({ ...prev, [claimType]: null }));
-      if (await refresh()) setNotice(pt("entry.saved"));
+      if (await refresh()) {
+        setNotice(pt("entry.saved"));
+        onChanged?.();
+      }
     } catch (err) {
       console.error("[profile] skill save failed", err);
       setError(pt("common.error"));
@@ -203,7 +217,10 @@ export function GeneralProfileClaims({ className = "" }: { className?: string })
       const res = await doRemove({ data: { kind: "claim", id } });
       const readBack = await refresh();
       if (!res.removed) setError(pt("entry.removeBlocked"));
-      else if (readBack) setNotice(pt("entry.saved"));
+      else if (readBack) {
+        setNotice(pt("entry.saved"));
+        onChanged?.();
+      }
     } catch (err) {
       console.error("[profile] remove failed", err);
       setError(pt("common.error"));

@@ -1,7 +1,7 @@
 import type { Claim } from "./types";
 import type { CredentialVerificationEvent } from "./international";
 import { currentCredentialVerification } from "./international";
-import { describeTrust } from "./trust-presentation";
+import { describeTrust, publicTrustLevel } from "./trust-presentation";
 import { validityOf } from "./validity";
 
 /** Product wording over the existing decision model. Never promotes a claim. */
@@ -44,12 +44,27 @@ export function credentialProductStatus(
     superseded: { sv: "Ersatt", en: "Replaced" },
     disputed: { sv: "Bestritt", en: "Disputed" },
   };
+  // ── A DOCUMENT REVIEW IS NOT A SOURCE CONFIRMATION ─────────────────
+  //
+  // Both arrive here as `reviewed`, because both are an authorised decision
+  // on an active credential. They are not the same statement: CQrityjob
+  // reading a certificate is "Document reviewed"; the issuer itself
+  // confirming it is "Source-confirmed". The WORD follows the effective
+  // public level the trust model already derives -- nothing is promoted
+  // here, and a row that is merely documented can never read as confirmed.
+  const label =
+    status === "reviewed" && publicTrustLevel(trust) === "source_verified"
+      ? { sv: "Källbekräftad", en: "Source-confirmed" }
+      : (labels[status] ?? labels.registered);
   return {
     claim: current,
     lifecycle,
     trust,
     status,
-    label: labels[status] ?? labels.registered,
+    label,
+    /** True only for an issuer's or employer's own confirmation. Lets a
+     *  surface draw the two reviewed states differently. */
+    sourceConfirmed: status === "reviewed" && publicTrustLevel(trust) === "source_verified",
     checked: lifecycle === "active" && trust.status === "verified" && status === "reviewed",
   };
 }

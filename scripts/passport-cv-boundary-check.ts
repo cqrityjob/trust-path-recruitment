@@ -60,6 +60,8 @@ const CV_VIEW = "src/components/professional-identity/CvDocumentView.tsx";
 const TYPES = "src/lib/professional-identity/types.ts";
 const EDITOR = "src/components/professional-identity/GeneralProfileClaims.tsx";
 const PROFILE_PAGE = "src/routes/_authenticated.my-career.profile.tsx";
+const CV_PAGE = "src/routes/_authenticated.my-career.cv.index.tsx";
+const CV_COPY = "src/components/professional-identity/cv-copy.ts";
 const WORKSPACE = "src/components/security-passport/PassportWorkspace.tsx";
 const I18N = "src/lib/security-passport/i18n.ts";
 
@@ -126,11 +128,13 @@ check(
   /pt\("info\.generalMoved"\)/.test(info) &&
     /pt\("info\.generalMovedLink"\)/.test(info) &&
     /data-cta="general-profile"/.test(info),
-  "it links to the profile instead, which the owner's rule allows",
+  "it links to the CV content instead, which the owner's rule allows",
 );
+// The editors stood on /my-career/profile between 2026-09-14 and 2026-09-17,
+// when the owner separated Profile (who am I now) from CV (what have I done).
 check(
-  /const GENERAL_PROFILE_ROUTE = "\/my-career\/profile"/.test(info),
-  "and that link points at the profile PAGE, not the overview",
+  /const GENERAL_PROFILE_ROUTE = "\/my-career\/cv"/.test(info),
+  "and that link points at the CV PAGE, where the editors are -- not the overview, not the Profile",
 );
 
 /* ------------------------------------------------------------------ */
@@ -138,10 +142,14 @@ console.log("\n3 · the profile renders the canonical editors, on the same rows"
 
 const profileEditor = code(read(EDITOR));
 const profilePage = read(PROFILE_PAGE);
+// Career history is CV content. The page that mounts its editors, and the
+// copy that says where each fact belongs, is the CV page.
+const cvPage = read(CV_PAGE);
+const cvCopy = read(CV_COPY);
 
 check(
-  /<GeneralProfileClaims/.test(profilePage),
-  "the profile page mounts the general profile/CV editors",
+  /<GeneralProfileClaims/.test(cvPage) && !/<GeneralProfileClaims/.test(code(profilePage)),
+  "the CV page mounts the general CV editors, and the Profile page does not",
 );
 check(/<SkillSection/.test(profileEditor), "languages and practical skills are edited there");
 check(/<ClaimEntryForm/.test(profileEditor), "and general education is edited there");
@@ -198,15 +206,13 @@ console.log("\n4b · old deep links go to the new home rather than failing silen
 
 const dest = read(DESTINATIONS);
 for (const [section, anchor] of [
-  ["education", "profile-education"],
-  ["skills", "profile-skills"],
-  ["languages", "profile-languages"],
+  ["education", "cv-education"],
+  ["skills", "cv-skills"],
+  ["languages", "cv-languages"],
 ] as const) {
   check(
-    new RegExp(`${section}: \\{ owner: "profile", href: "/my-career/profile#${anchor}" \\}`).test(
-      dest,
-    ),
-    `profile-destinations routes ${section} to the profile editor`,
+    new RegExp(`${section}: \\{ owner: "cv", href: "/my-career/cv#${anchor}" \\}`).test(dest),
+    `profile-destinations routes ${section} to the CV editor`,
   );
   check(profileEditor.includes(`"${anchor}"`), `and ${anchor} is a real id the editor renders`);
 }
@@ -262,17 +268,20 @@ console.log("\n5b · the two pages do not contradict each other about ownership"
 // Security Passport", which is what the review read as the product calling
 // CV facts Passport content.
 check(
-  !/utbildningar, intyg och språk bor i Security Passport/i.test(profilePage),
-  "the profile page no longer says education and languages LIVE in the Passport",
+  !/utbildningar, intyg och språk bor i Security Passport/i.test(profilePage + cvCopy),
+  "neither page says education and languages LIVE in the Passport",
 );
 check(
-  /hör till din profil och ditt CV/i.test(profilePage) &&
-    /belong to your profile and CV/i.test(profilePage),
-  "it says, in both languages, that they belong to the profile and CV",
+  /hör till ditt CV/i.test(cvCopy) && /belong to your CV/i.test(cvCopy),
+  "the CV page says, in both languages, that they belong to the CV",
 );
 check(
-  /inte säkerhetsbevisning/i.test(profilePage) && /not security evidence/i.test(profilePage),
+  /inte säkerhetsbevisning/i.test(cvCopy) && /not security evidence/i.test(cvCopy),
   "and that they are not security evidence, in both languages",
+);
+check(
+  /L\(CV\.contentLede, l\)/.test(cvPage),
+  "and that sentence is actually rendered on the CV page, not merely authored",
 );
 
 // The Passport's pointer is the other half of the same sentence. If only
@@ -306,15 +315,15 @@ check(
   "the removed CV region's copy keys are deleted rather than orphaned",
 );
 check(
-  /(redigeras här nedan|edited below)/i.test(profilePage),
-  "and says the general facts are edited HERE, on the profile",
+  /redigeras här nedan/i.test(cvCopy) && /edited below/i.test(cvCopy),
+  "and says the career-history facts are edited HERE, on the CV page",
 );
 check(
-  /(redigeras där|edited there)/i.test(profilePage),
-  "while security evidence is edited in the Passport",
+  /redigeras där/i.test(cvCopy) && /edited there/i.test(cvCopy),
+  "while security credentials are edited in the Passport",
 );
 check(
-  /(lagras en enda gång|stored exactly once)/i.test(profilePage),
+  /lagras en enda gång/i.test(cvCopy) && /stored exactly once/i.test(cvCopy),
   "and that the fact is stored exactly once wherever it is entered",
 );
 
@@ -345,8 +354,10 @@ check(
 // key: that key appears twice on this page, so a page-wide search stayed
 // true with the employment one removed — which a negative control caught.
 check(
-  infoRaw.includes('to="/my-career/profile"') && !infoRaw.includes('openEntry("experience", e.id)'),
-  "employment anchor points to the canonical profile without rendering CV history",
+  /to=\{GENERAL_PROFILE_ROUTE\}\s+hash="cv-employment"\s+data-employment-authoring-link/.test(
+    infoRaw,
+  ) && !infoRaw.includes('openEntry("experience", e.id)'),
+  "the employment section points to the CV's employment editor without rendering CV history",
 );
 
 // 1 · The authoring editor is mounted on the profile, and only there.
@@ -356,8 +367,9 @@ check(
   const profileRoute = read("src/routes/_authenticated.my-career.profile.tsx");
   const destinations = read("src/lib/professional-identity/profile-destinations.ts");
   check(
-    profileRoute.includes("<EmploymentHistoryEditor"),
-    "the canonical employment authoring editor is mounted on /my-career/profile",
+    read(CV_PAGE).includes("<EmploymentHistoryEditor") &&
+      !code(profileRoute).includes("<EmploymentHistoryEditor"),
+    "the canonical employment authoring editor is mounted on /my-career/cv, and only there",
   );
   check(
     editor.includes("<ExperienceForm"),
@@ -413,10 +425,8 @@ check(
   );
 
   check(
-    destinations.includes(
-      'employment: { owner: "profile", href: "/my-career/profile#profile-employment" }',
-    ),
-    "the employment destination is the profile workspace, not the Passport",
+    destinations.includes('employment: { owner: "cv", href: "/my-career/cv#cv-employment" }'),
+    "the employment destination is the CV, not the Passport and not the Profile",
   );
   check(!editor.includes("createServerFn"), "and defines no server function of its own");
   // 4 · Evidence, reviewer decisions and verification do not follow it.
@@ -439,7 +449,7 @@ check(
     "the profile editor links to the Passport section that documents and verifies these rows",
   );
   check(
-    infoRaw.includes("profile-employment"),
+    infoRaw.includes("cv-employment"),
     "and the Passport section links to the canonical editor",
   );
 

@@ -41,7 +41,7 @@ import { isAlreadyWorkingInSecurity } from "@/lib/security-career-profile/types"
 /** Which product owns the write. Presentation of an architectural fact, not
  *  a permission: every write still goes through the owner's own server
  *  function and its own rules. */
-export type SectionOwner = "profile" | "passport" | "discovery";
+export type SectionOwner = "profile" | "cv" | "passport" | "discovery";
 
 /** What the person must be able to do before a section may be recommended.
  *  See `isSectionReachable`. */
@@ -72,36 +72,35 @@ export const SECTION_DESTINATIONS: Readonly<Record<CompletenessSection, SectionD
   // Where a person works is a profile answer, not a credential. Same
   // sp_passport_profiles row, same setWorkCountry writer, new editor home.
   location: { owner: "profile", href: "/my-career/profile#profile-work-country" },
-  // ── AUTHORING MOVED, EVIDENCE DID NOT (owner, 2026-09-14) ──────────
+  // ── PROFILE IS WHO YOU ARE NOW; THE CV IS WHAT YOU HAVE DONE ───────
   //
-  // This pointed at the Passport because the employment EDITOR lived
-  // there. The owner moved the general authoring editors to the profile
-  // and was explicit that this does not follow from the evidence
-  // boundary: "sp-employment may remain a real Passport section and
-  // anchor. Employment evidence has not moved. However, the general
-  // authoring editor for employment history must move to the canonical
-  // Profile workspace."
+  // The owner's 2026-09-14 correction took the employment editor out of
+  // the Passport, and the 2026-09-17 refinement finished the thought:
+  // there are exactly three candidate surfaces -- Profile (current
+  // identity), CV (career history) and the Security Passport (governed
+  // credentials) -- and career history belongs to the CV. The editor
+  // therefore lives on /my-career/cv, under "CV content".
   //
-  // So the OWNER of the write is the profile, and the record is the same
+  // The RECORD did not move either time. It is the same
   // sp_experience_periods row written by the same saveExperienceEntry.
   // Documenting and verifying a period is still Passport work, reached
   // from #sp-employment, which is still a real section with a real
   // anchor and unchanged deep links.
-  employment: { owner: "profile", href: "/my-career/profile#profile-employment" },
-  // ── MOVED TO THE PROFILE, WHERE THE OWNER'S REVIEW PUT THEM ─────────
+  employment: { owner: "cv", href: "/my-career/cv#cv-employment" },
+  // ── EDUCATION, SKILLS AND LANGUAGES ARE CV CONTENT ─────────────────
   //
-  // These three were edited inside /passport/information, which is what
-  // made a candidate go to the Security Passport to record their degree.
-  // Their editors are on the canonical profile now, and this file routes
-  // to where the write actually happens -- which is the whole point of it.
+  // They were edited inside /passport/information, then on the profile
+  // page, and now on the CV page beside the employment history they are
+  // read with. This file routes to where the write actually happens --
+  // which is the whole point of it.
   //
   // The OWNER changes with the editor; the STORAGE does not. Each is still
   // one `sp_claims` row written by the same server function, so this is a
-  // routing change and emphatically not a copy into a profile table -- see
-  // the note above on migration 20261007090000.
-  education: { owner: "profile", href: "/my-career/profile#profile-education" },
-  skills: { owner: "profile", href: "/my-career/profile#profile-skills" },
-  languages: { owner: "profile", href: "/my-career/profile#profile-languages" },
+  // routing change and emphatically not a copy into a CV table -- see the
+  // note above on migration 20261007090000.
+  education: { owner: "cv", href: "/my-career/cv#cv-education" },
+  skills: { owner: "cv", href: "/my-career/cv#cv-skills" },
+  languages: { owner: "cv", href: "/my-career/cv#cv-languages" },
   careerDirection: { owner: "discovery", href: "/security-career-assessment" },
 };
 
@@ -118,7 +117,7 @@ export interface SectionLinkTarget {
  * The section overview needs to LINK to these, and a router link takes the
  * three parts separately rather than one string. Deriving them here is what
  * keeps `SECTION_DESTINATIONS` the only place a route or an anchor is
- * written down: a surface that re-typed `#profile-employment` next to its
+ * written down: a surface that re-typed `#cv-employment` next to its
  * own link would be a second source of truth, and the two would drift the
  * first time a section moved -- which is exactly how a recommendation ended
  * up pointing at an editor that had already been relocated.

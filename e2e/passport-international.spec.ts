@@ -127,9 +127,10 @@ for (const lang of ["sv", "en"] as const) {
     await expect(wallet).toBeVisible();
     await expect(wallet.locator("[data-credential-row]")).toHaveCount(1);
     await expect(wallet).toContainText("Original international credential");
-    await expect(page.locator("[data-compact-passport-card]")).toContainText(
-      lang === "sv" ? "Säkerhetsanalytiker" : "Security analyst",
-    );
+    // The Profile title is stated by the wallet's identity surface -- the
+    // ONE Passport on this page -- and by no second card beside it.
+    await expect(wallet).toContainText(lang === "sv" ? "Säkerhetsanalytiker" : "Security analyst");
+    await expect(page.locator("[data-compact-passport-card]")).toHaveCount(0);
     await expect(page.locator("main")).not.toContainText("PRIVATE CV EDUCATION");
     await expect(page.locator("main")).not.toContainText("OLD TITLE MUST NOT APPEAR");
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
@@ -137,8 +138,10 @@ for (const lang of ["sv", "en"] as const) {
       path: `/private/tmp/passport-wallet-${lang}-${test.info().project.name}.png`,
       fullPage: true,
     });
+    // The retired second preview lands on Preview and share.
     await page.goto(`${base}/passport/card`);
-    await expect(page.locator("[data-compact-passport-card]")).toBeVisible();
+    await expect(page).toHaveURL(/\/passport\/share$/);
+    await expect(page.locator("[data-share-screen]")).toBeVisible();
     await expect(page.locator("main")).not.toContainText("PRIVATE CV EDUCATION");
     assertNoRefusals(refusals);
   });

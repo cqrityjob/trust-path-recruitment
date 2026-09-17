@@ -111,10 +111,7 @@ check(
   new Set(tos).size === tos.length,
   "no two navigation entries resolve to the same destination -- the Översikt/Min karriär defect, generalised",
 );
-check(
-  new Set(labelKeys).size === labelKeys.length,
-  "no two navigation entries share a label",
-);
+check(new Set(labelKeys).size === labelKeys.length, "no two navigation entries share a label");
 
 /* ------------------------------------------------------------------ */
 /* 2 · Every primary control has a real destination                    */
@@ -137,10 +134,7 @@ check(
   !labelKeys.includes("nav.my_career"),
   '"Min karriär" is not a candidate navigation label -- that destination is called Översikt, and one destination gets one name',
 );
-check(
-  labelKeys.includes("nav.overview"),
-  "the candidate home is labelled Översikt",
-);
+check(labelKeys.includes("nav.overview"), "the candidate home is labelled Översikt");
 
 /* ------------------------------------------------------------------ */
 /* 4 · The CV is a destination AND still contextually reachable        */
@@ -171,18 +165,21 @@ check(
 check(keys.includes("cv"), "the CV navigation key exists");
 
 // The contextual paths the CV had before it was promoted. A nav item does
-// not replace them: the Overview status grid and the Jobs side column are
-// where somebody meets the CV in the middle of doing something else.
-const hubGrid = code(read("src/components/professional-identity/HubStatusGrid.tsx"));
+// not replace them: the Overview and the Jobs side column are where
+// somebody meets the CV in the middle of doing something else.
+//
+// On the Overview the CV was one of four status tiles. It is a surface of
+// its own now -- the CV card in OverviewSurfaces, with "Edit CV" -- so that
+// is where this looks, and it requires the card to be MOUNTED as well as to
+// exist: a component nobody renders reaches nothing.
+const cvCard = code(read("src/components/professional-identity/OverviewSurfaces.tsx"));
+const overviewRoute = code(read("src/routes/_authenticated.my-career.index.tsx"));
 check(
-  /"\/my-career\/cv"/.test(hubGrid),
-  "the Overview status grid still reaches the CV",
+  /<Link to="\/my-career\/cv" data-edit-cv/.test(cvCard) && /<OverviewCvCard/.test(overviewRoute),
+  "the Overview still reaches the CV",
 );
 const jobsColumn = code(read("src/components/jobs/JobsSideColumn.tsx"));
-check(
-  /to="\/my-career\/cv"/.test(jobsColumn),
-  "and the Jobs side column still does too",
-);
+check(/to="\/my-career\/cv"/.test(jobsColumn), "and the Jobs side column still does too");
 
 // A destination promoted into the navigation must stop presenting itself as
 // subordinate to a sibling. The CV index opened with a back arrow to
@@ -207,10 +204,7 @@ for (const [label, file] of [
 /* ------------------------------------------------------------------ */
 console.log("\n5 · Career Card is hidden for the pilot");
 
-check(
-  !navCode.includes("career-card"),
-  "Career Card is not in the candidate navigation",
-);
+check(!navCode.includes("career-card"), "Career Card is not in the candidate navigation");
 
 const cardRoute = code(read(CARD_ROUTE));
 check(
@@ -284,10 +278,7 @@ console.log("\n7 · the logo goes to the public homepage");
 
 const header = code(read(HEADER));
 const brandLink = /<Link\s+to="\/"/.test(header);
-check(
-  brandLink,
-  'the brand mark links to "/" literally',
-);
+check(brandLink, 'the brand mark links to "/" literally');
 check(
   !/to=\{appMode \? "\/my-career" : "\/"\}/.test(header),
   "and not through a ternary that makes the mark mean two different things depending on who is reading it",

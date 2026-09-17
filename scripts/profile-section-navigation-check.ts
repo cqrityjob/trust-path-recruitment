@@ -1,47 +1,43 @@
-// /my-career/profile — the section overview is navigation, not a list.
+// Profile and CV — every section is reachable on the surface that owns it.
 //
 // ── WHAT THIS DEFENDS ──────────────────────────────────────────────────
 //
-// The profile workspace opens with an index of every section, its
-// completeness and its owner. It was accurate and inert: the row rendered a
-// link only when
+// A candidate's information lives on three surfaces: the Profile (who am I
+// now), the CV (what have I done) and the Security Passport. Every section
+// the completeness model knows about names ONE of them as its owner in
+// SECTION_DESTINATIONS, and that owner must actually let the person edit it.
 //
-//     !done && owner !== "profile"
+// The profile page used to be an index of all ten sections. First the index
+// was inert -- it linked only `!done && owner !== "profile"`, so nine rows
+// named an editor and opened none. Then every row became a link, but each
+// still carried an "Edited here" label that was not a control, above a
+// 6 200px page holding the Passport's six-step basics card and every CV
+// editor. The owner's 2026-09-17 refinement removed the index: the Profile
+// page now holds only the Profile's editors, the CV page holds the CV's,
+// and what is MISSING is offered as a link to the field.
 //
-// and nine of the ten sections are profile-owned. So the index named where
-// to go and then left the reader to scroll a long page of stacked editors
-// for it, and a section that was already filled in could not be opened at
-// all — which is exactly the moment somebody wants to go and correct it.
+// Five properties keep the old defects from coming back:
 //
-// Four properties keep that from coming back, and each is one edit away
-// from being lost:
-//
-//   1. A profile-owned row IS the link. Not "has a link somewhere in it":
-//      the whole row, so the target is large and the affordance obvious.
-//   2. Completion does not gate it. `done` may change how a row READS; it
-//      may never decide whether the row can be opened.
+//   1. No dead ownership label. Nothing on the Profile page says "edited
+//      here" -- a section is either an editor or a link to one.
+//   2. Completion never gates an editor. The editors are mounted
+//      unconditionally; only the "missing" shortcuts depend on completeness.
 //   3. The destination comes from SECTION_DESTINATIONS, through
-//      `sectionLinkTarget`. A route or an anchor written again in the route
+//      `sectionLinkTarget`. A route or an anchor written again in a route
 //      file is a second source of truth, and the two drift the first time a
-//      section moves — which is how a recommendation ended up pointing at an
-//      editor that had already been relocated.
-//   4. Every destination anchor is RENDERED, exactly once, and carries a
-//      scroll offset. An anchor that exists twice is ambiguous; one with no
-//      offset lands under the fixed header, so the reader arrives at the
-//      right section and sees the wrong thing.
+//      section moves -- which is how a recommendation ended up pointing at
+//      an editor that had already been relocated.
+//   4. Every destination anchor is RENDERED, exactly once, ON THE SURFACE
+//      THAT OWNS IT, and carries a scroll offset. A profile-owned anchor
+//      that only exists on the CV page is a dead link with a live id.
+//   5. `sectionLinkTarget` round-trips, EXECUTED against the real contract.
 //
-// Sections 1–3 read the route's source. Section 4 reads the whole profile
-// surface — the route plus every component it mounts — because an anchor
-// lives in the component that renders it, not where it is linked from.
-// Section 5 EXECUTES `sectionLinkTarget` against the real contract rather
-// than pattern-matching it, so a parser that silently dropped a query or a
-// fragment would fail here rather than in a browser.
-
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
   SECTION_DESTINATIONS,
   sectionLinkTarget,
+  type SectionOwner,
 } from "../src/lib/professional-identity/profile-destinations";
 import type { CompletenessSection } from "../src/lib/professional-identity/completeness";
 
@@ -49,15 +45,25 @@ const ROOT = path.resolve(import.meta.dirname, "..");
 const read = (rel: string) => readFileSync(path.join(ROOT, rel), "utf8");
 
 const ROUTE = "src/routes/_authenticated.my-career.profile.tsx";
+const CV_ROUTE = "src/routes/_authenticated.my-career.cv.index.tsx";
 
-/** Every file that renders on /my-career/profile and may hold an anchor. */
-const PROFILE_SURFACE = [
-  ROUTE,
-  "src/components/professional-identity/ProfileBasicsSection.tsx",
-  "src/components/professional-identity/EmploymentHistoryEditor.tsx",
-  "src/components/professional-identity/GeneralProfileClaims.tsx",
-  "src/components/assessment/SecurityCareerProfileCard.tsx",
-] as const;
+/** Every file that renders on each owning page and may hold an anchor. */
+const SURFACES: Readonly<Partial<Record<SectionOwner, readonly string[]>>> = {
+  profile: [
+    ROUTE,
+    "src/components/professional-identity/ProfileBasicsSection.tsx",
+    "src/components/assessment/SecurityCareerProfileCard.tsx",
+  ],
+  cv: [
+    CV_ROUTE,
+    "src/components/professional-identity/EmploymentHistoryEditor.tsx",
+    "src/components/professional-identity/GeneralProfileClaims.tsx",
+  ],
+};
+const OWNER_PATH: Readonly<Partial<Record<SectionOwner, string>>> = {
+  profile: "/my-career/profile",
+  cv: "/my-career/cv",
+};
 
 let failures = 0;
 function ck(label: string, ok: boolean, detail?: string) {
@@ -69,116 +75,146 @@ function ck(label: string, ok: boolean, detail?: string) {
   console.log(`  FAIL ${label}${detail ? `\n         ${detail}` : ""}`);
 }
 
-const routeRaw = read(ROUTE);
-// Comments quote the very strings this guard searches for — including the
-// old gate it exists to keep out. Strip them before asserting, or the guard
-// reports its own explanation as the defect.
-const route = routeRaw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+// Comments quote the very strings this guard searches for -- including the
+// dead label it exists to keep out. Strip them before asserting, or the
+// guard reports its own explanation as the defect.
+const strip = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const route = strip(read(ROUTE));
+const cvRoute = strip(read(CV_ROUTE));
 
 const sections = Object.keys(SECTION_DESTINATIONS) as CompletenessSection[];
-const profileSections = sections.filter((s) => SECTION_DESTINATIONS[s].owner === "profile");
+const ownedBy = (owner: SectionOwner) =>
+  sections.filter((s) => SECTION_DESTINATIONS[s].owner === owner);
 
-// The profile-owned branch ONLY. Scoping matters more than it looks: the
-// non-profile branch renders a link too, with its own 44px minimum and its
-// own hash, so a whole-file search for either is satisfied by the wrong
-// branch. Three assertions here were dead exactly that way until the
-// controls below caught them.
-function profileBranchOf(src: string): string {
-  const start = src.indexOf('if (owner === "profile") {');
-  if (start < 0) return "";
+/** The JSX element that carries `data-section-link` in a route: the opening
+ *  tag only, so an assertion about the link is never satisfied by a
+ *  neighbour. */
+function sectionLinkTag(src: string): string {
+  const at = src.indexOf("data-section-link={section}");
+  if (at < 0) return "";
+  const open = src.lastIndexOf("<", at);
   let depth = 0;
-  for (let i = src.indexOf("{", start); i < src.length; i += 1) {
-    if (src[i] === "{") depth += 1;
-    else if (src[i] === "}") {
-      depth -= 1;
-      if (depth === 0) return src.slice(start, i + 1);
-    }
+  for (let i = open; i < src.length; i += 1) {
+    const ch = src[i];
+    if (ch === "{") depth += 1;
+    else if (ch === "}") depth -= 1;
+    else if (ch === ">" && depth === 0 && src[i - 1] !== "=") return src.slice(open, i + 1);
   }
   return "";
 }
-const profileBranch = profileBranchOf(route);
+const profileLink = sectionLinkTag(route);
 
-console.log("1 · the overview links every section this page owns");
+console.log("1 · the split is real, and nothing is a label pretending to be a control");
 
 ck(
-  "1.1 there are profile-owned sections to link at all",
-  profileSections.length >= 7,
-  `found ${profileSections.length}`,
+  "1.1 the Profile owns its five sections and the CV owns its four",
+  ownedBy("profile").length === 5 && ownedBy("cv").length === 4,
+  `profile ${ownedBy("profile").length}, cv ${ownedBy("cv").length}`,
+);
+for (const owner of ["profile", "cv"] as const) {
+  for (const section of ownedBy(owner)) {
+    ck(
+      `1.2 ${section} is edited on ${OWNER_PATH[owner]}`,
+      SECTION_DESTINATIONS[section].href.split(/[?#]/)[0] === OWNER_PATH[owner],
+      SECTION_DESTINATIONS[section].href,
+    );
+  }
+}
+ck(
+  "1.3 no dead ownership label on the Profile page",
+  !/Redigeras här|Edited here|ownedHere/.test(route),
+  'the Profile page says "edited here" beside something that is not a control',
+);
+ck(
+  "1.4 the Profile page mounts no CV editor, and the CV page mounts both",
+  !/<EmploymentHistoryEditor|<GeneralProfileClaims/.test(route) &&
+    /<EmploymentHistoryEditor/.test(cvRoute) &&
+    /<GeneralProfileClaims/.test(cvRoute),
+  "career history must have exactly one editing home: the CV page",
+);
+ck(
+  "1.5 each page offers one way to the other, and the Profile one to the Passport",
+  /to="\/my-career\/cv"/.test(route) &&
+    /to="\/passport"/.test(route) &&
+    /to="\/my-career\/profile"/.test(cvRoute),
 );
 
-// The defect in one line: a link gated on the row not being profile-owned.
+console.log("\n2 · completion never decides whether an editor is there");
+
+for (const [name, src] of [
+  ["<ProfileBasicsSection", route],
+  ["<SecurityCareerProfileCard", route],
+  ["<EmploymentHistoryEditor", cvRoute],
+  ["<GeneralProfileClaims", cvRoute],
+] as const) {
+  const at = src.indexOf(name);
+  // What stands IMMEDIATELY before the mount. A conditional that wraps it
+  // ends there -- `cond && <X`, `cond && (\n<X`, `cond ? <X` -- whatever the
+  // condition itself looks like. The first draft matched on the condition's
+  // spelling and let `missing.length > 0 && <X />` straight through; the
+  // negative control caught it.
+  const before = at < 0 ? "" : src.slice(Math.max(0, at - 40), at);
+  const gated = /(&&|\?|:)\s*\(?\s*$/.test(before);
+  ck(
+    `2.1 ${name} is mounted unconditionally`,
+    at >= 0 && !gated,
+    at < 0 ? "not mounted at all" : "the mount sits behind a completeness condition",
+  );
+}
 ck(
-  "1.2 no link in the overview is withheld because the section is profile-owned",
-  !/owner\s*!==\s*"profile"/.test(route),
-  'the route still gates a link on owner !== "profile"',
-);
-
-ck(
-  "1.3 a profile-owned row renders the link as the row itself",
-  /if\s*\(\s*owner\s*===\s*"profile"\s*\)\s*\{\s*return\s*\(\s*<li[^>]*>\s*<Link/.test(route),
-  "expected the profile branch to return a <li> whose only child is the <Link>",
-);
-
-ck(
-  "1.4 every row carries a stable hook naming its section",
-  /data-section-link=\{section\}/.test(profileBranch),
-  "expected data-section-link={section} on the profile row link",
-);
-
-console.log("\n2 · completion changes how a row reads, never whether it opens");
-
-// `done` may still choose a text colour and the empty-state wording. What it
-// must not do is stand between the reader and the editor.
-
-ck(
-  "2.1 the profile-owned branch never consults `done`",
-  profileBranch.length > 0 && !/\bdone\b/.test(profileBranch),
-  "the profile row branch reads `done`, so a completed section can stop being reachable",
-);
-
-ck(
-  "2.2 `done` is still used, so truthful completeness presentation was not removed",
-  /const done = completeness\.completedSections\.includes\(section\)/.test(route) &&
-    /done\s*\n?\s*\?/.test(route),
-  "completeness is no longer shown at all — the fix must not cost the status",
+  "2.2 only the shortcuts depend on completeness",
+  /missing\.length > 0 &&/.test(route) && /completedSections\.includes\(section\)/.test(route),
+  "the missing-section shortcuts are no longer derived from the completeness model",
 );
 
 console.log("\n3 · one source of truth for the destination");
 
 ck(
-  "3.1 the route derives its targets from the shared contract",
-  /sectionLinkTarget\(section\)/.test(route),
-  "expected sectionLinkTarget(section)",
+  "3.1 both routes derive their targets from the shared contract",
+  /sectionLinkTarget\(section\)/.test(route) && /sectionLinkTarget\(/.test(cvRoute),
+  "expected sectionLinkTarget(...) in the Profile and the CV route",
 );
-
 ck(
-  "3.2 the profile row's link is built from that target, part by part",
-  /to=\{target\.to\}/.test(profileBranch) &&
-    /search=\{target\.search\}/.test(profileBranch) &&
-    /hash=\{target\.hash\}/.test(profileBranch),
-  "expected to / search / hash on the profile row's own link",
+  "3.1b the shortcut carries a stable hook naming its section",
+  profileLink.length > 0,
+  "expected data-section-link={section} on the shortcut link",
+);
+ck(
+  "3.2 the Profile's shortcut link is built from that target, part by part",
+  /to=\{target\.to\}/.test(profileLink) &&
+    /search=\{target\.search\}/.test(profileLink) &&
+    /hash=\{target\.hash\}/.test(profileLink),
+  "expected to / search / hash on the shortcut's own link",
+);
+ck(
+  "3.2b it offers only what the Profile owns",
+  /SECTION_DESTINATIONS\[section\]\.owner === "profile"/.test(route),
+  "a missing education is the CV's to ask for, not the Profile's",
 );
 
-// A hand-written anchor or route beside the link is the second source of
-// truth this is here to prevent.
+// A hand-written anchor beside the link is the second source of truth this
+// is here to prevent -- in either route.
 for (const section of sections) {
   const { href } = SECTION_DESTINATIONS[section];
   const hash = href.includes("#") ? href.split("#")[1]! : null;
   if (!hash) continue;
-  ck(
-    `3.3 the route does not re-spell #${hash}`,
-    !route.includes(`"${hash}"`) && !route.includes(`#${hash}`),
-    `${hash} is written literally in the route as well as in the contract`,
-  );
+  for (const [name, src] of [
+    ["the Profile route", route],
+    ["the CV route", cvRoute],
+  ] as const) {
+    ck(
+      `3.3 ${name} does not re-spell #${hash}`,
+      !src.includes(`"${hash}"`) && !src.includes(`#${hash}`),
+      `${hash} is written literally in the route as well as in the contract`,
+    );
+  }
 }
 
 console.log("\n4 · every destination anchor is rendered exactly once, with an offset");
 
-const surface = PROFILE_SURFACE.map((f) => ({ file: f, src: read(f) }));
-
-const wantedAnchors = [
+const anchorsOf = (owner: SectionOwner) => [
   ...new Set(
-    profileSections
+    ownedBy(owner)
       .map((s) => SECTION_DESTINATIONS[s].href)
       .filter((h) => h.includes("#"))
       .map((h) => h.split("#")[1]!),
@@ -187,15 +223,15 @@ const wantedAnchors = [
 
 ck(
   "4.0 the anchor sweep actually examined something",
-  wantedAnchors.length >= 7,
-  `only ${wantedAnchors.length} anchors derived`,
+  anchorsOf("profile").length >= 3 && anchorsOf("cv").length >= 4,
+  `profile ${anchorsOf("profile").length}, cv ${anchorsOf("cv").length}`,
 );
 
 // An anchor reaches the DOM three ways on this surface, and a guard that knew
 // only the first reported two live anchors as dead and one offset as missing:
 //
 //   * literally, on a native element:      <div id="profile-work-country" …>
-//   * literally, on a shell component:     <SectionShell id="profile-education" …>
+//   * literally, on a shell component:     <SectionShell id="cv-education" …>
 //   * through a table of names:            <SectionShell id={section.anchor} …>
 //
 // All three are real renders. The offset then has to be read where it is
@@ -241,7 +277,7 @@ function renderedAnchors(file: string, src: string): AnchorHit[] {
     out.push({ anchor: m[1]!, file, tag: openingTagAround(src, m.index!), src });
   }
 
-  // `anchor: "profile-skills"` in a table, rendered as `id={section.anchor}`.
+  // `anchor: "cv-skills"` in a table, rendered as `id={section.anchor}`.
   const declared = [...src.matchAll(/\banchor:\s*"([A-Za-z0-9_-]+)"/g)].map((m) => m[1]!);
   if (declared.length > 0) {
     for (const m of src.matchAll(/id=\{[^"`{][^}]*\}/g)) {
@@ -266,8 +302,6 @@ function renderedAnchors(file: string, src: string): AnchorHit[] {
   return out;
 }
 
-const renderedBySurface = surface.flatMap(({ file, src }) => renderedAnchors(file, src));
-
 /** Does arriving at this anchor clear the fixed header? */
 function hasScrollOffset(hit: AnchorHit): boolean {
   if (/scroll-mt-\d+/.test(hit.tag)) return true;
@@ -280,24 +314,29 @@ function hasScrollOffset(hit: AnchorHit): boolean {
   return root !== null && /scroll-mt-\d+/.test(root);
 }
 
-for (const anchor of wantedAnchors) {
-  const hits = renderedBySurface.filter((r) => r.anchor === anchor);
+for (const owner of ["profile", "cv"] as const) {
+  // The OWNER'S surface only. Sweeping both together would let a
+  // profile-owned anchor that was rendered on the CV page pass.
+  const rendered = (SURFACES[owner] ?? []).flatMap((file) => renderedAnchors(file, read(file)));
+  for (const anchor of anchorsOf(owner)) {
+    const hits = rendered.filter((r) => r.anchor === anchor);
 
-  ck(
-    `4.1 #${anchor} is rendered exactly once on the profile surface`,
-    hits.length === 1,
-    hits.length === 0
-      ? "no rendered id= anywhere on the surface — the link is dead"
-      : `rendered ${hits.length} times: ${hits.map((h) => h.file).join(", ")}`,
-  );
+    ck(
+      `4.1 #${anchor} is rendered exactly once on the ${owner} surface`,
+      hits.length === 1,
+      hits.length === 0
+        ? "no rendered id= anywhere on the owning surface — the link is dead"
+        : `rendered ${hits.length} times: ${hits.map((h) => h.file).join(", ")}`,
+    );
 
-  if (hits.length !== 1) continue;
+    if (hits.length !== 1) continue;
 
-  ck(
-    `4.2 #${anchor} carries a scroll offset where it is rendered`,
-    hasScrollOffset(hits[0]!),
-    `no scroll-mt-* on the tag, nor on the component it renders through, in ${hits[0]!.file}`,
-  );
+    ck(
+      `4.2 #${anchor} carries a scroll offset where it is rendered`,
+      hasScrollOffset(hits[0]!),
+      `no scroll-mt-* on the tag, nor on the component it renders through, in ${hits[0]!.file}`,
+    );
+  }
 }
 
 console.log("\n5 · the derived target is the canonical destination");
@@ -327,29 +366,29 @@ for (const section of sections) {
   );
 }
 
-console.log("\n6 · the target is large enough and focusable");
+console.log("\n6 · the shortcut is large enough and focusable");
 
 ck(
-  "6.1 the profile row link declares a 44px minimum",
-  /min-h-\[44px\]/.test(profileBranch),
-  "no min-h-[44px] on the profile row link",
+  "6.1 the shortcut link declares a 44px minimum",
+  /min-h-\[44px\]/.test(profileLink),
+  "no min-h-[44px] on the shortcut link",
 );
 
 ck(
-  "6.2 keyboard focus is visible on the profile row link",
+  "6.2 keyboard focus is visible on the shortcut link",
   // The ring itself, not merely something named ring-*: an offset alone
   // draws nothing, and matching it kept this assertion alive while the
   // visible ring had been deleted.
-  /focus-visible:ring-2/.test(profileBranch) && /focus-visible:ring-ring/.test(profileBranch),
-  "the profile row link has no visible focus ring",
+  /focus-visible:ring-2/.test(profileLink) && /focus-visible:ring-ring/.test(profileLink),
+  "the shortcut link has no visible focus ring",
 );
 
-console.log("\n7 · both languages come from the existing copy");
+console.log("\n7 · both languages come from authored pairs");
 
 ck(
-  "7.1 the link is named from the section title, which is bilingual",
-  /aria-label=\{L\(SECTION_TITLE\[section\], l\)\}/.test(profileBranch),
-  "expected the accessible name to be L(SECTION_TITLE[section], l)",
+  "7.1 the shortcut is named from a bilingual pair, per section",
+  /L\(ADD_LABEL\[section\]!?, l\)/.test(route) && /const ADD_LABEL:/.test(route),
+  "expected the link text to be L(ADD_LABEL[section], l)",
 );
 
 ck(
@@ -365,9 +404,9 @@ if (failures > 0) {
 
 console.log(
   "\nprofile-section-navigation:check OK " +
-    "(every profile-owned overview row is the link, completion never gates it, " +
-    "the destination is derived from SECTION_DESTINATIONS and never re-spelled, " +
-    "every anchor is rendered exactly once with a scroll offset, the derived " +
-    "target round-trips to its canonical href, and the target is 44px, " +
-    "focus-visible and named from bilingual copy)",
+    "(the Profile and the CV each own and mount their own editors, nothing is a " +
+    "dead 'edited here' label, completion never gates an editor, every destination " +
+    "is derived from SECTION_DESTINATIONS and never re-spelled, every anchor is " +
+    "rendered exactly once on its owner's surface with a scroll offset, the derived " +
+    "target round-trips, and the shortcut is 44px, focus-visible and bilingual)",
 );

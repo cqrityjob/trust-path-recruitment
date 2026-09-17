@@ -100,12 +100,12 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "CNC-NC-CV-CONTEXT-LOST",
     defect:
-      "promoting the CV to the navigation strips it out of the Overview status grid, so it stops being reachable where somebody meets it mid-task",
-    file: "src/components/professional-identity/HubStatusGrid.tsx",
-    find: '<Go to={cv.state === "none" ? "/my-career/cv/new" : "/my-career/cv"}>',
-    replace: '<Go to={cv.state === "none" ? "/my-career/cv/new" : "/my-career/cv/new"}>',
+      "promoting the CV to the navigation strips it out of the Overview, so it stops being reachable where somebody meets it mid-task",
+    file: "src/components/professional-identity/OverviewSurfaces.tsx",
+    find: '<Link to="/my-career/cv" data-edit-cv className={ACTION}>',
+    replace: '<Link to="/my-career/cv/new" data-edit-cv className={ACTION}>',
     guard: GUARD,
-    expect: "the Overview status grid still reaches the CV",
+    expect: "the Overview still reaches the CV",
   },
 
   // ---- Career Card coming back ---------------------------------------------
@@ -114,7 +114,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Career Card route renders a pilot page again instead of redirecting, so a surface the owner removed is reachable",
     file: CARD,
-    find: "  beforeLoad: () => {\n    throw redirect({ to: \"/my-career\", replace: true });\n  },",
+    find: '  beforeLoad: () => {\n    throw redirect({ to: "/my-career", replace: true });\n  },',
     replace: "  component: () => null,",
     guard: GUARD,
     expect: "redirects rather than rendering a pilot page",
@@ -159,7 +159,8 @@ const MUTATIONS: readonly Mutation[] = [
       "the retired section strip is rendered in the shell again, putting a second candidate navigation under the first",
     file: SHELL,
     find: "    <SiteLayout>\n      <Outlet />\n    </SiteLayout>",
-    replace: "    <SiteLayout>\n      <MyCareerHubNav activeKey={null} />\n      <Outlet />\n    </SiteLayout>",
+    replace:
+      "    <SiteLayout>\n      <MyCareerHubNav activeKey={null} />\n      <Outlet />\n    </SiteLayout>",
     guard: GUARD,
     expect: "renders no section strip",
   },
@@ -168,7 +169,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect: "the shell grows a <nav> of its own beside the primary navigation",
     file: SHELL,
     find: "    <SiteLayout>\n      <Outlet />\n    </SiteLayout>",
-    replace: '    <SiteLayout>\n      <nav aria-label="sections" />\n      <Outlet />\n    </SiteLayout>',
+    replace:
+      '    <SiteLayout>\n      <nav aria-label="sections" />\n      <Outlet />\n    </SiteLayout>',
     guard: GUARD,
     expect: "declares no <nav> of its own",
   },

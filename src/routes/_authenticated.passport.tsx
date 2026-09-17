@@ -35,7 +35,10 @@ const NAV = [
   { to: "/passport", hash: "merits", sv: "Meriter", en: "Credentials" },
   { to: "/passport/credentials/new", sv: "Lägg till", en: "Add credential" },
   { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },
-  { to: "/passport/card", sv: "Förhandsvisa och dela", en: "Preview and share" },
+  // The recipient-style Passport lives in exactly one place. This pointed at
+  // /passport/card, a second preview whose selection the sharing flow never
+  // received; that route now redirects here.
+  { to: "/passport/share", sv: "Förhandsvisa och dela", en: "Preview and share" },
   { to: "/passport/privacy", sv: "Delning och integritet", en: "Sharing & privacy" },
 ];
 
