@@ -874,6 +874,59 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },
+
+  // ---- Schema-first: generated types vs hand-written application code -----
+  //
+  // The generated Supabase types may describe this migration's objects ONLY
+  // while release-state proves it applied. Each `expect` below is the
+  // FAILURE-LIST form of the diagnostic ("- REPORT-SCHEMA-FIRST: …"). The
+  // guard also prints every passing assertion as "ok <text>", and the release
+  // -state mutations here trip REPORT-REGISTRATION as well -- so matching the
+  // bare text would be satisfied by a passing "ok" line beside somebody
+  // else's failure, and a dead assertion would hide behind it.
+  {
+    id: "RPT-NC-TYPES-NAME-A-PENDING-MIGRATION",
+    defect:
+      "release-state says the migration is NOT applied while the generated types already describe its objects -- application code could then be written against a schema production does not have",
+    file: STATE,
+    find: '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "applied",',
+    replace:
+      '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "pending",',
+    guard: GUARD,
+    expect: "- REPORT-SCHEMA-FIRST: the generated types describe this migration's objects only",
+  },
+  {
+    id: "RPT-NC-BARE-FLIP-UNLOCKS-THE-TYPES",
+    defect:
+      "the state still reads 'applied' but its hosted evidence is gone -- a bare flip, which is exactly the unproved claim that must not be enough to let the types describe these objects",
+    file: STATE,
+    find: '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "applied",\n      "evidenceSource": "Applied',
+    replace:
+      '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n      "hostedState": "applied",\n      "evidenceSource": "",\n      "evidenceNote": "Applied',
+    guard: GUARD,
+    expect: "- REPORT-SCHEMA-FIRST: the generated types describe this migration's objects only",
+  },
+  {
+    id: "RPT-NC-APPLIED-ENTRY-IS-ANOTHER-MIGRATIONS",
+    defect:
+      "the applied entry no longer belongs to THIS migration, so the exemption would be resting on some other migration's state -- the relationship the rule depends on is broken",
+    file: STATE,
+    find: '"file": "20261117090000_bcp_conduct_prompts_and_report.sql",',
+    replace: '"file": "20261117090000_bcp_conduct_prompts_and_report_v2.sql",',
+    guard: GUARD,
+    expect: "- REPORT-SCHEMA-FIRST: the generated types describe this migration's objects only",
+  },
+  {
+    id: "RPT-NC-HANDWRITTEN-CODE-NAMES-THE-REPORT",
+    defect:
+      "hand-written application code names a PR 6 object before the application PR that is meant to consume it -- the premature use this assertion has always refused, and must still refuse now that the generated types are exempt",
+    file: "src/lib/beskt/interview-conduct.functions.ts",
+    find: "export const recordBesktPanelResolution = createServerFn",
+    replace:
+      'const PLANTED_PREMATURE_USE = "bcp_conduct_final_report";\nexport const recordBesktPanelResolution = createServerFn',
+    guard: GUARD,
+    expect: "- REPORT-SCHEMA-FIRST: no application code named an object of this migration",
+  },
 ];
 
 runControls("beskt-conduct-report", MUTATIONS);

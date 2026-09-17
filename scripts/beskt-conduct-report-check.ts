@@ -1134,7 +1134,41 @@ function insertIndex(body: string): number {
     ...PURE_FUNCTIONS,
     ...TRIGGER_FUNCTIONS,
   ];
+  // ── GENERATED TYPES ARE NOT APPLICATION CODE — ONCE, AND ONLY ONCE, THE
+  //    MIGRATION IS PROVEN APPLIED (owner-approved, 2026-09-17) ───────────
+  //
+  // This walked every file under src/ as one set, the generated Supabase
+  // types among them. While the migration was pending that was right: nothing
+  // at all could name these objects. It is applied now, and the generator
+  // reads the hosted schema -- so the next regeneration wrote these objects
+  // into types.ts, as it must, and the assertion went red on main over a file
+  // no person wrote.
+  //
+  // beskt-interview-conduct-check settled the same point for PR 5: "The
+  // migration is applied now, so the types MAY describe the conduct tables
+  // ... the rule that actually binds: application code may not reference an
+  // object whose migration is unapplied." This brings PR 6 to that form, as
+  // two separate assertions:
+  //
+  //   1. HAND-WRITTEN application code may not name these objects. Unchanged,
+  //      unconditional, and still what stops premature use.
+  //   2. The GENERATED types may name them only while release-state PROVES
+  //      this migration applied: THIS file's entry, state "applied", WITH its
+  //      hosted evidence. A bare flip of the state unlocks nothing, and a
+  //      pending migration's objects in types.ts are refused exactly as before.
+  const GENERATED_TYPES = "src/integrations/supabase/types.ts";
+  const release = (
+    JSON.parse(read(RELEASE_STATE)) as {
+      frontier?: Array<{ file?: string; hostedState?: string; evidenceSource?: string }>;
+    }
+  ).frontier?.find((m) => m.file === MIGRATION_NAME);
+  const provenApplied =
+    release?.hostedState === "applied" &&
+    typeof release.evidenceSource === "string" &&
+    release.evidenceSource.trim().length > 0;
+
   const offenders: string[] = [];
+  const generatedOffenders: string[] = [];
   const walk = (dir: string): void => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       const abs = join(dir, entry.name);
@@ -1143,9 +1177,11 @@ function insertIndex(body: string): number {
         continue;
       }
       if (!/\.tsx?$/.test(entry.name)) continue;
+      const rel = abs.slice(ROOT.length + 1);
       const text = readFileSync(abs, "utf8");
       for (const name of names) {
-        if (text.includes(name)) offenders.push(`${abs.slice(ROOT.length + 1)} names ${name}`);
+        if (!text.includes(name)) continue;
+        (rel === GENERATED_TYPES ? generatedOffenders : offenders).push(`${rel} names ${name}`);
       }
     }
   };
@@ -1153,6 +1189,10 @@ function insertIndex(body: string): number {
   check(
     offenders.length === 0,
     `REPORT-SCHEMA-FIRST: no application code named an object of this migration while it was pending; it is applied now, so the application PR that consumes it is release-eligible (${offenders.slice(0, 3).join("; ") || "none"})`,
+  );
+  check(
+    generatedOffenders.length === 0 || provenApplied,
+    `REPORT-SCHEMA-FIRST: the generated types describe this migration's objects only because release-state proves it applied, with hosted evidence (state: ${release?.hostedState ?? "no entry"}; ${generatedOffenders.slice(0, 2).join("; ") || "types name none"})`,
   );
 }
 
