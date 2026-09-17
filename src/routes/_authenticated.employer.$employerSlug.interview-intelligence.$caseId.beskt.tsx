@@ -161,6 +161,36 @@ function Page() {
   const finalFn = useServerFn(getBesktFinalReport);
   const versionsFn = useServerFn(listBesktReportVersions);
 
+  // ── WHY THE PREVIEW IS WITHHELD UNTIL THE DATABASE SAYS OTHERS ARE
+  //    VISIBLE, AND WHY THAT IS A MITIGATION AND NOT A BOUNDARY ─────────
+  //
+  // `bcp_conduct_preview_report` gates on three things: authentication,
+  // the session existing, and `scp_iv_can_read_case`. It does NOT call
+  // `bcp_conduct_may_see_others`, and the helper it delegates to,
+  // `bcp_conduct_build_report_basis`, is SECURITY DEFINER — so it returns
+  // EVERY assessor's entries, bypassing the row policies that carry the
+  // independence rule everywhere else in this surface.
+  //
+  // Nothing called that function before this change, so the gap was
+  // latent. A Report tab that called it unconditionally would make it
+  // reachable: an assessor whose own position is still open could read a
+  // colleague's locked one and anchor on it, which is the single thing
+  // the conduct layer is built to prevent.
+  //
+  // `othersVisible` is the DATABASE's own answer to "may this reader see
+  // other positions yet" — `bcp_conduct_may_see_others`, returned by the
+  // workspace. Gating on it closes the reachable path with the correct
+  // predicate rather than a guess.
+  //
+  // It is still only a mitigation. A crafted request that skips this file
+  // reaches the same RPC, so the real fix is the missing
+  // `bcp_conduct_may_see_others` check inside
+  // `bcp_conduct_preview_report`, which is a schema change and therefore a
+  // separate schema-first PR. Until that is applied, this is what keeps
+  // the product from shipping a reachable route to the hole.
+  // See docs/architecture/beskt-report-preview-independence.md.
+  const othersVisible = workspaceQ.data?.othersVisible === true;
+
   const reportQ = useQuery({
     queryKey: besktReportKey(employerSlug, caseId, sessionId ?? "none"),
     queryFn: async () => {
@@ -172,7 +202,7 @@ function Page() {
       ]);
       return { preview, finalReport, versions };
     },
-    enabled: sessionId !== null && view === "report",
+    enabled: sessionId !== null && view === "report" && othersVisible,
     retry: false,
   });
 
@@ -657,7 +687,15 @@ function Page() {
             />
           ))}
 
+        {view === "report" && !othersVisible && (
+          <Panel tone="neutral" title={t("beskt.report.withheld.title")}>
+            <p>{t("beskt.report.withheld.body")}</p>
+            <p className="mt-2">{t("beskt.report.withheld.whatToDo")}</p>
+          </Panel>
+        )}
+
         {view === "report" &&
+          othersVisible &&
           (reportQ.isLoading ? (
             <State kind="loading" />
           ) : reportQ.isError ? (

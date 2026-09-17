@@ -4306,6 +4306,11 @@ export const dictionaries = {
 
     // ---- PR 6 · rapporten -------------------------------------------------
     "beskt.report.heading": "Rapport",
+    "beskt.report.withheld.title": "Rapporten öppnas när alla underlag är låsta",
+    "beskt.report.withheld.body":
+      "Rapporten vilar på varje bedömares underlag. Den visas först när du har låst ditt eget och ingen annans står kvar öppet — annars skulle du kunna läsa en kollegas anteckningar innan du själv tagit ställning, vilket är just det som oberoendet finns för att förhindra.",
+    "beskt.report.withheld.whatToDo":
+      "Lås ditt underlag under Eget underlag. Är flera bedömare med öppnar panelen underlagen när alla har låst.",
     "beskt.report.lede":
       "Rapporten är en frusen återgivning av det människor har dokumenterat, bunden till metodversionen, kandidatens inlämnade svar och det meddelande kandidaten läste.",
     "beskt.report.print": "Skriv ut",
@@ -11575,6 +11580,11 @@ export const dictionaries = {
 
     // ---- PR 6 · the report ------------------------------------------------
     "beskt.report.heading": "Report",
+    "beskt.report.withheld.title": "The report opens once every record is locked",
+    "beskt.report.withheld.body":
+      "The report rests on every assessor's record. It appears once you have locked your own and nobody else's is still open — otherwise you could read a colleague's notes before taking your own position, which is exactly what independence exists to prevent.",
+    "beskt.report.withheld.whatToDo":
+      "Lock your record under Your record. Where more than one assessor is involved, the panel reveals the records once everyone has locked.",
     "beskt.report.lede":
       "The report is a frozen rendering of what people documented, bound to the method version, the answers the candidate submitted and the notice the candidate read.",
     "beskt.report.print": "Print",

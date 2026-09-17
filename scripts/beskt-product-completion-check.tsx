@@ -272,6 +272,29 @@ ck(
 );
 
 ck(
+  "P2.7b the preview is not fetched until the DATABASE says other positions are visible",
+  // `bcp_conduct_preview_report` gates on case authority alone and its
+  // SECURITY DEFINER helper returns every assessor's entries, so an
+  // unconditional fetch would let an assessor with an open position read a
+  // colleague's locked one. `othersVisible` is the database's own answer
+  // from `bcp_conduct_may_see_others`. A mitigation, not a boundary —
+  // docs/architecture/beskt-report-preview-independence.md, and the fix is
+  // a schema change.
+  /const othersVisible = workspaceQ\.data\?\.othersVisible === true;/.test(conductRouteCode) &&
+    /enabled: sessionId !== null && view === "report" && othersVisible,/.test(conductRouteCode) &&
+    /view === "report" && !othersVisible &&/.test(conductRouteCode),
+  "BESKT_PC_PREVIEW_INDEPENDENCE: an open position must not reach another assessor's record through the report",
+);
+
+ck(
+  "P2.7c the withheld state explains itself rather than rendering an empty report",
+  /beskt\.report\.withheld\.title/.test(conductRouteCode) &&
+    /beskt\.report\.withheld\.body/.test(conductRouteCode) &&
+    /beskt\.report\.withheld\.whatToDo/.test(conductRouteCode),
+  "BESKT_PC_PREVIEW_WITHHELD_SILENT: a withheld report must say why and what to do",
+);
+
+ck(
   "P2.8 the report says on its own face that it is not a decision and carries no score",
   /beskt\.report\.notADecision\.body/.test(reportCode) &&
     /beskt\.report\.notADecision\.noScore/.test(reportCode),

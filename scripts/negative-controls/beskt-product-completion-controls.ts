@@ -211,6 +211,27 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BESKT_PC_REPORT_NO_DISCLAIMER",
   },
 
+  {
+    id: "PC-NC-PREVIEW-INDEPENDENCE",
+    defect:
+      "THE ORIGINAL DEFECT: the report preview is fetched regardless of whether the reader may see other positions, so an assessor with an open position reads a colleague's locked record — the one thing the conduct layer exists to prevent",
+    file: "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.beskt.tsx",
+    find: '    enabled: sessionId !== null && view === "report" && othersVisible,',
+    replace: '    enabled: sessionId !== null && view === "report",',
+    guard: GUARD,
+    expect: "BESKT_PC_PREVIEW_INDEPENDENCE",
+  },
+  {
+    id: "PC-NC-PREVIEW-WITHHELD-SILENT",
+    defect:
+      "the withheld report renders as nothing at all, so an interviewer cannot tell a withheld report from a broken screen",
+    file: "src/routes/_authenticated.employer.$employerSlug.interview-intelligence.$caseId.beskt.tsx",
+    find: '            <p>{t("beskt.report.withheld.body")}</p>',
+    replace: "",
+    guard: GUARD,
+    expect: "BESKT_PC_PREVIEW_WITHHELD_SILENT",
+  },
+
   // ---- P2b · BEHAVIOUR: the limitations --------------------------------
   {
     id: "PC-NC-LIMIT-UNDOCUMENTED-HIDDEN",
