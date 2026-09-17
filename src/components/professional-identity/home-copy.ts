@@ -38,18 +38,8 @@ export const HEADER = {
   title: c("Din karriär, {0}", "Your career, {0}"),
   titleAnon: c("Din karriär", "Your career"),
   lede: c(
-    "Samla dina meriter, stärk ditt Security Passport och hitta nästa steg i säkerhetsbranschen.",
-    "Gather your merits, strengthen your Security Passport and find your next step in the security sector.",
-  ),
-  noTitle: c("Yrkestitel inte ifylld", "Professional title not filled in"),
-  noCountry: c("Arbetsland inte angett", "Work country not set"),
-  editDetails: c("Redigera mina uppgifter", "Edit my details"),
-  /** A fact about answered sections. Never a percentage, never a claim of
-   *  quality: the details are filled in, not good. */
-  basicsComplete: c("Grunduppgifter ifyllda", "Basic details filled in"),
-  selfReported: c(
-    "Uppgifterna här är självrapporterade. Det som är verifierat visas i ditt Security Passport.",
-    "The information here is self-reported. What has been verified is shown in your Security Passport.",
+    "Din profil, ditt CV och ditt Security Passport – och ditt nästa steg i säkerhetsbranschen.",
+    "Your profile, your CV and your Security Passport – and your next step in the security sector.",
   ),
   degraded: c(
     "Delar av din profil kunde inte läsas. Ingenting har tagits bort.",
@@ -60,7 +50,62 @@ export const HEADER = {
     "Resten av sidan visar det som gick att läsa. Ingenting har tagits bort.",
     "The rest of the page shows what could be read. Nothing has been removed.",
   ),
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Profile and CV — two of the three candidate surfaces                */
+/* ------------------------------------------------------------------ */
+
+/** One question per surface, and one action. The third surface, the
+ *  Security Passport, has its own block below. */
+export const SURFACES = {
   loading: c("Hämtar dina uppgifter…", "Loading your details…"),
+  profile: {
+    title: c("Profil", "Profile"),
+    question: c("Vem är jag nu?", "Who am I now?"),
+    edit: c("Redigera profil", "Edit Profile"),
+    addName: c("Lägg till ditt namn", "Add your name"),
+    addTitle: c("Lägg till nuvarande yrkestitel", "Add current professional title"),
+    addCountry: c("Lägg till landet där du arbetar", "Add the country where you work"),
+    /** A fact about answered sections. Never a percentage, never a claim of
+     *  quality: the details are filled in, not good. */
+    complete: c("Grunduppgifter ifyllda", "Basic details filled in"),
+    selfReported: c(
+      "Uppgifterna här är självrapporterade. Det som är verifierat visas i ditt Security Passport.",
+      "The information here is self-reported. What has been verified is shown in your Security Passport.",
+    ),
+    unavailable: c(
+      "Din profil kunde inte läsas just nu. Ingenting har tagits bort.",
+      "Your profile could not be read right now. Nothing has been removed.",
+    ),
+  },
+  cv: {
+    title: c("CV", "CV"),
+    question: c("Vad har jag gjort?", "What have I done?"),
+    edit: c("Redigera CV", "Edit CV"),
+    empty: c(
+      "Inga anställningar, utbildningar, språk eller färdigheter tillagda ännu.",
+      "No employment, education, languages or skills added yet.",
+    ),
+    addEmployment: c("Lägg till en anställning", "Add an employment"),
+    contentUnavailable: c(
+      "Ditt CV-innehåll kunde inte läsas just nu. Ingenting har tagits bort.",
+      "Your CV content could not be read right now. Nothing has been removed.",
+    ),
+    employment: cp(
+      c("{0} anställning", "{0} employment"),
+      c("{0} anställningar", "{0} employments"),
+    ),
+    education: cp(
+      c("{0} utbildning", "{0} education entry"),
+      c("{0} utbildningar", "{0} education entries"),
+    ),
+    languages: cp(c("{0} språk", "{0} language"), c("{0} språk", "{0} languages")),
+    skills: cp(c("{0} färdighet", "{0} skill"), c("{0} färdigheter", "{0} skills")),
+    noDocuments: c("Inget sparat CV-dokument ännu.", "No saved CV document yet."),
+    saved: cp(c("1 sparat CV", "1 saved CV"), c("{0} sparade CV", "{0} saved CVs")),
+    latest: c("senast ändrat {0}", "last changed {0}"),
+  },
 } as const;
 
 /* ------------------------------------------------------------------ */
@@ -91,6 +136,12 @@ export const NEXT_ACTION = {
 
 export const PASSPORT = {
   heading: c("Mitt Security Passport", "My Security Passport"),
+  /** The Passport's one question, stated beside the Profile's and the CV's. */
+  question: c("Vad kan jag dokumentera och dela?", "What can I document and share?"),
+  /** PassportSummary's own heading. The region is already titled "Security
+   *  Passport" by the card above it; this block is the status of what is in
+   *  it, and says so rather than naming the product a second time. */
+  statusHeading: c("Status för dina meriter", "Status of your merits"),
   unreadable: c(
     "Dina meriter kunde inte läsas just nu. Ingenting har tagits bort.",
     "Your merits could not be read right now. Nothing has been removed.",
@@ -138,7 +189,7 @@ export const PASSPORT = {
     "Dina egna uppgifter märks som tillagda av dig. En merit visas som verifierad först när källan själv har bekräftat den. Har CQrityjob granskat ett dokument visas meriten som dokumenterad.",
     "Your own entries are marked as added by you. A merit is shown as verified only once the source itself has confirmed it. Where CQrityjob has reviewed a document, the merit is shown as documented.",
   ),
-  open: c("Öppna mitt Security Passport", "Open my Security Passport"),
+  open: c("Öppna Security Passport", "Open Security Passport"),
   /** The contents preview beneath the card. The owner's correction: status
    *  totals say what STATE the Passport is in; they do not say what is in
    *  it. This names the contents. */
@@ -538,12 +589,12 @@ export const LINK_EARLIER = {
 
 /** Kept for the profile page's own hero, which shares this module. */
 export const GREETING = {
-  noTitle: HEADER.noTitle,
+  noTitle: c("Yrkestitel inte ifylld", "Professional title not filled in"),
   experienceYears: c("{0} års erfarenhet", "{0} years of experience"),
   viewProfile: c("Visa profil", "View profile"),
   editProfile: c("Redigera profil", "Edit profile"),
-  basicsComplete: HEADER.basicsComplete,
-  selfReported: HEADER.selfReported,
+  basicsComplete: SURFACES.profile.complete,
+  selfReported: SURFACES.profile.selfReported,
   degraded: HEADER.degraded,
   retry: COMMON.retry,
   welcome: c("Välkommen tillbaka, {0}", "Welcome back, {0}"),
@@ -608,18 +659,6 @@ export const HUB_TILE = {
   loading: c("Hämtar…", "Loading…"),
   unavailable: c("Kunde inte hämtas just nu.", "Could not be loaded right now."),
   retry: COMMON.retry,
-
-  cv: {
-    title: c("CV", "CV"),
-    none: c(
-      "Du har inget sparat CV ännu. Ett CV byggs av de meriter du redan har registrerat.",
-      "You have no saved CV yet. A CV is built from the merits you have already recorded.",
-    ),
-    saved: cp(c("1 sparat CV", "1 saved CV"), c("{0} sparade CV", "{0} saved CVs")),
-    latest: c("Senast ändrat {0}", "Last changed {0}"),
-    create: c("Skapa mitt första CV", "Create my first CV"),
-    open: c("Öppna mina CV", "Open my CVs"),
-  },
 
   discovery: {
     title: c("Karriäranalys", "Career analysis"),

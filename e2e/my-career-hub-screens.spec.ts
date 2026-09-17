@@ -77,10 +77,14 @@ test.describe("PR #211 · the hub", () => {
     await settled(page);
     await page.screenshot({ path: `${OUT}/05-new-candidate-1440-sv.png`, fullPage: true });
 
-    // Four empty modules, four different sentences, four live invitations —
-    // and not one of them a failure state.
-    await expect(page.locator("[data-hub-module]")).toHaveCount(4);
-    await expect(page.locator("[data-hub-go]")).toHaveCount(4);
+    // Two surface cards and three empty modules, each with its own sentence
+    // and its own live invitation — and not one of them a failure state.
+    // (The CV was the fourth module; it is a surface of its own now.)
+    await expect(page.locator("[data-overview-surface]")).toHaveCount(2);
+    await expect(page.locator("[data-edit-details]")).toHaveCount(1);
+    await expect(page.locator("[data-edit-cv]")).toHaveCount(1);
+    await expect(page.locator("[data-hub-module]")).toHaveCount(3);
+    await expect(page.locator("[data-hub-go]")).toHaveCount(3);
     await expect(page.locator('[role="alert"]')).toHaveCount(0);
 
     await page.setViewportSize(MOBILE);
@@ -110,18 +114,20 @@ test.describe("PR #211 · the hub", () => {
     await page.waitForTimeout(900);
     await page.screenshot({ path: `${OUT}/08-unavailable-1440-sv.png`, fullPage: true });
 
-    // Two modules failed and say so with a retry; the other two are
-    // untouched, which is the whole point of per-source state.
-    await expect(page.locator('[data-hub-module="cv"] [data-failed]')).toBeVisible();
+    // Two reads failed and say so with a retry; everything else is
+    // untouched, which is the whole point of per-source state. The CV card
+    // loses its DOCUMENTS line only -- its content summary comes from the
+    // identity read, which answered, and "Edit CV" is still offered.
+    const cv = page.locator('[data-overview-surface="cv"]');
+    await expect(cv.locator("[data-failed]")).toBeVisible();
     await expect(page.locator('[data-hub-module="sharing"] [data-failed]')).toBeVisible();
-    await expect(page.locator('[data-hub-module="cv"] [data-retry]')).toBeVisible();
+    await expect(cv.locator("[data-retry]")).toBeVisible();
+    await expect(cv.locator("[data-edit-cv]")).toBeVisible();
     await expect(page.locator('[data-hub-module="applications"]')).toContainText(
       "aktiva ansökningar",
     );
     // Never "you have none" for a read that failed.
-    await expect(page.locator('[data-hub-module="cv"]')).not.toContainText(
-      "Du har inget sparat CV",
-    );
+    await expect(cv).not.toContainText("Inget sparat CV-dokument");
   });
 
   // ── THE DESTINATIONS, REACHED BY CLICKING ───────────────────────────

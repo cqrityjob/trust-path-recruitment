@@ -21,6 +21,10 @@ import { NextBestAction } from "@/components/professional-identity/NextBestActio
 import { PassportSummary } from "@/components/professional-identity/PassportSummary";
 import { HubStatusGrid } from "@/components/professional-identity/HubStatusGrid";
 import { OverviewPassportCard } from "@/components/professional-identity/OverviewPassportCard";
+import {
+  OverviewCvCard,
+  OverviewProfileCard,
+} from "@/components/professional-identity/OverviewSurfaces";
 import { RecentActivity } from "@/components/professional-identity/RecentActivity";
 import { LinkEarlierResult } from "@/components/professional-identity/LinkEarlierResult";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
@@ -73,10 +77,19 @@ const CLAIMED = {
  *
  * ONE PERSON → ONE PROFESSIONAL IDENTITY → ONE MOST IMPORTANT NEXT STEP.
  *
- * Three questions, answered in this order, above the fold: who am I in the
- * security industry (CareerPageHeader), what is my one most useful step
- * (NextBestAction), and what has actually been established about me
- * (PassportSummary). That part is #190's and is unchanged.
+ * ── THREE SURFACES, VISIBLE AT ONCE ────────────────────────────────────
+ *
+ * A candidate's information lives on exactly three surfaces, and the first
+ * screen of this page names all three with one action each:
+ *
+ *   Profile            who am I now?                  → Edit Profile
+ *   CV                 what have I done?              → Edit CV
+ *   Security Passport  what can I document and share? → Open Security Passport
+ *
+ * Profile and CV are the two cards under the greeting; the Passport is the
+ * column beside them. Then the one most useful step (NextBestAction), and a
+ * status line for each remaining area. The overview summarises and
+ * navigates -- it edits nothing, and no card here is a second editor.
  *
  * ── WHAT #211 TOOK OFF THIS PAGE ───────────────────────────────────────
  *
@@ -527,6 +540,25 @@ function MyCareerPage() {
         <div className="min-w-0 lg:col-span-8">
           <CareerPageHeader profile={model.profile} onRetry={retryIdentity} />
 
+          {/* ── PROFILE AND CV ─────────────────────────────────────────
+              Two of the three surfaces; the third is the column on the
+              right. Summaries with one action each -- "Edit Profile" and
+              "Edit CV" -- and a missing fact is a link to the field that
+              fills it. Source order is mobile order: Profile, then CV. */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-2" data-overview-surfaces>
+            <OverviewProfileCard
+              profile={model.profile}
+              displayName={identityQ.data?.displayName ?? null}
+              onRetry={retryIdentity}
+            />
+            <OverviewCvCard
+              identity={identityQ.data ?? null}
+              identityState={identityInput.state === "error" ? "unavailable" : identityInput.state}
+              cv={model.cv}
+              onRetryCv={() => void cvsQ.refetch()}
+            />
+          </div>
+
           <NextBestAction
             // h-full was for the old side-by-side pair, where this card had
             // to match the height of the Passport summary beside it. It now
@@ -539,7 +571,6 @@ function MyCareerPage() {
           />
 
           <HubStatusGrid
-            cv={model.cv}
             career={model.career}
             careerClosed={assessmentClosed}
             // Offered ONLY when the analysis named a family AND that family
@@ -549,7 +580,6 @@ function MyCareerPage() {
             careerJobsFamilyId={model.jobs.state === "filtered" ? (familyId ?? null) : null}
             applications={model.applications}
             sharing={model.sharing}
-            onRetryCv={() => void cvsQ.refetch()}
             onRetryCareer={() => {
               void activeQ.refetch();
               void storedReportQ.refetch();
@@ -607,14 +637,14 @@ function MyCareerPage() {
           </div>
         </div>
 
-        {/* ── RIGHT · MITT SECURITY PASSPORT ─────────────────────────
-            The visual card first, then what the Passport actually
-            contains, then ONE way in. A person should be able to read
-            this column and know: this is mine, this is what is in it,
-            this is its verification state, this is where I open it. */}
+        {/* ── RIGHT · SECURITY PASSPORT ──────────────────────────────
+            The third surface. The premium card first -- a read-only
+            summary of the holder's own Passport -- then the status of
+            what is in it, then ONE way in. A preview and a shortcut:
+            nothing is edited, added or shared from here. */}
         <aside
           className="min-w-0 lg:col-span-4"
-          aria-label={lang === "sv" ? "Mitt Security Passport" : "My Security Passport"}
+          aria-label="Security Passport"
           data-overview-passport-region
         >
           <OverviewPassportCard lang={lang as Lang} />

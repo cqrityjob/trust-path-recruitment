@@ -72,7 +72,15 @@ function readReturnToPassport(): boolean {
   return new URLSearchParams(window.location.search).get("from") === "passport";
 }
 
-export function SecurityCareerProfileCard() {
+export function SecurityCareerProfileCard({
+  editLabel,
+}: {
+  /** What the edit button says when there is something to edit. The default
+   *  is "Edit profile", which is right on a dashboard and ambiguous on the
+   *  Profile page itself, where three editors stand side by side and the
+   *  button has to say WHICH part it opens. */
+  editLabel?: string;
+} = {}) {
   const { t, lang } = useT();
   const [draft, setDraft] = useState<SecurityCareerProfileDraft>(
     EMPTY_SECURITY_CAREER_PROFILE_DRAFT,
@@ -262,7 +270,7 @@ export function SecurityCareerProfileCard() {
         className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-        {rows.length > 0 ? t("sca.scp.summary.edit") : t("sca.scp.summary.fillIn")}
+        {rows.length > 0 ? (editLabel ?? t("sca.scp.summary.edit")) : t("sca.scp.summary.fillIn")}
       </button>
 
       <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">

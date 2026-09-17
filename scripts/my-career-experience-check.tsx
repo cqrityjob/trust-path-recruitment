@@ -41,6 +41,8 @@ await mock.module("@tanstack/react-router", () => ({
 const { I18nProvider } = await import("../src/i18n/context");
 const { CareerPageHeader } =
   await import("../src/components/professional-identity/CareerPageHeader");
+const { OverviewProfileCard } =
+  await import("../src/components/professional-identity/OverviewSurfaces");
 const { NextBestAction } = await import("../src/components/professional-identity/NextBestAction");
 const { PassportSummary } = await import("../src/components/professional-identity/PassportSummary");
 const { CareerDirectionSection } =
@@ -130,6 +132,15 @@ function renderPage(i: HomePresentationInput) {
   const retry = () => {};
   const html =
     render(<CareerPageHeader profile={m.profile} onRetry={retry} />) +
+    // The Profile card states who the person is since the identity row left
+    // the header; mounted here exactly as the route mounts it.
+    render(
+      <OverviewProfileCard
+        profile={m.profile}
+        displayName={i.identity.state === "ready" ? i.identity.identity.displayName : null}
+        onRetry={retry}
+      />,
+    ) +
     render(<NextBestAction next={m.nextAction} onRetry={retry} />) +
     render(<PassportSummary passport={m.passport} onRetry={retry} />) +
     render(<CareerDirectionSection career={m.career} onRetry={retry} />) +
@@ -340,10 +351,20 @@ group("5 · no identifier reaches the screen");
   ck("the bare country code is never printed as a value", !/>\s*AE\s*</.test(all));
   ck("the emirate is named", home.includes("Dubai"));
   ck("the career header never prints the stored experience band", !/5-10/.test(home));
-  const profilePage = code(read("src/routes/_authenticated.my-career.profile.tsx"));
+  // The band is stated by the Profile page's hero since the section index
+  // that used to print it was removed. RENDERED, not only grepped: the stored
+  // id must not reach the markup as a value.
+  const profileHero = render(<ProfessionalIdentityHeader identity={DUBAI} variant="profile" />);
+  const band = DUBAI.yearsOfExperience;
   ck(
     "the profile page resolves the experience band through its catalogue",
-    profilePage.includes("yearsOfExperienceOptions"),
+    code(read("src/components/professional-identity/ProfessionalIdentityHeader.tsx")).includes(
+      "yearsOfExperienceOptions",
+    ) &&
+      (!band ||
+        (!profileHero.includes(`${band} års`) &&
+          !profileHero.includes(`${band} years`) &&
+          !profileHero.includes(`${band} of experience`))),
   );
 }
 

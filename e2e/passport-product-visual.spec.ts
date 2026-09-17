@@ -411,15 +411,13 @@ for (const lang of ["en", "sv"] as const) {
     await expect(page.locator("[data-verification-history]")).toContainText("2026-09-10");
     await expect(page.locator("[data-verification-history]")).not.toContainText("2026-09-09");
     await capture("credential-detail");
+    // /passport/card was a second preview whose selection the sharing flow
+    // never received. It redirects to Preview and share, which is where the
+    // recipient-style Passport lives.
     await page.goto(`${base}/passport/card`);
-    await expect(page.locator("[data-compact-passport-card]")).toContainText(
-      lang === "sv" ? "0 valda" : "0 selected",
-    );
-    await page.getByRole("checkbox").nth(0).check();
-    await page.getByRole("checkbox").nth(1).check();
-    await capture("passport-preview");
-    await page.goto(`${base}/passport/share`);
+    await expect(page).toHaveURL(/\/passport\/share$/);
     await expect(page.locator("[data-share-screen]")).toBeVisible();
+    await capture("passport-preview");
     await expect(
       page.getByLabel(
         lang === "sv"

@@ -90,13 +90,14 @@ export const Route = createFileRoute("/_authenticated/passport/information")({
  *  them as Utbildning / Språk / Färdigheter. So the single source of truth
  *  the review asks for is already in place; what was missing was this page
  *  saying which of the two products each section belongs to. */
-/** Where the general profile/CV editors live.
+/** Where the CV-content editors live: employment, education, languages and
+ *  skills are edited on the CV page, under "CV content".
  *
- *  Deliberately NOT `CAREER_PROFILE_ROUTE`, which is "/my-career" -- the
- *  overview. Education, languages and skills are edited one level down, on
- *  the profile page, and pointing at the overview would land the reader on
- *  a page that does not contain what the link promised. */
-const GENERAL_PROFILE_ROUTE = "/my-career/profile" as const;
+ *  They stood on /my-career/profile between 2026-09-14 and 2026-09-17, when
+ *  the owner separated Profile (who am I now) from CV (what have I done).
+ *  Deliberately NOT `CAREER_PROFILE_ROUTE`, which is the overview and does
+ *  not contain what the link promises. */
+const GENERAL_PROFILE_ROUTE = "/my-career/cv" as const;
 
 /** The section row's destinations. Employment first because it is the
  *  first section on the page, then the credential sections in the order
@@ -407,12 +408,12 @@ function PassportInformationRoute() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const moved: Readonly<Record<string, string>> = {
-      "#sp-education": "profile-education",
-      "#sp-training": "profile-training",
-      "#sp-specialisation": "profile-specialisation",
-      "#sp-professional_membership": "profile-professional_membership",
-      "#sp-languages": "profile-languages",
-      "#sp-skills": "profile-skills",
+      "#sp-education": "cv-education",
+      "#sp-training": "cv-training",
+      "#sp-specialisation": "cv-specialisation",
+      "#sp-professional_membership": "cv-professional_membership",
+      "#sp-languages": "cv-languages",
+      "#sp-skills": "cv-skills",
     };
     const hash = window.location.hash;
     const target = moved[hash];
@@ -895,8 +896,8 @@ function PassportInformationRoute() {
       >
         <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
           <Link
-            to="/my-career/profile"
-            hash="profile-employment"
+            to={GENERAL_PROFILE_ROUTE}
+            hash="cv-employment"
             data-employment-authoring-link
             className="font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >

@@ -27,7 +27,8 @@ import { runControls, type Mutation } from "./runner";
 const INFO = "src/routes/_authenticated.passport.information.tsx";
 const I18N = "src/lib/security-passport/i18n.ts";
 const EDITOR = "src/components/professional-identity/GeneralProfileClaims.tsx";
-const PROFILE = "src/routes/_authenticated.my-career.profile.tsx";
+const CV_PAGE = "src/routes/_authenticated.my-career.cv.index.tsx";
+const CV_COPY = "src/components/professional-identity/cv-copy.ts";
 const DESTINATIONS = "src/lib/professional-identity/profile-destinations.ts";
 const GUARD = "passport-cv-boundary:check";
 
@@ -71,12 +72,12 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PCB-NC-EDITOR-NEVER-MOUNTED",
     defect:
-      "the editors leave the Passport but are never mounted on the profile, so the fields become uneditable anywhere -- the failure a relabel cannot have and a move can",
-    file: PROFILE,
-    find: "                <GeneralProfileClaims />",
+      "the editors leave the Passport but are never mounted on the CV page, so the fields become uneditable anywhere -- the failure a relabel cannot have and a move can",
+    file: CV_PAGE,
+    find: "            <GeneralProfileClaims onChanged={contentChanged} />",
     replace: "",
     guard: GUARD,
-    expect: "the profile page mounts the general profile/CV editors",
+    expect: "the CV page mounts the general CV editors",
   },
   {
     id: "PCB-NC-CREDENTIAL-ANCHOR-VANISHES",
@@ -128,7 +129,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the retired #sp-education fragment is no longer redirected, so a bookmark or a recommended next step opens the Passport at the top with no sign the section moved",
     file: INFO,
-    find: '      "#sp-education": "profile-education",\n',
+    find: '      "#sp-education": "cv-education",\n',
     replace: "",
     guard: GUARD,
     expect: "#sp-education deep link is redirected",
@@ -148,31 +149,31 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "profile-destinations still routes education into the Passport, so every recommended next step sends the candidate to the page the editor left",
     file: DESTINATIONS,
-    find: '  education: { owner: "profile", href: "/my-career/profile#profile-education" },',
+    find: '  education: { owner: "cv", href: "/my-career/cv#cv-education" },',
     replace: '  education: { owner: "passport", href: "/passport/information#sp-education" },',
     guard: GUARD,
-    expect: "profile-destinations routes education to the profile editor",
+    expect: "profile-destinations routes education to the CV editor",
   },
   {
     id: "PCB-NC-ANCHOR-MISSING",
     defect:
       "the languages anchor is dropped from the moved editor, so the destination's deep link names nothing and lands at the top of the profile",
     file: EDITOR,
-    find: '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "profile-languages" },',
+    find: '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "cv-languages" },',
     replace:
       '{ kind: "language" as const, titleKey: "info.languages" as const, anchor: "languages" },',
     guard: GUARD,
-    expect: "profile-languages is a real id",
+    expect: "cv-languages is a real id",
   },
   {
     id: "PCB-NC-LINK-TO-OVERVIEW",
     defect:
       "the Passport's pointer aims at /my-career, which is the Overview -- a reader who follows it never reaches the editor it promised",
     file: INFO,
-    find: 'const GENERAL_PROFILE_ROUTE = "/my-career/profile" as const;',
+    find: 'const GENERAL_PROFILE_ROUTE = "/my-career/cv" as const;',
     replace: 'const GENERAL_PROFILE_ROUTE = "/my-career" as const;',
     guard: GUARD,
-    expect: "points at the profile PAGE, not the overview",
+    expect: "points at the CV PAGE",
   },
   {
     id: "PCB-NC-POINTER-REMOVED",
@@ -182,28 +183,28 @@ const MUTATIONS: readonly Mutation[] = [
     find: '        {pt("info.generalMoved")}{" "}',
     replace: "",
     guard: GUARD,
-    expect: "it links to the profile instead",
+    expect: "it links to the CV content instead",
   },
 
   /* ── THE TWO PAGES TELLING ONE STORY, IN TWO LANGUAGES ─────────────── */
   {
     id: "PCB-NC-PAGES-CONTRADICT",
     defect:
-      "the profile page goes back to saying education and languages LIVE in the Security Passport, so the two pages tell the candidate different things about the same facts",
-    file: PROFILE,
-    find: '    "Anställningar och säkerhetsintyg är bevisning i ditt Security Passport och redigeras där. Utbildning, språk och färdigheter hör till din profil och ditt CV, redigeras här nedan och är inte säkerhetsbevisning.',
+      "the CV page goes back to saying education and languages LIVE in the Security Passport, so the two pages tell the candidate different things about the same facts",
+    file: CV_COPY,
+    find: '    "Anställningar, utbildning, språk och färdigheter hör till ditt CV och redigeras här nedan. De är inte säkerhetsbevisning.',
     replace:
       '    "Anställningar, utbildningar, intyg och språk bor i Security Passport. Där kan de granskas och verifieras — vilket en profiluppgift aldrig kan.',
     guard: GUARD,
-    expect: "no longer says education and languages LIVE in the Passport",
+    expect: "neither page says education and languages LIVE in the Passport",
   },
   {
     id: "PCB-NC-EN-DENIAL-DRIFTS",
     defect:
       "the English Passport pointer loses the denial the Swedish one keeps, so the boundary is stated to Swedish readers only",
     file: I18N,
-    find: "belong to your profile and CV, are edited there, and are not security evidence.",
-    replace: "belong to your profile and CV, and are edited there.",
+    find: "belong to your CV, are edited there, and are not security evidence.",
+    replace: "belong to your CV, and are edited there.",
     guard: GUARD,
     expect: "so does the English one",
   },
@@ -212,8 +213,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Swedish Passport pointer loses the denial the English one keeps -- the same drift in the other direction, which a one-language assertion would miss",
     file: I18N,
-    find: "hör till din profil och ditt CV, redigeras där och är inte säkerhetsbevisning.",
-    replace: "hör till din profil och ditt CV och redigeras där.",
+    find: "hör till ditt CV, redigeras där och är inte säkerhetsbevisning.",
+    replace: "hör till ditt CV och redigeras där.",
     guard: GUARD,
     expect: "the Swedish Passport pointer also says these are not security evidence",
   },
@@ -222,11 +223,21 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the removed CV region's copy keys come back, which is how the region itself gets quietly reinstated on the Passport page later",
     file: I18N,
-    find: '  "info.generalMovedLink": "Open profile and CV information",',
+    find: '  "info.generalMovedLink": "Open CV content",',
     replace:
-      '  "info.generalMovedLink": "Open profile and CV information",\n  "info.cvSection.title": "Profile and CV information",',
+      '  "info.generalMovedLink": "Open CV content",\n  "info.cvSection.title": "Profile and CV information",',
     guard: GUARD,
     expect: "copy keys are deleted rather than orphaned",
+  },
+  {
+    id: "PCB-NC-CV-SENTENCE-NOT-RENDERED",
+    defect:
+      "the ownership sentence stays authored in the copy table but is no longer rendered on the CV page, so a guard that read only the copy would go on passing over a page that says nothing",
+    file: CV_PAGE,
+    find: "            {L(CV.contentLede, l)}",
+    replace: "",
+    guard: GUARD,
+    expect: "actually rendered on the CV page",
   },
 ];
 

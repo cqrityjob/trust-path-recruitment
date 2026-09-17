@@ -12,13 +12,12 @@
 import { Link } from "@tanstack/react-router";
 import { meritFigures } from "@/lib/professional-identity/merit-figures";
 import type { MeritCounts } from "@/lib/professional-identity/passport-merits";
-import { ArrowRight, IdCard, Info } from "lucide-react";
+import { ArrowRight, Info } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { PassportSummaryModel } from "@/lib/professional-identity/home-presentation";
 import { L, Lp, type Lang } from "./copy";
 import { PASSPORT } from "./home-copy";
 import { Failed, Loading } from "./home-primitives";
-import { LINK } from "./home-format";
 
 function Count({
   value,
@@ -62,6 +61,13 @@ function Count({
   );
 }
 
+/** The region's ONE action, and therefore a button rather than a text link:
+ *  Profile has "Edit Profile", the CV has "Edit CV", and the Passport's way
+ *  in has to read as their equal. Filled, because of the three it is the one
+ *  that opens a product rather than an editor. */
+const OPEN =
+  "inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
 /** Zeroes for the branches that render no figures at all. `meritFigures` is
  *  total, so the call is unconditional and the render is not. */
 const EMPTY_COUNTS: MeritCounts = {
@@ -98,16 +104,12 @@ export function PassportSummary({
       data-passport-state={passport.state}
       className={className}
     >
-      <article className="flex h-full flex-col rounded-xl border border-border bg-card p-6 md:p-7">
+      <article className="flex h-full flex-col rounded-xl border border-border bg-card p-5 md:p-6">
         <h2
           id="passport-summary-heading"
-          className="flex items-center gap-2 text-lg font-semibold tracking-tight text-foreground"
-          style={{ fontFamily: "var(--font-display)" }}
+          className="text-sm font-semibold tracking-tight text-foreground"
         >
-          <span className="text-accent" aria-hidden="true">
-            <IdCard className="h-5 w-5" />
-          </span>
-          {L(PASSPORT.heading, l)}
+          {L(PASSPORT.statusHeading, l)}
         </h2>
 
         {passport.state === "loading" ? (
@@ -188,7 +190,7 @@ export function PassportSummary({
             remove. (The route is deliberately not named in this file —
             my-career-dashboard-check asserts its absence here.) */}
         <div className="mt-auto pt-5">
-          <Link to="/passport" className={LINK} data-cta="overview-open-passport">
+          <Link to="/passport" className={OPEN} data-cta="overview-open-passport">
             {L(PASSPORT.open, l)}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>

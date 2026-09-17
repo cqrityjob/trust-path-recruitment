@@ -79,7 +79,10 @@ export function CredentialWallet({
           aria-hidden="true"
           className="passport-grid absolute top-0 right-0 h-full w-52 border-l border-primary-foreground/10 opacity-25"
         />
-        <div className="relative grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        {/* The identity takes the full width and the actions sit on their own
+            row beneath it. Side by side, the two buttons took whatever the
+            name needed: "Amina Karlsson" wrapped to "Karlss / on" at 1440. */}
+        <div className="relative grid min-w-0 gap-6">
           <div className="grid min-w-0 grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-4 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-5">
             <div className="flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-lg border border-primary-foreground/20 bg-primary-foreground/10 text-xl font-semibold text-primary-foreground shadow-[var(--shadow-md)] sm:h-[5.5rem] sm:w-[5.5rem] sm:text-2xl">
               {identity?.displayName
@@ -90,30 +93,36 @@ export function CredentialWallet({
                 .join("") || "CQ"}
             </div>
             <div className="min-w-0">
-              <p className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.14em] text-primary-foreground/65">
+              <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[.14em] text-primary-foreground/65">
                 <Lock size={12} aria-hidden="true" />
                 Security Passport
               </p>
               <h1
                 id="credential-wallet-heading"
-                className="break-words text-3xl font-semibold !text-primary-foreground sm:text-[2.75rem]"
+                className="text-[1.75rem] font-semibold leading-tight text-balance !text-primary-foreground [overflow-wrap:anywhere] sm:text-[2.5rem]"
               >
                 {identity?.displayName || copy("Mitt Security Passport", "My Security Passport")}
               </h1>
-              <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-primary-foreground/80">
-                {title ||
-                  copy(
-                    "Komplettera din yrkestitel i Profil",
-                    "Add your professional title in Profile",
-                  )}{" "}
-                <span className="inline-flex items-center gap-1 text-xs text-primary-foreground/55">
-                  <UserRound size={12} aria-hidden="true" />
-                  {copy("från Profil", "from Profile")}
-                </span>
+              <p className="mt-2 text-primary-foreground/80">
+                {title || copy("Ingen yrkestitel angiven", "No professional title stated")}
               </p>
+              {/* Shown here, edited there. The name and the title are Profile
+                  facts: the Passport displays them and has no editor for
+                  either, so the way to change one is a link to the field. */}
+              <Link
+                to="/my-career/profile"
+                hash="profile-basics"
+                data-cta="edit-in-profile"
+                className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-primary-foreground/65 underline-offset-4 transition-colors hover:text-primary-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <UserRound size={12} aria-hidden="true" />
+                {title
+                  ? copy("Namn och titel ändras i Profil", "Name and title are edited in Profile")
+                  : copy("Lägg till yrkestitel i Profil", "Add professional title in Profile")}
+              </Link>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Link
               to="/passport/credentials/new"
               className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-foreground px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
@@ -127,15 +136,18 @@ export function CredentialWallet({
               className="inline-flex min-h-11 items-center gap-2 rounded-md border border-primary-foreground/25 px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <Share2 size={16} aria-hidden="true" />
-              {copy("Välj och dela", "Select and share")}
+              {copy("Förhandsvisa och dela", "Preview and share")}
             </Link>
           </div>
         </div>
-        <div className="relative mt-8 border-t border-primary-foreground/15 pt-4">
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/45">
+        <div className="relative mt-7 border-t border-primary-foreground/15 pt-4">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/60">
             {copy("Din professionella dokumentation", "Your professional records")}
           </p>
-          <dl className="flex flex-wrap gap-x-5 gap-y-2">
+          {/* A grid, not a wrapping row: five figures in a flex row broke after
+              the fourth at 1440 and left one orphan on a line of its own. Two
+              columns on a phone, five across from `sm`. */}
+          <dl className="grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-5">
             {[
               [active.length, copy("Aktiva meriter", "Active credentials")],
               [verified, copy("Granskade dokument", "Documents reviewed")],
@@ -151,12 +163,12 @@ export function CredentialWallet({
             ].map(([value, label]) => (
               <div
                 key={label}
-                className="flex min-w-0 items-baseline gap-2 border-primary-foreground/15 sm:border-l sm:pl-5 sm:first:border-l-0 sm:first:pl-0"
+                className="flex min-w-0 flex-col border-primary-foreground/15 sm:border-l sm:pl-4 sm:first:border-l-0 sm:first:pl-0"
               >
-                <dd className="text-sm font-semibold tabular-nums text-primary-foreground/90">
+                <dd className="text-xl font-semibold tabular-nums text-primary-foreground">
                   {value}
                 </dd>
-                <dt className="text-[11px] leading-snug text-primary-foreground/45">{label}</dt>
+                <dt className="text-[11px] leading-snug text-primary-foreground/65">{label}</dt>
               </div>
             ))}
           </dl>
@@ -227,8 +239,8 @@ export function CredentialWallet({
                           state={credentialPresentationOf(c, row.lifecycle)}
                           name={lang === "sv" ? c.titleSv : c.titleEn || c.titleSv}
                           decorative
-                          size={52}
-                          className="relative z-10"
+                          size={42}
+                          className="relative z-10 sm:h-[52px] sm:w-[52px]"
                         />
                       }
                       eyebrow={CREDENTIAL_CLASSES[credentialClass(c, detail)][lang]}

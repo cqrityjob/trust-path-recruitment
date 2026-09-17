@@ -843,6 +843,13 @@ const sv = {
   "basics.selfReported":
     "Det här är uppgifter du själv har lämnat. Ingen har kontrollerat dem, och att spara dem gör dem inte verifierade. Dina behörigheter och kontroller påverkas inte.",
   "basics.save": "Spara grunduppgifter",
+  "basics.compactTitle": "Namn och yrkestitel",
+  "basics.compactLead":
+    "Så presenteras du i ditt CV och i ditt Security Passport. Du har skrivit uppgifterna själv – ingen har granskat dem.",
+  "basics.compactNamePlaceholder": "Lägg till ditt namn",
+  "basics.compactTitlePlaceholder": "Lägg till nuvarande yrkestitel",
+  "basics.compactSave": "Spara",
+  "basics.compactCancel": "Avbryt",
   "basics.savedNotice": "Dina grunduppgifter är sparade.",
   // Named after what they change, not after where the control happens to sit.
   "basics.editWorkCountry": "Ändra arbetsland",
@@ -1003,8 +1010,8 @@ const sv = {
   // this heading changes is what the page CLAIMS about them.
   // The Passport MAY point at the profile; it may not edit there.
   "info.generalMoved":
-    "Utbildning, språk och färdigheter — körkort inräknat — hör till din profil och ditt CV, redigeras där och är inte säkerhetsbevisning.",
-  "info.generalMovedLink": "Öppna profil- och CV-uppgifter",
+    "Utbildning, språk och färdigheter — körkort inräknat — hör till ditt CV, redigeras där och är inte säkerhetsbevisning.",
+  "info.generalMovedLink": "Öppna CV-innehåll",
   "ev.retry": "Försök igen",
   "ev.stored": "Dokumentet ligger kvar i ditt Passport tills du tar bort det.",
   "ev.linkShort":
@@ -2899,6 +2906,13 @@ const en: Record<PassportCopyKey, string> = {
   "basics.selfReported":
     "This is information you have given about yourself. Nobody has checked it, and saving it does not make it verified. Your authorisations and reviews are unaffected.",
   "basics.save": "Save profile basics",
+  "basics.compactTitle": "Name and professional title",
+  "basics.compactLead":
+    "How you are presented on your CV and in your Security Passport. You wrote this yourself – nobody has reviewed it.",
+  "basics.compactNamePlaceholder": "Add your name",
+  "basics.compactTitlePlaceholder": "Add current professional title",
+  "basics.compactSave": "Save",
+  "basics.compactCancel": "Cancel",
   "basics.savedNotice": "Your profile basics have been saved.",
   "basics.editWorkCountry": "Change work country",
   "basics.workCountryUnset": "Work country not stated.",
@@ -3032,8 +3046,8 @@ const en: Record<PassportCopyKey, string> = {
   "ev.saved": "Document uploaded and saved.",
   "ev.savedState": "The entry is now Document provided — not Verified.",
   "info.generalMoved":
-    "Education, languages and skills — driving licence among them — belong to your profile and CV, are edited there, and are not security evidence.",
-  "info.generalMovedLink": "Open profile and CV information",
+    "Education, languages and skills — driving licence among them — belong to your CV, are edited there, and are not security evidence.",
+  "info.generalMovedLink": "Open CV content",
   "ev.retry": "Try again",
   "ev.stored": "The document stays in your Passport until you remove it.",
   "ev.linkShort":

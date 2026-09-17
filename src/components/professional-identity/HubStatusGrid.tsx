@@ -1,5 +1,14 @@
-// The hub's four compact status modules: CV, Career analysis, Applications
-// and Sharing.
+// The hub's three compact status modules: Career analysis, Applications and
+// Sharing.
+//
+// ── WHERE THE CV MODULE WENT ───────────────────────────────────────────
+//
+// It was the first of four here, one status tile among equals. The CV is
+// not a status: it is one of the three surfaces a candidate's information
+// lives on, beside the Profile and the Security Passport, and the overview
+// now presents it as one -- OverviewCvCard in OverviewSurfaces.tsx, with
+// its own "Edit CV" action. What is left here are the three areas that
+// genuinely are "one fact and one way in".
 //
 // ── WHAT THESE REPLACED ────────────────────────────────────────────────
 //
@@ -40,12 +49,11 @@
 // disabled button — the three ways a dashboard tile lies about what it is.
 
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, FileText, Compass, Send, Share2 } from "lucide-react";
+import { ArrowRight, Compass, Send, Share2 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type {
   ApplicationsModel,
-  CvModel,
   SharingModel,
 } from "@/lib/professional-identity/home-presentation";
 import type { CareerDirection } from "@/lib/professional-identity/career-direction";
@@ -130,19 +138,16 @@ function ModuleLoading({ label }: { label: string }) {
 }
 
 export function HubStatusGrid({
-  cv,
   career,
   careerClosed,
   careerJobsFamilyId,
   applications,
   sharing,
-  onRetryCv,
   onRetryCareer,
   onRetryApplications,
   onRetrySharing,
   className,
 }: {
-  cv: CvModel;
   career: CareerDirection;
   /** Career Discovery is not open to this candidate. An empty module must
    *  then say so rather than offering a button that refuses. */
@@ -158,7 +163,6 @@ export function HubStatusGrid({
   careerJobsFamilyId: string | null;
   applications: ApplicationsModel;
   sharing: SharingModel;
-  onRetryCv: () => void;
   onRetryCareer: () => void;
   onRetryApplications: () => void;
   onRetrySharing: () => void;
@@ -170,45 +174,7 @@ export function HubStatusGrid({
   const unavailable = L(HUB_TILE.unavailable, l);
 
   return (
-    <div data-hub-status-grid className={cn("grid gap-4 sm:grid-cols-2 xl:grid-cols-4", className)}>
-      {/* ── CV ───────────────────────────────────────────────────────── */}
-      <Module
-        moduleKey="cv"
-        title={L(HUB_TILE.cv.title, l)}
-        icon={<FileText className="h-4 w-4" />}
-      >
-        {cv.state === "loading" ? (
-          <ModuleLoading label={loading} />
-        ) : cv.state === "unavailable" ? (
-          <Failed message={unavailable} onRetry={onRetryCv} className="mt-2" />
-        ) : cv.state === "none" ? (
-          <Status muted>{L(HUB_TILE.cv.none, l)}</Status>
-        ) : (
-          <Status>
-            {Lp(HUB_TILE.cv.saved, l, cv.count)}
-            {cv.latest && (
-              <>
-                {" · "}
-                {/* The document's own name, then when it last changed. A
-                    count alone cannot tell somebody whether the CV they
-                    are about to send is the one they edited last week. */}
-                <span className="text-muted-foreground">
-                  {cv.latest.title}
-                  {formatDate(cv.latest.updatedAt, l)
-                    ? ` · ${Lf(HUB_TILE.cv.latest, l, formatDate(cv.latest.updatedAt, l)!)}`
-                    : ""}
-                </span>
-              </>
-            )}
-          </Status>
-        )}
-        {cv.state !== "unavailable" && (
-          <Go to={cv.state === "none" ? "/my-career/cv/new" : "/my-career/cv"}>
-            {L(cv.state === "none" ? HUB_TILE.cv.create : HUB_TILE.cv.open, l)}
-          </Go>
-        )}
-      </Module>
-
+    <div data-hub-status-grid className={cn("grid gap-4 sm:grid-cols-3", className)}>
       {/* ── Career analysis ──────────────────────────────────────────── */}
       <Module
         moduleKey="discovery"

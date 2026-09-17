@@ -620,13 +620,38 @@ group("7 · one name per product");
   // pins the boundary sentence.
   const profile = read("src/routes/_authenticated.my-career.profile.tsx");
   ck("self-reported is still named as such", profile.includes("Det du fyller i själv"));
+  // The Profile page no longer LISTS claims -- career history moved to the
+  // CV page with the owner's 2026-09-17 refinement -- so there is no claim
+  // row here for a verification mark to sit on. The rule did not move with
+  // it: the Profile's hero states that everything on the page is
+  // self-reported and that what is verified is shown in the Passport, and
+  // the CV's editors print each entry's level through AssertionChip, which
+  // is read-only by construction.
+  const profileHero = read("src/components/professional-identity/ProfessionalIdentityHeader.tsx");
   ck(
-    "verified is still attributed to a reviewer",
-    profile.includes("Verifierat av en behörig granskare."),
+    "the Profile says what is verified lives in the Passport, not here",
+    profileHero.includes("Det som är verifierat visas i Security Passport") &&
+      profileHero.includes("What has been verified is shown in the Security Passport"),
   );
   ck(
-    "each section still says which product owns it",
-    profile.includes("Tillhör Security Passport") && profile.includes("Tillhör Career Discovery"),
+    "and the CV's editors show each entry's level rather than implying one",
+    read("src/components/professional-identity/GeneralProfileClaims.tsx").includes(
+      "<AssertionChip",
+    ) &&
+      read("src/components/professional-identity/EmploymentHistoryEditor.tsx").includes(
+        "<AssertionChip",
+      ),
+  );
+  ck(
+    "each surface the Profile points to says which product owns it",
+    profile.includes("Tillhör ditt CV") &&
+      profile.includes("Belongs to your CV") &&
+      profile.includes("Tillhör Security Passport") &&
+      profile.includes("Belongs to the Security Passport"),
+  );
+  ck(
+    "and nothing on the Profile is a dead 'edited here' label",
+    !/Redigeras här|Edited here/.test(profile),
   );
 
   // The card's own controls and states, which live in the dictionary

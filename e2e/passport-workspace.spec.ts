@@ -733,9 +733,10 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     await expect(wallet(page)).not.toContainText("Nordic Security AB");
     await expect(rows(page)).not.toContainText("Source-confirmed");
-    await expect(page.locator("[data-compact-passport-card]")).not.toContainText(
-      "Nordic Security AB",
-    );
+    // Nowhere on the page -- the wallet, the next step or the sharing status.
+    // (A compact card used to sit in the side column; the Passport overview
+    // shows exactly one Passport now, so the whole workspace is the scope.)
+    await expect(page.locator("[data-passport-workspace]")).not.toContainText("Nordic Security AB");
   });
   test("4 pending review is stated without a verification promise", async ({ page }) => {
     await mount(page, IN_REVIEW, "en");
@@ -835,7 +836,7 @@ test.describe("Security Passport — governed wallet regression", () => {
     await noErrors();
   });
   for (const target of [
-    { name: "Select and share", url: "/passport/share", heading: /Share|Select/ },
+    { name: "Preview and share", url: "/passport/share", heading: /Share|Select/ },
     { name: "Add credential", url: "/passport/credentials/new", heading: /Add credential/ },
   ])
     test(`navigation — ${target.name} loads its real destination`, async ({ page }) => {
@@ -918,18 +919,20 @@ test.describe("Security Passport — governed wallet regression", () => {
       await expect(wallet(page)).toContainText("Certified Protection Professional (CPP)");
       await expect(wallet(page)).toContainText(lang === "sv" ? "Internationellt" : "International");
       await expect(wallet(page)).not.toContainText("Protective security training");
-      await expect(page.locator("[data-compact-passport-card]")).toContainText("Nina Lindqvist");
+      // The name comes from Profile and is stated ONCE, by the identity
+      // surface -- there is no second Passport card to repeat it.
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText("Nina Lindqvist");
+      await expect(page.locator("[data-compact-passport-card]")).toHaveCount(0);
     });
   test("private summary never creates a link or exposes a QR token", async ({ page }) => {
     await mount(page, MIXED, "en");
     await ready(page);
     await expect(page.locator("[data-passport-privacy-summary]")).toBeVisible();
     await expect(
-      page.locator(
-        '[data-compact-passport-card] a[href*="token"], [data-compact-passport-card] canvas',
-      ),
+      page.locator('[data-passport-workspace] a[href*="token"], [data-passport-workspace] canvas'),
     ).toHaveCount(0);
-    await expect(page.locator("[data-compact-passport-card] li")).toHaveCount(0);
+    // And no recipient-style card at all: that lives under Preview and share.
+    await expect(page.locator("[data-compact-passport-card]")).toHaveCount(0);
   });
   test("all workspace controls have 44px targets and visible keyboard focus", async ({ page }) => {
     await mount(page, MIXED, "en");

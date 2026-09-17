@@ -18,9 +18,36 @@ export const CV = {
   backToList: c("Alla CV", "All CVs"),
   title: c("Ditt CV", "Your CV"),
   lede: c(
-    "Byggt av det du redan har registrerat i CQrityjob. Arbetsgivare, roller, datum och intyg hämtas från dina egna uppgifter — AI:n formulerar, den hittar inte på.",
-    "Built from what you have already recorded in CQrityjob. Employers, roles, dates and credentials come from your own entries — the AI phrases, it does not invent.",
+    "Vad du har gjort: anställningar, utbildning, språk och färdigheter. Du fyller i innehållet en gång här, och varje CV-dokument byggs av det — AI:n formulerar, den hittar inte på.",
+    "What you have done: employment, education, languages and skills. You enter the content once here, and every CV document is built from it — the AI phrases, it does not invent.",
   ),
+
+  /* -- the two halves of the page ----------------------------------- */
+  navLabel: c("På den här sidan", "On this page"),
+  documentsHeading: c("CV-dokument", "CV documents"),
+  documentsLede: c(
+    "Färdiga CV:n att läsa, justera, exportera och skicka med en ansökan.",
+    "Finished CVs to read, adjust, export and send with an application.",
+  ),
+  contentHeading: c("CV-innehåll", "CV content"),
+  // Where each fact belongs AND where it is edited -- two questions, and the
+  // owner's review found the product answering only one of them. The
+  // sentence about storage is what lets the Passport document and review an
+  // employment without a second copy of it existing anywhere.
+  contentLede: c(
+    "Anställningar, utbildning, språk och färdigheter hör till ditt CV och redigeras här nedan. De är inte säkerhetsbevisning. Certifieringar, licenser och behörigheter hör till ditt Security Passport och redigeras där. Varje uppgift lagras en enda gång, så en anställning eller utbildning kan dokumenteras och granskas i Passportet utan att finnas på två ställen.",
+    "Employment, education, languages and skills belong to your CV and are edited below. They are not security evidence. Certifications, licences and authorisations belong to your Security Passport and are edited there. Every fact is stored exactly once, so an employment or an education can be documented and reviewed in the Passport without existing in two places.",
+  ),
+  navEmployment: c("Anställningar", "Employment"),
+  navEducation: c("Utbildning", "Education"),
+  navLanguages: c("Språk", "Languages"),
+  navSkills: c("Färdigheter", "Skills"),
+  profileNote: c(
+    "Ditt namn, din yrkestitel och ditt arbetsland hör till din profil.",
+    "Your name, professional title and work country belong to your profile.",
+  ),
+  editProfile: c("Redigera profil", "Edit Profile"),
+  backToCareer: c("Min karriär", "My Career"),
   loading: c("Hämtar dina uppgifter…", "Loading your information…"),
   loadFailed: c(
     "Dina uppgifter kunde inte hämtas just nu. Ingenting har gått förlorat.",
@@ -29,10 +56,10 @@ export const CV = {
 
   /* -- readiness ---------------------------------------------------- */
   notReadyTitle: c(
-    "Din profil behöver lite mer information innan vi kan skapa ett användbart CV.",
-    "Your profile needs a little more information before we can create a useful CV.",
+    "Lite mer information behövs innan vi kan skapa ett användbart CV.",
+    "A little more information is needed before we can create a useful CV.",
   ),
-  completeProfile: c("Komplettera profilen", "Complete profile"),
+  completeProfile: c("Komplettera uppgifterna", "Add the missing information"),
 
   /* -- the list ----------------------------------------------------- */
   listEmptyTitle: c("Du har inget CV ännu", "You do not have a CV yet"),
@@ -342,8 +369,8 @@ export const CV_MISSING_FIELD: Readonly<Record<CvRequiredField, Copy>> = {
   ),
   location: c("Land", "Country"),
   professionalHistory: c(
-    "Minst en anställning eller utbildning i Security Passport",
-    "At least one employment or education in the Security Passport",
+    "Minst en anställning eller utbildning i ditt CV-innehåll",
+    "At least one employment or education in your CV content",
   ),
 };
 

@@ -62,6 +62,7 @@ import {
 } from "@/lib/security-passport/profile-basics";
 import type { OnboardingField, OnboardingStep } from "@/lib/security-passport/onboarding";
 import type { BasicsAnswerReader } from "@/lib/security-passport/profile-basics";
+import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 /** What the holder can change from this card, in one save. The two delegated
  *  questions are deliberately absent: this shape is what makes it impossible
@@ -79,6 +80,14 @@ export interface ProfileBasicsPatch {
 function keyOf(stepId: string, fieldId: string): string {
   return `${stepId}.${fieldId}`;
 }
+
+/** What an empty field ASKS for, in the compact editor. "Add current
+ *  professional title" is an invitation; an empty box under a label is a
+ *  form. Keys, not strings, so both languages come from the dictionary. */
+const COMPACT_PLACEHOLDER: Readonly<Record<string, PassportCopyKey>> = {
+  displayName: "basics.compactNamePlaceholder",
+  headline: "basics.compactTitlePlaceholder",
+};
 
 /** The status of ONE step, stated in the vocabulary of what that step is.
  *
@@ -131,6 +140,7 @@ export function ProfileBasicsCard({
   onEditProfession,
   onEditWorkCountry,
   onEditCurrentRole,
+  variant = "full",
 }: {
   /** Every current answer, keyed `stepId.fieldId` exactly as the wizard keys
    *  them. Resolved by the route from wherever each one actually lives — two
@@ -148,6 +158,13 @@ export function ProfileBasicsCard({
   readonly onEditProfession: () => void;
   readonly onEditWorkCountry: () => void;
   readonly onEditCurrentRole: () => void;
+  /** `compact` is the Profile page's editor: the two answers this card
+   *  WRITES (name and professional title) and the declaration, with Save and
+   *  Cancel, and nothing else. The three delegated answers are not repeated
+   *  there because the Profile page mounts their canonical editors directly
+   *  beside this one -- a row that only says "changed further down" is noise
+   *  on the page that IS further down. Same state, same patch, same save. */
+  readonly variant?: "full" | "compact";
 }) {
   const { pt } = usePassportCopy();
 
@@ -286,6 +303,11 @@ export function ProfileBasicsCard({
           value={value}
           onChange={(e) => set(e.target.value)}
           aria-describedby={helpId}
+          placeholder={
+            variant === "compact"
+              ? pt(COMPACT_PLACEHOLDER[field.id] ?? "common.notStated")
+              : undefined
+          }
           className={control}
         />
         {field.helpKey && (
@@ -294,6 +316,78 @@ export function ProfileBasicsCard({
           </p>
         )}
       </div>
+    );
+  }
+
+  if (variant === "compact") {
+    const identityStep = PROFILE_BASICS_STEPS.find((step) => step.id === "identity");
+    const declarationStep = PROFILE_BASICS_STEPS.find((step) => step.id === "declaration");
+    return (
+      <section
+        id="sp-profile-basics"
+        data-basics-variant="compact"
+        aria-labelledby="sp-profile-basics-heading"
+      >
+        <h3
+          id="sp-profile-basics-heading"
+          className="text-base font-semibold tracking-tight text-foreground"
+        >
+          {pt("basics.compactTitle")}
+        </h3>
+        <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+          {pt("basics.compactLead")}
+        </p>
+
+        <div className="mt-5 grid gap-5 md:grid-cols-2">
+          {identityStep?.fields.map((f) => inlineField(identityStep, f))}
+        </div>
+
+        {declarationStep ? (
+          <div className="mt-5 border-t border-border pt-5">
+            {declarationStep.fields.map((f) => inlineField(declarationStep, f))}
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void submit()}
+            disabled={busy || !dirty}
+            data-basics-save
+            className="inline-flex h-11 items-center rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {busy ? pt("live.saving") : pt("basics.compactSave")}
+          </button>
+          <button
+            type="button"
+            disabled={busy || !dirty}
+            data-basics-cancel
+            onClick={() => {
+              // Back to what is stored. Nothing was written, so there is
+              // nothing to undo on the server.
+              setDisplayName(answers[keyOf("identity", "displayName")] ?? "");
+              setHeadline(answers[keyOf("identity", "headline")] ?? "");
+              setDeclared(declaredAccurateAt !== null);
+              setSaved(false);
+              setError(null);
+            }}
+            className="inline-flex h-11 items-center rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-secondary disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {pt("basics.compactCancel")}
+          </button>
+          {saved && !dirty ? (
+            <span role="status" className="text-sm text-muted-foreground">
+              {pt("basics.savedNotice")}
+            </span>
+          ) : null}
+        </div>
+
+        {error ? (
+          <p role="alert" className="mt-3 text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+      </section>
     );
   }
 

@@ -79,11 +79,15 @@ const COPY = {
   welcomeAnon: c("Välkommen tillbaka", "Welcome back"),
 
   eyebrowHome: c("Min karriär", "My Career"),
-  eyebrowProfile: c("Min profil", "My Profile"),
-  profileTitle: c("Min profil", "My Profile"),
+  eyebrowProfile: c("Min karriär", "My Career"),
+  profileTitle: c("Profil", "Profile"),
+  // One question per surface. The Profile answers this one; the CV answers
+  // "what have I done" and the Security Passport "what can I document and
+  // share" -- and saying so here is what stops a person looking for their
+  // employment history on the page that holds their name.
   profilePurpose: c(
-    "Allt du har registrerat om dig själv, avsnitt för avsnitt — och vilken del av CQrityjob som äger varje uppgift.",
-    "Everything you have recorded about yourself, section by section — and which part of CQrityjob owns each fact.",
+    "Vem du är just nu: ditt namn, din yrkestitel, var du arbetar och din nuvarande situation. Uppgifterna visas i ditt CV och i ditt Security Passport.",
+    "Who you are now: your name, your professional title, where you work and your current situation. It is shown on your CV and in your Security Passport.",
   ),
 
   noHeadline: c(
@@ -95,7 +99,9 @@ const COPY = {
     "The information here is self-reported. What has been verified is shown in the Security Passport.",
   ),
   viewProfile: c("Visa profil", "View profile"),
-  experienceYears: c("{0} års erfarenhet", "{0} years of experience"),
+  // {0} is the catalogue's own label -- "5–10 år", "Less than 1 year" -- so
+  // the unit is already in it.
+  experienceYears: c("{0} erfarenhet", "{0} of experience"),
 
   // ── The trust line ────────────────────────────────────────────────────
   trustVerified: c("Verifierat", "Verified"),
@@ -388,7 +394,23 @@ export function ProfessionalIdentityHeader({
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             {L(COPY.profilePurpose, l)}
           </p>
-          <p className="mt-4 text-base font-medium text-balance text-foreground">
+          {/* The person, then the title. The page used to state the title
+              alone, which left "who am I" answered without a name. */}
+          {identity.displayName && (
+            <p
+              className="mt-5 text-xl font-semibold tracking-tight text-foreground"
+              style={{ fontFamily: "var(--font-display)" }}
+              data-profile-name
+            >
+              {identity.displayName}
+            </p>
+          )}
+          <p
+            className={cn(
+              "text-base font-medium text-balance text-foreground",
+              identity.displayName ? "mt-0.5" : "mt-5",
+            )}
+          >
             {professionalTitle}
           </p>
         </>
@@ -402,7 +424,18 @@ export function ProfessionalIdentityHeader({
           {identity.yearsOfExperience && (
             <span className="inline-flex items-center gap-1.5">
               <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-              {Lf(COPY.experienceYears, l, identity.yearsOfExperience)}
+              {/* Never the bare id. `years_of_experience` stores "1-3", "10+",
+                  "<1" -- the value in the column rather than anything a person
+                  wrote. The catalogue that owns those ids owns their labels,
+                  and it is the one the editor below offers, so the header and
+                  the form can never disagree. */}
+              {Lf(
+                COPY.experienceYears,
+                l,
+                yearsOfExperienceOptions.find((o) => o.id === identity.yearsOfExperience)?.label[
+                  l
+                ] ?? identity.yearsOfExperience,
+              )}
             </span>
           )}
           {location && (
@@ -447,55 +480,61 @@ export function ProfessionalIdentityHeader({
         </div>
       ) : null}
 
-      <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-5 border-t border-border pt-6 sm:grid-cols-3">
-        <TrustFact
-          label={L(COPY.trustVerified, l)}
-          value={
-            !passportKnown
-              ? L(COPY.unreadable, l)
-              : !identity.hasPassport
-                ? L(COPY.trustPassportNone, l)
-                : verified === 0
-                  ? L(COPY.trustVerifiedNone, l)
-                  : verified === 1
-                    ? L(COPY.trustVerifiedOne, l)
-                    : Lf(COPY.trustVerifiedCount, l, verified)
-          }
-          detail={
-            passportKnown && identity.hasPassport && pending > 0
-              ? Lf(COPY.trustPending, l, pending)
-              : null
-          }
-          emphasis={passportKnown && verified > 0}
-        />
-        <TrustFact
-          label={L(COPY.trustDiscovery, l)}
-          value={
-            !discoveryKnown
-              ? L(COPY.unreadable, l)
-              : identity.discovery.hasCompletedReport
-                ? L(COPY.trustDiscoveryDone, l)
-                : L(COPY.trustDiscoveryNone, l)
-          }
-          emphasis={discoveryKnown && identity.discovery.hasCompletedReport}
-        />
-        <TrustFact
-          label={L(COPY.trustProfile, l)}
-          value={
-            degraded
-              ? L(COPY.unreadable, l)
-              : completeness.missingSections.length === 0
-                ? L(COPY.trustProfileComplete, l)
-                : Lf(COPY.trustProfileFilled, l, completeness.completedSections.length).replace(
-                    "{1}",
-                    String(completeness.applicableSections.length),
-                  )
-          }
-          emphasis={!degraded && completeness.score > 0}
-        />
-      </dl>
+      {/* Not on the Profile page. These three facts are about the Passport,
+          Career Discovery and a completeness count that ranges over CV
+          content as well -- none of which the Profile owns, and each of which
+          has its own surface one link away. */}
+      {!isProfile && (
+        <dl className="mt-6 grid grid-cols-1 gap-x-8 gap-y-5 border-t border-border pt-6 sm:grid-cols-3">
+          <TrustFact
+            label={L(COPY.trustVerified, l)}
+            value={
+              !passportKnown
+                ? L(COPY.unreadable, l)
+                : !identity.hasPassport
+                  ? L(COPY.trustPassportNone, l)
+                  : verified === 0
+                    ? L(COPY.trustVerifiedNone, l)
+                    : verified === 1
+                      ? L(COPY.trustVerifiedOne, l)
+                      : Lf(COPY.trustVerifiedCount, l, verified)
+            }
+            detail={
+              passportKnown && identity.hasPassport && pending > 0
+                ? Lf(COPY.trustPending, l, pending)
+                : null
+            }
+            emphasis={passportKnown && verified > 0}
+          />
+          <TrustFact
+            label={L(COPY.trustDiscovery, l)}
+            value={
+              !discoveryKnown
+                ? L(COPY.unreadable, l)
+                : identity.discovery.hasCompletedReport
+                  ? L(COPY.trustDiscoveryDone, l)
+                  : L(COPY.trustDiscoveryNone, l)
+            }
+            emphasis={discoveryKnown && identity.discovery.hasCompletedReport}
+          />
+          <TrustFact
+            label={L(COPY.trustProfile, l)}
+            value={
+              degraded
+                ? L(COPY.unreadable, l)
+                : completeness.missingSections.length === 0
+                  ? L(COPY.trustProfileComplete, l)
+                  : Lf(COPY.trustProfileFilled, l, completeness.completedSections.length).replace(
+                      "{1}",
+                      String(completeness.applicableSections.length),
+                    )
+            }
+            emphasis={!degraded && completeness.score > 0}
+          />
+        </dl>
+      )}
 
-      {passportKnown && verified > 0 && (
+      {!isProfile && passportKnown && verified > 0 && (
         <p className="mt-4 inline-flex items-start gap-1.5 text-xs text-muted-foreground">
           <BadgeCheck
             className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[color:var(--gold)]"

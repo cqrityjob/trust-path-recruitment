@@ -22,6 +22,8 @@ import { runControls, type Mutation } from "./runner";
 
 const ROUTE = "src/routes/_authenticated.my-career.index.tsx";
 const SUMMARY = "src/components/professional-identity/PassportSummary.tsx";
+const SURFACES = "src/components/professional-identity/OverviewSurfaces.tsx";
+const CARD = "src/components/professional-identity/OverviewPassportCard.tsx";
 const DASH = "my-career-dashboard:check";
 const PREMIUM = "my-career-premium-overview:check";
 
@@ -54,9 +56,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Passport summary regrows a second action beside the canonical one, which is how the column stops having one way in",
     file: SUMMARY,
-    find: '          <Link to="/passport" className={LINK} data-cta="overview-open-passport">',
+    find: '          <Link to="/passport" className={OPEN} data-cta="overview-open-passport">',
     replace:
-      '          <Link to="/passport/credentials/new" className={LINK}>add</Link>\n          <Link to="/passport" className={LINK} data-cta="overview-open-passport">',
+      '          <Link to="/passport/credentials/new" className={OPEN}>add</Link>\n          <Link to="/passport" className={OPEN} data-cta="overview-open-passport">',
     guard: DASH,
     expect: "must not carry its own add-a-merit destination",
   },
@@ -125,6 +127,39 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "          data-overview-passport-scattered",
     guard: PREMIUM,
     expect: "one labelled region",
+  },
+
+  // ---- Three surfaces, none of them an editor ------------------------------
+  {
+    id: "OV-NC-CV-SURFACE-UNMOUNTED",
+    defect:
+      "the CV stops being one of the three surfaces on Overview, so a candidate sees a Profile and a Passport and nothing that says where career history goes",
+    file: ROUTE,
+    find: "            <OverviewCvCard",
+    replace: "            <NoCvCard",
+    guard: DASH,
+    expect: "the Profile and the CV as surfaces of their own",
+  },
+  {
+    id: "OV-NC-OVERVIEW-BECOMES-AN-EDITOR",
+    defect:
+      "the Profile card grows an input of its own, so Overview is a second editor for a fact the Profile page already edits",
+    file: SURFACES,
+    find: '          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">\n            {L(SURFACES.profile.selfReported, l)}',
+    replace:
+      '          <input name="headline" />\n          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">\n            {L(SURFACES.profile.selfReported, l)}',
+    guard: DASH,
+    expect: "must hold no form control and no writer",
+  },
+  {
+    id: "OV-NC-PASSPORT-CARD-IS-AN-EMPTY-SELECTION",
+    defect:
+      "the Overview Passport card goes back to the selection preview with nothing selected, so the career home shows an empty Passport asking to be filled where nothing can be chosen",
+    file: CARD,
+    find: ' variant="summary" />',
+    replace: " />",
+    guard: DASH,
+    expect: "the holder's SUMMARY",
   },
 ];
 

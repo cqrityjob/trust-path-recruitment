@@ -604,6 +604,40 @@ export async function signedIn(page: Page, model: ServerModel, opts: Options = {
               block: null,
             })),
           );
+        // ── THE CV PAGE'S CONTENT EDITORS ─────────────────────────────────
+        //
+        // /my-career/cv mounts the employment and general-claim editors under
+        // "CV content" since the Profile/CV split, so opening the list now
+        // makes their reads too. Answered from the SAME model the bundle is
+        // built from, so the editor and the document describe one person --
+        // read-only rows, because this suite is about CV documents and the
+        // editors' own writes are proven in profile-cv-passport-surfaces.
+        case "listMyEntries":
+          return send({
+            experience: model.identity().employment.map((e) => ({
+              id: e.id,
+              employerName: e.employerName,
+              roleTitle: e.roleTitle,
+              employmentType: e.employmentType,
+              fteFraction: 1,
+              securityRelevance: "primary",
+              securityFraction: 1,
+              startedOn: e.startedOn,
+              endedOn: e.endedOn,
+              jurisdictionCode: e.jurisdictionCode,
+              assertionLevel: e.assertionLevel,
+              lifecycleState: "active",
+              verifierName: null,
+              verificationMethod: null,
+              editable: false,
+            })),
+            claims: [],
+          });
+        case "getMyPassport":
+          return send({ profile: null, profileIdentity: null, holder: null, eventCount: 0 });
+        case "listSkillTypes":
+        case "listJurisdictions":
+          return send([]);
         default:
           unmatched.push(name);
           return refuse(`UNSTUBBED_SERVER_FN:${name}`);

@@ -287,8 +287,11 @@ function CvNewPage() {
                 <li key={field}>{L(CV_MISSING_FIELD[field], l)}</li>
               ))}
             </ul>
+            {/* The CV page lists each missing thing as a link to the field
+                that fills it; this screen sends the reader there rather than
+                keeping a second copy of that list. */}
             <Link
-              to="/my-career/profile"
+              to="/my-career/cv"
               className="mt-5 inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)]"
             >
               {L(CV.completeProfile, l)}
