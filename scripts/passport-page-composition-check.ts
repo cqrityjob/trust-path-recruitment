@@ -69,10 +69,16 @@ const workspace = code(read(WORKSPACE));
 console.log("\n1 · the two columns exist, and the sketch's left column is the left column");
 
 check(/<PassportSideColumn/.test(index), "the Passport page renders a side column");
+check(
+  /<PassportSideColumn\s+part="steps"/.test(index) &&
+    /<PassportSideColumn\s+part="privacy"/.test(index),
+  "both halves of the side column are mounted: the steps in the panel, privacy under the card",
+);
 check(/<CredentialWallet/.test(index), "and the Passport workspace");
 check(
-  /max-w-\[1280px\]/.test(index) && /lg:grid-cols-\[minmax\(0,1fr\)_360px\]/.test(index),
-  "the wallet uses the desktop width and supporting card/settings form a two-column region",
+  /max-w-\[1280px\]/.test(index) &&
+    /lg:grid-cols-\[minmax\(0,1\.08fr\)_minmax\(0,1fr\)\]/.test(workspace),
+  "the overview uses the desktop width, and the card and its panel form a two-column region",
 );
 check(
   !/lg:order-[12]/.test(index) &&
@@ -168,7 +174,7 @@ check(
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n4 · the main column's two actions are near the top, once each");
+console.log("\n4 · one card, and the actions in the panel beside it");
 
 check(/to="\/passport\/credentials\/new"/.test(workspace), "add a credential is offered");
 check(/data-cta="share"/.test(workspace), "and sharing the Passport");
@@ -176,37 +182,52 @@ check(
   (workspace.match(/data-cta="share"/g) ?? []).length === 1,
   "share appears exactly once — not one control per region",
 );
-// ── REVERSED BY THE 2026-09-17 WORK ORDER, §1.2 ─────────────────────────
-// These two used to assert the actions sat INSIDE the header. The identity
-// surface is a card, and a card holds no interactive control at any time:
-// the buttons are why the holder's name had no room. They now sit in the
-// row directly beneath it — still near the top, still once each.
+// ── THE OWNER'S CORRECTION, 2026-09-17 ──────────────────────────────────
+// The card is a fixed visual object: no action control sits inside it. The
+// actions are the panel's. The single element in the card that can be
+// followed is the "+N" shield — a link to the rest of what the card
+// summarises — and the guard names it rather than allowing "a link".
 const headerStart = workspace.indexOf("<header");
 const headerEnd = workspace.indexOf("</header>");
 const header =
   headerStart >= 0 && headerEnd > headerStart ? workspace.slice(headerStart, headerEnd) : "";
+const panelIdx = workspace.indexOf("data-passport-panel");
 const actionsIdx = workspace.indexOf("data-passport-actions");
 check(
   header.length > 0 &&
-    !/<(Link|a|button|input|select|textarea)\b|role="(tab|button|menu)|onClick=/.test(header),
-  "the identity surface contains no interactive control of any kind",
+    !/<(a|button|input|select|textarea)\b|role="(tab|button|menu)|onClick=/.test(header),
+  "the Passport card contains no button, input or action control",
 );
 check(
-  actionsIdx > headerEnd &&
+  (header.match(/<Link\b/g) ?? []).length === 1 &&
+    /<Link\s+to="\/passport"\s+hash="merits"\s+data-shield-overflow-link/.test(header),
+  'and its only link is the "+N" shield, which goes to Credentials',
+);
+check(
+  panelIdx > headerEnd &&
+    actionsIdx > panelIdx &&
     workspace.indexOf('to="/passport/credentials/new"') > actionsIdx &&
     workspace.indexOf('data-cta="share"') > actionsIdx &&
     workspace.indexOf('data-cta="edit-in-profile"') > actionsIdx,
-  "add, share and edit-in-Profile sit in the action row beneath the card",
+  "add, share and edit-current-role sit in the action panel, after the card",
 );
 check(
-  actionsIdx > 0 && workspace.slice(headerEnd, actionsIdx).split("\n").length < 8,
-  "and that row follows the card directly, so the actions stay near the top",
+  (workspace.match(/to="\/passport\/credentials\/new"/g) ?? []).length === 1 &&
+    !/to="\/passport\/credentials\/new"/.test(side),
+  "there is exactly ONE Add credential on the overview — the panel's",
+);
+check(
+  /lg:grid-cols-\[minmax\(0,1\.08fr\)_minmax\(0,1fr\)\]/.test(workspace) &&
+    workspace.indexOf("<header") < panelIdx &&
+    panelIdx < workspace.indexOf("data-passport-under-card") &&
+    workspace.indexOf("data-passport-under-card") < workspace.indexOf('id="merits"'),
+  "source order is card, panel, privacy, collection — which is the order on a phone",
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n4b · the name never breaks inside a word, and the title is derived");
+console.log("\n4b · who the person is comes from the Profile; the card never renames them");
 
-const nameTag = workspace.match(/<h1\b[\s\S]*?>/)?.[0] ?? "";
+const nameTag = workspace.match(/<h1\s[^>]*data-passport-holder-name[\s\S]*?>/)?.[0] ?? "";
 check(
   /\[overflow-wrap:normal\]/.test(nameTag) &&
     /\[word-break:keep-all\]/.test(nameTag) &&
@@ -220,14 +241,31 @@ check(
 );
 check(/\[container-type:inline-size\]/.test(header), "the card is the container-query context");
 check(
-  /professionLine\(snapshot\.holder\.identity, lang, pt\("identity\.none"\)\)/.test(workspace),
-  "the primary title line is the derivation engine's output, with the neutral fallback",
+  /const identity = snapshot\.profileIdentity;/.test(workspace) &&
+    /const currentRole = \(lang === "sv" \? identity\?\.titleSv : identity\?\.titleEn\)/.test(
+      workspace,
+    ) &&
+    /data-passport-current-role[\s\S]{0,200}\{currentRole\}/.test(header),
+  "the primary professional line is the canonical Career Profile's current role",
 );
 check(
-  !/\{title \|\|/.test(workspace) &&
-    header.indexOf("data-passport-derived-title") > 0 &&
-    header.indexOf("data-passport-derived-title") < header.indexOf("data-passport-profile-title"),
-  "the Profile title is never the fallback, and never sits above the derived line",
+  !/credentialDerivedTitle|headlineTitles|professionLine|joinTitles/.test(header) &&
+    workspace.indexOf("data-passport-derived-title") > panelIdx,
+  "a credential-derived title never appears on the card — it is the panel's trust layer",
+);
+check(
+  !/identity\.none/.test(workspace) && !/No active professional title/.test(workspace),
+  'and "No active professional title" cannot render under anybody\'s name',
+);
+check(
+  /"Nuvarande yrke", "Current professional role"/.test(header) &&
+    /"Egen uppgift", "Self-declared"/.test(header),
+  "the role says whose statement it is, in both languages",
+);
+check(
+  /"Ändra nuvarande yrke", "Edit current professional role"/.test(workspace) &&
+    /to="\/my-career\/profile"\s+hash="profile-basics"/.test(workspace),
+  "and the way to change it is a link to the canonical editor",
 );
 
 /* ------------------------------------------------------------------ */

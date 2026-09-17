@@ -99,10 +99,7 @@ function PassportWorkspaceRoute() {
   if (!snapshot || !metadata || !snapshot.profile)
     return <p role="status">{lang === "sv" ? "Läser meriter…" : "Loading credentials…"}</p>;
   return (
-    <div
-      data-passport-workspace
-      className="mx-auto grid max-w-[1280px] gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start xl:gap-10"
-    >
+    <div data-passport-workspace className="mx-auto max-w-[1280px]">
       <div className="min-w-0 flex flex-col gap-6">
         <ScrollToHashOnceReady />
         <CredentialWallet
@@ -111,6 +108,27 @@ function PassportWorkspaceRoute() {
           reviews={reviews}
           reviewState={reviewState}
           now={new Date().toISOString().slice(0, 10)}
+          // The action panel's lower half. Passed as a slot so the wallet renders
+          // card, panel, collection in that order at every width, while this
+          // route keeps owning every read.
+          panel={
+            <PassportSideColumn
+              part="steps"
+              metadata={metadata}
+              snapshot={snapshot}
+              reviews={reviews}
+              today={new Date().toISOString().slice(0, 10)}
+            />
+          }
+          underCard={
+            <PassportSideColumn
+              part="privacy"
+              metadata={metadata}
+              snapshot={snapshot}
+              reviews={reviews}
+              today={new Date().toISOString().slice(0, 10)}
+            />
+          }
         />
         <section id="attention" aria-labelledby="attention-heading" tabIndex={-1}>
           <h2 id="attention-heading" className="sr-only">
@@ -141,16 +159,6 @@ function PassportWorkspaceRoute() {
           />
         </section>
       </div>
-      {/* No second Passport here. The wallet's identity surface IS the
-          Passport on this page; the recipient-style rendering lives under
-          Preview and share. This column is the next step and who can see. */}
-      <PassportSideColumn
-        metadata={metadata}
-        snapshot={snapshot}
-        reviews={reviews}
-        today={new Date().toISOString().slice(0, 10)}
-        className="lg:sticky lg:top-28 lg:!w-full"
-      />
     </div>
   );
 }

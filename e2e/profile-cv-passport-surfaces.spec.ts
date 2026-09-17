@@ -624,7 +624,9 @@ test.describe("Security Passport", () => {
       });
 
       // ONE identity surface, and no second Passport card anywhere.
-      await expect(page.locator("[data-credential-wallet] > header")).toHaveCount(1);
+      await expect(
+        page.locator("[data-credential-wallet] [data-passport-identity-surface]"),
+      ).toHaveCount(1);
       await expect(page.locator("[data-compact-passport-card]")).toHaveCount(0);
       await expect(page.locator("h1")).toHaveCount(1);
       await expect(page.locator("h1")).toHaveText("Amina Karlsson");

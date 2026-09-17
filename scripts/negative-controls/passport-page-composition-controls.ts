@@ -22,10 +22,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column stops rendering, so the next step and the privacy status disappear from the Passport overview",
     file: INDEX,
-    find: "      <PassportSideColumn",
-    replace: "        <NoSideColumn",
+    find: '              part="privacy"\n',
+    replace: '              part="steps"\n',
     guard: GUARD,
-    expect: "the Passport page renders a side column",
+    expect: "both halves of the side column are mounted",
   },
   {
     id: "PPC-NC-CARD-ABOVE-RECORD-ON-MOBILE",
@@ -74,22 +74,33 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the identity surface loses its link to the Profile, so the Passport displays a name and title with no way to reach the one place they are edited",
     file: WALLET,
-    find: '          data-cta="edit-in-profile"',
-    replace: '          data-cta="edit-elsewhere"',
+    find: '            data-cta="edit-in-profile"',
+    replace: '            data-cta="edit-elsewhere"',
     guard: GUARD,
     expect: "sends the holder to the Profile",
   },
-  // ── Work order 2026-09-17, part 1 ────────────────────────────────────
+  // ── Owner correction 2026-09-17: identity, card and panel ─────────────
   {
     id: "PPC-NC-CONTROL-BACK-INSIDE-THE-CARD",
     defect:
-      "a button is put back inside the identity surface, which is what left the holder's name no room",
+      "an action button is put back inside the Passport card, which is what left the holder's name no room",
     file: WALLET,
-    find: "              {derivedIsSelfDeclared ? (",
+    find: "          <CredentialConstellation\n",
     replace:
-      '              <button type="button">Add credential</button>\n              {derivedIsSelfDeclared ? (',
+      '          <button type="button">Add credential</button>\n          <CredentialConstellation\n',
     guard: GUARD,
-    expect: "the identity surface contains no interactive control",
+    expect: "contains no button, input or action control",
+  },
+  {
+    id: "PPC-NC-SECOND-LINK-IN-THE-CARD",
+    defect:
+      "the card gains a second link beside the +N shield, so it starts becoming a toolbar again",
+    file: WALLET,
+    find: "          <CredentialConstellation\n",
+    replace:
+      '          <Link to="/passport/share">Share</Link>\n          <CredentialConstellation\n',
+    guard: GUARD,
+    expect: 'its only link is the "+N" shield',
   },
   {
     id: "PPC-NC-NAME-BREAKS-INSIDE-A-WORD",
@@ -102,23 +113,46 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "may wrap between words and nowhere else",
   },
   {
-    id: "PPC-NC-PROFILE-TITLE-STANDS-IN",
+    id: "PPC-NC-DERIVED-TITLE-RENAMES-THE-PERSON",
     defect:
-      "the title line falls back to the Profile title, so a self-described 'Head of Security' prints where a credential-derived standing belongs",
+      "a credential-derived title takes the identity line, so a holder-reported appointment renames the Head of Security an Ordningsvakt",
     file: WALLET,
-    find: "                {derivedTitle}",
-    replace: "                {title || derivedTitle}",
+    find: "                    {currentRole}\n",
+    replace: "                    {credentialDerivedTitle ?? currentRole}\n",
     guard: GUARD,
-    expect: "the Profile title is never the fallback",
+    expect: "never appears on the card",
   },
   {
-    id: "PPC-NC-TITLE-NOT-FROM-THE-ENGINE",
-    defect: "the primary title line stops coming from the derivation engine",
+    id: "PPC-NC-ROLE-NOT-FROM-THE-PROFILE",
+    defect:
+      "the role is read from the Passport's own mirrored headline instead of the canonical Career Profile, which is a second title field",
     file: WALLET,
-    find: '  const derivedTitle = professionLine(snapshot.holder.identity, lang, pt("identity.none"));',
-    replace: '  const derivedTitle = snapshot.profile?.headline ?? pt("identity.none");',
+    find: "  const identity = snapshot.profileIdentity;",
+    replace:
+      "  const identity = {\n    displayName: snapshot.profile?.displayName ?? null,\n    titleSv: snapshot.profile?.headline ?? null,\n    titleEn: snapshot.profile?.headline ?? null,\n  };",
     guard: GUARD,
-    expect: "the derivation engine's output",
+    expect: "canonical Career Profile's current role",
+  },
+  {
+    id: "PPC-NC-NEGATIVE-TITLE-RETURNS",
+    defect:
+      "'No active professional title' comes back under the holder's name when no role is stated",
+    file: WALLET,
+    find: '{copy("Nuvarande yrke inte angivet", "Current professional role not added")}',
+    replace: '{pt("identity.none")}',
+    guard: GUARD,
+    expect: "No active professional title",
+  },
+  {
+    id: "PPC-NC-SECOND-ADD-CREDENTIAL",
+    defect:
+      "the next step grows its own Add credential button again, so the overview has two primary ways to do one thing",
+    file: SIDE,
+    find: '        {next.kind === "clarify" && (',
+    replace:
+      '        <Link to="/passport/credentials/new">+</Link>\n        {next.kind === "clarify" && (',
+    guard: GUARD,
+    expect: "exactly ONE Add credential",
   },
   {
     id: "PPC-NC-FIFTH-TAB",

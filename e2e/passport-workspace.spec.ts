@@ -771,8 +771,13 @@ test.describe("Security Passport — governed wallet regression", () => {
     await mount(page, MIXED, "en");
     await ready(page);
     await expect(rows(page)).toHaveCount(5);
+    // Once in the COLLECTION. The action panel now sits inside the wallet and
+    // may also link to the credential it recommends acting on; this is about
+    // the list not repeating a record, so it is scoped to the list.
     for (const c of MIXED.claims)
-      await expect(wallet(page).locator(`a[href="/passport/entry/claim/${c.id}"]`)).toHaveCount(1);
+      await expect(
+        wallet(page).locator(`#merits a[href="/passport/entry/claim/${c.id}"]`),
+      ).toHaveCount(1);
     await expect(wallet(page)).not.toContainText("Nordic Security AB");
     await expect(wallet(page)).not.toContainText("Väktarbolaget Syd AB");
   });
@@ -917,7 +922,9 @@ test.describe("Security Passport — governed wallet regression", () => {
         lang === "sv" ? "Säkerhetsanalytiker" : "Security analyst",
       );
       await expect(wallet(page)).toContainText("Certified Protection Professional (CPP)");
-      await expect(wallet(page)).toContainText(lang === "sv" ? "Internationellt" : "International");
+      await expect(wallet(page)).toContainText(
+        lang === "sv" ? "Internationella certifieringar" : "International certifications",
+      );
       await expect(wallet(page)).not.toContainText("Protective security training");
       // The name comes from Profile and is stated ONCE, by the identity
       // surface -- there is no second Passport card to repeat it.

@@ -142,11 +142,6 @@ function RecipientPassportBody({
             label={pt("rec.holder")}
             value={presentation.holderLabel ?? pt("rec.anonymousHolder")}
           />
-          {/* Derived first: a self-described title never precedes the
-              credential-derived one. */}
-          {presentation.titles.length > 0 && (
-            <Row label={pt("rec.profession")} value={joinTitles(presentation.titles, lang, "")} />
-          )}
           {presentation.profileTitle && (
             <Row
               label={
@@ -156,6 +151,9 @@ function RecipientPassportBody({
               }
               value={presentation.profileTitle}
             />
+          )}
+          {presentation.titles.length > 0 && (
+            <Row label={pt("rec.profession")} value={joinTitles(presentation.titles, lang, "")} />
           )}
           {presentation.eligibility.length > 0 ? (
             <Row

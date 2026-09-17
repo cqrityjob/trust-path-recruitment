@@ -30,6 +30,8 @@ import { formatDuration } from "@/lib/security-passport/format";
 import type { RecipientPresentation } from "@/lib/security-passport/recipient-presentation";
 import { BrandMark, EngravedField, EngravedRule, MicroLabel } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
+import { CredentialConstellation } from "../CredentialShield";
+import { resolveCredentialScope } from "@/lib/security-passport/credential-shield";
 
 /** Tones for the status word ON THE CARD's navy ground. Distinct from the
  *  theme-surface tones used elsewhere; both are supplementary to the word. */
@@ -96,28 +98,29 @@ export function RecipientPassportCard({
           >
             {holderName}
           </h2>
-          {/* The derived line first. A self-described title never sits above
-              the credential-derived one, and never at a larger size. */}
+          {/* Who the person IS: the current role from their Profile, said to
+              be their own statement. What their disclosed credentials support
+              follows it and never replaces it (owner decision, 2026-09-17). */}
+          {presentation.profileTitle && (
+            <p
+              className="mt-2 text-sm"
+              style={{ color: TRUST_PALETTE.inkMuted }}
+              data-shared-profile-title
+            >
+              {presentation.profileTitle}
+              <span className="mt-1 block text-xs">
+                {lang === "sv"
+                  ? "Yrkestitel från Profil · egen uppgift"
+                  : "Profile title · self-reported"}
+              </span>
+            </p>
+          )}
           {(presentation.titles.length > 0 || presentation.jurisdiction) && (
             <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
               {titleWithJurisdictionOnce(
                 presentation.titles.length ? joinTitles(presentation.titles, lang, "") : "",
                 presentation.jurisdiction ? jurisdiction : null,
               )}
-            </p>
-          )}
-          {presentation.profileTitle && (
-            <p
-              className="mt-2 text-xs"
-              style={{ color: TRUST_PALETTE.inkMuted }}
-              data-shared-profile-title
-            >
-              {presentation.profileTitle}
-              <span className="mt-1 block">
-                {lang === "sv"
-                  ? "Yrkestitel från Profil · egen uppgift"
-                  : "Profile title · self-reported"}
-              </span>
             </p>
           )}
         </header>
@@ -149,6 +152,35 @@ export function RecipientPassportCard({
             >
               {formatDuration(presentation.confirmedEmploymentDays, lang)}
             </p>
+          </div>
+        ) : null}
+
+        {/* ── The same shields the holder's own card draws ─────────────
+            Built from `presentation.credentials` and nothing else, so a "+N"
+            here counts DISCLOSED credentials only: what the holder left out of
+            this share has no representation on this surface, not even as a
+            number. No link on the count — a recipient has nowhere further to
+            go. Scope comes from the disclosed jurisdiction; the payload does
+            not say whether a definition is international, so a credential
+            with no jurisdiction wears no scope rather than a guessed globe. */}
+        {presentation.credentials.length > 0 ? (
+          <div className="mt-4 [container-type:inline-size]" data-recipient-shields>
+            <CredentialConstellation
+              ground="navy"
+              credentials={presentation.credentials.map((c) => ({
+                id: c.key,
+                code: c.code,
+                name: c.title,
+                state: c.presentation,
+                statusWordKey: c.statusWordKey,
+                lifecycle: c.lifecycle,
+                validUntil: c.validUntil,
+                scope: resolveCredentialScope(
+                  { jurisdictionCode: c.jurisdiction, subJurisdictionCode: c.subJurisdiction },
+                  lang,
+                ),
+              }))}
+            />
           </div>
         ) : null}
 

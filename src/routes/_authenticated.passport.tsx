@@ -96,7 +96,7 @@ function PassportShell() {
                       activeOptions={{ exact: true, includeHash: true }}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "inline-flex min-h-11 items-center justify-center whitespace-nowrap border-b-2 px-3 text-center text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                        "inline-flex min-h-11 items-center justify-center whitespace-nowrap border-b-2 px-2.5 text-center text-sm font-medium sm:px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                         active
                           ? "border-accent text-foreground"
                           : "border-transparent text-muted-foreground hover:text-foreground",
