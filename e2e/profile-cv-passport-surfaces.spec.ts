@@ -675,15 +675,21 @@ test.describe("Security Passport", () => {
       ready: "[data-credential-wallet]",
       overrides: passportOverrides(),
     });
+    // The actions sit in the row beneath the card: the card itself holds no
+    // control (work order 2026-09-17, 1.2).
+    await expect(page.locator("[data-credential-wallet] header").locator("a, button")).toHaveCount(
+      0,
+    );
     await page
-      .locator("[data-credential-wallet] header")
+      .locator("[data-passport-actions]")
       .getByRole("link", { name: "Add credential" })
       .click();
     await page.waitForURL("**/passport/credentials/new");
     await page.waitForTimeout(800);
     await shot(page, "08-passport-add-credential-1440-en");
 
-    await page.getByRole("link", { name: "Preview and share" }).first().click();
+    // From the form, sharing is the Share tab; from the Passport, the button.
+    await page.getByRole("link", { name: "Share", exact: true }).click();
     await page.waitForURL("**/passport/share");
     await expect(page.locator("[data-share-screen]")).toBeVisible();
     await shot(page, "09-passport-preview-and-share-1440-en");

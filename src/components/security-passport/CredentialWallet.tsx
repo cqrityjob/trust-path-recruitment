@@ -20,6 +20,10 @@ import {
 import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import {
+  headlineIsSelfDeclared,
+  professionLine,
+} from "@/lib/security-passport/identity/presentation";
 import { CredentialSymbol } from "./CredentialSymbol";
 import { CredentialRecord, CredentialRecordFact } from "./CredentialRecord";
 import { LifecycleChip } from "./LifecycleChip";
@@ -37,8 +41,12 @@ export function CredentialWallet({
   reviews: ReadonlyMap<string, string> | null;
   now: string;
 }) {
-  const { lang } = usePassportCopy();
+  const { lang, pt } = usePassportCopy();
   const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
+  // One derivation, one renderer — the same line the overview and the card
+  // print, from the same engine output the snapshot already carries.
+  const derivedTitle = professionLine(snapshot.holder.identity, lang, pt("identity.none"));
+  const derivedIsSelfDeclared = headlineIsSelfDeclared(snapshot.holder.identity);
   const claims = credentialPassportHolder(snapshot.holder).claims;
   const rows = claims.map((c) =>
     credentialProductStatus(c, metadata.verificationEvents, now, reviews?.get(c.id)),
@@ -70,7 +78,10 @@ export function CredentialWallet({
       data-credential-wallet
       className="min-w-0 space-y-8"
     >
-      <header className="passport-signature relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-8 lg:p-9">
+      <header
+        data-passport-identity-surface
+        className="passport-signature relative isolate overflow-hidden [container-type:inline-size] rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] sm:p-8 lg:p-9"
+      >
         <div
           aria-hidden="true"
           className="absolute inset-x-0 top-0 h-px bg-primary-foreground/40"
@@ -97,47 +108,47 @@ export function CredentialWallet({
                 <Lock size={12} aria-hidden="true" />
                 Security Passport
               </p>
+              {/* A holder's name never breaks inside a word. `overflow-wrap:
+                  anywhere` on a large size is what printed "Most / afa /
+                  Alsha / wi"; the size now follows the CARD's width, the
+                  name takes at most two lines, and then an ellipsis. */}
               <h1
                 id="credential-wallet-heading"
-                className="text-[1.75rem] font-semibold leading-tight text-balance !text-primary-foreground [overflow-wrap:anywhere] sm:text-[2.5rem]"
+                data-passport-holder-name
+                className="line-clamp-2 text-[clamp(20px,5.2cqw,30px)] font-semibold leading-tight !text-primary-foreground [hyphens:none] [overflow-wrap:normal] [word-break:keep-all]"
               >
                 {identity?.displayName || copy("Mitt Security Passport", "My Security Passport")}
               </h1>
-              <p className="mt-2 text-primary-foreground/80">
-                {title || copy("Ingen yrkestitel angiven", "No professional title stated")}
-              </p>
-              {/* Shown here, edited there. The name and the title are Profile
-                  facts: the Passport displays them and has no editor for
-                  either, so the way to change one is a link to the field. */}
-              <Link
-                to="/my-career/profile"
-                hash="profile-basics"
-                data-cta="edit-in-profile"
-                className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-primary-foreground/65 underline-offset-4 transition-colors hover:text-primary-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              {/* The primary title line is the derivation engine's output and
+                  nothing else. With no qualifying credential it is the neutral
+                  fallback — never the title somebody typed into Profile. */}
+              <p
+                data-passport-derived-title
+                className="mt-2 line-clamp-2 font-medium text-primary-foreground/90"
               >
-                <UserRound size={12} aria-hidden="true" />
-                {title
-                  ? copy("Namn och titel ändras i Profil", "Name and title are edited in Profile")
-                  : copy("Lägg till yrkestitel i Profil", "Add professional title in Profile")}
-              </Link>
+                {derivedTitle}
+              </p>
+              {derivedIsSelfDeclared ? (
+                <p
+                  data-testid="sp-self-declared-marker"
+                  className="mt-0.5 text-xs text-primary-foreground/65"
+                >
+                  {pt("identity.selfDeclared")}
+                </p>
+              ) : null}
+              {/* The Profile title may appear, below the derived line, lighter
+                  and smaller, and said to be the holder's own description. */}
+              {title ? (
+                <p
+                  data-passport-profile-title
+                  className="mt-1.5 truncate text-xs font-normal text-primary-foreground/65"
+                >
+                  {title}
+                  {" · "}
+                  {copy("egen uppgift från Profil", "self-described, from Profile")}
+                </p>
+              ) : null}
             </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Link
-              to="/passport/credentials/new"
-              className="inline-flex min-h-11 items-center gap-2 rounded-md bg-primary-foreground px-5 py-3 text-sm font-semibold text-primary transition-colors hover:bg-primary-foreground/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <Plus size={17} aria-hidden="true" />
-              {copy("Lägg till meriter", "Add credential")}
-            </Link>
-            <Link
-              to="/passport/share"
-              data-cta="share"
-              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-primary-foreground/25 px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary-foreground/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <Share2 size={16} aria-hidden="true" />
-              {copy("Förhandsvisa och dela", "Preview and share")}
-            </Link>
           </div>
         </div>
         <div className="relative mt-7 border-t border-primary-foreground/15 pt-4">
@@ -174,6 +185,41 @@ export function CredentialWallet({
           </dl>
         </div>
       </header>
+      {/* The card holds no controls — no button, link, tab or input, ever.
+          Everything the holder can DO sits in this row beneath it. */}
+      <div
+        data-passport-actions
+        className="!mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+      >
+        <Link
+          to="/passport/credentials/new"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <Plus size={17} aria-hidden="true" />
+          {copy("Lägg till meriter", "Add credential")}
+        </Link>
+        <Link
+          to="/passport/share"
+          data-cta="share"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-input bg-card px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          <Share2 size={16} aria-hidden="true" />
+          {copy("Förhandsvisa och dela", "Preview and share")}
+        </Link>
+        {/* Shown there, edited here: the name and the Profile title are
+            Profile facts, and the Passport has no editor for either. */}
+        <Link
+          to="/my-career/profile"
+          hash="profile-basics"
+          data-cta="edit-in-profile"
+          className="inline-flex min-h-11 items-center gap-1.5 text-xs font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:ml-auto"
+        >
+          <UserRound size={12} aria-hidden="true" />
+          {title
+            ? copy("Namn och titel ändras i Profil", "Name and title are edited in Profile")
+            : copy("Lägg till yrkestitel i Profil", "Add professional title in Profile")}
+        </Link>
+      </div>
       {reviews === null && (
         <p role="status" data-review-read-status className="rounded-xl bg-muted p-3 text-sm">
           {reviewState === "loading"

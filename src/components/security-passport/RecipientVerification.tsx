@@ -25,7 +25,11 @@ import { EligibilityLine } from "./EligibilityLine";
 import { ShieldCheck, ShieldQuestion } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatDuration, formatJurisdiction } from "@/lib/security-passport/format";
+import {
+  formatDuration,
+  formatJurisdiction,
+  titleWithJurisdictionOnce,
+} from "@/lib/security-passport/format";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type { DisclosurePayload } from "@/lib/security-passport/disclosure";
 import type { PassportCardModel } from "@/lib/security-passport/card";
@@ -67,7 +71,7 @@ export function DisclosurePayloadView({
           {payload.holderDisplayName}
         </h3>
         <p className="mt-1 text-sm text-foreground">
-          {profession} · {jurisdiction}
+          {titleWithJurisdictionOnce(profession, jurisdiction)}
         </p>
         {/* The one fact an employer is actually trying to establish, stated
             separately from the training line above it. Derived from the

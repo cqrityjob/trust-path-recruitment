@@ -23,7 +23,7 @@
 import { CredentialScopeLine } from "./CredentialScopeLine";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { EligibilityLine } from "../EligibilityLine";
-import { formatWorkLocation } from "@/lib/security-passport/format";
+import { formatWorkLocation, titleWithJurisdictionOnce } from "@/lib/security-passport/format";
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDuration } from "@/lib/security-passport/format";
@@ -96,28 +96,28 @@ export function RecipientPassportCard({
           >
             {holderName}
           </h2>
+          {/* The derived line first. A self-described title never sits above
+              the credential-derived one, and never at a larger size. */}
+          {(presentation.titles.length > 0 || presentation.jurisdiction) && (
+            <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
+              {titleWithJurisdictionOnce(
+                presentation.titles.length ? joinTitles(presentation.titles, lang, "") : "",
+                presentation.jurisdiction ? jurisdiction : null,
+              )}
+            </p>
+          )}
           {presentation.profileTitle && (
             <p
-              className="mt-2 text-sm"
+              className="mt-2 text-xs"
               style={{ color: TRUST_PALETTE.inkMuted }}
               data-shared-profile-title
             >
               {presentation.profileTitle}
-              <span className="mt-1 block text-xs">
+              <span className="mt-1 block">
                 {lang === "sv"
                   ? "Yrkestitel från Profil · egen uppgift"
                   : "Profile title · self-reported"}
               </span>
-            </p>
-          )}
-          {(presentation.titles.length > 0 || presentation.jurisdiction) && (
-            <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
-              {[
-                presentation.titles.length ? joinTitles(presentation.titles, lang, "") : null,
-                presentation.jurisdiction ? jurisdiction : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
             </p>
           )}
         </header>

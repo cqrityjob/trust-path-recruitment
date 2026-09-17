@@ -176,12 +176,81 @@ check(
   (workspace.match(/data-cta="share"/g) ?? []).length === 1,
   "share appears exactly once — not one control per region",
 );
+// ── REVERSED BY THE 2026-09-17 WORK ORDER, §1.2 ─────────────────────────
+// These two used to assert the actions sat INSIDE the header. The identity
+// surface is a card, and a card holds no interactive control at any time:
+// the buttons are why the holder's name had no room. They now sit in the
+// row directly beneath it — still near the top, still once each.
+const headerStart = workspace.indexOf("<header");
 const headerEnd = workspace.indexOf("</header>");
+const header =
+  headerStart >= 0 && headerEnd > headerStart ? workspace.slice(headerStart, headerEnd) : "";
+const actionsIdx = workspace.indexOf("data-passport-actions");
 check(
-  headerEnd > 0 && workspace.indexOf('to="/passport/credentials/new"') < headerEnd,
-  "add a credential sits inside the page header, near the top",
+  header.length > 0 &&
+    !/<(Link|a|button|input|select|textarea)\b|role="(tab|button|menu)|onClick=/.test(header),
+  "the identity surface contains no interactive control of any kind",
 );
-check(headerEnd > 0 && workspace.indexOf('data-cta="share"') < headerEnd, "and so does share");
+check(
+  actionsIdx > headerEnd &&
+    workspace.indexOf('to="/passport/credentials/new"') > actionsIdx &&
+    workspace.indexOf('data-cta="share"') > actionsIdx &&
+    workspace.indexOf('data-cta="edit-in-profile"') > actionsIdx,
+  "add, share and edit-in-Profile sit in the action row beneath the card",
+);
+check(
+  actionsIdx > 0 && workspace.slice(headerEnd, actionsIdx).split("\n").length < 8,
+  "and that row follows the card directly, so the actions stay near the top",
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n4b · the name never breaks inside a word, and the title is derived");
+
+const nameTag = workspace.match(/<h1\b[\s\S]*?>/)?.[0] ?? "";
+check(
+  /\[overflow-wrap:normal\]/.test(nameTag) &&
+    /\[word-break:keep-all\]/.test(nameTag) &&
+    /\[hyphens:none\]/.test(nameTag) &&
+    !/overflow-wrap:anywhere|break-all|break-words/.test(nameTag),
+  "the holder's name may wrap between words and nowhere else",
+);
+check(
+  /line-clamp-2/.test(nameTag) && /text-\[clamp\(20px,5\.2cqw,30px\)\]/.test(nameTag),
+  "two lines then an ellipsis, sized from the card's own width",
+);
+check(/\[container-type:inline-size\]/.test(header), "the card is the container-query context");
+check(
+  /professionLine\(snapshot\.holder\.identity, lang, pt\("identity\.none"\)\)/.test(workspace),
+  "the primary title line is the derivation engine's output, with the neutral fallback",
+);
+check(
+  !/\{title \|\|/.test(workspace) &&
+    header.indexOf("data-passport-derived-title") > 0 &&
+    header.indexOf("data-passport-derived-title") < header.indexOf("data-passport-profile-title"),
+  "the Profile title is never the fallback, and never sits above the derived line",
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n4c · four tabs");
+
+const shell = code(read(SHELL));
+const navBlock = shell.match(/const NAV = \[([\s\S]*?)\n\] as const;/)?.[1] ?? "";
+check(
+  (navBlock.match(/\ben: "/g) ?? []).join("|") === 'en: "|en: "|en: "|en: "' &&
+    /en: "Overview"[\s\S]*en: "Credentials"[\s\S]*en: "Verification"[\s\S]*en: "Share"/.test(
+      navBlock,
+    ),
+  "Overview, Credentials, Verification, Share — in that order and no others",
+);
+check(
+  /also: \["\/passport\/credentials\/new"\]/.test(navBlock) &&
+    /also: \["\/passport\/privacy"\]/.test(navBlock),
+  "the absorbed routes keep a current tab: the form under Credentials, privacy under Share",
+);
+check(
+  /to: "\/passport\/privacy", sv: "Delning och integritet", en: "Sharing & privacy"/.test(shell),
+  "and Sharing & privacy stays reachable from inside Share — nothing was removed",
+);
 check(/identity\?\.displayName/.test(workspace), "the main column names the holder from Profile");
 // Displayed here, edited there. The Passport has no editor for the name or
 // the title, and says where the editor is.
@@ -193,6 +262,45 @@ check(
   !/<(input|textarea|select)\b/.test(workspace) &&
     !/savePassportBasics/.test(workspace + side + index),
   "the Passport overview holds no editor for a Profile fact",
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n4d · the jurisdiction is rendered once, by one helper");
+
+const { titleWithJurisdictionOnce } = await import("../src/lib/security-passport/format");
+check(
+  titleWithJurisdictionOnce("Public Order Guard (Ordningsvakt) · Sweden", "Sweden") ===
+    "Public Order Guard (Ordningsvakt) · Sweden",
+  "a title that already ends in the country is not given it again",
+);
+check(
+  titleWithJurisdictionOnce("Ordningsvakt", "Sverige") === "Ordningsvakt · Sverige" &&
+    titleWithJurisdictionOnce("Ordningsvakt · sverige ", "Sverige") === "Ordningsvakt · sverige",
+  "one that does not is, and case or trailing space does not defeat the check",
+);
+check(
+  titleWithJurisdictionOnce("Ordningsvakt", null) === "Ordningsvakt" &&
+    titleWithJurisdictionOnce("", "Sverige") === "Sverige",
+  "a missing half never leaves a dangling separator",
+);
+for (const surface of [
+  "src/components/security-passport/PassportOverview.tsx",
+  "src/components/security-passport/RecipientVerification.tsx",
+  "src/components/security-passport/live/RecipientPassportCard.tsx",
+  "src/components/security-passport/live/LinkedInShareSection.tsx",
+  "src/lib/security-passport/share-image.ts",
+]) {
+  const src = code(read(surface));
+  check(
+    /titleWithJurisdictionOnce\(/.test(src) &&
+      !/\}\s*·\s*\$\{format(Jurisdiction|WorkLocation)\(/.test(src) &&
+      !/\{profession\}\s*·\s*\{jurisdiction\}/.test(src),
+    `${surface.split("/").pop()} joins title and jurisdiction through the helper only`,
+  );
+}
+check(
+  /TODO\(A4\)/.test(read("src/lib/security-passport/format.ts")),
+  "and the helper is marked temporary, tied to the A4 data fix",
 );
 
 /* ------------------------------------------------------------------ */

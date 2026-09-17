@@ -221,6 +221,29 @@ export function formatWorkLocation(
   return sub === country ? country : `${sub}, ${country}`;
 }
 
+/**
+ * A title line with the jurisdiction after it — stated once.
+ *
+ * Observed on screen: `Public Order Guard (Ordningsvakt) · Sweden · Sweden`.
+ * The title string already ended in the country and the surface appended it
+ * again. Every surface that joins a title to a jurisdiction goes through
+ * here, so they cannot diverge about whether the country is already there.
+ *
+ * Compared against the jurisdiction's name IN THE READER'S LOCALE, because
+ * that is the string about to be appended; case and surrounding whitespace
+ * are ignored and nothing else is.
+ */
+// TODO(A4): remove once the `· <Country>` suffix is stripped from
+// sp_professional_titles.name_en by migration. Display-layer dedup only.
+export function titleWithJurisdictionOnce(title: string, jurisdiction: string | null): string {
+  const t = title.trim();
+  const j = jurisdiction?.trim() ?? "";
+  if (!j) return t;
+  if (!t) return j;
+  if (t.toLocaleLowerCase().endsWith(j.toLocaleLowerCase())) return t;
+  return `${t} · ${j}`;
+}
+
 /** What the product can record for a given work country, as a copy key.
  *
  *  ── WHY IT LIVES HERE AND NOT IN A COMPONENT ───────────────────────────

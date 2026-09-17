@@ -11,7 +11,7 @@
 // contains.
 
 import { joinTitles } from "./identity/presentation";
-import { formatJurisdiction } from "./format";
+import { formatJurisdiction, titleWithJurisdictionOnce } from "./format";
 import { buildSocialSvg, svgToPngBlob } from "./social-export";
 import { shareFormat, type ShareFormat } from "./design/trust-system";
 import type { SocialCardModel } from "./social";
@@ -35,7 +35,10 @@ export async function renderShareImage(
     lang,
     {
       brand: pt("card.brand"),
-      professionLine: `${joinTitles(model.titles, lang, pt("identity.none"))} · ${formatJurisdiction(model.jurisdictionCode, lang)}`,
+      professionLine: titleWithJurisdictionOnce(
+        joinTitles(model.titles, lang, pt("identity.none")),
+        formatJurisdiction(model.jurisdictionCode, lang),
+      ),
       verifiedLabel: pt("assertion.verified"),
       yearsLabel: pt("recognition.years"),
       verifyAtSource: pt("card.verifyAtSource"),

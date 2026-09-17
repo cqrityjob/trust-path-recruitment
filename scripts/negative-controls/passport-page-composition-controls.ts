@@ -74,10 +74,81 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the identity surface loses its link to the Profile, so the Passport displays a name and title with no way to reach the one place they are edited",
     file: WALLET,
-    find: '                data-cta="edit-in-profile"',
-    replace: '                data-cta="edit-elsewhere"',
+    find: '          data-cta="edit-in-profile"',
+    replace: '          data-cta="edit-elsewhere"',
     guard: GUARD,
     expect: "sends the holder to the Profile",
+  },
+  // ── Work order 2026-09-17, part 1 ────────────────────────────────────
+  {
+    id: "PPC-NC-CONTROL-BACK-INSIDE-THE-CARD",
+    defect:
+      "a button is put back inside the identity surface, which is what left the holder's name no room",
+    file: WALLET,
+    find: "              {derivedIsSelfDeclared ? (",
+    replace:
+      '              <button type="button">Add credential</button>\n              {derivedIsSelfDeclared ? (',
+    guard: GUARD,
+    expect: "the identity surface contains no interactive control",
+  },
+  {
+    id: "PPC-NC-NAME-BREAKS-INSIDE-A-WORD",
+    defect:
+      "the holder's name may break anywhere again, so 'Mostafa Alshawi' prints as 'Most / afa / Alsha / wi'",
+    file: WALLET,
+    find: "[hyphens:none] [overflow-wrap:normal] [word-break:keep-all]",
+    replace: "[hyphens:none] [overflow-wrap:anywhere] [word-break:keep-all]",
+    guard: GUARD,
+    expect: "may wrap between words and nowhere else",
+  },
+  {
+    id: "PPC-NC-PROFILE-TITLE-STANDS-IN",
+    defect:
+      "the title line falls back to the Profile title, so a self-described 'Head of Security' prints where a credential-derived standing belongs",
+    file: WALLET,
+    find: "                {derivedTitle}",
+    replace: "                {title || derivedTitle}",
+    guard: GUARD,
+    expect: "the Profile title is never the fallback",
+  },
+  {
+    id: "PPC-NC-TITLE-NOT-FROM-THE-ENGINE",
+    defect: "the primary title line stops coming from the derivation engine",
+    file: WALLET,
+    find: '  const derivedTitle = professionLine(snapshot.holder.identity, lang, pt("identity.none"));',
+    replace: '  const derivedTitle = snapshot.profile?.headline ?? pt("identity.none");',
+    guard: GUARD,
+    expect: "the derivation engine's output",
+  },
+  {
+    id: "PPC-NC-FIFTH-TAB",
+    defect: "Add credential comes back as a tab, so the four tabs are five",
+    file: "src/routes/_authenticated.passport.tsx",
+    find: '  { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },',
+    replace:
+      '  { to: "/passport/credentials/new", sv: "Lägg till", en: "Add credential" },\n  { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },',
+    guard: GUARD,
+    expect: "in that order and no others",
+  },
+  {
+    id: "PPC-NC-COUNTRY-TWICE",
+    defect:
+      "the helper appends the jurisdiction unconditionally, so a title ending in the country prints it twice",
+    file: "src/lib/security-passport/format.ts",
+    find: "  if (t.toLocaleLowerCase().endsWith(j.toLocaleLowerCase())) return t;\n",
+    replace: "",
+    guard: GUARD,
+    expect: "is not given it again",
+  },
+  {
+    id: "PPC-NC-SURFACE-BYPASSES-THE-HELPER",
+    defect:
+      "the recipient page joins title and jurisdiction by hand again, so one surface can diverge from the other four",
+    file: "src/components/security-passport/RecipientVerification.tsx",
+    find: "          {titleWithJurisdictionOnce(profession, jurisdiction)}",
+    replace: "          {profession} · {jurisdiction}",
+    guard: GUARD,
+    expect: "RecipientVerification.tsx joins title and jurisdiction through the helper only",
   },
   {
     id: "PPC-NC-NEXT-STEP-SECOND-OPINION",

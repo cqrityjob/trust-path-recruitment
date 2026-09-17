@@ -25,7 +25,8 @@
 
 import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, Compass, Eye, Lock } from "lucide-react";
+import { ArrowRight, CalendarClock, Compass, Eye, Lock } from "lucide-react";
+import { credentialDate } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
@@ -74,6 +75,11 @@ export function PassportSideColumn({
     lang === "sv" ? row.claim.titleSv : row.claim.titleEn || row.claim.titleSv;
   const clarify = rows.find((r) => r.status === "clarification");
   const registered = rows.filter((r) => r.status === "registered");
+  // The wallet header's own window: active rows lapsing within 30 days.
+  const horizon = new Date(new Date(today).getTime() + 30 * 86400000).toISOString().slice(0, 10);
+  const expiring = rows
+    .filter((r) => r.lifecycle === "active" && r.claim.validUntil && r.claim.validUntil <= horizon)
+    .sort((a, b) => a.claim.validUntil!.localeCompare(b.claim.validUntil!));
 
   // A reviewer's question first: it is the only step with somebody waiting.
   const next: NextStep =
@@ -194,6 +200,44 @@ export function PassportSideColumn({
           </>
         )}
       </section>
+
+      {/* ── Expiring within 30 days ──────────────────────────────────────
+          The wallet's header prints this as a COUNT; this says which ones.
+          The same window over the same active rows, so the two cannot
+          disagree. States the date and nothing else — "renew" would be the
+          wrong instruction for a record nobody has checked. Not rendered at
+          all when nothing is expiring. */}
+      {expiring.length > 0 ? (
+        <section
+          aria-labelledby="sp-side-expiring-heading"
+          data-passport-expiring
+          className="rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-xs)]"
+        >
+          <h2
+            id="sp-side-expiring-heading"
+            className="flex items-center gap-2 text-sm font-semibold tracking-tight text-foreground"
+          >
+            <CalendarClock aria-hidden="true" className="h-3.5 w-3.5" />
+            {copy("Utgår inom 30 dagar", "Expiring within 30 days")}
+          </h2>
+          <ul className="mt-2 divide-y divide-border">
+            {expiring.map((row) => (
+              <li key={row.claim.id}>
+                <Link
+                  to="/passport/entry/$kind/$entryId"
+                  params={{ kind: "claim", entryId: row.claim.id }}
+                  className={`${LINK} w-full justify-between gap-3 font-medium text-foreground`}
+                >
+                  <span className="min-w-0 break-words">{titleOf(row)}</span>
+                  <span className="shrink-0 text-xs font-normal tabular-nums text-muted-foreground">
+                    {credentialDate(row.claim.validUntil!, lang)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       {/* ── Integrity, privacy and sharing ───────────────────────────── */}
       <section

@@ -35,7 +35,7 @@ import {
   type CatalogueOption,
 } from "@/lib/security-passport/market-catalogue";
 import { ExperienceTimeline } from "./ExperienceTimeline";
-import { formatWorkLocation } from "@/lib/security-passport/format";
+import { formatWorkLocation, titleWithJurisdictionOnce } from "@/lib/security-passport/format";
 import { EligibilityLine } from "./EligibilityLine";
 import { ExperienceTotalsPanel } from "./ExperienceTotals";
 import { JurisdictionNotice } from "./JurisdictionNotice";
@@ -163,8 +163,10 @@ export function PassportOverview({
         <p className="mt-2 text-sm text-foreground">
           {[
             holder.displayName,
-            profession,
-            formatWorkLocation(holder.jurisdictionCode, holder.subJurisdictionCode, lang),
+            titleWithJurisdictionOnce(
+              profession,
+              formatWorkLocation(holder.jurisdictionCode, holder.subJurisdictionCode, lang),
+            ),
           ]
             .map((part) => part?.trim())
             .filter((part): part is string => Boolean(part))
