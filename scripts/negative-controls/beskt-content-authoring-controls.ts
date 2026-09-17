@@ -675,6 +675,59 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },
+
+  // ---- Schema-first: generated types vs hand-written application code -----
+  //
+  // The generated Supabase types may describe this migration's doors ONLY
+  // while release-state proves it applied. Each `expect` below is the
+  // FAILURE-LIST form of the diagnostic ("- AUTHORING-SCHEMA-FIRST: …"). The
+  // guard also prints every passing assertion as "ok <text>", and the release
+  // -state mutations here trip AUTHORING-REGISTRATION as well -- so matching
+  // the bare text would be satisfied by a passing "ok" line beside somebody
+  // else's failure, and a dead assertion would hide behind it.
+  {
+    id: "AUT-NC-TYPES-NAME-A-PENDING-MIGRATION",
+    defect:
+      "release-state says the migration is NOT applied while the generated types already describe its doors -- an admin UI could then be written against functions production does not have",
+    file: STATE,
+    find: '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "applied",',
+    replace:
+      '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "pending",',
+    guard: GUARD,
+    expect: "- AUTHORING-SCHEMA-FIRST: the generated types describe this migration's objects only",
+  },
+  {
+    id: "AUT-NC-BARE-FLIP-UNLOCKS-THE-TYPES",
+    defect:
+      "the state still reads 'applied' but its hosted evidence is gone -- a bare flip, which is exactly the unproved claim that must not be enough to let the types describe these doors",
+    file: STATE,
+    find: '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "applied",\n      "evidenceSource": "Applied',
+    replace:
+      '"file": "20261118090000_beskt_governed_content_authoring.sql",\n      "hostedState": "applied",\n      "evidenceSource": "",\n      "evidenceNote": "Applied',
+    guard: GUARD,
+    expect: "- AUTHORING-SCHEMA-FIRST: the generated types describe this migration's objects only",
+  },
+  {
+    id: "AUT-NC-APPLIED-ENTRY-IS-ANOTHER-MIGRATIONS",
+    defect:
+      "the applied entry no longer belongs to THIS migration, so the exemption would be resting on some other migration's state -- the relationship the rule depends on is broken",
+    file: STATE,
+    find: '"file": "20261118090000_beskt_governed_content_authoring.sql",',
+    replace: '"file": "20261118090000_beskt_governed_content_authoring_v2.sql",',
+    guard: GUARD,
+    expect: "- AUTHORING-SCHEMA-FIRST: the generated types describe this migration's objects only",
+  },
+  {
+    id: "AUT-NC-HANDWRITTEN-CODE-NAMES-A-DOOR",
+    defect:
+      "hand-written application code names a PR 7 authoring door before the admin UI that is meant to consume it -- the premature use this assertion has always refused, and must still refuse now that the generated types are exempt",
+    file: "src/lib/beskt/interview-conduct.functions.ts",
+    find: "export const recordBesktPanelResolution = createServerFn",
+    replace:
+      'const PLANTED_PREMATURE_USE = "beskt_author_item";\nexport const recordBesktPanelResolution = createServerFn',
+    guard: GUARD,
+    expect: "- AUTHORING-SCHEMA-FIRST: no application code named an object of this migration",
+  },
 ];
 
 runControls("beskt-content-authoring", MUTATIONS);

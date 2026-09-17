@@ -34,6 +34,11 @@
     // planted controls, on the same terms as the security guard above.
     "scripts/interview-method-tenant-read-check.ts",
     "scripts/negative-controls/interview-method-tenant-read-controls.ts",
+    // The nullable-RPC contract guard and its planted controls: new, no
+    // pre-existing type debt, and it exists because a silent change to a
+    // generated file went unnoticed four times.
+    "scripts/nullable-rpc-contract-check.ts",
+    "scripts/negative-controls/nullable-rpc-contract-controls.ts",
     "scripts/cd-outstanding-reviews-check.ts",
     "scripts/negative-controls/cd-outstanding-reviews-controls.ts",
     "scripts/candidate-navigation-canon-check.ts",

@@ -17,7 +17,27 @@ const LEVELS = [
   },
 ] as const;
 
-/** A generic product preview: no holder, credential, score, identifier, or claim. */
+/**
+ * A generic product preview: no holder, credential, score, identifier, or claim.
+ *
+ * ── NO <header> AND NO <footer> IN HERE ────────────────────────────────
+ *
+ * The card's top and bottom bands were `<header>` and `<footer>` elements.
+ * Inside an <article> they are not ARIA landmarks, so nothing was announced
+ * twice -- but the page then held two of each TAG, and the public-entry
+ * suite, which asserts ONE site header and ONE site footer and drives the
+ * mobile menu through `header`, could no longer tell the site's from the
+ * card's. They are plain containers now: the site chrome owns the only
+ * <header> and <footer> on the page, and this card loses nothing by it.
+ *
+ * ── THE ACTION SITS WITH THE PROPOSITION ───────────────────────────────
+ *
+ * It used to close the card, under the facts, the three trust levels and the
+ * markets -- 850px down, so at 1024x768 (and at 1440x900) one of the
+ * homepage's two primary entrances was below the first screen while the
+ * other was not. It now follows the sentence it acts on. Everything beneath
+ * it is supporting detail and reads as such.
+ */
 export function HomePassportPreview({ action }: { action?: ReactNode }) {
   const { t } = useT();
 
@@ -37,7 +57,10 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-44 border-l border-primary-foreground/10 opacity-20"
       />
 
-      <header className="flex items-start justify-between gap-4 border-b border-primary-foreground/15 pb-5">
+      <div
+        className="flex items-start justify-between gap-4 border-b border-primary-foreground/15 pb-5"
+        data-home-passport-band="top"
+      >
         <div>
           <p className="text-base font-semibold text-primary-foreground">CQrityjob</p>
           <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/65">
@@ -48,7 +71,7 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
           <Lock className="h-3.5 w-3.5" aria-hidden="true" />
           {t("home.passportPreview.private")}
         </span>
-      </header>
+      </div>
 
       <div className="py-7">
         <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-foreground/60">
@@ -60,6 +83,15 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-primary-foreground/70">
           {t("home.entry.passport.body")}
         </p>
+        {action ? (
+          <div className="mt-6 flex min-h-11 items-center justify-between gap-4">
+            {action}
+            <ArrowRight
+              className="h-4 w-4 shrink-0 text-primary-foreground/70"
+              aria-hidden="true"
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 border-y border-primary-foreground/15 py-4 text-xs sm:grid-cols-4">
@@ -91,7 +123,7 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         ))}
       </ul>
 
-      <footer className="border-t border-primary-foreground/15 pt-5">
+      <div className="border-t border-primary-foreground/15 pt-5" data-home-passport-band="bottom">
         <p className="text-xs font-medium text-primary-foreground/65">
           {t("home.passportPreview.markets")}
         </p>
@@ -106,16 +138,7 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
             </li>
           ))}
         </ul>
-        {action ? (
-          <div className="mt-5 flex min-h-11 items-center justify-between gap-4 border-t border-primary-foreground/15 pt-5">
-            {action}
-            <ArrowRight
-              className="h-4 w-4 shrink-0 text-primary-foreground/70"
-              aria-hidden="true"
-            />
-          </div>
-        ) : null}
-      </footer>
+      </div>
     </article>
   );
 }

@@ -36,6 +36,20 @@ jobs:
         continue-on-error: true
         run: bun run lint
 
+      # TWO ENTRIES IN THE GENERATED SUPABASE TYPES ARE HAND-MAINTAINED, and a
+      # regeneration erases them without a word. bcp_conduct_record_resolution
+      # and scp_iv_finalise_previewed_report take arguments that are nullable
+      # at the database and have no DEFAULT; the generator can only express
+      # "optional", so it writes a bare `string` and the honest `?? null` call
+      # stops compiling. It has happened four times, and each time the only
+      # symptom was the Type-check step below going red in BESKT and Interview
+      # Intelligence code nobody had touched -- which invites a cast. This runs
+      # FIRST so the next wipe is named: which file, which entries, and why a
+      # cast or an empty string is the wrong repair. It also reads the latest
+      # SQL definitions, so the exception cannot outlive the facts behind it.
+      - name: Nullable RPC argument contract check
+        run: bun run nullable-rpc-contract:check
+
       - name: Type-check
         run: bunx tsc --noEmit
 
