@@ -111,7 +111,7 @@ const MUTATIONS: readonly Mutation[] = [
       "signed-in becomes 'not anonymous', so the loading state fires an authenticated read on every anonymous page view and flashes a panel that then vanishes",
     file: JOBS,
     find:
-      '  const signedIn =\n    profileState.status === "no_profile" || profileState.status === "ready";',
+      '  const signedIn = profileState.status === "no_profile" || profileState.status === "ready";',
     replace: '  const signedIn = profileState.status !== "anonymous";',
     guard: GUARD,
     expect: "resolved from the observed states",
