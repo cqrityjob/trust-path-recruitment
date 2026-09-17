@@ -188,7 +188,28 @@ function GateRow({
   );
 }
 
-/** The validator's findings, as a checklist a person can act on. */
+/**
+ * The validator's findings, as a checklist a person can act on.
+ *
+ * ── WHY THE DATABASE'S OWN SENTENCE IS SHOWN HERE, AND NOWHERE ELSE ────
+ *
+ * Everywhere else in BESKT the rule is absolute: a raised message never
+ * reaches the DOM, because it can name a table, a column or a policy and
+ * because it is written for whoever is reading the database log.
+ *
+ * A validator finding is a different thing. It is not a refusal — it is the
+ * validator naming which governed row is incomplete and how, by key, and
+ * there is no shorter way to say "the exposure profile `night_shift` has no
+ * English duties" than to say it. Translating a hundred of them into a
+ * second vocabulary would put an editor at one remove from the row they
+ * have to fix.
+ *
+ * Two things make that safe rather than sloppy, and both are asserted by
+ * the guard: this surface is reachable only by a platform admin or a
+ * platform content role — the same population that reads the migration —
+ * and the text is labelled as the validator's own words rather than
+ * presented as a sentence the product wrote.
+ */
 function Findings({
   findings,
   heading,
@@ -205,6 +226,11 @@ function Findings({
     <div data-testid={testId}>
       <h4 className="text-sm font-semibold text-foreground">{heading}</h4>
       <p className="mt-1 max-w-[80ch] text-xs leading-relaxed text-muted-foreground">{lede}</p>
+      {findings.length > 0 && (
+        <p className="mt-1 max-w-[80ch] text-xs leading-relaxed text-muted-foreground">
+          {t("beskt.admin.validate.ownWords")}
+        </p>
+      )}
       {findings.length === 0 ? (
         <p className="mt-2 text-sm text-muted-foreground">{t("beskt.admin.validate.clear")}</p>
       ) : (

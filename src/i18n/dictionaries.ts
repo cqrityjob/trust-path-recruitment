@@ -4701,6 +4701,8 @@ export const dictionaries = {
     "beskt.admin.event.retired": "Avvecklades",
     "beskt.admin.gateState.stale": "Räknas inte längre",
     "beskt.admin.validate.clear": "Inget hindrar just nu.",
+    "beskt.admin.validate.ownWords":
+      "Texten nedan är validatorns egen. Den namnger den styrda raden vid dess nyckel, så att du hittar precis den rad som behöver åtgärdas.",
     "beskt.admin.grant.revokeConfirm": "Återkalla uppdraget",
     "beskt.admin.gateStale.revision":
       "Utkastet har rörts sedan godkännandet. Även en ändring som återställer exakt samma text räknas.",
@@ -11965,6 +11967,8 @@ export const dictionaries = {
     "beskt.admin.event.retired": "Retired",
     "beskt.admin.gateState.stale": "No longer counts",
     "beskt.admin.validate.clear": "Nothing is outstanding right now.",
+    "beskt.admin.validate.ownWords":
+      "The text below is the validator's own. It names the governed row by its key, so you can find exactly the row that needs attention.",
     "beskt.admin.grant.revokeConfirm": "Revoke the mandate",
     "beskt.admin.gateStale.revision":
       "The draft was touched after the approval. Even a change that restores byte-identical text counts.",
