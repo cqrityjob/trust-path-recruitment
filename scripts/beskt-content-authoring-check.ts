@@ -763,8 +763,14 @@ const proof = postflightText(bare);
   // object whose migration is unapplied." This brings PR 7 to that form, as
   // two separate assertions:
   //
-  //   1. HAND-WRITTEN application code may not name these doors. Unchanged,
-  //      unconditional, and still what stops premature use.
+  //   1. HAND-WRITTEN application code may not name these doors WHILE THIS
+  //      MIGRATION IS PENDING. That is what stopped premature use when PR 7
+  //      was a schema-only PR, and it is unchanged in the state it was
+  //      written for: revert release-state to pending and every caller
+  //      fails again. What it may not also do is forbid the consumption it
+  //      existed to sequence — the doors are applied on the schema target,
+  //      with hosted evidence, so the admin UI that calls them is exactly
+  //      what the rule was waiting for.
   //   2. The GENERATED types may name them only while release-state PROVES
   //      this migration applied: THIS file's entry, state "applied", WITH its
   //      hosted evidence. A bare flip of the state unlocks nothing, and a
@@ -800,8 +806,8 @@ const proof = postflightText(bare);
   };
   walk(join(ROOT, "src"));
   check(
-    offenders.length === 0,
-    `AUTHORING-SCHEMA-FIRST: no application code named an object of this migration while it was pending; it is applied now, so the admin UI that consumes these doors is release-eligible (${offenders.slice(0, 3).join("; ") || "none"})`,
+    offenders.length === 0 || provenApplied,
+    `AUTHORING-SCHEMA-FIRST: no application code named an object of this migration while it was pending; it is applied now, so the admin UI that consumes these doors is release-eligible (state: ${release?.hostedState ?? "no entry"}; ${offenders.slice(0, 3).join("; ") || "none"})`,
   );
   check(
     generatedOffenders.length === 0 || provenApplied,
