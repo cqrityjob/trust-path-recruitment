@@ -4175,6 +4175,229 @@ export const dictionaries = {
     "beskt.mycareer.state.in_progress": "Påbörjad",
     "beskt.mycareer.state.submitted": "Inlämnad",
     "beskt.mycareer.state.cancelled": "Avbruten",
+
+    // ---- PR 6 · vad som saknas innan rapporten kan skrivas ----------------
+    "beskt.error.reportNoPosition":
+      "Ingen har tagit ställning i samtalet ännu. Rapporten skrivs först när minst en bedömare har låst sitt eget underlag.",
+    "beskt.error.reportPositionOpen":
+      "Minst ett underlag är fortfarande öppet. Var och en låser sitt eget innan rapporten skrivs.",
+    "beskt.error.reportNothingDocumented":
+      "Ingenting är dokumenterat ännu, så det finns inget att rapportera.",
+    "beskt.error.reportPanelRequired":
+      "Fler än en bedömare har tagit ställning. Panelen behöver mötas innan rapporten skrivs.",
+    "beskt.error.reportResolutionMissing":
+      "Minst ett tema som flera bedömare dokumenterat saknar en noterad panelutgång.",
+    "beskt.error.reportBlocked":
+      "Rapporten kan inte skrivas ännu. Listan ovanför visar vilka steg som återstår.",
+    "beskt.error.reportPreviewRequired":
+      "Läs igenom förhandsvisningen innan du signerar rapporten.",
+    "beskt.error.reportStalePreview":
+      "Underlaget har ändrats sedan du läste det. Läs om förhandsvisningen och signera den versionen.",
+    "beskt.error.reportImmutable":
+      "En skriven rapport kan inte ändras. Skriv en ny version i stället.",
+
+    // ---- PR 6 · styrningen av metoden -------------------------------------
+    "beskt.error.govNotEditor": "Du har inte redaktörsbehörighet för metodinnehåll.",
+    "beskt.error.govNotReviewer": "Du har inte granskarbehörighet för metodinnehåll.",
+    "beskt.error.govNotPublisher": "Du har inte publiceringsbehörighet för metodinnehåll.",
+    "beskt.error.govNotPlatformAdmin": "Endast en plattformsadministratör kan göra detta.",
+    "beskt.error.govGateNotGranted":
+      "Du har inget aktivt uppdrag för just den granskningsporten. Ett uppdrag ges separat och kan vara återkallat eller utgånget.",
+    "beskt.error.govGateNotOpen": "Versionen är inte under granskning just nu.",
+    "beskt.error.govUnknownGate": "Den granskningsporten finns inte.",
+    "beskt.error.govUnknownDecision": "Det beslutet finns inte.",
+    "beskt.error.govSelfReview": "Den som har skrivit innehållet kan inte granska det.",
+    "beskt.error.govPublisherIsAuthor": "Den som har skrivit innehållet kan inte publicera det.",
+    "beskt.error.govOneGatePerReviewer":
+      "Du har redan avgjort en port för det här innehållet. En granskare avgör en port.",
+    "beskt.error.govReviewHashMismatch":
+      "Innehållet har ändrats sedan granskningen. Godkännandena behöver göras om.",
+    "beskt.error.govRationaleRequired": "Skriv en motivering.",
+    "beskt.error.govReasonRequired": "Skriv en anledning.",
+    "beskt.error.govVersionNotFound": "Den metodversionen finns inte.",
+    "beskt.error.govNotDraft": "Versionen är inte ett utkast och kan inte ändras.",
+    "beskt.error.govPublishedImmutable": "Publicerat innehåll kan inte ändras.",
+    "beskt.error.govIllegalTransition": "Det steget är inte tillåtet från det här läget.",
+    "beskt.error.govOpenVersionExists":
+      "Metoden har redan en öppen version. Avsluta den innan en ny påbörjas.",
+    "beskt.error.govSubmitBlocked":
+      "Versionen kan inte lämnas till granskning ännu. Kontrollistan visar vad som saknas.",
+    "beskt.error.govPublishBlocked":
+      "Versionen kan inte publiceras ännu. Kontrollistan visar vad som saknas.",
+    "beskt.error.govNotReadyToPublish":
+      "Alla fem portar är inte godkända vid nuvarande innehåll och revision.",
+    "beskt.error.govNotPublished": "Versionen är inte publicerad.",
+    "beskt.error.govContentKeyRequired": "Raden behöver en nyckel.",
+    "beskt.error.govContentUnknownField":
+      "Formuläret skickade ett fält som inte finns i kontraktet.",
+    "beskt.error.govContentNotFound": "Den raden finns inte i den här versionen.",
+    "beskt.error.govContentFamilyUnknown": "Den innehållstypen finns inte.",
+    "beskt.error.govContentPayload": "Innehållet kunde inte läsas. Kontrollera fälten.",
+    "beskt.error.govContentParentRequired": "Raden måste höra till en överordnad rad.",
+    "beskt.error.govContentParentUnknown": "Den överordnade raden finns inte i den här versionen.",
+    "beskt.error.govExposureLinkRequired": "Raden måste peka på en exponeringsprofil.",
+    "beskt.error.govOptionsNotApplicable": "Svarstypen tar inga svarsalternativ.",
+    "beskt.error.govPromptStageMismatch": "Formuleringens typ hör inte till det PEACE-steget.",
+    "beskt.error.govEvaluationNotTemplated":
+      "Utvärderingssteget använder en fast mall. Formuleringen måste vara mallens egen text på båda språken.",
+    "beskt.error.govProvenanceRequired": "Ange var innehållet kommer ifrån.",
+    "beskt.error.govModeUnknown": "Det användningsläget finns inte.",
+    "beskt.error.govModeNotPermitted": "Raden är inte tillåten i det användningsläget.",
+    "beskt.error.govParentImmutable": "Radens tillhörighet kan inte flyttas efter att den skapats.",
+    "beskt.error.govIdentityImmutable":
+      "Metodens namn, nyckel och syfte kan inte ändras utanför det styrda kontraktet.",
+    "beskt.error.govCrossProfile": "En rad kan bara peka på innehåll i sin egen exponeringsprofil.",
+    "beskt.error.govCrossVersion": "En rad kan bara peka på innehåll i sin egen version.",
+    "beskt.error.govRouteBackward": "En regel kan bara peka framåt i ordningen.",
+    "beskt.error.govRouteNotOrdered": "Reglerna bildar ingen framåtriktad ordning.",
+    "beskt.error.govRouteConditionType": "Det villkoret finns inte.",
+    "beskt.error.govRouteItemUnknown": "Regeln pekar på en fråga som inte finns i versionen.",
+    "beskt.error.govRouteOptionScope": "Svarsalternativet hör inte till frågan regeln pekar på.",
+    "beskt.error.govRoutePhase": "Regeln kopplar två frågor i olika faser.",
+    "beskt.error.govRouteModeEscalation":
+      "Regeln kan inte leda från rekryteringsstöd till säkerhetsprövning.",
+    "beskt.error.govInvalidSlug":
+      "Nyckeln får bara innehålla små bokstäver, siffror och bindestreck.",
+    "beskt.error.govNameAndPurposeRequired": "Namn och syfte behövs.",
+    "beskt.error.govPackKindMismatch": "Den identiteten är inte en BESKT-metod.",
+    "beskt.error.govVersionIdentity": "Versionen hör inte till den metoden.",
+    "beskt.error.govGrantNotFound": "Det uppdraget finns inte.",
+    "beskt.error.govGrantAlreadyRevoked": "Uppdraget är redan återkallat.",
+    "beskt.error.govUserNotFound": "Den användaren finns inte.",
+
+    // ---- PR 6 · metodens egna intervjuarformuleringar ---------------------
+    "beskt.conduct.nav.report": "Rapport",
+    "beskt.conduct.prompts.themeHeading": "Metodens formuleringar för den här frågan",
+    "beskt.conduct.prompts.themeLede":
+      "Metodens egna sätt att ta upp frågan. Du väljer vad du faktiskt frågar.",
+    "beskt.conduct.prompts.stageHeading": "Metodens upplägg för samtalet",
+    "beskt.conduct.prompts.stageLede":
+      "Formuleringar som hör till samtalet som helhet snarare än till en enskild fråga.",
+    "beskt.conduct.prompts.notAScript":
+      "Det här är inte ett manus och inte ett frågeformulär. Formuleringarna är ett styrt sätt att fråga; vad som sägs avgör du och kandidaten tillsammans. Ingen formulering ger ett resultat, en poäng eller ett omdöme.",
+    "beskt.conduct.prompts.stageNote": "Riktar sig till samtalet i det här steget.",
+    "beskt.conduct.prompts.evaluationNote":
+      "Utvärderingssteget riktar sig till dig som intervjuare, aldrig till kandidaten. Det är en reflektion över hur samtalet genomfördes och vad underlaget saknar — aldrig ett omdöme om kandidaten.",
+    "beskt.conduct.prompts.stageLabel": "PEACE-steg",
+    "beskt.conduct.prompts.addresseeLabel": "Riktar sig till",
+    "beskt.conduct.prompts.basisLabel": "Får grundas i",
+    "beskt.conduct.prompts.wordingMissing": "Formuleringen saknas på det här språket.",
+    "beskt.conduct.prompts.stage.planning": "Planering",
+    "beskt.conduct.prompts.stage.engage_explain": "Möt och förklara",
+    "beskt.conduct.prompts.stage.account": "Redogörelse",
+    "beskt.conduct.prompts.stage.closure": "Avslut",
+    "beskt.conduct.prompts.stage.evaluation": "Utvärdering",
+    "beskt.conduct.prompts.addressee.candidate": "Kandidaten",
+    "beskt.conduct.prompts.addressee.interviewer": "Intervjuaren",
+    "beskt.conduct.prompts.basis.submitted_answer": "Kandidatens inlämnade svar",
+    "beskt.conduct.prompts.basis.documented_role_requirement": "Dokumenterat rollkrav",
+    "beskt.conduct.prompts.basis.candidate_supplied_document": "Handling kandidaten lämnat",
+    "beskt.conduct.prompts.basis.candidate_correction": "Kandidatens egen rättelse",
+    "beskt.conduct.prompts.unavailable.title": "Metodens formuleringar visas inte just nu",
+    "beskt.conduct.prompts.unavailable.versionNotFound":
+      "Metodversionen som samtalet är bundet till går inte att läsa.",
+    "beskt.conduct.prompts.unavailable.versionNotPublished":
+      "Metodversionen är inte publicerad längre. Den kan ha pausats eller avvecklats efter att samtalet påbörjades.",
+    "beskt.conduct.prompts.unavailable.modeNotPermitted":
+      "Metodversionen är inte tillåten för rekryteringsstöd.",
+    "beskt.conduct.prompts.unavailable.generic": "Formuleringarna går inte att läsa just nu.",
+    "beskt.conduct.prompts.unavailable.whatStillWorks":
+      "Frågornas egen text och syfte visas fortfarande, och det du redan dokumenterat är opåverkat. Ingenting formuleras här i stället.",
+
+    // ---- PR 6 · rapporten -------------------------------------------------
+    "beskt.report.heading": "Rapport",
+    "beskt.report.lede":
+      "Rapporten är en frusen återgivning av det människor har dokumenterat, bunden till metodversionen, kandidatens inlämnade svar och det meddelande kandidaten läste.",
+    "beskt.report.print": "Skriv ut",
+    "beskt.report.unknownActor": "Okänd användare",
+    "beskt.report.unknownCandidate": "Kandidat utan namn i underlaget",
+    "beskt.report.blockers.heading": "Det här återstår innan rapporten kan skrivas",
+    "beskt.report.blockers.lede":
+      "Varje punkt är ett steg som en människa inte har gjort ännu. Ingen av dem är ett omdöme om arbetets kvalitet.",
+    "beskt.report.finalise.action": "Signera och skriv rapporten",
+    "beskt.report.finalise.newVersion": "Skriv en ny version",
+    "beskt.report.finalise.working": "Skriver …",
+    "beskt.report.finalise.whatSigningMeans":
+      "Du signerar exakt det dokument som visas nedan. Ändras underlaget innan du signerar avbryts skrivningen, så att ingen står för en text de inte har läst.",
+    "beskt.report.finalise.notPermitted":
+      "Rapporten skrivs av någon som deltagit i samtalet och låst sitt eget underlag.",
+    "beskt.report.basisMoved.title": "Underlaget har ändrats sedan rapporten skrevs",
+    "beskt.report.basisMoved.body":
+      "Den skrivna rapporten står kvar oförändrad. Vill ni att dokumentet ska spegla det nya underlaget skrivs en ny version, och den tidigare behålls i historiken.",
+    "beskt.report.versions.heading": "Versioner",
+    "beskt.report.versions.lede":
+      "Varje skriven version behålls. En ersatt version tas aldrig bort.",
+    "beskt.report.versions.version": "Version",
+    "beskt.report.versions.final": "Gällande",
+    "beskt.report.versions.superseded": "Ersatt",
+    "beskt.report.document.heading": "BESKT-rapport",
+    "beskt.report.document.draftChip": "Förhandsvisning — inte signerad",
+    "beskt.report.document.finalChip": "Signerad version",
+    "beskt.report.document.finalisedBy": "Signerad av",
+    "beskt.report.notADecision.title": "Vad det här dokumentet är, och inte är",
+    "beskt.report.notADecision.body":
+      "Dokumentet är strukturerat beslutsunderlag för en intervju. Det är inte ett psykologiskt test, ingen säkerhetsprövning och ingen lögndetektor. Ansvaret för beslutet ligger kvar hos behöriga människor.",
+    "beskt.report.notADecision.noScore":
+      "Här finns ingen poäng, inget trovärdighetsmått, ingen sanningsbedömning, ingen lämplighetsdom, inget godkänt eller underkänt, ingen riskrangordning och ingen automatisk rekommendation.",
+    "beskt.report.limits.heading": "Vad dokumentet inte fastställer",
+    "beskt.report.limits.lede":
+      "Osäkerheten står först, inte sist. Den som läser ska veta vad underlaget saknar innan de bildar sig en uppfattning.",
+    "beskt.report.limits.none": "Inget tema är odokumenterat och ingen verifiering är öppen.",
+    "beskt.report.limits.undocumented": "Teman som ingen dokumenterade",
+    "beskt.report.limits.awaiting": "Verifiering som är begärd eller pågår",
+    "beskt.report.limits.unresolved": "Verifiering som inte kunde avgöras",
+    "beskt.report.limits.differences":
+      "Skillnader mellan bedömare som panelen inte tagit ställning till",
+    "beskt.report.provenance.heading": "Vad dokumentet vilar på",
+    "beskt.report.provenance.method": "Metod",
+    "beskt.report.provenance.version": "Metodversion",
+    "beskt.report.provenance.mode": "Användningsläge",
+    "beskt.report.provenance.validationLabel": "Valideringsstatus",
+    "beskt.report.provenance.noticeVersion": "Version av kandidatmeddelandet",
+    "beskt.report.provenance.responseVersion": "Version av kandidatens svar",
+    "beskt.report.provenance.methodHash": "Innehållssumma för metoden",
+    "beskt.report.provenance.answersHash": "Innehållssumma för svaren",
+    "beskt.report.provenance.basisHash": "Summa för det underlag som signerades",
+    "beskt.report.provenance.documentHash": "Summa för dokumentet",
+    "beskt.report.candidate.heading": "Vad kandidaten uppgav",
+    "beskt.report.candidate.lede":
+      "Kandidatens egna svar, frusna innan intervjun. Ingen har skrivit om dem.",
+    "beskt.report.candidate.empty": "Inga svar finns i underlaget.",
+    "beskt.report.candidate.stateLabel": "Svarsläge",
+    "beskt.report.candidate.answer": "Svar",
+    "beskt.report.candidate.yes": "Ja",
+    "beskt.report.candidate.no": "Nej",
+    "beskt.report.candidate.notAnAdverseFinding":
+      "Att avstå eller be att ta frågan muntligt är svarsalternativ metoden erbjuder. Det är inte ett negativt fynd.",
+    "beskt.report.positions.heading": "Vad bedömarna dokumenterade",
+    "beskt.report.positions.lede":
+      "Varje bedömares underlag i sin helhet. Underlagen vägs inte samman och medelvärdesberäknas inte.",
+    "beskt.report.positions.empty": "Ingen har dokumenterat något.",
+    "beskt.report.position.heading": "Bedömare",
+    "beskt.report.position.assessor": "Bedömare",
+    "beskt.report.position.lockedAt": "Låst",
+    "beskt.report.position.reopened": "Återöppnad",
+    "beskt.report.position.empty": "Den här bedömaren dokumenterade ingenting.",
+    "beskt.report.position.gaps": "Teman den här bedömaren inte dokumenterade",
+    "beskt.report.verification.trail": "Verifieringsspår",
+    "beskt.report.corrections.heading": "Rättelser",
+    "beskt.report.corrections.lede":
+      "Tidigare lydelser behålls. En anteckning vars rättelser togs bort skulle läsas som om den alltid stått som den står nu.",
+    "beskt.report.panel.heading": "Vad panelen kom fram till",
+    "beskt.report.panel.lede":
+      "Panelens egna ord om de teman flera bedömare dokumenterat — resonemanget, inte bara utfallet.",
+    "beskt.report.panel.none": "Ingen panel behövdes: en enda bedömare tog ställning.",
+    "beskt.report.panel.nothingRecorded": "Panelen har inte noterat något ännu.",
+    "beskt.report.panel.outcome": "Utfall",
+    "beskt.report.panel.agreed": "Överenskommen formulering",
+    "beskt.report.panel.divergent": "Kvarstående skillnad",
+    "beskt.report.panel.rationale": "Resonemang",
+    "beskt.report.themes.heading": "Teman samtalet skulle täcka",
+    "beskt.report.themes.lede":
+      "Frusna när förberedelsen kopplades till ärendet: en per fråga kandidaten avstod eller bad att ta muntligt.",
+    "beskt.report.themes.empty": "Kandidaten besvarade allt, så inget tema härleddes.",
+    "beskt.report.audit.heading": "Spårbarhet",
+    "beskt.report.audit.lede": "Den styrda händelseloggen för uppdraget, i tidsordning.",
     "academy.library.lede": "Välj ett test att tilldela en kandidat.",
     "academy.library.items": "Uppgifter",
     "academy.library.duration": "Tidsåtgång",
@@ -10789,6 +11012,228 @@ export const dictionaries = {
     "beskt.mycareer.state.in_progress": "Started",
     "beskt.mycareer.state.submitted": "Submitted",
     "beskt.mycareer.state.cancelled": "Cancelled",
+
+    // ---- PR 6 · what is missing before the report can be written ----------
+    "beskt.error.reportNoPosition":
+      "Nobody holds a position in this conversation yet. The report is written once at least one assessor has locked their own record.",
+    "beskt.error.reportPositionOpen":
+      "At least one record is still open. Everyone locks their own before the report is written.",
+    "beskt.error.reportNothingDocumented":
+      "Nothing has been documented yet, so there is nothing to report.",
+    "beskt.error.reportPanelRequired":
+      "More than one assessor took a position. The panel has to meet before the report is written.",
+    "beskt.error.reportResolutionMissing":
+      "At least one theme documented by more than one assessor has no recorded panel outcome.",
+    "beskt.error.reportBlocked":
+      "The report cannot be written yet. The list above names the steps that remain.",
+    "beskt.error.reportPreviewRequired": "Read the preview before you sign the report.",
+    "beskt.error.reportStalePreview":
+      "The record changed after you read it. Re-read the preview and sign that version.",
+    "beskt.error.reportImmutable":
+      "A written report cannot be changed. Write a new version instead.",
+
+    // ---- PR 6 · governing the method --------------------------------------
+    "beskt.error.govNotEditor": "You do not hold the editor role for method content.",
+    "beskt.error.govNotReviewer": "You do not hold the reviewer role for method content.",
+    "beskt.error.govNotPublisher": "You do not hold the publisher role for method content.",
+    "beskt.error.govNotPlatformAdmin": "Only a platform administrator can do this.",
+    "beskt.error.govGateNotGranted":
+      "You hold no active mandate for that review gate. A mandate is granted separately and may be revoked or expired.",
+    "beskt.error.govGateNotOpen": "This version is not under review right now.",
+    "beskt.error.govUnknownGate": "There is no such review gate.",
+    "beskt.error.govUnknownDecision": "There is no such decision.",
+    "beskt.error.govSelfReview": "Whoever wrote the content cannot review it.",
+    "beskt.error.govPublisherIsAuthor": "Whoever wrote the content cannot publish it.",
+    "beskt.error.govOneGatePerReviewer":
+      "You have already decided a gate for this content. One reviewer decides one gate.",
+    "beskt.error.govReviewHashMismatch":
+      "The content changed after the review. The approvals have to be collected again.",
+    "beskt.error.govRationaleRequired": "Write a rationale.",
+    "beskt.error.govReasonRequired": "Write a reason.",
+    "beskt.error.govVersionNotFound": "There is no such method version.",
+    "beskt.error.govNotDraft": "This version is not a draft and cannot be edited.",
+    "beskt.error.govPublishedImmutable": "Published content cannot be changed.",
+    "beskt.error.govIllegalTransition": "That step is not permitted from this state.",
+    "beskt.error.govOpenVersionExists":
+      "This method already has an open version. Close it before starting another.",
+    "beskt.error.govSubmitBlocked":
+      "This version cannot go to review yet. The checklist names what is missing.",
+    "beskt.error.govPublishBlocked":
+      "This version cannot be published yet. The checklist names what is missing.",
+    "beskt.error.govNotReadyToPublish":
+      "All five gates are not approved at the current content and revision.",
+    "beskt.error.govNotPublished": "This version is not published.",
+    "beskt.error.govContentKeyRequired": "This row needs a key.",
+    "beskt.error.govContentUnknownField": "The form sent a field the contract does not have.",
+    "beskt.error.govContentNotFound": "There is no such row in this version.",
+    "beskt.error.govContentFamilyUnknown": "There is no such kind of content.",
+    "beskt.error.govContentPayload": "The content could not be read. Check the fields.",
+    "beskt.error.govContentParentRequired": "This row has to belong to a parent row.",
+    "beskt.error.govContentParentUnknown": "That parent row is not in this version.",
+    "beskt.error.govExposureLinkRequired": "This row has to name an exposure profile.",
+    "beskt.error.govOptionsNotApplicable": "This answer type takes no options.",
+    "beskt.error.govPromptStageMismatch": "This prompt kind does not belong to that PEACE stage.",
+    "beskt.error.govEvaluationNotTemplated":
+      "The Evaluation step uses a fixed template. The wording has to be the template's own text in both languages.",
+    "beskt.error.govProvenanceRequired": "State where the content came from.",
+    "beskt.error.govModeUnknown": "There is no such mode.",
+    "beskt.error.govModeNotPermitted": "This row is not permitted in that mode.",
+    "beskt.error.govParentImmutable":
+      "A row cannot be moved to another parent after it is created.",
+    "beskt.error.govIdentityImmutable":
+      "The method's name, key and purpose cannot change outside the governed contract.",
+    "beskt.error.govCrossProfile": "A row may only reference content in its own exposure profile.",
+    "beskt.error.govCrossVersion": "A row may only reference content in its own version.",
+    "beskt.error.govRouteBackward": "A rule may only point forward in the order.",
+    "beskt.error.govRouteNotOrdered": "The rules do not form a forward-only order.",
+    "beskt.error.govRouteConditionType": "There is no such condition.",
+    "beskt.error.govRouteItemUnknown": "The rule names a question that is not in this version.",
+    "beskt.error.govRouteOptionScope":
+      "That option does not belong to the question the rule names.",
+    "beskt.error.govRoutePhase": "The rule connects two questions in different phases.",
+    "beskt.error.govRouteModeEscalation":
+      "A rule cannot lead from recruitment support into security vetting.",
+    "beskt.error.govInvalidSlug":
+      "The key may contain only lower-case letters, digits and hyphens.",
+    "beskt.error.govNameAndPurposeRequired": "A name and a purpose are needed.",
+    "beskt.error.govPackKindMismatch": "That identity is not a BESKT method.",
+    "beskt.error.govVersionIdentity": "This version does not belong to that method.",
+    "beskt.error.govGrantNotFound": "There is no such mandate.",
+    "beskt.error.govGrantAlreadyRevoked": "That mandate is already revoked.",
+    "beskt.error.govUserNotFound": "There is no such user.",
+
+    // ---- PR 6 · the method's own interviewer wordings ---------------------
+    "beskt.conduct.nav.report": "Report",
+    "beskt.conduct.prompts.themeHeading": "The method's wordings for this question",
+    "beskt.conduct.prompts.themeLede":
+      "The method's own ways of raising it. You decide what you actually ask.",
+    "beskt.conduct.prompts.stageHeading": "The method's structure for the conversation",
+    "beskt.conduct.prompts.stageLede":
+      "Wordings that belong to the conversation as a whole rather than to one question.",
+    "beskt.conduct.prompts.notAScript":
+      "This is not a script and not a questionnaire. The wordings are a governed way of asking; what is said is yours and the candidate's. No wording produces a result, a score or a judgement.",
+    "beskt.conduct.prompts.stageNote": "Addressed to the conversation at this stage.",
+    "beskt.conduct.prompts.evaluationNote":
+      "The Evaluation step is addressed to you as the interviewer, never to the candidate. It is a reflection on how the conversation was conducted and on what the record still lacks — never a judgement of the candidate.",
+    "beskt.conduct.prompts.stageLabel": "PEACE stage",
+    "beskt.conduct.prompts.addresseeLabel": "Addressed to",
+    "beskt.conduct.prompts.basisLabel": "May be grounded in",
+    "beskt.conduct.prompts.wordingMissing": "The wording is missing in this language.",
+    "beskt.conduct.prompts.stage.planning": "Planning",
+    "beskt.conduct.prompts.stage.engage_explain": "Engage and explain",
+    "beskt.conduct.prompts.stage.account": "Account",
+    "beskt.conduct.prompts.stage.closure": "Closure",
+    "beskt.conduct.prompts.stage.evaluation": "Evaluation",
+    "beskt.conduct.prompts.addressee.candidate": "The candidate",
+    "beskt.conduct.prompts.addressee.interviewer": "The interviewer",
+    "beskt.conduct.prompts.basis.submitted_answer": "The candidate's submitted answer",
+    "beskt.conduct.prompts.basis.documented_role_requirement": "A documented role requirement",
+    "beskt.conduct.prompts.basis.candidate_supplied_document": "A document the candidate supplied",
+    "beskt.conduct.prompts.basis.candidate_correction": "The candidate's own correction",
+    "beskt.conduct.prompts.unavailable.title": "The method's wordings are not shown right now",
+    "beskt.conduct.prompts.unavailable.versionNotFound":
+      "The method version this conversation is bound to cannot be read.",
+    "beskt.conduct.prompts.unavailable.versionNotPublished":
+      "The method version is no longer published. It may have been suspended or retired after this conversation began.",
+    "beskt.conduct.prompts.unavailable.modeNotPermitted":
+      "The method version is not permitted for recruitment support.",
+    "beskt.conduct.prompts.unavailable.generic": "The wordings cannot be read right now.",
+    "beskt.conduct.prompts.unavailable.whatStillWorks":
+      "The questions' own text and purpose are still shown, and what you have already documented is unaffected. Nothing is worded here in their place.",
+
+    // ---- PR 6 · the report ------------------------------------------------
+    "beskt.report.heading": "Report",
+    "beskt.report.lede":
+      "The report is a frozen rendering of what people documented, bound to the method version, the answers the candidate submitted and the notice the candidate read.",
+    "beskt.report.print": "Print",
+    "beskt.report.unknownActor": "Unknown user",
+    "beskt.report.unknownCandidate": "Candidate not named in the record",
+    "beskt.report.blockers.heading": "What remains before the report can be written",
+    "beskt.report.blockers.lede":
+      "Each item is a step a person has not taken yet. None of them is a judgement about the quality of the work.",
+    "beskt.report.finalise.action": "Sign and write the report",
+    "beskt.report.finalise.newVersion": "Write a new version",
+    "beskt.report.finalise.working": "Writing …",
+    "beskt.report.finalise.whatSigningMeans":
+      "You are signing exactly the document shown below. If the record changes before you sign, the write is refused, so nobody stands behind text they have not read.",
+    "beskt.report.finalise.notPermitted":
+      "The report is written by someone who took part in the conversation and locked their own record.",
+    "beskt.report.basisMoved.title": "The record changed after the report was written",
+    "beskt.report.basisMoved.body":
+      "The written report stands unchanged. If the document should reflect the newer record, write a new version — the earlier one is kept in the history.",
+    "beskt.report.versions.heading": "Versions",
+    "beskt.report.versions.lede":
+      "Every written version is kept. A superseded one is never removed.",
+    "beskt.report.versions.version": "Version",
+    "beskt.report.versions.final": "Current",
+    "beskt.report.versions.superseded": "Superseded",
+    "beskt.report.document.heading": "BESKT report",
+    "beskt.report.document.draftChip": "Preview — not signed",
+    "beskt.report.document.finalChip": "Signed version",
+    "beskt.report.document.finalisedBy": "Signed by",
+    "beskt.report.notADecision.title": "What this document is, and is not",
+    "beskt.report.notADecision.body":
+      "This is structured decision support for an interview. It is not a psychological test, not a security-clearance verdict and not a lie detector. Responsibility for the decision stays with authorised people.",
+    "beskt.report.notADecision.noScore":
+      "There is no score here, no credibility measure, no truthfulness rating, no suitability verdict, no pass or fail, no risk ranking and no automatic recommendation.",
+    "beskt.report.limits.heading": "What this document does not establish",
+    "beskt.report.limits.lede":
+      "The uncertainty comes first, not last. A reader should know what the record lacks before they form a view.",
+    "beskt.report.limits.none": "No theme is undocumented and no verification is open.",
+    "beskt.report.limits.undocumented": "Themes nobody documented",
+    "beskt.report.limits.awaiting": "Verification requested or in progress",
+    "beskt.report.limits.unresolved": "Verification that could not be settled",
+    "beskt.report.limits.differences": "Differences between assessors the panel has not spoken to",
+    "beskt.report.provenance.heading": "What this document rests on",
+    "beskt.report.provenance.method": "Method",
+    "beskt.report.provenance.version": "Method version",
+    "beskt.report.provenance.mode": "Mode",
+    "beskt.report.provenance.validationLabel": "Validation status",
+    "beskt.report.provenance.noticeVersion": "Candidate notice version",
+    "beskt.report.provenance.responseVersion": "Candidate answer version",
+    "beskt.report.provenance.methodHash": "Method content digest",
+    "beskt.report.provenance.answersHash": "Answers content digest",
+    "beskt.report.provenance.basisHash": "Digest of the material that was signed",
+    "beskt.report.provenance.documentHash": "Document digest",
+    "beskt.report.candidate.heading": "What the candidate stated",
+    "beskt.report.candidate.lede":
+      "The candidate's own answers, frozen before the interview. Nobody has rewritten them.",
+    "beskt.report.candidate.empty": "There are no answers in the record.",
+    "beskt.report.candidate.stateLabel": "Response state",
+    "beskt.report.candidate.answer": "Answer",
+    "beskt.report.candidate.yes": "Yes",
+    "beskt.report.candidate.no": "No",
+    "beskt.report.candidate.notAnAdverseFinding":
+      "Omitting a question, or asking to take it orally, are response options the method offers. Neither is an adverse finding.",
+    "beskt.report.positions.heading": "What the assessors documented",
+    "beskt.report.positions.lede":
+      "Each assessor's record in full. The records are not combined and not averaged.",
+    "beskt.report.positions.empty": "Nobody documented anything.",
+    "beskt.report.position.heading": "Assessor",
+    "beskt.report.position.assessor": "Assessor",
+    "beskt.report.position.lockedAt": "Locked",
+    "beskt.report.position.reopened": "Reopened",
+    "beskt.report.position.empty": "This assessor documented nothing.",
+    "beskt.report.position.gaps": "Themes this assessor did not document",
+    "beskt.report.verification.trail": "Verification trail",
+    "beskt.report.corrections.heading": "Corrections",
+    "beskt.report.corrections.lede":
+      "Earlier wordings are kept. A record whose corrections were dropped would read as if it had always said what it says now.",
+    "beskt.report.panel.heading": "What the panel resolved",
+    "beskt.report.panel.lede":
+      "The panel's own words on the themes more than one assessor documented — the reasoning, not merely the outcome.",
+    "beskt.report.panel.none": "No panel was needed: a single assessor took a position.",
+    "beskt.report.panel.nothingRecorded": "The panel has recorded nothing yet.",
+    "beskt.report.panel.outcome": "Outcome",
+    "beskt.report.panel.agreed": "Agreed statement",
+    "beskt.report.panel.divergent": "Remaining difference",
+    "beskt.report.panel.rationale": "Reasoning",
+    "beskt.report.themes.heading": "Themes the conversation had to cover",
+    "beskt.report.themes.lede":
+      "Frozen when the preparation was linked to the case: one per question the candidate omitted or asked to take orally.",
+    "beskt.report.themes.empty": "The candidate answered everything, so no theme was derived.",
+    "beskt.report.audit.heading": "Traceability",
+    "beskt.report.audit.lede": "The governed event ledger for this assignment, in time order.",
     "academy.library.lede": "Choose a test to assign to a candidate.",
     "academy.library.items": "Tasks",
     "academy.library.duration": "Time needed",

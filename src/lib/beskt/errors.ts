@@ -167,6 +167,111 @@ const MESSAGE_FOR_CODE: Readonly<Record<string, TranslationKey>> = {
   BCP_CONDUCT_AGREEMENT_REQUIRED: "beskt.error.conductAgreementRequired",
   BCP_CONDUCT_DIVERGENCE_REQUIRED: "beskt.error.conductDivergenceRequired",
   BCP_CONDUCT_RATIONALE_REQUIRED: "beskt.error.conductRationaleRequired",
+
+  // ---- The report ----------------------------------------------------------
+  //
+  // The blocker codes are also raised as a refusal by the finalisation, so
+  // they are translated once and reused by both the blocker list and the
+  // error line. A blocker is never a quality judgement: every one of these
+  // names a human step that has not happened yet.
+  BCP_CONDUCT_NO_POSITION: "beskt.error.reportNoPosition",
+  BCP_CONDUCT_POSITION_OPEN: "beskt.error.reportPositionOpen",
+  BCP_CONDUCT_NOTHING_DOCUMENTED: "beskt.error.reportNothingDocumented",
+  BCP_CONDUCT_PANEL_REQUIRED: "beskt.error.reportPanelRequired",
+  BCP_CONDUCT_RESOLUTION_MISSING: "beskt.error.reportResolutionMissing",
+  BCP_CONDUCT_REPORT_BLOCKED: "beskt.error.reportBlocked",
+  BCP_CONDUCT_PREVIEW_REQUIRED: "beskt.error.reportPreviewRequired",
+  BCP_CONDUCT_STALE_PREVIEW: "beskt.error.reportStalePreview",
+  BCP_CONDUCT_REPORT_IMMUTABLE: "beskt.error.reportImmutable",
+
+  // ---- Governing the method itself (the admin surface) ---------------------
+  //
+  // BESKT_-prefixed rather than BCP_: the governance contract is the
+  // method's own and was named before the candidate runtime existed. Every
+  // code below is raised by a migration in this repository; a code the admin
+  // surface cannot provoke is deliberately absent rather than guessed at.
+  BESKT_NOT_AUTHENTICATED: "beskt.error.notAuthenticated",
+  BESKT_NOT_AUTHORISED: "beskt.error.notAuthorised",
+  BESKT_NOT_EDITOR: "beskt.error.govNotEditor",
+  BESKT_NOT_REVIEWER: "beskt.error.govNotReviewer",
+  BESKT_NOT_PUBLISHER: "beskt.error.govNotPublisher",
+  BESKT_NOT_PLATFORM_ADMIN: "beskt.error.govNotPlatformAdmin",
+
+  // Who may decide which gate, and who may not decide at all.
+  BESKT_GATE_NOT_GRANTED: "beskt.error.govGateNotGranted",
+  BESKT_GATE_NOT_OPEN: "beskt.error.govGateNotOpen",
+  BESKT_UNKNOWN_GATE: "beskt.error.govUnknownGate",
+  BESKT_UNKNOWN_DECISION: "beskt.error.govUnknownDecision",
+  BESKT_SELF_REVIEW: "beskt.error.govSelfReview",
+  BESKT_PUBLISHER_IS_AUTHOR: "beskt.error.govPublisherIsAuthor",
+  BESKT_REVIEW_ONE_GATE_PER_REVIEWER: "beskt.error.govOneGatePerReviewer",
+  BESKT_REVIEW_HASH_MISMATCH: "beskt.error.govReviewHashMismatch",
+  BESKT_RATIONALE_REQUIRED: "beskt.error.govRationaleRequired",
+  BESKT_REASON_REQUIRED: "beskt.error.govReasonRequired",
+
+  // The draft moved under the editor.
+  BESKT_STALE_REVISION: "beskt.error.staleRevision",
+  BESKT_REVISION_REQUIRED: "beskt.error.staleRevision",
+  BESKT_REVISION_NOT_ADVANCED: "beskt.error.staleRevision",
+  BESKT_REVISION_REGRESSION: "beskt.error.staleRevision",
+  BESKT_CONTENT_HASH_STALE: "beskt.error.staleRevision",
+
+  // The lifecycle refused the transition.
+  BESKT_VERSION_NOT_FOUND: "beskt.error.govVersionNotFound",
+  BESKT_NOT_DRAFT: "beskt.error.govNotDraft",
+  BESKT_PUBLISHED_IMMUTABLE: "beskt.error.govPublishedImmutable",
+  BESKT_ILLEGAL_TRANSITION: "beskt.error.govIllegalTransition",
+  BESKT_OPEN_VERSION_EXISTS: "beskt.error.govOpenVersionExists",
+  BESKT_SUBMIT_BLOCKED: "beskt.error.govSubmitBlocked",
+  BESKT_PUBLISH_BLOCKED: "beskt.error.govPublishBlocked",
+  BESKT_NOT_READY_TO_PUBLISH: "beskt.error.govNotReadyToPublish",
+  BESKT_NOT_PUBLISHED: "beskt.error.govNotPublished",
+
+  // Authoring one governed row.
+  BESKT_CONTENT_KEY_REQUIRED: "beskt.error.govContentKeyRequired",
+  BESKT_CONTENT_UNKNOWN_FIELD: "beskt.error.govContentUnknownField",
+  BESKT_CONTENT_NOT_FOUND: "beskt.error.govContentNotFound",
+  BESKT_CONTENT_FAMILY_UNKNOWN: "beskt.error.govContentFamilyUnknown",
+  BESKT_CONTENT_PAYLOAD: "beskt.error.govContentPayload",
+  BESKT_CONTENT_PARENT_REQUIRED: "beskt.error.govContentParentRequired",
+  BESKT_CONTENT_PARENT_UNKNOWN: "beskt.error.govContentParentUnknown",
+  BESKT_EXPOSURE_LINK_REQUIRED: "beskt.error.govExposureLinkRequired",
+  BESKT_PROFILE_NOT_IN_VERSION: "beskt.error.profileNotInMethod",
+  BESKT_ITEM_OPTIONS_NOT_APPLICABLE: "beskt.error.govOptionsNotApplicable",
+  BESKT_PROMPT_STAGE_MISMATCH: "beskt.error.govPromptStageMismatch",
+  BESKT_EVALUATION_NOT_TEMPLATED: "beskt.error.govEvaluationNotTemplated",
+  BESKT_PROVENANCE_REQUIRED: "beskt.error.govProvenanceRequired",
+  BESKT_MODE_UNKNOWN: "beskt.error.govModeUnknown",
+  BESKT_MODE_NOT_PERMITTED: "beskt.error.govModeNotPermitted",
+
+  // Structure the governed graph refuses.
+  BESKT_PARENT_IMMUTABLE: "beskt.error.govParentImmutable",
+  BESKT_IDENTITY_IMMUTABLE: "beskt.error.govIdentityImmutable",
+  BESKT_CROSS_PROFILE_REFERENCE: "beskt.error.govCrossProfile",
+  BESKT_CROSS_VERSION_REFERENCE: "beskt.error.govCrossVersion",
+  BESKT_ROUTE_BACKWARD: "beskt.error.govRouteBackward",
+  BESKT_ROUTE_NOT_ORDERED: "beskt.error.govRouteNotOrdered",
+  BESKT_ROUTE_CONDITION_TYPE: "beskt.error.govRouteConditionType",
+  BESKT_ROUTE_ITEM_UNKNOWN: "beskt.error.govRouteItemUnknown",
+  BESKT_ROUTE_OPTION_SCOPE: "beskt.error.govRouteOptionScope",
+  BESKT_ROUTE_PHASE: "beskt.error.govRoutePhase",
+  BESKT_ROUTE_MODE_ESCALATION: "beskt.error.govRouteModeEscalation",
+
+  // Creating the method identity.
+  BESKT_INVALID_SLUG: "beskt.error.govInvalidSlug",
+  BESKT_NAME_AND_PURPOSE_REQUIRED: "beskt.error.govNameAndPurposeRequired",
+  BESKT_PACK_KIND_MISMATCH: "beskt.error.govPackKindMismatch",
+  BESKT_VERSION_IDENTITY: "beskt.error.govVersionIdentity",
+
+  // Governance grants.
+  BESKT_GRANT_NOT_FOUND: "beskt.error.govGrantNotFound",
+  BESKT_GRANT_ALREADY_REVOKED: "beskt.error.govGrantAlreadyRevoked",
+  BESKT_USER_NOT_FOUND: "beskt.error.govUserNotFound",
+
+  // Idempotency, the governance half.
+  BESKT_OPERATION_ID_REQUIRED: "beskt.error.operationConflict",
+  BESKT_OPERATION_PAYLOAD_MISMATCH: "beskt.error.operationConflict",
+  BESKT_OPERATION_ACTOR_MISMATCH: "beskt.error.operationConflict",
 };
 
 /** What the reader is told when we do not recognise the failure. */
@@ -183,7 +288,11 @@ export const BESKT_GENERIC_ERROR: TranslationKey = "beskt.error.generic";
  */
 export function besktErrorCode(error: unknown): string | null {
   const raw = error instanceof Error ? error.message : String(error ?? "");
-  const m = /\bBCP_[A-Z_]+\b/.exec(raw);
+  // BESKT_ first, and as its own alternative rather than an optional prefix:
+  // `BCP_[A-Z_]+` would otherwise match the tail of a BESKT_ code only by
+  // accident of where the word boundary falls, and an ordered alternation
+  // says which family a code belongs to instead of leaving it to chance.
+  const m = /\bBESKT_[A-Z_]+\b|\bBCP_[A-Z_]+\b/.exec(raw);
   return m ? m[0] : null;
 }
 
