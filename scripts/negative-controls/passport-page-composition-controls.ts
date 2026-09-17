@@ -157,13 +157,93 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PPC-NC-NEXT-STEP-DUPLICATES-THE-ROW-LINK",
     defect:
-      "the next step links straight to the claim again, so the overview shows two identical 'Add evidence' actions for one credential — the strict-mode failure of PR #263",
+      "the next step links straight to the claim route again, so the overview shows two claim links for one credential — the strict-mode failure of PR #263",
     file: SIDE,
-    find: '                {next.title}\n              </p>\n              <Link\n                to="/passport"\n                hash="attention"\n',
+    find: '          to="/passport"\n          hash={credentialRowAnchor(next.claimId)}\n',
     replace:
-      '                {next.title}\n              </p>\n              <Link\n                to="/passport/entry/$kind/$entryId"\n                params={{ kind: "claim", entryId: next.claimId }}\n',
+      '          to="/passport/entry/$kind/$entryId"\n          params={{ kind: "claim", entryId: next.claimId }}\n',
     guard: GUARD,
     expect: "the side column links to NO claim",
+  },
+  {
+    id: "PPC-NC-NEXT-STEP-LEADS-TO-AN-EMPTY-REGION",
+    defect:
+      "the next step points at #attention again, which renders nothing for a self-reported credential with no review outcome — a visible button that goes nowhere",
+    file: SIDE,
+    find: "          hash={credentialRowAnchor(next.claimId)}\n",
+    replace: '          hash="attention"\n',
+    guard: GUARD,
+    expect: "never to a generic region",
+  },
+  {
+    id: "PPC-NC-NEXT-STEP-OVERCLAIMS-ITS-LABEL",
+    defect:
+      "the button that only locates a record is labelled 'Add evidence' again, promising an action it does not perform",
+    file: SIDE,
+    find: '{copy("Visa meriten", "View credential")}',
+    replace: '{copy("Lägg till underlag", "Add evidence")}',
+    guard: GUARD,
+    expect: "labelled truthfully",
+  },
+  {
+    id: "PPC-NC-ROW-LOSES-ITS-ANCHOR",
+    defect:
+      "the credential row loses its id, so the next step's fragment resolves to nothing and the button is dead again",
+    file: WALLET,
+    find: "        id={credentialRowAnchor(c.id)}\n",
+    replace: "",
+    guard: GUARD,
+    expect: "every credential row carries the anchor",
+  },
+  {
+    id: "PPC-NC-ANCHOR-COLLIDES-WITH-A-SECTION",
+    defect:
+      "the row anchor is the bare claim id, so a claim called 'merits' or 'attention' would hijack a section's fragment",
+    file: "src/lib/security-passport/credential-passport.ts",
+    find: '  return `sp-credential-${claimId.replace(/[^A-Za-z0-9_-]/g, "_")}`;',
+    replace: "  return claimId;",
+    guard: GUARD,
+    expect: "cannot collide with a section id",
+  },
+  {
+    id: "PPC-NC-SECOND-PRESS-IS-INERT",
+    defect:
+      "the click no longer re-runs the arrival, so pressing the step a second time — fragment unchanged — does nothing",
+    file: SIDE,
+    find: "            requestAnimationFrame(() => goToHash(anchor));\n",
+    replace: "",
+    guard: GUARD,
+    expect: "a second press re-runs the arrival",
+  },
+  {
+    id: "PPC-NC-EDIT-ROLE-URL-RESPELLED",
+    defect:
+      "the wallet spells its own Profile URL instead of the shared contract, which is how the Passport and the Profile came to disagree about where the editor is",
+    file: WALLET,
+    find: "            href={CAREER_PROFILE_PROFESSION_EDIT_HREF}\n",
+    replace: '            href="/my-career/profile#profile-basics"\n',
+    guard: GUARD,
+    expect: "SHARED profession-edit contract",
+  },
+  {
+    id: "PPC-NC-EDIT-ROLE-OPENS-THE-HUB",
+    defect:
+      "the shared contract points at the /my-career hub again, which mounts no profession editor and drops the edit parameter — a dead action with a confident label",
+    file: "src/lib/security-passport/profile-basics.ts",
+    find: '  "/my-career/profile?edit=profession&from=passport#career-profile" as const;',
+    replace: '  "/my-career?edit=profession&from=passport#career-profile" as const;',
+    guard: GUARD,
+    expect: "name the SAME page",
+  },
+  {
+    id: "PPC-NC-VERIFICATION-DUPLICATES-THE-CLAIM-LINK",
+    defect:
+      "the Verification section links to the claim route again, so a credential with a reviewer's question has two claim links on one page",
+    file: INDEX,
+    find: "            hrefOf={(item) => `/passport#${credentialRowAnchor(item.subjectId)}`}",
+    replace: "            hrefOf={(item) => `/passport/entry/claim/${item.subjectId}`}",
+    guard: GUARD,
+    expect: "never to a second claim link",
   },
   {
     id: "PPC-NC-FIFTH-TAB",

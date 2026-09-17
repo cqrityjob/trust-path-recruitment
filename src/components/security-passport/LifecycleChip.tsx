@@ -13,6 +13,11 @@ import { AlertTriangle, Ban, CircleDot, Clock, FileClock, PenLine } from "lucide
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { LifecycleState } from "@/lib/security-passport/types";
+import {
+  effectiveTrust,
+  expiredNoteKey,
+  type ProvenanceBearing,
+} from "@/lib/security-passport/trust-presentation";
 
 const GLYPH: Record<LifecycleState, typeof Clock> = {
   draft: PenLine,
@@ -50,10 +55,27 @@ export function LifecycleChip({ state, className }: { state: LifecycleState; cla
 
 /** The explanatory note for the two states a reader is most likely to
  *  misinterpret. Returns null for the rest rather than padding the UI. */
-export function LifecycleNote({ state }: { state: LifecycleState }) {
+export function LifecycleNote({
+  state,
+  entry,
+}: {
+  state: LifecycleState;
+  /** REQUIRED. What an expired entry may be said to have been depends on its
+   *  stored trust standing, and a caller that could omit this is a caller that
+   *  could print "was verified" over a record nobody checked. */
+  entry: ProvenanceBearing;
+}) {
   const { pt } = usePassportCopy();
   if (state === "expired") {
-    return <p className="mt-1 text-xs text-muted-foreground">{pt("lifecycle.expiredNote")}</p>;
+    return (
+      <p
+        data-lifecycle-note="expired"
+        data-lifecycle-note-trust={effectiveTrust(entry)}
+        className="mt-1 text-xs text-muted-foreground"
+      >
+        {pt(expiredNoteKey(entry))}
+      </p>
+    );
   }
   if (state === "disputed") {
     return <p className="mt-1 text-xs text-muted-foreground">{pt("lifecycle.disputedNote")}</p>;

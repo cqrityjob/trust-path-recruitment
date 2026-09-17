@@ -32,6 +32,7 @@ import { BrandMark, EngravedField, EngravedRule, MicroLabel } from "../card/Card
 import { CredentialSymbol } from "../CredentialSymbol";
 import { CredentialConstellation } from "../CredentialShield";
 import { resolveCredentialScope } from "@/lib/security-passport/credential-shield";
+import { historicalTrustWordKey } from "@/lib/security-passport/trust-presentation";
 
 /** Tones for the status word ON THE CARD's navy ground. Distinct from the
  *  theme-surface tones used elsewhere; both are supplementary to the word. */
@@ -226,19 +227,26 @@ export function RecipientPassportCard({
                           >
                             {pt(`lifecycle.${c.lifecycle}` as const)}
                           </span>
-                          {c.assertion === "verified" && (
-                            <>
-                              <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
-                                ·
-                              </span>
-                              <span
-                                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-                                style={{ color: TRUST_PALETTE.inkMuted }}
-                              >
-                                {pt("assertion.verified.historical")}
-                              </span>
-                            </>
-                          )}
+                          {/* The trust word the STORED standing earns, from
+                              the one function that decides it. A document
+                              review is not "previously verified", and a
+                              self-declared entry is not anything but. */}
+                          <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
+                            ·
+                          </span>
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                            style={{ color: TRUST_PALETTE.inkMuted }}
+                          >
+                            {pt(
+                              historicalTrustWordKey({
+                                assertionLevel: c.assertion,
+                                verifierName: c.verifierOrganisation,
+                                verificationMethod: c.verificationMethod,
+                                subjectKind: "credential",
+                              }),
+                            )}
+                          </span>
                         </>
                       ) : (
                         <span

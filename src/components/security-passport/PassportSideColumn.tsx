@@ -26,10 +26,13 @@
 // same claim from here put two identical actions on one screen, and which of
 // the two a reader — or a test — meant became a guess.
 //
-// So nothing in this column links to a claim. The next step NAMES the
-// credential and sends the reader to the Verification section of this page
-// (`/passport#attention`); what needs attention names the credential and its
-// date, as text. The row does the rest. A guard asserts the absence.
+// So nothing in this column links to a claim ROUTE. The next step names the
+// credential and takes the reader to THAT CREDENTIAL'S ROW on this page
+// (`credentialRowAnchor`), labelled "View credential" because locating the
+// record is all it does. It used to point at `#attention`, which renders
+// nothing for a self-reported credential with no review outcome — a visible
+// button that led to an empty region. What needs attention names the
+// credential and its date, as text. A guard asserts all of it.
 //
 // ── NO SERVER TIER ─────────────────────────────────────────────────────
 //
@@ -42,7 +45,11 @@ import { ArrowRight, CalendarClock, Compass, Eye, Lock } from "lucide-react";
 import { credentialDate } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
-import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
+import {
+  credentialPassportHolder,
+  credentialRowAnchor,
+} from "@/lib/security-passport/credential-passport";
+import { goToHash } from "@/lib/security-passport/hash-arrival";
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 
@@ -115,6 +122,32 @@ export function PassportSideColumn({
             }
           : { kind: "share" };
 
+  const viewCredential =
+    next.kind === "clarify" || next.kind === "evidence" ? (
+      <>
+        {/* Locates the record; it does not act on it. So it says "View
+            credential", and goes to that credential's own row — where
+            the one real action for it lives — never to a generic region
+            that may have nothing in it. The click re-runs the arrival,
+            because a second press leaves the fragment unchanged and the
+            router then has nothing to announce. */}
+        <Link
+          to="/passport"
+          hash={credentialRowAnchor(next.claimId)}
+          onClick={() => {
+            const anchor = credentialRowAnchor(next.claimId);
+            requestAnimationFrame(() => goToHash(anchor));
+          }}
+          className={`${PRIMARY} mt-4`}
+          data-cta="next-step"
+          data-next-step-target={credentialRowAnchor(next.claimId)}
+        >
+          {copy("Visa meriten", "View credential")}
+          <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+        </Link>
+      </>
+    ) : null;
+
   return (
     <aside
       data-passport-side-column={part ?? "both"}
@@ -164,15 +197,7 @@ export function PassportSideColumn({
               <p className="mt-1.5 break-words text-sm leading-relaxed text-muted-foreground">
                 {next.title}
               </p>
-              <Link
-                to="/passport"
-                hash="attention"
-                className={`${PRIMARY} mt-4`}
-                data-cta="next-step"
-              >
-                {copy("Komplettera uppgifter", "Provide information")}
-                <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-              </Link>
+              {viewCredential}
             </>
           )}
 
@@ -192,15 +217,7 @@ export function PassportSideColumn({
                       `${next.count} credentials are self-reported. Start with ${next.title}.`,
                     )}
               </p>
-              <Link
-                to="/passport"
-                hash="attention"
-                className={`${PRIMARY} mt-4`}
-                data-cta="next-step"
-              >
-                {copy("Lägg till underlag", "Add evidence")}
-                <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-              </Link>
+              {viewCredential}
             </>
           )}
 

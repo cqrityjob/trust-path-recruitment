@@ -453,6 +453,67 @@ export function credentialPresentationOf(
 }
 
 /**
+ * What may be said about an entry whose validity has ended.
+ *
+ * ── EXPIRY DOES NOT CONFER A PAST ──────────────────────────────────────
+ *
+ * There used to be one sentence for every expired entry: "This entry was
+ * verified but its validity period has ended." It was written for the case it
+ * names and then printed for all of them — so a credential the holder typed
+ * in themselves, that nobody ever looked at, acquired a verification history
+ * the day it lapsed. On the shared page, that sentence is read by a stranger.
+ *
+ * The sentence follows the STORED standing, through the same `effectiveTrust`
+ * every chip uses: a CQrityjob document review says documented, never
+ * verified; only the structural employer-attestation path says
+ * source-confirmed. There is no "verified" sentence because there is no
+ * effective standing called verified — `effectiveTrust` resolves every
+ * verified row to one of those two — and no branch here can hand a
+ * self-declared entry any of the others' words.
+ */
+export function expiredNoteKey(entry: ProvenanceBearing): PassportCopyKey {
+  switch (effectiveTrust(entry)) {
+    case "source_confirmed":
+      return "lifecycle.expiredNote.source_confirmed";
+    case "documented":
+      return "lifecycle.expiredNote.documented";
+    case "document_provided":
+      return "lifecycle.expiredNote.document_provided";
+    case "self_declared":
+      return "lifecycle.expiredNote.self_declared";
+  }
+}
+
+/**
+ * The trust WORD beside the lifecycle word of an entry that is no longer
+ * current ("Expired · …").
+ *
+ * The same rule as `expiredNoteKey`, for the compact surfaces. Two of them
+ * decided this themselves and both got it wrong: the credential verification
+ * page printed "PREVIOUSLY VERIFIED" after the lifecycle word of EVERY
+ * non-current credential, a self-declared one included; the shared card
+ * printed it for any stored `verified`, which a CQrityjob document review is —
+ * and that review is Documented everywhere else in this product.
+ *
+ * "Previously verified" is earned only by the structural source confirmation.
+ * A document review keeps its level word, as the owner decided for the chip
+ * (trust-surface-check): losing currency does not un-review a document, and
+ * does not upgrade it either.
+ */
+export function historicalTrustWordKey(entry: ProvenanceBearing): PassportCopyKey {
+  switch (effectiveTrust(entry)) {
+    case "source_confirmed":
+      return "assertion.verified.historical";
+    case "documented":
+      return "trust.level.documented";
+    case "document_provided":
+      return "assertion.document_provided";
+    case "self_declared":
+      return "assertion.self_declared";
+  }
+}
+
+/**
  * The status WORD beside a credential symbol, for an entry.
  *
  * Ordinarily the symbol vocabulary's own word for the state. For a legacy

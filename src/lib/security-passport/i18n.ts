@@ -593,7 +593,14 @@ const sv = {
   "lifecycle.superseded": "Ersatt",
   "lifecycle.disputed": "Bestridd",
   "lifecycle.legend": "Tillstånd",
-  "lifecycle.expiredNote": "Uppgiften var verifierad men giltighetstiden har gått ut.",
+  "lifecycle.expiredNote.self_declared":
+    "Giltighetstiden har gått ut. Uppgiften är innehavarens egen och har inte kontrollerats av någon annan.",
+  "lifecycle.expiredNote.document_provided":
+    "Giltighetstiden har gått ut. Ett dokument bifogades men har inte granskats.",
+  "lifecycle.expiredNote.documented":
+    "Giltighetstiden har gått ut. Medan uppgiften gällde var den dokumenterad: CQrityjob granskade ett dokument, utfärdaren bekräftade den inte.",
+  "lifecycle.expiredNote.source_confirmed":
+    "Giltighetstiden har gått ut. Medan uppgiften gällde var den källbekräftad av den part den handlar om.",
   "lifecycle.disputedNote": "Uppgiften är bestridd och räknas inte med förrän den är utredd.",
   "lifecycle.locked": "Underlagsnivå och tillstånd sätts av systemet och kan inte ändras av dig.",
 
@@ -2736,7 +2743,14 @@ const en: Record<PassportCopyKey, string> = {
   "lifecycle.superseded": "Superseded",
   "lifecycle.disputed": "Disputed",
   "lifecycle.legend": "State",
-  "lifecycle.expiredNote": "This entry was verified but its validity period has ended.",
+  "lifecycle.expiredNote.self_declared":
+    "The validity period has ended. This entry is the holder's own statement and was not checked by anyone else.",
+  "lifecycle.expiredNote.document_provided":
+    "The validity period has ended. A document was attached but was not reviewed.",
+  "lifecycle.expiredNote.documented":
+    "The validity period has ended. While it was current this entry was documented: CQrityjob reviewed a document; the issuer did not confirm it.",
+  "lifecycle.expiredNote.source_confirmed":
+    "The validity period has ended. While it was current this entry was source-confirmed by the party it concerns.",
   "lifecycle.disputedNote": "This entry is disputed and is not counted until it is resolved.",
   "lifecycle.locked":
     "Evidence level and state are set by the system and cannot be changed by you.",

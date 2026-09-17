@@ -7,7 +7,11 @@ import {
   VERIFICATION_ATTENTION_UNAVAILABLE,
   type VerificationAttention,
 } from "@/lib/professional-identity/verification-attention";
-import { isPassportCredential } from "@/lib/security-passport/credential-passport";
+import {
+  credentialRowAnchor,
+  isPassportCredential,
+} from "@/lib/security-passport/credential-passport";
+import { goToHash } from "@/lib/security-passport/hash-arrival";
 import type { ReviewReadState } from "@/lib/security-passport/workspace";
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -143,7 +147,13 @@ function PassportWorkspaceRoute() {
                 lang === "sv" ? "titleSv" : "titleEn"
               ] ?? pt("att.entryRemoved")
             }
-            hrefOf={(item) => `/passport/entry/claim/${item.subjectId}`}
+            // ONE claim-route link per credential on this page, and the row
+            // owns it. An outcome names the credential, says what was decided
+            // and takes the reader to that credential's ROW — where "Provide
+            // information" or "View credential" is — not to a second copy of
+            // the row's own destination.
+            hrefOf={(item) => `/passport#${credentialRowAnchor(item.subjectId)}`}
+            linkLabel={{ sv: "Visa meriten", en: "View credential" }}
           />
           <AttentionPanel
             summary={attentionFor(
@@ -153,9 +163,18 @@ function PassportWorkspaceRoute() {
             )}
             buckets={["expired", "expiring"]}
             otherAttention
-            onOpenEntry={(kind, entryId) =>
-              void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId } })
-            }
+            // The same rule for the panel's "open" button: a credential is
+            // opened from its row. (Employment periods are not on this page at
+            // all, so they keep their own route.)
+            onOpenEntry={(kind, entryId) => {
+              if (kind !== "claim") {
+                void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId } });
+                return;
+              }
+              const anchor = credentialRowAnchor(entryId);
+              void navigate({ to: "/passport", hash: anchor });
+              requestAnimationFrame(() => goToHash(anchor));
+            }}
           />
         </section>
       </div>

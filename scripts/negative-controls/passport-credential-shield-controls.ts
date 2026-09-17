@@ -136,6 +136,16 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "a count, not a link",
   },
+  {
+    id: "PCS-NC-RECIPIENT-TITLE-COLLIDES-AGAIN",
+    defect:
+      "the shared credential header goes back to one wrapping row, so at 390px a long title's longest word paints over the trust chip",
+    file: "src/components/security-passport/live/RecipientCredentialList.tsx",
+    find: 'className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4"',
+    replace: 'className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2"',
+    guard: GUARD,
+    expect: "a deliberate stack below sm",
+  },
 ];
 
 runControls("passport-credential-shield", MUTATIONS);

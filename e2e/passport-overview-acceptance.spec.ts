@@ -20,6 +20,8 @@ import { personaById } from "../src/lib/security-passport/fixtures/personas";
 import { derivePreviewIdentity } from "../src/lib/security-passport/identity/visibility";
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
 import type { Claim } from "../src/lib/security-passport/types";
+import { credentialRowAnchor } from "../src/lib/security-passport/credential-passport";
+import { CAREER_PROFILE_PROFESSION_EDIT_HREF } from "../src/lib/security-passport/profile-basics";
 import {
   installBoundary,
   observeSupabaseStorageKey,
@@ -328,7 +330,9 @@ for (const lang of ["sv", "en"] as const) {
       );
       const step = page.locator('[data-cta="next-step"]');
       await expect(step).toHaveCount(1);
-      await expect(step).toHaveAttribute("href", /\/passport#attention$/);
+      await expect(step).toHaveAttribute("href", `/passport#${credentialRowAnchor(CPP.id)}`);
+      await expect(step).toHaveText(T("Visa meriten", "View credential"));
+      await expect(step).not.toHaveText(/Lägg till underlag|Add evidence/);
       // Still says WHICH credential, and the expiring one is still named.
       await expect(page.locator("[data-passport-next-step]")).toContainText(CPP.titleEn);
       await expect(page.locator(`[data-passport-expiring-item="${OV.id}"]`)).toBeVisible();
@@ -349,7 +353,7 @@ for (const lang of ["sv", "en"] as const) {
       );
       await expect(page.locator('[data-cta="edit-in-profile"]')).toHaveAttribute(
         "href",
-        /\/my-career\/profile#profile-basics$/,
+        CAREER_PROFILE_PROFESSION_EDIT_HREF,
       );
 
       // Four tabs, one current.
@@ -527,6 +531,300 @@ for (const lang of ["sv", "en"] as const) {
       await expect(tabs.locator('a[aria-current="page"]')).toHaveText([T("Dela", "Share")]);
       await expect(sections.locator('a[aria-current="page"]')).toHaveCount(1);
       await expect(sections.locator("a")).toHaveCount(2);
+    }
+  });
+
+  test(`the next step takes the holder to that credential's row · ${lang}`, async ({ page }) => {
+    test.setTimeout(180_000);
+    const T = (sv: string, en: string) => (lang === "sv" ? sv : en);
+    /** Whether the row is on screen and owns keyboard focus. */
+    const arrived = async (c: Claim) => {
+      const row = page.locator(`#${credentialRowAnchor(c.id)}`);
+      await expect(row).toHaveAttribute("data-credential-row");
+      await expect(row).toBeInViewport();
+      await expect(row).toBeFocused();
+      await expect(row).toHaveAttribute("data-hash-target", credentialRowAnchor(c.id));
+      // A VISIBLE focus state, not only a programmatic one.
+      expect(
+        await row.evaluate((el) => {
+          const cs = getComputedStyle(el);
+          return cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) >= 2;
+        }),
+      ).toBe(true);
+      return row;
+    };
+
+    for (const width of [390, 1440] as const) {
+      await page.setViewportSize({ width, height: 800 });
+
+      // ── evidence: twelve records, so the row is far below the fold ─────
+      await mount(
+        page,
+        "/passport",
+        lang,
+        snapshotFor("Mostafa Alshawi", [...NINE, EXPIRED, DRAFT, FUTURE]),
+      );
+      const step = page.locator('[data-cta="next-step"]');
+      await expect(step).toHaveCount(1, { timeout: 30_000 });
+      await expect(page.locator("[data-passport-next-step]")).toHaveAttribute(
+        "data-passport-next-step",
+        "evidence",
+      );
+      await expect(step).toHaveText(T("Visa meriten", "View credential"));
+      const target = await step.getAttribute("data-next-step-target");
+      expect(target).toBe(credentialRowAnchor(CPP.id));
+      // The target EXISTS before anybody presses anything: never an empty region.
+      await expect(page.locator(`#${target}`)).toHaveCount(1);
+
+      await step.click();
+      await expect(page).toHaveURL(new RegExp(`/passport#${target}$`));
+      const row = await arrived(CPP);
+      await expect(row).toContainText(CPP.titleEn);
+      // Its REAL action is still there, and still the only claim link for it.
+      const action = row.getByRole("link", { name: T("Lägg till underlag", "Add evidence") });
+      await expect(action).toBeVisible();
+      await expect(action).toHaveAttribute("href", `/passport/entry/claim/${CPP.id}`);
+      await expect(page.locator(`a[href="/passport/entry/claim/${CPP.id}"]`)).toHaveCount(1);
+      // Exactly one row is marked as the arrival.
+      await expect(page.locator("[data-hash-target]")).toHaveCount(1);
+
+      // A second press, fragment unchanged, still arrives.
+      await page.evaluate(() => {
+        window.scrollTo(0, 0);
+        (document.activeElement as HTMLElement | null)?.blur();
+      });
+      await expect(row).not.toBeFocused();
+      await step.click();
+      await arrived(CPP);
+
+      // By keyboard too.
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await step.focus();
+      await page.keyboard.press("Enter");
+      await arrived(CPP);
+
+      // ── clarify: a reviewer is waiting on the Swedish appointment ──────
+      await mount(page, "/passport", lang, snapshotFor("Mostafa Alshawi", NINE), {
+        listMyVerificationRequests: {
+          requests: [
+            {
+              id: "vr-1",
+              claimId: OV.id,
+              status: "clarification_requested",
+              createdAt: `${TODAY}T08:00:00Z`,
+            },
+          ],
+          decisions: [],
+        },
+      });
+      await expect(page.locator("[data-passport-next-step]")).toHaveAttribute(
+        "data-passport-next-step",
+        "clarify",
+        { timeout: 30_000 },
+      );
+      await expect(step).toHaveText(T("Visa meriten", "View credential"));
+      await step.click();
+      const ovRow = await arrived(OV);
+      const provide = ovRow.getByRole("link", {
+        name: T("Komplettera uppgifter", "Provide information"),
+      });
+      await expect(provide).toBeVisible();
+      await expect(provide).toHaveAttribute("href", `/passport/entry/claim/${OV.id}`);
+      // EXACTLY ONE claim-route link per credential on the COMPLETE page —
+      // the reviewer's credential included. No scoping, no .first().
+      for (const c of NINE) {
+        await expect(page.locator(`a[href="/passport/entry/claim/${c.id}"]`)).toHaveCount(1);
+        await expect(
+          page.locator(`[data-credential-row] a[href="/passport/entry/claim/${c.id}"]`),
+        ).toHaveCount(1);
+      }
+      await expect(page.locator('#attention a[href*="/passport/entry/"]')).toHaveCount(0);
+
+      // The Verification section still names the outcome — and takes the
+      // reader to the credential's row rather than duplicating its link.
+      const outcome = page.locator(`#attention a[data-outcome-link="${OV.id}"]`);
+      await expect(outcome).toHaveCount(1);
+      await expect(outcome).toHaveText(T("Visa meriten", "View credential"));
+      await expect(outcome).toHaveAttribute("href", `/passport#${credentialRowAnchor(OV.id)}`);
+      await page.evaluate(() => {
+        (document.activeElement as HTMLElement | null)?.blur();
+      });
+      await outcome.scrollIntoViewIfNeeded();
+      await outcome.click();
+      const viaOutcome = await arrived(OV);
+      // …and the outcome is USABLE from there: the row action opens the claim.
+      await viaOutcome
+        .getByRole("link", { name: T("Komplettera uppgifter", "Provide information") })
+        .click();
+      await expect(page).toHaveURL(new RegExp(`/passport/entry/claim/${OV.id}$`));
+      await page.goBack();
+      await expect(page.locator("[data-credential-wallet]")).toBeVisible({ timeout: 30_000 });
+      await expect(page.locator("[data-hash-target]")).toHaveCount(1);
+      expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test(`a long credential title never collides with its status · ${lang}`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(180_000);
+    const shots = process.env.PASSPORT_SHOTS ?? info.outputPath("shots");
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(shots, { recursive: true });
+    const T = (sv: string, en: string) => (lang === "sv" ? sv : en);
+
+    // Deliberately long, in both languages, with one long unbroken word —
+    // the shape that collided: "Ordningsvaktsförordnande".
+    const LONG = T(
+      "Ordningsvaktsförordnande med särskild behörighet för kollektivtrafik och domstolar",
+      "Ordningsvaktsförordnande — Public Order Guard Appointment with special authority for public transport",
+    );
+    const entry = (key: string, title: string, over: Record<string, unknown>) => ({
+      key,
+      type: "licence",
+      title,
+      credential_code: "OV",
+      issuer: "Polismyndigheten",
+      jurisdiction: "SE",
+      sub_jurisdiction: null,
+      scope_limited: false,
+      authorisation_scope: null,
+      issued_on: "2025-01-01",
+      valid_until: day(400),
+      assertion: "self_declared",
+      lifecycle: "active",
+      verified_at: null,
+      verifier_organisation: null,
+      verification_method: null,
+      ...over,
+    });
+    const payload = {
+      status: "active",
+      package: "selected_merits",
+      focus: "passport",
+      purpose: null,
+      locale: lang,
+      expires_at: `${day(30)}T09:00:00Z`,
+      authorised_at: `${TODAY}T09:00:00Z`,
+      last_updated: `${TODAY}T09:00:00Z`,
+      holder: "Mostafa Alshawi",
+      privacy_mode: "full_name",
+      profession_slug: null,
+      jurisdiction: "SE",
+      sub_jurisdiction: null,
+      checked_at: `${TODAY}T07:00:00Z`,
+      verified_claims: [
+        entry("long-self", LONG, {}),
+        // The widest chip the product prints, on the same long title.
+        entry("long-doc", LONG, { assertion: "document_provided" }),
+        // …and one that is no longer current: a different lifecycle chip.
+        entry("long-expired", LONG, { valid_until: day(-30) }),
+      ],
+      verified_experience: [],
+      verified_employment_days: 0,
+      rules: [],
+    };
+
+    type Box = { x: number; y: number; width: number; height: number };
+    const intersects = (a: Box, b: Box) =>
+      a.x < b.x + b.width - 0.5 &&
+      b.x < a.x + a.width - 0.5 &&
+      a.y < b.y + b.height - 0.5 &&
+      b.y < a.y + a.height - 0.5;
+
+    for (const width of [390, 1440] as const) {
+      await page.setViewportSize({ width, height: 900 });
+      await mount(page, "/p/abcdef0123456789", lang, snapshotFor("Mostafa Alshawi", NINE), {
+        getPublicDisclosureFromCookie: payload,
+      });
+      const items = page.locator("[data-recipient-credential]");
+      await expect(items).toHaveCount(3, { timeout: 30_000 });
+
+      for (const key of ["long-self", "long-doc", "long-expired"]) {
+        const item = page.locator(`[data-recipient-credential="${key}"]`);
+        const title = item.locator("[data-recipient-credential-title]");
+        const status = item.locator("[data-recipient-credential-status]");
+        await expect(title).toHaveText(LONG);
+
+        // The painted text, not the box: a word that overflows its box paints
+        // OUTSIDE it, which is exactly how the collision hid from a box check.
+        const ink = await title.evaluate((el) => {
+          const r = document.createRange();
+          r.selectNodeContents(el);
+          const rects = [...r.getClientRects()];
+          const x = Math.min(...rects.map((q) => q.left));
+          const y = Math.min(...rects.map((q) => q.top));
+          return {
+            x,
+            y,
+            width: Math.max(...rects.map((q) => q.right)) - x,
+            height: Math.max(...rects.map((q) => q.bottom)) - y,
+          };
+        });
+        const chips = await status.locator(":scope > *").all();
+        expect(chips.length, `${key} @${width}: trust and lifecycle`).toBe(2);
+        for (const chip of chips) {
+          await expect(chip).toBeVisible();
+          expect((await chip.innerText()).trim().length).toBeGreaterThan(0);
+          const box = (await chip.boundingBox())!;
+          expect(intersects(ink, box), `${key} @${width}: title ink over a status chip`).toBe(
+            false,
+          );
+          // Inside the card, fully: not clipped at the right edge.
+          const card = (await item.boundingBox())!;
+          expect(box.x + box.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
+        }
+        // The two chips do not overlap each other either.
+        const [a, b] = await Promise.all(chips.map((c) => c.boundingBox()));
+        expect(intersects(a!, b!), `${key} @${width}: chips overlap`).toBe(false);
+        // The title's ink stays inside its card.
+        const card = (await item.boundingBox())!;
+        expect(ink.x + ink.width).toBeLessThanOrEqual(card.x + card.width + 0.5);
+
+        // No word is broken across lines.
+        const broken = await title.evaluate((el) => {
+          const node = el.firstChild as Text;
+          const out: string[] = [];
+          for (const m of (node.textContent ?? "").matchAll(/\S+/g)) {
+            const r = document.createRange();
+            r.setStart(node, m.index!);
+            r.setEnd(node, m.index! + m[0].length);
+            if (new Set([...r.getClientRects()].map((q) => Math.round(q.top))).size > 1)
+              out.push(m[0]);
+          }
+          return out;
+        });
+        expect(broken, `${key} @${width}`).toEqual([]);
+
+        // The layout is DELIBERATE: stacked on a phone, side by side on desktop.
+        const tBox = (await title.boundingBox())!;
+        const sBox = (await status.boundingBox())!;
+        if (width === 390) {
+          expect(sBox.y).toBeGreaterThanOrEqual(tBox.y + tBox.height - 0.5);
+        } else {
+          expect(sBox.x).toBeGreaterThanOrEqual(tBox.x + tBox.width - 0.5);
+          expect(Math.abs(sBox.y - tBox.y)).toBeLessThan(12);
+          // Desktop keeps its right-aligned column of chips.
+          expect(sBox.x + sBox.width).toBeGreaterThan(card.x + card.width - 24);
+        }
+      }
+      // The labels say what they are, in this language.
+      const first = page.locator('[data-recipient-credential="long-self"]');
+      await expect(first.locator("[data-recipient-credential-status]")).toContainText(
+        T("Gällande", "Active"),
+      );
+      await expect(
+        page
+          .locator('[data-recipient-credential="long-expired"]')
+          .locator("[data-recipient-credential-status]"),
+      ).toContainText(T("Utgång", "Expired"));
+
+      expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+      await first.scrollIntoViewIfNeeded();
+      await page
+        .locator("[data-recipient-credential]")
+        .locator("xpath=ancestor::ul[1]")
+        .screenshot({ path: `${shots}/recipient-long-title-${width}-${lang}.png` });
     }
   });
 

@@ -1184,6 +1184,20 @@ jobs:
       - name: Passport page composition (sketch 2)
         run: bun run passport-page-composition:check
 
+      # The credential shield system (PR #263): one scope resolver, four shield
+      # slots at every count, trust told by shape and words, and a shared view
+      # whose "+N" counts disclosed credentials only. Read-only over committed
+      # code, nothing hosted. Its planted controls run in negative-controls:all.
+      - name: Passport credential shields
+        run: bun run passport-credential-shield:check
+
+      # What may be said about an entry that is no longer current (PR #263): an
+      # expired self-declared credential must never be described as having been
+      # verified, documented or source-confirmed. Read-only over committed code,
+      # nothing hosted. Its planted controls run in negative-controls:all.
+      - name: Passport expired-trust language
+        run: bun run passport-expired-trust-language:check
+
       - name: Candidate destination composition (sketches 3, 4, 5)
         run: bun run candidate-destination-composition:check
 

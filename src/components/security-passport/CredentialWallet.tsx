@@ -34,7 +34,11 @@ import {
 } from "lucide-react";
 import type { PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import type { InternationalPassportMetadata } from "@/lib/security-passport/international.functions";
-import { credentialPassportHolder } from "@/lib/security-passport/credential-passport";
+import {
+  credentialPassportHolder,
+  credentialRowAnchor,
+} from "@/lib/security-passport/credential-passport";
+import { CAREER_PROFILE_PROFESSION_EDIT_HREF } from "@/lib/security-passport/profile-basics";
 import {
   CREDENTIAL_CLASSES,
   credentialClass,
@@ -189,8 +193,13 @@ export function CredentialWallet({
     return (
       <li
         key={c.id}
+        // The side panel's next step links HERE. The arrival helper scrolls
+        // the row into view, focuses it and marks it; the outline and tint
+        // below are what make that arrival visible to a sighted reader.
+        id={credentialRowAnchor(c.id)}
         data-credential-row
-        className="grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[2.25rem_minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-x-4"
+        aria-label={r.name}
+        className="scroll-mt-28 outline-offset-[-2px] focus:outline-2 focus:outline-ring data-[hash-target]:bg-accent/10 grid min-w-0 grid-cols-[2.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-4 py-3 sm:grid-cols-[2.25rem_minmax(0,1.6fr)_minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-x-4"
       >
         {/* The treatment's tones are drawn for the card's navy ground, so the
             mark brings that ground with it onto a themed page. */}
@@ -382,9 +391,11 @@ export function CredentialWallet({
           </div>
           {/* Shown on the card, edited in the Profile: the Passport has no
               editor for the name or the role, and says where the editor is. */}
-          <Link
-            to="/my-career/profile"
-            hash="profile-basics"
+          {/* A plain anchor on the SHARED contract: the href carries a query
+              and a fragment, and re-spelling it here is how the Passport and
+              the Profile came to disagree about where the editor is. */}
+          <a
+            href={CAREER_PROFILE_PROFESSION_EDIT_HREF}
             data-cta="edit-in-profile"
             className="mt-1 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-accent underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
@@ -392,7 +403,7 @@ export function CredentialWallet({
             {currentRole
               ? copy("Ändra nuvarande yrke", "Edit current professional role")
               : copy("Lägg till nuvarande yrke", "Add current professional role")}
-          </Link>
+          </a>
 
           <dl
             data-passport-stats

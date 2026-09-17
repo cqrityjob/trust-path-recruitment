@@ -749,11 +749,18 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     const attention = page.locator("#attention");
     await expect(attention).toContainText("Vi behöver ett intyg");
-    await expect(attention.getByRole("link", { name: "Öppna uppgiften" })).toHaveAttribute(
-      "href",
-      "/passport/entry/claim/c-1",
-    );
-    await attention.getByRole("link", { name: "Öppna uppgiften" }).click();
+    // CORRECTED CONTRACT (owner, 2026-09-17): one claim-route link per
+    // credential on the whole page, and the row owns it. The question names
+    // its credential and takes the reader to that credential's ROW; the row's
+    // own action then opens the claim. Still one credential, still reachable.
+    const toRow = attention.getByRole("link", { name: "Visa meriten" });
+    await expect(toRow).toHaveAttribute("href", "/passport#sp-credential-c-1");
+    await expect(page.locator('a[href="/passport/entry/claim/c-1"]')).toHaveCount(1);
+    await toRow.click();
+    const row = page.locator("#sp-credential-c-1");
+    await expect(row).toBeInViewport();
+    await expect(row).toBeFocused();
+    await row.getByRole("link", { name: "Komplettera uppgifter" }).click();
     await expect(page).toHaveURL(/\/passport\/entry\/claim\/c-1$/);
     await noErrors();
   });
@@ -869,13 +876,29 @@ test.describe("Security Passport — governed wallet regression", () => {
     await expect(page.locator("#attention")).toContainText(
       "Underlaget visar inte kursens omfattning.",
     );
-    await expect(page.locator('#attention a[href="/passport/entry/claim/c-1"]')).toBeVisible();
+    // The correction destination is the credential's row, whose own action
+    // opens the claim — not a second copy of that link in this section.
+    await expect(page.locator('#attention a[href="/passport#sp-credential-c-1"]')).toBeVisible();
+    await expect(page.locator('a[href="/passport/entry/claim/c-1"]')).toHaveCount(1);
+    await page.locator('#attention a[href="/passport#sp-credential-c-1"]').click();
+    const row = page.locator("#sp-credential-c-1");
+    await expect(row).toBeFocused();
+    await row.locator('a[href="/passport/entry/claim/c-1"]').click();
+    await expect(page).toHaveURL(/\/passport\/entry\/claim\/c-1$/);
   });
   test("multiple questions link separately to their subjects", async ({ page }) => {
     await mount(page, TWO_QUESTIONS);
     await ready(page);
-    for (const id of ["c-a", "c-b"])
-      await expect(page.locator(`#attention a[href="/passport/entry/claim/${id}"]`)).toBeVisible();
+    // Still SEPARATELY, still to their own subjects — each to its own row.
+    for (const id of ["c-a", "c-b"]) {
+      await expect(
+        page.locator(`#attention a[href="/passport#sp-credential-${id}"]`),
+      ).toBeVisible();
+      await expect(page.locator(`a[href="/passport/entry/claim/${id}"]`)).toHaveCount(1);
+      await expect(
+        page.locator(`#sp-credential-${id} a[href="/passport/entry/claim/${id}"]`),
+      ).toBeVisible();
+    }
   });
   test("unreviewed claims cannot be described as pending or verified", async ({ page }) => {
     await mount(page, TWO_UNREVIEWED, "en");

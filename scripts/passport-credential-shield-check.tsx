@@ -389,6 +389,35 @@ check(
 );
 
 /* ------------------------------------------------------------------ */
+console.log("\n6 · on a phone, a long credential title never paints over its status");
+
+{
+  const list = read("src/components/security-passport/live/RecipientCredentialList.tsx")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/\/\/[^\n]*/g, "");
+  const head = list.match(/data-recipient-credential-head\s+className="([^"]+)"/)?.[1] ?? "";
+  const title = list.match(/data-recipient-credential-title\s+className="([^"]+)"/)?.[1] ?? "";
+  const status = list.match(/data-recipient-credential-status\s+className="([^"]+)"/)?.[1] ?? "";
+  check(
+    /(^| )flex-col( |$)/.test(head) && /sm:flex-row/.test(head) && !/flex-wrap/.test(head),
+    "the header is a deliberate stack below sm and a row from sm — not one wrapping row",
+  );
+  check(
+    /\[overflow-wrap:normal\]/.test(title) &&
+      /\[word-break:keep-all\]/.test(title) &&
+      !/break-all|break-words|overflow-wrap:anywhere/.test(title),
+    "the title wraps between words and never inside one",
+  );
+  check(
+    /sm:shrink-0/.test(status) &&
+      !/(^| )shrink-0( |$)/.test(status) &&
+      /sm:flex-col/.test(status) &&
+      /sm:items-end/.test(status),
+    "the status sits on its own line on a phone, and keeps its right-hand column on desktop",
+  );
+}
+
+/* ------------------------------------------------------------------ */
 console.log("");
 if (failures.length > 0) {
   console.error(`passport-credential-shield-check FAILED (${failures.length} of ${assertions}):`);

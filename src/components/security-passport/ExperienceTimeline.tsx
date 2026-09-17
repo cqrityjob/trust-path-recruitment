@@ -162,7 +162,10 @@ export function ExperienceTimeline({
                   </p>
                 ) : null}
 
-                <LifecycleNote state={p.lifecycleState} />
+                <LifecycleNote
+                  state={p.lifecycleState}
+                  entry={{ ...p, subjectKind: "employment" }}
+                />
               </article>
 
               {hasBreak ? (

@@ -228,18 +228,75 @@ check(
   !/passport\/entry/.test(side) && !/entryId/.test(side),
   "the side column links to NO claim — the credential row owns the one claim-specific link",
 );
+// ── A VISIBLE ACTION NEVER LEADS TO AN EMPTY REGION ─────────────────────
+// 1317be8 pointed these two steps at `#attention`, which renders nothing for
+// a self-reported credential with no review outcome. They go to the
+// credential's OWN ROW, and because locating a record is all they do, they
+// are labelled "View credential" and nothing stronger.
 check(
-  (side.match(/data-cta="next-step"/g) ?? []).length === 3 &&
-    (
-      side.match(
-        /to="\/passport"\s+hash="attention"\s+className=\{`\$\{PRIMARY\} mt-4`\}\s+data-cta="next-step"/g,
-      ) ?? []
-    ).length === 2,
-  "its clarify and evidence steps go to the Verification section of this page, not to the claim",
+  (side.match(/data-cta="next-step"/g) ?? []).length === 2 &&
+    (side.match(/to="\/passport"\s+hash=\{credentialRowAnchor\(next\.claimId\)\}/g) ?? [])
+      .length === 1 &&
+    (side.match(/\{viewCredential\}/g) ?? []).length === 2 &&
+    /next\.kind === "clarify" \|\| next\.kind === "evidence" \?/.test(side),
+  "the clarify and evidence steps share ONE action, to that credential's own row on this page",
 );
+check(
+  !/hash="attention"/.test(side) && !/hash="merits"/.test(side),
+  "and never to a generic region that may have nothing in it",
+);
+check(
+  (side.match(/\{copy\("Visa meriten", "View credential"\)\}/g) ?? []).length === 1 &&
+    !/data-cta="next-step"[\s\S]{0,260}copy\("(Lägg till underlag|Komplettera uppgifter)"/.test(
+      side,
+    ),
+  'labelled truthfully — "Visa meriten" / "View credential" — because they locate, they do not act',
+);
+check(
+  /id=\{credentialRowAnchor\(c\.id\)\}\s+data-credential-row/.test(workspace) &&
+    /focus:outline-2/.test(workspace) &&
+    /data-\[hash-target\]:/.test(workspace),
+  "every credential row carries the anchor, and shows a visible focus state on arrival",
+);
+{
+  const { credentialRowAnchor } = await import("../src/lib/security-passport/credential-passport");
+  const ids = ["c-gb-ds", "f1900000-0000-4000-8000-000000000010", "merits", "attention", "a b#c/d"];
+  const anchors = ids.map(credentialRowAnchor);
+  check(
+    new Set(anchors).size === ids.length &&
+      anchors.every((a) => /^sp-credential-[A-Za-z0-9_-]+$/.test(a)) &&
+      !anchors.includes("merits") &&
+      !anchors.includes("attention"),
+    "the anchor is one shared function: namespaced, fragment-safe, and cannot collide with a section id",
+  );
+  check(
+    /goToHash\(anchor\)/.test(side) &&
+      /export function goToHash/.test(read("src/lib/security-passport/hash-arrival.ts")),
+    "a second press re-runs the arrival, so the step is never inert when the fragment is unchanged",
+  );
+}
 check(
   (workspace.match(/to="\/passport\/entry\/\$kind\/\$entryId"/g) ?? []).length === 1,
   "and the wallet renders exactly one claim link per credential row",
+);
+// The WHOLE page, not only the wallet. The Verification section used to link
+// to the claim route too, so a credential with a reviewer's question had two
+// claim links. Its outcome now names the credential and goes to that
+// credential's row; the row's own action opens the claim.
+check(
+  /hrefOf=\{\(item\) => `\/passport#\$\{credentialRowAnchor\(item\.subjectId\)\}`\}/.test(index) &&
+    !/`\/passport\/entry\/claim\//.test(index),
+  "the Verification section sends an outcome to the credential's row, never to a second claim link",
+);
+check(
+  /linkLabel=\{\{ sv: "Visa meriten", en: "View credential" \}\}/.test(index),
+  'and says what it does: "Visa meriten" / "View credential"',
+);
+check(
+  /if \(kind !== "claim"\) \{[\s\S]{0,220}\$kind\/\$entryId[\s\S]{0,120}return;[\s\S]{0,200}credentialRowAnchor\(entryId\)/.test(
+    index,
+  ),
+  "its open button does the same for a credential; only an employment period keeps its own route",
 );
 
 /* ------------------------------------------------------------------ */
@@ -282,9 +339,37 @@ check(
 );
 check(
   /"Ändra nuvarande yrke", "Edit current professional role"/.test(workspace) &&
-    /to="\/my-career\/profile"\s+hash="profile-basics"/.test(workspace),
-  "and the way to change it is a link to the canonical editor",
+    /href=\{CAREER_PROFILE_PROFESSION_EDIT_HREF\}\s+data-cta="edit-in-profile"/.test(workspace),
+  "and the way to change it is the SHARED profession-edit contract, not a re-spelled URL",
 );
+check(
+  !/\/my-career|#profile-basics|hash="profile-basics"|edit=profession/.test(workspace),
+  "the wallet spells no Profile URL of its own",
+);
+{
+  const { CAREER_PROFILE_PROFESSION_EDIT_HREF } =
+    await import("../src/lib/security-passport/profile-basics");
+  const { SECTION_DESTINATIONS } =
+    await import("../src/lib/professional-identity/profile-destinations");
+  const contract = new URL(CAREER_PROFILE_PROFESSION_EDIT_HREF, "https://x.invalid");
+  const profile = new URL(SECTION_DESTINATIONS.profession.href, "https://x.invalid");
+  check(
+    contract.pathname === profile.pathname &&
+      contract.hash === profile.hash &&
+      contract.searchParams.get("edit") === "profession" &&
+      profile.searchParams.get("edit") === "profession",
+    "the Passport's contract and the Profile's own destination name the SAME page, intent and anchor",
+  );
+  check(
+    contract.searchParams.get("from") === "passport",
+    "and it still carries the return origin, so the editor can offer the way back",
+  );
+  const mount = read("src/routes/_authenticated.my-career.profile.tsx");
+  check(
+    contract.pathname === "/my-career/profile" && /<SecurityCareerProfileCard\b/.test(mount),
+    "that page is where the profession editor is actually mounted",
+  );
+}
 
 /* ------------------------------------------------------------------ */
 console.log("\n4c · four tabs");
@@ -311,8 +396,8 @@ check(/identity\?\.displayName/.test(workspace), "the main column names the hold
 // Displayed here, edited there. The Passport has no editor for the name or
 // the title, and says where the editor is.
 check(
-  /to="\/my-career\/profile"\s+hash="profile-basics"\s+data-cta="edit-in-profile"/.test(workspace),
-  "and sends the holder to the Profile to change the name or the title",
+  /href=\{CAREER_PROFILE_PROFESSION_EDIT_HREF\}\s+data-cta="edit-in-profile"/.test(workspace),
+  "and sends the holder to the Profile to change the role",
 );
 check(
   !/<(input|textarea|select)\b/.test(workspace) &&
