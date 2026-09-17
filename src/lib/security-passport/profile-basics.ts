@@ -43,9 +43,20 @@ export const CAREER_PROFILE_ROUTE = "/my-career" as const;
  * Passport does not own current profession. This URL carries an explicit edit
  * intent to the canonical Career Profile editor and a return origin. Keeping
  * it here makes the Passport-side href and the receiving UI one contract.
+ *
+ * ── IT POINTS AT THE PROFILE PAGE, WHERE THE EDITOR IS ─────────────────
+ *
+ * This read `/my-career?edit=profession…` from when /my-career WAS the
+ * profile. Since My Career became a hub, SecurityCareerProfileCard — the only
+ * reader of `edit=profession` — is mounted on /my-career/profile and nowhere
+ * else, and the hub's own `validateSearch` drops the parameter. The old value
+ * therefore opened a page with no editor on it: a dead action with a
+ * confident label. `SECTION_DESTINATIONS.profession` already names this page;
+ * passport-page-composition-check asserts the two agree, and a browser test
+ * proves the editor opens.
  */
 export const CAREER_PROFILE_PROFESSION_EDIT_HREF =
-  "/my-career?edit=profession&from=passport#career-profile" as const;
+  "/my-career/profile?edit=profession&from=passport#career-profile" as const;
 
 export const BASICS_DELEGATED_ACTIONS: Readonly<Record<string, DelegatedAction>> = {
   profession: {

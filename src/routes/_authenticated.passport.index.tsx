@@ -7,7 +7,11 @@ import {
   VERIFICATION_ATTENTION_UNAVAILABLE,
   type VerificationAttention,
 } from "@/lib/professional-identity/verification-attention";
-import { isPassportCredential } from "@/lib/security-passport/credential-passport";
+import {
+  credentialRowAnchor,
+  isPassportCredential,
+} from "@/lib/security-passport/credential-passport";
+import { goToHash } from "@/lib/security-passport/hash-arrival";
 import type { ReviewReadState } from "@/lib/security-passport/workspace";
 import { useCallback, useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -99,10 +103,7 @@ function PassportWorkspaceRoute() {
   if (!snapshot || !metadata || !snapshot.profile)
     return <p role="status">{lang === "sv" ? "Läser meriter…" : "Loading credentials…"}</p>;
   return (
-    <div
-      data-passport-workspace
-      className="mx-auto grid max-w-[1280px] gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start xl:gap-10"
-    >
+    <div data-passport-workspace className="mx-auto max-w-[1280px]">
       <div className="min-w-0 flex flex-col gap-6">
         <ScrollToHashOnceReady />
         <CredentialWallet
@@ -111,6 +112,27 @@ function PassportWorkspaceRoute() {
           reviews={reviews}
           reviewState={reviewState}
           now={new Date().toISOString().slice(0, 10)}
+          // The action panel's lower half. Passed as a slot so the wallet renders
+          // card, panel, collection in that order at every width, while this
+          // route keeps owning every read.
+          panel={
+            <PassportSideColumn
+              part="steps"
+              metadata={metadata}
+              snapshot={snapshot}
+              reviews={reviews}
+              today={new Date().toISOString().slice(0, 10)}
+            />
+          }
+          underCard={
+            <PassportSideColumn
+              part="privacy"
+              metadata={metadata}
+              snapshot={snapshot}
+              reviews={reviews}
+              today={new Date().toISOString().slice(0, 10)}
+            />
+          }
         />
         <section id="attention" aria-labelledby="attention-heading" tabIndex={-1}>
           <h2 id="attention-heading" className="sr-only">
@@ -125,7 +147,13 @@ function PassportWorkspaceRoute() {
                 lang === "sv" ? "titleSv" : "titleEn"
               ] ?? pt("att.entryRemoved")
             }
-            hrefOf={(item) => `/passport/entry/claim/${item.subjectId}`}
+            // ONE claim-route link per credential on this page, and the row
+            // owns it. An outcome names the credential, says what was decided
+            // and takes the reader to that credential's ROW — where "Provide
+            // information" or "View credential" is — not to a second copy of
+            // the row's own destination.
+            hrefOf={(item) => `/passport#${credentialRowAnchor(item.subjectId)}`}
+            linkLabel={{ sv: "Visa meriten", en: "View credential" }}
           />
           <AttentionPanel
             summary={attentionFor(
@@ -135,22 +163,21 @@ function PassportWorkspaceRoute() {
             )}
             buckets={["expired", "expiring"]}
             otherAttention
-            onOpenEntry={(kind, entryId) =>
-              void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId } })
-            }
+            // The same rule for the panel's "open" button: a credential is
+            // opened from its row. (Employment periods are not on this page at
+            // all, so they keep their own route.)
+            onOpenEntry={(kind, entryId) => {
+              if (kind !== "claim") {
+                void navigate({ to: "/passport/entry/$kind/$entryId", params: { kind, entryId } });
+                return;
+              }
+              const anchor = credentialRowAnchor(entryId);
+              void navigate({ to: "/passport", hash: anchor });
+              requestAnimationFrame(() => goToHash(anchor));
+            }}
           />
         </section>
       </div>
-      {/* No second Passport here. The wallet's identity surface IS the
-          Passport on this page; the recipient-style rendering lives under
-          Preview and share. This column is the next step and who can see. */}
-      <PassportSideColumn
-        metadata={metadata}
-        snapshot={snapshot}
-        reviews={reviews}
-        today={new Date().toISOString().slice(0, 10)}
-        className="lg:sticky lg:top-28 lg:!w-full"
-      />
     </div>
   );
 }

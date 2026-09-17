@@ -18,6 +18,19 @@ export function isPassportCredential(claim: Pick<Claim, "claimType" | "credentia
   );
 }
 
+/**
+ * The DOM anchor of one credential's row on the Passport overview.
+ *
+ * One function, so the row that carries the id and the side panel that links
+ * to it cannot spell it differently. Namespaced, so a claim id can never
+ * collide with a section id on the page (`merits`, `attention`); and reduced
+ * to the characters an id and a URL fragment share, so no claim id — a uuid
+ * today, anything tomorrow — can produce a fragment that fails to resolve.
+ */
+export function credentialRowAnchor(claimId: string): string {
+  return `sp-credential-${claimId.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+}
+
 /** A projection, never a second editable record or a change to the v1 reader. */
 export function credentialPassportHolder(holder: PassportHolder): PassportHolder {
   return { ...holder, claims: holder.claims.filter(isPassportCredential), periods: [] };

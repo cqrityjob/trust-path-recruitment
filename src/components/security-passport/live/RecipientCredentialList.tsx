@@ -63,8 +63,20 @@ export function RecipientCredentialList({
             data-recipient-credential={c.key}
             className="rounded-lg border border-border bg-card p-4"
           >
-            <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-              <div className="flex min-w-0 flex-1 items-start gap-3">
+            {/* ── STACKED ON A PHONE, SIDE BY SIDE FROM `sm` ─────────────
+                This was one wrapping flex row at every width, with the title
+                allowed to shrink (`min-w-0 flex-1`) beside chips that are not
+                (`shrink-0`). At 390px the title's box shrank below its longest
+                word — "Ordningsvaktsförordnande" — and the word painted
+                straight over the trust chip. A title is not something to
+                squeeze: on a narrow screen it takes the full width and the
+                status sits on its own line beneath it; from `sm` the original
+                presentation is unchanged. */}
+            <div
+              data-recipient-credential-head
+              className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-x-4"
+            >
+              <div className="flex min-w-0 items-start gap-3 sm:flex-1">
                 <CredentialSymbol
                   code={c.code}
                   state={c.presentation}
@@ -72,11 +84,17 @@ export function RecipientCredentialList({
                   size={40}
                   className="mt-0.5 shrink-0"
                 />
-                <h3 className="min-w-0 flex-1 text-base font-semibold tracking-tight text-foreground">
+                <h3
+                  data-recipient-credential-title
+                  className="min-w-0 flex-1 text-base font-semibold tracking-tight text-foreground [hyphens:none] [overflow-wrap:normal] [word-break:keep-all]"
+                >
                   {c.title}
                 </h3>
               </div>
-              <span className="flex shrink-0 flex-col items-end gap-1.5">
+              <span
+                data-recipient-credential-status
+                className="flex flex-row flex-wrap items-center gap-1.5 pl-[3.25rem] sm:shrink-0 sm:flex-col sm:items-end sm:pl-0"
+              >
                 {/* The present-tense VERIFIED pill is worn ONLY by a
                     credential whose derived presentation is verified. An
                     entry that is no longer current, and a legacy unsupported
@@ -110,7 +128,17 @@ export function RecipientCredentialList({
               </span>
             </div>
 
-            <LifecycleNote state={c.lifecycle} />
+            {/* The STORED level and provenance, as the chip above receives
+                them: what an expired entry "was" is derived, never assumed. */}
+            <LifecycleNote
+              state={c.lifecycle}
+              entry={{
+                assertionLevel: c.assertion,
+                verifierName: c.verifierOrganisation,
+                verificationMethod: c.verificationMethod,
+                subjectKind: "credential",
+              }}
+            />
             {c.credentialIdentifier && (
               <p className="mt-2 break-all text-sm">
                 {lang === "sv" ? "Certifikats- eller licensnummer" : "Credential identifier"}:{" "}

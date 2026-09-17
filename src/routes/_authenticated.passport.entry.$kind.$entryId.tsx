@@ -581,7 +581,10 @@ function PassportEntryRoute() {
             />
             <LifecycleChip state={validity.effectiveState} />
           </div>
-          <LifecycleNote state={validity.effectiveState} />
+          <LifecycleNote
+            state={validity.effectiveState}
+            entry={{ ...subject, subjectKind: isClaim ? "credential" : "employment" }}
+          />
         </div>
       </header>
 

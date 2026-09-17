@@ -593,7 +593,14 @@ const sv = {
   "lifecycle.superseded": "Ersatt",
   "lifecycle.disputed": "Bestridd",
   "lifecycle.legend": "Tillstånd",
-  "lifecycle.expiredNote": "Uppgiften var verifierad men giltighetstiden har gått ut.",
+  "lifecycle.expiredNote.self_declared":
+    "Giltighetstiden har gått ut. Uppgiften är innehavarens egen och har inte kontrollerats av någon annan.",
+  "lifecycle.expiredNote.document_provided":
+    "Giltighetstiden har gått ut. Ett dokument bifogades men har inte granskats.",
+  "lifecycle.expiredNote.documented":
+    "Giltighetstiden har gått ut. Medan uppgiften gällde var den dokumenterad: CQrityjob granskade ett dokument, utfärdaren bekräftade den inte.",
+  "lifecycle.expiredNote.source_confirmed":
+    "Giltighetstiden har gått ut. Medan uppgiften gällde var den källbekräftad av den part den handlar om.",
   "lifecycle.disputedNote": "Uppgiften är bestridd och räknas inte med förrän den är utredd.",
   "lifecycle.locked": "Underlagsnivå och tillstånd sätts av systemet och kan inte ändras av dig.",
 
@@ -812,6 +819,12 @@ const sv = {
   "jurisdiction.option.AE-DU": "Dubai, Förenade Arabemiraten",
   "jurisdiction.AE-AZ": "Abu Dhabi",
   "jurisdiction.GB-NI": "Nordirland",
+  "scope.global": "Global",
+  "scope.GB": "Storbritannien",
+  "scope.notStated": "Område ej angivet",
+  "shield.more": "fler aktuella meriter",
+  "shield.none": "Inga aktuella meriter ännu",
+  "shield.expires": "giltig till",
   "jurisdiction.option.GB-NI": "Nordirland, Storbritannien",
   "jurisdiction.option.AE-AZ": "Abu Dhabi, Förenade Arabemiraten",
   "jurisdiction.option.AE": "Förenade Arabemiraten (övriga)",
@@ -2730,7 +2743,14 @@ const en: Record<PassportCopyKey, string> = {
   "lifecycle.superseded": "Superseded",
   "lifecycle.disputed": "Disputed",
   "lifecycle.legend": "State",
-  "lifecycle.expiredNote": "This entry was verified but its validity period has ended.",
+  "lifecycle.expiredNote.self_declared":
+    "The validity period has ended. This entry is the holder's own statement and was not checked by anyone else.",
+  "lifecycle.expiredNote.document_provided":
+    "The validity period has ended. A document was attached but was not reviewed.",
+  "lifecycle.expiredNote.documented":
+    "The validity period has ended. While it was current this entry was documented: CQrityjob reviewed a document; the issuer did not confirm it.",
+  "lifecycle.expiredNote.source_confirmed":
+    "The validity period has ended. While it was current this entry was source-confirmed by the party it concerns.",
   "lifecycle.disputedNote": "This entry is disputed and is not counted until it is resolved.",
   "lifecycle.locked":
     "Evidence level and state are set by the system and cannot be changed by you.",
@@ -2885,6 +2905,12 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.option.AE-DU": "Dubai, United Arab Emirates",
   "jurisdiction.AE-AZ": "Abu Dhabi",
   "jurisdiction.GB-NI": "Northern Ireland",
+  "scope.global": "Global",
+  "scope.GB": "Great Britain",
+  "scope.notStated": "Area not stated",
+  "shield.more": "more current credentials",
+  "shield.none": "No current credentials yet",
+  "shield.expires": "valid until",
   "jurisdiction.option.GB-NI": "Northern Ireland, United Kingdom",
   "jurisdiction.option.AE-AZ": "Abu Dhabi, United Arab Emirates",
   "jurisdiction.option.AE": "United Arab Emirates (other)",

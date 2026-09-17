@@ -1244,10 +1244,21 @@ group("T16 · the lifecycle definition is shared; the reads are not, and that is
   // after the browser has given up on the fragment too. The CONTRACT is
   // unchanged and is now asserted where it lives, plus the fact that the
   // index still renders it.
-  const hashHelper = read("src/components/security-passport/ScrollToHashOnceReady.tsx");
+  //
+  // The arrival itself (scroll, focus, mark) moved once more, into
+  // `lib/security-passport/hash-arrival.ts` (PR #263), because the side
+  // panel's "View credential" step must re-run it on a press that leaves the
+  // fragment unchanged. Still the same contract, still asserted where it
+  // lives — plus the fact that the component delegates to it rather than
+  // keeping a second copy.
+  const hashComponent = read("src/components/security-passport/ScrollToHashOnceReady.tsx");
+  const hashHelper = read("src/lib/security-passport/hash-arrival.ts");
   ck(
     "the Passport index scrolls to AND focuses the hash once ready",
     passportRoute.includes("<ScrollToHashOnceReady />") &&
+      /import \{ goToHash \} from "@\/lib\/security-passport\/hash-arrival";/.test(hashComponent) &&
+      /goToHash\(hash\)/.test(hashComponent) &&
+      !hashComponent.includes("scrollIntoView") &&
       hashHelper.includes("scrollIntoView") &&
       hashHelper.includes("focus({ preventScroll: true })") &&
       hashHelper.includes('el.setAttribute("data-hash-target", hash)'),

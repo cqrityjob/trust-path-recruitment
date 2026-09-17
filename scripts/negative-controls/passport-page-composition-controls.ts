@@ -22,10 +22,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the side column stops rendering, so the next step and the privacy status disappear from the Passport overview",
     file: INDEX,
-    find: "      <PassportSideColumn",
-    replace: "        <NoSideColumn",
+    find: '              part="privacy"\n',
+    replace: '              part="steps"\n',
     guard: GUARD,
-    expect: "the Passport page renders a side column",
+    expect: "both halves of the side column are mounted",
   },
   {
     id: "PPC-NC-CARD-ABOVE-RECORD-ON-MOBILE",
@@ -74,10 +74,206 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the identity surface loses its link to the Profile, so the Passport displays a name and title with no way to reach the one place they are edited",
     file: WALLET,
-    find: '                data-cta="edit-in-profile"',
-    replace: '                data-cta="edit-elsewhere"',
+    find: '            data-cta="edit-in-profile"',
+    replace: '            data-cta="edit-elsewhere"',
     guard: GUARD,
     expect: "sends the holder to the Profile",
+  },
+  // ── Owner correction 2026-09-17: identity, card and panel ─────────────
+  {
+    id: "PPC-NC-CONTROL-BACK-INSIDE-THE-CARD",
+    defect:
+      "an action button is put back inside the Passport card, which is what left the holder's name no room",
+    file: WALLET,
+    find: "          <CredentialConstellation\n",
+    replace:
+      '          <button type="button">Add credential</button>\n          <CredentialConstellation\n',
+    guard: GUARD,
+    expect: "contains no button, input or action control",
+  },
+  {
+    id: "PPC-NC-SECOND-LINK-IN-THE-CARD",
+    defect:
+      "the card gains a second link beside the +N shield, so it starts becoming a toolbar again",
+    file: WALLET,
+    find: "          <CredentialConstellation\n",
+    replace:
+      '          <Link to="/passport/share">Share</Link>\n          <CredentialConstellation\n',
+    guard: GUARD,
+    expect: 'its only link is the "+N" shield',
+  },
+  {
+    id: "PPC-NC-NAME-BREAKS-INSIDE-A-WORD",
+    defect:
+      "the holder's name may break anywhere again, so 'Mostafa Alshawi' prints as 'Most / afa / Alsha / wi'",
+    file: WALLET,
+    find: "[hyphens:none] [overflow-wrap:normal] [word-break:keep-all]",
+    replace: "[hyphens:none] [overflow-wrap:anywhere] [word-break:keep-all]",
+    guard: GUARD,
+    expect: "may wrap between words and nowhere else",
+  },
+  {
+    id: "PPC-NC-DERIVED-TITLE-RENAMES-THE-PERSON",
+    defect:
+      "a credential-derived title takes the identity line, so a holder-reported appointment renames the Head of Security an Ordningsvakt",
+    file: WALLET,
+    find: "                    {currentRole}\n",
+    replace: "                    {credentialDerivedTitle ?? currentRole}\n",
+    guard: GUARD,
+    expect: "never appears on the card",
+  },
+  {
+    id: "PPC-NC-ROLE-NOT-FROM-THE-PROFILE",
+    defect:
+      "the role is read from the Passport's own mirrored headline instead of the canonical Career Profile, which is a second title field",
+    file: WALLET,
+    find: "  const identity = snapshot.profileIdentity;",
+    replace:
+      "  const identity = {\n    displayName: snapshot.profile?.displayName ?? null,\n    titleSv: snapshot.profile?.headline ?? null,\n    titleEn: snapshot.profile?.headline ?? null,\n  };",
+    guard: GUARD,
+    expect: "canonical Career Profile's current role",
+  },
+  {
+    id: "PPC-NC-NEGATIVE-TITLE-RETURNS",
+    defect:
+      "'No active professional title' comes back under the holder's name when no role is stated",
+    file: WALLET,
+    find: '{copy("Nuvarande yrke inte angivet", "Current professional role not added")}',
+    replace: '{pt("identity.none")}',
+    guard: GUARD,
+    expect: "No active professional title",
+  },
+  {
+    id: "PPC-NC-SECOND-ADD-CREDENTIAL",
+    defect:
+      "the next step grows its own Add credential button again, so the overview has two primary ways to do one thing",
+    file: SIDE,
+    find: '        {next.kind === "clarify" && (',
+    replace:
+      '        <Link to="/passport/credentials/new">+</Link>\n        {next.kind === "clarify" && (',
+    guard: GUARD,
+    expect: "exactly ONE Add credential",
+  },
+  {
+    id: "PPC-NC-NEXT-STEP-DUPLICATES-THE-ROW-LINK",
+    defect:
+      "the next step links straight to the claim route again, so the overview shows two claim links for one credential — the strict-mode failure of PR #263",
+    file: SIDE,
+    find: '          to="/passport"\n          hash={credentialRowAnchor(next.claimId)}\n',
+    replace:
+      '          to="/passport/entry/$kind/$entryId"\n          params={{ kind: "claim", entryId: next.claimId }}\n',
+    guard: GUARD,
+    expect: "the side column links to NO claim",
+  },
+  {
+    id: "PPC-NC-NEXT-STEP-LEADS-TO-AN-EMPTY-REGION",
+    defect:
+      "the next step points at #attention again, which renders nothing for a self-reported credential with no review outcome — a visible button that goes nowhere",
+    file: SIDE,
+    find: "          hash={credentialRowAnchor(next.claimId)}\n",
+    replace: '          hash="attention"\n',
+    guard: GUARD,
+    expect: "never to a generic region",
+  },
+  {
+    id: "PPC-NC-NEXT-STEP-OVERCLAIMS-ITS-LABEL",
+    defect:
+      "the button that only locates a record is labelled 'Add evidence' again, promising an action it does not perform",
+    file: SIDE,
+    find: '{copy("Visa meriten", "View credential")}',
+    replace: '{copy("Lägg till underlag", "Add evidence")}',
+    guard: GUARD,
+    expect: "labelled truthfully",
+  },
+  {
+    id: "PPC-NC-ROW-LOSES-ITS-ANCHOR",
+    defect:
+      "the credential row loses its id, so the next step's fragment resolves to nothing and the button is dead again",
+    file: WALLET,
+    find: "        id={credentialRowAnchor(c.id)}\n",
+    replace: "",
+    guard: GUARD,
+    expect: "every credential row carries the anchor",
+  },
+  {
+    id: "PPC-NC-ANCHOR-COLLIDES-WITH-A-SECTION",
+    defect:
+      "the row anchor is the bare claim id, so a claim called 'merits' or 'attention' would hijack a section's fragment",
+    file: "src/lib/security-passport/credential-passport.ts",
+    find: '  return `sp-credential-${claimId.replace(/[^A-Za-z0-9_-]/g, "_")}`;',
+    replace: "  return claimId;",
+    guard: GUARD,
+    expect: "cannot collide with a section id",
+  },
+  {
+    id: "PPC-NC-SECOND-PRESS-IS-INERT",
+    defect:
+      "the click no longer re-runs the arrival, so pressing the step a second time — fragment unchanged — does nothing",
+    file: SIDE,
+    find: "            requestAnimationFrame(() => goToHash(anchor));\n",
+    replace: "",
+    guard: GUARD,
+    expect: "a second press re-runs the arrival",
+  },
+  {
+    id: "PPC-NC-EDIT-ROLE-URL-RESPELLED",
+    defect:
+      "the wallet spells its own Profile URL instead of the shared contract, which is how the Passport and the Profile came to disagree about where the editor is",
+    file: WALLET,
+    find: "            href={CAREER_PROFILE_PROFESSION_EDIT_HREF}\n",
+    replace: '            href="/my-career/profile#profile-basics"\n',
+    guard: GUARD,
+    expect: "SHARED profession-edit contract",
+  },
+  {
+    id: "PPC-NC-EDIT-ROLE-OPENS-THE-HUB",
+    defect:
+      "the shared contract points at the /my-career hub again, which mounts no profession editor and drops the edit parameter — a dead action with a confident label",
+    file: "src/lib/security-passport/profile-basics.ts",
+    find: '  "/my-career/profile?edit=profession&from=passport#career-profile" as const;',
+    replace: '  "/my-career?edit=profession&from=passport#career-profile" as const;',
+    guard: GUARD,
+    expect: "name the SAME page",
+  },
+  {
+    id: "PPC-NC-VERIFICATION-DUPLICATES-THE-CLAIM-LINK",
+    defect:
+      "the Verification section links to the claim route again, so a credential with a reviewer's question has two claim links on one page",
+    file: INDEX,
+    find: "            hrefOf={(item) => `/passport#${credentialRowAnchor(item.subjectId)}`}",
+    replace: "            hrefOf={(item) => `/passport/entry/claim/${item.subjectId}`}",
+    guard: GUARD,
+    expect: "never to a second claim link",
+  },
+  {
+    id: "PPC-NC-FIFTH-TAB",
+    defect: "Add credential comes back as a tab, so the four tabs are five",
+    file: "src/routes/_authenticated.passport.tsx",
+    find: '  { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },',
+    replace:
+      '  { to: "/passport/credentials/new", sv: "Lägg till", en: "Add credential" },\n  { to: "/passport", hash: "attention", sv: "Granskning", en: "Verification" },',
+    guard: GUARD,
+    expect: "in that order and no others",
+  },
+  {
+    id: "PPC-NC-COUNTRY-TWICE",
+    defect:
+      "the helper appends the jurisdiction unconditionally, so a title ending in the country prints it twice",
+    file: "src/lib/security-passport/format.ts",
+    find: "  if (t.toLocaleLowerCase().endsWith(j.toLocaleLowerCase())) return t;\n",
+    replace: "",
+    guard: GUARD,
+    expect: "is not given it again",
+  },
+  {
+    id: "PPC-NC-SURFACE-BYPASSES-THE-HELPER",
+    defect:
+      "the recipient page joins title and jurisdiction by hand again, so one surface can diverge from the other four",
+    file: "src/components/security-passport/RecipientVerification.tsx",
+    find: "          {titleWithJurisdictionOnce(profession, jurisdiction)}",
+    replace: "          {profession} · {jurisdiction}",
+    guard: GUARD,
+    expect: "RecipientVerification.tsx joins title and jurisdiction through the helper only",
   },
   {
     id: "PPC-NC-NEXT-STEP-SECOND-OPINION",

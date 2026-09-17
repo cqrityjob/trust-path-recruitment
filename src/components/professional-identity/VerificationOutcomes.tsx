@@ -136,11 +136,13 @@ function Item({
   item,
   title,
   href,
+  linkLabel,
   lang,
 }: {
   item: VerificationAttentionItem;
   title: string;
   href: string;
+  linkLabel?: Copy;
   lang: Lang;
 }) {
   const next = NEXT_STEP[item.nextStep];
@@ -167,12 +169,28 @@ function Item({
 
       {next ? <p className="mt-2 text-sm text-muted-foreground">{L(next, lang)}</p> : null}
 
-      <Link
-        to={href}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline"
-      >
-        {L(COPY.openEntry, lang)}
-      </Link>
+      {/* A destination WITH a fragment is a place on a page — the Passport
+          sends the reader to the credential's own row, which holds the one
+          claim-route action for it. That is a plain anchor: a same-document
+          fragment is the browser's to follow, and the page's own arrival
+          helper takes the focus there. A route stays a router link. */}
+      {href.includes("#") ? (
+        <a
+          href={href}
+          data-outcome-link={item.subjectId}
+          className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {L(linkLabel ?? COPY.openEntry, lang)}
+        </a>
+      ) : (
+        <Link
+          to={href}
+          data-outcome-link={item.subjectId}
+          className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline"
+        >
+          {L(linkLabel ?? COPY.openEntry, lang)}
+        </Link>
+      )}
     </li>
   );
 }
@@ -185,6 +203,7 @@ function Group({
   rule,
   titleOf,
   hrefOf,
+  linkLabel,
   lang,
 }: {
   title: string;
@@ -194,6 +213,7 @@ function Group({
   rule: string;
   titleOf: (item: VerificationAttentionItem) => string;
   hrefOf: (item: VerificationAttentionItem) => string;
+  linkLabel?: Copy;
   lang: Lang;
 }) {
   if (items.length === 0) return null;
@@ -211,6 +231,7 @@ function Group({
             item={item}
             title={titleOf(item)}
             href={hrefOf(item)}
+            linkLabel={linkLabel}
             lang={lang}
           />
         ))}
@@ -265,11 +286,16 @@ export function VerificationOutcomes({
    * announcing one failed request is the page shouting.
    */
   showUnavailable = true,
+  /** What the link says. Defaults to "Open the entry", which is right when
+   *  `hrefOf` is the entry's route. A surface that sends the reader to a
+   *  PLACE rather than into the record passes a label that says so. */
+  linkLabel,
   className,
 }: {
   attention: VerificationAttention;
   titleOf: (item: VerificationAttentionItem) => string;
   hrefOf: (item: VerificationAttentionItem) => string;
+  linkLabel?: Copy;
   showClear?: boolean;
   groups?: readonly AttentionGroup[];
   showUnavailable?: boolean;
@@ -305,7 +331,7 @@ export function VerificationOutcomes({
 
   if (nothingToShow && !showClear) return null;
 
-  const shared = { titleOf, hrefOf, lang: l };
+  const shared = { titleOf, hrefOf, linkLabel, lang: l };
 
   return (
     <section

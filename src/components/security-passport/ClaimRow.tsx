@@ -146,7 +146,7 @@ export function ClaimRow({
         ) : null}
       </dl>
 
-      <LifecycleNote state={claim.lifecycleState} />
+      <LifecycleNote state={claim.lifecycleState} entry={{ ...claim, subjectKind: "credential" }} />
 
       {/* A recorded source method the product cannot structurally support --
           a legacy CQrityjob row, or any issuer confirmation. The chip above

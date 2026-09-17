@@ -22,7 +22,7 @@ import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatExpiry } from "@/lib/security-passport/format";
 import type { RecipientCredential } from "@/lib/security-passport/recipient-presentation";
-import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
+import { historicalTrustWordKey, methodLabelKey } from "@/lib/security-passport/trust-presentation";
 import { BrandMark, EngravedField, EngravedRule } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
 
@@ -103,7 +103,14 @@ export function CredentialVerificationPage({
           >
             {isCurrent
               ? pt(credential.statusWordKey)
-              : `${pt(`lifecycle.${credential.lifecycle}` as const)} · ${pt("assertion.verified.historical")}`}
+              : `${pt(`lifecycle.${credential.lifecycle}` as const)} · ${pt(
+                  historicalTrustWordKey({
+                    assertionLevel: credential.assertion,
+                    verifierName: credential.verifierOrganisation,
+                    verificationMethod: credential.verificationMethod,
+                    subjectKind: "credential",
+                  }),
+                )}`}
           </p>
 
           <p className="mt-4 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>

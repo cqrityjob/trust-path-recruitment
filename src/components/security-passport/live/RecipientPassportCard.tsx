@@ -23,13 +23,16 @@
 import { CredentialScopeLine } from "./CredentialScopeLine";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { EligibilityLine } from "../EligibilityLine";
-import { formatWorkLocation } from "@/lib/security-passport/format";
+import { formatWorkLocation, titleWithJurisdictionOnce } from "@/lib/security-passport/format";
 import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDuration } from "@/lib/security-passport/format";
 import type { RecipientPresentation } from "@/lib/security-passport/recipient-presentation";
 import { BrandMark, EngravedField, EngravedRule, MicroLabel } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
+import { CredentialConstellation } from "../CredentialShield";
+import { resolveCredentialScope } from "@/lib/security-passport/credential-shield";
+import { historicalTrustWordKey } from "@/lib/security-passport/trust-presentation";
 
 /** Tones for the status word ON THE CARD's navy ground. Distinct from the
  *  theme-surface tones used elsewhere; both are supplementary to the word. */
@@ -96,6 +99,9 @@ export function RecipientPassportCard({
           >
             {holderName}
           </h2>
+          {/* Who the person IS: the current role from their Profile, said to
+              be their own statement. What their disclosed credentials support
+              follows it and never replaces it (owner decision, 2026-09-17). */}
           {presentation.profileTitle && (
             <p
               className="mt-2 text-sm"
@@ -112,12 +118,10 @@ export function RecipientPassportCard({
           )}
           {(presentation.titles.length > 0 || presentation.jurisdiction) && (
             <p className="mt-2 text-sm" style={{ color: TRUST_PALETTE.inkMuted }}>
-              {[
-                presentation.titles.length ? joinTitles(presentation.titles, lang, "") : null,
+              {titleWithJurisdictionOnce(
+                presentation.titles.length ? joinTitles(presentation.titles, lang, "") : "",
                 presentation.jurisdiction ? jurisdiction : null,
-              ]
-                .filter(Boolean)
-                .join(" · ")}
+              )}
             </p>
           )}
         </header>
@@ -149,6 +153,35 @@ export function RecipientPassportCard({
             >
               {formatDuration(presentation.confirmedEmploymentDays, lang)}
             </p>
+          </div>
+        ) : null}
+
+        {/* ── The same shields the holder's own card draws ─────────────
+            Built from `presentation.credentials` and nothing else, so a "+N"
+            here counts DISCLOSED credentials only: what the holder left out of
+            this share has no representation on this surface, not even as a
+            number. No link on the count — a recipient has nowhere further to
+            go. Scope comes from the disclosed jurisdiction; the payload does
+            not say whether a definition is international, so a credential
+            with no jurisdiction wears no scope rather than a guessed globe. */}
+        {presentation.credentials.length > 0 ? (
+          <div className="mt-4 [container-type:inline-size]" data-recipient-shields>
+            <CredentialConstellation
+              ground="navy"
+              credentials={presentation.credentials.map((c) => ({
+                id: c.key,
+                code: c.code,
+                name: c.title,
+                state: c.presentation,
+                statusWordKey: c.statusWordKey,
+                lifecycle: c.lifecycle,
+                validUntil: c.validUntil,
+                scope: resolveCredentialScope(
+                  { jurisdictionCode: c.jurisdiction, subJurisdictionCode: c.subJurisdiction },
+                  lang,
+                ),
+              }))}
+            />
           </div>
         ) : null}
 
@@ -194,19 +227,26 @@ export function RecipientPassportCard({
                           >
                             {pt(`lifecycle.${c.lifecycle}` as const)}
                           </span>
-                          {c.assertion === "verified" && (
-                            <>
-                              <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
-                                ·
-                              </span>
-                              <span
-                                className="text-[10px] font-semibold uppercase tracking-[0.16em]"
-                                style={{ color: TRUST_PALETTE.inkMuted }}
-                              >
-                                {pt("assertion.verified.historical")}
-                              </span>
-                            </>
-                          )}
+                          {/* The trust word the STORED standing earns, from
+                              the one function that decides it. A document
+                              review is not "previously verified", and a
+                              self-declared entry is not anything but. */}
+                          <span aria-hidden="true" style={{ color: TRUST_PALETTE.inkFaint }}>
+                            ·
+                          </span>
+                          <span
+                            className="text-[10px] font-semibold uppercase tracking-[0.16em]"
+                            style={{ color: TRUST_PALETTE.inkMuted }}
+                          >
+                            {pt(
+                              historicalTrustWordKey({
+                                assertionLevel: c.assertion,
+                                verifierName: c.verifierOrganisation,
+                                verificationMethod: c.verificationMethod,
+                                subjectKind: "credential",
+                              }),
+                            )}
+                          </span>
                         </>
                       ) : (
                         <span

@@ -33,6 +33,7 @@ import { mkdirSync } from "node:fs";
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { fixtureById } from "../src/lib/professional-identity/fixtures/career-home-fixtures";
 import { mount, ok, passportSnapshot, takeMountBookkeeping } from "./support/career-home-harness";
+import { CAREER_PROFILE_PROFESSION_EDIT_HREF } from "../src/lib/security-passport/profile-basics";
 
 const SHOTS = process.env.SURFACE_SHOTS ?? "";
 if (SHOTS) mkdirSync(SHOTS, { recursive: true });
@@ -624,7 +625,9 @@ test.describe("Security Passport", () => {
       });
 
       // ONE identity surface, and no second Passport card anywhere.
-      await expect(page.locator("[data-credential-wallet] > header")).toHaveCount(1);
+      await expect(
+        page.locator("[data-credential-wallet] [data-passport-identity-surface]"),
+      ).toHaveCount(1);
       await expect(page.locator("[data-compact-passport-card]")).toHaveCount(0);
       await expect(page.locator("h1")).toHaveCount(1);
       await expect(page.locator("h1")).toHaveText("Amina Karlsson");
@@ -634,9 +637,11 @@ test.describe("Security Passport", () => {
       expect(h1 && h1.height < 70, "the name does not wrap at 1440").toBeTruthy();
 
       // Name and title are displayed here and edited in Profile.
+      // The role is edited in the Profile's profession editor, reached through
+      // the ONE shared contract — not the basics card, which has no role field.
       await expect(page.locator('[data-cta="edit-in-profile"]')).toHaveAttribute(
         "href",
-        "/my-career/profile#profile-basics",
+        CAREER_PROFILE_PROFESSION_EDIT_HREF,
       );
       await expect(
         page.locator("[data-credential-wallet] header").locator("input, textarea"),
@@ -675,19 +680,128 @@ test.describe("Security Passport", () => {
       ready: "[data-credential-wallet]",
       overrides: passportOverrides(),
     });
+    // The actions sit in the row beneath the card: the card itself holds no
+    // control (work order 2026-09-17, 1.2).
+    await expect(page.locator("[data-credential-wallet] header").locator("a, button")).toHaveCount(
+      0,
+    );
     await page
-      .locator("[data-credential-wallet] header")
+      .locator("[data-passport-actions]")
       .getByRole("link", { name: "Add credential" })
       .click();
     await page.waitForURL("**/passport/credentials/new");
     await page.waitForTimeout(800);
     await shot(page, "08-passport-add-credential-1440-en");
 
-    await page.getByRole("link", { name: "Preview and share" }).first().click();
+    // From the form, sharing is the Share tab; from the Passport, the button.
+    await page.getByRole("link", { name: "Share", exact: true }).click();
     await page.waitForURL("**/passport/share");
     await expect(page.locator("[data-share-screen]")).toBeVisible();
     await shot(page, "09-passport-preview-and-share-1440-en");
   });
+
+  for (const lang of ["sv", "en"] as const) {
+    test(`Edit current professional role opens the Profile's profession editor, loaded, and saves to the Career Profile · ${lang}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      const T = (sv: string, en: string) => (lang === "sv" ? sv : en);
+
+      // Both pages' backends: the click is a real navigation from one to the
+      // other. The Career Profile holds a CURRENT profession, and its owner's
+      // write is recorded so the test can say who was written to.
+      const b = backend();
+      const careerWrites: Record<string, unknown>[] = [];
+      let career = {
+        currentStatus: "working_in_industry",
+        currentProfessionSlug: "vaktare",
+        currentProfessionOther: null as string | null,
+        yearsOfExperience: "5-10",
+      };
+      await mount(page, "hub_active", {
+        lang,
+        path: "/passport",
+        ready: "[data-credential-wallet]",
+        overrides: {
+          ...b.overrides,
+          ...passportOverrides(),
+          getMySecurityCareerProfile: (route: Route) => reply(route, career),
+          upsertMySecurityCareerProfile: (route: Route) => {
+            const data = dataOf(route);
+            careerWrites.push(data);
+            career = { ...career, ...(data as typeof career) };
+            return reply(route, { ok: true });
+          },
+        },
+      });
+
+      // The profession catalogue is a published, RLS-restricted table the
+      // picker reads directly (profession-options.ts) — not a server function.
+      // Registered after mount so it takes precedence over the harness's
+      // blanket empty REST reply; nothing leaves the machine either way.
+      await page.route(/\/rest\/v1\/cig_professions\b/, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            { slug: "ordningsvakt", title_sv: "Ordningsvakt", title_en: "Public order guard" },
+            { slug: "sakerhetschef", title_sv: "Säkerhetschef", title_en: "Head of Security" },
+            { slug: "vaktare", title_sv: "Väktare", title_en: "Security guard" },
+          ]),
+        }),
+      );
+
+      // The Passport itself offers no way to type a role.
+      await expect(
+        page.locator("[data-credential-wallet]").locator("input, textarea, select"),
+      ).toHaveCount(0);
+
+      await page
+        .getByRole("link", { name: T("Ändra nuvarande yrke", "Edit current professional role") })
+        .click();
+      await page.waitForURL(
+        (url) => url.pathname + url.search + url.hash === CAREER_PROFILE_PROFESSION_EDIT_HREF,
+      );
+
+      // 1 · the ACTUAL editor, 2 · in edit mode: a dialog opened by the intent,
+      // with nobody pressing "edit" on the Profile page.
+      const editor = page.getByRole("dialog");
+      await expect(editor).toBeVisible({ timeout: 15_000 });
+
+      // 3 · the CURRENT profession is loaded into it — not an empty form.
+      const picker = editor.locator("select");
+      await expect(picker).toHaveCount(1);
+      await expect(picker).toHaveValue("vaktare");
+      await expect(picker.locator("option:checked")).toHaveText(T("Väktare", "Security guard"));
+      // …and the keyboard is already on it.
+      await expect(picker).toBeFocused();
+
+      // 4 · saving goes to the canonical Career Profile owner, and nowhere else.
+      await picker.selectOption("sakerhetschef");
+      await editor.getByRole("button", { name: T("Spara", "Save"), exact: true }).click();
+      await expect(editor).toBeHidden({ timeout: 15_000 });
+      expect(careerWrites).toHaveLength(1);
+      expect(careerWrites[0]).toMatchObject({
+        currentProfessionSlug: "sakerhetschef",
+        currentProfessionOther: null,
+      });
+      // No Passport-side title field was written: there is no second owner.
+      expect(b.state.writes.map((w) => w.fn)).toEqual([]);
+      // The Profile now states the new profession.
+      await expect(page.locator("#career-profile")).toContainText(
+        T("Säkerhetschef", "Head of Security"),
+      );
+
+      // 5 · the return origin survived the trip: the way back is offered.
+      const back = page.locator("#scp-return-passport");
+      await expect(back).toBeVisible();
+      await expect(back).toHaveText(
+        T("Tillbaka till Security Passport", "Back to Security Passport"),
+      );
+      await expect(back).toHaveAttribute("href", /^\/passport(\/|$)/);
+      await shot(page, `10-edit-current-role-saved-1440-${lang}`);
+    });
+  }
 
   test("/passport/card is retired into Preview and share", async ({ page }) => {
     await mount(page, "hub_active", {

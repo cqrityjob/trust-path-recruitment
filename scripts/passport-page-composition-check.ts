@@ -69,10 +69,16 @@ const workspace = code(read(WORKSPACE));
 console.log("\n1 · the two columns exist, and the sketch's left column is the left column");
 
 check(/<PassportSideColumn/.test(index), "the Passport page renders a side column");
+check(
+  /<PassportSideColumn\s+part="steps"/.test(index) &&
+    /<PassportSideColumn\s+part="privacy"/.test(index),
+  "both halves of the side column are mounted: the steps in the panel, privacy under the card",
+);
 check(/<CredentialWallet/.test(index), "and the Passport workspace");
 check(
-  /max-w-\[1280px\]/.test(index) && /lg:grid-cols-\[minmax\(0,1fr\)_360px\]/.test(index),
-  "the wallet uses the desktop width and supporting card/settings form a two-column region",
+  /max-w-\[1280px\]/.test(index) &&
+    /lg:grid-cols-\[minmax\(0,1\.08fr\)_minmax\(0,1fr\)\]/.test(workspace),
+  "the overview uses the desktop width, and the card and its panel form a two-column region",
 );
 check(
   !/lg:order-[12]/.test(index) &&
@@ -168,7 +174,7 @@ check(
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n4 · the main column's two actions are near the top, once each");
+console.log("\n4 · one card, and the actions in the panel beside it");
 
 check(/to="\/passport\/credentials\/new"/.test(workspace), "add a credential is offered");
 check(/data-cta="share"/.test(workspace), "and sharing the Passport");
@@ -176,23 +182,266 @@ check(
   (workspace.match(/data-cta="share"/g) ?? []).length === 1,
   "share appears exactly once — not one control per region",
 );
+// ── THE OWNER'S CORRECTION, 2026-09-17 ──────────────────────────────────
+// The card is a fixed visual object: no action control sits inside it. The
+// actions are the panel's. The single element in the card that can be
+// followed is the "+N" shield — a link to the rest of what the card
+// summarises — and the guard names it rather than allowing "a link".
+const headerStart = workspace.indexOf("<header");
 const headerEnd = workspace.indexOf("</header>");
+const header =
+  headerStart >= 0 && headerEnd > headerStart ? workspace.slice(headerStart, headerEnd) : "";
+const panelIdx = workspace.indexOf("data-passport-panel");
+const actionsIdx = workspace.indexOf("data-passport-actions");
 check(
-  headerEnd > 0 && workspace.indexOf('to="/passport/credentials/new"') < headerEnd,
-  "add a credential sits inside the page header, near the top",
+  header.length > 0 &&
+    !/<(a|button|input|select|textarea)\b|role="(tab|button|menu)|onClick=/.test(header),
+  "the Passport card contains no button, input or action control",
 );
-check(headerEnd > 0 && workspace.indexOf('data-cta="share"') < headerEnd, "and so does share");
+check(
+  (header.match(/<Link\b/g) ?? []).length === 1 &&
+    /<Link\s+to="\/passport"\s+hash="merits"\s+data-shield-overflow-link/.test(header),
+  'and its only link is the "+N" shield, which goes to Credentials',
+);
+check(
+  panelIdx > headerEnd &&
+    actionsIdx > panelIdx &&
+    workspace.indexOf('to="/passport/credentials/new"') > actionsIdx &&
+    workspace.indexOf('data-cta="share"') > actionsIdx &&
+    workspace.indexOf('data-cta="edit-in-profile"') > actionsIdx,
+  "add, share and edit-current-role sit in the action panel, after the card",
+);
+check(
+  (workspace.match(/to="\/passport\/credentials\/new"/g) ?? []).length === 1 &&
+    !/to="\/passport\/credentials\/new"/.test(side),
+  "there is exactly ONE Add credential on the overview — the panel's",
+);
+check(
+  /lg:grid-cols-\[minmax\(0,1\.08fr\)_minmax\(0,1fr\)\]/.test(workspace) &&
+    workspace.indexOf("<header") < panelIdx &&
+    panelIdx < workspace.indexOf("data-passport-under-card") &&
+    workspace.indexOf("data-passport-under-card") < workspace.indexOf('id="merits"'),
+  "source order is card, panel, privacy, collection — which is the order on a phone",
+);
+
+check(
+  !/passport\/entry/.test(side) && !/entryId/.test(side),
+  "the side column links to NO claim — the credential row owns the one claim-specific link",
+);
+// ── A VISIBLE ACTION NEVER LEADS TO AN EMPTY REGION ─────────────────────
+// 1317be8 pointed these two steps at `#attention`, which renders nothing for
+// a self-reported credential with no review outcome. They go to the
+// credential's OWN ROW, and because locating a record is all they do, they
+// are labelled "View credential" and nothing stronger.
+check(
+  (side.match(/data-cta="next-step"/g) ?? []).length === 2 &&
+    (side.match(/to="\/passport"\s+hash=\{credentialRowAnchor\(next\.claimId\)\}/g) ?? [])
+      .length === 1 &&
+    (side.match(/\{viewCredential\}/g) ?? []).length === 2 &&
+    /next\.kind === "clarify" \|\| next\.kind === "evidence" \?/.test(side),
+  "the clarify and evidence steps share ONE action, to that credential's own row on this page",
+);
+check(
+  !/hash="attention"/.test(side) && !/hash="merits"/.test(side),
+  "and never to a generic region that may have nothing in it",
+);
+check(
+  (side.match(/\{copy\("Visa meriten", "View credential"\)\}/g) ?? []).length === 1 &&
+    !/data-cta="next-step"[\s\S]{0,260}copy\("(Lägg till underlag|Komplettera uppgifter)"/.test(
+      side,
+    ),
+  'labelled truthfully — "Visa meriten" / "View credential" — because they locate, they do not act',
+);
+check(
+  /id=\{credentialRowAnchor\(c\.id\)\}\s+data-credential-row/.test(workspace) &&
+    /focus:outline-2/.test(workspace) &&
+    /data-\[hash-target\]:/.test(workspace),
+  "every credential row carries the anchor, and shows a visible focus state on arrival",
+);
+{
+  const { credentialRowAnchor } = await import("../src/lib/security-passport/credential-passport");
+  const ids = ["c-gb-ds", "f1900000-0000-4000-8000-000000000010", "merits", "attention", "a b#c/d"];
+  const anchors = ids.map(credentialRowAnchor);
+  check(
+    new Set(anchors).size === ids.length &&
+      anchors.every((a) => /^sp-credential-[A-Za-z0-9_-]+$/.test(a)) &&
+      !anchors.includes("merits") &&
+      !anchors.includes("attention"),
+    "the anchor is one shared function: namespaced, fragment-safe, and cannot collide with a section id",
+  );
+  check(
+    /goToHash\(anchor\)/.test(side) &&
+      /export function goToHash/.test(read("src/lib/security-passport/hash-arrival.ts")),
+    "a second press re-runs the arrival, so the step is never inert when the fragment is unchanged",
+  );
+}
+check(
+  (workspace.match(/to="\/passport\/entry\/\$kind\/\$entryId"/g) ?? []).length === 1,
+  "and the wallet renders exactly one claim link per credential row",
+);
+// The WHOLE page, not only the wallet. The Verification section used to link
+// to the claim route too, so a credential with a reviewer's question had two
+// claim links. Its outcome now names the credential and goes to that
+// credential's row; the row's own action opens the claim.
+check(
+  /hrefOf=\{\(item\) => `\/passport#\$\{credentialRowAnchor\(item\.subjectId\)\}`\}/.test(index) &&
+    !/`\/passport\/entry\/claim\//.test(index),
+  "the Verification section sends an outcome to the credential's row, never to a second claim link",
+);
+check(
+  /linkLabel=\{\{ sv: "Visa meriten", en: "View credential" \}\}/.test(index),
+  'and says what it does: "Visa meriten" / "View credential"',
+);
+check(
+  /if \(kind !== "claim"\) \{[\s\S]{0,220}\$kind\/\$entryId[\s\S]{0,120}return;[\s\S]{0,200}credentialRowAnchor\(entryId\)/.test(
+    index,
+  ),
+  "its open button does the same for a credential; only an employment period keeps its own route",
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n4b · who the person is comes from the Profile; the card never renames them");
+
+const nameTag = workspace.match(/<h1\s[^>]*data-passport-holder-name[\s\S]*?>/)?.[0] ?? "";
+check(
+  /\[overflow-wrap:normal\]/.test(nameTag) &&
+    /\[word-break:keep-all\]/.test(nameTag) &&
+    /\[hyphens:none\]/.test(nameTag) &&
+    !/overflow-wrap:anywhere|break-all|break-words/.test(nameTag),
+  "the holder's name may wrap between words and nowhere else",
+);
+check(
+  /line-clamp-2/.test(nameTag) && /text-\[clamp\(20px,5\.2cqw,30px\)\]/.test(nameTag),
+  "two lines then an ellipsis, sized from the card's own width",
+);
+check(/\[container-type:inline-size\]/.test(header), "the card is the container-query context");
+check(
+  /const identity = snapshot\.profileIdentity;/.test(workspace) &&
+    /const currentRole = \(lang === "sv" \? identity\?\.titleSv : identity\?\.titleEn\)/.test(
+      workspace,
+    ) &&
+    /data-passport-current-role[\s\S]{0,200}\{currentRole\}/.test(header),
+  "the primary professional line is the canonical Career Profile's current role",
+);
+check(
+  !/credentialDerivedTitle|headlineTitles|professionLine|joinTitles/.test(header) &&
+    workspace.indexOf("data-passport-derived-title") > panelIdx,
+  "a credential-derived title never appears on the card — it is the panel's trust layer",
+);
+check(
+  !/identity\.none/.test(workspace) && !/No active professional title/.test(workspace),
+  'and "No active professional title" cannot render under anybody\'s name',
+);
+check(
+  /"Nuvarande yrke", "Current professional role"/.test(header) &&
+    /"Egen uppgift", "Self-declared"/.test(header),
+  "the role says whose statement it is, in both languages",
+);
+check(
+  /"Ändra nuvarande yrke", "Edit current professional role"/.test(workspace) &&
+    /href=\{CAREER_PROFILE_PROFESSION_EDIT_HREF\}\s+data-cta="edit-in-profile"/.test(workspace),
+  "and the way to change it is the SHARED profession-edit contract, not a re-spelled URL",
+);
+check(
+  !/\/my-career|#profile-basics|hash="profile-basics"|edit=profession/.test(workspace),
+  "the wallet spells no Profile URL of its own",
+);
+{
+  const { CAREER_PROFILE_PROFESSION_EDIT_HREF } =
+    await import("../src/lib/security-passport/profile-basics");
+  const { SECTION_DESTINATIONS } =
+    await import("../src/lib/professional-identity/profile-destinations");
+  const contract = new URL(CAREER_PROFILE_PROFESSION_EDIT_HREF, "https://x.invalid");
+  const profile = new URL(SECTION_DESTINATIONS.profession.href, "https://x.invalid");
+  check(
+    contract.pathname === profile.pathname &&
+      contract.hash === profile.hash &&
+      contract.searchParams.get("edit") === "profession" &&
+      profile.searchParams.get("edit") === "profession",
+    "the Passport's contract and the Profile's own destination name the SAME page, intent and anchor",
+  );
+  check(
+    contract.searchParams.get("from") === "passport",
+    "and it still carries the return origin, so the editor can offer the way back",
+  );
+  const mount = read("src/routes/_authenticated.my-career.profile.tsx");
+  check(
+    contract.pathname === "/my-career/profile" && /<SecurityCareerProfileCard\b/.test(mount),
+    "that page is where the profession editor is actually mounted",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+console.log("\n4c · four tabs");
+
+const shell = code(read(SHELL));
+const navBlock = shell.match(/const NAV = \[([\s\S]*?)\n\] as const;/)?.[1] ?? "";
+check(
+  (navBlock.match(/\ben: "/g) ?? []).join("|") === 'en: "|en: "|en: "|en: "' &&
+    /en: "Overview"[\s\S]*en: "Credentials"[\s\S]*en: "Verification"[\s\S]*en: "Share"/.test(
+      navBlock,
+    ),
+  "Overview, Credentials, Verification, Share — in that order and no others",
+);
+check(
+  /also: \["\/passport\/credentials\/new"\]/.test(navBlock) &&
+    /also: \["\/passport\/privacy"\]/.test(navBlock),
+  "the absorbed routes keep a current tab: the form under Credentials, privacy under Share",
+);
+check(
+  /to: "\/passport\/privacy", sv: "Delning och integritet", en: "Sharing & privacy"/.test(shell),
+  "and Sharing & privacy stays reachable from inside Share — nothing was removed",
+);
 check(/identity\?\.displayName/.test(workspace), "the main column names the holder from Profile");
 // Displayed here, edited there. The Passport has no editor for the name or
 // the title, and says where the editor is.
 check(
-  /to="\/my-career\/profile"\s+hash="profile-basics"\s+data-cta="edit-in-profile"/.test(workspace),
-  "and sends the holder to the Profile to change the name or the title",
+  /href=\{CAREER_PROFILE_PROFESSION_EDIT_HREF\}\s+data-cta="edit-in-profile"/.test(workspace),
+  "and sends the holder to the Profile to change the role",
 );
 check(
   !/<(input|textarea|select)\b/.test(workspace) &&
     !/savePassportBasics/.test(workspace + side + index),
   "the Passport overview holds no editor for a Profile fact",
+);
+
+/* ------------------------------------------------------------------ */
+console.log("\n4d · the jurisdiction is rendered once, by one helper");
+
+const { titleWithJurisdictionOnce } = await import("../src/lib/security-passport/format");
+check(
+  titleWithJurisdictionOnce("Public Order Guard (Ordningsvakt) · Sweden", "Sweden") ===
+    "Public Order Guard (Ordningsvakt) · Sweden",
+  "a title that already ends in the country is not given it again",
+);
+check(
+  titleWithJurisdictionOnce("Ordningsvakt", "Sverige") === "Ordningsvakt · Sverige" &&
+    titleWithJurisdictionOnce("Ordningsvakt · sverige ", "Sverige") === "Ordningsvakt · sverige",
+  "one that does not is, and case or trailing space does not defeat the check",
+);
+check(
+  titleWithJurisdictionOnce("Ordningsvakt", null) === "Ordningsvakt" &&
+    titleWithJurisdictionOnce("", "Sverige") === "Sverige",
+  "a missing half never leaves a dangling separator",
+);
+for (const surface of [
+  "src/components/security-passport/PassportOverview.tsx",
+  "src/components/security-passport/RecipientVerification.tsx",
+  "src/components/security-passport/live/RecipientPassportCard.tsx",
+  "src/components/security-passport/live/LinkedInShareSection.tsx",
+  "src/lib/security-passport/share-image.ts",
+]) {
+  const src = code(read(surface));
+  check(
+    /titleWithJurisdictionOnce\(/.test(src) &&
+      !/\}\s*·\s*\$\{format(Jurisdiction|WorkLocation)\(/.test(src) &&
+      !/\{profession\}\s*·\s*\{jurisdiction\}/.test(src),
+    `${surface.split("/").pop()} joins title and jurisdiction through the helper only`,
+  );
+}
+check(
+  /TODO\(A4\)/.test(read("src/lib/security-passport/format.ts")),
+  "and the helper is marked temporary, tied to the A4 data fix",
 );
 
 /* ------------------------------------------------------------------ */
