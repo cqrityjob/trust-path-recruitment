@@ -682,6 +682,155 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BESKT_PC_STATE_MISSING",
   },
 
+  // ---- The RENDER guard: what a person actually sees ----------------------
+  //
+  // These break the MARKUP rather than the source, so they prove the render
+  // guard reads the page and not the file.
+  {
+    id: "PC-NC-RENDER-NO-SCORE-SENTENCE",
+    defect:
+      "the report stops saying in words that it carries no score, rating or recommendation — the promise disappears while the absence remains, which no reader can verify",
+    file: REPORT,
+    find: '          <p className="mt-2">{t("beskt.report.notADecision.noScore")}</p>',
+    replace: "",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_REPORT_NO_SCORE_SENTENCE",
+  },
+  {
+    id: "PC-NC-RENDER-LIMITS-ORDER",
+    defect:
+      "the limitations render after the evidence, so a reader meets them having already formed a view",
+    file: REPORT,
+    find:
+      "      <LimitationsBlock d={d} />\n" +
+      "      <ProvenanceBlock d={d} contentHash={contentHash} basisHash={basisHash} />\n" +
+      "      <CandidateStatements d={d} />",
+    replace:
+      "      <ProvenanceBlock d={d} contentHash={contentHash} basisHash={basisHash} />\n" +
+      "      <CandidateStatements d={d} />\n" +
+      "      <LimitationsBlock d={d} />",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_REPORT_LIMITS_ORDER",
+  },
+  {
+    id: "PC-NC-RENDER-GAP-UNNAMED",
+    defect:
+      "the undocumented theme is counted rather than named, so a reader cannot tell WHICH theme nobody covered",
+    file: PAYLOAD,
+    find: "    undocumentedThemes: d.themes.map((th) => th.itemKey).filter((k) => !documented.has(k)),",
+    replace: "    undocumentedThemes: [],",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_REPORT_GAP_UNNAMED",
+  },
+  {
+    id: "PC-NC-RENDER-CLAIMS-MERGED",
+    defect:
+      "the counter-evidence field loses its label and is folded in with the interviewer's interpretation, so two different kinds of claim read as one",
+    file: REPORT,
+    find:
+      "        <Claim\n" +
+      '          label={t("beskt.conduct.entry.alternativeExplanation")}\n' +
+      "          value={entry.alternativeExplanation}\n" +
+      "        />",
+    replace: "",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_REPORT_CLAIMS_MERGED",
+  },
+  {
+    id: "PC-NC-RENDER-OMISSION-ADVERSE",
+    defect:
+      "the report stops saying that omitting a question is not an adverse finding, so a skipped question reads as a mark against the candidate",
+    file: REPORT,
+    find: '                    {t("beskt.report.candidate.notAnAdverseFinding")}',
+    replace: '                    {""}',
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_REPORT_OMISSION_ADVERSE",
+  },
+  {
+    id: "PC-NC-RENDER-BLOCKED-FINALISE",
+    defect:
+      "the sign-and-write control is drawn while blockers remain, offering an action the database will refuse",
+    file: REPORT,
+    find: "          {preview !== null && preview.blockerCount === 0 && actions.canFinalise && (",
+    replace: "          {preview !== null && actions.canFinalise && (",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_BLOCKED_FINALISE",
+  },
+  {
+    id: "PC-NC-RENDER-SIGN-DEAD-CONTROL",
+    defect: "a reader who may not sign is shown the control anyway instead of being told who does",
+    file: REPORT,
+    find: "        {!actions.canFinalise && (",
+    replace: "        {false && (",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_SIGN_DEAD_CONTROL",
+  },
+  {
+    id: "PC-NC-RENDER-PROMPT-SCRIPT",
+    defect:
+      "the wording list stops saying it is not a script, so a governed prompt reads as a question to be read out verbatim",
+    file: PROMPTS,
+    find: '        {t("beskt.conduct.prompts.notAScript")}',
+    replace: '        {""}',
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_PROMPT_SCRIPT",
+  },
+  {
+    id: "PC-NC-RENDER-PROMPT-EVALUATION",
+    defect:
+      "the Evaluation step stops being marked as the interviewer's own reflection, so it reads as a judgement about the candidate",
+    file: PROMPTS,
+    find:
+      '                stage === "evaluation"\n' +
+      '                  ? "beskt.conduct.prompts.evaluationNote"\n' +
+      '                  : "beskt.conduct.prompts.stageNote",',
+    replace: '                "beskt.conduct.prompts.stageNote",',
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_PROMPT_EVALUATION",
+  },
+  {
+    id: "PC-NC-RENDER-GATES-COLLAPSED",
+    defect:
+      "a stale approval renders as simply undecided, so a reviewer is told the system lost the decision they made",
+    file: GOV_LOGIC,
+    find:
+      "  if (review.revisionAtReview !== version.revision)\n" +
+      '    return { kind: "stale", review, reason: "revision" };',
+    replace: '  if (review.revisionAtReview !== version.revision) return { kind: "undecided" };',
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_GATE_STATES_COLLAPSED",
+  },
+  {
+    id: "PC-NC-RENDER-MANDATE-UNSTATED",
+    defect:
+      "the gates section stops saying that a generic reviewer role is never enough — the least obvious rule on the screen",
+    file: LIFECYCLE,
+    find: '          {t("beskt.admin.gates.mandateNote")}',
+    replace: '          {""}',
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_MANDATE_UNSTATED",
+  },
+  {
+    id: "PC-NC-RENDER-PILOT-ON-DRAFT",
+    defect:
+      "the employer-admission form is drawn on an unpublished version, which the database always refuses",
+    file: "src/components/admin/beskt/BesktGrantsPanel.tsx",
+    find: "      {!actions.canGrant ? (",
+    replace: "      {false ? (",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_PILOT_ON_DRAFT",
+  },
+  {
+    id: "PC-NC-RENDER-FROZEN-EDITABLE",
+    defect:
+      "published content draws an edit control, inviting a write the database will refuse as frozen",
+    file: EDITOR,
+    find: "                  {editable && (",
+    replace: "                  {true && (",
+    guard: "beskt-product-completion-render:check",
+    expect: "BESKT_PCR_FROZEN_EDITABLE",
+  },
+
   // ---- P7 · Registration -------------------------------------------------
   {
     id: "PC-NC-REGISTRATION-CI",

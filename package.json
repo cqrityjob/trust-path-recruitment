@@ -31,6 +31,7 @@
     "beskt-conduct-report:check": "bun run scripts/beskt-conduct-report-check.ts",
     "beskt-content-authoring:check": "bun run scripts/beskt-content-authoring-check.ts",
     "beskt-product-completion:check": "bun run scripts/beskt-product-completion-check.tsx",
+    "beskt-product-completion-render:check": "bun run scripts/beskt-product-completion-render-check.tsx",
     "negative-controls:beskt-product-completion": "bun run scripts/negative-controls/beskt-product-completion-controls.ts",
     "beskt-candidate-preparation:check": "bun run scripts/beskt-candidate-preparation-check.ts",
     "beskt-interview-case-bridge:check": "bun run scripts/beskt-interview-case-bridge-check.ts",

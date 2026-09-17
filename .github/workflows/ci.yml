@@ -867,6 +867,14 @@ jobs:
       - name: BESKT product completion (PR 6) source and behaviour guard
         run: bun run beskt-product-completion:check
 
+      # The same three surfaces, asserted from their RENDERED markup in both
+      # languages: that the report says it is not a decision and puts its
+      # limitations before its evidence, that the governed wordings reach
+      # the page and say why they are missing when they are, and that the
+      # five gates draw as five independent states rather than a bar.
+      - name: BESKT product completion (PR 6) render guard
+        run: bun run beskt-product-completion-render:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the

@@ -1006,8 +1006,10 @@ group("P7 · Registration");
     "BESKT_PC_REGISTRATION: the controls must run in the chain, not only on demand",
   );
   ck(
-    "P7.3 CI runs the guard",
-    /beskt-product-completion:check/.test(ci),
+    "P7.3 CI runs the guard, and the render guard beside it",
+    /beskt-product-completion:check/.test(ci) &&
+      /beskt-product-completion-render:check/.test(ci) &&
+      /"beskt-product-completion-render:check":/.test(pkg),
     "BESKT_PC_REGISTRATION: a guard CI does not run is a guard that does not run",
   );
   ck(
@@ -1029,7 +1031,12 @@ group("P7 · Registration");
       }
       const expected = [...suite.matchAll(/expect:\s*"([^"]+)"/g)].map((m) => m[1]);
       if (expected.length < 18) return false;
-      const self = read("scripts/beskt-product-completion-check.tsx");
+      // Both guards: the controls drive the source guard AND the render
+      // guard, so a diagnostic printed by either one counts. Reading only
+      // this file would have called every BESKT_PCR_ expectation dead.
+      const self =
+        read("scripts/beskt-product-completion-check.tsx") +
+        read("scripts/beskt-product-completion-render-check.tsx");
       return expected.every((e) => self.includes(e));
     })(),
     "BESKT_PC_CONTROL_DIAGNOSTIC: a control expecting a diagnostic nobody prints proves nothing",
