@@ -417,6 +417,17 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BOUNDARY-REGISTRATION: and refuses a run in which the suite silently shrank",
   },
   {
+    id: "RIB-NC-PR6-REAPPLY-BURIES-BOUNDARY",
+    defect:
+      "the harness stops re-applying the boundary after PR 6's re-apply, so the replayed schema silently loses the independence check while CI stays green — the exact false-green shape PR #264 found in the Passport rollback loop",
+    file: DB,
+    find: '    echo "FAIL: PR 6 was re-applied and the independence boundary did NOT come back with it." >&2',
+    replace: '    echo "FAIL: pr6." >&2',
+    guard: GUARD,
+    expect:
+      "BOUNDARY-REGISTRATION: the boundary is re-applied after PR 6's re-apply, and proved back",
+  },
+  {
     id: "RIB-NC-CI-NOT-RUN",
     defect: "CI stops running the guard",
     file: CI,

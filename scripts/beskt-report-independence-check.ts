@@ -403,6 +403,17 @@ check(
   "BOUNDARY-REGISTRATION: and a failure actually fails the run",
 );
 
+check(
+  // PR 6's own rollback/re-apply block runs LATER and CREATE OR REPLACEs both
+  // readers back to their unguarded definitions. Without re-applying the
+  // boundary on top, the replayed schema stops matching the repository and
+  // any future suite after that point would run against the hole while CI
+  // stayed green — the trap PR #264 found in the Passport rollback loop.
+  /re-applied PR 6/.test(dbTest) &&
+    /PR 6 was re-applied and the independence boundary did NOT come back with it/.test(dbTest),
+  "BOUNDARY-REGISTRATION: the boundary is re-applied after PR 6's re-apply, and proved back",
+);
+
 const pkg = read(PKG);
 check(
   /"beskt-report-independence:check":/.test(pkg),

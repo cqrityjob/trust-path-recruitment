@@ -3860,6 +3860,39 @@ else
   echo "    ok  and the PR 6 migration re-applies cleanly over it"
 fi
 
+# ---------------------------------------------------------------------------
+# ...and then 20261126090000 goes back ON TOP, because PR 6's migration
+# CREATE OR REPLACEs the two report readers to their ORIGINAL, UNGUARDED
+# definitions. Re-applying PR 6 without re-applying the boundary fix leaves
+# the replayed schema in a state the repository no longer describes: the
+# independence check silently gone, the blocker reader answering anyone.
+#
+# Nothing after this point asserts the boundary today, so nothing is falsely
+# green right now -- which is exactly why this is worth writing down before
+# something is. It is the same trap PR #264 found in the Passport rollback
+# loop, where a newer migration was stood down by an older rollback and never
+# restored, and every later suite ran without it while CI stayed green.
+# ---------------------------------------------------------------------------
+set +e
+RIB_RE2="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261126090000_bcp_conduct_report_independence_boundary.sql 2>&1)"
+RIB_RE2_RC=$?
+set -e
+if [ "$RIB_RE2_RC" -ne 0 ]; then
+  echo "FAIL: the report independence boundary does not re-apply over the re-applied PR 6." >&2
+  echo "$RIB_RE2" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  RPT_FAILED=1
+else
+  RIB_BACK2="$(psql -tAq -d "$TEST_DB" -c \
+    "SELECT (position('bcp_conduct_may_see_others' in prosrc) > 0) FROM pg_proc WHERE proname = 'bcp_conduct_preview_report';")"
+  if [ "$RIB_BACK2" != "t" ]; then
+    echo "FAIL: PR 6 was re-applied and the independence boundary did NOT come back with it." >&2
+    RPT_FAILED=1
+  else
+    echo "    ok  and the independence boundary is re-applied on top, so the schema still matches the repository"
+  fi
+fi
+
 if [ "$RPT_FAILED" -ne 0 ]; then
   suite_failed "BESKT prompts and report"
 fi
