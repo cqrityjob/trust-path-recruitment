@@ -421,8 +421,7 @@ check(
   // back, in that order, and a run that ends without the boundary must fail.
   /20261113090000_bcp_interview_conduct\.sql >\/dev\/null\n[\s\S]{0,600}?20261117090000_bcp_conduct_prompts_and_report\.sql >\/dev\/null\npsql[^\n]*\n\s*-f supabase\/migrations\/20261127090000_bcp_conduct_report_independence_boundary\.sql >\/dev\/null/.test(
     dbTest,
-  ) &&
-    /suite_failed "BESKT report independence boundary \(end state\)"/.test(dbTest),
+  ) && /suite_failed "BESKT report independence boundary \(end state\)"/.test(dbTest),
   "BOUNDARY-REGISTRATION: the BESKT block ends with PR 6 and the boundary back on top, and a run that ends without it fails",
 );
 
