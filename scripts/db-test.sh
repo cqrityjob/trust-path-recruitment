@@ -3549,6 +3549,149 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# BESKT -- the report preview obeys the independence rule (20261124090000).
+#
+# Runs straight after the PR 6 suite, on the same replayed schema, because it
+# is about the very functions PR 6 shipped. It proves the boundary through
+# REAL authenticated sessions rather than through a screen: an assessor whose
+# own position is open is refused the document by name, the colleague's words
+# appear nowhere in anything that caller can still read, and the same caller
+# gets the whole document once they lock.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT report independence boundary assertions"
+set +e
+RIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_conduct_report_independence_test.sql 2>&1)"
+RIB_RC=$?
+set -e
+RIB_PASSED="$(echo "$RIB_OUT" | grep -c "ok  " || true)"
+RIB_FAILED=0
+if [ "$RIB_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT report independence suite exited with code ${RIB_RC}." >&2
+  echo "$RIB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  RIB_FAILED=1
+else
+  echo "    ok  ${RIB_PASSED} BESKT report independence assertions passed"
+  if [ "$RIB_PASSED" -lt 24 ]; then
+    echo "FAIL: expected at least 24 BESKT report independence assertions, only ${RIB_PASSED} ran." >&2
+    RIB_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# And the way back. A security fix whose rollback does not work is a fix
+# nobody can safely deploy, so the rollback is run for real and then the
+# migration is re-applied -- with the hole PROVED open in between, because a
+# rollback that quietly left the boundary in place would pass a weaker check
+# while being broken.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT report independence rollback and re-apply"
+RIB_RB_FAILED=0
+set +e
+RIB_RB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261127090000_bcp_conduct_report_independence_boundary_rollback.sql 2>&1)"
+RIB_RB_RC=$?
+set -e
+if [ "$RIB_RB_RC" -ne 0 ]; then
+  echo "FAIL: the report independence rollback did not run." >&2
+  echo "$RIB_RB_OUT" | head -10 >&2
+  RIB_RB_FAILED=1
+else
+  RIB_OPEN="$(psql -tAq -d "$TEST_DB" -c \
+    "SELECT (position('bcp_conduct_may_see_others' in prosrc) = 0) FROM pg_proc WHERE proname = 'bcp_conduct_preview_report';")"
+  if [ "$RIB_OPEN" != "t" ]; then
+    echo "FAIL: the rollback ran but the independence check is still in place -- it restored nothing." >&2
+    RIB_RB_FAILED=1
+  else
+    echo "    ok  the rollback restores the pre-fix definitions (the boundary is measurably gone)"
+  fi
+  set +e
+  RIB_RE_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+    -f supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql 2>&1)"
+  RIB_RE_RC=$?
+  set -e
+  if [ "$RIB_RE_RC" -ne 0 ]; then
+    echo "FAIL: the report independence migration did not re-apply after its rollback." >&2
+    echo "$RIB_RE_OUT" | head -10 >&2
+    RIB_RB_FAILED=1
+  else
+    RIB_BACK="$(psql -tAq -d "$TEST_DB" -c \
+      "SELECT (position('bcp_conduct_may_see_others' in prosrc) > 0) FROM pg_proc WHERE proname = 'bcp_conduct_preview_report';")"
+    if [ "$RIB_BACK" != "t" ]; then
+      echo "FAIL: the migration re-applied but the independence check is not back." >&2
+      RIB_RB_FAILED=1
+    else
+      echo "    ok  and the migration re-applies cleanly, closing the boundary again"
+    fi
+  fi
+fi
+
+if [ "$RIB_FAILED" -ne 0 ] || [ "$RIB_RB_FAILED" -ne 0 ]; then
+  suite_failed "BESKT report independence boundary"
+fi
+
+# ---------------------------------------------------------------------------
+# 20261128090000: scp_iv_create_case binds a candidate ACCOUNT only as the
+# bound application's own applicant. Proved through real authenticated
+# sessions: the applicant is accepted; a stranger, another employer's
+# applicant, another employer's application and a user id with no
+# application are each refused; an external reference is unchanged.
+# ---------------------------------------------------------------------------
+echo "==> Running interview-case candidate binding assertions"
+CBD_FAILED=0
+set +e
+CBD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/scp_iv_case_candidate_binding_test.sql 2>&1)"
+CBD_RC=$?
+set -e
+CBD_PASSED="$(echo "$CBD_OUT" | grep -c "ok  " || true)"
+if [ "$CBD_RC" -ne 0 ]; then
+  echo "FAIL: the candidate binding suite exited with code ${CBD_RC}." >&2
+  echo "$CBD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  CBD_FAILED=1
+else
+  echo "    ok  ${CBD_PASSED} candidate binding assertions passed"
+  if [ "$CBD_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 candidate binding assertions, only ${CBD_PASSED} ran." >&2
+    CBD_FAILED=1
+  fi
+fi
+
+# The way back, for real, with the hole PROVED open in between -- a rollback
+# that quietly left the rule in place would otherwise pass -- and then the
+# migration re-applied.
+echo "==> Running interview-case candidate binding rollback and re-apply"
+set +e
+CBD_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261128090000_scp_iv_case_candidate_binding_rollback.sql 2>&1)"
+CBD_RB_RC=$?
+set -e
+CBD_OPEN="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT position('SCP_IV_CANDIDATE_NOT_APPLICANT' in prosrc) = 0 FROM pg_proc WHERE proname = 'scp_iv_create_case';")"
+if [ "$CBD_RB_RC" -ne 0 ] || ! echo "$CBD_RB" | grep -q "SCP_IV_CANDIDATE_BINDING_ROLLBACK ok" || [ "$CBD_OPEN" != "t" ]; then
+  echo "FAIL: the candidate binding rollback did not restore the 20261108090000 body." >&2
+  echo "$CBD_RB" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CBD_FAILED=1
+else
+  echo "    ok  the rollback restores the 20261108090000 body, and the binding rule is measurably gone"
+fi
+set +e
+CBD_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql 2>&1)"
+CBD_RE_RC=$?
+set -e
+if [ "$CBD_RE_RC" -ne 0 ] || ! echo "$CBD_RE" | grep -q "SCP_IV_CANDIDATE_BINDING_PROOF ok"; then
+  echo "FAIL: the candidate binding migration does not re-apply over its rollback." >&2
+  echo "$CBD_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CBD_FAILED=1
+else
+  echo "    ok  and the migration re-applies over it"
+fi
+if [ "$CBD_FAILED" -ne 0 ]; then
+  suite_failed "Interview-case candidate binding"
+fi
+
+# ---------------------------------------------------------------------------
 # Two people press "lock my position" at the same instant, in two real
 # connections. Exactly one lock must land and the other must be refused by
 # name -- not both, not neither, and not a torn row. The suite above runs in
@@ -3804,6 +3947,39 @@ else
   echo "    ok  and the PR 6 migration re-applies cleanly over it"
 fi
 
+# ---------------------------------------------------------------------------
+# ...and then 20261127090000 goes back ON TOP, because PR 6's migration
+# CREATE OR REPLACEs the two report readers to their ORIGINAL, UNGUARDED
+# definitions. Re-applying PR 6 without re-applying the boundary fix leaves
+# the replayed schema in a state the repository no longer describes: the
+# independence check silently gone, the blocker reader answering anyone.
+#
+# Nothing after this point asserts the boundary today, so nothing is falsely
+# green right now -- which is exactly why this is worth writing down before
+# something is. It is the same trap PR #264 found in the Passport rollback
+# loop, where a newer migration was stood down by an older rollback and never
+# restored, and every later suite ran without it while CI stayed green.
+# ---------------------------------------------------------------------------
+set +e
+RIB_RE2="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql 2>&1)"
+RIB_RE2_RC=$?
+set -e
+if [ "$RIB_RE2_RC" -ne 0 ]; then
+  echo "FAIL: the report independence boundary does not re-apply over the re-applied PR 6." >&2
+  echo "$RIB_RE2" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  RPT_FAILED=1
+else
+  RIB_BACK2="$(psql -tAq -d "$TEST_DB" -c \
+    "SELECT (position('bcp_conduct_may_see_others' in prosrc) > 0) FROM pg_proc WHERE proname = 'bcp_conduct_preview_report';")"
+  if [ "$RIB_BACK2" != "t" ]; then
+    echo "FAIL: PR 6 was re-applied and the independence boundary did NOT come back with it." >&2
+    RPT_FAILED=1
+  else
+    echo "    ok  and the independence boundary is re-applied on top, so the schema still matches the repository"
+  fi
+fi
+
 if [ "$RPT_FAILED" -ne 0 ]; then
   suite_failed "BESKT prompts and report"
 fi
@@ -4016,6 +4192,26 @@ else
   echo "    ok  and the BESKT migration re-applies cleanly over the rolled-back state"
 fi
 
+# The BESKT PR 2 rollback restores scp_iv_create_case to its pre-BESKT body,
+# and re-applying PR 2 restores the 20261108090000 body -- WITHOUT the
+# candidate binding. 20261128090000 goes back on top, and the run fails if
+# the binding is not in the body afterwards: the same false-green shape as the
+# report readers above.
+set +e
+CBD_RE2="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql 2>&1)"
+CBD_RE2_RC=$?
+set -e
+CBD_BACK="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT position('SCP_IV_CANDIDATE_NOT_APPLICANT' in prosrc) > 0 FROM pg_proc WHERE proname = 'scp_iv_create_case';")"
+if [ "$CBD_RE2_RC" -ne 0 ] || [ "$CBD_BACK" != "t" ]; then
+  echo "FAIL: BESKT PR 2 was re-applied and the interview-case candidate binding did NOT come back with it." >&2
+  echo "$CBD_RE2" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "Interview-case candidate binding (after the BESKT PR 2 re-apply)"
+else
+  echo "    ok  and the candidate binding is re-applied on top, so scp_iv_create_case still matches the repository"
+fi
+
 # The database ends the BESKT block in the release state: PR 2, then PR 3,
 # then PR 4 -- the same order the frontier applies them in, and the reverse of
 # the order they were stood down in above.
@@ -4025,6 +4221,20 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261112090000_bcp_interview_case_bridge.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261113090000_bcp_interview_conduct.sql >/dev/null
+# PR 6 is deliberately NOT restored here: the documented rollback procedure
+# that runs next (scp_a_rollback_test.sql) starts from PR 5A. What must hold
+# is that no UNGUARDED report reader survives the block -- a later change that
+# restores PR 6 here without 20261127090000 on top would end the run with both
+# readers answering past the independence rule. Either they are absent, or
+# they carry the boundary.
+RIB_END="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT coalesce(bool_and(CASE p.proname WHEN 'bcp_conduct_preview_report' THEN position('bcp_conduct_may_see_others' in p.prosrc) > 0 ELSE position('scp_iv_can_read_case' in p.prosrc) > 0 END), true) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname IN ('bcp_conduct_preview_report', 'bcp_conduct_report_blockers');")"
+if [ "$RIB_END" != "t" ]; then
+  echo "FAIL: the BESKT block ended with a report reader that does not carry the independence boundary." >&2
+  suite_failed "BESKT report independence boundary (end state)"
+else
+  echo "    ok  the BESKT block ends with no unguarded report reader"
+fi
 
 # The race fixtures: the rollback above dropped their versions with the
 # domain and deleted their identities; the planted principals go too.

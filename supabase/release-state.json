@@ -7,6 +7,36 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261128090000_scp_iv_case_candidate_binding.sql", 
+      "hostedState": "pending", 
+      "introduces": [
+        {
+          "kind": "function", 
+          "object": "scp_iv_create_case(uuid,text,uuid,text,uuid,text,uuid,uuid) -- re-created, now binds a candidate account only as the bound application's applicant"
+        }
+      ], 
+      "note": "SECURITY FIX, not yet applied. scp_iv_create_case (latest body 20261108090000, identical in production) is SECURITY DEFINER and granted to authenticated, and never checked _candidate_user_id: an employer member calling it directly could bind any user to a case (proved on a replayed schema: a stranger was bound on the member's own application and with no application at all). That user then counts as the case's candidate for scp_iv_is_case_candidate, the candidate interview status and the BESKT preparation bridge. This migration re-creates exactly that function with one rule added: a non-NULL _candidate_user_id requires an application of the same employer whose applicant_user_id is that account. A case identified by an external reference is unchanged. Its precondition pins the 20261108090000 body by md5 so it can never overwrite a newer definition. Proved by supabase/tests/scp_iv_case_candidate_binding_test.sql through real authenticated sessions.", 
+      "verify": "SELECT position('SCP_IV_CANDIDATE_NOT_APPLICANT' in prosrc) > 0 AND position('SCP_IV_CANDIDATE_REQUIRES_APPLICATION' in prosrc) > 0 AND position('scp_iv_case_start_basis' in prosrc) > 0 FROM pg_proc WHERE proname = 'scp_iv_create_case'; -- expect t. Exactly one overload, prosecdef, proconfig search_path=public, not executable by anon.", 
+      "rollback": "supabase/rollback/20261128090000_scp_iv_case_candidate_binding_rollback.sql"
+    },
+    {
+      "file": "20261127090000_bcp_conduct_report_independence_boundary.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "bcp_conduct_preview_report(uuid) -- re-created, now also gated by bcp_conduct_may_see_others(uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "bcp_conduct_report_blockers(uuid) -- re-created, now authenticates and applies scp_iv_can_read_case(uuid)"
+        }
+      ],
+      "note": "SECURITY FIX, not yet applied. 20261117090000 shipped two report readers that do not apply the authorisation their own domain already defines, and both are live on production. bcp_conduct_preview_report gates on scp_iv_can_read_case and then calls bcp_conduct_build_report_basis, which is SECURITY DEFINER and reads past the three own-or-revealed row policies -- so it returns EVERY assessor's entries, correction chains and verification trails to any caller who may read the case, including an assessor whose own position is still open, which is the one thing the conduct layer exists to prevent. bcp_conduct_report_blockers has no authorisation at all, not even authentication, while being SECURITY DEFINER and granted to authenticated, so any signed-in user holding a session id could read the shape of a stranger's interview. This migration re-creates exactly those two functions with exactly those two checks added and changes nothing else: no table, no policy, no grant, no signature, no other function and no row. Proved over a replayed schema by supabase/tests/bcp_conduct_report_independence_test.sql through real authenticated sessions, including that the colleague's text appears nowhere in anything the open assessor can still read, and that the document is returned whole once they lock.",
+      "verify": "SELECT position('bcp_conduct_may_see_others' in prosrc) > 0 FROM pg_proc WHERE proname = 'bcp_conduct_preview_report'; -- expect t. SELECT position('scp_iv_can_read_case' in prosrc) > 0 AND position('auth.uid() IS NULL' in prosrc) > 0 FROM pg_proc WHERE proname = 'bcp_conduct_report_blockers'; -- expect t. Both must remain prosecdef with proconfig containing search_path=public, with exactly one overload each, and public.bcp_conduct_build_report_basis(uuid) must stay non-executable by authenticated and anon.",
+      "rollback": "supabase/rollback/20261127090000_bcp_conduct_report_independence_boundary_rollback.sql"
+    },
+    {
       "file": "20261123090000_sp_credential_organisation_roles.sql",
       "hostedState": "applied",
       "introduces": [
