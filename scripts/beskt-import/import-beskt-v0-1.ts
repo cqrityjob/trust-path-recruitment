@@ -42,8 +42,8 @@ import {
   SOURCE_VERSION,
   type Mode,
   type QuestionDef,
-} from "./beskt-v0-1.content";
-import { buildPlan, type MethodKey } from "./plan";
+} from "../../src/lib/beskt/import/beskt-v0-1.content";
+import { buildPlan, type MethodKey } from "../../src/lib/beskt/import/plan";
 
 const args = process.argv.slice(2);
 const flag = (name: string) => args.includes(name);

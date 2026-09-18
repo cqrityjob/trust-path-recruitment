@@ -119,6 +119,17 @@ const MESSAGE_FOR_CODE: Readonly<Record<string, TranslationKey>> = {
 
   // ---- The bridge between a preparation and an interview case -------------
   BCP_CASE_LINK_NOT_FOUND: "beskt.error.linkNotFound",
+
+  // ---- The owner's internal test activation (20261129090000) --------------
+  BCP_TEST_ACTIVATION_INCOMPLETE: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_EXPIRY: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_DECISION_REQUIRED: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_STATUS: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_NOT_FOUND: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_ALREADY_REVOKED: "beskt.error.testActivationRefused",
+  BESKT_CONTENT_ROLE_UNKNOWN: "beskt.error.notAuthorised",
+  BCP_TEST_ACTIVATION_EXISTS: "beskt.error.testActivationExists",
+
   BCP_NOT_SUBMITTED: "beskt.error.caseLinkNotSubmitted",
   BCP_CASE_LINK_EXISTS: "beskt.error.caseLinkExists",
   BCP_CASE_MISMATCH: "beskt.error.caseLinkMismatch",

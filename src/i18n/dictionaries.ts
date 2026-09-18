@@ -3653,6 +3653,83 @@ export const dictionaries = {
       "Intervjufallet gäller en annan ansökan eller kandidat och kan inte kopplas hit.",
     "beskt.error.caseLinkCancelled": "Intervjufallet är avbrutet och kan inte kopplas.",
     "beskt.error.caseLinkNotFound": "Intervjufallet finns inte längre. Ladda om sidan.",
+    "beskt.internalTest.start.noApplications":
+      "Det finns ingen ansökan ännu. Be testpersonen söka jobbet först.",
+    "beskt.internalTest.activation.employer": "Organisation (kortnamn)",
+    "beskt.internalTest.install.lawfulBasis": "Rättslig grund – ditt dokumenterade beslut",
+    "beskt.internalTest.start.action": "Starta test",
+    "beskt.internalTest.install.action": "Installera innehållet",
+    "beskt.internalTest.install.lawfulBasisHelp":
+      "Skrivs in på metodens exponeringsprofil. Ange vad som gäller för den här användningen, till exempel att det är intern funktionstest med testdata och vem som beslutat det.",
+    "beskt.internalTest.start.unnamed": "sökande utan namn",
+    "beskt.internalTest.roles.reviewer": "Granskare",
+    "beskt.internalTest.activation.revoked": "Återkallad",
+    "beskt.internalTest.banner.body":
+      "Metoden används här enligt ägarens beslut om intern funktionstest. Den har inte granskats eller publicerats och får bara användas med testdata.",
+    "beskt.internalTest.roles.reason": "Anledning",
+    "beskt.internalTest.activation.revokeReason": "Anledning till återkallandet",
+    "beskt.internalTest.install.exists": "BESKT v0.1 är installerat.",
+    "beskt.internalTest.start.title": "Starta test med BESKT",
+    "beskt.internalTest.install.working": "Installerar …",
+    "beskt.internalTest.roles.change": "Ändring",
+    "beskt.internalTest.start.chooseApplication": "Välj en ansökan",
+    "beskt.internalTest.roles.role": "Roll",
+    "beskt.internalTest.install.progress": "Installerar innehåll:",
+    "beskt.internalTest.activation.employerUnknown": "Ingen organisation har det kortnamnet. Kopiera det från adressen till organisationens sidor.",
+    "beskt.internalTest.activation.employerHelp":
+      "Organisationens kortnamn i adressen, till exempel cqrityjob.",
+    "beskt.internalTest.activation.until": "Gäller till",
+    "beskt.internalTest.start.working": "Startar …",
+    "beskt.internalTest.install.lede":
+      "Lägger in metodinnehållet från CQrityjob BESKT – metodstöd och byggspecifikation v0.1 (10 september 2026) som ett utkast, genom samma styrda steg som redaktörens egen yta. Kräver rollen redaktör. Installationen granskar och publicerar ingenting.",
+    "beskt.internalTest.install.blockedTitle": "Innehållet är installerat, men validatorn har fynd",
+    "beskt.internalTest.activation.notReviewTitle": "Det här är inte en granskning",
+    "beskt.internalTest.roles.granted": "Rollen är given.",
+    "beskt.internalTest.roles.action": "Spara",
+    "beskt.internalTest.activation.lede":
+      "Ägarens beslut att låta en namngiven organisation använda exakt det här innehållet för intern funktionstest med testdata. Aktiveringen gäller bara så länge innehållet är oförändrat och upphör senast vid slutdatumet.",
+    "beskt.internalTest.roles.grant": "Ge rollen",
+    "beskt.internalTest.start.profile": "Rollens exponeringsprofil",
+    "beskt.internalTest.start.lede":
+      "Välj den ansökan testet gäller. Kandidaten får förberedelsen under Min karriär.",
+    "beskt.internalTest.activation.revoke": "Återkalla",
+    "beskt.internalTest.roles.withdraw": "Ta bort rollen",
+    "beskt.internalTest.roles.publisher": "Publicerare",
+    "beskt.internalTest.activation.live": "Aktiv",
+    "beskt.internalTest.activation.heading": "Intern testaktivering",
+    "beskt.internalTest.install.rerun": "Installera innehållet igen i utkastet",
+    "beskt.internalTest.activation.none":
+      "Ingen testaktivering är registrerad för den här versionen.",
+    "beskt.internalTest.library.label": "BESKT – intern testversion",
+    "beskt.internalTest.activation.revokeConfirm": "Återkalla testaktiveringen",
+    "beskt.internalTest.start.applicationsFailed": "Ansökningarna kunde inte hämtas. Försök igen.",
+    "beskt.internalTest.activation.decision": "Ditt beslut",
+    "beskt.internalTest.start.application": "Ansökan",
+    "beskt.internalTest.install.doneBody":
+      "Validatorn har inga blockerande fynd. Nästa steg är testaktiveringen för er organisation.",
+    "beskt.internalTest.install.nextStep": "Gå till Behörigheter för testaktiveringen",
+    "beskt.internalTest.library.start": "Starta test",
+    "beskt.internalTest.install.open": "Öppna versionen",
+    "beskt.internalTest.banner.title": "Intern testversion – inte granskad eller publicerad",
+    "beskt.internalTest.roles.email": "E-postadress",
+    "beskt.internalTest.library.notice":
+      "Intern testversion: inte granskad eller publicerad. Används bara för test med testdata, enligt ägarens beslut.",
+    "beskt.internalTest.install.heading": "Installera BESKT v0.1",
+    "beskt.internalTest.roles.heading": "Innehållsroller",
+    "beskt.internalTest.activation.notLive": "Inte aktiv (utgången eller innehållet har ändrats)",
+    "beskt.internalTest.roles.lede":
+      "Plattformens roller för metodinnehåll: redaktör, granskare och publicerare. Varje ändring loggas med vem och varför.",
+    "beskt.internalTest.install.doneTitle": "Innehållet är installerat och komplett",
+    "beskt.internalTest.activation.expires": "Gäller till och med dagen före",
+    "beskt.internalTest.activation.notReviewBody":
+      "En testaktivering godkänner ingenting, publicerar ingenting och ändrar inte metodens status. De fem granskningsportarna är oförändrade och måste fortfarande avgöras av utsedda granskare.",
+    "beskt.internalTest.activation.action": "Registrera testaktiveringen",
+    "beskt.internalTest.roles.withdrawn": "Rollen är borttagen.",
+    "beskt.internalTest.roles.editor": "Redaktör",
+    "beskt.error.testActivationRefused":
+      "Testaktiveringen kunde inte registreras. Kontrollera att innehållet är komplett, att organisationen finns och att slutdatumet ligger inom 90 dagar.",
+    "beskt.error.testActivationExists":
+      "Organisationen har redan en aktiv testaktivering för den här versionen. Återkalla den först.",
     "beskt.library.badge": "BESKT",
     "beskt.library.nextAction": "Välj en ansökan",
     "beskt.library.nextSteps":
@@ -10967,6 +11044,84 @@ export const dictionaries = {
       "This interview case belongs to another application or candidate and cannot be linked here.",
     "beskt.error.caseLinkCancelled": "This interview case is cancelled and cannot be linked.",
     "beskt.error.caseLinkNotFound": "This interview case no longer exists. Reload the page.",
+    "beskt.internalTest.start.noApplications":
+      "There is no application yet. Ask the test person to apply for the job first.",
+    "beskt.internalTest.activation.employer": "Organisation (short name)",
+    "beskt.internalTest.install.lawfulBasis": "Lawful basis – your documented decision",
+    "beskt.internalTest.start.action": "Start test",
+    "beskt.internalTest.install.action": "Install the content",
+    "beskt.internalTest.install.lawfulBasisHelp":
+      "Recorded on the method's exposure profile. State what applies to this use, for example that it is internal functional testing with test data and who decided it.",
+    "beskt.internalTest.start.unnamed": "unnamed applicant",
+    "beskt.internalTest.roles.reviewer": "Reviewer",
+    "beskt.internalTest.activation.revoked": "Revoked",
+    "beskt.internalTest.banner.body":
+      "The method is used here under the owner's decision on internal functional testing. It has not been reviewed or published and may only be used with test data.",
+    "beskt.internalTest.roles.reason": "Reason",
+    "beskt.internalTest.activation.revokeReason": "Reason for revoking",
+    "beskt.internalTest.install.exists": "BESKT v0.1 is installed.",
+    "beskt.internalTest.start.title": "Start a test with BESKT",
+    "beskt.internalTest.install.working": "Installing …",
+    "beskt.internalTest.roles.change": "Change",
+    "beskt.internalTest.start.chooseApplication": "Choose an application",
+    "beskt.internalTest.roles.role": "Role",
+    "beskt.internalTest.install.progress": "Installing content:",
+    "beskt.internalTest.activation.employerUnknown": "No organisation has that short name. Copy it from the address of the organisation's pages.",
+    "beskt.internalTest.activation.employerHelp":
+      "The organisation's short name in the address, for example cqrityjob.",
+    "beskt.internalTest.activation.until": "Valid until",
+    "beskt.internalTest.start.working": "Starting …",
+    "beskt.internalTest.install.lede":
+      "Adds the method content of CQrityjob BESKT – method support and build specification v0.1 (10 September 2026) as a draft, through the same governed steps as the editor's own surface. Requires the editor role. Installing reviews and publishes nothing.",
+    "beskt.internalTest.install.blockedTitle":
+      "The content is installed, but the validator has findings",
+    "beskt.internalTest.activation.notReviewTitle": "This is not a review",
+    "beskt.internalTest.roles.granted": "The role is granted.",
+    "beskt.internalTest.roles.action": "Save",
+    "beskt.internalTest.activation.lede":
+      "The owner's decision to let one named organisation use exactly this content for internal functional testing with test data. It applies only while the content is unchanged and ends on its end date at the latest.",
+    "beskt.internalTest.roles.grant": "Grant the role",
+    "beskt.internalTest.start.profile": "Role exposure profile",
+    "beskt.internalTest.start.lede":
+      "Choose the application the test concerns. The candidate receives the preparation under My Career.",
+    "beskt.internalTest.activation.revoke": "Revoke",
+    "beskt.internalTest.roles.withdraw": "Withdraw the role",
+    "beskt.internalTest.roles.publisher": "Publisher",
+    "beskt.internalTest.activation.live": "Active",
+    "beskt.internalTest.activation.heading": "Internal test activation",
+    "beskt.internalTest.install.rerun": "Install the content again into the draft",
+    "beskt.internalTest.activation.none": "No test activation is recorded for this version.",
+    "beskt.internalTest.library.label": "BESKT – internal test version",
+    "beskt.internalTest.activation.revokeConfirm": "Revoke the test activation",
+    "beskt.internalTest.start.applicationsFailed":
+      "The applications could not be loaded. Try again.",
+    "beskt.internalTest.activation.decision": "Your decision",
+    "beskt.internalTest.start.application": "Application",
+    "beskt.internalTest.install.doneBody":
+      "The validator has no blocking findings. The next step is the test activation for your organisation.",
+    "beskt.internalTest.install.nextStep": "Go to Access for the test activation",
+    "beskt.internalTest.library.start": "Start test",
+    "beskt.internalTest.install.open": "Open the version",
+    "beskt.internalTest.banner.title": "Internal test version – not reviewed or published",
+    "beskt.internalTest.roles.email": "E-mail address",
+    "beskt.internalTest.library.notice":
+      "Internal test version: not reviewed or published. Used only for testing with test data, under the owner's decision.",
+    "beskt.internalTest.install.heading": "Install BESKT v0.1",
+    "beskt.internalTest.roles.heading": "Content roles",
+    "beskt.internalTest.activation.notLive": "Not active (expired, or the content has changed)",
+    "beskt.internalTest.roles.lede":
+      "The platform roles for method content: editor, reviewer and publisher. Every change is logged with who and why.",
+    "beskt.internalTest.install.doneTitle": "The content is installed and complete",
+    "beskt.internalTest.activation.expires": "Valid until the day before",
+    "beskt.internalTest.activation.notReviewBody":
+      "A test activation approves nothing, publishes nothing and does not change the method's status. The five review gates are unchanged and must still be decided by appointed reviewers.",
+    "beskt.internalTest.activation.action": "Record the test activation",
+    "beskt.internalTest.roles.withdrawn": "The role is withdrawn.",
+    "beskt.internalTest.roles.editor": "Editor",
+    "beskt.error.testActivationRefused":
+      "The test activation could not be recorded. Check that the content is complete, that the organisation exists and that the end date is within 90 days.",
+    "beskt.error.testActivationExists":
+      "The organisation already holds an active test activation for this version. Revoke it first.",
     "beskt.library.badge": "BESKT",
     "beskt.library.nextAction": "Choose an application",
     "beskt.library.nextSteps":

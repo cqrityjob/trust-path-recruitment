@@ -45,7 +45,17 @@ function ref(q: QuestionDef, extra = ""): string {
   return `${SOURCE}, ${q.specRef}${extra}`;
 }
 
-export function buildPlan(method: MethodKey, { synthetic }: { synthetic: boolean }): Plan {
+export function buildPlan(
+  method: MethodKey,
+  {
+    synthetic,
+    lawfulBasisReference,
+  }: {
+    synthetic: boolean;
+    /** The owner's recorded lawful-basis decision. Never invented here. */
+    lawfulBasisReference?: string;
+  },
+): Plan {
   const mode: Mode = method === "rekrytering" ? "recruitment_support" : "security_vetting_support";
   const questions = QUESTIONS.filter(
     (q) => mode === "security_vetting_support" || q.mode === "recruitment_support",
@@ -112,7 +122,7 @@ export function buildPlan(method: MethodKey, { synthetic }: { synthetic: boolean
       // validator blocks submission until the owner's decision is recorded.
       lawful_basis_reference: synthetic
         ? "SYNTETISK TESTVERSION – ingen rättslig grund fastställd; får inte användas med verkliga personuppgifter"
-        : null,
+        : lawfulBasisReference?.trim() || null,
       retention_class: vetting ? "security_vetting_record" : "recruitment_record",
       access_class: vetting ? "authorised_security_function" : "recruiter",
       security_sensitive_role_attestation_reference: null,
