@@ -5,9 +5,11 @@
 -- proof against a live local stack) so that CI's migration replay proves the
 -- same four things on every push:
 --
---   1. an ENTITLED GB or Dubai pilot member sees their market's approved
---      definitions in the closed catalogue, saves through the real RPC and
---      reads the credential back with the right jurisdiction;
+--   1. pilot membership opens a MARKET and approves NO definition: an
+--      entitled GB or Dubai member sees nothing until an administrator
+--      approves a definition of that market (is_active), then sees exactly
+--      the approved ones, saves through the real RPC and reads the credential
+--      back with the right jurisdiction;
 --   2. a NON-MEMBER, a session without a subject, a member of the OTHER
 --      market and a REVOKED member are all refused — catalogue and RPC;
 --   3. a disclosed package carries each credential's governed scope_code
@@ -16,8 +18,9 @@
 --      reapply, with this suite green on either side.
 --
 -- Everything is inside one transaction and rolled back. The entitlement rows
--- are written directly, as a platform administrator would grant them in
--- production; everything downstream — access, catalogue, write, readback,
+-- and the two definition approvals are written directly, as a platform
+-- administrator would grant them in production (the approval is the owner's
+-- per-definition decision — this suite takes none for the product); everything downstream — access, catalogue, write, readback,
 -- disclosure — is the real path under `authenticated`, and the recipient
 -- reads through the share session, exactly as the gateway does.
 \set ON_ERROR_STOP on
@@ -57,6 +60,21 @@ SELECT pg_temp.ok((SELECT count(*)=2 AND bool_and(pilot_state='internal_pilot' A
 SELECT pg_temp.ok((SELECT requires_scope FROM public.sp_credential_types WHERE code='AE_DU_SIRA_CARD_GUARD'),
  'the SIRA guard card is a scoped definition');
 
+-- ── membership alone approves nothing ───────────────────────────────────
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','fc240000-0000-4000-8000-000000000002',true);
+SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='pilot' AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='GB'),
+ 'a GB member with no approved GB definition reaches the market and sees an empty GB catalogue');
+SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"UK_SIA_LICENCE_SG","market_country":"GB","market_region":"","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}')$q$,
+ 'SP_APPROVED_DEFINITION_REQUIRED','pilot membership does not approve an inactive SIA definition');
+RESET ROLE;
+
+-- ── administrator approval of ONE definition per pilot market ───────────
+-- Inside this rolled-back test only. The market pack stays internal_pilot.
+UPDATE public.sp_credential_types SET is_active=true WHERE code IN ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY');
+SELECT pg_temp.ok((SELECT count(*)=2 FROM public.sp_market_packs WHERE code IN ('GB','AE-DU') AND pilot_state='internal_pilot' AND NOT is_active),
+ 'approving a definition activates no market pack');
+
 -- ── the ordinary holder: no entitlement ──────────────────────────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc240000-0000-4000-8000-000000000001',true);
@@ -64,7 +82,7 @@ SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='closed' AND public.s
  AND public.sp_market_access(auth.uid(),'SE')='production','ordinary holder: GB and Dubai closed, Sweden production');
 SELECT count(*) AS se_n FROM public.sp_approved_credential_catalogue WHERE country='SE' \gset
 SELECT pg_temp.ok(:se_n>0,'ordinary holder sees the Swedish catalogue');
-SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='GB'),'ordinary holder sees no GB definition');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='GB'),'ordinary holder sees no GB definition, approved or not: the market is closed to a non-member');
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU'),'ordinary holder sees no Dubai definition');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"UK_SIA_LICENCE_SG","market_country":"GB","market_region":"","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}')$q$,
  'SP_APPROVED_DEFINITION_REQUIRED','ordinary holder cannot save a GB licence');
@@ -83,9 +101,9 @@ RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc240000-0000-4000-8000-000000000002',true);
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='pilot' AND public.sp_market_access(auth.uid(),'AE-DU')='closed','GB member: GB pilot, Dubai closed');
-SELECT pg_temp.ok((SELECT count(*)>0 FROM public.sp_approved_credential_catalogue WHERE country='GB')
+SELECT pg_temp.ok((SELECT count(*)=1 FROM public.sp_approved_credential_catalogue WHERE country='GB')
  AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU')
- AND (SELECT count(*)=:se_n FROM public.sp_approved_credential_catalogue WHERE country='SE'),'GB member sees GB, not Dubai; Sweden unchanged');
+ AND (SELECT count(*)=:se_n FROM public.sp_approved_credential_catalogue WHERE country='SE'),'GB member sees exactly the one approved GB definition, not Dubai; Sweden unchanged');
 SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_LICENCE_SG' AND country='GB' AND coalesce(issuer_name,'')<>''),
  'the SIA licence is offered to the GB member with its governed issuer');
 SELECT public.sp_save_international_credential('{"definition_code":"UK_SIA_LICENCE_SG","market_country":"GB","market_region":"","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}') AS gb_claim \gset
@@ -101,17 +119,23 @@ RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc240000-0000-4000-8000-000000000003',true);
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'AE-DU')='pilot' AND public.sp_market_access(auth.uid(),'GB')='closed','Dubai member: Dubai pilot, GB closed');
-SELECT pg_temp.ok((SELECT count(*)>0 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU')
+SELECT pg_temp.ok((SELECT count(*)=1 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU')
  AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='GB')
- AND (SELECT count(*)=:se_n FROM public.sp_approved_credential_catalogue WHERE country='SE'),'Dubai member sees Dubai, not GB; Sweden unchanged');
+ AND (SELECT count(*)=:se_n FROM public.sp_approved_credential_catalogue WHERE country='SE'),'Dubai member sees exactly the one approved Dubai definition, not GB; Sweden unchanged');
 SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_BASIC_FIRE_SAFETY","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}') AS du_claim \gset
 SELECT pg_temp.ok((SELECT credential_code='AE_DU_BASIC_FIRE_SAFETY' AND jurisdiction_code='AE' AND sub_jurisdiction_code='AE-DU' AND coalesce(claimed_issuer_name,'')<>''
  AND assertion_level='self_declared' AND lifecycle_state='active' FROM public.sp_claims WHERE id=:'du_claim' AND holder_user_id=auth.uid()),
  'read back: AE with sub-jurisdiction AE-DU, governed issuer, self-declared and active');
 -- A course save proves nothing about SIRA CARD registration: no scoped card is
--- offered, and the RPC refuses one. This is the functional gap, stated by the suite.
-SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c JOIN public.sp_credential_types t ON t.code=c.code WHERE c.region='AE-DU' AND t.requires_scope),
- 'no scoped SIRA card is offered through the catalogue, only the courses');
+-- offered, and the RPC refuses one — even if an administrator approved it, the
+-- scope requirement keeps it out. This is the functional gap, stated by the suite.
+RESET ROLE;
+UPDATE public.sp_credential_types SET is_active=true WHERE code='AE_DU_SIRA_CARD_GUARD';
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','fc240000-0000-4000-8000-000000000003',true);
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_CARD_GUARD')
+ AND (SELECT count(*)=1 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU'),
+ 'an approved but scoped SIRA card is still not offered through the catalogue, only the course');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_SIRA_CARD_GUARD","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}')$q$,
  'SP_APPROVED_DEFINITION_REQUIRED','a scoped SIRA card is unavailable through the RPC even to the Dubai member');
 RESET ROLE;

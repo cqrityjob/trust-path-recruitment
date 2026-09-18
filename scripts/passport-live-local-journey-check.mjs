@@ -95,6 +95,14 @@ async function reread(holder, table, id) {
   return good(await holder.client.from(table).select("*").eq("id", id).single());
 }
 
+let approvedForRun = false;
+function restoreApproval() {
+  if (!approvedForRun) return;
+  sql(
+    "update public.sp_credential_types set is_active=false where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY')",
+  );
+  approvedForRun = false;
+}
 async function main() {
   const holder = await user("holder");
   const verifier = await user("verifier");
@@ -540,19 +548,69 @@ async function main() {
       ok((await access(holder, "SE")) === "production", "Sweden is production for everyone");
     },
   );
-  await check("Link 2 · governed definitions exist, approved, for both pilot markets", async () => {
-    const n = (c) => Number(sql(c));
+  await check(
+    "Link 2 · governed pilot definitions exist for both markets (authority set, NOT yet approved)",
+    async () => {
+      const n = (c) => Number(sql(c));
+      ok(
+        n(
+          "select count(*) from public.sp_credential_types where market_pack_code='GB' and pilot_state='internal_pilot' and authority_id is not null and not requires_scope",
+        ) > 0,
+        "no governed GB definition",
+      );
+      ok(
+        n(
+          "select count(*) from public.sp_credential_types where market_pack_code='AE-DU' and pilot_state='internal_pilot' and authority_id is not null and not requires_scope",
+        ) > 0,
+        "no governed Dubai definition",
+      );
+      ok(
+        n(
+          "select count(*) from public.sp_credential_types where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY') and not is_active",
+        ) === 2,
+        "the two fixture definitions are already approved",
+      );
+    },
+  );
+  await check(
+    "Link 2b · membership alone approves nothing: the GB member sees an empty GB catalogue",
+    async () => {
+      ok(
+        (await catalogueRows(gbPilot, "GB", null)) === 0,
+        "GB member sees an unapproved definition",
+      );
+      const r = await gbPilot.client.rpc("sp_save_international_credential", {
+        _input: {
+          definition_code: "UK_SIA_LICENCE_SG",
+          market_country: "GB",
+          market_region: "",
+          identifier: "",
+          issued_on: "2024-05-01",
+          valid_until: "2027-05-01",
+          no_expiry: false,
+        },
+      });
+      ok(
+        /SP_APPROVED_DEFINITION_REQUIRED/.test(r.error?.message ?? ""),
+        "unapproved definition accepted: " + (r.error?.message ?? "no error"),
+      );
+    },
+  );
+  // The owner's per-definition decision, taken here as a local administrator
+  // (a direct UPDATE on the isolated stack; restored at the end of the run).
+  // The market packs stay internal_pilot: approving a definition opens no market.
+  sql(
+    "update public.sp_credential_types set is_active=true where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY')",
+  );
+  approvedForRun = true;
+  await check("Link 2c · approving a definition activates no market pack", async () => {
     ok(
-      n(
-        "select count(*) from public.sp_credential_types where market_pack_code='GB' and pilot_state='internal_pilot' and authority_id is not null and not requires_scope",
-      ) > 0,
-      "no approved GB definition",
-    );
-    ok(
-      n(
-        "select count(*) from public.sp_credential_types where market_pack_code='AE-DU' and pilot_state='internal_pilot' and authority_id is not null and not requires_scope",
-      ) > 0,
-      "no approved Dubai definition",
+      Number(
+        sql(
+          "select count(*) from public.sp_market_packs where code in ('GB','AE-DU') and pilot_state='internal_pilot' and not is_active",
+        ),
+      ) === 2,
+      "a pack was activated",
     );
   });
   await check("Link 3 · catalogue visibility follows the entitlement, per market", async () => {
@@ -561,9 +619,15 @@ async function main() {
       (await catalogueRows(holder, "AE", "AE-DU")) === 0,
       "ordinary holder sees Dubai definitions",
     );
-    ok((await catalogueRows(gbPilot, "GB", null)) > 0, "GB pilot sees no GB definitions");
+    ok(
+      (await catalogueRows(gbPilot, "GB", null)) === 1,
+      "GB pilot sees other than the one approved GB definition",
+    );
     ok((await catalogueRows(gbPilot, "AE", "AE-DU")) === 0, "GB pilot sees Dubai definitions");
-    ok((await catalogueRows(duPilot, "AE", "AE-DU")) > 0, "Dubai pilot sees no Dubai definitions");
+    ok(
+      (await catalogueRows(duPilot, "AE", "AE-DU")) === 1,
+      "Dubai pilot sees other than the one approved Dubai definition",
+    );
     ok((await catalogueRows(duPilot, "GB", null)) === 0, "Dubai pilot sees GB definitions");
     // Sweden and the international catalogue are unchanged for everyone.
     ok((await catalogueRows(holder, "SE", null)) === 5, "SE catalogue changed");
@@ -742,9 +806,13 @@ async function main() {
   );
   const failed = results.filter((r) => !r.pass);
   console.log(`\n${results.length - failed.length} of ${results.length} passed`);
+  restoreApproval();
   process.exit(failed.length ? 1 : 0);
 }
 main().catch((e) => {
+  try {
+    restoreApproval();
+  } catch {}
   console.error("FATAL " + String(e.message).replace(/eyJ[^ ]+/g, "[redacted]"));
   process.exit(2);
 });

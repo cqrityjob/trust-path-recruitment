@@ -1,5 +1,5 @@
--- The approved credential catalogue admits an internal-pilot market's
--- definitions to that market's pilot members — and to nobody else.
+-- The approved credential catalogue admits an internal-pilot MARKET to that
+-- market's pilot members — and to nobody else. Definition approval is untouched.
 --
 -- ── THE MISSING CONNECTION ─────────────────────────────────────────────
 --
@@ -20,19 +20,26 @@
 --
 -- ── WHAT CHANGES, AND WHAT DOES NOT ────────────────────────────────────
 --
--- The view's row set gains exactly the definitions of an internal-pilot
--- market FOR A CALLER WHO IS A PILOT MEMBER OF THAT MARKET, as
--- sp_is_pilot_member(auth.uid(), pack) decides. The view is security_invoker,
+-- The view's MARKET clause gains one alternative: an internal-pilot pack
+-- counts as open FOR A CALLER WHO IS A PILOT MEMBER OF THAT MARKET, as
+-- sp_is_pilot_member(auth.uid(), pack) decides — the same two states
+-- sp_market_access() reports as 'production' and 'pilot'. The DEFINITION
+-- clause is unchanged: a definition must be approved (is_active) for a pilot
+-- member exactly as for everyone else. Four suites pin that contract
+-- (market_pilot 5.1, pilot_catalogue_visibility 3.6, pilot_write_path 1.1,
+-- global_certification 14.5): pilot entitlement never approves a definition.
+-- Approving a GB or Dubai definition for the pilot is therefore a separate,
+-- per-definition administrator decision, and this migration takes none. The view is security_invoker,
 -- so auth.uid() is the caller's own identity in the RPC and in the triggers
 -- alike; a session with no JWT (service role, harness) sees no pilot rows,
 -- exactly as sp_market_access answers 'closed' for it.
 --
 -- No market is activated. No definition is approved. No RLS, grant, table,
--- column or row changes. Every other clause of the view — approval, authority,
--- issuer, jurisdiction, deprecation, scope requirement — is unchanged, so a
--- pilot member can add only what the catalogue would approve in production,
--- and a SIRA card that requires a scope stays unavailable through this RPC
--- for everyone. The column list is unchanged, so the %ROWTYPE guards keep
+-- column or row changes. Every other clause of the view — definition approval,
+-- authority, issuer, jurisdiction, deprecation, scope requirement — is
+-- unchanged, so a pilot member can add only an approved definition of their
+-- own pilot market, and a SIRA card that requires a scope stays unavailable
+-- through this RPC for everyone. The column list is unchanged, so the %ROWTYPE guards keep
 -- their shape.
 BEGIN;
 
@@ -53,11 +60,9 @@ LEFT JOIN public.sp_certification_issuers i ON i.id=d.issuer_id AND i.is_active
 LEFT JOIN public.sp_authorities a ON a.id=t.authority_id AND a.is_active
 LEFT JOIN public.sp_credential_definition_metadata m ON m.credential_code=t.code
 WHERE
- -- A published definition, or an internal-pilot one for its own pilot member.
- (t.is_active
-  OR (t.pilot_state='internal_pilot' AND t.market_pack_code IS NOT NULL
-      AND public.sp_is_pilot_member(auth.uid(), t.market_pack_code)))
- AND NOT t.requires_scope AND m.deprecated_at IS NULL
+ -- The DEFINITION must be approved (is_active) for everyone alike: pilot
+ -- membership opens a market, it never approves a definition.
+ t.is_active AND NOT t.requires_scope AND m.deprecated_at IS NULL
  AND (d.effective_from IS NULL OR d.effective_from<=current_date)
  AND (d.retired_on IS NULL OR d.retired_on>current_date)
  AND public.sp_is_passport_credential(t.claim_type,t.code)
