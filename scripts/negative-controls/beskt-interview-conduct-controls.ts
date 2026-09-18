@@ -638,8 +638,14 @@ const MUTATIONS: readonly Mutation[] = [
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: FRONTIER,
     // Plant an already-applied version into the empty pending frontier.
-    find: "const expectedPending: string[] = [];",
-    replace: 'const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql"];',
+    // The anchor used to assume the pending frontier was EMPTY. 20261124090000
+    // (the report independence boundary) is legitimately pending now, so the
+    // control adds the already-applied name ALONGSIDE it rather than
+    // replacing an empty list. The defect is identical: a resolved name on
+    // the owner-level frontier hides the next genuinely stuck migration.
+    find: 'const expectedPending: string[] = ["20261124090000_bcp_conduct_report_independence_boundary.sql"];',
+    replace:
+      'const expectedPending: string[] = ["20261113090000_bcp_interview_conduct.sql", "20261124090000_bcp_conduct_report_independence_boundary.sql"];',
     guard: GUARD,
     expect: "CONDUCT-REGISTRATION",
   },

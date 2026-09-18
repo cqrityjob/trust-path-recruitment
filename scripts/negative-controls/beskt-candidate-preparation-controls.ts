@@ -519,9 +519,16 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the owner-level frontier list, where a resolved name hides the next genuinely stuck migration behind an expectation",
     file: "scripts/release-frontier-check.ts",
-    // Plant an already-applied version into the empty pending frontier.
-    find: "const expectedPending: string[] = [];",
-    replace: 'const expectedPending: string[] = ["20261110090000_bcp_candidate_preparation.sql"];',
+    // Plant an already-applied version into the pending frontier ALONGSIDE
+    // whatever is genuinely waiting there. The anchor used to assume the list
+    // was empty; 20261124090000 (the report independence boundary) is
+    // legitimately pending now, so the control adds the applied name to the
+    // real list instead of replacing an empty one. The defect is identical:
+    // a resolved name sitting on the owner-level frontier hides the next
+    // genuinely stuck migration behind an expectation.
+    find: 'const expectedPending: string[] = ["20261124090000_bcp_conduct_report_independence_boundary.sql"];',
+    replace:
+      'const expectedPending: string[] = ["20261110090000_bcp_candidate_preparation.sql", "20261124090000_bcp_conduct_report_independence_boundary.sql"];',
     guard: GUARD,
     expect: "BCP-RELEASE",
   },

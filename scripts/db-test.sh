@@ -3506,6 +3506,88 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# BESKT -- the report preview obeys the independence rule (20261124090000).
+#
+# Runs straight after the PR 6 suite, on the same replayed schema, because it
+# is about the very functions PR 6 shipped. It proves the boundary through
+# REAL authenticated sessions rather than through a screen: an assessor whose
+# own position is open is refused the document by name, the colleague's words
+# appear nowhere in anything that caller can still read, and the same caller
+# gets the whole document once they lock.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT report independence boundary assertions"
+set +e
+RIB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_conduct_report_independence_test.sql 2>&1)"
+RIB_RC=$?
+set -e
+RIB_PASSED="$(echo "$RIB_OUT" | grep -c "ok  " || true)"
+RIB_FAILED=0
+if [ "$RIB_RC" -ne 0 ]; then
+  echo "FAIL: the BESKT report independence suite exited with code ${RIB_RC}." >&2
+  echo "$RIB_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  RIB_FAILED=1
+else
+  echo "    ok  ${RIB_PASSED} BESKT report independence assertions passed"
+  if [ "$RIB_PASSED" -lt 24 ]; then
+    echo "FAIL: expected at least 24 BESKT report independence assertions, only ${RIB_PASSED} ran." >&2
+    RIB_FAILED=1
+  fi
+fi
+
+# ---------------------------------------------------------------------------
+# And the way back. A security fix whose rollback does not work is a fix
+# nobody can safely deploy, so the rollback is run for real and then the
+# migration is re-applied -- with the hole PROVED open in between, because a
+# rollback that quietly left the boundary in place would pass a weaker check
+# while being broken.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT report independence rollback and re-apply"
+RIB_RB_FAILED=0
+set +e
+RIB_RB_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261124090000_bcp_conduct_report_independence_boundary_rollback.sql 2>&1)"
+RIB_RB_RC=$?
+set -e
+if [ "$RIB_RB_RC" -ne 0 ]; then
+  echo "FAIL: the report independence rollback did not run." >&2
+  echo "$RIB_RB_OUT" | head -10 >&2
+  RIB_RB_FAILED=1
+else
+  RIB_OPEN="$(psql -tAq -d "$TEST_DB" -c \
+    "SELECT (position('bcp_conduct_may_see_others' in prosrc) = 0) FROM pg_proc WHERE proname = 'bcp_conduct_preview_report';")"
+  if [ "$RIB_OPEN" != "t" ]; then
+    echo "FAIL: the rollback ran but the independence check is still in place -- it restored nothing." >&2
+    RIB_RB_FAILED=1
+  else
+    echo "    ok  the rollback restores the pre-fix definitions (the boundary is measurably gone)"
+  fi
+  set +e
+  RIB_RE_OUT="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+    -f supabase/migrations/20261124090000_bcp_conduct_report_independence_boundary.sql 2>&1)"
+  RIB_RE_RC=$?
+  set -e
+  if [ "$RIB_RE_RC" -ne 0 ]; then
+    echo "FAIL: the report independence migration did not re-apply after its rollback." >&2
+    echo "$RIB_RE_OUT" | head -10 >&2
+    RIB_RB_FAILED=1
+  else
+    RIB_BACK="$(psql -tAq -d "$TEST_DB" -c \
+      "SELECT (position('bcp_conduct_may_see_others' in prosrc) > 0) FROM pg_proc WHERE proname = 'bcp_conduct_preview_report';")"
+    if [ "$RIB_BACK" != "t" ]; then
+      echo "FAIL: the migration re-applied but the independence check is not back." >&2
+      RIB_RB_FAILED=1
+    else
+      echo "    ok  and the migration re-applies cleanly, closing the boundary again"
+    fi
+  fi
+fi
+
+if [ "$RIB_FAILED" -ne 0 ] || [ "$RIB_RB_FAILED" -ne 0 ]; then
+  suite_failed "BESKT report independence boundary"
+fi
+
+# ---------------------------------------------------------------------------
 # Two people press "lock my position" at the same instant, in two real
 # connections. Exactly one lock must land and the other must be refused by
 # name -- not both, not neither, and not a torn row. The suite above runs in

@@ -390,11 +390,28 @@ DECLARE
 BEGIN
   SELECT * INTO _r FROM rp;
 
-  _prev := pg_temp.json_as(_r.rec_a,
-    format('SELECT public.bcp_conduct_preview_report(%L)', _r.sess));
+  -- The FACT this asserts is unchanged: an empty conversation is blocked for
+  -- having nothing to report. What changed is where it is read from.
+  --
+  -- 20261124090000 closed an authorisation hole: the preview used to hand
+  -- every assessor's record to any caller who could read the case, including
+  -- one whose own position was still open. rec_a's position is open here, so
+  -- the preview now refuses — and asserting the blocker THROUGH the preview
+  -- would be asserting the hole.
+  --
+  -- bcp_conduct_report_blockers is the reader designed for exactly this
+  -- question. It names what is missing and discloses nobody's record, so the
+  -- assertion moves there and keeps its meaning.
   PERFORM pg_temp.ok(
-    _prev -> 'blockers' @> '[{"code":"BCP_CONDUCT_NOTHING_DOCUMENTED"}]'::jsonb,
+    pg_temp.count_as(_r.rec_a, format(
+      'SELECT count(*) FROM public.bcp_conduct_report_blockers(%L) b '
+      'WHERE b.code = ''BCP_CONDUCT_NOTHING_DOCUMENTED''', _r.sess)) = 1,
     'R1.1 an empty conversation is blocked for having nothing to report');
+
+  PERFORM pg_temp.must_fail_as('authenticated', _r.rec_a,
+    format('SELECT public.bcp_conduct_preview_report(%L)', _r.sess),
+    'BCP_CONDUCT_NOT_VISIBLE_YET',
+    'R1.1a and the document itself is refused while the caller''s own position is open');
 
   -- The blocker reader answers directly too, not only through the preview:
   -- a screen that wants to say what is missing without rendering the whole
@@ -446,10 +463,13 @@ BEGIN
     _rev, 'verified', 'SYNTETISK källa', 'SYNTETISK anteckning');
   RESET ROLE; PERFORM pg_temp.nobody();
 
-  _prev := pg_temp.json_as(_r.rec_a,
-    format('SELECT public.bcp_conduct_preview_report(%L)', _r.sess));
+  -- Same correction as R1.1, same reason: rec_a's position is still open, so
+  -- the blocker is read from the reader that exists to answer it rather than
+  -- from a document the caller is no longer entitled to.
   PERFORM pg_temp.ok(
-    _prev -> 'blockers' @> '[{"code":"BCP_CONDUCT_POSITION_OPEN"}]'::jsonb,
+    pg_temp.count_as(_r.rec_a, format(
+      'SELECT count(*) FROM public.bcp_conduct_report_blockers(%L) b '
+      'WHERE b.code = ''BCP_CONDUCT_POSITION_OPEN''', _r.sess)) = 1,
     'R1.2 an open position blocks the report');
 
   -- A second assessor joins, documents the SAME theme differently, and locks.

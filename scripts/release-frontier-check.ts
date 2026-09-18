@@ -106,7 +106,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // genuinely stuck one.
 //
 // PR #258 applied and verified through the connector; canonical history alias verified.
-const expectedPending: string[] = [];
+//
+// 20261124090000_bcp_conduct_report_independence_boundary is GENUINELY PENDING,
+// and this is the list saying so out loud rather than a migration quietly
+// waiting. It is a security fix to two functions 20261117090000 already put
+// live: bcp_conduct_preview_report never applied the independence rule, and
+// bcp_conduct_report_blockers applied no authorisation at all.
+//
+// Its name comes OFF this list in the same change that records its hosted
+// evidence in release-state.json and hosted-ledger.json -- never before, and
+// never in the pull request that merely merges it. An applied migration left
+// here would mask the next genuinely stuck one, and a pending migration
+// missing from here is exactly the silence this check exists to break.
+const expectedPending: string[] = ["20261124090000_bcp_conduct_report_independence_boundary.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

@@ -308,9 +308,14 @@ const MUTATIONS: readonly Mutation[] = [
       "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
     // Plant an already-applied version into the empty pending frontier.
-    find: "const expectedPending: string[] = [];",
+    // The anchor used to assume the pending frontier was EMPTY. 20261124090000
+    // (the report independence boundary) is legitimately pending now, so the
+    // control adds the already-applied name ALONGSIDE it rather than
+    // replacing an empty list. The defect is identical: a resolved name on
+    // the owner-level frontier hides the next genuinely stuck migration.
+    find: 'const expectedPending: string[] = ["20261124090000_bcp_conduct_report_independence_boundary.sql"];',
     replace:
-      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
+      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql", "20261124090000_bcp_conduct_report_independence_boundary.sql"];',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
