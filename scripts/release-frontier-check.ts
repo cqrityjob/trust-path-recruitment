@@ -106,7 +106,22 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // genuinely stuck one.
 //
 // PR #258 applied and verified through the connector; canonical history alias verified.
-const expectedPending: string[] = [];
+//
+// PR #264 (Security Passport pilot finish) carries two EXPAND migrations that
+// are pending BY DESIGN until it merges and the official Supabase GitHub
+// integration applies them: 20261124090000_sp_pilot_member_catalogue (the
+// approved catalogue's market clause honours an internal-pilot entitlement;
+// the definition clause is unchanged) and
+// 20261125090000_sp_disclosure_definition_scope (sp_credential_payload_v2
+// emits the governed definition's scope_code). Both replace a body and
+// introduce no object; release-state.json records each as pending with its
+// verify SQL and rollback. Both names come OFF this list in the change that
+// records their hosted evidence, for the reason stated throughout: a resolved
+// name left here hides the next genuinely stuck migration.
+const expectedPending: string[] = [
+  "20261124090000_sp_pilot_member_catalogue.sql",
+  "20261125090000_sp_disclosure_definition_scope.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
