@@ -130,7 +130,7 @@ export const dictionaries = {
     "home.passportPreview.title": "Meriter med tydlig källa och status",
     "home.passportPreview.body":
       "Du väljer vad mottagaren ser. Delningslänkar är tidsbegränsade och förblir under din kontroll.",
-    "home.passportPreview.markets": "Marknader som stöds i dag",
+    "home.passportPreview.markets": "Marknader i dag",
     // The illustrative card. FICTIONAL, and says so twice: a label on the
     // card and a caption under it. It must never read as a real holder.
     "home.passportPreview.exampleLabel": "Exempel",
@@ -218,7 +218,7 @@ export const dictionaries = {
     "home.markets.eyebrow": "Security Passport",
     "home.markets.title": "Byggt för en karriär som rör sig",
     "home.markets.body":
-      "Ditt Security Passport stöder i dag tre marknader. Du väljer själv vilka uppgifter du delar, med vem och hur länge.",
+      "Sverige är öppet. Storbritannien och Dubai är i sluten pilot. Du väljer själv vad du delar och med vem.",
     "home.markets.SE": "Sverige",
     "home.markets.GB": "Storbritannien",
     "home.markets.AE-DU": "Dubai, Förenade Arabemiraten",
@@ -7030,7 +7030,7 @@ export const dictionaries = {
     "home.passportPreview.title": "Credentials with a clear source and status",
     "home.passportPreview.body":
       "You choose what a recipient sees. Share links expire and remain under your control.",
-    "home.passportPreview.markets": "Markets supported today",
+    "home.passportPreview.markets": "Markets today",
     "home.passportPreview.exampleLabel": "Example",
     "home.passportPreview.exampleCaption": "Fictional person, fictional credentials.",
     "home.passportPreview.exampleName": "Example Holder",
@@ -7077,7 +7077,7 @@ export const dictionaries = {
     "home.markets.eyebrow": "Security Passport",
     "home.markets.title": "Built for a career that moves",
     "home.markets.body":
-      "Your Security Passport supports three markets today. You decide which records you share, with whom and for how long.",
+      "Sweden is open. Great Britain and Dubai are in closed pilot. You decide what you share and with whom.",
     "home.markets.SE": "Sweden",
     "home.markets.GB": "Great Britain",
     "home.markets.AE-DU": "Dubai, United Arab Emirates",
