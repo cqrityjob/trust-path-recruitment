@@ -45,6 +45,7 @@ export type AdminNavSection =
   | "audit"
   | "data"
   | "passportVerification"
+  | "passportCatalogue"
   | "interviewRolePacks"
   | "besktMethods";
 
@@ -110,6 +111,13 @@ export function AdminShellChrome({ activeSection, children }: AdminShellChromePr
       key: "passportVerification",
       labelKey: "admin.nav.passportVerification",
       to: "/admin/passport-verification",
+    },
+    // READ-ONLY diagnosis of the Passport catalogue: why a researched
+    // definition is or is not selectable. It approves nothing.
+    {
+      key: "passportCatalogue",
+      labelKey: "admin.nav.passportCatalogue",
+      to: "/admin/passport-catalogue",
     },
     // Interview Intelligence Phase 1. A PLATFORM destination only: the employer
     // navigation item is deliberately not added here or anywhere else, and

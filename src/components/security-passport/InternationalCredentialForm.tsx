@@ -1,5 +1,5 @@
 import { CredentialDateInput } from "./CredentialDateInput";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Globe2, MapPin, ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
 import type {
@@ -12,6 +12,16 @@ import {
 } from "@/lib/security-passport/evidence.functions";
 import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import {
+  buildCatalogueIndex,
+  changeFilter,
+  clearOptionalFilters,
+  EMPTY_FILTERS,
+  filterCatalogue,
+  type CatalogueFilterState,
+  type IndexedDefinition,
+  type OrganisationRoleKind,
+} from "@/lib/security-passport/credential-catalogue-filters";
 
 const DOMAIN_LABELS: Record<string, { sv: string; en: string }> = {
   security_operations: { sv: "Säkerhetsarbete", en: "Security operations" },
@@ -20,6 +30,16 @@ const DOMAIN_LABELS: Record<string, { sv: string; en: string }> = {
   information_security: { sv: "Informationssäkerhet", en: "Information security" },
   investigation: { sv: "Utredning", en: "Investigation" },
   financial_crime: { sv: "Finansiell brottslighet", en: "Financial crime" },
+};
+
+// The organisation-role model's four roles, named as what they ARE. A regulator
+// is never presented as a training provider, and an awarding organisation is
+// never presented as a regulator.
+const ROLE_LABELS: Record<OrganisationRoleKind, { sv: string; en: string }> = {
+  regulator: { sv: "Tillsynsmyndighet", en: "Regulator" },
+  issuer: { sv: "Utfärdare", en: "Issuer" },
+  training_provider: { sv: "Utbildare", en: "Training provider" },
+  verification_authority: { sv: "Kontrolleras hos", en: "Verified with" },
 };
 
 export function InternationalCredentialForm({
@@ -44,15 +64,13 @@ export function InternationalCredentialForm({
   const definitions = metadata?.definitions;
   const preselected = definitions?.find((d) => d.code === preselectCode);
   const [step, setStep] = useState(initial || preselected ? 4 : 1);
-  const [scope, setScope] = useState(
-    initial?.market_country || preselected?.country ? "national" : "international",
-  );
-  const [country, setCountry] = useState(initial?.market_country ?? preselected?.country ?? "");
-  const [region, setRegion] = useState(initial?.market_region ?? preselected?.region ?? "");
-  const [category, setCategory] = useState("");
-  const [domain, setDomain] = useState("");
-  const [issuer, setIssuer] = useState("");
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<CatalogueFilterState>({
+    ...EMPTY_FILTERS,
+    scope: initial?.market_country || preselected?.country ? "national" : "international",
+    country: initial?.market_country ?? preselected?.country ?? "",
+    // Every OPTIONAL filter starts at "all": the catalogue is never narrowed to a
+    // first organisation, area or type the holder did not choose.
+  });
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,7 +79,7 @@ export function InternationalCredentialForm({
   // Saving the claim and attaching evidence are separate existing secure operations.
   // A failed attachment retries only that attachment, never creates another claim.
   const savedId = useRef<string | null>(null);
-  const blank = {
+  const blank: InternationalCredentialInput = {
     definition_code: "",
     market_country: "",
     market_region: "",
@@ -69,11 +87,12 @@ export function InternationalCredentialForm({
     issued_on: "",
     valid_until: "",
     no_expiry: null,
+    authorisation_scope: "",
+    issuer_name: "",
   };
   const [draft, setDraft] = useState<InternationalCredentialInput>(
     initial ?? { ...blank, definition_code: preselected?.code ?? "" },
   );
-  const selected = definitions?.find((d) => d.code === draft.definition_code);
   const locations = metadata?.jurisdictions ?? [];
   const locationName = (code: string | null) => {
     const j = locations.find((j) => j.code === code);
@@ -83,30 +102,59 @@ export function InternationalCredentialForm({
   };
   const className = (value: string) =>
     CREDENTIAL_CLASSES[value as CredentialClass]?.[lang] || value;
-  const applicable = (definitions ?? []).filter((d) =>
-    scope === "international"
-      ? d.scope_code === "global_professional"
-      : !!country && d.country === country && (!d.region || d.region === region),
+  const domainName = (value: string) => DOMAIN_LABELS[value]?.[lang] || value;
+  // ONE index over governed catalogue relationships; every filter, count and
+  // search result below is derived from it. See credential-catalogue-filters.ts.
+  const index = useMemo(
+    () =>
+      buildCatalogueIndex({
+        definitions: metadata?.definitions ?? [],
+        organisationRoles: metadata?.organisationRoles ?? [],
+        definitionReviews: metadata?.definitionReviews ?? [],
+        definitionFacts: metadata?.definitionScopes ?? [],
+        abbreviations: metadata?.abbreviations ?? [],
+        issuerAliases: metadata?.issuerAliases ?? [],
+        organisations: (metadata?.issuers ?? []).map((i) => ({ id: i.id, name: i.name })),
+      }),
+    [metadata],
   );
-  const visible = applicable.filter(
-    (d) =>
-      (!domain ||
-        metadata?.definitionReviews?.find((r) => r.credential_code === d.code)
-          ?.professional_domain === domain) &&
-      (!category || d.credential_class === category) &&
-      (!issuer || d.issuer_id === issuer) &&
-      [
-        d.name_sv,
-        d.name_en,
-        d.issuer_name,
-        className(d.credential_class),
-        locationName(d.country),
-        locationName(d.region),
-      ]
-        .join(" ")
-        .toLocaleLowerCase()
-        .includes(search.toLocaleLowerCase().trim()),
-  );
+  const localisedHaystack = (d: IndexedDefinition) =>
+    [
+      className(d.credential_class),
+      d.country ? locationName(d.country) : "",
+      d.region ? locationName(d.region) : "",
+      d.domain ? domainName(d.domain) : "",
+    ].join(" ");
+  const answer = filterCatalogue(index, filters, localisedHaystack);
+  const visible = answer.results;
+  const selected = index.find((d) => d.code === draft.definition_code);
+  // The catalogue row itself, for the governed fields the filter index does not carry.
+  const selectedRow = definitions?.find((d) => d.code === draft.definition_code);
+  const rolesOf = (d: IndexedDefinition) => {
+    const byRole = new Map<OrganisationRoleKind, string>();
+    for (const o of d.organisations) if (!byRole.has(o.role)) byRole.set(o.role, o.name);
+    const onDocument = copy("anges på intyget", "stated on the certificate");
+    if (d.issuerStatedOnDocument) byRole.set("issuer", onDocument);
+    if (d.trainingProviderStatedOnDocument) byRole.set("training_provider", onDocument);
+    return (["regulator", "issuer", "training_provider"] as const)
+      .filter((role) => byRole.has(role))
+      .map((role) => ({ role, label: ROLE_LABELS[role][lang], name: byRole.get(role) as string }));
+  };
+  /** Apply one filter change; dependents that are no longer valid are cleared. */
+  const change = (patch: Partial<CatalogueFilterState>) => {
+    setFilters((current) => changeFilter(index, current, patch));
+    reset();
+  };
+  const scopeLabel =
+    selected?.country === "AE"
+      ? copy(
+          "Licensierat företag som kortet är knutet till",
+          "Licensed company the card is tied to",
+        )
+      : copy(
+          "Vad förordnandet omfattar (skyddsobjekt eller uppdrag)",
+          "What the appointment covers (protected site or assignment)",
+        );
   const reset = () => {
     setDraft(blank);
     setFile(null);
@@ -123,6 +171,16 @@ export function InternationalCredentialForm({
   ];
   async function save() {
     if (!selected || saving.current) return;
+    if (selected.requiresScope && !draft.authorisation_scope?.trim()) {
+      setError(copy("Ange vad behörigheten omfattar.", "State what the authorisation covers."));
+      return;
+    }
+    if (selected.issuerStatedOnDocument && (draft.issuer_name?.trim().length ?? 0) < 2) {
+      setError(
+        copy("Ange utfärdaren som står på intyget.", "Name the issuer stated on the certificate."),
+      );
+      return;
+    }
     saving.current = true;
     setBusy(true);
     setError(null);
@@ -131,8 +189,12 @@ export function InternationalCredentialForm({
         savedId.current = (
           await onSave({
             ...draft,
+            // Territory, issuer and scope follow the SELECTED DEFINITION, never a
+            // filter: a stale country, organisation or scope cannot be saved.
             market_country: selected.country ?? "",
             market_region: selected.region ?? "",
+            authorisation_scope: selected.requiresScope ? draft.authorisation_scope : "",
+            issuer_name: selected.issuerStatedOnDocument ? draft.issuer_name : "",
           })
         ).id;
       if (file) {
@@ -235,20 +297,14 @@ export function InternationalCredentialForm({
               return (
                 <label
                   key={value}
-                  className={`cursor-pointer rounded-lg border p-5 transition-colors ${scope === value ? "border-accent bg-accent/5" : "border-border bg-background"}`}
+                  className={`cursor-pointer rounded-lg border p-5 transition-colors ${filters.scope === value ? "border-accent bg-accent/5" : "border-border bg-background"}`}
                 >
                   <input
                     type="radio"
                     name="scope"
                     value={value}
-                    checked={scope === value}
-                    onChange={() => {
-                      setScope(value);
-                      setCategory("");
-                      setIssuer("");
-                      setDomain("");
-                      reset();
-                    }}
+                    checked={filters.scope === value}
+                    onChange={() => change({ scope: value as CatalogueFilterState["scope"] })}
                   />
                   <Icon className="my-3" size={24} aria-hidden="true" />
                   <span className="block font-medium">
@@ -273,117 +329,126 @@ export function InternationalCredentialForm({
           </div>
         )}
         {step === 2 && (
-          <div className="grid gap-5 sm:grid-cols-2">
-            {scope === "national" && (
-              <>
-                <label>
-                  {copy("Land", "Country")}
-                  <select
-                    required
-                    className={inputClass}
-                    value={country}
-                    onChange={(e) => {
-                      setCountry(e.target.value);
-                      setRegion("");
-                      reset();
-                    }}
-                  >
-                    <option value="">{copy("Välj land", "Select country")}</option>
-                    {locations
-                      .filter((j) => j.jurisdiction_type === "national")
-                      .map((j) => (
-                        <option key={j.code} value={j.code}>
-                          {locationName(j.code)}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-                <label>
-                  {copy("Region (valfritt)", "Region (optional)")}
-                  <select
-                    className={inputClass}
-                    value={region}
-                    onChange={(e) => {
-                      setRegion(e.target.value);
-                      reset();
-                    }}
-                  >
-                    <option value="">{copy("Alla tillgängliga", "All available")}</option>
-                    {locations
-                      .filter(
-                        (j) => j.jurisdiction_type === "regional" && j.country_code === country,
-                      )
-                      .map((j) => (
-                        <option key={j.code} value={j.code}>
-                          {locationName(j.code)}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              </>
-            )}
-            <label>
-              {copy("Yrkesområde", "Professional domain")}
-              <select
-                className={inputClass}
-                value={domain}
-                onChange={(e) => {
-                  setDomain(e.target.value);
-                  reset();
-                }}
-              >
-                <option value="">{copy("Alla yrkesområden", "All domains")}</option>
-                {[
-                  ...new Set(
-                    metadata?.definitionReviews
-                      ?.filter((r) => applicable.some((d) => d.code === r.credential_code))
-                      .map((r) => r.professional_domain) ?? [],
-                  ),
-                ].map((d) => (
-                  <option key={d} value={d}>
-                    {DOMAIN_LABELS[d]?.[lang] || d}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {copy("Typ av meriter", "Credential class")}
-              <select
-                className={inputClass}
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  reset();
-                }}
-              >
-                <option value="">{copy("Alla typer", "All classes")}</option>
-                {[...new Set(applicable.map((d) => d.credential_class))].map((c) => (
-                  <option key={c} value={c}>
-                    {className(c)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {copy("Organisation", "Organisation")}
-              <select
-                className={inputClass}
-                value={issuer}
-                onChange={(e) => {
-                  setIssuer(e.target.value);
-                  reset();
-                }}
-              >
-                <option value="">{copy("Alla organisationer", "All organisations")}</option>
-                {[...new Map(applicable.map((d) => [d.issuer_id, d.issuer_name])).entries()].map(
-                  ([id, name]) => (
-                    <option key={id} value={id}>
-                      {name}
+          <div className="space-y-5" data-credential-filters>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {filters.scope === "national" && (
+                <>
+                  <label>
+                    {copy("Land", "Country")}
+                    <select
+                      required
+                      data-filter="country"
+                      className={inputClass}
+                      value={filters.country}
+                      onChange={(e) => change({ country: e.target.value })}
+                    >
+                      <option value="">{copy("Välj land", "Select country")}</option>
+                      {/* EVERY governed country is offered, with its count — zero
+                          included. A holder whose market is not open to them must be
+                          able to choose it and be TOLD why it is empty, not find it
+                          missing from the list. */}
+                      {locations
+                        .filter((j) => j.jurisdiction_type === "national")
+                        .map((j) => (
+                          <option key={j.code} value={j.code}>
+                            {locationName(j.code)} (
+                            {answer.countries.find((c) => c.value === j.code)?.count ?? 0})
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  {answer.regionRelevant && (
+                    <label>
+                      {copy("Region — sökfilter (valfritt)", "Region — search filter (optional)")}
+                      <select
+                        data-filter="region"
+                        className={inputClass}
+                        value={filters.region}
+                        onChange={(e) => change({ region: e.target.value })}
+                      >
+                        <option value="">{copy("Alla tillgängliga", "All available")}</option>
+                        {answer.regions.map((r) => (
+                          <option key={r.value} value={r.value}>
+                            {locationName(r.value)} ({r.count})
+                          </option>
+                        ))}
+                      </select>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        {copy(
+                          "Meriter som gäller i hela landet visas alltid. Meritens eget giltighetsområde bestäms av meriten, inte av filtret.",
+                          "Country-wide credentials always stay listed. A credential's own territory is set by the credential, not by this filter.",
+                        )}
+                      </span>
+                    </label>
+                  )}
+                </>
+              )}
+              <label>
+                {copy("Yrkesområde", "Professional area")}
+                <select
+                  data-filter="domain"
+                  className={inputClass}
+                  value={filters.domain}
+                  onChange={(e) => change({ domain: e.target.value })}
+                >
+                  <option value="">{copy("Alla yrkesområden", "All areas")}</option>
+                  {answer.domains.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {domainName(d.value)} ({d.count})
                     </option>
-                  ),
-                )}
-              </select>
-            </label>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {copy("Typ av merit", "Credential type")}
+                <select
+                  data-filter="category"
+                  className={inputClass}
+                  value={filters.category}
+                  onChange={(e) => change({ category: e.target.value })}
+                >
+                  <option value="">{copy("Alla typer", "All types")}</option>
+                  {answer.categories.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {className(c.value)} ({c.count})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                {copy("Organisation", "Organisation")}
+                <select
+                  data-filter="organisation"
+                  className={inputClass}
+                  value={filters.organisation}
+                  onChange={(e) => change({ organisation: e.target.value })}
+                >
+                  <option value="">{copy("Alla organisationer", "All organisations")}</option>
+                  {answer.organisations.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.name} ({o.count})
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {copy(
+                    "Tillsynsmyndighet eller utfärdare. Du behöver inte känna till den för att hitta din merit.",
+                    "A regulator or an issuer. You do not need to know it to find your credential.",
+                  )}
+                </span>
+              </label>
+            </div>
+            <FilterSummary
+              shown={visible.length}
+              total={answer.total}
+              narrowed={answer.narrowed}
+              needsCountry={filters.scope === "national" && !filters.country}
+              lang={lang}
+              onClear={() => {
+                setFilters((current) => clearOptionalFilters(current));
+                reset();
+              }}
+            />
           </div>
         )}
         {step === 3 && (
@@ -393,12 +458,13 @@ export function InternationalCredentialForm({
               <input
                 type="search"
                 className={inputClass}
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  reset();
-                }}
-                placeholder={copy("Namn, organisation, land…", "Name, organisation, country…")}
+                data-filter="search"
+                value={filters.search}
+                onChange={(e) => change({ search: e.target.value })}
+                placeholder={copy(
+                  "Namn, förkortning, kod eller organisation…",
+                  "Name, abbreviation, code or organisation…",
+                )}
               />
             </label>
             <label className="block">
@@ -415,18 +481,51 @@ export function InternationalCredentialForm({
                 <option value="">{copy("Välj merit", "Select credential")}</option>
                 {visible.map((d) => (
                   <option key={d.code} value={d.code}>
-                    {d[lang === "sv" ? "name_sv" : "name_en"]} — {d.issuer_name}
+                    {d[lang === "sv" ? "name_sv" : "name_en"]}
+                    {" — "}
+                    {d.issuer_name ??
+                      d.organisations.find((o) => o.role === "regulator")?.name ??
+                      copy("utfärdare anges på intyget", "issuer stated on the certificate")}
                   </option>
                 ))}
               </select>
             </label>
+            <FilterSummary
+              shown={visible.length}
+              total={answer.total}
+              narrowed={answer.narrowed}
+              needsCountry={filters.scope === "national" && !filters.country}
+              lang={lang}
+              onClear={() => {
+                setFilters((current) => clearOptionalFilters(current));
+                reset();
+              }}
+            />
             {!visible.length && (
-              <p role="status" className="rounded-xl bg-muted p-4 text-sm">
-                {copy(
-                  "Din merit är för närvarande inte tillgängligt i CQrityjob Security Passport.",
-                  "Your credential is not currently available in CQrityjob Security Passport.",
-                )}
-              </p>
+              <>
+                <p role="status" className="rounded-xl bg-muted p-4 text-sm" data-catalogue-empty>
+                  {copy(
+                    "Din merit är för närvarande inte tillgänglig i CQrityjob Security Passport.",
+                    "Your credential is not currently available in CQrityjob Security Passport.",
+                  )}
+                </p>
+                <p className="text-sm text-muted-foreground" data-catalogue-empty-reason>
+                  {answer.narrowed
+                    ? copy(
+                        "Inget matchar de valda filtren eller sökningen. Rensa filtren för att se hela katalogen.",
+                        "Nothing matches the chosen filters or the search. Clear the filters to see the whole catalogue.",
+                      )
+                    : filters.scope === "national" && filters.country
+                      ? copy(
+                          "Inga meriter är tillgängliga för dig i det här landet ännu. Marknaden är antingen inte öppnad för ditt konto eller så är dess meriter inte godkända än.",
+                          "No credentials are available to you in this country yet. Either the market is not open to your account or its credentials are not approved yet.",
+                        )
+                      : copy(
+                          "Katalogen är stängd: du kan inte lägga till en egen merittyp.",
+                          "The catalogue is closed: you cannot add a credential type of your own.",
+                        )}
+                </p>
+              </>
             )}
           </>
         )}
@@ -439,13 +538,23 @@ export function InternationalCredentialForm({
             <p className="mt-1 text-lg font-semibold">
               {selected[lang === "sv" ? "name_sv" : "name_en"]}
             </p>
-            <p className="mt-1 text-sm">
-              {selected.issuer_name} · {locationName(selected.region ?? selected.country)}
+            <p className="mt-1 text-sm" data-credential-territory>
+              {selected.scope_code === "global_professional"
+                ? copy("Internationell · inget land", "International · no country")
+                : `${copy("Gäller i", "Valid in")}: ${locationName(selected.region ?? selected.country)}`}
             </p>
-            {selected.official_url && (
+            <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2" data-credential-roles>
+              {rolesOf(selected).map((r) => (
+                <div key={r.role} className="min-w-0">
+                  <dt className="text-xs text-muted-foreground">{r.label}</dt>
+                  <dd className="break-words">{r.name}</dd>
+                </div>
+              ))}
+            </dl>
+            {selectedRow?.official_url && (
               <a
                 className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline"
-                href={selected.official_url}
+                href={selectedRow?.official_url}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -456,6 +565,45 @@ export function InternationalCredentialForm({
         )}
         {step === 4 && selected && (
           <div className="grid gap-5 sm:grid-cols-2">
+            {selected.issuerStatedOnDocument && (
+              <label className="sm:col-span-2">
+                {copy("Utfärdare enligt intyget", "Issuer stated on the certificate")}
+                <input
+                  required
+                  data-field="issuer-name"
+                  className={inputClass}
+                  minLength={2}
+                  maxLength={160}
+                  value={draft.issuer_name ?? ""}
+                  onChange={(e) => setDraft({ ...draft, issuer_name: e.target.value })}
+                />
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {copy(
+                    "Utbildningsföretaget eller examensutfärdaren som står på ditt intyg. Tillsynsmyndigheten är inte utbildare.",
+                    "The training company or awarding organisation printed on your certificate. The regulator is not the trainer.",
+                  )}
+                </span>
+              </label>
+            )}
+            {selected.requiresScope && (
+              <label className="sm:col-span-2">
+                {scopeLabel}
+                <input
+                  required
+                  data-field="authorisation-scope"
+                  className={inputClass}
+                  maxLength={200}
+                  value={draft.authorisation_scope ?? ""}
+                  onChange={(e) => setDraft({ ...draft, authorisation_scope: e.target.value })}
+                />
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {copy(
+                    "Obligatoriskt: den här behörigheten gäller bara inom sin omfattning. Texten visas inte i en anonym delning.",
+                    "Required: this authorisation is valid only within its scope. The text is not shown in an anonymous share.",
+                  )}
+                </span>
+              </label>
+            )}
             <label className="sm:col-span-2">
               {copy(
                 "Certifikats- eller licensnummer (valfritt)",
@@ -483,13 +631,13 @@ export function InternationalCredentialForm({
                 lang={lang}
                 className={inputClass}
                 min={draft.issued_on || undefined}
-                required={selected.requires_valid_until}
+                required={selectedRow?.requires_valid_until}
                 disabled={draft.no_expiry === true}
                 value={draft.valid_until}
                 onChange={(value) => setDraft({ ...draft, valid_until: value })}
               />
             </label>
-            {selected.allows_no_expiry && !selected.requires_valid_until && (
+            {selectedRow?.allows_no_expiry && !selectedRow?.requires_valid_until && (
               <label className="flex min-h-11 items-center gap-2 sm:col-span-2">
                 <input
                   type="checkbox"
@@ -564,6 +712,17 @@ export function InternationalCredentialForm({
           <>
             <dl className="grid grid-cols-1 gap-4 rounded-lg border border-border bg-secondary/30 p-5 text-sm sm:grid-cols-2">
               {[
+                ...(selected.issuerStatedOnDocument
+                  ? [
+                      [
+                        copy("Utfärdare enligt intyget", "Issuer on the certificate"),
+                        draft.issuer_name,
+                      ],
+                    ]
+                  : []),
+                ...(selected.requiresScope
+                  ? [[copy("Omfattning", "Scope"), draft.authorisation_scope]]
+                  : []),
                 [copy("Certifikats- eller licensnummer", "Identifier"), draft.identifier],
                 [copy("Utfärdad", "Issued"), draft.issued_on],
                 [
@@ -649,5 +808,45 @@ export function InternationalCredentialForm({
         )}
       </form>
     </section>
+  );
+}
+
+/** "Showing N of M" and the one control that undoes every optional filter. */
+function FilterSummary({
+  shown,
+  total,
+  narrowed,
+  needsCountry,
+  lang,
+  onClear,
+}: {
+  shown: number;
+  total: number;
+  narrowed: boolean;
+  needsCountry: boolean;
+  lang: "sv" | "en";
+  onClear: () => void;
+}) {
+  const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
+  if (needsCountry) return null;
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm"
+      data-filter-summary
+    >
+      <p aria-live="polite" data-filter-count>
+        {copy(`Visar ${shown} av ${total} meriter`, `Showing ${shown} of ${total} credentials`)}
+      </p>
+      {narrowed && (
+        <button
+          type="button"
+          data-clear-filters
+          className="min-h-11 rounded-md border border-input bg-background px-4 text-sm"
+          onClick={onClear}
+        >
+          {copy("Rensa filter", "Clear filters")}
+        </button>
+      )}
+    </div>
   );
 }

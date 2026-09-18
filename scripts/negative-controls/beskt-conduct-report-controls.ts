@@ -866,11 +866,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the APPLIED migration is put back on the owner-level pending list, where a resolved name hides the next genuinely stuck migration behind an expectation and contradicts release-state.json",
     file: FRONTIER,
-    // Applied now, so the defect inverts: the anchor is the empty list Prettier
-    // produces when nothing is pending.
-    find: "const expectedPending: string[] = [];",
+    // Insert the applied version while preserving genuinely pending migrations.
+    find: "const expectedPending: string[] = [",
     replace:
-      'const expectedPending: string[] = ["20261117090000_bcp_conduct_prompts_and_report.sql"];',
+      'const expectedPending: string[] = ["20261117090000_bcp_conduct_prompts_and_report.sql",',
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },

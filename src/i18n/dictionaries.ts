@@ -130,13 +130,16 @@ export const dictionaries = {
     "home.passportPreview.title": "Meriter med tydlig källa och status",
     "home.passportPreview.body":
       "Du väljer vad mottagaren ser. Delningslänkar är tidsbegränsade och förblir under din kontroll.",
-    "home.passportPreview.markets": "Marknader som stöds i dag",
-    "home.passportPreview.issuer": "Källa",
-    "home.passportPreview.source": "Dokumenterad källa",
-    "home.passportPreview.jurisdiction": "Jurisdiktion",
-    "home.passportPreview.marketScope": "Vald marknad",
-    "home.passportPreview.trustState": "Tillitstillstånd",
-    "home.passportPreview.sharing": "Delning",
+    "home.passportPreview.markets": "Marknader i dag",
+    // The illustrative card. FICTIONAL, and says so twice: a label on the
+    // card and a caption under it. It must never read as a real holder.
+    "home.passportPreview.exampleLabel": "Exempel",
+    "home.passportPreview.exampleCaption": "Påhittad person, påhittade meriter.",
+    "home.passportPreview.exampleName": "Exempel Exempelsson",
+    // Replaces "Dokumenterad källa" and "Tillitstillstånd: Dokumenterat", which
+    // sat on the panel as decoration and read as a statement about somebody.
+    "home.passportPreview.statusNote":
+      "Varje merit visar sin egen status. Registrerad är inte verifierad.",
 
     // ── THE TWO ENTRY CARDS ─────────────────────────────────────────────
     //
@@ -145,8 +148,12 @@ export const dictionaries = {
     // an ORDER and not a hierarchy, and Career Discovery may never be
     // styled as the quiet text link it used to be.
     "home.entry.passport.title": "Bygg ditt Security Passport",
+    // Certifications, licences and authorisations — and nothing else. Employment
+    // history is the CV's; personal details and current profession are the
+    // Profile's. This sentence used to promise "experience, education and
+    // certifications", which advertised the Passport as the editor for both.
     "home.entry.passport.body":
-      "Samla erfarenhet, utbildning och certifieringar. Välj Sverige, Storbritannien eller Dubai och bestäm själv vad du delar.",
+      "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",
     "home.entry.discovery.title": "Upptäck din säkerhetskarriär",
     "home.entry.discovery.body":
       "Utforska din arbetsinriktning och få förklarade förslag på roller och karriärvägar inom säkerhet.",
@@ -211,7 +218,7 @@ export const dictionaries = {
     "home.markets.eyebrow": "Security Passport",
     "home.markets.title": "Byggt för en karriär som rör sig",
     "home.markets.body":
-      "Ditt Security Passport stöder i dag tre marknader. Du väljer själv vilka uppgifter du delar, med vem och hur länge.",
+      "Sverige är öppet. Storbritannien och Dubai är i sluten pilot. Du väljer själv vad du delar och med vem.",
     "home.markets.SE": "Sverige",
     "home.markets.GB": "Storbritannien",
     "home.markets.AE-DU": "Dubai, Förenade Arabemiraten",
@@ -2545,6 +2552,7 @@ export const dictionaries = {
     "admin.nav.workforce": "Personal",
     "admin.nav.feedback": "Betafeedback",
     "admin.nav.passportVerification": "Passport-verifiering",
+    "admin.nav.passportCatalogue": "Passport-katalog",
     "admin.overview.section.passport": "Security Passport",
     "admin.overview.metric.passportOpen": "Väntar på granskning",
     "admin.overview.metric.passportClarification": "Väntar på komplettering",
@@ -7682,17 +7690,16 @@ export const dictionaries = {
     "home.passportPreview.title": "Credentials with a clear source and status",
     "home.passportPreview.body":
       "You choose what a recipient sees. Share links expire and remain under your control.",
-    "home.passportPreview.markets": "Markets supported today",
-    "home.passportPreview.issuer": "Source",
-    "home.passportPreview.source": "Documented source",
-    "home.passportPreview.jurisdiction": "Jurisdiction",
-    "home.passportPreview.marketScope": "Selected market",
-    "home.passportPreview.trustState": "Trust state",
-    "home.passportPreview.sharing": "Sharing",
+    "home.passportPreview.markets": "Markets today",
+    "home.passportPreview.exampleLabel": "Example",
+    "home.passportPreview.exampleCaption": "Fictional person, fictional credentials.",
+    "home.passportPreview.exampleName": "Example Holder",
+    "home.passportPreview.statusNote":
+      "Each credential shows its own status. Registered is not verified.",
 
     "home.entry.passport.title": "Build your Security Passport",
     "home.entry.passport.body":
-      "Bring together experience, education and credentials. Choose Sweden, Great Britain or Dubai and control what you share.",
+      "Bring together your certifications, licences and professional authorisations — internationally and by country. Add supporting evidence and choose what you share.",
     "home.entry.discovery.title": "Discover your security career",
     "home.entry.discovery.body":
       "Explore your work orientation and receive explained suggestions for security roles and career paths.",
@@ -7730,7 +7737,7 @@ export const dictionaries = {
     "home.markets.eyebrow": "Security Passport",
     "home.markets.title": "Built for a career that moves",
     "home.markets.body":
-      "Your Security Passport supports three markets today. You decide which records you share, with whom and for how long.",
+      "Sweden is open. Great Britain and Dubai are in closed pilot. You decide what you share and with whom.",
     "home.markets.SE": "Sweden",
     "home.markets.GB": "Great Britain",
     "home.markets.AE-DU": "Dubai, United Arab Emirates",
@@ -9881,6 +9888,7 @@ export const dictionaries = {
     "admin.nav.workforce": "Workforce",
     "admin.nav.feedback": "Beta feedback",
     "admin.nav.passportVerification": "Passport verification",
+    "admin.nav.passportCatalogue": "Passport catalogue",
     "admin.overview.section.passport": "Security Passport",
     "admin.overview.metric.passportOpen": "Waiting for review",
     "admin.overview.metric.passportClarification": "Waiting for clarification",

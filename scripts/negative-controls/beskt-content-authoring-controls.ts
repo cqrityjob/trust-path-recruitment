@@ -667,11 +667,11 @@ const MUTATIONS: readonly Mutation[] = [
     file: FRONTIER,
     // This migration is APPLIED now, so the defect inverts: putting it back
     // on the owner-level pending list would contradict release-state.json,
-    // which records it as applied with hosted evidence. The anchor is the
-    // empty list Prettier produces when nothing is pending.
-    find: "const expectedPending: string[] = [];",
+    // which records it as applied with hosted evidence. Preserve any genuinely
+    // pending migrations when inserting this already-applied version.
+    find: "const expectedPending: string[] = [",
     replace:
-      'const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql"];',
+      'const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql",',
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },

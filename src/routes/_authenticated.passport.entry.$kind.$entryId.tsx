@@ -811,6 +811,10 @@ function PassportEntryRoute() {
                     issued_on: claim.issuedOn ?? "",
                     valid_until: claim.validUntil ?? "",
                     no_expiry: internationalDetail?.no_expiry ?? null,
+                    // A correction must restate the scope and the document-stated
+                    // issuer, or a scoped credential could never be corrected.
+                    authorisation_scope: claim.authorisationScope ?? "",
+                    issuer_name: claim.issuerName ?? "",
                   }}
                 />
               ) : (

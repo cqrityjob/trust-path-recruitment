@@ -146,6 +146,27 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "a deliberate stack below sm",
   },
+  {
+    id: "PCS-NC-BLANK-JURISDICTION-READS-AS-GLOBAL-ON-THE-SHARED-CARD",
+    defect:
+      "the shared card treats a blank jurisdiction as global, so an old payload's national credential with no stated country wears a globe",
+    file: "src/lib/security-passport/recipient-presentation.ts",
+    find: '        c.scope_code === "global_professional"\n          ? "global"',
+    replace:
+      '        c.scope_code === "global_professional" || c.jurisdiction == null\n          ? "global"',
+    guard: GUARD,
+    expect: "stays unknown",
+  },
+  {
+    id: "PCS-NC-SHARED-CARD-IGNORES-THE-DEFINITION-SCOPE",
+    defect:
+      "the shared card stops passing the definition's scope, so a disclosed CPP loses its globe again — the original recipient gap",
+    file: "src/components/security-passport/live/RecipientPassportCard.tsx",
+    find: '                    global: c.definitionScope === "global",\n',
+    replace: "",
+    guard: GUARD,
+    expect: "wears the globe",
+  },
 ];
 
 runControls("passport-credential-shield", MUTATIONS);

@@ -80,6 +80,11 @@ export interface RecipientCredential {
   readonly jurisdiction: string | null;
   /** The emirate or region, where the regulator is sub-national. */
   readonly subJurisdiction: string | null;
+  /** What the DEFINITION declares: an international professional
+   *  certification, a national/regional one, or unknown. Read from the
+   *  payload's `scope_code` and from nothing else — a null jurisdiction is
+   *  NOT "global", and a payload that predates the key is "unknown". */
+  readonly definitionScope: "global" | "national" | "unknown";
   /** The approval has boundaries. True on every package, including the public
    *  card, where the exact scope is deliberately withheld. */
   readonly scopeLimited: boolean;
@@ -324,6 +329,12 @@ export function buildRecipientPresentation(
       issuer: c.issuer,
       jurisdiction: c.jurisdiction,
       subJurisdiction: c.sub_jurisdiction ?? null,
+      definitionScope:
+        c.scope_code === "global_professional"
+          ? "global"
+          : c.scope_code === "national_regulated"
+            ? "national"
+            : "unknown",
       scopeLimited: c.scope_limited === true,
       authorisationScope: c.authorisation_scope ?? null,
       issuedOn: c.issued_on,

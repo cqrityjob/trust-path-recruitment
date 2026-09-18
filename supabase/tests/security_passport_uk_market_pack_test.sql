@@ -190,8 +190,20 @@ BEGIN
   VALUES (_h, 'training', 'Ordningsvaktsutbildning (grundutbildning)', 'OV_TRAINING', 'SE',
           'Polismyndigheten', 'AO/2026/DS/00417');
   RAISE NOTICE 'ok  4.4 an approved training certificate number is not forced into the licence shape';
-  IF EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_QUAL_DS') THEN RAISE EXCEPTION 'ASSERTION FAILED: qualification with no governed issuer exposed'; END IF;
-  RAISE NOTICE 'ok  4.5 qualification without a governed issuer remains withheld even after market activation';
+  -- Since 20261126090000 a licence-linked qualification is LISTED once its market
+  -- is active: the organisation-role model says its issuer is stated on the
+  -- certificate, under SIA as regulator. No issuer is invented for it, and a row
+  -- that names none is refused.
+  IF NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_QUAL_DS' AND issuer_name IS NULL) THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 4.5 the qualification must be listed with NO governed issuer'; END IF;
+  DECLARE _msg text; BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name)
+    SELECT _h,claim_type,name_en,code,country,NULL FROM public.sp_approved_credential_catalogue WHERE code='UK_SIA_QUAL_DS';
+    RAISE EXCEPTION 'ASSERTION FAILED: 4.5 a qualification was stored with no awarding organisation';
+  EXCEPTION WHEN check_violation THEN GET STACKED DIAGNOSTICS _msg = MESSAGE_TEXT;
+    IF _msg NOT LIKE 'SP_CREDENTIAL_REQUIRES_ISSUER%' THEN RAISE EXCEPTION 'ASSERTION FAILED: 4.5 refused for another reason: %', _msg; END IF;
+  END;
+  RAISE NOTICE 'ok  4.5 an activated qualification is listed without an invented issuer and refuses a row that names none';
 
   -- =====================================================================
   RAISE NOTICE 'GROUP 5 -- nothing crosses a market, in either direction';

@@ -368,6 +368,78 @@ check(
   "never a count of the holder's whole collection, and no withheld title anywhere",
 );
 check(!/<a\b/.test(region), "the recipient's +N is a count, not a link — there is nowhere to go");
+// ── DEFINITION → PAYLOAD → MODEL → SHIELD ────────────────────────────
+// The payload's `scope_code` (20261125090000) is what a recipient card draws
+// a globe from. A blank jurisdiction alone is not global; an older payload
+// without the key is unknown, and unknown wears no scope at all.
+{
+  const scoped = buildRecipientPresentation(
+    {
+      ...(payload as unknown as Record<string, unknown>),
+      verified_claims: [
+        {
+          ...claimOf(0, "CPP"),
+          credential_code: "INTL_ASIS_CPP",
+          jurisdiction: null,
+          scope_code: "global_professional",
+        },
+        { ...claimOf(1, "OV"), credential_code: "OV", scope_code: "national_regulated" },
+        {
+          ...claimOf(2, "SIRA course"),
+          credential_code: "AE_DU_BASIC_FIRE_SAFETY",
+          jurisdiction: "AE",
+          sub_jurisdiction: "AE-DU",
+          scope_code: "national_regulated",
+        },
+        {
+          ...claimOf(3, "Old share, no key"),
+          credential_code: "INTL_ASIS_PSP",
+          jurisdiction: null,
+        },
+      ],
+    } as unknown as RecipientPayloadActive,
+    "2026-09-17",
+  );
+  check(
+    scoped.credentials.map((c) => c.definitionScope).join() === "global,national,national,unknown",
+    "the model reads the definition's scope from the payload and nothing else",
+  );
+  const card = html(<RecipientPassportCard presentation={scoped} />);
+  // One shield's markup: from its own marker to the next shield, the +N slot
+  // or the end of the list — whichever comes first.
+  const shieldOf = (key: string) => {
+    const start = card.indexOf(`data-credential-shield="${key}"`);
+    if (start < 0) return "";
+    const rest = card.slice(start + 1);
+    const ends = [
+      rest.indexOf("data-credential-shield="),
+      rest.indexOf("data-shield-overflow"),
+      rest.indexOf("</ul>"),
+    ].filter((i) => i >= 0);
+    return card.slice(start, start + 1 + Math.min(...ends));
+  };
+  check(
+    /data-scope-mark="globe"/.test(shieldOf("c0")) &&
+      !/data-flag=/.test(shieldOf("c0")) &&
+      />Global</.test(shieldOf("c0")),
+    "a disclosed international certification wears the globe and the word Global",
+  );
+  check(
+    /data-flag="SE"/.test(shieldOf("c1")) && />Sweden</.test(shieldOf("c1")),
+    "a disclosed Swedish credential keeps its flag and written scope",
+  );
+  check(
+    /data-flag="AE"/.test(shieldOf("c2")) &&
+      />Dubai</.test(shieldOf("c2")) &&
+      !/United Arab Emirates/.test(shieldOf("c2")),
+    "a disclosed Dubai credential keeps the emirate, not the country",
+  );
+  check(
+    !/data-scope-mark=/.test(shieldOf("c3")) && !/>Global</.test(shieldOf("c3")),
+    "a payload without the key stays unknown: no globe, no flag, no guessed scope",
+  );
+}
+
 const cardSrc = read("src/components/security-passport/live/RecipientPassportCard.tsx");
 check(
   /credentials=\{presentation\.credentials\.map\(/.test(cardSrc) &&

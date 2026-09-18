@@ -62,6 +62,53 @@ export const TRUST_PALETTE = {
   danger: "#E06B6B",
 } as const;
 
+/**
+ * The Passport card's ground — everywhere a card is drawn.
+ *
+ * ── ONE SURFACE, AND IT IS QUIET ───────────────────────────────────────
+ *
+ * The card used to wear diagonal stripes and a grid on the overview and the
+ * homepage, a wave engraving on the shared card and concentric circles in the
+ * exported image: four decorations for one object, each loud enough to compete
+ * with the name printed on it. A credential card's authority is its content.
+ *
+ * So the ground is a deep navy with a tonal gradient subtle enough to read as
+ * material, a restrained hairline border and a soft shadow — and nothing else.
+ * No pattern sits behind text, behind a shield or behind a QR code, which
+ * keeps the QR's quiet zone truly quiet.
+ *
+ * The three stops are the three palette navies `passport-fixture-check`
+ * already proves every ink colour clears WCAG AA against. `src/styles.css`
+ * mirrors them as `--passport-ground-*` for the `passport-signature` utility;
+ * `passport-card-surface-check` asserts the mirror has not drifted.
+ */
+export const PASSPORT_CARD_SURFACE = {
+  stops: [
+    { offset: 0, color: TRUST_PALETTE.navyRaised },
+    { offset: 0.46, color: TRUST_PALETTE.navy },
+    { offset: 1, color: TRUST_PALETTE.navyDeep },
+  ],
+  /** Degrees, CSS convention. Near-vertical: a sheen, not a stripe. */
+  angle: 168,
+  border: "rgba(244, 247, 251, 0.12)",
+  shadow: "0 18px 40px -24px rgba(6, 20, 38, 0.55), 0 2px 6px -2px rgba(6, 20, 38, 0.25)",
+} as const;
+
+/** The ground as a CSS `background` value, for an inline-styled card. */
+export function passportCardBackground(): string {
+  const s = PASSPORT_CARD_SURFACE;
+  return `linear-gradient(${s.angle}deg, ${s.stops
+    .map((x) => `${x.color} ${Math.round(x.offset * 100)}%`)
+    .join(", ")})`;
+}
+
+/** The same ground as SVG gradient stops, for an exported image. */
+export function passportCardSvgStops(): string {
+  return PASSPORT_CARD_SURFACE.stops
+    .map((x) => `<stop offset="${Math.round(x.offset * 100)}%" stop-color="${x.color}"/>`)
+    .join("");
+}
+
 /** Milestone bands. Internal only — never rendered as a word. */
 export type MilestoneTier = "entry" | "established" | "senior";
 

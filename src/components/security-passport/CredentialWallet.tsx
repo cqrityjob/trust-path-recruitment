@@ -171,6 +171,18 @@ export function CredentialWallet({
     groups.set(key, g);
   }
 
+  /** A holder-stated issuer, or null when it is really a governed authority's name. */
+  const statedIssuer = (value: string | null | undefined): string | null => {
+    const stated = value?.trim();
+    if (!stated) return null;
+    const lower = stated.toLocaleLowerCase();
+    const governed = metadata.issuers.some((i) => {
+      const name = i.name.toLocaleLowerCase();
+      return name.includes(lower) || lower.includes(name);
+    });
+    return governed ? null : stated;
+  };
+
   const issuerOf = (r: Row) => {
     const role = metadata.organisationRoles?.find(
       (o) => o.credential_code === r.claim.credentialCode && o.role === "issuer",
@@ -182,10 +194,28 @@ export function CredentialWallet({
     return (
       official ||
       (role?.document_specific
-        ? copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
+        ? // The holder named the awarding organisation or training provider on
+          // the certificate. It is shown as THEIR statement — unless what is
+          // stored is the name of a governed authority. Records created before
+          // the closed catalogue defaulted the issuer to the Police; a regulator
+          // must never be presented as the trainer of a course it does not run.
+          statedIssuer(r.claim.issuerName)
+          ? `${statedIssuer(r.claim.issuerName)} · ${copy("enligt intyget", "as stated on the certificate")}`
+          : copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
         : r.definition?.issuer_name) ||
       copy("Officiell organisation behöver bekräftas", "Official organisation needs confirmation")
     );
+  };
+
+  /** The governed REGULATOR, shown only where it is not also the issuer. */
+  const regulatorOf = (r: Row) => {
+    const roles = (metadata.organisationRoles ?? []).filter(
+      (o) => o.credential_code === r.claim.credentialCode,
+    );
+    const regulator = roles.find((o) => o.role === "regulator");
+    const issuer = roles.find((o) => o.role === "issuer");
+    if (!regulator?.authority_id || regulator.authority_id === issuer?.authority_id) return null;
+    return metadata.issuers.find((i) => i.id === regulator.authority_id)?.name ?? null;
   };
 
   const renderRow = (r: Row) => {
@@ -214,6 +244,22 @@ export function CredentialWallet({
             {r.name}
           </p>
           <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{issuerOf(r)}</p>
+          {regulatorOf(r) && (
+            <p
+              data-credential-regulator
+              className="text-xs text-muted-foreground [overflow-wrap:anywhere]"
+            >
+              {copy("Tillsyn", "Regulator")}: {regulatorOf(r)}
+            </p>
+          )}
+          {c.authorisationScope?.trim() && (
+            <p
+              data-credential-authorisation-scope
+              className="text-xs text-foreground [overflow-wrap:anywhere]"
+            >
+              {copy("Omfattning", "Scope")}: {c.authorisationScope.trim()}
+            </p>
+          )}
         </div>
         <div className="col-start-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 sm:contents">
           <p
@@ -282,12 +328,8 @@ export function CredentialWallet({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start">
         <header
           data-passport-identity-surface
-          className="passport-signature relative isolate flex min-w-0 flex-col justify-between gap-7 overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] [container-type:inline-size] sm:p-7"
+          className="passport-signature passport-card-frame relative isolate flex min-w-0 flex-col gap-6 overflow-hidden rounded-xl p-5 text-primary-foreground [container-type:inline-size] sm:gap-7 sm:p-7"
         >
-          <div
-            aria-hidden="true"
-            className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-52 opacity-25"
-          />
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xl font-semibold tracking-tight">CQrityjob</p>

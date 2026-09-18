@@ -307,10 +307,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the frontier selection check still expects the migration pending after production has applied it, which would mask the next genuinely stuck migration behind a stale expectation",
     file: FRONTIER,
-    // Plant an already-applied version into the empty pending frontier.
-    find: "const expectedPending: string[] = [];",
+    // Insert the applied version while preserving genuinely pending migrations.
+    find: "const expectedPending: string[] = [",
     replace:
-      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql"];',
+      'const expectedPending: string[] = ["20261115090000_scp_interview_method_library_tenant_read.sql",',
     guard: GUARD,
     expect: "IMTR-REGISTRATION",
   },
