@@ -3,6 +3,13 @@
 #
 #   scripts/local-stack/test-env.sh           build from scratch (replay + seed)
 #   scripts/local-stack/test-env.sh --reseed  back to the seeded start state
+#   scripts/local-stack/test-env.sh --with-beskt-v01
+#                                             build, then import BESKT v0.1 (the
+#                                             2026-09-10 specification) as the
+#                                             synthetic editor, release it through
+#                                             five SYNTHETIC test reviews, admit
+#                                             BESKT Journey AB, and make that the
+#                                             seeded start state
 #   scripts/local-stack/down.sh               stop it
 #
 # Starts PostgreSQL 16 in Docker on 127.0.0.1:5432 and PostgREST from a local
@@ -53,6 +60,23 @@ if [ -n "${SECURITY_REF:-}" ]; then
       echo "    applied $(basename "$f")"
     fi
   done
+  psql -h 127.0.0.1 -U postgres -d postgres -q \
+    -c "DROP DATABASE IF EXISTS beskt_e2e_seed WITH (FORCE);" \
+    -c "CREATE DATABASE beskt_e2e_seed TEMPLATE beskt_e2e;"
+  scripts/local-stack/up.sh --reseed
+fi
+
+if [ "${1:-}" = "--with-beskt-v01" ]; then
+  echo "==> Importing BESKT v0.1 as the synthetic editor (test environment only)"
+  export BESKT_SUPABASE_URL="http://127.0.0.1:${GATEWAY_PORT}"
+  export BESKT_SUPABASE_ANON_KEY="$(sed -n 's/^VITE_SUPABASE_PUBLISHABLE_KEY=//p' .env.local)"
+  export BESKT_EDITOR_EMAIL="beskt-journey-editor@local.test" BESKT_EDITOR_PASSWORD="LocalJourney!2026"
+  export BCP_DATABASE_URL="postgresql://postgres:${PGPASSWORD}@127.0.0.1:5432/beskt_e2e"
+  version="$(bun run scripts/beskt-import/import-beskt-v0-1.ts --method rekrytering --synthetic \
+               | sed -n 's/^METHOD_VERSION_ID=//p')"
+  bun run scripts/beskt-import/import-beskt-v0-1.ts --method sakerhet --synthetic > /dev/null
+  bun run scripts/beskt-import/synthetic-release.ts "$version"
+  scripts/local-stack/down.sh > /dev/null 2>&1 || true
   psql -h 127.0.0.1 -U postgres -d postgres -q \
     -c "DROP DATABASE IF EXISTS beskt_e2e_seed WITH (FORCE);" \
     -c "CREATE DATABASE beskt_e2e_seed TEMPLATE beskt_e2e;"

@@ -28,12 +28,16 @@ fields, the roles, the prohibitions (no score, ranking, pass/fail,
 recommendation, credibility or suitability inference), the five review gates,
 and `release_scope = 'synthetic_internal_only'` — the only representable value.
 
-**Not decided anywhere in the repository:** the method's actual questions,
-exposure profiles, prompts, routing and evidence anchors. They must be written
-by the editor and reviewed by the five gates. Nothing in this repository may be
-presented as that content or as its review. The synthetic method in the local
-test environment is test content, labelled so, and must never be copied to
-production.
+**The method content exists:** _CQrityjob BESKT – metodstöd och byggspecifikation
+v0.1_ (10 September 2026). It is mapped onto the governed objects and imported
+by the editor through `scripts/beskt-import/import-beskt-v0-1.ts` — see
+`docs/architecture/beskt-v0-1-import-mapping.md` for what maps directly, what
+was adapted and what is not yet supported. What remains is the **review** of
+that content by the five gates, not its authoring.
+
+The synthetic test version in the local environment is that same content,
+released through five synthetic test reviews. It must never be copied to
+production or described as reviewed.
 
 Because of `synthetic_internal_only`, even a published method is for internal
 use with test candidates — not for real applicants.

@@ -882,6 +882,12 @@ jobs:
       - name: BESKT product completion (PR 6) render guard
         run: bun run beskt-product-completion-render:check
 
+      # BESKT v0.1: the import of the 2026-09-10 specification carries every
+      # question, scenario and FAKTA step, keeps E, S and K out of the
+      # recruitment method, and invents no lawful basis or attestation.
+      - name: BESKT v0.1 import check
+        run: bun run beskt-v01-import:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the
