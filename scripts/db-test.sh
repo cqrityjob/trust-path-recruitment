@@ -169,16 +169,21 @@ for passport_round in before after; do
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
-    for passport_migration in 20261125090000_sp_disclosure_definition_scope 20261124090000_sp_pilot_member_catalogue 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
+    # The two pilot-finish rollbacks go first, and must STAND THE CHANGE DOWN,
+    # not merely run: no pilot membership in the catalogue view, no scope_code
+    # in the payload. Checked HERE, before 20261121090000's rollback drops the
+    # view and 20261120090000's drops the payload function altogether.
+    for passport_migration in 20261125090000_sp_disclosure_definition_scope 20261124090000_sp_pilot_member_catalogue; do
       psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
     done
-    # The pilot-finish rollbacks must STAND THE CHANGE DOWN, not merely run:
-    # no pilot membership in the catalogue view, no scope_code in the payload.
     pilot_view="$(psql_q -d "$TEST_DB" -Atc "SELECT pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass)")"
     printf '%s' "$pilot_view" | grep -q 'sp_is_pilot_member' && { echo "FAIL: 20261124090000 rollback left pilot membership in sp_approved_credential_catalogue"; exit 1; }
     scope_fn="$(psql_q -d "$TEST_DB" -Atc "SELECT string_agg(prosrc, ' ') FROM pg_proc WHERE proname = 'sp_credential_payload_v2' AND pronamespace = 'public'::regnamespace")"
     printf '%s' "$scope_fn" | grep -q 'scope_code' && { echo "FAIL: 20261125090000 rollback left scope_code in sp_credential_payload_v2"; exit 1; }
     echo "    ok  pilot-finish rollbacks stood down: catalogue view without pilot membership, payload without scope_code"
+    for passport_migration in 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
+      psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
+    done
     for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue 20261123090000_sp_credential_organisation_roles 20261124090000_sp_pilot_member_catalogue 20261125090000_sp_disclosure_definition_scope; do
       psql_q -d "$TEST_DB" -f "supabase/migrations/${passport_migration}.sql" >/dev/null
     done
