@@ -182,12 +182,12 @@ function Page() {
   // workspace. Gating on it closes the reachable path with the correct
   // predicate rather than a guess.
   //
-  // It is still only a mitigation. A crafted request that skips this file
-  // reaches the same RPC, so the real fix is the missing
-  // `bcp_conduct_may_see_others` check inside
-  // `bcp_conduct_preview_report`, which is a schema change and therefore a
-  // separate schema-first PR. Until that is applied, this is what keeps
-  // the product from shipping a reachable route to the hole.
+  // It is not the boundary. A crafted request that skips this file reaches
+  // the same RPC, so the boundary is the `bcp_conduct_may_see_others` check
+  // that 20261127090000 (PR #266, schema-first) adds inside
+  // `bcp_conduct_preview_report`. This condition stays as defence in depth,
+  // and until that migration is live it is what keeps the product from
+  // shipping a reachable route to the hole.
   // See docs/architecture/beskt-report-preview-independence.md.
   const othersVisible = workspaceQ.data?.othersVisible === true;
 

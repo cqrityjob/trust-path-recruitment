@@ -31,7 +31,9 @@ const GOV_LOGIC = "src/components/admin/beskt/governance-logic.ts";
 const SCHEMA = "src/components/admin/beskt/content-schema.ts";
 const EDITOR = "src/components/admin/beskt/BesktContentEditor.tsx";
 const LIFECYCLE = "src/components/admin/beskt/BesktLifecyclePanel.tsx";
-const ADMIN_ROUTE = "src/routes/_authenticated.admin.beskt-methods.$methodVersionId.tsx";
+const ADMIN_ROUTE = "src/components/admin/beskt/pages/BesktVersionPage.tsx";
+const GOV_LAYOUT = "src/routes/_authenticated.beskt-governance.tsx";
+const GOV_LIST_ROUTE = "src/routes/_authenticated.beskt-governance.index.tsx";
 const CHROME = "src/components/admin/AdminShellChrome.tsx";
 const ERRORS = "src/lib/beskt/errors.ts";
 const DICT = "src/i18n/dictionaries.ts";
@@ -467,11 +469,61 @@ const MUTATIONS: readonly Mutation[] = [
       "BEHAVIOUR: a touch that restored byte-identical content no longer invalidates the gates, which is the one case the hash alone cannot catch",
     file: GOV_LOGIC,
     find:
-      "  if (review.revisionAtReview !== version.revision)\n" +
+      "  if (!contentFrozen && review.revisionAtReview !== version.revision)\n" +
       '    return { kind: "stale", review, reason: "revision" };',
     replace: "",
     guard: GUARD,
     expect: "BESKT_PC_GATE_STALE_REVISION",
+  },
+  {
+    id: "PC-NC-GOV-SURFACE-OPEN",
+    defect:
+      "the governance surface stops checking the governance read predicate, so any signed-in person is drawn the governance pages",
+    file: GOV_LAYOUT,
+    find: "  if (!q.data?.canRead) {",
+    replace: "  if (false) {",
+    guard: GUARD,
+    expect: "BESKT_PC_GOV_SURFACE_GATE",
+  },
+  {
+    id: "PC-NC-GOV-ERROR-AS-DENIED",
+    defect:
+      "a failed access check falls through to 'you have no role', so a reviewer with a mandate is told to ask for one",
+    file: GOV_LAYOUT,
+    find: "  if (q.isError) {",
+    replace: "  if (q.isError && false) {",
+    guard: GUARD,
+    expect: "BESKT_PC_GOV_ERROR_AS_DENIED",
+  },
+  {
+    id: "PC-NC-GOV-ACCESS-TAB-LEAK",
+    defect:
+      "the governance surface draws the access tab, offering editors and reviewers the admin's mandate and pilot forms",
+    file: ADMIN_ROUTE,
+    find: '  governance: ["content", "lifecycle"],',
+    replace: '  governance: ["content", "lifecycle", "access"],',
+    guard: GUARD,
+    expect: "BESKT_PC_GOV_ACCESS_TAB_LEAK",
+  },
+  {
+    id: "PC-NC-GOV-CREATE-FOR-ALL",
+    defect:
+      "every governance role is offered 'create a method', which the database refuses to anyone but an editor",
+    file: GOV_LIST_ROUTE,
+    find: '  const canCreate = access.data?.contentRoles.includes("editor") ?? false;',
+    replace: "  const canCreate = true;",
+    guard: GUARD,
+    expect: "BESKT_PC_GOV_CREATE_FOR_ALL",
+  },
+  {
+    id: "PC-NC-GATE-PUBLISHED-STALE",
+    defect:
+      "BEHAVIOUR: the revision check applies to published content again, so a published method says every approval it was published on no longer counts",
+    file: GOV_LOGIC,
+    find: "  if (!contentFrozen && review.revisionAtReview !== version.revision)",
+    replace: "  if (review.revisionAtReview !== version.revision)",
+    guard: GUARD,
+    expect: "BESKT_PC_GATE_PUBLISHED_STALE",
   },
   {
     id: "PC-NC-GATE-REJECTION-HIDDEN",

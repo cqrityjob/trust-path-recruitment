@@ -87,9 +87,13 @@ const SCHEMA = "src/components/admin/beskt/content-schema.ts";
 const EDITOR = "src/components/admin/beskt/BesktContentEditor.tsx";
 const LIFECYCLE = "src/components/admin/beskt/BesktLifecyclePanel.tsx";
 const GRANTS = "src/components/admin/beskt/BesktGrantsPanel.tsx";
-const ADMIN_ROUTE = "src/routes/_authenticated.admin.beskt-methods.$methodVersionId.tsx";
-const ADMIN_LIST = "src/routes/_authenticated.admin.beskt-methods.index.tsx";
-const ADMIN_NEW = "src/routes/_authenticated.admin.beskt-methods.new.tsx";
+const ADMIN_ROUTE = "src/components/admin/beskt/pages/BesktVersionPage.tsx";
+const ADMIN_LIST = "src/components/admin/beskt/pages/BesktMethodListPage.tsx";
+const ADMIN_NEW = "src/components/admin/beskt/pages/NewBesktMethodPage.tsx";
+const SURFACE = "src/components/admin/beskt/surface.tsx";
+const GOV_LAYOUT = "src/routes/_authenticated.beskt-governance.tsx";
+const GOV_LIST_ROUTE = "src/routes/_authenticated.beskt-governance.index.tsx";
+const GOV_VERSION_ROUTE = "src/routes/_authenticated.beskt-governance.$methodVersionId.tsx";
 const CHROME = "src/components/admin/AdminShellChrome.tsx";
 const AUTHORING_MIGRATION =
   "supabase/migrations/20261118090000_beskt_governed_content_authoring.sql";
@@ -112,6 +116,10 @@ const grantsCode = code(read(GRANTS));
 const adminRouteCode = code(read(ADMIN_ROUTE));
 const adminListCode = code(read(ADMIN_LIST));
 const adminNewCode = code(read(ADMIN_NEW));
+const surfaceCode = code(read(SURFACE));
+const govLayoutCode = code(read(GOV_LAYOUT));
+const govListRouteCode = code(read(GOV_LIST_ROUTE));
+const govVersionRouteCode = code(read(GOV_VERSION_ROUTE));
 
 const ALL_NEW_SURFACE = [
   promptsCode,
@@ -659,6 +667,23 @@ group("P3c · BEHAVIOUR: an approval binds to the cycle, the hash and the revisi
     "BESKT_PC_GATE_STALE_REVISION: a touch that leaves the hash alone must still invalidate the gates",
   );
   ck(
+    "P3c.5a BEHAVIOUR: on a published version, the approvals it was published on still count",
+    // Publication advances the revision without touching the frozen content,
+    // so the five approvals that published it sit one revision behind.
+    (["published", "suspended", "retired"] as const).every(
+      (contentStatus) =>
+        besktGateState("data_protection", [{ ...base, revisionAtReview: 3 }], {
+          ...version,
+          contentStatus,
+        }).kind === "approved",
+    ) &&
+      besktGateState("data_protection", [{ ...base, revisionAtReview: 3 }], {
+        ...version,
+        contentStatus: "in_review",
+      }).kind === "stale",
+    "BESKT_PC_GATE_PUBLISHED_STALE: a published method must not say its own approvals no longer count",
+  );
+  ck(
     "P3c.6 BEHAVIOUR: a rejection reads as a rejection, never as merely stale",
     besktGateState("data_protection", [{ ...base, decision: "rejected" }], version).kind ===
       "rejected",
@@ -832,6 +857,43 @@ ck(
 );
 
 /* ================================================================== */
+group("P4g · Governance has a door for the people who govern");
+
+ck(
+  "P4g.1 the governance surface admits exactly who the governance tables admit",
+  // scp_interview_can_read is what every governance table's SELECT policy
+  // applies. A second, hand-written notion of "who governs" would drift.
+  /rpc\("scp_interview_can_read"/.test(govFnsCode) &&
+    /getBesktGovernanceAccess/.test(govLayoutCode) &&
+    /!q\.data\?\.canRead/.test(govLayoutCode),
+  "BESKT_PC_GOV_SURFACE_GATE: the governance surface must be gated by the governance read predicate",
+);
+
+ck(
+  "P4g.2 a failed access check is never shown as 'you have no role'",
+  /if \(q\.isError\)[\s\S]*?beskt\.governance\.error\.heading[\s\S]*?if \(!q\.data\?\.canRead\)[\s\S]*?beskt\.governance\.denied\.heading/.test(
+    govLayoutCode,
+  ),
+  "BESKT_PC_GOV_ERROR_AS_DENIED: a technical failure told as a missing role sends a reviewer to ask for access they already have",
+);
+
+ck(
+  "P4g.3 mandates and pilot grants stay with the platform admin",
+  // The access tab grants review mandates and employer pilot grants. Only a
+  // platform admin may; offering it on the governance surface would offer
+  // actions the database always refuses.
+  /governance:\s*\["content",\s*"lifecycle"\]/.test(adminRouteCode) &&
+    /tab === "access" && surface === "admin"/.test(adminRouteCode) &&
+    !/"access"/.test(govVersionRouteCode),
+  "BESKT_PC_GOV_ACCESS_TAB_LEAK: an editor or reviewer must not be offered the admin's grant forms",
+);
+
+ck(
+  "P4g.4 only an editor is offered 'create a method'",
+  /contentRoles\.includes\("editor"\)/.test(govListRouteCode) && /canCreate &&/.test(adminListCode),
+  "BESKT_PC_GOV_CREATE_FOR_ALL: a reviewer or publisher must not be offered an action only an editor may take",
+);
+
 group("P5 · The screens speak the reader's language, never the database's");
 
 ck(
@@ -854,9 +916,13 @@ ck(
   // The validator names which governed row is incomplete, by key, and
   // there is no shorter way to say it. What the screen must not do is pass
   // it off as its own sentence — and it must be a platform-only surface.
+  // Platform-internal means one of the two gated governance shells: the
+  // admin console, or /beskt-governance behind scp_interview_can_read.
   /\{f\.message\}/.test(lifecycleCode) &&
     /beskt\.admin\.validate\.ownWords/.test(lifecycleCode) &&
-    /AdminShellChrome/.test(adminRouteCode),
+    /<BesktSurfaceShell\b/.test(adminRouteCode) &&
+    /<AdminShellChrome\b/.test(surfaceCode) &&
+    /!q\.data\?\.canRead/.test(govLayoutCode),
   "BESKT_PC_VALIDATOR_UNATTRIBUTED: a database sentence shown as the product's own is a lie about its source",
 );
 

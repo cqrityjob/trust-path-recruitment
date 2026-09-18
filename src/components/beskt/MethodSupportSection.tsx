@@ -24,6 +24,7 @@
 // disagree.
 
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ClipboardList, Info, Loader2, ShieldCheck } from "lucide-react";
 
@@ -38,7 +39,14 @@ function isDenied(error: unknown): boolean {
   return /BCP_NOT_|permission denied|insufficient_privilege|not authorised/i.test(m);
 }
 
-export function MethodSupportSection({ employerId }: { readonly employerId: string }) {
+export function MethodSupportSection({
+  employerId,
+  employerSlug,
+}: {
+  readonly employerId: string;
+  /** When given, an available method offers its real next step. */
+  readonly employerSlug?: string;
+}) {
   const { t, lang } = useT();
   const listMethods = useServerFn(listAssignableBesktMethods);
 
@@ -63,6 +71,9 @@ export function MethodSupportSection({ employerId }: { readonly employerId: stri
         </span>
         <div className="min-w-0 flex-1">
           <h2 id="beskt-method-support-heading" className="text-lg font-semibold tracking-tight">
+            <Badge className="mr-2 align-middle" data-testid="beskt-method-support-badge">
+              {t("beskt.library.badge")}
+            </Badge>
             {t("beskt.library.title")}
           </h2>
           <p className="mt-0.5 text-xs text-muted-foreground">{t("beskt.library.siblingNote")}</p>
@@ -131,52 +142,73 @@ export function MethodSupportSection({ employerId }: { readonly employerId: stri
             </p>
           </div>
         ) : (
-          <ul className="space-y-3" data-testid="beskt-method-support-list">
-            {methods.data.map((m) => (
-              <li
-                key={m.methodVersionId}
-                className="rounded-lg border bg-background p-4"
-                data-testid="beskt-method-row"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="text-sm font-medium">
-                      {(lang === "sv" ? m.nameSv : (m.nameEn ?? m.nameSv)) ?? m.packSlug}
-                    </h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {(lang === "sv" ? m.summarySv : (m.summaryEn ?? m.summarySv)) ??
-                        m.purposeSv ??
-                        ""}
-                    </p>
+          <>
+            <ul className="space-y-3" data-testid="beskt-method-support-list">
+              {methods.data.map((m) => (
+                <li
+                  key={m.methodVersionId}
+                  className="rounded-lg border bg-background p-4"
+                  data-testid="beskt-method-row"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-medium">
+                        {(lang === "sv" ? m.nameSv : (m.nameEn ?? m.nameSv)) ?? m.packSlug}
+                      </h3>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {(lang === "sv" ? m.summarySv : (m.summaryEn ?? m.summarySv)) ??
+                          m.purposeSv ??
+                          ""}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="shrink-0 font-normal">
+                      {t(
+                        m.validationLabel === "content_validated"
+                          ? "beskt.library.validationLabel.content_validated"
+                          : "beskt.library.validationLabel.pilot_hypothesis",
+                      )}
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="shrink-0 font-normal">
-                    {t(
-                      m.validationLabel === "content_validated"
-                        ? "beskt.library.validationLabel.content_validated"
-                        : "beskt.library.validationLabel.pilot_hypothesis",
-                    )}
-                  </Badge>
-                </div>
-                <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
-                  <div className="flex gap-1.5">
-                    <dt>{t("beskt.library.version")}</dt>
-                    <dd className="font-medium text-foreground">{m.versionNumber}</dd>
-                  </div>
-                  <div className="flex min-w-0 gap-1.5">
-                    <dt>{t("beskt.library.contentHash")}</dt>
-                    <dd className="truncate font-mono text-foreground">
-                      {m.contentHash.slice(0, 12)}…
-                    </dd>
-                  </div>
-                </dl>
-                {/* Deliberately NOT a start button. A preparation is always
+                  <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                    <div className="flex gap-1.5">
+                      <dt>{t("beskt.library.version")}</dt>
+                      <dd className="font-medium text-foreground">{m.versionNumber}</dd>
+                    </div>
+                    <div className="flex min-w-0 gap-1.5">
+                      <dt>{t("beskt.library.contentHash")}</dt>
+                      <dd className="truncate font-mono text-foreground">
+                        {m.contentHash.slice(0, 12)}…
+                      </dd>
+                    </div>
+                  </dl>
+                  {/* Deliberately NOT a start button. A preparation is always
                     started from a real application, so the control lives on
                     the application's own page and cannot be reached without
                     a candidate. */}
-                <p className="mt-3 text-xs text-muted-foreground">{t("beskt.library.startHint")}</p>
-              </li>
-            ))}
-          </ul>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {t("beskt.library.startHint")}
+                  </p>
+                </li>
+              ))}
+            </ul>
+            {/* The next step is the applications list, never a start button
+              here: a preparation always belongs to one real application. */}
+            <div
+              className="mt-4 rounded-lg border bg-background p-4"
+              data-testid="beskt-method-support-next"
+            >
+              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                {t("beskt.library.nextSteps")}
+              </p>
+              {employerSlug ? (
+                <Button asChild size="sm" className="mt-3 min-h-[44px]">
+                  <Link to="/employer/$employerSlug/applications" params={{ employerSlug }}>
+                    {t("beskt.library.nextAction")}
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          </>
         )}
       </div>
     </section>

@@ -3624,6 +3624,18 @@ export const dictionaries = {
     "beskt.library.validationLabel.content_validated": "Innehållsgranskad",
     "beskt.library.startHint":
       "Förberedelsen startas från en befintlig ansökan, på ansökans egen sida.",
+    "beskt.governance.loading": "Kontrollerar din behörighet …",
+    "beskt.governance.denied.heading": "Ingen roll i BESKT-styrningen",
+    "beskt.governance.denied.body":
+      "Den här sidan är för dem som författar, granskar eller publicerar BESKT-metoder. Ditt konto har ingen sådan roll. En plattformsadministratör tilldelar rollerna.",
+    "beskt.governance.error.heading": "Behörigheten kunde inte kontrolleras",
+    "beskt.governance.error.body":
+      "Det är ett tekniskt fel, inte ett besked om din roll. Försök igen om en stund.",
+    "beskt.governance.error.retry": "Försök igen",
+    "beskt.library.badge": "BESKT",
+    "beskt.library.nextAction": "Välj en ansökan",
+    "beskt.library.nextSteps":
+      "Så går det till: öppna en ansökan och välj BESKT-förberedelse. När kandidaten har skickat in sin förberedelse öppnar ni BESKT under Intervjuer, i intervjufallet för samma ansökan. Där finns frågor, följdfrågor, era egna ståndpunkter, panel och rapport.",
 
     // ── The employer's start control, on an application ──────────────────
     "beskt.start.title": "BESKT-förberedelse",
@@ -3765,7 +3777,7 @@ export const dictionaries = {
     // code chooses the sentence below; the original text never reaches the
     // screen, because it names tables, columns and policies.
     "beskt.error.generic":
-      "Något gick fel och åtgärden genomfördes inte. Försök igen. Om det upprepas, kontakta den som skickade förberedelsen.",
+      "Något gick fel och åtgärden genomfördes inte. Försök igen. Om det upprepas, kontakta den som ansvarar för ärendet.",
     "beskt.error.staleRevision":
       "Förberedelsen har ändrats i ett annat fönster eller på en annan enhet. Ladda om sidan så visas den senaste versionen, och försök sedan igen.",
     "beskt.error.incomplete":
@@ -10905,6 +10917,18 @@ export const dictionaries = {
     "beskt.library.validationLabel.content_validated": "Content reviewed",
     "beskt.library.startHint":
       "A preparation is started from an existing application, on that application's own page.",
+    "beskt.governance.loading": "Checking your access …",
+    "beskt.governance.denied.heading": "No role in BESKT governance",
+    "beskt.governance.denied.body":
+      "This page is for people who author, review or publish BESKT methods. Your account has no such role. A platform administrator assigns the roles.",
+    "beskt.governance.error.heading": "Your access could not be checked",
+    "beskt.governance.error.body":
+      "This is a technical error, not an answer about your role. Try again in a moment.",
+    "beskt.governance.error.retry": "Try again",
+    "beskt.library.badge": "BESKT",
+    "beskt.library.nextAction": "Choose an application",
+    "beskt.library.nextSteps":
+      "How it works: open an application and choose BESKT preparation. Once the candidate has submitted their preparation, open BESKT under Interviews, in the interview case for the same application. That is where the questions, follow-up questions, your own positions, the panel and the report are.",
 
     "beskt.start.title": "BESKT preparation",
     "beskt.start.lede":
@@ -11039,7 +11063,7 @@ export const dictionaries = {
     // code chooses the sentence below; the original text never reaches the
     // screen, because it names tables, columns and policies.
     "beskt.error.generic":
-      "Something went wrong and the action did not go through. Try again. If it keeps happening, contact whoever sent you this preparation.",
+      "Something went wrong and the action did not go through. Try again. If it keeps happening, contact whoever is responsible for this case.",
     "beskt.error.staleRevision":
       "This preparation changed in another window or on another device. Reload the page to see the latest version, then try again.",
     "beskt.error.incomplete":

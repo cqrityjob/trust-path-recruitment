@@ -145,6 +145,14 @@ export type BesktGateState =
  * every gate is stale for that reason and saying "the content changed" would
  * be wrong; then the HASH; then the REVISION, which catches an edit that
  * restored byte-identical content and therefore left the hash alone.
+ *
+ * The REVISION binds only while the content can still be edited. Publishing,
+ * suspending and retiring each advance the revision without touching the
+ * content, which is frozen from publication on -- so on a published version
+ * the approvals it was published on are exactly the ones recorded one
+ * revision earlier. Comparing revisions there would call every approval that
+ * published the method "no longer counts", which is false. Cycle and hash
+ * still apply, because they are still facts about the content.
  */
 export function besktGateState(
   gate: BesktGate,
@@ -153,6 +161,7 @@ export function besktGateState(
     readonly contentHash: string | null;
     readonly revision: number;
     readonly reviewCycle: number;
+    readonly contentStatus?: string;
   },
 ): BesktGateState {
   // The workspace returns reviews newest first, so the first match is the
@@ -164,7 +173,11 @@ export function besktGateState(
     return { kind: "stale", review, reason: "cycle" };
   if (review.contentHashAtReview !== version.contentHash)
     return { kind: "stale", review, reason: "hash" };
-  if (review.revisionAtReview !== version.revision)
+  const contentFrozen =
+    version.contentStatus === "published" ||
+    version.contentStatus === "suspended" ||
+    version.contentStatus === "retired";
+  if (!contentFrozen && review.revisionAtReview !== version.revision)
     return { kind: "stale", review, reason: "revision" };
   return { kind: "approved", review };
 }

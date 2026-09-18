@@ -142,6 +142,41 @@ function toVersionSummary(v: Record<string, unknown>): BesktMethodVersionSummary
 }
 
 /**
+ * Who may open the BESKT governance surface, and as what.
+ *
+ * `canRead` is `scp_interview_can_read` -- the SAME predicate every governance
+ * table's SELECT policy applies -- so the screen and the rows cannot disagree
+ * about who belongs here. The content roles are the caller's own rows, which
+ * `scp_content_roles_self_select` lets them read. None of this authorises an
+ * action: every lifecycle step is still decided by its governed RPC.
+ */
+export interface BesktGovernanceAccess {
+  readonly canRead: boolean;
+  readonly isPlatformAdmin: boolean;
+  readonly contentRoles: readonly string[];
+}
+
+export const getBesktGovernanceAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<BesktGovernanceAccess> => {
+    const db = context.supabase;
+    const userId = (context as { userId: string }).userId;
+    const [readRes, adminRes, rolesRes] = await Promise.all([
+      db.rpc("scp_interview_can_read", { _user_id: userId }),
+      db.rpc("is_platform_admin", { _user_id: userId }),
+      db.from("scp_content_roles").select("role").eq("user_id", userId),
+    ]);
+    if (readRes.error) throw new Error(readRes.error.message);
+    if (adminRes.error) throw new Error(adminRes.error.message);
+    if (rolesRes.error) throw new Error(rolesRes.error.message);
+    return {
+      canRead: readRes.data === true,
+      isPlatformAdmin: adminRes.data === true,
+      contentRoles: (rolesRes.data ?? []).map((r) => String(r.role)),
+    };
+  });
+
+/**
  * Every BESKT method identity and its versions, in every lifecycle state.
  *
  * `pack_kind = 'beskt_method'` and nothing else: the identity table also
@@ -321,12 +356,12 @@ export const getBesktVersionWorkspace = createServerFn({ method: "GET" })
         .from("beskt_evidence_anchors")
         .select("*")
         .eq("method_version_id", id)
-        .order("anchor_key", { ascending: true }),
+        .order("evidence_state", { ascending: true }),
       db
         .from("beskt_observation_fields")
         .select("*")
         .eq("method_version_id", id)
-        .order("display_order", { ascending: true }),
+        .order("ordinal", { ascending: true }),
       db
         .from("beskt_activation_requirements")
         .select("*")
