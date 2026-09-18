@@ -91,6 +91,10 @@ const ADMIN_ROUTE = "src/components/admin/beskt/pages/BesktVersionPage.tsx";
 const ADMIN_LIST = "src/components/admin/beskt/pages/BesktMethodListPage.tsx";
 const ADMIN_NEW = "src/components/admin/beskt/pages/NewBesktMethodPage.tsx";
 const SURFACE = "src/components/admin/beskt/surface.tsx";
+const CASE_LINK = "src/components/beskt/BesktCaseLinkSection.tsx";
+const APP_PANEL = "src/components/beskt/BesktApplicationPanel.tsx";
+const PREP_FNS = "src/lib/beskt/candidate-preparation.functions.ts";
+const RUNTIME_FNS = "src/lib/interview-intelligence/runtime.functions.ts";
 const GOV_LAYOUT = "src/routes/_authenticated.beskt-governance.tsx";
 const GOV_LIST_ROUTE = "src/routes/_authenticated.beskt-governance.index.tsx";
 const GOV_VERSION_ROUTE = "src/routes/_authenticated.beskt-governance.$methodVersionId.tsx";
@@ -117,6 +121,10 @@ const adminRouteCode = code(read(ADMIN_ROUTE));
 const adminListCode = code(read(ADMIN_LIST));
 const adminNewCode = code(read(ADMIN_NEW));
 const surfaceCode = code(read(SURFACE));
+const caseLinkCode = code(read(CASE_LINK));
+const appPanelCode = code(read(APP_PANEL));
+const prepFnsCode = code(read(PREP_FNS));
+const runtimeFnsCode = code(read(RUNTIME_FNS));
 const govLayoutCode = code(read(GOV_LAYOUT));
 const govListRouteCode = code(read(GOV_LIST_ROUTE));
 const govVersionRouteCode = code(read(GOV_VERSION_ROUTE));
@@ -892,6 +900,46 @@ ck(
   "P4g.4 only an editor is offered 'create a method'",
   /contentRoles\.includes\("editor"\)/.test(govListRouteCode) && /canCreate &&/.test(adminListCode),
   "BESKT_PC_GOV_CREATE_FOR_ALL: a reviewer or publisher must not be offered an action only an editor may take",
+);
+
+group("P4l · A submitted preparation reaches Intervjuer through the governed link");
+
+ck(
+  "P4l.1 the cases offered and the link made are the governed RPCs' own",
+  /rpc\("bcp_linkable_interview_cases"/.test(prepFnsCode) &&
+    /rpc\("bcp_link_preparation_to_case"/.test(prepFnsCode) &&
+    !/\.from\("bcp_case_links"\)/.test(prepFnsCode),
+  "BESKT_PC_LINK_UNGOVERNED: a preparation must reach a case only through bcp_link_preparation_to_case",
+);
+
+ck(
+  "P4l.2 the link is offered only for a submitted preparation",
+  /existing\.lifecycleState === "submitted" && employerSlug \? \(\s*<BesktCaseLinkSection/.test(
+    appPanelCode,
+  ),
+  "BESKT_PC_LINK_BEFORE_SUBMIT: a draft must never be offered to an interview case",
+);
+
+ck(
+  "P4l.3 the applicant is read from the application on the server, never taken from the browser",
+  // The case's candidate is what the bridge matches on and what the
+  // candidate's own interview status reads. Accepting it from the client
+  // would let anyone bind anybody.
+  /bindApplicant: z\.boolean\(\)\.optional\(\)/.test(runtimeFnsCode) &&
+    /\.from\("job_applications"\)\s*\.select\("applicant_user_id, employer_id"\)/.test(
+      runtimeFnsCode,
+    ) &&
+    /app\.data\.employer_id !== data\.employerId/.test(runtimeFnsCode) &&
+    !/candidateUserId: z\./.test(runtimeFnsCode),
+  "BESKT_PC_LINK_CLIENT_CANDIDATE: a case must never be bound to a user id the browser supplied",
+);
+
+ck(
+  "P4l.4 with no case yet, the section points at Intervjuer with the application and the BESKT binding",
+  /to="\/employer\/\$employerSlug\/interview-intelligence\/new"[\s\S]*?search=\{\{ applicationId, jobId: undefined, beskt: true \}\}/.test(
+    caseLinkCode,
+  ),
+  "BESKT_PC_LINK_DEAD_END: a submitted preparation with no case must say where to create one",
 );
 
 group("P5 · The screens speak the reader's language, never the database's");

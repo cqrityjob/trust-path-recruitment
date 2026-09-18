@@ -119,6 +119,11 @@ const MESSAGE_FOR_CODE: Readonly<Record<string, TranslationKey>> = {
 
   // ---- The bridge between a preparation and an interview case -------------
   BCP_CASE_LINK_NOT_FOUND: "beskt.error.linkNotFound",
+  BCP_NOT_SUBMITTED: "beskt.error.caseLinkNotSubmitted",
+  BCP_CASE_LINK_EXISTS: "beskt.error.caseLinkExists",
+  BCP_CASE_MISMATCH: "beskt.error.caseLinkMismatch",
+  BCP_CASE_CANCELLED: "beskt.error.caseLinkCancelled",
+  BCP_CASE_NOT_FOUND: "beskt.error.caseLinkNotFound",
   BCP_CONDUCT_LINK_NOT_LIVE: "beskt.error.linkNotLive",
 
   // ---- Conducting the interview -------------------------------------------

@@ -3632,6 +3632,27 @@ export const dictionaries = {
     "beskt.governance.error.body":
       "Det är ett tekniskt fel, inte ett besked om din roll. Försök igen om en stund.",
     "beskt.governance.error.retry": "Försök igen",
+    "beskt.caseLink.heading": "Till intervjun",
+    "beskt.caseLink.lede":
+      "Koppla den inskickade förberedelsen till intervjufallet för samma ansökan. Då öppnar ni BESKT under Intervjuer, med kandidatens svar och de teman samtalet ska ta upp.",
+    "beskt.caseLink.loading": "Hämtar intervjufall …",
+    "beskt.caseLink.linked": "Kopplad",
+    "beskt.caseLink.untitled": "Intervjufall utan rubrik",
+    "beskt.caseLink.open": "Öppna BESKT i intervjufallet",
+    "beskt.caseLink.created": "Skapat",
+    "beskt.caseLink.action": "Koppla förberedelsen till det här intervjufallet",
+    "beskt.caseLink.linking": "Kopplar …",
+    "beskt.caseLink.none":
+      "Det finns inget intervjufall för den här ansökan ännu. Skapa ett under Intervjuer och kom sedan tillbaka hit för att koppla förberedelsen.",
+    "beskt.caseLink.create": "Skapa ett intervjufall för ansökan",
+    "beskt.error.caseLinkNotSubmitted":
+      "Förberedelsen kan kopplas först när kandidaten har skickat in den.",
+    "beskt.error.caseLinkExists":
+      "Intervjufallet har redan en kopplad förberedelse. Ladda om sidan för att se den.",
+    "beskt.error.caseLinkMismatch":
+      "Intervjufallet gäller en annan ansökan eller kandidat och kan inte kopplas hit.",
+    "beskt.error.caseLinkCancelled": "Intervjufallet är avbrutet och kan inte kopplas.",
+    "beskt.error.caseLinkNotFound": "Intervjufallet finns inte längre. Ladda om sidan.",
     "beskt.library.badge": "BESKT",
     "beskt.library.nextAction": "Välj en ansökan",
     "beskt.library.nextSteps":
@@ -10925,6 +10946,27 @@ export const dictionaries = {
     "beskt.governance.error.body":
       "This is a technical error, not an answer about your role. Try again in a moment.",
     "beskt.governance.error.retry": "Try again",
+    "beskt.caseLink.heading": "To the interview",
+    "beskt.caseLink.lede":
+      "Link the submitted preparation to the interview case for the same application. You then open BESKT under Interviews, with the candidate's answers and the themes the conversation should cover.",
+    "beskt.caseLink.loading": "Loading interview cases …",
+    "beskt.caseLink.linked": "Linked",
+    "beskt.caseLink.untitled": "Untitled interview case",
+    "beskt.caseLink.open": "Open BESKT in the interview case",
+    "beskt.caseLink.created": "Created",
+    "beskt.caseLink.action": "Link the preparation to this interview case",
+    "beskt.caseLink.linking": "Linking …",
+    "beskt.caseLink.none":
+      "There is no interview case for this application yet. Create one under Interviews, then come back here to link the preparation.",
+    "beskt.caseLink.create": "Create an interview case for this application",
+    "beskt.error.caseLinkNotSubmitted":
+      "The preparation can be linked only once the candidate has submitted it.",
+    "beskt.error.caseLinkExists":
+      "This interview case already has a linked preparation. Reload the page to see it.",
+    "beskt.error.caseLinkMismatch":
+      "This interview case belongs to another application or candidate and cannot be linked here.",
+    "beskt.error.caseLinkCancelled": "This interview case is cancelled and cannot be linked.",
+    "beskt.error.caseLinkNotFound": "This interview case no longer exists. Reload the page.",
     "beskt.library.badge": "BESKT",
     "beskt.library.nextAction": "Choose an application",
     "beskt.library.nextSteps":

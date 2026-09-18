@@ -58,6 +58,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useT } from "@/i18n/context";
+import { BesktCaseLinkSection } from "@/components/beskt/BesktCaseLinkSection";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { besktErrorKey } from "@/lib/beskt/errors";
 import {
@@ -110,9 +111,12 @@ function AnswerValue({ answer }: { readonly answer: BesktSubmittedAnswer }) {
 
 export function BesktApplicationPanel({
   employerId,
+  employerSlug,
   applicationId,
 }: {
   readonly employerId: string;
+  /** When given, a submitted preparation offers its link to Intervjuer. */
+  readonly employerSlug?: string;
   readonly applicationId: string;
 }) {
   const { t, lang } = useT();
@@ -399,6 +403,14 @@ export function BesktApplicationPanel({
                 </>
               )}
             </div>
+
+            {existing.lifecycleState === "submitted" && employerSlug ? (
+              <BesktCaseLinkSection
+                assignmentId={existing.assignmentId}
+                applicationId={applicationId}
+                employerSlug={employerSlug}
+              />
+            ) : null}
 
             {cancellable ? (
               <div className="mt-6 border-t pt-5">

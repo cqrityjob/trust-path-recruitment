@@ -586,6 +586,74 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
     });
   });
 
+  test("6b · the submitted preparation reaches Intervjuer and opens BESKT there", async ({
+    page,
+  }) => {
+    const applicationPath = `/employer/${EMPLOYER_SLUG}/applications/${APPLICATION_ID}`;
+    await step("interview", "sign in and open the application", () =>
+      signIn(page, RECRUITER, applicationPath),
+    );
+
+    const link = page.getByTestId("beskt-case-link");
+    await step("interview", "with no interview case yet, the one place to create it", async () => {
+      await expect(link.getByTestId("beskt-case-link-none")).toBeVisible({ timeout: 30_000 });
+      await shot(page, "6b-no-case-sv");
+      await link.getByRole("link", { name: /Skapa ett intervjufall för ansökan/ }).click();
+      await expect(page).toHaveURL(/\/interview-intelligence\/new\?applicationId=/);
+    });
+
+    await step("interview", "the case is created under Intervjuer, prefilled", async () => {
+      const title = page.locator("#ii-title");
+      await expect(title).not.toHaveValue("", { timeout: 30_000 });
+      const pack = page.locator("#ii-pack");
+      const value = await pack
+        .locator("option")
+        .evaluateAll((options) =>
+          options.map((o) => (o as HTMLOptionElement).value).find((v) => v !== ""),
+        );
+      expect(value, "the employer has an interview pack to choose").toBeTruthy();
+      await pack.selectOption(value!);
+      await page.getByRole("button", { name: /^Planera intervjun$|^Plan the interview$/ }).click();
+      await expect(page).toHaveURL(/\/interview-intelligence\/[0-9a-f-]{36}\/prepare/, {
+        timeout: 60_000,
+      });
+    });
+
+    await step(
+      "interview",
+      "back on the application, the preparation is linked to it",
+      async () => {
+        await page.goto(applicationPath);
+        await expect(link.getByTestId("beskt-case-link-candidates")).toBeVisible({
+          timeout: 30_000,
+        });
+        await link.getByTestId("beskt-case-link-submit").first().click();
+        await expect(link.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+        await expectFitsViewport(page);
+        await shot(page, "6b-linked-sv");
+      },
+    );
+
+    await step(
+      "interview",
+      "and BESKT opens inside that case, on the candidate's words",
+      async () => {
+        await link.getByRole("link", { name: /Öppna BESKT i intervjufallet/ }).click();
+        await expect(page).toHaveURL(/\/interview-intelligence\/[0-9a-f-]{36}\/beskt/, {
+          timeout: 30_000,
+        });
+        await expect(page.locator("body")).toContainText(
+          /Jag larmade och dokumenterade händelsen samma natt\./,
+          { timeout: 60_000 },
+        );
+        await shot(page, "6b-beskt-in-case-sv");
+        await useEnglish(page);
+        await shot(page, "6b-beskt-in-case-en");
+        await useSwedish(page);
+      },
+    );
+  });
+
   test("7 · a wrong candidate and a wrong employer are both refused", async ({ browser }) => {
     // A separate browser context per person, because they ARE separate people:
     // reusing one context would leave the previous session in place and the

@@ -31,7 +31,11 @@ export type BesktAnswerType =
   | "acknowledgement";
 
 export type BesktLifecycleState =
-  "assigned" | "notice_acknowledged" | "in_progress" | "submitted" | "cancelled";
+  | "assigned"
+  | "notice_acknowledged"
+  | "in_progress"
+  | "submitted"
+  | "cancelled";
 
 export interface BesktAssignableMethod {
   readonly methodVersionId: string;
@@ -763,3 +767,80 @@ export const listAssignableBesktExposureProfiles = createServerFn({ method: "GET
       candidateItemCount: r.candidate_item_count as number,
     }));
   });
+
+// ---------------------------------------------------------------------------
+// The bridge from a submitted preparation to an interview case.
+//
+// A submitted preparation reaches Intervjuer only through a governed link:
+// `bcp_link_preparation_to_case` binds the frozen response to ONE case of the
+// same employer, application and candidate, and derives the interview topics
+// from it. `bcp_linkable_interview_cases` answers with exactly the cases that
+// RPC would accept, so the screen never offers a case it would refuse.
+// ---------------------------------------------------------------------------
+
+export interface BesktLinkableCase {
+  readonly caseId: string;
+  readonly title: string | null;
+  readonly status: string;
+  readonly createdAt: string;
+  readonly alreadyLinked: boolean;
+}
+
+export interface BesktLinkableCases {
+  /** The preparation's revision, which the link names for compare-and-swap. */
+  readonly revision: number;
+  readonly cases: readonly BesktLinkableCase[];
+}
+
+export const listLinkableBesktCases = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => assignmentInput.parse(d))
+  .handler(async ({ context, data }): Promise<BesktLinkableCases> => {
+    const [casesRes, assignmentRes] = await Promise.all([
+      context.supabase.rpc("bcp_linkable_interview_cases", { _assignment_id: data.assignmentId }),
+      context.supabase
+        .from("bcp_assignments")
+        .select("revision")
+        .eq("id", data.assignmentId)
+        .maybeSingle(),
+    ]);
+    if (casesRes.error) throw new Error(casesRes.error.message);
+    if (assignmentRes.error) throw new Error(assignmentRes.error.message);
+    if (!assignmentRes.data) throw new Error("BCP_ASSIGNMENT_NOT_FOUND: no such preparation.");
+    return {
+      revision: assignmentRes.data.revision as number,
+      cases: ((casesRes.data ?? []) as Array<Record<string, unknown>>).map((r) => ({
+        caseId: r.case_id as string,
+        title: (r.title as string | null) ?? null,
+        status: r.status as string,
+        createdAt: r.created_at as string,
+        alreadyLinked: Boolean(r.already_linked),
+      })),
+    };
+  });
+
+export const linkBesktPreparationToCase = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        operationId: z.string().uuid(),
+        assignmentId: z.string().uuid(),
+        caseId: z.string().uuid(),
+        expectedRevision: z.number().int().positive(),
+      })
+      .parse(d),
+  )
+  .handler(
+    async ({ context, data }): Promise<{ readonly linkId: string; readonly caseId: string }> => {
+      const { data: raw, error } = await context.supabase.rpc("bcp_link_preparation_to_case", {
+        _operation_id: data.operationId,
+        _assignment_id: data.assignmentId,
+        _case_id: data.caseId,
+        _expected_revision: data.expectedRevision,
+      });
+      if (error) throw new Error(error.message);
+      const r = raw as unknown as Record<string, unknown>;
+      return { linkId: r.link_id as string, caseId: (r.case_id as string) ?? data.caseId };
+    },
+  );

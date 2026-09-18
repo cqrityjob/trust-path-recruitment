@@ -33,6 +33,9 @@ const EDITOR = "src/components/admin/beskt/BesktContentEditor.tsx";
 const LIFECYCLE = "src/components/admin/beskt/BesktLifecyclePanel.tsx";
 const ADMIN_ROUTE = "src/components/admin/beskt/pages/BesktVersionPage.tsx";
 const GOV_LAYOUT = "src/routes/_authenticated.beskt-governance.tsx";
+const CASE_LINK = "src/components/beskt/BesktCaseLinkSection.tsx";
+const APP_PANEL = "src/components/beskt/BesktApplicationPanel.tsx";
+const RUNTIME_FNS = "src/lib/interview-intelligence/runtime.functions.ts";
 const GOV_LIST_ROUTE = "src/routes/_authenticated.beskt-governance.index.tsx";
 const CHROME = "src/components/admin/AdminShellChrome.tsx";
 const ERRORS = "src/lib/beskt/errors.ts";
@@ -474,6 +477,45 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "",
     guard: GUARD,
     expect: "BESKT_PC_GATE_STALE_REVISION",
+  },
+  {
+    id: "PC-NC-LINK-BEFORE-SUBMIT",
+    defect: "the interview-case link is offered while the preparation is still a draft",
+    file: APP_PANEL,
+    find: '            {existing.lifecycleState === "submitted" && employerSlug ? (',
+    replace: "            {employerSlug ? (",
+    guard: GUARD,
+    expect: "BESKT_PC_LINK_BEFORE_SUBMIT",
+  },
+  {
+    id: "PC-NC-LINK-CLIENT-CANDIDATE",
+    defect:
+      "the server function trusts the application without checking its employer, so a case can be bound to another employer's applicant",
+    file: RUNTIME_FNS,
+    find: "      if (!app.data || app.data.employer_id !== data.employerId || !app.data.applicant_user_id) {",
+    replace: "      if (!app.data || !app.data.applicant_user_id) {",
+    guard: GUARD,
+    expect: "BESKT_PC_LINK_CLIENT_CANDIDATE",
+  },
+  {
+    id: "PC-NC-LINK-DEAD-END",
+    defect:
+      "the create-a-case link drops the BESKT binding, so the new case can never be linked to the preparation",
+    file: CASE_LINK,
+    find: "search={{ applicationId, jobId: undefined, beskt: true }}",
+    replace: "search={{ applicationId, jobId: undefined }}",
+    guard: GUARD,
+    expect: "BESKT_PC_LINK_DEAD_END",
+  },
+  {
+    id: "PC-NC-LINK-UNGOVERNED",
+    defect: "the link bypasses the governed RPC",
+    file: "src/lib/beskt/candidate-preparation.functions.ts",
+    find: '    const { data: raw, error } = await context.supabase.rpc("bcp_link_preparation_to_case", {',
+    replace:
+      '    const { data: raw, error } = await context.supabase.rpc("bcp_link_case_directly", {',
+    guard: GUARD,
+    expect: "BESKT_PC_LINK_UNGOVERNED",
   },
   {
     id: "PC-NC-GOV-SURFACE-OPEN",
