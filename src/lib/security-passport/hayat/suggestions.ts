@@ -119,6 +119,8 @@ export function acceptValue<D extends SuggestibleDraft>(
 /** The file went away: take back what HAYAT filled and the holder left alone. */
 export function withdrawReading<D extends SuggestibleDraft>(draft: D, marks: HayatMarks): D {
   const next = { ...draft };
-  for (const field of SUGGESTIBLE_FIELDS) if (isReadByHayat(draft, marks, field)) next[field] = "";
+  for (const field of SUGGESTIBLE_FIELDS) {
+    if (isReadByHayat(draft, marks, field)) next[field] = "";
+  }
   return next;
 }
