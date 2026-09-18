@@ -428,25 +428,25 @@ const MUTATIONS: readonly Mutation[] = [
       "BOUNDARY-REGISTRATION: the boundary is re-applied after PR 6's re-apply, and proved back",
   },
   {
-    id: "RIB-NC-BLOCK-ENDS-WITHOUT-BOUNDARY",
+    id: "RIB-NC-END-STATE-UNCHECKED",
     defect:
-      "the BESKT block restores PR 6 at its end but no longer puts the boundary back on top, so the run ends with both report readers unguarded",
+      "the harness stops checking the end of the BESKT block for an unguarded report reader, so restoring PR 6 there without the boundary would go unnoticed",
     file: DB,
-    find: "  -f supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql >/dev/null\nRIB_END=",
-    replace: '  -c "SELECT 1" >/dev/null\nRIB_END=',
+    find: '  echo "FAIL: the BESKT block ended with a report reader that does not carry the independence boundary." >&2',
+    replace: '  echo "FAIL: end." >&2',
     guard: GUARD,
     expect:
-      "BOUNDARY-REGISTRATION: the BESKT block ends with PR 6 and the boundary back on top, and a run that ends without it fails",
+      "BOUNDARY-REGISTRATION: no unguarded report reader survives the BESKT block, and a run that ends with one fails",
   },
   {
     id: "RIB-NC-END-STATE-NOT-FATAL",
-    defect: "a run that ends without the boundary is reported and then tolerated",
+    defect: "a run that ends with an unguarded report reader is reported and then tolerated",
     file: DB,
     find: '  suite_failed "BESKT report independence boundary (end state)"',
     replace: "  true",
     guard: GUARD,
     expect:
-      "BOUNDARY-REGISTRATION: the BESKT block ends with PR 6 and the boundary back on top, and a run that ends without it fails",
+      "BOUNDARY-REGISTRATION: no unguarded report reader survives the BESKT block, and a run that ends with one fails",
   },
   {
     id: "RIB-NC-CI-NOT-RUN",

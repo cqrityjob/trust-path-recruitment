@@ -4140,21 +4140,19 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261112090000_bcp_interview_case_bridge.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261113090000_bcp_interview_conduct.sql >/dev/null
-# ...then PR 6, which the unwinding above stood down, and the independence
-# boundary ON TOP of it: PR 6 alone would put the two report readers back
-# unguarded, and a run that ended there would leave the replayed schema in a
-# state the repository no longer describes.
-psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql >/dev/null
-psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql >/dev/null
+# PR 6 is deliberately NOT restored here: the documented rollback procedure
+# that runs next (scp_a_rollback_test.sql) starts from PR 5A. What must hold
+# is that no UNGUARDED report reader survives the block -- a later change that
+# restores PR 6 here without 20261127090000 on top would end the run with both
+# readers answering past the independence rule. Either they are absent, or
+# they carry the boundary.
 RIB_END="$(psql -tAq -d "$TEST_DB" -c \
-  "SELECT (SELECT position('bcp_conduct_may_see_others' in prosrc) > 0 FROM pg_proc WHERE proname = 'bcp_conduct_preview_report') AND (SELECT position('scp_iv_can_read_case' in prosrc) > 0 FROM pg_proc WHERE proname = 'bcp_conduct_report_blockers');")"
+  "SELECT coalesce(bool_and(CASE p.proname WHEN 'bcp_conduct_preview_report' THEN position('bcp_conduct_may_see_others' in p.prosrc) > 0 ELSE position('scp_iv_can_read_case' in p.prosrc) > 0 END), true) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname IN ('bcp_conduct_preview_report', 'bcp_conduct_report_blockers');")"
 if [ "$RIB_END" != "t" ]; then
-  echo "FAIL: the BESKT block ended without the report independence boundary in place." >&2
+  echo "FAIL: the BESKT block ended with a report reader that does not carry the independence boundary." >&2
   suite_failed "BESKT report independence boundary (end state)"
 else
-  echo "    ok  the BESKT block ends in the release state, with the independence boundary in place"
+  echo "    ok  the BESKT block ends with no unguarded report reader"
 fi
 
 # The race fixtures: the rollback above dropped their versions with the
