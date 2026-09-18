@@ -56,16 +56,22 @@ BEGIN
   UPDATE public.sp_credential_types SET is_active = true WHERE market_pack_code = 'AE-DU';
   UPDATE public.sp_professional_titles SET is_active = true WHERE market_pack_code = 'AE-DU';
 
-  -- A reviewed market does not approve candidate-defined scope. Cards remain
-  -- withheld; approved training provides the positive regional write control.
+  -- Since 20261126090000 an approved cadre card IS registrable, and the company
+  -- it is tied to is REQUIRED: a card without it is refused for that reason.
   BEGIN
-    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until,authorisation_scope)
-    VALUES(_h,'licence','SIRA Security Cadre Card — Security Guard','AE_DU_SIRA_CARD_GUARD','AE','AE-DU','Security Industry Regulatory Agency',current_date+700,'Candidate company');
-    RAISE EXCEPTION 'ASSERTION FAILED: candidate scoped card accepted';
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
+    VALUES(_h,'licence','SIRA Security Cadre Card — Security Guard','AE_DU_SIRA_CARD_GUARD','AE','AE-DU','Security Industry Regulatory Agency',current_date+700);
+    RAISE EXCEPTION 'ASSERTION FAILED: a cadre card was accepted without its company';
   EXCEPTION WHEN check_violation THEN
-    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
-    RAISE NOTICE 'ok  2.0 candidate-scope card remains withheld after pack approval';
+    IF SQLERRM<>'SP_CREDENTIAL_REQUIRES_SCOPE' THEN RAISE; END IF;
+    RAISE NOTICE 'ok  2.0 a cadre card without the company it is tied to is refused';
   END;
+  INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until,authorisation_scope)
+  VALUES(_h,'licence','SIRA Security Cadre Card — Security Guard','AE_DU_SIRA_CARD_GUARD','AE','AE-DU','Security Industry Regulatory Agency',current_date+700,'Candidate company');
+  IF NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_h AND credential_code='AE_DU_SIRA_CARD_GUARD' AND authorisation_scope='Candidate company' AND sub_jurisdiction_code='AE-DU') THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: 2.0b the cadre card was not stored with its company and emirate'; END IF;
+  DELETE FROM public.sp_claims WHERE holder_user_id=_h AND credential_code='AE_DU_SIRA_CARD_GUARD' AND authorisation_scope='Candidate company';
+  RAISE NOTICE 'ok  2.0b with its company the card is stored, in Dubai, under SIRA';
   INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
   SELECT _h,claim_type,name_en,code,country,region,issuer_name,current_date+700 FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
   IF NOT FOUND THEN RAISE EXCEPTION 'ASSERTION FAILED: approved regional training unavailable'; END IF;
@@ -134,11 +140,12 @@ BEGIN
       (holder_user_id, claim_type, title, credential_code, jurisdiction_code,
        sub_jurisdiction_code, claimed_issuer_name, valid_until, credential_reference)
     VALUES (_h, 'licence', 'SIRA Security Cadre Card — Security Supervisor', 'AE_DU_SIRA_CARD_SUPERVISOR', 'AE',
-            'AE-DU', 'SIRA', current_date + 700, 'SIRA-2026-004418');
+            'AE-DU', 'Security Industry Regulatory Agency', current_date + 700, 'SIRA-2026-004418');
     RAISE EXCEPTION 'ASSERTION FAILED: 4.1 a cadre card with no employing company was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
+    -- The row is otherwise governed-correct, so the ONLY reason left is the scope.
+    IF _txt NOT LIKE 'SP_CREDENTIAL_REQUIRES_SCOPE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 4.1 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  4.1 a cadre card must name the licensed company it is tied to';

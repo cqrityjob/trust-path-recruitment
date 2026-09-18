@@ -126,18 +126,22 @@ SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_BASIC_
 SELECT pg_temp.ok((SELECT credential_code='AE_DU_BASIC_FIRE_SAFETY' AND jurisdiction_code='AE' AND sub_jurisdiction_code='AE-DU' AND coalesce(claimed_issuer_name,'')<>''
  AND assertion_level='self_declared' AND lifecycle_state='active' FROM public.sp_claims WHERE id=:'du_claim' AND holder_user_id=auth.uid()),
  'read back: AE with sub-jurisdiction AE-DU, governed issuer, self-declared and active');
--- A course save proves nothing about SIRA CARD registration: no scoped card is
--- offered, and the RPC refuses one — even if an administrator approved it, the
--- scope requirement keeps it out. This is the functional gap, stated by the suite.
+-- A course save proves nothing about SIRA CARD registration, so the card is
+-- proved on its own. Since 20261126090000 a scoped definition is in the
+-- catalogue once approved, and its scope is a REQUIRED field — never removed.
 RESET ROLE;
 UPDATE public.sp_credential_types SET is_active=true WHERE code='AE_DU_SIRA_CARD_GUARD';
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc240000-0000-4000-8000-000000000003',true);
-SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_CARD_GUARD')
- AND (SELECT count(*)=1 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU'),
- 'an approved but scoped SIRA card is still not offered through the catalogue, only the course');
+SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_CARD_GUARD')
+ AND (SELECT count(*)=2 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU'),
+ 'an approved SIRA card is offered to the Dubai member beside the approved course');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_SIRA_CARD_GUARD","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}')$q$,
- 'SP_APPROVED_DEFINITION_REQUIRED','a scoped SIRA card is unavailable through the RPC even to the Dubai member');
+ 'SP_CREDENTIAL_REQUIRES_SCOPE','a SIRA card without the company it is tied to is refused');
+SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_SIRA_CARD_GUARD","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false,"authorisation_scope":"Fiktivt bevakningsbolag LLC"}') AS card_claim \gset
+SELECT pg_temp.ok((SELECT authorisation_scope='Fiktivt bevakningsbolag LLC' AND jurisdiction_code='AE' AND sub_jurisdiction_code='AE-DU' AND claimed_issuer_name='Security Industry Regulatory Agency'
+ FROM public.sp_claims WHERE id=:'card_claim' AND holder_user_id=auth.uid()),
+ 'read back: the SIRA card keeps its company, Dubai and SIRA as issuer');
 RESET ROLE;
 
 -- ── revocation: an UPDATE, attributed, and the door closes ──────────────

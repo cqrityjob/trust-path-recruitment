@@ -182,10 +182,25 @@ export function CredentialWallet({
     return (
       official ||
       (role?.document_specific
-        ? copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
+        ? // The holder named the awarding organisation or training provider on
+          // the certificate. It is shown as THEIR statement, never as a governed one.
+          r.claim.issuerName?.trim()
+          ? `${r.claim.issuerName.trim()} · ${copy("enligt intyget", "as stated on the certificate")}`
+          : copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
         : r.definition?.issuer_name) ||
       copy("Officiell organisation behöver bekräftas", "Official organisation needs confirmation")
     );
+  };
+
+  /** The governed REGULATOR, shown only where it is not also the issuer. */
+  const regulatorOf = (r: Row) => {
+    const roles = (metadata.organisationRoles ?? []).filter(
+      (o) => o.credential_code === r.claim.credentialCode,
+    );
+    const regulator = roles.find((o) => o.role === "regulator");
+    const issuer = roles.find((o) => o.role === "issuer");
+    if (!regulator?.authority_id || regulator.authority_id === issuer?.authority_id) return null;
+    return metadata.issuers.find((i) => i.id === regulator.authority_id)?.name ?? null;
   };
 
   const renderRow = (r: Row) => {
@@ -214,6 +229,22 @@ export function CredentialWallet({
             {r.name}
           </p>
           <p className="text-xs text-muted-foreground [overflow-wrap:anywhere]">{issuerOf(r)}</p>
+          {regulatorOf(r) && (
+            <p
+              data-credential-regulator
+              className="text-xs text-muted-foreground [overflow-wrap:anywhere]"
+            >
+              {copy("Tillsyn", "Regulator")}: {regulatorOf(r)}
+            </p>
+          )}
+          {c.authorisationScope?.trim() && (
+            <p
+              data-credential-authorisation-scope
+              className="text-xs text-foreground [overflow-wrap:anywhere]"
+            >
+              {copy("Omfattning", "Scope")}: {c.authorisationScope.trim()}
+            </p>
+          )}
         </div>
         <div className="col-start-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 sm:contents">
           <p

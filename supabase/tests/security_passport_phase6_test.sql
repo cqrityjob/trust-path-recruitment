@@ -67,9 +67,28 @@ BEGIN
   IF _n<>2 THEN RAISE EXCEPTION 'ASSERTION FAILED: approved independent training claims without invented expiry'; END IF;
   RAISE NOTICE 'ok  2.1 approved training accepted without inventing expiry';
   RAISE NOTICE 'ok  2.2 adding another approved training definition preserves the first';
-  IF EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV')) THEN
-    RAISE EXCEPTION 'ASSERTION FAILED: unresolved issuer/scope definitions exposed'; END IF;
-  RAISE NOTICE 'ok  2.3 definitions without governed issuer/scope are withheld';
+  -- Since 20261126090000 VU1, VU2 and SV are LISTED (owner decision: the whole
+  -- researched Swedish catalogue is selectable). Listing them resolved nothing by
+  -- itself: each still refuses a row that lacks what its definition demands.
+  IF (SELECT count(*) FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV'))<>3 THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: VU1, VU2 and SV must all be listed'; END IF;
+  IF EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2') AND issuer_name IS NOT NULL) THEN
+    RAISE EXCEPTION 'ASSERTION FAILED: an issuer was invented for VU1/VU2'; END IF;
+  DECLARE _msg text; BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,claimed_issuer_name,jurisdiction_code)
+    SELECT _h1,claim_type,name_sv,code,NULL,country FROM public.sp_approved_credential_catalogue WHERE code='VU1';
+    RAISE EXCEPTION 'ASSERTION FAILED: VU1 was stored with no issuer at all';
+  EXCEPTION WHEN check_violation THEN GET STACKED DIAGNOSTICS _msg = MESSAGE_TEXT;
+    IF _msg NOT LIKE 'SP_CREDENTIAL_REQUIRES_ISSUER%' THEN RAISE EXCEPTION 'ASSERTION FAILED: VU1 without issuer refused for another reason: %', _msg; END IF;
+  END;
+  DECLARE _msg text; BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,claimed_issuer_name,jurisdiction_code,valid_until)
+    SELECT _h1,claim_type,name_sv,code,issuer_name,country,current_date+300 FROM public.sp_approved_credential_catalogue WHERE code='SV';
+    RAISE EXCEPTION 'ASSERTION FAILED: SV was stored with no scope';
+  EXCEPTION WHEN check_violation THEN GET STACKED DIAGNOSTICS _msg = MESSAGE_TEXT;
+    IF _msg NOT LIKE 'SP_CREDENTIAL_REQUIRES_SCOPE%' THEN RAISE EXCEPTION 'ASSERTION FAILED: SV without scope refused for another reason: %', _msg; END IF;
+  END;
+  RAISE NOTICE 'ok  2.3 VU1, VU2 and SV are listed, with no invented issuer, and still refuse a row without their issuer or scope';
 
   RAISE NOTICE 'GROUP 3 -- appointments cannot be misrepresented';
 

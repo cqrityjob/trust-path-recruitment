@@ -118,9 +118,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // verify SQL and rollback. Both names come OFF this list in the change that
 // records their hosted evidence, for the reason stated throughout: a resolved
 // name left here hides the next genuinely stuck migration.
+//
+// 20261126090000_sp_catalogue_scope_and_document_issuer rides the same PR and
+// is pending for the same reason: it replaces the catalogue view, the governed
+// save RPC, the table guard and the payload body, and seeds the Dubai
+// organisation roles. It introduces no object and approves no definition.
 const expectedPending: string[] = [
   "20261124090000_sp_pilot_member_catalogue.sql",
   "20261125090000_sp_disclosure_definition_scope.sql",
+  "20261126090000_sp_catalogue_scope_and_document_issuer.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
