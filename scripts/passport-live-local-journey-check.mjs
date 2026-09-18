@@ -551,6 +551,9 @@ async function main() {
       await u.client
         .from("sp_approved_credential_catalogue")
         .select("code")
+        // Read as the NEW application reads it: the contract header declares that
+        // this caller can send a scope and a document-stated issuer.
+        .setHeader("x-passport-catalogue-contract", "2")
         .eq("country", country)
         [region ? "eq" : "is"]("region", region),
     ).length;
@@ -587,51 +590,50 @@ async function main() {
         n(
           "select count(*) from public.sp_credential_types where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY') and not is_active",
         ) === 2,
-        "the two fixture definitions are already approved",
+        "a pilot fixture definition is approved for the public",
       );
     },
   );
   await check(
-    "Link 2b · membership alone approves nothing: the GB member sees an empty GB catalogue",
+    "Link 2b · ROUTE A: nothing is approved — every pilot definition keeps is_active = false",
     async () => {
       ok(
-        (await catalogueRows(gbPilot, "GB", null)) === 0,
-        "GB member sees an unapproved definition",
+        Number(
+          sql(
+            "select count(*) from public.sp_credential_types where market_pack_code in ('GB','GB-NI','AE-DU','AE-AZ') and is_active",
+          ),
+        ) === 0,
+        "a pilot definition is active",
       );
-      const r = await gbPilot.client.rpc("sp_save_international_credential", {
-        _input: {
-          definition_code: "UK_SIA_LICENCE_SG",
-          market_country: "GB",
-          market_region: "",
-          identifier: "",
-          issued_on: "2024-05-01",
-          valid_until: "2027-05-01",
-          no_expiry: false,
-        },
-      });
       ok(
-        /SP_APPROVED_DEFINITION_REQUIRED/.test(r.error?.message ?? ""),
-        "unapproved definition accepted: " + (r.error?.message ?? "no error"),
+        Number(
+          sql(
+            "select count(*) from public.sp_market_packs where code in ('GB','GB-NI','AE-DU') and pilot_state='internal_pilot' and not is_active",
+          ),
+        ) === 3,
+        "a pilot pack is not internal_pilot",
       );
     },
   );
-  // The owner's per-definition decision, taken here as a local administrator
-  // (a direct UPDATE on the isolated stack; restored at the end of the run).
-  // The market packs stay internal_pilot: approving a definition opens no market.
-  sql(
-    "update public.sp_credential_types set is_active=true where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY')",
+  await check(
+    "Link 2c · an OLD application (no contract header) is never offered what its form cannot save",
+    async () => {
+      const old = good(
+        await gbPilot.client
+          .from("sp_approved_credential_catalogue")
+          .select("code")
+          .eq("country", "GB"),
+      );
+      ok(
+        old.length === 7,
+        "an old application is offered " + old.length + " GB rows, expected the 7 licences",
+      );
+      ok(
+        !old.some((r) => r.code.startsWith("UK_SIA_QUAL") || r.code === "UK_SIA_TOP_UP"),
+        "a document-issuer qualification was offered to an old application",
+      );
+    },
   );
-  approvedForRun = true;
-  await check("Link 2c · approving a definition activates no market pack", async () => {
-    ok(
-      Number(
-        sql(
-          "select count(*) from public.sp_market_packs where code in ('GB','AE-DU') and pilot_state='internal_pilot' and not is_active",
-        ),
-      ) === 2,
-      "a pack was activated",
-    );
-  });
   await check("Link 3 · catalogue visibility follows the entitlement, per market", async () => {
     ok((await catalogueRows(holder, "GB", null)) === 0, "ordinary holder sees GB definitions");
     ok(
@@ -639,13 +641,13 @@ async function main() {
       "ordinary holder sees Dubai definitions",
     );
     ok(
-      (await catalogueRows(gbPilot, "GB", null)) === 1,
-      "GB pilot sees other than the one approved GB definition",
+      (await catalogueRows(gbPilot, "GB", null)) === 13,
+      "GB pilot does not see all 13 GB pilot definitions",
     );
     ok((await catalogueRows(gbPilot, "AE", "AE-DU")) === 0, "GB pilot sees Dubai definitions");
     ok(
-      (await catalogueRows(duPilot, "AE", "AE-DU")) === 1,
-      "Dubai pilot sees other than the one approved Dubai definition",
+      (await catalogueRows(duPilot, "AE", "AE-DU")) === 30,
+      "Dubai pilot does not see all 30 Dubai pilot definitions",
     );
     ok((await catalogueRows(duPilot, "GB", null)) === 0, "Dubai pilot sees GB definitions");
     // Sweden and the international catalogue are unchanged for everyone.
@@ -726,10 +728,25 @@ async function main() {
     },
   );
   await check(
-    "A scoped SIRA card stays unavailable through this RPC even to its pilot member",
+    "A scoped SIRA card: refused without its company, saved and reloaded with it",
     async () => {
-      const r = await saveVia(duPilot, "AE_DU_SIRA_CARD_GUARD", "AE", "AE-DU");
-      ok(/SP_APPROVED_DEFINITION_REQUIRED/.test(r.error?.message ?? ""), "scoped card accepted");
+      const bare = await saveVia(duPilot, "AE_DU_SIRA_CARD_GUARD", "AE", "AE-DU");
+      ok(
+        /SP_CREDENTIAL_REQUIRES_SCOPE/.test(bare.error?.message ?? ""),
+        "card without a company: " + (bare.error?.message ?? "accepted"),
+      );
+      const id = good(
+        await saveVia(duPilot, "AE_DU_SIRA_CARD_GUARD", "AE", "AE-DU", {
+          authorisation_scope: "Fiktivt Security LLC",
+        }),
+      );
+      const row = await reread(duPilot, "sp_claims", id);
+      ok(
+        row.authorisation_scope === "Fiktivt Security LLC" &&
+          row.sub_jurisdiction_code === "AE-DU" &&
+          row.claimed_issuer_name === "Security Industry Regulatory Agency",
+        "card read back wrong",
+      );
     },
   );
 
@@ -855,10 +872,8 @@ async function main() {
             ('${duAll.id}', 'AE-DU', '${verifier.id}', 'completeness')
      on conflict do nothing`,
   );
-  sql(
-    "update public.sp_credential_types set is_active=true where market_pack_code in ('GB','GB-NI','AE-DU')",
-  );
-  approvedForRun = true;
+  // ROUTE A: nothing is approved for this loop. Each holder reaches their
+  // market's definitions through their membership alone.
   const expectedCodes = sql(
     "select string_agg(code, ',' order by code) from public.sp_credential_types where market_pack_code is distinct from 'AE-AZ'",
   ).split(",");
@@ -877,7 +892,8 @@ async function main() {
         const rows = good(
           await u.client
             .from("sp_approved_credential_catalogue")
-            .select("code,country,region,issuer_name,requires_valid_until"),
+            .select("code,country,region,issuer_name,requires_valid_until")
+            .setHeader("x-passport-catalogue-contract", "2"),
         ).filter(mine);
         const facts = good(
           await u.client.from("sp_credential_types").select("code,requires_scope"),

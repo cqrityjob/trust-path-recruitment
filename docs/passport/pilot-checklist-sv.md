@@ -16,24 +16,22 @@ testare faktiskt kan göra i dag.
 och migrationerna applicerade: alla 8 svenska definitioner (VU1, VU2, tre ordningsvaktsutbildningar,
 OV, SV, personalgodkännande) och alla 14 internationella certifieringar.
 
-**Storbritannien, Nordirland och Dubai** kräver dessutom två separata beslut per testare/definition:
+**Storbritannien, Nordirland och Dubai** (44 definitioner) blir användbara för en testare som har
+**pilotåtkomst till just den marknaden** (admin → användarens sida → *Pilotåtkomst*). Ägaren har
+beslutat Route A: det redan registrerade pilotgodkännandet per definition gäller för uttryckligt
+beviljade pilotmedlemmar. Inget mer godkännande behövs. Definitionerna är fortsatt **inte**
+godkända för allmänheten, och ingen marknad aktiveras. Nordirland är en egen marknad (`GB-NI`)
+med egen åtkomst. Abu Dhabi är stängt och erbjuds ingen.
 
-1. **Pilotåtkomst** för den namngivna testaren (admin → användarens sida → *Pilotåtkomst*).
-2. **Ägarens beslut om de 44 definitionerna.** Ingen av dem är valbar i dag. Ägarens
-   godkännande för pilottest finns redan registrerat per definition (`pilot_state`), men den slutna
-   katalogen läser `is_active`. Vilken väg som gäller, vem som beslutar och exakt releaseåtgärd
-   står i [pilot-approval-decisions.md](pilot-approval-decisions.md), med alla 44 definitioner per
-   marknad och källa. Medlemskap öppnar en marknad men godkänner ingen definition.
-
-Utan båda ser testaren en **tom** brittisk eller dubaisk katalog. Det är avsett, inte ett fel.
-Abu Dhabi är stängt och erbjuds ingen.
+Utan pilotåtkomst ser en användare en **tom** brittisk eller dubaisk katalog, med en förklaring.
+Det är avsett. Exakta releasesteg: [pilot-approval-decisions.md](pilot-approval-decisions.md).
 
 ## Före testet (admin)
 
 - [ ] PR #264 mergad; de tre migrationerna applicerade; verifierings-SQL i `supabase/release-state.json` körd.
 - [ ] Öppna **Admin → Passport-katalog**. Kontrollera: *Valbar för alla* = 22, *Blockerad* = 0.
-- [ ] För brittiska/dubaiska testare: pilotåtkomst given **och** de definitioner som ska testas godkända.
-      Kontrollera på katalogsidan att de står som *Valbar för pilotmedlemmar*.
+- [ ] Katalogsidan ska visa *Valbar för pilotmedlemmar i marknaden* = 44 och *Marknaden är stängd* = 7.
+- [ ] För brittiska/dubaiska testare: ge pilotåtkomst till rätt marknad (`GB`, `GB-NI` eller `AE-DU`).
 - [ ] Minst en granskare har rollen `passport_verifier` (eller är plattformsadmin).
 
 ## Testarens resa — Sverige
@@ -55,9 +53,9 @@ Abu Dhabi är stängt och erbjuds ingen.
 - [ ] Spara. Meriten visas med **jordglob** och *utan land*, även om ditt arbetsland är Sverige.
 - [ ] Byt arbetsland i profilen. Den internationella meriten har fortfarande inget land; OV är fortfarande svensk.
 
-## Testarens resa — Storbritannien och Dubai (endast med åtkomst + godkänd definition)
+## Testarens resa — Storbritannien och Dubai (kräver pilotåtkomst till marknaden)
 
-- [ ] Storbritannien: välj land → välj licens → *Gäller i: United Kingdom*. Spara, ladda om.
+- [ ] Storbritannien: välj land (räknaren visar **13**) → välj licens → *Gäller i: United Kingdom*. Spara, ladda om.
       Filtrerar du på *Nordirland* ligger de landsomfattande SIA-licenserna kvar i listan.
 - [ ] Dubai: land *Förenade Arabemiraten*, regionfilter *Dubai* (valfritt sökfilter, inte förvalt).
       Välj ett **SIRA-kort**: fältet **Licensierat företag som kortet är knutet till** är obligatoriskt.

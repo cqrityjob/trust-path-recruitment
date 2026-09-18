@@ -509,12 +509,26 @@ console.log("\nwhy a definition is, or is not, selectable (the administrator's d
     packPilotState: "internal_pilot",
     review: { sourceUrl: "https://example.invalid", checkedOn: "2026-08-22" },
   };
-  const pilotUnapproved = diagnoseDefinition(base);
+  // ROUTE A: internal_pilot definition + internal_pilot pack = pilot members only.
+  const pilot = diagnoseDefinition(base);
   check(
-    pilotUnapproved.availability === "awaiting_definition_approval" &&
-      pilotUnapproved.reasons.includes("definition_not_approved") &&
-      pilotUnapproved.reasons.includes("market_pilot_members_only"),
-    "D an unapproved pilot definition awaits approval, and approval and entitlement are named separately",
+    pilot.availability === "selectable_pilot_members" &&
+      pilot.reasons.includes("pilot_authorised_not_public") &&
+      pilot.reasons.includes("market_pilot_members_only") &&
+      !pilot.reasons.includes("definition_not_approved"),
+    "D an internal-pilot definition in an internal-pilot market is selectable by that market's members, and named as NOT public",
+  );
+  check(
+    diagnoseDefinition({ ...base, pilotState: "closed" }).availability ===
+      "awaiting_definition_approval",
+    "D a definition held back individually (pilot_state closed) is not offered, even in a pilot market",
+  );
+  check(
+    diagnoseDefinition({ ...base, packIsActive: true, packPilotState: "closed" }).availability ===
+      "awaiting_definition_approval" &&
+      diagnoseDefinition({ ...base, packIsActive: true }).availability ===
+        "awaiting_definition_approval",
+    "D activating the market publishes no pilot-only definition: it waits for its own approval",
   );
   check(
     diagnoseDefinition({ ...base, isActive: true }).availability === "selectable_pilot_members",
@@ -583,6 +597,45 @@ console.log("\nthe administrator's diagnosis is authorised server-side and reads
   check(
     !/\.(insert|update|upsert|delete)\(/.test(handler) && !/\.rpc\("sp_/.test(handler),
     "A it writes nothing and calls no Passport RPC: approval stays a reviewed migration",
+  );
+}
+
+console.log("\nguarded release: the application declares the catalogue contract it can save");
+{
+  const contract = readFileSync(
+    path.join(root, "src/lib/security-passport/catalogue-contract.ts"),
+    "utf8",
+  );
+  check(
+    /PASSPORT_CATALOGUE_CONTRACT_HEADER = "x-passport-catalogue-contract"/.test(contract) &&
+      /PASSPORT_CATALOGUE_CONTRACT = "2"/.test(contract),
+    "G the contract header and version are declared once",
+  );
+  const readers = [
+    "src/lib/security-passport/international.functions.ts",
+    "src/lib/security-passport/credentials.functions.ts",
+  ].map((f) => readFileSync(path.join(root, f), "utf8"));
+  check(
+    readers.every((t) =>
+      /\.from\("sp_approved_credential_catalogue" as never\)[\s\S]{0,320}?\.setHeader\(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT\)/.test(
+        t,
+      ),
+    ),
+    "G BOTH catalogue readers declare the contract, so the wizard and the market panels list what the wizard can save",
+  );
+  const migration = readFileSync(
+    path.join(
+      root,
+      "supabase/migrations/20261126090000_sp_catalogue_scope_and_document_issuer.sql",
+    ),
+    "utf8",
+  );
+  check(
+    /current_setting\('request\.path', true\)/.test(migration) &&
+      /'x-passport-catalogue-contract'/.test(migration) &&
+      /pp\.pilot_state='internal_pilot' AND NOT pp\.is_active/.test(migration) &&
+      /public\.sp_is_pilot_member\(auth\.uid\(\), t\.market_pack_code\)/.test(migration),
+    "G the migration narrows the REST listing by that header, and Route A requires the definition's OWN pack to be a not-active pilot",
   );
 }
 

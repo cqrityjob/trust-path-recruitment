@@ -232,8 +232,14 @@ BEGIN
   _r := pg_temp.try_claim_as(_gb_user, 'UK_SIA_LICENCE_DS',
         'SIA Licence — Door Supervision', 'GB', NULL, 'licence', '2030-01-01',
         'Security Industry Authority');
-  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
-    '3.6 pilot catalogue visibility does not approve a GB claim (got ' || _r || ')');
+  -- ROUTE A (owner decision 2026-09-18): what a pilot member can SEE in their
+  -- own market they can REGISTER, under the governed issuer, is_active untouched.
+  PERFORM pg_temp.ok(_r = 'OK',
+    '3.6 THE FIX, restored: the GB member registers a GB licence as authenticated (got ' || _r || ')');
+  PERFORM pg_temp.ok((SELECT count(*) = 1 FROM public.sp_claims WHERE holder_user_id = _gb_user
+      AND credential_code = 'UK_SIA_LICENCE_DS' AND jurisdiction_code = 'GB' AND sub_jurisdiction_code IS NULL)
+    AND (SELECT NOT is_active FROM public.sp_credential_types WHERE code = 'UK_SIA_LICENCE_DS'),
+    '3.6b it is stored under Great Britain, and the definition is still not approved for the public');
   -- Historical claim only: database-owner fixture, guarded candidate admission tested above.
   ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
   _r := pg_temp.try_claim_as(_gb_user, 'UK_SIA_LICENCE_DS', 'SIA Licence — Door Supervision', 'GB', NULL, 'licence',
@@ -293,8 +299,8 @@ BEGIN
     _r := pg_temp.try_claim_as(_ni_user, 'UK_SIA_LICENCE_VI',
           'SIA Licence — Vehicle Immobilisation (Northern Ireland)',
           'GB', 'GB-NI', 'licence', '2030-01-01', 'Security Industry Authority');
-    PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
-      '5.7 NI catalogue visibility does not approve a claim (got ' || _r || ')');
+    PERFORM pg_temp.ok(_r = 'OK',
+      '5.7 the Northern Ireland member registers the one NI licence (got ' || _r || ')');
   ELSE
     RAISE NOTICE 'ok  5.5 GB-NI pack absent; NI assertions skipped';
     RAISE NOTICE 'ok  5.6 GB-NI pack absent; NI assertions skipped';
@@ -405,8 +411,8 @@ BEGIN
   _r := pg_temp.try_claim_as(_du_user, 'AE_DU_SIRA_CARD_GUARD',
         'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence', '2030-01-01',
         'Security Industry Regulatory Agency', 'Fiktivt bevakningsbolag');
-  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
-    '9.10 the closed catalogue refuses the unapproved definition even for a member (got ' || _r || ')');
+  PERFORM pg_temp.ok(_r = 'OK',
+    '9.10 the entitled Dubai member files a cadre card with its company, as authenticated (got ' || _r || ')');
   -- Historical claim only: database-owner fixture, guarded candidate admission tested above.
   ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
   _r := pg_temp.try_claim_as(_du_user, 'AE_DU_SIRA_CARD_GUARD', 'SIRA Security Cadre Card — Security Guard', 'AE', 'AE-DU', 'licence',

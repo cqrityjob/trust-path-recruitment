@@ -59,7 +59,11 @@ They were withheld until 20261126090000 because the projection could not express
 | VU1, VU2 | The view required a governed AUTHORITY as issuer | The organisation-role model (20261123090000) already recorded `issuer.document_specific = true` under Polismyndigheten as regulator. The view now reads it: the definition is listed with NO governed issuer, and the holder must name the training provider on the certificate. The regulator is never presented as the trainer. |
 | SV | The view excluded `requires_scope` and the governed RPC had no scope key | The definition is listed and its scope is a REQUIRED holder field, enforced by the RPC and by the table guard, and refused on every definition that has none. |
 
-No issuer, authority or territorial scope was invented. The same two rules make the six UK licence-linked qualifications and the fifteen SIRA cadre cards expressible — but those are in pilot markets whose definitions are **not approved**, so nobody is offered them yet. Inactive pilot definitions are still not candidate-selectable, even for a holder with a pilot entitlement: membership opens a market and approves no definition (20261124090000).
+No issuer, authority or territorial scope was invented. The same two rules make the six UK licence-linked qualifications and the fifteen SIRA cadre cards expressible — but those are in pilot markets whose definitions are **not approved for the public**.
+
+### Pilot definitions — Route A (owner decision, 2026-09-18)
+
+An `internal_pilot` definition in an `internal_pilot`, not-active market pack is offered to a holder with a **valid membership of that exact pack**, and to nobody else. This honours the owner's per-definition pilot authorisation already recorded by 20260915090000; `is_active` stays false, so activating a market publicly publishes none of them, and the legal-review gate is unchanged. A single definition is held back by setting its `pilot_state` to `closed`. Non-members, members of another market and revoked members are refused. Implemented in 20261126090000 and pinned by `security_passport_pilot_scope_test.sql`.
 
 ## Verification queries
 

@@ -28,7 +28,10 @@ export const Route = createFileRoute("/_authenticated/admin/passport-catalogue")
 
 const AVAILABILITY: Record<CatalogueAvailability, { sv: string; en: string }> = {
   selectable: { sv: "Valbar för alla", en: "Selectable by everyone" },
-  selectable_pilot_members: { sv: "Valbar för pilotmedlemmar", en: "Selectable by pilot members" },
+  selectable_pilot_members: {
+    sv: "Valbar för pilotmedlemmar i marknaden",
+    en: "Selectable by this market's pilot members",
+  },
   awaiting_definition_approval: {
     sv: "Väntar på godkännande av definitionen",
     en: "Awaiting definition approval",
@@ -49,6 +52,10 @@ const REASONS: Record<DiagnosticReason, { sv: string; en: string }> = {
   market_pilot_members_only: {
     sv: "Marknaden är i intern pilot: erbjuds bara namngivna pilotmedlemmar (ges på användarens sida).",
     en: "The market is in internal pilot: offered to named pilot members only (granted on the user's page).",
+  },
+  pilot_authorised_not_public: {
+    sv: "Ägaren har godkänt definitionen för intern pilot. Den erbjuds giltiga pilotmedlemmar i just den här marknaden, är inte godkänd för allmänheten (is_active = false) och publiceras inte av att marknaden aktiveras.",
+    en: "Authorised by the owner for the internal pilot. Offered to valid pilot members of this exact market, not approved for the public (is_active = false), and not published by activating the market.",
   },
   issuer_unresolved: {
     sv: "Ingen styrd utfärdare, och ingen dokumentangiven utfärdare under en styrd tillsynsmyndighet.",

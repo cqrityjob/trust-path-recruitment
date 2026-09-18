@@ -1,93 +1,95 @@
-# Security Passport — the 44 pending pilot definitions: what is decided, what is not
+# Security Passport — the 44 pilot definitions: Route A, decided and implemented
 
-**Status: 44 definitions in Great Britain (13), Northern Ireland (1) and Dubai (30) are
-implemented and proven, and are available to NO pilot tester.** This document states exactly
-what is already decided, what is missing, who decides it, and the precise release action.
-Nothing here is activated by PR work. The full catalogue is in
-[catalogue-coverage-matrix.md](catalogue-coverage-matrix.md).
+**Owner decision, 2026-09-18: Route A is approved.** The per-definition internal-pilot
+authorisation already on record is honoured for explicitly granted pilot members. This authorises
+implementation and testing. It is **not** public market activation, and nothing here activates a
+market or approves a definition for the public.
+
+## The rule, exactly
+
+A pilot definition is offered — in the catalogue, by the save RPC and by the table guards alike —
+only when ALL of these hold:
+
+1. the definition is `internal_pilot`;
+2. ITS OWN market pack is `internal_pilot`, not active and not superseded;
+3. the authenticated holder has a valid (not revoked) membership of THAT exact pack;
+4. every other requirement passes: source review, governed or document-stated issuer under a
+   governed regulator, active jurisdiction, not deprecated, and the scope where one is required.
+
+`is_active` stays **false** on all 44. Consequences, each pinned by
+`security_passport_pilot_scope_test.sql` in CI:
+
+- a non-member, a member of another market, a revoked member and a session without a subject
+  are offered nothing and cannot save;
+- a definition held back individually (`pilot_state = 'closed'`) is withheld from its own members;
+- **activating a market publicly publishes none of them**: the day a pack becomes active, its
+  pilot-only definitions are offered to nobody — public or former member — until each is
+  approved on its own (`is_active`). The legal-review gate (named reviewer and date before a
+  pack can be activated) is untouched.
+
+The administrator's page `/admin/passport-catalogue` applies the same rule: 44 definitions read
+_Selectable by this market's pilot members_, with the reason _authorised for the internal pilot,
+not approved for the public_.
 
 ## Five states, kept apart
 
-| state | meaning | the 44 today |
-|---|---|---|
-| Implemented and tested | definition, roles, sources, form contract, save path, reviewer and share display | **yes** — all 44, pinned by code in CI (`security_passport_catalogue_completeness_test.sql`) |
-| Definition approved | the closed catalogue's own flag, `sp_credential_types.is_active` | **no** — 0 of 44 |
-| Hosted migration applied | 20261124090000, 20261125090000, 20261126090000 on the owner project | **no** — pending by design until merge |
-| Pilot membership granted | a named tester's `sp_pilot_members` row, given on the admin user page | per tester; none assumed |
-| Selectable and saveable by the actual tester | all of the above true at once | **no** |
+| state | the 44 |
+|---|---|
+| Implemented and tested | **yes** — all 44, pinned by code, with no approval of any kind in the proofs |
+| Definition approved for the public (`is_active`) | **no, by design** — 0 of 44 |
+| Hosted migration applied | 20261124090000 and 20261125090000 **applied** (ledger verified read-only 2026-09-18); **20261126090000 pending** until PR #265 merges |
+| Pilot membership granted | per named tester, per market; none assumed |
+| Selectable and saveable by the actual tester | after the release steps below |
 
-## What is ALREADY recorded — checked before asking again
+## Release steps, in order
 
-1. **The owner's authorisation for internal-pilot TESTING exists, per definition.** Migration
-   `20260915090000_sp_market_pilot_entitlement` set `pilot_state = 'internal_pilot'` on the GB,
-   GB-NI and AE-DU packs and on every one of these 44 definitions, and defines it in its own
-   words as: _"internal_pilot means 'the owner has authorised testing', not 'a regulator or
-   lawyer has approved this content'."_ It is applied hosted.
-2. **Legal review is NOT recorded, for any pilot pack.** `legal_review_state = 'pending'` on GB,
-   GB-NI and AE-DU and on all 44 definitions; `legal_reviewed_by` and `legal_reviewed_on` are
-   NULL. `three-market-architecture.md` requires a **named reviewer and a date** before a pack
-   can be activated publicly, and a database CHECK enforces it. Nobody has invented one here.
-3. **The closed catalogue's approval flag is NOT set**: `is_active = false` on all 44. The
-   application code records WHY it was left false
-   (`credentials.functions.ts`, the pilot branch): _"is_active stays false so they do not become
-   public the day the pack is approved without somebody deciding that separately."_
+The release is safe in either order (see *Guarded release*), so there is no "sync promptly" step
+and no window in which a form is offered something it cannot save.
 
-So the gap is not 44 missing approvals. It is **one unresolved question**, created when the
-closed catalogue (20261121090000) began reading `is_active` and four test suites were migrated to
-the contract "pilot entitlement cannot approve an inactive definition":
+1. **Merge PR #265.** The official Supabase GitHub integration applies
+   `20261126090000_sp_catalogue_scope_and_document_issuer` to the owner project.
+2. **Verify the migration, read-only** (Supabase SQL editor or the management connector):
+   ```sql
+   -- a. the ledger row
+   SELECT version, name FROM supabase_migrations.schema_migrations WHERE version = '20261126090000';
+   -- b. Route A and the document-issuer clause are in the view
+   SELECT pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass, true) LIKE '%pilot_state%'
+      AND pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass, true) LIKE '%document_specific%';   -- t
+   -- c. the Dubai role rows
+   SELECT count(*) FROM public.sp_credential_organisation_roles r
+     JOIN public.sp_credential_types t ON t.code = r.credential_code WHERE t.market_pack_code = 'AE-DU';          -- 104
+   -- d. NOTHING was approved or activated
+   SELECT count(*) FROM public.sp_credential_types
+    WHERE market_pack_code IN ('GB','GB-NI','AE-DU','AE-AZ') AND is_active;                                        -- 0
+   SELECT count(*) FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU','AE-AZ') AND is_active;        -- 0
+   ```
+3. **Record the evidence**: set the 20261126090000 entry in `supabase/release-state.json` to
+   `applied` with the ledger evidence, add the row to `supabase/hosted-ledger.json`, and take the
+   name off `expectedPending` in `scripts/release-frontier-check.ts` — one small follow-up commit.
+4. **Sync the application** (the owner's usual Lovable sync of `main`). Until then the deployed
+   form keeps working and is offered only what it can save.
+5. **Grant pilot access per tester**: Admin → Users → the tester → _Pilot access_ → grant
+   `GB`, `GB-NI` and/or `AE-DU`. Northern Ireland is its own market with its own grant.
+6. **Confirm on the admin page** `/admin/passport-catalogue`: _Selectable by everyone_ 22,
+   _Selectable by this market's pilot members_ 44, _Market closed_ 7, _Blocked_ 0.
+7. **The tester follows** [pilot-checklist-sv.md](pilot-checklist-sv.md).
 
-> **Does the owner's recorded internal-pilot authorisation (`pilot_state`) count as definition
-> approval FOR A NAMED PILOT MEMBER — or must each definition also be switched on (`is_active`)?**
+To hold one definition back at any time: a reviewed migration setting its `pilot_state` to
+`closed`. To withdraw a tester: revoke on the same admin page; what they saved is retained.
 
-## The decision, who takes it, and the release action
+## Guarded release — why the order cannot strand a user
 
-**Who:** the product owner, acting as the authorised catalogue administrator
-(`closed-catalogue-governance.md`: catalogue administration is a reviewed, versioned migration).
-**Not** a legal reviewer: both routes below keep every pack in `internal_pilot`, open to named
-members only. A legal reviewer is required only for PUBLIC activation of a market, which neither
-route does and this document does not request.
-
-### Route A — honour the authorisation that is already recorded (recommended)
-
-One reviewed migration replaces the catalogue view's definition clause so that, for a caller who
-is a pilot member of the definition's own pack, an `internal_pilot` definition counts as approved:
-
-```sql
--- in sp_approved_credential_catalogue, replacing:  t.is_active AND …
-(t.is_active
- OR (t.pilot_state = 'internal_pilot' AND t.market_pack_code IS NOT NULL
-     AND public.sp_is_pilot_member(auth.uid(), t.market_pack_code)))
-```
-
-- Needs **no per-definition re-approval**: it uses the 44 authorisations already on record.
-- `is_active` stays false, so **nothing becomes public** on the day a pack is activated.
-- It reverses one recorded test contract. Four assertions must be rewritten with the owner's
-  explicit confirmation: `security_passport_market_pilot_test` 5.1,
-  `security_passport_pilot_catalogue_visibility_test` 3.6,
-  `security_passport_pilot_write_path_test` 1.1 and
-  `security_passport_global_certification_test` 14.5. This is the shape 20261124090000 first
-  had; it was narrowed precisely because that confirmation had not been given.
-- A definition can still be held back individually by setting its `pilot_state` to `closed`.
-
-### Route B — approve definitions one by one
-
-A reviewed data migration, listing exactly the codes the owner approves:
-
-```sql
-UPDATE public.sp_credential_types SET is_active = true
- WHERE market_pack_code IN ('GB','GB-NI','AE-DU')
-   AND code IN ( /* the approved codes, copied from the tables below */ );
-```
-
-- No code or test changes; fully reversible per definition.
-- **Trap, recorded in the code:** each approved definition becomes PUBLIC automatically the day
-  its pack is activated. Route B therefore needs a second decision at activation time.
-- The migration's own guard in 20261126090000 (which refuses to finish if a pilot definition is
-  active) applies to that migration only; a later migration is free to approve.
-
-Either route is followed, per tester, by the existing pilot grant on the admin user page. After
-that — and only then — the definition is selectable and saveable by that tester, which
-`/admin/passport-catalogue` will show as _Selectable by pilot members_.
+A definition that needs a holder-written scope or a document-stated issuer can only be saved by
+an application that sends those fields. Over the REST listing of the catalogue, the database
+offers such a row only to a caller that declares the contract
+(`x-passport-catalogue-contract: 2`, sent by the new application's two catalogue readers). An
+application deployed BEFORE the migration sends no header and is offered exactly what its form
+can save (19 rows for a Swedish holder; the 7 SIA licences for a GB member). The save RPC and the
+table guards read the full catalogue, so nothing a capable application selects is refused.
+Proved in CI both ways: the new application against the old database
+(`security_passport_catalogue_old_rpc_compat_test.sql`, rolled-back stage), and the old
+application against the new database (completeness suite, by simulating PostgREST's request
+path and headers), and over real PostgREST on the isolated stack.
 
 ## The 44 definitions, by market, with source evidence
 

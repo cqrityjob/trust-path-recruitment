@@ -24,6 +24,13 @@ export type DiagnosticReason =
   | "market_closed"
   /** The pack is in internal pilot: only a named pilot member is offered it. */
   | "market_pilot_members_only"
+  /**
+   * ROUTE A (owner decision 2026-09-18): the definition is internal_pilot in an
+   * internal_pilot pack, so the owner's recorded pilot authorisation admits it
+   * for a valid member of THAT pack. It is NOT approved for the public
+   * (is_active stays false) and is published to nobody by a pack activation.
+   */
+  | "pilot_authorised_not_public"
   /** No governed issuer and no document-stated issuer under a governed regulator. */
   | "issuer_unresolved"
   | "deprecated"
@@ -34,7 +41,7 @@ export type DiagnosticReason =
 export type CatalogueAvailability =
   /** Offered to every holder. */
   | "selectable"
-  /** Offered to that market's pilot members only. */
+  /** Offered to valid pilot members of the definition's own market only. */
   | "selectable_pilot_members"
   /** Everything is in place except the owner's per-definition approval. */
   | "awaiting_definition_approval"
@@ -94,7 +101,11 @@ export function diagnoseDefinition(d: DiagnosticDefinition): DefinitionDiagnosis
   const marketPilot = !global && d.packIsActive !== true && d.packPilotState === "internal_pilot";
   if (!marketOpen && !marketPilot) reasons.push("market_closed");
   if (marketPilot) reasons.push("market_pilot_members_only");
-  if (!d.isActive) reasons.push("definition_not_approved");
+  // The SAME rule as sp_approved_credential_catalogue (20261126090000): the
+  // definition is internal_pilot AND its own pack is internal_pilot and not active.
+  const pilotRoute = !global && !d.isActive && d.pilotState === "internal_pilot" && marketPilot;
+  if (pilotRoute) reasons.push("pilot_authorised_not_public");
+  else if (!d.isActive) reasons.push("definition_not_approved");
 
   const structural = reasons.some(
     (r) => r === "issuer_unresolved" || r === "deprecated" || r === "jurisdiction_inactive",
@@ -105,10 +116,10 @@ export function diagnoseDefinition(d: DiagnosticDefinition): DefinitionDiagnosis
     ? "market_closed"
     : structural
       ? "blocked"
-      : !d.isActive
-        ? "awaiting_definition_approval"
-        : marketPilot
-          ? "selectable_pilot_members"
+      : pilotRoute || (d.isActive && marketPilot)
+        ? "selectable_pilot_members"
+        : !d.isActive
+          ? "awaiting_definition_approval"
           : "selectable";
 
   const holderMustState: ("authorisation_scope" | "issuer_name")[] = [];

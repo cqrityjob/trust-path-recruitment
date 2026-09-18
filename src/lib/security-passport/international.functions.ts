@@ -6,6 +6,10 @@ import type {
   CredentialJurisdiction,
   CredentialVerificationEvent,
 } from "./international";
+import {
+  PASSPORT_CATALOGUE_CONTRACT,
+  PASSPORT_CATALOGUE_CONTRACT_HEADER,
+} from "./catalogue-contract";
 
 export interface CredentialOrganisationRole {
   credential_code: string;
@@ -62,7 +66,10 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       abbreviations,
       issuerAliases,
     ] = await Promise.all([
-      db.from("sp_approved_credential_catalogue" as never).select("*"),
+      db
+        .from("sp_approved_credential_catalogue" as never)
+        .select("*")
+        .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT),
       // New schema stays explicitly pending in release-state.json. RLS resolves
       // claim ownership; there is no caller-provided holder or service client.
       db

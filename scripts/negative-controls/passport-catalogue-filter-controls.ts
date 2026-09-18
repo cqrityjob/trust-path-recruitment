@@ -114,8 +114,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the administrator's diagnosis reports an approved pilot definition as selectable by everyone, merging definition approval with market entitlement",
     file: DIAG,
-    find: '          ? "selectable_pilot_members"',
-    replace: '          ? "selectable"',
+    find: '        ? "selectable_pilot_members"',
+    replace: '        ? "selectable"',
     guard: GUARD,
     expect: "D once approved it is selectable by pilot members only",
   },
@@ -138,6 +138,26 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "    const ctx = context as Ctx;\n    // Service role AFTER the admin check",
     guard: GUARD,
     expect: "A the platform-admin check runs on the server BEFORE the service-role client",
+  },
+  {
+    id: "PCF-NC-ACTIVATION-PUBLISHES-PILOT-DEFINITIONS",
+    defect:
+      "the diagnosis stops requiring the market to still be a pilot, so activating a market reports every pilot-only definition as available",
+    file: DIAG,
+    find: '  const pilotRoute = !global && !d.isActive && d.pilotState === "internal_pilot" && marketPilot;',
+    replace: '  const pilotRoute = !global && !d.isActive && d.pilotState === "internal_pilot";',
+    guard: GUARD,
+    expect: "D activating the market publishes no pilot-only definition",
+  },
+  {
+    id: "PCF-NC-READER-FORGETS-THE-CONTRACT",
+    defect:
+      "the market panels stop declaring the catalogue contract, so they list fewer credentials than the wizard they lead into can save",
+    file: "src/lib/security-passport/credentials.functions.ts",
+    find: "      .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);",
+    replace: ";",
+    guard: GUARD,
+    expect: "G BOTH catalogue readers declare the contract",
   },
 ];
 

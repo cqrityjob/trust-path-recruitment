@@ -38,10 +38,24 @@
 --      2026-08-22 (docs/passport/regulatory-source-register.md). Abu Dhabi is
 --      closed by owner decision and receives nothing.
 --
+--   6. ROUTE A (owner decision, 2026-09-18). An internal_pilot definition in an
+--      internal_pilot, not-active pack is admitted for a holder with a valid
+--      membership of THAT pack — the owner's per-definition pilot authorisation
+--      (20260915090000) is what is honoured. is_active stays false, so public
+--      activation of a market publishes no pilot-only definition; a single
+--      definition is held back with pilot_state = 'closed'. Non-members,
+--      other-market members and revoked members are refused.
+--   7. GUARDED RELEASE. Over the REST listing, a row that needs a scope or a
+--      document-stated issuer is offered only to a caller declaring
+--      x-passport-catalogue-contract: 2. An application deployed before this
+--      migration is never offered a credential its form cannot save; the RPC
+--      and the table guards read the full catalogue.
+--
 -- ── WHAT DOES NOT CHANGE ───────────────────────────────────────────────
 --
--- No definition is approved and no market is activated: is_active, pilot_state
--- and legal_review_state are untouched on every row. The scope requirement is
+-- No definition is approved FOR THE PUBLIC and no market is activated: is_active,
+-- pilot_state and legal_review_state are untouched on every row, and the
+-- legal-review gate for activating a pack is unchanged. The scope requirement is
 -- not removed from any definition. No table, column, function, grant, policy
 -- or trigger is introduced — EXPAND, bodies and seed rows only. A candidate
 -- still cannot create a credential type, an issuer or a catalogue row.
@@ -75,7 +89,32 @@ WHERE
  -- membership opens a market, it never approves a definition.
  -- A scoped definition (SV, a SIRA cadre card) is in the catalogue: the scope is a
  -- REQUIRED holder field enforced by the write path, not a reason to withhold it.
- t.is_active AND m.deprecated_at IS NULL
+ --
+ -- ROUTE A (owner decision, 2026-09-18). A definition is admitted when it is
+ -- approved for everyone (is_active), OR when ALL of these hold: the definition
+ -- itself is internal_pilot; ITS OWN market pack is internal_pilot and not
+ -- active; and the caller holds a valid membership of THAT pack. The owner's
+ -- per-definition pilot authorisation (20260915090000) is what is honoured:
+ -- is_active stays false, so the day a pack is activated publicly a pilot-only
+ -- definition is offered to NOBODY until it is approved on its own. A single
+ -- definition is held back by setting its pilot_state to 'closed'.
+ (t.is_active
+  OR (t.pilot_state='internal_pilot' AND t.market_pack_code IS NOT NULL
+      AND EXISTS (SELECT 1 FROM public.sp_market_packs pp WHERE pp.code=t.market_pack_code
+                   AND pp.pilot_state='internal_pilot' AND NOT pp.is_active AND pp.superseded_on IS NULL)
+      AND public.sp_is_pilot_member(auth.uid(), t.market_pack_code)))
+ AND m.deprecated_at IS NULL
+ -- GUARDED RELEASE. A definition that needs a holder-written scope or a
+ -- document-stated issuer can only be saved by an application that sends those
+ -- fields. Over the REST LISTING of this view, such a row is offered only to a
+ -- caller that declares the contract (header x-passport-catalogue-contract: 2).
+ -- An application deployed before this migration sends no such header and is
+ -- therefore never offered a credential its form cannot save. Every other
+ -- reader — the save RPC, the table guards, SQL — sees the full catalogue.
+ AND (NOT (t.requires_scope OR EXISTS (SELECT 1 FROM public.sp_credential_organisation_roles r
+            WHERE r.credential_code=t.code AND r.role='issuer' AND r.document_specific))
+      OR coalesce(current_setting('request.path', true),'') <> '/sp_approved_credential_catalogue'
+      OR coalesce(nullif(current_setting('request.headers', true),'')::json->>'x-passport-catalogue-contract','') = '2')
  AND (d.effective_from IS NULL OR d.effective_from<=current_date)
  AND (d.retired_on IS NULL OR d.retired_on>current_date)
  AND public.sp_is_passport_credential(t.claim_type,t.code)

@@ -14,11 +14,11 @@
 --   30 Dubai                            (internal pilot)
 --    7 Abu Dhabi                        (CLOSED by owner decision: never listed)
 --
--- GB, GB-NI and Dubai definitions are NOT approved in the product. This suite
--- approves them INSIDE ITS OWN ROLLED-BACK TRANSACTION, as a catalogue
--- administrator would by reviewed migration, to prove that once the owner
--- approves a definition every one of them registers. It takes no decision for
--- the product and activates no market pack.
+-- ROUTE A (owner decision 2026-09-18). GB, GB-NI and Dubai definitions are
+-- internal_pilot and keep is_active = false for the WHOLE suite: nothing is
+-- approved here, temporarily or otherwise. They are reached exactly as a real
+-- pilot tester reaches them — through a valid membership of the definition's
+-- own internal_pilot pack.
 \set ON_ERROR_STOP on
 BEGIN;
 CREATE FUNCTION pg_temp.ok(b boolean,label text) RETURNS void LANGUAGE plpgsql AS $$ BEGIN
@@ -101,14 +101,35 @@ SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_approved_credential_catalogu
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000004',true);
-SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='AE'),
- 'today an entitled Dubai member is offered no Dubai definition: none is approved, and membership approves nothing');
+SELECT pg_temp.ok((SELECT count(*)=30 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU'),
+ 'an entitled Dubai member is offered all 30 Dubai pilot definitions, with none of them approved for the public');
 RESET ROLE;
+SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_credential_types WHERE market_pack_code IN ('GB','GB-NI','AE-DU','AE-AZ') AND is_active)
+ AND (SELECT count(*)=0 FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU','AE-AZ') AND is_active),
+ 'no pilot definition and no pilot market is active: this suite approves nothing');
 
--- ── the administrator's approval, inside this rolled-back test only ─────
-UPDATE public.sp_credential_types SET is_active=true WHERE market_pack_code IN ('GB','GB-NI','AE-DU','AE-AZ');
-SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU','AE-AZ') AND is_active),
- 'approving definitions activates no market pack');
+-- ── NEW database, OLD application: never offered what its form cannot save ──
+-- PostgREST publishes the request path and headers as settings. A listing with
+-- no contract header is an application from before 20261126090000.
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
+SELECT set_config('request.path','/sp_approved_credential_catalogue',true);
+SELECT set_config('request.headers','{"user-agent":"an application deployed before the migration"}',true);
+SELECT pg_temp.ok((SELECT count(*)=19 FROM public.sp_approved_credential_catalogue)
+ AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.code IN ('VU1','VU2','SV')),
+ 'an OLD application lists the 19 it can save: no scoped and no document-issuer definition is offered to it');
+SELECT set_config('request.headers','{"x-passport-catalogue-contract":"2"}',true);
+SELECT pg_temp.ok((SELECT count(*)=22 FROM public.sp_approved_credential_catalogue),
+ 'the NEW application declares the contract and is offered all 22');
+SELECT set_config('request.path','/rpc/sp_save_international_credential',true);
+SELECT set_config('request.headers','{}',true);
+SELECT pg_temp.ok((SELECT count(*)=22 FROM public.sp_approved_credential_catalogue),
+ 'the guard narrows the LISTING only: the save RPC and the table guards read the whole catalogue');
+SELECT set_config('request.path','',true);
+SELECT set_config('request.headers','',true);
+RESET ROLE;
+-- Abu Dhabi: even an APPROVED definition of a closed market is offered to nobody.
+UPDATE public.sp_credential_types SET is_active=true WHERE market_pack_code='AE-AZ';
 
 -- ── every definition: visible, saved, read back ─────────────────────────
 DO $$

@@ -100,7 +100,7 @@ const awarding = (r: (typeof rows)[number]) =>
   (r.issuerStatedOnDocument ? "stated on the certificate" : "—");
 const STATE: Record<string, string> = {
   selectable: "approved · open to all",
-  selectable_pilot_members: "approved · pilot members",
+  selectable_pilot_members: "pilot-authorised (not public) · valid members of this market",
   awaiting_definition_approval: "NOT approved · pilot market",
   market_closed: "market CLOSED",
   blocked: "BLOCKED",
@@ -112,10 +112,10 @@ const display = (r: (typeof rows)[number]) =>
     : `flag ${r.subJurisdictionCode ?? r.jurisdictionCode}${r.requiresScope ? " · scope-limited mark, scope text withheld from an anonymous share" : ""}`;
 
 const line = (r: (typeof rows)[number]) =>
-  `| \`${r.code}\` | ${r.nameEn} | ${territory(r)} | ${r.claimType} / ${r.category} | ${r.regulator ?? "—"} | ${awarding(r)}${r.trainingProviderStatedOnDocument ? "; training provider stated on the certificate" : ""} | ${STATE[r.availability]} | ${r.availability === "selectable" ? "yes" : r.availability === "selectable_pilot_members" ? "pilot members" : "no"} | ${inScope(r) ? `proven${r.holderMustState.length ? ` (holder states ${r.holderMustState.join(" + ").replaceAll("_", " ")})` : ""}${r.isActive ? "" : " — after approval"}` : "refused (closed market)"} | ${inScope(r) ? "review request + evidence reach the reviewer; definition, issuer as stated, territory and scope shown" : "n/a"} | ${inScope(r) ? display(r) : "n/a"} |`;
+  `| \`${r.code}\` | ${r.nameEn} | ${territory(r)} | ${r.claimType} / ${r.category} | ${r.regulator ?? "—"} | ${awarding(r)}${r.trainingProviderStatedOnDocument ? "; training provider stated on the certificate" : ""} | ${STATE[r.availability]} | ${r.availability === "selectable" ? "yes" : r.availability === "selectable_pilot_members" ? "pilot members" : "no"} | ${inScope(r) ? `proven${r.holderMustState.length ? ` (holder states ${r.holderMustState.join(" + ").replaceAll("_", " ")})` : ""}${r.availability === "selectable_pilot_members" ? " — as a valid pilot member" : ""}` : "refused (closed market)"} | ${inScope(r) ? "review request + evidence reach the reviewer; definition, issuer as stated, territory and scope shown" : "n/a"} | ${inScope(r) ? display(r) : "n/a"} |`;
 
 const count = (a: string) => rows.filter((r) => r.availability === a).length;
-const pending = rows.filter((r) => r.availability === "awaiting_definition_approval");
+const pending = rows.filter((r) => r.availability === "selectable_pilot_members");
 const groups: [string, (r: (typeof rows)[number]) => boolean][] = [
   ["International certifications", (r) => r.scopeCode === "global_professional"],
   ["Sweden", (r) => r.marketPackCode === "SE"],
@@ -144,18 +144,18 @@ same diagnosis is shown to a platform administrator at \`/admin/passport-catalog
 | definitions in the taxonomy | ${rows.length} |
 | in the agreed scope (international, Sweden, Great Britain, Northern Ireland, Dubai) | ${rows.filter(inScope).length} |
 | selectable by every holder today | ${count("selectable")} |
-| selectable by pilot members today | ${count("selectable_pilot_members")} |
-| awaiting the owner's per-definition approval | ${count("awaiting_definition_approval")} |
+| selectable by VALID PILOT MEMBERS of the definition's own market (Route A) | ${count("selectable_pilot_members")} |
+| held back individually or awaiting approval | ${count("awaiting_definition_approval")} |
 | market closed (Abu Dhabi) | ${count("market_closed")} |
 | blocked by missing governed data | ${count("blocked")} |
 
-**"Saves and reloads — proven"** means the definition is pinned by code in
+**Nothing is approved to produce this proof.** "Saves and reloads — proven" means the definition is pinned by code in
 \`supabase/tests/security_passport_catalogue_completeness_test.sql\` (CI, every push) and in
 \`scripts/passport-live-local-journey-check.mjs\` (real GoTrue + PostgREST, authenticated test
 users): visible to its entitled holder, saved through \`sp_save_international_credential\` with the
-contract its definition demands, and read back with the right territory, issuer and scope. For a
-definition that is not approved, both proofs approve it inside their own disposable database and
-restore it; **the product approves nothing**.
+contract its definition demands, and read back with the right territory, issuer and scope. A pilot
+definition is reached through a pilot membership alone, exactly as a real tester reaches it;
+\`is_active\` is never set, temporarily or otherwise.
 
 Three questions are kept apart throughout: **definition approval** (\`is_active\`, per definition),
 **market entitlement** (active pack, or internal pilot + a named member) and **holder
@@ -168,15 +168,17 @@ ${groups
   })
   .join("\n\n")}
 
-## Outstanding approval decisions — ${pending.length} definitions
+## The ${pending.length} pilot definitions — Route A (owner decision, 2026-09-18)
 
-None of these is activated by this work. Each needs the owner's decision, taken as a reviewed,
-versioned migration by an authorised catalogue administrator
-(\`docs/passport/closed-catalogue-governance.md\`, six evidence items), and each market's
-\`legal_review_state\` is still \`pending\`: \`docs/passport/three-market-architecture.md\` requires a
-**named reviewer and a date** before a pack can be activated. Approving a definition
-(\`is_active = true\`) while its pack stays \`internal_pilot\` opens it to **named pilot members
-only**; it does not open the market publicly.
+The owner approved Route A: the per-definition internal-pilot authorisation already on record
+(\`pilot_state = 'internal_pilot'\`, 20260915090000) is honoured **for explicitly granted pilot
+members**. A pilot definition is offered only when the definition is \`internal_pilot\`, ITS OWN
+market pack is \`internal_pilot\` and not active, and the authenticated holder has a valid
+membership of THAT pack — and every other catalogue, source, issuer, jurisdiction and scope
+requirement passes. \`is_active\` stays false on all of them, so public activation of a market
+publishes none of them; the legal-review gate is untouched. This authorises implementation and
+testing, not public market activation. Details and release steps:
+[pilot-approval-decisions.md](pilot-approval-decisions.md).
 
 | code | name | market | legal review | source recorded for the definition | checked |
 |---|---|---|---|---|---|
@@ -210,5 +212,5 @@ ${pending
 `;
 writeFileSync(path.join(root, "docs/passport/catalogue-coverage-matrix.md"), md);
 console.log(
-  `coverage matrix written: ${rows.length} definitions, ${pending.length} awaiting approval, ${count("selectable")} selectable`,
+  `coverage matrix written: ${rows.length} definitions, ${pending.length} for pilot members, ${count("selectable")} selectable`,
 );
