@@ -82,6 +82,7 @@ import { Route as AuthenticatedAdminWorkforceRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated.admin.users'
 import { Route as AuthenticatedAdminResultsRouteImport } from './routes/_authenticated.admin.results'
 import { Route as AuthenticatedAdminPassportVerificationRouteImport } from './routes/_authenticated.admin.passport-verification'
+import { Route as AuthenticatedAdminPassportCatalogueRouteImport } from './routes/_authenticated.admin.passport-catalogue'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated.admin.jobs'
 import { Route as AuthenticatedAdminInterviewRolePacksRouteImport } from './routes/_authenticated.admin.interview-role-packs'
 import { Route as AuthenticatedAdminFeedbackRouteImport } from './routes/_authenticated.admin.feedback'
@@ -567,6 +568,12 @@ const AuthenticatedAdminPassportVerificationRoute =
   AuthenticatedAdminPassportVerificationRouteImport.update({
     id: '/passport-verification',
     path: '/passport-verification',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminPassportCatalogueRoute =
+  AuthenticatedAdminPassportCatalogueRouteImport.update({
+    id: '/passport-catalogue',
+    path: '/passport-catalogue',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
 const AuthenticatedAdminJobsRoute = AuthenticatedAdminJobsRouteImport.update({
@@ -1208,6 +1215,7 @@ export interface FileRoutesByFullPath {
   '/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
   '/admin/interview-role-packs': typeof AuthenticatedAdminInterviewRolePacksRouteWithChildren
   '/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
+  '/admin/passport-catalogue': typeof AuthenticatedAdminPassportCatalogueRoute
   '/admin/passport-verification': typeof AuthenticatedAdminPassportVerificationRoute
   '/admin/results': typeof AuthenticatedAdminResultsRouteWithChildren
   '/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
@@ -1360,6 +1368,7 @@ export interface FileRoutesByTo {
   '/admin/career-discovery-preview': typeof AuthenticatedAdminCareerDiscoveryPreviewRoute
   '/admin/data': typeof AuthenticatedAdminDataRoute
   '/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
+  '/admin/passport-catalogue': typeof AuthenticatedAdminPassportCatalogueRoute
   '/admin/passport-verification': typeof AuthenticatedAdminPassportVerificationRoute
   '/discovery/history': typeof AuthenticatedDiscoveryHistoryRoute
   '/discovery/session': typeof AuthenticatedDiscoverySessionRoute
@@ -1519,6 +1528,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/feedback': typeof AuthenticatedAdminFeedbackRoute
   '/_authenticated/admin/interview-role-packs': typeof AuthenticatedAdminInterviewRolePacksRouteWithChildren
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRouteWithChildren
+  '/_authenticated/admin/passport-catalogue': typeof AuthenticatedAdminPassportCatalogueRoute
   '/_authenticated/admin/passport-verification': typeof AuthenticatedAdminPassportVerificationRoute
   '/_authenticated/admin/results': typeof AuthenticatedAdminResultsRouteWithChildren
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRouteWithChildren
@@ -1685,6 +1695,7 @@ export interface FileRouteTypes {
     | '/admin/feedback'
     | '/admin/interview-role-packs'
     | '/admin/jobs'
+    | '/admin/passport-catalogue'
     | '/admin/passport-verification'
     | '/admin/results'
     | '/admin/users'
@@ -1837,6 +1848,7 @@ export interface FileRouteTypes {
     | '/admin/career-discovery-preview'
     | '/admin/data'
     | '/admin/feedback'
+    | '/admin/passport-catalogue'
     | '/admin/passport-verification'
     | '/discovery/history'
     | '/discovery/session'
@@ -1995,6 +2007,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/feedback'
     | '/_authenticated/admin/interview-role-packs'
     | '/_authenticated/admin/jobs'
+    | '/_authenticated/admin/passport-catalogue'
     | '/_authenticated/admin/passport-verification'
     | '/_authenticated/admin/results'
     | '/_authenticated/admin/users'
@@ -2649,6 +2662,13 @@ declare module '@tanstack/react-router' {
       path: '/passport-verification'
       fullPath: '/admin/passport-verification'
       preLoaderRoute: typeof AuthenticatedAdminPassportVerificationRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/passport-catalogue': {
+      id: '/_authenticated/admin/passport-catalogue'
+      path: '/passport-catalogue'
+      fullPath: '/admin/passport-catalogue'
+      preLoaderRoute: typeof AuthenticatedAdminPassportCatalogueRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/jobs': {
@@ -3455,6 +3475,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminFeedbackRoute: typeof AuthenticatedAdminFeedbackRoute
   AuthenticatedAdminInterviewRolePacksRoute: typeof AuthenticatedAdminInterviewRolePacksRouteWithChildren
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRouteWithChildren
+  AuthenticatedAdminPassportCatalogueRoute: typeof AuthenticatedAdminPassportCatalogueRoute
   AuthenticatedAdminPassportVerificationRoute: typeof AuthenticatedAdminPassportVerificationRoute
   AuthenticatedAdminResultsRoute: typeof AuthenticatedAdminResultsRouteWithChildren
   AuthenticatedAdminUsersRoute: typeof AuthenticatedAdminUsersRouteWithChildren
@@ -3480,6 +3501,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminInterviewRolePacksRoute:
     AuthenticatedAdminInterviewRolePacksRouteWithChildren,
   AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRouteWithChildren,
+  AuthenticatedAdminPassportCatalogueRoute:
+    AuthenticatedAdminPassportCatalogueRoute,
   AuthenticatedAdminPassportVerificationRoute:
     AuthenticatedAdminPassportVerificationRoute,
   AuthenticatedAdminResultsRoute: AuthenticatedAdminResultsRouteWithChildren,

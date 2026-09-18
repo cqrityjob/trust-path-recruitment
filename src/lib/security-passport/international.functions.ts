@@ -6,6 +6,10 @@ import type {
   CredentialJurisdiction,
   CredentialVerificationEvent,
 } from "./international";
+import {
+  PASSPORT_CATALOGUE_CONTRACT,
+  PASSPORT_CATALOGUE_CONTRACT_HEADER,
+} from "./catalogue-contract";
 
 export interface CredentialOrganisationRole {
   credential_code: string;
@@ -25,7 +29,17 @@ export interface CredentialDefinitionReview {
   validity_en: string;
 }
 export interface InternationalPassportMetadata {
-  definitionScopes?: readonly { code: string; scope_code: string | null }[];
+  definitionScopes?: readonly {
+    code: string;
+    scope_code: string | null;
+    /** The definition demands a holder-written authorisation scope (SV, SIRA cards). */
+    requires_scope?: boolean | null;
+    symbol_label?: string | null;
+  }[];
+  /** `sp_certification_definitions.abbreviation` — search only ("CPP", "CISSP"). */
+  abbreviations?: readonly { credential_code: string; abbreviation: string | null }[];
+  /** Approved issuer aliases — search only, never rendered ("(ISC)²"). */
+  issuerAliases?: readonly { issuer_id: string; alias: string }[];
   organisationRoles?: readonly CredentialOrganisationRole[];
   definitionReviews?: readonly CredentialDefinitionReview[];
   definitions?: readonly ApprovedCredentialDefinition[];
@@ -49,8 +63,13 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       roles,
       definitionReviews,
       scopes,
+      abbreviations,
+      issuerAliases,
     ] = await Promise.all([
-      db.from("sp_approved_credential_catalogue" as never).select("*"),
+      db
+        .from("sp_approved_credential_catalogue" as never)
+        .select("*")
+        .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT),
       // New schema stays explicitly pending in release-state.json. RLS resolves
       // claim ownership; there is no caller-provided holder or service client.
       db
@@ -73,7 +92,12 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
         .order("decided_at", { ascending: true }),
       db.from("sp_credential_organisation_roles" as never).select("*"),
       db.from("sp_credential_definition_reviews" as never).select("*"),
-      db.from("sp_credential_types").select("code,scope_code"),
+      db.from("sp_credential_types").select("code,scope_code,requires_scope,symbol_label"),
+      // Search aids only. A failure here must not take the whole wizard down, so
+      // these two are read tolerantly below: no abbreviation means a weaker
+      // search, never a missing catalogue.
+      db.from("sp_certification_definitions").select("credential_code,abbreviation"),
+      db.from("sp_certification_issuer_aliases" as never).select("issuer_id,alias"),
     ]);
     if (
       [
@@ -93,7 +117,15 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
     }
     const claimOf = new Map((requests.data ?? []).map((r) => [r.id, r.claim_id]));
     return {
-      definitionScopes: scopes.data as unknown as { code: string; scope_code: string | null }[],
+      definitionScopes: scopes.data as unknown as InternationalPassportMetadata["definitionScopes"],
+      abbreviations: (abbreviations.error ? [] : (abbreviations.data ?? [])) as unknown as {
+        credential_code: string;
+        abbreviation: string | null;
+      }[],
+      issuerAliases: (issuerAliases.error ? [] : (issuerAliases.data ?? [])) as unknown as {
+        issuer_id: string;
+        alias: string;
+      }[],
       organisationRoles: roles.data as unknown as CredentialOrganisationRole[],
       definitionReviews: definitionReviews.data as unknown as CredentialDefinitionReview[],
       definitions: catalogue.data as unknown as ApprovedCredentialDefinition[],
@@ -138,6 +170,10 @@ const internationalInput = z
     issued_on: z.string().max(10),
     valid_until: z.string().max(10),
     no_expiry: z.boolean().nullable(),
+    /** REQUIRED by the database for a scoped definition, refused for any other. */
+    authorisation_scope: z.string().max(200).optional(),
+    /** REQUIRED where the issuer is stated on the document, refused where governed. */
+    issuer_name: z.string().max(160).optional(),
   })
   .strict();
 export type InternationalCredentialInput = z.infer<typeof internationalInput>;
@@ -145,12 +181,26 @@ export const saveInternationalCredential = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => internationalInput.parse(data))
   .handler(async ({ context, data }): Promise<{ id: string }> => {
+    // The two optional keys are sent ONLY when they carry a value. A database
+    // that has not yet received 20261126090000 refuses unknown keys, and it also
+    // never lists a definition that needs one — so an empty key must not travel.
+    const { authorisation_scope, issuer_name, ...core } = data;
+    const input: Record<string, unknown> = { ...core };
+    if (authorisation_scope?.trim()) input.authorisation_scope = authorisation_scope.trim();
+    if (issuer_name?.trim()) input.issuer_name = issuer_name.trim();
     const result = (await context.supabase.rpc(
       "sp_save_international_credential" as never,
-      { _input: data } as never,
-    )) as unknown as { data: unknown; error: unknown };
-    if (result.error || typeof result.data !== "string")
+      { _input: input } as never,
+    )) as unknown as { data: unknown; error: { message?: string } | null };
+    if (result.error || typeof result.data !== "string") {
+      // Only the two holder-fixable refusals are named; everything else stays generic.
+      const message = result.error?.message ?? "";
+      if (message.includes("SP_CREDENTIAL_REQUIRES_SCOPE"))
+        throw new Error("SP_CREDENTIAL_REQUIRES_SCOPE");
+      if (message.includes("SP_CREDENTIAL_REQUIRES_ISSUER"))
+        throw new Error("SP_CREDENTIAL_REQUIRES_ISSUER");
       throw new Error("Credential could not be saved");
+    }
     return { id: result.data };
   });
 
@@ -162,8 +212,9 @@ export interface ApprovedCredentialDefinition {
   scope_code: string;
   country: string | null;
   region: string | null;
-  issuer_id: string;
-  issuer_name: string;
+  /** NULL where the organisation-role model says the issuer is stated on the document. */
+  issuer_id: string | null;
+  issuer_name: string | null;
   official_url: string | null;
   verification_url: string | null;
   requires_valid_until: boolean;
@@ -178,7 +229,7 @@ export const readApprovedCredentialDraft = createServerFn({ method: "GET" })
     const result = await context.supabase
       .from("sp_claims")
       .select(
-        "id,version_no,credential_code,jurisdiction_code,sub_jurisdiction_code,credential_reference,issued_on,valid_until",
+        "id,version_no,credential_code,jurisdiction_code,sub_jurisdiction_code,credential_reference,issued_on,valid_until,authorisation_scope,claimed_issuer_name",
       )
       .eq("holder_user_id", context.userId)
       .eq("id", data.id)
@@ -197,5 +248,9 @@ export const readApprovedCredentialDraft = createServerFn({ method: "GET" })
       issued_on: row.issued_on ?? "",
       valid_until: row.valid_until ?? "",
       no_expiry: null,
+      // Carried so a scoped or document-issuer draft resumes complete. The form
+      // sends them back only where the SELECTED definition asks for them.
+      authorisation_scope: row.authorisation_scope ?? "",
+      issuer_name: row.claimed_issuer_name ?? "",
     };
   });

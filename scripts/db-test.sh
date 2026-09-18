@@ -163,12 +163,31 @@ psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
+    # 20261126090000 (scoped + document-issuer definitions, Dubai roles) is the
+    # newest and rolls back first. It must STAND DOWN too: the view withholds
+    # scoped definitions again, the RPC knows no scope key, the Dubai rows go.
+    psql_q -d "$TEST_DB" -f "supabase/rollback/20261126090000_sp_catalogue_scope_and_document_issuer_rollback.sql" >/dev/null
+    cat_view="$(psql_q -d "$TEST_DB" -Atc "SELECT pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass)")"
+    printf '%s' "$cat_view" | grep -q 'document_specific' && { echo "FAIL: 20261126090000 rollback left the document-issuer clause in sp_approved_credential_catalogue"; exit 1; }
+    printf '%s' "$cat_view" | grep -q 'requires_scope' || { echo "FAIL: 20261126090000 rollback did not restore NOT requires_scope in sp_approved_credential_catalogue"; exit 1; }
+    save_fn="$(psql_q -d "$TEST_DB" -Atc "SELECT string_agg(prosrc, ' ') FROM pg_proc WHERE proname = 'sp_save_international_credential' AND pronamespace = 'public'::regnamespace")"
+    printf '%s' "$save_fn" | grep -q 'authorisation_scope' && { echo "FAIL: 20261126090000 rollback left the scope key in sp_save_international_credential"; exit 1; }
+    du_roles="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM public.sp_credential_organisation_roles r JOIN public.sp_credential_types t ON t.code = r.credential_code WHERE t.market_pack_code = 'AE-DU'")"
+    [ "$du_roles" = "0" ] || { echo "FAIL: 20261126090000 rollback left $du_roles Dubai organisation-role rows"; exit 1; }
+    echo "    ok  catalogue-completeness rollback stood down: scoped definitions withheld, no scope key, no Dubai role rows"
+    # DEPLOYMENT COMPATIBILITY: this is the database the owner project has BEFORE
+    # 20261126090000. The new application must not be able to lose a required
+    # scope or issuer against it: the old RPC refuses such a request whole.
+    compat_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_catalogue_old_rpc_compat_test.sql 2>&1)" || { echo "$compat_output"; exit 1; }
+    compat_count="$(printf '%s\n' "$compat_output" | grep -c 'NOTICE:  ok ' || true)"
+    [ "$compat_count" -ge 5 ] || { echo "old-RPC compatibility assertion shortfall: $compat_count"; exit 1; }
+    echo "    $compat_count assertions passed: new application against the OLD save RPC (nothing silently discarded)"
     # The two pilot-finish rollbacks go first, and must STAND THE CHANGE DOWN,
     # not merely run: no pilot membership in the catalogue view, no scope_code
     # in the payload. Checked HERE, before 20261121090000's rollback drops the
@@ -184,7 +203,7 @@ for passport_round in before after; do
     for passport_migration in 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
       psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
     done
-    for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue 20261123090000_sp_credential_organisation_roles 20261124090000_sp_pilot_member_catalogue 20261125090000_sp_disclosure_definition_scope; do
+    for passport_migration in 20261118100000_sp_international_passport_foundation 20261119090000_sp_international_credential_wallet 20261120090000_sp_credential_selective_sharing_v2 20261121090000_sp_closed_credential_catalogue 20261123090000_sp_credential_organisation_roles 20261124090000_sp_pilot_member_catalogue 20261125090000_sp_disclosure_definition_scope 20261126090000_sp_catalogue_scope_and_document_issuer; do
       psql_q -d "$TEST_DB" -f "supabase/migrations/${passport_migration}.sql" >/dev/null
     done
     pilot_view="$(psql_q -d "$TEST_DB" -Atc "SELECT pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass)")"
@@ -192,6 +211,13 @@ for passport_round in before after; do
     scope_fn="$(psql_q -d "$TEST_DB" -Atc "SELECT string_agg(prosrc, ' ') FROM pg_proc WHERE proname = 'sp_credential_payload_v2' AND pronamespace = 'public'::regnamespace")"
     printf '%s' "$scope_fn" | grep -q 'scope_code' || { echo "FAIL: 20261125090000 reapply did not restore scope_code in sp_credential_payload_v2"; exit 1; }
     echo "    ok  pilot-finish migrations reapplied: catalogue view with pilot membership, payload with scope_code"
+    cat_view="$(psql_q -d "$TEST_DB" -Atc "SELECT pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass)")"
+    printf '%s' "$cat_view" | grep -q 'document_specific' || { echo "FAIL: 20261126090000 reapply did not restore the document-issuer clause"; exit 1; }
+    save_fn="$(psql_q -d "$TEST_DB" -Atc "SELECT string_agg(prosrc, ' ') FROM pg_proc WHERE proname = 'sp_save_international_credential' AND pronamespace = 'public'::regnamespace")"
+    printf '%s' "$save_fn" | grep -q 'authorisation_scope' || { echo "FAIL: 20261126090000 reapply did not restore the scope key"; exit 1; }
+    du_roles="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM public.sp_credential_organisation_roles r JOIN public.sp_credential_types t ON t.code = r.credential_code WHERE t.market_pack_code = 'AE-DU'")"
+    [ "$du_roles" = "104" ] || { echo "FAIL: 20261126090000 reapply seeded $du_roles Dubai organisation-role rows, expected 104"; exit 1; }
+    echo "    ok  catalogue-completeness migration reapplied: document-issuer clause, scope key, 104 Dubai role rows"
   fi
 done
 
@@ -4772,7 +4798,8 @@ TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
-for passport_migration in 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
+# 20261126090000 first: its catalogue view reads sp_credential_organisation_roles.
+for passport_migration in 20261126090000_sp_catalogue_scope_and_document_issuer 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
   psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null
 done
 # The rollback contract is not "the objects disappear". It is "the objects
@@ -6148,6 +6175,9 @@ fi
 
 # The schema foundation must be independently reversible without touching an
 # existing disclosure, then safely re-applicable for the remaining suites.
+# 20261126090000's catalogue view reads sp_credential_organisation_roles, so it
+# stands down first or the table below cannot be dropped.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261126090000_sp_catalogue_scope_and_document_issuer_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261123090000_sp_credential_organisation_roles_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261120090000_sp_credential_selective_sharing_v2_rollback.sql >/dev/null
 echo "==> Proving share-gateway rollback and re-apply"

@@ -48,17 +48,22 @@ Rollback removes only the new schema/command guard, restores the exact previous 
 
 ## Availability requiring review
 
-The clean local catalogue has 73 definitions, 14 certification definitions and five certification issuers. The approved projection returns 19 entries: 14 international and five Swedish.
+The clean local catalogue has 73 definitions, 14 certification definitions and five certification issuers. Since `20261126090000_sp_catalogue_scope_and_document_issuer` the approved projection returns **22** entries to a Swedish holder: 14 international and all eight Swedish definitions. The full reconciliation, code by code, is [catalogue-coverage-matrix.md](catalogue-coverage-matrix.md), and a platform administrator sees the same diagnosis at `/admin/passport-catalogue`.
 
-The other three active definitions are deliberately withheld:
+### How VU1, VU2 and SV were resolved (owner decision, 2026-09-18)
 
-| Definition | Missing or incompatible governed metadata |
-|---|---|
-| VU1 | No governed issuer relationship |
-| VU2 | No governed issuer relationship |
-| SV | Requires holder-written authorisation scope |
+They were withheld until 20261126090000 because the projection could not express them, not because they were out of scope:
 
-No issuer, authority or territorial scope was invented to make these selectable. An authorised catalogue review must resolve their modelling before they can be offered under the closed decision. Inactive pilot definitions are not candidate-selectable, even when a holder has a pilot entitlement.
+| Definition | What was missing | How it is modelled now |
+|---|---|---|
+| VU1, VU2 | The view required a governed AUTHORITY as issuer | The organisation-role model (20261123090000) already recorded `issuer.document_specific = true` under Polismyndigheten as regulator. The view now reads it: the definition is listed with NO governed issuer, and the holder must name the training provider on the certificate. The regulator is never presented as the trainer. |
+| SV | The view excluded `requires_scope` and the governed RPC had no scope key | The definition is listed and its scope is a REQUIRED holder field, enforced by the RPC and by the table guard, and refused on every definition that has none. |
+
+No issuer, authority or territorial scope was invented. The same two rules make the six UK licence-linked qualifications and the fifteen SIRA cadre cards expressible — but those are in pilot markets whose definitions are **not approved for the public**.
+
+### Pilot definitions — Route A (owner decision, 2026-09-18)
+
+An `internal_pilot` definition in an `internal_pilot`, not-active market pack is offered to a holder with a **valid membership of that exact pack**, and to nobody else. This honours the owner's per-definition pilot authorisation already recorded by 20260915090000; `is_active` stays false, so activating a market publicly publishes none of them, and the legal-review gate is unchanged. A single definition is held back by setting its `pilot_state` to `closed`. Non-members, members of another market and revoked members are refused. Implemented in 20261126090000 and pinned by `security_passport_pilot_scope_test.sql`.
 
 ## Verification queries
 
