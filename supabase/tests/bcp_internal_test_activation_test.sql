@@ -292,6 +292,16 @@ BEGIN
       'public.bcp_internal_test_activation_active(uuid,uuid)', 'EXECUTE')
     AND NOT has_table_privilege('anon', 'public.bcp_internal_test_activations', 'SELECT'),
     'IT10.1 anon reaches nothing, and the predicates are internal');
+  -- The interviewer's wordings follow the party read: the activation that
+  -- COVERED the started content, with the assignment's own pinned hash.
+  PERFORM pg_temp.ok(
+    position('bcp_internal_test_activation_covers(_a.employer_id, _v.id' IN
+             (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts')) > 0
+    AND position('_a.pinned_content_hash' IN
+             (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts')) > 0
+    AND position('bcp_internal_test_activation_active' IN
+             (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts')) = 0,
+    'IT10.2 the conversation wordings of a started test follow the covering activation');
 END $$;
 
 ROLLBACK;

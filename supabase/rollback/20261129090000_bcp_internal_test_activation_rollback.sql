@@ -1,6 +1,6 @@
 -- Rollback for 20261129090000_bcp_internal_test_activation.
 --
--- Restores the four gates exactly as they were, then drops the activation and
+-- Restores the five gates exactly as they were, then drops the activation and
 -- content-role objects. Refuses while any test activation exists, so a
 -- rollback can never silently strand a recorded decision.
 
@@ -142,6 +142,36 @@ BEGIN
 END;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.bcp_assignable_exposure_profiles(_employer_id uuid, _method_version_id uuid)
+ RETURNS TABLE(exposure_profile_id uuid, profile_key text, display_order integer, exposure_area text, duties_sv text, duties_en text, role_relevance_rationale_sv text, role_relevance_rationale_en text, retention_class text, candidate_item_count integer)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF auth.uid() IS NULL
+     OR NOT public.has_employer_role(auth.uid(), _employer_id, ARRAY['owner', 'admin', 'member'])
+     OR NOT coalesce(public.employer_is_active_status(_employer_id), false)
+     OR NOT public.bcp_pilot_grant_active(_employer_id, _method_version_id)
+     OR NOT public.bcp_version_is_candidate_safe(_method_version_id) THEN
+    RETURN;
+  END IF;
+  RETURN QUERY
+    SELECT p.id, p.profile_key, p.display_order, p.exposure_area,
+           p.duties_sv, p.duties_en,
+           p.role_relevance_rationale_sv, p.role_relevance_rationale_en,
+           p.retention_class,
+           (SELECT count(*)::integer FROM public.beskt_items i
+             WHERE i.exposure_profile_id = p.id
+               AND i.phase = 'candidate_preparation'
+               AND i.permitted_mode = 'recruitment_support')
+      FROM public.beskt_exposure_profiles p
+     WHERE p.method_version_id = _method_version_id
+       AND p.permitted_mode = 'recruitment_support'
+     ORDER BY p.display_order, p.profile_key;
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.bcp_assignable_method_versions(_employer_id uuid)
  RETURNS TABLE(method_version_id uuid, pack_id uuid, pack_slug text, name_sv text, name_en text, purpose_sv text, version_number integer, mode text, validation_label text, release_scope text, content_hash text, summary_sv text, summary_en text, grant_expires_on date)
  LANGUAGE plpgsql
@@ -190,33 +220,122 @@ AS $function$
                                           ARRAY['owner', 'admin', 'member'])));
 $function$;
 
-CREATE OR REPLACE FUNCTION public.bcp_assignable_exposure_profiles(_employer_id uuid, _method_version_id uuid)
- RETURNS TABLE(exposure_profile_id uuid, profile_key text, display_order integer, exposure_area text, duties_sv text, duties_en text, role_relevance_rationale_sv text, role_relevance_rationale_en text, retention_class text, candidate_item_count integer)
+CREATE OR REPLACE FUNCTION public.bcp_conduct_topic_prompts(_session_id uuid)
+ RETURNS jsonb
  LANGUAGE plpgsql
  STABLE SECURITY DEFINER
  SET search_path TO 'public'
 AS $function$
+DECLARE
+  _caller uuid := auth.uid();
+  _s public.bcp_conduct_sessions%ROWTYPE;
+  _a public.bcp_assignments%ROWTYPE;
+  _v public.beskt_method_versions%ROWTYPE;
 BEGIN
-  IF auth.uid() IS NULL
-     OR NOT public.has_employer_role(auth.uid(), _employer_id, ARRAY['owner', 'admin', 'member'])
-     OR NOT coalesce(public.employer_is_active_status(_employer_id), false)
-     OR NOT public.bcp_pilot_grant_active(_employer_id, _method_version_id)
-     OR NOT public.bcp_version_is_candidate_safe(_method_version_id) THEN
-    RETURN;
+  IF _caller IS NULL THEN
+    RAISE EXCEPTION 'BCP_NOT_AUTHENTICATED: sign in first.' USING ERRCODE = 'insufficient_privilege';
   END IF;
-  RETURN QUERY
-    SELECT p.id, p.profile_key, p.display_order, p.exposure_area,
-           p.duties_sv, p.duties_en,
-           p.role_relevance_rationale_sv, p.role_relevance_rationale_en,
-           p.retention_class,
-           (SELECT count(*)::integer FROM public.beskt_items i
-             WHERE i.exposure_profile_id = p.id
-               AND i.phase = 'candidate_preparation'
-               AND i.permitted_mode = 'recruitment_support')
-      FROM public.beskt_exposure_profiles p
-     WHERE p.method_version_id = _method_version_id
-       AND p.permitted_mode = 'recruitment_support'
-     ORDER BY p.display_order, p.profile_key;
+
+  SELECT * INTO _s FROM public.bcp_conduct_sessions WHERE id = _session_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BCP_CONDUCT_SESSION_NOT_FOUND: no such conduct session.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- The EXISTING case authority. A caller who cannot read the case cannot
+  -- learn anything here, including whether the session exists in a readable
+  -- state -- the refusal above is reached only for a session id that is not
+  -- a session at all.
+  IF NOT public.scp_iv_can_read_case(_s.case_id) THEN
+    RAISE EXCEPTION 'BCP_CONDUCT_NOT_PERMITTED: you may not read this interview case.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT * INTO _a FROM public.bcp_assignments WHERE id = _s.assignment_id;
+  SELECT * INTO _v FROM public.beskt_method_versions WHERE id = _s.bound_method_version_id;
+
+  -- A version that is no longer published stops answering. Not an error: the
+  -- interview's own record is unaffected and the screen says the wordings are
+  -- unavailable, which is true and is different from inventing them.
+  IF _v.id IS NULL
+     OR _v.content_status <> 'published'
+     OR _v.mode <> 'recruitment_support' THEN
+    RETURN jsonb_build_object(
+      'session_id', _session_id,
+      'method_version_id', _s.bound_method_version_id,
+      'available', false,
+      'reason', CASE WHEN _v.id IS NULL THEN 'version_not_found'
+                     WHEN _v.mode <> 'recruitment_support' THEN 'mode_not_permitted'
+                     ELSE 'version_not_published' END,
+      'topics', '[]'::jsonb,
+      'stage_prompts', '[]'::jsonb,
+      'produces_score', false,
+      'interpretation', 'none');
+  END IF;
+
+  RETURN jsonb_build_object(
+    'session_id', _session_id,
+    'method_version_id', _v.id,
+    'content_hash', _s.bound_content_hash,
+    'available', true,
+    'reason', NULL,
+
+    -- Per frozen topic: the item's own governed wording and purpose, and the
+    -- prompts that name that item. Ordered by the method's own display order.
+    'topics', coalesce((
+      SELECT jsonb_agg(jsonb_build_object(
+          'topic_id', t.id,
+          'item_key', t.item_key,
+          'reason', t.topic_reason,
+          'prompts', coalesce((
+            SELECT jsonb_agg(jsonb_build_object(
+                'prompt_key', pr.prompt_key,
+                'display_order', pr.display_order,
+                'prompt_kind', pr.prompt_kind,
+                'peace_stage', pr.peace_stage,
+                'addressee', pr.addressee,
+                'question_form', pr.question_form,
+                'permitted_probe_bases', public.beskt_sorted_array(pr.permitted_probe_bases),
+                'wording_sv', pr.wording_sv,
+                'wording_en', pr.wording_en)
+              ORDER BY pr.display_order, pr.prompt_key)
+              FROM public.beskt_prompts pr
+              JOIN public.beskt_items pi ON pi.id = pr.item_id
+             WHERE pr.method_version_id = _v.id
+               AND pr.item_id = t.item_id
+               AND pr.exposure_profile_id = _a.exposure_profile_id
+               AND pr.permitted_mode = 'recruitment_support'
+               AND pi.permitted_mode = 'recruitment_support'
+               AND pi.access_class <> 'authorised_security_function'), '[]'::jsonb))
+        ORDER BY t.display_order)
+        FROM public.bcp_case_topics t
+        JOIN public.beskt_items i ON i.id = t.item_id
+       WHERE t.link_id = _s.link_id
+         AND i.permitted_mode = 'recruitment_support'
+         AND i.access_class <> 'authorised_security_function'), '[]'::jsonb),
+
+    -- The method's own structure for the conversation, which belongs to no
+    -- single item.
+    'stage_prompts', coalesce((
+      SELECT jsonb_agg(jsonb_build_object(
+          'prompt_key', pr.prompt_key,
+          'display_order', pr.display_order,
+          'prompt_kind', pr.prompt_kind,
+          'peace_stage', pr.peace_stage,
+          'addressee', pr.addressee,
+          'question_form', pr.question_form,
+          'wording_sv', pr.wording_sv,
+          'wording_en', pr.wording_en)
+        ORDER BY pr.display_order, pr.prompt_key)
+        FROM public.beskt_prompts pr
+       WHERE pr.method_version_id = _v.id
+         AND pr.item_id IS NULL
+         AND pr.exposure_profile_id = _a.exposure_profile_id
+         AND pr.permitted_mode = 'recruitment_support'), '[]'::jsonb),
+
+    -- Said in the payload itself, as every BESKT read says it.
+    'produces_score', false,
+    'interpretation', 'none');
 END;
 $function$;
 DROP FUNCTION public.beskt_set_content_role(uuid, text, text, boolean, text);
@@ -236,7 +355,8 @@ BEGIN
   IF (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'bcp_assign') <> '17fe1068d9bc3df2bbe8714db5933173'
      OR (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'bcp_assignable_exposure_profiles') <> 'd9b541a310219692fe9073c58e25aa07'
      OR (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'bcp_assignable_method_versions') <> '000658663cb432406dc1a56128faa796'
-     OR (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'bcp_party_can_read_method_version') <> '10873ada27198366eafa06e708fb7edf' THEN
+     OR (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'bcp_party_can_read_method_version') <> '10873ada27198366eafa06e708fb7edf'
+     OR (SELECT md5(prosrc) FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts') <> '91709981bb9f04816c80d3203b36ec7d' THEN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_ROLLBACK: a gate was not restored exactly.';
   END IF;
   RAISE NOTICE 'BCP_INTERNAL_TEST_ACTIVATION_ROLLBACK ok';

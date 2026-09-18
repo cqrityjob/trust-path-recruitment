@@ -35,11 +35,15 @@
 --
 -- ── WHAT IS EXTENDED, AND ONLY THAT ─────────────────────────────────────
 --
--- The four gates that decide who may start and read a preparation accept
--- EITHER the existing path (published + candidate-safe + live pilot grant)
--- OR a live test activation for that same employer:
+-- The five gates that decide who may start a preparation and read its
+-- method accept EITHER the existing path (published + candidate-safe + live
+-- pilot grant) OR a test activation for that same employer:
 --   bcp_assign, bcp_assignable_exposure_profiles,
---   bcp_assignable_method_versions, bcp_party_can_read_method_version.
+--   bcp_assignable_method_versions (a LIVE activation: starting),
+--   bcp_party_can_read_method_version, bcp_conduct_topic_prompts (the
+--   activation that COVERED the started content: reading it, before and
+--   after a revocation, exactly as a suspended publication is not retroactive
+--   for the parties' own record).
 -- Their bodies are the current ones (md5-pinned below, verified identical in
 -- production) with only those conditions changed. Nothing else in the
 -- interview, conduct, panel or report chain changes: assessor independence
@@ -63,6 +67,11 @@ BEGIN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assign is not the body this migration extends (count %, md5 %).', _n, _md5;
   END IF;
   SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+   WHERE ns.nspname = 'public' AND p.proname = 'bcp_assignable_exposure_profiles';
+  IF _n <> 1 OR _md5 <> 'd9b541a310219692fe9073c58e25aa07' THEN
+    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assignable_exposure_profiles is not the body this migration extends (count %, md5 %).', _n, _md5;
+  END IF;
+  SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
    WHERE ns.nspname = 'public' AND p.proname = 'bcp_assignable_method_versions';
   IF _n <> 1 OR _md5 <> '000658663cb432406dc1a56128faa796' THEN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assignable_method_versions is not the body this migration extends (count %, md5 %).', _n, _md5;
@@ -73,9 +82,9 @@ BEGIN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_party_can_read_method_version is not the body this migration extends (count %, md5 %).', _n, _md5;
   END IF;
   SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
-   WHERE ns.nspname = 'public' AND p.proname = 'bcp_assignable_exposure_profiles';
-  IF _n <> 1 OR _md5 <> 'd9b541a310219692fe9073c58e25aa07' THEN
-    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assignable_exposure_profiles is not the body this migration extends (count %, md5 %).', _n, _md5;
+   WHERE ns.nspname = 'public' AND p.proname = 'bcp_conduct_topic_prompts';
+  IF _n <> 1 OR _md5 <> '91709981bb9f04816c80d3203b36ec7d' THEN
+    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_conduct_topic_prompts is not the body this migration extends (count %, md5 %).', _n, _md5;
   END IF;
 END $pre$;
 
@@ -426,7 +435,7 @@ END $$;
 REVOKE ALL ON FUNCTION public.beskt_set_content_role(uuid, text, text, boolean, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.beskt_set_content_role(uuid, text, text, boolean, text) TO authenticated, service_role;
 
--- ---- the four gates, extended ------------------------------------------
+-- ---- the five gates, extended ------------------------------------------
 
 CREATE OR REPLACE FUNCTION public.bcp_assign(_operation_id uuid, _application_id uuid, _method_version_id uuid, _exposure_profile_id uuid, _expected_content_hash text, _notice_version text, _due_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
  RETURNS jsonb
@@ -663,6 +672,131 @@ AS $function$
 $function$
 ;
 
+CREATE OR REPLACE FUNCTION public.bcp_conduct_topic_prompts(_session_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  _caller uuid := auth.uid();
+  _s public.bcp_conduct_sessions%ROWTYPE;
+  _a public.bcp_assignments%ROWTYPE;
+  _v public.beskt_method_versions%ROWTYPE;
+BEGIN
+  IF _caller IS NULL THEN
+    RAISE EXCEPTION 'BCP_NOT_AUTHENTICATED: sign in first.' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT * INTO _s FROM public.bcp_conduct_sessions WHERE id = _session_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'BCP_CONDUCT_SESSION_NOT_FOUND: no such conduct session.'
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  -- The EXISTING case authority. A caller who cannot read the case cannot
+  -- learn anything here, including whether the session exists in a readable
+  -- state -- the refusal above is reached only for a session id that is not
+  -- a session at all.
+  IF NOT public.scp_iv_can_read_case(_s.case_id) THEN
+    RAISE EXCEPTION 'BCP_CONDUCT_NOT_PERMITTED: you may not read this interview case.'
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
+
+  SELECT * INTO _a FROM public.bcp_assignments WHERE id = _s.assignment_id;
+  SELECT * INTO _v FROM public.beskt_method_versions WHERE id = _s.bound_method_version_id;
+
+  -- A version that is no longer published stops answering. Not an error: the
+  -- interview's own record is unaffected and the screen says the wordings are
+  -- unavailable, which is true and is different from inventing them.
+  -- 20261129090000: unless it is the exact content an internal test
+  -- activation of the assignment's employer covered -- the same rule as the
+  -- party read, so a started test keeps its wordings after a revocation.
+  IF _v.id IS NULL
+     OR (_v.content_status <> 'published'
+         AND NOT public.bcp_internal_test_activation_covers(_a.employer_id, _v.id,
+                                                             _a.pinned_content_hash))
+     OR _v.mode <> 'recruitment_support' THEN
+    RETURN jsonb_build_object(
+      'session_id', _session_id,
+      'method_version_id', _s.bound_method_version_id,
+      'available', false,
+      'reason', CASE WHEN _v.id IS NULL THEN 'version_not_found'
+                     WHEN _v.mode <> 'recruitment_support' THEN 'mode_not_permitted'
+                     ELSE 'version_not_published' END,
+      'topics', '[]'::jsonb,
+      'stage_prompts', '[]'::jsonb,
+      'produces_score', false,
+      'interpretation', 'none');
+  END IF;
+
+  RETURN jsonb_build_object(
+    'session_id', _session_id,
+    'method_version_id', _v.id,
+    'content_hash', _s.bound_content_hash,
+    'available', true,
+    'reason', NULL,
+
+    -- Per frozen topic: the item's own governed wording and purpose, and the
+    -- prompts that name that item. Ordered by the method's own display order.
+    'topics', coalesce((
+      SELECT jsonb_agg(jsonb_build_object(
+          'topic_id', t.id,
+          'item_key', t.item_key,
+          'reason', t.topic_reason,
+          'prompts', coalesce((
+            SELECT jsonb_agg(jsonb_build_object(
+                'prompt_key', pr.prompt_key,
+                'display_order', pr.display_order,
+                'prompt_kind', pr.prompt_kind,
+                'peace_stage', pr.peace_stage,
+                'addressee', pr.addressee,
+                'question_form', pr.question_form,
+                'permitted_probe_bases', public.beskt_sorted_array(pr.permitted_probe_bases),
+                'wording_sv', pr.wording_sv,
+                'wording_en', pr.wording_en)
+              ORDER BY pr.display_order, pr.prompt_key)
+              FROM public.beskt_prompts pr
+              JOIN public.beskt_items pi ON pi.id = pr.item_id
+             WHERE pr.method_version_id = _v.id
+               AND pr.item_id = t.item_id
+               AND pr.exposure_profile_id = _a.exposure_profile_id
+               AND pr.permitted_mode = 'recruitment_support'
+               AND pi.permitted_mode = 'recruitment_support'
+               AND pi.access_class <> 'authorised_security_function'), '[]'::jsonb))
+        ORDER BY t.display_order)
+        FROM public.bcp_case_topics t
+        JOIN public.beskt_items i ON i.id = t.item_id
+       WHERE t.link_id = _s.link_id
+         AND i.permitted_mode = 'recruitment_support'
+         AND i.access_class <> 'authorised_security_function'), '[]'::jsonb),
+
+    -- The method's own structure for the conversation, which belongs to no
+    -- single item.
+    'stage_prompts', coalesce((
+      SELECT jsonb_agg(jsonb_build_object(
+          'prompt_key', pr.prompt_key,
+          'display_order', pr.display_order,
+          'prompt_kind', pr.prompt_kind,
+          'peace_stage', pr.peace_stage,
+          'addressee', pr.addressee,
+          'question_form', pr.question_form,
+          'wording_sv', pr.wording_sv,
+          'wording_en', pr.wording_en)
+        ORDER BY pr.display_order, pr.prompt_key)
+        FROM public.beskt_prompts pr
+       WHERE pr.method_version_id = _v.id
+         AND pr.item_id IS NULL
+         AND pr.exposure_profile_id = _a.exposure_profile_id
+         AND pr.permitted_mode = 'recruitment_support'), '[]'::jsonb),
+
+    -- Said in the payload itself, as every BESKT read says it.
+    'produces_score', false,
+    'interpretation', 'none');
+END;
+$function$
+;
+
 -- ---- postflight ---------------------------------------------------------------
 DO $proof$
 DECLARE _fn text;
@@ -672,11 +806,13 @@ BEGIN
      OR position('bcp_internal_test_activation_active' IN (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_assignable_exposure_profiles')) = 0
      OR position('bcp_internal_test_activations' IN (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_assignable_method_versions')) = 0
      OR position('bcp_internal_test_activation_covers' IN (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_party_can_read_method_version')) = 0
-     OR position('bcp_version_is_candidate_safe' IN (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_party_can_read_method_version')) = 0 THEN
+     OR position('bcp_version_is_candidate_safe' IN (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_party_can_read_method_version')) = 0
+     OR position('bcp_internal_test_activation_covers' IN (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts')) = 0
+     OR position('''published''' IN (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts')) = 0 THEN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PROOF: a gate does not carry both paths.';
   END IF;
   FOREACH _fn IN ARRAY ARRAY['bcp_assign', 'bcp_assignable_exposure_profiles', 'bcp_assignable_method_versions',
-    'bcp_party_can_read_method_version', 'bcp_grant_internal_test_activation', 'bcp_revoke_internal_test_activation',
+    'bcp_party_can_read_method_version', 'bcp_conduct_topic_prompts', 'bcp_grant_internal_test_activation', 'bcp_revoke_internal_test_activation',
     'bcp_internal_test_activations_for', 'beskt_set_content_role', 'bcp_internal_test_activation_active',
     'bcp_internal_test_activation_covers', 'bcp_version_is_structurally_candidate_safe'] LOOP
     IF (SELECT count(*) FROM pg_proc WHERE proname = _fn) <> 1 THEN

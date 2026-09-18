@@ -3712,8 +3712,8 @@ if [ "$ITA_RC" -ne 0 ]; then
   ITA_FAILED=1
 else
   echo "    ok  ${ITA_PASSED} internal test activation assertions passed"
-  if [ "$ITA_PASSED" -lt 32 ]; then
-    echo "FAIL: expected at least 32 internal test activation assertions, only ${ITA_PASSED} ran." >&2
+  if [ "$ITA_PASSED" -lt 33 ]; then
+    echo "FAIL: expected at least 33 internal test activation assertions, only ${ITA_PASSED} ran." >&2
     ITA_FAILED=1
   fi
 fi

@@ -11,6 +11,15 @@ const GUARD = "beskt-internal-test-activation:check";
 
 const MUTATIONS: readonly Mutation[] = [
   {
+    id: "ITA-NC-WORDINGS-ANY-DRAFT",
+    defect: "the interviewer's wordings open for any draft, not only covered content",
+    file: MIG,
+    find: "     OR (_v.content_status <> 'published'\n         AND NOT public.bcp_internal_test_activation_covers(_a.employer_id, _v.id,\n                                                             _a.pinned_content_hash))",
+    replace: "     OR _v.content_status NOT IN ('published', 'draft')",
+    guard: GUARD,
+    expect: "ITA-WORDINGS: the interviewer's wordings open only for the content",
+  },
+  {
     id: "ITA-NC-ANYONE-ACTIVATES",
     defect: "any signed-in user can record a test activation",
     file: MIG,

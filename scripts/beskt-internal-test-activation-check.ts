@@ -82,6 +82,14 @@ check(
     read(MIG).includes("17fe1068d9bc3df2bbe8714db5933173"),
   "ITA-PRECONDITION: the migration extends only the verified current gate bodies",
 );
+const prompts =
+  /FUNCTION public\.bcp_conduct_topic_prompts\([\s\S]*?\$function\$\s*;/.exec(mig)?.[0] ?? "";
+check(
+  /OR \(_v\.content_status <> 'published'\s+AND NOT public\.bcp_internal_test_activation_covers\(_a\.employer_id, _v\.id,\s+_a\.pinned_content_hash\)\)/.test(
+    prompts,
+  ) && read(MIG).includes("91709981bb9f04816c80d3203b36ec7d"),
+  "ITA-WORDINGS: the interviewer's wordings open only for the content this employer's activation covered",
+);
 check(
   /BCP_INTERNAL_TEST_ACTIVATION_ROLLBACK ok/.test(read(RB)) &&
     read(RB).includes("17fe1068d9bc3df2bbe8714db5933173"),
@@ -90,7 +98,7 @@ check(
 const db = read(DB);
 check(
   db.includes(SUITE) &&
-    /if \[ "\$ITA_PASSED" -lt 32 \]; then/.test(db) &&
+    /if \[ "\$ITA_PASSED" -lt 33 \]; then/.test(db) &&
     /suite_failed "BESKT internal test activation"/.test(db),
   "ITA-HARNESS: db:test runs the suite and refuses a shrunk or failed one",
 );
