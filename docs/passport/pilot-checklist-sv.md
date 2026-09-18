@@ -1,6 +1,6 @@
 # Security Passport — pilotchecklista (svenska)
 
-Gäller PR #264 (`claude/passport-part2-card-finish`). Läs först **Läget** — det avgör vad en
+Gäller PR #265 (`claude/passport-catalogue-completion`). Läs först **Läget** — det avgör vad en
 testare faktiskt kan göra i dag.
 
 ## Läget: fyra olika saker
@@ -8,12 +8,12 @@ testare faktiskt kan göra i dag.
 | | Vad det betyder | Status |
 |---|---|---|
 | **Implementerat** | Koden och migrationerna finns på grenen och är bevisade lokalt och i CI | Ja, allt nedan |
-| **Mergat** | PR #264 är sammanslagen till `main` | **Nej** — utkast |
-| **Applicerat hostat** | Migrationerna 20261124090000, 20261125090000 och 20261126090000 körda mot ägarens Supabase-projekt | **Nej** — väntar på merge |
+| **Mergat** | PR #265 är sammanslagen till `main` | **Nej** — utkast. (PR #264 är mergad.) |
+| **Applicerat hostat** | Migrationerna körda mot ägarens Supabase-projekt | 20261124090000 och 20261125090000: **ja** (raden i den hostade migrationsloggen är läst, inget skrivet). 20261126090000: **nej** — väntar på merge av PR #265 |
 | **Användbart för piloten** | En testare kan göra det i den publicerade appen | Se per marknad nedan |
 
-**Sverige och internationella certifieringar** blir användbara för alla så snart PR:en är mergad
-och migrationerna applicerade: alla 8 svenska definitioner (VU1, VU2, tre ordningsvaktsutbildningar,
+**Sverige och internationella certifieringar** blir användbara för alla så snart PR:en är mergad,
+migrationen 20261126090000 applicerad och appen synkad: alla 8 svenska definitioner (VU1, VU2, tre ordningsvaktsutbildningar,
 OV, SV, personalgodkännande) och alla 14 internationella certifieringar.
 
 **Storbritannien, Nordirland och Dubai** (44 definitioner) blir användbara för en testare som har
@@ -28,7 +28,8 @@ Det är avsett. Exakta releasesteg: [pilot-approval-decisions.md](pilot-approval
 
 ## Före testet (admin)
 
-- [ ] PR #264 mergad; de tre migrationerna applicerade; verifierings-SQL i `supabase/release-state.json` körd.
+- [ ] PR #265 mergad; migrationen 20261126090000 applicerad; de fem verifieringsfrågorna i
+      [pilot-approval-decisions.md](pilot-approval-decisions.md) körda (endast läsning); appen synkad.
 - [ ] Öppna **Admin → Passport-katalog**. Kontrollera: *Valbar för alla* = 22, *Blockerad* = 0.
 - [ ] Katalogsidan ska visa *Valbar för pilotmedlemmar i marknaden* = 44 och *Marknaden är stängd* = 7.
 - [ ] För brittiska/dubaiska testare: ge pilotåtkomst till rätt marknad (`GB`, `GB-NI` eller `AE-DU`).
