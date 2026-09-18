@@ -20,6 +20,21 @@ export const besktModuleKey = (employerSlug: string, caseId: string) =>
 export const besktWorkspaceKey = (employerSlug: string, caseId: string, sessionId: string) =>
   ["beskt", "conduct", employerSlug, caseId, sessionId] as const;
 
+/**
+ * The method's own interviewer wordings for one session.
+ *
+ * Separate from the workspace key because the two have different lifetimes:
+ * the wordings change only when the governed method version does, while the
+ * workspace changes on every entry. Invalidating the workspace after a save
+ * must not re-fetch governance content that cannot have moved.
+ */
+export const besktPromptsKey = (employerSlug: string, caseId: string, sessionId: string) =>
+  ["beskt", "prompts", employerSlug, caseId, sessionId] as const;
+
+/** The report surface: preview, finalised document and version history. */
+export const besktReportKey = (employerSlug: string, caseId: string, sessionId: string) =>
+  ["beskt", "report", employerSlug, caseId, sessionId] as const;
+
 /** One entry's correction and verification history. */
 export const besktEntryHistoryKey = (sessionId: string, entryId: string) =>
   ["beskt", "conduct", "entry", sessionId, entryId] as const;
@@ -38,6 +53,13 @@ export function besktInvalidateAfterMutation(
   sessionId: string | null,
 ): readonly (readonly string[])[] {
   const keys: (readonly string[])[] = [besktModuleKey(employerSlug, caseId)];
-  if (sessionId !== null) keys.push(besktWorkspaceKey(employerSlug, caseId, sessionId));
+  if (sessionId !== null) {
+    keys.push(besktWorkspaceKey(employerSlug, caseId, sessionId));
+    // The report reads the whole record, so every conduct mutation moves it —
+    // including the blockers, which are the reason a reader is on that screen.
+    // The prompts key is deliberately NOT here: governance content cannot
+    // move because an interviewer saved a note.
+    keys.push(besktReportKey(employerSlug, caseId, sessionId));
+  }
   return keys;
 }

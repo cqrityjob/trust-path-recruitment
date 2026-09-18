@@ -1150,8 +1150,14 @@ function insertIndex(body: string): number {
   // object whose migration is unapplied." This brings PR 6 to that form, as
   // two separate assertions:
   //
-  //   1. HAND-WRITTEN application code may not name these objects. Unchanged,
-  //      unconditional, and still what stops premature use.
+  //   1. HAND-WRITTEN application code may not name these objects WHILE THIS
+  //      MIGRATION IS PENDING. That is the rule that stopped premature use
+  //      when PR #254 was a schema-only PR, and it is unchanged in the state
+  //      it was written for: revert release-state to pending and every line
+  //      of application code below fails again. What it may not also do is
+  //      forbid the consumption it existed to sequence — the migration is
+  //      applied on the schema target, with hosted evidence, so the surfaces
+  //      that call these objects are exactly what it was waiting for.
   //   2. The GENERATED types may name them only while release-state PROVES
   //      this migration applied: THIS file's entry, state "applied", WITH its
   //      hosted evidence. A bare flip of the state unlocks nothing, and a
@@ -1187,8 +1193,8 @@ function insertIndex(body: string): number {
   };
   walk(join(ROOT, "src"));
   check(
-    offenders.length === 0,
-    `REPORT-SCHEMA-FIRST: no application code named an object of this migration while it was pending; it is applied now, so the application PR that consumes it is release-eligible (${offenders.slice(0, 3).join("; ") || "none"})`,
+    offenders.length === 0 || provenApplied,
+    `REPORT-SCHEMA-FIRST: no application code named an object of this migration while it was pending; it is applied now, so the application PR that consumes it is release-eligible (state: ${release?.hostedState ?? "no entry"}; ${offenders.slice(0, 3).join("; ") || "none"})`,
   );
   check(
     generatedOffenders.length === 0 || provenApplied,

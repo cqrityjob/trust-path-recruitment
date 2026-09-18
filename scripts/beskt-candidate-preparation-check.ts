@@ -1134,8 +1134,16 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
       !/font-mono text-xs">\{(actionError|startError|cancelError|error)\}/.test(employerPanel),
     "BCP-SAFE-ERRORS: no surface renders a raw error string",
   );
+  // The extractor's literal gained a second alternative when the governance
+  // codes joined the translator in PR 6. Pinning the exact characters would
+  // have made a correct extension look like a regression, so what is asserted
+  // is the contract: it pulls a BCP_ code out of the raised text, it never
+  // reads anything but `raw`, and an unmapped code falls back to the generic
+  // sentence. A translator that stopped matching BCP_ still fails.
+  const extractor = /const m = (\/[^\n]*?\/)\.exec\(raw\);/.exec(errors);
   check(
-    /const m = \/\\bBCP_\[A-Z_\]\+\\b\/\.exec\(raw\)/.test(errors) &&
+    extractor !== null &&
+      extractor[1].includes("\\bBCP_[A-Z_]+\\b") &&
       /return MESSAGE_FOR_CODE\[code\] \?\? BESKT_GENERIC_ERROR/.test(errors),
     "BCP-SAFE-ERRORS: the translator maps a governed code and falls back to the generic sentence",
   );

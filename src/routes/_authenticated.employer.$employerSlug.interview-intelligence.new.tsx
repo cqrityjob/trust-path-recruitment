@@ -48,6 +48,10 @@ export const Route = createFileRoute(
         ? search.applicationId
         : undefined,
     jobId: typeof search.jobId === "string" && UUID.test(search.jobId) ? search.jobId : undefined,
+    // Set only by the BESKT preparation's own link to this page. It binds the
+    // case to the applicant's account so the submitted preparation can be
+    // linked to it; the server reads who that is from the application.
+    ...(search.beskt === true || search.beskt === "true" ? { beskt: true as const } : {}),
   }),
 });
 
@@ -55,7 +59,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function Page() {
   const { employerSlug } = Route.useParams();
-  const { applicationId, jobId } = Route.useSearch();
+  const { applicationId, jobId, beskt } = Route.useSearch();
   const navigate = useNavigate();
   const ws = useEmployerWorkspace(employerSlug);
   const { t } = useT();
@@ -132,6 +136,7 @@ function Page() {
           // attach a case to somebody else's application.
           applicationId: applicationId ?? null,
           jobId: effectiveJobId,
+          bindApplicant: beskt === true && Boolean(applicationId),
         },
       }),
     onSuccess: ({ caseId }) =>

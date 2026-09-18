@@ -625,6 +625,7 @@ group("T5 · The themes are the database's, not the screen's");
       methodVersionId={BINDING.methodVersionId}
       topics={TOPICS}
       entries={[]}
+      prompts={null}
       actions={NO_ACTIONS}
     />,
   );
@@ -659,6 +660,7 @@ group("T5 · The themes are the database's, not the screen's");
           methodVersionId={BINDING.methodVersionId}
           topics={[]}
           entries={[]}
+          prompts={null}
           actions={NO_ACTIONS}
         />,
       ),
@@ -718,6 +720,7 @@ ck(
       methodVersionId={BINDING.methodVersionId}
       topics={TOPICS}
       entries={[MY_ENTRY]}
+      prompts={null}
       actions={WRITE_ACTIONS}
     />,
   );
@@ -1219,6 +1222,7 @@ ck(
       methodVersionId={BINDING.methodVersionId}
       topics={TOPICS}
       entries={[MY_ENTRY]}
+      prompts={null}
       actions={WRITE_ACTIONS}
     />,
   );

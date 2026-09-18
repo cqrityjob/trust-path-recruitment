@@ -918,11 +918,29 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "RPT-NC-HANDWRITTEN-CODE-NAMES-THE-REPORT",
     defect:
-      "hand-written application code names a PR 6 object before the application PR that is meant to consume it -- the premature use this assertion has always refused, and must still refuse now that the generated types are exempt",
-    file: "src/lib/beskt/interview-conduct.functions.ts",
-    find: "export const recordBesktPanelResolution = createServerFn",
+      "THE SEQUENCING RULE STOPS BINDING: the migration is put back to pending while the application code that calls it is still in the tree — exactly the premature use this assertion exists to refuse",
+    // ── WHY THIS CONTROL MOVES release-state AND NOT THE SOURCE ─────────
+    //
+    // It used to plant a reference to `bcp_conduct_final_report` in a file
+    // that had none, because at the time NO hand-written code named a PR 6
+    // object and the rule was unconditional. PR 6's application half now
+    // names them on purpose, and the rule is conditional on release-state
+    // proving the migration applied — so planting one more reference
+    // proves nothing and left this control dead, which the runner caught.
+    //
+    // What the rule actually protects is the ORDERING: application code may
+    // not call an object whose migration has not been applied. So the
+    // control now breaks the thing the rule depends on — it returns the
+    // entry to `pending` — and the guard must refuse the callers that are
+    // genuinely there. That is the same defect, asserted from the side that
+    // can still move.
+    file: "supabase/release-state.json",
+    find:
+      '      "file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n' +
+      '      "hostedState": "applied",',
     replace:
-      'const PLANTED_PREMATURE_USE = "bcp_conduct_final_report";\nexport const recordBesktPanelResolution = createServerFn',
+      '      "file": "20261117090000_bcp_conduct_prompts_and_report.sql",\n' +
+      '      "hostedState": "pending",',
     guard: GUARD,
     expect: "- REPORT-SCHEMA-FIRST: no application code named an object of this migration",
   },

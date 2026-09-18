@@ -50,6 +50,7 @@
  */
 
 import { expect, test, type Browser, type Page } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import { appendFileSync, mkdirSync } from "node:fs";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
@@ -74,6 +75,83 @@ const OUTSIDER = "beskt-outsider@local.test";
 const EMPLOYER_SLUG = process.env.E2E_TOOL_EMPLOYER_SLUG ?? "beskt-journey-ab";
 const CASE_ID = process.env.E2E_TOOL_CASE_ID ?? "b5000000-0000-4000-8000-00000000cc05";
 const BESKT_PATH = `/employer/${EMPLOYER_SLUG}/interview-intelligence/${CASE_ID}/beskt`;
+const INTERVIEWEE = "beskt-interviewee@local.test";
+const UNRELATED = "beskt-candidate2@local.test";
+
+// The direct-call proofs talk to the same gateway the browser does, with the
+// signed-in person's own token read from their own page. Nothing here holds a
+// service key, and nothing is written to disk: the token lives only in memory.
+const SUPABASE_URL = process.env.E2E_SUPABASE_URL ?? "";
+const SUPABASE_ANON_KEY = process.env.E2E_SUPABASE_ANON_KEY ?? "";
+const DATABASE_URL = process.env.BCP_DATABASE_URL ?? "";
+const LOOPBACK = /^[a-z]+:\/\/([^@/]*@)?(localhost|127\.0\.0\.1)(:|\/|$)/;
+
+/** The case's conduct session id, read from the disposable database itself. */
+function sessionIdForCase(): string {
+  if (!LOOPBACK.test(DATABASE_URL)) throw new Error("BCP_DATABASE_URL must be a loopback database");
+  return execFileSync(
+    "psql",
+    [
+      DATABASE_URL,
+      "-Atc",
+      `SELECT s.id FROM public.bcp_conduct_sessions s WHERE s.case_id = '${CASE_ID}' ORDER BY s.created_at DESC LIMIT 1`,
+    ],
+    { encoding: "utf8" },
+  ).trim();
+}
+
+interface RpcAnswer {
+  readonly status: number;
+  readonly body: string;
+}
+
+/**
+ * Call an RPC exactly as a crafted request would: straight at PostgREST,
+ * skipping every screen, as whoever is signed in on `page` -- or as nobody.
+ */
+async function rpcAs(
+  page: Page,
+  fn: string,
+  args: Record<string, unknown>,
+  { anonymous = false }: { anonymous?: boolean } = {},
+): Promise<RpcAnswer> {
+  if (!LOOPBACK.test(SUPABASE_URL)) throw new Error("E2E_SUPABASE_URL must be loopback");
+  let token = SUPABASE_ANON_KEY;
+  if (!anonymous) {
+    const stored = await page.evaluate(() => {
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const name = localStorage.key(i) ?? "";
+        if (/^sb-.*-auth-token$/.test(name)) return localStorage.getItem(name);
+      }
+      return null;
+    });
+    const parsed = stored ? JSON.parse(stored) : {};
+    token = parsed.access_token ?? parsed.currentSession?.access_token ?? "";
+    if (!token) throw new Error("no signed-in session on this page");
+  }
+  // Sent from the test runner rather than the page: the local gateway answers
+  // the application's own origin only, exactly like a CORS-restricted API.
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(args),
+  });
+  return { status: response.status, body: await response.text() };
+}
+
+/** A refusal: an error status, a named reason, and none of the case's words. */
+function expectRefused(answer: RpcAnswer, reason: RegExp, who: string): void {
+  expect(
+    answer.status,
+    `${who} was answered ${answer.status}: ${answer.body.slice(0, 200)}`,
+  ).toBeGreaterThanOrEqual(400);
+  expect(answer.body, `${who}'s refusal names its reason`).toMatch(reason);
+  expect(answer.body, `${who}'s refusal carries no recorded words`).not.toMatch(/SYNTETISKT-/);
+}
 
 mkdirSync(OUT, { recursive: true });
 
@@ -705,6 +783,51 @@ test.describe("BESKT interview tool — the routed journey", () => {
         await expect(page.locator("body")).not.toContainText(/SYNTETISKT-A1-/);
         await shot(page, "16-withheld-en");
       });
+
+      await step(
+        "independence",
+        "the report is withheld on screen while their position is open",
+        async () => {
+          await useSwedish(page);
+          await page.goto(`${BESKT_PATH}?view=report`);
+          await expect(page.locator("body")).toContainText(
+            /Rapporten öppnas när alla underlag är låsta/,
+            {
+              timeout: 30_000,
+            },
+          );
+          await expect(page.locator("body")).not.toContainText(/SYNTETISKT-A1-/);
+          await expect(page.getByTestId("beskt-report-document")).toHaveCount(0);
+          await shot(page, "16-report-withheld-sv");
+        },
+      );
+
+      await step(
+        "independence",
+        "and the database refuses the report to a direct call",
+        async () => {
+          // The screen above fetches nothing. This is the request a crafted
+          // client would send instead -- and the database, not the screen, must
+          // be what refuses it (20261127090000).
+          const sessionId = sessionIdForCase();
+          const preview = await rpcAs(page, "bcp_conduct_preview_report", {
+            _session_id: sessionId,
+          });
+          expectRefused(
+            preview,
+            /BCP_CONDUCT_NOT_VISIBLE_YET/,
+            "an assessor with an open position",
+          );
+          // The blocker reader stays open to a participant: it says what is
+          // missing without disclosing anybody's record.
+          const blockers = await rpcAs(page, "bcp_conduct_report_blockers", {
+            _session_id: sessionId,
+          });
+          expect(blockers.status, blockers.body.slice(0, 200)).toBe(200);
+          expect(blockers.body).not.toMatch(/SYNTETISKT-/);
+          expect(leaks, "responses carrying the first assessor's words").toEqual([]);
+        },
+      );
     } finally {
       await context.close();
     }
@@ -907,6 +1030,221 @@ test.describe("BESKT interview tool — the routed journey", () => {
         await expect(outsiderPage.locator("body")).not.toContainText(/SYNTETISKT-A2-/);
         await expect(outsiderPage.locator("body")).not.toContainText(DIVERGENT);
         await shot(outsiderPage, "20-outsider-refused-sv");
+      } finally {
+        await context.close();
+      }
+    });
+  });
+
+  /* --------------------------------------------------------------- 21 */
+  test("21 · the method's governed wordings are there for the interviewer", async ({ page }) => {
+    await signIn(page, INTERVIEWER, BESKT_PATH);
+
+    await step("prompts", "the conversation plan, stage by stage", async () => {
+      const stages = page.getByTestId("beskt-stage-prompts");
+      await expect(stages).toBeVisible({ timeout: 60_000 });
+      await expect(stages).toContainText(/Metodens upplägg för samtalet/);
+      await expect(stages).toContainText(/Planering/);
+      await expect(stages).toContainText(/Möt och förklara/);
+      await expect(stages).toContainText(/Beslut fattas av arbetsgivaren, inte av systemet\./);
+      await expectNoScoringClaim(page, "beskt-stage-prompts");
+      await shot(page, "21-stage-prompts-sv");
+    });
+
+    await step("prompts", "and the wordings for a question, inside its own theme", async () => {
+      // The fixture carries an item-level wording for shift_patterns_worked,
+      // which this case derives as a theme; the other theme carries none and
+      // must not borrow it.
+      const theme = page.getByTestId("beskt-theme-shift_patterns_worked");
+      await expect(theme).toContainText(/Metodens formuleringar för den här frågan/, {
+        timeout: 30_000,
+      });
+      await expect(theme.getByTestId("beskt-prompt-p1_shift_probe")).toContainText(
+        "SYNTETISK FORMULERING Hur såg ett nattpass ut för dig?",
+      );
+      await expect(page.getByTestId("beskt-theme-most_recent_training")).not.toContainText(
+        /Metodens formuleringar för den här frågan/,
+      );
+      await expectFitsViewport(page);
+      await theme.scrollIntoViewIfNeeded();
+      await shot(page, "21-theme-prompts-sv");
+    });
+
+    await step("prompts", "and the same in English", async () => {
+      await useEnglish(page);
+      await expect(page.getByTestId("beskt-stage-prompts")).toContainText(/Planning/i);
+      await shot(page, "21-stage-prompts-en");
+      await useSwedish(page);
+    });
+  });
+
+  /* --------------------------------------------------------------- 22 */
+  test("22 · the report opens once everyone is locked, whole and without a verdict", async ({
+    page,
+  }) => {
+    await signIn(page, INTERVIEWER, `${BESKT_PATH}?view=report`);
+    const reportDoc = page.getByTestId("beskt-report-document");
+
+    await step("report", "the preview carries both assessors and the panel", async () => {
+      await expect(reportDoc).toBeVisible({ timeout: 60_000 });
+      await expect(reportDoc).toContainText(/BESKT-rapport/);
+      await expect(reportDoc).toContainText(/Förhandsvisning — inte signerad/);
+      await expect(reportDoc).toContainText(A1_FACT_CORRECTED);
+      await expect(reportDoc).toContainText(A2_FACT);
+      await expect(reportDoc).toContainText(DIVERGENT);
+      await shot(page, "22-report-preview-sv");
+    });
+
+    await step("report", "what is not known comes before the evidence", async () => {
+      const limits = page.getByTestId("beskt-report-limitations");
+      await expect(limits).toBeVisible();
+      const order = await page.evaluate(() => {
+        const l = document.querySelector('[data-testid="beskt-report-limitations"]');
+        const d = document.querySelector('[data-testid="beskt-report-document"]');
+        const firstPosition = d?.textContent?.indexOf("SYNTETISKT-") ?? -1;
+        const limitsAt = l && d ? (d.textContent ?? "").indexOf(l.textContent ?? "") : -1;
+        return { limitsAt, firstPosition };
+      });
+      expect(order.limitsAt).toBeGreaterThanOrEqual(0);
+      expect(order.limitsAt).toBeLessThan(order.firstPosition);
+    });
+
+    await step("report", "and no figure, verdict or recommendation is derived", async () => {
+      await expectNoScoringClaim(page, "beskt-report-document");
+      const text = await reportDoc.innerText();
+      expect(text).not.toMatch(/\b\d{1,3}\s*%/);
+      await expectFitsViewport(page);
+    });
+
+    await step("report", "and the same in English", async () => {
+      await useEnglish(page);
+      await expect(reportDoc).toContainText(/Preview — not signed/i);
+      await shot(page, "22-report-preview-en");
+      await useSwedish(page);
+    });
+  });
+
+  /* --------------------------------------------------------------- 23 */
+  test("23 · signing writes version 1, and the history keeps it", async ({ page }) => {
+    await signIn(page, INTERVIEWER, `${BESKT_PATH}?view=report`);
+    const finalise = page.getByTestId("beskt-report-finalise");
+
+    await step(
+      "sign",
+      "the report names what is still missing, and offers no signature",
+      async () => {
+        // Both assessors documented BOTH themes, and step 20 recorded the
+        // panel's handling of one. The database's own blocker names the other.
+        const blockers = page.getByTestId("beskt-report-blockers");
+        await expect(blockers).toContainText(/saknar en noterad panelutgång/, { timeout: 60_000 });
+        await expect(finalise).toHaveCount(0);
+        await shot(page, "23-blocked-sv");
+      },
+    );
+
+    await step("sign", "the panel records its handling of the remaining theme", async () => {
+      await page.goto(`${BESKT_PATH}?view=panel`);
+      const panel = page.getByTestId("beskt-panel");
+      await expect(panel).toBeVisible({ timeout: 30_000 });
+      const themeSelect = panel.getByLabel(/^Tema$|^Theme$/i);
+      const values = await themeSelect
+        .locator("option")
+        .evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value));
+      expect(values.length).toBeGreaterThanOrEqual(2);
+      await themeSelect.selectOption(values[1]);
+      await panel
+        .getByLabel(/Hur panelen hanterade temat|How the panel handled it/i)
+        .selectOption("agreed");
+      await panel
+        .getByLabel(/^Gemensam formulering$|^Shared statement$/i)
+        .fill("SYNTETISKT panelen är överens om att utbildningen var nyligen genomförd");
+      await panel
+        .getByLabel(/^Motivering$|^Rationale$/i)
+        .fill("SYNTETISKT båda bedömarna beskrev samma utbildning");
+      await panel.getByRole("button", { name: B.recordResolution }).click();
+      await expect(panel).toContainText(/SYNTETISKT panelen är överens/, { timeout: 60_000 });
+      await shot(page, "23-panel-agreed-sv");
+      await page.goto(`${BESKT_PATH}?view=report`);
+    });
+
+    await step("sign", "nothing blocks the report now, so it can be signed", async () => {
+      await expect(finalise).toBeVisible({ timeout: 60_000 });
+      await expect(page.getByTestId("beskt-report-blockers")).toHaveCount(0);
+      await expect(finalise).toHaveText(/Signera och skriv rapporten/);
+      await shot(page, "23-before-signing-sv");
+    });
+
+    await step("sign", "signed once, against the basis that was read", async () => {
+      await finalise.click();
+      const versions = page.getByTestId("beskt-report-versions");
+      await expect(versions).toContainText(/Version 1/, { timeout: 60_000 });
+      await expect(versions).toContainText(/Gällande/);
+      await expect(page.getByTestId("beskt-report-document")).toContainText(/Signerad version/);
+      await expect(finalise).toHaveText(/Skriv en ny version/);
+      await expectFitsViewport(page);
+      await shot(page, "23-signed-sv");
+    });
+
+    await step("sign", "and the same in English", async () => {
+      await useEnglish(page);
+      await expect(page.getByTestId("beskt-report-document")).toContainText(/Signed version/i);
+      await shot(page, "23-signed-en");
+      await useSwedish(page);
+    });
+  });
+
+  /* --------------------------------------------------------------- 24 */
+  test("24 · nobody outside the case reads it, even by calling the database directly", async ({
+    browser,
+  }: {
+    browser: Browser;
+  }) => {
+    const sessionId = sessionIdForCase();
+    expect(sessionId).toMatch(/^[0-9a-f-]{36}$/);
+
+    for (const [who, email] of [
+      ["a member of another employer", OUTSIDER],
+      ["the candidate", INTERVIEWEE],
+      ["an unrelated signed-in user", UNRELATED],
+    ] as const) {
+      await step("refusal", `${who} is refused both report readers`, async () => {
+        const context = await browser.newContext();
+        const page = await context.newPage();
+        try {
+          await signIn(page, email, "/");
+          for (const fn of [
+            "bcp_conduct_preview_report",
+            "bcp_conduct_report_blockers",
+            "bcp_conduct_final_report",
+          ]) {
+            const answer = await rpcAs(page, fn, { _session_id: sessionId });
+            expectRefused(answer, /BCP_CONDUCT_NOT_PERMITTED|BCP_[A-Z_]+/, `${who} calling ${fn}`);
+          }
+          const helper = await rpcAs(page, "bcp_conduct_build_report_basis", {
+            _session_id: sessionId,
+          });
+          expectRefused(helper, /permission denied|42501/, `${who} calling the internal helper`);
+          await page.goto(`${BESKT_PATH}?view=report`);
+          await expect(page.locator("body")).not.toContainText(/SYNTETISKT-/, { timeout: 30_000 });
+        } finally {
+          await context.close();
+        }
+      });
+    }
+
+    await step("refusal", "and so is a caller with no session at all", async () => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+      try {
+        await page.goto("/");
+        for (const fn of ["bcp_conduct_preview_report", "bcp_conduct_report_blockers"]) {
+          const answer = await rpcAs(page, fn, { _session_id: sessionId }, { anonymous: true });
+          expectRefused(
+            answer,
+            /permission denied|42501|BCP_NOT_AUTHENTICATED/,
+            `anon calling ${fn}`,
+          );
+        }
       } finally {
         await context.close();
       }

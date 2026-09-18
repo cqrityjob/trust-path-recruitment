@@ -1240,16 +1240,43 @@ export const createInterviewCase = createServerFn({ method: "POST" })
         candidateExternalRef: z.string().max(200).nullable().optional(),
         jobId: z.string().uuid().nullable().optional(),
         applicationId: z.string().uuid().nullable().optional(),
+        // Bind the case to the applicant's own account. Asked for only by the
+        // BESKT path, whose preparation bridge links a submitted preparation
+        // to a case of the SAME candidate and so can never match a case that
+        // carries an external reference instead.
+        bindApplicant: z.boolean().optional(),
       })
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<{ readonly caseId: string }> => {
+    // The applicant is read from the application itself, under the caller's
+    // own RLS -- never taken from the browser. A caller who cannot read the
+    // application cannot bind anybody.
+    let candidateUserId: string | undefined;
+    if (data.bindApplicant && data.applicationId) {
+      const app = await context.supabase
+        .from("job_applications")
+        .select("applicant_user_id, employer_id")
+        .eq("id", data.applicationId)
+        .maybeSingle();
+      if (app.error) throw new Error(app.error.message);
+      if (!app.data || app.data.employer_id !== data.employerId || !app.data.applicant_user_id) {
+        throw new Error(
+          "SCP_IV_CROSS_TENANT_APPLICATION: that application belongs to a different employer.",
+        );
+      }
+      candidateUserId = app.data.applicant_user_id;
+    }
     const { data: id, error } = await context.supabase.rpc("scp_iv_create_case", {
       _employer_id: data.employerId,
       _title: data.title,
       _pack_version_id: data.packVersionId,
       _candidate_display_name: data.candidateDisplayName,
-      _candidate_external_ref: data.candidateExternalRef ?? `EXT-${Date.now()}`,
+      // Exactly one of the two identifies the candidate (a table CHECK).
+      _candidate_user_id: candidateUserId,
+      _candidate_external_ref: candidateUserId
+        ? undefined
+        : (data.candidateExternalRef ?? `EXT-${Date.now()}`),
       _job_id: data.jobId ?? undefined,
       _application_id: data.applicationId ?? undefined,
     });

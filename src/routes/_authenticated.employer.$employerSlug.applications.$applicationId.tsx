@@ -749,7 +749,11 @@ function Candidate360({
         <h2 id="candidate-beskt" className="sr-only">
           {t("beskt.start.title")}
         </h2>
-        <BesktApplicationPanel employerId={employerId} applicationId={applicationId} />
+        <BesktApplicationPanel
+          employerId={employerId}
+          employerSlug={employerSlug}
+          applicationId={applicationId}
+        />
       </section>
 
       {/* ── Security Passport ───────────────────────────────────────── */}

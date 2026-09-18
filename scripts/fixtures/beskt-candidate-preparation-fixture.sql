@@ -407,20 +407,25 @@ BEGIN
     (_v, _p1, _i2, 'p1_probe', 10, 'specific_probe', 'account', 'candidate', 'neutral_clarification',
      ARRAY['submitted_answer'], 'recruitment_support', 'Vad gjorde du först i den situationen?', 'What did you do first in that situation?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_context', 11, 'context_opportunity', 'account', 'candidate', 'open_question',
+    (_v, _p1, NULL, 'p1_context', 12, 'context_opportunity', 'account', 'candidate', 'open_question',
      '{}', 'recruitment_support', 'Finns det något i sammanhanget du vill lägga till?', 'Is there anything about the context you want to add?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_correct', 12, 'correction_opportunity', 'account', 'candidate', 'open_question',
+    (_v, _p1, NULL, 'p1_correct', 13, 'correction_opportunity', 'account', 'candidate', 'open_question',
      '{}', 'recruitment_support', 'Vill du rätta något av det du skrev?', 'Would you like to correct anything you wrote?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_difference', 13, 'neutral_difference_exploration', 'account', 'candidate', 'neutral_clarification',
+    (_v, _p1, NULL, 'p1_difference', 14, 'neutral_difference_exploration', 'account', 'candidate', 'neutral_clarification',
      ARRAY['submitted_answer', 'candidate_correction'], 'recruitment_support', 'Här finns två olika uppgifter; hur hänger de ihop?', 'There are two different statements here; how do they fit together?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_summary', 14, 'summary_confirmation', 'account', 'candidate', 'summary_readback',
+    (_v, _p1, NULL, 'p1_summary', 15, 'summary_confirmation', 'account', 'candidate', 'summary_readback',
      '{}', 'recruitment_support', 'Har jag uppfattat dig rätt?', 'Have I understood you correctly?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_closure', 15, 'closure_next_step', 'closure', 'candidate', 'information_notice',
+    (_v, _p1, NULL, 'p1_closure', 16, 'closure_next_step', 'closure', 'candidate', 'information_notice',
      '{}', 'recruitment_support', 'Nästa steg är att arbetsgivaren återkommer.', 'The next step is that the employer will get back to you.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    -- An item-level wording for a question the interview walk derives as a
+    -- theme, so the routed walk sees a governed wording INSIDE its theme.
+    (_v, _p1, _i7, 'p1_shift_probe', 11, 'specific_probe', 'account', 'candidate', 'neutral_clarification',
+     ARRAY['submitted_answer'], 'recruitment_support', 'SYNTETISK FORMULERING Hur såg ett nattpass ut för dig?', 'SYNTHETIC WORDING What did a night shift look like for you?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture');
 
   INSERT INTO public.beskt_prompts
@@ -428,7 +433,7 @@ BEGIN
      addressee, question_form, permitted_probe_bases, permitted_mode, evaluation_template_key,
      wording_sv, wording_en, content_provenance, source_reference)
   VALUES
-    (_v, _p1, NULL, 'p1_evaluation', 16, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback',
+    (_v, _p1, NULL, 'p1_evaluation', 17, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback',
      '{}', 'recruitment_support', 'method_adherence',
      public.beskt_evaluation_template('method_adherence', 'sv'),
      public.beskt_evaluation_template('method_adherence', 'en'),
@@ -758,20 +763,25 @@ BEGIN
     (_v, _p1, _i2, 'p1_probe', 10, 'specific_probe', 'account', 'candidate', 'neutral_clarification',
      ARRAY['submitted_answer'], 'recruitment_support', 'Vad gjorde du först i den situationen?', 'What did you do first in that situation?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_context', 11, 'context_opportunity', 'account', 'candidate', 'open_question',
+    (_v, _p1, NULL, 'p1_context', 12, 'context_opportunity', 'account', 'candidate', 'open_question',
      '{}', 'recruitment_support', 'Finns det något i sammanhanget du vill lägga till?', 'Is there anything about the context you want to add?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_correct', 12, 'correction_opportunity', 'account', 'candidate', 'open_question',
+    (_v, _p1, NULL, 'p1_correct', 13, 'correction_opportunity', 'account', 'candidate', 'open_question',
      '{}', 'recruitment_support', 'Vill du rätta något av det du skrev?', 'Would you like to correct anything you wrote?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_difference', 13, 'neutral_difference_exploration', 'account', 'candidate', 'neutral_clarification',
+    (_v, _p1, NULL, 'p1_difference', 14, 'neutral_difference_exploration', 'account', 'candidate', 'neutral_clarification',
      ARRAY['submitted_answer', 'candidate_correction'], 'recruitment_support', 'Här finns två olika uppgifter; hur hänger de ihop?', 'There are two different statements here; how do they fit together?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_summary', 14, 'summary_confirmation', 'account', 'candidate', 'summary_readback',
+    (_v, _p1, NULL, 'p1_summary', 15, 'summary_confirmation', 'account', 'candidate', 'summary_readback',
      '{}', 'recruitment_support', 'Har jag uppfattat dig rätt?', 'Have I understood you correctly?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
-    (_v, _p1, NULL, 'p1_closure', 15, 'closure_next_step', 'closure', 'candidate', 'information_notice',
+    (_v, _p1, NULL, 'p1_closure', 16, 'closure_next_step', 'closure', 'candidate', 'information_notice',
      '{}', 'recruitment_support', 'Nästa steg är att arbetsgivaren återkommer.', 'The next step is that the employer will get back to you.',
+     'cqrity_design_hypothesis', 'synthetic-journey-fixture'),
+    -- An item-level wording for a question the interview walk derives as a
+    -- theme, so the routed walk sees a governed wording INSIDE its theme.
+    (_v, _p1, _i7, 'p1_shift_probe', 11, 'specific_probe', 'account', 'candidate', 'neutral_clarification',
+     ARRAY['submitted_answer'], 'recruitment_support', 'SYNTETISK FORMULERING Hur såg ett nattpass ut för dig?', 'SYNTHETIC WORDING What did a night shift look like for you?',
      'cqrity_design_hypothesis', 'synthetic-journey-fixture');
 
   INSERT INTO public.beskt_prompts
@@ -779,7 +789,7 @@ BEGIN
      addressee, question_form, permitted_probe_bases, permitted_mode, evaluation_template_key,
      wording_sv, wording_en, content_provenance, source_reference)
   VALUES
-    (_v, _p1, NULL, 'p1_evaluation', 16, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback',
+    (_v, _p1, NULL, 'p1_evaluation', 17, 'interviewer_self_review', 'evaluation', 'interviewer', 'reflective_readback',
      '{}', 'recruitment_support', 'method_adherence',
      public.beskt_evaluation_template('method_adherence', 'sv'),
      public.beskt_evaluation_template('method_adherence', 'en'),

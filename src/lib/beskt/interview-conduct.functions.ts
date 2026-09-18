@@ -837,3 +837,304 @@ export const getBesktCaseModule = createServerFn({ method: "GET" })
       available: submitted && methodBindingValid,
     };
   });
+
+// ###########################################################################
+// PR 6 — the governed interviewer wordings, and the report.
+//
+// Both are pass-throughs in exactly the same sense as everything above. The
+// prompts come from `bcp_conduct_topic_prompts`, which narrows to the frozen
+// method version, the pinned exposure profile, the frozen topics, published
+// recruitment-support content and an access class an interviewer holds — all
+// inside the database, where a caller cannot reach past it. The report comes
+// from the immutable PR 6 chain.
+//
+// Neither function may ever compute anything. A prompt is shown or it is not;
+// a report is the payload the database froze or there is no report.
+// ###########################################################################
+
+/** The closed PEACE stage vocabulary, mirrored from the governed column. */
+export const BESKT_PEACE_STAGES = [
+  "planning",
+  "engage_explain",
+  "account",
+  "closure",
+  "evaluation",
+] as const;
+export type BesktPeaceStage = (typeof BESKT_PEACE_STAGES)[number];
+
+export type BesktPromptAddressee = "candidate" | "interviewer";
+
+export interface BesktPrompt {
+  readonly promptKey: string;
+  readonly displayOrder: number;
+  readonly promptKind: string;
+  readonly peaceStage: BesktPeaceStage;
+  readonly addressee: BesktPromptAddressee;
+  readonly questionForm: string;
+  /** Empty for a stage prompt: it probes no item, so it grounds in nothing. */
+  readonly permittedProbeBases: readonly string[];
+  readonly wordingSv: string | null;
+  readonly wordingEn: string | null;
+}
+
+export interface BesktTopicPrompts {
+  readonly topicId: string;
+  readonly itemKey: string;
+  readonly reason: BesktTopicReason;
+  readonly prompts: readonly BesktPrompt[];
+}
+
+/**
+ * Why the wordings are not on the screen, when they are not.
+ *
+ * Three governed reasons and nothing else. `null` while they ARE available,
+ * so a screen cannot render an explanation for a state it is not in.
+ */
+export type BesktPromptsUnavailableReason =
+  | "version_not_found"
+  | "version_not_published"
+  | "mode_not_permitted";
+
+export interface BesktConductPrompts {
+  readonly sessionId: string;
+  readonly methodVersionId: string | null;
+  readonly contentHash: string | null;
+  readonly available: boolean;
+  readonly reason: BesktPromptsUnavailableReason | null;
+  readonly topics: readonly BesktTopicPrompts[];
+  readonly stagePrompts: readonly BesktPrompt[];
+  readonly producesScore: false;
+  readonly interpretation: "none";
+}
+
+function toPrompt(p: Record<string, unknown>): BesktPrompt {
+  return {
+    promptKey: p.prompt_key as string,
+    displayOrder: p.display_order as number,
+    promptKind: p.prompt_kind as string,
+    peaceStage: p.peace_stage as BesktPeaceStage,
+    addressee: p.addressee as BesktPromptAddressee,
+    questionForm: p.question_form as string,
+    permittedProbeBases: Array.isArray(p.permitted_probe_bases)
+      ? (p.permitted_probe_bases as string[])
+      : [],
+    wordingSv: str(p.wording_sv),
+    wordingEn: str(p.wording_en),
+  };
+}
+
+/**
+ * The method's own interviewer wordings for one conduct session.
+ *
+ * Read-only and separately queried on purpose: an interviewer who may read
+ * the case may read these, and a version that stops being published stops
+ * answering — which is a state this surface must be able to SAY rather than
+ * a failure it should retry.
+ */
+export const getBesktTopicPrompts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ sessionId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }): Promise<BesktConductPrompts> => {
+    const { data: row, error } = await context.supabase.rpc("bcp_conduct_topic_prompts", {
+      _session_id: data.sessionId,
+    });
+    if (error) throw new Error(error.message);
+    const r = asRecord(row);
+    return {
+      sessionId: r.session_id as string,
+      methodVersionId: str(r.method_version_id),
+      contentHash: str(r.content_hash),
+      available: r.available === true,
+      reason: (str(r.reason) as BesktPromptsUnavailableReason | null) ?? null,
+      topics: asArray(r.topics).map((t) => ({
+        topicId: t.topic_id as string,
+        itemKey: t.item_key as string,
+        reason: t.reason as BesktTopicReason,
+        prompts: asArray(t.prompts).map(toPrompt),
+      })),
+      stagePrompts: asArray(r.stage_prompts).map(toPrompt),
+      producesScore: false,
+      interpretation: "none",
+    };
+  });
+
+// ---------------------------------------------------------------------------
+// The report.
+// ---------------------------------------------------------------------------
+
+/**
+ * The frozen payload, typed as JSON rather than as `Record<string, unknown>`.
+ *
+ * The server-function boundary serialises what it returns, and `unknown` is
+ * not something it can promise to serialise. `BesktReportJson` says what the
+ * value actually is — a jsonb document — and `readBesktReportPayload` is the
+ * one place that reads a shape out of it.
+ */
+export type BesktReportJson =
+  | string
+  | number
+  | boolean
+  | null
+  | BesktReportJson[]
+  | { [key: string]: BesktReportJson };
+
+export interface BesktReportBlocker {
+  readonly code: string;
+  readonly message: string;
+}
+
+export interface BesktReportPreview {
+  readonly sessionId: string;
+  /** The frozen rendering, exactly as the database assembled it. */
+  readonly payload: BesktReportJson;
+  readonly basisHash: string;
+  readonly contentHash: string;
+  readonly blockers: readonly BesktReportBlocker[];
+  readonly blockerCount: number;
+  readonly producesScore: false;
+  readonly interpretation: "none";
+}
+
+/**
+ * The document as it WOULD be written, and what still stands in the way.
+ *
+ * The blockers are the database's, code and all. The screen translates the
+ * code and never the message: the message names counts and is written for an
+ * operator, exactly as every other governed refusal in this domain is.
+ */
+export const previewBesktReport = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ sessionId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }): Promise<BesktReportPreview> => {
+    const { data: row, error } = await context.supabase.rpc("bcp_conduct_preview_report", {
+      _session_id: data.sessionId,
+    });
+    if (error) throw new Error(error.message);
+    const r = asRecord(row);
+    return {
+      sessionId: r.session_id as string,
+      payload: (r.payload ?? null) as BesktReportJson,
+      basisHash: r.basis_hash as string,
+      contentHash: r.content_hash as string,
+      blockers: asArray(r.blockers).map((b) => ({
+        code: b.code as string,
+        message: b.message as string,
+      })),
+      blockerCount: (r.blocker_count as number) ?? 0,
+      producesScore: false,
+      interpretation: "none",
+    };
+  });
+
+export interface BesktFinalisedReport {
+  readonly sessionId: string;
+  readonly finalised: boolean;
+  readonly reportId: string | null;
+  readonly versionNumber: number | null;
+  readonly status: string | null;
+  readonly payload: BesktReportJson | null;
+  readonly contentHash: string | null;
+  readonly contentHashAlgorithm: string | null;
+  readonly basisHash: string | null;
+  readonly boundMethodVersionId: string | null;
+  readonly boundContentHash: string | null;
+  readonly boundAnswersContentHash: string | null;
+  readonly finalisedBy: string | null;
+  readonly finalisedAt: string | null;
+}
+
+/** The finalised document, or the honest answer that there is not one. */
+export const getBesktFinalReport = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ sessionId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }): Promise<BesktFinalisedReport> => {
+    const { data: row, error } = await context.supabase.rpc("bcp_conduct_final_report", {
+      _session_id: data.sessionId,
+    });
+    if (error) throw new Error(error.message);
+    const r = asRecord(row);
+    const finalised = r.finalised === true;
+    return {
+      sessionId: r.session_id as string,
+      finalised,
+      reportId: finalised ? (r.report_id as string) : null,
+      versionNumber: finalised ? (r.version_number as number) : null,
+      status: finalised ? (r.status as string) : null,
+      payload: finalised ? ((r.payload ?? null) as BesktReportJson) : null,
+      contentHash: str(r.content_hash),
+      contentHashAlgorithm: str(r.content_hash_algorithm),
+      basisHash: str(r.basis_hash),
+      boundMethodVersionId: str(r.bound_method_version_id),
+      boundContentHash: str(r.bound_content_hash),
+      boundAnswersContentHash: str(r.bound_answers_content_hash),
+      finalisedBy: str(r.finalised_by),
+      finalisedAt: str(r.finalised_at),
+    };
+  });
+
+export interface BesktReportVersion {
+  readonly reportId: string;
+  readonly versionNumber: number;
+  readonly status: string;
+  readonly contentHash: string;
+  readonly basisHash: string;
+  readonly finalisedBy: string;
+  readonly finalisedAt: string;
+}
+
+/** Every version, newest first, superseded ones included. */
+export const listBesktReportVersions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ sessionId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }): Promise<readonly BesktReportVersion[]> => {
+    const { data: rows, error } = await context.supabase.rpc("bcp_conduct_report_versions", {
+      _session_id: data.sessionId,
+    });
+    if (error) throw new Error(error.message);
+    return asArray(rows).map((r) => ({
+      reportId: r.report_id as string,
+      versionNumber: r.version_number as number,
+      status: r.status as string,
+      contentHash: r.content_hash as string,
+      basisHash: r.basis_hash as string,
+      finalisedBy: r.finalised_by as string,
+      finalisedAt: r.finalised_at as string,
+    }));
+  });
+
+/**
+ * Write the report.
+ *
+ * `expectedBasisHash` is not optional and is not computed here: it is the
+ * hash the reader was SHOWN in the preview they are signing. The database
+ * refuses if the basis moved between the reading and the signature, which is
+ * the whole safeguard — a human is answerable for the document they read, not
+ * for whatever the record happened to say a moment later.
+ */
+export const finaliseBesktReport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        operationId: z.string().uuid(),
+        sessionId: z.string().uuid(),
+        expectedBasisHash: z.string().regex(/^[0-9a-f]{64}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }) => {
+    const { data: row, error } = await context.supabase.rpc("bcp_conduct_finalise_report", {
+      _operation_id: data.operationId,
+      _session_id: data.sessionId,
+      _expected_basis_hash: data.expectedBasisHash,
+    });
+    if (error) throw new Error(error.message);
+    const r = asRecord(row);
+    return {
+      reportId: r.report_id as string,
+      versionNumber: r.version_number as number,
+      basisHash: r.basis_hash as string,
+      contentHash: r.content_hash as string,
+      unchanged: r.unchanged === true,
+    };
+  });

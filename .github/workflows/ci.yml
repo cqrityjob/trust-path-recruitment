@@ -864,6 +864,30 @@ jobs:
       - name: BESKT interview tool (PR 5B) source and render guard
         run: bun run beskt-interview-tool:check
 
+      # The three surfaces PR 6 builds on top of the already-applied schema:
+      # the governed interviewer wordings, the immutable report, and the
+      # governance surface at /admin/beskt-methods. Asserted from the real
+      # source AND by calling the pure decisions with the inputs that matter
+      # — an unchanged field, an emptied one, an approval whose review cycle
+      # moved, a pilot grant that expired yesterday. Its planted controls run
+      # in negative-controls:all.
+      - name: BESKT product completion (PR 6) source and behaviour guard
+        run: bun run beskt-product-completion:check
+
+      # The same three surfaces, asserted from their RENDERED markup in both
+      # languages: that the report says it is not a decision and puts its
+      # limitations before its evidence, that the governed wordings reach
+      # the page and say why they are missing when they are, and that the
+      # five gates draw as five independent states rather than a bar.
+      - name: BESKT product completion (PR 6) render guard
+        run: bun run beskt-product-completion-render:check
+
+      # BESKT v0.1: the import of the 2026-09-10 specification carries every
+      # question, scenario and FAKTA step, keeps E, S and K out of the
+      # recruitment method, and invents no lawful basis or attestation.
+      - name: BESKT v0.1 import check
+        run: bun run beskt-v01-import:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the

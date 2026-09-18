@@ -5,6 +5,7 @@ reachable when `supabase start` is not, so the BESKT candidate-preparation
 walk can be run in a real browser against a real database.
 
 ```
+scripts/local-stack/test-env.sh            # Docker Postgres 16 + PostgREST image, then up.sh
 scripts/local-stack/up.sh                  # replay, seed, snapshot, start
 scripts/local-stack/run-routed-evidence.sh # the walk, every viewport, traces kept
 scripts/local-stack/down.sh                # stop what up.sh started
@@ -84,3 +85,17 @@ not the other.
 That content exists **only** inside this disposable database. Production must
 stay honest when no governed method is published, and it does: the section
 says the method is under development, which is the true answer.
+
+## Without a PostgREST binary: `test-env.sh`
+
+`test-env.sh` starts PostgreSQL 16 in Docker on 127.0.0.1:5432, runs PostgREST
+from a local container image through `postgrest-docker.sh`, puts the gateway on
+54331, and then runs `up.sh` unchanged. `--reseed` returns to the seeded start
+state. With `SECURITY_REF=<git ref>` it also lays not-yet-merged security
+migrations (`20261127090000`, `20261128090000`) over the replay, so the test
+environment carries the database fixes the application is waiting for.
+
+The seed also lets the synthetic governance people sign in
+(`scripts/fixtures/beskt-governance-signin-fixture.sql`), for walking
+`/beskt-governance` and `/admin/beskt-methods`. Every account is
+`@local.test` with the password `LocalJourney!2026`, on loopback only.

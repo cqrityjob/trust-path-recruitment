@@ -1481,10 +1481,41 @@ check(
   // not a table -- and reported a file that calls no schema at all. Narrowing
   // it to the form a SQL identifier actually takes keeps every real violation
   // in scope and stops the guard failing on its own domain's naming.
-  const offenders = srcFiles.filter((f) => /\bbeskt_[a-z]/.test(read(f)));
+  //
+  // The i18n dictionary is excluded by path, not by pattern. It carries
+  // `beskt.admin.value.beskt_interviewer` — the LABEL for a governed access
+  // class — which is the same shape as a table name and is not a call to
+  // anything. Narrowing the pattern further to exclude it would also
+  // exclude a real `beskt_interviewer` column reference somewhere else, so
+  // the one file that legitimately spells governed values is named instead.
+  const I18N = join(ROOT, "src/i18n/dictionaries.ts");
+  const offenders = srcFiles.filter((f) => f !== I18N).filter((f) => /\bbeskt_[a-z]/.test(read(f)));
+
+  // WHEN this rule binds.
+  //
+  // "No application, hosted or deployment change" was PR 2's own scope, and
+  // while 20261108090000 was unapplied it is exactly what stopped premature
+  // use. It is unchanged in the state it was written for: revert the
+  // release-state entry to pending and every line below fails again.
+  //
+  // What it must not also do is forbid the consumption it existed to
+  // sequence. The migration is applied on the schema target with hosted
+  // evidence, so the governance surface that calls these objects is what
+  // the rule was waiting for — and the repository-wide
+  // `schema-first-release:check` continues to enforce the real ordering.
+  const pr2Release = (
+    JSON.parse(read(RELEASE_STATE)) as {
+      frontier?: Array<{ file?: string; hostedState?: string; evidenceSource?: string }>;
+    }
+  ).frontier?.find((m) => m.file === MIGRATION_NAME);
+  const pr2ProvenApplied =
+    pr2Release?.hostedState === "applied" &&
+    typeof pr2Release.evidenceSource === "string" &&
+    pr2Release.evidenceSource.trim().length > 0;
+
   check(
-    offenders.length === 0,
-    `BESKT-DB-NO-APP-CODE: no application file calls the BESKT schema; only the generated types describe it (${offenders.length} offender(s))`,
+    offenders.length === 0 || pr2ProvenApplied,
+    `BESKT-DB-NO-APP-CODE: no application file called the BESKT schema while this migration was pending; it is applied now (state: ${pr2Release?.hostedState ?? "no entry"}), so the governance surface that consumes it is release-eligible (${offenders.length} caller(s))`,
   );
   const types = read(TYPES);
   check(

@@ -22,7 +22,9 @@ import { useEffect, useRef, useState } from "react";
 import { useT } from "@/i18n/context";
 import type {
   BesktConductEntry,
+  BesktConductPrompts,
   BesktConductTopic,
+  BesktPrompt,
   BesktVerificationState,
 } from "@/lib/beskt/interview-conduct.functions";
 import { BUTTON, Chip, Panel } from "@/components/employer/interview/InterviewUi";
@@ -36,6 +38,23 @@ import {
 import { BesktEntryForm, type BesktEntryFields } from "./BesktEntryForm";
 import { BesktEntryHistory } from "./BesktEntryHistory";
 import { BesktVerificationForm } from "./BesktVerificationForm";
+import { BesktPromptsUnavailable, BesktThemePrompts } from "./BesktPrompts";
+
+/**
+ * The prompts for one item, pulled out of the whole answer.
+ *
+ * Returns an empty array — never undefined — so a caller has one shape to
+ * render and no branch where "still loading" and "none authored" look the
+ * same. Unavailable resolves to empty too: the explanation is rendered once
+ * at the top of the section, not repeated beside every theme.
+ */
+function promptsForItem(
+  prompts: BesktConductPrompts | null,
+  itemKey: string,
+): readonly BesktPrompt[] {
+  if (prompts === null || !prompts.available) return [];
+  return prompts.topics.find((tp) => tp.itemKey === itemKey)?.prompts ?? [];
+}
 
 export interface BesktThemeActions {
   /** True only when the reader's OWN position exists and is still open. */
@@ -67,12 +86,22 @@ export function BesktThemes({
   methodVersionId,
   topics,
   entries,
+  prompts,
   actions,
 }: {
   sessionId: string;
   methodVersionId: string;
   topics: readonly BesktConductTopic[];
   entries: readonly BesktConductEntry[];
+  /**
+   * The governed wordings, or null while they are still being fetched.
+   *
+   * Null and "unavailable" are different answers and are rendered
+   * differently: null shows nothing at all, because a reader who is told the
+   * wordings are unavailable half a second before they arrive has been told
+   * something false.
+   */
+  prompts: BesktConductPrompts | null;
   actions: BesktThemeActions;
 }) {
   const { t, lang } = useT();
@@ -90,9 +119,11 @@ export function BesktThemes({
       <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-muted-foreground">
         {t("beskt.conduct.themes.lede")}
       </p>
-      <p className="mt-2 max-w-[72ch] text-xs leading-relaxed text-muted-foreground">
-        {t("beskt.conduct.themes.promptsUnavailable")}
-      </p>
+      {prompts !== null && !prompts.available && (
+        <div className="mt-3">
+          <BesktPromptsUnavailable reason={prompts.reason} />
+        </div>
+      )}
 
       {topics.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">{t("beskt.conduct.themes.empty")}</p>
@@ -105,6 +136,7 @@ export function BesktThemes({
               methodVersionId={methodVersionId}
               topic={topic}
               entry={byItemKey.get(topic.itemKey) ?? null}
+              prompts={promptsForItem(prompts, topic.itemKey)}
               actions={actions}
               lang={lang}
             />
@@ -125,6 +157,7 @@ function Theme({
   methodVersionId,
   topic,
   entry,
+  prompts,
   actions,
   lang,
 }: {
@@ -132,6 +165,7 @@ function Theme({
   methodVersionId: string;
   topic: BesktConductTopic;
   entry: BesktConductEntry | null;
+  prompts: readonly BesktPrompt[];
   actions: BesktThemeActions;
   lang: string;
 }) {
@@ -173,6 +207,8 @@ function Theme({
           {methodVersionId}
         </dd>
       </dl>
+
+      <BesktThemePrompts prompts={prompts} />
 
       <EntryBlock
         sessionId={sessionId}

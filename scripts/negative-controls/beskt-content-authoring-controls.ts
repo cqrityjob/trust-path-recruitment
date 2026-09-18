@@ -720,11 +720,26 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "AUT-NC-HANDWRITTEN-CODE-NAMES-A-DOOR",
     defect:
-      "hand-written application code names a PR 7 authoring door before the admin UI that is meant to consume it -- the premature use this assertion has always refused, and must still refuse now that the generated types are exempt",
-    file: "src/lib/beskt/interview-conduct.functions.ts",
-    find: "export const recordBesktPanelResolution = createServerFn",
+      "THE SEQUENCING RULE STOPS BINDING: the migration is put back to pending while the admin UI that calls these doors is still in the tree — exactly the premature use this assertion exists to refuse",
+    // ── WHY THIS CONTROL MOVES release-state AND NOT THE SOURCE ─────────
+    //
+    // It used to plant a reference to `beskt_author_item` in a file that
+    // had none, because at the time no hand-written code named a PR 7 door
+    // and the rule was unconditional. The admin UI now names all eight on
+    // purpose, and the rule is conditional on release-state proving the
+    // migration applied — so planting a ninth reference proves nothing and
+    // left this control dead, which the runner caught.
+    //
+    // What the rule protects is the ORDERING. So the control breaks the
+    // thing the rule depends on, returning the entry to `pending`, and the
+    // guard must refuse the callers that are genuinely there.
+    file: "supabase/release-state.json",
+    find:
+      '      "file": "20261118090000_beskt_governed_content_authoring.sql",\n' +
+      '      "hostedState": "applied",',
     replace:
-      'const PLANTED_PREMATURE_USE = "beskt_author_item";\nexport const recordBesktPanelResolution = createServerFn',
+      '      "file": "20261118090000_beskt_governed_content_authoring.sql",\n' +
+      '      "hostedState": "pending",',
     guard: GUARD,
     expect: "- AUTHORING-SCHEMA-FIRST: no application code named an object of this migration",
   },

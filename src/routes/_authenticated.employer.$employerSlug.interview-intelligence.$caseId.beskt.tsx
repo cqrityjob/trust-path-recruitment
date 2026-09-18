@@ -51,12 +51,19 @@ import {
   revealBesktPanel,
   saveBesktConductEntry,
   startBesktConductSession,
+  getBesktTopicPrompts,
+  previewBesktReport,
+  getBesktFinalReport,
+  listBesktReportVersions,
+  finaliseBesktReport,
   type BesktResolutionKind,
   type BesktVerificationState,
 } from "@/lib/beskt/interview-conduct.functions";
 import {
   besktInvalidateAfterMutation,
   besktModuleKey,
+  besktPromptsKey,
+  besktReportKey,
   besktWorkspaceKey,
 } from "@/lib/beskt/conduct-queries";
 import { besktErrorKey } from "@/lib/beskt/errors";
@@ -68,10 +75,12 @@ import { BesktSnapshot } from "@/components/employer/interview/beskt/BesktSnapsh
 import { BesktThemes } from "@/components/employer/interview/beskt/BesktThemes";
 import { BesktPositionSection } from "@/components/employer/interview/beskt/BesktPosition";
 import { BesktPanelSection } from "@/components/employer/interview/beskt/BesktPanel";
+import { BesktStagePrompts } from "@/components/employer/interview/beskt/BesktPrompts";
+import { BesktReportSection } from "@/components/employer/interview/beskt/BesktReport";
 import { TOUCH } from "@/components/employer/interview/beskt/BesktConductUi";
 import type { BesktEntryFields } from "@/components/employer/interview/beskt/BesktEntryForm";
 
-const VIEWS = ["interview", "position", "panel"] as const;
+const VIEWS = ["interview", "position", "panel", "report"] as const;
 type View = (typeof VIEWS)[number];
 
 // `catch` rather than a hard failure: a stale link should open the
@@ -134,6 +143,69 @@ function Page() {
     retry: false,
   });
 
+  // The governed wordings. A separate query because they have a different
+  // lifetime from the record: they move only when the method version does.
+  const promptsFn = useServerFn(getBesktTopicPrompts);
+  const promptsQ = useQuery({
+    queryKey: besktPromptsKey(employerSlug, caseId, sessionId ?? "none"),
+    queryFn: () => promptsFn({ data: { sessionId: sessionId! } }),
+    enabled: sessionId !== null,
+    retry: false,
+  });
+
+  // The report. Three reads that always travel together, because a screen
+  // that showed a finalised document without knowing whether the record has
+  // moved since would be telling a reader the document is current when it
+  // may not be.
+  const previewFn = useServerFn(previewBesktReport);
+  const finalFn = useServerFn(getBesktFinalReport);
+  const versionsFn = useServerFn(listBesktReportVersions);
+
+  // ── WHY THE PREVIEW IS WITHHELD UNTIL THE DATABASE SAYS OTHERS ARE
+  //    VISIBLE, AND WHY THAT IS A MITIGATION AND NOT A BOUNDARY ─────────
+  //
+  // `bcp_conduct_preview_report` gates on three things: authentication,
+  // the session existing, and `scp_iv_can_read_case`. It does NOT call
+  // `bcp_conduct_may_see_others`, and the helper it delegates to,
+  // `bcp_conduct_build_report_basis`, is SECURITY DEFINER — so it returns
+  // EVERY assessor's entries, bypassing the row policies that carry the
+  // independence rule everywhere else in this surface.
+  //
+  // Nothing called that function before this change, so the gap was
+  // latent. A Report tab that called it unconditionally would make it
+  // reachable: an assessor whose own position is still open could read a
+  // colleague's locked one and anchor on it, which is the single thing
+  // the conduct layer is built to prevent.
+  //
+  // `othersVisible` is the DATABASE's own answer to "may this reader see
+  // other positions yet" — `bcp_conduct_may_see_others`, returned by the
+  // workspace. Gating on it closes the reachable path with the correct
+  // predicate rather than a guess.
+  //
+  // It is not the boundary. A crafted request that skips this file reaches
+  // the same RPC, so the boundary is the `bcp_conduct_may_see_others` check
+  // that 20261127090000 (PR #266, schema-first) adds inside
+  // `bcp_conduct_preview_report`. This condition stays as defence in depth,
+  // and until that migration is live it is what keeps the product from
+  // shipping a reachable route to the hole.
+  // See docs/architecture/beskt-report-preview-independence.md.
+  const othersVisible = workspaceQ.data?.othersVisible === true;
+
+  const reportQ = useQuery({
+    queryKey: besktReportKey(employerSlug, caseId, sessionId ?? "none"),
+    queryFn: async () => {
+      const id = sessionId!;
+      const [preview, finalReport, versions] = await Promise.all([
+        previewFn({ data: { sessionId: id } }),
+        finalFn({ data: { sessionId: id } }),
+        versionsFn({ data: { sessionId: id } }),
+      ]);
+      return { preview, finalReport, versions };
+    },
+    enabled: sessionId !== null && view === "report" && othersVisible,
+    retry: false,
+  });
+
   const invalidate = async () => {
     for (const key of besktInvalidateAfterMutation(employerSlug, caseId, sessionId)) {
       await queryClient.invalidateQueries({ queryKey: key });
@@ -150,6 +222,7 @@ function Page() {
   const panelOp = useOperationId();
   const revealOp = useOperationId();
   const resolutionOp = useOperationId();
+  const reportOp = useOperationId();
 
   const startFn = useServerFn(startBesktConductSession);
   const joinFn = useServerFn(joinBesktConductSession);
@@ -160,6 +233,7 @@ function Page() {
   const openPanelFn = useServerFn(openBesktPanel);
   const revealFn = useServerFn(revealBesktPanel);
   const resolutionFn = useServerFn(recordBesktPanelResolution);
+  const finaliseFn = useServerFn(finaliseBesktReport);
 
   const [pendingItemKey, setPendingItemKey] = useState<string | null>(null);
   const [savedItemKey, setSavedItemKey] = useState<string | null>(null);
@@ -318,6 +392,25 @@ function Page() {
       }),
     onSuccess: async () => {
       resolutionOp.clear();
+      await invalidate();
+    },
+  });
+
+  /**
+   * Writing the report.
+   *
+   * `expectedBasisHash` is the hash the reader was SHOWN. It is passed
+   * straight through and never recomputed here: the safeguard is that a
+   * human is answerable for the document they read, and a client that
+   * recalculated the hash would be signing whatever the record says now.
+   */
+  const finalise = useMutation({
+    mutationFn: (expectedBasisHash: string) =>
+      finaliseFn({
+        data: { operationId: reportOp.take(), sessionId: sessionId!, expectedBasisHash },
+      }),
+    onSuccess: async () => {
+      reportOp.clear();
       await invalidate();
     },
   });
@@ -485,7 +578,9 @@ function Page() {
                   ? "beskt.conduct.nav.interview"
                   : v === "position"
                     ? "beskt.conduct.nav.position"
-                    : "beskt.conduct.nav.panel",
+                    : v === "panel"
+                      ? "beskt.conduct.nav.panel"
+                      : "beskt.conduct.nav.report",
               )}
             </Link>
           </li>
@@ -515,11 +610,13 @@ function Page() {
         {view === "interview" && (
           <>
             <BesktSnapshot answers={mod.answers} />
+            {promptsQ.data?.available && <BesktStagePrompts prompts={promptsQ.data.stagePrompts} />}
             <BesktThemes
               sessionId={sessionId}
               methodVersionId={w.bound.methodVersionId}
               topics={w.topics}
               entries={w.myEntries}
+              prompts={promptsQ.data ?? null}
               actions={{
                 canWrite,
                 pendingItemKey,
@@ -587,6 +684,36 @@ function Page() {
                   reason,
                 })
               }
+            />
+          ))}
+
+        {view === "report" && !othersVisible && (
+          <Panel tone="neutral" title={t("beskt.report.withheld.title")}>
+            <p>{t("beskt.report.withheld.body")}</p>
+            <p className="mt-2">{t("beskt.report.withheld.whatToDo")}</p>
+          </Panel>
+        )}
+
+        {view === "report" &&
+          othersVisible &&
+          (reportQ.isLoading ? (
+            <State kind="loading" />
+          ) : reportQ.isError ? (
+            <State kind="error" message={t(besktErrorKey(reportQ.error))} />
+          ) : (
+            <BesktReportSection
+              preview={reportQ.data?.preview ?? null}
+              finalReport={reportQ.data?.finalReport ?? null}
+              versions={reportQ.data?.versions ?? []}
+              actions={{
+                // Only a participant who has locked their own position may
+                // sign. The database decides the same thing again; this keeps
+                // the screen from offering an action it knows will be refused.
+                canFinalise: myPosition !== null && myPosition.state === "locked",
+                busy: finalise.isPending,
+                error: finalise.isError ? finalise.error : null,
+                finalise: (expectedBasisHash) => finalise.mutate(expectedBasisHash),
+              }}
             />
           ))}
 

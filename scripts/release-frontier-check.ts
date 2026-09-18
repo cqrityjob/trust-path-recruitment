@@ -130,7 +130,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Both names come OFF this list here, in the same change, as planned. One name
 // remains, pending by design until PR #265 merges.
 //
-// 20261127090000_bcp_conduct_report_independence_boundary is GENUINELY PENDING,
+// 2026-09-18, after PR #266 merged as 50bf5de: 20261126090000 (applied when
+// #265 merged), 20261127090000 and 20261128090000 were verified read-only in
+// the hosted ledger -- the two security fixes by their function bodies as well
+// -- and recorded with that evidence in release-state.json and
+// hosted-ledger.json. All three come OFF this list here. Nothing is pending.
+//
+// 20261127090000_bcp_conduct_report_independence_boundary WAS GENUINELY PENDING,
 // and this is the list saying so out loud rather than a migration quietly
 // waiting. It is a security fix to two functions 20261117090000 already put
 // live: bcp_conduct_preview_report never applied the independence rule, and
@@ -146,11 +152,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (#266) and is pending for the same reason: scp_iv_create_case never checked
 // the candidate account it was given. Its name comes OFF this list in the
 // change that records its hosted evidence, never before.
-const expectedPending: string[] = [
-  "20261126090000_sp_catalogue_scope_and_document_issuer.sql",
-  "20261127090000_bcp_conduct_report_independence_boundary.sql",
-  "20261128090000_scp_iv_case_candidate_binding.sql",
-];
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
