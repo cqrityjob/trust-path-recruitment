@@ -283,7 +283,9 @@ group("T2 · two PEER individual entry products render, in both languages");
     sv: {
       "home.entry.passport.title": "Bygg ditt Security Passport",
       "home.entry.passport.body":
-        "Samla erfarenhet, utbildning och certifieringar. Välj Sverige, Storbritannien eller Dubai och bestäm själv vad du delar.",
+        // Owner copy, 2026-09-17: certifications, licences and authorisations only.
+        // Employment history is the CV's, so "erfarenhet, utbildning" is gone.
+        "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",
       "home.entry.discovery.title": "Upptäck din säkerhetskarriär",
       "home.entry.discovery.body":
         "Utforska din arbetsinriktning och få förklarade förslag på roller och karriärvägar inom säkerhet.",
@@ -295,7 +297,7 @@ group("T2 · two PEER individual entry products render, in both languages");
     en: {
       "home.entry.passport.title": "Build your Security Passport",
       "home.entry.passport.body":
-        "Bring together experience, education and credentials. Choose Sweden, Great Britain or Dubai and control what you share.",
+        "Bring together your certifications, licences and professional authorisations — internationally and by country. Add supporting evidence and choose what you share.",
       "home.entry.discovery.title": "Discover your security career",
       "home.entry.discovery.body":
         "Explore your work orientation and receive explained suggestions for security roles and career paths.",
@@ -1232,6 +1234,7 @@ group("T15 · the English page is English, decoration included");
   ck("no Swedish string literal remains in the route", literals.length === 0, literals.join(" · "));
   // 4. The page's word count, so a rebuild cannot quietly become a brochure.
   //    A CEILING rather than a snapshot of today.
+  //
   for (const lang of LANGS) {
     ck(
       `${lang}: ${wc(seenOf[lang])} words rendered in total (ceiling 340)`,

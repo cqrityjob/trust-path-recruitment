@@ -31,6 +31,7 @@ import {
   milestoneStyle,
   shareFormat,
   type ShareFormat,
+  passportCardSvgStops,
 } from "./design/trust-system";
 import { SYMBOL_CODES, SYMBOL_VIEWBOX, credentialSymbolMarkup } from "./design/credential-symbols";
 import { credentialMark } from "./credentials";
@@ -87,29 +88,6 @@ export interface SocialExportStrings {
   readonly verifyAtSource: string;
   readonly noVerifiedYet: string;
   readonly staleWarning: string | null;
-}
-
-/** Guilloche-flavoured background: concentric hairline arcs, the engraving
- *  vocabulary the Security Passport already uses. Cheap in bytes, and it is what
- *  makes an exported PNG recognisably the same object as the card on screen
- *  rather than a generic banner. */
-function engraving(width: number, height: number): string {
-  const parts: string[] = [];
-  const cx = width * 0.82;
-  const cy = height * 0.18;
-  for (let i = 0; i < 14; i += 1) {
-    const r = width * 0.08 + i * (width * 0.035);
-    parts.push(
-      `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r.toFixed(1)}" fill="none" stroke="${TRUST_PALETTE.blueLuminous}" stroke-opacity="0.06" stroke-width="1"/>`,
-    );
-  }
-  for (let i = 0; i < 10; i += 1) {
-    const y = height * 0.62 + i * (height * 0.012);
-    parts.push(
-      `<line x1="0" y1="${y.toFixed(1)}" x2="${width}" y2="${y.toFixed(1)}" stroke="${TRUST_PALETTE.blueLuminous}" stroke-opacity="0.04" stroke-width="1"/>`,
-    );
-  }
-  return parts.join("");
 }
 
 function seal(cx: number, cy: number, r: number, rim: string, rimBright: string): string {
@@ -235,11 +213,11 @@ export function buildSocialSvg(
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
     `<defs><linearGradient id="sp-ground" x1="0" y1="0" x2="0" y2="1">`,
-    `<stop offset="0%" stop-color="${TRUST_PALETTE.navy}"/>`,
-    `<stop offset="100%" stop-color="${TRUST_PALETTE.navyDeep}"/>`,
+    // The one card ground — see PASSPORT_CARD_SURFACE. No engraving: nothing
+    // is drawn behind the text, the plates or the QR code.
+    passportCardSvgStops(),
     `</linearGradient></defs>`,
     `<rect width="${W}" height="${H}" fill="url(#sp-ground)"/>`,
-    engraving(W, H),
     `<rect x="${Math.round(pad / 2)}" y="${Math.round(pad / 2)}" width="${W - pad}" height="${H - pad}" fill="none" stroke="${TRUST_PALETTE.gold}" stroke-opacity="0.25" stroke-width="${Math.max(1, fs(2))}"/>`,
     body.join(""),
     `</svg>`,
@@ -322,11 +300,9 @@ export function buildGenericOgSvg(strings: {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`,
     `<defs><linearGradient id="sp-og-ground" x1="0" y1="0" x2="0" y2="1">`,
-    `<stop offset="0%" stop-color="${TRUST_PALETTE.navyRaised}"/>`,
-    `<stop offset="100%" stop-color="${TRUST_PALETTE.navyDeep}"/>`,
+    passportCardSvgStops(),
     `</linearGradient></defs>`,
     `<rect width="${W}" height="${H}" fill="url(#sp-og-ground)"/>`,
-    engraving(W, H),
     `<rect x="${pad / 2}" y="${pad / 2}" width="${W - pad}" height="${H - pad}" fill="none" stroke="${TRUST_PALETTE.gold}" stroke-opacity="0.28" stroke-width="2"/>`,
     body.join(""),
     `</svg>`,

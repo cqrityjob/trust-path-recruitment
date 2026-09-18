@@ -57,16 +57,8 @@ export function SecurityPassportPreview({
     <article
       data-compact-passport-card
       data-passport-card-variant={variant}
-      className="passport-signature relative isolate min-w-0 overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] ring-1 ring-accent/20 sm:p-6"
+      className="passport-signature passport-card-frame relative isolate min-w-0 overflow-hidden rounded-xl p-5 text-primary-foreground sm:p-6"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary-foreground/40"
-      />
-      <div
-        aria-hidden="true"
-        className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-40 opacity-20"
-      />
       <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
         <div>
           <p className="text-lg font-semibold tracking-tight">CQrityjob</p>

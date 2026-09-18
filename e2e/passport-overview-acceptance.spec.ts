@@ -828,6 +828,152 @@ for (const lang of ["sv", "en"] as const) {
     }
   });
 
+  test(`the card finish: one quiet ground, on the overview and the homepage · ${lang}`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(240_000);
+    // PASSPORT_EVIDENCE_ONLY renders the SAME fixture against another build
+    // (the "before" pictures) without asserting the new contract against it.
+    const evidenceOnly = process.env.PASSPORT_EVIDENCE_ONLY === "1";
+    const tag = process.env.PASSPORT_SHOT_TAG ?? "after";
+    const shots = process.env.PASSPORT_SHOTS ?? info.outputPath("shots");
+    const { mkdirSync } = await import("node:fs");
+    mkdirSync(shots, { recursive: true });
+    const T = (sv: string, en: string) => (lang === "sv" ? sv : en);
+
+    for (const width of [390, 1440] as const) {
+      await page.setViewportSize({ width, height: 900 });
+
+      // ── the holder's card, same fixture as every other test here ──────
+      await mount(page, "/passport", lang, snapshotFor("Mostafa Alshawi", NINE));
+      await expect(card(page)).toBeVisible({ timeout: 30_000 });
+      await card(page).screenshot({ path: `${shots}/${tag}-card-${width}-${lang}.png` });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: `${shots}/${tag}-overview-${width}-${lang}.png` });
+
+      if (!evidenceOnly) {
+        const ground = await card(page).evaluate((el) => {
+          const cs = getComputedStyle(el);
+          return { image: cs.backgroundImage, border: cs.borderTopWidth, shadow: cs.boxShadow };
+        });
+        expect(ground.image).toContain("linear-gradient");
+        expect(ground.image).not.toContain("repeating-linear-gradient");
+        expect((ground.image.match(/gradient\(/g) ?? []).length).toBe(1);
+        expect(ground.border).toBe("1px");
+        expect(ground.shadow).not.toBe("none");
+        // No decorative layer is mounted inside the card at all.
+        await expect(card(page).locator('[aria-hidden="true"][class*="absolute"]')).toHaveCount(0);
+        // The content is untouched: shields, flags, globe, trust words, +N.
+        await expect(shields(page)).toHaveCount(3);
+        await expect(card(page).locator("[data-shield-overflow]")).toHaveCount(1);
+        // At 390px and up the holder's card is wide enough for ONE row of four.
+        const tops = await card(page)
+          .locator("[data-shield-constellation] > li")
+          .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+        expect(new Set(tops).size, `one row @${width}`).toBe(1);
+        await expect(card(page).locator('[data-scope-mark="globe"]')).not.toHaveCount(0);
+        await expect(card(page).locator("[data-flag]")).not.toHaveCount(0);
+        // White identity text on navy: the name is the token's ink-on-navy.
+        const name = await page
+          .locator("[data-passport-holder-name]")
+          .evaluate((el) => getComputedStyle(el).color);
+        expect(name).toMatch(/rgb\(2[0-9]{2}, 2[0-9]{2}, 2[0-9]{2}\)|oklch\(0\.9/);
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+      }
+
+      // ── the public homepage, signed out ───────────────────────────────
+      await page.context().clearCookies();
+      await page.goto(`${base}/`);
+      await page.evaluate((l) => {
+        localStorage.clear();
+        localStorage.setItem("cqrityjob.lang", l);
+      }, lang);
+      await page.goto(`${base}/`);
+      const panel = page.locator("[data-home-passport-preview]");
+      await expect(panel).toBeVisible({ timeout: 30_000 });
+      await panel.scrollIntoViewIfNeeded();
+      await panel.screenshot({ path: `${shots}/${tag}-homepage-panel-${width}-${lang}.png` });
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({
+        path: `${shots}/${tag}-homepage-${width}-${lang}.png`,
+        fullPage: true,
+      });
+
+      if (!evidenceOnly) {
+        const image = await panel.evaluate((el) => getComputedStyle(el).backgroundImage);
+        expect(image).not.toContain("repeating-linear-gradient");
+        await expect(panel.locator('[class*="passport-grid"]')).toHaveCount(0);
+
+        // The owner's sentence, to the letter.
+        await expect(panel).toContainText(
+          T(
+            "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",
+            "Bring together your certifications, licences and professional authorisations — internationally and by country. Add supporting evidence and choose what you share.",
+          ),
+        );
+        expect(await panel.innerText()).not.toMatch(
+          /Samla erfarenhet|experience, education|Dokumenterad källa|Documented source|Tillitstillstånd|Trust state/i,
+        );
+
+        // A labelled, fictional example drawn with the REAL shield system.
+        const example = panel.locator("[data-home-passport-example]");
+        await expect(example.locator("[data-home-passport-example-label]")).toHaveText(
+          T("Exempel", "Example"),
+        );
+        await expect(example).toHaveAttribute(
+          "aria-label",
+          T(/Exempel — Påhittad person/, /Example — Fictional person/),
+        );
+        await expect(example).toContainText(T("Exempel Exempelsson", "Example Holder"));
+        await expect(example.locator("[data-credential-shield]")).toHaveCount(3);
+        await expect(example.locator('[data-scope-mark="globe"]')).toHaveCount(1);
+        for (const flag of ["SE", "GB"]) {
+          await expect(example.locator(`[data-flag="${flag}"]`)).toHaveCount(1);
+        }
+        await expect(example.locator('[data-shield-state="verified"]')).toHaveCount(0);
+        // No shield's words run into its neighbour's — the collision the
+        // narrow example card had at 390px. Measured on the painted text.
+        const inks = await example.locator("[data-credential-shield]").evaluateAll((els) =>
+          els.map((el) => {
+            const r = document.createRange();
+            r.selectNodeContents(el);
+            const rects = [...r.getClientRects()].filter((q) => q.width > 0);
+            return {
+              left: Math.min(...rects.map((q) => q.left)),
+              right: Math.max(...rects.map((q) => q.right)),
+              top: Math.min(...rects.map((q) => q.top)),
+              bottom: Math.max(...rects.map((q) => q.bottom)),
+            };
+          }),
+        );
+        for (let i = 0; i < inks.length; i += 1)
+          for (let j = i + 1; j < inks.length; j += 1) {
+            const [p1, p2] = [inks[i]!, inks[j]!];
+            const overlap =
+              p1.left < p2.right - 0.5 &&
+              p2.left < p1.right - 0.5 &&
+              p1.top < p2.bottom - 0.5 &&
+              p2.top < p1.bottom - 0.5;
+            expect(overlap, `shields ${i} and ${j} overlap @${width}`).toBe(false);
+          }
+        await expect(panel).toContainText(
+          T("Registrerad är inte verifierad", "Registered is not verified"),
+        );
+
+        // The action: inside the entrance, OUTSIDE the example, above it,
+        // carrying the Passport destination through registration.
+        const cta = panel.locator('a[href^="/signup"]');
+        await expect(cta).toHaveCount(1);
+        await expect(cta).toHaveAttribute("href", "/signup?redirect=%2Fpassport");
+        await expect(example.locator("a, button")).toHaveCount(0);
+        const [c, e] = [await cta.boundingBox(), await example.boundingBox()];
+        expect(c!.y + c!.height).toBeLessThanOrEqual(e!.y);
+        expect(c!.height).toBeGreaterThanOrEqual(44);
+        expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
   test(`a shared view counts only what was disclosed · ${lang}`, async ({ page }, info) => {
     test.setTimeout(180_000);
     const shots = process.env.PASSPORT_SHOTS ?? info.outputPath("shots");
@@ -871,6 +1017,13 @@ for (const lang of ["sv", "en"] as const) {
         verified_at: c.assertionLevel === "verified" ? "2026-09-10T00:00:00Z" : null,
         verifier_organisation: c.assertionLevel === "verified" ? "CQrityjob" : null,
         verification_method: c.assertionLevel === "verified" ? "document_review" : null,
+        // The DEFINITION's scope, as sp_credential_payload_v2 emits it since
+        // 20261125090000. SIA is left WITHOUT the key: an older payload.
+        scope_code: GLOBAL_CODES.includes(c.credentialCode ?? "")
+          ? "global_professional"
+          : c === SIA
+            ? undefined
+            : "national_regulated",
       })),
       verified_experience: [],
       verified_employment_days: 0,
@@ -904,8 +1057,35 @@ for (const lang of ["sv", "en"] as const) {
       expect(body).not.toMatch(/Nordirland|Northern Ireland/);
       expect(body).not.toMatch(/\+6|\b9\b/);
 
-      // Same flags, same written scope, as the holder's own card.
+      // Same flags, same written scope, as the holder's own card — and the
+      // definition's scope from the payload: the globe for an international
+      // certification, the flag for a national one, nothing for a payload
+      // that carries no scope (SIA here), never a guess.
       await expect(region.locator('[data-shield-scope="SE"] [data-flag="SE"]')).toHaveCount(1);
+      // Every DRAWN shield carries the mark its definition scope earns.
+      const marks = await region.locator("[data-credential-shield]").evaluateAll((els) =>
+        els.map((el) => ({
+          scope: el.getAttribute("data-shield-scope"),
+          globe: el.querySelectorAll('[data-scope-mark="globe"]').length,
+          flag: el.querySelector("[data-flag]")?.getAttribute("data-flag") ?? null,
+          text: (el as HTMLElement).innerText,
+        })),
+      );
+      expect(marks.length).toBe(3);
+      expect(marks.some((m) => m.scope === "global")).toBe(true);
+      for (const m of marks) {
+        if (m.scope === "global") {
+          expect(m.globe, m.text).toBe(1);
+          expect(m.flag).toBeNull();
+          expect(m.text).toContain("Global");
+        } else if (m.scope === "not_stated") {
+          expect(m.globe).toBe(0);
+          expect(m.flag).toBeNull();
+        } else {
+          expect(m.globe).toBe(0);
+          expect(m.flag).toBe(m.scope!.slice(0, 2));
+        }
+      }
 
       // No QR on a page that was not handed a share link to encode.
       expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

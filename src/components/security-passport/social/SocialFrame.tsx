@@ -26,6 +26,7 @@
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import {
   TRUST_PALETTE,
+  passportCardBackground,
   shareFormat,
   type ShareFormat,
 } from "@/lib/security-passport/design/trust-system";
@@ -35,13 +36,7 @@ import { useQrDataUrl } from "@/lib/security-passport/use-qr";
 import { milestoneStyle } from "@/lib/security-passport/design/trust-system";
 import type { SocialCardModel } from "@/lib/security-passport/social";
 import { formatJurisdiction } from "@/lib/security-passport/format";
-import {
-  BrandMark,
-  EngravedField,
-  EngravedRule,
-  Rosette,
-  VerifiedSeal,
-} from "../card/CardPrimitives";
+import { BrandMark, EngravedRule, Rosette, VerifiedSeal } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
 
 function useSocialStrings(model: SocialCardModel) {
@@ -274,12 +269,11 @@ export function SocialFrame({
           // place and screenshots correctly. Either way the canvas is laid
           // out at true export size, so the preview is faithful.
           zoom,
-          background: `linear-gradient(165deg, ${TRUST_PALETTE.navyRaised} 0%, ${TRUST_PALETTE.navy} 40%, ${TRUST_PALETTE.navyDeep} 100%)`,
+          // The ONE card ground — the same the exported PNG is drawn on.
+          background: passportCardBackground(),
         }}
         className="relative isolate"
       >
-        <EngravedField intensity={0.9} tone={TRUST_PALETTE.goldBright} />
-
         <div className="relative flex h-full flex-col" style={{ padding: pad }}>
           {/* Identity */}
           <header>

@@ -282,12 +282,8 @@ export function CredentialWallet({
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start">
         <header
           data-passport-identity-surface
-          className="passport-signature relative isolate flex min-w-0 flex-col justify-between gap-7 overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] [container-type:inline-size] sm:p-7"
+          className="passport-signature passport-card-frame relative isolate flex min-w-0 flex-col gap-6 overflow-hidden rounded-xl p-5 text-primary-foreground [container-type:inline-size] sm:gap-7 sm:p-7"
         >
-          <div
-            aria-hidden="true"
-            className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-52 opacity-25"
-          />
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xl font-semibold tracking-tight">CQrityjob</p>
