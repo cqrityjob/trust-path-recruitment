@@ -1222,6 +1222,16 @@ jobs:
       - name: Passport credential shields
         run: bun run passport-credential-shield:check
 
+      # HAYAT (document reading + verification model): dates and fields are read
+      # and never guessed, the holder's values win, a reading belongs to its
+      # file, every verification acceptance case in the specification, SSRF
+      # refusal, and the structural boundary -- no client path to "verified",
+      # no production issuer until one is onboarded, no migration. Synthetic
+      # keys generated at run time; nothing hosted. Its planted controls run in
+      # negative-controls:all.
+      - name: Passport HAYAT reading and verification
+        run: bun run passport-hayat:check
+
       # The Passport card's ONE ground (owner addendum, pilot finish): the CSS
       # mirror matches PASSPORT_CARD_SURFACE, no stripes, grid or engraving sits
       # behind any card, and the homepage panel draws the real shield system

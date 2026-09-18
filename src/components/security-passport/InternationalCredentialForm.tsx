@@ -1,5 +1,5 @@
 import { CredentialDateInput } from "./CredentialDateInput";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Globe2, MapPin, ArrowRight, Lock, Check, FileCheck2 } from "lucide-react";
 import type {
@@ -12,6 +12,32 @@ import {
 } from "@/lib/security-passport/evidence.functions";
 import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { todayIso } from "@/lib/security-passport/dates";
+import {
+  acceptValue,
+  applyReading,
+  isReadByHayat,
+  withdrawReading,
+  type FieldNotices,
+  type HayatMarks,
+} from "@/lib/security-passport/hayat/suggestions";
+import type {
+  DocumentReader,
+  DocumentReading,
+  ReadingContext,
+  SuggestibleField,
+} from "@/lib/security-passport/hayat/types";
+import {
+  unverifiableDocument,
+  type HayatDecision,
+} from "@/lib/security-passport/hayat/verification/model";
+import {
+  HayatBadge,
+  HayatFieldNote,
+  HayatPanel,
+  type HayatAssessmentState,
+} from "./hayat/HayatPanel";
+import { useHayatReading } from "./hayat/use-hayat-reading";
 import {
   buildCatalogueIndex,
   changeFilter,
@@ -48,6 +74,9 @@ export function InternationalCredentialForm({
   metadata,
   onSave,
   onUpload,
+  onAssess,
+  accountName,
+  documentReader,
 }: {
   initial?: InternationalCredentialInput;
   preselectCode?: string;
@@ -57,6 +86,19 @@ export function InternationalCredentialForm({
     claimId: string,
     file: { fileName: string; mimeType: string; contentBase64: string },
   ) => Promise<unknown>;
+  /** HAYAT's server-side check of a signed credential found in the file. Reading
+   *  the document never needs it; without it no verification result is shown
+   *  beyond the honest default. */
+  onAssess?: (input: {
+    definitionCode: string;
+    issuedOn: string | null;
+    validUntil: string | null;
+    signedCredential: string;
+  }) => Promise<{ decision: HayatDecision; recorded: boolean }>;
+  /** The account's display name, for comparison with the name on the document. */
+  accountName?: string | null;
+  /** Replaceable document reader; defaults to the in-browser pdf.js + OCR reader. */
+  documentReader?: DocumentReader;
 }) {
   const { lang } = usePassportCopy();
   const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
@@ -93,6 +135,18 @@ export function InternationalCredentialForm({
   const [draft, setDraft] = useState<InternationalCredentialInput>(
     initial ?? { ...blank, definition_code: preselected?.code ?? "" },
   );
+  // ── HAYAT: what was read from the chosen file, and what was done with it.
+  const hayat = useHayatReading(documentReader);
+  const [marks, setMarks] = useState<HayatMarks>({});
+  const [notices, setNotices] = useState<FieldNotices>({});
+  const [assessment, setAssessment] = useState<HayatAssessmentState>({ state: "none" });
+  // A reading resolves seconds after it started. It is applied to the draft as
+  // it is THEN, so anything typed while HAYAT was reading is already protected.
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
+  const latestMarks = useRef(marks);
+  latestMarks.current = marks;
+  const assessRun = useRef(0);
   const locations = metadata?.jurisdictions ?? [];
   const locationName = (code: string | null) => {
     const j = locations.find((j) => j.code === code);
@@ -155,11 +209,122 @@ export function InternationalCredentialForm({
           "Vad förordnandet omfattar (skyddsobjekt eller uppdrag)",
           "What the appointment covers (protected site or assignment)",
         );
+  /** Forget the current file's reading: abort it, and take back what it filled. */
+  const forgetReading = () => {
+    hayat.cancel();
+    assessRun.current += 1;
+    setDraft((current) => withdrawReading(current, latestMarks.current));
+    setMarks({});
+    setNotices({});
+    setAssessment({ state: "none" });
+  };
   const reset = () => {
+    forgetReading();
     setDraft(blank);
     setFile(null);
     setError(null);
   };
+  const readingContext = (): ReadingContext | null => {
+    if (!selected) return null;
+    const namesOf = (d: IndexedDefinition) => {
+      const row = definitions?.find((r) => r.code === d.code);
+      const abbreviation = metadata?.abbreviations?.find((a) => a.credential_code === d.code);
+      return [row?.name_sv, row?.name_en, abbreviation?.abbreviation].filter(
+        (n): n is string => typeof n === "string" && n.trim().length > 0,
+      );
+    };
+    // Governed organisation names only. Search aliases stay in the search.
+    const issuersOf = (d: IndexedDefinition) =>
+      [
+        ...d.organisations.filter((o) => o.role === "issuer").map((o) => o.name),
+        definitions?.find((r) => r.code === d.code)?.issuer_name ?? "",
+      ].filter((n) => n.trim().length > 0);
+    const labelOf = (d: IndexedDefinition) => {
+      const row = definitions?.find((r) => r.code === d.code);
+      return (lang === "sv" ? row?.name_sv : row?.name_en) ?? d.code;
+    };
+    return {
+      selected: {
+        code: selected.code,
+        names: namesOf(selected),
+        issuerNames: selected.issuerStatedOnDocument ? [] : issuersOf(selected),
+        issuerStatedOnDocument: selected.issuerStatedOnDocument,
+      },
+      others: index
+        .filter((d) => d.code !== selected.code)
+        .map((d) => ({
+          code: d.code,
+          label: labelOf(d),
+          names: namesOf(d),
+          issuerLabel: issuersOf(d)[0] ?? "",
+          issuerNames: issuersOf(d),
+        })),
+      accountName: accountName ?? null,
+      today: todayIso(),
+    };
+  };
+  const suggestible = (): SuggestibleField[] => [
+    "identifier",
+    "issued_on",
+    "valid_until",
+    ...(selected?.issuerStatedOnDocument ? (["issuer_name"] as const) : []),
+  ];
+  const onDocumentRead = (reading: DocumentReading) => {
+    const applied = applyReading(latestDraft.current, reading, suggestible());
+    setDraft(applied.draft);
+    setMarks(applied.marks);
+    setNotices(applied.notices);
+  };
+  /** Verification is a separate question, asked of the server, never of the reading. */
+  const assess = async (signedCredential: string | null) => {
+    assessRun.current += 1;
+    const mine = assessRun.current;
+    if (!signedCredential || !onAssess || !selected) {
+      setAssessment({
+        state: "done",
+        decision: unverifiableDocument(new Date().toISOString()),
+        recorded: false,
+      });
+      return;
+    }
+    setAssessment({ state: "checking" });
+    try {
+      const result = await onAssess({
+        definitionCode: selected.code,
+        issuedOn: latestDraft.current.issued_on || null,
+        validUntil: latestDraft.current.valid_until || null,
+        signedCredential,
+      });
+      if (assessRun.current === mine) setAssessment({ state: "done", ...result });
+    } catch {
+      if (assessRun.current === mine) setAssessment({ state: "unavailable" });
+    }
+  };
+  const readDocument = (chosen: File) => {
+    const context = readingContext();
+    if (!context) return;
+    void hayat.start(chosen, context, onDocumentRead);
+  };
+  const accept = (field: SuggestibleField, value: string) => {
+    const accepted = acceptValue(draft, marks, notices, field, value);
+    setDraft(accepted.draft);
+    setMarks(accepted.marks);
+    setNotices(accepted.notices);
+  };
+  // Once a reading has settled -- read or not -- ask the separate question.
+  const settled = hayat.state.phase === "read" || hayat.state.phase === "failed";
+  const signedCredential =
+    hayat.state.phase === "read" || hayat.state.phase === "failed"
+      ? hayat.state.signedCredential
+      : null;
+  useEffect(() => {
+    if (settled) void assess(signedCredential);
+    // `assess` reads refs and the current selection; re-running it on every
+    // render would re-ask the server for the same file.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settled, signedCredential]);
+  const readBy = (field: SuggestibleField) =>
+    isReadByHayat(draft, marks, field) ? <HayatBadge /> : null;
   const inputClass =
     "mt-2 block min-h-12 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
   const steps = [
@@ -568,6 +733,7 @@ export function InternationalCredentialForm({
             {selected.issuerStatedOnDocument && (
               <label className="sm:col-span-2">
                 {copy("Utfärdare enligt intyget", "Issuer stated on the certificate")}
+                {readBy("issuer_name")}
                 <input
                   required
                   data-field="issuer-name"
@@ -583,6 +749,11 @@ export function InternationalCredentialForm({
                     "The training company or awarding organisation printed on your certificate. The regulator is not the trainer.",
                   )}
                 </span>
+                <HayatFieldNote
+                  field="issuer_name"
+                  notice={notices.issuer_name}
+                  onAccept={accept}
+                />
               </label>
             )}
             {selected.requiresScope && (
@@ -604,39 +775,52 @@ export function InternationalCredentialForm({
                 </span>
               </label>
             )}
-            <label className="sm:col-span-2">
-              {copy(
-                "Certifikats- eller licensnummer (valfritt)",
-                "Credential identifier (optional)",
-              )}
-              <input
-                className={inputClass}
-                maxLength={120}
-                value={draft.identifier}
-                onChange={(e) => setDraft({ ...draft, identifier: e.target.value })}
-              />
-            </label>
-            <label>
-              {copy("Utfärdad", "Issued")}
-              <CredentialDateInput
-                lang={lang}
-                className={inputClass}
-                value={draft.issued_on}
-                onChange={(value) => setDraft({ ...draft, issued_on: value })}
-              />
-            </label>
-            <label>
-              {copy("Giltig till", "Valid until")}
-              <CredentialDateInput
-                lang={lang}
-                className={inputClass}
-                min={draft.issued_on || undefined}
-                required={selectedRow?.requires_valid_until}
-                disabled={draft.no_expiry === true}
-                value={draft.valid_until}
-                onChange={(value) => setDraft({ ...draft, valid_until: value })}
-              />
-            </label>
+            <div className="sm:col-span-2">
+              <label>
+                {copy(
+                  "Certifikats- eller licensnummer (valfritt)",
+                  "Credential identifier (optional)",
+                )}
+                {readBy("identifier")}
+                <input
+                  data-field="identifier"
+                  className={inputClass}
+                  maxLength={120}
+                  value={draft.identifier}
+                  onChange={(e) => setDraft({ ...draft, identifier: e.target.value })}
+                />
+              </label>
+              <HayatFieldNote field="identifier" notice={notices.identifier} onAccept={accept} />
+            </div>
+            <div>
+              <label>
+                {copy("Utfärdad", "Issued")}
+                {readBy("issued_on")}
+                <CredentialDateInput
+                  lang={lang}
+                  className={inputClass}
+                  value={draft.issued_on}
+                  onChange={(value) => setDraft({ ...draft, issued_on: value })}
+                />
+              </label>
+              <HayatFieldNote field="issued_on" notice={notices.issued_on} onAccept={accept} />
+            </div>
+            <div>
+              <label>
+                {copy("Giltig till", "Valid until")}
+                {readBy("valid_until")}
+                <CredentialDateInput
+                  lang={lang}
+                  className={inputClass}
+                  min={draft.issued_on || undefined}
+                  required={selectedRow?.requires_valid_until}
+                  disabled={draft.no_expiry === true}
+                  value={draft.valid_until}
+                  onChange={(value) => setDraft({ ...draft, valid_until: value })}
+                />
+              </label>
+              <HayatFieldNote field="valid_until" notice={notices.valid_until} onAccept={accept} />
+            </div>
             {selectedRow?.allows_no_expiry && !selectedRow?.requires_valid_until && (
               <label className="flex min-h-11 items-center gap-2 sm:col-span-2">
                 <input
@@ -678,11 +862,16 @@ export function InternationalCredentialForm({
                         "Choose PDF, JPG, PNG or HEIC, up to 8 MB.",
                       ),
                     );
+                    forgetReading();
                     setFile(null);
                     e.target.value = "";
                   } else {
+                    // A new file, or none: the previous file's reading goes first,
+                    // so nothing it produced can outlive it.
+                    forgetReading();
                     setFile(f);
                     setError(null);
+                    if (f) readDocument(f);
                   }
                 }}
               />
@@ -694,10 +883,31 @@ export function InternationalCredentialForm({
                 >
                   {copy("Välj fil", "Choose file")}
                 </button>
-                <span className="min-w-0 break-all text-sm">
+                <span className="min-w-0 break-all text-sm" data-evidence-file-name>
                   {file?.name ?? copy("Ingen fil vald", "No file chosen")}
                 </span>
+                {file && (
+                  <button
+                    type="button"
+                    data-evidence-remove
+                    className="min-h-11 rounded-md px-3 text-sm underline"
+                    onClick={() => {
+                      forgetReading();
+                      setFile(null);
+                      if (fileInput.current) fileInput.current.value = "";
+                    }}
+                  >
+                    {copy("Ta bort fil", "Remove file")}
+                  </button>
+                )}
               </div>
+              <HayatPanel
+                reading={hayat.state}
+                notices={notices}
+                assessment={assessment}
+                onRetry={() => file && readDocument(file)}
+                onChooseOther={() => setStep(3)}
+              />
               <span className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
                 <Lock size={12} aria-hidden="true" />
                 {copy(
