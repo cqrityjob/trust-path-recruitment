@@ -4140,6 +4140,22 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261112090000_bcp_interview_case_bridge.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/migrations/20261113090000_bcp_interview_conduct.sql >/dev/null
+# ...then PR 6, which the unwinding above stood down, and the independence
+# boundary ON TOP of it: PR 6 alone would put the two report readers back
+# unguarded, and a run that ended there would leave the replayed schema in a
+# state the repository no longer describes.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261117090000_bcp_conduct_prompts_and_report.sql >/dev/null
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql >/dev/null
+RIB_END="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT (SELECT position('bcp_conduct_may_see_others' in prosrc) > 0 FROM pg_proc WHERE proname = 'bcp_conduct_preview_report') AND (SELECT position('scp_iv_can_read_case' in prosrc) > 0 FROM pg_proc WHERE proname = 'bcp_conduct_report_blockers');")"
+if [ "$RIB_END" != "t" ]; then
+  echo "FAIL: the BESKT block ended without the report independence boundary in place." >&2
+  suite_failed "BESKT report independence boundary (end state)"
+else
+  echo "    ok  the BESKT block ends in the release state, with the independence boundary in place"
+fi
 
 # The race fixtures: the rollback above dropped their versions with the
 # domain and deleted their identities; the planted principals go too.

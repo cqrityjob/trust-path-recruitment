@@ -414,6 +414,18 @@ check(
   "BOUNDARY-REGISTRATION: the boundary is re-applied after PR 6's re-apply, and proved back",
 );
 
+check(
+  // The BESKT block unwinds PR 6 and then restores the chain it stood down.
+  // Restoring PR 2-4 alone leaves the run ending without the report readers;
+  // restoring PR 6 without the boundary leaves them unguarded. Both must come
+  // back, in that order, and a run that ends without the boundary must fail.
+  /20261113090000_bcp_interview_conduct\.sql >\/dev\/null\n[\s\S]{0,600}?20261117090000_bcp_conduct_prompts_and_report\.sql >\/dev\/null\npsql[^\n]*\n\s*-f supabase\/migrations\/20261127090000_bcp_conduct_report_independence_boundary\.sql >\/dev\/null/.test(
+    dbTest,
+  ) &&
+    /suite_failed "BESKT report independence boundary \(end state\)"/.test(dbTest),
+  "BOUNDARY-REGISTRATION: the BESKT block ends with PR 6 and the boundary back on top, and a run that ends without it fails",
+);
+
 const pkg = read(PKG);
 check(
   /"beskt-report-independence:check":/.test(pkg),

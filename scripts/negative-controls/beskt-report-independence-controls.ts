@@ -428,6 +428,27 @@ const MUTATIONS: readonly Mutation[] = [
       "BOUNDARY-REGISTRATION: the boundary is re-applied after PR 6's re-apply, and proved back",
   },
   {
+    id: "RIB-NC-BLOCK-ENDS-WITHOUT-BOUNDARY",
+    defect:
+      "the BESKT block restores PR 6 at its end but no longer puts the boundary back on top, so the run ends with both report readers unguarded",
+    file: DB,
+    find: '  -f supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql >/dev/null\nRIB_END=',
+    replace: '  -c "SELECT 1" >/dev/null\nRIB_END=',
+    guard: GUARD,
+    expect:
+      "BOUNDARY-REGISTRATION: the BESKT block ends with PR 6 and the boundary back on top, and a run that ends without it fails",
+  },
+  {
+    id: "RIB-NC-END-STATE-NOT-FATAL",
+    defect: "a run that ends without the boundary is reported and then tolerated",
+    file: DB,
+    find: '  suite_failed "BESKT report independence boundary (end state)"',
+    replace: '  true',
+    guard: GUARD,
+    expect:
+      "BOUNDARY-REGISTRATION: the BESKT block ends with PR 6 and the boundary back on top, and a run that ends without it fails",
+  },
+  {
     id: "RIB-NC-CI-NOT-RUN",
     defect: "CI stops running the guard",
     file: CI,
