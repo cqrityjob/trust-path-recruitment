@@ -111,13 +111,40 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "CANDIDATE-BINDING: db:test runs the suite and refuses a shrunk or failed one",
   },
   {
-    id: "CBD-NC-FRONTIER-SILENT",
-    defect: "the pending migration disappears from the frontier's expected list",
+    id: "CBD-NC-FRONTIER-STALE",
+    defect:
+      "the applied migration is put back on the frontier's pending list, hiding the next stuck one",
     file: FRONTIER,
-    find: '  "20261128090000_scp_iv_case_candidate_binding.sql",\n',
-    replace: "",
+    find: "const expectedPending: string[] = [];",
+    replace:
+      'const expectedPending: string[] = ["20261128090000_scp_iv_case_candidate_binding.sql"];',
     guard: GUARD,
-    expect: "CANDIDATE-BINDING: the frontier expects it pending",
+    expect: "CANDIDATE-BINDING: and it is OFF the frontier's pending list",
+  },
+  {
+    id: "CBD-NC-EVIDENCE-LEDGER-ONLY",
+    defect:
+      "the evidence no longer names the verified body, so a ledger row alone would pass as proof",
+    file: STATE,
+    find: "945372c712b96b9c29f0683f5bae70ec",
+    replace: "ledger-row-only",
+    guard: GUARD,
+    expect:
+      "CANDIDATE-BINDING: the evidence names the verified function body, not only the ledger row",
+  },
+  {
+    id: "CBD-NC-STATE-BACK-TO-PENDING",
+    defect:
+      "release-state says the applied fix is still pending, so the deploy plan and the record disagree",
+    file: STATE,
+    find:
+      '      "file": "20261128090000_scp_iv_case_candidate_binding.sql", \n' +
+      '      "hostedState": "applied",',
+    replace:
+      '      "file": "20261128090000_scp_iv_case_candidate_binding.sql", \n' +
+      '      "hostedState": "pending",',
+    guard: GUARD,
+    expect: "CANDIDATE-BINDING: declared APPLIED at its hosted version, with its rollback",
   },
   // ---- The authorisation computation itself -------------------------------
   {
@@ -549,32 +576,39 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "BOUNDARY-REGISTRATION: its controls run as part of negative-controls:all",
   },
   {
-    id: "RIB-NC-RELEASE-STATE-CLAIMS-APPLIED",
+    id: "RIB-NC-STATE-BACK-TO-PENDING",
     defect:
-      "release-state claims the fix is already applied on production when it is not — which would let application code depend on a boundary that is not there",
+      "release-state says the applied fix is still pending, so the deploy plan and the record disagree",
     file: STATE,
     find:
       '      "file": "20261127090000_bcp_conduct_report_independence_boundary.sql",\n' +
-      '      "hostedState": "pending",',
+      '      "hostedState": "applied",',
     replace:
       '      "file": "20261127090000_bcp_conduct_report_independence_boundary.sql",\n' +
-      '      "hostedState": "applied",',
+      '      "hostedState": "pending",',
     guard: GUARD,
-    expect: "BOUNDARY-RELEASE: and declared PENDING",
+    expect: "BOUNDARY-RELEASE: declared APPLIED at the hosted version the ledger holds",
   },
   {
-    id: "RIB-NC-FRONTIER-SILENT",
+    id: "RIB-NC-EVIDENCE-LEDGER-ONLY",
     defect:
-      "the pending migration is dropped from the frontier's expected set, so a genuinely stuck migration stops being named out loud",
-    file: FRONTIER,
-    // Removes ONLY this migration's own line, leaving whatever else is
-    // genuinely pending in place. PR #264 put two Passport migrations on this
-    // list as well, so blanking the whole array would have planted three
-    // defects at once and proved nothing about which one the guard noticed.
-    find: '  "20261127090000_bcp_conduct_report_independence_boundary.sql",\n',
-    replace: "",
+      "the evidence no longer names the verified bodies, so a ledger row alone would pass as proof",
+    file: STATE,
+    find: "86385edf3343d7c5c3892951831b5674",
+    replace: "ledger-row-only",
     guard: GUARD,
-    expect: "BOUNDARY-RELEASE: the frontier check expects exactly this pending migration",
+    expect: "BOUNDARY-RELEASE: the evidence names the verified function bodies",
+  },
+  {
+    id: "RIB-NC-FRONTIER-STALE",
+    defect:
+      "the applied migration is put back on the frontier's pending list, hiding the next stuck one",
+    file: FRONTIER,
+    find: "const expectedPending: string[] = [];",
+    replace:
+      'const expectedPending: string[] = ["20261127090000_bcp_conduct_report_independence_boundary.sql"];',
+    guard: GUARD,
+    expect: "BOUNDARY-RELEASE: and it is OFF the frontier's pending list",
   },
 ];
 

@@ -447,14 +447,32 @@ check(read(TSCONFIG).includes("scripts"), "BOUNDARY-REGISTRATION: the guard is t
 console.log("\nB9 · Release bookkeeping tells the truth about production");
 
 const state = JSON.parse(read(RELEASE_STATE)) as {
-  frontier: Array<{ file?: string; hostedState?: string; note?: string; rollback?: string }>;
+  frontier: Array<{
+    file?: string;
+    hostedState?: string;
+    hostedVersion?: string;
+    evidenceSource?: string;
+    note?: string;
+    rollback?: string;
+  }>;
 };
 const entry = state.frontier.find((m) => m.file === MIGRATION_NAME);
+// The names the frontier check still expects to be pending, read from the
+// array itself rather than from anywhere in the file: its comments may name a
+// migration that has long since been applied.
+const pendingList =
+  /const expectedPending: string\[\] = \[([\s\S]*?)\];/.exec(read(FRONTIER))?.[1] ?? "";
 
 check(entry !== undefined, "BOUNDARY-RELEASE: the migration is declared in release-state.json");
 check(
-  entry?.hostedState === "pending",
-  "BOUNDARY-RELEASE: and declared PENDING — it is a fix to live production that has NOT been applied",
+  entry?.hostedState === "applied" && entry?.hostedVersion === "20261127090000",
+  "BOUNDARY-RELEASE: declared APPLIED at the hosted version the ledger holds (after PR #266)",
+);
+check(
+  typeof entry?.evidenceSource === "string" &&
+    entry.evidenceSource.includes("86385edf3343d7c5c3892951831b5674") &&
+    entry.evidenceSource.includes("286f9bec7e6bea3bf68823756eefff84"),
+  "BOUNDARY-RELEASE: the evidence names the verified function bodies, not only the ledger row",
 );
 check(
   typeof entry?.note === "string" && /SECURITY FIX/.test(entry.note),
@@ -462,8 +480,8 @@ check(
 );
 check(entry?.rollback === ROLLBACK, "BOUNDARY-RELEASE: and names how to undo it");
 check(
-  read(FRONTIER).includes(MIGRATION_NAME),
-  "BOUNDARY-RELEASE: the frontier check expects exactly this pending migration",
+  !pendingList.includes(MIGRATION_NAME),
+  "BOUNDARY-RELEASE: and it is OFF the frontier's pending list — a resolved name there hides the next stuck one",
 );
 
 /* ================================================================== */
@@ -537,12 +555,19 @@ check(
 );
 const cbEntry = state.frontier.find((e) => e.file === CB_NAME);
 check(
-  cbEntry?.hostedState === "pending" && cbEntry?.rollback === CB_ROLLBACK,
-  "CANDIDATE-BINDING: declared pending in release-state.json, with its rollback",
+  cbEntry?.hostedState === "applied" &&
+    cbEntry?.hostedVersion === "20261128090000" &&
+    cbEntry?.rollback === CB_ROLLBACK,
+  "CANDIDATE-BINDING: declared APPLIED at its hosted version, with its rollback",
 );
 check(
-  read(FRONTIER).includes(`"${CB_NAME}"`),
-  "CANDIDATE-BINDING: the frontier expects it pending",
+  typeof cbEntry?.evidenceSource === "string" &&
+    cbEntry.evidenceSource.includes("945372c712b96b9c29f0683f5bae70ec"),
+  "CANDIDATE-BINDING: the evidence names the verified function body, not only the ledger row",
+);
+check(
+  !pendingList.includes(CB_NAME),
+  "CANDIDATE-BINDING: and it is OFF the frontier's pending list",
 );
 
 /* ================================================================== */
