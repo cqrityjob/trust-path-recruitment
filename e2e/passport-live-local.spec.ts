@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 import { createClient, type Session } from "@supabase/supabase-js";
+import QRCode from "qrcode";
 
 test.skip(
   process.env.PASSPORT_LIVE_LOCAL !== "1",
@@ -103,6 +104,57 @@ test("real owner adds and selectively shares a credential, recipient loses acces
   const gateway = new URL(link);
   expect(gateway.origin).toBe(values.API_URL);
   expect(gateway.pathname).toBe("/functions/v1/passport-share");
+
+  // ── THE QR CODE IS THIS LINK, AND NOTHING ELSE ──────────────────────
+  // Scanning it must open the same recipient view the link opens. QR encoding
+  // is deterministic, so the proof is exact: encode the created link with the
+  // options `use-qr.ts` uses and the image on the page must be byte-identical.
+  // A QR carrying anything more — a name, an identifier, a second parameter —
+  // or anything less would differ.
+  const qr = page.getByRole("img", { name: "QR code for your selected disclosure" });
+  await expect(qr).toBeVisible();
+  // Compared MODULE BY MODULE, not as PNG bytes: Node and the browser compress
+  // a PNG differently, so identical codes produce different files.
+  const expected = QRCode.create(link, { errorCorrectionLevel: "M" }).modules;
+  const drawn = await qr.evaluate(async (el, size) => {
+    const img = el as HTMLImageElement;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, 0, 0);
+    const cell = img.naturalWidth / size;
+    const out: number[] = [];
+    for (let y = 0; y < size; y += 1)
+      for (let x = 0; x < size; x += 1) {
+        const px = ctx.getImageData(
+          Math.floor(x * cell + cell / 2),
+          Math.floor(y * cell + cell / 2),
+          1,
+          1,
+        ).data;
+        out.push(px[0]! + px[1]! + px[2]! < 384 ? 1 : 0);
+      }
+    return { out, width: img.naturalWidth, height: img.naturalHeight };
+  }, expected.size);
+  expect(drawn.width).toBe(drawn.height);
+  expect(drawn.width % expected.size).toBe(0); // no margin baked in: whole cells only
+  expect(drawn.out).toEqual(Array.from(expected.data, (v) => (v ? 1 : 0)));
+  // Scannable: dark modules on a pure white ground, inside a white quiet zone.
+  const quiet = await qr.evaluate((el) => {
+    const cs = getComputedStyle(el);
+    return { border: cs.borderTopColor, width: parseFloat(cs.borderTopWidth) };
+  });
+  expect(quiet.border).toMatch(/rgb\(255, 255, 255\)/);
+  expect(quiet.width).toBeGreaterThanOrEqual(8);
+  // …and the link it encodes carries the opaque token only.
+  // No query string at all: the opaque token rides in the FRAGMENT, which a
+  // browser never sends to a server or writes to an access log.
+  expect([...gateway.searchParams.keys()]).toEqual([]);
+  expect(gateway.hash).toMatch(/^#[0-9a-f]{32,}$/);
+  expect(link).not.toContain("BROWSER-OPTIONAL");
+  expect(link).not.toContain(owner.id);
   const recipientContext = await browser.newContext({
     ignoreHTTPSErrors: true,
     viewport: testInfo.project.use.viewport,
@@ -187,5 +239,80 @@ test("real owner adds and selectively shares a credential, recipient loses acces
     .from("security_career_profiles")
     .update({ current_profession_other: "Local Profile Title" })
     .eq("user_id", owner.id);
+  expect(external).toEqual([]);
+});
+
+test("real owner changes current profession in Profile; after a reload the Passport shows it", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  test.skip(testInfo.project.name !== "chromium", "one shared fixture owner — walked once");
+  const base = process.env.E2E_BASE_URL;
+  expect(base).toBe("https://127.0.0.1:3120");
+  const owner = (
+    JSON.parse(readFileSync("/private/tmp/passport-phase2-users.json", "utf8")) as Record<
+      string,
+      { id: string; session: Session }
+    >
+  ).owner;
+  await page.addInitScript((session) => {
+    localStorage.setItem("sb-127-auth-token", JSON.stringify(session));
+    localStorage.setItem("cqrityjob.lang", "en");
+  }, owner.session);
+  const external: string[] = [];
+  await page.route("**/*", async (route) => {
+    const hostname = new URL(route.request().url()).hostname;
+    if (hostname !== "127.0.0.1" && hostname !== "localhost") {
+      external.push(hostname);
+      return route.abort();
+    }
+    return route.continue();
+  });
+
+  // The Passport shows the role the fixture wrote, and offers no editor for it.
+  await page.goto(`${base}/passport`);
+  const role = page.locator("[data-passport-current-role]");
+  await expect(role).toHaveText("Local Profile Title", { timeout: 30_000 });
+  await expect(
+    page.locator("[data-credential-wallet]").locator("input, textarea, select"),
+  ).toHaveCount(0);
+
+  // The Passport's own action opens the REAL editor, in edit mode, loaded.
+  await page.getByRole("link", { name: "Edit current professional role" }).click();
+  await expect(page).toHaveURL(
+    /\/my-career\/profile\?edit=profession&from=passport#career-profile$/,
+  );
+  const editor = page.getByRole("dialog");
+  await expect(editor).toBeVisible({ timeout: 30_000 });
+  // OBSERVED PRODUCT BEHAVIOUR, recorded rather than worked around: the
+  // profession picker exists only once a working situation is chosen. A holder
+  // who arrives with no situation stated meets "Where are you today?" first.
+  const picker = editor.locator("select");
+  if ((await picker.count()) === 0) {
+    await editor.getByText("Working in the security industry", { exact: true }).click();
+  }
+  await expect(picker).toHaveCount(1);
+  // A real published catalogue, read from the local database — not a stub.
+  const options = await picker
+    .locator("option")
+    .evaluateAll((els) =>
+      els.map((e) => ({ value: (e as HTMLOptionElement).value, text: e.textContent ?? "" })),
+    );
+  const chosen = options.find((o) => o.value && !/other/i.test(o.value) && o.value !== "__other__");
+  expect(chosen, "no published profession in the local catalogue").toBeTruthy();
+  await picker.selectOption(chosen!.value);
+  await editor.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(editor).toBeHidden({ timeout: 30_000 });
+  // The return origin survived the trip.
+  await expect(page.locator("#scp-return-passport")).toBeVisible();
+
+  // A FULL reload of the Passport — a fresh read from the database.
+  await page.goto(`${base}/passport`);
+  await page.reload();
+  await expect(role).toHaveText(chosen!.text.trim(), { timeout: 30_000 });
+  await expect(role).not.toHaveText("Local Profile Title");
+  await expect(page.locator("[data-passport-role-source]")).toHaveText(
+    "Current professional role · Self-declared",
+  );
   expect(external).toEqual([]);
 });

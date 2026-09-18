@@ -1,62 +1,93 @@
-import { ArrowRight, CheckCircle2, FileText, Lock, MapPin, PencilLine } from "lucide-react";
+import { ArrowRight, Lock, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { PUBLIC_MARKET_SCALE } from "./passport-market-scale";
 import { useT } from "@/i18n/context";
-
-const LEVELS = [
-  {
-    key: "home.trust.registered",
-    icon: PencilLine,
-    style: "border-dashed border-primary-foreground/35",
-  },
-  { key: "home.trust.documented", icon: FileText, style: "border-primary-foreground/55" },
-  {
-    key: "home.trust.sourceConfirmed",
-    icon: CheckCircle2,
-    style: "border-primary-foreground bg-primary-foreground/10",
-  },
-] as const;
+import {
+  CredentialConstellation,
+  type ShieldCredential,
+} from "@/components/security-passport/CredentialShield";
+import { resolveCredentialScope } from "@/lib/security-passport/credential-shield";
 
 /**
- * A generic product preview: no holder, credential, score, identifier, or claim.
+ * The homepage's Passport entrance: the proposition, its action, and ONE
+ * illustrative card.
+ *
+ * ── NOT AN IMITATION ───────────────────────────────────────────────────
+ *
+ * This panel used to be its own drawing of a Passport — its own striped
+ * ground, its own grid, a row of decorative facts ("Documented source",
+ * "Trust state: Documented") that described nobody and read as if they
+ * described somebody. The authenticated Passport then changed and this did
+ * not, which is what a separate imitation always does.
+ *
+ * It now wears the SAME ground (`passport-signature`, mirrored from
+ * PASSPORT_CARD_SURFACE) and draws its credentials with the SAME
+ * `CredentialConstellation`, scope resolver, flags and globe the holder's own
+ * card uses. There is nothing here to keep in step by hand.
+ *
+ * ── THE EXAMPLE IS FICTIONAL, AND SAYS SO ──────────────────────────────
+ *
+ * The card carries an "Exempel / Example" label and a caption that says the
+ * person and the credentials are made up. Nothing on it is verified: every
+ * shield is self-declared — the honest shape of a Passport on the day
+ * somebody starts one.
+ * No name, number, issuer logo, tick or rating that could be mistaken for a
+ * real holder's.
+ *
+ * ── THE ACTION IS OUTSIDE THE CARD ─────────────────────────────────────
+ *
+ * The registration action belongs to the proposition, not to the example: it
+ * sits under the sentence it acts on, above the illustrative card, so nobody
+ * reads "create your Passport" as a control ON a fictional person's record.
  *
  * ── NO <header> AND NO <footer> IN HERE ────────────────────────────────
  *
- * The card's top and bottom bands were `<header>` and `<footer>` elements.
- * Inside an <article> they are not ARIA landmarks, so nothing was announced
- * twice -- but the page then held two of each TAG, and the public-entry
- * suite, which asserts ONE site header and ONE site footer and drives the
- * mobile menu through `header`, could no longer tell the site's from the
- * card's. They are plain containers now: the site chrome owns the only
- * <header> and <footer> on the page, and this card loses nothing by it.
- *
- * ── THE ACTION SITS WITH THE PROPOSITION ───────────────────────────────
- *
- * It used to close the card, under the facts, the three trust levels and the
- * markets -- 850px down, so at 1024x768 (and at 1440x900) one of the
- * homepage's two primary entrances was below the first screen while the
- * other was not. It now follows the sentence it acts on. Everything beneath
- * it is supporting detail and reads as such.
+ * The public-entry suite asserts ONE site header and ONE site footer and
+ * drives the mobile menu through `header`. The bands are plain containers.
  */
 export function HomePassportPreview({ action }: { action?: ReactNode }) {
-  const { t } = useT();
+  const { t, lang } = useT();
+  const l = lang === "sv" ? "sv" : "en";
+
+  // Fictional, and deliberately unverified. The abbreviations are governed
+  // marks or written in the name itself — see `shieldMarkText`.
+  const example: readonly ShieldCredential[] = [
+    {
+      id: "example-cpp",
+      code: "INTL_ASIS_CPP",
+      name: "Certified Protection Professional (CPP)",
+      state: "self_declared",
+      lifecycle: "active",
+      validUntil: null,
+      scope: resolveCredentialScope({ global: true }, l),
+    },
+    {
+      id: "example-ov",
+      code: "OV",
+      name: l === "sv" ? "Ordningsvaktsförordnande" : "Public Order Guard Appointment",
+      state: "self_declared",
+      lifecycle: "active",
+      validUntil: null,
+      scope: resolveCredentialScope({ jurisdictionCode: "SE" }, l),
+    },
+    {
+      id: "example-sia",
+      code: null,
+      name: "SIA Licence — Security Guarding",
+      state: "self_declared",
+      lifecycle: "active",
+      validUntil: null,
+      scope: resolveCredentialScope({ jurisdictionCode: "GB" }, l),
+    },
+  ];
 
   return (
     <article
       aria-label={t("home.markets.eyebrow")}
-      className="passport-signature relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground shadow-[var(--shadow-lg)] ring-1 ring-accent/20 sm:p-7"
+      className="passport-signature passport-card-frame relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground sm:p-7"
       data-home-passport-preview
       data-home-entry="passport"
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary-foreground/40"
-      />
-      <div
-        aria-hidden="true"
-        className="passport-grid pointer-events-none absolute top-0 right-0 -z-10 h-full w-44 border-l border-primary-foreground/10 opacity-20"
-      />
-
       <div
         className="flex items-start justify-between gap-4 border-b border-primary-foreground/15 pb-5"
         data-home-passport-band="top"
@@ -73,18 +104,15 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         </span>
       </div>
 
-      <div className="py-7">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-primary-foreground/60">
-          {t("home.passportPreview.record")}
-        </p>
-        <h2 className="mt-2 max-w-[24ch] text-2xl font-semibold leading-tight !text-primary-foreground sm:text-[1.75rem]">
+      <div className="pt-6">
+        <h2 className="max-w-[24ch] text-2xl font-semibold leading-tight !text-primary-foreground sm:text-[1.75rem]">
           {t("home.entry.passport.title")}
         </h2>
-        <p className="mt-2 max-w-[40ch] text-sm leading-relaxed text-primary-foreground/70">
+        <p className="mt-2.5 max-w-[46ch] text-sm leading-relaxed text-primary-foreground/75">
           {t("home.entry.passport.body")}
         </p>
         {action ? (
-          <div className="mt-6 flex min-h-11 items-center justify-between gap-4">
+          <div className="mt-5 flex min-h-11 items-center justify-between gap-4">
             {action}
             <ArrowRight
               className="h-4 w-4 shrink-0 text-primary-foreground/70"
@@ -94,36 +122,61 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         ) : null}
       </div>
 
-      <div className="grid grid-cols-2 border-y border-primary-foreground/15 py-4 text-xs sm:grid-cols-4">
-        {[
-          [t("home.passportPreview.issuer"), t("home.passportPreview.source")],
-          [t("home.passportPreview.jurisdiction"), t("home.passportPreview.marketScope")],
-          [t("home.passportPreview.trustState"), t("home.trust.documented")],
-          [t("home.passportPreview.sharing"), t("home.passportPreview.private")],
-        ].map(([label, value]) => (
-          <dl
-            key={label}
-            className="min-w-0 px-3 py-2 first:pl-0 sm:border-l sm:border-primary-foreground/15 sm:first:border-l-0 sm:last:pr-0"
-          >
-            <dt className="text-primary-foreground/50">{label}</dt>
-            <dd className="mt-1 break-words font-medium text-primary-foreground/90">{value}</dd>
-          </dl>
-        ))}
-      </div>
+      {/* ── The illustrative card ─────────────────────────────────────── */}
+      {/* The visible label "Exempel / Example" and the name "Example Holder" say
+          what this is; the accessible name adds the full sentence. The page
+          has a 340-word budget (public-homepage-check), so the card carries
+          no third line of prose. */}
+      <figure
+        className="mt-7"
+        data-home-passport-example
+        aria-label={`${t("home.passportPreview.exampleLabel")} — ${t("home.passportPreview.exampleCaption")}`}
+      >
+        <div className="rounded-lg border border-primary-foreground/15 bg-primary-foreground/[0.04] p-4 [container-type:inline-size] sm:p-5">
+          <div className="flex items-center justify-end gap-3">
+            <span
+              data-home-passport-example-label
+              className="inline-flex min-h-6 items-center rounded-full border border-dashed border-primary-foreground/45 px-2.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-primary-foreground/85"
+            >
+              {t("home.passportPreview.exampleLabel")}
+            </span>
+          </div>
 
-      <ul className="space-y-2.5 py-5">
-        {LEVELS.map(({ key, icon: Icon, style }) => (
-          <li
-            key={key}
-            className={`flex min-h-11 items-center gap-3 border-l-2 px-3.5 text-sm ${style}`}
-          >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span>{t(key)}</span>
-          </li>
-        ))}
-      </ul>
+          <div className="mt-4 grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-3.5">
+            <div
+              aria-hidden="true"
+              className="flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-lg border border-dashed border-primary-foreground/30 bg-primary-foreground/[0.06] text-sm font-semibold text-primary-foreground/80"
+            >
+              EX
+            </div>
+            <div className="min-w-0">
+              <p className="text-base font-semibold leading-tight text-primary-foreground [overflow-wrap:normal] [word-break:keep-all]">
+                {t("home.passportPreview.exampleName")}
+              </p>
+            </div>
+          </div>
 
-      <div className="border-t border-primary-foreground/15 pt-5" data-home-passport-band="bottom">
+          <CredentialConstellation
+            credentials={example}
+            ground="navy"
+            className="mt-5 border-t border-primary-foreground/15 pt-4"
+          />
+        </div>
+      </figure>
+
+      {/* Each credential carries its OWN review status; the panel states none.
+          This replaces the decorative "Documented source" facts. */}
+      <p
+        data-home-passport-status-note
+        className="mt-5 border-l-2 border-primary-foreground/35 pl-3.5 text-sm leading-relaxed text-primary-foreground/85"
+      >
+        {t("home.passportPreview.statusNote")}
+      </p>
+
+      <div
+        className="mt-6 border-t border-primary-foreground/15 pt-5"
+        data-home-passport-band="bottom"
+      >
         <p className="text-xs font-medium text-primary-foreground/65">
           {t("home.passportPreview.markets")}
         </p>

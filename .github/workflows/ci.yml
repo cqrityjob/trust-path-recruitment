@@ -1191,6 +1191,15 @@ jobs:
       - name: Passport credential shields
         run: bun run passport-credential-shield:check
 
+      # The Passport card's ONE ground (owner addendum, pilot finish): the CSS
+      # mirror matches PASSPORT_CARD_SURFACE, no stripes, grid or engraving sits
+      # behind any card, and the homepage panel draws the real shield system
+      # with a labelled fictional example and the owner's Passport copy.
+      # Read-only over committed code, nothing hosted. Its planted controls run
+      # in negative-controls:all.
+      - name: Passport card surface and homepage panel
+        run: bun run passport-card-surface:check
+
       # What may be said about an entry that is no longer current (PR #263): an
       # expired self-declared credential must never be described as having been
       # verified, documented or source-confirmed. Read-only over committed code,

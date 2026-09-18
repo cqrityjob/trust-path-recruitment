@@ -343,21 +343,37 @@ export function CredentialConstellation({
   return (
     <ul
       data-shield-constellation={shown.length + (more > 0 ? 1 : 0)}
-      className={cn("grid grid-cols-4 items-start", className)}
+      // Four across wherever four FIT. A shield's longest word —
+      // "Egenrapporterad" — needs about 72px; below an 18rem container a
+      // quarter is narrower than that and the words ran into each other (the
+      // homepage's inset example card at 390px). There the same four shields
+      // sit two by two.       // keeps its single row at every width and its height does not change.
+      className={cn(
+        "grid grid-cols-2 items-start gap-y-4 @[18rem]:grid-cols-4 @[18rem]:gap-y-0",
+        className,
+      )}
     >
       {shown.map((c, i) => (
         <li
           key={c.id}
           className={cn(
             "min-w-0",
-            i > 0 && (navy ? "border-l border-primary-foreground/15" : "border-l"),
+            i > 0 &&
+              (navy
+                ? "@[18rem]:border-l @[18rem]:border-primary-foreground/15"
+                : "@[18rem]:border-l"),
           )}
         >
           <CredentialShield credential={c} ground={ground} />
         </li>
       ))}
       {more > 0 ? (
-        <li className={cn("min-w-0", navy ? "border-l border-primary-foreground/15" : "border-l")}>
+        <li
+          className={cn(
+            "min-w-0",
+            navy ? "@[18rem]:border-l @[18rem]:border-primary-foreground/15" : "@[18rem]:border-l",
+          )}
+        >
           {overflow ? (
             overflow(moreShield, label, more)
           ) : (

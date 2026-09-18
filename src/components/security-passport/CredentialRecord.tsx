@@ -27,10 +27,6 @@ export function CredentialRecord({
       )}
     >
       <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-accent" />
-      <div
-        aria-hidden="true"
-        className="passport-grid pointer-events-none absolute inset-y-0 left-0 w-28 opacity-25"
-      />
       {/* ── COMPACT ON A PHONE ─────────────────────────────────────────
           The mark sits BESIDE the name at every width. Stacked above it, one
           record ran to 320px at 390 -- mark, then name, then three facts one
