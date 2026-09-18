@@ -115,6 +115,9 @@ if [ "$MODE" = "full" ]; then
   echo "==> Seeding the BESKT interview-tool fixture"
   psql -q -v ON_ERROR_STOP=1 -d "$DB_URL" \
     -f scripts/fixtures/beskt-interview-tool-fixture.sql > /dev/null
+  echo "==> Letting the synthetic governance accounts sign in"
+  psql -q -v ON_ERROR_STOP=1 -d "$DB_URL" \
+    -f scripts/fixtures/beskt-governance-signin-fixture.sql > /dev/null
 
   echo "==> Snapshotting the seeded state as ${SEED_DB}"
   psql -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d postgres \

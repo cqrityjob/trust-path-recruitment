@@ -1,7 +1,11 @@
 # BESKT — the report preview and the independence rule
 
-**Status:** open defect in an APPLIED migration. Mitigated in the application; the
-real fix is a schema change that is not in this PR.
+**Status:** fixed in the database by
+`supabase/migrations/20261127090000_bcp_conduct_report_independence_boundary.sql`
+(PR #266, schema-first). Until that migration is merged, applied on
+`wrygicdfxwjnrugduxnt` and recorded in `supabase/release-state.json`, the
+application mitigation below is the only thing between the Report tab and the
+hole. It stays afterwards as defence in depth.
 
 **Found:** 2026-09-18, building the report surface on top of PR #254.
 
@@ -76,9 +80,9 @@ product does not ship a reachable route to the hole, and the guard
 `beskt-product-completion:check` asserts it with a planted negative control
 so it cannot be removed silently.
 
-## The fix, which is a separate schema-first PR
+## The fix: 20261127090000, PR #266
 
-Add the missing check to `bcp_conduct_preview_report`, after the case
+It adds the missing check to `bcp_conduct_preview_report`, after the case
 authority and before the payload is built:
 
 ```sql
@@ -92,9 +96,11 @@ authority and before the payload is built:
 already translated (`beskt.error.conductNotVisibleYet`), so no new code and no
 new copy is required.
 
-That migration must carry a suite proving, over a replayed schema, that an
-assessor with an open position is refused and that the same caller succeeds
-once their position is locked — the same shape as the existing PR 5A
-independence assertions. It has to be authored, reviewed, merged and applied
-before the mitigation above can be relaxed; the mitigation is harmless to
-leave in place afterwards.
+It also gives `bcp_conduct_report_blockers` the authentication and case
+authority it lacked. `supabase/tests/bcp_conduct_report_independence_test.sql`
+proves both over a replayed schema through two real assessor sessions. The
+routed walk `e2e/beskt-interview-tool.spec.ts` (steps 16 and 24) additionally
+calls both readers straight at PostgREST as the open assessor, another
+employer, the candidate, an unrelated user and anon, against a local stack
+carrying the migration, and asserts every refusal and that no recorded word
+leaves. The mitigation above is harmless to keep.
