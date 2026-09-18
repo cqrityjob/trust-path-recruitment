@@ -91,7 +91,7 @@ function Field({
         <label htmlFor={id} className="text-sm text-foreground">
           {label}
         </label>
-        <code className="font-mono text-xs text-muted-foreground">{field.name}</code>
+        <code className="break-all font-mono text-xs text-muted-foreground">{field.name}</code>
       </div>
     );
   }
@@ -101,7 +101,8 @@ function Field({
     return (
       <fieldset className="min-w-0">
         <legend className="text-sm font-medium text-foreground">
-          {label} <code className="font-mono text-xs text-muted-foreground">{field.name}</code>
+          {label}{" "}
+          <code className="break-all font-mono text-xs text-muted-foreground">{field.name}</code>
         </legend>
         <div className="mt-1 space-y-1">
           {(field.options ?? []).map((option) => (
@@ -118,7 +119,7 @@ function Field({
                 }
               />
               <span>{valueLabel(t, option)}</span>
-              <code className="font-mono text-xs text-muted-foreground">{option}</code>
+              <code className="break-all font-mono text-xs text-muted-foreground">{option}</code>
             </label>
           ))}
         </div>
@@ -130,7 +131,8 @@ function Field({
     return (
       <div className="min-w-0">
         <label htmlFor={id} className="text-sm font-medium text-foreground">
-          {label} <code className="font-mono text-xs text-muted-foreground">{field.name}</code>
+          {label}{" "}
+          <code className="break-all font-mono text-xs text-muted-foreground">{field.name}</code>
           {field.required && <span className="text-destructive"> *</span>}
         </label>
         <select
@@ -155,7 +157,8 @@ function Field({
   return (
     <div className="min-w-0">
       <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label} <code className="font-mono text-xs text-muted-foreground">{field.name}</code>
+        {label}{" "}
+        <code className="break-all font-mono text-xs text-muted-foreground">{field.name}</code>
         {field.required && <span className="text-destructive"> *</span>}
       </label>
       <Control

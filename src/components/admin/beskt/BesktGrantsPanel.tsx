@@ -128,7 +128,9 @@ export function BesktGovernanceGrants({
                   <p className="text-sm font-medium text-foreground">
                     {t(`beskt.admin.grantKind.${g.grantKind}` as TranslationKey)}
                   </p>
-                  <code className="font-mono text-xs text-muted-foreground">{g.userId}</code>
+                  <code className="break-all font-mono text-xs text-muted-foreground">
+                    {g.userId}
+                  </code>
                 </div>
                 <GrantState live={besktGrantIsLive(g, now)} />
               </div>
@@ -371,7 +373,9 @@ export function BesktPilotGrants({
                   <p className="text-sm font-medium text-foreground">
                     {g.employerName ?? t("beskt.admin.pilot.unnamedEmployer")}
                   </p>
-                  <code className="font-mono text-xs text-muted-foreground">{g.employerId}</code>
+                  <code className="break-all font-mono text-xs text-muted-foreground">
+                    {g.employerId}
+                  </code>
                 </div>
                 <GrantState live={besktPilotIsLive(g, today)} />
               </div>

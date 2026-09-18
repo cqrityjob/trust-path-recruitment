@@ -237,7 +237,7 @@ function Findings({
         <ul className="mt-2 space-y-1">
           {findings.map((f, i) => (
             <li key={`${f.code}-${i}`} className="text-sm">
-              <code className="font-mono text-xs text-muted-foreground">{f.code}</code>{" "}
+              <code className="break-all font-mono text-xs text-muted-foreground">{f.code}</code>{" "}
               <span className="text-foreground">{f.message}</span>
             </li>
           ))}

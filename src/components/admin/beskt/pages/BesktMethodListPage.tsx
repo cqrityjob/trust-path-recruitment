@@ -105,7 +105,9 @@ export function BesktMethodListPage({
                     <h3 className="text-base font-semibold text-foreground">
                       {lang === "en" ? (m.nameEn ?? m.nameSv) : m.nameSv}
                     </h3>
-                    <code className="font-mono text-xs text-muted-foreground">{m.slug}</code>
+                    <code className="break-all font-mono text-xs text-muted-foreground">
+                      {m.slug}
+                    </code>
                   </div>
                 </div>
                 <p className="mt-2 max-w-[80ch] text-sm leading-relaxed text-muted-foreground">

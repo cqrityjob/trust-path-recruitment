@@ -390,7 +390,7 @@ export function BesktVersionPage({
           >
             {t(`beskt.admin.value.${v.validationLabel}` as TranslationKey)}
           </StateBadge>
-          <code className="font-mono text-xs text-muted-foreground">{w.method.slug}</code>
+          <code className="break-all font-mono text-xs text-muted-foreground">{w.method.slug}</code>
         </div>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           {w.method.purposeSv}
