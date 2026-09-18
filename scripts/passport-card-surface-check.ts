@@ -140,8 +140,11 @@ check(
   "no example shield is verified, and there is no tick, star or logo",
 );
 check(
-  /data-home-passport-example-label/.test(home) &&
-    /home\.passportPreview\.exampleLabel/.test(home) &&
+  // The label must be the VISIBLE content of the labelled span — the key also
+  // appears in the figure's aria-label, so a loose "key exists" test is dead.
+  /data-home-passport-example-label[^>]*>\s*\{t\("home\.passportPreview\.exampleLabel"\)\}\s*<\/span>/.test(
+    home,
+  ) &&
     /aria-label=\{`\$\{t\("home\.passportPreview\.exampleLabel"\)\} — \$\{t\("home\.passportPreview\.exampleCaption"\)\}`\}/.test(
       home,
     ),
