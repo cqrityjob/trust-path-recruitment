@@ -25,6 +25,10 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { isGlobalCertification } from "./certification-scope";
+import {
+  PASSPORT_CATALOGUE_CONTRACT,
+  PASSPORT_CATALOGUE_CONTRACT_HEADER,
+} from "./catalogue-contract";
 import { isCalendarDate } from "./dates";
 import {
   isMissingPilotLayer,
@@ -389,7 +393,10 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // including older market panels. Pilot visibility is not claim approval.
     const approved = await supabase
       .from("sp_approved_credential_catalogue" as never)
-      .select("code");
+      .select("code")
+      // The market panels lead into the same wizard, so they declare the same
+      // contract: what is listed here is exactly what that wizard can save.
+      .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);
     if (approved.error) throw new Error("Credential catalogue unavailable");
     const approvedCodes = new Set(
       (approved.data as unknown as { code: string }[]).map((r) => r.code),

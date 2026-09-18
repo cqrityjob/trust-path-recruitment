@@ -105,7 +105,9 @@ BEGIN
        jurisdiction_code, valid_until, authorisation_scope, lifecycle_state)
     VALUES (%L,'licence','SV','Bajskorv','Polismyndigheten','SE',
             DATE '2030-01-01','Skyddsobjekt A (fiktivt)','active')$f$, _h),
-    'SP_APPROVED_DEFINITION_REQUIRED',
+    -- SV is in the approved catalogue since 20261126090000, so the refusal is the
+    -- precise one: the governed name (and issuer) cannot be replaced.
+    'SP_GOVERNED_METADATA_IMMUTABLE',
     '1.4 Skyddsvaktsförordnande cannot be renamed by its holder');
 
   -- Not only the appointments: the courses were writable too.

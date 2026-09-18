@@ -145,7 +145,9 @@ BEGIN
     RAISE EXCEPTION 'ASSERTION FAILED: 3.2 an unscoped skyddsvakt approval was accepted';
   EXCEPTION WHEN check_violation THEN
     GET STACKED DIAGNOSTICS _txt = MESSAGE_TEXT;
-    IF _txt NOT LIKE 'SP_APPROVED_DEFINITION_REQUIRED%' THEN
+    -- Since 20261126090000 SV is in the approved catalogue, so the refusal names
+    -- the real reason instead of pretending the definition does not exist.
+    IF _txt NOT LIKE 'SP_CREDENTIAL_REQUIRES_SCOPE%' THEN
       RAISE EXCEPTION 'ASSERTION FAILED: 3.2 wrong error: %', _txt;
     END IF;
     RAISE NOTICE 'ok  3.2 without its scope the approval is refused, not stored as general';
@@ -154,17 +156,31 @@ BEGIN
   BEGIN
     INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name,valid_until,authorisation_scope)
     VALUES(_h,'licence','Skyddsvaktsförordnande','SV','SE','Länsstyrelsen',current_date+300,'Candidate scope');
-    RAISE EXCEPTION 'ASSERTION FAILED: candidate-defined scope accepted';
+    -- Since 20261126090000 this is the INTENDED path: SV is selectable, and its
+    -- scope is what makes it truthful. The row must carry exactly that scope.
+    IF NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_h AND credential_code='SV'
+                   AND authorisation_scope='Candidate scope' AND claimed_issuer_name='Länsstyrelsen') THEN
+      RAISE EXCEPTION 'ASSERTION FAILED: 3.3 a scoped skyddsvakt approval was not stored with its scope';
+    END IF;
+    DELETE FROM public.sp_claims WHERE holder_user_id=_h AND credential_code='SV' AND authorisation_scope='Candidate scope';
+    RAISE NOTICE 'ok  3.3 with its scope the approval is stored, under Länsstyrelsen, carrying that scope';
+  END;
+  -- …and a scope cannot be attached to a definition that has none.
+  BEGIN
+    INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name,valid_until,authorisation_scope)
+    VALUES(_h,'licence','Ordningsvaktsförordnande','OV','SE','Polismyndigheten',current_date+300,'Candidate scope');
+    RAISE EXCEPTION 'ASSERTION FAILED: 3.3b a candidate-defined scope was accepted on an unscoped appointment';
   EXCEPTION WHEN check_violation THEN
-    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
-    RAISE NOTICE 'ok  3.3 candidate cannot make SV selectable by supplying scope';
+    IF SQLERRM<>'SP_GOVERNED_METADATA_IMMUTABLE' THEN RAISE; END IF;
+    RAISE NOTICE 'ok  3.3b a holder cannot attach a scope to an appointment that has none';
   END;
   BEGIN
     INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name,lifecycle_state)
     VALUES(_h,'licence','Skyddsvaktsförordnande','SV','SE','Länsstyrelsen','draft');
     RAISE EXCEPTION 'ASSERTION FAILED: draft bypass accepted';
   EXCEPTION WHEN check_violation THEN
-    IF SQLERRM<>'SP_APPROVED_DEFINITION_REQUIRED' THEN RAISE; END IF;
+    -- SV is listed since 20261126090000; the refusal is the scope rule itself.
+    IF SQLERRM<>'SP_CREDENTIAL_REQUIRES_SCOPE' THEN RAISE; END IF;
     RAISE NOTICE 'ok  3.4 drafts cannot bypass governed scope requirements';
   END;
   BEGIN

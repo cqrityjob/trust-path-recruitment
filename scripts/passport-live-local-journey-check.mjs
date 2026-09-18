@@ -98,8 +98,10 @@ async function reread(holder, table, id) {
 let approvedForRun = false;
 function restoreApproval() {
   if (!approvedForRun) return;
+  // Every GB, GB-NI and Dubai definition is inactive in the product. Whatever this
+  // run approved locally goes back to that, including after a failure.
   sql(
-    "update public.sp_credential_types set is_active=false where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY')",
+    "update public.sp_credential_types set is_active=false where market_pack_code in ('GB','GB-NI','AE-DU')",
   );
   approvedForRun = false;
 }
@@ -263,9 +265,26 @@ async function main() {
       jurisdiction_code: "SE",
       lifecycle_state: "active",
     });
+    // VU1 is in the catalogue since 20261126090000, so the table refuses this
+    // row for the real reason: it names no training provider. A row that names
+    // a GOVERNED-looking issuer for a different definition is refused as well.
     ok(
-      /SP_APPROVED_DEFINITION_REQUIRED/.test(r.error?.message ?? ""),
+      /SP_CREDENTIAL_REQUIRES_ISSUER/.test(r.error?.message ?? ""),
       "bypass accepted: " + (r.error?.message ?? "no error"),
+    );
+    const renamed = await holder.client.from("sp_claims").insert({
+      holder_user_id: holder.id,
+      claim_type: "licence",
+      credential_code: "OV",
+      title: "My own police appointment",
+      claimed_issuer_name: "Polismyndigheten",
+      jurisdiction_code: "SE",
+      valid_until: "2030-01-01",
+      lifecycle_state: "active",
+    });
+    ok(
+      /SP_GOVERNED_METADATA_IMMUTABLE/.test(renamed.error?.message ?? ""),
+      "renamed definition accepted: " + (renamed.error?.message ?? "no error"),
     );
   });
   for (const [label, code, country, region] of [
@@ -532,6 +551,9 @@ async function main() {
       await u.client
         .from("sp_approved_credential_catalogue")
         .select("code")
+        // Read as the NEW application reads it: the contract header declares that
+        // this caller can send a scope and a document-stated issuer.
+        .setHeader("x-passport-catalogue-contract", "2")
         .eq("country", country)
         [region ? "eq" : "is"]("region", region),
     ).length;
@@ -568,51 +590,50 @@ async function main() {
         n(
           "select count(*) from public.sp_credential_types where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY') and not is_active",
         ) === 2,
-        "the two fixture definitions are already approved",
+        "a pilot fixture definition is approved for the public",
       );
     },
   );
   await check(
-    "Link 2b · membership alone approves nothing: the GB member sees an empty GB catalogue",
+    "Link 2b · ROUTE A: nothing is approved — every pilot definition keeps is_active = false",
     async () => {
       ok(
-        (await catalogueRows(gbPilot, "GB", null)) === 0,
-        "GB member sees an unapproved definition",
+        Number(
+          sql(
+            "select count(*) from public.sp_credential_types where market_pack_code in ('GB','GB-NI','AE-DU','AE-AZ') and is_active",
+          ),
+        ) === 0,
+        "a pilot definition is active",
       );
-      const r = await gbPilot.client.rpc("sp_save_international_credential", {
-        _input: {
-          definition_code: "UK_SIA_LICENCE_SG",
-          market_country: "GB",
-          market_region: "",
-          identifier: "",
-          issued_on: "2024-05-01",
-          valid_until: "2027-05-01",
-          no_expiry: false,
-        },
-      });
       ok(
-        /SP_APPROVED_DEFINITION_REQUIRED/.test(r.error?.message ?? ""),
-        "unapproved definition accepted: " + (r.error?.message ?? "no error"),
+        Number(
+          sql(
+            "select count(*) from public.sp_market_packs where code in ('GB','GB-NI','AE-DU') and pilot_state='internal_pilot' and not is_active",
+          ),
+        ) === 3,
+        "a pilot pack is not internal_pilot",
       );
     },
   );
-  // The owner's per-definition decision, taken here as a local administrator
-  // (a direct UPDATE on the isolated stack; restored at the end of the run).
-  // The market packs stay internal_pilot: approving a definition opens no market.
-  sql(
-    "update public.sp_credential_types set is_active=true where code in ('UK_SIA_LICENCE_SG','AE_DU_BASIC_FIRE_SAFETY')",
+  await check(
+    "Link 2c · an OLD application (no contract header) is never offered what its form cannot save",
+    async () => {
+      const old = good(
+        await gbPilot.client
+          .from("sp_approved_credential_catalogue")
+          .select("code")
+          .eq("country", "GB"),
+      );
+      ok(
+        old.length === 7,
+        "an old application is offered " + old.length + " GB rows, expected the 7 licences",
+      );
+      ok(
+        !old.some((r) => r.code.startsWith("UK_SIA_QUAL") || r.code === "UK_SIA_TOP_UP"),
+        "a document-issuer qualification was offered to an old application",
+      );
+    },
   );
-  approvedForRun = true;
-  await check("Link 2c · approving a definition activates no market pack", async () => {
-    ok(
-      Number(
-        sql(
-          "select count(*) from public.sp_market_packs where code in ('GB','AE-DU') and pilot_state='internal_pilot' and not is_active",
-        ),
-      ) === 2,
-      "a pack was activated",
-    );
-  });
   await check("Link 3 · catalogue visibility follows the entitlement, per market", async () => {
     ok((await catalogueRows(holder, "GB", null)) === 0, "ordinary holder sees GB definitions");
     ok(
@@ -620,17 +641,18 @@ async function main() {
       "ordinary holder sees Dubai definitions",
     );
     ok(
-      (await catalogueRows(gbPilot, "GB", null)) === 1,
-      "GB pilot sees other than the one approved GB definition",
+      (await catalogueRows(gbPilot, "GB", null)) === 13,
+      "GB pilot does not see all 13 GB pilot definitions",
     );
     ok((await catalogueRows(gbPilot, "AE", "AE-DU")) === 0, "GB pilot sees Dubai definitions");
     ok(
-      (await catalogueRows(duPilot, "AE", "AE-DU")) === 1,
-      "Dubai pilot sees other than the one approved Dubai definition",
+      (await catalogueRows(duPilot, "AE", "AE-DU")) === 30,
+      "Dubai pilot does not see all 30 Dubai pilot definitions",
     );
     ok((await catalogueRows(duPilot, "GB", null)) === 0, "Dubai pilot sees GB definitions");
     // Sweden and the international catalogue are unchanged for everyone.
-    ok((await catalogueRows(holder, "SE", null)) === 5, "SE catalogue changed");
+    // All eight Swedish definitions since 20261126090000 (VU1, VU2 and SV included).
+    ok((await catalogueRows(holder, "SE", null)) === 8, "SE catalogue is not the full eight");
   });
   const saveVia = (u, definition_code, market_country, market_region, extra = {}) =>
     u.client.rpc("sp_save_international_credential", {
@@ -667,7 +689,13 @@ async function main() {
   await check(
     "Link 4 · the real write path: a Dubai pilot member saves a SIRA course",
     async () => {
-      duClaim = good(await saveVia(duPilot, "AE_DU_BASIC_FIRE_SAFETY", "AE", "AE-DU"));
+      // A Dubai course certificate comes from a SIRA-approved training CENTRE,
+      // named on the document; SIRA regulates the centres and issues no course.
+      duClaim = good(
+        await saveVia(duPilot, "AE_DU_BASIC_FIRE_SAFETY", "AE", "AE-DU", {
+          issuer_name: "Fiktivt Training Centre LLC",
+        }),
+      );
       ok(duClaim, "no claim id");
     },
   );
@@ -700,10 +728,25 @@ async function main() {
     },
   );
   await check(
-    "A scoped SIRA card stays unavailable through this RPC even to its pilot member",
+    "A scoped SIRA card: refused without its company, saved and reloaded with it",
     async () => {
-      const r = await saveVia(duPilot, "AE_DU_SIRA_CARD_GUARD", "AE", "AE-DU");
-      ok(/SP_APPROVED_DEFINITION_REQUIRED/.test(r.error?.message ?? ""), "scoped card accepted");
+      const bare = await saveVia(duPilot, "AE_DU_SIRA_CARD_GUARD", "AE", "AE-DU");
+      ok(
+        /SP_CREDENTIAL_REQUIRES_SCOPE/.test(bare.error?.message ?? ""),
+        "card without a company: " + (bare.error?.message ?? "accepted"),
+      );
+      const id = good(
+        await saveVia(duPilot, "AE_DU_SIRA_CARD_GUARD", "AE", "AE-DU", {
+          authorisation_scope: "Fiktivt Security LLC",
+        }),
+      );
+      const row = await reread(duPilot, "sp_claims", id);
+      ok(
+        row.authorisation_scope === "Fiktivt Security LLC" &&
+          row.sub_jurisdiction_code === "AE-DU" &&
+          row.claimed_issuer_name === "Security Industry Regulatory Agency",
+        "card read back wrong",
+      );
     },
   );
 
@@ -795,6 +838,217 @@ async function main() {
           def.country === "SE" &&
           (def.issuer_name ?? "").length > 0,
         "definition row",
+      );
+    },
+  );
+
+  /* ── COMPLETENESS over real GoTrue + PostgREST: all 66 definitions ────── */
+  // Fresh holders, so nothing saved above interferes. Every GB, GB-NI and Dubai
+  // definition is approved LOCALLY for this run (restored at exit); the market
+  // packs stay internal_pilot and Abu Dhabi stays closed.
+  const seAll = await user("complete-se");
+  const gbAll = await user("complete-gb");
+  const niAll = await user("complete-ni");
+  const duAll = await user("complete-du");
+  for (const [u, j, sub] of [
+    [seAll, "SE", null],
+    [gbAll, "GB", null],
+    [niAll, "GB", "GB-NI"],
+    [duAll, "AE", "AE-DU"],
+  ]) {
+    good(
+      await u.client.from("sp_passport_profiles").insert({
+        holder_user_id: u.id,
+        jurisdiction_code: j,
+        sub_jurisdiction_code: sub,
+        work_location_confirmed_at: new Date().toISOString(),
+      }),
+    );
+  }
+  sql(
+    `insert into public.sp_pilot_members (user_id, market_pack_code, granted_by, note)
+     values ('${gbAll.id}', 'GB', '${verifier.id}', 'completeness'),
+            ('${niAll.id}', 'GB-NI', '${verifier.id}', 'completeness'),
+            ('${duAll.id}', 'AE-DU', '${verifier.id}', 'completeness')
+     on conflict do nothing`,
+  );
+  // ROUTE A: nothing is approved for this loop. Each holder reaches their
+  // market's definitions through their membership alone.
+  const expectedCodes = sql(
+    "select string_agg(code, ',' order by code) from public.sp_credential_types where market_pack_code is distinct from 'AE-AZ'",
+  ).split(",");
+  const savedCodes = [];
+  await check(
+    "Completeness · every in-scope definition saves through the real RPC and reloads (66)",
+    async () => {
+      ok(expectedCodes.length === 66, "expected set is " + expectedCodes.length);
+      const plans = [
+        [seAll, (d) => d.country === null || d.country === "SE"],
+        [gbAll, (d) => d.country === "GB" && d.region === null],
+        [niAll, (d) => d.region === "GB-NI"],
+        [duAll, (d) => d.region === "AE-DU"],
+      ];
+      for (const [u, mine] of plans) {
+        const rows = good(
+          await u.client
+            .from("sp_approved_credential_catalogue")
+            .select("code,country,region,issuer_name,requires_valid_until")
+            .setHeader("x-passport-catalogue-contract", "2"),
+        ).filter(mine);
+        const facts = good(
+          await u.client.from("sp_credential_types").select("code,requires_scope"),
+        );
+        for (const d of rows) {
+          const scoped = facts.find((f) => f.code === d.code)?.requires_scope === true;
+          const input = {
+            definition_code: d.code,
+            market_country: d.country ?? "",
+            market_region: d.region ?? "",
+            identifier: "",
+            issued_on: "2024-05-01",
+            valid_until: "2027-05-01",
+            no_expiry: false,
+            ...(scoped ? { authorisation_scope: "Fiktivt bevakningsbolag AB" } : {}),
+            ...(d.issuer_name === null ? { issuer_name: "Fiktiv Utbildning AB" } : {}),
+          };
+          const id = good(
+            await u.client.rpc("sp_save_international_credential", { _input: input }),
+          );
+          const row = await reread(u, "sp_claims", id);
+          ok(
+            row.credential_code === d.code &&
+              row.jurisdiction_code === d.country &&
+              row.sub_jurisdiction_code === d.region &&
+              (row.claimed_issuer_name ?? "").length > 0 &&
+              (scoped
+                ? row.authorisation_scope === "Fiktivt bevakningsbolag AB"
+                : row.authorisation_scope === null),
+            d.code + " read back wrong",
+          );
+          savedCodes.push(d.code);
+        }
+      }
+      savedCodes.sort();
+      ok(
+        savedCodes.join(",") === expectedCodes.join(","),
+        "saved " +
+          savedCodes.length +
+          " of 66; missing: " +
+          expectedCodes.filter((c) => !savedCodes.includes(c)).join(" "),
+      );
+    },
+  );
+  /* ── a SCOPED card and a DOCUMENT-ISSUER training reach the reviewer ─── */
+  for (const [label, u, code, expectScope, expectIssuer] of [
+    [
+      "a scoped SIRA card",
+      duAll,
+      "AE_DU_SIRA_CARD_GUARD",
+      "Fiktivt bevakningsbolag AB",
+      "Security Industry Regulatory Agency",
+    ],
+    ["VU1 with its stated training provider", seAll, "VU1", null, "Fiktiv Utbildning AB"],
+  ]) {
+    await check(
+      `Review · evidence and a review request for ${label} reach the reviewer with its facts`,
+      async () => {
+        const claim = good(
+          await u.client
+            .from("sp_claims")
+            .select("id")
+            .eq("credential_code", code)
+            .eq("holder_user_id", u.id)
+            .single(),
+        );
+        const objectPath = u.id + "/" + crypto.randomUUID() + ".pdf";
+        good(
+          await u.client.storage
+            .from("passport-evidence")
+            .upload(objectPath, bytes, { contentType: "application/pdf" }),
+        );
+        good(
+          await u.client.rpc("sp_attach_evidence", {
+            _claim_id: claim.id,
+            _period_id: null,
+            _storage_path: objectPath,
+            _file_name: "catalogue.pdf",
+            _mime_type: "application/pdf",
+            _size_bytes: bytes.length,
+            _sha256: crypto.createHash("sha256").update(bytes).digest("hex"),
+          }),
+        );
+        const req = good(
+          await u.client.rpc("sp_submit_for_verification", {
+            _claim_id: claim.id,
+            _period_id: null,
+            _kind: "cqrityjob_review",
+            _employer_id: null,
+          }),
+        );
+        const queue = good(await verifier.client.rpc("sp_verifier_queue", { _status: "pending" }));
+        ok(JSON.stringify(queue).includes(req), "the request is not in the reviewer's queue");
+        const d = good(
+          await verifier.client.rpc("sp_verifier_request_detail", { _request_id: req }),
+        );
+        ok(d.claim?.credential_code === code, "definition code: " + d.claim?.credential_code);
+        ok(d.claim?.issuer === expectIssuer, "issuer as stated: " + d.claim?.issuer);
+        ok(
+          (d.claim?.authorisation_scope ?? null) === expectScope,
+          "scope: " + d.claim?.authorisation_scope,
+        );
+        ok(Array.isArray(d.evidence) && d.evidence.length === 1, "evidence: " + d.evidence?.length);
+        const row = await reread(u, "sp_claims", claim.id);
+        ok(
+          row.assertion_level === "document_provided",
+          "a document is evidence, not verification: " + row.assertion_level,
+        );
+      },
+    );
+  }
+
+  await check("Completeness · Abu Dhabi is offered to nobody", async () => {
+    const rows = good(
+      await duAll.client
+        .from("sp_approved_credential_catalogue")
+        .select("code")
+        .eq("region", "AE-AZ"),
+    );
+    ok(rows.length === 0, "Abu Dhabi rows: " + rows.length);
+  });
+  await check("Completeness · a scoped card without its company is refused by name", async () => {
+    const r = await duAll.client.rpc("sp_save_international_credential", {
+      _input: {
+        definition_code: "AE_DU_SIRA_CARD_WATCHMAN",
+        market_country: "AE",
+        market_region: "AE-DU",
+        identifier: "",
+        issued_on: "2024-05-01",
+        valid_until: "2027-05-01",
+        no_expiry: false,
+      },
+    });
+    ok(
+      /SP_CREDENTIAL_REQUIRES_SCOPE/.test(r.error?.message ?? ""),
+      "got: " + (r.error?.message ?? "accepted"),
+    );
+  });
+  await check(
+    "Completeness · VU1 without the provider on the certificate is refused by name",
+    async () => {
+      const r = await seAll.client.rpc("sp_save_international_credential", {
+        _input: {
+          definition_code: "VU1",
+          market_country: "SE",
+          market_region: "",
+          identifier: "",
+          issued_on: "2024-05-01",
+          valid_until: "",
+          no_expiry: false,
+        },
+      });
+      ok(
+        /SP_CREDENTIAL_REQUIRES_ISSUER/.test(r.error?.message ?? ""),
+        "got: " + (r.error?.message ?? "accepted"),
       );
     },
   );

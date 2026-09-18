@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-16 19:10:18.316816+00",
-  "readBy": "PR #258 owner-authorized application and separate canonical history-only alias, verified through the Supabase connector. Ledger 293 -> 294 -> 295. The original 294 complete rows are unchanged by the alias; canonical alias statements are NULL. Exact pinned SQL checksum, all 48 baseline counts/digests, Auth/Storage and security verified. Evidence: docs/passport/product-finalization/hosted-application.json",
+  "readAt": "2026-09-18",
+  "readBy": "Read-only list_migrations through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-18. 297 rows: the 295 of the previous snapshot unchanged in order and name, plus 20261124090000 sp_pilot_member_catalogue and 20261125090000 sp_disclosure_definition_scope, applied by the official GitHub integration when PR #264 merged. No statement was executed.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1195,6 +1195,14 @@
     {
       "version": "20261123090000",
       "name": "sp_credential_organisation_roles"
+    },
+    {
+      "version": "20261124090000",
+      "name": "sp_pilot_member_catalogue"
+    },
+    {
+      "version": "20261125090000",
+      "name": "sp_disclosure_definition_scope"
     }
   ]
 }

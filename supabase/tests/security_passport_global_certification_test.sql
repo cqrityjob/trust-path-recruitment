@@ -1263,29 +1263,34 @@ BEGIN
       WHERE c.holder_user_id = _se AND c.credential_code IS NULL) = _legacy_before,
     '14.4 nor the free-text rows');
 
-  -- The GB and Dubai pilot behaviour, unchanged.
+  -- The GB and Dubai pilot behaviour under ROUTE A (owner decision 2026-09-18,
+  -- 20261126090000): a valid member of a pilot market registers that market's
+  -- internal_pilot definitions; is_active stays false (14.12) and no market is
+  -- activated (14.11). Cross-market filings are refused exactly as before.
   PERFORM set_config('request.jwt.claim.sub', _admin::text, true);
   PERFORM public.sp_grant_pilot_member(_gb, 'GB', 'global certification suite');
   PERFORM public.sp_grant_pilot_member(_gb, 'AE-DU', 'global certification suite');
 
   _r := pg_temp.file_canonical(_gb, 'UK_SIA_LICENCE_DS', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED', '14.5 pilot entitlement cannot approve an inactive SIA definition');
+  PERFORM pg_temp.ok(_r = 'OK', '14.5 a GB pilot member registers an internal-pilot SIA licence (got ' || _r || ')');
   PERFORM pg_temp.ok(
-    NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_gb AND credential_code='UK_SIA_LICENCE_DS'),
-    '14.6 no unapproved UK claim was stored');
+    (SELECT count(*) = 1 FROM public.sp_claims WHERE holder_user_id=_gb AND credential_code='UK_SIA_LICENCE_DS'
+        AND jurisdiction_code='GB' AND sub_jurisdiction_code IS NULL),
+    '14.6 stored once, under Great Britain');
 
   _r := pg_temp.file_as(_gb, 'UK_SIA_LICENCE_DS', 'SE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '14.7 THE PR #222 DEFECT: a British licence filed in Sweden is still refused (got ' || _r || ')');
 
   _r := pg_temp.file_canonical(_gb, 'AE_DU_SIRA_CARD_GUARD', 'active');
-  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED', '14.8 pilot entitlement cannot approve a scoped Dubai definition');
+  PERFORM pg_temp.ok(_r = 'OK', '14.8 a Dubai pilot member registers a scoped cadre card with its company (got ' || _r || ')');
   PERFORM pg_temp.ok(
-    NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE holder_user_id=_gb AND credential_code='AE_DU_SIRA_CARD_GUARD'),
-    '14.9 no unapproved Dubai claim was stored');
+    (SELECT count(*) = 1 FROM public.sp_claims WHERE holder_user_id=_gb AND credential_code='AE_DU_SIRA_CARD_GUARD'
+        AND sub_jurisdiction_code='AE-DU' AND nullif(btrim(authorisation_scope),'') IS NOT NULL),
+    '14.9 stored once, in Dubai, carrying its scope');
 
   _r := pg_temp.file_as(_gb, 'AE_DU_SIRA_CARD_GUARD', 'AE', NULL, 'active');
-  PERFORM pg_temp.ok(_r = 'SP_APPROVED_DEFINITION_REQUIRED',
+  PERFORM pg_temp.ok(_r = 'SP_GOVERNED_METADATA_IMMUTABLE',
     '14.10 and a Dubai card with no emirate is still refused (got ' || _r || ')');
 
   -- No market was activated by any of this.

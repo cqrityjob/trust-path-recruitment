@@ -28,10 +28,10 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const read = (p: string) => readFileSync(join(ROOT, p), "utf8");
 
-const MIGRATION_NAME = "20261126090000_bcp_conduct_report_independence_boundary.sql";
+const MIGRATION_NAME = "20261127090000_bcp_conduct_report_independence_boundary.sql";
 const MIGRATION = `supabase/migrations/${MIGRATION_NAME}`;
 const ROLLBACK =
-  "supabase/rollback/20261126090000_bcp_conduct_report_independence_boundary_rollback.sql";
+  "supabase/rollback/20261127090000_bcp_conduct_report_independence_boundary_rollback.sql";
 const SUITE = "supabase/tests/bcp_conduct_report_independence_test.sql";
 const PR6_SUITE = "supabase/tests/bcp_conduct_prompts_and_report_test.sql";
 const DB_TEST = "scripts/db-test.sh";
@@ -388,8 +388,8 @@ check(
 );
 
 check(
-  dbTest.includes("20261126090000_bcp_conduct_report_independence_boundary_rollback.sql") &&
-    dbTest.includes("20261126090000_bcp_conduct_report_independence_boundary.sql"),
+  dbTest.includes("20261127090000_bcp_conduct_report_independence_boundary_rollback.sql") &&
+    dbTest.includes("20261127090000_bcp_conduct_report_independence_boundary.sql"),
   "BOUNDARY-REGISTRATION: the rollback is run for real and the migration re-applied",
 );
 

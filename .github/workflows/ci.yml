@@ -1207,6 +1207,15 @@ jobs:
       - name: Passport card surface and homepage panel
         run: bun run passport-card-surface:check
 
+      # THE ADD-CREDENTIAL WIZARD'S FILTERS, EXECUTED. One pure model decides
+      # what a holder is offered: faceted options with counts, a region filter
+      # that never hides a country-wide credential, dependent selections
+      # cleared when they stop being valid, a search that reads codes,
+      # abbreviations and approved aliases, and scope / issuer saved from the
+      # SELECTED definition and never from a filter.
+      - name: Passport catalogue filter model
+        run: bun run passport-catalogue-filter:check
+
       # What may be said about an entry that is no longer current (PR #263): an
       # expired self-declared credential must never be described as having been
       # verified, documented or source-confirmed. Read-only over committed code,

@@ -415,9 +415,57 @@ const CRED_FUNCTIONS = read("src/lib/security-passport/credentials.functions.ts"
     /issuerDisplayName: r\.sp_certification_issuers\.display_name/.test(CRED_FUNCTIONS),
     "issuer names come from the controlled display name",
   );
+  // Aliases exist for SEARCH and never for rendering. Since the catalogue
+  // completion the add-credential wizard searches them (owner requirement:
+  // "(ISC)²" must find ISC2's certifications), so exactly two files may name the
+  // table — the reader and the pure filter model — and the two assertions
+  // below prove an alias can only ever reach the search haystack.
+  const ALIAS_SEARCH_ONLY = new Set([
+    "src/lib/security-passport/international.functions.ts",
+    "src/lib/security-passport/credential-catalogue-filters.ts",
+  ]);
   const aliasOffenders = handWritten()
-    .filter(([, t]) => /sp_certification_issuer_aliases/.test(t))
+    .filter(([rel, t]) => /sp_certification_issuer_aliases/.test(t) && !ALIAS_SEARCH_ONLY.has(rel))
     .map(([rel]) => rel);
+  {
+    const model = readFileSync(
+      join(root, "src/lib/security-passport/credential-catalogue-filters.ts"),
+      "utf8",
+    );
+    const uses = [...model.matchAll(/aliasText|aliasesOf/g)].length;
+    ok(
+      uses > 0 &&
+        /const aliasText = organisations\.flatMap\(\(o\) => aliasesOf\.get\(o\.id\) \?\? \[\]\);/.test(
+          model,
+        ) &&
+        /\.\.\.aliasText,\s*\]\.join\(" "\),\s*\),/.test(model) &&
+        (model.match(/aliasText/g) ?? []).length === 2,
+      "an alias reaches exactly one place in the filter model: the folded search haystack",
+    );
+    const consumers = handWritten()
+      .filter(([, t]) => /issuerAliases/.test(t))
+      .map(([rel]) => rel)
+      .sort();
+    ok(
+      consumers.join() ===
+        [
+          "src/components/security-passport/InternationalCredentialForm.tsx",
+          "src/lib/security-passport/credential-catalogue-filters.ts",
+          "src/lib/security-passport/international.functions.ts",
+        ].join(),
+      `aliases are consumed by the reader, the filter model and the wizard only — ${consumers.join(", ")}`,
+    );
+    const form = readFileSync(
+      join(root, "src/components/security-passport/InternationalCredentialForm.tsx"),
+      "utf8",
+    );
+    ok(
+      // once as the argument name, once as the metadata field it is read from
+      (form.match(/issuerAliases/g) ?? []).length === 2 &&
+        /issuerAliases: metadata\?\.issuerAliases \?\? \[\],/.test(form),
+      "the wizard hands aliases to the filter model and renders none of them",
+    );
+  }
   ok(
     aliasOffenders.length === 0,
     `no surface renders from the search aliases${aliasOffenders.length ? ` — ${aliasOffenders.join(", ")}` : ""}`,
