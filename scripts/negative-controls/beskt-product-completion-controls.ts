@@ -846,9 +846,10 @@ const MUTATIONS: readonly Mutation[] = [
       "a stale approval renders as simply undecided, so a reviewer is told the system lost the decision they made",
     file: GOV_LOGIC,
     find:
-      "  if (review.revisionAtReview !== version.revision)\n" +
+      "  if (!contentFrozen && review.revisionAtReview !== version.revision)\n" +
       '    return { kind: "stale", review, reason: "revision" };',
-    replace: '  if (review.revisionAtReview !== version.revision) return { kind: "undecided" };',
+    replace:
+      '  if (!contentFrozen && review.revisionAtReview !== version.revision) return { kind: "undecided" };',
     guard: "beskt-product-completion-render:check",
     expect: "BESKT_PCR_GATE_STATES_COLLAPSED",
   },
