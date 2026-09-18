@@ -816,6 +816,13 @@ jobs:
       - name: BESKT conduct prompts and report (PR 6) source guard
         run: bun run beskt-conduct-report:check
 
+      # The security fix to two of PR 6's own readers: bcp_conduct_preview_report
+      # never applied the independence rule, and bcp_conduct_report_blockers
+      # applied no authorisation at all. Read structurally here; proved
+      # behaviourally over a replayed schema in the database job.
+      - name: BESKT report independence boundary schema guard
+        run: bun run beskt-report-independence:check
+
       # BESKT PR 7 (20261118090000) -- the governed content-authoring doors:
       # the editor gate, the revision CAS, the replay contract, the typed jsonb
       # payload that refuses an unknown field, the absence of any new client
