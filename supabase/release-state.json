@@ -7,6 +7,39 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261129090000_bcp_internal_test_activation.sql", 
+      "hostedState": "pending", 
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "bcp_internal_test_activations"
+        }, 
+        {
+          "kind": "table", 
+          "object": "beskt_content_role_changes"
+        }, 
+        {
+          "kind": "function", 
+          "object": "bcp_grant_internal_test_activation(uuid,uuid,uuid,text,date)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "bcp_revoke_internal_test_activation(uuid,uuid,text)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "bcp_internal_test_activations_for(uuid,uuid)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "beskt_set_content_role(uuid,text,text,boolean,text)"
+        }
+      ], 
+      "note": "OWNER DECISION 2026-09-18: test BESKT end to end on the live site for cqrityjob only, with test data, before the method is reviewed. Adds a SEPARATE, recorded, employer-scoped internal test activation (platform admin only; complete recruitment-only content; pinned by content hash; expires within 90 days; revocable) that never writes a review, never publishes and never changes the version's status or validation label. bcp_assign, bcp_assignable_exposure_profiles, bcp_assignable_method_versions and bcp_party_can_read_method_version accept either the existing published+pilot path or a live activation for the same employer; their bodies are the md5-pinned current ones with only those conditions changed. Also a governed, audited beskt_set_content_role for platform admins. Proved by supabase/tests/bcp_internal_test_activation_test.sql (32) through real sessions.", 
+      "verify": "SELECT to_regclass('public.bcp_internal_test_activations') IS NOT NULL AND position('bcp_internal_test_activation_active' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_assign')) > 0 AND position('bcp_internal_test_activation_covers' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_party_can_read_method_version')) > 0;  -- expect t. No anon execute on any new function; bcp_internal_test_activation_active / _covers / bcp_version_is_structurally_candidate_safe not executable by authenticated; both new tables FORCE RLS and SELECT-only for clients.", 
+      "rollback": "supabase/rollback/20261129090000_bcp_internal_test_activation_rollback.sql"
+    },
+    {
       "file": "20261128090000_scp_iv_case_candidate_binding.sql", 
       "hostedState": "applied", 
       "hostedVersion": "20261128090000", 
