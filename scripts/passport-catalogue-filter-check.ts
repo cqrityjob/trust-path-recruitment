@@ -211,6 +211,9 @@ const source: CatalogueFilterSource = {
   ],
   abbreviations: [
     { credential_code: "INTL_ASIS_CPP", abbreviation: "CPP" },
+    // An abbreviation that appears in NO name and NO code, so only the
+    // abbreviation field can find it: the assertion below cannot pass by luck.
+    { credential_code: "OV", abbreviation: "OVF" },
     { credential_code: "INTL_ISC2_CISSP", abbreviation: "CISSP" },
   ],
   issuerAliases: [
@@ -364,11 +367,14 @@ console.log("\n6 · organisations are governed, in a stated role");
 
 console.log("\n7 · search");
 check(
-  codes({ ...EMPTY_FILTERS, search: "cpp" }).join() === "INTL_ASIS_CPP",
+  codes({ ...EMPTY_FILTERS, search: "cpp" }).join() === "INTL_ASIS_CPP" &&
+    codes(national({ country: "SE", search: "ovf" })).join() === "OV",
   "7 an abbreviation finds its certification",
 );
 check(
-  codes({ ...EMPTY_FILTERS, search: "(ISC)²" }).join() === "INTL_ISC2_CISSP",
+  codes({ ...EMPTY_FILTERS, search: "(ISC)²" }).join() === "INTL_ISC2_CISSP" &&
+    // "industrial security" exists ONLY in ASIS's approved alias.
+    codes({ ...EMPTY_FILTERS, search: "industrial security" }).join() === "INTL_ASIS_CPP",
   "7 an approved issuer alias finds the issuer's certifications",
 );
 check(
