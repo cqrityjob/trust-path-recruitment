@@ -315,8 +315,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + 3 TRUST conduct layer: the six-step conduct sequence, the named prohibited
 #   techniques, and the Target/Ready/Trace guidance. Deterministic governed
 #   content read by a human -- the Understand stage still permits zero AI tasks.
-if [ "$SCP_TABLES" -ne 126 ]; then
-  echo "FAIL: expected 126 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 127 ]; then
+  echo "FAIL: expected 127 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
