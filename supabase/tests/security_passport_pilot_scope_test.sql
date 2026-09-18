@@ -122,10 +122,12 @@ SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'AE-DU')='pilot' AND public
 SELECT pg_temp.ok((SELECT count(*)=1 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU')
  AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='GB')
  AND (SELECT count(*)=:se_n FROM public.sp_approved_credential_catalogue WHERE country='SE'),'Dubai member sees exactly the one approved Dubai definition, not GB; Sweden unchanged');
-SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_BASIC_FIRE_SAFETY","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false}') AS du_claim \gset
-SELECT pg_temp.ok((SELECT credential_code='AE_DU_BASIC_FIRE_SAFETY' AND jurisdiction_code='AE' AND sub_jurisdiction_code='AE-DU' AND coalesce(claimed_issuer_name,'')<>''
+SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_BASIC_FIRE_SAFETY","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false,"issuer_name":"Fiktivt Training Centre LLC"}') AS du_claim \gset
+SELECT pg_temp.ok((SELECT credential_code='AE_DU_BASIC_FIRE_SAFETY' AND jurisdiction_code='AE' AND sub_jurisdiction_code='AE-DU' AND claimed_issuer_name='Fiktivt Training Centre LLC'
  AND assertion_level='self_declared' AND lifecycle_state='active' FROM public.sp_claims WHERE id=:'du_claim' AND holder_user_id=auth.uid()),
- 'read back: AE with sub-jurisdiction AE-DU, governed issuer, self-declared and active');
+ 'read back: AE with sub-jurisdiction AE-DU, the training centre named on the certificate, self-declared and active');
+SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_DU_BASIC_FIRE_SAFETY","market_country":"AE","market_region":"AE-DU","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false,"issuer_name":"Security Industry Regulatory Agency"}')$q$,
+ 'SP_ISSUER_IS_A_REGULATOR','SIRA approves the training centres; it cannot be named as the issuer of a course certificate');
 -- A course save proves nothing about SIRA CARD registration, so the card is
 -- proved on its own. Since 20261126090000 a scoped definition is in the
 -- catalogue once approved, and its scope is a REQUIRED field — never removed.

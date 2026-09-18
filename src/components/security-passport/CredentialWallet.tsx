@@ -171,6 +171,18 @@ export function CredentialWallet({
     groups.set(key, g);
   }
 
+  /** A holder-stated issuer, or null when it is really a governed authority's name. */
+  const statedIssuer = (value: string | null | undefined): string | null => {
+    const stated = value?.trim();
+    if (!stated) return null;
+    const lower = stated.toLocaleLowerCase();
+    const governed = metadata.issuers.some((i) => {
+      const name = i.name.toLocaleLowerCase();
+      return name.includes(lower) || lower.includes(name);
+    });
+    return governed ? null : stated;
+  };
+
   const issuerOf = (r: Row) => {
     const role = metadata.organisationRoles?.find(
       (o) => o.credential_code === r.claim.credentialCode && o.role === "issuer",
@@ -183,9 +195,12 @@ export function CredentialWallet({
       official ||
       (role?.document_specific
         ? // The holder named the awarding organisation or training provider on
-          // the certificate. It is shown as THEIR statement, never as a governed one.
-          r.claim.issuerName?.trim()
-          ? `${r.claim.issuerName.trim()} · ${copy("enligt intyget", "as stated on the certificate")}`
+          // the certificate. It is shown as THEIR statement — unless what is
+          // stored is the name of a governed authority. Records created before
+          // the closed catalogue defaulted the issuer to the Police; a regulator
+          // must never be presented as the trainer of a course it does not run.
+          statedIssuer(r.claim.issuerName)
+          ? `${statedIssuer(r.claim.issuerName)} · ${copy("enligt intyget", "as stated on the certificate")}`
           : copy("Utfärdare enligt dokumentet", "Issuer recorded on the document")
         : r.definition?.issuer_name) ||
       copy("Officiell organisation behöver bekräftas", "Official organisation needs confirmation")

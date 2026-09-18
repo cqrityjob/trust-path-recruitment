@@ -149,8 +149,12 @@ RESET ROLE;
 
 SELECT pg_temp.ok((SELECT count(*)=15+1 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.authorisation_scope IS NOT NULL),
  'exactly the 16 scoped definitions carry a scope: SV and the fifteen SIRA cards');
-SELECT pg_temp.ok((SELECT count(*)=8 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.claimed_issuer_name='Fiktiv Utbildning AB'),
- 'exactly the 8 document-issuer definitions carry a holder-stated issuer: VU1, VU2 and the six UK qualifications');
+SELECT pg_temp.ok((SELECT count(*)=23 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.claimed_issuer_name='Fiktiv Utbildning AB'),
+ 'exactly the 23 document-issuer definitions carry a holder-stated issuer: VU1, VU2, six UK qualifications and the fifteen Dubai courses and checks');
+SELECT pg_temp.ok((SELECT count(*)=15 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.claimed_issuer_name='Security Industry Regulatory Agency')
+ AND NOT EXISTS(SELECT 1 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id JOIN public.sp_credential_types t ON t.code=s.code
+                 WHERE t.market_pack_code='AE-DU' AND t.category<>'appointment' AND c.claimed_issuer_name='Security Industry Regulatory Agency'),
+ 'SIRA is the issuer of the fifteen cadre cards and of no course: it approves the centres, it does not award the certificate');
 SELECT pg_temp.ok((SELECT count(*)=14 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.jurisdiction_code IS NULL AND c.sub_jurisdiction_code IS NULL),
  'the 14 international certifications carry no country: they did not inherit the holder''s');
 
@@ -181,6 +185,8 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"VU1","market_country":"SE","market_region":"","identifier":"","issued_on":"2024-05-01","valid_until":"","no_expiry":false}')$q$,
  'SP_CREDENTIAL_REQUIRES_ISSUER','VU1 without the training provider on the certificate is refused');
+SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"VU1","market_country":"SE","market_region":"","identifier":"","issued_on":"2024-05-01","valid_until":"","no_expiry":false,"issuer_name":"Polismyndigheten"}')$q$,
+ 'SP_ISSUER_IS_A_REGULATOR','the regulator cannot be named as the training provider of a course it does not deliver');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"OV","market_country":"SE","market_region":"","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false,"issuer_name":"Fake Police"}')$q$,
  'SP_ISSUER_IS_GOVERNED','an ordningsvakt appointment is issued by the Police and by nobody the holder names');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"INTL_ASIS_CPP","identifier":"","issued_on":"2024-05-01","issuer_name":"ASIS"}')$q$,
@@ -210,4 +216,14 @@ SELECT pg_temp.ok(EXISTS(SELECT 1 FROM jsonb_array_elements(:'payload'::jsonb->'
  WHERE c->>'credential_code'='SV' AND (c->>'scope_limited')::boolean AND c->'authorisation_scope'='null'::jsonb AND c->>'issuer'='Länsstyrelsen'),
  'SV discloses that it is scope-limited, withholds the scope text, and names Länsstyrelsen');
 SELECT pg_temp.ok(position('Fiktivt bevakningsbolag AB' IN :'payload')=0,'the scope text itself is not in the anonymous package');
+
+-- ── a record from before the closed catalogue, whose issuer defaulted to the Police ──
+-- Owner-only fixture: no candidate mutation runs with the guard disabled.
+ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
+INSERT INTO public.sp_claims(id,holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name)
+ VALUES('fc260000-0000-4000-8000-0000000000a1','fc260000-0000-4000-8000-000000000002','training','Security Guard Training 2 (VU2)','VU2','SE','Polismyndigheten');
+ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
+SELECT pg_temp.ok((SELECT public.sp_credential_payload_v2('fc260000-0000-4000-8000-000000000002',ARRAY['fc260000-0000-4000-8000-0000000000a1']::uuid[],'{}',NULL,'en',now()+interval '1 day',now())
+  #> '{verified_claims,0,issuer}')='null'::jsonb,
+ 'a legacy VU2 record whose issuer defaulted to the Police discloses NO issuer: a regulator is never presented as the trainer');
 ROLLBACK;

@@ -343,11 +343,18 @@ export function InternationalCredentialForm({
                       onChange={(e) => change({ country: e.target.value })}
                     >
                       <option value="">{copy("Välj land", "Select country")}</option>
-                      {answer.countries.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {locationName(c.value)} ({c.count})
-                        </option>
-                      ))}
+                      {/* EVERY governed country is offered, with its count — zero
+                          included. A holder whose market is not open to them must be
+                          able to choose it and be TOLD why it is empty, not find it
+                          missing from the list. */}
+                      {locations
+                        .filter((j) => j.jurisdiction_type === "national")
+                        .map((j) => (
+                          <option key={j.code} value={j.code}>
+                            {locationName(j.code)} (
+                            {answer.countries.find((c) => c.value === j.code)?.count ?? 0})
+                          </option>
+                        ))}
                     </select>
                   </label>
                   {answer.regionRelevant && (
@@ -494,18 +501,31 @@ export function InternationalCredentialForm({
                 reset();
               }}
             />
-            {!visible.length && !answer.narrowed && answer.total === 0 && (
-              <p role="status" className="rounded-xl bg-muted p-4 text-sm" data-catalogue-empty>
-                {filters.scope === "national" && filters.country
-                  ? copy(
-                      "Inga meriter är tillgängliga för dig i det här landet ännu. Marknaden är antingen inte öppnad för ditt konto eller så är dess meriter inte godkända än.",
-                      "No credentials are available to you in this country yet. Either the market is not open to your account or its credentials are not approved yet.",
-                    )
-                  : copy(
-                      "Din merit är för närvarande inte tillgänglig i CQrityjob Security Passport.",
-                      "Your credential is not currently available in CQrityjob Security Passport.",
-                    )}
-              </p>
+            {!visible.length && (
+              <>
+                <p role="status" className="rounded-xl bg-muted p-4 text-sm" data-catalogue-empty>
+                  {copy(
+                    "Din merit är för närvarande inte tillgänglig i CQrityjob Security Passport.",
+                    "Your credential is not currently available in CQrityjob Security Passport.",
+                  )}
+                </p>
+                <p className="text-sm text-muted-foreground" data-catalogue-empty-reason>
+                  {answer.narrowed
+                    ? copy(
+                        "Inget matchar de valda filtren eller sökningen. Rensa filtren för att se hela katalogen.",
+                        "Nothing matches the chosen filters or the search. Clear the filters to see the whole catalogue.",
+                      )
+                    : filters.scope === "national" && filters.country
+                      ? copy(
+                          "Inga meriter är tillgängliga för dig i det här landet ännu. Marknaden är antingen inte öppnad för ditt konto eller så är dess meriter inte godkända än.",
+                          "No credentials are available to you in this country yet. Either the market is not open to your account or its credentials are not approved yet.",
+                        )
+                      : copy(
+                          "Katalogen är stängd: du kan inte lägga till en egen merittyp.",
+                          "The catalogue is closed: you cannot add a credential type of your own.",
+                        )}
+                </p>
+              </>
             )}
           </>
         )}
@@ -814,7 +834,7 @@ function FilterSummary({
       className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm"
       data-filter-summary
     >
-      <p role="status" aria-live="polite" data-filter-count>
+      <p aria-live="polite" data-filter-count>
         {copy(`Visar ${shown} av ${total} meriter`, `Showing ${shown} of ${total} credentials`)}
       </p>
       {narrowed && (

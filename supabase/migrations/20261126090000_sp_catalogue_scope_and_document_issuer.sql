@@ -55,7 +55,10 @@ CREATE OR REPLACE VIEW public.sp_approved_credential_catalogue WITH (security_in
 SELECT t.code, t.claim_type, t.name_sv, t.name_en,
  coalesce(m.credential_class,CASE t.claim_type WHEN 'licence' THEN 'regulated_authorisation' WHEN 'training' THEN 'mandatory_training' ELSE 'certification' END) AS credential_class,
  t.scope_code, t.jurisdiction_code AS country, t.sub_jurisdiction_code AS region,
- coalesce(i.id,a.id) AS issuer_id, coalesce(i.display_name,a.name_local) AS issuer_name,
+ CASE WHEN EXISTS (SELECT 1 FROM public.sp_credential_organisation_roles r WHERE r.credential_code=t.code AND r.role='issuer' AND r.document_specific)
+      THEN NULL::uuid ELSE coalesce(i.id,a.id) END AS issuer_id,
+ CASE WHEN EXISTS (SELECT 1 FROM public.sp_credential_organisation_roles r WHERE r.credential_code=t.code AND r.role='issuer' AND r.document_specific)
+      THEN NULL::text ELSE coalesce(i.display_name,a.name_local) END AS issuer_name,
  coalesce(d.programme_url,a.official_url) AS official_url,
  coalesce(d.public_verification_url,i.public_verification_url) AS verification_url,
  i.verification_mode, t.requires_valid_until, t.allows_no_expiry,
@@ -133,6 +136,11 @@ BEGIN
  IF length(coalesce(_issuer,''))>160 THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_INPUT'; END IF;
  IF d.issuer_name IS NULL AND (_issuer IS NULL OR length(_issuer)<2) THEN RAISE EXCEPTION 'SP_CREDENTIAL_REQUIRES_ISSUER'; END IF;
  IF d.issuer_name IS NOT NULL AND _issuer IS NOT NULL THEN RAISE EXCEPTION 'SP_ISSUER_IS_GOVERNED'; END IF;
+ -- A document-stated issuer is an awarding organisation or a training provider.
+ -- A governed AUTHORITY is neither: the regulator does not deliver the course.
+ IF d.issuer_name IS NULL AND EXISTS (SELECT 1 FROM public.sp_authorities g
+   WHERE lower(g.name_local)=lower(_issuer) OR lower(g.name_en)=lower(_issuer))
+ THEN RAISE EXCEPTION 'SP_ISSUER_IS_A_REGULATOR'; END IF;
  IF nullif(_input->>'issued_on','') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
  OR nullif(_input->>'valid_until','') !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
  THEN RAISE EXCEPTION 'SP_INVALID_CREDENTIAL_DATE'; END IF;
@@ -234,7 +242,7 @@ BEGIN
  'last_updated',(SELECT max(updated_at) FROM public.sp_claims WHERE holder_user_id=_holder AND id=ANY(_ids)),
  'verified_claims',coalesce((SELECT jsonb_agg(jsonb_build_object(
    'key','c'||c.ord,'type',c.claim_type,'title',c.title,'credential_code',c.credential_code,
-   'issuer',(SELECT coalesce(a.name_local,i.display_name,CASE WHEN r.document_specific THEN nullif(btrim(c.claimed_issuer_name),'') END) FROM public.sp_credential_organisation_roles r LEFT JOIN public.sp_authorities a ON a.id=r.authority_id LEFT JOIN public.sp_certification_issuers i ON i.id=r.certification_issuer_id WHERE r.credential_code=c.credential_code AND r.role='issuer'),'jurisdiction',c.jurisdiction_code,'sub_jurisdiction',c.sub_jurisdiction_code,
+   'issuer',(SELECT coalesce(a.name_local,i.display_name,CASE WHEN r.document_specific AND NOT EXISTS (SELECT 1 FROM public.sp_authorities g WHERE position(lower(btrim(c.claimed_issuer_name)) IN lower(g.name_local))>0 OR position(lower(g.name_local) IN lower(btrim(c.claimed_issuer_name)))>0) THEN nullif(btrim(c.claimed_issuer_name),'') END) FROM public.sp_credential_organisation_roles r LEFT JOIN public.sp_authorities a ON a.id=r.authority_id LEFT JOIN public.sp_certification_issuers i ON i.id=r.certification_issuer_id WHERE r.credential_code=c.credential_code AND r.role='issuer'),'jurisdiction',c.jurisdiction_code,'sub_jurisdiction',c.sub_jurisdiction_code,
    'scope_limited',nullif(btrim(c.authorisation_scope),'') IS NOT NULL,'authorisation_scope',NULL,
    'issued_on',c.issued_on,'valid_until',c.valid_until,
    'assertion',CASE WHEN c.assertion_level='verified' AND (v.id IS NULL OR (v.valid_until IS NOT NULL AND v.valid_until<current_date))
@@ -275,7 +283,7 @@ SELECT t.code,
       ELSE 'security_operations' END,
  CASE WHEN t.category='appointment' THEN 'https://www.sira.gov.ae/en/services/security-cadre-card'
       ELSE 'https://www.sira.gov.ae/en/information-center/certified-security-training-centers' END,
- DATE '2026-08-22',
+ DATE '2026-09-18',
  CASE WHEN t.category='appointment'
       THEN 'SIRA:s säkerhetskort är knutet till det licensierade företag innehavaren arbetar för och anger sitt eget slutdatum. SIRA anger generellt två års giltighet för företagsansökta kategorier; datumet beräknas aldrig, det läses från kortet.'
       ELSE 'Kursintyg från ett SIRA-certifierat utbildningscenter. En genomförd kurs är inte ett säkerhetskort och ger ingen behörighet att arbeta.' END,
@@ -285,24 +293,36 @@ SELECT t.code,
 FROM public.sp_credential_types t WHERE t.market_pack_code='AE-DU'
 ON CONFLICT (credential_code) DO NOTHING;
 
+-- SOURCE CONTENT, read 2026-09-18 (not merely reachability):
+--   sira.gov.ae/en/services/security-cadre-card presents the Security Cadre Card as a
+--   SIRA service, and lists among its requirements "Completion of the … course from
+--   Approved Training Centers" and "Passing the Security Knowledge Test … at one of
+--   the Security Training Centers approved by the Agency".
+-- So: a CARD is issued, regulated and verified by SIRA. A COURSE (and the fitness
+-- check) is regulated by SIRA — which approves the centres — but its certificate
+-- comes from the approved centre, named on the document. SIRA is NOT recorded as
+-- the issuer or the trainer of a course, whatever the taxonomy's authority_id says.
 INSERT INTO public.sp_credential_organisation_roles(credential_code,role,authority_id,certification_issuer_id,document_specific,source_url,checked_on)
-SELECT t.code, r.role, a.id, NULL, false,
- CASE WHEN t.category='appointment' THEN 'https://www.sira.gov.ae/en/services/security-cadre-card'
-      ELSE 'https://www.sira.gov.ae/en/information-center/certified-security-training-centers' END,
- DATE '2026-08-22'
+SELECT t.code, r.role, a.id, NULL, false, 'https://www.sira.gov.ae/en/services/security-cadre-card', DATE '2026-09-18'
 FROM public.sp_credential_types t
 CROSS JOIN (VALUES ('regulator'),('issuer'),('verification_authority')) r(role)
 JOIN public.sp_authorities a ON a.code='AE_DU_SIRA'
-WHERE t.market_pack_code='AE-DU'
+WHERE t.market_pack_code='AE-DU' AND t.category='appointment'
 ON CONFLICT (credential_code,role) DO NOTHING;
 
--- A course is delivered by a SIRA-certified training CENTRE, named on the
--- certificate. SIRA regulates the centres; it is not recorded as the trainer.
 INSERT INTO public.sp_credential_organisation_roles(credential_code,role,authority_id,certification_issuer_id,document_specific,source_url,checked_on)
-SELECT t.code,'training_provider',NULL,NULL,true,
- 'https://www.sira.gov.ae/en/information-center/certified-security-training-centers',DATE '2026-08-22'
+SELECT t.code,'regulator',a.id,NULL,false,'https://www.sira.gov.ae/en/services/security-cadre-card',DATE '2026-09-18'
+FROM public.sp_credential_types t JOIN public.sp_authorities a ON a.code='AE_DU_SIRA'
+WHERE t.market_pack_code='AE-DU' AND t.category<>'appointment'
+ON CONFLICT (credential_code,role) DO NOTHING;
+
+INSERT INTO public.sp_credential_organisation_roles(credential_code,role,authority_id,certification_issuer_id,document_specific,source_url,checked_on)
+SELECT t.code, r.role, NULL, NULL, true,
+ 'https://www.sira.gov.ae/en/information-center/certified-security-training-centers', DATE '2026-09-18'
 FROM public.sp_credential_types t
-WHERE t.market_pack_code='AE-DU' AND t.claim_type='training'
+CROSS JOIN (VALUES ('issuer'),('verification_authority'),('training_provider')) r(role)
+WHERE t.market_pack_code='AE-DU' AND t.category<>'appointment'
+  AND (r.role<>'training_provider' OR t.claim_type='training')
 ON CONFLICT (credential_code,role) DO NOTHING;
 
 -- The view must still carry the reloptions the closed catalogue declared, and

@@ -24,6 +24,10 @@ import {
   type CatalogueFilterSource,
   type CatalogueFilterState,
 } from "../src/lib/security-passport/credential-catalogue-filters";
+import {
+  diagnoseDefinition,
+  type DiagnosticDefinition,
+} from "../src/lib/security-passport/catalogue-diagnostics";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const failures: string[] = [];
@@ -475,6 +479,110 @@ console.log("\nthe wizard uses the model, and saves from the definition");
     /if \(authorisation_scope\?\.trim\(\)\) input\.authorisation_scope/.test(fn) &&
       /if \(issuer_name\?\.trim\(\)\) input\.issuer_name/.test(fn),
     "the two new RPC keys travel only when they carry a value",
+  );
+}
+
+console.log("\nwhy a definition is, or is not, selectable (the administrator's diagnosis)");
+{
+  const base: DiagnosticDefinition = {
+    code: "X",
+    nameSv: "X",
+    nameEn: "X",
+    claimType: "licence",
+    category: "appointment",
+    scopeCode: "national_regulated",
+    marketPackCode: "GB",
+    jurisdictionCode: "GB",
+    subJurisdictionCode: null,
+    isActive: false,
+    pilotState: "internal_pilot",
+    legalReviewState: "pending",
+    requiresScope: false,
+    deprecated: false,
+    governedAuthority: "Security Industry Authority",
+    governedCertificationIssuer: null,
+    regulator: "Security Industry Authority",
+    issuerStatedOnDocument: false,
+    trainingProviderStatedOnDocument: false,
+    jurisdictionActive: true,
+    packIsActive: false,
+    packPilotState: "internal_pilot",
+    review: { sourceUrl: "https://example.invalid", checkedOn: "2026-08-22" },
+  };
+  const pilotUnapproved = diagnoseDefinition(base);
+  check(
+    pilotUnapproved.availability === "awaiting_definition_approval" &&
+      pilotUnapproved.reasons.includes("definition_not_approved") &&
+      pilotUnapproved.reasons.includes("market_pilot_members_only"),
+    "D an unapproved pilot definition awaits approval, and approval and entitlement are named separately",
+  );
+  check(
+    diagnoseDefinition({ ...base, isActive: true }).availability === "selectable_pilot_members",
+    "D once approved it is selectable by pilot members only, never by everyone",
+  );
+  check(
+    diagnoseDefinition({ ...base, isActive: true, packPilotState: "closed" }).availability ===
+      "market_closed",
+    "D an approved definition in a closed market stays closed: approval does not open a market",
+  );
+  check(
+    diagnoseDefinition({
+      ...base,
+      governedAuthority: null,
+      issuerStatedOnDocument: true,
+      isActive: true,
+      packIsActive: true,
+    }).holderMustState.join() === "issuer_name",
+    "D a document-stated issuer under a governed regulator is resolved, and the holder must name it",
+  );
+  check(
+    diagnoseDefinition({
+      ...base,
+      governedAuthority: null,
+      regulator: null,
+      isActive: true,
+      packIsActive: true,
+    }).availability === "blocked",
+    "D with no governed issuer and no governed regulator the definition is blocked, not quietly listed",
+  );
+  check(
+    diagnoseDefinition({ ...base, requiresScope: true }).holderMustState.includes(
+      "authorisation_scope",
+    ) && !diagnoseDefinition({ ...base, requiresScope: true }).reasons.some((r) => /scope/.test(r)),
+    "D a required scope is a holder contract, never a reason a definition is unavailable",
+  );
+}
+
+console.log("\nthe administrator's diagnosis is authorised server-side and reads nothing personal");
+{
+  const admin = readFileSync(
+    path.join(root, "src/lib/job-intelligence/admin-passport-catalogue.functions.ts"),
+    "utf8",
+  );
+  const handler = admin.slice(admin.indexOf("export const adminListPassportCatalogue"));
+  const gate = handler.indexOf("await assertAdmin(ctx);");
+  const service = handler.indexOf("@/integrations/supabase/client.server");
+  check(
+    /\.middleware\(\[requireSupabaseAuth\]\)/.test(handler) && gate > 0 && service > gate,
+    "A the platform-admin check runs on the server BEFORE the service-role client is even imported",
+  );
+  check(
+    /rpc\("is_platform_admin"/.test(admin) && /FORBIDDEN_ADMIN_REQUIRED/.test(admin),
+    "A the check is the database's is_platform_admin, and a non-administrator is refused",
+  );
+  const tables = [...handler.matchAll(/\.from\("([a-z_]+)"\)/g)].map((m) => m[1]);
+  check(
+    tables.length === 10 &&
+      tables.every((t) =>
+        /^sp_(credential_types|market_packs|authorities|certification_definitions|certification_issuers|credential_organisation_roles|credential_definition_reviews|credential_definition_metadata|jurisdictions|sub_jurisdictions)$/.test(
+          t,
+        ),
+      ),
+    "A it reads ten CATALOGUE tables and no holder table: no claim, profile, evidence or pilot-member row",
+  );
+  check(
+    !/\.(insert|update|upsert|delete)\(/.test(handler) && !/\.rpc\("sp_/.test(handler),
+    "A it writes nothing and calls no Passport RPC: approval stays a reviewed migration",
   );
 }
 

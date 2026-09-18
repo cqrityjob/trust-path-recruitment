@@ -181,6 +181,13 @@ for passport_round in before after; do
     du_roles="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM public.sp_credential_organisation_roles r JOIN public.sp_credential_types t ON t.code = r.credential_code WHERE t.market_pack_code = 'AE-DU'")"
     [ "$du_roles" = "0" ] || { echo "FAIL: 20261126090000 rollback left $du_roles Dubai organisation-role rows"; exit 1; }
     echo "    ok  catalogue-completeness rollback stood down: scoped definitions withheld, no scope key, no Dubai role rows"
+    # DEPLOYMENT COMPATIBILITY: this is the database the owner project has BEFORE
+    # 20261126090000. The new application must not be able to lose a required
+    # scope or issuer against it: the old RPC refuses such a request whole.
+    compat_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_catalogue_old_rpc_compat_test.sql 2>&1)" || { echo "$compat_output"; exit 1; }
+    compat_count="$(printf '%s\n' "$compat_output" | grep -c 'NOTICE:  ok ' || true)"
+    [ "$compat_count" -ge 5 ] || { echo "old-RPC compatibility assertion shortfall: $compat_count"; exit 1; }
+    echo "    $compat_count assertions passed: new application against the OLD save RPC (nothing silently discarded)"
     # The two pilot-finish rollbacks go first, and must STAND THE CHANGE DOWN,
     # not merely run: no pilot membership in the catalogue view, no scope_code
     # in the payload. Checked HERE, before 20261121090000's rollback drops the

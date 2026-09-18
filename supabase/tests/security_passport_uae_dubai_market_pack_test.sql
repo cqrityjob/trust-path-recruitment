@@ -73,12 +73,12 @@ BEGIN
   DELETE FROM public.sp_claims WHERE holder_user_id=_h AND credential_code='AE_DU_SIRA_CARD_GUARD' AND authorisation_scope='Candidate company';
   RAISE NOTICE 'ok  2.0b with its company the card is stored, in Dubai, under SIRA';
   INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name,valid_until)
-  SELECT _h,claim_type,name_en,code,country,region,issuer_name,current_date+700 FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
+  SELECT _h,claim_type,name_en,code,country,region,'Fiktivt Training Centre LLC',current_date+700 FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
   IF NOT FOUND THEN RAISE EXCEPTION 'ASSERTION FAILED: approved regional training unavailable'; END IF;
   RAISE NOTICE 'ok  2.1 POSITIVE CONTROL approved Dubai training records with its governed emirate and issuer';
   BEGIN
     INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name)
-    SELECT _h,claim_type,name_en,code,country,issuer_name FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
+    SELECT _h,claim_type,name_en,code,country,'Fiktivt Training Centre LLC' FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
     RAISE EXCEPTION 'ASSERTION FAILED: missing emirate accepted';
   EXCEPTION WHEN check_violation THEN
     IF SQLERRM<>'SP_GOVERNED_METADATA_IMMUTABLE' THEN RAISE; END IF;
@@ -87,7 +87,7 @@ BEGIN
   FOR _txt IN SELECT code FROM public.sp_sub_jurisdictions WHERE jurisdiction_code='AE' AND code<>'AE-DU' LOOP
     BEGIN
       INSERT INTO public.sp_claims(holder_user_id,claim_type,title,credential_code,jurisdiction_code,sub_jurisdiction_code,claimed_issuer_name)
-      SELECT _h,claim_type,name_en,code,country,_txt,issuer_name FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
+      SELECT _h,claim_type,name_en,code,country,_txt,'Fiktivt Training Centre LLC' FROM public.sp_approved_credential_catalogue WHERE code='AE_DU_SIRA_GUARD_COURSE';
       RAISE EXCEPTION 'ASSERTION FAILED: wrong emirate accepted';
     EXCEPTION WHEN check_violation THEN
       IF SQLERRM<>'SP_GOVERNED_METADATA_IMMUTABLE' THEN RAISE; END IF;

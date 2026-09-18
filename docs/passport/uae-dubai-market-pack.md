@@ -46,6 +46,14 @@ SIRA requires training before it issues a card. Somebody with the courses and
 no card is **not licensed to work**, and with only a card credential available
 would have had nothing truthful to record.
 
+> **The table below is the FIRST nine.** `20260914091000_sp_uae_dubai_cadre_catalogue`
+> completed the catalogue to **fifteen cadre cards and fifteen training credentials**
+> (thirty definitions). The authoritative, code-by-code list — with each
+> definition's regulator, issuer, approval state and source — is
+> [catalogue-coverage-matrix.md](catalogue-coverage-matrix.md). Since
+> `20261126090000` every cadre card is expressible in the closed catalogue with
+> its company as a required scope; none is approved.
+
 | Code                            | Category      | Contributes to     |
 | ------------------------------- | ------------- | ------------------ |
 | `AE_DU_SIRA_CARD_GUARD`         | appointment   | eligibility, title |

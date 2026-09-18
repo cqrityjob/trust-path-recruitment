@@ -16,6 +16,8 @@ import { runControls, type Mutation } from "./runner";
 const MODEL = "src/lib/security-passport/credential-catalogue-filters.ts";
 const FORM = "src/components/security-passport/InternationalCredentialForm.tsx";
 const FN = "src/lib/security-passport/international.functions.ts";
+const DIAG = "src/lib/security-passport/catalogue-diagnostics.ts";
+const ADMIN = "src/lib/job-intelligence/admin-passport-catalogue.functions.ts";
 const GUARD = "passport-catalogue-filter:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -106,6 +108,36 @@ const MUTATIONS: readonly Mutation[] = [
     replace: '    input.authorisation_scope = authorisation_scope ?? "";',
     guard: GUARD,
     expect: "the two new RPC keys travel only when they carry a value",
+  },
+  {
+    id: "PCF-NC-APPROVAL-OPENS-A-PILOT-MARKET",
+    defect:
+      "the administrator's diagnosis reports an approved pilot definition as selectable by everyone, merging definition approval with market entitlement",
+    file: DIAG,
+    find: '          ? "selectable_pilot_members"',
+    replace: '          ? "selectable"',
+    guard: GUARD,
+    expect: "D once approved it is selectable by pilot members only",
+  },
+  {
+    id: "PCF-NC-UNRESOLVED-ISSUER-LISTED",
+    defect:
+      "a definition with neither a governed issuer nor a governed regulator is reported as selectable instead of blocked",
+    file: DIAG,
+    find: '  if (!issuerResolved) reasons.push("issuer_unresolved");',
+    replace: "  void issuerResolved;",
+    guard: GUARD,
+    expect: "D with no governed issuer and no governed regulator the definition is blocked",
+  },
+  {
+    id: "PCF-NC-DIAGNOSIS-WITHOUT-ADMIN-CHECK",
+    defect:
+      "the catalogue diagnosis reaches for the service-role client without first proving the caller is a platform administrator",
+    file: ADMIN,
+    find: "    const ctx = context as Ctx;\n    await assertAdmin(ctx);\n    // Service role AFTER the admin check",
+    replace: "    const ctx = context as Ctx;\n    // Service role AFTER the admin check",
+    guard: GUARD,
+    expect: "A the platform-admin check runs on the server BEFORE the service-role client",
   },
 ];
 
