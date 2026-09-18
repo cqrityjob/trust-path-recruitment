@@ -34,9 +34,91 @@ const FRONTIER = "scripts/release-frontier-check.ts";
 const PKG = "package.json";
 const CI = ".github/workflows/ci.yml";
 
+const CB_MIG = "supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql";
+
 const GUARD = "beskt-report-independence:check";
 
 const MUTATIONS: readonly Mutation[] = [
+  // ---- The interview-case candidate binding (20261128090000) --------------
+  {
+    id: "CBD-NC-APPLICANT-CHECK-REMOVED",
+    defect:
+      "THE ORIGINAL DEFECT: the applicant comparison is gone, so any account can be bound to a case on the employer's own application",
+    file: CB_MIG,
+    find: "            AND a.applicant_user_id = _candidate_user_id) THEN",
+    replace: "            AND true) THEN",
+    guard: GUARD,
+    expect:
+      "CANDIDATE-BINDING: the account must be the applicant of an application of THIS employer",
+  },
+  {
+    id: "CBD-NC-NO-APPLICATION-ALLOWED",
+    defect: "a candidate account with no application is accepted again",
+    file: CB_MIG,
+    find: "    IF _application_id IS NULL THEN\n      RAISE EXCEPTION 'SCP_IV_CANDIDATE_REQUIRES_APPLICATION",
+    replace: "    IF false THEN\n      RAISE EXCEPTION 'SCP_IV_CANDIDATE_REQUIRES_APPLICATION",
+    guard: GUARD,
+    expect: "CANDIDATE-BINDING: a candidate account with no application is refused",
+  },
+  {
+    id: "CBD-NC-EMPLOYER-SCOPE-DROPPED",
+    defect:
+      "the applicant is matched on any employer's application, so a member binds another employer's applicant",
+    file: CB_MIG,
+    find: "            AND a.employer_id = _employer_id\n            AND a.applicant_user_id = _candidate_user_id) THEN",
+    replace: "            AND a.applicant_user_id = _candidate_user_id) THEN",
+    guard: GUARD,
+    expect:
+      "CANDIDATE-BINDING: the account must be the applicant of an application of THIS employer",
+  },
+  {
+    id: "CBD-NC-OLDER-BODY-COPIED",
+    defect:
+      "the migration carries an older body without the start-basis rule, re-introducing an earlier defect",
+    file: CB_MIG,
+    find: "  _basis := public.scp_iv_case_start_basis(_employer_id, _pack_version_id, auth.uid());",
+    replace: "  _basis := 'published';",
+    guard: GUARD,
+    expect:
+      "CANDIDATE-BINDING: every later rule of the function is kept, and the employer check still comes first",
+  },
+  {
+    id: "CBD-NC-PRECONDITION-REMOVED",
+    defect: "the migration no longer refuses to overwrite a newer definition",
+    file: CB_MIG,
+    find: "  IF _md5 <> '24cfc8e7f612df1cb3bd6e97af6e805a' THEN",
+    replace: "  IF false THEN",
+    guard: GUARD,
+    expect: "CANDIDATE-BINDING: the migration refuses to overwrite any body but the one it extends",
+  },
+  {
+    id: "CBD-NC-PR2-REAPPLY-BURIES-RULE",
+    defect:
+      "db:test stops putting the binding back after BESKT PR 2's re-apply, so the replayed function silently loses it",
+    file: DB,
+    find: '  echo "FAIL: BESKT PR 2 was re-applied and the interview-case candidate binding did NOT come back with it." >&2',
+    replace: '  echo "FAIL: pr2." >&2',
+    guard: GUARD,
+    expect: "CANDIDATE-BINDING: after BESKT PR 2's re-apply the rule is put back on top and proved",
+  },
+  {
+    id: "CBD-NC-SUITE-SHRINK",
+    defect: "a shrunk candidate binding suite is tolerated",
+    file: DB,
+    find: 'if [ "$CBD_PASSED" -lt 18 ]; then',
+    replace: 'if [ "$CBD_PASSED" -lt 0 ]; then',
+    guard: GUARD,
+    expect: "CANDIDATE-BINDING: db:test runs the suite and refuses a shrunk or failed one",
+  },
+  {
+    id: "CBD-NC-FRONTIER-SILENT",
+    defect: "the pending migration disappears from the frontier's expected list",
+    file: FRONTIER,
+    find: '  "20261128090000_scp_iv_case_candidate_binding.sql",\n',
+    replace: "",
+    guard: GUARD,
+    expect: "CANDIDATE-BINDING: the frontier expects it pending",
+  },
   // ---- The authorisation computation itself -------------------------------
   {
     id: "RIB-NC-INDEPENDENCE-REMOVED",

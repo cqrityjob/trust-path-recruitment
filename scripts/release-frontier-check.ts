@@ -141,9 +141,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // never in the pull request that merely merges it. An applied migration left
 // here would mask the next genuinely stuck one, and a pending migration
 // missing from here is exactly the silence this check exists to break.
+//
+// 20261128090000_scp_iv_case_candidate_binding rides the same security PR
+// (#266) and is pending for the same reason: scp_iv_create_case never checked
+// the candidate account it was given. Its name comes OFF this list in the
+// change that records its hosted evidence, never before.
 const expectedPending: string[] = [
   "20261126090000_sp_catalogue_scope_and_document_issuer.sql",
   "20261127090000_bcp_conduct_report_independence_boundary.sql",
+  "20261128090000_scp_iv_case_candidate_binding.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

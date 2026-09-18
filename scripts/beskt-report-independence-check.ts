@@ -467,6 +467,85 @@ check(
 );
 
 /* ================================================================== */
+// The second fix in this PR: scp_iv_create_case binds a candidate ACCOUNT only
+// as the bound application's applicant (20261128090000).
+const CB_NAME = "20261128090000_scp_iv_case_candidate_binding.sql";
+const CB_MIGRATION = `supabase/migrations/${CB_NAME}`;
+const CB_ROLLBACK = "supabase/rollback/20261128090000_scp_iv_case_candidate_binding_rollback.sql";
+const CB_SUITE = "supabase/tests/scp_iv_case_candidate_binding_test.sql";
+const cbMigration = existsSync(join(ROOT, CB_MIGRATION)) ? read(CB_MIGRATION) : "";
+/** scp_iv_create_case closes with `END; $$;` on one line, so it has its own extractor. */
+function createCaseBody(src: string): string {
+  const m = /CREATE OR REPLACE FUNCTION public\.scp_iv_create_case\s*\([\s\S]*?END; \$\$;/.exec(
+    src,
+  );
+  return m ? sql(m[0]) : "";
+}
+const cbBody = createCaseBody(cbMigration);
+const cbRollbackBody = existsSync(join(ROOT, CB_ROLLBACK)) ? createCaseBody(read(CB_ROLLBACK)) : "";
+
+check(
+  /IF _candidate_user_id IS NOT NULL THEN\s+IF _application_id IS NULL THEN\s+RAISE EXCEPTION 'SCP_IV_CANDIDATE_REQUIRES_APPLICATION/.test(
+    cbBody,
+  ),
+  "CANDIDATE-BINDING: a candidate account with no application is refused",
+);
+check(
+  /WHERE a\.id = _application_id\s+AND a\.employer_id = _employer_id\s+AND a\.applicant_user_id = _candidate_user_id\) THEN\s+RAISE EXCEPTION 'SCP_IV_CANDIDATE_NOT_APPLICANT/.test(
+    cbBody,
+  ),
+  "CANDIDATE-BINDING: the account must be the applicant of an application of THIS employer",
+);
+check(
+  cbBody.indexOf("SCP_IV_CROSS_TENANT_APPLICATION") > -1 &&
+    cbBody.indexOf("SCP_IV_CROSS_TENANT_APPLICATION") <
+      cbBody.indexOf("SCP_IV_CANDIDATE_NOT_APPLICANT") &&
+    /scp_iv_case_start_basis/.test(cbBody) &&
+    /SCP_IV_PACK_KIND_NOT_STARTABLE/.test(cbBody),
+  "CANDIDATE-BINDING: every later rule of the function is kept, and the employer check still comes first",
+);
+check(
+  /md5\(p\.prosrc\)/.test(sql(cbMigration)) &&
+    /_md5 <> '24cfc8e7f612df1cb3bd6e97af6e805a'/.test(sql(cbMigration)),
+  "CANDIDATE-BINDING: the migration refuses to overwrite any body but the one it extends",
+);
+check(
+  /REVOKE ALL ON FUNCTION public\.scp_iv_create_case\([^)]*\)\s+FROM PUBLIC, anon;/.test(
+    cbMigration,
+  ) && /SCP_IV_CANDIDATE_BINDING_PROOF ok/.test(cbMigration),
+  "CANDIDATE-BINDING: grants re-stated and a postflight proves the rule",
+);
+check(
+  cbRollbackBody !== "" && !/SCP_IV_CANDIDATE_NOT_APPLICANT/.test(cbRollbackBody),
+  "CANDIDATE-BINDING: the rollback restores the body without the rule",
+);
+const dbTestCb = read(DB_TEST);
+check(
+  dbTestCb.includes(CB_SUITE) &&
+    /if \[ "\$CBD_PASSED" -lt 18 \]; then/.test(dbTestCb) &&
+    /suite_failed "Interview-case candidate binding"/.test(dbTestCb),
+  "CANDIDATE-BINDING: db:test runs the suite and refuses a shrunk or failed one",
+);
+check(
+  /BESKT PR 2 was re-applied and the interview-case candidate binding did NOT come back with it/.test(
+    dbTestCb,
+  ) &&
+    /suite_failed "Interview-case candidate binding \(after the BESKT PR 2 re-apply\)"/.test(
+      dbTestCb,
+    ),
+  "CANDIDATE-BINDING: after BESKT PR 2's re-apply the rule is put back on top and proved",
+);
+const cbEntry = state.frontier.find((e) => e.file === CB_NAME);
+check(
+  cbEntry?.hostedState === "pending" && cbEntry?.rollback === CB_ROLLBACK,
+  "CANDIDATE-BINDING: declared pending in release-state.json, with its rollback",
+);
+check(
+  read(FRONTIER).includes(`"${CB_NAME}"`),
+  "CANDIDATE-BINDING: the frontier expects it pending",
+);
+
+/* ================================================================== */
 console.log("");
 if (fails.length > 0) {
   console.error(

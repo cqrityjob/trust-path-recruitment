@@ -3631,6 +3631,67 @@ if [ "$RIB_FAILED" -ne 0 ] || [ "$RIB_RB_FAILED" -ne 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 20261128090000: scp_iv_create_case binds a candidate ACCOUNT only as the
+# bound application's own applicant. Proved through real authenticated
+# sessions: the applicant is accepted; a stranger, another employer's
+# applicant, another employer's application and a user id with no
+# application are each refused; an external reference is unchanged.
+# ---------------------------------------------------------------------------
+echo "==> Running interview-case candidate binding assertions"
+CBD_FAILED=0
+set +e
+CBD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/scp_iv_case_candidate_binding_test.sql 2>&1)"
+CBD_RC=$?
+set -e
+CBD_PASSED="$(echo "$CBD_OUT" | grep -c "ok  " || true)"
+if [ "$CBD_RC" -ne 0 ]; then
+  echo "FAIL: the candidate binding suite exited with code ${CBD_RC}." >&2
+  echo "$CBD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  CBD_FAILED=1
+else
+  echo "    ok  ${CBD_PASSED} candidate binding assertions passed"
+  if [ "$CBD_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 candidate binding assertions, only ${CBD_PASSED} ran." >&2
+    CBD_FAILED=1
+  fi
+fi
+
+# The way back, for real, with the hole PROVED open in between -- a rollback
+# that quietly left the rule in place would otherwise pass -- and then the
+# migration re-applied.
+echo "==> Running interview-case candidate binding rollback and re-apply"
+set +e
+CBD_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261128090000_scp_iv_case_candidate_binding_rollback.sql 2>&1)"
+CBD_RB_RC=$?
+set -e
+CBD_OPEN="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT position('SCP_IV_CANDIDATE_NOT_APPLICANT' in prosrc) = 0 FROM pg_proc WHERE proname = 'scp_iv_create_case';")"
+if [ "$CBD_RB_RC" -ne 0 ] || ! echo "$CBD_RB" | grep -q "SCP_IV_CANDIDATE_BINDING_ROLLBACK ok" || [ "$CBD_OPEN" != "t" ]; then
+  echo "FAIL: the candidate binding rollback did not restore the 20261108090000 body." >&2
+  echo "$CBD_RB" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CBD_FAILED=1
+else
+  echo "    ok  the rollback restores the 20261108090000 body, and the binding rule is measurably gone"
+fi
+set +e
+CBD_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql 2>&1)"
+CBD_RE_RC=$?
+set -e
+if [ "$CBD_RE_RC" -ne 0 ] || ! echo "$CBD_RE" | grep -q "SCP_IV_CANDIDATE_BINDING_PROOF ok"; then
+  echo "FAIL: the candidate binding migration does not re-apply over its rollback." >&2
+  echo "$CBD_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CBD_FAILED=1
+else
+  echo "    ok  and the migration re-applies over it"
+fi
+if [ "$CBD_FAILED" -ne 0 ]; then
+  suite_failed "Interview-case candidate binding"
+fi
+
+# ---------------------------------------------------------------------------
 # Two people press "lock my position" at the same instant, in two real
 # connections. Exactly one lock must land and the other must be refused by
 # name -- not both, not neither, and not a torn row. The suite above runs in
@@ -4129,6 +4190,26 @@ if [ "$BG_RE_RC" -ne 0 ] || ! echo "$BG_RE" | grep -q "BESKT_GOVERNED_CONTENT_PR
   BG_FAILED=1
 else
   echo "    ok  and the BESKT migration re-applies cleanly over the rolled-back state"
+fi
+
+# The BESKT PR 2 rollback restores scp_iv_create_case to its pre-BESKT body,
+# and re-applying PR 2 restores the 20261108090000 body -- WITHOUT the
+# candidate binding. 20261128090000 goes back on top, and the run fails if
+# the binding is not in the body afterwards: the same false-green shape as the
+# report readers above.
+set +e
+CBD_RE2="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql 2>&1)"
+CBD_RE2_RC=$?
+set -e
+CBD_BACK="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT position('SCP_IV_CANDIDATE_NOT_APPLICANT' in prosrc) > 0 FROM pg_proc WHERE proname = 'scp_iv_create_case';")"
+if [ "$CBD_RE2_RC" -ne 0 ] || [ "$CBD_BACK" != "t" ]; then
+  echo "FAIL: BESKT PR 2 was re-applied and the interview-case candidate binding did NOT come back with it." >&2
+  echo "$CBD_RE2" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  suite_failed "Interview-case candidate binding (after the BESKT PR 2 re-apply)"
+else
+  echo "    ok  and the candidate binding is re-applied on top, so scp_iv_create_case still matches the repository"
 fi
 
 # The database ends the BESKT block in the release state: PR 2, then PR 3,

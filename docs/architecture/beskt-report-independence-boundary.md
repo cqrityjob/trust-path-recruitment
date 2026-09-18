@@ -136,3 +136,38 @@ boundary in place would otherwise pass.
 The Report tab already withholds the preview until the workspace reports
 `others_visible`. That was a mitigation, not a boundary, and it stays as
 defence in depth once this migration is applied.
+
+## The second fix in this PR: `scp_iv_create_case` and the candidate account
+
+**Migration:** `supabase/migrations/20261128090000_scp_iv_case_candidate_binding.sql`
+**Rollback:** `supabase/rollback/20261128090000_scp_iv_case_candidate_binding_rollback.sql`
+**Suite:** `supabase/tests/scp_iv_case_candidate_binding_test.sql` (18 assertions)
+
+Found while wiring the BESKT preparation to Intervjuer. The latest effective
+definition of `scp_iv_create_case` is `20261108090000` (not `20260926090000`),
+byte-identical on `main`, on this branch and on `wrygicdfxwjnrugduxnt`
+(md5 of `prosrc` `24cfc8e7…`). It is `SECURITY DEFINER`, granted to
+`authenticated`, and checks membership, an active employer, the pack and that a
+job or application belongs to the employer — but never `_candidate_user_id`.
+
+Proved by calling it as a real employer member: a case bound to a stranger's
+account was created on the member's own application, and with no application
+at all. That stranger then counts as the case's candidate for
+`scp_iv_is_case_candidate`, the candidate's own interview status, and the BESKT
+preparation bridge.
+
+The fix re-creates exactly that function with one rule after the existing
+employer check: a non-NULL `_candidate_user_id` requires an application of the
+same employer whose `applicant_user_id` is that account. A candidate identified
+by an external reference is unchanged. The migration refuses to run over any
+body but the verified `20261108090000` one, so it can never undo a newer
+improvement.
+
+The suite proves, through real authenticated sessions: the applicant is
+accepted; a stranger on the employer's own application, another employer's
+applicant, another employer's application, an employer the caller does not
+belong to, and a user id with no application are each refused and write
+nothing; external references still work with and without an application.
+`db:test` runs the rollback for real with the hole proved open in between, and
+re-applies the rule after BESKT PR 2's own rollback/re-apply, which would
+otherwise leave the unguarded body in place.
