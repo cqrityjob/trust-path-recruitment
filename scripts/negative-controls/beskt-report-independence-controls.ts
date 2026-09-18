@@ -24,8 +24,8 @@
  */
 import { runControls, type Mutation } from "./runner";
 
-const MIG = "supabase/migrations/20261124090000_bcp_conduct_report_independence_boundary.sql";
-const RB = "supabase/rollback/20261124090000_bcp_conduct_report_independence_boundary_rollback.sql";
+const MIG = "supabase/migrations/20261126090000_bcp_conduct_report_independence_boundary.sql";
+const RB = "supabase/rollback/20261126090000_bcp_conduct_report_independence_boundary_rollback.sql";
 const SUITE = "supabase/tests/bcp_conduct_report_independence_test.sql";
 const PR6 = "supabase/tests/bcp_conduct_prompts_and_report_test.sql";
 const DB = "scripts/db-test.sh";
@@ -440,10 +440,10 @@ const MUTATIONS: readonly Mutation[] = [
       "release-state claims the fix is already applied on production when it is not — which would let application code depend on a boundary that is not there",
     file: STATE,
     find:
-      '      "file": "20261124090000_bcp_conduct_report_independence_boundary.sql",\n' +
+      '      "file": "20261126090000_bcp_conduct_report_independence_boundary.sql",\n' +
       '      "hostedState": "pending",',
     replace:
-      '      "file": "20261124090000_bcp_conduct_report_independence_boundary.sql",\n' +
+      '      "file": "20261126090000_bcp_conduct_report_independence_boundary.sql",\n' +
       '      "hostedState": "applied",',
     guard: GUARD,
     expect: "BOUNDARY-RELEASE: and declared PENDING",
@@ -453,10 +453,12 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the pending migration is dropped from the frontier's expected set, so a genuinely stuck migration stops being named out loud",
     file: FRONTIER,
-    // Prettier collapses the one-element array onto a single line, so the
-    // anchor is the whole declaration rather than an indented member.
-    find: 'const expectedPending: string[] = ["20261124090000_bcp_conduct_report_independence_boundary.sql"];',
-    replace: "const expectedPending: string[] = [];",
+    // Removes ONLY this migration's own line, leaving whatever else is
+    // genuinely pending in place. PR #264 put two Passport migrations on this
+    // list as well, so blanking the whole array would have planted three
+    // defects at once and proved nothing about which one the guard noticed.
+    find: '  "20261126090000_bcp_conduct_report_independence_boundary.sql",\n',
+    replace: "",
     guard: GUARD,
     expect: "BOUNDARY-RELEASE: the frontier check expects exactly this pending migration",
   },

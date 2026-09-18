@@ -234,6 +234,12 @@ export interface RecipientClaim {
   readonly verified_at: string | null;
   readonly verifier_organisation: string | null;
   readonly verification_method: string | null;
+  /** The DEFINITION's scope — 'global_professional' or 'national_regulated' —
+   *  from the governed catalogue row, or null when the claim carries no
+   *  governed code. Emitted by sp_credential_payload_v2 since
+   *  20261125090000; absent from older payloads, which a reader must treat
+   *  exactly as null: scope unknown, never guessed. */
+  readonly scope_code?: string | null;
 }
 
 export interface RecipientPeriod {

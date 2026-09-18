@@ -866,16 +866,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the APPLIED migration is put back on the owner-level pending list, where a resolved name hides the next genuinely stuck migration behind an expectation and contradicts release-state.json",
     file: FRONTIER,
-    // Applied now, so the defect inverts: the anchor is the empty list Prettier
-    // produces when nothing is pending.
-    // The anchor used to assume the pending frontier was EMPTY. 20261124090000
-    // (the report independence boundary) is legitimately pending now, so the
-    // control adds the already-applied name ALONGSIDE it rather than
-    // replacing an empty list. The defect is identical: a resolved name on
-    // the owner-level frontier hides the next genuinely stuck migration.
-    find: 'const expectedPending: string[] = ["20261124090000_bcp_conduct_report_independence_boundary.sql"];',
+    // Insert the applied version while preserving genuinely pending migrations.
+    find: "const expectedPending: string[] = [",
     replace:
-      'const expectedPending: string[] = ["20261117090000_bcp_conduct_prompts_and_report.sql", "20261124090000_bcp_conduct_report_independence_boundary.sql"];',
+      'const expectedPending: string[] = ["20261117090000_bcp_conduct_prompts_and_report.sql",',
     guard: GUARD,
     expect: "REPORT-REGISTRATION",
   },

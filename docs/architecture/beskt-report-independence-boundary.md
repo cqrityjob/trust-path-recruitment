@@ -3,8 +3,8 @@
 **Status:** schema fix authored, proved over a replayed schema, **not yet
 applied to production**.
 
-**Migration:** `supabase/migrations/20261124090000_bcp_conduct_report_independence_boundary.sql`
-**Rollback:** `supabase/rollback/20261124090000_bcp_conduct_report_independence_boundary_rollback.sql`
+**Migration:** `supabase/migrations/20261126090000_bcp_conduct_report_independence_boundary.sql`
+**Rollback:** `supabase/rollback/20261126090000_bcp_conduct_report_independence_boundary_rollback.sql`
 **Suite:** `supabase/tests/bcp_conduct_report_independence_test.sql`
 **Guard / controls:** `scripts/beskt-report-independence-check.ts`,
 `scripts/negative-controls/beskt-report-independence-controls.ts`

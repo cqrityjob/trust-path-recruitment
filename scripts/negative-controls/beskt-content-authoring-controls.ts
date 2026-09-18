@@ -667,16 +667,11 @@ const MUTATIONS: readonly Mutation[] = [
     file: FRONTIER,
     // This migration is APPLIED now, so the defect inverts: putting it back
     // on the owner-level pending list would contradict release-state.json,
-    // which records it as applied with hosted evidence. The anchor is the
-    // empty list Prettier produces when nothing is pending.
-    // The anchor used to assume the pending frontier was EMPTY. 20261124090000
-    // (the report independence boundary) is legitimately pending now, so the
-    // control adds the already-applied name ALONGSIDE it rather than
-    // replacing an empty list. The defect is identical: a resolved name on
-    // the owner-level frontier hides the next genuinely stuck migration.
-    find: 'const expectedPending: string[] = ["20261124090000_bcp_conduct_report_independence_boundary.sql"];',
+    // which records it as applied with hosted evidence. Preserve any genuinely
+    // pending migrations when inserting this already-applied version.
+    find: "const expectedPending: string[] = [",
     replace:
-      'const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql", "20261124090000_bcp_conduct_report_independence_boundary.sql"];',
+      'const expectedPending: string[] = ["20261118090000_beskt_governed_content_authoring.sql",',
     guard: GUARD,
     expect: "AUTHORING-REGISTRATION",
   },

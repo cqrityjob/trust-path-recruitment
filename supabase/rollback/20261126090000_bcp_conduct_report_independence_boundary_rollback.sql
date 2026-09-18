@@ -1,4 +1,4 @@
--- ROLLBACK for 20261124090000_bcp_conduct_report_independence_boundary.
+-- ROLLBACK for 20261126090000_bcp_conduct_report_independence_boundary.
 --
 -- Restores bcp_conduct_report_blockers and bcp_conduct_preview_report to the
 -- definitions 20261117090000 shipped: byte-for-byte the bodies this migration

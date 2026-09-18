@@ -24,11 +24,15 @@ import { CredentialScopeLine } from "./CredentialScopeLine";
 import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { EligibilityLine } from "../EligibilityLine";
 import { formatWorkLocation, titleWithJurisdictionOnce } from "@/lib/security-passport/format";
-import { TRUST_PALETTE } from "@/lib/security-passport/design/trust-system";
+import {
+  PASSPORT_CARD_SURFACE,
+  TRUST_PALETTE,
+  passportCardBackground,
+} from "@/lib/security-passport/design/trust-system";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDuration } from "@/lib/security-passport/format";
 import type { RecipientPresentation } from "@/lib/security-passport/recipient-presentation";
-import { BrandMark, EngravedField, EngravedRule, MicroLabel } from "../card/CardPrimitives";
+import { BrandMark, EngravedRule, MicroLabel } from "../card/CardPrimitives";
 import { CredentialSymbol } from "../CredentialSymbol";
 import { CredentialConstellation } from "../CredentialShield";
 import { resolveCredentialScope } from "@/lib/security-passport/credential-shield";
@@ -76,15 +80,15 @@ export function RecipientPassportCard({
   return (
     <article
       className={`relative isolate overflow-hidden rounded-2xl ${className}`}
+      // The ONE card ground (trust-system.ts): the same quiet navy the holder's
+      // own card wears, with no engraving behind the text or the shields.
       style={{
-        background: `linear-gradient(165deg, ${TRUST_PALETTE.navyRaised} 0%, ${TRUST_PALETTE.navy} 38%, ${TRUST_PALETTE.navyDeep} 100%)`,
-        border: `1px solid ${rim}88`,
-        boxShadow: `0 20px 56px -26px rgba(0,0,0,0.8), inset 0 1px 0 ${rimBright}22`,
+        background: passportCardBackground(),
+        border: `1px solid ${PASSPORT_CARD_SURFACE.border}`,
+        boxShadow: PASSPORT_CARD_SURFACE.shadow,
       }}
       aria-label={pt("card.brand")}
     >
-      <EngravedField intensity={0.95} tone={rimBright} />
-
       <div className="relative flex h-full flex-col p-5 sm:p-6">
         {/* ── Identity band ─────────────────────────────────────────── */}
         <header>
@@ -162,8 +166,9 @@ export function RecipientPassportCard({
             this share has no representation on this surface, not even as a
             number. No link on the count — a recipient has nowhere further to
             go. Scope comes from the disclosed jurisdiction; the payload does
-            not say whether a definition is international, so a credential
-            with no jurisdiction wears no scope rather than a guessed globe. */}
+            says whether a definition is international (scope_code, since
+            20261125090000); an older payload does not, and a credential with
+            no stated scope then wears no scope rather than a guessed globe. */}
         {presentation.credentials.length > 0 ? (
           <div className="mt-4 [container-type:inline-size]" data-recipient-shields>
             <CredentialConstellation
@@ -176,8 +181,15 @@ export function RecipientPassportCard({
                 statusWordKey: c.statusWordKey,
                 lifecycle: c.lifecycle,
                 validUntil: c.validUntil,
+                // Global is what the DEFINITION declares, carried in the
+                // payload; a blank jurisdiction on its own resolves to "not
+                // stated", which the shield keeps silent about.
                 scope: resolveCredentialScope(
-                  { jurisdictionCode: c.jurisdiction, subJurisdictionCode: c.subJurisdiction },
+                  {
+                    global: c.definitionScope === "global",
+                    jurisdictionCode: c.jurisdiction,
+                    subJurisdictionCode: c.subJurisdiction,
+                  },
                   lang,
                 ),
               }))}
