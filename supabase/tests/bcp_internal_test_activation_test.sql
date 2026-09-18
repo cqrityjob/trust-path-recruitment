@@ -277,7 +277,7 @@ BEGIN
     'SYNTETISKT installationen är klar');
   RESET ROLE;
   _after := public.scp_has_content_role('b2000000-0000-4000-8000-0000000000f1', 'editor');
-  SELECT count(*) INTO _audit FROM public.beskt_content_role_changes
+  SELECT count(*) INTO _audit FROM public.scp_content_role_changes
    WHERE user_id = 'b2000000-0000-4000-8000-0000000000f1';
   PERFORM pg_temp.ok(_has AND NOT _after, 'IT9.2 a role is granted by e-mail and withdrawn again');
   PERFORM pg_temp.ok(_audit = 2, 'IT9.3 and both changes are in the audit, with who and why');

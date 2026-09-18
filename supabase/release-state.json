@@ -16,7 +16,7 @@
         }, 
         {
           "kind": "table", 
-          "object": "beskt_content_role_changes"
+          "object": "scp_content_role_changes"
         }, 
         {
           "kind": "function", 

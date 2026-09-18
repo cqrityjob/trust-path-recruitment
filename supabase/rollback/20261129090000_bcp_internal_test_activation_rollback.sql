@@ -13,23 +13,6 @@ BEGIN
   END IF;
 END $pre$;
 
-CREATE OR REPLACE FUNCTION public.bcp_party_can_read_method_version(_method_version_id uuid)
- RETURNS boolean
- LANGUAGE sql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-  SELECT auth.uid() IS NOT NULL
-    AND public.bcp_version_is_candidate_safe(_method_version_id)
-    AND EXISTS (
-      SELECT 1 FROM public.bcp_assignments a
-       WHERE a.method_version_id = _method_version_id
-         AND a.lifecycle_state <> 'cancelled'
-         AND (a.candidate_user_id = auth.uid()
-              OR public.has_employer_role(auth.uid(), a.employer_id,
-                                          ARRAY['owner', 'admin', 'member'])));
-$function$;
-
 CREATE OR REPLACE FUNCTION public.bcp_assign(_operation_id uuid, _application_id uuid, _method_version_id uuid, _exposure_profile_id uuid, _expected_content_hash text, _notice_version text, _due_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -159,36 +142,6 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.bcp_assignable_exposure_profiles(_employer_id uuid, _method_version_id uuid)
- RETURNS TABLE(exposure_profile_id uuid, profile_key text, display_order integer, exposure_area text, duties_sv text, duties_en text, role_relevance_rationale_sv text, role_relevance_rationale_en text, retention_class text, candidate_item_count integer)
- LANGUAGE plpgsql
- STABLE SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-BEGIN
-  IF auth.uid() IS NULL
-     OR NOT public.has_employer_role(auth.uid(), _employer_id, ARRAY['owner', 'admin', 'member'])
-     OR NOT coalesce(public.employer_is_active_status(_employer_id), false)
-     OR NOT public.bcp_pilot_grant_active(_employer_id, _method_version_id)
-     OR NOT public.bcp_version_is_candidate_safe(_method_version_id) THEN
-    RETURN;
-  END IF;
-  RETURN QUERY
-    SELECT p.id, p.profile_key, p.display_order, p.exposure_area,
-           p.duties_sv, p.duties_en,
-           p.role_relevance_rationale_sv, p.role_relevance_rationale_en,
-           p.retention_class,
-           (SELECT count(*)::integer FROM public.beskt_items i
-             WHERE i.exposure_profile_id = p.id
-               AND i.phase = 'candidate_preparation'
-               AND i.permitted_mode = 'recruitment_support')
-      FROM public.beskt_exposure_profiles p
-     WHERE p.method_version_id = _method_version_id
-       AND p.permitted_mode = 'recruitment_support'
-     ORDER BY p.display_order, p.profile_key;
-END;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.bcp_assignable_method_versions(_employer_id uuid)
  RETURNS TABLE(method_version_id uuid, pack_id uuid, pack_slug text, name_sv text, name_en text, purpose_sv text, version_number integer, mode text, validation_label text, release_scope text, content_hash text, summary_sv text, summary_en text, grant_expires_on date)
  LANGUAGE plpgsql
@@ -219,8 +172,55 @@ BEGIN
      ORDER BY p.name_sv, v.version_number DESC;
 END;
 $function$;
+
+CREATE OR REPLACE FUNCTION public.bcp_party_can_read_method_version(_method_version_id uuid)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  SELECT auth.uid() IS NOT NULL
+    AND public.bcp_version_is_candidate_safe(_method_version_id)
+    AND EXISTS (
+      SELECT 1 FROM public.bcp_assignments a
+       WHERE a.method_version_id = _method_version_id
+         AND a.lifecycle_state <> 'cancelled'
+         AND (a.candidate_user_id = auth.uid()
+              OR public.has_employer_role(auth.uid(), a.employer_id,
+                                          ARRAY['owner', 'admin', 'member'])));
+$function$;
+
+CREATE OR REPLACE FUNCTION public.bcp_assignable_exposure_profiles(_employer_id uuid, _method_version_id uuid)
+ RETURNS TABLE(exposure_profile_id uuid, profile_key text, display_order integer, exposure_area text, duties_sv text, duties_en text, role_relevance_rationale_sv text, role_relevance_rationale_en text, retention_class text, candidate_item_count integer)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+BEGIN
+  IF auth.uid() IS NULL
+     OR NOT public.has_employer_role(auth.uid(), _employer_id, ARRAY['owner', 'admin', 'member'])
+     OR NOT coalesce(public.employer_is_active_status(_employer_id), false)
+     OR NOT public.bcp_pilot_grant_active(_employer_id, _method_version_id)
+     OR NOT public.bcp_version_is_candidate_safe(_method_version_id) THEN
+    RETURN;
+  END IF;
+  RETURN QUERY
+    SELECT p.id, p.profile_key, p.display_order, p.exposure_area,
+           p.duties_sv, p.duties_en,
+           p.role_relevance_rationale_sv, p.role_relevance_rationale_en,
+           p.retention_class,
+           (SELECT count(*)::integer FROM public.beskt_items i
+             WHERE i.exposure_profile_id = p.id
+               AND i.phase = 'candidate_preparation'
+               AND i.permitted_mode = 'recruitment_support')
+      FROM public.beskt_exposure_profiles p
+     WHERE p.method_version_id = _method_version_id
+       AND p.permitted_mode = 'recruitment_support'
+     ORDER BY p.display_order, p.profile_key;
+END;
+$function$;
 DROP FUNCTION public.beskt_set_content_role(uuid, text, text, boolean, text);
-DROP TABLE public.beskt_content_role_changes;
+DROP TABLE public.scp_content_role_changes;
 DROP FUNCTION public.bcp_internal_test_activations_for(uuid, uuid);
 DROP FUNCTION public.bcp_revoke_internal_test_activation(uuid, uuid, text);
 DROP FUNCTION public.bcp_grant_internal_test_activation(uuid, uuid, uuid, text, date);

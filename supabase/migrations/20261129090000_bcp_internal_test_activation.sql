@@ -50,31 +50,32 @@
 -- beskt_set_content_role lets a platform admin grant or withdraw the
 -- platform content roles (editor, reviewer, publisher) through a governed,
 -- audited RPC, keyed by the person's e-mail. There was no governed path at
--- all; the activation checklist already assumed one.
+-- all; the activation checklist already assumed one. Each change is audited in
+-- scp_content_role_changes.
 -- ===========================================================================
 
 DO $pre$
 DECLARE _n integer; _md5 text;
 BEGIN
   SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
-   WHERE ns.nspname = 'public' AND p.proname = 'bcp_party_can_read_method_version';
-  IF _n <> 1 OR _md5 <> '10873ada27198366eafa06e708fb7edf' THEN
-    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_party_can_read_method_version is not the body this migration extends (count %, md5 %).', _n, _md5;
-  END IF;
-  SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
    WHERE ns.nspname = 'public' AND p.proname = 'bcp_assign';
   IF _n <> 1 OR _md5 <> '17fe1068d9bc3df2bbe8714db5933173' THEN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assign is not the body this migration extends (count %, md5 %).', _n, _md5;
   END IF;
   SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
-   WHERE ns.nspname = 'public' AND p.proname = 'bcp_assignable_exposure_profiles';
-  IF _n <> 1 OR _md5 <> 'd9b541a310219692fe9073c58e25aa07' THEN
-    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assignable_exposure_profiles is not the body this migration extends (count %, md5 %).', _n, _md5;
-  END IF;
-  SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
    WHERE ns.nspname = 'public' AND p.proname = 'bcp_assignable_method_versions';
   IF _n <> 1 OR _md5 <> '000658663cb432406dc1a56128faa796' THEN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assignable_method_versions is not the body this migration extends (count %, md5 %).', _n, _md5;
+  END IF;
+  SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+   WHERE ns.nspname = 'public' AND p.proname = 'bcp_party_can_read_method_version';
+  IF _n <> 1 OR _md5 <> '10873ada27198366eafa06e708fb7edf' THEN
+    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_party_can_read_method_version is not the body this migration extends (count %, md5 %).', _n, _md5;
+  END IF;
+  SELECT count(*), max(md5(p.prosrc)) INTO _n, _md5 FROM pg_proc p JOIN pg_namespace ns ON ns.oid = p.pronamespace
+   WHERE ns.nspname = 'public' AND p.proname = 'bcp_assignable_exposure_profiles';
+  IF _n <> 1 OR _md5 <> 'd9b541a310219692fe9073c58e25aa07' THEN
+    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PRECONDITION: bcp_assignable_exposure_profiles is not the body this migration extends (count %, md5 %).', _n, _md5;
   END IF;
 END $pre$;
 
@@ -363,7 +364,7 @@ GRANT EXECUTE ON FUNCTION public.bcp_internal_test_activations_for(uuid, uuid) T
 
 -- ---- content roles, governed and audited ------------------------------------
 
-CREATE TABLE public.beskt_content_role_changes (
+CREATE TABLE public.scp_content_role_changes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   role text NOT NULL CHECK (role IN ('editor', 'reviewer', 'publisher')),
@@ -373,19 +374,20 @@ CREATE TABLE public.beskt_content_role_changes (
   changed_at timestamptz NOT NULL DEFAULT now(),
   operation_id uuid NOT NULL UNIQUE
 );
-COMMENT ON TABLE public.beskt_content_role_changes IS
+COMMENT ON TABLE public.scp_content_role_changes IS
   'Append-only audit of platform content-role grants and withdrawals made through beskt_set_content_role (20261129090000).';
-ALTER TABLE public.beskt_content_role_changes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.beskt_content_role_changes FORCE ROW LEVEL SECURITY;
-REVOKE ALL ON public.beskt_content_role_changes FROM PUBLIC, anon, authenticated, service_role;
-GRANT SELECT ON public.beskt_content_role_changes TO authenticated, service_role;
-CREATE POLICY beskt_crc_admin_read ON public.beskt_content_role_changes
+-- scp_ domain convention: RLS enabled, not forced (the scp_ domain suite
+-- asserts no scp_ table forces it). No client role holds a write privilege.
+ALTER TABLE public.scp_content_role_changes ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.scp_content_role_changes FROM PUBLIC, anon, authenticated, service_role;
+GRANT SELECT ON public.scp_content_role_changes TO authenticated, service_role;
+CREATE POLICY scp_crc_admin_read ON public.scp_content_role_changes
   FOR SELECT TO authenticated USING (public.is_platform_admin(auth.uid()));
 
 CREATE OR REPLACE FUNCTION public.beskt_set_content_role(
   _operation_id uuid, _email text, _role text, _grant boolean, _reason text)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE _user uuid; _prior public.beskt_content_role_changes%ROWTYPE;
+DECLARE _user uuid; _prior public.scp_content_role_changes%ROWTYPE;
 BEGIN
   IF auth.uid() IS NULL OR NOT public.is_platform_admin(auth.uid()) THEN
     RAISE EXCEPTION 'BESKT_NOT_PLATFORM_ADMIN: only a platform administrator may change content roles.'
@@ -395,7 +397,7 @@ BEGIN
     RAISE EXCEPTION 'BESKT_OPERATION_ID_REQUIRED: every governed mutation names its operation.'
       USING ERRCODE = 'check_violation';
   END IF;
-  SELECT * INTO _prior FROM public.beskt_content_role_changes WHERE operation_id = _operation_id;
+  SELECT * INTO _prior FROM public.scp_content_role_changes WHERE operation_id = _operation_id;
   IF FOUND THEN
     RETURN jsonb_build_object('user_id', _prior.user_id, 'role', _prior.role, 'action', _prior.action, 'replayed', true);
   END IF;
@@ -416,7 +418,7 @@ BEGIN
   ELSE
     DELETE FROM public.scp_content_roles WHERE user_id = _user AND role = _role;
   END IF;
-  INSERT INTO public.beskt_content_role_changes (user_id, role, action, reason, changed_by, operation_id)
+  INSERT INTO public.scp_content_role_changes (user_id, role, action, reason, changed_by, operation_id)
   VALUES (_user, _role, CASE WHEN _grant THEN 'granted' ELSE 'withdrawn' END, btrim(_reason), auth.uid(), _operation_id);
   RETURN jsonb_build_object('user_id', _user, 'role', _role,
     'action', CASE WHEN _grant THEN 'granted' ELSE 'withdrawn' END, 'replayed', false);
@@ -696,13 +698,13 @@ BEGIN
   IF has_table_privilege('authenticated', 'public.bcp_internal_test_activations', 'INSERT')
      OR has_table_privilege('service_role', 'public.bcp_internal_test_activations', 'INSERT')
      OR has_table_privilege('anon', 'public.bcp_internal_test_activations', 'SELECT')
-     OR has_table_privilege('anon', 'public.beskt_content_role_changes', 'SELECT')
-     OR has_table_privilege('authenticated', 'public.beskt_content_role_changes', 'INSERT') THEN
+     OR has_table_privilege('anon', 'public.scp_content_role_changes', 'SELECT')
+     OR has_table_privilege('authenticated', 'public.scp_content_role_changes', 'INSERT') THEN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PROOF: a client role can write, or anon can read, a new table.';
   END IF;
   IF NOT (SELECT relforcerowsecurity FROM pg_class WHERE oid = 'public.bcp_internal_test_activations'::regclass)
-     OR NOT (SELECT relforcerowsecurity FROM pg_class WHERE oid = 'public.beskt_content_role_changes'::regclass) THEN
-    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PROOF: FORCE ROW LEVEL SECURITY is missing.';
+     OR NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.scp_content_role_changes'::regclass) THEN
+    RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PROOF: row level security is missing on a new table.';
   END IF;
   IF EXISTS (SELECT 1 FROM public.bcp_internal_test_activations) THEN
     RAISE EXCEPTION 'BCP_TEST_ACTIVATION_PROOF: the migration must seed nothing.';
