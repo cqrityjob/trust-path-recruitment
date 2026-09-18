@@ -19,10 +19,11 @@ OV, SV, personalgodkännande) och alla 14 internationella certifieringar.
 **Storbritannien, Nordirland och Dubai** kräver dessutom två separata beslut per testare/definition:
 
 1. **Pilotåtkomst** för den namngivna testaren (admin → användarens sida → *Pilotåtkomst*).
-2. **Godkännande av definitionen** (`is_active`), per definition, genom granskad migration.
-   Ingen av de 44 definitionerna är godkänd. Exakt lista med källor:
-   [catalogue-coverage-matrix.md](catalogue-coverage-matrix.md), avsnittet *Outstanding approval
-   decisions*. Medlemskap öppnar en marknad men godkänner ingen definition.
+2. **Ägarens beslut om de 44 definitionerna.** Ingen av dem är valbar i dag. Ägarens
+   godkännande för pilottest finns redan registrerat per definition (`pilot_state`), men den slutna
+   katalogen läser `is_active`. Vilken väg som gäller, vem som beslutar och exakt releaseåtgärd
+   står i [pilot-approval-decisions.md](pilot-approval-decisions.md), med alla 44 definitioner per
+   marknad och källa. Medlemskap öppnar en marknad men godkänner ingen definition.
 
 Utan båda ser testaren en **tom** brittisk eller dubaisk katalog. Det är avsett, inte ett fel.
 Abu Dhabi är stängt och erbjuds ingen.
@@ -61,7 +62,8 @@ Abu Dhabi är stängt och erbjuds ingen.
 - [ ] Dubai: land *Förenade Arabemiraten*, regionfilter *Dubai* (valfritt sökfilter, inte förvalt).
       Välj ett **SIRA-kort**: fältet **Licensierat företag som kortet är knutet till** är obligatoriskt.
       Spara, ladda om: *Dubai* och företaget finns kvar.
-- [ ] En **SIRA-kurs** är en egen merit. Att en kurs går att spara säger ingenting om kortet.
+- [ ] En **SIRA-kurs** är en egen merit: ange utbildningscentret som står på intyget. Att en kurs
+      går att spara säger ingenting om kortet.
 
 ## Underlag, granskning och delning
 
@@ -75,7 +77,7 @@ Abu Dhabi är stängt och erbjuds ingen.
 ## Kända begränsningar att rapportera, inte felanmäla
 
 - Dubai: arabiska namn saknas på alla definitioner, och SIRA:s portal har aldrig svarat källkontrollen.
-- Dubai: för fyra generella utbildningar (brand, HLR, People of Determination, fitness) är frågan om
-  vem som faktiskt utfärdar intyget öppen för granskaren. Ingen utfärdare har hittats på.
+- Dubai: ett SIRA-kort utfärdas av SIRA och är knutet till företaget. En kurs certifieras av ett
+  SIRA-godkänt utbildningscenter som du själv anger; SIRA kan inte anges som kursutfärdare.
 - Sverige är `grandfathered`, inte `approved`: samma juridiska granskningsskuld kvarstår.
 - Yrkesväljaren i profilen visas först efter att arbetsstatus valts (”Var är du i dag?”).
