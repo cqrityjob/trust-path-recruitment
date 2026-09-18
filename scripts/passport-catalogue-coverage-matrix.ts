@@ -196,7 +196,7 @@ ${pending
   (2026-09-18). \`sira.gov.ae/en/services/security-cadre-card\` presents the Security Cadre Card
   as a SIRA service and requires "completion of the … course from Approved Training Centers"
   and a knowledge test "at one of the Security Training Centers approved by the Agency". So a
-  **card** is issued, regulated and verified by SIRA; a **course or check** is regulated by SIRA
+  **card** is issued and regulated by SIRA, the authority recorded for checking it; a **course or check** is regulated by SIRA
   but its certificate comes from the approved centre, which the holder names. SIRA is recorded as
   the issuer of no course, although the taxonomy's \`authority_id\` names it on every Dubai row.
   What the source does NOT state is who issues the fitness, fire-safety and life-support

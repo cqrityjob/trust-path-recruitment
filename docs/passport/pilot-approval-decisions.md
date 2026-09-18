@@ -109,7 +109,7 @@ that — and only then — the definition is selectable and saveable by that tes
 | `UK_SIA_QUAL_CVIT` | Licence-linked qualification — Cash and Valuables in Transit | training | Security Industry Authority | stated on the certificate |  | https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence (2026-09-16) |
 | `UK_SIA_TOP_UP` | SIA top-up / refresher training | training | Security Industry Authority | stated on the certificate |  | https://www.gov.uk/guidance/check-what-training-you-need-to-get-an-sia-licence (2026-09-16) |
 
-Licences are issued, regulated and verified by the SIA. The six qualifications and top-up
+Licences are issued and regulated by the SIA, the authority recorded for checking them. The six qualifications and top-up
 training are regulated by the SIA and awarded by an awarding organisation through an approved
 training provider, **stated on the certificate**; the SIA delivers no training. Standing caveat:
 the four ICO sources must be re-read on the implementation date (Data (Use and Access) Act).
