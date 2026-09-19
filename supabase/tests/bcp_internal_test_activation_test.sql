@@ -307,9 +307,14 @@ BEGIN
     'IT10.1 anon reaches nothing, and the predicates are internal');
   -- The interviewer's wordings follow the party read: the activation that
   -- COVERED the started content, with the assignment's own pinned hash.
+  -- Since 20261201090000 that check lives in bcp_offer_content_covers, which
+  -- the wordings call with the same pinned hash; the covering activation is
+  -- still one of its three admissions, and the ACTIVE check is still absent.
   PERFORM pg_temp.ok(
-    position('bcp_internal_test_activation_covers(_a.employer_id, _v.id' IN
+    position('bcp_offer_content_covers(_a.employer_id, _v.id' IN
              (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts')) > 0
+    AND position('bcp_internal_test_activation_covers(_employer_id, _method_version_id' IN
+             (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_offer_content_covers')) > 0
     AND position('_a.pinned_content_hash' IN
              (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_topic_prompts')) > 0
     AND position('bcp_internal_test_activation_active' IN

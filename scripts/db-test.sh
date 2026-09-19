@@ -315,8 +315,10 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + 3 TRUST conduct layer: the six-step conduct sequence, the named prohibited
 #   techniques, and the Target/Ready/Trace guidance. Deterministic governed
 #   content read by a human -- the Understand stage still permits zero AI tasks.
-if [ "$SCP_TABLES" -ne 127 ]; then
-  echo "FAIL: expected 127 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit), found $SCP_TABLES" >&2
+# + scp_recruitment_setups: the library choice (method, role group, role
+#   profile, work environment) a case or BESKT assignment was started with.
+if [ "$SCP_TABLES" -ne 128 ]; then
+  echo "FAIL: expected 128 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit + 1 recruitment setup), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -3734,6 +3736,22 @@ fi
 # meaning. Its rollback runs before 20261129090000's, because that one
 # restores functions this one extends.
 # ---------------------------------------------------------------------------
+echo "==> Standing 20261201090000 down before the 20261130090000 cycles"
+LD_FAILED=0
+# 20261201090000 re-creates functions 20261130090000 created and changes the
+# listing's return type, so 20261130's rollback cannot run beneath it. It is
+# rolled back here and cycled on its own below, over the re-applied 20261130.
+set +e
+LD_DOWN="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261201090000_scp_library_direct_access_rollback.sql 2>&1)"
+LD_DOWN_RC=$?
+set -e
+if [ "$LD_DOWN_RC" -ne 0 ] || ! echo "$LD_DOWN" | grep -q "SCP_LIBRARY_ROLLBACK ok"; then
+  echo "FAIL: 20261201090000 could not be stood down." >&2
+  echo "$LD_DOWN" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  LD_FAILED=1
+fi
+
 echo "==> Re-synchronising 20261130090000 after the earlier rollback cycles"
 BC_FAILED=0
 # The 20261127 and 20261128 cycles above restore and re-apply functions this
@@ -3830,6 +3848,76 @@ else
 fi
 if [ "$BC_FAILED" -ne 0 ]; then
   suite_failed "BESKT complete product"
+fi
+
+# ---------------------------------------------------------------------------
+# 20261201090000: the library's direct access. Proved through real sessions:
+# a NEW active organisation and an EXISTING one reach published content, and
+# content the publisher made available, with no grant, activation, content
+# role or install of their own; a pending organisation and another
+# organisation reach nothing; availability is governed, idempotent and frozen
+# and reviews nothing; withdrawal stops new starts but not started work; the
+# security function still owns a vetting; and the recruitment setup is
+# recorded once, readable only where its case or assignment is.
+# ---------------------------------------------------------------------------
+echo "==> Applying the library's direct access over 20261130090000"
+set +e
+LD_UP="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261201090000_scp_library_direct_access.sql 2>&1)"
+LD_UP_RC=$?
+set -e
+if [ "$LD_UP_RC" -ne 0 ] || ! echo "$LD_UP" | grep -q "SCP_LIBRARY_DIRECT_ACCESS_PROOF ok"; then
+  echo "FAIL: 20261201090000 does not apply over 20261130090000." >&2
+  echo "$LD_UP" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  LD_FAILED=1
+fi
+echo "==> Running library direct-access assertions"
+set +e
+LD_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/scp_library_direct_access_test.sql 2>&1)"
+LD_RC=$?
+set -e
+LD_PASSED="$(echo "$LD_OUT" | grep -c "ok  " || true)"
+if [ "$LD_RC" -ne 0 ]; then
+  echo "FAIL: the library direct-access suite exited with code ${LD_RC}." >&2
+  echo "$LD_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  LD_FAILED=1
+else
+  echo "    ok  ${LD_PASSED} library direct-access assertions passed"
+  if [ "$LD_PASSED" -lt 34 ]; then
+    echo "FAIL: expected at least 34 library direct-access assertions, only ${LD_PASSED} ran." >&2
+    LD_FAILED=1
+  fi
+fi
+echo "==> Running library direct-access rollback and re-apply"
+set +e
+LD_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261201090000_scp_library_direct_access_rollback.sql 2>&1)"
+LD_RB_RC=$?
+set -e
+LD_GONE="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT to_regclass('public.scp_recruitment_setups') IS NULL AND position('bcp_pilot_grant_active' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_check_start')) > 0;")"
+if [ "$LD_RB_RC" -ne 0 ] || ! echo "$LD_RB" | grep -q "SCP_LIBRARY_ROLLBACK ok" || [ "$LD_GONE" != "t" ]; then
+  echo "FAIL: the library direct-access rollback did not restore the previous gates." >&2
+  echo "$LD_RB" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  LD_FAILED=1
+else
+  echo "    ok  the rollback restores every gate exactly, and the per-employer grant is required again"
+fi
+set +e
+LD_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261201090000_scp_library_direct_access.sql 2>&1)"
+LD_RE_RC=$?
+set -e
+if [ "$LD_RE_RC" -ne 0 ] || ! echo "$LD_RE" | grep -q "SCP_LIBRARY_DIRECT_ACCESS_PROOF ok"; then
+  echo "FAIL: the library direct-access migration does not re-apply over its rollback." >&2
+  echo "$LD_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  LD_FAILED=1
+else
+  echo "    ok  and the migration re-applies over it"
+fi
+if [ "$LD_FAILED" -ne 0 ]; then
+  suite_failed "Library direct access"
 fi
 
 # ---------------------------------------------------------------------------
@@ -4125,10 +4213,12 @@ if [ "$RPT_FAILED" -ne 0 ]; then
   suite_failed "BESKT prompts and report"
 fi
 
-# 20261130090000 and then 20261129090000 come down first: the activation table holds a foreign key
+# 20261201090000, 20261130090000 and then 20261129090000 come down first: the activation table holds a foreign key
 # into beskt_method_versions and its functions call beskt_method_validate, so
 # the BESKT domain rollbacks below correctly refuse while it stands. It is not
 # re-applied afterwards, exactly like PR 6 and the report boundary.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261201090000_scp_library_direct_access_rollback.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/rollback/20261130090000_bcp_beskt_complete_rollback.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
