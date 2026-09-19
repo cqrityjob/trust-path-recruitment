@@ -7,6 +7,56 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261203090000_scp_interview_case_vetting_read.sql", 
+      "hostedState": "pending", 
+      "introduces": [
+        {
+          "kind": "function", 
+          "object": "scp_iv_case_row_visible(uuid,uuid)"
+        }
+      ], 
+      "note": "OWNER DECISION 2026-09-19 (blocker for #273/#274): a security vetting's interview case ROW is the appointed security function's alone. scp_interview_cases_read was membership-only (has_employer_role), so a plain member -- and an owner or admin who is not the security function -- could SELECT the vetting case's row (title, candidate, application) although scp_iv_can_read_case answered false. The policy is re-created on scp_iv_case_row_visible(id, employer_id): the same rule as scp_iv_can_read_case, reading only membership and BESKT tables (no recursion); it is the table's only policy; the one view is security_invoker; child tables already read through scp_iv_can_read_case. scp_iv_confirm_transcript_basis additionally requires bcp_case_access_ok (md5-pinned daf35ff566dc5e44ce799340cbcf8e46 -> eb9c745d2b7745299c41289c385e9e36, equal in production 2026-09-19). THE ROLLBACK REINTRODUCES THE GAP and is run only in isolated test databases. Proved by supabase/tests/scp_interview_case_vetting_read_test.sql (direct reads as member, owner, admin, officer, candidate, other organisation, anon; lists, related rows, view, RPCs; revoked appointment), which db-test.sh also requires to FAIL against the old policy.", 
+      "verify": "SELECT qual = 'scp_iv_case_row_visible(id, employer_id)' FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_interview_cases' AND policyname = 'scp_interview_cases_read'; -- expect t, and exactly one policy on the table. md5(prosrc) of scp_iv_confirm_transcript_basis = eb9c745d2b7745299c41289c385e9e36; scp_iv_case_row_visible executable by authenticated, not anon. Behaviour, rolled back: as a plain member SELECT count(*) FROM scp_interview_cases WHERE id = <a vetting case> returns 0.", 
+      "rollback": "supabase/rollback/20261203090000_scp_interview_case_vetting_read_rollback.sql"
+    }, 
+    {
+      "file": "20261202090000_scp_interview_starts.sql", 
+      "hostedState": "pending", 
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "scp_interview_starts"
+        }, 
+        {
+          "kind": "table", 
+          "object": "scp_assessment_setups"
+        }, 
+        {
+          "kind": "function", 
+          "object": "scp_iv_start_interview(uuid,uuid,text,uuid,text,uuid,text,text,text,text)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "scp_record_assessment_setup(uuid,uuid,text,text,text)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "scp_iv_start_choices(uuid,uuid)"
+        }, 
+        {
+          "kind": "table", 
+          "object": "scp_recruitment_role_profiles"
+        }, 
+        {
+          "kind": "table", 
+          "object": "scp_recruitment_content_links"
+        }
+      ], 
+      "note": "OWNER CORRECTIONS 2026-09-19 (#273/#274, test → interview → final report). (1) Which guide and test belong to a setup is DATA: scp_recruitment_role_profiles (library role profile → governed role, role group) and scp_recruitment_content_links (profile + environment → role-interview guide of that role, test of that role's profession; a trigger refuses anything else), seeded with Väktare/general → vaktare-se + security-officer-recruitment. scp_iv_start_interview verifies role group, environment content, the completed test's definition and any supplied guide against them BEFORE the lock and any write, derives the guide when none is named, and keeps a started case's pinned versions on reopen; scp_iv_start_choices lists the compatible setups. (2) BESKT starts -- from an application or an accepted standalone invitation (application_id NULL, no application invented) -- require a submitted preparation and write the governed link (bcp_link_preparation_to_case) in the same transaction, so a security vetting's case is restricted from its first moment; a live link is adopted, never duplicated. One interview per intended START, created atomically. A start is identified by its source -- a completed candidate test (assessment assignment), a BESKT assignment, or an explicitly chosen setup before any test -- never by the application alone, so TRUST and BESKT (or two tests) keep separate cases. scp_iv_start_interview verifies the application, the source (the test must be this application's, for this applicant, submitted; a BESKT source needs the employer party), binds the application's own candidate account, serialises on employer + start key (advisory lock + partial unique index), and writes the case, its setup and its non-personal material in one transaction. A cancelled case releases its start (kept, superseded); nothing is merged or deleted. scp_assessment_setups records the setup a test was sent with (owner/admin). Adds objects only; no existing body is changed. Proved by supabase/tests/scp_interview_starts_test.sql and the two-connection race in scripts/db-test.sh.", 
+      "verify": "SELECT to_regclass('public.scp_interview_starts') IS NOT NULL AND to_regclass('public.scp_assessment_setups') IS NOT NULL AND EXISTS (SELECT 1 FROM public.scp_recruitment_content_links l JOIN public.scp_interview_packs p ON p.id = l.interview_pack_id WHERE l.role_profile = 'vaktare' AND l.environment = 'general' AND p.slug = 'vaktare-se') AND EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'scp_interview_starts_one_live') AND position('pg_advisory_xact_lock' in (SELECT prosrc FROM pg_proc WHERE proname = 'scp_iv_start_interview')) > 0; -- expect t. Neither function executable by anon; scp_iv_start_result and the guard not executable by authenticated; both tables RLS enabled (not forced, the scp_ convention), SELECT-only for clients, 0 rows.", 
+      "rollback": "supabase/rollback/20261202090000_scp_interview_starts_rollback.sql"
+    }, 
+    {
       "file": "20261201090000_scp_library_direct_access.sql", 
       "hostedState": "pending", 
       "introduces": [
