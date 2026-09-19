@@ -14,7 +14,7 @@
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
   "readAt": "2026-09-19",
-  "readBy": "Read-only SQL through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-19, after PR #268 merged as dbdeba1. 301 rows: the 300 of the previous snapshot plus 20261129090000 bcp_internal_test_activation, applied by the official GitHub integration. No migration was executed or replayed.",
+  "readBy": "Read-only SQL through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-19, after PR #270 merged as 188e8cd. 302 rows: the 301 of the previous snapshot plus 20261130090000 bcp_beskt_complete, applied by the official GitHub integration. No migration was executed or replayed.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1219,6 +1219,10 @@
     {
       "version": "20261129090000",
       "name": "bcp_internal_test_activation"
+    },
+    {
+      "version": "20261130090000",
+      "name": "bcp_beskt_complete"
     }
   ]
 }
