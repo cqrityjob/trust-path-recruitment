@@ -206,8 +206,9 @@ check(
     /availableEnvironments\(\)/.test(lib) &&
     !/disabled=\{!available\}/.test(lib) &&
     /state === "available" \?/.test(lib) &&
-    !/"development"\] as const/.test(contentLib) &&
-    !/"training", "development"/.test(contentLib),
+    !/"development"/.test(
+      /function sectionsFor[\s\S]*?\n\}/.exec(contentLib)?.[0] ?? '"development"',
+    ),
   "LS-CLEAN: customers see only what they can start -- no switched-off roles or environments, no 'Under utveckling', and no start button on a method with nothing in it",
 );
 
