@@ -165,15 +165,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 20261201090000_scp_library_direct_access (the library's direct access and
 // recruitment setup, PR #272) was applied by the integration and its hosted
 // evidence recorded on 2026-09-19, so it is off this list.
-// 20261202090000_scp_interview_starts is GENUINELY PENDING: one interview per
-// intended start (the owner's test → interview → final report correction).
-// Its name comes OFF this list in the change that records its hosted
-// evidence, never before. 20261203090000_scp_interview_case_vetting_read
-// (the security vetting's case row) is pending with it, on the same terms.
-const expectedPending: string[] = [
-  "20261202090000_scp_interview_starts.sql",
-  "20261203090000_scp_interview_case_vetting_read.sql",
-];
+// PR #274 merged as 1631d5d3; both 20261202090000 and 20261203090000
+// were verified read-only in owner production on 2026-09-19. Function bodies,
+// RLS, policy, grants, content link and unique index match the merged source.
+// release-state.json and hosted-ledger.json record the evidence and limits.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
