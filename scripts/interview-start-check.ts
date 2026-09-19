@@ -128,8 +128,9 @@ check(
 const start = code(read("src/lib/library/start.functions.ts"));
 const startFn = /async function start\([\s\S]*?\n\}/.exec(start)?.[0] ?? "";
 check(
-  !/TRUST_CONTENT|vaktare-se|guidePackSlug|scp_iv_startable_pack_versions|role_profile: "|environment: "/.test(start) &&
-    !/vaktare|"general"/.test(code(read("src/components/library/PrepareInterviewButton.tsx"))),
+  !/TRUST_CONTENT|vaktare-se|guidePackSlug|scp_iv_startable_pack_versions|role_profile: "|environment: "/.test(
+    start,
+  ) && !/vaktare|"general"/.test(code(read("src/components/library/PrepareInterviewButton.tsx"))),
   "IS-NO-GUESS: the app resolves no guide and names no role or environment in a start",
 );
 check(

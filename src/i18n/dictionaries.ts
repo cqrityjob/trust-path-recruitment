@@ -3857,20 +3857,26 @@ export const dictionaries = {
     "lib.prepareInterview.hint": "Öppnas under Intervjuer. Ett klick till öppnar samma ärende.",
     "lib.prepareInterview": "Förbered intervju",
     "lib.start.refused.guide_mismatch": "Den valda intervjuguiden hör inte till upplägget.",
-    "lib.start.refused.beskt_not_submitted": "Kandidaten har inte skickat in BESKT-förberedelsen ännu.",
-    "iiu.new.setupRequired": "Ärendet behöver ett upplägg. Välj roll och miljö i Rekryteringsstöd och starta därifrån.",
+    "lib.start.refused.beskt_not_submitted":
+      "Kandidaten har inte skickat in BESKT-förberedelsen ännu.",
+    "iiu.new.setupRequired":
+      "Ärendet behöver ett upplägg. Välj roll och miljö i Rekryteringsstöd och starta därifrån.",
     "iiu.ts.sourceTest": "Intervjun utgår från detta test",
     "lib.start.choose.heading": "Välj upplägg för intervjun",
     "lib.start.choose.afterTest":
       "Testet skickades utan sparat upplägg. Välj det upplägg testet hör till – inget väljs åt dig.",
-    "lib.start.choose.beforeTest": "Inget test är gjort ännu. Välj vilket upplägg intervjun ska följa.",
+    "lib.start.choose.beforeTest":
+      "Inget test är gjort ännu. Välj vilket upplägg intervjun ska följa.",
     "lib.start.choose.submit": "Starta med detta upplägg",
     "lib.start.refused.setup_already_recorded":
       "Testet skickades med ett annat upplägg. Intervjun följer det upplägg testet har.",
     "lib.start.refused.no_role_content": "Det finns inget innehåll för den rollen.",
-    "lib.start.refused.environment_without_content": "Den arbetsmiljön har inget eget innehåll ännu.",
-    "lib.start.refused.setup_test_mismatch": "Upplägget hör inte till testet som kandidaten gjorde.",
-    "lib.start.refused.no_setup_for_test": "Det finns ingen intervjuguide som hör till det här testet.",
+    "lib.start.refused.environment_without_content":
+      "Den arbetsmiljön har inget eget innehåll ännu.",
+    "lib.start.refused.setup_test_mismatch":
+      "Upplägget hör inte till testet som kandidaten gjorde.",
+    "lib.start.refused.no_setup_for_test":
+      "Det finns ingen intervjuguide som hör till det här testet.",
     "lib.start.refused.test_not_on_application": "Testet hör inte till den här ansökan.",
     "lib.start.sendTest": "Skicka kandidattestet",
     "lib.start.sendTest.sending": "Skickar …",
@@ -11734,19 +11740,24 @@ export const dictionaries = {
     "lib.prepareInterview.hint": "Opens under Interviews. Clicking again opens the same case.",
     "lib.prepareInterview": "Prepare interview",
     "lib.start.refused.guide_mismatch": "The chosen interview guide does not belong to this setup.",
-    "lib.start.refused.beskt_not_submitted": "The candidate has not submitted the BESKT preparation yet.",
-    "iiu.new.setupRequired": "The case needs a setup. Choose the role and environment in Recruitment support and start from there.",
+    "lib.start.refused.beskt_not_submitted":
+      "The candidate has not submitted the BESKT preparation yet.",
+    "iiu.new.setupRequired":
+      "The case needs a setup. Choose the role and environment in Recruitment support and start from there.",
     "iiu.ts.sourceTest": "The interview follows this test",
     "lib.start.choose.heading": "Choose the interview's setup",
     "lib.start.choose.afterTest":
       "The test was sent without a saved setup. Choose the setup the test belongs to – nothing is chosen for you.",
-    "lib.start.choose.beforeTest": "No test has been taken yet. Choose the setup the interview will follow.",
+    "lib.start.choose.beforeTest":
+      "No test has been taken yet. Choose the setup the interview will follow.",
     "lib.start.choose.submit": "Start with this setup",
     "lib.start.refused.setup_already_recorded":
       "The test was sent with a different setup. The interview follows the test's setup.",
     "lib.start.refused.no_role_content": "There is no content for that role.",
-    "lib.start.refused.environment_without_content": "That work environment has no content of its own yet.",
-    "lib.start.refused.setup_test_mismatch": "That setup does not belong to the test the candidate took.",
+    "lib.start.refused.environment_without_content":
+      "That work environment has no content of its own yet.",
+    "lib.start.refused.setup_test_mismatch":
+      "That setup does not belong to the test the candidate took.",
     "lib.start.refused.no_setup_for_test": "No interview guide belongs to this test.",
     "lib.start.refused.test_not_on_application": "That test does not belong to this application.",
     "lib.start.sendTest": "Send the candidate test",
