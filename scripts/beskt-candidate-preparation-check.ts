@@ -1036,10 +1036,24 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
     !/methods\.data\?\.\[0\]/.test(employerPanel) && !/methods\[0\]/.test(startDialog),
     "BCP-METHOD-CHOICE: no silent first-method selection survives",
   );
+  // The purpose is chosen, then the version within it: the one selected, and
+  // when a purpose has several versions the choice is on screen -- never the
+  // list order deciding unseen.
   check(
-    /const method = methods\.find\(\(m\) => m\.mode === mode\) \?\? null;/.test(startDialog) &&
+    /const versionsForMode = methods\.filter\(\(m\) => m\.mode === mode\);/.test(startDialog) &&
+      /versionsForMode\.find\(\(m\) => m\.methodVersionId === versionId\)/.test(startDialog) &&
+      /\{versionsForMode\.length > 1 \? \(/.test(startDialog) &&
+      /id="beskt-start-version"/.test(startDialog) &&
       /data-testid=\{`beskt-purpose-\$\{m\}`\}/.test(startDialog),
     "BCP-METHOD-CHOICE: the method in use is the one the employer selected",
+  );
+  const versionChange =
+    /id="beskt-start-version"[\s\S]*?onChange=\{\(e\) => \{([\s\S]*?)\}\}/.exec(startDialog)?.[1] ??
+    "";
+  check(
+    /setVersionId\(e\.target\.value\);/.test(versionChange) &&
+      /setProfileId\(""\);/.test(versionChange),
+    "BCP-METHOD-CHOICE: changing the version clears the profile, which belongs to the old one",
   );
   // Bounded to the mode effect's OWN body, for the reason the old check gave:
   // an unbounded match ran past it and found a reset somewhere else.
