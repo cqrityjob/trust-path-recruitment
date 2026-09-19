@@ -14,7 +14,7 @@
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
   "readAt": "2026-09-19",
-  "readBy": "Read-only SQL through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-19, after PR #270 merged as 188e8cd. 302 rows: the 301 of the previous snapshot plus 20261130090000 bcp_beskt_complete, applied by the official GitHub integration. No migration was executed or replayed.",
+  "readBy": "Read-only SQL through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-19, after PR #272 merged as 61a04c8. 303 rows: the 302 of the previous snapshot plus 20261201090000 scp_library_direct_access, applied by the official GitHub integration. No migration was executed or replayed.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1223,6 +1223,10 @@
     {
       "version": "20261130090000",
       "name": "bcp_beskt_complete"
+    },
+    {
+      "version": "20261201090000",
+      "name": "scp_library_direct_access"
     }
   ]
 }
