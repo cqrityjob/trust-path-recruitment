@@ -109,14 +109,30 @@ check(
   "ITA-HARNESS: it is rolled back before the BESKT chain is unwound",
 );
 const state = JSON.parse(read(STATE)) as {
-  frontier: Array<{ file?: string; hostedState?: string }>;
+  frontier: Array<{ file?: string; hostedState?: string; evidenceSource?: string }>;
 };
+const entry = state.frontier.find(
+  (e) => e.file === "20261129090000_bcp_internal_test_activation.sql",
+);
+// Applied by the integration after #268 merged (dbdeba1), verified by the
+// BODIES of every function it created or re-created, not only the ledger row.
 check(
-  state.frontier.some(
-    (e) =>
-      e.file === "20261129090000_bcp_internal_test_activation.sql" && e.hostedState === "pending",
+  entry?.hostedState === "applied" &&
+    /wrygicdfxwjnrugduxnt/.test(entry.evidenceSource ?? "") &&
+    [
+      "7ea7e1a3925b0ba8a7acfb1b45c17c9a",
+      "8eed9c0dd9b0b910262aa92627de7d7d",
+      "78db634ed36fcc975886e872b1a67f3a",
+      "6a03afdae30f3c32089c04bd76cedefa",
+    ].every((md5) => (entry.evidenceSource ?? "").includes(md5)) &&
+    /"version": "20261129090000"/.test(read("supabase/hosted-ledger.json")),
+  "ITA-RELEASE: recorded applied with hosted body evidence and a ledger row",
+);
+check(
+  !/const expectedPending: string\[\] = \[[^\]]*20261129090000/.test(
+    read("scripts/release-frontier-check.ts"),
   ),
-  "ITA-RELEASE: declared pending until the integration applies it",
+  "ITA-RELEASE: no longer expected pending on the frontier",
 );
 
 console.log("");
