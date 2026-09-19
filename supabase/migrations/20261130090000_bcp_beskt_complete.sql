@@ -4282,51 +4282,59 @@ CREATE POLICY bcp_conduct_actions_member_read ON public.bcp_conduct_actions FOR 
 -- Functions. Client-callable ones to authenticated; internal predicates and
 -- builders to nobody but their owner. Hosted default privileges would
 -- otherwise hand every new function to anon.
-DO $grants$
-DECLARE _fn text;
-BEGIN
-  FOREACH _fn IN ARRAY ARRAY[
-    'bcp_appoint_security_officer(uuid,uuid,uuid,text)',
-    'bcp_revoke_security_officer(uuid,uuid,text)',
-    'bcp_employer_people(uuid)',
-    'bcp_start_beskt(uuid,uuid,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz)',
-    'bcp_create_invitation(uuid,uuid,text,text,text,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz)',
-    'bcp_revoke_invitation(uuid,uuid,text)',
-    'bcp_invitation_for_token(text)',
-    'bcp_accept_invitation(uuid,text)',
-    'bcp_employer_invitations(uuid)',
-    'bcp_method_preview(uuid,uuid,uuid)',
-    'bcp_employer_beskt_assignments(uuid)',
-    'bcp_submit_supplement(uuid,uuid,text,text,text)',
-    'bcp_assignment_supplements(uuid)',
-    'bcp_interview_preparation(uuid)',
-    'bcp_conduct_record_stance(uuid,uuid,integer,text,text,text,text,text,text,text)',
-    'bcp_conduct_record_action(uuid,uuid,uuid,integer,text,text,date,text,date,text)',
-    'bcp_conduct_decision(uuid)',
-    'bcp_candidate_assignments()',
-    -- A policy predicate: it is evaluated as the caller, and says only
-    -- whether the caller is the employer party of an assignment.
-    'bcp_employer_party(uuid)'] LOOP
-    EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon', _fn);
-    EXECUTE format('GRANT EXECUTE ON FUNCTION public.%s TO authenticated, service_role', _fn);
-  END LOOP;
-  FOREACH _fn IN ARRAY ARRAY[
-    'bcp_is_security_officer(uuid,uuid)',
-    'bcp_case_vetting_restricted(uuid)',
-    'bcp_case_access_ok(uuid)',
-    'bcp_check_start(uuid,text,uuid,uuid,text,uuid,text,uuid,text,text)',
-    'bcp_version_is_runnable(uuid)',
-    'bcp_invitation_token_digest(text)',
-    'bcp_conduct_may_record_stance(uuid)',
-    'bcp_conduct_report_extensions(uuid)',
-    'bcp_notice_version_for(text)',
-    'bcp_notice_sections_for(text)',
-    'bcp_notice_copy_keys_for(text)',
-    'bcp_guard_security_officer()',
-    'bcp_guard_invitation()'] LOOP
-    EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon, authenticated', _fn);
-  END LOOP;
-END $grants$;
+-- Written out statement by statement so the SQL security guard can read
+-- every grant (a loop would hide them).
+REVOKE ALL ON FUNCTION public.bcp_appoint_security_officer(uuid,uuid,uuid,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_appoint_security_officer(uuid,uuid,uuid,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_revoke_security_officer(uuid,uuid,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_revoke_security_officer(uuid,uuid,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_employer_people(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_employer_people(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_start_beskt(uuid,uuid,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_start_beskt(uuid,uuid,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_create_invitation(uuid,uuid,text,text,text,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_create_invitation(uuid,uuid,text,text,text,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_revoke_invitation(uuid,uuid,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_revoke_invitation(uuid,uuid,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_invitation_for_token(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_invitation_for_token(text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_accept_invitation(uuid,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_accept_invitation(uuid,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_employer_invitations(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_employer_invitations(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_method_preview(uuid,uuid,uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_method_preview(uuid,uuid,uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_employer_beskt_assignments(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_employer_beskt_assignments(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_submit_supplement(uuid,uuid,text,text,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_submit_supplement(uuid,uuid,text,text,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_assignment_supplements(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_assignment_supplements(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_interview_preparation(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_interview_preparation(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_conduct_record_stance(uuid,uuid,integer,text,text,text,text,text,text,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_conduct_record_stance(uuid,uuid,integer,text,text,text,text,text,text,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_conduct_record_action(uuid,uuid,uuid,integer,text,text,date,text,date,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_conduct_record_action(uuid,uuid,uuid,integer,text,text,date,text,date,text) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_conduct_decision(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_conduct_decision(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_candidate_assignments() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_candidate_assignments() TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_employer_party(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bcp_employer_party(uuid) TO authenticated, service_role;
+REVOKE ALL ON FUNCTION public.bcp_is_security_officer(uuid,uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_case_vetting_restricted(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_case_access_ok(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_check_start(uuid,text,uuid,uuid,text,uuid,text,uuid,text,text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_version_is_runnable(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_invitation_token_digest(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_conduct_may_record_stance(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_conduct_report_extensions(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_notice_version_for(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_notice_sections_for(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_notice_copy_keys_for(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_guard_security_officer() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bcp_guard_invitation() FROM PUBLIC, anon, authenticated;
 
 
 -- ---- postflight ---------------------------------------------------------------
