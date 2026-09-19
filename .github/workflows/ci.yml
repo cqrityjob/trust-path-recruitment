@@ -888,6 +888,12 @@ jobs:
       - name: BESKT v0.1 import check
         run: bun run beskt-v01-import:check
 
+      # 20261129090000: the owner's internal test activation stays an
+      # admin-only, recorded, employer-scoped, hash-pinned decision that is
+      # never a review and never reachable by anon.
+      - name: BESKT internal test activation guard
+        run: bun run beskt-internal-test-activation:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the

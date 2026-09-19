@@ -315,8 +315,8 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 # + 3 TRUST conduct layer: the six-step conduct sequence, the named prohibited
 #   techniques, and the Target/Ready/Trace guidance. Deterministic governed
 #   content read by a human -- the Understand stage still permits zero AI tasks.
-if [ "$SCP_TABLES" -ne 126 ]; then
-  echo "FAIL: expected 126 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest), found $SCP_TABLES" >&2
+if [ "$SCP_TABLES" -ne 127 ]; then
+  echo "FAIL: expected 127 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -3692,6 +3692,64 @@ if [ "$CBD_FAILED" -ne 0 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 20261129090000: the owner's internal test activation. Proved through real
+# sessions: only a platform admin records it, only for complete recruitment
+# content, for one employer, pinned by content hash; no review row is ever
+# written; another employer is refused; a revocation stops new starts but
+# never strands a started test; changed content is no longer covered.
+# ---------------------------------------------------------------------------
+echo "==> Running BESKT internal test activation assertions"
+ITA_FAILED=0
+set +e
+ITA_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_internal_test_activation_test.sql 2>&1)"
+ITA_RC=$?
+set -e
+ITA_PASSED="$(echo "$ITA_OUT" | grep -c "ok  " || true)"
+if [ "$ITA_RC" -ne 0 ]; then
+  echo "FAIL: the internal test activation suite exited with code ${ITA_RC}." >&2
+  echo "$ITA_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  ITA_FAILED=1
+else
+  echo "    ok  ${ITA_PASSED} internal test activation assertions passed"
+  if [ "$ITA_PASSED" -lt 33 ]; then
+    echo "FAIL: expected at least 33 internal test activation assertions, only ${ITA_PASSED} ran." >&2
+    ITA_FAILED=1
+  fi
+fi
+
+echo "==> Running BESKT internal test activation rollback and re-apply"
+set +e
+ITA_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261129090000_bcp_internal_test_activation_rollback.sql 2>&1)"
+ITA_RB_RC=$?
+set -e
+ITA_GONE="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT to_regclass('public.bcp_internal_test_activations') IS NULL AND position('bcp_internal_test_activation_active' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_assign')) = 0;")"
+if [ "$ITA_RB_RC" -ne 0 ] || ! echo "$ITA_RB" | grep -q "BCP_INTERNAL_TEST_ACTIVATION_ROLLBACK ok" || [ "$ITA_GONE" != "t" ]; then
+  echo "FAIL: the internal test activation rollback did not restore the gates." >&2
+  echo "$ITA_RB" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ITA_FAILED=1
+else
+  echo "    ok  the rollback restores the four gates exactly, and the activation path is measurably gone"
+fi
+set +e
+ITA_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261129090000_bcp_internal_test_activation.sql 2>&1)"
+ITA_RE_RC=$?
+set -e
+if [ "$ITA_RE_RC" -ne 0 ] || ! echo "$ITA_RE" | grep -q "BCP_INTERNAL_TEST_ACTIVATION_PROOF ok"; then
+  echo "FAIL: the internal test activation migration does not re-apply over its rollback." >&2
+  echo "$ITA_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ITA_FAILED=1
+else
+  echo "    ok  and the migration re-applies over it"
+fi
+if [ "$ITA_FAILED" -ne 0 ]; then
+  suite_failed "BESKT internal test activation"
+fi
+
+# ---------------------------------------------------------------------------
 # Two people press "lock my position" at the same instant, in two real
 # connections. Exactly one lock must land and the other must be refused by
 # name -- not both, not neither, and not a torn row. The suite above runs in
@@ -3983,6 +4041,13 @@ fi
 if [ "$RPT_FAILED" -ne 0 ]; then
   suite_failed "BESKT prompts and report"
 fi
+
+# 20261129090000 comes down first: its activation table holds a foreign key
+# into beskt_method_versions and its functions call beskt_method_validate, so
+# the BESKT domain rollbacks below correctly refuse while it stands. It is not
+# re-applied afterwards, exactly like PR 6 and the report boundary.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261129090000_bcp_internal_test_activation_rollback.sql >/dev/null
 
 # Stand PR 6 down so PR 5A can be unwound below: bcp_conduct_reports holds a
 # foreign key into bcp_conduct_sessions.

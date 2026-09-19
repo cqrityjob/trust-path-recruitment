@@ -115,9 +115,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the frontier's pending list, hiding the next stuck one",
     file: FRONTIER,
-    find: "const expectedPending: string[] = [];",
+    find: "const expectedPending: string[] = [",
     replace:
-      'const expectedPending: string[] = ["20261128090000_scp_iv_case_candidate_binding.sql"];',
+      'const expectedPending: string[] = ["20261128090000_scp_iv_case_candidate_binding.sql", ',
     guard: GUARD,
     expect: "CANDIDATE-BINDING: and it is OFF the frontier's pending list",
   },
@@ -604,9 +604,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the applied migration is put back on the frontier's pending list, hiding the next stuck one",
     file: FRONTIER,
-    find: "const expectedPending: string[] = [];",
+    find: "const expectedPending: string[] = [",
     replace:
-      'const expectedPending: string[] = ["20261127090000_bcp_conduct_report_independence_boundary.sql"];',
+      'const expectedPending: string[] = ["20261127090000_bcp_conduct_report_independence_boundary.sql", ',
     guard: GUARD,
     expect: "BOUNDARY-RELEASE: and it is OFF the frontier's pending list",
   },
