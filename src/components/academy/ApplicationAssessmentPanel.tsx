@@ -16,6 +16,7 @@
 // Job -> Application -> Candidate -> Assessment -> Report chain, rendered as
 // one place rather than as a trail the recruiter has to remember.
 
+import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -73,11 +74,15 @@ export function ApplicationAssessmentPanel({
   employerSlug,
   applicationId,
   canAssign,
+  prepareInterview = false,
 }: {
   employerId: string;
   employerSlug: string;
   applicationId: string;
   canAssign: boolean;
+  /** On the application page: once the candidate has finished the test, the
+   *  next step is the interview -- the same linked case every time. */
+  prepareInterview?: boolean;
 }) {
   const { t, lang } = useT();
   const sv = lang !== "en";
@@ -259,6 +264,17 @@ export function ApplicationAssessmentPanel({
           {t(ASSIGN_ERROR[failed] ?? "journey.assignFailed")}
         </p>
       )}
+
+      {prepareInterview &&
+        rows.some((a) =>
+          ["under_review", "brief_ready", "brief_released"].includes(assessmentStageOf(a)),
+        ) && (
+          <PrepareInterviewButton
+            employerId={employerId}
+            employerSlug={employerSlug}
+            applicationId={applicationId}
+          />
+        )}
     </PanelFrame>
   );
 }

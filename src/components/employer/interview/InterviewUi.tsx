@@ -16,7 +16,7 @@
 //      not the person.
 
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
@@ -1173,6 +1173,12 @@ export function WorkflowNav({
   const { t } = useT();
   const done = STAGES_DONE[status] ?? 0;
   const here = current ?? stageOf(status);
+  // On a narrow screen the row scrolls sideways; the stage the reader is on
+  // must never be the one clipped out of view.
+  const currentRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    currentRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [here]);
   const currentIdx = here ? STAGES.indexOf(here) : -1;
 
   return (
@@ -1230,6 +1236,7 @@ export function WorkflowNav({
             <li key={stage} className="shrink-0">
               {isCurrent ? (
                 <span
+                  ref={currentRef}
                   aria-current="step"
                   className={cn(base, "border-accent font-semibold text-foreground")}
                 >

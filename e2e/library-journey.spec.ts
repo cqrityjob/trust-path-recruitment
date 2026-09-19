@@ -108,8 +108,17 @@ test.describe("Bibliotek — method → role → environment → setup → the f
     page,
   }) => {
     await signIn(page, OWNER, `/employer/${EMPLOYER}`);
-    await navTo(page, /^Bibliotek$/);
+    await navTo(page, /^Tester & bedömningar$|^Tests & assessments$/);
+    await page
+      .getByRole("link", { name: /^Rekryteringsstöd$|^Recruitment support$/ })
+      .first()
+      .click();
     await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
+    await expect(page.getByRole("heading", { name: /^Rekryteringsstöd$/ })).toBeVisible({
+      timeout: 60_000,
+    });
+    // A clean customer surface: no drafts catalogue, no empty internal section.
+    await expect(page.getByText(/Under utveckling|Internt material/)).toHaveCount(0);
     const methods = page.getByTestId("lib-methods");
     await expect(methods.getByTestId("lib-method-trust")).toContainText(
       /Tester och strukturerade intervjuer för rekrytering till säkerhetsjobb/,
@@ -142,24 +151,16 @@ test.describe("Bibliotek — method → role → environment → setup → the f
     );
     await shot(page, "1-trust-operational");
 
-    // Strategic: no leadership content, and the Väktare test is NOT offered
-    // under a new title.
-    await page.getByTestId("lib-group-strategic").check();
-    await expect(page.getByTestId("lib-role-security_manager-note")).toContainText(
-      /Inget TRUST-innehåll/,
-    );
-    await expect(setup).toHaveAttribute("data-startable", "false", { timeout: 60_000 });
-    await expect(setup.getByTestId("lib-blocker-no_role_content")).toBeVisible();
-    await expect(setup.getByTestId("lib-start-trust")).toHaveCount(0);
-    await expect(setup.getByTestId("lib-setup-candidate")).not.toContainText(/Väktare/);
-    await shot(page, "1-trust-strategic");
-
-    // A site environment with no scenarios of its own cannot be chosen.
-    await expect(page.getByTestId("lib-env-hospital")).toBeDisabled();
-    await expect(page.getByTestId("lib-env-data_centre")).toBeDisabled();
+    // Only what can be started is offered: TRUST has no strategic content, so
+    // no strategic role is shown under it -- and no switched-off environments.
+    await expect(page.getByTestId("lib-group-strategic")).toHaveCount(0);
+    await expect(page.getByTestId("lib-env-hospital")).toHaveCount(0);
+    await expect(page.getByTestId("lib-env-data_centre")).toHaveCount(0);
 
     // Back keeps the setup: the choices are in the URL.
     await page.goBack();
+    await expect(page.getByTestId("lib-group-operational")).not.toBeChecked({ timeout: 30_000 });
+    await page.goForward();
     await expect(page.getByTestId("lib-group-operational")).toBeChecked({ timeout: 30_000 });
     await expect(setup).toHaveAttribute("data-startable", "true", { timeout: 60_000 });
   });
@@ -259,6 +260,39 @@ test.describe("Bibliotek — method → role → environment → setup → the f
     });
     await expectFitsViewport(page);
     await shot(page, "2-step4-review");
+  });
+
+  test("2b · Förbered intervju opens the linked case, and the same case every time", async ({
+    page,
+  }) => {
+    const other = "b4000000-0000-4000-8000-00000000aa02";
+    await signIn(page, OWNER, `/employer/${EMPLOYER}/applications/${other}`);
+    await page.getByTestId("prepare-interview").first().click();
+    await expect(page).toHaveURL(/\/interview-intelligence\/[0-9a-f-]{36}\/prepare$/, {
+      timeout: 60_000,
+    });
+    const first = new URL(page.url()).pathname;
+    // Candidate, application, the advert and the setup came along.
+    await expect(page.getByTestId("case-setup-value")).toHaveText(
+      /TRUST · Väktare · Generell säkerhetsverksamhet/,
+      { timeout: 60_000 },
+    );
+    await shot(page, "2b-prepared");
+
+    // Again: the same case, not a second one.
+    await page.goto(`/employer/${EMPLOYER}/applications/${other}`);
+    await expect(page.getByTestId("prepare-interview")).toHaveCount(0);
+
+    // The same case, opened directly under Intervjuer, shows the same setup.
+    await page.goto(`/employer/${EMPLOYER}/interview-intelligence`);
+    await page
+      .locator(`a[href*="${first.split("/")[4]}"]`)
+      .first()
+      .click();
+    await page.goto(first);
+    await expect(page.getByTestId("case-setup-value")).toHaveText(/TRUST · Väktare/, {
+      timeout: 60_000,
+    });
   });
 
   test("3 · BESKT is made available once, and an organisation with nothing reaches it", async ({

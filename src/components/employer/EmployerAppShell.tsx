@@ -132,7 +132,6 @@ type NavTarget =
   | "/employer/$employerSlug/applications"
   | "/employer/$employerSlug/workforce"
   | "/employer/$employerSlug/assessments"
-  | "/employer/$employerSlug/assessments/library"
   | "/employer/$employerSlug/interview-intelligence"
   | "/employer/$employerSlug/competencies"
   | "/employer/$employerSlug/training"
@@ -206,14 +205,13 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Inbox,
         to: "/employer/$employerSlug/applications",
       },
-      // Bibliotek: METHOD -> ROLE -> ENVIRONMENT -> SETUP (product structure
-      // v2.0). The assessment pages behind it (candidates, review) are its
-      // tabs, so they light this item up too.
+      // Tester & bedömningar (owner decision 2026-09-19): its Rekryteringsstöd
+      // tab holds METHOD -> ROLE -> ENVIRONMENT -> SETUP.
       {
         key: "assessments",
-        labelKey: "employer.nav.library",
+        labelKey: "employer.nav.assessments",
         icon: ClipboardCheck,
-        to: "/employer/$employerSlug/assessments/library",
+        to: "/employer/$employerSlug/assessments",
       },
       // Interview Intelligence. Added only now that the landing route, the
       // permission checks and the whole journey behind it actually work --
@@ -224,13 +222,6 @@ const NAV_GROUPS: NavGroup[] = [
         icon: MessagesSquare,
         labelKey: "employer.nav.interviewIntelligence",
         to: "/employer/$employerSlug/interview-intelligence",
-      },
-      // Rapporter: the reports in the same cases, under the same access rules.
-      {
-        key: "reports",
-        labelKey: "employer.nav.reports",
-        icon: FileCheck2,
-        to: "/employer/$employerSlug/reports",
       },
     ],
   },

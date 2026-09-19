@@ -69,6 +69,34 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "LS-FOCUS",
   },
+  {
+    id: "LS-NC-UNDER-DEVELOPMENT-BACK",
+    defect: "the 'Under utveckling' catalogue of drafts returns to the customer's library",
+    file: "src/components/academy/ContentLibrary.tsx",
+    find: '    : (["assessment", "internal"] as const);',
+    replace: '    : (["assessment", "development", "internal"] as const);',
+    guard: GUARD,
+    expect: "LS-CLEAN",
+  },
+  {
+    id: "LS-NC-PREPARE-DUPLICATES",
+    defect: "Förbered intervju creates a new case on every click instead of opening the linked one",
+    file: "src/lib/interview-intelligence/runtime.functions.ts",
+    find: '        .is("cancelled_at", null)\n        .order("created_at", { ascending: false })',
+    replace:
+      '        .is("cancelled_at", "never")\n        .order("created_at", { ascending: false })',
+    guard: GUARD,
+    expect: "LS-PREPARE",
+  },
+  {
+    id: "LS-NC-BIBLIOTEK-MENU",
+    defect: "the sidebar is renamed to Bibliotek against the owner's navigation decision",
+    file: "src/components/employer/EmployerAppShell.tsx",
+    find: '        labelKey: "employer.nav.assessments",\n        icon: ClipboardCheck,',
+    replace: '        labelKey: "employer.nav.library",\n        icon: ClipboardCheck,',
+    guard: GUARD,
+    expect: "LS-NAV",
+  },
 ];
 
 await runControls("library-structure", MUTATIONS);

@@ -9,7 +9,7 @@
  *
  *   1. admin: editor role, install recruitment + security vetting, record the
  *      organisation's activation for both -- nothing reviewed or published;
- *   2. owner: Testbibliotek shows BESKT; appoints the security function;
+ *   2. owner: Rekryteringsstöd shows BESKT; appoints the security function;
  *      "Visa innehåll" shows E, S and K to the security function only;
  *   3. owner: "Starta BESKT" -- security vetting, existing application,
  *      responsible interviewer, security owner, attestation, lawful basis;
@@ -82,7 +82,11 @@ async function navTo(page: Page, name: RegExp): Promise<void> {
 
 async function openLibrary(page: Page, email: string, employer: string): Promise<void> {
   await signIn(page, email, `/employer/${employer}`);
-  await navTo(page, /^Bibliotek$|^Library$/);
+  await navTo(page, /^Tester & bedömningar$|^Tests & assessments$/);
+  await page
+    .getByRole("link", { name: /^Rekryteringsstöd$|^Recruitment support$/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
   await expect(page.getByTestId("library")).toBeVisible({ timeout: 60_000 });
 }
@@ -173,9 +177,9 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
     // internal test activation, never a review.
     const rows = module.getByTestId("lib-setup-status").locator("li");
     await expect(rows.filter({ hasText: /säkerhetsprövningsstöd/ })).toHaveCount(1);
-    await expect(rows.filter({ hasText: /Intern testversion enligt organisationens aktivering/ })).toHaveCount(
-      2,
-    );
+    await expect(
+      rows.filter({ hasText: /Intern testversion enligt organisationens aktivering/ }),
+    ).toHaveCount(2);
 
     // Before the appointment, the vetting wording is withheld.
     await module.getByTestId("lib-preview-beskt").click();

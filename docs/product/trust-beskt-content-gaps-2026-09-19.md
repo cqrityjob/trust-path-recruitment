@@ -4,25 +4,42 @@
 
 Underlag: *CQrityjob – TRUST och BESKT, samlad produktstruktur och byggspecifikation v2.0* (19 september 2026), avsnitt 3, 4 och 7. Innehållsläget avläst i produktion 19 september 2026 (endast läsning).
 
+## 0. Innehållsläget, exakt (avläst 19 september 2026)
+
+| Innehåll | I källkoden | Installerat i produktionsdatabasen | Tillgängligt för arbetsgivare i produktion |
+|---|---|---|---|
+| TRUST · intervjuguide *Väktare* (`vaktare-se`) | Ja, i migrationerna | Ja: v1, 8 frågor, 6 kompetensområden, status utkast / pilothypotes | **Ja**, som öppen pilot för alla aktiva arbetsgivare |
+| TRUST · kandidattest *Väktare – Recruitment Assessment* | Ja, i migrationerna | Ja: v1 (50 uppgifter, 5 testdelar), status utkast / design | **Ja**, standard för rekrytering för alla aktiva arbetsgivare |
+| TRUST · strategiska och ledande roller | Nej | Nej | Nej |
+| BESKT v0.1 · rekryteringsstöd | Ja: `src/lib/beskt/import/beskt-v0-1.content.ts` med 4 avsnitt, 51 kandidatfrågor (inklusive följdfrågor), 70 routingregler, 25 samtalsstöd, 7 ankare och 10 FAKTA-fält | **Nej** (0 BESKT-versioner, 0 frågor) | Nej |
+| BESKT v0.1 · säkerhetsprövningsstöd | Ja: samma fil, med 7 avsnitt (bas, B, E, S, K, T, situationer), 133 kandidatfrågor, 216 routingregler, 25 samtalsstöd, 7 ankare, 10 FAKTA-fält och 3 aktiveringskrav | **Nej** | Nej |
+| Arbetsmiljöpaket (datacenter, sjukhus, köpcentrum) | Nej | Nej | Nej |
+
+**Åtgärd för BESKT i produktion:**
+1. Installera v0.1: Admin → BESKT-metoder → *Installera BESKT v0.1* (rekrytering respektive säkerhetsprövning), som innehållsredaktör och med er egen rättsliga grund.
+2. Fatta ett centralt tillgänglighetsbeslut per version: Admin → BESKT-metoder → versionen → *Behörigheter* → *Gör tillgänglig för alla arbetsgivare*. Det kräver publicistrollen.
+
+**Konsekvens:** efter steg 2 kan varje aktiv organisation starta BESKT direkt, märkt som ogranskad pilotversion. Ingen aktivering per företag behövs eller återinförs. Utan steg 2 visar kundytan kort att BESKT-innehåll inte är tillgängligt ännu, utan startknapp. De fem granskningsgrindarna påverkas inte och står kvar som öppna.
+
 ## 1. De fyra innehållsvägarna
 
 | Metod | Rollgrupp | Status | Vad som finns | Vad som saknas |
 |---|---|---|---|---|
 | TRUST | Operativa roller (Väktare) | **1 – Finns och får användas** (pilotversion, ogranskad hypotes) | Intervjuguiden *Väktare* (`vaktare-se`, v1, öppen pilot) och kandidattestet *Väktare – Recruitment Assessment* (v1, standard för rekrytering). Båda är kopplade i biblioteket och verifierade genom hela ärendet till Granska & rapport, lokalt. | Innehållsgranskning och validering av båda enligt respektive granskningsstege. |
-| TRUST | Strategiska och ledande roller (Security Manager / säkerhetschef) | **3 – Saknas** | Inget. Biblioteket visar rollen men erbjuder den inte som startbar, och väktarinnehållet erbjuds inte under den rubriken. | Kravprofil, intervjuguide och eventuellt kandidatmoment för ledningsroller, se 3.1. |
+| TRUST | Strategiska och ledande roller (Security Manager / säkerhetschef) | **3 – Saknas** | Inget. Rollen visas inte för kunden under TRUST, och väktarinnehållet erbjuds aldrig under den rubriken. | Kravprofil, intervjuguide och eventuellt kandidatmoment för ledningsroller, se 3.1. |
 | BESKT | Operativa roller | **2 – Finns delvis** | BESKT v0.1 (rekrytering och säkerhetsprövning) med gemensam bas, B, E, S, K, T, situationer, neutrala följdfrågor och FAKTA. Befattningens exponering anges av arbetsgivaren när uppdraget startas (en generisk T-mall). I produktion: **inte installerad ännu**. | Installation och innehållsbeslut i produktion. De fem granskningsgrindarna. Rollspecifika exponeringsmallar för operativa roller, se 3.2. |
 | BESKT | Strategiska och ledande roller | **2 – Finns delvis** | Samma gemensamma metod. Frågorna motiveras av befattningens exponering, som arbetsgivaren anger. | Frågor och exponeringsmallar för mandat, åtkomst, styrning och ansvar i ledningsroller, se 3.3. |
 
-**Tekniskt färdigt ≠ innehållsmässigt färdigt.** Alla fyra vägar går att välja i biblioteket, och varje väg säger sanningsenligt vad som finns. Men endast *TRUST · operativa roller* har eget innehåll som kan användas hela vägen i dag. Den vägen är dessutom en pilotversion och inte granskad.
+**Tekniskt färdigt ≠ innehållsmässigt färdigt.** Kundytan (Tester & bedömningar → Rekryteringsstöd) erbjuder bara de vägar som har startbart innehåll. En metod utan tillgängligt innehåll säger det kort, utan startknapp. I produktion i dag har endast *TRUST · operativa roller* innehåll som kan användas hela vägen, och även den vägen är en pilotversion som inte är granskad.
 
 ## 2. Arbetsmiljöer
 
 | Miljö | Status | Konsekvens i produkten |
 |---|---|---|
 | Generell säkerhetsverksamhet | Används av alla befintliga paket | Startbar. Uppläggen visar ”Generellt upplägg – inga miljöspecifika scenarier ingår.” |
-| Datacenter | **3 – Saknas** | Visas men kan inte väljas. |
-| Sjukhus | **3 – Saknas** | Visas men kan inte väljas. |
-| Köpcentrum | **3 – Saknas** | Visas men kan inte väljas. |
+| Datacenter | **3 – Saknas** | Visas inte för kunden (ägarbeslut 19 september 2026: ingen katalog av avstängda paket i kundytan). |
+| Sjukhus | **3 – Saknas** | Visas inte för kunden. |
+| Köpcentrum | **3 – Saknas** | Visas inte för kunden. |
 
 Befintliga arbetsförhållanden i kompetensgrafen (kontrollrum, rondering, stationär post och liknande) är **arbetsförhållanden, inte arbetsmiljöprofiler**. De har inte kopplats om till miljövalet.
 

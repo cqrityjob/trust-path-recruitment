@@ -23,10 +23,10 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
-  ENVIRONMENTS,
-  ENVIRONMENTS_WITH_CONTENT,
   ROLE_GROUPS,
-  TRUST_CONTENT,
+  availableEnvironments,
+  availableProfiles,
+  methodAvailability,
   profilesFor,
   resolveSetup,
   type EnvironmentKey,
@@ -38,7 +38,10 @@ import {
 } from "@/lib/library/catalogue";
 import { listStartableInterviewPacks } from "@/lib/interview-intelligence/runtime.functions";
 import { listContentLibrary } from "@/lib/security-competency/academy-employer.functions";
-import { listAssignableBesktMethods } from "@/lib/beskt/candidate-preparation.functions";
+import {
+  listAssignableBesktMethods,
+  type BesktAssignableMethod,
+} from "@/lib/beskt/candidate-preparation.functions";
 import { getMyBesktStanding } from "@/lib/beskt/complete.functions";
 import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
 import { recordBesktSetup } from "@/lib/library/setup.functions";
@@ -101,6 +104,7 @@ export function RecruitmentLibrary({
       search: next,
     });
 
+  const content = useLibraryContent(employerId);
   const method = search.method;
   const group = search.group;
   const role =
@@ -126,14 +130,16 @@ export function RecruitmentLibrary({
         {(
           [
             ["lib.step.method", Boolean(method)],
-            ["lib.step.role", Boolean(method && group && role && env)],
+            ["lib.step.role", Boolean(method && group && role)],
+            ["lib.step.env", Boolean(method && group && role && env)],
             ["lib.step.setup", false],
           ] as const
         ).map(([key, done], i) => {
           const current =
             (i === 0 && !method) ||
-            (i === 1 && method && !(group && role && env)) ||
-            (i === 2 && method && group && role && env);
+            (i === 1 && method && !(group && role)) ||
+            (i === 2 && method && group && role && !env) ||
+            (i === 3 && method && group && role && env);
           return (
             <li
               key={key}
@@ -152,8 +158,16 @@ export function RecruitmentLibrary({
         })}
       </ol>
 
-      {!method ? (
-        <MethodChoice onChoose={(m) => go({ method: m })} />
+      {content.pending ? (
+        <p
+          className="mt-8 flex items-center gap-2 text-sm text-muted-foreground"
+          aria-live="polite"
+        >
+          <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
+          {t("lib.loading")}
+        </p>
+      ) : !method ? (
+        <MethodChoice content={content} onChoose={(m) => go({ method: m })} />
       ) : (
         <>
           <div
@@ -179,6 +193,7 @@ export function RecruitmentLibrary({
           </div>
 
           <RoleAndEnvironment
+            content={content}
             method={method}
             group={group}
             role={role}
@@ -195,6 +210,7 @@ export function RecruitmentLibrary({
               role={role}
               env={env}
               canAssign={canAssign}
+              content={content}
             />
           ) : null}
 
@@ -210,243 +226,40 @@ export function RecruitmentLibrary({
   );
 }
 
-function MethodChoice({ onChoose }: { onChoose: (m: LibraryMethod) => void }) {
-  const { t } = useT();
-  return (
-    <section aria-labelledby="lib-method-h" className="mt-8">
-      <h2 id="lib-method-h" className="text-lg font-semibold">
-        {t("lib.method.heading")}
-      </h2>
-      <div className="mt-4 grid gap-4 md:grid-cols-2" data-testid="lib-methods">
-        {(["trust", "beskt"] as const).map((m) => (
-          <div key={m} className={CARD} data-testid={`lib-method-${m}`}>
-            <div className="flex items-center gap-2">
-              <ShieldCheck aria-hidden="true" className="h-5 w-5 text-foreground" />
-              <h3 className="text-xl font-semibold tracking-tight">
-                {t(m === "trust" ? "lib.method.trust.title" : "lib.method.beskt.title")}
-              </h3>
-            </div>
-            <p className="mt-2 text-sm font-medium text-foreground">
-              {t(m === "trust" ? "lib.method.trust.body" : "lib.method.beskt.body")}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t(m === "trust" ? "lib.method.trust.aim" : "lib.method.beskt.aim")}
-            </p>
-            <Button
-              type="button"
-              className="mt-4 min-h-[44px]"
-              onClick={() => onChoose(m)}
-              data-testid={`lib-method-${m}-choose`}
-            >
-              {t(m === "trust" ? "lib.method.trust.choose" : "lib.method.beskt.choose")}
-              <ArrowRight aria-hidden="true" className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
-      <p className="mt-4 max-w-3xl text-xs text-muted-foreground">{t("lib.method.separate")}</p>
-    </section>
-  );
+export interface LibraryContent {
+  readonly live: LiveContent;
+  readonly pending: boolean;
+  readonly besktMethods: readonly BesktAssignableMethod[];
+  readonly isSecurityOfficer: boolean;
 }
 
-function RoleAndEnvironment({
-  method,
-  group,
-  role,
-  env,
-  onChange,
-}: {
-  method: LibraryMethod;
-  group?: RoleGroup;
-  role?: RoleProfileKey;
-  env?: EnvironmentKey;
-  onChange: (next: { group?: RoleGroup; role?: RoleProfileKey; env?: EnvironmentKey }) => void;
-}) {
-  const { t } = useT();
-  const roleNote = (key: RoleProfileKey): { ok: boolean; text: string } =>
-    method === "trust"
-      ? TRUST_CONTENT[key]
-        ? { ok: true, text: t("lib.role.available") }
-        : { ok: false, text: t("lib.role.trust.missing") }
-      : { ok: true, text: t("lib.role.beskt.generic") };
-
-  return (
-    <div className="mt-8 grid gap-8 lg:grid-cols-2">
-      <fieldset data-testid="lib-groups">
-        <legend className="text-lg font-semibold">{t("lib.group.heading")}</legend>
-        <div className="mt-3 space-y-2">
-          {ROLE_GROUPS.map((g) => (
-            <label
-              key={g}
-              className={`${CHOICE} ${group === g ? "border-foreground" : "border-border"}`}
-            >
-              <input
-                type="radio"
-                name="lib-group"
-                className="mt-1"
-                checked={group === g}
-                onChange={() => {
-                  const only = profilesFor(g);
-                  onChange({ group: g, role: only.length === 1 ? only[0]!.key : undefined, env });
-                }}
-                data-testid={`lib-group-${g}`}
-              />
-              <span>
-                <span className="block font-medium">{t(GROUP_LABEL[g])}</span>
-                <span className="block text-xs text-muted-foreground">{t(GROUP_HINT[g])}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-
-        {group ? (
-          <div className="mt-5" data-testid="lib-roles">
-            <p className="text-sm font-semibold">{t("lib.role.heading")}</p>
-            <div className="mt-2 space-y-2">
-              {profilesFor(group).map((p) => {
-                const note = roleNote(p.key);
-                return (
-                  <label
-                    key={p.key}
-                    className={`${CHOICE} ${role === p.key ? "border-foreground" : "border-border"}`}
-                  >
-                    <input
-                      type="radio"
-                      name="lib-role"
-                      className="mt-1"
-                      checked={role === p.key}
-                      onChange={() => onChange({ group, role: p.key, env })}
-                      data-testid={`lib-role-${p.key}`}
-                    />
-                    <span>
-                      <span className="block font-medium">{t(ROLE_LABEL[p.key])}</span>
-                      <span
-                        className={`block text-xs ${note.ok ? "text-muted-foreground" : "text-amber-800 dark:text-amber-300"}`}
-                        data-testid={`lib-role-${p.key}-note`}
-                      >
-                        {note.text}
-                      </span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-      </fieldset>
-
-      <fieldset data-testid="lib-environments">
-        <legend className="text-lg font-semibold">{t("lib.env.heading")}</legend>
-        <div className="mt-3 space-y-2">
-          {ENVIRONMENTS.map((e) => {
-            const available = ENVIRONMENTS_WITH_CONTENT.includes(e);
-            return (
-              <label
-                key={e}
-                className={`${CHOICE} ${env === e ? "border-foreground" : "border-border"} ${available ? "" : "cursor-not-allowed opacity-70"}`}
-              >
-                <input
-                  type="radio"
-                  name="lib-env"
-                  className="mt-1"
-                  checked={env === e}
-                  disabled={!available}
-                  onChange={() => onChange({ group, role, env: e })}
-                  data-testid={`lib-env-${e}`}
-                />
-                <span>
-                  <span className="block font-medium">{t(ENV_LABEL[e])}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {available ? t("lib.env.generalNote") : t("lib.env.none")}
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">{t("lib.env.noScope")}</p>
-      </fieldset>
-    </div>
-  );
-}
-
-function statusKey(label: string): TranslationKey {
-  if (label === "content_validated") return "lib.status.content_validated";
-  if (label === "published") return "lib.status.published";
-  if (label === "open_pilot") return "lib.status.open_pilot";
-  if (label === "internal_test") return "lib.status.internal_test";
-  return "lib.status.pilot_hypothesis";
-}
-
-function SetupPanel({
-  employerId,
-  employerSlug,
-  method,
-  group,
-  role,
-  env,
-  canAssign,
-}: {
-  employerId: string;
-  employerSlug: string;
-  method: LibraryMethod;
-  group: RoleGroup;
-  role: RoleProfileKey;
-  env: EnvironmentKey;
-  canAssign: boolean;
-}) {
-  const { t, lang } = useT();
+/** Everything the library reads, once: what TRUST and BESKT content this
+ *  organisation can start today. Access is the database's to decide. */
+function useLibraryContent(employerId: string): LibraryContent {
   const packsFn = useServerFn(listStartableInterviewPacks);
   const libraryFn = useServerFn(listContentLibrary);
   const besktFn = useServerFn(listAssignableBesktMethods);
   const standingFn = useServerFn(getMyBesktStanding);
-  const appsFn = useServerFn(listApplicationsForEmployer);
-  const recordFn = useServerFn(recordBesktSetup);
-
   const packs = useQuery({
     queryKey: ["ii", "packs", employerId],
     queryFn: () => packsFn({ data: { employerId } }),
-    enabled: method === "trust",
     retry: false,
   });
   const library = useQuery({
     queryKey: ["academy", "content-library", employerId],
     queryFn: () => libraryFn({ data: { employerId } }),
-    enabled: method === "trust",
     retry: false,
   });
   const beskt = useQuery({
     queryKey: ["beskt", "assignable-methods", employerId],
     queryFn: () => besktFn({ data: { employerId } }),
-    enabled: method === "beskt",
     retry: false,
   });
   const standing = useQuery({
     queryKey: ["beskt", "standing", employerId],
     queryFn: () => standingFn({ data: { employerId } }),
-    enabled: method === "beskt",
     retry: false,
   });
-  const apps = useQuery({
-    queryKey: ["beskt", "start", "applications", employerId],
-    queryFn: () => appsFn({ data: { employerId } }),
-    enabled: method === "trust",
-    retry: false,
-  });
-  const [applicationId, setApplicationId] = useState("");
-  const [startOpen, setStartOpen] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-
-  const loading = method === "trust" ? packs.isPending || library.isPending : beskt.isPending;
-  if (loading) {
-    return (
-      <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground" aria-live="polite">
-        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
-        {t("lib.loading")}
-      </p>
-    );
-  }
-
   const live: LiveContent = {
     guides: packs.isError
       ? null
@@ -493,6 +306,250 @@ function SetupPanel({
           nameEn: m.nameEn,
         })),
   };
+  return {
+    live,
+    pending: packs.isPending || library.isPending || beskt.isPending,
+    besktMethods: beskt.data ?? [],
+    isSecurityOfficer: standing.data?.isSecurityOfficer ?? false,
+  };
+}
+
+function MethodChoice({
+  content,
+  onChoose,
+}: {
+  content: LibraryContent;
+  onChoose: (m: LibraryMethod) => void;
+}) {
+  const { t } = useT();
+  return (
+    <section aria-labelledby="lib-method-h" className="mt-8">
+      <h2 id="lib-method-h" className="text-lg font-semibold">
+        {t("lib.method.heading")}
+      </h2>
+      <div className="mt-4 grid gap-4 md:grid-cols-2" data-testid="lib-methods">
+        {(["trust", "beskt"] as const).map((m) => {
+          const state = methodAvailability(m, content.live);
+          const groups = ROLE_GROUPS.filter((g) =>
+            availableProfiles(m, content.live).some((p) => p.group === g),
+          );
+          return (
+            <div key={m} className={CARD} data-testid={`lib-method-${m}`} data-state={state}>
+              <div className="flex items-center gap-2">
+                <ShieldCheck aria-hidden="true" className="h-5 w-5 text-foreground" />
+                <h3 className="text-xl font-semibold tracking-tight">
+                  {t(m === "trust" ? "lib.method.trust.title" : "lib.method.beskt.title")}
+                </h3>
+              </div>
+              <p className="mt-2 text-sm font-medium text-foreground">
+                {t(m === "trust" ? "lib.method.trust.body" : "lib.method.beskt.body")}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {t(m === "trust" ? "lib.method.trust.aim" : "lib.method.beskt.aim")}
+              </p>
+              {groups.length > 0 ? (
+                <ul className="mt-3 flex flex-wrap gap-2" data-testid={`lib-method-${m}-groups`}>
+                  {groups.map((g) => (
+                    <li key={g}>
+                      <Badge variant="outline" className="font-normal">
+                        {t(GROUP_LABEL[g])}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {state === "available" ? (
+                <Button
+                  type="button"
+                  className="mt-4 min-h-[44px]"
+                  onClick={() => onChoose(m)}
+                  data-testid={`lib-method-${m}-choose`}
+                >
+                  {t(m === "trust" ? "lib.method.trust.choose" : "lib.method.beskt.choose")}
+                  <ArrowRight aria-hidden="true" className="ml-1 h-4 w-4" />
+                </Button>
+              ) : (
+                <p
+                  className="mt-4 text-sm text-muted-foreground"
+                  data-testid={`lib-method-${m}-unavailable`}
+                >
+                  {t(
+                    state === "unreadable"
+                      ? "lib.blocker.content_unreadable"
+                      : `lib.method.${m}.none`,
+                  )}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <p className="mt-4 max-w-3xl text-xs text-muted-foreground">{t("lib.method.separate")}</p>
+    </section>
+  );
+}
+
+function RoleAndEnvironment({
+  content,
+  method,
+  group,
+  role,
+  env,
+  onChange,
+}: {
+  content: LibraryContent;
+  method: LibraryMethod;
+  group?: RoleGroup;
+  role?: RoleProfileKey;
+  env?: EnvironmentKey;
+  onChange: (next: { group?: RoleGroup; role?: RoleProfileKey; env?: EnvironmentKey }) => void;
+}) {
+  const { t } = useT();
+  // Only what can be started is offered: no catalogue of switched-off roles
+  // or environments on the customer's screen.
+  const profiles = availableProfiles(method, content.live);
+  const groups = ROLE_GROUPS.filter((g) => profiles.some((p) => p.group === g));
+  const envs = availableEnvironments();
+  const onlyEnv = envs.length === 1 ? envs[0] : undefined;
+  const choose = (g: RoleGroup, r?: RoleProfileKey) =>
+    onChange({ group: g, role: r, env: env ?? onlyEnv });
+
+  return (
+    <div className="mt-8 grid gap-8 lg:grid-cols-2">
+      <fieldset data-testid="lib-groups">
+        <legend className="text-lg font-semibold">{t("lib.group.heading")}</legend>
+        <div className="mt-3 space-y-2">
+          {groups.map((g) => (
+            <label
+              key={g}
+              className={`${CHOICE} ${group === g ? "border-foreground" : "border-border"}`}
+            >
+              <input
+                type="radio"
+                name="lib-group"
+                className="mt-1"
+                checked={group === g}
+                onChange={() => {
+                  const only = profiles.filter((p) => p.group === g);
+                  choose(g, only.length === 1 ? only[0]!.key : undefined);
+                }}
+                data-testid={`lib-group-${g}`}
+              />
+              <span>
+                <span className="block font-medium">{t(GROUP_LABEL[g])}</span>
+                <span className="block text-xs text-muted-foreground">{t(GROUP_HINT[g])}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+
+        {group ? (
+          <div className="mt-5" data-testid="lib-roles">
+            <p className="text-sm font-semibold">{t("lib.role.heading")}</p>
+            <div className="mt-2 space-y-2">
+              {profiles
+                .filter((p) => p.group === group)
+                .map((p) => (
+                  <label
+                    key={p.key}
+                    className={`${CHOICE} ${role === p.key ? "border-foreground" : "border-border"}`}
+                  >
+                    <input
+                      type="radio"
+                      name="lib-role"
+                      className="mt-1"
+                      checked={role === p.key}
+                      onChange={() => choose(group, p.key)}
+                      data-testid={`lib-role-${p.key}`}
+                    />
+                    <span>
+                      <span className="block font-medium">{t(ROLE_LABEL[p.key])}</span>
+                      <span
+                        className="block text-xs text-muted-foreground"
+                        data-testid={`lib-role-${p.key}-note`}
+                      >
+                        {t(method === "trust" ? "lib.role.available" : "lib.role.beskt.generic")}
+                      </span>
+                    </span>
+                  </label>
+                ))}
+            </div>
+          </div>
+        ) : null}
+      </fieldset>
+
+      <fieldset data-testid="lib-environments">
+        <legend className="text-lg font-semibold">{t("lib.env.heading")}</legend>
+        <div className="mt-3 space-y-2">
+          {envs.map((e) => (
+            <label
+              key={e}
+              className={`${CHOICE} ${env === e ? "border-foreground" : "border-border"}`}
+            >
+              <input
+                type="radio"
+                name="lib-env"
+                className="mt-1"
+                checked={env === e}
+                onChange={() => onChange({ group, role, env: e })}
+                data-testid={`lib-env-${e}`}
+              />
+              <span>
+                <span className="block font-medium">{t(ENV_LABEL[e])}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {t("lib.env.generalNote")}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">{t("lib.env.noScope")}</p>
+      </fieldset>
+    </div>
+  );
+}
+
+function statusKey(label: string): TranslationKey {
+  if (label === "content_validated") return "lib.status.content_validated";
+  if (label === "published") return "lib.status.published";
+  if (label === "open_pilot") return "lib.status.open_pilot";
+  if (label === "internal_test") return "lib.status.internal_test";
+  return "lib.status.pilot_hypothesis";
+}
+
+function SetupPanel({
+  employerId,
+  employerSlug,
+  method,
+  group,
+  role,
+  env,
+  canAssign,
+  content,
+}: {
+  employerId: string;
+  employerSlug: string;
+  method: LibraryMethod;
+  group: RoleGroup;
+  role: RoleProfileKey;
+  env: EnvironmentKey;
+  canAssign: boolean;
+  content: LibraryContent;
+}) {
+  const { t, lang } = useT();
+  const appsFn = useServerFn(listApplicationsForEmployer);
+  const recordFn = useServerFn(recordBesktSetup);
+  const { live, besktMethods, isSecurityOfficer } = content;
+  const apps = useQuery({
+    queryKey: ["beskt", "start", "applications", employerId],
+    queryFn: () => appsFn({ data: { employerId } }),
+    enabled: method === "trust",
+    retry: false,
+  });
+  const [applicationId, setApplicationId] = useState("");
+  const [startOpen, setStartOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+
   const setup: ResolvedSetup = resolveSetup(method, group, role, env, live);
   const guideName = setup.guide
     ? ((lang === "en" ? setup.guide.nameEn : null) ?? setup.guide.name)
@@ -749,8 +806,8 @@ function SetupPanel({
               onOpenChange={setStartOpen}
               employerId={employerId}
               employerSlug={employerSlug}
-              methods={beskt.data ?? []}
-              isSecurityOfficer={standing.data?.isSecurityOfficer ?? false}
+              methods={besktMethods}
+              isSecurityOfficer={isSecurityOfficer}
               onStarted={async (assignmentId) => {
                 await recordFn({
                   data: {
@@ -770,7 +827,7 @@ function SetupPanel({
               open={previewOpen}
               onOpenChange={setPreviewOpen}
               employerId={employerId}
-              methods={beskt.data ?? []}
+              methods={besktMethods}
             />
           ) : null}
         </div>

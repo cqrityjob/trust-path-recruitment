@@ -48,6 +48,7 @@
 // where the assessment has got to. A single blended badge would be a judgement
 // the platform does not make.
 
+import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -570,6 +571,7 @@ function Candidate360({
           employerSlug={employerSlug}
           applicationId={applicationId}
           canAssign={canAssign}
+          prepareInterview
         />
       </section>
 
@@ -683,14 +685,11 @@ function Candidate360({
              *  which employer it belongs to is being asserted by the URL;
              *  scp_iv_create_case re-checks it against the caller's employer
              *  regardless. */}
-            <Link
-              to="/employer/$employerSlug/interview-intelligence/new"
-              params={{ employerSlug }}
-              search={{ applicationId, jobId: c.jobId ?? undefined }}
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
-            >
-              {t("employer.candidate.structuredInterview.start")}
-            </Link>
+            <PrepareInterviewButton
+              employerId={employerId}
+              employerSlug={employerSlug}
+              applicationId={applicationId}
+            />
           </div>
         ) : (
           <ul className="mt-4 space-y-2">

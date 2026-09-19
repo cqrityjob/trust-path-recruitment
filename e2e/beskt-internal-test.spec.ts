@@ -12,7 +12,7 @@
  *      the validator finds nothing blocking and NOTHING is reviewed;
  *   3. on the version's Behörigheter tab they record the test activation
  *      for one organisation — the method stays a draft;
- *   4. the recruiter sees "BESKT – intern testversion" in Testbibliotek and
+ *   4. the recruiter sees "BESKT – intern testversion" in Rekryteringsstöd and
  *      starts it with "Starta test" on an existing application; another
  *      organisation sees nothing;
  *   5. the candidate prepares and submits;
@@ -94,7 +94,11 @@ async function openVersionAccess(page: Page): Promise<void> {
 
 async function openLibrary(page: Page, email: string, employer: string): Promise<void> {
   await signIn(page, email, `/employer/${employer}`);
-  await navTo(page, /^Bibliotek$/);
+  await navTo(page, /^Tester & bedömningar$|^Tests & assessments$/);
+  await page
+    .getByRole("link", { name: /^Rekryteringsstöd$|^Recruitment support$/ })
+    .first()
+    .click();
   await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
   // The library's order, clicked: BESKT → operational role → general environment.
   await page.getByTestId("lib-method-beskt-choose").click();
@@ -200,7 +204,7 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await expect(panel).toContainText(/BESKT Journey AB · Aktiv/, { timeout: 60_000 });
   });
 
-  test("4 · the recruiter starts it from Testbibliotek; another organisation sees nothing", async ({
+  test("4 · the recruiter starts it from Rekryteringsstöd; another organisation sees nothing", async ({
     page,
     browser,
   }) => {
@@ -244,7 +248,10 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     // not in the rival's offer, and none of its assignments are listed.
     await openLibrary(rival, OUTSIDER, RIVAL);
     await expect(
-      rival.getByTestId("lib-setup-status").locator("li").filter({ hasText: /BESKT – rekryteringsstöd/ }),
+      rival
+        .getByTestId("lib-setup-status")
+        .locator("li")
+        .filter({ hasText: /BESKT – rekryteringsstöd/ }),
     ).toHaveCount(0);
     await expect(rival.getByTestId("beskt-assignment-row")).toHaveCount(0);
     await expect(rival.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(0);

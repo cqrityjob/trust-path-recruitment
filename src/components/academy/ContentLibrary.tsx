@@ -114,13 +114,16 @@ function sectionOf(e: ContentLibraryEntry): SectionKey {
   return e.libraryKind === "training" ? "training" : "assessment";
 }
 
-/** The "ready to use" section differs by area; development and internal
- *  scaffolding are shown in both, because an employer needs to know what is
- *  coming and what is only test material wherever they are standing. */
+/** What a customer sees: what is ready to use in this area, and nothing
+ *  else. Owner decision 2026-09-19 ("ren kundyta"): "Under utveckling" was a
+ *  catalogue of drafts the customer cannot use, so it is not shown; the
+ *  content overview lives in administration and documentation. Internal test
+ *  material appears only where it exists -- rows the server admits solely to
+ *  organisations with fixture access -- and never as an empty section. */
 function sectionsFor(area: LibraryArea): readonly SectionKey[] {
   return area === "workforce"
-    ? (["training", "development", "internal"] as const)
-    : (["assessment", "development", "internal"] as const);
+    ? (["training", "internal"] as const)
+    : (["assessment", "internal"] as const);
 }
 
 /** Which employer area a library row belongs in.
@@ -233,9 +236,13 @@ export function ContentLibrary({
                 active={filter === "all"}
                 onClick={() => setFilter("all")}
                 label={t("academy.library.filter.all")}
-                count={(query.data ?? []).length}
+                count={visible.reduce((n, k) => n + (grouped.get(k)?.length ?? 0), 0)}
               />
-              {SECTIONS.filter(({ key }) => visible.includes(key)).map(({ key }) => (
+              {SECTIONS.filter(
+                ({ key }) =>
+                  visible.includes(key) &&
+                  (key !== "internal" || (grouped.get(key)?.length ?? 0) > 0),
+              ).map(({ key }) => (
                 <FilterChip
                   key={key}
                   active={filter === key}

@@ -209,3 +209,31 @@ export function resolveSetup(
     environmentAdapted: false,
   };
 }
+
+/** The role profiles a customer is offered under a method: only those with
+ *  content they can start. A catalogue of switched-off future packages is not
+ *  shown to customers (owner decision 2026-09-19); it lives in documentation. */
+export function availableProfiles(
+  method: LibraryMethod,
+  live: LiveContent,
+): readonly RoleProfile[] {
+  return ROLE_PROFILES.filter(
+    (p) => resolveSetup(method, p.group, p.key, "general", live).startable,
+  );
+}
+
+/** The environments a customer is offered: only those with content. */
+export function availableEnvironments(): readonly EnvironmentKey[] {
+  return ENVIRONMENTS.filter((e) => ENVIRONMENTS_WITH_CONTENT.includes(e));
+}
+
+/** Whether a whole method has anything this organisation can start. `null`
+ *  when the content could not be read -- never shown as "nothing there". */
+export function methodAvailability(
+  method: LibraryMethod,
+  live: LiveContent,
+): "available" | "none" | "unreadable" {
+  if (method === "trust" && live.guides === null) return "unreadable";
+  if (method === "beskt" && live.beskt === null) return "unreadable";
+  return availableProfiles(method, live).length > 0 ? "available" : "none";
+}

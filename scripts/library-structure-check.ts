@@ -185,16 +185,42 @@ check(
   "LS-FOCUS: one question navigation, folded follow-ups and a compact case bar in the interview",
 );
 
-// ---- navigation ---------------------------------------------------------------------
+// ---- navigation (owner decision 2026-09-19, the latest) ------------------------
 const shell = code(read("src/components/employer/EmployerAppShell.tsx"));
+const dict = read("src/i18n/dictionaries.ts");
 check(
-  /labelKey: "employer\.nav\.library",\s*icon: ClipboardCheck,\s*to: "\/employer\/\$employerSlug\/assessments\/library"/.test(
+  /labelKey: "employer\.nav\.assessments",\s*icon: ClipboardCheck,\s*to: "\/employer\/\$employerSlug\/assessments"/.test(
     shell,
   ) &&
-    /labelKey: "employer\.nav\.reports",\s*icon: FileCheck2,\s*to: "\/employer\/\$employerSlug\/reports"/.test(
-      shell,
+    /labelKey: "employer\.nav\.interviewIntelligence"/.test(shell) &&
+    !/labelKey: "employer\.nav\.library"/.test(shell) &&
+    /"academy\.nav\.library": "Rekryteringsstöd"/.test(dict) &&
+    /"lib\.title": "Rekryteringsstöd"/.test(dict),
+  "LS-NAV: Tester & bedömningar and Intervjuer stay separate; the library is the Rekryteringsstöd tab, not a Bibliotek menu item",
+);
+
+// ---- a clean customer surface ----------------------------------------------------
+const contentLib = code(read("src/components/academy/ContentLibrary.tsx"));
+check(
+  /availableProfiles\(method, content\.live\)/.test(lib) &&
+    /availableEnvironments\(\)/.test(lib) &&
+    !/disabled=\{!available\}/.test(lib) &&
+    /state === "available" \?/.test(lib) &&
+    !/"development"\] as const/.test(contentLib) &&
+    !/"training", "development"/.test(contentLib),
+  "LS-CLEAN: customers see only what they can start -- no switched-off roles or environments, no 'Under utveckling', and no start button on a method with nothing in it",
+);
+
+// ---- Förbered intervju: the same case every time ------------------------------------
+const prep = /export const prepareApplicationInterview[\s\S]*?\n  \);/.exec(runtime)?.[0] ?? "";
+check(
+  /\.eq\("application_id", data\.applicationId\)[\s\S]*?\.is\("cancelled_at", null\)/.test(prep) &&
+    prep.indexOf('.is("cancelled_at", null)') < prep.indexOf("createCaseCore(") &&
+    /setup: \{\s*method: "trust"/.test(prep) &&
+    /prepareInterview &&\s*rows\.some\(\(a\) =>\s*\["under_review", "brief_ready", "brief_released"\]\.includes\(assessmentStageOf\(a\)\)/.test(
+      code(read("src/components/academy/ApplicationAssessmentPanel.tsx")),
     ),
-  "LS-NAV: Bibliotek and Rapporter are in the recruitment navigation",
+  "LS-PREPARE: Förbered intervju opens the linked case before it would ever create one, and a created case carries its setup",
 );
 
 console.log("");

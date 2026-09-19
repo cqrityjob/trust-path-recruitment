@@ -110,15 +110,19 @@ async function expectRecruiterScreen(page: Page, where: string) {
 }
 
 /** The four-stage journey, and which stage is current. */
-async function expectJourney(page: Page, current: "Förbered" | "Intervjua" | "Bedöm" | "Rapport") {
+/** Since 2026-09-19: Upplägg → Tester & underlag → Intervju → Granska & rapport. */
+async function expectJourney(
+  page: Page,
+  current: "Upplägg" | "Tester & underlag" | "Intervju" | "Granska & rapport",
+) {
   const nav = page.getByRole("navigation", { name: /Intervjuns fyra steg|four stages/i });
   await expect(nav).toBeVisible({ timeout: 30_000 });
   const items = nav.locator("ol").first().locator("li");
   await expect(items).toHaveCount(4);
-  await expect(items.nth(0)).toContainText(/Förbered|Prepare/);
-  await expect(items.nth(1)).toContainText(/Intervjua|Interview/);
-  await expect(items.nth(2)).toContainText(/Bedöm|Assess/);
-  await expect(items.nth(3)).toContainText(/Rapport|Report/);
+  await expect(items.nth(0)).toContainText(/Upplägg|Setup/);
+  await expect(items.nth(1)).toContainText(/Tester & underlag|Tests & material/);
+  await expect(items.nth(2)).toContainText(/Intervju|Interview/);
+  await expect(items.nth(3)).toContainText(/Granska & rapport|Review & report/);
   await expect(nav.locator('[aria-current="step"]').first()).toContainText(current);
 }
 
@@ -170,7 +174,7 @@ test("A · from the application: plan, context visible, four stages, one action"
     await expect(briefing).toBeVisible({ timeout: 30_000 });
     await expect(briefing).toContainText(/Intervjuunderlag|Interview briefing/);
     await expect(briefing).toContainText(/Väktare/i);
-    await expectJourney(page, "Förbered");
+    await expectJourney(page, "Upplägg");
     await expectRecruiterScreen(page, "prepare (from application)");
     // The guide is called what the brief says it is called.
     await expect(page.locator("main")).toContainText(
@@ -212,7 +216,7 @@ test("B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Ra
   await page.waitForURL(/interview-intelligence\/[0-9a-f-]{36}\/prepare/, { timeout: 60_000 });
   walkedCase = caseIdFromUrl(page);
 
-  await expectJourney(page, "Förbered");
+  await expectJourney(page, "Upplägg");
   await expect(page.locator("main h1")).toContainText(ref);
   await expect(page.locator("main")).toContainText(/Förbereds|Being prepared/);
   await expectRecruiterScreen(page, "prepare (fresh)");
@@ -250,7 +254,7 @@ test("B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Ra
   await page.waitForURL(/\/interview$/, { timeout: 60_000 });
 
   // ---- Intervjua: Q1–Q8 ---------------------------------------------
-  await expectJourney(page, "Intervjua");
+  await expectJourney(page, "Intervju");
   await expect(page.locator("main")).toContainText(/Intervju pågår|Interview in progress/);
   await expectRecruiterScreen(page, "live interview Q1");
   // The support column is called support, and the follow-ups sit in it.
@@ -295,7 +299,7 @@ test("B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Ra
   await page.waitForURL(/\/evidence$/, { timeout: 60_000 });
 
   // ---- Bedöm 1/2: choose the material ---------------------------------
-  await expectJourney(page, "Bedöm");
+  await expectJourney(page, "Granska & rapport");
   await expect(page.locator("main")).toContainText(/Underlag granskas|Material under review/);
   await expect(
     page.getByRole("heading", { name: /Välj underlag|Choose the material/ }).first(),
@@ -324,7 +328,7 @@ test("B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Ra
   await page.waitForURL(/\/assessment$/, { timeout: 60_000 });
 
   // ---- Bedöm 2/2: assess against the requirements ---------------------
-  await expectJourney(page, "Bedöm");
+  await expectJourney(page, "Granska & rapport");
   await expectRecruiterScreen(page, "assess");
   // Human judgement only: a recruiter picks a described level and writes why.
   await expect(page.locator("main")).toContainText(
@@ -348,7 +352,7 @@ test("B–D · a fresh interview walks Förbered → Intervjua → Bedöm → Ra
   await page.waitForURL(/\/report$/, { timeout: 60_000 });
 
   // ---- Rapport: the material, then the one irreversible action --------
-  await expectJourney(page, "Rapport");
+  await expectJourney(page, "Granska & rapport");
   await expect(page.locator("main")).toContainText(/Rapportunderlag redo|Report material ready/);
   await expect(
     page.getByRole("heading", { name: /Rapportunderlag|Report material/ }),
@@ -399,7 +403,7 @@ test("E · a member sees the ready state, no finalise button, and a way back to 
     page.getByRole("link", { name: /Tillbaka till kandidaten|Back to the candidate/ }),
   ).toBeVisible();
   expect(await primaryCount(page), "member report: no primary action to take").toBe(0);
-  await expectJourney(page, "Rapport");
+  await expectJourney(page, "Granska & rapport");
   await expectRecruiterScreen(page, "report (member)");
 });
 
