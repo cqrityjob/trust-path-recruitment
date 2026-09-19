@@ -22,6 +22,7 @@
 
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+import { ifShown, openThemeArea, recordStance, walkSteps } from "./support/beskt-walk";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
 const BASE = process.env.E2E_BASE_URL ?? "";
@@ -41,6 +42,7 @@ const EMPLOYER = "beskt-journey-ab";
 const APPLICATION = "b4000000-0000-4000-8000-00000000aa01";
 const APPLICATION_PATH = `/employer/${EMPLOYER}/applications/${APPLICATION}`;
 const METHOD = /SYNTETISK TEST – BESKT – rekryteringsstöd/;
+const RECRUITER_NAME = "Rekryterare Journey";
 const FACT = "SYNTETISKT-V01 kandidaten beskrev hur misstaget rapporterades samma dag";
 
 async function signIn(page: Page, email: string, destination: string): Promise<void> {
@@ -89,11 +91,24 @@ test.describe("BESKT v0.1 — candidate preparation → interview → report on 
     await page.goto(APPLICATION_PATH);
     const panel = page.getByTestId("beskt-application-panel");
     await expect(panel).toBeVisible({ timeout: 60_000 });
-    await panel.getByLabel(/^metod$|^method$/i).click();
-    await page.getByRole("option", { name: METHOD }).click();
-    await panel.getByLabel(/rollexponering|role exposure/i).click();
-    await page.getByRole("option").first().click();
-    await panel.getByTestId("beskt-start-submit").click();
+    await panel.getByTestId("beskt-start-open").click();
+    const dialog = page.getByTestId("beskt-start-dialog");
+    await expect(dialog).toBeVisible({ timeout: 15_000 });
+    const version = dialog.locator("#beskt-start-version");
+    if ((await version.count()) > 0) {
+      const v01 = await version
+        .locator("option")
+        .evaluateAll(
+          (o) =>
+            (o as HTMLOptionElement[]).find((x) =>
+              /SYNTETISK TEST – BESKT – rekryteringsstöd/.test(x.text),
+            )?.value,
+        );
+      await version.selectOption(v01!);
+    }
+    await dialog.locator("#beskt-start-interviewer").selectOption({ label: RECRUITER_NAME });
+    await dialog.getByTestId("beskt-start-dialog-submit").click();
+    await expect(dialog).toHaveCount(0, { timeout: 60_000 });
     await expect(panel.getByTestId("beskt-readback-state")).toBeVisible({ timeout: 60_000 });
     await shot(page, "1-started-sv");
   });
@@ -110,61 +125,54 @@ test.describe("BESKT v0.1 — candidate preparation → interview → report on 
     await page.getByLabel(/jag har läst informationen/i).check();
     await page.getByTestId("beskt-acknowledge").click();
 
-    // T: the candidate only confirms the role description (§4.3 T).
-    await expect(page.getByTestId("beskt-item-t01_forstaelse")).toBeVisible({ timeout: 60_000 });
-    await page.locator("#beskt-input-t01_forstaelse").check();
-    // §4.3 fråga 1, in the specification's own words.
-    await expect(page.getByTestId("beskt-item-q01_sakerhetsregel")).toContainText(
-      "Beskriv en situation där du följde en säkerhetsregel trots att den gjorde arbetet svårare.",
-    );
-    await page
-      .locator("#beskt-input-q01_sakerhetsregel")
-      .fill("SYNTETISKT-V01 jag följde tvåpersonsregeln vid larmkvittering.");
-    // Ja on fråga 2 opens the §4.2 follow-ups; Nej on fråga 3 opens none.
-    await page.locator("#beskt-input-q02_misstag-ja").click();
-    await page.locator("#beskt-input-q03_kringga_regel-nej").click();
-    await saveAndReopen(page);
-
-    await expect(page.getByTestId("beskt-item-q02_misstag__aktualitet")).toBeVisible({
-      timeout: 60_000,
+    // One area per step. The answers below, on whichever step shows them;
+    // every other question gets "Vill inte svara" as the state it is.
+    let sawQ01 = false;
+    let sawQ02FollowUp = false;
+    await walkSteps(page, async () => {
+      // T: the candidate only confirms the role description (§4.3 T).
+      await ifShown(page, "#beskt-input-t01_forstaelse", () =>
+        page.locator("#beskt-input-t01_forstaelse").check(),
+      );
+      await ifShown(page, "#beskt-input-q01_sakerhetsregel", async () => {
+        sawQ01 = true;
+        // §4.3 fråga 1, in the specification's own words.
+        await expect(page.getByTestId("beskt-item-q01_sakerhetsregel")).toContainText(
+          "Beskriv en situation där du följde en säkerhetsregel trots att den gjorde arbetet svårare.",
+        );
+        await page
+          .locator("#beskt-input-q01_sakerhetsregel")
+          .fill("SYNTETISKT-V01 jag följde tvåpersonsregeln vid larmkvittering.");
+      });
+      // Ja on fråga 2 opens the §4.2 follow-ups; Nej on fråga 3 opens none.
+      await ifShown(page, "#beskt-input-q02_misstag-ja", () =>
+        page.locator("#beskt-input-q02_misstag-ja").click(),
+      );
+      await ifShown(page, "#beskt-input-q03_kringga_regel-nej", () =>
+        page.locator("#beskt-input-q03_kringga_regel-nej").click(),
+      );
+      await ifShown(page, "#beskt-input-q02_misstag__aktualitet-manader_7_24", async () => {
+        sawQ02FollowUp = true;
+        await expect(page.getByTestId("beskt-item-q03_kringga_regel__aktualitet")).toHaveCount(0);
+        await page.locator("#beskt-input-q02_misstag__aktualitet-manader_7_24").click();
+        await page.locator("#beskt-input-q02_misstag__beskrivning").fill(FACT);
+        await shot(page, "2-grammar-sv");
+      });
+      // "Tar muntligt" and "Vill inte svara" are neutral states, not options.
+      await ifShown(page, '[data-testid="beskt-item-q05_konflikt_atgard-oral"]', async () => {
+        const oral = page.getByTestId("beskt-item-q05_konflikt_atgard-oral");
+        if ((await oral.getAttribute("aria-pressed")) !== "true") await oral.click();
+      });
+      await ifShown(page, '[data-testid="beskt-item-q06_olost_oforratt-skip"]', async () => {
+        const skip = page.getByTestId("beskt-item-q06_olost_oforratt-skip");
+        if ((await skip.getAttribute("aria-pressed")) !== "true") await skip.click();
+      });
+      await expectFitsViewport(page);
     });
-    await expect(page.getByTestId("beskt-item-q03_kringga_regel__aktualitet")).toHaveCount(0);
-    await page.locator("#beskt-input-q02_misstag__aktualitet-manader_7_24").click();
-    await page.locator("#beskt-input-q02_misstag__beskrivning").fill(FACT);
-    await shot(page, "2-grammar-sv");
-
-    // "Tar muntligt" and "Vill inte svara" are neutral states, not options.
-    await page.getByTestId("beskt-item-q05_konflikt_atgard-oral").click();
-    await page.getByTestId("beskt-item-q06_olost_oforratt-skip").click();
+    expect(sawQ01 && sawQ02FollowUp).toBe(true);
+    // Saved answers survive leaving and coming back.
     await saveAndReopen(page);
-    await expect(page.getByTestId("beskt-item-q02_misstag__beskrivning")).toBeVisible({
-      timeout: 60_000,
-    });
-    await expect(page.locator("#beskt-input-q02_misstag__beskrivning")).toHaveValue(FACT);
-    await expectFitsViewport(page);
-
-    // Every visible question needs an explicit state before review. The rest
-    // are skipped deliberately -- "Vill inte svara" as the state it is.
-    for (const key of [
-      "t02_tidigare_ansvar",
-      "q02_misstag__monster",
-      "q02_misstag__nulage",
-      "q02_misstag__forandring",
-      "q02_misstag__stod",
-      "q02_misstag__verifiering",
-      "q04_rollens_ansvar",
-      "q07_ilska_regelbrott",
-      "q08_motgang",
-      "s1_akut_order",
-      "s2_lana_inloggning",
-      "s3_eget_misstag",
-      "s4_litet_undantag",
-      "s5_ej_godkand_ai",
-      "s6_distansarbete",
-    ]) {
-      await page.getByTestId(`beskt-item-${key}-skip`).click();
-    }
-    await saveAndReopen(page);
+    await expect(page.getByTestId("beskt-steps")).toBeVisible({ timeout: 60_000 });
     await page.getByTestId("beskt-to-review").click();
     await expect(page.getByTestId("beskt-review-list")).toBeVisible({ timeout: 60_000 });
     await shot(page, "2-review-sv");
@@ -225,8 +233,14 @@ test.describe("BESKT v0.1 — candidate preparation → interview → report on 
     await expect(stages).toContainText("Hur förklarar du själv det som hände?");
     await expect(stages).toContainText(/Systemet fattar inget beslut/);
     // The candidate's own choices, and nothing else, became themes.
-    await expect(page.getByTestId("beskt-theme-q05_konflikt_atgard")).toBeVisible();
+    await expect(await openThemeArea(page, "q05_konflikt_atgard")).toBeVisible();
     await expect(page.getByTestId("beskt-theme-q06_olost_oforratt")).toBeVisible();
+    // Ja on fråga 2 fired its follow-up rule: a theme too, naming the rule.
+    // It sits in its own area (the common base), not in B's.
+    await expect(await openThemeArea(page, "q02_misstag")).toHaveAttribute(
+      "data-reason",
+      "candidate_disclosed",
+    );
     await expectFitsViewport(page);
     await shot(page, "4-beskt-in-case-sv");
   });
@@ -239,7 +253,8 @@ test.describe("BESKT v0.1 — candidate preparation → interview → report on 
       .click();
     await expect(page).toHaveURL(/\/beskt$/, { timeout: 60_000 });
 
-    const theme = page.getByTestId("beskt-theme-q05_konflikt_atgard");
+    // The session was opened in step 4; the conversation support is shown.
+    const theme = await openThemeArea(page, "q05_konflikt_atgard");
     await expect(theme.getByRole("button", { name: /Dokumentera temat/ })).toBeVisible({
       timeout: 60_000,
     });
@@ -263,6 +278,7 @@ test.describe("BESKT v0.1 — candidate preparation → interview → report on 
     const doc = page.getByTestId("beskt-report-document");
     await expect(doc).toBeVisible({ timeout: 60_000 });
     await expect(doc).toContainText(METHOD);
+    await recordStance(page, RECRUITER_NAME);
     await page.getByTestId("beskt-report-finalise").click();
     await expect(page.getByTestId("beskt-report-versions")).toContainText(/Version 1/, {
       timeout: 60_000,

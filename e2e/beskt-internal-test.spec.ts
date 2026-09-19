@@ -27,6 +27,7 @@
 
 import { expect, test, type Page } from "@playwright/test";
 import { mkdirSync } from "node:fs";
+import { ifShown, openThemeArea, recordStance, walkSteps } from "./support/beskt-walk";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
 const BASE = process.env.E2E_BASE_URL ?? "";
@@ -48,7 +49,7 @@ const EMPLOYER = "beskt-journey-ab";
 const RIVAL = "beskt-rival-ab";
 const APPLICATION = "b4000000-0000-4000-8000-00000000aa01";
 const LAWFUL_BASIS = "Intern funktionstest med testdata enligt ägarens beslut 2026-09-18";
-const LABEL = "BESKT – intern testversion";
+const RECRUITER_NAME = "Rekryterare Journey";
 const FACT = "TESTDATA kandidaten beskrev hur misstaget rapporterades samma dag";
 
 async function signIn(page: Page, email: string, destination: string): Promise<void> {
@@ -150,7 +151,7 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await openAdminMethods(page);
     const card = page.getByTestId("beskt-install-v01");
     await expect(card).toBeVisible({ timeout: 60_000 });
-    await card.locator("#beskt-install-lawful").fill(LAWFUL_BASIS);
+    await card.locator("#beskt-install-lawful-rekrytering").fill(LAWFUL_BASIS);
     await card.getByTestId("beskt-install-v01-submit").click();
     const done = card.getByTestId("beskt-install-v01-done");
     await expect(done).toBeVisible({ timeout: 240_000 });
@@ -186,7 +187,7 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     const card = page.getByTestId("beskt-install-v01");
     await expect(card.getByTestId("beskt-install-v01-existing")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(1);
-    await card.locator("#beskt-install-lawful").fill(LAWFUL_BASIS);
+    await card.locator("#beskt-install-lawful-rekrytering").fill(LAWFUL_BASIS);
     await card.getByTestId("beskt-install-v01-submit").click();
     await expect(card.getByTestId("beskt-install-v01-done")).toContainText(
       /Innehållet är installerat och komplett/,
@@ -203,27 +204,37 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     browser,
   }) => {
     await openLibrary(page, RECRUITER, EMPLOYER);
+    // One row per runnable version; the installed one says it runs under
+    // the organisation's recorded activation, as an unreviewed version.
     const row = page
       .getByTestId("beskt-method-row")
-      .filter({ hasText: /BESKT – rekryteringsstöd/ });
+      .filter({ hasText: /Används enligt organisationens aktivering/ });
     await expect(row).toHaveCount(1, { timeout: 60_000 });
-    await expect(row.getByTestId("beskt-internal-test-label")).toHaveText(LABEL);
+    await expect(row.getByTestId("beskt-method-status")).toContainText(/Ogranskad metodversion/);
     await expectFitsViewport(page);
     await shot(page, "4-library");
-    await row.getByTestId("beskt-start-test").click();
-    const dialog = page.getByTestId("beskt-start-test-dialog");
+    await page.getByTestId("beskt-module-start").click();
+    const dialog = page.getByTestId("beskt-start-dialog");
     await expect(dialog).toBeVisible();
-    const app = dialog.locator("#beskt-start-test-application");
+    await dialog.getByTestId("beskt-purpose-recruitment_support").check();
+    const version = dialog.locator("#beskt-start-version");
+    const installed = await version
+      .locator("option")
+      .evaluateAll(
+        (o) =>
+          (o as HTMLOptionElement[]).find((x) => /BESKT – rekryteringsstöd/.test(x.text))?.value,
+      );
+    await version.selectOption(installed!);
+    const app = dialog.locator("#beskt-start-application");
     await expect(app.locator(`option[value="${APPLICATION}"]`)).toHaveCount(1, {
       timeout: 60_000,
     });
     await app.selectOption(APPLICATION);
+    await dialog.locator("#beskt-start-interviewer").selectOption({ label: RECRUITER_NAME });
     await shot(page, "4-start-dialog");
-    await dialog.getByTestId("beskt-start-test-submit").click();
-    await expect(page).toHaveURL(new RegExp(`/applications/${APPLICATION}`), { timeout: 60_000 });
-    await expect(
-      page.getByTestId("beskt-application-panel").getByTestId("beskt-readback-state"),
-    ).toBeVisible({ timeout: 60_000 });
+    await dialog.getByTestId("beskt-start-dialog-submit").click();
+    await expect(page.getByTestId("beskt-assignment")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("beskt-readback-state")).toBeVisible({ timeout: 60_000 });
 
     const ctx = await browser.newContext();
     const rival = await ctx.newPage();
@@ -231,14 +242,14 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await expect(rival.getByRole("heading", { name: /^Testbibliotek$/ })).toBeVisible({
       timeout: 60_000,
     });
-    await expect(rival.getByTestId("beskt-internal-test-label")).toHaveCount(0);
+    await expect(rival.getByTestId("beskt-module")).toHaveCount(0);
     await expect(rival.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(0);
     await shot(rival, "4-rival-library");
     // The hostile deep link: this organisation's library, typed by an outsider.
     await rival.goto(`/employer/${EMPLOYER}/assessments/library`);
     // A positive refusal, not merely an absence on a page still loading.
     await expect(rival.getByText(/Åtkomst ej tillgänglig/)).toBeVisible({ timeout: 60_000 });
-    await expect(rival.getByTestId("beskt-start-test")).toHaveCount(0, { timeout: 30_000 });
+    await expect(rival.getByTestId("beskt-module-start")).toHaveCount(0, { timeout: 30_000 });
     await expect(rival.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(0);
     await shot(rival, "4-rival-deep-link");
     await ctx.close();
@@ -259,48 +270,39 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await page.getByLabel(/jag har läst informationen/i).check();
     await page.getByTestId("beskt-acknowledge").click();
 
-    await expect(page.getByTestId("beskt-item-t01_forstaelse")).toBeVisible({ timeout: 60_000 });
-    await page.locator("#beskt-input-t01_forstaelse").check();
-    await page
-      .locator("#beskt-input-q01_sakerhetsregel")
-      .fill("TESTDATA jag följde tvåpersonsregeln vid larmkvittering.");
-    await page.locator("#beskt-input-q02_misstag-ja").click();
-    await page.locator("#beskt-input-q03_kringga_regel-nej").click();
-    await saveAndReopen(page);
-
-    await expect(page.getByTestId("beskt-item-q02_misstag__aktualitet")).toBeVisible({
-      timeout: 60_000,
+    // One area per step. On each: the answers this walk gives, and a neutral
+    // "Vill inte svara" for the rest. q02 = Ja opens its follow-ups on the
+    // same step; q05 is taken orally.
+    await walkSteps(page, async () => {
+      await ifShown(page, "#beskt-input-t01_forstaelse", () =>
+        page.locator("#beskt-input-t01_forstaelse").check(),
+      );
+      await ifShown(page, "#beskt-input-q01_sakerhetsregel", () =>
+        page
+          .locator("#beskt-input-q01_sakerhetsregel")
+          .fill("TESTDATA jag följde tvåpersonsregeln vid larmkvittering."),
+      );
+      await ifShown(page, "#beskt-input-q02_misstag-ja", () =>
+        page.locator("#beskt-input-q02_misstag-ja").click(),
+      );
+      await ifShown(page, "#beskt-input-q03_kringga_regel-nej", () =>
+        page.locator("#beskt-input-q03_kringga_regel-nej").click(),
+      );
+      await ifShown(page, "#beskt-input-q02_misstag__aktualitet-manader_7_24", () =>
+        page.locator("#beskt-input-q02_misstag__aktualitet-manader_7_24").click(),
+      );
+      await ifShown(page, "#beskt-input-q02_misstag__beskrivning", () =>
+        page.locator("#beskt-input-q02_misstag__beskrivning").fill(FACT),
+      );
+      await ifShown(page, '[data-testid="beskt-item-q05_konflikt_atgard-oral"]', async () => {
+        const oral = page.getByTestId("beskt-item-q05_konflikt_atgard-oral");
+        if ((await oral.getAttribute("aria-pressed")) !== "true") await oral.click();
+      });
+      await expectFitsViewport(page);
     });
-    await page.locator("#beskt-input-q02_misstag__aktualitet-manader_7_24").click();
-    await page.locator("#beskt-input-q02_misstag__beskrivning").fill(FACT);
-    await page.getByTestId("beskt-item-q05_konflikt_atgard-oral").click();
-    await page.getByTestId("beskt-item-q06_olost_oforratt-skip").click();
+    // Saved answers survive leaving and coming back.
     await saveAndReopen(page);
-    await expect(page.locator("#beskt-input-q02_misstag__beskrivning")).toHaveValue(FACT, {
-      timeout: 60_000,
-    });
-    await expectFitsViewport(page);
-
-    for (const key of [
-      "t02_tidigare_ansvar",
-      "q02_misstag__monster",
-      "q02_misstag__nulage",
-      "q02_misstag__forandring",
-      "q02_misstag__stod",
-      "q02_misstag__verifiering",
-      "q04_rollens_ansvar",
-      "q07_ilska_regelbrott",
-      "q08_motgang",
-      "s1_akut_order",
-      "s2_lana_inloggning",
-      "s3_eget_misstag",
-      "s4_litet_undantag",
-      "s5_ej_godkand_ai",
-      "s6_distansarbete",
-    ]) {
-      await page.getByTestId(`beskt-item-${key}-skip`).click();
-    }
-    await saveAndReopen(page);
+    await expect(page.getByTestId("beskt-steps")).toBeVisible({ timeout: 60_000 });
     await page.getByTestId("beskt-to-review").click();
     await expect(page.getByTestId("beskt-review-list")).toBeVisible({ timeout: 60_000 });
     await page.getByTestId("beskt-submit").click();
@@ -349,7 +351,7 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await expect(page.getByTestId("beskt-stage-prompts")).toContainText("Vad hände konkret?", {
       timeout: 60_000,
     });
-    const theme = page.getByTestId("beskt-theme-q05_konflikt_atgard");
+    const theme = await openThemeArea(page, "q05_konflikt_atgard");
     await theme.getByRole("button", { name: /Dokumentera temat/ }).click();
     await page
       .getByLabel(/^Observerbart faktum$/i)
@@ -370,6 +372,7 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await parts.getByRole("link", { name: /^Rapport$/ }).click();
     const doc = page.getByTestId("beskt-report-document");
     await expect(doc).toBeVisible({ timeout: 60_000 });
+    await recordStance(page, RECRUITER_NAME);
     await page.getByTestId("beskt-report-finalise").click();
     await expect(page.getByTestId("beskt-report-versions")).toContainText(/Version 1/, {
       timeout: 60_000,

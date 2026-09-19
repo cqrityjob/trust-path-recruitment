@@ -73,7 +73,8 @@ export function BesktMethodListPage({
         </NoticePanel>
       </div>
 
-      <BesktInstallV01Card surface={surface} />
+      <BesktInstallV01Card surface={surface} method="rekrytering" />
+      <BesktInstallV01Card surface={surface} method="sakerhet" />
       {surface === "admin" ? <BesktContentRolesPanel /> : null}
 
       {canCreate && (

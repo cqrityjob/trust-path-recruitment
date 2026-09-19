@@ -65,6 +65,25 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "BC-CONTENT",
   },
+  {
+    id: "BC-NC-RELEASE-UNRECORDED",
+    defect: "the migration is declared applied without its hosted body evidence",
+    file: "supabase/release-state.json",
+    find: "bcp_conduct_record_stance c51d18baa2d076060382ba2fd1534d4b",
+    replace: "bcp_conduct_record_stance (not checked)",
+    guard: GUARD,
+    expect: "BC-RELEASE: recorded applied with hosted body evidence",
+  },
+  {
+    id: "BC-NC-FRONTIER-STALE",
+    defect:
+      "the applied migration is put back on the frontier's pending list, hiding the next stuck one",
+    file: "scripts/release-frontier-check.ts",
+    find: "const expectedPending: string[] = [",
+    replace: 'const expectedPending: string[] = ["20261130090000_bcp_beskt_complete.sql",',
+    guard: GUARD,
+    expect: "BC-RELEASE: no longer expected pending",
+  },
 ];
 
 await runControls("beskt-complete", MUTATIONS);

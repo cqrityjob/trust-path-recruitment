@@ -143,13 +143,28 @@ check(
   "BC-HARNESS: db:test runs the suite, refuses a shrunk one, and unwinds 20261130 before 20261129",
 );
 const state = JSON.parse(read(STATE)) as {
-  frontier: Array<{ file?: string; hostedState?: string }>;
+  frontier: Array<{ file?: string; hostedState?: string; evidenceSource?: string }>;
 };
+// Applied by the integration after #270 merged (188e8cd), verified by the
+// BODIES of the functions it created or re-created, not only the ledger row.
+const entry = state.frontier.find((e) => e.file === "20261130090000_bcp_beskt_complete.sql");
 check(
-  state.frontier.some(
-    (e) => e.file === "20261130090000_bcp_beskt_complete.sql" && e.hostedState === "pending",
+  entry?.hostedState === "applied" &&
+    /wrygicdfxwjnrugduxnt/.test(entry.evidenceSource ?? "") &&
+    [
+      "5b727429a8136f052eac2eb444538aa0",
+      "02356e64182f89271b75895e4e9a8b64",
+      "c51d18baa2d076060382ba2fd1534d4b",
+      "cd8e784e78863a52b919f514eea8bfa4",
+    ].every((md5) => (entry.evidenceSource ?? "").includes(md5)) &&
+    /"version": "20261130090000"/.test(read("supabase/hosted-ledger.json")),
+  "BC-RELEASE: recorded applied with hosted body evidence and a ledger row",
+);
+check(
+  !/const expectedPending: string\[\] = \[[^\]]*20261130090000/.test(
+    read("scripts/release-frontier-check.ts"),
   ),
-  "BC-RELEASE: declared pending until the integration applies it",
+  "BC-RELEASE: no longer expected pending on the frontier",
 );
 
 console.log("");

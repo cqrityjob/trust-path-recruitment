@@ -37,7 +37,11 @@ function LibraryRoute() {
               scored assessment, and the section renders its own truthful
               state (including "under development" when nothing governed is
               published, which in production is always). */}
-          <MethodSupportSection employerId={ws.employerId} employerSlug={employerSlug} />
+          <MethodSupportSection
+            employerId={ws.employerId}
+            employerSlug={employerSlug}
+            canManage={ws.role === "owner" || ws.role === "admin"}
+          />
         </>
       )}
     </AcademyPage>

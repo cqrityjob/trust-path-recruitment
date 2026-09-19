@@ -95,6 +95,11 @@ function noticeForLocale(locale: string, contentHash: string): BesktNoticeForLoc
     decisionMaker: "accountable_employer_human",
     producesScore: false,
     methodContentHash: "3".repeat(64),
+    // 20261130's assignment facts; absent here, as on a v1 notice.
+    employerName: null,
+    roleTitle: null,
+    contactStatement: null,
+    lawfulBasisStatement: null,
   };
 }
 
@@ -190,6 +195,12 @@ const PREPARATION: BesktCandidatePreparation = {
   assignmentId: "00000000-0000-4000-8000-0000000000a1",
   applicationId: "00000000-0000-4000-8000-0000000000a2",
   lifecycleState: "assigned",
+  mode: "recruitment_support",
+  roleTitle: null,
+  roleTitleEn: null,
+  employerName: null,
+  contactStatement: null,
+  entrance: "application",
   availableFrom: "2026-09-12T08:00:00.000Z",
   dueAt: null,
   submittedAt: null,

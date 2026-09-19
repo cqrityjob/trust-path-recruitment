@@ -1245,6 +1245,10 @@ export const createInterviewCase = createServerFn({ method: "POST" })
         // to a case of the SAME candidate and so can never match a case that
         // carries an external reference instead.
         bindApplicant: z.boolean().optional(),
+        // A BESKT assignment that came through an invitation, not an
+        // application: the case is bound to the account that ACCEPTED it.
+        // Read under the caller's own RLS; scp_iv_create_case re-checks it.
+        besktAssignmentId: z.string().uuid().nullable().optional(),
       })
       .parse(d),
   )
@@ -1266,6 +1270,25 @@ export const createInterviewCase = createServerFn({ method: "POST" })
         );
       }
       candidateUserId = app.data.applicant_user_id;
+    }
+    if (data.besktAssignmentId && !data.applicationId) {
+      const a = await context.supabase
+        .from("bcp_assignments" as never)
+        .select("candidate_user_id, employer_id, invitation_id")
+        .eq("id", data.besktAssignmentId)
+        .maybeSingle();
+      if (a.error) throw new Error(a.error.message);
+      const row = a.data as {
+        candidate_user_id: string;
+        employer_id: string;
+        invitation_id: string | null;
+      } | null;
+      if (!row || row.employer_id !== data.employerId || !row.invitation_id) {
+        throw new Error(
+          "SCP_IV_CANDIDATE_REQUIRES_APPLICATION: that BESKT assignment is not an accepted invitation of this employer.",
+        );
+      }
+      candidateUserId = row.candidate_user_id;
     }
     const { data: id, error } = await context.supabase.rpc("scp_iv_create_case", {
       _employer_id: data.employerId,

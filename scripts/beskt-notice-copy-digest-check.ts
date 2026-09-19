@@ -168,6 +168,67 @@ if (!dictionaryCarriesTheNotice) {
   }
 }
 
+/* ------------------------------------------------------------------ */
+/* 3 · The later notices (20261130090000): each version its own keys   */
+/* ------------------------------------------------------------------ */
+
+// The general recruitment notice and the security-vetting notice. Their key
+// lists and digests live in bcp_notice_copy_keys_for / bcp_notice_copy_digest
+// of the complete-product migration; the dictionary must hash to them in
+// both locales, over exactly those keys, in that order.
+const COMPLETE = join(ROOT, "supabase/migrations/20261130090000_bcp_beskt_complete.sql");
+if (existsSync(COMPLETE)) {
+  const csql = readFileSync(COMPLETE, "utf8");
+  const keysFor =
+    /CREATE OR REPLACE FUNCTION public\.bcp_notice_copy_keys_for\(_notice_version text\)[\s\S]*?\$\$;/.exec(
+      csql,
+    )?.[0] ?? "";
+  const digestFn =
+    /CREATE OR REPLACE FUNCTION public\.bcp_notice_copy_digest\(_notice_version text, _locale text\)[\s\S]*?\n\$function\$/.exec(
+      csql,
+    )?.[0] ?? "";
+  const svStart = dict.indexOf("  sv: {");
+  const enStart = dict.indexOf("  en: {");
+  const blocks: Record<string, string> = {
+    "sv-SE": dict.slice(svStart, enStart),
+    "en-GB": dict.slice(enStart),
+  };
+  for (const version of ["beskt-prep-notice-2", "beskt-vetting-notice-1"]) {
+    const block = new RegExp(
+      `WHEN _notice_version = '${version}' THEN ARRAY\\[([\\s\\S]*?)\\]::text\\[\\]`,
+    ).exec(keysFor);
+    const keys = block
+      ? Array.from(block[1].matchAll(/'([a-z][a-zA-Z0-9_.]*)'/g), (m) => m[1])
+      : [];
+    check(
+      keys.length === 29 && new Set(keys).size === 29,
+      `${version} governs 29 distinct copy keys (found ${keys.length})`,
+    );
+    check(
+      keys[keys.length - 1] === "beskt.prep.open",
+      `${version} ends with the control that records the acknowledgement`,
+    );
+    for (const locale of ["sv-SE", "en-GB"] as const) {
+      const governed =
+        new RegExp(
+          `WHEN _notice_version = '${version}' AND _locale = '${locale}'\\s*\\n\\s*THEN '([0-9a-f]{64})'`,
+        ).exec(digestFn)?.[1] ?? null;
+      let computed: string | null = null;
+      let error = "";
+      try {
+        computed = canonicalDigest(blocks[locale], keys);
+      } catch (e) {
+        error = e instanceof Error ? e.message : String(e);
+      }
+      check(
+        governed !== null && computed === governed,
+        `the ${locale} dictionary hashes to ${version}'s governed digest` +
+          (error ? ` (${error})` : ` (got ${computed})`),
+      );
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error(`\nBESKT notice-copy digest FAILED (${failures.length} of ${assertions}).`);
   for (const failure of failures) console.error(`  - ${failure}`);

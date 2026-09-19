@@ -69,6 +69,7 @@ const BLOCKER_LABEL: Record<string, TranslationKey> = {
   BCP_CONDUCT_PANEL_NOT_REVEALED: "beskt.error.conductPanelNotRevealed",
   BCP_CONDUCT_RESOLUTION_MISSING: "beskt.error.reportResolutionMissing",
   BCP_CONDUCT_SESSION_NOT_FOUND: "beskt.error.conductSessionNotFound",
+  BCP_CONDUCT_STANCE_MISSING: "beskt.error.reportStanceMissing",
 };
 
 const RESPONSE_STATE_LABEL: Record<string, TranslationKey> = {
@@ -215,6 +216,17 @@ function EntryBlock({ entry }: { entry: BesktReportEntry }) {
           value={entry.alternativeExplanation}
         />
         <Claim label={t("beskt.conduct.entry.protectiveFactor")} value={entry.protectiveFactor} />
+        <Claim label={t("beskt.fakta.eventTiming")} value={entry.eventTiming} />
+        <Claim label={t("beskt.fakta.consequence")} value={entry.consequence} />
+        <Claim label={t("beskt.fakta.supportingInformation")} value={entry.supportingInformation} />
+        <Claim
+          label={t("beskt.fakta.contradictingInformation")}
+          value={entry.contradictingInformation}
+        />
+        <Claim label={t("beskt.fakta.measuresTaken")} value={entry.measuresTaken} />
+        <Claim label={t("beskt.fakta.roleLink")} value={entry.roleLink} />
+        <Claim label={t("beskt.fakta.informationGap")} value={entry.informationGap} />
+        <Claim label={t("beskt.fakta.candidateResponse")} value={entry.candidateResponse} />
         <Claim label={t("beskt.conduct.entry.verificationNeed")} value={entry.verificationNeed} />
         <Claim
           label={t("beskt.conduct.entry.verificationSource")}
@@ -543,6 +555,7 @@ export function BesktReportDocument({
         </Panel>
       </div>
 
+      <AssignmentBlock d={d} />
       <LimitationsBlock d={d} />
       <ProvenanceBlock d={d} contentHash={contentHash} basisHash={basisHash} />
       <CandidateStatements d={d} />
@@ -562,6 +575,7 @@ export function BesktReportDocument({
       </section>
 
       <PanelBlock d={d} />
+      <StanceBlock d={d} />
 
       <section className="mt-6" aria-labelledby="beskt-report-themes-h">
         <h3 id="beskt-report-themes-h" className="text-base font-semibold text-foreground">
@@ -603,6 +617,178 @@ export function BesktReportDocument({
         </ol>
       </section>
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// §6 points 2-3 and 6-8: the assignment and its people, the candidate's own
+// later corrections, the sufficiency of the basis, the responsible human's
+// stance and the follow-up. All from the frozen basis; none of it computed.
+// ---------------------------------------------------------------------------
+
+function AssignmentBlock({ d }: { d: ReturnType<typeof readBesktReportPayload> }) {
+  const { t, lang } = useT();
+  const a = d.assignment;
+  if (!a) return null;
+  return (
+    <section
+      className="mt-6"
+      aria-labelledby="beskt-report-assignment-h"
+      data-testid="beskt-report-assignment"
+    >
+      <h3 id="beskt-report-assignment-h" className="text-base font-semibold text-foreground">
+        {t("beskt.report.assignment.heading")}
+      </h3>
+      <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-xs text-muted-foreground">{t("beskt.invitation.purpose")}</dt>
+          <dd data-testid="beskt-report-purpose">
+            {t(
+              a.purpose === "security_vetting"
+                ? "beskt.purpose.securityVetting"
+                : "beskt.purpose.recruitment",
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">{t("beskt.invitation.role")}</dt>
+          <dd>{a.roleTitle ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-xs text-muted-foreground">
+            {t("beskt.report.assignment.interviewer")}
+          </dt>
+          <dd>{a.responsibleInterviewer ?? "—"}</dd>
+        </div>
+        {a.securityOwner ? (
+          <div>
+            <dt className="text-xs text-muted-foreground">
+              {t("beskt.startDialog.securityOwner")}
+            </dt>
+            <dd>{a.securityOwner}</dd>
+          </div>
+        ) : null}
+        <div className="sm:col-span-2">
+          <dt className="text-xs text-muted-foreground">{t("beskt.workspace.exposure")}</dt>
+          <dd>
+            {(lang === "sv" ? a.exposureDutiesSv : (a.exposureDutiesEn ?? a.exposureDutiesSv)) ??
+              "—"}
+          </dd>
+        </div>
+        {a.roleSecurityAttestation ? (
+          <div className="sm:col-span-2">
+            <dt className="text-xs text-muted-foreground">{t("beskt.workspace.attestation")}</dt>
+            <dd>{a.roleSecurityAttestation}</dd>
+          </div>
+        ) : null}
+        {a.lawfulBasisStatement ? (
+          <div className="sm:col-span-2">
+            <dt className="text-xs text-muted-foreground">{t("beskt.startDialog.lawfulBasis")}</dt>
+            <dd>{a.lawfulBasisStatement}</dd>
+          </div>
+        ) : null}
+      </dl>
+      <h4 className="mt-4 text-sm font-semibold">{t("beskt.report.assignment.conduct")}</h4>
+      <ul className="mt-1 space-y-0.5 text-sm" data-testid="beskt-report-participants">
+        {d.participants.map((x, i) => (
+          <li key={i}>
+            {x.name ?? "—"} ·{" "}
+            {t(
+              x.positionRole === "responsible_owner"
+                ? "beskt.report.assignment.owner"
+                : "beskt.report.assignment.assessor",
+            )}
+            {x.lockedAt ? (
+              <>
+                {" "}
+                · {t("beskt.report.assignment.locked")} <Stamp iso={x.lockedAt} />
+              </>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {d.supplements.length > 0 ? (
+        <>
+          <h4 className="mt-4 text-sm font-semibold">{t("beskt.supplement.employerHeading")}</h4>
+          <ul className="mt-1 space-y-1 text-sm" data-testid="beskt-report-supplements">
+            {d.supplements.map((x, i) => (
+              <li key={i} className="rounded-md border border-border p-2">
+                <span className="text-xs text-muted-foreground">
+                  {t(
+                    x.kind === "correction"
+                      ? "beskt.supplement.correction"
+                      : "beskt.supplement.addition",
+                  )}
+                  {x.itemKey ? ` · ${x.itemKey}` : ""} · <Stamp iso={x.submittedAt} />
+                </span>
+                <p className="mt-0.5 whitespace-pre-wrap">{x.body}</p>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+function StanceBlock({ d }: { d: ReturnType<typeof readBesktReportPayload> }) {
+  const { t } = useT();
+  return (
+    <section
+      className="mt-6"
+      aria-labelledby="beskt-report-stance-h"
+      data-testid="beskt-report-stance"
+    >
+      <h3 id="beskt-report-stance-h" className="text-base font-semibold text-foreground">
+        {t("beskt.report.stance.heading")}
+      </h3>
+      {d.stance ? (
+        <dl className="mt-2 space-y-2 text-sm">
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("beskt.decision.sufficiency")}</dt>
+            <dd data-testid="beskt-report-sufficiency">
+              {t(
+                d.stance.sufficiency === "sufficient"
+                  ? "beskt.decision.sufficient"
+                  : "beskt.decision.moreInformation",
+              )}{" "}
+              — {d.stance.sufficiencyReason}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("beskt.decision.stance")}</dt>
+            <dd className="whitespace-pre-wrap">{d.stance.stance}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("beskt.decision.rationale")}</dt>
+            <dd className="whitespace-pre-wrap">{d.stance.rationale}</dd>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {d.stance.decidedByName} · {d.stance.decidedRole} · <Stamp iso={d.stance.decidedAt} />
+          </p>
+        </dl>
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">{t("beskt.report.stance.none")}</p>
+      )}
+      <h4 className="mt-4 text-sm font-semibold">{t("beskt.decision.actions")}</h4>
+      {d.actions.length === 0 ? (
+        <p className="mt-1 text-sm text-muted-foreground">{t("beskt.decision.noActions")}</p>
+      ) : (
+        <ul className="mt-1 space-y-1 text-sm" data-testid="beskt-report-actions">
+          {d.actions.map((x, i) => (
+            <li key={i} className="rounded-md border border-border p-2">
+              <p>{x.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {t("beskt.decision.responsible")}: {x.responsible} · {t("beskt.decision.due")}:{" "}
+                {x.dueOn ?? "—"} · {t("beskt.decision.status")}:{" "}
+                {x.status ? t(`beskt.decision.status.${x.status}` as TranslationKey) : "—"} ·{" "}
+                {t("beskt.decision.review")}: {x.reviewOn ?? "—"}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

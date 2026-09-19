@@ -32,7 +32,9 @@ export function BesktCaseLinkSection({
   employerSlug,
 }: {
   readonly assignmentId: string;
-  readonly applicationId: string;
+  /** Null for an invitation-based assignment: the case is then bound to the
+   *  account that accepted the invitation, never to an invented application. */
+  readonly applicationId: string | null;
   readonly employerSlug: string;
 }) {
   const { t, lang } = useT();
@@ -165,9 +167,19 @@ export function BesktCaseLinkSection({
                   <Link
                     to="/employer/$employerSlug/interview-intelligence/new"
                     params={{ employerSlug }}
-                    search={{ applicationId, jobId: undefined, beskt: true }}
+                    search={
+                      applicationId
+                        ? { applicationId, jobId: undefined, beskt: true }
+                        : {
+                            applicationId: undefined,
+                            jobId: undefined,
+                            besktAssignment: assignmentId,
+                          }
+                    }
                   >
-                    {t("beskt.caseLink.create")}
+                    {applicationId
+                      ? t("beskt.caseLink.create")
+                      : t("beskt.caseLink.createStandalone")}
                   </Link>
                 </Button>
               </div>
