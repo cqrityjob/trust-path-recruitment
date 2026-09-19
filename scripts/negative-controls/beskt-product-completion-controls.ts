@@ -492,8 +492,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the server function trusts the application without checking its employer, so a case can be bound to another employer's applicant",
     file: RUNTIME_FNS,
-    find: "      if (!app.data || app.data.employer_id !== data.employerId || !app.data.applicant_user_id) {",
-    replace: "      if (!app.data || !app.data.applicant_user_id) {",
+    // Case creation lives in createCaseCore since the library's "Förbered
+    // intervju" shares it; the check is the same one, two spaces shallower.
+    find: "    if (!app.data || app.data.employer_id !== data.employerId || !app.data.applicant_user_id) {",
+    replace: "    if (!app.data || !app.data.applicant_user_id) {",
     guard: GUARD,
     expect: "BESKT_PC_LINK_CLIENT_CANDIDATE",
   },
