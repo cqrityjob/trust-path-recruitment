@@ -643,11 +643,10 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       "back on the application, the preparation is linked to it",
       async () => {
         await page.goto(applicationPath);
-        await expect(link.getByTestId("beskt-case-link-candidates")).toBeVisible({
-          timeout: 30_000,
-        });
-        await link.getByTestId("beskt-case-link-submit").first().click();
+        // Started from the preparation, the case arrives linked (one atomic
+        // start, scp_iv_start_interview): nothing is left to link by hand.
         await expect(link.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+        await expect(link.getByTestId("beskt-case-link-submit")).toHaveCount(0);
         await expectFitsViewport(page);
         await shot(page, "6b-linked-sv");
       },

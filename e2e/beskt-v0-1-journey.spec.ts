@@ -210,8 +210,9 @@ test.describe("BESKT v0.1 — candidate preparation → interview → report on 
     });
 
     await page.goto(APPLICATION_PATH);
-    await link.getByTestId("beskt-case-link-submit").first().click();
+    // Started from the preparation, the case arrives linked: one atomic start.
     await expect(link.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+    await expect(link.getByTestId("beskt-case-link-submit")).toHaveCount(0);
     await shot(page, "3-linked-sv");
   });
 

@@ -144,8 +144,10 @@ const runtime = code(read("src/lib/interview-intelligence/runtime.functions.ts")
 const seed = /async function seedCaseSources[\s\S]*?\n\}/.exec(runtime)?.[0] ?? "";
 check(
   /await recordSetup\(db, data\.employerId, data\.setup/.test(runtime) &&
-    /readSetup\(db, "beskt_assignment_id", data\.besktAssignmentId\)/.test(runtime),
-  "LS-CASE-SETUP: case creation records the setup, or carries a BESKT assignment's",
+    /PERFORM public\.scp_record_recruitment_setup\(\s*_employer_id, _method, _g, _r, _e, _case,\s*CASE WHEN _source_kind = 'beskt_assignment' THEN _source_id END\);/.test(
+      read("supabase/migrations/20261202090000_scp_interview_starts.sql"),
+    ),
+  "LS-CASE-SETUP: a standalone case records its setup; a started case records it in the start, carrying a BESKT assignment's",
 );
 check(
   seed.length > 0 &&

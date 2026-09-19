@@ -1,35 +1,40 @@
 /**
- * Test → interview: one interview per intended start (20261202090000 + #273).
+ * Test / BESKT preparation → interview: one interview per intended start,
+ * verified and created by the database (20261202090000 + #273).
  *
- * The DB suite (scp_interview_starts_test.sql) and the two-connection race in
- * db-test.sh prove the database half; the routed walk
+ * The DB suite (scp_interview_starts_test.sql, 80 assertions) and the two
+ * two-connection races in db-test.sh prove the behaviour; the routed walk
  * (e2e/test-interview-report-journey.spec.ts) proves the journey. This guard
- * runs in the fast job and fails if the app stops keeping its half:
+ * runs in the fast job and fails if the source stops keeping the contract:
  *
- *   IS-ROUTE     different setups route to their own guide, from fixture
- *                catalogues; a test's recorded setup wins and cannot be
- *                swapped; a setup that does not belong to the test is refused;
- *   IS-NO-GUESS  no start without a source setup or an explicit choice, and
- *                no Väktare literal in the start path;
- *   IS-ATOMIC    the start is ONE database call, serialised on the start key,
- *                with a partial unique index -- and no uniqueness on the
- *                application alone;
- *   IS-SOURCE    the button is per completed test and passes that test;
- *   IS-BIND      every application-bound case is bound to its applicant, and a
- *                failed read never becomes an invented reference;
- *   IS-HONEST    a reopened case whose setup or material is missing is said to
- *                be incomplete.
+ *   IS-DB-VERIFY  the start checks role profile, role group, environment
+ *                 content, the test's definition and the guide against
+ *                 scp_recruitment_content_links -- before the lock and before
+ *                 any write;
+ *   IS-DB-LINK    a content link can only name a guide of its own role and a
+ *                 test of that role's profession;
+ *   IS-PARITY     the library's display catalogue (TRUST_CONTENT,
+ *                 ENVIRONMENTS_WITH_CONTENT) says exactly what the seeded
+ *                 content links say -- one truth, two readers;
+ *   IS-NO-GUESS   the app resolves no guide and names no role in a start;
+ *   IS-ATOMIC     every start is ONE database call, serialised on the start
+ *                 key, with a partial unique index and no uniqueness on the
+ *                 application alone;
+ *   IS-BESKT      a BESKT start writes the governed link in the same
+ *                 transaction, and the new-case form sends BESKT and every
+ *                 application-bound case through the start;
+ *   IS-BIND       the candidate is the application's applicant or the
+ *                 account that accepted the invitation; the client path that
+ *                 could name one refuses application-bound cases;
+ *   IS-SOURCE     Förbered intervju is per completed test and carries it;
+ *   IS-HONEST     a reopened case whose setup or material is missing is said
+ *                 to be incomplete.
  *
  * Run: bun run interview-start:check
  */
 
 import { readFileSync } from "node:fs";
-import {
-  routeInterviewStart,
-  startChoices,
-  LIVE_CATALOGUE,
-  type StartCatalogue,
-} from "../src/lib/library/start-routing";
+import { ENVIRONMENTS_WITH_CONTENT, TRUST_CONTENT } from "../src/lib/library/catalogue";
 
 const read = (p: string) => readFileSync(p, "utf8");
 const code = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -46,114 +51,95 @@ function check(ok: boolean, label: string): void {
   }
 }
 
-// ---- routing, from isolated fixture catalogues ------------------------------------
-// Two fixture roles with their own guides and tests, two environments: none of
-// this is content the product ships; it proves the routing is by setup.
-const FIXTURE: StartCatalogue = {
-  content: {
-    vaktare: { guidePackSlug: "fixture-guard-guide", assessmentSlug: "fixture-guard-test" },
-    security_manager: {
-      guidePackSlug: "fixture-manager-guide",
-      assessmentSlug: "fixture-manager-test",
-    },
-  },
-  profiles: [
-    { key: "vaktare", group: "operational" },
-    { key: "security_manager", group: "strategic" },
-  ],
-  environments: ["general", "hospital"],
-};
-const guard = { roleGroup: "operational", roleProfile: "vaktare", environment: "general" } as const;
-const manager = {
-  roleGroup: "strategic",
-  roleProfile: "security_manager",
-  environment: "hospital",
-} as const;
-
-const a = routeInterviewStart(
-  { testSlug: "fixture-guard-test", recorded: guard, chosen: null },
-  FIXTURE,
-);
-const b = routeInterviewStart(
-  { testSlug: "fixture-manager-test", recorded: manager, chosen: null },
-  FIXTURE,
-);
-const c = routeInterviewStart({ testSlug: null, recorded: null, chosen: manager }, FIXTURE);
-check(
-  a.kind === "route" &&
-    a.guidePackSlug === "fixture-guard-guide" &&
-    a.fromSource &&
-    b.kind === "route" &&
-    b.guidePackSlug === "fixture-manager-guide" &&
-    b.setup.environment === "hospital" &&
-    c.kind === "route" &&
-    c.guidePackSlug === "fixture-manager-guide" &&
-    !c.fromSource,
-  "IS-ROUTE-1: each setup routes to its own role's guide, from the test's recorded setup or an explicit choice",
-);
-check(
-  routeInterviewStart({ testSlug: "fixture-guard-test", recorded: guard, chosen: manager }, FIXTURE)
-    .kind === "refused" &&
-    (
-      routeInterviewStart(
-        { testSlug: "fixture-guard-test", recorded: null, chosen: manager },
-        FIXTURE,
-      ) as {
-        reason?: string;
-      }
-    ).reason === "setup_test_mismatch",
-  "IS-ROUTE-2: a test's recorded setup cannot be swapped, and a setup whose test was not the one taken is refused",
-);
-const choose = routeInterviewStart(
-  { testSlug: "fixture-manager-test", recorded: null, chosen: null },
-  FIXTURE,
-);
-check(
-  choose.kind === "choose" &&
-    choose.choices.length === 2 &&
-    choose.choices.every((x) => x.roleProfile === "security_manager"),
-  "IS-ROUTE-3: a test sent without a setup offers only the setups built on THAT test",
-);
-check(
-  routeInterviewStart({ testSlug: null, recorded: null, chosen: null }, FIXTURE).kind ===
-    "choose" && startChoices(null, FIXTURE).length === 4,
-  "IS-NO-GUESS-1: before any test nothing is started without an explicit choice",
-);
-check(
-  (
-    routeInterviewStart(
-      { testSlug: null, recorded: null, chosen: { ...guard, environment: "data_centre" } },
-      FIXTURE,
-    ) as { reason?: string }
-  ).reason === "environment_without_content" &&
-    startChoices(null, LIVE_CATALOGUE).every(
-      (x) => x.roleProfile === "vaktare" && x.environment === "general",
-    ),
-  "IS-ROUTE-4: an environment without content is refused, and live content offers exactly what exists",
-);
-
-// ---- the source -----------------------------------------------------------------
-const start = code(read("src/lib/library/start.functions.ts"));
-const startFn = /export const startApplicationInterview[\s\S]*?\n {2}\}\);/.exec(start)?.[0] ?? "";
-check(
-  startFn.includes('"scp_iv_start_interview"') &&
-    (startFn.match(/rpc\(db, "/g) ?? []).length === 2 &&
-    !/\.insert\(|scp_iv_create_case|createCaseCore/.test(startFn),
-  "IS-ATOMIC-1: the start is one database call (scp_iv_start_interview) -- no read-then-create in the app",
-);
-check(
-  !/vaktare/i.test(startFn) &&
-    !/vaktare|"general"/.test(code(read("src/components/library/PrepareInterviewButton.tsx"))),
-  "IS-NO-GUESS-2: no role or environment is written into the start path; it comes from the source or a choice",
-);
-check(
-  /complete: res\.setup_recorded && res\.material > 0/.test(startFn),
-  "IS-HONEST: a case whose setup or material is missing is returned as incomplete",
-);
-
 const mig = read("supabase/migrations/20261202090000_scp_interview_starts.sql");
 const startBody =
   /CREATE OR REPLACE FUNCTION public\.scp_iv_start_interview[\s\S]*?\n\$\$;/.exec(mig)?.[0] ?? "";
+const lockAt = startBody.indexOf("pg_advisory_xact_lock(hashtextextended('scp_iv_start:");
+const firstWrite = Math.min(
+  ...[
+    "public.scp_record_assessment_setup(",
+    "public.scp_iv_create_case(",
+    "UPDATE public.scp_interview_starts",
+    "INSERT INTO public.scp_interview_starts",
+  ]
+    .map((w) => startBody.indexOf(w))
+    .filter((i) => i >= 0),
+);
+
+// ---- the database verifies the setup ----------------------------------------------
+const verify = [
+  "SELECT * INTO _profile FROM public.scp_recruitment_role_profiles WHERE role_profile = _r;",
+  "IF NOT FOUND OR _profile.role_group <> _g THEN",
+  "SELECT * INTO _link FROM public.scp_recruitment_content_links",
+  "'SCP_START_NO_CONTENT:",
+  "AND _link.assessment_definition_id IS DISTINCT FROM _test_def THEN",
+  "WHERE v.id = _pack_version_id AND v.pack_id = _link.interview_pack_id) THEN",
+];
+check(
+  lockAt > 0 &&
+    verify.every((v) => {
+      const at = startBody.indexOf(v);
+      return at > 0 && at < lockAt && at < firstWrite;
+    }),
+  "IS-DB-VERIFY: role group, environment content, the test's definition and the guide are verified against the content links before the lock and before any write",
+);
+check(
+  /WHERE v\.pack_id = _link\.interview_pack_id\s+ORDER BY v\.version_number DESC/.test(startBody) &&
+    !/_pack_version_id\s*:=/.test(startBody),
+  "IS-DB-VERIFY-2: with no guide named, the setup's own guide is taken -- a supplied guide is only ever verified, never trusted",
+);
+const guard =
+  /CREATE OR REPLACE FUNCTION public\.scp_guard_recruitment_content_link[\s\S]*?\n\$\$;/.exec(
+    mig,
+  )?.[0] ?? "";
+check(
+  /p\.pack_kind = 'role_interview' AND p\.role_id = rp\.role_id/.test(guard) &&
+    /d\.profession_id = r\.profession_id/.test(guard) &&
+    /BEFORE INSERT OR UPDATE ON public\.scp_recruitment_content_links/.test(mig),
+  "IS-DB-LINK: a content link names only a role-interview guide of its own role and a test of that role's profession",
+);
+
+// ---- one truth, two readers ---------------------------------------------------------
+const seeded = [
+  ...mig.matchAll(
+    /SELECT '(\w+)', '(\w+)', p\.id,\s*\(SELECT d\.id FROM public\.scp_assessment_definitions d WHERE d\.slug = '([\w-]+)'\)\s*FROM public\.scp_interview_packs p\s*WHERE p\.slug = '([\w-]+)'/g,
+  ),
+].map((m) => ({ profile: m[1], env: m[2], test: m[3], guide: m[4] }));
+const catalogued = Object.entries(TRUST_CONTENT).filter(([, c]) => c !== null) as Array<
+  [string, { guidePackSlug: string; assessmentSlug: string | null }]
+>;
+check(
+  seeded.length === catalogued.length * ENVIRONMENTS_WITH_CONTENT.length &&
+    catalogued.every(([profile, c]) =>
+      ENVIRONMENTS_WITH_CONTENT.every((env) =>
+        seeded.some(
+          (s) =>
+            s.profile === profile &&
+            s.env === env &&
+            s.guide === c.guidePackSlug &&
+            s.test === c.assessmentSlug,
+        ),
+      ),
+    ),
+  "IS-PARITY: the library's catalogue says exactly what the seeded content links say",
+);
+
+// ---- the app decides nothing ----------------------------------------------------------
+const start = code(read("src/lib/library/start.functions.ts"));
+const startFn = /async function start\([\s\S]*?\n\}/.exec(start)?.[0] ?? "";
+check(
+  !/TRUST_CONTENT|vaktare-se|guidePackSlug|scp_iv_startable_pack_versions|role_profile: "|environment: "/.test(start) &&
+    !/vaktare|"general"/.test(code(read("src/components/library/PrepareInterviewButton.tsx"))),
+  "IS-NO-GUESS: the app resolves no guide and names no role or environment in a start",
+);
+check(
+  (startFn.match(/"scp_iv_start_interview"/g) ?? []).length === 1 &&
+    !/scp_iv_create_case|createCaseCore|\.insert\(/.test(start) &&
+    /start\(context\.supabase as unknown as Db, \{[\s\S]*?sourceKind: "beskt_assignment"/.test(
+      start,
+    ),
+  "IS-ATOMIC-1: every start -- TRUST and BESKT -- is one call to scp_iv_start_interview; the app creates nothing itself",
+);
 check(
   /pg_advisory_xact_lock\(hashtextextended\('scp_iv_start:' \|\| _employer_id::text \|\| ':' \|\| _key, 0\)\)/.test(
     startBody,
@@ -161,8 +147,7 @@ check(
     /CREATE UNIQUE INDEX scp_interview_starts_one_live\s+ON public\.scp_interview_starts \(employer_id, start_key\) WHERE superseded_at IS NULL;/.test(
       mig,
     ) &&
-    startBody.indexOf("pg_advisory_xact_lock(hashtextextended('scp_iv_start:") <
-      startBody.indexOf("public.scp_iv_create_case("),
+    lockAt < startBody.indexOf("public.scp_iv_create_case("),
   "IS-ATOMIC-2: the start serialises on employer + start key before it creates, and one live start per key is a constraint",
 );
 check(
@@ -171,31 +156,59 @@ check(
     /'beskt:' \|\| _source_id::text/.test(startBody),
   "IS-ATOMIC-3: the start is identified by its source -- no uniqueness on the application alone",
 );
+
+// ---- BESKT ---------------------------------------------------------------------------
+const linkAt = startBody.indexOf("PERFORM public.bcp_link_preparation_to_case(");
 check(
-  /_app\.applicant_user_id,\s*CASE WHEN _app\.applicant_user_id IS NULL THEN 'APP-'/.test(
-    startBody,
-  ) && /aa\.recipient_user_id IS NOT DISTINCT FROM _app\.applicant_user_id/.test(startBody),
-  "IS-BIND-1: the database binds the applicant's own account, and the test must be that applicant's",
+  linkAt > startBody.indexOf("public.scp_iv_create_case(") &&
+    linkAt <
+      startBody.indexOf(
+        "INSERT INTO public.scp_interview_starts\n    (employer_id, application_id, start_key, source_kind, source_id, interview_case_id, created_by)\n  VALUES (_employer_id, _application_id, _key, _source_kind, _source_id, _case, auth.uid());",
+      ) &&
+    /'SCP_START_BESKT_NOT_SUBMITTED:/.test(startBody) &&
+    /FROM public\.bcp_case_links l[\s\S]*?WHERE l\.assignment_id = _source_id AND l\.unlinked_at IS NULL;/.test(
+      startBody,
+    ),
+  "IS-BESKT-1: a BESKT start writes the governed link in the same transaction, only for a submitted preparation, and adopts a live link",
+);
+const newCase = code(
+  read("src/routes/_authenticated.employer.$employerSlug.interview-intelligence.new.tsx"),
+);
+check(
+  /if \(besktAssignment \|\| applicationId\) \{[\s\S]*?startBesktFn\(/.test(newCase) &&
+    /startAppFn\(/.test(newCase) &&
+    /applicationId: null,/.test(newCase),
+  "IS-BESKT-2: the new-case form sends every BESKT and application-bound case through the atomic start; only a standalone case is created directly",
 );
 
+// ---- the candidate ---------------------------------------------------------------------
+check(
+  /_candidate := _app\.applicant_user_id;/.test(startBody) &&
+    /_candidate := _ba\.candidate_user_id;/.test(startBody) &&
+    /aa\.recipient_user_id IS NOT DISTINCT FROM _app\.applicant_user_id/.test(startBody) &&
+    /_ba\.candidate_user_id IS DISTINCT FROM _app\.applicant_user_id/.test(startBody),
+  "IS-BIND-1: the case is bound to the application's applicant, or the account that accepted the invitation -- and a source of another candidate is refused",
+);
 const runtime = code(read("src/lib/interview-intelligence/runtime.functions.ts"));
 const core = /async function createCaseCore[\s\S]*?\n\}/.exec(runtime)?.[0] ?? "";
 check(
-  /if \(data\.applicationId\) \{\s*const app = await context\.supabase\s*\.from\("job_applications"\)/.test(
-    core,
-  ) &&
-    /if \(app\.error\) throw new Error\(app\.error\.message\);/.test(core) &&
-    !/data\.bindApplicant/.test(core) &&
+  /if \(data\.applicationId\) \{\s*throw new Error\(\s*"SCP_START_USE_START/.test(core) &&
+    !/bindApplicant|data\.besktAssignmentId|_candidate_user_id: candidateUserId/.test(runtime) &&
     !/prepareApplicationInterview/.test(runtime),
-  "IS-BIND-2: every application-bound case binds its applicant; a failed read throws; the old guessing prepare is gone",
+  "IS-BIND-2: the client path creates only standalone cases and names no candidate account",
 );
 
+// ---- the button, and honesty ----------------------------------------------------------
 const panel = code(read("src/components/academy/ApplicationAssessmentPanel.tsx"));
 check(
   /\.filter\(\(a\) =>\s*\["under_review", "brief_ready", "brief_released"\]\.includes\(assessmentStageOf\(a\)\),?\s*\)\s*\.map\(\(a\) => \(/.test(
     panel,
   ) && /assessmentAssignmentId=\{a\.assignmentId\}/.test(panel),
   "IS-SOURCE: Förbered intervju is offered per completed test and carries THAT test",
+);
+check(
+  /complete: res\.setup_recorded && res\.material > 0/.test(startFn),
+  "IS-HONEST: a case whose setup or material is missing is returned as incomplete",
 );
 
 console.log("");

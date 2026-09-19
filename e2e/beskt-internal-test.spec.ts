@@ -350,8 +350,9 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
       .first()
       .click();
     await expect(page).toHaveURL(new RegExp(`/applications/${APPLICATION}$`), { timeout: 60_000 });
-    await link.getByTestId("beskt-case-link-submit").first().click();
+    // Started from the preparation, the case arrives linked: one atomic start.
     await expect(link.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+    await expect(link.getByTestId("beskt-case-link-submit")).toHaveCount(0);
     await link.getByRole("link", { name: /Öppna BESKT i intervjufallet/ }).click();
     await expect(page).toHaveURL(/\/beskt$/, { timeout: 60_000 });
     await expect(page.getByTestId("beskt-internal-test-banner").first()).toBeVisible({

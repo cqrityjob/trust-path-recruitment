@@ -369,8 +369,10 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
       .getByRole("link", { name: /^Öppna ansökan$/ })
       .first()
       .click();
-    await page.getByTestId("beskt-case-link-submit").first().click();
+    // The case was started FROM the preparation and is linked already
+    // (scp_iv_start_interview, one transaction) -- nothing left to link.
     await expect(page.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("beskt-case-link-submit")).toHaveCount(0);
     await page.getByRole("link", { name: /Öppna BESKT i intervjufallet/ }).click();
     await expect(page).toHaveURL(/\/beskt$/, { timeout: 60_000 });
 
@@ -528,8 +530,10 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
     await pack.selectOption(value!);
     await page.getByRole("button", { name: /^Planera intervjun$/ }).click();
     await expect(page).toHaveURL(/\/assessments\/beskt\/[0-9a-f-]{36}$/, { timeout: 60_000 });
-    await page.getByTestId("beskt-case-link-submit").first().click();
+    // The case was started FROM the preparation and is linked already
+    // (scp_iv_start_interview, one transaction) -- nothing left to link.
     await expect(page.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("beskt-case-link-submit")).toHaveCount(0);
     await page.getByRole("link", { name: /Öppna BESKT i intervjufallet/ }).click();
     await page.getByRole("button", { name: /Öppna samtalsstödet/ }).click();
     await expect(page.getByTestId("beskt-interview-workspace")).toBeVisible({ timeout: 60_000 });

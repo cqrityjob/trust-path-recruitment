@@ -3856,6 +3856,9 @@ export const dictionaries = {
     "beskt.module.start": "Starta BESKT",
     "lib.prepareInterview.hint": "Öppnas under Intervjuer. Ett klick till öppnar samma ärende.",
     "lib.prepareInterview": "Förbered intervju",
+    "lib.start.refused.guide_mismatch": "Den valda intervjuguiden hör inte till upplägget.",
+    "lib.start.refused.beskt_not_submitted": "Kandidaten har inte skickat in BESKT-förberedelsen ännu.",
+    "iiu.new.setupRequired": "Ärendet behöver ett upplägg. Välj roll och miljö i Rekryteringsstöd och starta därifrån.",
     "iiu.ts.sourceTest": "Intervjun utgår från detta test",
     "lib.start.choose.heading": "Välj upplägg för intervjun",
     "lib.start.choose.afterTest":
@@ -11730,6 +11733,9 @@ export const dictionaries = {
     "beskt.module.start": "Start BESKT",
     "lib.prepareInterview.hint": "Opens under Interviews. Clicking again opens the same case.",
     "lib.prepareInterview": "Prepare interview",
+    "lib.start.refused.guide_mismatch": "The chosen interview guide does not belong to this setup.",
+    "lib.start.refused.beskt_not_submitted": "The candidate has not submitted the BESKT preparation yet.",
+    "iiu.new.setupRequired": "The case needs a setup. Choose the role and environment in Recruitment support and start from there.",
     "iiu.ts.sourceTest": "The interview follows this test",
     "lib.start.choose.heading": "Choose the interview's setup",
     "lib.start.choose.afterTest":

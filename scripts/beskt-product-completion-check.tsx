@@ -125,6 +125,10 @@ const caseLinkCode = code(read(CASE_LINK));
 const appPanelCode = code(read(APP_PANEL));
 const prepFnsCode = code(read(PREP_FNS));
 const runtimeFnsCode = code(read(RUNTIME_FNS));
+const startsMigration = read("supabase/migrations/20261202090000_scp_interview_starts.sql");
+const newCaseCode = code(
+  read("src/routes/_authenticated.employer.$employerSlug.interview-intelligence.new.tsx"),
+);
 const govLayoutCode = code(read(GOV_LAYOUT));
 const govListRouteCode = code(read(GOV_LIST_ROUTE));
 const govVersionRouteCode = code(read(GOV_VERSION_ROUTE));
@@ -921,16 +925,18 @@ ck(
 );
 
 ck(
-  "P4l.3 the applicant is read from the application on the server, never taken from the browser",
+  "P4l.3 the applicant is read from the application (or the accepted invitation) in the database, never taken from the browser",
   // The case's candidate is what the bridge matches on and what the
   // candidate's own interview status reads. Accepting it from the client
-  // would let anyone bind anybody.
-  /bindApplicant: z\.boolean\(\)\.optional\(\)/.test(runtimeFnsCode) &&
-    /\.from\("job_applications"\)\s*\.select\("applicant_user_id, employer_id"\)/.test(
-      runtimeFnsCode,
-    ) &&
-    /app\.data\.employer_id !== data\.employerId/.test(runtimeFnsCode) &&
-    !/candidateUserId: z\./.test(runtimeFnsCode),
+  // would let anyone bind anybody. Since 20261202090000 a BESKT case is
+  // started by scp_iv_start_interview, which takes the candidate from the
+  // application or the assignment itself; the client path that could name a
+  // candidate refuses any application-bound case.
+  /_candidate := _app\.applicant_user_id;/.test(startsMigration) &&
+    /_candidate := _ba\.candidate_user_id;/.test(startsMigration) &&
+    /SCP_START_USE_START/.test(runtimeFnsCode) &&
+    !/candidateUserId: z\./.test(runtimeFnsCode) &&
+    /startBesktFn\(/.test(newCaseCode),
   "BESKT_PC_LINK_CLIENT_CANDIDATE: a case must never be bound to a user id the browser supplied",
 );
 
@@ -938,7 +944,7 @@ ck(
   "P4l.4 with no case yet, the section points at Intervjuer with the application and the BESKT binding",
   // 20261130090000: an invitation-based assignment has no application, and
   // the same link then carries the assignment instead -- never nothing.
-  /to="\/employer\/\$employerSlug\/interview-intelligence\/new"[\s\S]*?\{ applicationId, jobId: undefined, beskt: true \}[\s\S]*?besktAssignment: assignmentId/.test(
+  /to="\/employer\/\$employerSlug\/interview-intelligence\/new"[\s\S]*?applicationId,\s*jobId: undefined,\s*beskt: true,\s*besktAssignment: assignmentId,[\s\S]*?besktAssignment: assignmentId/.test(
     caseLinkCode,
   ),
   "BESKT_PC_LINK_DEAD_END: a submitted preparation with no case must say where to create one",

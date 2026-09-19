@@ -1,25 +1,12 @@
-// Which interview an intended start leads to -- decided from the start's own
-// source, never from the application alone and never from a job title.
+// What a start may answer, as the app shows it.
 //
-//   * after a completed test, the setup is the one the TEST was sent with;
-//     a test sent without one needs an explicit choice, limited to the roles
-//     whose content includes exactly that test;
-//   * before any test, only an explicitly chosen, available setup starts
-//     anything -- there is no Väktare default;
-//   * the guide is the role's own (TRUST_CONTENT), and a role whose test is
-//     not the one that was taken is refused rather than re-labelled.
-//
-// Pure, so the routing can be proved with fixture content maps; the database
-// (scp_iv_start_interview) re-checks the source, the candidate and the setup.
+// Which guide and test belong to a setup is decided in ONE place: the
+// database (scp_recruitment_content_links, verified by scp_iv_start_interview
+// and listed by scp_iv_start_choices). This module holds no routing of its
+// own -- only the shapes, and the mapping from the database's refusal codes to
+// the sentence the employer reads.
 
-import {
-  ENVIRONMENTS_WITH_CONTENT,
-  ROLE_PROFILES,
-  TRUST_CONTENT,
-  type EnvironmentKey,
-  type RoleGroup,
-  type RoleProfileKey,
-} from "@/lib/library/catalogue";
+import type { EnvironmentKey, RoleGroup, RoleProfileKey } from "@/lib/library/catalogue";
 
 export interface StartSetup {
   readonly roleGroup: RoleGroup;
@@ -27,107 +14,35 @@ export interface StartSetup {
   readonly environment: EnvironmentKey;
 }
 
-export type TrustContentMap = Readonly<
-  Record<string, { readonly guidePackSlug: string; readonly assessmentSlug: string | null } | null>
->;
-
-export interface StartCatalogue {
-  readonly content: TrustContentMap;
-  readonly profiles: readonly { readonly key: string; readonly group: RoleGroup }[];
-  readonly environments: readonly string[];
-}
-
-export const LIVE_CATALOGUE: StartCatalogue = {
-  content: TRUST_CONTENT,
-  profiles: ROLE_PROFILES,
-  environments: ENVIRONMENTS_WITH_CONTENT,
-};
-
 export type StartRefusal =
   | "setup_already_recorded"
   | "no_role_content"
   | "environment_without_content"
   | "setup_test_mismatch"
-  | "no_setup_for_test";
+  | "guide_mismatch"
+  | "no_setup_for_test"
+  | "test_not_on_application"
+  | "beskt_not_submitted";
 
-export type StartRoute =
-  | {
-      readonly kind: "route";
-      readonly setup: StartSetup;
-      readonly guidePackSlug: string;
-      /** True when the setup came from the source itself, not from a choice. */
-      readonly fromSource: boolean;
-    }
-  | { readonly kind: "choose"; readonly choices: readonly StartSetup[] }
-  | { readonly kind: "refused"; readonly reason: StartRefusal };
+/** The database's refusal codes that are an answer for the employer rather
+ *  than a fault. Anything else is thrown and shown as an error. */
+const REFUSALS: ReadonlyArray<readonly [string, StartRefusal]> = [
+  ["SCP_SETUP_ALREADY_RECORDED", "setup_already_recorded"],
+  ["SCP_START_SETUP_INCOMPATIBLE", "no_role_content"],
+  ["SCP_START_NO_CONTENT", "environment_without_content"],
+  ["SCP_START_TEST_MISMATCH", "setup_test_mismatch"],
+  ["SCP_START_GUIDE_MISMATCH", "guide_mismatch"],
+  ["SCP_START_SOURCE_MISMATCH", "test_not_on_application"],
+  ["SCP_START_BESKT_NOT_SUBMITTED", "beskt_not_submitted"],
+];
 
-function same(a: StartSetup, b: StartSetup): boolean {
-  return (
-    a.roleGroup === b.roleGroup &&
-    a.roleProfile === b.roleProfile &&
-    a.environment === b.environment
-  );
+export function refusalOf(message: string): StartRefusal | null {
+  for (const [code, refusal] of REFUSALS) {
+    if (new RegExp(`\\b${code}\\b`).test(message)) return refusal;
+  }
+  return null;
 }
 
-/** Every setup that may be chosen for this start: roles with content (and,
- *  after a test, content built on THAT test) in environments with content. */
-export function startChoices(
-  testSlug: string | null,
-  catalogue: StartCatalogue = LIVE_CATALOGUE,
-): readonly StartSetup[] {
-  const out: StartSetup[] = [];
-  for (const p of catalogue.profiles) {
-    const c = catalogue.content[p.key];
-    if (!c) continue;
-    if (testSlug !== null && c.assessmentSlug !== testSlug) continue;
-    for (const e of catalogue.environments) {
-      out.push({
-        roleGroup: p.group,
-        roleProfile: p.key as RoleProfileKey,
-        environment: e as EnvironmentKey,
-      });
-    }
-  }
-  return out;
-}
-
-export function routeInterviewStart(
-  input: {
-    /** The slug of the completed test this start comes from; null before any test. */
-    readonly testSlug: string | null;
-    /** The setup recorded with the source, when there is one. */
-    readonly recorded: StartSetup | null;
-    /** The setup the employer chose explicitly, when they did. */
-    readonly chosen: StartSetup | null;
-  },
-  catalogue: StartCatalogue = LIVE_CATALOGUE,
-): StartRoute {
-  const { testSlug, recorded, chosen } = input;
-  if (recorded && chosen && !same(recorded, chosen)) {
-    return { kind: "refused", reason: "setup_already_recorded" };
-  }
-  const setup = recorded ?? chosen;
-  if (!setup) {
-    const choices = startChoices(testSlug, catalogue);
-    return choices.length > 0
-      ? { kind: "choose", choices }
-      : { kind: "refused", reason: "no_setup_for_test" };
-  }
-  const profile = catalogue.profiles.find((p) => p.key === setup.roleProfile);
-  const content = catalogue.content[setup.roleProfile];
-  if (!profile || profile.group !== setup.roleGroup || !content) {
-    return { kind: "refused", reason: "no_role_content" };
-  }
-  if (!catalogue.environments.includes(setup.environment)) {
-    return { kind: "refused", reason: "environment_without_content" };
-  }
-  if (testSlug !== null && content.assessmentSlug !== testSlug) {
-    return { kind: "refused", reason: "setup_test_mismatch" };
-  }
-  return {
-    kind: "route",
-    setup,
-    guidePackSlug: content.guidePackSlug,
-    fromSource: recorded !== null,
-  };
+export function isSetupRequired(message: string): boolean {
+  return /\bSCP_START_SETUP_REQUIRED\b/.test(message);
 }

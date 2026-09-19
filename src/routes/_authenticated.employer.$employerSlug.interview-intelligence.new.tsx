@@ -32,6 +32,8 @@ import {
 import { getApplicationInterviewStart } from "@/lib/interview-intelligence/context.functions";
 import { processLinkage } from "@/lib/employer-continuity/process-projection";
 import { isEnvironment, isMethod, isRoleGroup, isRoleProfile } from "@/lib/library/catalogue";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { startApplicationInterview, startBesktInterview } from "@/lib/library/start.functions";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/new",
@@ -163,35 +165,84 @@ function Page() {
   // field below, never by the guide that gets chosen.
   const linkage = processLinkage(applicationId);
 
+  const startAppFn = useServerFn(startApplicationInterview);
+  const startBesktFn = useServerFn(startBesktInterview);
+  // Which start this form makes. A case that belongs to a BESKT preparation or
+  // to an application is ONE atomic, serialised database start
+  // (scp_iv_start_interview): the case, its setup, its material and -- for
+  // BESKT -- its governed link are written together, and a double click, a
+  // second tab or a retry reaches the same case. Only a standalone case with
+  // neither is created directly.
+  type Outcome =
+    | { kind: "case"; caseId: string; complete: boolean }
+    | { kind: "refused"; key: TranslationKey };
   const create = useMutation({
-    mutationFn: (v: { title: string; candidate: string; packVersionId: string }) =>
-      createFn({
+    mutationFn: async (v: {
+      title: string;
+      candidate: string;
+      packVersionId: string;
+    }): Promise<Outcome> => {
+      const employerId = ws.workspace!.employerId;
+      if (besktAssignment || applicationId) {
+        const res = besktAssignment
+          ? await startBesktFn({
+              data: {
+                employerId,
+                besktAssignmentId: besktAssignment,
+                applicationId: applicationId ?? null,
+                packVersionId: v.packVersionId,
+                setup: setup && setup.method === "beskt" ? setup : null,
+                title: v.title,
+              },
+            })
+          : await startAppFn({
+              data: {
+                employerId,
+                applicationId: applicationId!,
+                assessmentAssignmentId: null,
+                packVersionId: v.packVersionId,
+                setup: setup && setup.method === "trust" ? setup : null,
+                title: v.title,
+              },
+            });
+        if (res.kind === "started")
+          return { kind: "case", caseId: res.caseId, complete: res.complete };
+        return {
+          kind: "refused",
+          key:
+            res.kind === "choose"
+              ? "iiu.new.setupRequired"
+              : (`lib.start.refused.${res.reason}` as TranslationKey),
+        };
+      }
+      const made = await createFn({
         data: {
-          employerId: ws.workspace!.employerId,
+          employerId,
           title: v.title,
           packVersionId: v.packVersionId,
           candidateDisplayName: v.candidate,
-          // scp_iv_create_case re-checks that both belong to this employer and
-          // raises SCP_IV_CROSS_TENANT_* otherwise, so a hand-edited URL cannot
-          // attach a case to somebody else's application.
-          applicationId: applicationId ?? null,
+          applicationId: null,
           jobId: effectiveJobId,
-          bindApplicant: beskt === true && Boolean(applicationId),
-          besktAssignmentId: besktAssignment ?? null,
           setup,
         },
-      }),
-    onSuccess: ({ caseId, setupRecorded }) =>
-      void (besktAssignment
-        ? navigate({
+      });
+      return { kind: "case", caseId: made.caseId, complete: made.setupRecorded };
+    },
+    onSuccess: (out) => {
+      if (out.kind !== "case") return;
+      void (besktAssignment && !applicationId
+        ? // A standalone invitation: back to the preparation, which now shows
+          // the case it is linked to.
+          navigate({
             to: "/employer/$employerSlug/assessments/beskt/$assignmentId",
             params: { employerSlug, assignmentId: besktAssignment },
           })
         : navigate({
             to: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
-            params: { employerSlug, caseId },
-            search: setupRecorded ? {} : { setupFailed: true },
-          })),
+            params: { employerSlug, caseId: out.caseId },
+            search: out.complete ? {} : { setupFailed: true },
+          }));
+    },
     // The list and the create call share one entitlement definition, so a
     // refusal here means the state changed after the list was drawn -- the
     // package was withdrawn, or the account stopped being active. Re-read the
@@ -353,6 +404,11 @@ function Page() {
           {create.isError && (
             <Panel tone="governance" role="alert" title={t("iiu.new.failed")}>
               <p className="whitespace-pre-line">{interviewErrorMessage(create.error, t)}</p>
+            </Panel>
+          )}
+          {create.data?.kind === "refused" && (
+            <Panel tone="governance" role="alert" title={t("iiu.new.failed")}>
+              <p data-testid="ii-new-refused">{t(create.data.key)}</p>
             </Panel>
           )}
 

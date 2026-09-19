@@ -15,7 +15,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
-import { readSetup, recordSetup, setupShape, type SetupDb } from "@/lib/library/setup.functions";
+import { recordSetup, setupShape, type SetupDb } from "@/lib/library/setup.functions";
 import { runAiTask } from "./ai/orchestrator";
 import type { UntrustedBlock } from "./ai/provider";
 import type { TaskKey } from "./ai/registry";
@@ -1259,15 +1259,9 @@ const createCaseInput = z.object({
   candidateDisplayName: z.string().min(1).max(200),
   candidateExternalRef: z.string().max(200).nullable().optional(),
   jobId: z.string().uuid().nullable().optional(),
+  // Accepted so an older caller is REFUSED by name rather than silently
+  // creating a second, unserialised case for an application (see below).
   applicationId: z.string().uuid().nullable().optional(),
-  // Accepted for older callers and ignored: every application-bound case is
-  // bound to its applicant now (the BESKT preparation bridge needed it first;
-  // a TRUST case with an invented reference lost the candidate the same way).
-  bindApplicant: z.boolean().optional(),
-  // A BESKT assignment that came through an invitation, not an
-  // application: the case is bound to the account that ACCEPTED it.
-  // Read under the caller's own RLS; scp_iv_create_case re-checks it.
-  besktAssignmentId: z.string().uuid().nullable().optional(),
   // The library choice this case is started with (method, role group,
   // role profile, work environment). Recorded once, with the case.
   setup: setupShape.nullable().optional(),
@@ -1280,63 +1274,31 @@ type CreateCaseResult = {
   readonly setupRecorded: boolean;
 };
 
-/** The one way a case is created: the same binding checks, setup record and
- *  seeded material whichever screen asked. */
+/** A STANDALONE case: no application, no BESKT preparation, no test -- the
+ *  workspace's own "Ny intervju". Every case that belongs to a start (an
+ *  application, a completed test, a BESKT preparation or invitation) is made
+ *  by scp_iv_start_interview instead, in one serialised transaction with its
+ *  setup, material and links; this path refuses those, so there is no second,
+ *  non-atomic way to create them. */
 async function createCaseCore(
   context: { supabase: SupabaseClient<Database> },
   data: CreateCaseInput,
 ): Promise<CreateCaseResult> {
-  // The applicant is read from the application itself, under the caller's
-  // own RLS -- never taken from the browser. A caller who cannot read the
-  // application cannot bind anybody, and a failed read is an error: it never
-  // falls through to an invented reference standing in for a known account.
-  // Every application-bound case is bound to its applicant, whichever method.
-  let candidateUserId: string | undefined;
   if (data.applicationId) {
-    const app = await context.supabase
-      .from("job_applications")
-      .select("applicant_user_id, employer_id")
-      .eq("id", data.applicationId)
-      .maybeSingle();
-    if (app.error) throw new Error(app.error.message);
-    if (!app.data || app.data.employer_id !== data.employerId || !app.data.applicant_user_id) {
-      throw new Error(
-        "SCP_IV_CROSS_TENANT_APPLICATION: that application belongs to a different employer.",
-      );
-    }
-    candidateUserId = app.data.applicant_user_id;
-  }
-  if (data.besktAssignmentId && !data.applicationId) {
-    const a = await context.supabase
-      .from("bcp_assignments" as never)
-      .select("candidate_user_id, employer_id, invitation_id")
-      .eq("id", data.besktAssignmentId)
-      .maybeSingle();
-    if (a.error) throw new Error(a.error.message);
-    const row = a.data as {
-      candidate_user_id: string;
-      employer_id: string;
-      invitation_id: string | null;
-    } | null;
-    if (!row || row.employer_id !== data.employerId || !row.invitation_id) {
-      throw new Error(
-        "SCP_IV_CANDIDATE_REQUIRES_APPLICATION: that BESKT assignment is not an accepted invitation of this employer.",
-      );
-    }
-    candidateUserId = row.candidate_user_id;
+    throw new Error(
+      "SCP_START_USE_START: an application's interview is started through its start (scp_iv_start_interview).",
+    );
   }
   const { data: id, error } = await context.supabase.rpc("scp_iv_create_case", {
     _employer_id: data.employerId,
     _title: data.title,
     _pack_version_id: data.packVersionId,
     _candidate_display_name: data.candidateDisplayName,
-    // Exactly one of the two identifies the candidate (a table CHECK).
-    _candidate_user_id: candidateUserId,
-    _candidate_external_ref: candidateUserId
-      ? undefined
-      : (data.candidateExternalRef ?? `EXT-${Date.now()}`),
+    // A standalone case names its candidate by the employer's own reference.
+    _candidate_user_id: undefined,
+    _candidate_external_ref: data.candidateExternalRef ?? `EXT-${Date.now()}`,
     _job_id: data.jobId ?? undefined,
-    _application_id: data.applicationId ?? undefined,
+    _application_id: undefined,
   });
   if (error) throw new Error(error.message);
   const caseId = id as unknown as string;
@@ -1347,25 +1309,8 @@ async function createCaseCore(
     if (data.setup) {
       await recordSetup(db, data.employerId, data.setup, {
         interviewCaseId: caseId,
-        besktAssignmentId: data.setup.method === "beskt" ? (data.besktAssignmentId ?? null) : null,
+        besktAssignmentId: null,
       });
-    } else if (data.besktAssignmentId) {
-      // Carried from a BESKT assignment: the case takes that assignment's
-      // setup, so nobody chooses the role and environment a second time.
-      const prior = await readSetup(db, "beskt_assignment_id", data.besktAssignmentId);
-      if (prior) {
-        await recordSetup(
-          db,
-          data.employerId,
-          {
-            method: prior.method,
-            roleGroup: prior.roleGroup,
-            roleProfile: prior.roleProfile,
-            environment: prior.environment,
-          },
-          { interviewCaseId: caseId, besktAssignmentId: data.besktAssignmentId },
-        );
-      }
     }
   } catch (e) {
     console.error("[interview-case] setup not recorded", e);
@@ -1373,10 +1318,8 @@ async function createCaseCore(
   }
 
   // What the case can be grounded in WITHOUT anyone typing it again: the
-  // guide's own role requirements, and the published advert when the case
-  // belongs to one. Neither is personal data, so neither needs a lawful
-  // basis decision invented for it; the candidate's CV and answers stay the
-  // recruiter's to add, with their own basis.
+  // guide's own role requirements, and the advert when one was named. Neither
+  // is personal data, so neither needs a lawful basis invented for it.
   try {
     await seedCaseSources(context.supabase, caseId, data.packVersionId, data.jobId ?? null);
   } catch (e) {
