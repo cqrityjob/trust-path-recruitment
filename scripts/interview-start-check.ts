@@ -212,6 +212,29 @@ check(
   "IS-HONEST: a case whose setup or material is missing is returned as incomplete",
 );
 
+// ---- the security vetting's case row (20261203090000) -----------------------------
+const vet = read("supabase/migrations/20261203090000_scp_interview_case_vetting_read.sql");
+const helper =
+  /CREATE FUNCTION public\.scp_iv_case_row_visible[\s\S]*?\n\$\$;/.exec(vet)?.[0] ?? "";
+const dbTest = read("scripts/db-test.sh");
+check(
+  /CREATE POLICY scp_interview_cases_read ON public\.scp_interview_cases\s+FOR SELECT TO authenticated\s+USING \(public\.scp_iv_case_row_visible\(id, employer_id\)\);/.test(
+    vet,
+  ) &&
+    /NOT public\.bcp_case_vetting_restricted\(_case_id\)\s+OR public\.bcp_is_security_officer\(_employer_id, auth\.uid\(\)\)/.test(
+      helper,
+    ) &&
+    !/scp_interview_cases/.test(helper) &&
+    /IF NOT public\.bcp_case_access_ok\(_case_id\) THEN/.test(vet),
+  "IS-VETTING-ROW: the case row follows the security-function rule (no recursion), and the transcript basis cannot be written around it",
+);
+check(
+  /scp_interview_case_vetting_read_test\.sql/.test(dbTest) &&
+    /grep -q "ASSERTION FAILED: CV1\.1"/.test(dbTest) &&
+    /20261203090000_scp_interview_case_vetting_read_rollback\.sql/.test(dbTest),
+  "IS-VETTING-ROW-2: db-test runs the direct-read suite and requires it to FAIL against the old membership policy",
+);
+
 console.log("");
 if (fails.length > 0) {
   console.error(`interview-start:check FAILED (${fails.length} of ${passed + fails.length}).`);

@@ -144,6 +144,26 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "IS-HONEST",
   },
+  {
+    id: "IS-NC-VETTING-ROW-MEMBERSHIP",
+    defect:
+      "the case table's read policy goes back to membership only, so any member reads a vetting case row",
+    file: "supabase/migrations/20261203090000_scp_interview_case_vetting_read.sql",
+    find: "  USING (public.scp_iv_case_row_visible(id, employer_id));",
+    replace: "  USING (public.has_employer_role(auth.uid(), employer_id, NULL::text[]));",
+    guard: GUARD,
+    expect: "IS-VETTING-ROW",
+  },
+  {
+    id: "IS-NC-VETTING-TRANSCRIPT-OPEN",
+    defect:
+      "an owner who is not the security function can confirm a vetting case's transcript basis again",
+    file: "supabase/migrations/20261203090000_scp_interview_case_vetting_read.sql",
+    find: "  IF NOT public.bcp_case_access_ok(_case_id) THEN",
+    replace: "  IF false THEN",
+    guard: GUARD,
+    expect: "IS-VETTING-ROW",
+  },
 ];
 
 await runControls("interview-start", MUTATIONS);
