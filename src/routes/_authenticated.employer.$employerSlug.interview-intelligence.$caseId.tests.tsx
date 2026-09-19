@@ -36,6 +36,7 @@ import {
 } from "@/lib/interview-intelligence/runtime.functions";
 import { listBesktAssignments } from "@/lib/beskt/complete.functions";
 import { getCaseSetup } from "@/lib/library/setup.functions";
+import { getCaseStart } from "@/lib/library/start.functions";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/tests",
@@ -77,6 +78,12 @@ function Page() {
   const setup = useQuery({
     queryKey: ["ii", "setup", caseId],
     queryFn: () => setupFn({ data: { caseId } }),
+    retry: false,
+  });
+  const startOfCase = useServerFn(getCaseStart);
+  const source = useQuery({
+    queryKey: ["ii", "start", caseId],
+    queryFn: () => startOfCase({ data: { caseId } }),
     retry: false,
   });
   const beskt = useQuery({
@@ -159,6 +166,9 @@ function Page() {
               employerSlug={employerSlug}
               applicationId={d.applicationId}
               canAssign={canAssign}
+              sourceAssignmentId={
+                source.data?.sourceKind === "assessment_assignment" ? source.data.sourceId : null
+              }
             />
           ) : (
             <p

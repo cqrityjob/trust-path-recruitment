@@ -212,16 +212,20 @@ check(
   "LS-CLEAN: customers see only what they can start -- no switched-off roles or environments, no 'Under utveckling', and no start button on a method with nothing in it",
 );
 
-// ---- Förbered intervju: the same case every time ------------------------------------
-const prep = /export const prepareApplicationInterview[\s\S]*?\n  \);/.exec(runtime)?.[0] ?? "";
+// ---- Förbered intervju: the case of ONE start, the same case every time -------------
+// Restated 2026-09-19 (owner correction to #273): the start is decided in the
+// database (scp_iv_start_interview) from the start's SOURCE -- the completed
+// test, or an explicitly chosen setup -- never by looking up "the latest case
+// on the application" and never with a hard-coded role. The detailed promises
+// live in interview-start:check; this keeps the journey's shape.
+const prepButton = code(read("src/components/library/PrepareInterviewButton.tsx"));
+const panelSrc = code(read("src/components/academy/ApplicationAssessmentPanel.tsx"));
 check(
-  /\.eq\("application_id", data\.applicationId\)[\s\S]*?\.is\("cancelled_at", null\)/.test(prep) &&
-    prep.indexOf('.is("cancelled_at", null)') < prep.indexOf("createCaseCore(") &&
-    /setup: \{\s*method: "trust"/.test(prep) &&
-    /prepareInterview &&\s*rows\.some\(\(a\) =>\s*\["under_review", "brief_ready", "brief_released"\]\.includes\(assessmentStageOf\(a\)\)/.test(
-      code(read("src/components/academy/ApplicationAssessmentPanel.tsx")),
-    ),
-  "LS-PREPARE: Förbered intervju opens the linked case before it would ever create one, and a created case carries its setup",
+  /useServerFn\(startApplicationInterview\)/.test(prepButton) &&
+    /assessmentAssignmentId=\{a\.assignmentId\}/.test(panelSrc) &&
+    !/prepareApplicationInterview/.test(runtime) &&
+    /data-testid="prepare-interview-choose"/.test(prepButton),
+  "LS-PREPARE: Förbered intervju starts from the test it sits on, or asks for the setup -- it never picks the latest case or a default role",
 );
 
 console.log("");

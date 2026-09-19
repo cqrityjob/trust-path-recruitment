@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CheckCircle2, Info, Loader2, ShieldCheck } from "lucide-react";
 
@@ -45,6 +45,8 @@ import {
 import { getMyBesktStanding } from "@/lib/beskt/complete.functions";
 import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
 import { recordBesktSetup } from "@/lib/library/setup.functions";
+import { sendTestFromSetup } from "@/lib/library/start.functions";
+import { interviewErrorMessage } from "@/components/employer/interview/InterviewUi";
 import { BesktStartDialog } from "@/components/beskt/BesktStartDialog";
 import { BesktPreviewDialog } from "@/components/beskt/BesktPreviewDialog";
 import {
@@ -539,6 +541,7 @@ function SetupPanel({
   const { t, lang } = useT();
   const appsFn = useServerFn(listApplicationsForEmployer);
   const recordFn = useServerFn(recordBesktSetup);
+  const sendTestFn = useServerFn(sendTestFromSetup);
   const { live, besktMethods, isSecurityOfficer } = content;
   const apps = useQuery({
     queryKey: ["beskt", "start", "applications", employerId],
@@ -547,6 +550,20 @@ function SetupPanel({
     retry: false,
   });
   const [applicationId, setApplicationId] = useState("");
+  // The role's candidate test, sent for the chosen application WITH this
+  // setup, so the interview after it follows the same role and environment.
+  const sendTest = useMutation({
+    mutationFn: (appId: string) =>
+      sendTestFn({
+        data: {
+          employerId,
+          applicationId: appId,
+          roleGroup: group,
+          roleProfile: role,
+          environment: env,
+        },
+      }),
+  });
   const [startOpen, setStartOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -779,6 +796,37 @@ function SetupPanel({
               {t("lib.start.trust")}
             </Link>
           </Button>
+          {setup.assessment && canAssign ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-[44px]"
+              disabled={applicationId === "" || sendTest.isPending}
+              onClick={() => sendTest.mutate(applicationId)}
+              data-testid="lib-send-test"
+            >
+              {sendTest.isPending ? t("lib.start.sendTest.sending") : t("lib.start.sendTest")}
+            </Button>
+          ) : null}
+          {setup.assessment && canAssign && applicationId === "" ? (
+            <p className="basis-full text-xs text-muted-foreground">
+              {t("lib.start.sendTest.needsApplication")}
+            </p>
+          ) : null}
+          {sendTest.isSuccess ? (
+            <p role="status" className="basis-full text-sm" data-testid="lib-send-test-done">
+              {t(
+                sendTest.data.setupRecorded
+                  ? "lib.start.sendTest.sent"
+                  : "lib.start.sendTest.sentNoSetup",
+              )}
+            </p>
+          ) : null}
+          {sendTest.isError ? (
+            <p role="alert" className="basis-full text-sm text-destructive">
+              {interviewErrorMessage(sendTest.error, t)}
+            </p>
+          ) : null}
         </div>
       ) : (
         <div className="mt-6 flex flex-wrap gap-3">

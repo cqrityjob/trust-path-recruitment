@@ -75,11 +75,15 @@ export function ApplicationAssessmentPanel({
   applicationId,
   canAssign,
   prepareInterview = false,
+  sourceAssignmentId = null,
 }: {
   employerId: string;
   employerSlug: string;
   applicationId: string;
   canAssign: boolean;
+  /** Inside an interview case: the test the case was started from, marked
+   *  so the interviewer sees which test the interview follows. */
+  sourceAssignmentId?: string | null;
   /** On the application page: once the candidate has finished the test, the
    *  next step is the interview -- the same linked case every time. */
   prepareInterview?: boolean;
@@ -207,6 +211,15 @@ export function ApplicationAssessmentPanel({
               <span className="text-xs tabular-nums text-muted-foreground">
                 {a.answered}/{a.totalItems}
               </span>
+              {sourceAssignmentId === a.assignmentId ? (
+                <span
+                  className="inline-flex rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent"
+                  data-testid="case-source-test"
+                  data-assignment-id={a.assignmentId}
+                >
+                  {t("iiu.ts.sourceTest")}
+                </span>
+              ) : null}
               {a.governanceMode === "closed_test" && (
                 <span className="text-xs text-muted-foreground">{t("journey.closedTest")}</span>
               )}
@@ -265,16 +278,26 @@ export function ApplicationAssessmentPanel({
         </p>
       )}
 
+      {/* One per completed test: the interview follows THAT test, its
+       *  version and the setup it was sent with -- never "the latest test". */}
       {prepareInterview &&
-        rows.some((a) =>
-          ["under_review", "brief_ready", "brief_released"].includes(assessmentStageOf(a)),
-        ) && (
-          <PrepareInterviewButton
-            employerId={employerId}
-            employerSlug={employerSlug}
-            applicationId={applicationId}
-          />
-        )}
+        rows
+          .filter((a) =>
+            ["under_review", "brief_ready", "brief_released"].includes(assessmentStageOf(a)),
+          )
+          .map((a) => (
+            <div key={`prepare-${a.assignmentId}`}>
+              {rows.length > 1 ? (
+                <p className="mt-3 text-xs text-muted-foreground">{sv ? a.nameSv : a.nameEn}</p>
+              ) : null}
+              <PrepareInterviewButton
+                employerId={employerId}
+                employerSlug={employerSlug}
+                applicationId={applicationId}
+                assessmentAssignmentId={a.assignmentId}
+              />
+            </div>
+          ))}
     </PanelFrame>
   );
 }

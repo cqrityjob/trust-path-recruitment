@@ -1260,10 +1260,9 @@ const createCaseInput = z.object({
   candidateExternalRef: z.string().max(200).nullable().optional(),
   jobId: z.string().uuid().nullable().optional(),
   applicationId: z.string().uuid().nullable().optional(),
-  // Bind the case to the applicant's own account. Asked for only by the
-  // BESKT path, whose preparation bridge links a submitted preparation
-  // to a case of the SAME candidate and so can never match a case that
-  // carries an external reference instead.
+  // Accepted for older callers and ignored: every application-bound case is
+  // bound to its applicant now (the BESKT preparation bridge needed it first;
+  // a TRUST case with an invented reference lost the candidate the same way).
   bindApplicant: z.boolean().optional(),
   // A BESKT assignment that came through an invitation, not an
   // application: the case is bound to the account that ACCEPTED it.
@@ -1289,9 +1288,11 @@ async function createCaseCore(
 ): Promise<CreateCaseResult> {
   // The applicant is read from the application itself, under the caller's
   // own RLS -- never taken from the browser. A caller who cannot read the
-  // application cannot bind anybody.
+  // application cannot bind anybody, and a failed read is an error: it never
+  // falls through to an invented reference standing in for a known account.
+  // Every application-bound case is bound to its applicant, whichever method.
   let candidateUserId: string | undefined;
-  if (data.bindApplicant && data.applicationId) {
+  if (data.applicationId) {
     const app = await context.supabase
       .from("job_applications")
       .select("applicant_user_id, employer_id")
@@ -1389,97 +1390,6 @@ export const createInterviewCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) => createCaseInput.parse(d))
   .handler(({ context, data }): Promise<CreateCaseResult> => createCaseCore(context, data));
-
-/**
- * "Förbered intervju" from an application: open the interview already linked
- * to it, or create ONE linked interview if there is none.
- *
- * Repeated clicks open the same case: the live case linked to the
- * application is looked up first, under the caller's own RLS. A case the
- * caller may not read (a security vetting's, for anyone but the security
- * function) is therefore never opened or revealed here; such a caller gets a
- * separate TRUST interview instead, which is its own method and report. Two
- * clicks at the very same instant from two tabs are not serialised (no schema
- * change was made for it); sequential clicks never duplicate. The new case
- * carries the application, the advert's requirements, the candidate and the
- * TRUST operational setup; nothing is typed again.
- */
-export const prepareApplicationInterview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
-    z.object({ employerId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d),
-  )
-  .handler(
-    async ({
-      context,
-      data,
-    }): Promise<{
-      readonly caseId: string;
-      readonly created: boolean;
-      readonly setupRecorded: boolean;
-    }> => {
-      const existing = await context.supabase
-        .from("scp_interview_cases")
-        .select("id, cancelled_at, created_at")
-        .eq("employer_id", data.employerId)
-        .eq("application_id", data.applicationId)
-        .is("cancelled_at", null)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      if (existing.error) throw new Error(existing.error.message);
-      if (existing.data && existing.data.length > 0) {
-        return { caseId: existing.data[0]!.id as string, created: false, setupRecorded: true };
-      }
-
-      const app = await context.supabase.rpc("scp_application_candidate", {
-        _application_id: data.applicationId,
-      });
-      if (app.error) throw new Error(app.error.message);
-      const a = (Array.isArray(app.data) ? app.data[0] : app.data) as
-        | { display_name?: string | null; job_title_sv?: string | null; job_id?: string | null }
-        | undefined;
-      if (!a) throw new Error("SCP_IV_CROSS_TENANT_APPLICATION: that application is not yours.");
-
-      // The TRUST operational guide, resolved by what it is, from what this
-      // employer may start today.
-      const startable = await context.supabase.rpc("scp_iv_startable_pack_versions", {
-        _employer_id: data.employerId,
-      });
-      if (startable.error) throw new Error(startable.error.message);
-      const ids = ((startable.data ?? []) as Array<{ pack_version_id: string }>).map(
-        (r) => r.pack_version_id,
-      );
-      const slugs = ids.length
-        ? await context.supabase
-            .from("scp_interview_pack_versions")
-            .select("id, scp_interview_packs(slug)")
-            .in("id", ids)
-        : { data: [], error: null };
-      if (slugs.error) throw new Error(slugs.error.message);
-      const guide = (
-        (slugs.data ?? []) as Array<{ id: string; scp_interview_packs: { slug: string } | null }>
-      ).find((r) => r.scp_interview_packs?.slug === "vaktare-se");
-      if (!guide) throw new Error("SCP_IV_NO_GUIDE: no interview guide for the role is available.");
-
-      const name = a.display_name?.trim() || "Kandidat";
-      const role = a.job_title_sv?.trim() || null;
-      const res = await createCaseCore(context, {
-        employerId: data.employerId,
-        title: [role, name].filter(Boolean).join(" — "),
-        packVersionId: guide.id,
-        candidateDisplayName: name,
-        applicationId: data.applicationId,
-        jobId: a.job_id ?? null,
-        setup: {
-          method: "trust",
-          roleGroup: "operational",
-          roleProfile: "vaktare",
-          environment: "general",
-        },
-      });
-      return { caseId: res.caseId, created: true, setupRecorded: res.setupRecorded };
-    },
-  );
 
 async function seedCaseSources(
   db: SupabaseClient<Database>,

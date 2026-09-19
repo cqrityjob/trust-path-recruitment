@@ -676,19 +676,17 @@ function Candidate360({
             <p className="text-sm text-muted-foreground">
               {t("employer.candidate.structuredInterview.empty")}
             </p>
-            {/* The job travels with the application.
-             *
-             *  It was `undefined` here, so a case created from an application
-             *  pinned the application and left job_id NULL -- and the
-             *  preparation screen then had no advert to read requirements
-             *  from. `c.jobId` is this application's own job, so nothing about
-             *  which employer it belongs to is being asserted by the URL;
-             *  scp_iv_create_case re-checks it against the caller's employer
-             *  regardless. */}
+            {/* An interview before any test: the button asks for an
+             *  explicitly chosen setup (there is no default role), and the
+             *  database start (scp_iv_start_interview) binds this
+             *  application's own candidate and job -- nothing about either is
+             *  taken from the URL or the browser. After a test, the button
+             *  sits on that test in the assessment panel instead. */}
             <PrepareInterviewButton
               employerId={employerId}
               employerSlug={employerSlug}
               applicationId={applicationId}
+              assessmentAssignmentId={null}
             />
           </div>
         ) : (

@@ -262,12 +262,20 @@ test.describe("Bibliotek — method → role → environment → setup → the f
     await shot(page, "2-step4-review");
   });
 
-  test("2b · Förbered intervju opens the linked case, and the same case every time", async ({
+  test("2b · Förbered intervju before any test asks for the setup, then opens the same case", async ({
     page,
   }) => {
     const other = "b4000000-0000-4000-8000-00000000aa02";
     await signIn(page, OWNER, `/employer/${EMPLOYER}/applications/${other}`);
+    // No test has been taken: nothing is started until a setup is chosen --
+    // no Väktare default. The only available setup is offered.
     await page.getByTestId("prepare-interview").first().click();
+    const choose = page.getByTestId("prepare-interview-choose");
+    await expect(choose).toBeVisible({ timeout: 60_000 });
+    await expect(choose).toContainText(/Inget test är gjort ännu/);
+    await expect(choose.getByRole("radio")).toHaveCount(1);
+    await shot(page, "2b-choose-setup");
+    await page.getByTestId("prepare-interview-choose-submit").click();
     await expect(page).toHaveURL(/\/interview-intelligence\/[0-9a-f-]{36}\/prepare$/, {
       timeout: 60_000,
     });

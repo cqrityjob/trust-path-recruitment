@@ -79,12 +79,12 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "LS-CLEAN",
   },
   {
-    id: "LS-NC-PREPARE-DUPLICATES",
-    defect: "Förbered intervju creates a new case on every click instead of opening the linked one",
-    file: "src/lib/interview-intelligence/runtime.functions.ts",
-    find: '        .is("cancelled_at", null)\n        .order("created_at", { ascending: false })',
-    replace:
-      '        .is("cancelled_at", "never")\n        .order("created_at", { ascending: false })',
+    id: "LS-NC-PREPARE-WITHOUT-SOURCE",
+    defect:
+      "Förbered intervju on a completed test starts without that test, so the interview no longer follows it",
+    file: "src/components/academy/ApplicationAssessmentPanel.tsx",
+    find: "                assessmentAssignmentId={a.assignmentId}",
+    replace: "                assessmentAssignmentId={null}",
     guard: GUARD,
     expect: "LS-PREPARE",
   },
