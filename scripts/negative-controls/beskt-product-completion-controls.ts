@@ -502,8 +502,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the create-a-case link drops the BESKT binding, so the new case can never be linked to the preparation",
     file: CASE_LINK,
-    find: "search={{ applicationId, jobId: undefined, beskt: true }}",
-    replace: "search={{ applicationId, jobId: undefined }}",
+    // Since 20261130 the same link also serves an invitation (no
+    // application); the application branch is the one this defect breaks.
+    find: "? { applicationId, jobId: undefined, beskt: true }",
+    replace: "? { applicationId, jobId: undefined }",
     guard: GUARD,
     expect: "BESKT_PC_LINK_DEAD_END",
   },
