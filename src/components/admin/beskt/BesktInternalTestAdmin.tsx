@@ -56,23 +56,12 @@ export function BesktInstallV01Card({ surface }: { readonly surface: BesktSurfac
 
   const install = useMutation({
     mutationFn: async () => {
-      let p: BesktInstallProgress;
-      let step: number;
-      if (installation.data) {
-        p = {
-          methodVersionId: installation.data.methodVersionId,
-          done: 0,
-          total: 0,
-          finished: false,
-          blocking: [],
-        };
-        step = 1;
-      } else {
-        p = await stepFn({
-          data: { step: 0, methodVersionId: null, lawfulBasisReference: lawfulBasis },
-        });
-        step = 1;
-      }
+      // Step 0 resumes: it reuses an existing method and draft, so an
+      // interrupted or repeated install never creates a second one.
+      let p: BesktInstallProgress = await stepFn({
+        data: { step: 0, methodVersionId: null, lawfulBasisReference: lawfulBasis },
+      });
+      let step = 1;
       setProgress(p);
       while (!p.finished) {
         p = await stepFn({

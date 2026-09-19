@@ -18,6 +18,11 @@
  *   5. the candidate prepares and submits;
  *   6. the recruiter links the preparation to a case under Intervjuer, sees
  *      the test banner in BESKT, documents, locks and signs the report.
+ *
+ * Only the product's own entry points are typed (/admin, /employer/<org>,
+ * /my-career); every step below them is CLICKED, so nothing depends on a
+ * hand-built address. The one typed deep link is the hostile one: another
+ * organisation trying this organisation's library.
  */
 
 import { expect, test, type Page } from "@playwright/test";
@@ -42,7 +47,7 @@ const OUTSIDER = "beskt-outsider@local.test";
 const EMPLOYER = "beskt-journey-ab";
 const RIVAL = "beskt-rival-ab";
 const APPLICATION = "b4000000-0000-4000-8000-00000000aa01";
-const APPLICATION_PATH = `/employer/${EMPLOYER}/applications/${APPLICATION}`;
+const LAWFUL_BASIS = "Intern funktionstest med testdata enligt ägarens beslut 2026-09-18";
 const LABEL = "BESKT – intern testversion";
 const FACT = "TESTDATA kandidaten beskrev hur misstaget rapporterades samma dag";
 
@@ -54,6 +59,52 @@ async function signIn(page: Page, email: string, destination: string): Promise<v
   await page.getByLabel(/^lösenord$|^password$/i).fill(PASSWORD);
   await page.getByRole("button", { name: /^logga in$|^sign in$/i }).click();
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 60_000 });
+}
+
+/** Click a navigation link, opening the mobile menu first when it is hidden. */
+async function navTo(page: Page, name: RegExp): Promise<void> {
+  const link = page.getByRole("link", { name }).filter({ visible: true });
+  const menu = page
+    .getByRole("button", { name: /^Öppna meny$|^Open menu$/ })
+    .filter({ visible: true });
+  await expect(link.or(menu).first()).toBeVisible({ timeout: 60_000 });
+  if ((await link.count()) === 0) {
+    await menu.first().click();
+    // The drawer slides in; wait for it to settle before clicking inside it.
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.waitForTimeout(400);
+  }
+  await link.first().click();
+}
+
+async function openAdminMethods(page: Page): Promise<void> {
+  await signIn(page, ADMIN, "/admin");
+  await navTo(page, /^BESKT-metoder$/);
+  await expect(page).toHaveURL(/\/admin\/beskt-methods$/, { timeout: 60_000 });
+}
+
+async function openVersionAccess(page: Page): Promise<void> {
+  await openAdminMethods(page);
+  await page.getByTestId("beskt-install-v01-existing").getByRole("link").click();
+  await expect(page).toHaveURL(/\/admin\/beskt-methods\/[0-9a-f-]{36}/, { timeout: 60_000 });
+  await page.getByRole("link", { name: /^Behörigheter$/ }).click();
+  await expect(page.getByTestId("beskt-test-activations")).toBeVisible({ timeout: 60_000 });
+}
+
+async function openLibrary(page: Page, email: string, employer: string): Promise<void> {
+  await signIn(page, email, `/employer/${employer}`);
+  await navTo(page, /^Tester & bedömningar$/);
+  await page
+    .getByRole("link", { name: /^Testbibliotek$/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
+}
+
+async function openApplication(page: Page): Promise<void> {
+  await navTo(page, /^Ansökningar$/);
+  await page.locator(`a[href$="/applications/${APPLICATION}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`/applications/${APPLICATION}$`), { timeout: 60_000 });
 }
 
 async function saveAndReopen(page: Page): Promise<void> {
@@ -81,7 +132,7 @@ async function expectFitsViewport(page: Page): Promise<void> {
 
 test.describe("BESKT internal test — owner activation → Starta test → report", () => {
   test("1 · the administrator takes the editor role through Innehållsroller", async ({ page }) => {
-    await signIn(page, ADMIN, "/admin/beskt-methods");
+    await openAdminMethods(page);
     const roles = page.getByTestId("beskt-content-roles");
     await expect(roles).toBeVisible({ timeout: 60_000 });
     await roles.locator("#beskt-role-email").fill(ADMIN);
@@ -96,12 +147,10 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
   test("2 · they install BESKT v0.1 with their own lawful basis; nothing is reviewed", async ({
     page,
   }) => {
-    await signIn(page, ADMIN, "/admin/beskt-methods");
+    await openAdminMethods(page);
     const card = page.getByTestId("beskt-install-v01");
     await expect(card).toBeVisible({ timeout: 60_000 });
-    await card
-      .locator("#beskt-install-lawful")
-      .fill("Intern funktionstest med testdata enligt ägarens beslut 2026-09-18");
+    await card.locator("#beskt-install-lawful").fill(LAWFUL_BASIS);
     await card.getByTestId("beskt-install-v01-submit").click();
     const done = card.getByTestId("beskt-install-v01-done");
     await expect(done).toBeVisible({ timeout: 240_000 });
@@ -114,11 +163,7 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
   test("3 · the test activation is recorded for one organisation; the method stays a draft", async ({
     page,
   }) => {
-    await signIn(page, ADMIN, "/admin/beskt-methods");
-    await page.getByTestId("beskt-install-v01-existing").getByRole("link").click();
-    await expect(page).toHaveURL(/\/admin\/beskt-methods\/[0-9a-f-]{36}/, { timeout: 60_000 });
-    const url = new URL(page.url());
-    await page.goto(`${url.pathname}?tab=access`);
+    await openVersionAccess(page);
     const panel = page.getByTestId("beskt-test-activations");
     await expect(panel).toBeVisible({ timeout: 60_000 });
     await expect(panel).toContainText(/Det här är inte en granskning/);
@@ -129,15 +174,35 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await panel.getByTestId("beskt-test-activation-submit").click();
     await expect(panel).toContainText(/BESKT Journey AB/, { timeout: 60_000 });
     await expect(panel).toContainText(/Aktiv/);
+    await expect(page.getByText(/Läge:\s*Utkast/).first()).toBeVisible();
     await expectFitsViewport(page);
     await shot(page, "3-activated");
+  });
+
+  test("3b · re-running the install duplicates nothing and keeps the activation live", async ({
+    page,
+  }) => {
+    await openAdminMethods(page);
+    const card = page.getByTestId("beskt-install-v01");
+    await expect(card.getByTestId("beskt-install-v01-existing")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(1);
+    await card.locator("#beskt-install-lawful").fill(LAWFUL_BASIS);
+    await card.getByTestId("beskt-install-v01-submit").click();
+    await expect(card.getByTestId("beskt-install-v01-done")).toContainText(
+      /Innehållet är installerat och komplett/,
+      { timeout: 240_000 },
+    );
+    await expect(page.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(1);
+    await card.getByTestId("beskt-install-v01-done").getByRole("link").click();
+    const panel = page.getByTestId("beskt-test-activations");
+    await expect(panel).toContainText(/BESKT Journey AB · Aktiv/, { timeout: 60_000 });
   });
 
   test("4 · the recruiter starts it from Testbibliotek; another organisation sees nothing", async ({
     page,
     browser,
   }) => {
-    await signIn(page, RECRUITER, `/employer/${EMPLOYER}/assessments/library`);
+    await openLibrary(page, RECRUITER, EMPLOYER);
     const row = page
       .getByTestId("beskt-method-row")
       .filter({ hasText: /BESKT – rekryteringsstöd/ });
@@ -162,15 +227,30 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
 
     const ctx = await browser.newContext();
     const rival = await ctx.newPage();
-    await signIn(rival, OUTSIDER, `/employer/${RIVAL}/assessments/library`);
-    await expect(rival.getByRole("heading").first()).toBeVisible({ timeout: 60_000 });
+    await openLibrary(rival, OUTSIDER, RIVAL);
+    await expect(rival.getByRole("heading", { name: /^Testbibliotek$/ })).toBeVisible({
+      timeout: 60_000,
+    });
     await expect(rival.getByTestId("beskt-internal-test-label")).toHaveCount(0);
     await expect(rival.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(0);
+    await shot(rival, "4-rival-library");
+    // The hostile deep link: this organisation's library, typed by an outsider.
+    await rival.goto(`/employer/${EMPLOYER}/assessments/library`);
+    // A positive refusal, not merely an absence on a page still loading.
+    await expect(rival.getByText(/Åtkomst ej tillgänglig/)).toBeVisible({ timeout: 60_000 });
+    await expect(rival.getByTestId("beskt-start-test")).toHaveCount(0, { timeout: 30_000 });
+    await expect(rival.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(0);
+    await shot(rival, "4-rival-deep-link");
     await ctx.close();
   });
 
   test("5 · the candidate prepares and submits", async ({ page }) => {
-    await signIn(page, CANDIDATE, "/my-career/applications");
+    await signIn(page, CANDIDATE, "/my-career");
+    await page
+      .locator('a[href="/my-career/applications"]')
+      .filter({ visible: true })
+      .first()
+      .click();
     const list = page.getByTestId("beskt-my-preparations");
     await expect(list).toBeVisible({ timeout: 60_000 });
     await list.getByTestId("beskt-my-preparation-row").first().getByRole("link").click();
@@ -231,7 +311,8 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
   test("6 · Intervjuer → BESKT (test banner) → documented, locked and signed report", async ({
     page,
   }) => {
-    await signIn(page, RECRUITER, APPLICATION_PATH);
+    await signIn(page, RECRUITER, `/employer/${EMPLOYER}`);
+    await openApplication(page);
     const panel = page.getByTestId("beskt-application-panel");
     await expect(panel.getByTestId("beskt-readback-answers")).toContainText(FACT, {
       timeout: 60_000,
@@ -250,7 +331,12 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
       timeout: 60_000,
     });
 
-    await page.goto(APPLICATION_PATH);
+    // Back to the application from the case, by the case's own link.
+    await page
+      .getByRole("link", { name: /^Öppna ansökan$/ })
+      .first()
+      .click();
+    await expect(page).toHaveURL(new RegExp(`/applications/${APPLICATION}$`), { timeout: 60_000 });
     await link.getByTestId("beskt-case-link-submit").first().click();
     await expect(link.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
     await link.getByRole("link", { name: /Öppna BESKT i intervjufallet/ }).click();
@@ -273,15 +359,15 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     await expect(theme.locator("form")).toHaveCount(0, { timeout: 60_000 });
     await shot(page, "6-beskt-in-case");
 
-    const base = new URL(page.url()).pathname;
-    await page.goto(`${base}?view=position`);
+    const parts = page.getByRole("navigation", { name: /Delar av BESKT-metodstödet/ });
+    await parts.getByRole("link", { name: /^Min ståndpunkt$/ }).click();
     await page.getByRole("button", { name: /Lås min ståndpunkt/ }).click();
     await page.getByRole("button", { name: /Ja, lås min ståndpunkt/ }).click();
     await expect(page.getByTestId("beskt-position")).toContainText(/Din ståndpunkt är låst/, {
       timeout: 60_000,
     });
 
-    await page.goto(`${base}?view=report`);
+    await parts.getByRole("link", { name: /^Rapport$/ }).click();
     const doc = page.getByTestId("beskt-report-document");
     await expect(doc).toBeVisible({ timeout: 60_000 });
     await page.getByTestId("beskt-report-finalise").click();

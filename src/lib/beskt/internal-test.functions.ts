@@ -112,17 +112,49 @@ export const installBesktV01Step = createServerFn({ method: "POST" })
     const rows = flatten(data.lawfulBasisReference);
 
     if (data.step === 0) {
+      // Resumable: an install interrupted after the method, or after the
+      // draft, picks up what exists instead of creating a second one.
       const plan = buildPlan("rekrytering", { synthetic: false });
-      const method = await rpc<{ pack_id: string }>("beskt_create_method", {
-        _operation_id: crypto.randomUUID(),
-        _slug: plan.method.slug,
-        _name_sv: plan.method.nameSv,
-        _purpose_sv: plan.method.purposeSv,
-        _name_en: plan.method.nameEn,
-      });
+      const existingPack = await db
+        .from("scp_interview_packs")
+        .select("id")
+        .eq("slug", plan.method.slug)
+        .eq("pack_kind", "beskt_method")
+        .maybeSingle();
+      if (existingPack.error) throw new Error(existingPack.error.message);
+      let packId = existingPack.data?.id as string | undefined;
+      if (packId) {
+        const draft = await db
+          .from("beskt_method_versions")
+          .select("id, content_status")
+          .eq("pack_id", packId)
+          .order("version_number", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (draft.error) throw new Error(draft.error.message);
+        if (draft.data) {
+          if (draft.data.content_status !== "draft") throw new Error("BESKT_VERSION_NOT_EDITABLE");
+          return {
+            methodVersionId: draft.data.id as string,
+            done: 0,
+            total: rows.length,
+            finished: false,
+            blocking: [],
+          };
+        }
+      } else {
+        const method = await rpc<{ pack_id: string }>("beskt_create_method", {
+          _operation_id: crypto.randomUUID(),
+          _slug: plan.method.slug,
+          _name_sv: plan.method.nameSv,
+          _purpose_sv: plan.method.purposeSv,
+          _name_en: plan.method.nameEn,
+        });
+        packId = method.pack_id;
+      }
       const version = await rpc<{ method_version_id: string }>("beskt_create_method_version", {
         _operation_id: crypto.randomUUID(),
-        _pack_id: method.pack_id,
+        _pack_id: packId,
         _mode: plan.version.mode,
         _source_reference: SOURCE,
         _source_document_version: SOURCE_VERSION,
