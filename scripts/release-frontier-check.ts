@@ -173,6 +173,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 const expectedPending: string[] = [
   "20261201090000_scp_library_direct_access.sql",
   "20261202090000_scp_interview_starts.sql",
+  "20261203090000_scp_interview_case_vetting_read.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

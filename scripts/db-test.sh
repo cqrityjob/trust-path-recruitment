@@ -3741,6 +3741,12 @@ fi
 # meaning. Its rollback runs before 20261129090000's, because that one
 # restores functions this one extends.
 # ---------------------------------------------------------------------------
+echo "==> Standing 20261203090000 down before 20261202090000"
+# It re-creates scp_interview_cases' read policy on 20261130090000's BESKT
+# predicates, so it comes down before the 20261202/20261201/20261130 cycles
+# and goes back up with 20261202090000 below.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261203090000_scp_interview_case_vetting_read_rollback.sql >/dev/null
 echo "==> Standing 20261202090000 down before 20261201090000"
 # It calls functions 20261201090000 creates, so it comes down first and is
 # cycled on its own once 20261201090000 is back.
@@ -3951,6 +3957,17 @@ if [ "$ST_UP_RC" -ne 0 ] || ! echo "$ST_UP" | grep -q "SCP_INTERVIEW_STARTS_PROO
   echo "$ST_UP" | grep -iE "ERROR:|FEL:" | head -5 >&2
   ST_FAILED=1
 fi
+# 20261203090000 goes up with it: the start suite reads the vetting case row.
+set +e
+CV_UP="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261203090000_scp_interview_case_vetting_read.sql 2>&1)"
+CV_UP_RC=$?
+set -e
+if [ "$CV_UP_RC" -ne 0 ] || ! echo "$CV_UP" | grep -q "SCP_CASE_VETTING_READ_PROOF ok"; then
+  echo "FAIL: 20261203090000 does not apply over 20261202090000." >&2
+  echo "$CV_UP" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ST_FAILED=1
+fi
 echo "==> Running interview start assertions"
 set +e
 ST_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_starts_test.sql 2>&1)"
@@ -4147,6 +4164,54 @@ SQL
 fi
 psql -q -d postgres -c "DROP DATABASE IF EXISTS ${ST_RACE_DB};" > /dev/null
 
+# ---------------------------------------------------------------------------
+# 20261203090000: a security vetting's case ROW is the security function's.
+# Proved by DIRECT reads of scp_interview_cases as real sessions (member,
+# owner, admin, security officer, candidate, other organisation, anon), plus
+# lists, related rows, the view and the RPCs -- and then the same suite is run
+# against the OLD membership policy (the rollback) and must FAIL there. The
+# rollback reintroduces the gap; it runs only here, in the disposable replay.
+# ---------------------------------------------------------------------------
+echo "==> Running security-vetting case-row access assertions"
+CV_FAILED=0
+set +e
+CV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_case_vetting_read_test.sql 2>&1)"
+CV_RC=$?
+set -e
+CV_PASSED="$(echo "$CV_OUT" | grep -c "ok  " || true)"
+if [ "$CV_RC" -ne 0 ]; then
+  echo "FAIL: the case-row access suite exited with code ${CV_RC}." >&2
+  echo "$CV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  CV_FAILED=1
+else
+  echo "    ok  ${CV_PASSED} case-row access assertions passed"
+  if [ "$CV_PASSED" -lt 23 ]; then
+    echo "FAIL: expected at least 23 case-row access assertions, only ${CV_PASSED} ran." >&2
+    CV_FAILED=1
+  fi
+fi
+echo "==> Negative control: the same suite against the old membership policy must fail"
+set +e
+CV_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261203090000_scp_interview_case_vetting_read_rollback.sql 2>&1)"
+CV_RB_RC=$?
+CV_OLD="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_case_vetting_read_test.sql 2>&1)"
+CV_OLD_RC=$?
+set -e
+if [ "$CV_RB_RC" -ne 0 ] || ! echo "$CV_RB" | grep -q "SCP_CASE_VETTING_READ_ROLLBACK ok"; then
+  echo "FAIL: the case-row access rollback did not restore the previous policy exactly." >&2
+  echo "$CV_RB" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CV_FAILED=1
+elif [ "$CV_OLD_RC" -eq 0 ] || ! echo "$CV_OLD" | grep -q "ASSERTION FAILED: CV1.1"; then
+  echo "FAIL: the access suite did NOT fail against the old membership policy -- it would not catch the gap." >&2
+  echo "$CV_OLD" | grep -iE "ASSERTION FAILED|ERROR:" | head -3 >&2
+  CV_FAILED=1
+else
+  echo "    ok  with the old membership policy restored the suite fails at CV1.1: a plain member reads the vetting row"
+fi
+# 20261203090000 stays down for 20261202090000's own rollback cycle below,
+# and is re-applied after it.
+
 echo "==> Running interview start rollback and re-apply"
 set +e
 ST_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
@@ -4169,6 +4234,21 @@ else
 fi
 if [ "$ST_FAILED" -ne 0 ]; then
   suite_failed "Interview starts"
+fi
+set +e
+CV_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261203090000_scp_interview_case_vetting_read.sql 2>&1)"
+CV_RE_RC=$?
+set -e
+if [ "$CV_RE_RC" -ne 0 ] || ! echo "$CV_RE" | grep -q "SCP_CASE_VETTING_READ_PROOF ok"; then
+  echo "FAIL: 20261203090000 does not re-apply over its rollback." >&2
+  echo "$CV_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  CV_FAILED=1
+else
+  echo "    ok  and 20261203090000 re-applies over its rollback: the case row is protected again"
+fi
+if [ "$CV_FAILED" -ne 0 ]; then
+  suite_failed "Security-vetting case-row access"
 fi
 
 # ---------------------------------------------------------------------------
@@ -4464,6 +4544,9 @@ if [ "$RPT_FAILED" -ne 0 ]; then
   suite_failed "BESKT prompts and report"
 fi
 
+# 20261203090000 comes down first: its policy uses 20261130090000's predicates.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261203090000_scp_interview_case_vetting_read_rollback.sql >/dev/null
 # 20261202090000 comes down before them: it calls 20261201090000's functions.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/rollback/20261202090000_scp_interview_starts_rollback.sql >/dev/null
