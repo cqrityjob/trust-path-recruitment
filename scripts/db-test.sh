@@ -319,8 +319,11 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 #   profile, work environment) a case or BESKT assignment was started with.
 # + scp_assessment_setups and scp_interview_starts: the setup a candidate test
 #   was sent with, and which case each intended interview start led to.
-if [ "$SCP_TABLES" -ne 130 ]; then
-  echo "FAIL: expected 130 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit + 1 recruitment setup + 2 interview starts), found $SCP_TABLES" >&2
+# + scp_recruitment_role_profiles and scp_recruitment_content_links: which
+#   governed guide and test belong to each library role profile and work
+#   environment, so the start can verify a setup against its content.
+if [ "$SCP_TABLES" -ne 132 ]; then
+  echo "FAIL: expected 132 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit + 1 recruitment setup + 2 interview starts + 2 recruitment content links), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -3960,8 +3963,8 @@ if [ "$ST_RC" -ne 0 ]; then
   ST_FAILED=1
 else
   echo "    ok  ${ST_PASSED} interview start assertions passed"
-  if [ "$ST_PASSED" -lt 41 ]; then
-    echo "FAIL: expected at least 41 interview start assertions, only ${ST_PASSED} ran." >&2
+  if [ "$ST_PASSED" -lt 80 ]; then
+    echo "FAIL: expected at least 80 interview start assertions, only ${ST_PASSED} ran." >&2
     ST_FAILED=1
   fi
 fi
@@ -3987,16 +3990,7 @@ VALUES ('bf100000-0000-4000-8000-0000000000a1', 'bf100000-0000-4000-8000-0000000
         'bf100000-0000-4000-8000-0000000000e1', 'bf100000-0000-4000-8000-0000000000c1', now());
 COMMIT;
 SQL
-# Marked, because set_config echoes the principal's uuid one line earlier.
-ST_PACK="$(psql -tAq -d "$TEST_DB" <<'SQL' | { grep -oE 'PACK=[0-9a-f-]{36}' || true; } | head -1 | cut -d= -f2
-BEGIN;
-SELECT set_config('request.jwt.claim.sub', 'bf100000-0000-4000-8000-0000000000d1', true);
-SET LOCAL ROLE authenticated;
-SELECT 'PACK=' || s.pack_version_id FROM public.scp_iv_startable_pack_versions('bf100000-0000-4000-8000-0000000000e1') s LIMIT 1;
-COMMIT;
-SQL
-)"
-ST_RACE_SQL="SELECT 'CASEID=' || (public.scp_iv_start_interview('bf100000-0000-4000-8000-0000000000e1', 'bf100000-0000-4000-8000-0000000000a1', 'chosen_setup', NULL, '${ST_PACK}', 'trust', 'operational', 'vaktare', 'general') ->> 'case_id') AS marked;"
+ST_RACE_SQL="SELECT 'CASEID=' || (public.scp_iv_start_interview('bf100000-0000-4000-8000-0000000000e1', 'bf100000-0000-4000-8000-0000000000a1', 'chosen_setup', NULL, 'trust', NULL, 'operational', 'vaktare', 'general') ->> 'case_id') AS marked;"
 ST_A="$(mktemp)"; ST_B="$(mktemp)"; ST_C="$(mktemp)"
 cat > "$ST_A" <<SQL
 BEGIN;
@@ -4028,7 +4022,7 @@ ST_STARTS="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.scp_intervi
 ST_ID_A="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/strace_a.out || true; } | head -1 | cut -d= -f2)"
 ST_ID_B="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/strace_b.out || true; } | head -1 | cut -d= -f2)"
 ST_ID_C="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/strace_c.out || true; } | head -1 | cut -d= -f2)"
-if [ -z "$ST_PACK" ] || [ "$(( ST_AFTER - ST_BEFORE ))" -ne 1 ] || [ "$ST_STARTS" -ne 1 ]; then
+if [ "$(( ST_AFTER - ST_BEFORE ))" -ne 1 ] || [ "$ST_STARTS" -ne 1 ]; then
   echo "FAIL: two concurrent starts and a retry produced $(( ST_AFTER - ST_BEFORE )) cases and ${ST_STARTS} starts, not 1 and 1." >&2
   head -5 /tmp/strace_a.out /tmp/strace_b.out /tmp/strace_c.out >&2
   ST_FAILED=1
@@ -4076,6 +4070,82 @@ DELETE FROM public.employers WHERE id = 'bf100000-0000-4000-8000-0000000000e1';
 DELETE FROM auth.users WHERE id IN ('bf100000-0000-4000-8000-0000000000d1', 'bf100000-0000-4000-8000-0000000000c1');
 COMMIT;
 SQL
+
+echo "==> Running BESKT interview start race (application-bound preparation)"
+# The same guarantee for BESKT, whose start also writes the governed link.
+# Its committed world is heavy (method, assignment, answers, ledger), so it
+# lives in a THROWAWAY copy of the test database and is dropped with it.
+ST_RACE_DB="${TEST_DB}_start_race"
+psql -q -d postgres -c "DROP DATABASE IF EXISTS ${ST_RACE_DB};" > /dev/null
+psql -q -v ON_ERROR_STOP=1 -d postgres -c "CREATE DATABASE ${ST_RACE_DB} TEMPLATE ${TEST_DB};" > /dev/null
+set +e
+BR_SETUP_OUT="$(printf 'BEGIN;\n\\set ON_ERROR_STOP on\n\\i supabase/tests/scp_interview_start_beskt_race_fixture.sql\nCOMMIT;\n' \
+  | psql -v ON_ERROR_STOP=1 -tAq -d "$ST_RACE_DB" 2>&1)"
+BR_SETUP_RC=$?
+set -e
+BR_EMP="$(echo "$BR_SETUP_OUT" | { grep -oE 'EMP=[0-9a-f-]{36}' || true; } | head -1 | cut -d= -f2)"
+BR_APP="$(echo "$BR_SETUP_OUT" | { grep -oE 'APP=[0-9a-f-]{36}' || true; } | head -1 | cut -d= -f2)"
+BR_ASSIGN="$(echo "$BR_SETUP_OUT" | { grep -oE 'ASSIGN=[0-9a-f-]{36}' || true; } | head -1 | cut -d= -f2)"
+BR_OWNER="$(echo "$BR_SETUP_OUT" | { grep -oE 'OWNER=[0-9a-f-]{36}' || true; } | head -1 | cut -d= -f2)"
+if [ "$BR_SETUP_RC" -ne 0 ] || [ -z "$BR_ASSIGN" ] || [ -z "$BR_OWNER" ]; then
+  echo "FAIL: the BESKT start race fixture could not be committed." >&2
+  echo "$BR_SETUP_OUT" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ST_FAILED=1
+else
+  BR_SQL="SELECT 'CASEID=' || (public.scp_iv_start_interview('${BR_EMP}', '${BR_APP}', 'beskt_assignment', '${BR_ASSIGN}', 'beskt') ->> 'case_id') AS marked;"
+  BR_A="$(mktemp)"; BR_B="$(mktemp)"; BR_C="$(mktemp)"
+  cat > "$BR_A" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BR_OWNER}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BR_OWNER}', true);
+SET LOCAL ROLE authenticated;
+${BR_SQL}
+SELECT pg_sleep(2);
+COMMIT;
+SQL
+  cat > "$BR_B" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claims', json_build_object('sub', '${BR_OWNER}', 'role', 'authenticated')::text, true);
+SELECT set_config('request.jwt.claim.sub', '${BR_OWNER}', true);
+SET LOCAL ROLE authenticated;
+${BR_SQL}
+COMMIT;
+SQL
+  cp "$BR_B" "$BR_C"
+  psql -tAq -d "$ST_RACE_DB" -f "$BR_A" > /tmp/brace_a.out 2>&1 &
+  BR_PID=$!
+  sleep 1
+  psql -tAq -d "$ST_RACE_DB" -f "$BR_B" > /tmp/brace_b.out 2>&1
+  wait "$BR_PID" || true
+  psql -tAq -d "$ST_RACE_DB" -f "$BR_C" > /tmp/brace_c.out 2>&1
+  BR_COUNTS="$(psql -tAq -d "$ST_RACE_DB" -c "select (select count(*) from public.scp_interview_cases where employer_id = '${BR_EMP}') || '/' || (select count(*) from public.scp_interview_starts where employer_id = '${BR_EMP}') || '/' || (select count(*) from public.bcp_case_links where assignment_id = '${BR_ASSIGN}' and unlinked_at is null) || '/' || (select count(*) from public.scp_recruitment_setups where beskt_assignment_id = '${BR_ASSIGN}');")"
+  BR_ID_A="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/brace_a.out || true; } | head -1 | cut -d= -f2)"
+  BR_ID_B="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/brace_b.out || true; } | head -1 | cut -d= -f2)"
+  BR_ID_C="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/brace_c.out || true; } | head -1 | cut -d= -f2)"
+  BR_LINKED="$(psql -tAq -d "$ST_RACE_DB" -c "select count(*) from public.bcp_case_links where assignment_id = '${BR_ASSIGN}' and case_id::text = '${BR_ID_A}' and unlinked_at is null;")"
+  if [ "$BR_COUNTS" != "1/1/1/1" ]; then
+    echo "FAIL: two concurrent BESKT starts and a retry left cases/starts/links/setups = ${BR_COUNTS}, not 1/1/1/1." >&2
+    head -5 /tmp/brace_a.out /tmp/brace_b.out /tmp/brace_c.out >&2
+    ST_FAILED=1
+  else
+    echo "    ok  two concurrent BESKT starts and a retry: one case, one start, one live link, one setup"
+  fi
+  if [ -z "$BR_ID_A" ] || [ "$BR_ID_A" != "$BR_ID_B" ] || [ "$BR_ID_A" != "$BR_ID_C" ] || [ "$BR_LINKED" != "1" ]; then
+    echo "FAIL: the BESKT callers were told different cases ('${BR_ID_A}' / '${BR_ID_B}' / '${BR_ID_C}'), or it is not the linked one." >&2
+    ST_FAILED=1
+  else
+    echo "    ok  and all three callers were told the same, linked case (${BR_ID_A})"
+  fi
+  if grep -qiE "ERROR:|FEL:" /tmp/brace_b.out /tmp/brace_c.out; then
+    echo "FAIL: a later BESKT caller errored instead of waiting for, or reusing, the first." >&2
+    head -5 /tmp/brace_b.out /tmp/brace_c.out >&2
+    ST_FAILED=1
+  else
+    echo "    ok  the second BESKT caller waited for the first, and the retry reused its case"
+  fi
+  rm -f "$BR_A" "$BR_B" "$BR_C" /tmp/brace_a.out /tmp/brace_b.out /tmp/brace_c.out
+fi
+psql -q -d postgres -c "DROP DATABASE IF EXISTS ${ST_RACE_DB};" > /dev/null
 
 echo "==> Running interview start rollback and re-apply"
 set +e
