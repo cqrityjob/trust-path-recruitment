@@ -268,21 +268,45 @@ $$;
 
 
 -- ---------------------------------------------------------------------------
--- C1 -- The assignability gate. Fail closed by default: without an explicit,
---       live, in-window pilot grant NOTHING is assignable, to anybody.
+-- C1 -- The assignability gate. Since 20261201090000 (owner decision
+--       2026-09-19) a PUBLISHED runnable version is in every ACTIVE
+--       employer's offer directly: no pilot grant, no activation, no request.
+--       What stays closed: an employer that is not active, anyone who is not
+--       that employer's member, and the pilot grant table itself, which no
+--       employer can write. The grant, where one exists, adds nothing twice.
 -- ---------------------------------------------------------------------------
 DO $c1$
 DECLARE _k bcpk%ROWTYPE; _r jsonb; _op uuid := gen_random_uuid();
 BEGIN
   SELECT * INTO _k FROM bcpk;
 
+  -- Both published, runnable versions -- the recruitment method and the
+  -- security vetting (whose start still needs the appointed security
+  -- function) -- and neither the draft, the suspended nor the retired one.
+  PERFORM pg_temp.ok(
+    pg_temp.count_as(_k.rec_a, format(
+      'SELECT count(*) FROM public.bcp_assignable_method_versions(%L) WHERE availability = %L AND method_version_id IN (%L, %L)',
+      _k.emp_a, 'published', _k.v, _k.sv_v)) = 2
+    AND pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_a)) = 2,
+    'C1.1 with no grant an authorised member of an active employer is offered the published versions directly, and nothing else');
+
+  -- The same employer, not active: offered nothing, and refused on start.
+  UPDATE public.employers SET status = 'pending' WHERE id = _k.emp_a;
   PERFORM pg_temp.ok(
     pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_a)) = 0,
-    'C1.1 with no grant an authorised employer member is offered NOTHING');
-
+    'C1.2a an employer that is not active is offered NOTHING');
   PERFORM pg_temp.must_fail_as('authenticated', _k.rec_a,
     format('SELECT public.bcp_assign(%L, %L, %L, %L, %L, %L)', gen_random_uuid(), _k.app_a, _k.v, _k.prof, _k.hash, 'beskt-prep-notice-1'),
-    'BCP_NOT_ASSIGNABLE', 'C1.2 and starting a preparation without a grant is refused');
+    'BCP_EMPLOYER_NOT_ACTIVE', 'C1.2 and cannot start a preparation');
+  UPDATE public.employers SET status = 'active' WHERE id = _k.emp_a;
+  -- A draft nobody made available is outside the offer: the start path
+  -- refuses it by name, for an active employer's own member.
+  PERFORM pg_temp.must_fail_as('authenticated', _k.rec_a,
+    format('SELECT public.bcp_start_beskt(%L, %L, %L, %L, %L, %L, %L, %L)', gen_random_uuid(), _k.app_a,
+      'recruitment_support', _k.draft_v,
+      (SELECT id FROM public.beskt_exposure_profiles WHERE method_version_id = _k.draft_v AND profile_key = 'lone_working'),
+      (SELECT content_hash FROM public.beskt_method_versions WHERE id = _k.draft_v), _k.rec_a, 'Kontakt: rekryteraren'),
+    'BCP_NOT_ASSIGNABLE', 'C1.2b and a draft nobody made available cannot be started');
 
   PERFORM pg_temp.must_fail_as('authenticated', _k.rec_a,
     format('SELECT public.bcp_grant_pilot(%L, %L, %L, %L, %L)', gen_random_uuid(), _k.emp_a, _k.v, 'unauthorised', (current_date + 30)),
@@ -305,11 +329,11 @@ BEGIN
     'C1.7 and exactly one grant row exists');
 
   PERFORM pg_temp.ok(
-    pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_a)) = 1,
-    'C1.8 the admitted employer is now offered exactly one method');
+    pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_a)) = 2,
+    'C1.8 a grant on top of the offer duplicates nothing: still the same two versions');
   PERFORM pg_temp.ok(
-    pg_temp.count_as(_k.rec_b, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_b)) = 0,
-    'C1.9 another employer is still offered nothing');
+    pg_temp.count_as(_k.rec_b, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_b)) = 2,
+    'C1.9 another active employer is offered the same published versions, with no grant of its own');
   PERFORM pg_temp.ok(
     pg_temp.count_as(_k.rec_b, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_a)) = 0,
     'C1.10 and a member of another employer enumerates nothing for employer A');
@@ -1061,16 +1085,19 @@ BEGIN
       _k.hash, 'beskt-prep-notice-99'),
     'BCP_NOTICE_VERSION_UNKNOWN', 'C7.7 and an unknown candidate notice version is refused');
 
-  -- Revocation closes the door again, on the list and on the create call.
+  -- Since 20261201090000 access is the OFFER's, not a grant's: revoking a
+  -- grant takes nothing away from a published version, and what closes the
+  -- door is content governance -- suspension or retirement of the version.
   PERFORM pg_temp.rpc(_k.admin_u, format('SELECT public.bcp_revoke_pilot(%L, %L, %L, %L)',
     gen_random_uuid(), _k.emp_a, _k.v, 'Syntetisk återkallelse.'));
   PERFORM pg_temp.ok(
-    pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_a)) = 0,
-    'C7.8 REVOKED: the employer is offered nothing again');
+    pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L) WHERE method_version_id = %L', _k.emp_a, _k.v)) = 1
+    AND pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L) WHERE method_version_id IN (%L, %L)', _k.emp_a, _k.susp_v, _k.ret_v)) = 0,
+    'C7.8 a revoked grant takes nothing from the offer; the suspended and retired versions stay out of it');
   PERFORM pg_temp.must_fail_as('authenticated', _k.rec_a,
-    format('SELECT public.bcp_assign(%L, %L, %L, %L, %L, %L)', gen_random_uuid(), _k.app_a2, _k.v, _k.prof,
-      _k.hash, 'beskt-prep-notice-1'),
-    'BCP_NOT_ASSIGNABLE', 'C7.9 and cannot start a new preparation');
+    format('SELECT public.bcp_assign(%L, %L, %L, %L, %L, %L)', gen_random_uuid(), _k.app_a2, _k.susp_v, _k.susp_prof,
+      (SELECT content_hash FROM public.beskt_method_versions WHERE id = _k.susp_v), 'beskt-prep-notice-1'),
+    'BCP_METHOD_NOT_PUBLISHED', 'C7.9 and a withdrawn (suspended) version cannot start a new preparation');
   PERFORM pg_temp.ok(
     (pg_temp.rpc(_k.rec_a, format('SELECT public.bcp_employer_readback(%L)', _k.assignment)) ->> 'is_submitted')::boolean,
     'C7.10 while the preparation already submitted under the grant stays readable');
@@ -1247,7 +1274,8 @@ DO $c10$
 DECLARE _k bcpk%ROWTYPE;
 BEGIN
   SELECT * INTO _k FROM bcpk;
-  -- Employer A's grant was revoked in C7, employer B's is still live.
+  -- Employer A's grant was revoked in C7, employer B's is still live; since
+  -- 20261201090000 neither changes what the offer holds.
   PERFORM pg_temp.ok(
     pg_temp.count_as(_k.rec_b, format('SELECT count(*) FROM public.bcp_assignable_exposure_profiles(%L, %L)', _k.emp_b, _k.v)) = 1,
     'C10.1 an admitted employer is offered the documented role-exposure profile');
@@ -1257,8 +1285,8 @@ BEGIN
       _k.emp_b, _k.v, 'recruitment_record')) = 1,
     'C10.2 with the number of candidate questions it carries and its retention class');
   PERFORM pg_temp.ok(
-    pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_exposure_profiles(%L, %L)', _k.emp_a, _k.v)) = 0,
-    'C10.3 an employer whose grant was revoked is offered none');
+    pg_temp.count_as(_k.rec_a, format('SELECT count(*) FROM public.bcp_assignable_exposure_profiles(%L, %L)', _k.emp_a, _k.v)) = 1,
+    'C10.3 an employer whose grant was revoked is still offered the profile: access is the offer''s, not a grant''s');
   PERFORM pg_temp.ok(
     pg_temp.count_as(_k.rec_b, format('SELECT count(*) FROM public.bcp_assignable_exposure_profiles(%L, %L)', _k.emp_a, _k.v)) = 0,
     'C10.4 CROSS-TENANT: and none for an employer they are not a member of');
@@ -1266,8 +1294,12 @@ BEGIN
     pg_temp.count_as(_k.cand_a, format('SELECT count(*) FROM public.bcp_assignable_exposure_profiles(%L, %L)', _k.emp_a, _k.v)) = 0,
     'C10.5 a candidate enumerates no governed profile at all');
   PERFORM pg_temp.ok(
-    pg_temp.count_as(_k.rec_b, format('SELECT count(*) FROM public.bcp_assignable_exposure_profiles(%L, %L)', _k.emp_b, _k.sv_v)) = 0,
-    'C10.6 SECURITY VETTING: a security-vetting version offers no profile here, ever');
+    pg_temp.count_as(_k.rec_b, format('SELECT count(*) FROM public.bcp_assignable_exposure_profiles(%L, %L)', _k.emp_b, _k.sv_v))
+      = (SELECT count(*) FROM public.beskt_exposure_profiles
+          WHERE method_version_id = _k.sv_v AND permitted_mode = 'security_vetting_support')
+    AND (SELECT count(*) FROM public.beskt_exposure_profiles
+          WHERE method_version_id = _k.sv_v AND permitted_mode = 'security_vetting_support') >= 1,
+    'C10.6 SECURITY VETTING: a published security-vetting version offers its security-vetting profiles only, never a recruitment one');
 END
 $c10$;
 
@@ -1366,8 +1398,8 @@ BEGIN
   -- Closing it costs nothing: the governed path still works for the people
   -- it is meant to work for.
   PERFORM pg_temp.ok(
-    jsonb_array_length(pg_temp.rpc(_k.rec_a,
-      format('SELECT public.bcp_assignable_method_versions(%L)', _k.emp_a))) >= 1,
+    pg_temp.count_as(_k.rec_a,
+      format('SELECT count(*) FROM public.bcp_assignable_method_versions(%L)', _k.emp_a)) >= 1,
     'C12.9 the employer still sees what is assignable, through the governed read model');
   PERFORM pg_temp.ok(
     (SELECT count(*) FROM public.bcp_assignments WHERE id = _k.assignment) = 1,
