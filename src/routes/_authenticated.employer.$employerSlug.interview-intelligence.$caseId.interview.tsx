@@ -95,6 +95,9 @@ const REASON_LABEL: Record<FollowUpReason, TranslationKey> = {
  *  needs a reminder, not the briefing again. */
 const CONTEXT_AREAS_SHOWN = 5;
 
+/** How many follow-up questions are in view before "show more". */
+const FOLLOWUPS_SHOWN = 4;
+
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
   const ws = useEmployerWorkspace(employerSlug);
@@ -590,6 +593,7 @@ function Page() {
           is method support, and lives with it below. */}
       <div className="mt-3">
         <CaseHeader
+          compact
           candidate={d.candidateDisplayName}
           role={d.packName ?? d.title}
           status={d.status}
@@ -703,7 +707,7 @@ function Page() {
 
               {/* The question itself. The single most important thing on the
                   screen, and sized like it. */}
-              <h2 className="mt-2 max-w-[46ch] text-xl font-semibold leading-snug tracking-tight text-foreground sm:text-2xl">
+              <h2 className="mt-2 max-w-[60ch] text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
                 {question.promptSv}
               </h2>
               {/* The question's number and whether it is covered. Its type
@@ -725,14 +729,17 @@ function Page() {
               {(() => {
                 const req = requirementOf(question);
                 if (!req) return null;
+                // Folded: the requirement's name stays in view, its meaning is
+                // one click away, so the note field is not pushed off screen.
                 return (
-                  <div className="mt-4 border-l-2 border-accent/40 pl-3.5">
-                    <Eyebrow>{t("iiu.lv.why")}</Eyebrow>
-                    <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-foreground">
-                      <span className="font-medium">{reqName(req)}</span>
-                      {reqMeaning(req) ? ` — ${reqMeaning(req)}` : ""}
+                  <Disclosure
+                    className="mt-3"
+                    summary={`${t("iiu.lv.why")}: ${reqName(req)}`}
+                  >
+                    <p className="max-w-[70ch] text-sm leading-relaxed text-foreground">
+                      {reqMeaning(req) || reqName(req)}
                     </p>
-                  </div>
+                  </Disclosure>
                 );
               })()}
 
@@ -1028,19 +1035,15 @@ function Page() {
             </p>
 
             <div className="mt-4 space-y-4">
-              {/* 1 · what is left */}
+              {/* 1 · what is left -- a count, not a second question list. The
+                  question list on the left is the one navigation; two of them
+                  was one more thing to look at mid-conversation. */}
               <SupportGroup title={t("iiu.lv.cat.tocover")}>
-                {toCover.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">{t("iiu.lv.cat.tocover.none")}</p>
-                ) : (
-                  <ul className="flex flex-wrap gap-1">
-                    {toCover.map((qq) => (
-                      <li key={qq.id}>
-                        <Chip tone={qq.id === question?.id ? "work" : "neutral"}>{qq.code}</Chip>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <p className="text-xs text-muted-foreground" data-testid="iv-remaining">
+                  {toCover.length === 0
+                    ? t("iiu.lv.cat.tocover.none")
+                    : t("iiu.iv.remaining").replace("{n}", String(toCover.length))}
+                </p>
               </SupportGroup>
 
               {/* 2 · the pack's own follow-ups for this question */}
@@ -1048,13 +1051,33 @@ function Page() {
                 {followUps.length === 0 ? (
                   <p className="text-xs text-muted-foreground">{t("iiu.lv.cat.followup.none")}</p>
                 ) : (
-                  <ul className="space-y-1.5">
-                    {followUps.map((p) => (
-                      <li key={p.id} className="text-xs leading-relaxed text-foreground">
-                        {p.wordingSv}
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    {/* A few neutral follow-ups in view; the rest one click
+                        away, so the list never competes with the conversation. */}
+                    <ul className="space-y-1.5" data-testid="iv-followups">
+                      {followUps.slice(0, FOLLOWUPS_SHOWN).map((p) => (
+                        <li key={p.id} className="text-xs leading-relaxed text-foreground">
+                          {p.wordingSv}
+                        </li>
+                      ))}
+                    </ul>
+                    {followUps.length > FOLLOWUPS_SHOWN ? (
+                      <Disclosure
+                        summary={t("iiu.iv.followups.more").replace(
+                          "{n}",
+                          String(followUps.length - FOLLOWUPS_SHOWN),
+                        )}
+                      >
+                        <ul className="space-y-1.5">
+                          {followUps.slice(FOLLOWUPS_SHOWN).map((p) => (
+                            <li key={p.id} className="text-xs leading-relaxed text-foreground">
+                              {p.wordingSv}
+                            </li>
+                          ))}
+                        </ul>
+                      </Disclosure>
+                    ) : null}
+                  </>
                 )}
               </SupportGroup>
 

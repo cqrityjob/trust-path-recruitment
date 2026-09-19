@@ -14,7 +14,7 @@
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
   "readAt": "2026-09-19",
-  "readBy": "Read-only SQL through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-19, after PR #270 merged as 188e8cd. 302 rows: the 301 of the previous snapshot plus 20261130090000 bcp_beskt_complete, applied by the official GitHub integration. No migration was executed or replayed.",
+  "readBy": "Read-only Supabase management SQL on explicit owner project wrygicdfxwjnrugduxnt after PR #274 merged as 1631d5d3f481520e8f3a85f8220072959eff6855. Full 305-row ledger refreshed; includes 20261202090000 scp_interview_starts and 20261203090000 scp_interview_case_vetting_read. No migration executed or replayed.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1223,6 +1223,18 @@
     {
       "version": "20261130090000",
       "name": "bcp_beskt_complete"
+    },
+    {
+      "version": "20261201090000",
+      "name": "scp_library_direct_access"
+    },
+    {
+      "version": "20261202090000",
+      "name": "scp_interview_starts"
+    },
+    {
+      "version": "20261203090000",
+      "name": "scp_interview_case_vetting_read"
     }
   ]
 }

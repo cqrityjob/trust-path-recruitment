@@ -50,7 +50,13 @@ export interface BesktAssignableMethod {
   readonly contentHash: string;
   readonly summarySv: string | null;
   readonly summaryEn: string | null;
-  readonly grantExpiresOn: string;
+  /** The internal test activation's expiry; null for content in the offer. */
+  readonly grantExpiresOn: string | null;
+  /** 20261201090000: the version's own status, and WHY this employer may start
+   *  it -- published, made available as open pilot content, or under an
+   *  internal test activation. Never implies a review that did not happen. */
+  readonly contentStatus: string | null;
+  readonly availability: "published" | "open_pilot" | "internal_test" | null;
 }
 
 const employerInput = z.object({ employerId: z.string().uuid() });
@@ -60,8 +66,9 @@ const assignmentInput = z.object({ assignmentId: z.string().uuid() });
  * The BESKT methods this employer may actually start right now.
  *
  * An empty list is the HONEST answer, not a failure: until a governed method
- * has passed its five human review gates AND the owner has admitted this
- * employer to the pilot, there is nothing to offer. The screen says so.
+ * is published, or made available by the platform publisher as open pilot
+ * content, there is nothing to offer. No employer is admitted one by one
+ * (20261201090000). The screen says so.
  */
 export const listAssignableBesktMethods = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -84,7 +91,9 @@ export const listAssignableBesktMethods = createServerFn({ method: "GET" })
       contentHash: r.content_hash as string,
       summarySv: (r.summary_sv as string | null) ?? null,
       summaryEn: (r.summary_en as string | null) ?? null,
-      grantExpiresOn: r.grant_expires_on as string,
+      grantExpiresOn: (r.grant_expires_on as string | null) ?? null,
+      contentStatus: (r.content_status as string | null) ?? null,
+      availability: ((r.availability as string | null) ?? null) as BesktAssignableMethod["availability"],
     }));
   });
 

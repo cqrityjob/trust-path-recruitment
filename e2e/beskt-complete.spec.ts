@@ -9,7 +9,7 @@
  *
  *   1. admin: editor role, install recruitment + security vetting, record the
  *      organisation's activation for both -- nothing reviewed or published;
- *   2. owner: Testbibliotek shows BESKT; appoints the security function;
+ *   2. owner: Rekryteringsstöd shows BESKT; appoints the security function;
  *      "Visa innehåll" shows E, S and K to the security function only;
  *   3. owner: "Starta BESKT" -- security vetting, existing application,
  *      responsible interviewer, security owner, attestation, lawful basis;
@@ -84,10 +84,20 @@ async function openLibrary(page: Page, email: string, employer: string): Promise
   await signIn(page, email, `/employer/${employer}`);
   await navTo(page, /^Tester & bedömningar$|^Tests & assessments$/);
   await page
-    .getByRole("link", { name: /^Testbibliotek$|^Test library$/ })
+    .getByRole("link", { name: /^Rekryteringsstöd$|^Recruitment support$/ })
     .first()
     .click();
   await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
+  await expect(page.getByTestId("library")).toBeVisible({ timeout: 60_000 });
+}
+
+/** The library's order, clicked: BESKT → operational role → general environment. */
+async function openBeskt(page: Page, email: string, employer: string): Promise<void> {
+  await openLibrary(page, email, employer);
+  await page.getByTestId("lib-method-beskt-choose").click();
+  await page.getByTestId("lib-group-operational").check();
+  await page.getByTestId("lib-env-general").check();
+  await expect(page.getByTestId("lib-setup")).toBeVisible({ timeout: 60_000 });
 }
 
 async function shot(page: Page, name: string): Promise<void> {
@@ -159,20 +169,20 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
   test("2 · the owner sees BESKT, appoints the security function and views the content", async ({
     page,
   }) => {
-    await openLibrary(page, OWNER, EMPLOYER);
-    const module = page.getByTestId("beskt-module");
-    await expect(module).toBeVisible({ timeout: 60_000 });
-    await expect(module.getByTestId("beskt-module-name")).toHaveText("BESKT");
+    await openBeskt(page, OWNER, EMPLOYER);
+    const module = page.getByTestId("lib-setup");
+    await expect(module).toHaveAttribute("data-startable", "true");
     // The two installed v0.1 methods, next to the environment's synthetic
-    // pilot versions: one row per runnable version, each saying its purpose.
-    const rows = module.getByTestId("beskt-method-row");
-    await expect(rows.filter({ hasText: /^Säkerhetsprövning/ })).toHaveCount(1);
-    await expect(rows.filter({ hasText: /Används enligt organisationens aktivering/ })).toHaveCount(
-      2,
-    );
+    // pilot versions: each says its real standing -- here the organisation's
+    // internal test activation, never a review.
+    const rows = module.getByTestId("lib-setup-status").locator("li");
+    await expect(rows.filter({ hasText: /säkerhetsprövningsstöd/ })).toHaveCount(1);
+    await expect(
+      rows.filter({ hasText: /Intern testversion enligt organisationens aktivering/ }),
+    ).toHaveCount(2);
 
     // Before the appointment, the vetting wording is withheld.
-    await module.getByTestId("beskt-module-preview").click();
+    await module.getByTestId("lib-preview-beskt").click();
     const preview = page.getByTestId("beskt-preview-dialog");
     await preview.getByTestId("beskt-preview-purpose-security_vetting_support").click();
     await expect(
@@ -190,7 +200,7 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
       timeout: 60_000,
     });
 
-    await module.getByTestId("beskt-module-preview").click();
+    await module.getByTestId("lib-preview-beskt").click();
     await preview.getByTestId("beskt-preview-purpose-security_vetting_support").click();
     await expect(preview.getByTestId("beskt-preview-section-e_ekonomi")).toContainText(
       /förfallna åtaganden/,
@@ -203,8 +213,8 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
   });
 
   test("3 · the owner starts a security vetting on an application", async ({ page }) => {
-    await openLibrary(page, OWNER, EMPLOYER);
-    await page.getByTestId("beskt-module-start").click();
+    await openBeskt(page, OWNER, EMPLOYER);
+    await page.getByTestId("lib-start-beskt").click();
     const dialog = page.getByTestId("beskt-start-dialog");
     await dialog.getByTestId("beskt-purpose-security_vetting_support").check();
     await expect(
@@ -245,7 +255,7 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
   }) => {
     const ctx = await browser.newContext();
     const other = await ctx.newPage();
-    await openLibrary(other, OTHER_ADMIN, EMPLOYER);
+    await openBeskt(other, OTHER_ADMIN, EMPLOYER);
     await expect(other.getByTestId("beskt-assignments")).toBeVisible({ timeout: 60_000 });
     // An administrator who is not the security function: the organisation's
     // recruitment assignments are listed, the security vetting is not -- and
@@ -265,11 +275,18 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
 
     const ctx2 = await browser.newContext();
     const rival = await ctx2.newPage();
-    await openLibrary(rival, OUTSIDER, RIVAL);
-    await expect(rival.getByRole("heading", { name: /^Testbibliotek$/ })).toBeVisible({
-      timeout: 60_000,
-    });
-    await expect(rival.getByTestId("beskt-module")).toHaveCount(0);
+    // The other organisation holds no activation: the v0.1 methods activated
+    // for this one are not in its offer (only the environment's synthetic
+    // PUBLISHED versions are, as for every active organisation), and none of
+    // this organisation's assignments are listed to it.
+    await openBeskt(rival, OUTSIDER, RIVAL);
+    await expect(
+      rival
+        .getByTestId("lib-setup-status")
+        .locator("li")
+        .filter({ hasText: /BESKT – (rekryteringsstöd|säkerhetsprövningsstöd)/ }),
+    ).toHaveCount(0);
+    await expect(rival.getByTestId("beskt-assignment-row")).toHaveCount(0);
     await rival.goto(`/employer/${EMPLOYER}/assessments/library`);
     await expect(rival.getByText(/Åtkomst ej tillgänglig/)).toBeVisible({ timeout: 60_000 });
     await ctx2.close();
@@ -327,7 +344,7 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
   test("6 · Intervjuer → BESKT with E, the FAKTA chain, stance and the signed report", async ({
     page,
   }) => {
-    await openLibrary(page, OWNER, EMPLOYER);
+    await openBeskt(page, OWNER, EMPLOYER);
     await page
       .getByTestId("beskt-assignment-row")
       .first()
@@ -352,8 +369,10 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
       .getByRole("link", { name: /^Öppna ansökan$/ })
       .first()
       .click();
-    await page.getByTestId("beskt-case-link-submit").first().click();
+    // The case was started FROM the preparation and is linked already
+    // (scp_iv_start_interview, one transaction) -- nothing left to link.
     await expect(page.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("beskt-case-link-submit")).toHaveCount(0);
     await page.getByRole("link", { name: /Öppna BESKT i intervjufallet/ }).click();
     await expect(page).toHaveURL(/\/beskt$/, { timeout: 60_000 });
 
@@ -444,8 +463,8 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
     page,
     browser,
   }) => {
-    await openLibrary(page, OWNER, EMPLOYER);
-    await page.getByTestId("beskt-module-start").click();
+    await openBeskt(page, OWNER, EMPLOYER);
+    await page.getByTestId("lib-start-beskt").click();
     const dialog = page.getByTestId("beskt-start-dialog");
     await dialog.getByTestId("beskt-purpose-recruitment_support").check();
     const version = dialog.locator("#beskt-start-version");
@@ -491,7 +510,9 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
     await shot(cand, "7-invitee-submitted");
     await ctx.close();
 
-    await page.goto(`/employer/${EMPLOYER}/assessments/library`);
+    await page.goto(
+      `/employer/${EMPLOYER}/assessments/library?method=beskt&group=operational&role=vaktare&env=general`,
+    );
     const row = page.getByTestId("beskt-assignment-row").filter({ hasText: /Larmoperatör/ });
     await row.first().getByTestId("beskt-assignment-open").click();
     await expect(page.getByTestId("beskt-assignment")).toContainText(/via inbjudan/, {
@@ -509,8 +530,10 @@ test.describe("BESKT complete — security vetting with E, S and K, and a standa
     await pack.selectOption(value!);
     await page.getByRole("button", { name: /^Planera intervjun$/ }).click();
     await expect(page).toHaveURL(/\/assessments\/beskt\/[0-9a-f-]{36}$/, { timeout: 60_000 });
-    await page.getByTestId("beskt-case-link-submit").first().click();
+    // The case was started FROM the preparation and is linked already
+    // (scp_iv_start_interview, one transaction) -- nothing left to link.
     await expect(page.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+    await expect(page.getByTestId("beskt-case-link-submit")).toHaveCount(0);
     await page.getByRole("link", { name: /Öppna BESKT i intervjufallet/ }).click();
     await page.getByRole("button", { name: /Öppna samtalsstödet/ }).click();
     await expect(page.getByTestId("beskt-interview-workspace")).toBeVisible({ timeout: 60_000 });

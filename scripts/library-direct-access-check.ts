@@ -175,10 +175,25 @@ const state = JSON.parse(read(STATE)) as {
   frontier: Array<{ file?: string; hostedState?: string; evidenceSource?: string }>;
 };
 const entry = state.frontier.find((e) => e.file === "20261201090000_scp_library_direct_access.sql");
+// Applied by the integration after #272 merged (61a04c8), verified by the
+// BODIES of the functions it created or re-created, not only the ledger row.
 check(
-  entry?.hostedState === "pending" ||
-    (entry?.hostedState === "applied" && /wrygicdfxwjnrugduxnt/.test(entry.evidenceSource ?? "")),
-  "LD-RELEASE: recorded pending, or applied with hosted evidence",
+  entry?.hostedState === "applied" &&
+    /wrygicdfxwjnrugduxnt/.test(entry.evidenceSource ?? "") &&
+    [
+      "bb180a98cc9cbc3cc34e5abcfa1bfced",
+      "0b8d3807dfd38bd5b3a781f1c951d779",
+      "b25ff58d23fa119c6938bebc99d52dc7",
+      "e87cf7bba30d4ec94b49e658a5484ad6",
+    ].every((md5) => (entry.evidenceSource ?? "").includes(md5)) &&
+    /"version": "20261201090000"/.test(read("supabase/hosted-ledger.json")),
+  "LD-RELEASE: recorded applied with hosted body evidence and a ledger row",
+);
+check(
+  !/const expectedPending: string\[\] = \[[^\]]*20261201090000/.test(
+    read("scripts/release-frontier-check.ts"),
+  ),
+  "LD-RELEASE: no longer expected pending on the frontier",
 );
 
 console.log("");

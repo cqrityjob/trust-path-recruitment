@@ -7,7 +7,7 @@
  *
  * The whole journey, in order, because the order is the contract:
  *
- *   1. the employer's Testbibliotek names "Metodstöd för rekrytering" as a
+ *   1. the employer's library offers BESKT as one of its two entrances, as a
  *      sibling section and never as a test;
  *   2. the employer starts a preparation from an EXISTING application, and
  *      sees NOTHING of the candidate's while it is still a draft;
@@ -195,21 +195,24 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       signIn(page, RECRUITER, `/employer/${EMPLOYER_SLUG}/assessments/library`),
     );
 
-    const section = page.getByTestId("beskt-method-support");
+    // Since the library's product structure (v2.0) BESKT is one of the two
+    // entrances, beside TRUST and of equal weight.
+    const section = page.getByTestId("lib-method-beskt");
     await step("library", "the section is present and is not a test", async () => {
       await expect(section).toBeVisible({ timeout: 30_000 });
-      await expect(section).toContainText(/Metodstöd för rekrytering/i);
+      await expect(section).toContainText(/Förberedande frågeunderlag och strukturerat metodstöd/i);
+      await expect(page.getByTestId("lib-method-trust")).toBeVisible();
       // The claim PR 1's contract forbids must not be on screen, ever.
       await expect(section).not.toContainText(/personlighetstest|lämplighetstest/i);
-      await expectNoScoringClaim(page, "beskt-method-support");
+      await expectNoScoringClaim(page, "lib-methods");
       await shot(page, "1-library-sv");
     });
 
     await step("library", "the same page in English", async () => {
       await useEnglish(page);
-      await expect(section).toContainText(/Method support for recruitment/i);
+      await expect(section).toContainText(/Preparatory questions and structured method support/i);
       await expect(section).not.toContainText(/personality test|suitability test/i);
-      await expectNoScoringClaim(page, "beskt-method-support");
+      await expectNoScoringClaim(page, "lib-methods");
       await shot(page, "1-library-en");
     });
   });
@@ -640,11 +643,10 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       "back on the application, the preparation is linked to it",
       async () => {
         await page.goto(applicationPath);
-        await expect(link.getByTestId("beskt-case-link-candidates")).toBeVisible({
-          timeout: 30_000,
-        });
-        await link.getByTestId("beskt-case-link-submit").first().click();
+        // Started from the preparation, the case arrives linked (one atomic
+        // start, scp_iv_start_interview): nothing is left to link by hand.
         await expect(link.getByTestId("beskt-case-link-linked")).toBeVisible({ timeout: 60_000 });
+        await expect(link.getByTestId("beskt-case-link-submit")).toHaveCount(0);
         await expectFitsViewport(page);
         await shot(page, "6b-linked-sv");
       },

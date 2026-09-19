@@ -31,6 +31,9 @@ import {
 } from "@/lib/interview-intelligence/runtime.functions";
 import { getApplicationInterviewStart } from "@/lib/interview-intelligence/context.functions";
 import { processLinkage } from "@/lib/employer-continuity/process-projection";
+import { isEnvironment, isMethod, isRoleGroup, isRoleProfile } from "@/lib/library/catalogue";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import { startApplicationInterview, startBesktInterview } from "@/lib/library/start.functions";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/new",
@@ -59,6 +62,14 @@ export const Route = createFileRoute(
     ...(typeof search.besktAssignment === "string" && UUID.test(search.besktAssignment)
       ? { besktAssignment: search.besktAssignment }
       : {}),
+    // Arriving from the library: the guide it resolved, and the setup it was
+    // chosen with (method, role group, role profile, work environment). The
+    // guide is only a preselection -- the list below is still the database's.
+    ...(typeof search.pack === "string" && UUID.test(search.pack) ? { pack: search.pack } : {}),
+    ...(isMethod(search.method) ? { method: search.method } : {}),
+    ...(isRoleGroup(search.group) ? { group: search.group } : {}),
+    ...(isRoleProfile(search.role) ? { role: search.role } : {}),
+    ...(isEnvironment(search.env) ? { env: search.env } : {}),
   }),
 });
 
@@ -66,7 +77,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function Page() {
   const { employerSlug } = Route.useParams();
-  const { applicationId, jobId, beskt, besktAssignment } = Route.useSearch();
+  const { applicationId, jobId, beskt, besktAssignment, pack, method, group, role, env } =
+    Route.useSearch();
+  const setup =
+    method && group && role && env
+      ? { method, roleGroup: group, roleProfile: role, environment: env }
+      : null;
   const navigate = useNavigate();
   const ws = useEmployerWorkspace(employerSlug);
   const { t } = useT();
@@ -83,7 +99,7 @@ function Page() {
 
   const [title, setTitle] = useState("");
   const [candidate, setCandidate] = useState("");
-  const [packVersionId, setPackVersionId] = useState("");
+  const [packVersionId, setPackVersionId] = useState(pack ?? "");
   const [errors, setErrors] = useState<readonly { fieldId: string; message: string }[]>([]);
 
   // ── WHAT THE APPLICATION ALREADY ANSWERS ──────────────────────────────
@@ -149,33 +165,84 @@ function Page() {
   // field below, never by the guide that gets chosen.
   const linkage = processLinkage(applicationId);
 
+  const startAppFn = useServerFn(startApplicationInterview);
+  const startBesktFn = useServerFn(startBesktInterview);
+  // Which start this form makes. A case that belongs to a BESKT preparation or
+  // to an application is ONE atomic, serialised database start
+  // (scp_iv_start_interview): the case, its setup, its material and -- for
+  // BESKT -- its governed link are written together, and a double click, a
+  // second tab or a retry reaches the same case. Only a standalone case with
+  // neither is created directly.
+  type Outcome =
+    | { kind: "case"; caseId: string; complete: boolean }
+    | { kind: "refused"; key: TranslationKey };
   const create = useMutation({
-    mutationFn: () =>
-      createFn({
+    mutationFn: async (v: {
+      title: string;
+      candidate: string;
+      packVersionId: string;
+    }): Promise<Outcome> => {
+      const employerId = ws.workspace!.employerId;
+      if (besktAssignment || applicationId) {
+        const res = besktAssignment
+          ? await startBesktFn({
+              data: {
+                employerId,
+                besktAssignmentId: besktAssignment,
+                applicationId: applicationId ?? null,
+                packVersionId: v.packVersionId,
+                setup: setup && setup.method === "beskt" ? setup : null,
+                title: v.title,
+              },
+            })
+          : await startAppFn({
+              data: {
+                employerId,
+                applicationId: applicationId!,
+                assessmentAssignmentId: null,
+                packVersionId: v.packVersionId,
+                setup: setup && setup.method === "trust" ? setup : null,
+                title: v.title,
+              },
+            });
+        if (res.kind === "started")
+          return { kind: "case", caseId: res.caseId, complete: res.complete };
+        return {
+          kind: "refused",
+          key:
+            res.kind === "choose"
+              ? "iiu.new.setupRequired"
+              : (`lib.start.refused.${res.reason}` as TranslationKey),
+        };
+      }
+      const made = await createFn({
         data: {
-          employerId: ws.workspace!.employerId,
-          title,
-          packVersionId,
-          candidateDisplayName: candidate,
-          // scp_iv_create_case re-checks that both belong to this employer and
-          // raises SCP_IV_CROSS_TENANT_* otherwise, so a hand-edited URL cannot
-          // attach a case to somebody else's application.
-          applicationId: applicationId ?? null,
+          employerId,
+          title: v.title,
+          packVersionId: v.packVersionId,
+          candidateDisplayName: v.candidate,
+          applicationId: null,
           jobId: effectiveJobId,
-          bindApplicant: beskt === true && Boolean(applicationId),
-          besktAssignmentId: besktAssignment ?? null,
+          setup,
         },
-      }),
-    onSuccess: ({ caseId }) =>
-      void (besktAssignment
-        ? navigate({
+      });
+      return { kind: "case", caseId: made.caseId, complete: made.setupRecorded };
+    },
+    onSuccess: (out) => {
+      if (out.kind !== "case") return;
+      void (besktAssignment && !applicationId
+        ? // A standalone invitation: back to the preparation, which now shows
+          // the case it is linked to.
+          navigate({
             to: "/employer/$employerSlug/assessments/beskt/$assignmentId",
             params: { employerSlug, assignmentId: besktAssignment },
           })
         : navigate({
             to: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
-            params: { employerSlug, caseId },
-          })),
+            params: { employerSlug, caseId: out.caseId },
+            search: out.complete ? {} : { setupFailed: true },
+          }));
+    },
     // The list and the create call share one entitlement definition, so a
     // refusal here means the state changed after the list was drawn -- the
     // package was withdrawn, or the account stopped being active. Re-read the
@@ -198,22 +265,34 @@ function Page() {
   const errorFor = (id: string) => errors.find((e) => e.fieldId === id)?.message ?? null;
   const chosen = packs.data?.packs.find((p) => p.packVersionId === packVersionId) ?? null;
 
-  function onSubmit(e: React.FormEvent) {
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Validate what the FORM holds, not only what React saw typed: a value the
+    // browser filled in (autofill, a restored page) fires no change event, and
+    // the recruiter was told a field they could see filled in was missing.
+    const fd = new FormData(e.currentTarget);
+    const v = {
+      title: String(fd.get("title") ?? title).trim(),
+      candidate: String(fd.get("candidate") ?? candidate).trim(),
+      packVersionId: String(fd.get("pack") ?? packVersionId),
+    };
+    setTitle(v.title);
+    setCandidate(v.candidate);
+    setPackVersionId(v.packVersionId);
     const next: Array<{ fieldId: string; message: string }> = [];
-    if (title.trim() === "") next.push({ fieldId: "ii-title", message: t("iiu.new.err.title") });
-    if (candidate.trim() === "")
+    if (v.title === "") next.push({ fieldId: "ii-title", message: t("iiu.new.err.title") });
+    if (v.candidate === "")
       // Was a hardcoded Swedish string on an otherwise translated form: an
       // English-language recruiter who left the field empty got the one
       // message on the screen they could not read.
       next.push({ fieldId: "ii-candidate", message: t("iiu.new.err.candidate") });
-    if (packVersionId === "") next.push({ fieldId: "ii-pack", message: t("iiu.new.err.pack") });
+    if (v.packVersionId === "") next.push({ fieldId: "ii-pack", message: t("iiu.new.err.pack") });
     setErrors(next);
     if (next.length > 0) {
       window.requestAnimationFrame(() => summaryRef.current?.focus());
       return;
     }
-    create.mutate();
+    create.mutate(v);
   }
 
   return (
@@ -327,6 +406,11 @@ function Page() {
               <p className="whitespace-pre-line">{interviewErrorMessage(create.error, t)}</p>
             </Panel>
           )}
+          {create.data?.kind === "refused" && (
+            <Panel tone="governance" role="alert" title={t("iiu.new.failed")}>
+              <p data-testid="ii-new-refused">{t(create.data.key)}</p>
+            </Panel>
+          )}
 
           <div>
             <label htmlFor="ii-title" className="text-sm font-medium text-foreground">
@@ -334,6 +418,7 @@ function Page() {
             </label>
             <input
               id="ii-title"
+              name="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               aria-invalid={errorFor("ii-title") !== null}
@@ -360,6 +445,7 @@ function Page() {
             </label>
             <input
               id="ii-candidate"
+              name="candidate"
               value={candidate}
               onChange={(e) => setCandidate(e.target.value)}
               aria-invalid={errorFor("ii-candidate") !== null}
@@ -386,6 +472,7 @@ function Page() {
             </label>
             <select
               id="ii-pack"
+              name="pack"
               value={packVersionId}
               onChange={(e) => setPackVersionId(e.target.value)}
               aria-invalid={errorFor("ii-pack") !== null}

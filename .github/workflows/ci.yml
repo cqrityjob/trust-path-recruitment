@@ -900,6 +900,10 @@ jobs:
         run: bun run beskt-complete:check
       - name: Library direct access and recruitment setup guard
         run: bun run library-direct-access:check
+      - name: Library structure and employer journey guard
+        run: bun run library-structure:check
+      - name: Test → interview start guard
+        run: bun run interview-start:check
 
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape

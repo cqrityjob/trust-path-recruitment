@@ -384,3 +384,62 @@ export const setBesktContentRole = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { action: (out as { action: string }).action };
   });
+
+/* ------------------------------------------------------------------ */
+/* Availability in the employer offer (20261201090000)                 */
+/*                                                                     */
+/* One governed CONTENT decision per version, by the platform          */
+/* publisher: make a draft or in-review version available to EVERY    */
+/* active employer -- no per-company grant, activation or request. It  */
+/* reviews, publishes and relabels nothing, and freezes the content.   */
+/* ------------------------------------------------------------------ */
+
+export interface BesktAvailability {
+  readonly pilotAvailability: "restricted" | "open";
+  readonly contentStatus: string;
+  readonly validationLabel: string;
+}
+
+export const getBesktAvailability = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ methodVersionId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }): Promise<BesktAvailability> => {
+    const { data: row, error } = await context.supabase
+      .from("beskt_method_versions")
+      .select("*")
+      .eq("id", data.methodVersionId)
+      .single();
+    if (error) throw new Error(error.message);
+    const r = row as unknown as Record<string, unknown>;
+    return {
+      pilotAvailability: (r.pilot_availability as "restricted" | "open" | undefined) ?? "restricted",
+      contentStatus: String(r.content_status),
+      validationLabel: String(r.validation_label),
+    };
+  });
+
+export const setBesktAvailability = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d: unknown) =>
+    z
+      .object({
+        operationId: z.string().uuid(),
+        methodVersionId: z.string().uuid(),
+        available: z.boolean(),
+        reason: z.string().trim().min(3).max(2000),
+      })
+      .parse(d),
+  )
+  .handler(async ({ context, data }): Promise<{ changed: boolean }> => {
+    const { data: res, error } = await context.supabase.rpc(
+      "beskt_set_pilot_availability" as never,
+      {
+        _operation_id: data.operationId,
+        _method_version_id: data.methodVersionId,
+        _available: data.available,
+        _reason: data.reason,
+      } as never,
+    );
+    if (error) throw new Error(error.message);
+    return { changed: Boolean((res as { changed?: boolean } | null)?.changed) };
+  });

@@ -205,6 +205,8 @@ const NAV_GROUPS: NavGroup[] = [
         icon: Inbox,
         to: "/employer/$employerSlug/applications",
       },
+      // Tester & bedömningar (owner decision 2026-09-19): its Rekryteringsstöd
+      // tab holds METHOD -> ROLE -> ENVIRONMENT -> SETUP.
       {
         key: "assessments",
         labelKey: "employer.nav.assessments",

@@ -56,6 +56,8 @@ export function BesktStartDialog({
   methods,
   isSecurityOfficer,
   fixedApplicationId,
+  initialMode,
+  onStarted,
 }: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
@@ -66,6 +68,12 @@ export function BesktStartDialog({
   readonly isSecurityOfficer: boolean;
   /** Started from an application's own page: the candidate is that applicant. */
   readonly fixedApplicationId?: string;
+  /** The purpose to open on, when the caller already knows it. */
+  readonly initialMode?: BesktMode;
+  /** Called with the new assignment before the dialog moves on -- the library
+   *  records the setup it was started with here. Its failure is shown to the
+   *  caller, never allowed to lose the assignment that already exists. */
+  readonly onStarted?: (assignmentId: string) => Promise<void>;
 }) {
   const { t, lang } = useT();
   const navigate = useNavigate();
@@ -80,7 +88,9 @@ export function BesktStartDialog({
     () => Array.from(new Set(methods.map((m) => m.mode as BesktMode))),
     [methods],
   );
-  const [mode, setMode] = useState<BesktMode>(modes[0] ?? "recruitment_support");
+  const [mode, setMode] = useState<BesktMode>(
+    initialMode && modes.includes(initialMode) ? initialMode : (modes[0] ?? "recruitment_support"),
+  );
   // More than one runnable version of a purpose (a new version next to the
   // one in use): the person starting chooses, rather than the list order.
   const versionsForMode = methods.filter((m) => m.mode === mode);
@@ -181,10 +191,17 @@ export function BesktStartDialog({
       });
       return { kind: "invited" as const, token: r.token };
     },
-    onSuccess: (r) => {
+    onSuccess: async (r) => {
       if (r.kind === "invited") {
         setInvitationLink(`${window.location.origin}/beskt/inbjudan/${r.token}`);
         return;
+      }
+      if (onStarted) {
+        try {
+          await onStarted(r.assignmentId);
+        } catch (e) {
+          console.error("[beskt-start] the setup was not recorded", e);
+        }
       }
       onOpenChange(false);
       // Started from the application's own page: stay there, where the

@@ -16,7 +16,9 @@ import { NoticePanel } from "@/components/admin/interview/PackGovernanceUi";
 import { BesktVersionLink, type BesktSurface } from "@/components/admin/beskt/surface";
 import { besktErrorKey } from "@/lib/beskt/errors";
 import {
+  getBesktAvailability,
   getBesktV01Installation,
+  setBesktAvailability,
   grantBesktTestActivation,
   installBesktV01Step,
   listBesktTestActivations,
@@ -217,6 +219,99 @@ export function BesktInstallV01Card({
           </p>
         ) : null}
       </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Availability in the employer offer                                  */
+/* ------------------------------------------------------------------ */
+
+/** The product path: one decision per VERSION makes it available to every
+ *  active organisation at once. Not a review, and said so on the panel. */
+export function BesktAvailabilityPanel({ methodVersionId }: { readonly methodVersionId: string }) {
+  const { t } = useT();
+  const queryClient = useQueryClient();
+  const getFn = useServerFn(getBesktAvailability);
+  const setFn = useServerFn(setBesktAvailability);
+  const key = ["admin", "beskt-availability", methodVersionId] as const;
+  const [reason, setReason] = useState("");
+  const [op, setOp] = useState(() => crypto.randomUUID());
+  const q = useQuery({ queryKey: key, queryFn: () => getFn({ data: { methodVersionId } }), retry: false });
+  const change = useMutation({
+    mutationFn: (available: boolean) =>
+      setFn({ data: { operationId: op, methodVersionId, available, reason } }),
+    onSuccess: async () => {
+      setOp(crypto.randomUUID());
+      setReason("");
+      await queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+  const open = q.data?.pilotAvailability === "open";
+  const openable = q.data ? ["draft", "in_review"].includes(q.data.contentStatus) : false;
+  return (
+    <section
+      className="rounded-lg border border-border p-4"
+      data-testid="beskt-availability"
+      data-state={q.data?.pilotAvailability ?? "unknown"}
+      aria-labelledby="beskt-availability-h"
+    >
+      <h3 id="beskt-availability-h" className="text-base font-semibold text-foreground">
+        {t("beskt.availability.heading")}
+      </h3>
+      <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        {t("beskt.availability.lede")}
+      </p>
+      <div className="mt-3">
+        <NoticePanel tone="attention" title={t("beskt.availability.notReviewTitle")}>
+          <p>{t("beskt.availability.notReviewBody")}</p>
+        </NoticePanel>
+      </div>
+      {q.isError ? (
+        <p role="alert" className="mt-3 text-sm text-destructive">
+          {t(besktErrorKey(q.error))}
+        </p>
+      ) : q.data ? (
+        <div className="mt-3 space-y-3 text-sm">
+          <p data-testid="beskt-availability-state">
+            {t(
+              q.data.contentStatus === "published"
+                ? "beskt.availability.state.published"
+                : open
+                  ? "beskt.availability.state.open"
+                  : "beskt.availability.state.restricted",
+            )}
+          </p>
+          {openable ? (
+            <>
+              <label htmlFor="beskt-availability-reason" className="block font-medium">
+                {t("beskt.availability.reason")}
+              </label>
+              <textarea
+                id="beskt-availability-reason"
+                rows={2}
+                className="min-h-[44px] w-full rounded-md border border-border bg-background px-3 py-2"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+              />
+              {change.isError ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {t(besktErrorKey(change.error))}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className="inline-flex min-h-[44px] items-center rounded-md border border-border px-4 font-medium"
+                disabled={reason.trim().length < 3 || change.isPending}
+                onClick={() => change.mutate(!open)}
+                data-testid="beskt-availability-submit"
+              >
+                {t(open ? "beskt.availability.withdraw" : "beskt.availability.open")}
+              </button>
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

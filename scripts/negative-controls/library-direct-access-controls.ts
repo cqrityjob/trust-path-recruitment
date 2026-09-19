@@ -86,6 +86,25 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "LD-HARNESS",
   },
+  {
+    id: "LD-NC-RELEASE-UNRECORDED",
+    defect: "the migration is declared applied without its hosted body evidence",
+    file: "supabase/release-state.json",
+    find: "bcp_offer_covers bb180a98cc9cbc3cc34e5abcfa1bfced",
+    replace: "bcp_offer_covers (not checked)",
+    guard: GUARD,
+    expect: "LD-RELEASE: recorded applied with hosted body evidence",
+  },
+  {
+    id: "LD-NC-FRONTIER-STALE",
+    defect:
+      "the applied migration is put back on the frontier's pending list, hiding the next stuck one",
+    file: "scripts/release-frontier-check.ts",
+    find: "const expectedPending: string[] = [",
+    replace: 'const expectedPending: string[] = ["20261201090000_scp_library_direct_access.sql",',
+    guard: GUARD,
+    expect: "LD-RELEASE: no longer expected pending",
+  },
 ];
 
 await runControls("library-direct-access", MUTATIONS);
