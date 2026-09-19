@@ -7,6 +7,19 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261203090000_scp_interview_case_vetting_read.sql", 
+      "hostedState": "pending", 
+      "introduces": [
+        {
+          "kind": "function", 
+          "object": "scp_iv_case_row_visible(uuid,uuid)"
+        }
+      ], 
+      "note": "OWNER DECISION 2026-09-19 (blocker for #273/#274): a security vetting's interview case ROW is the appointed security function's alone. scp_interview_cases_read was membership-only (has_employer_role), so a plain member -- and an owner or admin who is not the security function -- could SELECT the vetting case's row (title, candidate, application) although scp_iv_can_read_case answered false. The policy is re-created on scp_iv_case_row_visible(id, employer_id): the same rule as scp_iv_can_read_case, reading only membership and BESKT tables (no recursion); it is the table's only policy; the one view is security_invoker; child tables already read through scp_iv_can_read_case. scp_iv_confirm_transcript_basis additionally requires bcp_case_access_ok (md5-pinned daf35ff566dc5e44ce799340cbcf8e46 -> eb9c745d2b7745299c41289c385e9e36, equal in production 2026-09-19). THE ROLLBACK REINTRODUCES THE GAP and is run only in isolated test databases. Proved by supabase/tests/scp_interview_case_vetting_read_test.sql (direct reads as member, owner, admin, officer, candidate, other organisation, anon; lists, related rows, view, RPCs; revoked appointment), which db-test.sh also requires to FAIL against the old policy.", 
+      "verify": "SELECT qual = 'scp_iv_case_row_visible(id, employer_id)' FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_interview_cases' AND policyname = 'scp_interview_cases_read'; -- expect t, and exactly one policy on the table. md5(prosrc) of scp_iv_confirm_transcript_basis = eb9c745d2b7745299c41289c385e9e36; scp_iv_case_row_visible executable by authenticated, not anon. Behaviour, rolled back: as a plain member SELECT count(*) FROM scp_interview_cases WHERE id = <a vetting case> returns 0.", 
+      "rollback": "supabase/rollback/20261203090000_scp_interview_case_vetting_read_rollback.sql"
+    }, 
+    {
       "file": "20261202090000_scp_interview_starts.sql", 
       "hostedState": "pending", 
       "introduces": [

@@ -168,8 +168,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 20261202090000_scp_interview_starts is GENUINELY PENDING: one interview per
 // intended start (the owner's test → interview → final report correction).
 // Its name comes OFF this list in the change that records its hosted
-// evidence, never before.
-const expectedPending: string[] = ["20261202090000_scp_interview_starts.sql"];
+// evidence, never before. 20261203090000_scp_interview_case_vetting_read
+// (the security vetting's case row) is pending with it, on the same terms.
+const expectedPending: string[] = [
+  "20261202090000_scp_interview_starts.sql",
+  "20261203090000_scp_interview_case_vetting_read.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

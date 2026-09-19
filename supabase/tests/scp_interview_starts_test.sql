@@ -16,6 +16,8 @@
 -- link -- a forced failure rolls all of it back -- and a security vetting's
 -- case is the security function's from its first moment. The candidate answers the real
 -- 50-item Väktare test through the ordinary save/submit functions.
+-- Requires 20261203090000 (the case row's security-function policy) as well:
+-- ST10 reads the vetting case row directly.
 -- Everything is synthetic and rolls back.
 
 BEGIN;
@@ -662,10 +664,11 @@ BEGIN
   _v2 := pg_temp.start_as(r.officer, r.emp_a, r.app_2, 'beskt_assignment', r.vet_assign, 'beskt');
   PERFORM pg_temp.become(r.member_a); SET LOCAL ROLE authenticated;
   _read := public.scp_iv_can_read_case((_v ->> 'case_id')::uuid);
-  -- The start row follows the case's read predicate (scp_iv_can_read_case,
-  -- the vetting boundary of 20261130). The case table's own row policy is
-  -- older and membership-based; that is recorded separately, not changed here.
-  SELECT count(*) INTO _seen FROM public.scp_interview_starts WHERE interview_case_id = (_v ->> 'case_id')::uuid;
+  -- Direct reads, as the member: the case ROW (its policy follows the
+  -- security-function rule since 20261203090000, which db-test.sh applies
+  -- before this suite) and the start row (scp_iv_can_read_case).
+  SELECT (SELECT count(*) FROM public.scp_interview_cases WHERE id = (_v ->> 'case_id')::uuid)
+       + (SELECT count(*) FROM public.scp_interview_starts WHERE interview_case_id = (_v ->> 'case_id')::uuid) INTO _seen;
   RESET ROLE; PERFORM pg_temp.nobody();
   PERFORM pg_temp.become(r.officer); SET LOCAL ROLE authenticated;
   _officer_reads := public.scp_iv_can_read_case((_v ->> 'case_id')::uuid);
@@ -675,7 +678,7 @@ BEGIN
                                    AND assignment_id = r.vet_assign AND unlinked_at IS NULL),
     'ST10.6 the security officer starts it once, linked in the same transaction');
   PERFORM pg_temp.ok(NOT _read AND _seen = 0 AND _officer_reads,
-    'ST10.7 from its first moment only the security function may read the case, and its start row is invisible to a plain member');
+    'ST10.7 from its first moment a plain member reads neither the case row nor its start row, and scp_iv_can_read_case agrees; the security officer reads it');
   PERFORM pg_temp.must_fail_as('authenticated', r.member_a,
     pg_temp.start_sql(r.emp_a, r.app_2, 'beskt_assignment', r.vet_assign, 'beskt'),
     'SCP_START_SOURCE_MISMATCH', 'ST10.8 a retry by a plain member neither reveals nor replaces it');
