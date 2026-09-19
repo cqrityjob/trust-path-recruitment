@@ -52,6 +52,7 @@ import {
   Surface,
   WorkSplit,
 } from "@/components/employer/interview/InterviewLayout";
+import { CaseSetupStrip } from "@/components/library/CaseSetupStrip";
 import { InterviewContextPanel } from "@/components/employer/interview/InterviewContextPanel";
 import { getInterviewCaseContext } from "@/lib/interview-intelligence/context.functions";
 import { ContextUnavailable } from "@/components/employer/interview/InterviewContextOutcome";
@@ -69,7 +70,15 @@ import {
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/$caseId/prepare",
-)({ ssr: false, component: Page, errorComponent: EmployerErrorState });
+)({
+  ssr: false,
+  component: Page,
+  errorComponent: EmployerErrorState,
+  // Set by the case-creation step when the case exists but its setup could
+  // not be recorded -- said here, rather than lost.
+  validateSearch: (search: Record<string, unknown>): { setupFailed?: true } =>
+    search.setupFailed === true || search.setupFailed === "true" ? { setupFailed: true } : {},
+});
 
 const ITEM_LABEL: Record<string, TranslationKey> = {
   focus_area: "iiu.pp.item.focus_area",
@@ -95,6 +104,7 @@ const CLARIFY_ITEMS = ["missing_information", "ambiguity", "clarification"];
 
 function Page() {
   const { employerSlug, caseId } = Route.useParams();
+  const { setupFailed } = Route.useSearch();
   const ws = useEmployerWorkspace(employerSlug);
   const { t, lang } = useT();
   const navigate = useNavigate();
@@ -147,15 +157,18 @@ function Page() {
   const [approvalNote, setApprovalNote] = useState("");
 
   const addSource = useMutation({
-    mutationFn: () =>
+    // The values are the FORM's, read at submit: a field the browser filled in
+    // (autofill, a restored draft) fires no change event, so state alone would
+    // send an empty value the recruiter can see is filled.
+    mutationFn: (v: { label: string; text: string; basis: string }) =>
       addSourceFn({
         data: {
           caseId,
           sourceKind: kind,
-          label,
-          contentText: text,
+          label: v.label,
+          contentText: v.text,
           purposeCode: "recruitment_interview",
-          lawfulBasisNote: basis,
+          lawfulBasisNote: v.basis,
           origin:
             kind === "candidate_cv" || kind === "application_answers"
               ? "candidate_application"
@@ -187,18 +200,23 @@ function Page() {
   // it; here the person writing it is the person standing behind it, and
   // asking them to approve their own words on a second click protected
   // nothing. An AI draft keeps its separate approval below.
-  const [timePlan, setTimePlan] = useState("");
-  const [opening, setOpening] = useState("");
-  const [closing, setClosing] = useState("");
+  //
+  // The three fields start from a standard proposal the recruiter confirms or
+  // adjusts: nobody should have to write an agenda from nothing to be allowed
+  // to start an interview. The proposal says only how the conversation runs,
+  // never anything about the candidate.
+  const [timePlan, setTimePlan] = useState(() => t("iiu.pp.manual.default.timeplan"));
+  const [opening, setOpening] = useState(() => t("iiu.pp.manual.default.opening"));
+  const [closing, setClosing] = useState(() => t("iiu.pp.manual.default.closing"));
   const manualPrep = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (v: { timePlan: string; opening: string; closing: string }) => {
       await readyIfNeeded();
       const { planId } = await manualPrepFn({
         data: {
           caseId,
-          timePlan: timePlan || undefined,
-          openingGuidance: opening || undefined,
-          closingGuidance: closing || undefined,
+          timePlan: v.timePlan || undefined,
+          openingGuidance: v.opening || undefined,
+          closingGuidance: v.closing || undefined,
         },
       });
       await approveFn({ data: { planId } });
@@ -356,6 +374,7 @@ function Page() {
           employerSlug={employerSlug}
           caseId={caseId}
         />
+        <CaseSetupStrip caseId={caseId} setupFailed={setupFailed} />
       </div>
 
       {startSession.isError && (
@@ -442,7 +461,16 @@ function Page() {
                             className="space-y-3"
                             onSubmit={(e) => {
                               e.preventDefault();
-                              if (label && text) addSource.mutate();
+                              const fd = new FormData(e.currentTarget);
+                              const v = {
+                                label: String(fd.get("label") ?? "").trim(),
+                                text: String(fd.get("text") ?? "").trim(),
+                                basis: String(fd.get("basis") ?? "").trim(),
+                              };
+                              setLabel(v.label);
+                              setText(v.text);
+                              setBasis(v.basis);
+                              if (v.label && v.text && v.basis) addSource.mutate(v);
                             }}
                           >
                             <h3 className="text-sm font-semibold text-foreground">
@@ -485,6 +513,7 @@ function Page() {
                                 </label>
                                 <input
                                   id="src-label"
+                                  name="label"
                                   value={label}
                                   onChange={(e) => setLabel(e.target.value)}
                                   className={FIELD}
@@ -501,6 +530,7 @@ function Page() {
                               </label>
                               <textarea
                                 id="src-text"
+                                name="text"
                                 rows={6}
                                 value={text}
                                 onChange={(e) => setText(e.target.value)}
@@ -521,6 +551,7 @@ function Page() {
                               </label>
                               <input
                                 id="src-basis"
+                                name="basis"
                                 value={basis}
                                 onChange={(e) => setBasis(e.target.value)}
                                 className={FIELD}
@@ -557,7 +588,16 @@ function Page() {
                             className="space-y-4"
                             onSubmit={(e) => {
                               e.preventDefault();
-                              manualPrep.mutate();
+                              const fd = new FormData(e.currentTarget);
+                              const v = {
+                                timePlan: String(fd.get("timePlan") ?? "").trim(),
+                                opening: String(fd.get("opening") ?? "").trim(),
+                                closing: String(fd.get("closing") ?? "").trim(),
+                              };
+                              setTimePlan(v.timePlan);
+                              setOpening(v.opening);
+                              setClosing(v.closing);
+                              manualPrep.mutate(v);
                             }}
                           >
                             <div>
@@ -577,6 +617,7 @@ function Page() {
                               </label>
                               <input
                                 id="mp-time"
+                                name="timePlan"
                                 value={timePlan}
                                 onChange={(e) => setTimePlan(e.target.value)}
                                 className={FIELD}
@@ -591,6 +632,7 @@ function Page() {
                               </label>
                               <textarea
                                 id="mp-open"
+                                name="opening"
                                 rows={2}
                                 value={opening}
                                 onChange={(e) => setOpening(e.target.value)}
@@ -606,6 +648,7 @@ function Page() {
                               </label>
                               <textarea
                                 id="mp-close"
+                                name="closing"
                                 rows={2}
                                 value={closing}
                                 onChange={(e) => setClosing(e.target.value)}
@@ -860,7 +903,11 @@ function Page() {
                     requirement, so printing the definition per question filled
                     the column with the same paragraph three times. It is
                     written out once, in the role-requirements panel. */}
-                <ol className="divide-y divide-border border-y border-border">
+                <details className="group" data-testid="ii-guide">
+                  <summary className="inline-flex min-h-[44px] cursor-pointer items-center text-sm font-medium text-accent underline-offset-2 hover:underline">
+                    {t("iiu.pp.guide.show").replace("{n}", String(d.questions.length))}
+                  </summary>
+                <ol className="mt-2 divide-y divide-border border-y border-border">
                   {d.questions.map((qq) => {
                     const req = primaryRequirement(qq.competencyCodes[0]);
                     const also = qq.competencyCodes
@@ -895,6 +942,7 @@ function Page() {
                     );
                   })}
                 </ol>
+                </details>
               </Section>
 
               <Rule />

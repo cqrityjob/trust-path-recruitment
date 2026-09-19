@@ -83,8 +83,12 @@ test.describe("BESKT v0.1 — candidate preparation → interview → report on 
   test("1 · the library shows v0.1 and the employer starts it from an application", async ({
     page,
   }) => {
-    await signIn(page, RECRUITER, `/employer/${EMPLOYER}/assessments/library`);
-    const rows = page.getByTestId("beskt-method-row");
+    await signIn(
+      page,
+      RECRUITER,
+      `/employer/${EMPLOYER}/assessments/library?method=beskt&group=operational&role=vaktare&env=general`,
+    );
+    const rows = page.getByTestId("lib-setup-status").locator("li");
     await expect(rows.filter({ hasText: METHOD })).toHaveCount(1, { timeout: 60_000 });
     await shot(page, "1-library-sv");
 

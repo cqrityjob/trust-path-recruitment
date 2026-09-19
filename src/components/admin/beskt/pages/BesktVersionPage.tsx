@@ -39,7 +39,10 @@ import {
   type BesktVersionTab,
 } from "@/components/admin/beskt/surface";
 import { useT } from "@/i18n/context";
-import { BesktTestActivationPanel } from "@/components/admin/beskt/BesktInternalTestAdmin";
+import {
+  BesktAvailabilityPanel,
+  BesktTestActivationPanel,
+} from "@/components/admin/beskt/BesktInternalTestAdmin";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { AsyncState, NoticePanel, StateBadge } from "@/components/admin/interview/PackGovernanceUi";
 import { BesktContentEditor } from "@/components/admin/beskt/BesktContentEditor";
@@ -500,6 +503,7 @@ export function BesktVersionPage({
 
         {tab === "access" && surface === "admin" && (
           <>
+            <BesktAvailabilityPanel methodVersionId={methodVersionId} />
             <BesktTestActivationPanel methodVersionId={methodVersionId} />
             <BesktGovernanceGrants
               grants={govGrantsQ.data ?? []}

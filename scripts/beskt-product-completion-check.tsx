@@ -1030,6 +1030,9 @@ ck(
         ...read("supabase/migrations/20261130090000_bcp_beskt_complete.sql").matchAll(
           /\b((?:BCP|BESKT)_[A-Z_]+)\b/g,
         ),
+        ...read("supabase/migrations/20261201090000_scp_library_direct_access.sql").matchAll(
+          /\b((?:BCP|BESKT)_[A-Z_]+)\b/g,
+        ),
       ].map((m) => m[1]),
     );
     return mapped.length > 100 && mapped.every((c) => raised.has(c));

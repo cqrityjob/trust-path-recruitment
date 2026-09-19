@@ -131,13 +131,14 @@ const strip = (markup: string) => markup.replace(/<[^>]+>/g, " ").replace(/\s+/g
 console.log("interview-recruiter-workflow-check\n");
 
 /* ================================================================== */
-/* A · The visible workflow is Prepare → Interview → Assess → Report    */
+/* A · The visible workflow is Setup → Tests & material → Interview →   */
+/*     Review & report (TRUST/BESKT product structure v2.0, section 9)  */
 /* ================================================================== */
 
 ok(ui.STAGES.length === 4, "A · the journey has exactly four stages");
 ok(
-  ui.STAGES.join(",") === "prepare,interview,assess,report",
-  "A · in the order prepare, interview, assess, report",
+  ui.STAGES.join(",") === "prepare,tests,interview,review",
+  "A · in the order setup, tests & material, interview, review & report",
 );
 
 {
@@ -147,31 +148,33 @@ ok(
   const items = nav.match(/<li\b/g) ?? [];
   ok(items.length === 4, `A · the rendered journey has four steps (found ${items.length})`);
   const text = strip(nav);
-  const order = ["Förbered", "Intervjua", "Bedöm", "Rapport"].map((w) => text.indexOf(w));
+  const order = ["Upplägg", "Tester & underlag", "Intervju", "Granska & rapport"].map((w) =>
+    text.indexOf(w.replace("&", "&amp;")),
+  );
   ok(
     order.every((i) => i >= 0) && order.every((v, i) => i === 0 || v > order[i - 1]),
-    "A · the four stages read Förbered → Intervjua → Bedöm → Rapport, in that order",
+    "A · the four stages read Upplägg → Tester & underlag → Intervju → Granska & rapport, in that order",
   );
-  for (const old of ["Översikt", "Granska", "Sammanfattning"]) {
+  for (const old of ["Översikt", "Sammanfattning", "Förbered", "Bedöm"]) {
     ok(!text.includes(old), `A · "${old}" is no longer a stage of the journey`);
   }
   ok(
-    en["iiu.wf.prepare"] === "Prepare" &&
+    en["iiu.wf.prepare"] === "Setup" &&
+      en["iiu.wf.tests"] === "Tests & material" &&
       en["iiu.wf.interview"] === "Interview" &&
-      en["iiu.wf.assess"] === "Assess" &&
-      en["iiu.wf.report"] === "Report",
-    "A/M · the four stages read Prepare → Interview → Assess → Report in English",
+      en["iiu.wf.review"] === "Review & report",
+    "A/M · the four stages read Setup → Tests & material → Interview → Review & report in English",
   );
 }
 
-// The two halves of Assess are shown only inside Assess, and never as
-// stages of their own.
+// The three steps of Review & report -- the material, the assessment, the
+// report -- are shown only inside that stage, and never as stages of their own.
 {
   const inAssess = strip(
     render(
       <ui.WorkflowNav
         status="evidence_review"
-        current="assess"
+        current="review"
         step="material"
         employerSlug="e"
         caseId="c"
@@ -179,15 +182,17 @@ ok(
     ),
   );
   ok(
-    inAssess.includes(sv["iiu.wf.assess.material"]) && inAssess.includes(sv["iiu.wf.assess.judge"]),
-    "A · inside Assess the recruiter sees its two halves: choose the material, assess against the requirements",
+    inAssess.includes(sv["iiu.wf.assess.material"]) &&
+      inAssess.includes(sv["iiu.wf.assess.judge"]) &&
+      inAssess.includes(sv["iiu.wf.assess.report"]),
+    "A · inside Review & report the recruiter sees its three steps: the material, the assessment, the report",
   );
   const inPrepare = strip(
     render(<ui.WorkflowNav status="draft" current="prepare" employerSlug="e" caseId="c" />),
   );
   ok(
     !inPrepare.includes(sv["iiu.wf.assess.material"]),
-    "A · and those halves are not shown outside Assess",
+    "A · and those steps are not shown outside Review & report",
   );
 }
 
@@ -199,12 +204,12 @@ const EXPECTED_STAGE: Record<(typeof STATUSES)[number], string> = {
   draft: "prepare",
   sources_ready: "prepare",
   prep_generated: "prepare",
-  prep_approved: "interview",
+  prep_approved: "tests",
   interview_in_progress: "interview",
-  interview_complete: "assess",
-  evidence_review: "assess",
-  assessed: "report",
-  reported: "report",
+  interview_complete: "review",
+  evidence_review: "review",
+  assessed: "review",
+  reported: "review",
 };
 
 for (const status of STATUSES) {
@@ -216,7 +221,7 @@ for (const status of STATUSES) {
   // recruiter in -- the overview relies on exactly this.
   const nav = render(<ui.WorkflowNav status={status} employerSlug="e" caseId="c" />);
   const currentItem = nav.split("<li").find((li) => li.includes('aria-current="step"')) ?? "";
-  const label = strip(currentItem);
+  const label = strip(currentItem).replace(/&amp;/g, "&");
   ok(
     label.includes(sv[`iiu.wf.${EXPECTED_STAGE[status]}`]),
     `B · the rendered journey marks "${EXPECTED_STAGE[status]}" as current for "${status}" (got "${label.trim()}")`,

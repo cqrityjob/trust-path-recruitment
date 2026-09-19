@@ -157,7 +157,8 @@ function Page() {
       <div className="mt-5">
         <WorkflowNav
           status={d.status}
-          current="report"
+          current="review"
+          step="report"
           employerSlug={employerSlug}
           caseId={caseId}
         />

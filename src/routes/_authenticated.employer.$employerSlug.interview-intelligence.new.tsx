@@ -31,6 +31,7 @@ import {
 } from "@/lib/interview-intelligence/runtime.functions";
 import { getApplicationInterviewStart } from "@/lib/interview-intelligence/context.functions";
 import { processLinkage } from "@/lib/employer-continuity/process-projection";
+import { isEnvironment, isMethod, isRoleGroup, isRoleProfile } from "@/lib/library/catalogue";
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/new",
@@ -59,6 +60,14 @@ export const Route = createFileRoute(
     ...(typeof search.besktAssignment === "string" && UUID.test(search.besktAssignment)
       ? { besktAssignment: search.besktAssignment }
       : {}),
+    // Arriving from the library: the guide it resolved, and the setup it was
+    // chosen with (method, role group, role profile, work environment). The
+    // guide is only a preselection -- the list below is still the database's.
+    ...(typeof search.pack === "string" && UUID.test(search.pack) ? { pack: search.pack } : {}),
+    ...(isMethod(search.method) ? { method: search.method } : {}),
+    ...(isRoleGroup(search.group) ? { group: search.group } : {}),
+    ...(isRoleProfile(search.role) ? { role: search.role } : {}),
+    ...(isEnvironment(search.env) ? { env: search.env } : {}),
   }),
 });
 
@@ -66,7 +75,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function Page() {
   const { employerSlug } = Route.useParams();
-  const { applicationId, jobId, beskt, besktAssignment } = Route.useSearch();
+  const { applicationId, jobId, beskt, besktAssignment, pack, method, group, role, env } =
+    Route.useSearch();
+  const setup =
+    method && group && role && env
+      ? { method, roleGroup: group, roleProfile: role, environment: env }
+      : null;
   const navigate = useNavigate();
   const ws = useEmployerWorkspace(employerSlug);
   const { t } = useT();
@@ -83,7 +97,7 @@ function Page() {
 
   const [title, setTitle] = useState("");
   const [candidate, setCandidate] = useState("");
-  const [packVersionId, setPackVersionId] = useState("");
+  const [packVersionId, setPackVersionId] = useState(pack ?? "");
   const [errors, setErrors] = useState<readonly { fieldId: string; message: string }[]>([]);
 
   // ── WHAT THE APPLICATION ALREADY ANSWERS ──────────────────────────────
@@ -150,13 +164,13 @@ function Page() {
   const linkage = processLinkage(applicationId);
 
   const create = useMutation({
-    mutationFn: () =>
+    mutationFn: (v: { title: string; candidate: string; packVersionId: string }) =>
       createFn({
         data: {
           employerId: ws.workspace!.employerId,
-          title,
-          packVersionId,
-          candidateDisplayName: candidate,
+          title: v.title,
+          packVersionId: v.packVersionId,
+          candidateDisplayName: v.candidate,
           // scp_iv_create_case re-checks that both belong to this employer and
           // raises SCP_IV_CROSS_TENANT_* otherwise, so a hand-edited URL cannot
           // attach a case to somebody else's application.
@@ -164,9 +178,10 @@ function Page() {
           jobId: effectiveJobId,
           bindApplicant: beskt === true && Boolean(applicationId),
           besktAssignmentId: besktAssignment ?? null,
+          setup,
         },
       }),
-    onSuccess: ({ caseId }) =>
+    onSuccess: ({ caseId, setupRecorded }) =>
       void (besktAssignment
         ? navigate({
             to: "/employer/$employerSlug/assessments/beskt/$assignmentId",
@@ -175,6 +190,7 @@ function Page() {
         : navigate({
             to: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
             params: { employerSlug, caseId },
+            search: setupRecorded ? {} : { setupFailed: true },
           })),
     // The list and the create call share one entitlement definition, so a
     // refusal here means the state changed after the list was drawn -- the
@@ -198,22 +214,34 @@ function Page() {
   const errorFor = (id: string) => errors.find((e) => e.fieldId === id)?.message ?? null;
   const chosen = packs.data?.packs.find((p) => p.packVersionId === packVersionId) ?? null;
 
-  function onSubmit(e: React.FormEvent) {
+  function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    // Validate what the FORM holds, not only what React saw typed: a value the
+    // browser filled in (autofill, a restored page) fires no change event, and
+    // the recruiter was told a field they could see filled in was missing.
+    const fd = new FormData(e.currentTarget);
+    const v = {
+      title: String(fd.get("title") ?? title).trim(),
+      candidate: String(fd.get("candidate") ?? candidate).trim(),
+      packVersionId: String(fd.get("pack") ?? packVersionId),
+    };
+    setTitle(v.title);
+    setCandidate(v.candidate);
+    setPackVersionId(v.packVersionId);
     const next: Array<{ fieldId: string; message: string }> = [];
-    if (title.trim() === "") next.push({ fieldId: "ii-title", message: t("iiu.new.err.title") });
-    if (candidate.trim() === "")
+    if (v.title === "") next.push({ fieldId: "ii-title", message: t("iiu.new.err.title") });
+    if (v.candidate === "")
       // Was a hardcoded Swedish string on an otherwise translated form: an
       // English-language recruiter who left the field empty got the one
       // message on the screen they could not read.
       next.push({ fieldId: "ii-candidate", message: t("iiu.new.err.candidate") });
-    if (packVersionId === "") next.push({ fieldId: "ii-pack", message: t("iiu.new.err.pack") });
+    if (v.packVersionId === "") next.push({ fieldId: "ii-pack", message: t("iiu.new.err.pack") });
     setErrors(next);
     if (next.length > 0) {
       window.requestAnimationFrame(() => summaryRef.current?.focus());
       return;
     }
-    create.mutate();
+    create.mutate(v);
   }
 
   return (
@@ -334,6 +362,7 @@ function Page() {
             </label>
             <input
               id="ii-title"
+              name="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               aria-invalid={errorFor("ii-title") !== null}
@@ -360,6 +389,7 @@ function Page() {
             </label>
             <input
               id="ii-candidate"
+              name="candidate"
               value={candidate}
               onChange={(e) => setCandidate(e.target.value)}
               aria-invalid={errorFor("ii-candidate") !== null}
@@ -386,6 +416,7 @@ function Page() {
             </label>
             <select
               id="ii-pack"
+              name="pack"
               value={packVersionId}
               onChange={(e) => setPackVersionId(e.target.value)}
               aria-invalid={errorFor("ii-pack") !== null}

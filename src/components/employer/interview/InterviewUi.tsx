@@ -1015,15 +1015,22 @@ export function ShortDate({ iso }: { iso: string | null }) {
  *
  *  Workflow state only: done, current, not yet. Nothing here says anything
  *  about the candidate, and a stage is never "passed" or "failed". */
-export type Stage = "prepare" | "interview" | "assess" | "report";
+//
+// 2026-09-19 (TRUST/BESKT product structure v2.0, section 9): the same four
+// stages, named for the work: SETUP (the brief, the plan) -> TESTS & MATERIAL
+// (what the candidate does before the interview) -> INTERVIEW -> REVIEW &
+// REPORT (the material, the assessment and the report, one stage with three
+// steps). Tests & material never blocks the interview: an optional test that
+// is not part of the setup is not a gate.
+export type Stage = "prepare" | "tests" | "interview" | "review";
 
-export const STAGES: readonly Stage[] = ["prepare", "interview", "assess", "report"];
+export const STAGES: readonly Stage[] = ["prepare", "tests", "interview", "review"];
 
 const STAGE_LABEL: Record<Stage, TranslationKey> = {
   prepare: "iiu.wf.prepare",
+  tests: "iiu.wf.tests",
   interview: "iiu.wf.interview",
-  assess: "iiu.wf.assess",
-  report: "iiu.wf.report",
+  review: "iiu.wf.review",
 };
 
 /** Where each stage's work is done. Assess opens on the material, because
@@ -1031,14 +1038,14 @@ const STAGE_LABEL: Record<Stage, TranslationKey> = {
 const STAGE_ROUTE: Record<
   Stage,
   | "/employer/$employerSlug/interview-intelligence/$caseId/prepare"
+  | "/employer/$employerSlug/interview-intelligence/$caseId/tests"
   | "/employer/$employerSlug/interview-intelligence/$caseId/interview"
   | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
-  | "/employer/$employerSlug/interview-intelligence/$caseId/report"
 > = {
   prepare: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
+  tests: "/employer/$employerSlug/interview-intelligence/$caseId/tests",
   interview: "/employer/$employerSlug/interview-intelligence/$caseId/interview",
-  assess: "/employer/$employerSlug/interview-intelligence/$caseId/evidence",
-  report: "/employer/$employerSlug/interview-intelligence/$caseId/report",
+  review: "/employer/$employerSlug/interview-intelligence/$caseId/evidence",
 };
 
 /** Which stage a case status puts the recruiter in.
@@ -1050,12 +1057,12 @@ export const STAGE_OF_STATUS: Record<string, Stage> = {
   draft: "prepare",
   sources_ready: "prepare",
   prep_generated: "prepare",
-  prep_approved: "interview",
+  prep_approved: "tests",
   interview_in_progress: "interview",
-  interview_complete: "assess",
-  evidence_review: "assess",
-  assessed: "report",
-  reported: "report",
+  interview_complete: "review",
+  evidence_review: "review",
+  assessed: "review",
+  reported: "review",
 };
 
 /** How many stages are behind the recruiter, per status. */
@@ -1064,11 +1071,26 @@ const STAGES_DONE: Record<string, number> = {
   sources_ready: 0,
   prep_generated: 0,
   prep_approved: 1,
-  interview_in_progress: 1,
-  interview_complete: 2,
-  evidence_review: 2,
+  interview_in_progress: 2,
+  interview_complete: 3,
+  evidence_review: 3,
   assessed: 3,
   reported: 4,
+};
+
+/** How far a recruiter may go, per status. Tests & material is open from the
+ *  start (a test can be sent while the plan is written) and the interview as
+ *  soon as the plan is approved, whatever the candidate has done. */
+const STAGES_REACHABLE: Record<string, number> = {
+  draft: 1,
+  sources_ready: 1,
+  prep_generated: 1,
+  prep_approved: 2,
+  interview_in_progress: 2,
+  interview_complete: 3,
+  evidence_review: 3,
+  assessed: 3,
+  reported: 3,
 };
 
 export function stageOf(status: string): Stage | null {
@@ -1102,16 +1124,18 @@ export function assessedQuestionCount(
   return new Set(assessments.map((a) => a.questionId)).size;
 }
 
-/** The two halves of Assess. Shown only while the recruiter is inside that
- *  stage, as a small second row under it -- never as stages of their own. */
-export type AssessStep = "material" | "assess";
+/** The three steps of Review & report. Shown only while the recruiter is
+ *  inside that stage, as a small second row under it -- never as stages of
+ *  their own. The notes and material flow through them; nothing is copied. */
+export type AssessStep = "material" | "assess" | "report";
 
 const ASSESS_STEPS: ReadonlyArray<{
   key: AssessStep;
   label: TranslationKey;
   to:
     | "/employer/$employerSlug/interview-intelligence/$caseId/evidence"
-    | "/employer/$employerSlug/interview-intelligence/$caseId/assessment";
+    | "/employer/$employerSlug/interview-intelligence/$caseId/assessment"
+    | "/employer/$employerSlug/interview-intelligence/$caseId/report";
 }> = [
   {
     key: "material",
@@ -1122,6 +1146,11 @@ const ASSESS_STEPS: ReadonlyArray<{
     key: "assess",
     label: "iiu.wf.assess.judge",
     to: "/employer/$employerSlug/interview-intelligence/$caseId/assessment",
+  },
+  {
+    key: "report",
+    label: "iiu.wf.assess.report",
+    to: "/employer/$employerSlug/interview-intelligence/$caseId/report",
   },
 ];
 
@@ -1165,7 +1194,7 @@ export function WorkflowNav({
           // A stage the case has not reached is shown, so the recruiter can
           // see what is coming, but it is not a link: a page for work that
           // cannot be done yet is a dead end dressed as a destination.
-          const reachable = i <= done;
+          const reachable = i <= Math.max(done, STAGES_REACHABLE[status] ?? 0);
           const face = (
             <>
               <span
@@ -1226,7 +1255,7 @@ export function WorkflowNav({
           );
         })}
       </ol>
-      {here === "assess" && step && (
+      {here === "review" && step && (
         <ol
           aria-label={t("iiu.wf.assess.aria")}
           className="flex flex-wrap gap-x-5 gap-y-1 border-t border-border/60 py-2 text-xs"
@@ -1274,13 +1303,29 @@ export function CaseHeader({
   role,
   status,
   action,
+  compact = false,
 }: {
   candidate: string;
   role: string;
   status: string;
   /** The primary action for THIS screen, when it has one. */
   action?: React.ReactNode;
+  /** The interview's focused mode: one line, so the question and the notes
+   *  fit a laptop screen together. */
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">{candidate}</h1>
+          <span className="text-sm text-muted-foreground">{role}</span>
+          <CaseStatusChip status={status} />
+        </div>
+        {action && <div className="shrink-0">{action}</div>}
+      </header>
+    );
+  }
   return (
     <header className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">

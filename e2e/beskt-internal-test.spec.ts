@@ -94,12 +94,13 @@ async function openVersionAccess(page: Page): Promise<void> {
 
 async function openLibrary(page: Page, email: string, employer: string): Promise<void> {
   await signIn(page, email, `/employer/${employer}`);
-  await navTo(page, /^Tester & bedömningar$/);
-  await page
-    .getByRole("link", { name: /^Testbibliotek$/ })
-    .first()
-    .click();
+  await navTo(page, /^Bibliotek$/);
   await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
+  // The library's order, clicked: BESKT → operational role → general environment.
+  await page.getByTestId("lib-method-beskt-choose").click();
+  await page.getByTestId("lib-group-operational").check();
+  await page.getByTestId("lib-env-general").check();
+  await expect(page.getByTestId("lib-setup")).toBeVisible({ timeout: 60_000 });
 }
 
 async function openApplication(page: Page): Promise<void> {
@@ -204,16 +205,17 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
     browser,
   }) => {
     await openLibrary(page, RECRUITER, EMPLOYER);
-    // One row per runnable version; the installed one says it runs under
-    // the organisation's recorded activation, as an unreviewed version.
+    // The installed version says it runs under the organisation's recorded
+    // activation, as an internal test version -- never as reviewed.
     const row = page
-      .getByTestId("beskt-method-row")
-      .filter({ hasText: /Används enligt organisationens aktivering/ });
+      .getByTestId("lib-setup-status")
+      .locator("li")
+      .filter({ hasText: /BESKT – rekryteringsstöd/ });
     await expect(row).toHaveCount(1, { timeout: 60_000 });
-    await expect(row.getByTestId("beskt-method-status")).toContainText(/Ogranskad metodversion/);
+    await expect(row).toContainText(/Intern testversion enligt organisationens aktivering/);
     await expectFitsViewport(page);
     await shot(page, "4-library");
-    await page.getByTestId("beskt-module-start").click();
+    await page.getByTestId("lib-start-beskt").click();
     const dialog = page.getByTestId("beskt-start-dialog");
     await expect(dialog).toBeVisible();
     await dialog.getByTestId("beskt-purpose-recruitment_support").check();
@@ -238,18 +240,20 @@ test.describe("BESKT internal test — owner activation → Starta test → repo
 
     const ctx = await browser.newContext();
     const rival = await ctx.newPage();
+    // No activation of its own: this organisation's activated version is
+    // not in the rival's offer, and none of its assignments are listed.
     await openLibrary(rival, OUTSIDER, RIVAL);
-    await expect(rival.getByRole("heading", { name: /^Testbibliotek$/ })).toBeVisible({
-      timeout: 60_000,
-    });
-    await expect(rival.getByTestId("beskt-module")).toHaveCount(0);
+    await expect(
+      rival.getByTestId("lib-setup-status").locator("li").filter({ hasText: /BESKT – rekryteringsstöd/ }),
+    ).toHaveCount(0);
+    await expect(rival.getByTestId("beskt-assignment-row")).toHaveCount(0);
     await expect(rival.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(0);
     await shot(rival, "4-rival-library");
     // The hostile deep link: this organisation's library, typed by an outsider.
     await rival.goto(`/employer/${EMPLOYER}/assessments/library`);
     // A positive refusal, not merely an absence on a page still loading.
     await expect(rival.getByText(/Åtkomst ej tillgänglig/)).toBeVisible({ timeout: 60_000 });
-    await expect(rival.getByTestId("beskt-module-start")).toHaveCount(0, { timeout: 30_000 });
+    await expect(rival.getByTestId("lib-start-beskt")).toHaveCount(0, { timeout: 30_000 });
     await expect(rival.getByText(/BESKT – rekryteringsstöd/)).toHaveCount(0);
     await shot(rival, "4-rival-deep-link");
     await ctx.close();

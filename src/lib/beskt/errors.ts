@@ -239,6 +239,10 @@ const MESSAGE_FOR_CODE: Readonly<Record<string, TranslationKey>> = {
   BESKT_NOT_EDITOR: "beskt.error.govNotEditor",
   BESKT_NOT_REVIEWER: "beskt.error.govNotReviewer",
   BESKT_NOT_PUBLISHER: "beskt.error.govNotPublisher",
+  // 20261201090000: availability in the employer offer.
+  BESKT_NOT_OPENABLE_INCOMPLETE: "beskt.error.notOpenableIncomplete",
+  BESKT_NOT_OPENABLE: "beskt.error.notOpenable",
+  BESKT_OPEN_FROZEN: "beskt.error.openFrozen",
   BESKT_NOT_PLATFORM_ADMIN: "beskt.error.govNotPlatformAdmin",
 
   // Who may decide which gate, and who may not decide at all.

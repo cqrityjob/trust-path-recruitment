@@ -91,3 +91,21 @@ export async function recordStance(page: Page, name: string): Promise<void> {
   await decision.getByTestId("beskt-decision-submit").click();
   await expect(decision.getByTestId("beskt-decision-current")).toBeVisible({ timeout: 60_000 });
 }
+
+/**
+ * The library's BESKT setup (product structure v2.0): method → role →
+ * environment, carried in the URL. Opens it for an operational role in the
+ * general environment and waits for the resolved setup.
+ */
+export async function openBesktSetup(
+  page: Page,
+  employerSlug: string,
+  opts: { group?: "operational" | "strategic"; role?: "vaktare" | "security_manager" } = {},
+): Promise<void> {
+  const group = opts.group ?? "operational";
+  const role = opts.role ?? (group === "operational" ? "vaktare" : "security_manager");
+  await page.goto(
+    `/employer/${employerSlug}/assessments/library?method=beskt&group=${group}&role=${role}&env=general`,
+  );
+  await expect(page.getByTestId("lib-setup")).toBeVisible({ timeout: 60_000 });
+}

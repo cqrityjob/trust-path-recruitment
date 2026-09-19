@@ -1,0 +1,85 @@
+# TRUST och BESKT – innehållsstatus och innehållsspecifikation för granskning
+
+**Status: UTKAST FÖR GRANSKNING. Inget i detta dokument är publicerat, granskat eller validerat innehåll.** Dokumentet anger vad som finns i dag, vad som saknas och vad som behöver tas fram. Det innehåller inga färdiga testfrågor, poängregler eller facit. Innehåll som tas fram utifrån specifikationen ska gå igenom samma innehållsgranskning och versionering som befintliga paket innan det kan publiceras eller göras tillgängligt.
+
+Underlag: *CQrityjob – TRUST och BESKT, samlad produktstruktur och byggspecifikation v2.0* (19 september 2026), avsnitt 3, 4 och 7. Innehållsläget avläst i produktion 19 september 2026 (endast läsning).
+
+## 1. De fyra innehållsvägarna
+
+| Metod | Rollgrupp | Status | Vad som finns | Vad som saknas |
+|---|---|---|---|---|
+| TRUST | Operativa roller (Väktare) | **1 – Finns och får användas** (pilotversion, ogranskad hypotes) | Intervjuguiden *Väktare* (`vaktare-se`, v1, öppen pilot) och kandidattestet *Väktare – Recruitment Assessment* (v1, standard för rekrytering). Båda är kopplade i biblioteket och verifierade genom hela ärendet till Granska & rapport, lokalt. | Innehållsgranskning och validering av båda enligt respektive granskningsstege. |
+| TRUST | Strategiska och ledande roller (Security Manager / säkerhetschef) | **3 – Saknas** | Inget. Biblioteket visar rollen men erbjuder den inte som startbar, och väktarinnehållet erbjuds inte under den rubriken. | Kravprofil, intervjuguide och eventuellt kandidatmoment för ledningsroller, se 3.1. |
+| BESKT | Operativa roller | **2 – Finns delvis** | BESKT v0.1 (rekrytering och säkerhetsprövning) med gemensam bas, B, E, S, K, T, situationer, neutrala följdfrågor och FAKTA. Befattningens exponering anges av arbetsgivaren när uppdraget startas (en generisk T-mall). I produktion: **inte installerad ännu**. | Installation och innehållsbeslut i produktion. De fem granskningsgrindarna. Rollspecifika exponeringsmallar för operativa roller, se 3.2. |
+| BESKT | Strategiska och ledande roller | **2 – Finns delvis** | Samma gemensamma metod. Frågorna motiveras av befattningens exponering, som arbetsgivaren anger. | Frågor och exponeringsmallar för mandat, åtkomst, styrning och ansvar i ledningsroller, se 3.3. |
+
+**Tekniskt färdigt ≠ innehållsmässigt färdigt.** Alla fyra vägar går att välja i biblioteket, och varje väg säger sanningsenligt vad som finns. Men endast *TRUST · operativa roller* har eget innehåll som kan användas hela vägen i dag. Den vägen är dessutom en pilotversion och inte granskad.
+
+## 2. Arbetsmiljöer
+
+| Miljö | Status | Konsekvens i produkten |
+|---|---|---|
+| Generell säkerhetsverksamhet | Används av alla befintliga paket | Startbar. Uppläggen visar ”Generellt upplägg – inga miljöspecifika scenarier ingår.” |
+| Datacenter | **3 – Saknas** | Visas men kan inte väljas. |
+| Sjukhus | **3 – Saknas** | Visas men kan inte väljas. |
+| Köpcentrum | **3 – Saknas** | Visas men kan inte väljas. |
+
+Befintliga arbetsförhållanden i kompetensgrafen (kontrollrum, rondering, stationär post och liknande) är **arbetsförhållanden, inte arbetsmiljöprofiler**. De har inte kopplats om till miljövalet.
+
+## 3. Specifikation av saknat innehåll (för granskning)
+
+### 3.1 TRUST – strategiska och ledande roller
+
+**Syfte.** Ge underlag om arbetsrelaterad kompetens, erfarenhet och omdöme för ledningsroller inom säkerhet. Det ska inte vara väktartestet med ny rubrik, och väktarpaketets eventuella evidens får inte överföras.
+
+**Behöver tas fram:**
+1. **Kravprofil** med definierade kompetensområden och observerbara indikatorer. Förslag på områden att pröva i granskningen, inte beslut:
+   - riskbaserad prioritering och resursfördelning;
+   - styrning, mandat och ansvarsfördelning;
+   - incident- och krisledning;
+   - samverkan med verksamhet, myndigheter och leverantörer;
+   - regelefterlevnad och uppföljning;
+   - ledarskap och uppföljning av personal.
+2. **Intervjuguide** i samma format som *Väktare*: fasta frågor i fast ordning, ”därför frågar vi”, neutrala fördjupningsfrågor och nivåbeskrivningar per område. Allt versionsbundet och låst innan någon kandidat intervjuas.
+3. **Eventuellt kandidatmoment**, till exempel ett strukturerat arbetsprov. Om ett sådant ingår krävs egen instrumentgranskning. Upplägget ska kunna fortsätta utan kandidatmoment (acceptanskriterium A14).
+4. **Rapportavsnitt:** kompetensvisa mänskliga bedömningar med belägg. Otillräckligt underlag redovisas som otillräckligt, inte som låg kompetens.
+5. **Granskning:** samma stege som intervjupaket (expert, juridik, kognitiv granskning), och därefter publicering eller ett uttryckligt beslut om öppen pilot.
+
+**Källor att utgå från vid framtagning:** extern forskning om strukturerade intervjuer, rollanalys av ledande säkerhetsbefattningar hos pilotkunder, och organisationens egna mandat och rapportvägar. De senare kompletterar upplägget men ändrar inte mätmodellen (avsnitt 4 i byggspecifikationen).
+
+### 3.2 BESKT – operativa roller
+
+**Behöver tas fram:** avhemligade exponeringsmallar per vanlig operativ befattning (till exempel väktare med nyckelhantering eller operatör i larmcentral). Varje mall anger:
+- typ av åtkomst;
+- självständighet;
+- möjlighet att kringgå kontroll;
+- möjlig skada;
+- tillsyn;
+- befintliga skydd.
+
+Mallarna är utgångspunkter som arbetsgivaren justerar, inte slutsatser om en person. Mallarna ska granskas av den som äger personalsäkerhetsgrinden.
+
+### 3.3 BESKT – strategiska och ledande roller
+
+**Behöver tas fram:**
+1. **Exponeringsmallar** för ledningsroller: mandat över andras behörigheter, tillgång till skyddsvärd information, beslutsrätt och budget, samt möjlighet att påverka kontroller.
+2. **Rollutlösta frågor** kopplade till dessa exponeringar, i BESKT:s befintliga grammatik: neutrala, förklaringsbaserade och utan poäng.
+
+Allt ska granskas genom BESKT:s fem grindar.
+
+### 3.4 Arbetsmiljövarianter
+
+**Per miljö behöver tas fram:**
+- situationer och scenarier som är specifika för miljön (till exempel tillträde till serverhall, vårdmiljö med patientintegritet, publik miljö med hög genomströmning);
+- vilka intervjufrågor eller situationer i befintliga paket som ersätts eller kompletteras.
+
+Arbetsmiljön får inte själv välja metod, ändra säkerhetsklassning eller ge tillgång till fler personuppgifter. En variant blir startbar först när dess eget innehåll är granskat. Tills dess visas miljön som inte tillgänglig.
+
+## 4. Kvarstående beslut som inte är tekniska
+
+| Beslut | Ansvarig |
+|---|---|
+| Installera BESKT v0.1 i produktion och besluta om öppen pilot (ett beslut per version, inte per organisation) | Innehållsansvarig (plattformens publicist) |
+| De fem granskningsgrindarna för BESKT v0.1 | Utsedda granskare per grind |
+| Granskning och validering av TRUST Väktare (guide och test) | Innehållsansvarig och granskare |
+| Beställning av innehåll enligt 3.1–3.4 | Produktägare |
