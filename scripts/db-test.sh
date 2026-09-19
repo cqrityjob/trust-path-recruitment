@@ -317,8 +317,10 @@ SCP_TABLES="$(psql -tAq -d "$TEST_DB" -c \
 #   content read by a human -- the Understand stage still permits zero AI tasks.
 # + scp_recruitment_setups: the library choice (method, role group, role
 #   profile, work environment) a case or BESKT assignment was started with.
-if [ "$SCP_TABLES" -ne 128 ]; then
-  echo "FAIL: expected 128 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit + 1 recruitment setup), found $SCP_TABLES" >&2
+# + scp_assessment_setups and scp_interview_starts: the setup a candidate test
+#   was sent with, and which case each intended interview start led to.
+if [ "$SCP_TABLES" -ne 130 ]; then
+  echo "FAIL: expected 130 scp_ tables (23 PR-A + 15 graph + 23 Academy + 1 report snapshot + 1 fixture access + 1 test grants + 1 follow-up prompts + 1 employer decisions + 1 review rubric scores + 2 training delivery + 1 employer response reviewers + 1 form blocks + 1 interview guide prompts + 1 interview notes + 1 participant invitations + 13 role interview pack + 7 interview knowledge layer + 21 interview runtime + 1 candidate corrections + 2 panel review + 4 CQrity TRUST + 3 TRUST conduct layer + 1 report computation manifest + 1 content role audit + 1 recruitment setup + 2 interview starts), found $SCP_TABLES" >&2
   exit 1
 fi
 echo "    ok  23 scp_ base tables present (A1 + A2 both applied)"
@@ -3736,6 +3738,11 @@ fi
 # meaning. Its rollback runs before 20261129090000's, because that one
 # restores functions this one extends.
 # ---------------------------------------------------------------------------
+echo "==> Standing 20261202090000 down before 20261201090000"
+# It calls functions 20261201090000 creates, so it comes down first and is
+# cycled on its own once 20261201090000 is back.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261202090000_scp_interview_starts_rollback.sql >/dev/null
 echo "==> Standing 20261201090000 down before the 20261130090000 cycles"
 LD_FAILED=0
 # 20261201090000 re-creates functions 20261130090000 created and changes the
@@ -3918,6 +3925,180 @@ else
 fi
 if [ "$LD_FAILED" -ne 0 ]; then
   suite_failed "Library direct access"
+fi
+
+# ---------------------------------------------------------------------------
+# 20261202090000: one interview per intended start. Proved through real
+# sessions: the start follows its source (the exact test, a BESKT assignment,
+# or an explicitly chosen setup); the case is bound to the applicant's own
+# account; TRUST and BESKT stay apart; another organisation neither reads nor
+# reuses a start; a cancelled case releases it. Then two real connections
+# start the same interview at the same instant, a third retries, and exactly
+# one case exists.
+# ---------------------------------------------------------------------------
+echo "==> Applying interview starts over 20261201090000"
+ST_FAILED=0
+set +e
+ST_UP="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261202090000_scp_interview_starts.sql 2>&1)"
+ST_UP_RC=$?
+set -e
+if [ "$ST_UP_RC" -ne 0 ] || ! echo "$ST_UP" | grep -q "SCP_INTERVIEW_STARTS_PROOF ok"; then
+  echo "FAIL: 20261202090000 does not apply over 20261201090000." >&2
+  echo "$ST_UP" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ST_FAILED=1
+fi
+echo "==> Running interview start assertions"
+set +e
+ST_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_interview_starts_test.sql 2>&1)"
+ST_RC=$?
+set -e
+ST_PASSED="$(echo "$ST_OUT" | grep -c "ok  " || true)"
+if [ "$ST_RC" -ne 0 ]; then
+  echo "FAIL: the interview start suite exited with code ${ST_RC}." >&2
+  echo "$ST_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  ST_FAILED=1
+else
+  echo "    ok  ${ST_PASSED} interview start assertions passed"
+  if [ "$ST_PASSED" -lt 41 ]; then
+    echo "FAIL: expected at least 41 interview start assertions, only ${ST_PASSED} ran." >&2
+    ST_FAILED=1
+  fi
+fi
+
+echo "==> Running interview start concurrent-creation race"
+# Committed fixtures: the race needs rows both connections can see. They are
+# removed again below, so nothing after this block meets them.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" >/dev/null <<'SQL'
+BEGIN;
+SET LOCAL session_replication_role = replica;
+INSERT INTO auth.users (id, email) VALUES
+  ('bf100000-0000-4000-8000-0000000000d1', 'st-race-owner@synthetic.test'),
+  ('bf100000-0000-4000-8000-0000000000c1', 'st-race-cand@synthetic.test');
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('bf100000-0000-4000-8000-0000000000e1', 'SYNTETISK Race AB', 'synthetic-st-race', 'active');
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+VALUES ('bf100000-0000-4000-8000-0000000000e1', 'bf100000-0000-4000-8000-0000000000d1', 'owner', 'active');
+INSERT INTO public.jobs (id, slug, short_id, employer_id, application_method, title_sv, title_en, status, published_at, expires_at)
+VALUES ('bf100000-0000-4000-8000-0000000000f1', 'st-race-job', 'STRACE', 'bf100000-0000-4000-8000-0000000000e1',
+        'internal', 'Väktare (syntetisk)', 'Security officer (synthetic)', 'published', now(), now() + interval '90 days');
+INSERT INTO public.job_applications (id, job_id, employer_id, applicant_user_id, consent_given_at)
+VALUES ('bf100000-0000-4000-8000-0000000000a1', 'bf100000-0000-4000-8000-0000000000f1',
+        'bf100000-0000-4000-8000-0000000000e1', 'bf100000-0000-4000-8000-0000000000c1', now());
+COMMIT;
+SQL
+# Marked, because set_config echoes the principal's uuid one line earlier.
+ST_PACK="$(psql -tAq -d "$TEST_DB" <<'SQL' | { grep -oE 'PACK=[0-9a-f-]{36}' || true; } | head -1 | cut -d= -f2
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'bf100000-0000-4000-8000-0000000000d1', true);
+SET LOCAL ROLE authenticated;
+SELECT 'PACK=' || s.pack_version_id FROM public.scp_iv_startable_pack_versions('bf100000-0000-4000-8000-0000000000e1') s LIMIT 1;
+COMMIT;
+SQL
+)"
+ST_RACE_SQL="SELECT 'CASEID=' || (public.scp_iv_start_interview('bf100000-0000-4000-8000-0000000000e1', 'bf100000-0000-4000-8000-0000000000a1', 'chosen_setup', NULL, '${ST_PACK}', 'trust', 'operational', 'vaktare', 'general') ->> 'case_id') AS marked;"
+ST_A="$(mktemp)"; ST_B="$(mktemp)"; ST_C="$(mktemp)"
+cat > "$ST_A" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'bf100000-0000-4000-8000-0000000000d1', true);
+SET LOCAL ROLE authenticated;
+${ST_RACE_SQL}
+SELECT pg_sleep(2);
+COMMIT;
+SQL
+cat > "$ST_B" <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'bf100000-0000-4000-8000-0000000000d1', true);
+SET LOCAL ROLE authenticated;
+${ST_RACE_SQL}
+COMMIT;
+SQL
+cp "$ST_B" "$ST_C"
+ST_BEFORE="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.scp_interview_cases where application_id='bf100000-0000-4000-8000-0000000000a1';")"
+psql -tAq -d "$TEST_DB" -f "$ST_A" > /tmp/strace_a.out 2>&1 &
+ST_PID=$!
+# Long enough for A to be inside its transaction, holding the start's lock.
+sleep 1
+psql -tAq -d "$TEST_DB" -f "$ST_B" > /tmp/strace_b.out 2>&1
+wait "$ST_PID" || true
+# A retry after the response was lost: a fresh connection, after both committed.
+psql -tAq -d "$TEST_DB" -f "$ST_C" > /tmp/strace_c.out 2>&1
+ST_AFTER="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.scp_interview_cases where application_id='bf100000-0000-4000-8000-0000000000a1';")"
+ST_STARTS="$(psql -tAq -d "$TEST_DB" -c "select count(*) from public.scp_interview_starts where application_id='bf100000-0000-4000-8000-0000000000a1';")"
+ST_ID_A="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/strace_a.out || true; } | head -1 | cut -d= -f2)"
+ST_ID_B="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/strace_b.out || true; } | head -1 | cut -d= -f2)"
+ST_ID_C="$( { grep -oE 'CASEID=[0-9a-f-]{36}' /tmp/strace_c.out || true; } | head -1 | cut -d= -f2)"
+if [ -z "$ST_PACK" ] || [ "$(( ST_AFTER - ST_BEFORE ))" -ne 1 ] || [ "$ST_STARTS" -ne 1 ]; then
+  echo "FAIL: two concurrent starts and a retry produced $(( ST_AFTER - ST_BEFORE )) cases and ${ST_STARTS} starts, not 1 and 1." >&2
+  head -5 /tmp/strace_a.out /tmp/strace_b.out /tmp/strace_c.out >&2
+  ST_FAILED=1
+else
+  echo "    ok  two concurrent starts and a retry: exactly one case and one start row"
+fi
+if [ -z "$ST_ID_A" ] || [ "$ST_ID_A" != "$ST_ID_B" ] || [ "$ST_ID_A" != "$ST_ID_C" ]; then
+  echo "FAIL: the callers were told different cases ('${ST_ID_A}' / '${ST_ID_B}' / '${ST_ID_C}')." >&2
+  ST_FAILED=1
+else
+  echo "    ok  and all three callers were told the same case (${ST_ID_A})"
+fi
+if grep -qiE "ERROR:|FEL:" /tmp/strace_b.out /tmp/strace_c.out; then
+  echo "FAIL: a later caller errored instead of waiting for, or reusing, the first." >&2
+  head -5 /tmp/strace_b.out /tmp/strace_c.out >&2
+  ST_FAILED=1
+else
+  echo "    ok  the second caller waited for the first, and the retry reused its case"
+fi
+rm -f "$ST_A" "$ST_B" "$ST_C"
+# The race's committed rows go again, every row that names its case first.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" >/dev/null <<'SQL'
+BEGIN;
+SET LOCAL session_replication_role = replica;
+DO $clean$
+DECLARE _t record; _cases uuid[];
+BEGIN
+  SELECT array_agg(id) INTO _cases FROM public.scp_interview_cases
+   WHERE employer_id = 'bf100000-0000-4000-8000-0000000000e1';
+  FOR _t IN SELECT c.table_name FROM information_schema.columns c
+             JOIN information_schema.tables t ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+            WHERE c.table_schema = 'public' AND c.column_name IN ('case_id', 'interview_case_id')
+              AND t.table_type = 'BASE TABLE' LOOP
+    EXECUTE format('DELETE FROM public.%I WHERE %I = ANY($1)', _t.table_name,
+      (SELECT column_name FROM information_schema.columns WHERE table_schema = 'public'
+          AND table_name = _t.table_name AND column_name IN ('case_id', 'interview_case_id') LIMIT 1))
+      USING _cases;
+  END LOOP;
+  DELETE FROM public.scp_interview_cases WHERE id = ANY(_cases);
+END $clean$;
+DELETE FROM public.job_applications WHERE id = 'bf100000-0000-4000-8000-0000000000a1';
+DELETE FROM public.jobs WHERE id = 'bf100000-0000-4000-8000-0000000000f1';
+DELETE FROM public.employer_memberships WHERE employer_id = 'bf100000-0000-4000-8000-0000000000e1';
+DELETE FROM public.employers WHERE id = 'bf100000-0000-4000-8000-0000000000e1';
+DELETE FROM auth.users WHERE id IN ('bf100000-0000-4000-8000-0000000000d1', 'bf100000-0000-4000-8000-0000000000c1');
+COMMIT;
+SQL
+
+echo "==> Running interview start rollback and re-apply"
+set +e
+ST_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261202090000_scp_interview_starts_rollback.sql 2>&1)"
+ST_RB_RC=$?
+ST_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261202090000_scp_interview_starts.sql 2>&1)"
+ST_RE_RC=$?
+set -e
+if [ "$ST_RB_RC" -ne 0 ] || ! echo "$ST_RB" | grep -q "SCP_INTERVIEW_STARTS_ROLLBACK ok"; then
+  echo "FAIL: the interview start rollback did not run cleanly." >&2
+  echo "$ST_RB" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ST_FAILED=1
+elif [ "$ST_RE_RC" -ne 0 ] || ! echo "$ST_RE" | grep -q "SCP_INTERVIEW_STARTS_PROOF ok"; then
+  echo "FAIL: the interview start migration does not re-apply over its rollback." >&2
+  echo "$ST_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  ST_FAILED=1
+else
+  echo "    ok  the rollback removes it and the migration re-applies over it"
+fi
+if [ "$ST_FAILED" -ne 0 ]; then
+  suite_failed "Interview starts"
 fi
 
 # ---------------------------------------------------------------------------
@@ -4213,6 +4394,9 @@ if [ "$RPT_FAILED" -ne 0 ]; then
   suite_failed "BESKT prompts and report"
 fi
 
+# 20261202090000 comes down before them: it calls 20261201090000's functions.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261202090000_scp_interview_starts_rollback.sql >/dev/null
 # 20261201090000, 20261130090000 and then 20261129090000 come down first: the activation table holds a foreign key
 # into beskt_method_versions and its functions call beskt_method_validate, so
 # the BESKT domain rollbacks below correctly refuse while it stands. It is not
