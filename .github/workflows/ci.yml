@@ -894,6 +894,11 @@ jobs:
       - name: BESKT internal test activation guard
         run: bun run beskt-internal-test-activation:check
 
+      # 20261130090000: BESKT as a complete product. Migration shape only;
+      # its planted controls run in negative-controls:all.
+      - name: BESKT complete-product guard
+        run: bun run beskt-complete:check
+
       # The governed notice-TEMPLATE digest, and the obligation it puts on the
       # application half. In the schema release it proves the contract's shape
       # and reports the dictionary proof as outstanding; once PR 3B adds the

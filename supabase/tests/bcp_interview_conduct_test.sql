@@ -481,8 +481,11 @@ BEGIN
 
   PERFORM pg_temp.ok(
     NOT EXISTS (SELECT 1 FROM jsonb_array_elements(_w -> 'topics') t
-                 WHERE t ->> 'reason' NOT IN ('omitted', 'discuss_orally')),
-    'C2.3 every theme carries the candidate''s own neutral state and nothing else');
+                 WHERE t ->> 'reason' NOT IN ('omitted', 'discuss_orally', 'candidate_disclosed')
+                    OR ((t ->> 'reason') = 'candidate_disclosed') <> ((t ->> 'trigger_rule_key') IS NOT NULL)),
+    -- 20261130090000: or the candidate's own explicit answer that fired a
+    -- governed show-rule, named by that rule -- never an interpretation.
+    'C2.3 every theme carries the candidate''s own state, or the rule their own answer fired, and nothing else');
 
   -- The neutral states are rendered as the candidate's own words, with no
   -- adverse vocabulary anywhere near them.

@@ -109,10 +109,23 @@ BEGIN
     format('SELECT public.bcp_grant_internal_test_activation(gen_random_uuid(), %L, %L, %L, current_date + 30)',
            r.emp_a, r.v, 'SYNTETISKT ägarbeslut om intern test'),
     'BCP_NOT_PLATFORM_ADMIN', 'IT2.2 nor can the method''s own editor');
-  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+  -- 20261130090000 (owner decision 2026-09-19): a security-vetting version
+  -- carrying its three activation requirements may be activated -- for its
+  -- own mode only. The recruitment runtime still refuses it outright.
+  PERFORM pg_temp.as_user('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
     format('SELECT public.bcp_grant_internal_test_activation(gen_random_uuid(), %L, %L, %L, current_date + 30)',
-           r.emp_a, r.v_vetting, 'SYNTETISKT ägarbeslut om intern test'),
-    'BCP_METHOD_NOT_CANDIDATE_SAFE', 'IT2.3 security-vetting content is never activated for candidates');
+           r.emp_a, r.v_vetting, 'SYNTETISKT ägarbeslut om intern test av säkerhetsprövning'));
+  PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000d1',
+    format('SELECT public.bcp_assign(gen_random_uuid(), %L, %L, %L, %L, public.bcp_notice_version())',
+           r.app_a, r.v_vetting,
+           (SELECT id FROM public.beskt_exposure_profiles WHERE method_version_id = r.v_vetting
+             AND permitted_mode = 'security_vetting_support'),
+           (SELECT content_hash FROM public.beskt_method_versions WHERE id = r.v_vetting)),
+    'BCP_METHOD_MODE_NOT_PERMITTED', 'IT2.3 security-vetting content never reaches the recruitment runtime');
+  PERFORM pg_temp.as_user('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
+    format('SELECT public.bcp_revoke_internal_test_activation(gen_random_uuid(), %L, %L)',
+           (SELECT id FROM public.bcp_internal_test_activations WHERE method_version_id = r.v_vetting),
+           'SYNTETISK: bara för IT2.3'));
   PERFORM pg_temp.must_fail_as('authenticated', 'b2000000-0000-4000-8000-0000000000ad',
     format('SELECT public.bcp_grant_internal_test_activation(gen_random_uuid(), %L, %L, %L, current_date + 30)',
            r.emp_a, r.v_incomplete, 'SYNTETISKT ägarbeslut om intern test'),

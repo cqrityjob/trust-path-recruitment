@@ -3718,6 +3718,73 @@ else
   fi
 fi
 
+if [ "$ITA_FAILED" -ne 0 ]; then
+  suite_failed "BESKT internal test activation"
+fi
+
+# ---------------------------------------------------------------------------
+# 20261130090000: BESKT as a complete product. Proved through real sessions:
+# the security function and its boundary (a plain member, and another
+# employer, see nothing of a vetting); a security vetting started with the
+# employer's attestation, lawful basis and owner, answered with
+# security-vetting-only content, supplemented, linked, conducted with the
+# whole FAKTA chain and finalised only after a human stance; a standalone
+# invitation bound to the confirmed invited account with no application;
+# the disclosed topic with its rule; and that the legacy paths kept their
+# meaning. Its rollback runs before 20261129090000's, because that one
+# restores functions this one extends.
+# ---------------------------------------------------------------------------
+echo "==> Re-synchronising 20261130090000 after the earlier rollback cycles"
+BC_FAILED=0
+# The 20261127 and 20261128 cycles above restore and re-apply functions this
+# migration extends, so they leave some of its bodies behind. Rolling it back
+# and re-applying it puts every body back to the repository's -- and its
+# md5 preconditions only admit that when every pinned body is main's again.
+set +e
+BC_SYNC="$( { psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/rollback/20261130090000_bcp_beskt_complete_rollback.sql \
+  && psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f supabase/migrations/20261130090000_bcp_beskt_complete.sql; } 2>&1)"
+BC_SYNC_RC=$?
+set -e
+if [ "$BC_SYNC_RC" -ne 0 ] || ! echo "$BC_SYNC" | grep -q "BCP_BESKT_COMPLETE_PROOF ok"; then
+  echo "FAIL: 20261130090000 could not be re-synchronised." >&2
+  echo "$BC_SYNC" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BC_FAILED=1
+fi
+echo "==> Running BESKT complete-product assertions"
+set +e
+BC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/tests/bcp_beskt_complete_test.sql 2>&1)"
+BC_RC=$?
+set -e
+BC_PASSED="$(echo "$BC_OUT" | grep -c "ok  " || true)"
+if [ "$BC_RC" -ne 0 ]; then
+  echo "FAIL: the complete-product suite exited with code ${BC_RC}." >&2
+  echo "$BC_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+  BC_FAILED=1
+else
+  echo "    ok  ${BC_PASSED} complete-product assertions passed"
+  if [ "$BC_PASSED" -lt 45 ]; then
+    echo "FAIL: expected at least 45 complete-product assertions, only ${BC_PASSED} ran." >&2
+    BC_FAILED=1
+  fi
+fi
+
+echo "==> Running BESKT complete-product rollback"
+set +e
+BC_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
+  -f supabase/rollback/20261130090000_bcp_beskt_complete_rollback.sql 2>&1)"
+BC_RB_RC=$?
+set -e
+BC_GONE="$(psql -tAq -d "$TEST_DB" -c \
+  "SELECT to_regclass('public.bcp_security_officers') IS NULL AND to_regclass('public.bcp_invitations') IS NULL AND position('bcp_case_access_ok' in (SELECT prosrc FROM pg_proc WHERE proname = 'scp_iv_can_read_case')) = 0;")"
+if [ "$BC_RB_RC" -ne 0 ] || ! echo "$BC_RB" | grep -q "BCP_BESKT_COMPLETE_ROLLBACK ok" || [ "$BC_GONE" != "t" ]; then
+  echo "FAIL: the complete-product rollback did not restore the previous schema." >&2
+  echo "$BC_RB" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BC_FAILED=1
+else
+  echo "    ok  the rollback restores every extended function exactly, and the new objects are gone"
+fi
+
 echo "==> Running BESKT internal test activation rollback and re-apply"
 set +e
 ITA_RB="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" \
@@ -3746,7 +3813,23 @@ else
   echo "    ok  and the migration re-applies over it"
 fi
 if [ "$ITA_FAILED" -ne 0 ]; then
-  suite_failed "BESKT internal test activation"
+  suite_failed "BESKT internal test activation rollback"
+fi
+echo "==> Re-applying BESKT complete product over the restored 20261129090000"
+set +e
+BC_RE="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/migrations/20261130090000_bcp_beskt_complete.sql 2>&1)"
+BC_RE_RC=$?
+set -e
+if [ "$BC_RE_RC" -ne 0 ] || ! echo "$BC_RE" | grep -q "BCP_BESKT_COMPLETE_PROOF ok"; then
+  echo "FAIL: the complete-product migration does not re-apply over its rollback." >&2
+  echo "$BC_RE" | grep -iE "ERROR:|FEL:" | head -5 >&2
+  BC_FAILED=1
+else
+  echo "    ok  and the migration re-applies over it"
+fi
+if [ "$BC_FAILED" -ne 0 ]; then
+  suite_failed "BESKT complete product"
 fi
 
 # ---------------------------------------------------------------------------
@@ -4042,10 +4125,12 @@ if [ "$RPT_FAILED" -ne 0 ]; then
   suite_failed "BESKT prompts and report"
 fi
 
-# 20261129090000 comes down first: its activation table holds a foreign key
+# 20261130090000 and then 20261129090000 come down first: the activation table holds a foreign key
 # into beskt_method_versions and its functions call beskt_method_validate, so
 # the BESKT domain rollbacks below correctly refuse while it stands. It is not
 # re-applied afterwards, exactly like PR 6 and the report boundary.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20261130090000_bcp_beskt_complete_rollback.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/rollback/20261129090000_bcp_internal_test_activation_rollback.sql >/dev/null
 

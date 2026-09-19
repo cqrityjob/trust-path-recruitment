@@ -465,20 +465,31 @@ BEGIN
    WHERE an.response_id = _r.response AND an.response_state IN ('omitted', 'discuss_orally');
 
   PERFORM pg_temp.ok(
-    (SELECT count(*) FROM public.bcp_case_topics WHERE link_id = _r.link) = _expected
+    -- 20261130090000: disclosed topics (an explicit answer that fired a
+    -- governed rule) sit beside these; the two neutral states are counted.
+    (SELECT count(*) FROM public.bcp_case_topics WHERE link_id = _r.link
+       AND topic_reason IN ('omitted', 'discuss_orally')) = _expected
     AND _expected > 0,
     'L4.1 exactly one topic per question the candidate omitted or deferred, and there is at least one');
 
   PERFORM pg_temp.ok(NOT EXISTS (
     SELECT 1 FROM public.bcp_case_topics t
       JOIN public.bcp_answers an ON an.item_id = t.item_id AND an.response_id = _r.response
-     WHERE t.link_id = _r.link AND an.response_state = 'answered'),
-    'L4.2 no question the candidate ANSWERED became a topic');
+     WHERE t.link_id = _r.link AND an.response_state = 'answered'
+       -- 20261130090000 (§4.5): except an answer that FIRED a governed
+       -- show-rule, which is a disclosed topic naming that rule.
+       AND NOT (t.topic_reason = 'candidate_disclosed' AND EXISTS (
+             SELECT 1 FROM public.beskt_routing_rules rr
+              WHERE rr.rule_key = t.trigger_rule_key AND rr.source_item_id = t.item_id
+                AND rr.action = 'show'))),
+    'L4.2 no question the candidate ANSWERED became a topic, unless their answer fired a governed rule');
 
   PERFORM pg_temp.ok(NOT EXISTS (
     SELECT 1 FROM public.bcp_case_topics t
       JOIN public.bcp_answers an ON an.item_id = t.item_id AND an.response_id = _r.response
-     WHERE t.link_id = _r.link AND an.response_state <> t.topic_reason),
+     WHERE t.link_id = _r.link
+       AND an.response_state <> CASE t.topic_reason WHEN 'candidate_disclosed' THEN 'answered'
+                                                    ELSE t.topic_reason END),
     'L4.3 every topic carries the state the candidate actually gave');
 
   PERFORM pg_temp.ok((SELECT bool_and(derived_from_response_id = _r.response)
