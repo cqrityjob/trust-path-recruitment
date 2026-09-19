@@ -59,6 +59,26 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "ITA-PRIVILEGE: the predicates are internal",
   },
+  {
+    id: "ITA-NC-RELEASE-UNRECORDED",
+    defect: "the migration is declared applied without its hosted body evidence",
+    file: "supabase/release-state.json",
+    find: "bcp_conduct_topic_prompts 8eed9c0dd9b0b910262aa92627de7d7d",
+    replace: "bcp_conduct_topic_prompts (not checked)",
+    guard: GUARD,
+    expect: "ITA-RELEASE: recorded applied with hosted body evidence",
+  },
+  {
+    id: "ITA-NC-FRONTIER-STALE",
+    defect:
+      "the applied migration is put back on the frontier's pending list, hiding the next stuck one",
+    file: "scripts/release-frontier-check.ts",
+    find: "const expectedPending: string[] = [",
+    replace:
+      'const expectedPending: string[] = ["20261129090000_bcp_internal_test_activation.sql",',
+    guard: GUARD,
+    expect: "ITA-RELEASE: no longer expected pending",
+  },
 ];
 
 await runControls("beskt-internal-test-activation", MUTATIONS);

@@ -72,6 +72,7 @@ import {
   BesktMethodHeader,
 } from "@/components/employer/interview/beskt/BesktMethodHeader";
 import { BesktSnapshot } from "@/components/employer/interview/beskt/BesktSnapshot";
+import { BesktInternalTestBanner } from "@/components/beskt/BesktInternalTestBanner";
 import { BesktThemes } from "@/components/employer/interview/beskt/BesktThemes";
 import { BesktPositionSection } from "@/components/employer/interview/beskt/BesktPosition";
 import { BesktPanelSection } from "@/components/employer/interview/beskt/BesktPanel";
@@ -503,6 +504,7 @@ function Page() {
         {header}
         <div className="mt-6 max-w-4xl space-y-4">
           <BesktMethodHeader binding={binding} />
+          <BesktInternalTestBanner methodVersionId={binding.methodVersionId} />
           <section className="rounded-lg border border-border p-4" aria-labelledby="beskt-start-h">
             <h2 id="beskt-start-h" className="text-sm font-semibold text-foreground">
               {t("beskt.conduct.start.heading")}
@@ -605,6 +607,7 @@ function Page() {
 
       <div className="mt-6 max-w-4xl space-y-4">
         <BesktMethodHeader binding={binding} />
+        <BesktInternalTestBanner methodVersionId={binding.methodVersionId} />
         {joinBlock}
 
         {view === "interview" && (

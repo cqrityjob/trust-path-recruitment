@@ -153,10 +153,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // the candidate account it was given. Its name comes OFF this list in the
 // change that records its hosted evidence, never before.
 //
-// 20261129090000_bcp_internal_test_activation is GENUINELY PENDING: the owner's
-// internal test activation for BESKT (decision of 2026-09-18). Its name comes OFF
-// this list in the change that records its hosted evidence, never before.
-const expectedPending: string[] = ["20261129090000_bcp_internal_test_activation.sql"];
+// 20261129090000_bcp_internal_test_activation (the owner's internal test
+// activation for BESKT, PR #268) was applied by the integration and its hosted
+// evidence recorded on 2026-09-19, so it is off this list.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

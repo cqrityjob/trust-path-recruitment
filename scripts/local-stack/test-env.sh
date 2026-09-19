@@ -53,7 +53,7 @@ if [ -n "${SECURITY_REF:-}" ]; then
   echo "==> Laying the pending security migrations from ${SECURITY_REF} over the replay"
   scripts/local-stack/down.sh > /dev/null 2>&1 || true
   for f in $(git ls-tree --name-only "$SECURITY_REF" supabase/migrations/ \
-               | grep -E '/20261127090000_|/20261128090000_'); do
+               | grep -E '/20261127090000_|/20261128090000_|/20261129090000_'); do
     if [ ! -f "$f" ]; then
       git show "${SECURITY_REF}:${f}" | psql -h 127.0.0.1 -U postgres -d beskt_e2e \
         -v ON_ERROR_STOP=1 -q > /dev/null

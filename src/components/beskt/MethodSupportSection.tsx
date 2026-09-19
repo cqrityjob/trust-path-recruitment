@@ -23,6 +23,7 @@
 // database function the start path calls, so the screen and the button cannot
 // disagree.
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -32,7 +33,12 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/context";
-import { listAssignableBesktMethods } from "@/lib/beskt/candidate-preparation.functions";
+import {
+  listAssignableBesktMethods,
+  type BesktAssignableMethod,
+} from "@/lib/beskt/candidate-preparation.functions";
+import { listBesktTestActivations } from "@/lib/beskt/internal-test.functions";
+import { BesktStartTestDialog } from "@/components/beskt/BesktStartTestDialog";
 
 function isDenied(error: unknown): boolean {
   const m = error instanceof Error ? error.message : String(error ?? "");
@@ -49,6 +55,20 @@ export function MethodSupportSection({
 }) {
   const { t, lang } = useT();
   const listMethods = useServerFn(listAssignableBesktMethods);
+
+  const activationsFn = useServerFn(listBesktTestActivations);
+  const [starting, setStarting] = useState<BesktAssignableMethod | null>(null);
+  // Which offered versions this employer may use because of the owner's
+  // internal test activation rather than a review. A failed read of it never
+  // hides a method; it only withholds the test label and the start button.
+  const activations = useQuery({
+    queryKey: ["beskt", "test-activations", employerId],
+    queryFn: () => activationsFn({ data: { employerId } }),
+    retry: false,
+  });
+  const underTest = new Set(
+    (activations.data ?? []).filter((a) => a.isLive).map((a) => a.methodVersionId),
+  );
 
   const methods = useQuery({
     queryKey: ["beskt", "assignable-methods", employerId],
@@ -152,6 +172,14 @@ export function MethodSupportSection({
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
+                      {underTest.has(m.methodVersionId) ? (
+                        <p
+                          className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200"
+                          data-testid="beskt-internal-test-label"
+                        >
+                          {t("beskt.internalTest.library.label")}
+                        </p>
+                      ) : null}
                       <h3 className="text-sm font-medium">
                         {(lang === "sv" ? m.nameSv : (m.nameEn ?? m.nameSv)) ?? m.packSlug}
                       </h3>
@@ -181,13 +209,30 @@ export function MethodSupportSection({
                       </dd>
                     </div>
                   </dl>
-                  {/* Deliberately NOT a start button. A preparation is always
-                    started from a real application, so the control lives on
-                    the application's own page and cannot be reached without
-                    a candidate. */}
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {t("beskt.library.startHint")}
-                  </p>
+                  {/* A preparation always belongs to one real application.
+                    Under the owner's internal test activation the row starts
+                    one through a dialog that makes the employer pick it;
+                    otherwise the control lives on the application's page. */}
+                  {underTest.has(m.methodVersionId) && employerSlug ? (
+                    <div className="mt-3" data-testid="beskt-internal-test-start">
+                      <p className="max-w-3xl text-xs leading-relaxed text-amber-900 dark:text-amber-200">
+                        {t("beskt.internalTest.library.notice")}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="mt-2 min-h-[44px]"
+                        onClick={() => setStarting(m)}
+                        data-testid="beskt-start-test"
+                      >
+                        {t("beskt.internalTest.library.start")}
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {t("beskt.library.startHint")}
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>
@@ -211,6 +256,17 @@ export function MethodSupportSection({
           </>
         )}
       </div>
+      {starting && employerSlug ? (
+        <BesktStartTestDialog
+          open
+          onOpenChange={(o) => {
+            if (!o) setStarting(null);
+          }}
+          employerId={employerId}
+          employerSlug={employerSlug}
+          method={starting}
+        />
+      ) : null}
     </section>
   );
 }

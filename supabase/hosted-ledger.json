@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-18",
-  "readBy": "Read-only SQL through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-18, after PR #266 merged as 50bf5de. 300 rows: the 297 of the previous snapshot plus 20261126090000 sp_catalogue_scope_and_document_issuer, 20261127090000 bcp_conduct_report_independence_boundary and 20261128090000 scp_iv_case_candidate_binding, applied by the official GitHub integration. No migration was executed or replayed.",
+  "readAt": "2026-09-19",
+  "readBy": "Read-only SQL through the Supabase management connector, explicit project wrygicdfxwjnrugduxnt, 2026-09-19, after PR #268 merged as dbdeba1. 301 rows: the 300 of the previous snapshot plus 20261129090000 bcp_internal_test_activation, applied by the official GitHub integration. No migration was executed or replayed.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1215,6 +1215,10 @@
     {
       "version": "20261128090000",
       "name": "scp_iv_case_candidate_binding"
+    },
+    {
+      "version": "20261129090000",
+      "name": "bcp_internal_test_activation"
     }
   ]
 }

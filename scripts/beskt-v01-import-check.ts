@@ -15,8 +15,8 @@ import {
   QUESTIONS,
   PROMPTS,
   WORDING_ADAPTATIONS,
-} from "./beskt-import/beskt-v0-1.content";
-import { buildPlan } from "./beskt-import/plan";
+} from "../src/lib/beskt/import/beskt-v0-1.content";
+import { buildPlan } from "../src/lib/beskt/import/plan";
 
 const fails: string[] = [];
 let passed = 0;
@@ -121,6 +121,24 @@ check(
   ),
   "V01-DECISIONS: no lawful basis and no role attestation is invented for a real import",
 );
+{
+  // The in-product install records the owner's own documented decision —
+  // verbatim, and nothing else: no attestation, no default text.
+  const decided = "Intern funktionstest med testdata, ägarens beslut 2026-09-18";
+  const owned = buildPlan("rekrytering", {
+    synthetic: false,
+    lawfulBasisReference: `  ${decided} `,
+  });
+  check(
+    owned.profiles.length > 0 &&
+      owned.profiles.every(
+        (p) =>
+          p.lawful_basis_reference === decided &&
+          p.security_sensitive_role_attestation_reference === null,
+      ),
+    "V01-DECISIONS: an install records exactly the lawful basis its operator wrote",
+  );
+}
 check(
   rekSyn.profiles.every((p) => /^SYNTETISK/.test(String(p.lawful_basis_reference))) &&
     /^SYNTETISK TEST/.test(rekSyn.method.nameSv) &&

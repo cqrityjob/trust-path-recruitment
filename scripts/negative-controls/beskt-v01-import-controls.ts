@@ -7,8 +7,8 @@
 
 import { runControls, type Mutation } from "./runner";
 
-const PLAN = "scripts/beskt-import/plan.ts";
-const CONTENT = "scripts/beskt-import/beskt-v0-1.content.ts";
+const PLAN = "src/lib/beskt/import/plan.ts";
+const CONTENT = "src/lib/beskt/import/beskt-v0-1.content.ts";
 const GUARD = "beskt-v01-import:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -28,10 +28,10 @@ const MUTATIONS: readonly Mutation[] = [
     file: PLAN,
     find:
       '        ? "SYNTETISK TESTVERSION – ingen rättslig grund fastställd; får inte användas med verkliga personuppgifter"\n' +
-      "        : null,",
+      "        : lawfulBasisReference?.trim() || null,",
     replace:
       '        ? "SYNTETISK TESTVERSION – ingen rättslig grund fastställd; får inte användas med verkliga personuppgifter"\n' +
-      '        : "GDPR artikel 6.1 f",',
+      '        : lawfulBasisReference?.trim() || "GDPR artikel 6.1 f",',
     guard: GUARD,
     expect: "V01-DECISIONS: no lawful basis and no role attestation is invented",
   },
