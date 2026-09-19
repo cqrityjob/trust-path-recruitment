@@ -156,7 +156,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 20261129090000_bcp_internal_test_activation (the owner's internal test
 // activation for BESKT, PR #268) was applied by the integration and its hosted
 // evidence recorded on 2026-09-19, so it is off this list.
-const expectedPending: string[] = [];
+// 20261130090000_bcp_beskt_complete is GENUINELY PENDING: BESKT as a complete
+// product (owner decision of 2026-09-19). Its name comes OFF this list in the
+// change that records its hosted evidence, never before.
+const expectedPending: string[] = ["20261130090000_bcp_beskt_complete.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

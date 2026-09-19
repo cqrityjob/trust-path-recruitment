@@ -7,6 +7,103 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "hostedState": "pending", 
+      "note": "OWNER DECISION 2026-09-19: BESKT as a complete product -- security vetting with B, E, S, K and T, reachable from the employer's Testbibliotek -- with no review fabricated and nothing labelled validated. Adds the employer's appointed security function (bcp_security_officers) and makes it the only employer party of a security vetting at the assignment, in every party-read policy and at the interview case (scp_iv_can_read_case / _write_case); security-vetting assignments carry the employer's own attestation, lawful basis and security owner on the row; standalone invitations (bcp_invitations) bind the confirmed invited account without a job application (scp_iv_create_case admits that binding); purpose-specific governed notices with a contact route; candidate supplements; disclosed topics carrying the rule that fired; the completed FAKTA chain on each observation; the responsible human's stance and follow-up actions, with a new report blocker so a signature alone never finalises. 28 re-created bodies are md5-pinned (verified identical in production 2026-09-19) and restored verbatim by the rollback.", 
+      "introduces": [
+        {
+          "object": "bcp_start_beskt(uuid,uuid,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_create_invitation(uuid,uuid,text,text,text,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_revoke_invitation(uuid,uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_invitation_for_token(text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_accept_invitation(uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_employer_invitations(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_method_preview(uuid,uuid,uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_employer_beskt_assignments(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_submit_supplement(uuid,uuid,text,text,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_assignment_supplements(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_interview_preparation(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_conduct_record_stance(uuid,uuid,integer,text,text,text,text,text,text,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_conduct_record_action(uuid,uuid,uuid,integer,text,text,date,text,date,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_conduct_decision(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_employer_people(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_appoint_security_officer(uuid,uuid,uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_revoke_security_officer(uuid,uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_security_officers", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_invitations", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_candidate_supplements", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_conduct_stances", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_conduct_actions", 
+          "kind": "table"
+        }
+      ], 
+      "verify": "SELECT to_regclass('public.bcp_security_officers') IS NOT NULL AND to_regclass('public.bcp_invitations') IS NOT NULL AND position('bcp_case_access_ok' in (SELECT prosrc FROM pg_proc WHERE proname = 'scp_iv_can_read_case')) > 0 AND position('BCP_CONDUCT_STANCE_MISSING' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_report_blockers')) > 0; -- expect t. No anon execute on any new function; bcp_check_start, bcp_is_security_officer, bcp_case_access_ok, bcp_version_is_runnable, bcp_conduct_may_decide and bcp_conduct_report_extensions not executable by authenticated; the five new tables FORCE RLS; authenticated cannot SELECT bcp_invitations.", 
+      "rollback": "supabase/rollback/20261130090000_bcp_beskt_complete_rollback.sql", 
+      "file": "20261130090000_bcp_beskt_complete.sql"
+    },
+    {
       "file": "20261129090000_bcp_internal_test_activation.sql", 
       "hostedState": "applied", 
       "hostedVersion": "20261129090000", 
