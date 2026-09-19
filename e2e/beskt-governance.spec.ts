@@ -236,16 +236,15 @@ test.describe("BESKT governance and pilot access — the routed walk", () => {
         await expect(rival.getByTestId("beskt-method-row").first()).toBeVisible({
           timeout: 60_000,
         });
-        const next = rival.getByTestId("beskt-method-support-next");
-        await expect(next).toContainText(/Intervjuer/);
-        await expect(next.getByRole("link", { name: /Välj en ansökan/ })).toHaveAttribute(
-          "href",
-          `/employer/${RIVAL_SLUG}/applications`,
-        );
+        // The next step is the module's own: "Starta BESKT" opens the start
+        // dialog, where the candidate is an application or an invitation.
+        const next = rival.getByTestId("beskt-module");
+        await expect(next.getByTestId("beskt-module-name")).toHaveText("BESKT");
+        await expect(next.getByTestId("beskt-module-start")).toHaveText(/Starta BESKT/);
         await expectFitsViewport(rival);
         await shot(rival, "02-rival-during-sv");
         await useEnglish(rival);
-        await expect(next.getByRole("link", { name: /Choose an application/ })).toBeVisible();
+        await expect(next.getByTestId("beskt-module-start")).toHaveText(/Start BESKT/);
         await shot(rival, "02-rival-during-en");
         await useSwedish(rival);
       });

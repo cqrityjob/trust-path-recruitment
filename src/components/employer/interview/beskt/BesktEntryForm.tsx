@@ -39,6 +39,14 @@ export interface BesktEntryFields {
   interviewerInterpretation: string;
   alternativeExplanation: string;
   protectiveFactor: string;
+  eventTiming: string;
+  consequence: string;
+  supportingInformation: string;
+  contradictingInformation: string;
+  measuresTaken: string;
+  roleLink: string;
+  informationGap: string;
+  candidateResponse: string;
   verificationNeed: string;
   verificationState: BesktVerificationState;
   verificationSource: string;
@@ -51,6 +59,14 @@ const EMPTY: BesktEntryFields = {
   interviewerInterpretation: "",
   alternativeExplanation: "",
   protectiveFactor: "",
+  eventTiming: "",
+  consequence: "",
+  supportingInformation: "",
+  contradictingInformation: "",
+  measuresTaken: "",
+  roleLink: "",
+  informationGap: "",
+  candidateResponse: "",
   verificationNeed: "",
   verificationState: "not_required",
   verificationSource: "",
@@ -64,6 +80,14 @@ function fromEntry(e: BesktConductEntry): BesktEntryFields {
     interviewerInterpretation: e.interviewerInterpretation ?? "",
     alternativeExplanation: e.alternativeExplanation ?? "",
     protectiveFactor: e.protectiveFactor ?? "",
+    eventTiming: e.eventTiming ?? "",
+    consequence: e.consequence ?? "",
+    supportingInformation: e.supportingInformation ?? "",
+    contradictingInformation: e.contradictingInformation ?? "",
+    measuresTaken: e.measuresTaken ?? "",
+    roleLink: e.roleLink ?? "",
+    informationGap: e.informationGap ?? "",
+    candidateResponse: e.candidateResponse ?? "",
     verificationNeed: e.verificationNeed ?? "",
     verificationState: e.verificationState,
     verificationSource: e.verificationSource ?? "",
@@ -79,6 +103,14 @@ function hasContent(f: BesktEntryFields): boolean {
     f.interviewerInterpretation.trim() !== "" ||
     f.alternativeExplanation.trim() !== "" ||
     f.protectiveFactor.trim() !== "" ||
+    f.eventTiming.trim() !== "" ||
+    f.consequence.trim() !== "" ||
+    f.supportingInformation.trim() !== "" ||
+    f.contradictingInformation.trim() !== "" ||
+    f.measuresTaken.trim() !== "" ||
+    f.roleLink.trim() !== "" ||
+    f.informationGap.trim() !== "" ||
+    f.candidateResponse.trim() !== "" ||
     f.verificationNeed.trim() !== ""
   );
 }
@@ -165,6 +197,20 @@ export function BesktEntryForm({
         onChange={(v) => set("observableFact", v)}
       />
       <TextField
+        id={id("eventTiming")}
+        label={t("beskt.fakta.eventTiming")}
+        help={t("beskt.fakta.eventTimingHelp")}
+        value={fields.eventTiming}
+        onChange={(v) => set("eventTiming", v)}
+      />
+      <TextField
+        id={id("consequence")}
+        label={t("beskt.fakta.consequence")}
+        help={t("beskt.fakta.consequenceHelp")}
+        value={fields.consequence}
+        onChange={(v) => set("consequence", v)}
+      />
+      <TextField
         id={id("cand")}
         label={t("beskt.conduct.entry.candidateExplanation")}
         help={t("beskt.conduct.entry.candidateExplanationHelp")}
@@ -186,6 +232,27 @@ export function BesktEntryForm({
         onChange={(v) => set("alternativeExplanation", v)}
       />
       <TextField
+        id={id("supportingInformation")}
+        label={t("beskt.fakta.supportingInformation")}
+        help={t("beskt.fakta.supportingInformationHelp")}
+        value={fields.supportingInformation}
+        onChange={(v) => set("supportingInformation", v)}
+      />
+      <TextField
+        id={id("contradictingInformation")}
+        label={t("beskt.fakta.contradictingInformation")}
+        help={t("beskt.fakta.contradictingInformationHelp")}
+        value={fields.contradictingInformation}
+        onChange={(v) => set("contradictingInformation", v)}
+      />
+      <TextField
+        id={id("measuresTaken")}
+        label={t("beskt.fakta.measuresTaken")}
+        help={t("beskt.fakta.measuresTakenHelp")}
+        value={fields.measuresTaken}
+        onChange={(v) => set("measuresTaken", v)}
+      />
+      <TextField
         id={id("prot")}
         label={t("beskt.conduct.entry.protectiveFactor")}
         help={t("beskt.conduct.entry.protectiveFactorHelp")}
@@ -193,11 +260,32 @@ export function BesktEntryForm({
         onChange={(v) => set("protectiveFactor", v)}
       />
       <TextField
+        id={id("roleLink")}
+        label={t("beskt.fakta.roleLink")}
+        help={t("beskt.fakta.roleLinkHelp")}
+        value={fields.roleLink}
+        onChange={(v) => set("roleLink", v)}
+      />
+      <TextField
         id={id("need")}
         label={t("beskt.conduct.entry.verificationNeed")}
         help={t("beskt.conduct.entry.verificationNeedHelp")}
         value={fields.verificationNeed}
         onChange={(v) => set("verificationNeed", v)}
+      />
+      <TextField
+        id={id("informationGap")}
+        label={t("beskt.fakta.informationGap")}
+        help={t("beskt.fakta.informationGapHelp")}
+        value={fields.informationGap}
+        onChange={(v) => set("informationGap", v)}
+      />
+      <TextField
+        id={id("candidateResponse")}
+        label={t("beskt.fakta.candidateResponse")}
+        help={t("beskt.fakta.candidateResponseHelp")}
+        value={fields.candidateResponse}
+        onChange={(v) => set("candidateResponse", v)}
       />
 
       <div className="grid gap-4 sm:grid-cols-2">

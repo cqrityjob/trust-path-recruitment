@@ -73,7 +73,8 @@ import {
 } from "@/components/employer/interview/beskt/BesktMethodHeader";
 import { BesktSnapshot } from "@/components/employer/interview/beskt/BesktSnapshot";
 import { BesktInternalTestBanner } from "@/components/beskt/BesktInternalTestBanner";
-import { BesktThemes } from "@/components/employer/interview/beskt/BesktThemes";
+import { BesktInterviewWorkspace } from "@/components/employer/interview/beskt/BesktInterviewWorkspace";
+import { BesktDecisionPanel } from "@/components/employer/interview/beskt/BesktDecisionPanel";
 import { BesktPositionSection } from "@/components/employer/interview/beskt/BesktPosition";
 import { BesktPanelSection } from "@/components/employer/interview/beskt/BesktPanel";
 import { BesktStagePrompts } from "@/components/employer/interview/beskt/BesktPrompts";
@@ -275,12 +276,22 @@ function Page() {
           expectedRevision: input.expectedRevision,
           entry: {
             itemKey: input.itemKey,
-            topicId: input.topicId,
+            // A base or role question is documented against the governed
+            // item itself; only a derived topic carries a topic id.
+            topicId: input.topicId?.startsWith("item:") ? null : input.topicId,
             observableFact: input.fields.observableFact,
             candidateExplanation: input.fields.candidateExplanation,
             interviewerInterpretation: input.fields.interviewerInterpretation,
             alternativeExplanation: input.fields.alternativeExplanation,
             protectiveFactor: input.fields.protectiveFactor,
+            eventTiming: input.fields.eventTiming,
+            consequence: input.fields.consequence,
+            supportingInformation: input.fields.supportingInformation,
+            contradictingInformation: input.fields.contradictingInformation,
+            measuresTaken: input.fields.measuresTaken,
+            roleLink: input.fields.roleLink,
+            informationGap: input.fields.informationGap,
+            candidateResponse: input.fields.candidateResponse,
             verificationNeed: input.fields.verificationNeed,
             verificationState: input.fields.verificationState,
             verificationSource: input.fields.verificationSource,
@@ -614,7 +625,7 @@ function Page() {
           <>
             <BesktSnapshot answers={mod.answers} />
             {promptsQ.data?.available && <BesktStagePrompts prompts={promptsQ.data.stagePrompts} />}
-            <BesktThemes
+            <BesktInterviewWorkspace
               sessionId={sessionId}
               methodVersionId={w.bound.methodVersionId}
               topics={w.topics}
@@ -704,20 +715,23 @@ function Page() {
           ) : reportQ.isError ? (
             <State kind="error" message={t(besktErrorKey(reportQ.error))} />
           ) : (
-            <BesktReportSection
-              preview={reportQ.data?.preview ?? null}
-              finalReport={reportQ.data?.finalReport ?? null}
-              versions={reportQ.data?.versions ?? []}
-              actions={{
-                // Only a participant who has locked their own position may
-                // sign. The database decides the same thing again; this keeps
-                // the screen from offering an action it knows will be refused.
-                canFinalise: myPosition !== null && myPosition.state === "locked",
-                busy: finalise.isPending,
-                error: finalise.isError ? finalise.error : null,
-                finalise: (expectedBasisHash) => finalise.mutate(expectedBasisHash),
-              }}
-            />
+            <>
+              <BesktDecisionPanel sessionId={sessionId} />
+              <BesktReportSection
+                preview={reportQ.data?.preview ?? null}
+                finalReport={reportQ.data?.finalReport ?? null}
+                versions={reportQ.data?.versions ?? []}
+                actions={{
+                  // Only a participant who has locked their own position may
+                  // sign. The database decides the same thing again; this keeps
+                  // the screen from offering an action it knows will be refused.
+                  canFinalise: myPosition !== null && myPosition.state === "locked",
+                  busy: finalise.isPending,
+                  error: finalise.isError ? finalise.error : null,
+                  finalise: (expectedBasisHash) => finalise.mutate(expectedBasisHash),
+                }}
+              />
+            </>
           ))}
 
         {view === "panel" && (

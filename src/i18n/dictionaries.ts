@@ -3675,7 +3675,8 @@ export const dictionaries = {
     "beskt.internalTest.start.chooseApplication": "Välj en ansökan",
     "beskt.internalTest.roles.role": "Roll",
     "beskt.internalTest.install.progress": "Installerar innehåll:",
-    "beskt.internalTest.activation.employerUnknown": "Ingen organisation har det kortnamnet. Kopiera det från adressen till organisationens sidor.",
+    "beskt.internalTest.activation.employerUnknown":
+      "Ingen organisation har det kortnamnet. Kopiera det från adressen till organisationens sidor.",
     "beskt.internalTest.activation.employerHelp":
       "Organisationens kortnamn i adressen, till exempel cqrityjob.",
     "beskt.internalTest.activation.until": "Gäller till",
@@ -3710,7 +3711,7 @@ export const dictionaries = {
     "beskt.internalTest.install.nextStep": "Gå till Behörigheter för testaktiveringen",
     "beskt.internalTest.library.start": "Starta test",
     "beskt.internalTest.install.open": "Öppna versionen",
-    "beskt.internalTest.banner.title": "Intern testversion – inte granskad eller publicerad",
+    "beskt.internalTest.banner.title": "Ogranskad metodversion – pilothypotes",
     "beskt.internalTest.roles.email": "E-postadress",
     "beskt.internalTest.library.notice":
       "Intern testversion: inte granskad eller publicerad. Används bara för test med testdata, enligt ägarens beslut.",
@@ -3730,6 +3731,334 @@ export const dictionaries = {
       "Testaktiveringen kunde inte registreras. Kontrollera att innehållet är komplett, att organisationen finns och att slutdatumet ligger inom 90 dagar.",
     "beskt.error.testActivationExists":
       "Organisationen har redan en aktiv testaktivering för den här versionen. Återkalla den först.",
+    "beskt.assignment.back": "Till Testbiblioteket",
+    "beskt.assignment.unavailableTitle": "Uppdraget är inte tillgängligt",
+    "beskt.assignment.unavailableBody":
+      "Du kan inte se det här BESKT-uppdraget. Ett säkerhetsprövningsuppdrag visas bara för organisationens utsedda säkerhetsfunktion.",
+    "beskt.caseLink.createStandalone": "Skapa ett intervjufall för uppdraget",
+    "beskt.conduct.themes.reason.candidate_disclosed": "Kandidatens uppgift",
+    "beskt.conduct.themes.reason.base_question": "Basfråga",
+    "beskt.conduct.themes.reason.role_exposure": "Befattningens exponering",
+    "beskt.conduct.themes.ruleSource": "Följdfråga enligt regel",
+    "beskt.decision.heading": "Ansvarigt ställningstagande och åtgärder",
+    "beskt.decision.lede":
+      "Skrivs av den ansvariga människan efter att alla egna ståndpunkter är låsta. Systemet föreslår ingen text. En signatur ensam räcker inte: rapporten kan inte färdigställas utan ett dokumenterat ställningstagande.",
+    "beskt.decision.sufficiency": "Underlagets tillräcklighet",
+    "beskt.decision.sufficient": "Underlaget är tillräckligt",
+    "beskt.decision.moreInformation": "Ytterligare information krävs",
+    "beskt.decision.sufficiencyReason": "Skäl för bedömningen av underlagets tillräcklighet",
+    "beskt.decision.stance": "Ställningstagande",
+    "beskt.decision.rationale": "Motivering",
+    "beskt.decision.name": "Namn",
+    "beskt.decision.role": "Roll",
+    "beskt.decision.correctionReason": "Varför ändras ställningstagandet?",
+    "beskt.decision.noScoreHint":
+      "Skriv skäl och sakförhållanden. Ingen poäng, riskklass eller sannolikhet.",
+    "beskt.decision.record": "Registrera ställningstagandet",
+    "beskt.decision.change": "Ändra ställningstagandet",
+    "beskt.decision.notResponsible":
+      "Ställningstagandet registreras av ansvarig intervjuare, säkerhetsansvarig eller organisationens ägare eller administratör.",
+    "beskt.decision.actions": "Åtgärder och uppföljning",
+    "beskt.decision.noActions": "Inga åtgärder är registrerade.",
+    "beskt.decision.actionDescription": "Åtgärd",
+    "beskt.decision.responsible": "Ansvarig",
+    "beskt.decision.due": "Tidsfrist",
+    "beskt.decision.review": "Omprövas",
+    "beskt.decision.status": "Status",
+    "beskt.decision.status.planned": "Planerad",
+    "beskt.decision.status.in_progress": "Pågår",
+    "beskt.decision.status.done": "Klar",
+    "beskt.decision.status.cancelled": "Avbruten",
+    "beskt.decision.addAction": "Lägg till åtgärd",
+    "beskt.decision.inReportTitle": "Följer med i rapporten",
+    "beskt.decision.inReportBody":
+      "Ställningstagandet och åtgärderna ingår i förhandsgranskningen och i den version som färdigställs.",
+    "beskt.error.notSecurityOfficer":
+      "Endast organisationens utsedda säkerhetsfunktion kan göra detta i en säkerhetsprövning.",
+    "beskt.error.securityOwnerRequired": "Välj en utsedd säkerhetsansvarig för prövningen.",
+    "beskt.error.attestationRequired":
+      "Skriv organisationens intygande om att befattningen är säkerhetskänslig (minst 20 tecken).",
+    "beskt.error.lawfulBasisRequired":
+      "Ange den rättsliga grund organisationen stöder sig på (minst 20 tecken).",
+    "beskt.error.interviewerNotMember": "Personen måste vara aktiv medlem i organisationen.",
+    "beskt.error.contactRequired": "Ange hur kandidaten kan nå er.",
+    "beskt.error.notEmployerAdmin":
+      "Endast organisationens ägare eller administratör kan ändra säkerhetsfunktionen.",
+    "beskt.error.officerExists": "Personen är redan utsedd.",
+    "beskt.error.invitationExists": "Personen har redan en öppen inbjudan till den här metoden.",
+    "beskt.error.invitationEmail": "Ange en giltig e-postadress.",
+    "beskt.error.roleTitleRequired": "Ange befattningen.",
+    "beskt.error.candidateIsMember":
+      "En medlem i den inbjudande organisationen kan inte vara dess egen kandidat här.",
+    "beskt.error.supplementLength": "Skriv mellan 3 och 2000 tecken.",
+    "beskt.error.notResponsible": "Du är inte ansvarig för ställningstagandet i det här uppdraget.",
+    "beskt.error.positionsNotLocked": "Alla egna ståndpunkter måste vara låsta först.",
+    "beskt.error.stanceIncomplete":
+      "Skäl, ställningstagande och motivering skrivs ut, med namn och roll.",
+    "beskt.error.stanceWording":
+      "Ett ställningstagande anger skäl, inte en poäng, sannolikhet eller en tolkning av ärlighet.",
+    "beskt.error.stanceCorrectionReason": "Ange varför ställningstagandet ändras.",
+    "beskt.error.actionIncomplete": "En åtgärd anger vad, vem som är ansvarig och status.",
+    "beskt.error.reportStanceMissing": "Det ansvariga ställningstagandet är inte registrerat ännu.",
+    "beskt.fakta.eventTiming": "Tid och aktualitet",
+    "beskt.fakta.eventTimingHelp": "När, hur länge, och är det pågående?",
+    "beskt.fakta.consequence": "Konsekvens",
+    "beskt.fakta.consequenceHelp":
+      "Vad blev följden för arbete, skyldigheter eller säkerhetsbeteende?",
+    "beskt.fakta.supportingInformation": "Stödjande information",
+    "beskt.fakta.supportingInformationHelp": "Vad stöder uppgiften, och från vilken källa?",
+    "beskt.fakta.contradictingInformation": "Motsägande information",
+    "beskt.fakta.contradictingInformationHelp":
+      "Vad talar emot eller nyanserar uppgiften, och från vilken källa?",
+    "beskt.fakta.measuresTaken": "Åtgärder",
+    "beskt.fakta.measuresTakenHelp": "Vad har personen eller organisationen gjort?",
+    "beskt.fakta.roleLink": "Konkret rollkoppling",
+    "beskt.fakta.roleLinkHelp": "Hur kopplas detta till befattningens faktiska exponering?",
+    "beskt.fakta.informationGap": "Osäkerhet och kvarstående informationslucka",
+    "beskt.fakta.informationGapHelp": "Vad återstår innan en människa kan bedöma helheten?",
+    "beskt.fakta.candidateResponse": "Kandidatens bemötande och rättelser",
+    "beskt.fakta.candidateResponseHelp": "Vad kandidaten sa när sakuppgifterna lästes tillbaka.",
+    "beskt.internalTest.install.headingVetting": "Installera BESKT v0.1 – säkerhetsprövning",
+    "beskt.internalTest.install.ledeVetting":
+      "Lägger in hela metoden – gemensam bas, B, E, S, K, T, situationer och FAKTA-stödet – med de tre aktiveringskraven, som ett utkast. Kräver rollen redaktör. Installationen granskar och publicerar ingenting.",
+    "beskt.invitation.title": "Inbjudan till BESKT",
+    "beskt.invitation.employer": "Arbetsgivare",
+    "beskt.invitation.role": "Befattning",
+    "beskt.invitation.purpose": "Ändamål",
+    "beskt.invitation.contact": "Kontaktväg",
+    "beskt.invitation.lede":
+      "Om du tackar ja öppnas förberedelsen i ditt konto. Du får information om hur uppgifterna används innan du svarar på någon fråga.",
+    "beskt.invitation.accept": "Tacka ja och öppna förberedelsen",
+    "beskt.invitation.accepting": "Öppnar …",
+    "beskt.invitation.acceptFailed": "Inbjudan kunde inte öppnas",
+    "beskt.invitation.open": "Öppna förberedelsen",
+    "beskt.invitation.notAvailable":
+      "Inbjudan är inte tillgänglig för det här kontot. Logga in med den e-postadress inbjudan skickades till.",
+    "beskt.invitation.emailNotConfirmed":
+      "Bekräfta din e-postadress först, och öppna sedan länken igen.",
+    "beskt.invitation.alreadyAccepted": "Du har redan tackat ja till inbjudan.",
+    "beskt.invitation.revoked": "Arbetsgivaren har dragit tillbaka inbjudan.",
+    "beskt.invitation.expired": "Inbjudan är inte längre öppen. Be arbetsgivaren om en ny.",
+    "beskt.module.description":
+      "Kandidatförberedelse och strukturerad intervju med FAKTA-stöd: rekryteringsstöd, eller säkerhetsprövningsstöd med B, E, S, K och T. Metoden identifierar teman att klarlägga och skyddsåtgärder att överväga – ingen poäng, ingen rangordning och inget automatiskt beslut.",
+    "beskt.module.preview": "Visa innehåll",
+    "beskt.module.start": "Starta BESKT",
+    "beskt.module.statusActivated":
+      "Ogranskad metodversion (pilothypotes). Används enligt organisationens aktivering till {date}.",
+    "beskt.module.statusPilot": "Publicerad metodversion inom pilotmedgivande.",
+    "beskt.module.assignments": "BESKT-uppdrag",
+    "beskt.module.assignmentsEmpty": "Inga uppdrag ännu.",
+    "beskt.module.started": "Startat",
+    "beskt.module.byInvitation": "via inbjudan",
+    "beskt.module.fromApplication": "via ansökan",
+    "beskt.module.openAssignment": "Öppna uppdraget",
+    "beskt.module.reportFinalised": "Rapport färdigställd",
+    "beskt.module.vettingListNote":
+      "Säkerhetsprövningar visas bara för organisationens utsedda säkerhetsfunktion.",
+    "beskt.module.invitations": "Öppna inbjudningar",
+    "beskt.module.invitationExpires": "gäller till",
+    "beskt.module.invitationRevoke": "Dra tillbaka",
+    "beskt.module.invitationRevokeReason": "Inbjudan drogs tillbaka av arbetsgivaren.",
+    "beskt.preview.title": "BESKT – innehåll",
+    "beskt.preview.lede":
+      "Frågorna kandidaten kan få för varje ändamål, med varför varje fråga ställs. Följdfrågor visas bara när kandidatens eget svar öppnar dem.",
+    "beskt.preview.count": "{n} frågor",
+    "beskt.preview.followUpNote": "följdfrågor visas bara vid relevant svar",
+    "beskt.preview.followUp": "Följdfråga",
+    "beskt.preview.why": "Varför",
+    "beskt.preview.vettingWithheld":
+      "Säkerhetsprövningens frågor visas bara för organisationens utsedda säkerhetsfunktion. Här ser du områdena och antalet frågor.",
+    "beskt.purpose.recruitment": "Rekrytering",
+    "beskt.purpose.recruitmentHint": "Gemensam bas, B, situationer och rollens exponering (T).",
+    "beskt.purpose.securityVetting": "Säkerhetsprövning",
+    "beskt.purpose.securityVettingHint":
+      "Hela metoden: bas, B, E, S, K, T och situationer. Kräver utsedd säkerhetsfunktion, attest och rättslig grund.",
+    "beskt.readback.reason.candidate_disclosed": "Kandidatens uppgift – följdfråga",
+    "beskt.report.assignment.heading": "Uppdrag och genomförande",
+    "beskt.report.assignment.interviewer": "Ansvarig intervjuare",
+    "beskt.report.assignment.conduct": "Deltagare",
+    "beskt.report.assignment.owner": "Ansvarig",
+    "beskt.report.assignment.assessor": "Bedömare",
+    "beskt.report.assignment.locked": "låste sin ståndpunkt",
+    "beskt.report.stance.heading": "Underlagets tillräcklighet, ställningstagande och uppföljning",
+    "beskt.report.stance.none": "Inget ställningstagande är registrerat.",
+    "beskt.section.t": "T – Tillfälle och roll",
+    "beskt.section.base": "Gemensam bas",
+    "beskt.section.b": "B – Besvikelse och konflikter",
+    "beskt.section.e": "E – Ekonomi",
+    "beskt.section.s": "S – Social situation",
+    "beskt.section.k": "K – Kontakter och påverkan",
+    "beskt.section.situations": "Situationer",
+    "beskt.security.heading": "Säkerhetsfunktion",
+    "beskt.security.lede":
+      "Utsedda personer i organisationen som får starta, läsa, genomföra och rapportera säkerhetsprövningar. Utses av ägaren eller en administratör, med skäl. Ingen annan i organisationen ser en säkerhetsprövning.",
+    "beskt.security.none": "Ingen är utsedd ännu. Säkerhetsprövning kräver minst en utsedd person.",
+    "beskt.security.person": "Person",
+    "beskt.security.choosePerson": "Välj person",
+    "beskt.security.reason": "Skäl",
+    "beskt.security.appoint": "Utse",
+    "beskt.security.revoke": "Ta bort",
+    "beskt.security.revokeReason": "Uppdraget i säkerhetsfunktionen avslutades av organisationen.",
+    "beskt.start.dialogHint": "Välj ändamål, befattning, ansvarig intervjuare och kontaktväg.",
+    "beskt.startDialog.title": "Starta BESKT",
+    "beskt.startDialog.lede":
+      "Välj ändamål och kandidat. Kandidaten får förberedelsen i sitt konto, med information om arbetsgivaren, syftet, användningen av uppgifterna och kontaktvägen.",
+    "beskt.startDialog.purpose": "Ändamål",
+    "beskt.startDialog.version": "Metodversion",
+    "beskt.startDialog.purposeUnavailable": "Inte aktiverad för organisationen.",
+    "beskt.startDialog.purposeNeedsOfficer":
+      "Kräver att du ingår i organisationens utsedda säkerhetsfunktion.",
+    "beskt.startDialog.candidate": "Kandidat",
+    "beskt.startDialog.fromApplication": "Befintlig ansökan",
+    "beskt.startDialog.byInvitation": "Bjud in via e-post",
+    "beskt.startDialog.application": "Ansökan",
+    "beskt.startDialog.chooseApplication": "Välj en ansökan",
+    "beskt.startDialog.unnamed": "sökande utan namn",
+    "beskt.startDialog.noApplications":
+      "Det finns ingen ansökan. Använd inbjudan via e-post i stället.",
+    "beskt.startDialog.email": "Kandidatens e-postadress",
+    "beskt.startDialog.candidateName": "Kandidatens namn (valfritt)",
+    "beskt.startDialog.roleTitle": "Befattning",
+    "beskt.startDialog.invitationHint":
+      "Kandidaten tackar ja inloggad med just den bekräftade e-postadressen. Ingen jobbansökan skapas.",
+    "beskt.startDialog.profile": "Rollens exponeringsprofil",
+    "beskt.startDialog.profileHint":
+      "Tillfälle är organisationens åtkomst- och kontrollfråga, inte kandidatens egenskap.",
+    "beskt.startDialog.interviewer": "Ansvarig intervjuare",
+    "beskt.startDialog.chooseInterviewer": "Välj intervjuare",
+    "beskt.startDialog.interviewerVetting":
+      "I en säkerhetsprövning ingår intervjuaren i den utsedda säkerhetsfunktionen.",
+    "beskt.startDialog.contact": "Kontaktväg för kandidaten",
+    "beskt.startDialog.contactHint": "Visas för kandidaten i informationen.",
+    "beskt.startDialog.contactDefault": "Kontakta {name}, {email}",
+    "beskt.startDialog.vettingHeading": "Säkerhetsprövning – organisationens uppgifter",
+    "beskt.startDialog.vettingLede":
+      "Organisationens egna uppgifter, i egna ord. CQrityjob intygar inget och fastställer ingen rättslig grund.",
+    "beskt.startDialog.securityOwner": "Säkerhetsansvarig",
+    "beskt.startDialog.chooseOwner": "Välj säkerhetsansvarig",
+    "beskt.startDialog.attestation": "Intygande att befattningen är säkerhetskänslig",
+    "beskt.startDialog.attestationHint":
+      "Enligt organisationens befattningsanalys (säkerhetsskyddslagen 3 kap.). Minst 20 tecken.",
+    "beskt.startDialog.lawfulBasis": "Rättslig grund",
+    "beskt.startDialog.lawfulBasisHint":
+      "Den grund organisationen stöder sig på. Visas för kandidaten. Minst 20 tecken.",
+    "beskt.startDialog.questions": "Frågor kandidaten kommer att få",
+    "beskt.startDialog.start": "Starta BESKT",
+    "beskt.startDialog.invite": "Skapa inbjudan",
+    "beskt.startDialog.starting": "Startar …",
+    "beskt.startDialog.invitedTitle": "Inbjudan är skapad",
+    "beskt.startDialog.invitedBody":
+      "Skicka länken till kandidaten. Kandidaten öppnar den inloggad med den inbjudna e-postadressen.",
+    "beskt.startDialog.invitationLink": "Inbjudningslänk",
+    "beskt.startDialog.copy": "Kopiera länken",
+    "beskt.startDialog.copied": "Kopierad",
+    "beskt.startDialog.invitationOnce":
+      "Länken visas bara nu. Går den förlorad drar du tillbaka inbjudan och skapar en ny.",
+    "beskt.startDialog.done": "Klar",
+    "beskt.steps.aria": "Förberedelsens steg",
+    "beskt.steps.progress": "Steg {n} av {total}",
+    "beskt.steps.remaining": "Obesvarade frågor i steget: {n}",
+    "beskt.steps.next": "Spara och fortsätt",
+    "beskt.steps.previous": "Föregående steg",
+    "beskt.supplement.heading": "Rättelse eller komplettering",
+    "beskt.supplement.lede":
+      "Svaren är låsta. Om något blev fel eller saknas lämnar du en daterad rättelse eller komplettering. Den följer med till intervjun.",
+    "beskt.supplement.correction": "Rättelse",
+    "beskt.supplement.addition": "Komplettering",
+    "beskt.supplement.question": "Gäller fråga",
+    "beskt.supplement.general": "Allmänt, ingen särskild fråga",
+    "beskt.supplement.body": "Din text",
+    "beskt.supplement.submit": "Skicka",
+    "beskt.supplement.sent": "Skickat",
+    "beskt.supplement.employerHeading": "Kandidatens rättelser och kompletteringar",
+    "beskt.workspace.roleProfile": "Rollprofil",
+    "beskt.workspace.exposure": "Befattningens exponering",
+    "beskt.workspace.attestation": "Organisationens intygande",
+    "beskt.workspace.areas": "BESKT-områden",
+    "beskt.workspace.areaLede":
+      "Först kandidatens egna uppgifter och följdfrågor, sedan metodens basfrågor. Dokumentera fakta före tolkning, och alternativ förklaring och skyddsfaktor innan relevans.",
+    "beskt.notice2.title": "Innan du börjar",
+    "beskt.notice2.lede":
+      "Läs igenom det här. Du behöver bekräfta att du har läst informationen innan du svarar på någon fråga.",
+    "beskt.notice2.purpose.title": "Syftet",
+    "beskt.notice2.purpose.body":
+      "Arbetsgivaren som bett dig om den här förberedelsen vill hålla en strukturerad intervju om sådant som faktiskt hör till rollen. Dina svar används som underlag för samtalet.",
+    "beskt.notice2.use_of_information.title": "Hur uppgifterna används",
+    "beskt.notice2.use_of_information.body":
+      "Det du lämnar in läses av behöriga personer hos arbetsgivaren och används för att förbereda och genomföra intervjun för den angivna rollen. Det används inte för att räkna fram något om dig och återanvänds inte för andra roller eller arbetsgivare.",
+    "beskt.notice2.human_decision.title": "En människa beslutar",
+    "beskt.notice2.human_decision.body":
+      "Alla beslut fattas av människor hos arbetsgivaren. Systemet fattar inget beslut om dig och lämnar ingen rekommendation.",
+    "beskt.notice2.not_a_test_with_score.title": "Det här är inte ett test",
+    "beskt.notice2.not_a_test_with_score.body":
+      "Det finns inget resultat, ingen poäng, ingen nivå och ingen rangordning. Ett enskilt svar avgör aldrig något.",
+    "beskt.notice2.may_omit_questions.title": "Du får hoppa över frågor",
+    "beskt.notice2.may_omit_questions.body":
+      "Du kan hoppa över enskilda frågor eller svara att du är osäker. Att hoppa över en fråga räknas aldrig som ett negativt svar.",
+    "beskt.notice2.oral_discussion.title": "Du kan ta något muntligt",
+    "beskt.notice2.oral_discussion.body":
+      "Om du hellre vill ta en fråga i samtalet kan du markera den så. Den blir ett samtalsämne, inget annat.",
+    "beskt.notice2.review_and_correct.title": "Du granskar innan du lämnar in",
+    "beskt.notice2.review_and_correct.body":
+      "Du kan spara, komma tillbaka senare och ändra dina svar. Du ser allt du skrivit och kan rätta det innan du lämnar in.",
+    "beskt.notice2.supplement_after_submission.title": "Komplettera efter inlämning",
+    "beskt.notice2.supplement_after_submission.body":
+      "När du har lämnat in låses svaren. Om något blev fel eller saknas kan du lämna en daterad rättelse eller komplettering, som följer med till intervjun.",
+    "beskt.notice2.who_can_access.title": "Vem kan läsa det",
+    "beskt.notice2.who_can_access.body":
+      "Behöriga medarbetare hos arbetsgivaren. Ditt utkast är privat tills du lämnar in det — arbetsgivaren ser att förberedelsen pågår, inte vad du har skrivit.",
+    "beskt.notice2.retention.title": "Hur länge det sparas",
+    "beskt.notice2.retention.body":
+      "Uppgifterna hanteras som rekryteringsunderlag enligt arbetsgivarens dokumenterade gallringsregler.",
+    "beskt.notice2.contact.title": "Kontakt och dina rättigheter",
+    "beskt.notice2.contact.body":
+      "Frågor om förberedelsen, rättelser eller dina rättigheter enligt dataskyddsreglerna ställer du till arbetsgivaren via kontaktvägen nedan.",
+    "beskt.notice2.retentionClass": "Gallringsklass",
+    "beskt.notice2.lawfulBasis": "Rättslig grund (arbetsgivarens)",
+    "beskt.notice2.acknowledge": "Jag har läst informationen",
+    "beskt.notice2.acknowledgeHint":
+      "Det här är en bekräftelse på att du fått informationen. Det är inte ett samtycke och det skapar ingen rättslig grund.",
+    "beskt.noticeVetting.title": "Förberedande personalsäkerhetsunderlag",
+    "beskt.noticeVetting.lede":
+      "Detta är ett förberedelseunderlag inför en mänskligt ledd säkerhetsprövningsintervju. Läs informationen och bekräfta att du har läst den innan du svarar.",
+    "beskt.noticeVetting.purpose.title": "Syftet",
+    "beskt.noticeVetting.purpose.body":
+      "Underlaget hjälper intervjuaren att ställa relevanta följdfrågor för den angivna befattningen i säkerhetsprövningen. Det är inte ett personlighetstest.",
+    "beskt.noticeVetting.use_of_information.title": "Hur uppgifterna används",
+    "beskt.noticeVetting.use_of_information.body":
+      "Dina svar används endast för den angivna rollen hos den angivna arbetsgivaren. De återanvänds inte för andra roller, arbetsgivare eller framtida jobb och delas inte via din profil.",
+    "beskt.noticeVetting.human_decision.title": "En människa beslutar",
+    "beskt.noticeVetting.human_decision.body":
+      "Prövningen görs av behörig människa hos arbetsgivaren som en helhet. Systemet fattar inget beslut, skapar ingen riskklass och lämnar ingen rekommendation. Ett enskilt svar avgör aldrig bedömningen.",
+    "beskt.noticeVetting.not_a_test_with_score.title": "Ingen poäng eller riskklass",
+    "beskt.noticeVetting.not_a_test_with_score.body":
+      "Det finns ingen poäng, ingen riskklass, ingen rangordning och ingen automatisk analys av dina svar. Ingen AI används för att tolka det du skriver.",
+    "beskt.noticeVetting.may_omit_questions.title": "Vill inte svara eller osäker",
+    "beskt.noticeVetting.may_omit_questions.body":
+      "Du kan svara att du är osäker eller välja att inte svara. Att inte svara blir en informationslucka som intervjuaren tar upp, aldrig ett negativt svar. Om en uppgift som behövs enligt lag inte lämnas kan det innebära att prövningen inte kan slutföras.",
+    "beskt.noticeVetting.oral_discussion.title": "Ta känsliga frågor muntligt",
+    "beskt.noticeVetting.oral_discussion.body":
+      "För känsliga frågor kan du välja att ta dem muntligt i intervjun i stället för skriftligt. Det blir en samtalspunkt utan negativ etikett.",
+    "beskt.noticeVetting.review_and_correct.title": "Granska och rätta",
+    "beskt.noticeVetting.review_and_correct.body":
+      "Du kan spara, fortsätta senare och rätta dina svar innan du lämnar in. Ange aldrig belopp, diagnoser eller uppgifter om andra personer än vad frågan uttryckligen ber om.",
+    "beskt.noticeVetting.supplement_after_submission.title": "Rättelse efter inlämning",
+    "beskt.noticeVetting.supplement_after_submission.body":
+      "Efter inlämning låses svaren. En rättelse eller komplettering lämnas som en daterad uppgift och följer med till intervjun. Du får också rätta sakfel i intervjun.",
+    "beskt.noticeVetting.who_can_access.title": "Vem kan läsa det",
+    "beskt.noticeVetting.who_can_access.body":
+      "Endast arbetsgivarens utsedda behöriga säkerhetsfunktion. Ditt utkast är privat tills du lämnar in det.",
+    "beskt.noticeVetting.retention.title": "Hur länge det sparas",
+    "beskt.noticeVetting.retention.body":
+      "Uppgifterna hanteras som säkerhetsprövningsunderlag enligt arbetsgivarens gallringsregler. Registerkontroll och särskild personutredning görs inte här.",
+    "beskt.noticeVetting.contact.title": "Kontakt och dina rättigheter",
+    "beskt.noticeVetting.contact.body":
+      "Frågor om prövningen, rättelser eller dina rättigheter ställer du till arbetsgivaren via kontaktvägen nedan.",
+    "beskt.noticeVetting.retentionClass": "Gallringsklass",
+    "beskt.noticeVetting.lawfulBasis": "Rättslig grund (arbetsgivarens)",
+    "beskt.noticeVetting.acknowledge": "Jag har läst informationen",
+    "beskt.noticeVetting.acknowledgeHint":
+      "Detta bekräftar att du fått informationen. Det är inte ett samtycke, och samtycke till registerkontroll är inte samma sak som rättslig grund.",
     "beskt.library.badge": "BESKT",
     "beskt.library.nextAction": "Välj en ansökan",
     "beskt.library.nextSteps":
@@ -11066,7 +11395,8 @@ export const dictionaries = {
     "beskt.internalTest.start.chooseApplication": "Choose an application",
     "beskt.internalTest.roles.role": "Role",
     "beskt.internalTest.install.progress": "Installing content:",
-    "beskt.internalTest.activation.employerUnknown": "No organisation has that short name. Copy it from the address of the organisation's pages.",
+    "beskt.internalTest.activation.employerUnknown":
+      "No organisation has that short name. Copy it from the address of the organisation's pages.",
     "beskt.internalTest.activation.employerHelp":
       "The organisation's short name in the address, for example cqrityjob.",
     "beskt.internalTest.activation.until": "Valid until",
@@ -11102,7 +11432,7 @@ export const dictionaries = {
     "beskt.internalTest.install.nextStep": "Go to Access for the test activation",
     "beskt.internalTest.library.start": "Start test",
     "beskt.internalTest.install.open": "Open the version",
-    "beskt.internalTest.banner.title": "Internal test version – not reviewed or published",
+    "beskt.internalTest.banner.title": "Unreviewed method version – pilot hypothesis",
     "beskt.internalTest.roles.email": "E-mail address",
     "beskt.internalTest.library.notice":
       "Internal test version: not reviewed or published. Used only for testing with test data, under the owner's decision.",
@@ -11122,6 +11452,335 @@ export const dictionaries = {
       "The test activation could not be recorded. Check that the content is complete, that the organisation exists and that the end date is within 90 days.",
     "beskt.error.testActivationExists":
       "The organisation already holds an active test activation for this version. Revoke it first.",
+    "beskt.assignment.back": "Back to the Test library",
+    "beskt.assignment.unavailableTitle": "The assignment is not available",
+    "beskt.assignment.unavailableBody":
+      "You cannot see this BESKT assignment. A security vetting assignment is visible only to the organisation's appointed security function.",
+    "beskt.caseLink.createStandalone": "Create an interview case for the assignment",
+    "beskt.conduct.themes.reason.candidate_disclosed": "Candidate's statement",
+    "beskt.conduct.themes.reason.base_question": "Base question",
+    "beskt.conduct.themes.reason.role_exposure": "The position's exposure",
+    "beskt.conduct.themes.ruleSource": "Follow-up by rule",
+    "beskt.decision.heading": "Responsible stance and actions",
+    "beskt.decision.lede":
+      "Written by the responsible person after every own position is locked. The system proposes no text. A signature alone is not enough: the report cannot be finalised without a documented stance.",
+    "beskt.decision.sufficiency": "Sufficiency of the basis",
+    "beskt.decision.sufficient": "The basis is sufficient",
+    "beskt.decision.moreInformation": "Further information is required",
+    "beskt.decision.sufficiencyReason": "Reason for the sufficiency of the basis",
+    "beskt.decision.stance": "Stance",
+    "beskt.decision.rationale": "Rationale",
+    "beskt.decision.name": "Name",
+    "beskt.decision.role": "Role",
+    "beskt.decision.correctionReason": "Why does the stance change?",
+    "beskt.decision.noScoreHint": "Write reasons and facts. No score, risk class or probability.",
+    "beskt.decision.record": "Record the stance",
+    "beskt.decision.change": "Change the stance",
+    "beskt.decision.notResponsible":
+      "The stance is recorded by the responsible interviewer, the security owner or the organisation's owner or admin.",
+    "beskt.decision.actions": "Actions and follow-up",
+    "beskt.decision.noActions": "No actions are recorded.",
+    "beskt.decision.actionDescription": "Action",
+    "beskt.decision.responsible": "Responsible",
+    "beskt.decision.due": "Due",
+    "beskt.decision.review": "Review on",
+    "beskt.decision.status": "Status",
+    "beskt.decision.status.planned": "Planned",
+    "beskt.decision.status.in_progress": "In progress",
+    "beskt.decision.status.done": "Done",
+    "beskt.decision.status.cancelled": "Cancelled",
+    "beskt.decision.addAction": "Add action",
+    "beskt.decision.inReportTitle": "Carried into the report",
+    "beskt.decision.inReportBody":
+      "The stance and the actions are part of the preview and of the version that is finalised.",
+    "beskt.error.notSecurityOfficer":
+      "Only the organisation's appointed security function can do this in a security vetting.",
+    "beskt.error.securityOwnerRequired": "Choose an appointed security owner for the vetting.",
+    "beskt.error.attestationRequired":
+      "Write the organisation's attestation that the position is security-sensitive (at least 20 characters).",
+    "beskt.error.lawfulBasisRequired":
+      "State the lawful basis the organisation relies on (at least 20 characters).",
+    "beskt.error.interviewerNotMember": "The person must be an active member of the organisation.",
+    "beskt.error.contactRequired": "Say how the candidate can reach you.",
+    "beskt.error.notEmployerAdmin":
+      "Only the organisation's owner or an admin can change the security function.",
+    "beskt.error.officerExists": "The person is already appointed.",
+    "beskt.error.invitationExists": "The person already has an open invitation to this method.",
+    "beskt.error.invitationEmail": "Give a valid e-mail address.",
+    "beskt.error.roleTitleRequired": "Give the position.",
+    "beskt.error.candidateIsMember":
+      "A member of the inviting organisation cannot be its own candidate here.",
+    "beskt.error.supplementLength": "Write between 3 and 2000 characters.",
+    "beskt.error.notResponsible": "You are not responsible for the stance in this assignment.",
+    "beskt.error.positionsNotLocked": "Every own position must be locked first.",
+    "beskt.error.stanceIncomplete":
+      "Reason, stance and rationale are written in full, with name and role.",
+    "beskt.error.stanceWording":
+      "A stance gives reasons, not a score, a probability or a reading of honesty.",
+    "beskt.error.stanceCorrectionReason": "Say why the stance changes.",
+    "beskt.error.actionIncomplete": "An action names what, who is responsible and its status.",
+    "beskt.error.reportStanceMissing": "The responsible stance has not been recorded yet.",
+    "beskt.fakta.eventTiming": "Time and currency",
+    "beskt.fakta.eventTimingHelp": "When, for how long, and is it ongoing?",
+    "beskt.fakta.consequence": "Consequence",
+    "beskt.fakta.consequenceHelp": "What followed for work, obligations or security behaviour?",
+    "beskt.fakta.supportingInformation": "Supporting information",
+    "beskt.fakta.supportingInformationHelp": "What supports the statement, and from which source?",
+    "beskt.fakta.contradictingInformation": "Contradicting information",
+    "beskt.fakta.contradictingInformationHelp":
+      "What speaks against or qualifies the statement, and from which source?",
+    "beskt.fakta.measuresTaken": "Measures",
+    "beskt.fakta.measuresTakenHelp": "What has the person or the organisation done?",
+    "beskt.fakta.roleLink": "Concrete link to the role",
+    "beskt.fakta.roleLinkHelp": "How does this connect to the position's actual exposure?",
+    "beskt.fakta.informationGap": "Uncertainty and remaining information gap",
+    "beskt.fakta.informationGapHelp": "What remains before a person can weigh the whole?",
+    "beskt.fakta.candidateResponse": "The candidate's response and corrections",
+    "beskt.fakta.candidateResponseHelp": "What the candidate said when the facts were read back.",
+    "beskt.internalTest.install.headingVetting": "Install BESKT v0.1 – security vetting",
+    "beskt.internalTest.install.ledeVetting":
+      "Adds the whole method – common base, B, E, S, K, T, situations and the FAKTA support – with the three activation requirements, as a draft. Requires the editor role. Installing reviews and publishes nothing.",
+    "beskt.invitation.title": "Invitation to BESKT",
+    "beskt.invitation.employer": "Employer",
+    "beskt.invitation.role": "Position",
+    "beskt.invitation.purpose": "Purpose",
+    "beskt.invitation.contact": "Contact route",
+    "beskt.invitation.lede":
+      "If you accept, the preparation opens in your account. You are told how the information is used before you answer any question.",
+    "beskt.invitation.accept": "Accept and open the preparation",
+    "beskt.invitation.accepting": "Opening …",
+    "beskt.invitation.acceptFailed": "The invitation could not be opened",
+    "beskt.invitation.open": "Open the preparation",
+    "beskt.invitation.notAvailable":
+      "The invitation is not available to this account. Sign in with the e-mail address the invitation was sent to.",
+    "beskt.invitation.emailNotConfirmed":
+      "Confirm your e-mail address first, then open the link again.",
+    "beskt.invitation.alreadyAccepted": "You have already accepted the invitation.",
+    "beskt.invitation.revoked": "The employer has withdrawn the invitation.",
+    "beskt.invitation.expired": "The invitation is no longer open. Ask the employer for a new one.",
+    "beskt.module.description":
+      "Candidate preparation and a structured interview with FAKTA support: recruitment support, or security vetting support with B, E, S, K and T. The method identifies topics to clarify and safeguards to consider – no score, no ranking and no automated decision.",
+    "beskt.module.preview": "View content",
+    "beskt.module.start": "Start BESKT",
+    "beskt.module.statusActivated":
+      "Unreviewed method version (pilot hypothesis). Used under the organisation's activation until {date}.",
+    "beskt.module.statusPilot": "Published method version under a pilot grant.",
+    "beskt.module.assignments": "BESKT assignments",
+    "beskt.module.assignmentsEmpty": "No assignments yet.",
+    "beskt.module.started": "Started",
+    "beskt.module.byInvitation": "by invitation",
+    "beskt.module.fromApplication": "from an application",
+    "beskt.module.openAssignment": "Open the assignment",
+    "beskt.module.reportFinalised": "Report finalised",
+    "beskt.module.vettingListNote":
+      "Security vettings are shown to the organisation's appointed security function only.",
+    "beskt.module.invitations": "Open invitations",
+    "beskt.module.invitationExpires": "valid until",
+    "beskt.module.invitationRevoke": "Withdraw",
+    "beskt.module.invitationRevokeReason": "The invitation was withdrawn by the employer.",
+    "beskt.preview.title": "BESKT – content",
+    "beskt.preview.lede":
+      "The questions a candidate can get for each purpose, with why each is asked. Follow-up questions appear only when the candidate's own answer opens them.",
+    "beskt.preview.count": "{n} questions",
+    "beskt.preview.followUpNote": "follow-ups appear only after a relevant answer",
+    "beskt.preview.followUp": "Follow-up",
+    "beskt.preview.why": "Why",
+    "beskt.preview.vettingWithheld":
+      "The security vetting questions are shown only to the organisation's appointed security function. Here you see the areas and the number of questions.",
+    "beskt.purpose.recruitment": "Recruitment",
+    "beskt.purpose.recruitmentHint": "Common base, B, situations and the role's exposure (T).",
+    "beskt.purpose.securityVetting": "Security vetting",
+    "beskt.purpose.securityVettingHint":
+      "The whole method: base, B, E, S, K, T and situations. Requires an appointed security function, an attestation and a lawful basis.",
+    "beskt.readback.reason.candidate_disclosed": "Candidate's statement – follow-up",
+    "beskt.report.assignment.heading": "Assignment and conduct",
+    "beskt.report.assignment.interviewer": "Responsible interviewer",
+    "beskt.report.assignment.conduct": "Participants",
+    "beskt.report.assignment.owner": "Responsible",
+    "beskt.report.assignment.assessor": "Assessor",
+    "beskt.report.assignment.locked": "locked their position",
+    "beskt.report.stance.heading": "Sufficiency of the basis, stance and follow-up",
+    "beskt.report.stance.none": "No stance is recorded.",
+    "beskt.section.t": "T – Opportunity and role",
+    "beskt.section.base": "Common base",
+    "beskt.section.b": "B – Disappointment and conflicts",
+    "beskt.section.e": "E – Finances",
+    "beskt.section.s": "S – Social situation",
+    "beskt.section.k": "K – Contacts and influence",
+    "beskt.section.situations": "Situations",
+    "beskt.security.heading": "Security function",
+    "beskt.security.lede":
+      "Appointed people in the organisation who may start, read, conduct and report security vettings. Appointed by the owner or an admin, with a reason. Nobody else in the organisation sees a security vetting.",
+    "beskt.security.none":
+      "Nobody is appointed yet. Security vetting requires at least one appointed person.",
+    "beskt.security.person": "Person",
+    "beskt.security.choosePerson": "Choose a person",
+    "beskt.security.reason": "Reason",
+    "beskt.security.appoint": "Appoint",
+    "beskt.security.revoke": "Remove",
+    "beskt.security.revokeReason":
+      "The appointment to the security function was ended by the organisation.",
+    "beskt.start.dialogHint":
+      "Choose the purpose, position, responsible interviewer and contact route.",
+    "beskt.startDialog.title": "Start BESKT",
+    "beskt.startDialog.lede":
+      "Choose the purpose and the candidate. The candidate receives the preparation in their account, with information about the employer, the purpose, how the information is used and the contact route.",
+    "beskt.startDialog.purpose": "Purpose",
+    "beskt.startDialog.version": "Method version",
+    "beskt.startDialog.purposeUnavailable": "Not activated for the organisation.",
+    "beskt.startDialog.purposeNeedsOfficer":
+      "Requires you to belong to the organisation's appointed security function.",
+    "beskt.startDialog.candidate": "Candidate",
+    "beskt.startDialog.fromApplication": "Existing application",
+    "beskt.startDialog.byInvitation": "Invite by e-mail",
+    "beskt.startDialog.application": "Application",
+    "beskt.startDialog.chooseApplication": "Choose an application",
+    "beskt.startDialog.unnamed": "unnamed applicant",
+    "beskt.startDialog.noApplications":
+      "There is no application. Use an invitation by e-mail instead.",
+    "beskt.startDialog.email": "The candidate's e-mail address",
+    "beskt.startDialog.candidateName": "The candidate's name (optional)",
+    "beskt.startDialog.roleTitle": "Position",
+    "beskt.startDialog.invitationHint":
+      "The candidate accepts signed in with exactly that confirmed e-mail address. No job application is created.",
+    "beskt.startDialog.profile": "The role's exposure profile",
+    "beskt.startDialog.profileHint":
+      "Opportunity is the organisation's access and control question, not a characteristic of the candidate.",
+    "beskt.startDialog.interviewer": "Responsible interviewer",
+    "beskt.startDialog.chooseInterviewer": "Choose an interviewer",
+    "beskt.startDialog.interviewerVetting":
+      "In a security vetting the interviewer belongs to the appointed security function.",
+    "beskt.startDialog.contact": "Contact route for the candidate",
+    "beskt.startDialog.contactHint": "Shown to the candidate in the information.",
+    "beskt.startDialog.contactDefault": "Contact {name}, {email}",
+    "beskt.startDialog.vettingHeading": "Security vetting – the organisation's statements",
+    "beskt.startDialog.vettingLede":
+      "The organisation's own statements, in its own words. CQrityjob attests nothing and establishes no lawful basis.",
+    "beskt.startDialog.securityOwner": "Security owner",
+    "beskt.startDialog.chooseOwner": "Choose a security owner",
+    "beskt.startDialog.attestation": "Attestation that the position is security-sensitive",
+    "beskt.startDialog.attestationHint":
+      "Under the organisation's position analysis (Protective Security Act, chapter 3). At least 20 characters.",
+    "beskt.startDialog.lawfulBasis": "Lawful basis",
+    "beskt.startDialog.lawfulBasisHint":
+      "The basis the organisation relies on. Shown to the candidate. At least 20 characters.",
+    "beskt.startDialog.questions": "Questions the candidate will get",
+    "beskt.startDialog.start": "Start BESKT",
+    "beskt.startDialog.invite": "Create invitation",
+    "beskt.startDialog.starting": "Starting …",
+    "beskt.startDialog.invitedTitle": "The invitation is created",
+    "beskt.startDialog.invitedBody":
+      "Send the link to the candidate. The candidate opens it signed in with the invited e-mail address.",
+    "beskt.startDialog.invitationLink": "Invitation link",
+    "beskt.startDialog.copy": "Copy the link",
+    "beskt.startDialog.copied": "Copied",
+    "beskt.startDialog.invitationOnce":
+      "The link is shown only now. If it is lost, withdraw the invitation and create a new one.",
+    "beskt.startDialog.done": "Done",
+    "beskt.steps.aria": "Preparation steps",
+    "beskt.steps.progress": "Step {n} of {total}",
+    "beskt.steps.remaining": "Unanswered questions in this step: {n}",
+    "beskt.steps.next": "Save and continue",
+    "beskt.steps.previous": "Previous step",
+    "beskt.supplement.heading": "Correction or addition",
+    "beskt.supplement.lede":
+      "Your answers are locked. If something was wrong or missing, add a dated correction or addition. It is carried into the interview.",
+    "beskt.supplement.correction": "Correction",
+    "beskt.supplement.addition": "Addition",
+    "beskt.supplement.question": "About question",
+    "beskt.supplement.general": "General, no particular question",
+    "beskt.supplement.body": "Your text",
+    "beskt.supplement.submit": "Send",
+    "beskt.supplement.sent": "Sent",
+    "beskt.supplement.employerHeading": "The candidate's corrections and additions",
+    "beskt.workspace.roleProfile": "Role profile",
+    "beskt.workspace.exposure": "The position's exposure",
+    "beskt.workspace.attestation": "The organisation's attestation",
+    "beskt.workspace.areas": "BESKT areas",
+    "beskt.workspace.areaLede":
+      "First the candidate's own statements and follow-ups, then the method's base questions. Record facts before interpretation, and the alternative explanation and protective factor before relevance.",
+    "beskt.notice2.title": "Before you begin",
+    "beskt.notice2.lede":
+      "Please read this. You need to confirm that you have read the information before you answer any question.",
+    "beskt.notice2.purpose.title": "The purpose",
+    "beskt.notice2.purpose.body":
+      "The employer that asked you for this preparation wants to hold a structured interview about matters that genuinely belong to the role. Your answers are used as the basis for that conversation.",
+    "beskt.notice2.use_of_information.title": "How the information is used",
+    "beskt.notice2.use_of_information.body":
+      "What you submit is read by authorised people at the employer and used to prepare and hold the interview for the stated role. It is not used to calculate anything about you and is not reused for other roles or employers.",
+    "beskt.notice2.human_decision.title": "A human decides",
+    "beskt.notice2.human_decision.body":
+      "Every decision is made by people at the employer. The system makes no decision about you and gives no recommendation.",
+    "beskt.notice2.not_a_test_with_score.title": "This is not a test",
+    "beskt.notice2.not_a_test_with_score.body":
+      "There is no result, no score, no level and no ranking. A single answer never decides anything.",
+    "beskt.notice2.may_omit_questions.title": "You may skip questions",
+    "beskt.notice2.may_omit_questions.body":
+      "You can skip individual questions or answer that you are unsure. Skipping a question never counts as a negative answer.",
+    "beskt.notice2.oral_discussion.title": "You can take something orally",
+    "beskt.notice2.oral_discussion.body":
+      "If you would rather discuss a question in the conversation, you can mark it that way. It becomes a topic of conversation, nothing more.",
+    "beskt.notice2.review_and_correct.title": "You review before you submit",
+    "beskt.notice2.review_and_correct.body":
+      "You can save, come back later and change your answers. You see everything you have written and can correct it before you submit.",
+    "beskt.notice2.supplement_after_submission.title": "Supplementing after submission",
+    "beskt.notice2.supplement_after_submission.body":
+      "Once you submit, your answers are locked. If something was wrong or missing you can add a dated correction or addition, which is carried into the interview.",
+    "beskt.notice2.who_can_access.title": "Who can read it",
+    "beskt.notice2.who_can_access.body":
+      "Authorised staff at the employer. Your draft is private until you submit it — the employer sees that the preparation is in progress, not what you have written.",
+    "beskt.notice2.retention.title": "How long it is kept",
+    "beskt.notice2.retention.body":
+      "The information is handled as recruitment material under the employer's documented retention rules.",
+    "beskt.notice2.contact.title": "Contact and your rights",
+    "beskt.notice2.contact.body":
+      "Questions about the preparation, corrections or your rights under data protection law go to the employer through the contact route below.",
+    "beskt.notice2.retentionClass": "Retention class",
+    "beskt.notice2.lawfulBasis": "Lawful basis (the employer's)",
+    "beskt.notice2.acknowledge": "I have read the information",
+    "beskt.notice2.acknowledgeHint":
+      "This confirms that you received the information. It is not consent and it creates no lawful basis.",
+    "beskt.noticeVetting.title": "Pre-interview personnel security form",
+    "beskt.noticeVetting.lede":
+      "This is preparation for a human-led security vetting interview. Read the information and confirm that you have read it before you answer.",
+    "beskt.noticeVetting.purpose.title": "The purpose",
+    "beskt.noticeVetting.purpose.body":
+      "The form helps the interviewer ask relevant follow-up questions for the stated position in the security vetting. It is not a personality test.",
+    "beskt.noticeVetting.use_of_information.title": "How the information is used",
+    "beskt.noticeVetting.use_of_information.body":
+      "Your answers are used only for the stated role at the stated employer. They are not reused for other roles, employers or future jobs and are not shared through your profile.",
+    "beskt.noticeVetting.human_decision.title": "A human decides",
+    "beskt.noticeVetting.human_decision.body":
+      "The vetting is decided as a whole by an authorised person at the employer. The system makes no decision, creates no risk class and gives no recommendation. A single answer never decides the assessment.",
+    "beskt.noticeVetting.not_a_test_with_score.title": "No score or risk class",
+    "beskt.noticeVetting.not_a_test_with_score.body":
+      "There is no score, no risk class, no ranking and no automated analysis of your answers. No AI is used to interpret what you write.",
+    "beskt.noticeVetting.may_omit_questions.title": "Prefer not to answer, or unsure",
+    "beskt.noticeVetting.may_omit_questions.body":
+      "You can answer that you are unsure or choose not to answer. Not answering becomes an information gap the interviewer raises, never a negative answer. If information required by law is not given, the vetting may not be able to be completed.",
+    "beskt.noticeVetting.oral_discussion.title": "Take sensitive questions orally",
+    "beskt.noticeVetting.oral_discussion.body":
+      "For sensitive questions you can choose to take them orally in the interview instead of in writing. It becomes a point of conversation without a negative label.",
+    "beskt.noticeVetting.review_and_correct.title": "Review and correct",
+    "beskt.noticeVetting.review_and_correct.body":
+      "You can save, continue later and correct your answers before you submit. Never give amounts, diagnoses or information about other people beyond what a question explicitly asks for.",
+    "beskt.noticeVetting.supplement_after_submission.title": "Corrections after submission",
+    "beskt.noticeVetting.supplement_after_submission.body":
+      "Once submitted, your answers are locked. A correction or addition is given as a dated statement and is carried into the interview. You may also correct factual errors in the interview.",
+    "beskt.noticeVetting.who_can_access.title": "Who can read it",
+    "beskt.noticeVetting.who_can_access.body":
+      "Only the employer's appointed authorised security function. Your draft is private until you submit it.",
+    "beskt.noticeVetting.retention.title": "How long it is kept",
+    "beskt.noticeVetting.retention.body":
+      "The information is handled as security vetting material under the employer's retention rules. Register checks and special personal investigations are not carried out here.",
+    "beskt.noticeVetting.contact.title": "Contact and your rights",
+    "beskt.noticeVetting.contact.body":
+      "Questions about the vetting, corrections or your rights go to the employer through the contact route below.",
+    "beskt.noticeVetting.retentionClass": "Retention class",
+    "beskt.noticeVetting.lawfulBasis": "Lawful basis (the employer's)",
+    "beskt.noticeVetting.acknowledge": "I have read the information",
+    "beskt.noticeVetting.acknowledgeHint":
+      "This confirms that you received the information. It is not consent, and consent to a register check is not the same thing as a lawful basis.",
     "beskt.library.badge": "BESKT",
     "beskt.library.nextAction": "Choose an application",
     "beskt.library.nextSteps":

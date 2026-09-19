@@ -9,6 +9,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { listBesktAssignments } from "@/lib/beskt/complete.functions";
 import { useEffect, useRef, useState } from "react";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -52,6 +53,12 @@ export const Route = createFileRoute(
     // case to the applicant's account so the submitted preparation can be
     // linked to it; the server reads who that is from the application.
     ...(search.beskt === true || search.beskt === "true" ? { beskt: true as const } : {}),
+    // Set only by a standalone BESKT assignment's own link: the case is bound
+    // to the account that accepted the invitation, and the recruiter returns
+    // to the assignment to link the preparation.
+    ...(typeof search.besktAssignment === "string" && UUID.test(search.besktAssignment)
+      ? { besktAssignment: search.besktAssignment }
+      : {}),
   }),
 });
 
@@ -59,7 +66,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function Page() {
   const { employerSlug } = Route.useParams();
-  const { applicationId, jobId, beskt } = Route.useSearch();
+  const { applicationId, jobId, beskt, besktAssignment } = Route.useSearch();
   const navigate = useNavigate();
   const ws = useEmployerWorkspace(employerSlug);
   const { t } = useT();
@@ -112,6 +119,25 @@ function Page() {
     );
   }, [prefill.data]);
 
+  // A standalone BESKT assignment names its candidate and role itself.
+  const besktListFn = useServerFn(listBesktAssignments);
+  const besktRow = useQuery({
+    queryKey: ["beskt", "assignments", ws.workspace?.employerId],
+    queryFn: () => besktListFn({ data: { employerId: ws.workspace!.employerId } }),
+    enabled: Boolean(besktAssignment && ws.workspace?.employerId),
+    retry: false,
+    select: (rows) => rows.find((r) => r.assignmentId === besktAssignment) ?? null,
+  });
+  const besktPrefilled = useRef(false);
+  useEffect(() => {
+    if (besktPrefilled.current || !besktRow.data) return;
+    besktPrefilled.current = true;
+    const name = besktRow.data.candidateDisplayName;
+    const role = besktRow.data.roleTitle;
+    setCandidate((current) => (current === "" ? name : current));
+    setTitle((current) => (current === "" ? [role, name].filter(Boolean).join(" — ") : current));
+  }, [besktRow.data]);
+
   // The job comes from the APPLICATION when we could read it, and from the URL
   // only as a fallback. An application cannot name another employer's job, so
   // the authoritative value is also the one that cannot be steered by a
@@ -137,13 +163,19 @@ function Page() {
           applicationId: applicationId ?? null,
           jobId: effectiveJobId,
           bindApplicant: beskt === true && Boolean(applicationId),
+          besktAssignmentId: besktAssignment ?? null,
         },
       }),
     onSuccess: ({ caseId }) =>
-      void navigate({
-        to: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
-        params: { employerSlug, caseId },
-      }),
+      void (besktAssignment
+        ? navigate({
+            to: "/employer/$employerSlug/assessments/beskt/$assignmentId",
+            params: { employerSlug, assignmentId: besktAssignment },
+          })
+        : navigate({
+            to: "/employer/$employerSlug/interview-intelligence/$caseId/prepare",
+            params: { employerSlug, caseId },
+          })),
     // The list and the create call share one entitlement definition, so a
     // refusal here means the state changed after the list was drawn -- the
     // package was withdrawn, or the account stopped being active. Re-read the

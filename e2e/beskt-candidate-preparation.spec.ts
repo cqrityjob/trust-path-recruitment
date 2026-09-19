@@ -176,6 +176,19 @@ async function shot(page: Page, name: string): Promise<void> {
   });
 }
 
+const RECRUITER_NAME = "Rekryterare Journey";
+
+/** "Starta BESKT" on the application: the version by index, the first profile. */
+async function startFromPanel(page: Page, versionIndex: number): Promise<void> {
+  await page.getByTestId("beskt-application-panel").getByTestId("beskt-start-open").click();
+  const dialog = page.getByTestId("beskt-start-dialog");
+  await expect(dialog).toBeVisible({ timeout: 15_000 });
+  await dialog.locator("#beskt-start-version").selectOption({ index: versionIndex });
+  await dialog.locator("#beskt-start-interviewer").selectOption({ label: RECRUITER_NAME });
+  await dialog.getByTestId("beskt-start-dialog-submit").click();
+  await expect(dialog).toHaveCount(0, { timeout: 30_000 });
+}
+
 test.describe("BESKT candidate preparation — the routed journey", () => {
   test("1 · the library names the method and states its real state", async ({ page }) => {
     await step("library", "sign in as the recruiter", () =>
@@ -208,12 +221,20 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
 
     const panel = page.getByTestId("beskt-application-panel");
 
-    await step("assign", "nothing can be started before a method is CHOSEN", async () => {
+    const dialog = page.getByTestId("beskt-start-dialog");
+    const submit = dialog.getByTestId("beskt-start-dialog-submit");
+    const version = dialog.locator("#beskt-start-version");
+    const profile = dialog.locator("#beskt-start-profile");
+
+    await step("assign", "nothing can be started before the people are CHOSEN", async () => {
       // Finding 0.3: the method used to be `methods.data?.[0]` -- whatever came
-      // back first, with no way to see or change it. The employer now picks,
-      // and until they do, and until a profile follows, start is refused.
+      // back first, with no way to see or change it. The employer now sees the
+      // version and profile, and nothing starts until a responsible
+      // interviewer is named.
       await expect(panel).toBeVisible({ timeout: 30_000 });
-      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
+      await panel.getByTestId("beskt-start-open").click();
+      await expect(dialog).toBeVisible({ timeout: 15_000 });
+      await expect(submit).toBeDisabled();
       await shot(page, "2-employer-before-start");
     });
 
@@ -221,38 +242,33 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       "assign",
       "the offered methods are the governed ones, and there is a choice",
       async () => {
-        await panel.getByLabel(/^metod$|^method$/i).click();
-        const options = page.getByRole("option");
-        await expect(options.first()).toBeVisible({ timeout: 15_000 });
         // The fixture publishes two admissible methods precisely so that
         // "the employer chooses" is observable rather than notional.
-        expect(await options.count()).toBeGreaterThanOrEqual(2);
-        await options.first().click();
-        await expect(panel.getByTestId("beskt-method-summary")).toBeVisible();
-        // A method alone is still not enough.
-        await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
+        await expect(version).toBeVisible({ timeout: 15_000 });
+        expect(await version.locator("option").count()).toBeGreaterThanOrEqual(2);
+        await version.selectOption({ index: 0 });
+        await expect(submit).toBeDisabled();
       },
     );
 
     await step("assign", "the profile list belongs to the CHOSEN method", async () => {
-      await panel.getByLabel(/rollexponering|role exposure/i).click();
-      await page.getByRole("option").first().click();
-      await expect(panel.getByTestId("beskt-start-submit")).toBeEnabled();
+      await expect(profile.locator("option").first()).toBeAttached({ timeout: 15_000 });
+      await dialog.locator("#beskt-start-interviewer").selectOption({ label: RECRUITER_NAME });
+      await expect(submit).toBeEnabled();
     });
 
-    await step("assign", "changing the method clears the profile beneath it", async () => {
-      await panel.getByLabel(/^metod$|^method$/i).click();
-      await page.getByRole("option").nth(1).click();
+    await step("assign", "changing the method replaces the profile beneath it", async () => {
+      const before = await profile.inputValue();
+      await version.selectOption({ index: 1 });
       // The profile belonged to the previous method; carrying it over would
       // submit a pairing the database refuses for a fault the UI created.
-      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
-      await panel.getByLabel(/rollexponering|role exposure/i).click();
-      await page.getByRole("option").first().click();
-      await expect(panel.getByTestId("beskt-start-submit")).toBeEnabled();
+      await expect.poll(() => profile.inputValue(), { timeout: 15_000 }).not.toBe(before);
+      await expect(submit).toBeEnabled();
     });
 
     await step("assign", "start it", async () => {
-      await panel.getByTestId("beskt-start-submit").click();
+      await submit.click();
+      await expect(dialog).toHaveCount(0, { timeout: 30_000 });
       await expect(panel.getByTestId("beskt-readback-state")).toBeVisible({ timeout: 30_000 });
     });
 
@@ -715,11 +731,7 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
     await step("cancel", "start one with the FIRST method", async () => {
       await signIn(page, RECRUITER, `/employer/${EMPLOYER_SLUG}/applications/${OTHER_APPLICATION}`);
       await expect(panel).toBeVisible({ timeout: 30_000 });
-      await panel.getByLabel(/^metod$|^method$/i).click();
-      await page.getByRole("option").first().click();
-      await panel.getByLabel(/rollexponering|role exposure/i).click();
-      await page.getByRole("option").first().click();
-      await panel.getByTestId("beskt-start-submit").click();
+      await startFromPanel(page, 0);
       await expect(panel.getByTestId("beskt-readback-state")).toBeVisible({ timeout: 30_000 });
     });
 
@@ -741,17 +753,12 @@ test.describe("BESKT candidate preparation — the routed journey", () => {
       await page.getByTestId("beskt-cancel-confirm").click();
       // Nothing is deleted: the cancelled assignment simply stops being the
       // live one, and the employer may start a correct replacement.
-      await expect(panel.getByTestId("beskt-start-submit")).toBeVisible({ timeout: 30_000 });
-      await expect(panel.getByTestId("beskt-start-submit")).toBeDisabled();
+      await expect(panel.getByTestId("beskt-start-open")).toBeVisible({ timeout: 30_000 });
       await shot(page, "9-cancelled");
     });
 
     await step("cancel", "the replacement uses a DIFFERENT method and profile", async () => {
-      await panel.getByLabel(/^metod$|^method$/i).click();
-      await page.getByRole("option").nth(1).click();
-      await panel.getByLabel(/rollexponering|role exposure/i).click();
-      await page.getByRole("option").first().click();
-      await panel.getByTestId("beskt-start-submit").click();
+      await startFromPanel(page, 1);
       await expect(panel.getByTestId("beskt-readback-state")).toBeVisible({ timeout: 30_000 });
       await expectFitsViewport(page);
       await shot(page, "9-replaced");

@@ -52,6 +52,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { appendFileSync, mkdirSync } from "node:fs";
+import { recordStance } from "./support/beskt-walk";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
 const BASE = process.env.E2E_BASE_URL ?? "";
@@ -287,12 +288,23 @@ const B = {
   recordResolution: /Registrera hantering|Record outcome/i,
 };
 
+/**
+ * The themes the candidate's neutral choices produced -- a skipped question
+ * and one taken orally. Since 20261130 the candidate's explicit answers that
+ * fired a governed follow-up rule are themes too (reason candidate_disclosed),
+ * and the area workspace lists the method's base and role questions beside
+ * them; this walk documents the two neutral ones.
+ */
+const DERIVED =
+  '[data-testid^="beskt-theme-"][data-reason="omitted"], [data-testid^="beskt-theme-"][data-reason="discuss_orally"]';
+const DISCLOSED = '[data-testid^="beskt-theme-"][data-reason="candidate_disclosed"]';
+
 /** The first derived theme's element, whichever item key the fixture produced. */
 function firstTheme(page: Page) {
-  return page.locator('[data-testid^="beskt-theme-"]').first();
+  return page.locator(DERIVED).first();
 }
 function secondTheme(page: Page) {
-  return page.locator('[data-testid^="beskt-theme-"]').nth(1);
+  return page.locator(DERIVED).nth(1);
 }
 
 test.describe("BESKT interview tool — the routed journey", () => {
@@ -454,7 +466,13 @@ test.describe("BESKT interview tool — the routed journey", () => {
 
     await step("themes", "both derived themes are present with their reason", async () => {
       await expect(themes).toBeVisible({ timeout: 30_000 });
-      expect(await page.locator('[data-testid^="beskt-theme-"]').count()).toBe(2);
+      expect(await page.locator(DERIVED).count()).toBe(2);
+      // The two explicit Yes answers whose follow-up rule fired, each naming
+      // the governed rule that made it a theme.
+      const disclosed = page.locator(DISCLOSED);
+      expect(await disclosed.count()).toBe(2);
+      await expect(disclosed.filter({ hasText: /show_example_when_experienced/ })).toHaveCount(1);
+      await expect(disclosed.filter({ hasText: /show_context_when_reported/ })).toHaveCount(1);
       await expect(themes).toContainText(/Kandidaten hoppade över frågan/);
       await expect(themes).toContainText(/Kandidaten valde att ta frågan muntligt/);
       await expectNoScoringClaim(page, "beskt-themes");
@@ -1165,6 +1183,14 @@ test.describe("BESKT interview tool — the routed journey", () => {
       await expect(panel).toContainText(/SYNTETISKT panelen är överens/, { timeout: 60_000 });
       await shot(page, "23-panel-agreed-sv");
       await page.goto(`${BESKT_PATH}?view=report`);
+    });
+
+    await step("sign", "a signature alone is not a stance: it is documented first", async () => {
+      // 20261130: the report is finalised only after a human stance on the
+      // sufficiency of the basis, with its reasons, has been recorded.
+      await expect(page.getByTestId("beskt-report-blockers")).toBeVisible({ timeout: 60_000 });
+      await expect(finalise).toHaveCount(0);
+      await recordStance(page, "Intervjuare Journey");
     });
 
     await step("sign", "nothing blocks the report now, so it can be signed", async () => {

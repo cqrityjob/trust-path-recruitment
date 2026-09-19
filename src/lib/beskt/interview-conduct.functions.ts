@@ -43,7 +43,15 @@ export const BESKT_SENSITIVITY_CLASSES = ["ordinary", "sensitive", "special_cate
 export type BesktSensitivityClass = (typeof BESKT_SENSITIVITY_CLASSES)[number];
 
 /** The candidate's own two neutral states, carried through from PR 4. */
-export type BesktTopicReason = "omitted" | "discuss_orally";
+/** Why a question is on the interviewer's list: the candidate's own neutral
+ *  state, a governed rule their own answer fired, or -- on screen only, never
+ *  stored as a topic -- the method's base question or the role's exposure. */
+export type BesktTopicReason =
+  | "omitted"
+  | "discuss_orally"
+  | "candidate_disclosed"
+  | "base_question"
+  | "role_exposure";
 
 /** A panel outcome. Exactly two, and neither is a score. */
 export const BESKT_RESOLUTION_KINDS = ["agreed", "disagreed"] as const;
@@ -59,6 +67,14 @@ export interface BesktConductEntry {
   readonly interviewerInterpretation: string | null;
   readonly alternativeExplanation: string | null;
   readonly protectiveFactor: string | null;
+  readonly eventTiming: string | null;
+  readonly consequence: string | null;
+  readonly supportingInformation: string | null;
+  readonly contradictingInformation: string | null;
+  readonly measuresTaken: string | null;
+  readonly roleLink: string | null;
+  readonly informationGap: string | null;
+  readonly candidateResponse: string | null;
   readonly verificationNeed: string | null;
   readonly verificationState: BesktVerificationState;
   readonly verificationSource: string | null;
@@ -67,9 +83,12 @@ export interface BesktConductEntry {
 }
 
 export interface BesktConductTopic {
+  /** A derived topic's id; for a base or role question shown for
+   *  documentation, "item:<key>", which is never sent to the database. */
   readonly topicId: string;
   readonly itemKey: string;
   readonly reason: BesktTopicReason;
+  readonly triggerRuleKey?: string | null;
   readonly wordingSv: string | null;
   readonly wordingEn: string | null;
   readonly purposeSv: string | null;
@@ -90,6 +109,14 @@ export interface BesktOtherPosition {
     readonly interviewerInterpretation: string | null;
     readonly alternativeExplanation: string | null;
     readonly protectiveFactor: string | null;
+    readonly eventTiming: string | null;
+    readonly consequence: string | null;
+    readonly supportingInformation: string | null;
+    readonly contradictingInformation: string | null;
+    readonly measuresTaken: string | null;
+    readonly roleLink: string | null;
+    readonly informationGap: string | null;
+    readonly candidateResponse: string | null;
     readonly verificationState: BesktVerificationState;
   }[];
 }
@@ -158,6 +185,14 @@ function toEntry(r: Record<string, unknown>): BesktConductEntry {
     interviewerInterpretation: str(r.interviewer_interpretation),
     alternativeExplanation: str(r.alternative_explanation),
     protectiveFactor: str(r.protective_factor),
+    eventTiming: str(r.event_timing),
+    consequence: str(r.consequence),
+    supportingInformation: str(r.supporting_information),
+    contradictingInformation: str(r.contradicting_information),
+    measuresTaken: str(r.measures_taken),
+    roleLink: str(r.role_link),
+    informationGap: str(r.information_gap),
+    candidateResponse: str(r.candidate_response),
     verificationNeed: str(r.verification_need),
     verificationState: (r.verification_state as BesktVerificationState) ?? "not_required",
     verificationSource: str(r.verification_source),
@@ -204,6 +239,7 @@ export const getBesktConductWorkspace = createServerFn({ method: "GET" })
         topicId: t.topic_id as string,
         itemKey: t.item_key as string,
         reason: t.reason as BesktTopicReason,
+        triggerRuleKey: str(t.trigger_rule_key),
         wordingSv: str(t.wording_sv),
         wordingEn: str(t.wording_en),
         purposeSv: str(t.purpose_sv),
@@ -235,6 +271,14 @@ export const getBesktConductWorkspace = createServerFn({ method: "GET" })
           interviewerInterpretation: str(e.interviewer_interpretation),
           alternativeExplanation: str(e.alternative_explanation),
           protectiveFactor: str(e.protective_factor),
+          eventTiming: str(e.event_timing),
+          consequence: str(e.consequence),
+          supportingInformation: str(e.supporting_information),
+          contradictingInformation: str(e.contradicting_information),
+          measuresTaken: str(e.measures_taken),
+          roleLink: str(e.role_link),
+          informationGap: str(e.information_gap),
+          candidateResponse: str(e.candidate_response),
           verificationState: (e.verification_state as BesktVerificationState) ?? "not_required",
         })),
       })),
@@ -283,6 +327,14 @@ export const getBesktEntryHistory = createServerFn({ method: "GET" })
         interviewerInterpretation: str(v.interviewer_interpretation),
         alternativeExplanation: str(v.alternative_explanation),
         protectiveFactor: str(v.protective_factor),
+        eventTiming: str(v.event_timing),
+        consequence: str(v.consequence),
+        supportingInformation: str(v.supporting_information),
+        contradictingInformation: str(v.contradicting_information),
+        measuresTaken: str(v.measures_taken),
+        roleLink: str(v.role_link),
+        informationGap: str(v.information_gap),
+        candidateResponse: str(v.candidate_response),
         verificationNeed: str(v.verification_need),
         verificationState: (v.verification_state as BesktVerificationState) ?? "not_required",
         verificationSource: str(v.verification_source),
@@ -386,6 +438,14 @@ const entryFields = z.object({
   interviewerInterpretation: z.string().max(8000).optional(),
   alternativeExplanation: z.string().max(8000).optional(),
   protectiveFactor: z.string().max(8000).optional(),
+  eventTiming: z.string().max(8000).optional(),
+  consequence: z.string().max(8000).optional(),
+  supportingInformation: z.string().max(8000).optional(),
+  contradictingInformation: z.string().max(8000).optional(),
+  measuresTaken: z.string().max(8000).optional(),
+  roleLink: z.string().max(8000).optional(),
+  informationGap: z.string().max(8000).optional(),
+  candidateResponse: z.string().max(8000).optional(),
   verificationNeed: z.string().max(8000).optional(),
   verificationState: z.enum(BESKT_VERIFICATION_STATES).optional(),
   verificationSource: z.string().max(2000).optional(),
@@ -420,6 +480,14 @@ export const saveBesktConductEntry = createServerFn({ method: "POST" })
         interviewer_interpretation: e.interviewerInterpretation ?? null,
         alternative_explanation: e.alternativeExplanation ?? null,
         protective_factor: e.protectiveFactor ?? null,
+        event_timing: e.eventTiming ?? null,
+        consequence: e.consequence ?? null,
+        supporting_information: e.supportingInformation ?? null,
+        contradicting_information: e.contradictingInformation ?? null,
+        measures_taken: e.measuresTaken ?? null,
+        role_link: e.roleLink ?? null,
+        information_gap: e.informationGap ?? null,
+        candidate_response: e.candidateResponse ?? null,
         verification_need: e.verificationNeed ?? null,
         verification_state: e.verificationState ?? "not_required",
         verification_source: e.verificationSource ?? null,

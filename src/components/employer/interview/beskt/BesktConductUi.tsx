@@ -60,6 +60,9 @@ export function ResponseStateChip({ state }: { state: string }) {
 export const TOPIC_REASON_LABEL: Record<BesktTopicReason, TranslationKey> = {
   omitted: "beskt.conduct.themes.reason.omitted",
   discuss_orally: "beskt.conduct.themes.reason.discuss_orally",
+  candidate_disclosed: "beskt.conduct.themes.reason.candidate_disclosed",
+  base_question: "beskt.conduct.themes.reason.base_question",
+  role_exposure: "beskt.conduct.themes.reason.role_exposure",
 };
 
 export const VERIFICATION_LABEL: Record<BesktVerificationState, TranslationKey> = {

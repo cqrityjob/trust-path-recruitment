@@ -25,7 +25,6 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ClipboardList, Info, Loader2, ShieldCheck } from "lucide-react";
 
@@ -33,12 +32,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/context";
-import {
-  listAssignableBesktMethods,
-  type BesktAssignableMethod,
-} from "@/lib/beskt/candidate-preparation.functions";
+import { listAssignableBesktMethods } from "@/lib/beskt/candidate-preparation.functions";
 import { listBesktTestActivations } from "@/lib/beskt/internal-test.functions";
-import { BesktStartTestDialog } from "@/components/beskt/BesktStartTestDialog";
+import { getMyBesktStanding } from "@/lib/beskt/complete.functions";
+import { BesktStartDialog } from "@/components/beskt/BesktStartDialog";
+import { BesktPreviewDialog } from "@/components/beskt/BesktPreviewDialog";
+import {
+  BesktAssignmentsList,
+  BesktSecurityFunctionPanel,
+  purposeKey,
+} from "@/components/beskt/BesktModulePanels";
 
 function isDenied(error: unknown): boolean {
   const m = error instanceof Error ? error.message : String(error ?? "");
@@ -48,27 +51,36 @@ function isDenied(error: unknown): boolean {
 export function MethodSupportSection({
   employerId,
   employerSlug,
+  canManage = false,
 }: {
   readonly employerId: string;
   /** When given, an available method offers its real next step. */
   readonly employerSlug?: string;
+  /** The employer's owner or admin: may appoint the security function. */
+  readonly canManage?: boolean;
 }) {
   const { t, lang } = useT();
   const listMethods = useServerFn(listAssignableBesktMethods);
 
   const activationsFn = useServerFn(listBesktTestActivations);
-  const [starting, setStarting] = useState<BesktAssignableMethod | null>(null);
-  // Which offered versions this employer may use because of the owner's
-  // internal test activation rather than a review. A failed read of it never
-  // hides a method; it only withholds the test label and the start button.
+  const standingFn = useServerFn(getMyBesktStanding);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [startOpen, setStartOpen] = useState(false);
+  // Which offered versions this employer uses under the owner's recorded
+  // activation rather than a completed review -- said on the row, plainly.
   const activations = useQuery({
     queryKey: ["beskt", "test-activations", employerId],
     queryFn: () => activationsFn({ data: { employerId } }),
     retry: false,
   });
-  const underTest = new Set(
+  const underActivation = new Set(
     (activations.data ?? []).filter((a) => a.isLive).map((a) => a.methodVersionId),
   );
+  const standing = useQuery({
+    queryKey: ["beskt", "standing", employerId],
+    queryFn: () => standingFn({ data: { employerId } }),
+    retry: false,
+  });
 
   const methods = useQuery({
     queryKey: ["beskt", "assignable-methods", employerId],
@@ -162,34 +174,30 @@ export function MethodSupportSection({
             </p>
           </div>
         ) : (
-          <>
-            <ul className="space-y-3" data-testid="beskt-method-support-list">
+          <div className="rounded-lg border bg-background p-4" data-testid="beskt-module">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold" data-testid="beskt-module-name">
+                  BESKT
+                </h3>
+                <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                  {t("beskt.module.description")}
+                </p>
+              </div>
+            </div>
+            <ul className="mt-3 space-y-2" data-testid="beskt-method-support-list">
               {methods.data.map((m) => (
                 <li
                   key={m.methodVersionId}
-                  className="rounded-lg border bg-background p-4"
+                  className="rounded-md border p-3"
                   data-testid="beskt-method-row"
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      {underTest.has(m.methodVersionId) ? (
-                        <p
-                          className="mb-1 text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-200"
-                          data-testid="beskt-internal-test-label"
-                        >
-                          {t("beskt.internalTest.library.label")}
-                        </p>
-                      ) : null}
-                      <h3 className="text-sm font-medium">
-                        {(lang === "sv" ? m.nameSv : (m.nameEn ?? m.nameSv)) ?? m.packSlug}
-                      </h3>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {(lang === "sv" ? m.summarySv : (m.summaryEn ?? m.summarySv)) ??
-                          m.purposeSv ??
-                          ""}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="shrink-0 font-normal">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-medium">{t(purposeKey(m.mode))}</span>
+                    <span className="text-sm text-muted-foreground" data-testid="beskt-method-name">
+                      {(lang === "sv" ? m.nameSv : (m.nameEn ?? m.nameSv)) ?? m.packSlug}
+                    </span>
+                    <Badge variant="outline" className="font-normal">
                       {t(
                         m.validationLabel === "content_validated"
                           ? "beskt.library.validationLabel.content_validated"
@@ -197,7 +205,20 @@ export function MethodSupportSection({
                       )}
                     </Badge>
                   </div>
-                  <dl className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                  <p
+                    className="mt-1 text-xs text-muted-foreground"
+                    data-testid="beskt-method-status"
+                  >
+                    {underActivation.has(m.methodVersionId)
+                      ? t("beskt.module.statusActivated").replace(
+                          "{date}",
+                          new Date(m.grantExpiresOn).toLocaleDateString(
+                            lang === "sv" ? "sv-SE" : "en-GB",
+                          ),
+                        )
+                      : t("beskt.module.statusPilot")}
+                  </p>
+                  <dl className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
                     <div className="flex gap-1.5">
                       <dt>{t("beskt.library.version")}</dt>
                       <dd className="font-medium text-foreground">{m.versionNumber}</dd>
@@ -209,62 +230,53 @@ export function MethodSupportSection({
                       </dd>
                     </div>
                   </dl>
-                  {/* A preparation always belongs to one real application.
-                    Under the owner's internal test activation the row starts
-                    one through a dialog that makes the employer pick it;
-                    otherwise the control lives on the application's page. */}
-                  {underTest.has(m.methodVersionId) && employerSlug ? (
-                    <div className="mt-3" data-testid="beskt-internal-test-start">
-                      <p className="max-w-3xl text-xs leading-relaxed text-amber-900 dark:text-amber-200">
-                        {t("beskt.internalTest.library.notice")}
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="mt-2 min-h-[44px]"
-                        onClick={() => setStarting(m)}
-                        data-testid="beskt-start-test"
-                      >
-                        {t("beskt.internalTest.library.start")}
-                      </Button>
-                    </div>
-                  ) : (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {t("beskt.library.startHint")}
-                    </p>
-                  )}
                 </li>
               ))}
             </ul>
-            {/* The next step is the applications list, never a start button
-              here: a preparation always belongs to one real application. */}
-            <div
-              className="mt-4 rounded-lg border bg-background p-4"
-              data-testid="beskt-method-support-next"
-            >
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-                {t("beskt.library.nextSteps")}
-              </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-[44px]"
+                onClick={() => setPreviewOpen(true)}
+                data-testid="beskt-module-preview"
+              >
+                {t("beskt.module.preview")}
+              </Button>
               {employerSlug ? (
-                <Button asChild size="sm" className="mt-3 min-h-[44px]">
-                  <Link to="/employer/$employerSlug/applications" params={{ employerSlug }}>
-                    {t("beskt.library.nextAction")}
-                  </Link>
+                <Button
+                  type="button"
+                  className="min-h-[44px]"
+                  onClick={() => setStartOpen(true)}
+                  data-testid="beskt-module-start"
+                >
+                  {t("beskt.module.start")}
                 </Button>
               ) : null}
             </div>
-          </>
+            {employerSlug ? (
+              <BesktAssignmentsList employerId={employerId} employerSlug={employerSlug} />
+            ) : null}
+            <BesktSecurityFunctionPanel employerId={employerId} canManage={canManage} />
+          </div>
         )}
       </div>
-      {starting && employerSlug ? (
-        <BesktStartTestDialog
+      {previewOpen && methods.data ? (
+        <BesktPreviewDialog
           open
-          onOpenChange={(o) => {
-            if (!o) setStarting(null);
-          }}
+          onOpenChange={setPreviewOpen}
+          employerId={employerId}
+          methods={methods.data}
+        />
+      ) : null}
+      {startOpen && employerSlug && methods.data ? (
+        <BesktStartDialog
+          open
+          onOpenChange={setStartOpen}
           employerId={employerId}
           employerSlug={employerSlug}
-          method={starting}
+          methods={methods.data}
+          isSecurityOfficer={Boolean(standing.data?.isSecurityOfficer)}
         />
       ) : null}
     </section>

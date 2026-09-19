@@ -936,7 +936,9 @@ ck(
 
 ck(
   "P4l.4 with no case yet, the section points at Intervjuer with the application and the BESKT binding",
-  /to="\/employer\/\$employerSlug\/interview-intelligence\/new"[\s\S]*?search=\{\{ applicationId, jobId: undefined, beskt: true \}\}/.test(
+  // 20261130090000: an invitation-based assignment has no application, and
+  // the same link then carries the assignment instead -- never nothing.
+  /to="\/employer\/\$employerSlug\/interview-intelligence\/new"[\s\S]*?\{ applicationId, jobId: undefined, beskt: true \}[\s\S]*?besktAssignment: assignmentId/.test(
     caseLinkCode,
   ),
   "BESKT_PC_LINK_DEAD_END: a submitted preparation with no case must say where to create one",
@@ -1023,6 +1025,9 @@ ck(
           /\b((?:BCP|BESKT)_[A-Z_]+)\b/g,
         ),
         ...read("supabase/migrations/20261129090000_bcp_internal_test_activation.sql").matchAll(
+          /\b((?:BCP|BESKT)_[A-Z_]+)\b/g,
+        ),
+        ...read("supabase/migrations/20261130090000_bcp_beskt_complete.sql").matchAll(
           /\b((?:BCP|BESKT)_[A-Z_]+)\b/g,
         ),
       ].map((m) => m[1]),

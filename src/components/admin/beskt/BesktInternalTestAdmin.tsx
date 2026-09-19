@@ -23,6 +23,7 @@ import {
   revokeBesktTestActivation,
   setBesktContentRole,
   type BesktInstallProgress,
+  type BesktV01Method,
 } from "@/lib/beskt/internal-test.functions";
 
 const BUTTON =
@@ -40,7 +41,15 @@ function inDays(n: number): string {
 /* Install BESKT v0.1                                                  */
 /* ------------------------------------------------------------------ */
 
-export function BesktInstallV01Card({ surface }: { readonly surface: BesktSurface }) {
+export function BesktInstallV01Card({
+  surface,
+  method = "rekrytering",
+}: {
+  readonly surface: BesktSurface;
+  /** Which of the two v0.1 methods: recruitment support, or security vetting
+   *  (B, E, S, K and T with the three activation requirements). */
+  readonly method?: BesktV01Method;
+}) {
   const { t } = useT();
   const queryClient = useQueryClient();
   const installationFn = useServerFn(getBesktV01Installation);
@@ -49,8 +58,8 @@ export function BesktInstallV01Card({ surface }: { readonly surface: BesktSurfac
   const [progress, setProgress] = useState<BesktInstallProgress | null>(null);
 
   const installation = useQuery({
-    queryKey: ["admin", "beskt-v01-installation"],
-    queryFn: () => installationFn(),
+    queryKey: ["admin", "beskt-v01-installation", method],
+    queryFn: () => installationFn({ data: { method } }),
     retry: false,
   });
 
@@ -59,13 +68,18 @@ export function BesktInstallV01Card({ surface }: { readonly surface: BesktSurfac
       // Step 0 resumes: it reuses an existing method and draft, so an
       // interrupted or repeated install never creates a second one.
       let p: BesktInstallProgress = await stepFn({
-        data: { step: 0, methodVersionId: null, lawfulBasisReference: lawfulBasis },
+        data: { step: 0, methodVersionId: null, lawfulBasisReference: lawfulBasis, method },
       });
       let step = 1;
       setProgress(p);
       while (!p.finished) {
         p = await stepFn({
-          data: { step, methodVersionId: p.methodVersionId, lawfulBasisReference: lawfulBasis },
+          data: {
+            step,
+            methodVersionId: p.methodVersionId,
+            lawfulBasisReference: lawfulBasis,
+            method,
+          },
         });
         setProgress(p);
         step += 1;
@@ -85,14 +99,22 @@ export function BesktInstallV01Card({ surface }: { readonly surface: BesktSurfac
   return (
     <section
       className="mt-6 rounded-lg border border-border p-4"
-      data-testid="beskt-install-v01"
-      aria-labelledby="beskt-install-v01-h"
+      data-testid={method === "rekrytering" ? "beskt-install-v01" : "beskt-install-v01-sakerhet"}
+      aria-labelledby={`beskt-install-v01-h-${method}`}
     >
-      <h2 id="beskt-install-v01-h" className="text-base font-semibold text-foreground">
-        {t("beskt.internalTest.install.heading")}
+      <h2 id={`beskt-install-v01-h-${method}`} className="text-base font-semibold text-foreground">
+        {t(
+          method === "rekrytering"
+            ? "beskt.internalTest.install.heading"
+            : "beskt.internalTest.install.headingVetting",
+        )}
       </h2>
       <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-        {t("beskt.internalTest.install.lede")}
+        {t(
+          method === "rekrytering"
+            ? "beskt.internalTest.install.lede"
+            : "beskt.internalTest.install.ledeVetting",
+        )}
       </p>
 
       {existing ? (
@@ -117,12 +139,15 @@ export function BesktInstallV01Card({ surface }: { readonly surface: BesktSurfac
           }}
         >
           <div>
-            <label htmlFor="beskt-install-lawful" className="text-sm font-medium text-foreground">
+            <label
+              htmlFor={`beskt-install-lawful-${method}`}
+              className="text-sm font-medium text-foreground"
+            >
               {t("beskt.internalTest.install.lawfulBasis")}
               <span className="text-destructive"> *</span>
             </label>
             <textarea
-              id="beskt-install-lawful"
+              id={`beskt-install-lawful-${method}`}
               className={INPUT}
               rows={3}
               required

@@ -497,6 +497,20 @@ function OtherPosition({
                 label={t("beskt.conduct.entry.protectiveFactor")}
                 value={e.protectiveFactor}
               />
+              <OtherRow label={t("beskt.fakta.eventTiming")} value={e.eventTiming} />
+              <OtherRow label={t("beskt.fakta.consequence")} value={e.consequence} />
+              <OtherRow
+                label={t("beskt.fakta.supportingInformation")}
+                value={e.supportingInformation}
+              />
+              <OtherRow
+                label={t("beskt.fakta.contradictingInformation")}
+                value={e.contradictingInformation}
+              />
+              <OtherRow label={t("beskt.fakta.measuresTaken")} value={e.measuresTaken} />
+              <OtherRow label={t("beskt.fakta.roleLink")} value={e.roleLink} />
+              <OtherRow label={t("beskt.fakta.informationGap")} value={e.informationGap} />
+              <OtherRow label={t("beskt.fakta.candidateResponse")} value={e.candidateResponse} />
             </dl>
           </li>
         ))}

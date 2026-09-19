@@ -24,13 +24,28 @@ import { SOURCE, SOURCE_VERSION } from "@/lib/beskt/import/beskt-v0-1.content";
 import { buildPlan } from "@/lib/beskt/import/plan";
 
 export const BESKT_V01_SLUG = "beskt-rekryteringsstod";
+export type BesktV01Method = "rekrytering" | "sakerhet";
 const STEP_SIZE = 30;
+
+// Where a security vetting's attestation lives. A factual reference to the
+// runtime that records each employer's attestation per assignment (20261130),
+// not an attestation: nothing here states that any role is security-sensitive.
+const ATTESTATION_REFERENCE =
+  "Arbetsgivarens attest att befattningen är säkerhetskänslig registreras per säkerhetsprövningsuppdrag i CQrityjob, av arbetsgivarens utsedda säkerhetsfunktion (säkerhetsskyddslagen 3 kap.).";
 
 type Row = Record<string, unknown>;
 type Family = { fn: string; param: string; rows: Row[] };
 
-function families(lawfulBasisReference: string): Family[] {
-  const plan = buildPlan("rekrytering", { synthetic: false, lawfulBasisReference });
+function planFor(method: BesktV01Method, lawfulBasisReference?: string) {
+  return buildPlan(method, {
+    synthetic: false,
+    lawfulBasisReference,
+    attestationReference: ATTESTATION_REFERENCE,
+  });
+}
+
+function families(method: BesktV01Method, lawfulBasisReference: string): Family[] {
+  const plan = planFor(method, lawfulBasisReference);
   return [
     { fn: "beskt_author_exposure_profile", param: "_profile", rows: plan.profiles },
     { fn: "beskt_author_section", param: "_section", rows: plan.sections },
@@ -39,11 +54,15 @@ function families(lawfulBasisReference: string): Family[] {
     { fn: "beskt_author_prompt", param: "_prompt", rows: plan.prompts },
     { fn: "beskt_author_evidence_anchor", param: "_anchor", rows: plan.anchors },
     { fn: "beskt_author_observation_field", param: "_field", rows: plan.fields },
+    { fn: "beskt_author_activation_requirement", param: "_requirement", rows: plan.activation },
   ];
 }
 
-function flatten(lawfulBasisReference: string): Array<{ fn: string; param: string; row: Row }> {
-  return families(lawfulBasisReference).flatMap((f) =>
+function flatten(
+  method: BesktV01Method,
+  lawfulBasisReference: string,
+): Array<{ fn: string; param: string; row: Row }> {
+  return families(method, lawfulBasisReference).flatMap((f) =>
     f.rows.map((row) => ({ fn: f.fn, param: f.param, row })),
   );
 }
@@ -57,18 +76,22 @@ export interface BesktInstallProgress {
   readonly blocking: readonly string[];
 }
 
-/** Is v0.1 already installed? Readable by every governance reader. */
+const methodInput = z.enum(["rekrytering", "sakerhet"]).default("rekrytering");
+
+/** Is this v0.1 method already installed? Readable by every governance reader. */
 export const getBesktV01Installation = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
+  .validator((d: unknown) => z.object({ method: methodInput }).parse(d ?? {}))
   .handler(
     async ({
       context,
+      data,
     }): Promise<{ methodVersionId: string; status: string; contentHash: string | null } | null> => {
       const db = context.supabase;
       const pack = await db
         .from("scp_interview_packs")
         .select("id")
-        .eq("slug", BESKT_V01_SLUG)
+        .eq("slug", planFor(data.method).method.slug)
         .eq("pack_kind", "beskt_method")
         .maybeSingle();
       if (pack.error) throw new Error(pack.error.message);
@@ -99,6 +122,7 @@ export const installBesktV01Step = createServerFn({ method: "POST" })
         step: z.number().int().min(0),
         methodVersionId: z.string().uuid().nullable(),
         lawfulBasisReference: z.string().trim().min(20).max(2000),
+        method: methodInput,
       })
       .parse(d),
   )
@@ -109,12 +133,12 @@ export const installBesktV01Step = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       return out as T;
     };
-    const rows = flatten(data.lawfulBasisReference);
+    const rows = flatten(data.method, data.lawfulBasisReference);
 
     if (data.step === 0) {
       // Resumable: an install interrupted after the method, or after the
       // draft, picks up what exists instead of creating a second one.
-      const plan = buildPlan("rekrytering", { synthetic: false });
+      const plan = planFor(data.method);
       const existingPack = await db
         .from("scp_interview_packs")
         .select("id")

@@ -1029,29 +1029,29 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
   );
 
   // ---- 0.3 · the employer CHOOSES the method ----------------------------
+  // Since 20261130 the start is one dialog for both entrances: the employer
+  // chooses the PURPOSE, and the method is the version of that purpose.
+  const startDialog = read(join(ROOT, "src/components/beskt/BesktStartDialog.tsx"));
   check(
-    !/methods\.data\?\.\[0\]/.test(employerPanel),
+    !/methods\.data\?\.\[0\]/.test(employerPanel) && !/methods\[0\]/.test(startDialog),
     "BCP-METHOD-CHOICE: no silent first-method selection survives",
   );
   check(
-    /const method =\s*\(methods\.data \?\? \[\]\)\.find\(\(m\) => m\.methodVersionId === methodVersionId\)/.test(
-      employerPanel,
-    ),
+    /const method = methods\.find\(\(m\) => m\.mode === mode\) \?\? null;/.test(startDialog) &&
+      /data-testid=\{`beskt-purpose-\$\{m\}`\}/.test(startDialog),
     "BCP-METHOD-CHOICE: the method in use is the one the employer selected",
   );
-  // Bounded to chooseMethod's OWN body. An unbounded [\s\S]*? ran past the end
-  // of the function and matched the setProfileId("") in the cancel handler
-  // instead, so a planted control that deleted the real one still passed.
-  const chooseMethodBody =
-    /const chooseMethod = \(id: string\) => \{([\s\S]*?)\n {2}\};/.exec(employerPanel)?.[1] ?? "";
+  // Bounded to the mode effect's OWN body, for the reason the old check gave:
+  // an unbounded match ran past it and found a reset somewhere else.
+  const modeEffect =
+    /useEffect\(\(\) => \{([\s\S]*?)\n {2}\}, \[mode\]\);/.exec(startDialog)?.[1] ?? "";
   check(
-    chooseMethodBody.length > 0 && /setProfileId\(""\);/.test(chooseMethodBody),
+    modeEffect.length > 0 && /setProfileId\(""\);/.test(modeEffect),
     "BCP-METHOD-CHOICE: changing the method clears the profile, which belongs to the old one",
   );
   check(
-    /disabled=\{!methodVersionId \|\| !profileId \|\| startMutation\.isPending\}/.test(
-      employerPanel,
-    ),
+    /disabled=\{!ready \|\| start\.isPending\}/.test(startDialog) &&
+      /Boolean\(method\) &&\s*Boolean\(effectiveProfile\)/.test(startDialog),
     "BCP-METHOD-CHOICE: and nothing can be started until both are chosen",
   );
 
@@ -1123,10 +1123,13 @@ if (existsSync(PANEL) && existsSync(EMPLOYER_PANEL) && existsSync(CLIENT)) {
   );
   const employerHandlers =
     employerPanel.match(/onError:\s*\(e: unknown\) =>[\s\S]*?,\n {2}\}\);/g) ?? [];
+  const dialogForStart = read(join(ROOT, "src/components/beskt/BesktStartDialog.tsx"));
   check(
-    employerHandlers.length >= 2 &&
+    employerHandlers.length >= 1 &&
       employerHandlers.every((h) => /besktErrorKey\(e\)/.test(h)) &&
-      !/set(Start|Cancel)Error\([^)]*e\.message/.test(employerPanel),
+      !/set(Start|Cancel)Error\([^)]*e\.message/.test(employerPanel) &&
+      /\{t\(besktErrorKey\(start\.error\)\)\}/.test(dialogForStart) &&
+      !/start\.error\?*\.message/.test(dialogForStart),
     "BCP-SAFE-ERRORS: and so does the employer screen, for start and for cancel",
   );
   check(

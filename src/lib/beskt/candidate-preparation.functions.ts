@@ -210,8 +210,9 @@ export interface BesktSubmittedAnswer {
 
 export interface BesktInterviewTopic {
   readonly itemKey: string;
-  /** "omitted" or "discuss_orally" — the candidate's own choice, never a judgement. */
-  readonly reason: Extract<BesktResponseState, "omitted" | "discuss_orally">;
+  /** The candidate's own choice, or the governed rule their own answer fired
+   *  ("candidate_disclosed") -- never a judgement. */
+  readonly reason: "omitted" | "discuss_orally" | "candidate_disclosed";
   readonly wordingSv: string | null;
   readonly wordingEn: string | null;
   readonly purposeSv: string | null;
@@ -220,7 +221,7 @@ export interface BesktInterviewTopic {
 
 export interface BesktEmployerReadback {
   readonly assignmentId: string;
-  readonly applicationId: string;
+  readonly applicationId: string | null;
   readonly lifecycleState: BesktLifecycleState;
   readonly assignedAt: string;
   readonly dueAt: string | null;
@@ -277,7 +278,7 @@ export const getBesktEmployerReadback = createServerFn({ method: "GET" })
     const topics = d.topics_for_interview;
     return {
       assignmentId: d.assignment_id as string,
-      applicationId: d.application_id as string,
+      applicationId: (d.application_id as string | null) ?? null,
       lifecycleState: d.lifecycle_state as BesktLifecycleState,
       assignedAt: d.assigned_at as string,
       dueAt: (d.due_at as string | null) ?? null,
@@ -300,7 +301,7 @@ export const getBesktEmployerReadback = createServerFn({ method: "GET" })
           ? null
           : (topics as Array<Record<string, unknown>>).map((t) => ({
               itemKey: t.item_key as string,
-              reason: t.reason as "omitted" | "discuss_orally",
+              reason: t.reason as "omitted" | "discuss_orally" | "candidate_disclosed",
               wordingSv: (t.wording_sv as string | null) ?? null,
               wordingEn: (t.wording_en as string | null) ?? null,
               purposeSv: (t.purpose_sv as string | null) ?? null,
@@ -336,7 +337,9 @@ export const cancelBesktPreparation = createServerFn({ method: "POST" })
 
 export interface BesktCandidateAssignmentRow {
   readonly assignmentId: string;
-  readonly applicationId: string;
+  readonly applicationId: string | null;
+  readonly mode: "recruitment_support" | "security_vetting_support";
+  readonly roleTitle: string | null;
   readonly jobTitleSv: string | null;
   readonly jobTitleEn: string | null;
   readonly employerName: string | null;
@@ -355,7 +358,9 @@ export const listMyBesktPreparations = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return ((rows ?? []) as Array<Record<string, unknown>>).map((r) => ({
       assignmentId: r.assignment_id as string,
-      applicationId: r.application_id as string,
+      applicationId: (r.application_id as string | null) ?? null,
+      mode: (r.mode as BesktCandidateAssignmentRow["mode"] | undefined) ?? "recruitment_support",
+      roleTitle: (r.role_title as string | null) ?? null,
       jobTitleSv: (r.job_title_sv as string | null) ?? null,
       jobTitleEn: (r.job_title_en as string | null) ?? null,
       employerName: (r.employer_name as string | null) ?? null,
@@ -426,6 +431,11 @@ export interface BesktNoticeForLocale {
    *  schema that ever started producing a score would surface here. */
   readonly producesScore: boolean;
   readonly methodContentHash: string;
+  /** 20261130090000 notices only: the facts the candidate is owed as data. */
+  readonly employerName: string | null;
+  readonly roleTitle: string | null;
+  readonly contactStatement: string | null;
+  readonly lawfulBasisStatement: string | null;
 }
 
 export interface BesktNotice {
@@ -437,8 +447,14 @@ export interface BesktNotice {
 
 export interface BesktCandidatePreparation {
   readonly assignmentId: string;
-  readonly applicationId: string;
+  readonly applicationId: string | null;
   readonly lifecycleState: BesktLifecycleState;
+  readonly mode: "recruitment_support" | "security_vetting_support";
+  readonly roleTitle: string | null;
+  readonly roleTitleEn: string | null;
+  readonly employerName: string | null;
+  readonly contactStatement: string | null;
+  readonly entrance: "application" | "invitation";
   readonly availableFrom: string;
   readonly dueAt: string | null;
   readonly submittedAt: string | null;
@@ -516,12 +532,22 @@ export const getMyBesktPreparation = createServerFn({ method: "GET" })
         decisionMaker: desc.decision_maker as string,
         producesScore: Boolean(desc.produces_score),
         methodContentHash: desc.method_content_hash as string,
+        employerName: (desc.employer_name as string | null) ?? null,
+        roleTitle: (desc.role_title as string | null) ?? null,
+        contactStatement: (desc.contact_statement as string | null) ?? null,
+        lawfulBasisStatement: (desc.lawful_basis_statement as string | null) ?? null,
       };
     }
     return {
       assignmentId: d.assignment_id as string,
-      applicationId: d.application_id as string,
+      applicationId: (d.application_id as string | null) ?? null,
       lifecycleState: d.lifecycle_state as BesktLifecycleState,
+      mode: (d.mode as BesktCandidatePreparation["mode"] | undefined) ?? "recruitment_support",
+      roleTitle: (d.role_title as string | null) ?? null,
+      roleTitleEn: (d.role_title_en as string | null) ?? null,
+      employerName: (d.employer_name as string | null) ?? null,
+      contactStatement: (d.contact_statement as string | null) ?? null,
+      entrance: (d.entrance as "application" | "invitation" | undefined) ?? "application",
       availableFrom: d.available_from as string,
       dueAt: (d.due_at as string | null) ?? null,
       submittedAt: (d.submitted_at as string | null) ?? null,
