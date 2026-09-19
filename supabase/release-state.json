@@ -8,7 +8,10 @@
   "frontier": [
     {
       "file": "20261203090000_scp_interview_case_vetting_read.sql", 
-      "hostedState": "pending", 
+      "hostedState": "applied",
+      "hostedVersion": "20261203090000",
+      "hostedName": "scp_interview_case_vetting_read",
+      "evidenceSource": "Read-only verification 2026-09-19 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt after PR #274 merged as 1631d5d3f481520e8f3a85f8220072959eff6855. Both canonical migration versions/names are present in the 305-row hosted ledger. All eight function bodies introduced/replaced by the two migrations are byte-identical to their merged SQL source; one overload each, pinned search_path=public, no anon execute. All four new tables have RLS enabled, no authenticated INSERT/UPDATE/DELETE and no anon SELECT; internal helpers are not executable by authenticated. The partial unique start index and the Vaktare/general to vaktare-se content link exist. scp_interview_cases has exactly one policy, scp_interview_cases_read USING scp_iv_case_row_visible(id, employer_id); the transcript confirmation body matches the corrected source. No hosted writes or migrations were performed. There are zero live security_vetting_support case links in production, so a non-vacuous existing-case role probe is unavailable; role behaviour is covered by the merged isolated DB tests, not claimed as production-tested.", 
       "introduces": [
         {
           "kind": "function", 
@@ -21,7 +24,10 @@
     }, 
     {
       "file": "20261202090000_scp_interview_starts.sql", 
-      "hostedState": "pending", 
+      "hostedState": "applied",
+      "hostedVersion": "20261202090000",
+      "hostedName": "scp_interview_starts",
+      "evidenceSource": "Read-only verification 2026-09-19 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt after PR #274 merged as 1631d5d3f481520e8f3a85f8220072959eff6855. Both canonical migration versions/names are present in the 305-row hosted ledger. All eight function bodies introduced/replaced by the two migrations are byte-identical to their merged SQL source; one overload each, pinned search_path=public, no anon execute. All four new tables have RLS enabled, no authenticated INSERT/UPDATE/DELETE and no anon SELECT; internal helpers are not executable by authenticated. The partial unique start index and the Vaktare/general to vaktare-se content link exist. scp_interview_cases has exactly one policy, scp_interview_cases_read USING scp_iv_case_row_visible(id, employer_id); the transcript confirmation body matches the corrected source. No hosted writes or migrations were performed. There are zero live security_vetting_support case links in production, so a non-vacuous existing-case role probe is unavailable; role behaviour is covered by the merged isolated DB tests, not claimed as production-tested.", 
       "introduces": [
         {
           "kind": "table", 
