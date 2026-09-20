@@ -1,7 +1,9 @@
 # HAYAT in Security Passport — what was built, and what was deliberately not
 
 Implements `HAYAT_verifieringsmodell_v0.1` (18 September 2026) inside the existing
-`/passport/credentials/new` form. No new module, no new route, no migration.
+`/passport/credentials/new` form. No new module or route. Document reading has no new
+schema dependency; saved assessments require migration `20261204090000` to be applied
+and verified before this application branch is released.
 
 **"Document read" and "credential verified" are two facts and two boxes on the page.**
 Reading a document never grants a verification status — there is no code path by which
@@ -113,24 +115,26 @@ complete and proven against synthetic issuers whose keys are generated inside th
 run. The server function never accepts a registry from a caller; adding a trust anchor
 is a reviewed code change.
 
-### In this PR a decision is shown, not recorded (recording is the next two PRs)
+### Saved assessments (this branch; needs migration 20261204090000 applied first)
 
-`assessCredentialEvidence` returns `recorded: false` and writes nothing.
-`assertion_level` is untouched: the only writer of `verified` is still
-`sp_verifier_decide`, and `issuer_confirmation` is still refused for every request kind
-(`20261030090000`). Persisting a HAYAT decision needs, in order:
+| Step | What happens |
+| --- | --- |
+| Save | Claim first, then the private upload — unchanged. **Then**, only if the file carried a signed credential or the holder gave a link, `assessSavedCredential` runs. Its failure never blocks saving. |
+| Check | The server reads the claim and its evidence through the **holder's own session** (another holder's claim id finds nothing), takes the claim's fingerprint **before** checking, and for a file extracts the signed credential itself from the stored bytes. The browser is never asked what a file contains. |
+| Record | One service-only writer (`hayat-assessment.server.ts` → `sp_hayat_record_assessment`). Bound to: the claim, a fingerprint of the five assessed fields, the exact document (sha256) or the holder's link, the adapter, the rule version and the check time. An outage, or a result that checked nothing, is shown and **never stored**. |
+| Reopen | The credential page shows the saved check: **current**, or **history** with the reason — corrected, document replaced/withdrawn, or aged out — plus scope limits, binding level, date and rule version. |
+| Re-check | "Kontrollera igen" re-runs the same source. A correction creates a successor claim (that is how Passport edits), so a corrected credential starts unchecked **by construction** and the old check becomes history. |
 
-1. **Schema PR (alone, per the schema-first gate):** an evidence/check/decision record
-   (or an extension of `sp_evidence_extractions` / `sp_verification_decisions`), a
-   service-only writer, a new verification method, and the matching change to the
-   trust-source containment and public payload wording. Rollback file + suite.
-2. Hosted apply through the tracked mechanism; evidence recorded in
-   `supabase/release-state.json`.
-3. **App PR:** call the writer; show "Verifierad av HAYAT" in Passport with last-checked
-   date and scope; scheduled re-check using `ageDecision`.
-4. Onboard the first issuer (key over a trusted channel, scope, status host, terms).
+It does **not** move `assertion_level`, does not appear in any share, and says so on the
+card. Promoting a machine result into what a *recipient* sees is a separate trust-policy
+change (the `issuer_confirmation` containment of `20261030090000`) and is not made here.
 
-Steps 1–3 are an owner decision about the trust model, not a side effect of a form.
+**Trust-policy change to review:** a *second named service-role exception* in the Passport
+domain. The recipient boundary has no identity for RLS to key on; this writer has an
+identity that must not be able to write — a holder can call any `authenticated`-executable
+function through PostgREST. `passport-separation:check` pins it as tightly as the first:
+one file, exactly one rpc, no table or storage access, holder id from the verified session,
+one permitted importer.
 
 ## 4. Security properties, and where each is pinned
 
@@ -181,16 +185,23 @@ fails identically on untouched `origin/main` (2df1a39, reproduced in a clean wor
 page says "Expired · Documented" where the test expects "PREVIOUSLY VERIFIED". It is not in
 CI and is not caused by this change.
 
-## 6. Rollback
+## 6. Release and rollback
 
-No database change, no stored data, no production configuration.
+Release order: merge the reading PR and schema PR; apply the exact merged migration
+`20261204090000_sp_hayat_assessments.sql` through the established production process;
+verify hosted functions, privileges and behavior; record genuine hosted evidence; then
+release this assessment application PR after its schema-first gate and required CI pass.
+Opening or merging the schema PR alone does not apply the migration.
 
-1. Revert the PR (one merge commit). The form returns to its previous behaviour; the
-   upload path was never modified.
-2. Nothing to clean up: no rows, no bucket objects, no environment variables. The
-   `/hayat-ocr/` assets disappear with the next build.
-3. Faster switch without a revert: remove the `onAssess` prop from the two routes to
-   disable server assessment; the reading has no server dependency at all.
+For an application regression, revert the assessment application change and deploy the
+previous working application. Leave the additive database schema in place unless a
+separate database rollback is necessary and approved. Reading can continue without
+assessment persistence using the independent reading release.
+
+The schema rollback file removes assessment objects and can remove saved assessment
+history. Inspect it and preserve required data before using it; never describe that
+rollback as having no stored data to clean up. Remove all application callers before
+removing their database functions. Do not roll back unrelated migrations.
 
 ## 7. Owner test script — `/passport/credentials/new`
 

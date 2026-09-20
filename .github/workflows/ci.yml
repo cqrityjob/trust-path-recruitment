@@ -1680,6 +1680,11 @@ jobs:
       - name: Three-market browser suite (desktop and 375px)
         run: bun run e2e:three-market
 
+      - name: HAYAT document reading and saved assessment browser suite
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e e2e/passport-hayat-reading.spec.ts --project=chromium
+
       - name: Server log
         if: failure()
         run: cat /tmp/dev-server.log

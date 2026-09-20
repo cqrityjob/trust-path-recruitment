@@ -12,6 +12,7 @@ import {
 } from "@/lib/security-passport/international.functions";
 import {
   assessCredentialEvidence,
+  assessSavedCredential,
   getHayatAvailability,
 } from "@/lib/security-passport/hayat/hayat.functions";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
@@ -33,6 +34,7 @@ function NewCredentialRoute() {
   const readDraft = useServerFn(readApprovedCredentialDraft);
   const assess = useServerFn(assessCredentialEvidence);
   const hayatAvailability = useServerFn(getHayatAvailability);
+  const assessSaved = useServerFn(assessSavedCredential);
   const [draft, setDraft] = useState<InternationalCredentialInput | undefined>();
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const [failed, setFailed] = useState(false);
@@ -79,6 +81,7 @@ function NewCredentialRoute() {
           onUpload={(claimId, file) => upload({ data: { ...file, claimId, periodId: null } })}
           onAssess={(data) => assess({ data })}
           onLoadAvailability={hayatAvailability}
+          onAssessSaved={(data) => assessSaved({ data })}
         />
       )}
     </div>
