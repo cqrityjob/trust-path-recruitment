@@ -2344,7 +2344,7 @@ const sv = {
   "hayat.verify.reason.evidence_too_old":
     "Den tidigare kontrollen är för gammal. Gör en ny kontroll.",
   "hayat.verify.reason.ok":
-    "Signatur, utfärdare, innehavarkoppling, giltighet och status kontrollerades utan anmärkning.",
+    "Utfärdare, merittyp, innehavarkoppling, giltighet och status kontrollerades mot källan utan anmärkning.",
   "hayat.verify.reason.status_not_offered_accepted_by_policy":
     "Utfärdaren publicerar ingen återkallelsestatus.",
   "hayat.verify.reason.not_evaluated": "Kontrollen kunde inte slutföras.",
@@ -4399,7 +4399,7 @@ const en: Record<PassportCopyKey, string> = {
     "The issuer's status source did not answer. That says nothing about the credential. Try again later.",
   "hayat.verify.reason.evidence_too_old": "The earlier check is too old. Run a new check.",
   "hayat.verify.reason.ok":
-    "Signature, issuer, holder binding, validity and status were checked with no remarks.",
+    "Issuer, credential type, holder binding, validity and status were checked against the source with no remarks.",
   "hayat.verify.reason.status_not_offered_accepted_by_policy":
     "The issuer publishes no revocation status.",
   "hayat.verify.reason.not_evaluated": "The check could not be completed.",

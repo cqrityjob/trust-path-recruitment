@@ -1184,7 +1184,11 @@ async function main(): Promise<void> {
     );
   }
   const boundary = code("src/lib/security-passport/hayat/hayat.functions.ts");
-  ok(/\.strict\(\)/.test(boundary), "9.7 the server input refuses unknown keys");
+  const schemas = (boundary.match(/z\s*\.object\(/g) ?? []).length;
+  ok(
+    schemas > 0 && schemas === (boundary.match(/\.strict\(\)/g) ?? []).length,
+    "9.7 EVERY server input schema refuses unknown keys",
+  );
   ok(
     /requireSupabaseAuth/.test(boundary),
     "9.8 the server function requires an authenticated account",

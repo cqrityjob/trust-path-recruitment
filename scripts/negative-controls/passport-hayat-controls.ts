@@ -88,10 +88,10 @@ const MUTATIONS: readonly Mutation[] = [
     id: "HAYAT-NC-CLIENT-SUPPLIED-RESULT",
     defect: "the server input stops refusing unknown keys, so a client can start sending a result",
     file: BOUNDARY,
-    find: "  .strict();",
-    replace: "  .passthrough();",
+    find: "  .strict()\n  .refine(",
+    replace: "  .passthrough()\n  .refine(",
     guard: GUARD,
-    expect: "9.7 the server input refuses unknown keys",
+    expect: "9.7 EVERY server input schema refuses unknown keys",
   },
 ];
 
