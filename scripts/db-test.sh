@@ -163,12 +163,19 @@ psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
+    # 20261204090000 (HAYAT assessments) is the newest Passport migration and
+    # stands down FIRST: its triggers sit on sp_claims and sp_evidence, and every
+    # rollback below must run against a database that no longer carries them.
+    psql_q -d "$TEST_DB" -f "supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql" >/dev/null
+    hayat_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.sp_hayat_assessments') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'sp\_hayat\_%') + (SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'sp\_hayat\_%')")"
+    [ "$hayat_left" = "0" ] || { echo "FAIL: 20261204090000 rollback left $hayat_left HAYAT object(s) behind"; exit 1; }
+    echo "    ok  HAYAT assessments rollback stood down: no table, function or trigger left"
     # 20261126090000 (scoped + document-issuer definitions, Dubai roles) is the
     # newest and rolls back first. It must STAND DOWN too: the view withholds
     # scoped definitions again, the RPC knows no scope key, the Dubai rows go.
@@ -218,6 +225,10 @@ for passport_round in before after; do
     du_roles="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM public.sp_credential_organisation_roles r JOIN public.sp_credential_types t ON t.code = r.credential_code WHERE t.market_pack_code = 'AE-DU'")"
     [ "$du_roles" = "104" ] || { echo "FAIL: 20261126090000 reapply seeded $du_roles Dubai organisation-role rows, expected 104"; exit 1; }
     echo "    ok  catalogue-completeness migration reapplied: document-issuer clause, scope key, 104 Dubai role rows"
+    psql_q -d "$TEST_DB" -f "supabase/migrations/20261204090000_sp_hayat_assessments.sql" >/dev/null
+    hayat_back="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'sp\_hayat\_%') || '/' || has_function_privilege('service_role','public.sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)','EXECUTE')::int || has_function_privilege('authenticated','public.sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)','EXECUTE')::int || has_function_privilege('anon','public.sp_hayat_current_assessment(uuid)','EXECUTE')::int")"
+    [ "$hayat_back" = "3/100" ] || { echo "FAIL: 20261204090000 reapply: expected 3 triggers and the writer granted to service_role only, got $hayat_back"; exit 1; }
+    echo "    ok  HAYAT assessments reapplied: 3 triggers, writer executable by service_role only, reader closed to anon"
   fi
 done
 
@@ -5585,6 +5596,10 @@ TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
+# 20261204090000 (HAYAT assessments) before everything: it is the newest unit and
+# its triggers sit on sp_claims and sp_evidence. This database is discarded at
+# the end of the block, so it is not reapplied here.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql >/dev/null
 # 20261126090000 first: its catalogue view reads sp_credential_organisation_roles.
 for passport_migration in 20261126090000_sp_catalogue_scope_and_document_issuer 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
   psql_q -d "$TEST_DB" -f "supabase/rollback/${passport_migration}_rollback.sql" >/dev/null

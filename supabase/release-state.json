@@ -7,6 +7,32 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261204090000_sp_hayat_assessments.sql", 
+      "hostedState": "pending",
+      "hostedName": "sp_hayat_assessments",
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "sp_hayat_assessments"
+        }, 
+        {
+          "kind": "function", 
+          "object": "sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "sp_hayat_current_assessment(uuid)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "sp_hayat_claim_fingerprint(uuid)"
+        }
+      ], 
+      "note": "HAYAT assessments: server-produced check results for a Passport credential, kept apart from sp_claims.assertion_level and from human decisions. Bound to the claim, a fingerprint of the five assessed fields, the exact evidence file (sha256) or the holder's own badge link, the adapter, the rule version and the check time. The ONLY writer is sp_hayat_record_assessment, EXECUTE granted to service_role alone, and it re-checks holder, evidence and that the assessed fields are still the claim's fields. Changing a relevant field or withdrawing the assessed document invalidates the assessment by trigger; sp_hayat_current_assessment re-derives currency at read time. It does NOT move assertion_level, is NOT in any disclosure payload, and stores nothing fetched from a source. 0 personal rows changed, no backfill. Schema-only release: the application code that calls these objects is a separate PR and must not merge until this entry is recorded applied with evidence. Rollback refuses once any assessment exists.",
+      "verify": "SELECT to_regclass('public.sp_hayat_assessments') IS NOT NULL; -- expect t. SELECT relrowsecurity FROM pg_class WHERE oid='public.sp_hayat_assessments'::regclass; -- expect t. SELECT has_function_privilege('service_role','public.sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)','EXECUTE'), has_function_privilege('authenticated','public.sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)','EXECUTE'), has_function_privilege('anon','public.sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)','EXECUTE'); -- expect t,f,f (the hosted default privileges grant anon EXECUTE on new functions; the explicit REVOKE must have landed). SELECT has_function_privilege('anon','public.sp_hayat_current_assessment(uuid)','EXECUTE'), has_function_privilege('anon','public.sp_hayat_claim_fingerprint(uuid)','EXECUTE'), has_function_privilege('anon','public.sp_hayat_fields_fingerprint(public.sp_claims)','EXECUTE'); -- expect f,f,f. SELECT has_table_privilege('anon','public.sp_hayat_assessments','SELECT'), has_table_privilege('authenticated','public.sp_hayat_assessments','INSERT'), has_table_privilege('authenticated','public.sp_hayat_assessments','TRUNCATE'); -- expect f,f,f. SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'sp\\_hayat\\_%'; -- expect 3. SELECT count(*) FROM public.sp_hayat_assessments; -- expect 0.",
+      "rollback": "supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql"
+    }, 
+    {
       "file": "20261203090000_scp_interview_case_vetting_read.sql", 
       "hostedState": "applied",
       "hostedVersion": "20261203090000",
