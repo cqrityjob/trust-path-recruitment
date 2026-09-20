@@ -59,8 +59,13 @@ permission to fetch anyone's.
 > `api.credly.com/v1/obi/v2/badge_assertions/<id>` when the badge's earner supplies the
 > link, (b) record our own verification result, and (c) re-check it periodically.
 
-Nothing else blocks the ASIS path. With that permission: set `enabled: true` and
-`permission: "<reference>"`, merge, and CPP/PSP/PCI/APP verification works end to end.
+Permission is an external prerequisite, not proof that the live integration works.
+Before activation, obtain an authorized test badge and validate the actual endpoint,
+recipient hash/salt handling, issuer and template identifiers, expiry and revocation
+semantics, and the scope of permitted result storage and re-checks. Confirm deployment
+of the assessment persistence prerequisites if saved results are part of the release.
+Only after those checks pass should `enabled: true` and a real permission reference be
+committed. Until then, end-to-end live CPP/PSP/PCI/APP verification remains unproven.
 
 ## 4. Ready-to-send requests (owner sends; nothing has been sent)
 
