@@ -585,3 +585,57 @@ test("reopen: an earlier positive check is shown as HISTORY, with the reason, an
   await shot(page, "reopened-history-sv", "[data-hayat-saved]");
   assertNoRefusals(refusals);
 });
+
+// ── The timeout path ──────────────────────────────────────────────────────
+//
+// Until this test existed, the reader's cancellation was only ever checked by
+// reading its source (passport-hayat:check 9.18). Nothing PROVED that a reading
+// which runs out of time actually gives up, keeps the holder's work, offers a
+// way forward, and -- the part that matters -- cannot come back later and
+// overwrite the file the holder has since chosen instead.
+//
+// The budget is held against the wall clock, so the test costs about 95 s. That
+// is the price of proving it rather than asserting it.
+test("a timed-out reading keeps the form, offers a retry, and its late result never lands", async ({
+  page,
+}) => {
+  test.setTimeout(400_000);
+  const { refusals } = await mount(page, "sv");
+
+  // The holder's own value must survive all of this.
+  await identifier(page).fill("MITT-EGNA-NUMMER");
+
+  // Hold the OCR language data past the 60 s budget: a deterministic cold start
+  // that runs out of time, exactly as a very slow first use would.
+  let held = true;
+  await page.route("**/hayat-ocr/lang/**", async (route) => {
+    if (held) await new Promise((r) => setTimeout(r, 70_000));
+    await route.continue();
+  });
+
+  await choose(page, "photo.jpg", "image/jpeg", await fixtures.jpeg(ENGLISH_CPP));
+  await expect(panel(page, "failed")).toBeVisible({ timeout: 120_000 });
+  await expect(page.locator("[data-hayat-failure]")).toHaveAttribute(
+    "data-hayat-failure",
+    "timeout",
+  );
+  await expect(panel(page, "failed")).toContainText("Dina ifyllda uppgifter är kvar.");
+  await expect(
+    panel(page, "failed").getByRole("button", { name: "Läs dokumentet igen" }),
+  ).toBeVisible();
+  await expect(identifier(page)).toHaveValue("MITT-EGNA-NUMMER");
+
+  // A new file is chosen. The abandoned reading is now free to finish.
+  held = false;
+  await choose(page, "certificate.pdf", "application/pdf", await fixtures.textPdf(ENGLISH_CPP));
+  await expect(panel(page, "read")).toBeVisible({ timeout: 120_000 });
+  await expect(dates(page).nth(0)).toHaveValue("2024-03-12");
+
+  // Ample time for the abandoned engine to load and try to write.
+  await page.waitForTimeout(25_000);
+  await expect(identifier(page)).toHaveValue("MITT-EGNA-NUMMER");
+  await expect(dates(page).nth(0)).toHaveValue("2024-03-12");
+  await expect(dates(page).nth(1)).toHaveValue("2027-03-31");
+  await expect(page.locator("[data-hayat-ocr]")).toHaveCount(0);
+  assertNoRefusals(refusals);
+});

@@ -117,7 +117,11 @@ export interface HayatDecision {
 
 export type ScopeLimit =
   | "revocation_not_published" // the issuer offers no status source; policy accepts that
-  | "credential_number_not_published" // the source carries no certificate number to match
+  // The check compared no certificate number. Deliberately a statement about
+  // what WE did, not about what the source publishes: an issuer may well put a
+  // number in the assertion's evidence, and saying otherwise would be a claim
+  // we have not verified for every issuer.
+  | "credential_number_not_published"
   | "issue_date_not_compared"; // the source dates the badge, not the certification
 
 export const HAYAT_RULE_VERSION = "hayat-rules/2";
