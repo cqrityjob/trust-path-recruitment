@@ -1,7 +1,9 @@
 # HAYAT in Security Passport — what was built, and what was deliberately not
 
 Implements `HAYAT_verifieringsmodell_v0.1` (18 September 2026) inside the existing
-`/passport/credentials/new` form. No new module, no new route, no migration.
+`/passport/credentials/new` form. No new module or route. Document reading has no new
+schema dependency; saved assessments require migration `20261204090000` to be applied
+and verified before this application branch is released.
 
 **"Document read" and "credential verified" are two facts and two boxes on the page.**
 Reading a document never grants a verification status — there is no code path by which
@@ -183,16 +185,23 @@ fails identically on untouched `origin/main` (2df1a39, reproduced in a clean wor
 page says "Expired · Documented" where the test expects "PREVIOUSLY VERIFIED". It is not in
 CI and is not caused by this change.
 
-## 6. Rollback
+## 6. Release and rollback
 
-No database change, no stored data, no production configuration.
+Release order: merge the reading PR and schema PR; apply the exact merged migration
+`20261204090000_sp_hayat_assessments.sql` through the established production process;
+verify hosted functions, privileges and behavior; record genuine hosted evidence; then
+release this assessment application PR after its schema-first gate and required CI pass.
+Opening or merging the schema PR alone does not apply the migration.
 
-1. Revert the PR (one merge commit). The form returns to its previous behaviour; the
-   upload path was never modified.
-2. Nothing to clean up: no rows, no bucket objects, no environment variables. The
-   `/hayat-ocr/` assets disappear with the next build.
-3. Faster switch without a revert: remove the `onAssess` prop from the two routes to
-   disable server assessment; the reading has no server dependency at all.
+For an application regression, revert the assessment application change and deploy the
+previous working application. Leave the additive database schema in place unless a
+separate database rollback is necessary and approved. Reading can continue without
+assessment persistence using the independent reading release.
+
+The schema rollback file removes assessment objects and can remove saved assessment
+history. Inspect it and preserve required data before using it; never describe that
+rollback as having no stored data to clean up. Remove all application callers before
+removing their database functions. Do not roll back unrelated migrations.
 
 ## 7. Owner test script — `/passport/credentials/new`
 
