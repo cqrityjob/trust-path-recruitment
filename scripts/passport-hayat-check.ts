@@ -91,7 +91,7 @@ const CONTEXT: ReadingContext = {
   selected: {
     code: "INTL_ASIS_CPP",
     names: ["Certified Protection Professional (CPP)", "CPP"],
-    issuerNames: ["ASIS International", "ASIS"],
+    issuerNames: ["ASIS International", "American Society for Industrial Security"],
     issuerStatedOnDocument: false,
   },
   others: [
@@ -107,7 +107,12 @@ const CONTEXT: ReadingContext = {
       label: "Certified Information Systems Security Professional (CISSP)",
       names: ["Certified Information Systems Security Professional (CISSP)", "CISSP"],
       issuerLabel: "ISC2",
-      issuerNames: ["ISC2"],
+      // governed name first, then approved variations -- matching only
+      issuerNames: [
+        "ISC2",
+        "(ISC)²",
+        "International Information System Security Certification Consortium",
+      ],
     },
   ],
   accountName: "Test Holder Synthetic",
@@ -352,6 +357,27 @@ group("3 · Issuer and credential type are compared, never changed");
   ok(
     variant.credentialType.state === "match",
     "3.7 the name matches without its bracketed abbreviation",
+  );
+}
+{
+  // Approved issuer-name variations: recognised, and never shown.
+  const historical = parseDocument(
+    doc("American Society for Industrial Security\nCertified Protection Professional"),
+    CONTEXT,
+  );
+  ok(
+    historical.issuer.state === "match",
+    "3.11 an approved variation of the selected issuer is a match",
+  );
+  const foreign = parseDocument(doc("(ISC)² certifies that\nCertificate No: 1"), CONTEXT);
+  ok(
+    foreign.issuer.state === "different" && foreign.issuer.found === "ISC2",
+    "3.12 a variation of another issuer is reported under its GOVERNED name",
+  );
+  ok(
+    !JSON.stringify(foreign).includes("(ISC)²") &&
+      !JSON.stringify(historical).includes("American Society"),
+    "3.13 no alias appears anywhere in a reading, so none can be rendered",
   );
 }
 {
@@ -973,8 +999,9 @@ async function main(): Promise<void> {
   );
 
   ok(
-    (form.match(/issuerAliases/g) ?? []).length === 2,
-    "9.17b search aliases are not used for matching, so one can never be rendered in a mismatch",
+    (form.match(/issuerAliases/g) ?? []).length === 2 &&
+      /issuerLabel: issuerLabelOf\(d\)/.test(form),
+    "9.17b the form never touches an alias itself, and a mismatch is labelled with the governed name",
   );
 
   const hook = code("src/components/security-passport/hayat/use-hayat-reading.ts");

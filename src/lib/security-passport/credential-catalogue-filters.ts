@@ -127,6 +127,14 @@ export interface IndexedDefinition extends FilterDefinition {
   readonly trainingProviderStatedOnDocument: boolean;
   readonly organisations: readonly OrganisationInRole[];
   readonly haystack: string;
+  /**
+   * Every approved way the ISSUER of this definition may be written: the
+   * governed organisation name plus its approved aliases ("(ISC)²", a historical
+   * name). For MATCHING a document against the catalogue only. Like the
+   * haystack it is never rendered: whatever matched, the holder is shown the
+   * governed name. Pinned by passport-global-certification:check.
+   */
+  readonly issuerMatchTerms: readonly string[];
 }
 
 export interface FacetOption {
@@ -190,6 +198,7 @@ export function buildCatalogueIndex(source: CatalogueFilterSource): readonly Ind
       organisations.push({ id: d.issuer_id, name: d.issuer_name, role: "issuer" });
     const facts = factsOf.get(d.code);
     const aliasText = organisations.flatMap((o) => aliasesOf.get(o.id) ?? []);
+    const issuingOrganisations = organisations.filter((o) => o.role === "issuer");
     return {
       ...d,
       domain: domainOf.get(d.code) ?? null,
@@ -200,6 +209,10 @@ export function buildCatalogueIndex(source: CatalogueFilterSource): readonly Ind
         (r) => r.role === "training_provider" && r.document_specific,
       ),
       organisations,
+      issuerMatchTerms: issuingOrganisations.flatMap((o) => [
+        o.name,
+        ...(aliasesOf.get(o.id) ?? []),
+      ]),
       haystack: foldForSearch(
         [
           d.name_sv,

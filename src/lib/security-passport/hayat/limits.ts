@@ -18,6 +18,8 @@ export const HAYAT_LIMITS = {
   maxSourcePixels: 40_000_000,
   /** Longest edge handed to OCR. Larger images are downscaled first. */
   maxOcrEdge: 2600,
+  /** Longest edge of the small copies used to find a sideways page's orientation. */
+  orientationProbeEdge: 1100,
   /** Pixel budget for one rendered PDF page. */
   maxRenderPixels: 6_500_000,
   /** Render scale for a scanned PDF page before the pixel budget applies. */

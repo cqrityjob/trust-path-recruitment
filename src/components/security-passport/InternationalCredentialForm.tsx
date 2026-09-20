@@ -233,12 +233,10 @@ export function InternationalCredentialForm({
         (n): n is string => typeof n === "string" && n.trim().length > 0,
       );
     };
-    // Governed organisation names only. Search aliases stay in the search.
-    const issuersOf = (d: IndexedDefinition) =>
-      [
-        ...d.organisations.filter((o) => o.role === "issuer").map((o) => o.name),
-        definitions?.find((r) => r.code === d.code)?.issuer_name ?? "",
-      ].filter((n) => n.trim().length > 0);
+    // Approved variations are used to MATCH; only the governed name is ever shown.
+    const issuersOf = (d: IndexedDefinition) => d.issuerMatchTerms;
+    const issuerLabelOf = (d: IndexedDefinition) =>
+      d.organisations.find((o) => o.role === "issuer")?.name ?? "";
     const labelOf = (d: IndexedDefinition) => {
       const row = definitions?.find((r) => r.code === d.code);
       return (lang === "sv" ? row?.name_sv : row?.name_en) ?? d.code;
@@ -256,10 +254,10 @@ export function InternationalCredentialForm({
           code: d.code,
           label: labelOf(d),
           names: namesOf(d),
-          issuerLabel: issuersOf(d)[0] ?? "",
+          issuerLabel: issuerLabelOf(d),
           issuerNames: issuersOf(d),
         })),
-      accountName: accountName ?? null,
+      accountName: accountName ?? metadata?.holderDisplayName ?? null,
       today: todayIso(),
     };
   };

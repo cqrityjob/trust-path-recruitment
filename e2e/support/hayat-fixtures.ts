@@ -80,6 +80,8 @@ export interface Fixtures {
   readonly png: (c: CertificateText, rotateDegrees?: number) => Promise<Buffer>;
   readonly jpeg: (c: CertificateText) => Promise<Buffer>;
   readonly scannedPdf: (c: CertificateText) => Promise<Buffer>;
+  /** The same photograph, turned: what a phone held sideways produces. */
+  readonly turnedJpeg: (c: CertificateText, degrees: 90 | 180 | 270) => Promise<Buffer>;
   readonly close: () => Promise<void>;
 }
 
@@ -102,6 +104,27 @@ export async function createFixtures(browser: Browser): Promise<Fixtures> {
     png: (c, rotate) => shot(c, "png", rotate),
     jpeg: (c) => shot(c, "jpeg"),
     scannedPdf: async (c) => imagePdf(await shot(c, "jpeg"), 1000, 760),
+    turnedJpeg: async (c, degrees) => {
+      const upright = (await shot(c, "jpeg")).toString("base64");
+      const dataUrl = await page.evaluate(
+        async ({ source, turn }) => {
+          const image = new Image();
+          image.src = `data:image/jpeg;base64,${source}`;
+          await image.decode();
+          const sideways = turn !== 180;
+          const canvas = document.createElement("canvas");
+          canvas.width = sideways ? image.height : image.width;
+          canvas.height = sideways ? image.width : image.height;
+          const context = canvas.getContext("2d")!;
+          context.translate(canvas.width / 2, canvas.height / 2);
+          context.rotate((turn * Math.PI) / 180);
+          context.drawImage(image, -image.width / 2, -image.height / 2);
+          return canvas.toDataURL("image/jpeg", 0.92);
+        },
+        { source: upright, turn: degrees },
+      );
+      return Buffer.from(dataUrl.split(",")[1], "base64");
+    },
     close: () => context.close(),
   };
 }

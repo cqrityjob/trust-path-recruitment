@@ -90,6 +90,71 @@ async function ocrCanvas(
   return lines;
 }
 
+// ── Orientation ─────────────────────────────────────────────────────────
+//
+// A phone photo of a certificate is sideways about as often as it is not, and
+// an EXIF flag only helps when the camera wrote one. Tesseract's own
+// orientation detection needs the legacy engine and a second model; this
+// reader ships the LSTM engine only. So orientation is found the plain way:
+// if the upright reading is poor, read a SMALL copy at 90, 180 and 270 degrees,
+// keep whichever reads best, and only then do the full-size pass in that
+// orientation. An upright document costs nothing extra.
+
+const alnum = (text: string) => text.replace(/[^\p{L}\p{N}]/gu, "").length;
+/** How much legible text a reading holds: characters weighted by confidence. */
+const legibility = (lines: readonly TextLine[]) =>
+  lines.reduce((sum, l) => sum + alnum(l.text) * (l.confidence ?? 0), 0);
+const readsWell = (lines: readonly TextLine[]) => {
+  const characters = lines.reduce((n, l) => n + alnum(l.text), 0);
+  return characters >= 30 && legibility(lines) / characters >= 0.7;
+};
+
+function rotated(
+  source: HTMLCanvasElement,
+  degrees: 90 | 180 | 270,
+  maxEdge: number,
+  session: Session,
+): HTMLCanvasElement {
+  const scale = Math.min(1, maxEdge / Math.max(source.width, source.height));
+  const w = source.width * scale;
+  const h = source.height * scale;
+  const canvas = canvasOf(degrees === 180 ? w : h, degrees === 180 ? h : w, session);
+  const context = canvas.getContext("2d");
+  if (!context) throw new ReadError("engine_unavailable");
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.translate(canvas.width / 2, canvas.height / 2);
+  context.rotate((degrees * Math.PI) / 180);
+  context.drawImage(source, -w / 2, -h / 2, w, h);
+  return canvas;
+}
+
+async function ocrAnyOrientation(
+  session: Session,
+  canvas: HTMLCanvasElement,
+  page: number,
+): Promise<TextLine[]> {
+  const upright = await ocrCanvas(session, canvas, page);
+  if (readsWell(upright)) return upright;
+  let best: { degrees: 0 | 90 | 180 | 270; score: number } = {
+    degrees: 0,
+    score: legibility(upright),
+  };
+  for (const degrees of [90, 270, 180] as const) {
+    aborted(session);
+    const probe = rotated(canvas, degrees, HAYAT_LIMITS.orientationProbeEdge, session);
+    const lines = await ocrCanvas(session, probe, page);
+    probe.width = 0;
+    probe.height = 0;
+    // A turned copy must read clearly better, not marginally: noise read
+    // sideways is still noise.
+    if (readsWell(lines) && legibility(lines) > best.score * 1.5)
+      best = { degrees, score: legibility(lines) };
+  }
+  if (best.degrees === 0) return upright;
+  return ocrCanvas(session, rotated(canvas, best.degrees, HAYAT_LIMITS.maxOcrEdge, session), page);
+}
+
 function canvasOf(width: number, height: number, session: Session): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.floor(width));
@@ -127,7 +192,7 @@ async function readImage(session: Session, file: Blob, mimeType: string): Promis
   context.fillStyle = "#fff";
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const lines = await ocrCanvas(session, canvas, 1);
+  const lines = await ocrAnyOrientation(session, canvas, 1);
   if (lines.length === 0) throw new ReadError("no_text");
   return { ok: true, text: { lines, pageCount: 1, pagesRead: 1 } };
 }
@@ -201,7 +266,7 @@ async function readPdf(session: Session, file: Blob): Promise<ReadOutcome> {
       const context = canvas.getContext("2d");
       if (!context) throw new ReadError("engine_unavailable");
       await page.render({ canvas, canvasContext: context, viewport }).promise;
-      lines.push(...(await ocrCanvas(session, canvas, number)));
+      lines.push(...(await ocrAnyOrientation(session, canvas, number)));
       canvas.width = 0;
       canvas.height = 0;
     }

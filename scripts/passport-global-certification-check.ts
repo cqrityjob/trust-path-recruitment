@@ -440,7 +440,34 @@ const CRED_FUNCTIONS = read("src/lib/security-passport/credentials.functions.ts"
         ) &&
         /\.\.\.aliasText,\s*\]\.join\(" "\),\s*\),/.test(model) &&
         (model.match(/aliasText/g) ?? []).length === 2,
-      "an alias reaches exactly one place in the filter model: the folded search haystack",
+      "an alias reaches the folded search haystack through exactly one expression",
+    );
+    // HAYAT (document reading) added the ONLY other destination an alias may
+    // have: matching a document against the catalogue, so a certificate that
+    // prints "(ISC)²" is recognised as ISC2's. It is pinned as tightly as the
+    // haystack -- one expression, issuing organisations only -- and the rule is
+    // unchanged: an alias is never RENDERED. passport-hayat:check 3.11-3.13
+    // proves the holder is only ever shown the governed name.
+    ok(
+      // two READS by organisation: the haystack and the match terms (the third
+      // `aliasesOf.get` in the file is the map being built, keyed by issuer_id)
+      (model.match(/aliasesOf\.get\(o\.id\)/g) ?? []).length === 2 &&
+        /issuerMatchTerms: issuingOrganisations\.flatMap\(\(o\) => \[\s*o\.name,\s*\.\.\.\(aliasesOf\.get\(o\.id\) \?\? \[\]\),?\s*\]\),/.test(
+          model,
+        ),
+      "the one other use of an alias is issuerMatchTerms, for issuing organisations only",
+    );
+    const matchTermReaders = handWritten()
+      .filter(([, t]) => /issuerMatchTerms/.test(t))
+      .map(([rel]) => rel)
+      .sort();
+    ok(
+      matchTermReaders.join() ===
+        [
+          "src/components/security-passport/InternationalCredentialForm.tsx",
+          "src/lib/security-passport/credential-catalogue-filters.ts",
+        ].join(),
+      `issuerMatchTerms is read by the wizard's HAYAT context only — ${matchTermReaders.join(", ")}`,
     );
     const consumers = handWritten()
       .filter(([, t]) => /issuerAliases/.test(t))
@@ -464,6 +491,11 @@ const CRED_FUNCTIONS = read("src/lib/security-passport/credentials.functions.ts"
       (form.match(/issuerAliases/g) ?? []).length === 2 &&
         /issuerAliases: metadata\?\.issuerAliases \?\? \[\],/.test(form),
       "the wizard hands aliases to the filter model and renders none of them",
+    );
+    ok(
+      (form.match(/issuerMatchTerms/g) ?? []).length === 1 &&
+        /const issuersOf = \(d: IndexedDefinition\) => d\.issuerMatchTerms;/.test(form),
+      "match terms reach the document comparison and no JSX",
     );
   }
   ok(

@@ -239,6 +239,23 @@ test("image (JPEG): typed values are kept and the conflict is shown", async ({ p
   assertNoRefusals(refusals);
 });
 
+for (const degrees of [90, 180] as const) {
+  test(`a photo turned ${degrees} degrees is read the right way up`, async ({ page }) => {
+    const { refusals } = await mount(page, "en");
+    await choose(
+      page,
+      "sideways.jpg",
+      "image/jpeg",
+      await fixtures.turnedJpeg(ENGLISH_CPP, degrees),
+    );
+    await expect(panel(page, "read")).toBeVisible({ timeout: 140_000 });
+    await expect(identifier(page)).toHaveValue("7741-2291-86");
+    await expect(dates(page).nth(0)).toHaveValue("2024-03-12");
+    await expect(dates(page).nth(1)).toHaveValue("2027-03-31");
+    assertNoRefusals(refusals);
+  });
+}
+
 test("an ambiguous date is a question, and a missing field stays empty", async ({ page }) => {
   const { refusals } = await mount(page, "en");
   await choose(page, "ambiguous.pdf", "application/pdf", await fixtures.textPdf(AMBIGUOUS));
