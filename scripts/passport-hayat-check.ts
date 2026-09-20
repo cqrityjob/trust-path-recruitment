@@ -1268,7 +1268,16 @@ async function main(): Promise<void> {
     "9.19 no sharing payload references a reading",
   );
   const added = walk("supabase/migrations").filter((f) => /hayat/i.test(f));
-  ok(added.length === 0, "9.20 this change adds no migration");
+  // Document reading needs no schema at all. Saved assessments have exactly one
+  // migration, and it is released on its own, schema-first.
+  const ledger = readFileSync("supabase/release-state.json", "utf8");
+  ok(
+    added.length === 0 ||
+      (added.length === 1 &&
+        added[0].endsWith("20261204090000_sp_hayat_assessments.sql") &&
+        ledger.includes("20261204090000_sp_hayat_assessments.sql")),
+    "9.20 HAYAT has at most one migration, and the release ledger knows it",
+  );
 
   // =======================================================================
   group("10 · Saved assessments: recorded by the server, bound, and never promoted");
