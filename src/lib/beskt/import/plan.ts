@@ -45,7 +45,22 @@ function ref(q: QuestionDef, extra = ""): string {
   return `${SOURCE}, ${q.specRef}${extra}`;
 }
 
-export function buildPlan(method: MethodKey, { synthetic }: { synthetic: boolean }): Plan {
+export function buildPlan(
+  method: MethodKey,
+  {
+    synthetic,
+    lawfulBasisReference,
+    attestationReference,
+  }: {
+    synthetic: boolean;
+    /** The owner's recorded lawful-basis decision. Never invented here. */
+    lawfulBasisReference?: string;
+    /** Security vetting only: where the employer's attestation that a role is
+     *  security-sensitive is recorded. A reference to the requirement's
+     *  runtime, stated by the operator -- never an attestation itself. */
+    attestationReference?: string;
+  },
+): Plan {
   const mode: Mode = method === "rekrytering" ? "recruitment_support" : "security_vetting_support";
   const questions = QUESTIONS.filter(
     (q) => mode === "security_vetting_support" || q.mode === "recruitment_support",
@@ -112,10 +127,11 @@ export function buildPlan(method: MethodKey, { synthetic }: { synthetic: boolean
       // validator blocks submission until the owner's decision is recorded.
       lawful_basis_reference: synthetic
         ? "SYNTETISK TESTVERSION – ingen rättslig grund fastställd; får inte användas med verkliga personuppgifter"
-        : null,
+        : lawfulBasisReference?.trim() || null,
       retention_class: vetting ? "security_vetting_record" : "recruitment_record",
       access_class: vetting ? "authorised_security_function" : "recruiter",
-      security_sensitive_role_attestation_reference: null,
+      security_sensitive_role_attestation_reference:
+        vetting && !synthetic ? attestationReference?.trim() || null : null,
       content_provenance: "derived_in_authoring",
       source_reference: `${SOURCE}, §2.1, §4.3 T, §7`,
     },

@@ -110,6 +110,23 @@ export function BesktEntryHistory({ sessionId, entryId }: { sessionId: string; e
                   label={t("beskt.conduct.entry.protectiveFactor")}
                   value={v.protectiveFactor}
                 />
+                <HistoryField label={t("beskt.fakta.eventTiming")} value={v.eventTiming} />
+                <HistoryField label={t("beskt.fakta.consequence")} value={v.consequence} />
+                <HistoryField
+                  label={t("beskt.fakta.supportingInformation")}
+                  value={v.supportingInformation}
+                />
+                <HistoryField
+                  label={t("beskt.fakta.contradictingInformation")}
+                  value={v.contradictingInformation}
+                />
+                <HistoryField label={t("beskt.fakta.measuresTaken")} value={v.measuresTaken} />
+                <HistoryField label={t("beskt.fakta.roleLink")} value={v.roleLink} />
+                <HistoryField label={t("beskt.fakta.informationGap")} value={v.informationGap} />
+                <HistoryField
+                  label={t("beskt.fakta.candidateResponse")}
+                  value={v.candidateResponse}
+                />
                 <HistoryField
                   label={t("beskt.conduct.entry.verificationNeed")}
                   value={v.verificationNeed}

@@ -527,6 +527,21 @@ BEGIN
     'SYNTETISK motivering till panelens hantering');
   RESET ROLE; PERFORM pg_temp.nobody();
 
+  -- 20261130090000: a signature alone never finalises. The responsible
+  -- human's stance is required, and is recorded by an employer admin here
+  -- (this preparation came through the legacy entrance, with no named
+  -- responsible interviewer).
+  _prev := pg_temp.json_as(_r.rec_a,
+    format('SELECT public.bcp_conduct_preview_report(%L)', _r.sess));
+  PERFORM pg_temp.ok(
+    _prev -> 'blockers' @> '[{"code":"BCP_CONDUCT_STANCE_MISSING"}]'::jsonb,
+    'R1.5b without a documented stance the report is still blocked');
+  PERFORM pg_temp.become(_r.rec_a); SET LOCAL ROLE authenticated;
+  PERFORM public.bcp_conduct_record_stance(gen_random_uuid(), _r.sess, 0, 'sufficient',
+    'SYNTETISKT: underlaget räcker för ställningstagandet.', 'SYNTETISKT ställningstagande om rollen.',
+    'SYNTETISK motivering utifrån dokumenterade uppgifter.', 'SYNTETISK Rekryterare', 'Rekryteringsansvarig');
+  RESET ROLE; PERFORM pg_temp.nobody();
+
   _prev := pg_temp.json_as(_r.rec_a,
     format('SELECT public.bcp_conduct_preview_report(%L)', _r.sess));
   PERFORM pg_temp.ok((_prev ->> 'blocker_count')::integer = 0,
@@ -561,7 +576,13 @@ BEGIN
 
   PERFORM pg_temp.ok(jsonb_array_length(_p -> 'candidate_preparation') > 0,
     'R2.4 it carries the candidate''s own frozen answers');
-  PERFORM pg_temp.ok(jsonb_array_length(_p -> 'themes') = 2,
+  -- 20261130090000: the two neutral states, plus any theme the candidate's
+  -- own answer opened by a governed rule -- each naming its rule.
+  PERFORM pg_temp.ok((SELECT count(*) FROM jsonb_array_elements(_p -> 'themes') t
+                       WHERE t ->> 'reason' IN ('omitted', 'discuss_orally')) = 2
+                     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(_p -> 'themes') t
+                                      WHERE t ->> 'reason' = 'candidate_disclosed'
+                                        AND (t ->> 'trigger_rule_key') IS NULL),
     'R2.5 it carries the derived themes');
   PERFORM pg_temp.ok(jsonb_array_length(_p -> 'positions') = 2,
     'R2.6 it carries BOTH independent positions, whole');

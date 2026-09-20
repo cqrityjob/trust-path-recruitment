@@ -48,6 +48,7 @@
 // where the assessment has got to. A single blended badge would be a judgement
 // the platform does not make.
 
+import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -570,6 +571,7 @@ function Candidate360({
           employerSlug={employerSlug}
           applicationId={applicationId}
           canAssign={canAssign}
+          prepareInterview
         />
       </section>
 
@@ -674,23 +676,18 @@ function Candidate360({
             <p className="text-sm text-muted-foreground">
               {t("employer.candidate.structuredInterview.empty")}
             </p>
-            {/* The job travels with the application.
-             *
-             *  It was `undefined` here, so a case created from an application
-             *  pinned the application and left job_id NULL -- and the
-             *  preparation screen then had no advert to read requirements
-             *  from. `c.jobId` is this application's own job, so nothing about
-             *  which employer it belongs to is being asserted by the URL;
-             *  scp_iv_create_case re-checks it against the caller's employer
-             *  regardless. */}
-            <Link
-              to="/employer/$employerSlug/interview-intelligence/new"
-              params={{ employerSlug }}
-              search={{ applicationId, jobId: c.jobId ?? undefined }}
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-accent hover:underline"
-            >
-              {t("employer.candidate.structuredInterview.start")}
-            </Link>
+            {/* An interview before any test: the button asks for an
+             *  explicitly chosen setup (there is no default role), and the
+             *  database start (scp_iv_start_interview) binds this
+             *  application's own candidate and job -- nothing about either is
+             *  taken from the URL or the browser. After a test, the button
+             *  sits on that test in the assessment panel instead. */}
+            <PrepareInterviewButton
+              employerId={employerId}
+              employerSlug={employerSlug}
+              applicationId={applicationId}
+              assessmentAssignmentId={null}
+            />
           </div>
         ) : (
           <ul className="mt-4 space-y-2">

@@ -1,7 +1,7 @@
 # BESKT v0.1 – import av metodinnehållet till de styrda objekten
 
 **Källa:** _CQrityjob BESKT – metodstöd och byggspecifikation v0.1_, 10 september 2026 (avsnitt 4–6).
-**Importunderlag:** `scripts/beskt-import/beskt-v0-1.content.ts` (innehållet), `scripts/beskt-import/plan.ts` (mappningen till rader), `scripts/beskt-import/import-beskt-v0-1.ts` (importen via de styrda RPC:erna).
+**Importunderlag:** `src/lib/beskt/import/beskt-v0-1.content.ts` (innehållet), `src/lib/beskt/import/plan.ts` (mappningen till rader), `scripts/beskt-import/import-beskt-v0-1.ts` (importen via de styrda RPC:erna).
 **Kontroll:** `bun run beskt-v01-import:check` (42 påståenden) med planterade negativa kontroller; genomgång i webbläsare: `e2e/beskt-v0-1-journey.spec.ts`.
 
 Innehållet finns och återanvänds som det är. Importen skriver det som ett **utkast** genom samma styrda RPC:er som redaktörens egen yta, inloggad som redaktören. Den granskar, publicerar och beviljar ingenting.

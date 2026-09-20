@@ -490,10 +490,12 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PC-NC-LINK-CLIENT-CANDIDATE",
     defect:
-      "the server function trusts the application without checking its employer, so a case can be bound to another employer's applicant",
-    file: RUNTIME_FNS,
-    find: "      if (!app.data || app.data.employer_id !== data.employerId || !app.data.applicant_user_id) {",
-    replace: "      if (!app.data || !app.data.applicant_user_id) {",
+      "the interview start binds the case to the caller instead of the application's own applicant",
+    file: "supabase/migrations/20261202090000_scp_interview_starts.sql",
+    // Since 20261202090000 the candidate is chosen inside the database start;
+    // the defect is the start taking someone other than the applicant.
+    find: "    _candidate := _app.applicant_user_id;",
+    replace: "    _candidate := auth.uid();",
     guard: GUARD,
     expect: "BESKT_PC_LINK_CLIENT_CANDIDATE",
   },
@@ -502,8 +504,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the create-a-case link drops the BESKT binding, so the new case can never be linked to the preparation",
     file: CASE_LINK,
-    find: "search={{ applicationId, jobId: undefined, beskt: true }}",
-    replace: "search={{ applicationId, jobId: undefined }}",
+    // Since 20261130 the same link also serves an invitation (no
+    // application); the application branch is the one this defect breaks.
+    find: "                            beskt: true,\n                            besktAssignment: assignmentId,\n",
+    replace: "",
     guard: GUARD,
     expect: "BESKT_PC_LINK_DEAD_END",
   },

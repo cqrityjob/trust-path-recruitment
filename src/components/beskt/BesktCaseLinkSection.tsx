@@ -8,7 +8,8 @@
 // The cases offered are exactly the ones `bcp_linkable_interview_cases`
 // returns, which is the set `bcp_link_preparation_to_case` accepts. When
 // there is none, the section says so and points at the one place a case is
-// created, prefilled with this application — it never creates a case itself.
+// started from this preparation -- where the case is created together with
+// its link, in one transaction.
 
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -32,7 +33,9 @@ export function BesktCaseLinkSection({
   employerSlug,
 }: {
   readonly assignmentId: string;
-  readonly applicationId: string;
+  /** Null for an invitation-based assignment: the case is then bound to the
+   *  account that accepted the invitation, never to an invented application. */
+  readonly applicationId: string | null;
   readonly employerSlug: string;
 }) {
   const { t, lang } = useT();
@@ -165,9 +168,26 @@ export function BesktCaseLinkSection({
                   <Link
                     to="/employer/$employerSlug/interview-intelligence/new"
                     params={{ employerSlug }}
-                    search={{ applicationId, jobId: undefined, beskt: true }}
+                    // The assignment travels in both cases: the case is started
+                    // FROM it, atomically and already linked (scp_iv_start_interview).
+                    search={
+                      applicationId
+                        ? {
+                            applicationId,
+                            jobId: undefined,
+                            beskt: true,
+                            besktAssignment: assignmentId,
+                          }
+                        : {
+                            applicationId: undefined,
+                            jobId: undefined,
+                            besktAssignment: assignmentId,
+                          }
+                    }
                   >
-                    {t("beskt.caseLink.create")}
+                    {applicationId
+                      ? t("beskt.caseLink.create")
+                      : t("beskt.caseLink.createStandalone")}
                   </Link>
                 </Button>
               </div>

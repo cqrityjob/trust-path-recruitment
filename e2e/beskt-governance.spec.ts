@@ -31,6 +31,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
+import { openBesktSetup } from "./support/beskt-walk";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
 const BASE = process.env.E2E_BASE_URL ?? "";
@@ -190,91 +191,37 @@ test.describe("BESKT governance and pilot access — the routed walk", () => {
   });
 
   /* ---------------------------------------------------------------- 2 */
-  test("2 · only a pilot grant opens the method to an employer, and revoking closes it", async ({
+  // Since 20261201090000 (owner decision 2026-09-19) a published method is in
+  // every ACTIVE employer's offer directly: no pilot grant, no activation, no
+  // request to CQrityjob. The rival employer here has none of those.
+  test("2 · a published method is in a new employer's offer at once, with no grant or request", async ({
     browser,
   }: {
     browser: Browser;
   }) => {
-    const { versionId, rivalId } = ids();
-    const library = `/employer/${RIVAL_SLUG}/assessments/library`;
-
     const rivalContext = await browser.newContext();
     const rival = await rivalContext.newPage();
-    const adminContext = await browser.newContext();
-    const admin = await adminContext.newPage();
     try {
-      await test.step("before: the rival employer's library says it is not available", async () => {
-        await signIn(rival, OUTSIDER, library);
-        const section = rival.getByTestId("beskt-method-support");
-        await expect(section).toBeVisible({ timeout: 60_000 });
-        await expect(section.getByTestId("beskt-method-support-badge")).toHaveText("BESKT");
-        await expect(rival.getByTestId("beskt-method-support-empty")).toBeVisible({
-          timeout: 60_000,
-        });
-        await shot(rival, "02-rival-before-sv");
-      });
-
-      await test.step("the platform admin admits the rival employer", async () => {
-        await signIn(admin, ADMIN, `/admin/beskt-methods/${versionId}?tab=access`);
-        const pilots = admin.getByTestId("beskt-pilot-grants");
-        await expect(pilots).toBeVisible({ timeout: 60_000 });
-        await pilots.getByRole("button", { name: /Anta en arbetsgivare/ }).click();
-        await admin.locator("#beskt-pilot-employer").fill(rivalId);
-        await admin.locator("#beskt-pilot-source").fill("SYNTETISKT pilotbeslut för genomgången");
-        const expires = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
-        await admin.locator("#beskt-pilot-expires").fill(expires);
-        await pilots
-          .locator("form")
-          .getByRole("button", { name: /Anta en arbetsgivare/ })
-          .click();
-        await expect(admin.getByTestId(`beskt-pilot-${rivalId}`)).toBeVisible({ timeout: 60_000 });
-        await shot(admin, "02-admin-granted-sv");
-      });
-
-      await test.step("during: the method appears, with its real next step", async () => {
-        await rival.goto(library);
-        await expect(rival.getByTestId("beskt-method-row").first()).toBeVisible({
-          timeout: 60_000,
-        });
-        const next = rival.getByTestId("beskt-method-support-next");
-        await expect(next).toContainText(/Intervjuer/);
-        await expect(next.getByRole("link", { name: /Välj en ansökan/ })).toHaveAttribute(
-          "href",
-          `/employer/${RIVAL_SLUG}/applications`,
-        );
+      await test.step("the rival employer's library offers BESKT, published, with its next step", async () => {
+        await signIn(rival, OUTSIDER, `/employer/${RIVAL_SLUG}/assessments/library`);
+        await expect(rival.getByTestId("lib-method-beskt")).toBeVisible({ timeout: 60_000 });
+        await openBesktSetup(rival, RIVAL_SLUG);
+        const setup = rival.getByTestId("lib-setup");
+        await expect(setup).toHaveAttribute("data-startable", "true", { timeout: 60_000 });
+        await expect(setup.getByTestId("lib-setup-status")).toContainText(/Publicerad/);
+        await expect(setup.getByTestId("lib-start-beskt")).toHaveText(/Starta BESKT/);
         await expectFitsViewport(rival);
-        await shot(rival, "02-rival-during-sv");
+        await shot(rival, "02-rival-offer-sv");
         await useEnglish(rival);
-        await expect(next.getByRole("link", { name: /Choose an application/ })).toBeVisible();
-        await shot(rival, "02-rival-during-en");
+        await expect(setup.getByTestId("lib-start-beskt")).toHaveText(/Start BESKT/);
+        await shot(rival, "02-rival-offer-en");
         await useSwedish(rival);
       });
-
-      await test.step("the platform admin revokes, with a reason", async () => {
-        const row = admin.getByTestId(`beskt-pilot-${rivalId}`);
-        await row.getByRole("button", { name: /^Återkalla$/ }).click();
-        await admin
-          .getByLabel(/Anledning till återkallandet/)
-          .fill("SYNTETISKT genomgången är klar");
-        await row
-          .getByRole("button", { name: /^Återkalla/ })
-          .last()
-          .click();
-        await expect(row).toContainText(/Återkallad|Återkallat/, { timeout: 60_000 });
-        await shot(admin, "02-admin-revoked-sv");
-      });
-
-      await test.step("after: the method is gone from the rival employer again", async () => {
-        await rival.goto(library);
-        await expect(rival.getByTestId("beskt-method-support-empty")).toBeVisible({
-          timeout: 60_000,
-        });
-        await expect(rival.getByTestId("beskt-method-row")).toHaveCount(0);
-        await shot(rival, "02-rival-after-sv");
+      await test.step("and it sees no other employer's assignments", async () => {
+        await expect(rival.getByTestId("beskt-assignment-row")).toHaveCount(0);
       });
     } finally {
       await rivalContext.close();
-      await adminContext.close();
     }
   });
 

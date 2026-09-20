@@ -50,24 +50,18 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useT } from "@/i18n/context";
 import { BesktCaseLinkSection } from "@/components/beskt/BesktCaseLinkSection";
+import { BesktStartDialog } from "@/components/beskt/BesktStartDialog";
+import { getMyBesktStanding } from "@/lib/beskt/complete.functions";
+import { topicReasonKey } from "@/components/beskt/BesktModulePanels";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { besktErrorKey } from "@/lib/beskt/errors";
 import {
   cancelBesktPreparation,
   getBesktEmployerReadback,
-  listAssignableBesktExposureProfiles,
   listAssignableBesktMethods,
   listEmployerBesktPreparations,
-  startBesktPreparation,
   type BesktLifecycleState,
   type BesktSubmittedAnswer,
 } from "@/lib/beskt/candidate-preparation.functions";
@@ -81,7 +75,7 @@ const STATE_KEY = {
 } as const satisfies Record<BesktLifecycleState, string>;
 
 /** The candidate's own value, rendered exactly as they gave it. */
-function AnswerValue({ answer }: { readonly answer: BesktSubmittedAnswer }) {
+export function AnswerValue({ answer }: { readonly answer: BesktSubmittedAnswer }) {
   const { t, lang } = useT();
   if (answer.responseState === "omitted") {
     return <span className="text-muted-foreground">{t("beskt.readback.reason.omitted")}</span>;
@@ -123,10 +117,9 @@ export function BesktApplicationPanel({
   const queryClient = useQueryClient();
 
   const listMethods = useServerFn(listAssignableBesktMethods);
-  const listProfiles = useServerFn(listAssignableBesktExposureProfiles);
   const listPreparations = useServerFn(listEmployerBesktPreparations);
   const readback = useServerFn(getBesktEmployerReadback);
-  const start = useServerFn(startBesktPreparation);
+  const standingFn = useServerFn(getMyBesktStanding);
   const cancel = useServerFn(cancelBesktPreparation);
 
   // ── 0.3 — THE METHOD IS CHOSEN, NOT ASSUMED ──────────────────────────
@@ -136,9 +129,7 @@ export function BesktApplicationPanel({
   // picked or to pick anything else. With one method admitted that is
   // invisible; with two it is wrong, and wrong in the way that matters --
   // the method determines the questions a candidate is asked.
-  const [methodVersionId, setMethodVersionId] = useState<string>("");
-  const [profileId, setProfileId] = useState<string>("");
-  const [startError, setStartError] = useState<TranslationKey | null>(null);
+  const [startOpen, setStartOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [cancelError, setCancelError] = useState<TranslationKey | null>(null);
@@ -164,52 +155,17 @@ export function BesktApplicationPanel({
     enabled: !existing && !preparations.isPending,
   });
 
-  const method = (methods.data ?? []).find((m) => m.methodVersionId === methodVersionId) ?? null;
-
-  const profiles = useQuery({
-    queryKey: ["beskt", "exposure-profiles", employerId, method?.methodVersionId],
-    queryFn: () => listProfiles({ data: { employerId, methodVersionId: method!.methodVersionId } }),
+  const standing = useQuery({
+    queryKey: ["beskt", "standing", employerId],
+    queryFn: () => standingFn({ data: { employerId } }),
     retry: false,
-    enabled: Boolean(method),
   });
-
-  // A profile belongs to ONE method version. Changing the method therefore
-  // invalidates the profile beneath it, and carrying the old selection over
-  // would let the employer submit a pairing the database refuses with
-  // BCP_PROFILE_NOT_IN_VERSION -- a refusal caused entirely by the UI.
-  const chooseMethod = (id: string) => {
-    setMethodVersionId(id);
-    setProfileId("");
-    setStartError(null);
-  };
 
   const detail = useQuery({
     queryKey: ["beskt", "readback", existing?.assignmentId],
     queryFn: () => readback({ data: { assignmentId: existing!.assignmentId } }),
     retry: false,
     enabled: Boolean(existing),
-  });
-
-  const startMutation = useMutation({
-    mutationFn: async () => {
-      if (!method) throw new Error("BCP_NOT_ASSIGNABLE");
-      // No noticeVersion: the server reads the governed value from
-      // bcp_notice_version() so the browser has no vote in it.
-      return start({
-        data: {
-          operationId: crypto.randomUUID(),
-          applicationId,
-          methodVersionId: method.methodVersionId,
-          exposureProfileId: profileId,
-          expectedContentHash: method.contentHash,
-        },
-      });
-    },
-    onSuccess: async () => {
-      setStartError(null);
-      await queryClient.invalidateQueries({ queryKey: ["beskt", "employer-preparations"] });
-    },
-    onError: (e: unknown) => setStartError(besktErrorKey(e)),
   });
 
   // ── 0.6 — CANCELLING A PREPARATION THAT SHOULD NOT HAVE BEEN SENT ────
@@ -239,12 +195,6 @@ export function BesktApplicationPanel({
       setCancelError(null);
       setCancelOpen(false);
       setCancelReason("");
-      // The replacement starts from a blank choice. Leaving the cancelled
-      // method and profile selected would pre-fill the form with the exact
-      // pairing just declared wrong, which invites making the same mistake
-      // twice -- and the employer is here because the first choice was wrong.
-      setMethodVersionId("");
-      setProfileId("");
       await queryClient.invalidateQueries({ queryKey: ["beskt", "employer-preparations"] });
     },
     onError: (e: unknown) => setCancelError(besktErrorKey(e)),
@@ -380,11 +330,7 @@ export function BesktApplicationPanel({
                               ) : (
                                 <MessageSquare aria-hidden="true" className="h-3.5 w-3.5" />
                               )}
-                              {t(
-                                topic.reason === "omitted"
-                                  ? "beskt.readback.reason.omitted"
-                                  : "beskt.readback.reason.discuss_orally",
-                              )}
+                              {t(topicReasonKey(topic.reason))}
                             </Badge>
                             <span className="min-w-0 flex-1 text-sm">
                               {(lang === "sv"
@@ -441,87 +387,34 @@ export function BesktApplicationPanel({
             <AlertDescription>{t("beskt.start.noMethod")}</AlertDescription>
           </Alert>
         ) : (
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              startMutation.mutate();
-            }}
-          >
-            <div>
-              <Label htmlFor="beskt-method">{t("beskt.start.chooseMethod")}</Label>
-              <Select value={methodVersionId} onValueChange={chooseMethod}>
-                <SelectTrigger id="beskt-method" className="mt-1.5 min-h-[44px] w-full max-w-md">
-                  <SelectValue placeholder={t("beskt.start.chooseMethod")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(methods.data ?? []).map((m) => (
-                    <SelectItem key={m.methodVersionId} value={m.methodVersionId}>
-                      {((lang === "sv" ? m.nameSv : (m.nameEn ?? m.nameSv)) ?? m.packSlug) +
-                        ` · v${m.versionNumber}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {method ? (
-                <p
-                  className="mt-2 text-xs text-muted-foreground"
-                  data-testid="beskt-method-summary"
-                >
-                  {(lang === "sv" ? method.summarySv : (method.summaryEn ?? method.summarySv)) ??
-                    (lang === "sv" ? method.purposeSv : method.purposeSv) ??
-                    ""}
-                </p>
-              ) : null}
-            </div>
-
-            <div>
-              <Label htmlFor="beskt-exposure-profile">{t("beskt.start.chooseProfile")}</Label>
-              <Select value={profileId} onValueChange={setProfileId} disabled={!method}>
-                <SelectTrigger
-                  id="beskt-exposure-profile"
-                  className="mt-1.5 min-h-[44px] w-full max-w-md"
-                >
-                  <SelectValue
-                    placeholder={t(
-                      method ? "beskt.start.chooseProfile" : "beskt.start.chooseMethodFirst",
-                    )}
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {(profiles.data ?? []).map((p) => (
-                    <SelectItem key={p.exposureProfileId} value={p.exposureProfileId}>
-                      {(lang === "sv" ? p.dutiesSv : (p.dutiesEn ?? p.dutiesSv)) ?? p.profileKey}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {method && !profiles.isPending && (profiles.data ?? []).length === 0 ? (
-                <p className="mt-2 text-xs text-muted-foreground" data-testid="beskt-no-profiles">
-                  {t("beskt.start.noProfile")}
-                </p>
-              ) : null}
-            </div>
-
-            {startError ? (
-              <Alert variant="destructive" role="alert">
-                <AlertTriangle aria-hidden="true" className="h-4 w-4" />
-                <AlertTitle>{t("beskt.start.failed")}</AlertTitle>
-                <AlertDescription data-testid="beskt-start-error">{t(startError)}</AlertDescription>
-              </Alert>
-            ) : null}
-
+          <div data-testid="beskt-start-from-application">
             <Button
-              type="submit"
+              type="button"
               className="min-h-[44px]"
-              disabled={!methodVersionId || !profileId || startMutation.isPending}
-              data-testid="beskt-start-submit"
+              onClick={() => setStartOpen(true)}
+              data-testid="beskt-start-open"
             >
-              {startMutation.isPending ? t("beskt.start.starting") : t("beskt.start.action")}
+              {t("beskt.module.start")}
             </Button>
-          </form>
+            <p className="mt-2 text-xs text-muted-foreground">{t("beskt.start.dialogHint")}</p>
+          </div>
         )}
       </div>
+
+      {startOpen && employerSlug && methods.data ? (
+        <BesktStartDialog
+          open
+          onOpenChange={(o) => {
+            setStartOpen(o);
+            if (!o) void queryClient.invalidateQueries({ queryKey: ["beskt"] });
+          }}
+          employerId={employerId}
+          employerSlug={employerSlug}
+          methods={methods.data}
+          isSecurityOfficer={Boolean(standing.data?.isSecurityOfficer)}
+          fixedApplicationId={applicationId}
+        />
+      ) : null}
 
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
         <DialogContent data-testid="beskt-cancel-dialog">

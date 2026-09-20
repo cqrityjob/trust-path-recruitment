@@ -189,10 +189,28 @@ export const getInterviewCaseContext = createServerFn({ method: "GET" })
     // job, so this is the reference that cannot be steered.
     const jobId = str(a.job_id);
 
+    // The test this case was STARTED from, when it was started from one
+    // (scp_interview_starts, 20261202090000). Its brief is the one the
+    // interview follows -- never "the newest released test" when the
+    // application holds more than one. A failed read of the start is a failed
+    // assessment read, not permission to guess.
+    const start = await db
+      .from("scp_interview_starts" as never)
+      .select("source_kind, source_id")
+      .eq("interview_case_id", data.caseId)
+      .maybeSingle();
+    const startRow = start.data as { source_kind: string; source_id: string | null } | null;
+    const source: AssessmentSource = start.error
+      ? { kind: "unreadable" }
+      : startRow?.source_kind === "assessment_assignment" && startRow.source_id
+        ? { kind: "assignment", assignmentId: startRow.source_id }
+        : { kind: "any" };
+    if (start.error) console.error("[interview-context] case start unavailable", start.error);
+
     const [job, cv, assessment] = await Promise.all([
       readJob(db, jobId, employerId),
       readCv(applicationId),
-      readAssessment(db, applicationId),
+      readAssessment(db, applicationId, source),
     ]);
 
     return {
@@ -397,10 +415,26 @@ async function readCv(applicationId: string): Promise<Sourced<ContextCvInput>> {
  *  written the wrong way round, because an unreleased assessment has no row to
  *  return. What the attempt list contributes is only the knowledge that one is
  *  on its way, which is why `pending` is derived from it and the brief is not. */
+/** Which test a case's briefing may come from: exactly the one it was started
+ *  from, any released one (a case not started from a test), or none because
+ *  the start could not be read. */
+type AssessmentSource =
+  | { readonly kind: "assignment"; readonly assignmentId: string }
+  | { readonly kind: "any" }
+  | { readonly kind: "unreadable" };
+
 async function readAssessment(
   db: Db,
   applicationId: string,
+  source: AssessmentSource = { kind: "any" },
 ): Promise<{ brief: ContextAssessmentInput | null; pending: boolean; read: SourceRead }> {
+  if (source.kind === "unreadable") {
+    return {
+      brief: null,
+      pending: false,
+      read: resolveSourceRead({ referenced: true, error: { message: "start" }, hasRow: false }),
+    };
+  }
   const { data: rows, error } = await db.rpc("scp_application_assessments", {
     _application_id: applicationId,
   });
@@ -418,7 +452,14 @@ async function readAssessment(
     };
   }
 
-  const attempts = (Array.isArray(rows) ? rows : []) as Row[];
+  const all = (Array.isArray(rows) ? rows : []) as Row[];
+  // Started from a test: that test alone. It is on the application by
+  // construction (scp_iv_start_interview verified it), so an empty list here
+  // is a read that did not see it, never "no assessment".
+  const attempts =
+    source.kind === "assignment"
+      ? all.filter((r) => str(r.assignment_id) === source.assignmentId)
+      : all;
   // Genuinely none. The only `absent` on this path, and the only state that
   // may be rendered as "no assessment has been sent".
   if (attempts.length === 0) return { brief: null, pending: false, read: "absent" };

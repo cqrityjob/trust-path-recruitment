@@ -85,6 +85,14 @@ export interface BesktReportCorrection {
   readonly interviewerInterpretation: string | null;
   readonly alternativeExplanation: string | null;
   readonly protectiveFactor: string | null;
+  readonly eventTiming: string | null;
+  readonly consequence: string | null;
+  readonly supportingInformation: string | null;
+  readonly contradictingInformation: string | null;
+  readonly measuresTaken: string | null;
+  readonly roleLink: string | null;
+  readonly informationGap: string | null;
+  readonly candidateResponse: string | null;
   readonly recordedBy: string | null;
   readonly recordedAt: string | null;
 }
@@ -108,6 +116,14 @@ export interface BesktReportEntry {
   readonly interviewerInterpretation: string | null;
   readonly alternativeExplanation: string | null;
   readonly protectiveFactor: string | null;
+  readonly eventTiming: string | null;
+  readonly consequence: string | null;
+  readonly supportingInformation: string | null;
+  readonly contradictingInformation: string | null;
+  readonly measuresTaken: string | null;
+  readonly roleLink: string | null;
+  readonly informationGap: string | null;
+  readonly candidateResponse: string | null;
   readonly verificationNeed: string | null;
   readonly verificationState: string | null;
   readonly verificationSource: string | null;
@@ -162,6 +178,23 @@ export interface BesktReportDocumentData {
   readonly positions: readonly BesktReportPosition[];
   readonly panel: BesktReportPanel | null;
   readonly auditEvents: readonly BesktReportEvent[];
+  /** 20261130090000: the assignment's purpose and people, the participants,
+   *  the candidate's supplements, the responsible human's stance and the
+   *  follow-up actions -- all in the frozen, previewed basis. */
+  readonly assignment: BesktReportAssignment | null;
+  readonly participants: ReadonlyArray<{
+    readonly name: string | null;
+    readonly positionRole: string | null;
+    readonly lockedAt: string | null;
+  }>;
+  readonly supplements: ReadonlyArray<{
+    readonly itemKey: string | null;
+    readonly kind: string | null;
+    readonly body: string | null;
+    readonly submittedAt: string | null;
+  }>;
+  readonly stance: BesktReportStance | null;
+  readonly actions: readonly BesktReportAction[];
   /**
    * The document's own statement about itself, carried through rather than
    * asserted by the client. All three are false in every payload the
@@ -174,6 +207,39 @@ export interface BesktReportDocumentData {
   readonly interpretation: string | null;
 }
 
+export interface BesktReportAssignment {
+  readonly purpose: string | null;
+  readonly roleTitle: string | null;
+  readonly entrance: string | null;
+  readonly assignedAt: string | null;
+  readonly submittedAt: string | null;
+  readonly responsibleInterviewer: string | null;
+  readonly securityOwner: string | null;
+  readonly roleSecurityAttestation: string | null;
+  readonly lawfulBasisStatement: string | null;
+  readonly exposureDutiesSv: string | null;
+  readonly exposureDutiesEn: string | null;
+}
+
+export interface BesktReportStance {
+  readonly version: number | null;
+  readonly sufficiency: string | null;
+  readonly sufficiencyReason: string | null;
+  readonly stance: string | null;
+  readonly rationale: string | null;
+  readonly decidedByName: string | null;
+  readonly decidedRole: string | null;
+  readonly decidedAt: string | null;
+}
+
+export interface BesktReportAction {
+  readonly description: string | null;
+  readonly responsible: string | null;
+  readonly dueOn: string | null;
+  readonly status: string | null;
+  readonly reviewOn: string | null;
+}
+
 function toCorrection(c: Record<string, unknown>): BesktReportCorrection {
   return {
     entryId: s(c.entry_id),
@@ -184,6 +250,14 @@ function toCorrection(c: Record<string, unknown>): BesktReportCorrection {
     interviewerInterpretation: s(c.interviewer_interpretation),
     alternativeExplanation: s(c.alternative_explanation),
     protectiveFactor: s(c.protective_factor),
+    eventTiming: s(c.event_timing),
+    consequence: s(c.consequence),
+    supportingInformation: s(c.supporting_information),
+    contradictingInformation: s(c.contradicting_information),
+    measuresTaken: s(c.measures_taken),
+    roleLink: s(c.role_link),
+    informationGap: s(c.information_gap),
+    candidateResponse: s(c.candidate_response),
     recordedBy: s(c.recorded_by),
     recordedAt: s(c.recorded_at),
   };
@@ -199,6 +273,14 @@ function toEntry(e: Record<string, unknown>): BesktReportEntry {
     interviewerInterpretation: s(e.interviewer_interpretation),
     alternativeExplanation: s(e.alternative_explanation),
     protectiveFactor: s(e.protective_factor),
+    eventTiming: s(e.event_timing),
+    consequence: s(e.consequence),
+    supportingInformation: s(e.supporting_information),
+    contradictingInformation: s(e.contradicting_information),
+    measuresTaken: s(e.measures_taken),
+    roleLink: s(e.role_link),
+    informationGap: s(e.information_gap),
+    candidateResponse: s(e.candidate_response),
     verificationNeed: s(e.verification_need),
     verificationState: s(e.verification_state),
     verificationSource: s(e.verification_source),
@@ -308,6 +390,57 @@ export function readBesktReportPayload(payload: unknown): BesktReportDocumentDat
       recordedAt: s(e.recorded_at),
       actorId: s(e.actor_id),
       reason: s(e.reason),
+    })),
+    assignment: p.assignment
+      ? (() => {
+          const a = rec(p.assignment);
+          return {
+            purpose: s(a.purpose),
+            roleTitle: s(a.role_title),
+            entrance: s(a.entrance),
+            assignedAt: s(a.assigned_at),
+            submittedAt: s(a.submitted_at),
+            responsibleInterviewer: s(a.responsible_interviewer),
+            securityOwner: s(a.security_owner),
+            roleSecurityAttestation: s(a.role_security_attestation),
+            lawfulBasisStatement: s(a.lawful_basis_statement),
+            exposureDutiesSv: s(a.exposure_duties_sv),
+            exposureDutiesEn: s(a.exposure_duties_en),
+          };
+        })()
+      : null,
+    participants: arr(p.participants).map((x) => ({
+      name: s(x.name),
+      positionRole: s(x.position_role),
+      lockedAt: s(x.locked_at),
+    })),
+    supplements: arr(p.supplements).map((x) => ({
+      itemKey: s(x.item_key),
+      kind: s(x.kind),
+      body: s(x.body),
+      submittedAt: s(x.submitted_at),
+    })),
+    stance: p.stance
+      ? (() => {
+          const x = rec(p.stance);
+          return {
+            version: n(x.version),
+            sufficiency: s(x.sufficiency),
+            sufficiencyReason: s(x.sufficiency_reason),
+            stance: s(x.stance),
+            rationale: s(x.rationale),
+            decidedByName: s(x.decided_by_name),
+            decidedRole: s(x.decided_role),
+            decidedAt: s(x.decided_at),
+          };
+        })()
+      : null,
+    actions: arr(p.actions).map((x) => ({
+      description: s(x.description),
+      responsible: s(x.responsible),
+      dueOn: s(x.due_on),
+      status: s(x.status),
+      reviewOn: s(x.review_on),
     })),
     producesScore: p.produces_score === true,
     producesRanking: p.produces_ranking === true,

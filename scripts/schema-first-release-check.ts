@@ -116,8 +116,22 @@ const sources = sourceFiles(SRC)
   .filter((f) => !EXCLUDED.has(f))
   .map((f) => ({ file: path.relative(root, f), body: readFileSync(f, "utf8") }));
 
+/**
+ * The bare identifier an inventory entry names. A function is recorded WITH
+ * its signature and often a comment -- "bcp_assign(uuid,...) -- re-created" --
+ * and that string used as a pattern turns the parentheses into a regex group
+ * that matches nothing: every function entry passed as unreferenced, and an
+ * application branch calling four unapplied RPCs went green (2026-09-19).
+ */
+function inventoryIdentifier(object: string): string {
+  const m = /^\s*(?:public\.)?([A-Za-z_][A-Za-z0-9_]*)/.exec(object);
+  if (!m) throw new Error(`release-state inventory entry has no identifier: ${object}`);
+  return m[1];
+}
+
 function referencedBy(item: IntroducedObject): { file: string; line: number } | null {
-  const patterns = [item.object, camel(item.object)].map((id) => new RegExp(`\\b${id}\\b`));
+  const id = inventoryIdentifier(item.object);
+  const patterns = [id, camel(id)].map((name) => new RegExp(`\\b${name}\\b`));
   for (const { file, body } of sources) {
     if (item.kind === "column" && item.table && !body.includes(item.table)) continue;
     const lines = body.split("\n");
@@ -127,6 +141,26 @@ function referencedBy(item: IntroducedObject): { file: string; line: number } | 
     }
   }
   return null;
+}
+
+// Self-test: the matcher must see through a recorded SIGNATURE. Every applied
+// function entry written with one, and called by the application, has to be
+// found -- otherwise a pending entry of the same shape would be invisible and
+// this guard would pass exactly the branches it exists to stop.
+const signatureShaped = state.frontier
+  .filter((e) => e.hostedState === "applied")
+  .flatMap((e) => e.introduces)
+  .filter((i) => i.kind === "function" && /[^A-Za-z0-9_]/.test(i.object));
+const signatureSeen = signatureShaped.filter((i) => referencedBy(i) !== null);
+if (signatureShaped.length > 0 && signatureSeen.length === 0) {
+  console.error("schema-first release contract\n");
+  console.error("  SELF-TEST FAILED — no signature-shaped inventory entry is recognised in src/,");
+  console.error(
+    `  although ${signatureShaped.length} are recorded (e.g. ${signatureShaped[0].object.slice(0, 60)}).`,
+  );
+  console.error("  The matcher cannot see a function recorded with its signature, so a pending");
+  console.error("  one would never block. Fix the matcher, not the inventory.");
+  process.exit(1);
 }
 
 type Blocker = { migration: string; object: string; file: string; line: number };

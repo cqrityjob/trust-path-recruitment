@@ -7,6 +7,222 @@
   "$comment": "RELEASE PARITY STATE. Enforced by scripts/release-parity-check.ts, which runs in CI and before a release. This file records, for every canonical migration at the release frontier, whether it is believed applied on the hosted database, and which database objects it introduces. The guard fails when application code on this branch references an object whose migration is not applied -- the exact class of failure that stopped employers saving jobs during UAT. It NEVER connects to a database, holds no credentials and applies no migration; it compares this repository against itself. Edit it deliberately: every entry is an owner-level statement about production.", 
   "frontier": [
     {
+      "file": "20261203090000_scp_interview_case_vetting_read.sql", 
+      "hostedState": "applied",
+      "hostedVersion": "20261203090000",
+      "hostedName": "scp_interview_case_vetting_read",
+      "evidenceSource": "Read-only verification 2026-09-19 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt after PR #274 merged as 1631d5d3f481520e8f3a85f8220072959eff6855. Both canonical migration versions/names are present in the 305-row hosted ledger. All eight function bodies introduced/replaced by the two migrations are byte-identical to their merged SQL source; one overload each, pinned search_path=public, no anon execute. All four new tables have RLS enabled, no authenticated INSERT/UPDATE/DELETE and no anon SELECT; internal helpers are not executable by authenticated. The partial unique start index and the Vaktare/general to vaktare-se content link exist. scp_interview_cases has exactly one policy, scp_interview_cases_read USING scp_iv_case_row_visible(id, employer_id); the transcript confirmation body matches the corrected source. No hosted writes or migrations were performed. There are zero live security_vetting_support case links in production, so a non-vacuous existing-case role probe is unavailable; role behaviour is covered by the merged isolated DB tests, not claimed as production-tested.", 
+      "introduces": [
+        {
+          "kind": "function", 
+          "object": "scp_iv_case_row_visible(uuid,uuid)"
+        }
+      ], 
+      "note": "OWNER DECISION 2026-09-19 (blocker for #273/#274): a security vetting's interview case ROW is the appointed security function's alone. scp_interview_cases_read was membership-only (has_employer_role), so a plain member -- and an owner or admin who is not the security function -- could SELECT the vetting case's row (title, candidate, application) although scp_iv_can_read_case answered false. The policy is re-created on scp_iv_case_row_visible(id, employer_id): the same rule as scp_iv_can_read_case, reading only membership and BESKT tables (no recursion); it is the table's only policy; the one view is security_invoker; child tables already read through scp_iv_can_read_case. scp_iv_confirm_transcript_basis additionally requires bcp_case_access_ok (md5-pinned daf35ff566dc5e44ce799340cbcf8e46 -> eb9c745d2b7745299c41289c385e9e36, equal in production 2026-09-19). THE ROLLBACK REINTRODUCES THE GAP and is run only in isolated test databases. Proved by supabase/tests/scp_interview_case_vetting_read_test.sql (direct reads as member, owner, admin, officer, candidate, other organisation, anon; lists, related rows, view, RPCs; revoked appointment), which db-test.sh also requires to FAIL against the old policy.", 
+      "verify": "SELECT qual = 'scp_iv_case_row_visible(id, employer_id)' FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_interview_cases' AND policyname = 'scp_interview_cases_read'; -- expect t, and exactly one policy on the table. md5(prosrc) of scp_iv_confirm_transcript_basis = eb9c745d2b7745299c41289c385e9e36; scp_iv_case_row_visible executable by authenticated, not anon. Behaviour, rolled back: as a plain member SELECT count(*) FROM scp_interview_cases WHERE id = <a vetting case> returns 0.", 
+      "rollback": "supabase/rollback/20261203090000_scp_interview_case_vetting_read_rollback.sql"
+    }, 
+    {
+      "file": "20261202090000_scp_interview_starts.sql", 
+      "hostedState": "applied",
+      "hostedVersion": "20261202090000",
+      "hostedName": "scp_interview_starts",
+      "evidenceSource": "Read-only verification 2026-09-19 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt after PR #274 merged as 1631d5d3f481520e8f3a85f8220072959eff6855. Both canonical migration versions/names are present in the 305-row hosted ledger. All eight function bodies introduced/replaced by the two migrations are byte-identical to their merged SQL source; one overload each, pinned search_path=public, no anon execute. All four new tables have RLS enabled, no authenticated INSERT/UPDATE/DELETE and no anon SELECT; internal helpers are not executable by authenticated. The partial unique start index and the Vaktare/general to vaktare-se content link exist. scp_interview_cases has exactly one policy, scp_interview_cases_read USING scp_iv_case_row_visible(id, employer_id); the transcript confirmation body matches the corrected source. No hosted writes or migrations were performed. There are zero live security_vetting_support case links in production, so a non-vacuous existing-case role probe is unavailable; role behaviour is covered by the merged isolated DB tests, not claimed as production-tested.", 
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "scp_interview_starts"
+        }, 
+        {
+          "kind": "table", 
+          "object": "scp_assessment_setups"
+        }, 
+        {
+          "kind": "function", 
+          "object": "scp_iv_start_interview(uuid,uuid,text,uuid,text,uuid,text,text,text,text)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "scp_record_assessment_setup(uuid,uuid,text,text,text)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "scp_iv_start_choices(uuid,uuid)"
+        }, 
+        {
+          "kind": "table", 
+          "object": "scp_recruitment_role_profiles"
+        }, 
+        {
+          "kind": "table", 
+          "object": "scp_recruitment_content_links"
+        }
+      ], 
+      "note": "OWNER CORRECTIONS 2026-09-19 (#273/#274, test → interview → final report). (1) Which guide and test belong to a setup is DATA: scp_recruitment_role_profiles (library role profile → governed role, role group) and scp_recruitment_content_links (profile + environment → role-interview guide of that role, test of that role's profession; a trigger refuses anything else), seeded with Väktare/general → vaktare-se + security-officer-recruitment. scp_iv_start_interview verifies role group, environment content, the completed test's definition and any supplied guide against them BEFORE the lock and any write, derives the guide when none is named, and keeps a started case's pinned versions on reopen; scp_iv_start_choices lists the compatible setups. (2) BESKT starts -- from an application or an accepted standalone invitation (application_id NULL, no application invented) -- require a submitted preparation and write the governed link (bcp_link_preparation_to_case) in the same transaction, so a security vetting's case is restricted from its first moment; a live link is adopted, never duplicated. One interview per intended START, created atomically. A start is identified by its source -- a completed candidate test (assessment assignment), a BESKT assignment, or an explicitly chosen setup before any test -- never by the application alone, so TRUST and BESKT (or two tests) keep separate cases. scp_iv_start_interview verifies the application, the source (the test must be this application's, for this applicant, submitted; a BESKT source needs the employer party), binds the application's own candidate account, serialises on employer + start key (advisory lock + partial unique index), and writes the case, its setup and its non-personal material in one transaction. A cancelled case releases its start (kept, superseded); nothing is merged or deleted. scp_assessment_setups records the setup a test was sent with (owner/admin). Adds objects only; no existing body is changed. Proved by supabase/tests/scp_interview_starts_test.sql and the two-connection race in scripts/db-test.sh.", 
+      "verify": "SELECT to_regclass('public.scp_interview_starts') IS NOT NULL AND to_regclass('public.scp_assessment_setups') IS NOT NULL AND EXISTS (SELECT 1 FROM public.scp_recruitment_content_links l JOIN public.scp_interview_packs p ON p.id = l.interview_pack_id WHERE l.role_profile = 'vaktare' AND l.environment = 'general' AND p.slug = 'vaktare-se') AND EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'scp_interview_starts_one_live') AND position('pg_advisory_xact_lock' in (SELECT prosrc FROM pg_proc WHERE proname = 'scp_iv_start_interview')) > 0; -- expect t. Neither function executable by anon; scp_iv_start_result and the guard not executable by authenticated; both tables RLS enabled (not forced, the scp_ convention), SELECT-only for clients, 0 rows.", 
+      "rollback": "supabase/rollback/20261202090000_scp_interview_starts_rollback.sql"
+    }, 
+    {
+      "file": "20261201090000_scp_library_direct_access.sql", 
+      "hostedState": "applied", 
+      "hostedVersion": "20261201090000", 
+      "hostedName": "scp_library_direct_access", 
+      "evidenceSource": "Read-only verification 2026-09-19 through the Supabase management connector on CQrityjob Production (wrygicdfxwjnrugduxnt), after PR #272 merged to main as 61a04c8: supabase_migrations.schema_migrations holds 20261201090000 / scp_library_direct_access (303 rows), applied by the official Supabase GitHub integration. The OBJECT BODIES were verified, not only the ledger row: md5(prosrc) of all fifteen functions it created or re-created equals a local replay of the merged file -- bcp_offer_covers bb180a98cc9cbc3cc34e5abcfa1bfced, bcp_open_pilot_available e5530d38faecb23201bce3c009932d01, bcp_offer_content_covers 7d80f296bc7ac489d2e47130348670a9, beskt_set_pilot_availability b25ff58d23fa119c6938bebc99d52dc7, scp_record_recruitment_setup c03cbd8f78deb94d777148357dc8a467, scp_guard_recruitment_setup 0b467088888bb92540fc53c5075d5f62, bcp_check_start 0b8d3807dfd38bd5b3a781f1c951d779, bcp_assign 7d953b7d0369a1452f39bd9d5b92f3c3, bcp_accept_invitation 54d0cf578d5cb2b6da4451f6f2a7c4b1, bcp_assignable_method_versions 842b8b07f4ea834a390a7725414b246c, bcp_assignable_exposure_profiles 5668d549b428e069211b63408b5fe2ef, bcp_method_preview 57f80746aa2494984a4bdf251d5fa154, bcp_party_can_read_method_version ccf5b43f989e1c5198cb9c016716f293, bcp_conduct_topic_prompts a3f8062c32c8f630bc4a5a6b323e67e7, beskt_content_gate e87cf7bba30d4ec94b49e658a5484ad6; one overload each. beskt_method_versions.pilot_availability exists; scp_recruitment_setups exists with RLS enabled (not forced, the scp_ convention), is not readable by anon nor insertable by authenticated, and holds 0 rows; the entitlement predicates are not executable by authenticated; anon can execute neither the setter nor the setup recorder. No BESKT method version is installed in production (0 rows), so nothing is available yet. Behaviour, in a rolled-back transaction as authenticated with no identity: beskt_set_pilot_availability answered 42501 BESKT_NOT_AUTHENTICATED. No statement wrote to production and the migration was not re-run.", 
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "scp_recruitment_setups"
+        }, 
+        {
+          "kind": "function", 
+          "object": "scp_record_recruitment_setup(uuid,text,text,text,text,uuid,uuid)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "beskt_set_pilot_availability(uuid,uuid,boolean,text)"
+        }
+      ], 
+      "note": "Applied 2026-09-19 (PR #272). OWNER DECISION 2026-09-19 (TRUST/BESKT product structure v2.0, section 6): published methods in the employer offer are available directly; no employer asks for access, holds a content role, installs a method or waits for a platform activation. Gives BESKT the TRUST open-pilot rule of 20260925090000: one entitlement predicate (bcp_offer_covers) on every start path -- published runnable content, or content the platform publisher made available while still draft/in review, or the kept internal test activation -- for any ACTIVE employer, with no per-employer pilot grant. Availability is set per VERSION, freezes content, and reviews, publishes and relabels nothing. Adds scp_recruitment_setups: the library choice (method, role group, role profile, environment) recorded once against the case or BESKT assignment. Nine bodies md5-pinned (equal to production 2026-09-19) and restored verbatim by the rollback. Proved by supabase/tests/scp_library_direct_access_test.sql.", 
+      "verify": "SELECT to_regclass('public.scp_recruitment_setups') IS NOT NULL AND position('bcp_offer_covers' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_check_start')) > 0 AND position('bcp_pilot_grant_active' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_check_start')) = 0 AND position('BESKT_OPEN_FROZEN' in (SELECT prosrc FROM pg_proc WHERE proname = 'beskt_content_gate')) > 0; -- expect t. No anon execute on any new function; bcp_offer_covers / bcp_open_pilot_available / bcp_offer_content_covers not executable by authenticated; scp_recruitment_setups RLS enabled (not forced, the scp_ convention) and SELECT-only for clients; every beskt_method_versions.pilot_availability = 'restricted' until the publisher acts.", 
+      "rollback": "supabase/rollback/20261201090000_scp_library_direct_access_rollback.sql"
+    }, 
+    {
+      "hostedState": "applied", 
+      "hostedVersion": "20261130090000", 
+      "hostedName": "bcp_beskt_complete", 
+      "evidenceSource": "Read-only verification 2026-09-19 through the Supabase management connector on CQrityjob Production (wrygicdfxwjnrugduxnt), after PR #270 merged to main as 188e8cd: supabase_migrations.schema_migrations holds 20261130090000 / bcp_beskt_complete (302 rows), applied by the official Supabase GitHub integration. The OBJECT BODIES were verified, not only the ledger row: md5(prosrc) of 43 functions equals a local replay of the merged file, among them bcp_start_beskt 5b727429a8136f052eac2eb444538aa0, bcp_create_invitation 8f1d54205b85eb5de130d3a60fde79a4, bcp_accept_invitation 15fa23a1e8bbf1622b6458146fdca697, bcp_invitation_for_token c57ee390af51bf553ada62ca01eaa946, bcp_appoint_security_officer 36193adf38da2cb2f56b4fc08816faa9, bcp_is_security_officer ab47910593d1e6a343678d387e92af4e, bcp_case_access_ok 02356e64182f89271b75895e4e9a8b64, bcp_employer_party aed5c74f73735006cb781e2053518de2, bcp_conduct_record_stance c51d18baa2d076060382ba2fd1534d4b, bcp_conduct_record_action a25c4c0c9b8acbe451c4bd1e38dda7bd, bcp_conduct_report_blockers cd8e784e78863a52b919f514eea8bfa4, bcp_interview_preparation b00ec5bd41a547046b62f6e2def254dc, bcp_submit_supplement cef00ebca8fd63b9746b6e2de7ea01f0, bcp_version_is_runnable 9449df12930d75074f427eb352d5c46d, bcp_candidate_assignments 2fcec8c4722cdfbc0bf4ac27ed1c2f96, scp_iv_can_read_case 0407b86c8467b224ddece07781d80fa1, scp_iv_can_write_case 26ba3211992ff064f33bddaed8601992; one overload each, search_path=public; no bcp_ function is executable by anon; the internal predicates, builders and guards are not executable by authenticated. The five new tables have RLS enabled AND forced, are not readable by anon (TRUNCATE included) and not writable by authenticated; bcp_invitations is not SELECT-able by authenticated; all five hold 0 rows. Behaviour, in a rolled-back transaction as authenticated with no identity: bcp_appoint_security_officer answered 42501 BCP_NOT_AUTHENTICATED. No statement wrote to production and the migration was not re-run.", 
+      "note": "Applied 2026-09-19 (PR #270). OWNER DECISION 2026-09-19: BESKT as a complete product -- security vetting with B, E, S, K and T, reachable from the employer's Testbibliotek -- with no review fabricated and nothing labelled validated. Adds the employer's appointed security function (bcp_security_officers) and makes it the only employer party of a security vetting at the assignment, in every party-read policy and at the interview case (scp_iv_can_read_case / _write_case); security-vetting assignments carry the employer's own attestation, lawful basis and security owner on the row; standalone invitations (bcp_invitations) bind the confirmed invited account without a job application (scp_iv_create_case admits that binding); purpose-specific governed notices with a contact route; candidate supplements; disclosed topics carrying the rule that fired; the completed FAKTA chain on each observation; the responsible human's stance and follow-up actions, with a new report blocker so a signature alone never finalises. 28 re-created bodies are md5-pinned (verified identical in production 2026-09-19) and restored verbatim by the rollback.", 
+      "introduces": [
+        {
+          "object": "bcp_start_beskt(uuid,uuid,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_create_invitation(uuid,uuid,text,text,text,text,uuid,uuid,text,uuid,text,uuid,text,text,timestamptz)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_revoke_invitation(uuid,uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_invitation_for_token(text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_accept_invitation(uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_employer_invitations(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_method_preview(uuid,uuid,uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_employer_beskt_assignments(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_submit_supplement(uuid,uuid,text,text,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_assignment_supplements(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_interview_preparation(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_conduct_record_stance(uuid,uuid,integer,text,text,text,text,text,text,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_conduct_record_action(uuid,uuid,uuid,integer,text,text,date,text,date,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_conduct_decision(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_employer_people(uuid)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_appoint_security_officer(uuid,uuid,uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_revoke_security_officer(uuid,uuid,text)", 
+          "kind": "function"
+        }, 
+        {
+          "object": "bcp_security_officers", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_invitations", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_candidate_supplements", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_conduct_stances", 
+          "kind": "table"
+        }, 
+        {
+          "object": "bcp_conduct_actions", 
+          "kind": "table"
+        }
+      ], 
+      "verify": "SELECT to_regclass('public.bcp_security_officers') IS NOT NULL AND to_regclass('public.bcp_invitations') IS NOT NULL AND position('bcp_case_access_ok' in (SELECT prosrc FROM pg_proc WHERE proname = 'scp_iv_can_read_case')) > 0 AND position('BCP_CONDUCT_STANCE_MISSING' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_report_blockers')) > 0; -- expect t. No anon execute on any new function; bcp_check_start, bcp_is_security_officer, bcp_case_access_ok, bcp_version_is_runnable, bcp_conduct_may_record_stance and bcp_conduct_report_extensions not executable by authenticated; the five new tables FORCE RLS; authenticated cannot SELECT bcp_invitations.", 
+      "rollback": "supabase/rollback/20261130090000_bcp_beskt_complete_rollback.sql", 
+      "file": "20261130090000_bcp_beskt_complete.sql"
+    },
+    {
+      "file": "20261129090000_bcp_internal_test_activation.sql", 
+      "hostedState": "applied", 
+      "hostedVersion": "20261129090000", 
+      "hostedName": "bcp_internal_test_activation", 
+      "evidenceSource": "Read-only verification 2026-09-19 through the Supabase management connector on CQrityjob Production (wrygicdfxwjnrugduxnt), after PR #268 merged to main as dbdeba1: supabase_migrations.schema_migrations holds 20261129090000 / bcp_internal_test_activation (301 rows), applied by the official Supabase GitHub integration. The OBJECT BODIES were verified, not only the ledger row: md5(prosrc) of all thirteen functions equals a local replay of the merged file -- bcp_assign 7ea7e1a3925b0ba8a7acfb1b45c17c9a, bcp_assignable_exposure_profiles 2d9fba1e411f8c9a8f589a691eacb3ea, bcp_assignable_method_versions 1efd54d66a2e827d5a4bc763826d877f, bcp_party_can_read_method_version 78db634ed36fcc975886e872b1a67f3a, bcp_conduct_topic_prompts 8eed9c0dd9b0b910262aa92627de7d7d, bcp_grant_internal_test_activation 6a03afdae30f3c32089c04bd76cedefa, bcp_revoke_internal_test_activation 60824af93039a62bdad4936658e9140e, bcp_internal_test_activations_for cc78f125a15599da60fb8ddf14d6eec6, beskt_set_content_role 75a3cec824280445a5093bc3a40a465a, bcp_internal_test_activation_active d2ea285935d9a506cdce0cd6182e7099, bcp_internal_test_activation_covers 291fefae69c9a3c678a1c4a4bd4f840f, bcp_version_is_structurally_candidate_safe eb73148d35f25e135e800a4f5e09574b, bcp_guard_internal_test_activation a2b5eccbfa15fa8ebdf6fcf54d73162f; one overload each, search_path=public, none executable by anon; the three predicates, the guard and bcp_party_can_read_method_version not executable by authenticated. bcp_internal_test_activations has RLS enabled AND forced, one policy, one guard trigger; scp_content_role_changes has RLS enabled (not forced, the scp_ convention) and one policy; neither table is writable by authenticated or service_role nor readable by anon (TRUNCATE included). Both tables hold 0 rows and no BESKT method exists yet. Behaviour, in rolled-back transactions as authenticated with no identity: bcp_grant_internal_test_activation answered BCP_NOT_PLATFORM_ADMIN and beskt_set_content_role answered BESKT_NOT_PLATFORM_ADMIN. No statement wrote to production and the migration was not re-run.", 
+      "introduces": [
+        {
+          "kind": "table", 
+          "object": "bcp_internal_test_activations"
+        }, 
+        {
+          "kind": "table", 
+          "object": "scp_content_role_changes"
+        }, 
+        {
+          "kind": "function", 
+          "object": "bcp_grant_internal_test_activation(uuid,uuid,uuid,text,date)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "bcp_revoke_internal_test_activation(uuid,uuid,text)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "bcp_internal_test_activations_for(uuid,uuid)"
+        }, 
+        {
+          "kind": "function", 
+          "object": "beskt_set_content_role(uuid,text,text,boolean,text)"
+        }
+      ], 
+      "note": "Applied 2026-09-19 (PR #268). OWNER DECISION 2026-09-18: test BESKT end to end on the live site for cqrityjob only, with test data, before the method is reviewed. Adds a SEPARATE, recorded, employer-scoped internal test activation (platform admin only; complete recruitment-only content; pinned by content hash; expires within 90 days; revocable) that never writes a review, never publishes and never changes the version's status or validation label. bcp_assign, bcp_assignable_exposure_profiles, bcp_assignable_method_versions and bcp_party_can_read_method_version accept either the existing published+pilot path or a live activation for the same employer; their bodies are the md5-pinned current ones with only those conditions changed. Also a governed, audited beskt_set_content_role for platform admins. Proved by supabase/tests/bcp_internal_test_activation_test.sql (32) through real sessions.", 
+      "verify": "SELECT to_regclass('public.bcp_internal_test_activations') IS NOT NULL AND position('bcp_internal_test_activation_active' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_assign')) > 0 AND position('bcp_internal_test_activation_covers' in (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_party_can_read_method_version')) > 0;  -- expect t. No anon execute on any new function; bcp_internal_test_activation_active / _covers / bcp_version_is_structurally_candidate_safe not executable by authenticated; bcp_internal_test_activations FORCE RLS, scp_content_role_changes RLS enabled; both SELECT-only for clients.", 
+      "rollback": "supabase/rollback/20261129090000_bcp_internal_test_activation_rollback.sql"
+    },
+    {
       "file": "20261128090000_scp_iv_case_candidate_binding.sql", 
       "hostedState": "applied", 
       "hostedVersion": "20261128090000", 

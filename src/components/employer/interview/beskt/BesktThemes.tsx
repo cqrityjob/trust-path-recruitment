@@ -88,6 +88,7 @@ export function BesktThemes({
   entries,
   prompts,
   actions,
+  area,
 }: {
   sessionId: string;
   methodVersionId: string;
@@ -103,21 +104,27 @@ export function BesktThemes({
    */
   prompts: BesktConductPrompts | null;
   actions: BesktThemeActions;
+  /** Inside one area of the workspace: its own heading, and no catch-all of
+   *  entries that belong to other areas. */
+  area?: { readonly id: string; readonly heading: string; readonly lede?: string };
 }) {
   const { t, lang } = useT();
   const byItemKey = new Map(entries.map((e) => [e.itemKey, e]));
 
   return (
     <section
-      data-testid="beskt-themes"
+      data-testid={area ? `beskt-area-${area.id}` : "beskt-themes"}
       className="rounded-lg border border-border p-4"
-      aria-labelledby="beskt-themes-h"
+      aria-labelledby={area ? `beskt-area-${area.id}-h` : "beskt-themes-h"}
     >
-      <h2 id="beskt-themes-h" className="text-sm font-semibold text-foreground">
-        {t("beskt.conduct.themes.heading")}
+      <h2
+        id={area ? `beskt-area-${area.id}-h` : "beskt-themes-h"}
+        className="text-sm font-semibold text-foreground"
+      >
+        {area ? area.heading : t("beskt.conduct.themes.heading")}
       </h2>
       <p className="mt-1 max-w-[72ch] text-sm leading-relaxed text-muted-foreground">
-        {t("beskt.conduct.themes.lede")}
+        {area?.lede ?? t("beskt.conduct.themes.lede")}
       </p>
       {prompts !== null && !prompts.available && (
         <div className="mt-3">
@@ -147,7 +154,9 @@ export function BesktThemes({
       {/* Entries the interviewer recorded against a governed item that is not
           one of the derived themes still belong on the screen. Hiding them
           would make the record look smaller than it is. */}
-      <ExtraEntries topics={topics} entries={entries} sessionId={sessionId} actions={actions} />
+      {area ? null : (
+        <ExtraEntries topics={topics} entries={entries} sessionId={sessionId} actions={actions} />
+      )}
     </section>
   );
 }
@@ -177,6 +186,7 @@ function Theme({
   return (
     <li
       data-testid={`beskt-theme-${topic.itemKey}`}
+      data-reason={topic.reason}
       className="rounded-md border border-border p-3"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -193,6 +203,12 @@ function Theme({
         </div>
       </div>
 
+      {topic.triggerRuleKey ? (
+        <p className="mt-1 text-xs text-muted-foreground" data-testid="beskt-theme-rule">
+          {t("beskt.conduct.themes.ruleSource")}:{" "}
+          <span className="font-mono">{topic.triggerRuleKey}</span>
+        </p>
+      ) : null}
       <dl className="mt-3 space-y-1">
         <dt className="text-xs text-muted-foreground">{t("beskt.conduct.themes.purpose")}</dt>
         <dd className="text-xs leading-relaxed text-muted-foreground">
@@ -410,6 +426,17 @@ function EntryReadOnly({ entry }: { entry: BesktConductEntry }) {
           value={entry.alternativeExplanation}
         />
         <Row label={t("beskt.conduct.entry.protectiveFactor")} value={entry.protectiveFactor} />
+        <Row label={t("beskt.fakta.eventTiming")} value={entry.eventTiming} />
+        <Row label={t("beskt.fakta.consequence")} value={entry.consequence} />
+        <Row label={t("beskt.fakta.supportingInformation")} value={entry.supportingInformation} />
+        <Row
+          label={t("beskt.fakta.contradictingInformation")}
+          value={entry.contradictingInformation}
+        />
+        <Row label={t("beskt.fakta.measuresTaken")} value={entry.measuresTaken} />
+        <Row label={t("beskt.fakta.roleLink")} value={entry.roleLink} />
+        <Row label={t("beskt.fakta.informationGap")} value={entry.informationGap} />
+        <Row label={t("beskt.fakta.candidateResponse")} value={entry.candidateResponse} />
         <Row label={t("beskt.conduct.entry.verificationNeed")} value={entry.verificationNeed} />
         <Row label={t("beskt.conduct.entry.verificationSource")} value={entry.verificationSource} />
       </dl>

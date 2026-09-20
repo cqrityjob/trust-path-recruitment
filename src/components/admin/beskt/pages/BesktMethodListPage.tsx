@@ -22,6 +22,10 @@ import { useServerFn } from "@tanstack/react-start";
 
 import { useT } from "@/i18n/context";
 import {
+  BesktContentRolesPanel,
+  BesktInstallV01Card,
+} from "@/components/admin/beskt/BesktInternalTestAdmin";
+import {
   BesktNewMethodLink,
   BesktSurfaceShell,
   BesktVersionLink,
@@ -68,6 +72,10 @@ export function BesktMethodListPage({
           <p>{t("beskt.admin.list.notATestBody")}</p>
         </NoticePanel>
       </div>
+
+      <BesktInstallV01Card surface={surface} method="rekrytering" />
+      <BesktInstallV01Card surface={surface} method="sakerhet" />
+      {surface === "admin" ? <BesktContentRolesPanel /> : null}
 
       {canCreate && (
         <div className="mt-6">

@@ -571,7 +571,9 @@ test("10-13 · ENGLISH MOBILE 375 · preview, keyboard finalise, immutable", asy
   // No document overflow is not enough: an internally scrolling workflow row
   // can still clip the current stage. The full active label must be visible.
   const currentStage = main(page).locator('nav[aria-label] [aria-current="step"]').first();
-  await expect(currentStage).toContainText(/Report/);
+  // Since the four stages were renamed (2026-09-19) the report is a step of
+  // "Review & report".
+  await expect(currentStage).toContainText(/Review & report/);
   const currentStageBox = await currentStage.boundingBox();
   expect(currentStageBox).not.toBeNull();
   expect(currentStageBox?.x ?? -1).toBeGreaterThanOrEqual(0);

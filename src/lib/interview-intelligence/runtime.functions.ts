@@ -15,6 +15,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
+import { recordSetup, setupShape, type SetupDb } from "@/lib/library/setup.functions";
 import { runAiTask } from "./ai/orchestrator";
 import type { UntrustedBlock } from "./ai/provider";
 import type { TaskKey } from "./ai/registry";
@@ -358,6 +359,10 @@ export const listStartableInterviewPacks = createServerFn({ method: "GET" })
       readonly canStart: boolean;
       readonly packs: readonly {
         readonly packVersionId: string;
+        /** The guide's governed identity, so the library can find "the Väktare
+         *  guide" by what it is rather than by its display name. Null when the
+         *  pack row is not readable to this employer. */
+        readonly packSlug: string | null;
         readonly name: string;
         readonly nameEn: string | null;
         readonly versionNumber: number;
@@ -394,6 +399,7 @@ export const listStartableInterviewPacks = createServerFn({ method: "GET" })
         }>
       ).map((r) => ({
         packVersionId: r.pack_version_id,
+        packSlug: null as string | null,
         name: r.name_sv,
         nameEn: r.name_en,
         versionNumber: r.version_number,
@@ -402,6 +408,24 @@ export const listStartableInterviewPacks = createServerFn({ method: "GET" })
         locale: r.locale,
         entitlementBasis: r.entitlement_basis,
       }));
+
+      // The slug, read through the same RLS that admitted the versions. A
+      // failure costs the library its matching, never the list itself.
+      if (packs.length > 0) {
+        const { data: slugRows } = await context.supabase
+          .from("scp_interview_pack_versions")
+          .select("id, scp_interview_packs(slug)")
+          .in(
+            "id",
+            packs.map((p) => p.packVersionId),
+          );
+        const slugOf = new Map(
+          (
+            (slugRows ?? []) as Array<{ id: string; scp_interview_packs: { slug: string } | null }>
+          ).map((r) => [r.id, r.scp_interview_packs?.slug ?? null] as const),
+        );
+        for (const p of packs) p.packSlug = slugOf.get(p.packVersionId) ?? null;
+      }
 
       return { canStart: canStartRes.data === true, packs };
     },
@@ -1228,61 +1252,146 @@ export const getInterviewCase = createServerFn({ method: "GET" })
 /* Governed writes                                                     */
 /* ------------------------------------------------------------------ */
 
+const createCaseInput = z.object({
+  employerId: z.string().uuid(),
+  title: z.string().min(1).max(300),
+  packVersionId: z.string().uuid(),
+  candidateDisplayName: z.string().min(1).max(200),
+  candidateExternalRef: z.string().max(200).nullable().optional(),
+  jobId: z.string().uuid().nullable().optional(),
+  // Accepted so an older caller is REFUSED by name rather than silently
+  // creating a second, unserialised case for an application (see below).
+  applicationId: z.string().uuid().nullable().optional(),
+  // The library choice this case is started with (method, role group,
+  // role profile, work environment). Recorded once, with the case.
+  setup: setupShape.nullable().optional(),
+});
+type CreateCaseInput = z.infer<typeof createCaseInput>;
+type CreateCaseResult = {
+  readonly caseId: string;
+  /** False when the case exists but its setup or seeded material could not
+   *  be recorded -- said on screen, never hidden. */
+  readonly setupRecorded: boolean;
+};
+
+/** A STANDALONE case: no application, no BESKT preparation, no test -- the
+ *  workspace's own "Ny intervju". Every case that belongs to a start (an
+ *  application, a completed test, a BESKT preparation or invitation) is made
+ *  by scp_iv_start_interview instead, in one serialised transaction with its
+ *  setup, material and links; this path refuses those, so there is no second,
+ *  non-atomic way to create them. */
+async function createCaseCore(
+  context: { supabase: SupabaseClient<Database> },
+  data: CreateCaseInput,
+): Promise<CreateCaseResult> {
+  if (data.applicationId) {
+    throw new Error(
+      "SCP_START_USE_START: an application's interview is started through its start (scp_iv_start_interview).",
+    );
+  }
+  const { data: id, error } = await context.supabase.rpc("scp_iv_create_case", {
+    _employer_id: data.employerId,
+    _title: data.title,
+    _pack_version_id: data.packVersionId,
+    _candidate_display_name: data.candidateDisplayName,
+    // A standalone case names its candidate by the employer's own reference.
+    _candidate_user_id: undefined,
+    _candidate_external_ref: data.candidateExternalRef ?? `EXT-${Date.now()}`,
+    _job_id: data.jobId ?? undefined,
+    _application_id: undefined,
+  });
+  if (error) throw new Error(error.message);
+  const caseId = id as unknown as string;
+
+  let setupRecorded = true;
+  const db = context.supabase as unknown as SetupDb;
+  try {
+    if (data.setup) {
+      await recordSetup(db, data.employerId, data.setup, {
+        interviewCaseId: caseId,
+        besktAssignmentId: null,
+      });
+    }
+  } catch (e) {
+    console.error("[interview-case] setup not recorded", e);
+    setupRecorded = false;
+  }
+
+  // What the case can be grounded in WITHOUT anyone typing it again: the
+  // guide's own role requirements, and the advert when one was named. Neither
+  // is personal data, so neither needs a lawful basis invented for it.
+  try {
+    await seedCaseSources(context.supabase, caseId, data.packVersionId, data.jobId ?? null);
+  } catch (e) {
+    console.error("[interview-case] material not seeded", e);
+    setupRecorded = false;
+  }
+  return { caseId, setupRecorded };
+}
+
 export const createInterviewCase = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d: unknown) =>
-    z
-      .object({
-        employerId: z.string().uuid(),
-        title: z.string().min(1).max(300),
-        packVersionId: z.string().uuid(),
-        candidateDisplayName: z.string().min(1).max(200),
-        candidateExternalRef: z.string().max(200).nullable().optional(),
-        jobId: z.string().uuid().nullable().optional(),
-        applicationId: z.string().uuid().nullable().optional(),
-        // Bind the case to the applicant's own account. Asked for only by the
-        // BESKT path, whose preparation bridge links a submitted preparation
-        // to a case of the SAME candidate and so can never match a case that
-        // carries an external reference instead.
-        bindApplicant: z.boolean().optional(),
-      })
-      .parse(d),
-  )
-  .handler(async ({ context, data }): Promise<{ readonly caseId: string }> => {
-    // The applicant is read from the application itself, under the caller's
-    // own RLS -- never taken from the browser. A caller who cannot read the
-    // application cannot bind anybody.
-    let candidateUserId: string | undefined;
-    if (data.bindApplicant && data.applicationId) {
-      const app = await context.supabase
-        .from("job_applications")
-        .select("applicant_user_id, employer_id")
-        .eq("id", data.applicationId)
-        .maybeSingle();
-      if (app.error) throw new Error(app.error.message);
-      if (!app.data || app.data.employer_id !== data.employerId || !app.data.applicant_user_id) {
-        throw new Error(
-          "SCP_IV_CROSS_TENANT_APPLICATION: that application belongs to a different employer.",
-        );
-      }
-      candidateUserId = app.data.applicant_user_id;
-    }
-    const { data: id, error } = await context.supabase.rpc("scp_iv_create_case", {
-      _employer_id: data.employerId,
-      _title: data.title,
-      _pack_version_id: data.packVersionId,
-      _candidate_display_name: data.candidateDisplayName,
-      // Exactly one of the two identifies the candidate (a table CHECK).
-      _candidate_user_id: candidateUserId,
-      _candidate_external_ref: candidateUserId
-        ? undefined
-        : (data.candidateExternalRef ?? `EXT-${Date.now()}`),
-      _job_id: data.jobId ?? undefined,
-      _application_id: data.applicationId ?? undefined,
+  .validator((d: unknown) => createCaseInput.parse(d))
+  .handler(({ context, data }): Promise<CreateCaseResult> => createCaseCore(context, data));
+
+async function seedCaseSources(
+  db: SupabaseClient<Database>,
+  caseId: string,
+  packVersionId: string,
+  jobId: string | null,
+): Promise<void> {
+  const comps = await db
+    .from("scp_interview_pack_competencies")
+    .select("code, display_order, name_sv, definition_sv")
+    .eq("pack_version_id", packVersionId)
+    .order("display_order");
+  if (comps.error) throw new Error(comps.error.message);
+  const requirements = (comps.data ?? [])
+    .map((c) => `${c.code} ${c.name_sv}\n${c.definition_sv ?? ""}`.trim())
+    .join("\n\n");
+  if (requirements) {
+    const { error } = await db.rpc("scp_iv_add_source", {
+      _case_id: caseId,
+      _source_kind: "employer_requirements",
+      _label: "Rollens krav (ur intervjuguiden)",
+      _content_text: requirements,
+      _purpose_code: "recruitment_interview",
+      _lawful_basis_note:
+        "Inga personuppgifter: den styrda kravprofilen ur intervjuguiden / No personal data: the guide's governed requirement profile.",
+      _origin: "employer_supplied",
     });
     if (error) throw new Error(error.message);
-    return { caseId: id as unknown as string };
-  });
+  }
+  if (jobId) {
+    const job = await db
+      .from("jobs")
+      .select("title_sv, description_sv, responsibilities, requirements_sv")
+      .eq("id", jobId)
+      .maybeSingle();
+    if (job.error) throw new Error(job.error.message);
+    const j = job.data as Record<string, unknown> | null;
+    const text = j
+      ? [j.title_sv, j.description_sv, j.responsibilities, j.requirements_sv]
+          .map((v) => (Array.isArray(v) ? v.join("\n") : typeof v === "string" ? v : ""))
+          .map((v) => v.trim())
+          .filter(Boolean)
+          .join("\n\n")
+      : "";
+    if (text) {
+      const { error } = await db.rpc("scp_iv_add_source", {
+        _case_id: caseId,
+        _source_kind: "job_description",
+        _label: "Annonsen",
+        _content_text: text,
+        _purpose_code: "recruitment_interview",
+        _lawful_basis_note:
+          "Inga personuppgifter: arbetsgivarens publicerade annons / No personal data: the employer's published advert.",
+        _origin: "employer_supplied",
+      });
+      if (error) throw new Error(error.message);
+    }
+  }
+}
 
 export const addCaseSource = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

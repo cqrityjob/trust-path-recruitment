@@ -54,6 +54,8 @@ import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { besktErrorKey } from "@/lib/beskt/errors";
 import { draftFrom, isAddressed, type Draft } from "./preparation-draft";
+import { BesktSupplementPanel } from "./BesktSupplementPanel";
+import { purposeKey } from "./BesktModulePanels";
 import {
   acknowledgeBesktNotice,
   getMyBesktPreparation,
@@ -102,6 +104,22 @@ const NOTICE_COPY: Record<string, { title: TranslationKey; body: TranslationKey 
 };
 
 /** Only an addressed item is worth sending; an untouched one stays untouched. */
+/** The method's areas, one per step, named for the candidate. */
+const SECTION_TITLE: Record<string, TranslationKey> = {
+  t_roll_och_tillfalle: "beskt.section.t",
+  bas_sakerhetsbeteende: "beskt.section.base",
+  b_besvikelse_konflikter: "beskt.section.b",
+  e_ekonomi: "beskt.section.e",
+  s_social_situation: "beskt.section.s",
+  k_kontakter: "beskt.section.k",
+  situationer: "beskt.section.situations",
+};
+
+export function sectionTitle(key: string, t: (k: TranslationKey) => string): string {
+  const k = SECTION_TITLE[key];
+  return k ? t(k) : key.replace(/_/g, " ");
+}
+
 function toEntry(item: BesktPreparationItem, d: Draft): BesktAnswerEntry | null {
   if (!isAddressed(item, d)) return null;
   if (d.state !== "answered") return { itemKey: item.itemKey, responseState: d.state };
@@ -137,6 +155,8 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
 
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [phase, setPhase] = useState<"answer" | "review">("answer");
+  // One area of the method per step, in the method's own order.
+  const [stepIndex, setStepIndex] = useState(0);
   // A translation KEY, never the database's own sentence. See
   // src/lib/beskt/errors.ts for why the original text never reaches the DOM.
   const [actionError, setActionError] = useState<TranslationKey | null>(null);
@@ -208,6 +228,16 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
     return data.items.filter((i) => !isAddressed(i, drafts[i.itemKey] ?? draftFrom(i)));
   }, [data, drafts]);
 
+  const steps = useMemo(() => {
+    if (!data) return [] as string[];
+    const seen: string[] = [];
+    for (const i of data.items) if (!seen.includes(i.sectionKey)) seen.push(i.sectionKey);
+    return seen;
+  }, [data]);
+  const step = Math.min(stepIndex, Math.max(0, steps.length - 1));
+  const stepItems = data ? data.items.filter((i) => i.sectionKey === steps[step]) : [];
+  const stepOutstanding = outstanding.filter((i) => i.sectionKey === steps[step]);
+
   const ackMutation = useMutation({
     mutationFn: async () => {
       if (!data || !notice) throw new Error("no data");
@@ -262,6 +292,41 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
       await queryClient.invalidateQueries({ queryKey: ["beskt", "preparation", assignmentId] });
       // Confirmed written; now the "exit" half.
       await navigate({ to: "/my-career/applications" });
+    },
+    onError: (e: unknown) => setActionError(besktErrorKey(e)),
+  });
+
+  // "Nästa" saves and moves on. A save can open governed follow-up questions
+  // in the same step; then the step stays, so they are seen before leaving.
+  const stepSaveMutation = useMutation({
+    mutationFn: async (direction: 1 | -1) => {
+      if (!data?.response) throw new Error("no draft");
+      const entries = data.items
+        .map((i) => toEntry(i, drafts[i.itemKey] ?? draftFrom(i)))
+        .filter((e): e is BesktAnswerEntry => e !== null);
+      const before = data.items.filter((i) => i.sectionKey === steps[step]).length;
+      if (entries.length > 0)
+        await save({
+          data: {
+            operationId: crypto.randomUUID(),
+            assignmentId,
+            expectedRevision: data.response.revision,
+            answers: entries,
+          },
+        });
+      const fresh = await queryClient.fetchQuery({
+        queryKey: ["beskt", "preparation", assignmentId],
+        queryFn: () => getPreparation({ data: { assignmentId } }),
+      });
+      const after = fresh.items.filter((i) => i.sectionKey === steps[step]).length;
+      return { direction, grew: after > before };
+    },
+    onSuccess: ({ direction, grew }) => {
+      setActionError(null);
+      setSavedAt(new Date().toISOString());
+      if (direction === 1 && grew) return;
+      setStepIndex(Math.max(0, Math.min(steps.length - 1, step + direction)));
+      window.scrollTo({ top: 0, behavior: "auto" });
     },
     onError: (e: unknown) => setActionError(besktErrorKey(e)),
   });
@@ -348,6 +413,15 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
         <p className="mt-1 text-sm text-muted-foreground">
           {t("beskt.prep.methodLabel")}: {methodName} · v{data.method.versionNumber}
         </p>
+        {data.employerName ? (
+          <p className="mt-1 text-sm" data-testid="beskt-prep-context">
+            {data.employerName}
+            {data.roleTitle
+              ? ` · ${lang === "sv" ? data.roleTitle : (data.roleTitleEn ?? data.roleTitle)}`
+              : ""}{" "}
+            · {t(purposeKey(data.mode))}
+          </p>
+        ) : null}
         <p className="mt-3 rounded-lg bg-muted/50 p-3 text-sm" data-testid="beskt-not-a-test">
           {t("beskt.prep.notATest")}
         </p>
@@ -384,6 +458,7 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
             ) : null}
           </p>
           <ReviewList items={data.items} drafts={drafts} readOnly />
+          <BesktSupplementPanel assignmentId={assignmentId} items={data.items} />
         </section>
       ) : !acknowledged ? (
         <NoticePanel
@@ -411,7 +486,11 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
                 {outstanding.map((i) => (
                   <li key={i.itemKey}>
-                    <a className="underline underline-offset-2" href={`#beskt-item-${i.itemKey}`}>
+                    <a
+                      className="underline underline-offset-2"
+                      href={`#beskt-item-${i.itemKey}`}
+                      onClick={() => setStepIndex(Math.max(0, steps.indexOf(i.sectionKey)))}
+                    >
                       {(lang === "sv" ? i.wordingSv : (i.wordingEn ?? i.wordingSv)) ?? i.itemKey}
                     </a>
                   </li>
@@ -420,8 +499,31 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
             </div>
           ) : null}
 
+          <nav
+            aria-label={t("beskt.steps.aria")}
+            className="mb-6 rounded-lg border bg-muted/30 p-3"
+            data-testid="beskt-steps"
+          >
+            <p className="text-sm font-medium" data-testid="beskt-step-label">
+              {t("beskt.steps.progress")
+                .replace("{n}", String(step + 1))
+                .replace("{total}", String(steps.length))}
+              : {sectionTitle(steps[step] ?? "", t)}
+            </p>
+            <ol className="mt-2 flex flex-wrap gap-1.5" aria-hidden="true">
+              {steps.map((key, i) => (
+                <li
+                  key={key}
+                  className={`h-1.5 w-8 rounded-full ${i <= step ? "bg-foreground" : "bg-border"}`}
+                />
+              ))}
+            </ol>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t("beskt.steps.remaining").replace("{n}", String(stepOutstanding.length))}
+            </p>
+          </nav>
           <ol className="space-y-6">
-            {data.items.map((item) => (
+            {stepItems.map((item) => (
               <QuestionCard
                 key={item.itemKey}
                 item={item}
@@ -454,9 +556,33 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
                   ? t("beskt.answer.savedAndLeaving")
                   : t("beskt.answer.save")}
             </Button>
+            {step > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-[44px]"
+                disabled={stepSaveMutation.isPending}
+                onClick={() => stepSaveMutation.mutate(-1)}
+                data-testid="beskt-step-prev"
+              >
+                {t("beskt.steps.previous")}
+              </Button>
+            ) : null}
+            {step < steps.length - 1 ? (
+              <Button
+                type="button"
+                className="min-h-[44px]"
+                disabled={stepSaveMutation.isPending}
+                onClick={() => stepSaveMutation.mutate(1)}
+                data-testid="beskt-step-next"
+              >
+                {stepSaveMutation.isPending ? t("beskt.answer.saving") : t("beskt.steps.next")}
+              </Button>
+            ) : null}
             <Button
               type="button"
               className="min-h-[44px]"
+              variant={step < steps.length - 1 ? "outline" : "default"}
               data-testid="beskt-to-review"
               onClick={() => {
                 if (outstanding.length > 0) {
@@ -493,6 +619,8 @@ export function CandidatePreparation({ assignmentId }: { readonly assignmentId: 
               setActionError(null);
               setShowErrors(false);
               setPhase("answer");
+              const section = data.items.find((i) => i.itemKey === itemKey)?.sectionKey;
+              if (section) setStepIndex(Math.max(0, steps.indexOf(section)));
               setFocusItemKey(itemKey);
             }}
           />
@@ -551,6 +679,11 @@ export function NoticePanel({
 }) {
   const { t } = useT();
   const [confirmed, setConfirmed] = useState(false);
+  // The governed copy keys of THIS notice version. The first notice renders
+  // exactly as before; a later one reads its own keys, which the digest
+  // guard holds to the database's governed digest.
+  const prefix = notice.noticeCopyKeys[0]?.replace(/\.title$/, "") || "beskt.notice";
+  const k = (suffix: string) => `${prefix}.${suffix}` as TranslationKey;
 
   return (
     // ── THE BINDING, MADE OBSERVABLE ─────────────────────────────────────
@@ -570,13 +703,45 @@ export function NoticePanel({
       data-notice-hash={notice.noticeContentHash}
     >
       <h2 id="beskt-notice" className="text-lg font-semibold">
-        {t("beskt.notice.title")}
+        {t(k("title"))}
       </h2>
-      <p className="mt-1 text-sm text-muted-foreground">{t("beskt.notice.lede")}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{t(k("lede"))}</p>
+      {notice.employerName ? (
+        <dl
+          className="mt-4 grid gap-2 rounded-lg border p-4 text-sm sm:grid-cols-2"
+          data-testid="beskt-notice-facts"
+        >
+          <div>
+            <dt className="text-xs text-muted-foreground">{t("beskt.invitation.employer")}</dt>
+            <dd className="font-medium">{notice.employerName}</dd>
+          </div>
+          {notice.roleTitle ? (
+            <div>
+              <dt className="text-xs text-muted-foreground">{t("beskt.invitation.role")}</dt>
+              <dd className="font-medium">{notice.roleTitle}</dd>
+            </div>
+          ) : null}
+          {notice.contactStatement ? (
+            <div className="sm:col-span-2" data-testid="beskt-notice-contact-route">
+              <dt className="text-xs text-muted-foreground">{t("beskt.invitation.contact")}</dt>
+              <dd>{notice.contactStatement}</dd>
+            </div>
+          ) : null}
+          {notice.lawfulBasisStatement ? (
+            <div className="sm:col-span-2">
+              <dt className="text-xs text-muted-foreground">{t(k("lawfulBasis"))}</dt>
+              <dd>{notice.lawfulBasisStatement}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
 
       <dl className="mt-5 space-y-4">
         {notice.sections.map((key) => {
-          const copy = NOTICE_COPY[key];
+          const copy =
+            prefix === "beskt.notice"
+              ? NOTICE_COPY[key]
+              : { title: k(`${key}.title`), body: k(`${key}.body`) };
           if (!copy) return null;
           return (
             <div key={key} className="rounded-lg border p-4" data-testid={`beskt-notice-${key}`}>
@@ -589,14 +754,14 @@ export function NoticePanel({
 
       <dl className="mt-4 flex flex-wrap gap-x-8 gap-y-2 text-xs text-muted-foreground">
         <div>
-          <dt>{t("beskt.notice.retentionClass")}</dt>
+          <dt>{t(k("retentionClass"))}</dt>
           <dd className="mt-0.5 font-medium text-foreground">
             {data.exposureProfile.retentionClass}
           </dd>
         </div>
         {data.exposureProfile.lawfulBasisReference ? (
           <div>
-            <dt>{t("beskt.notice.lawfulBasis")}</dt>
+            <dt>{t(k("lawfulBasis"))}</dt>
             <dd className="mt-0.5 font-medium text-foreground">
               {data.exposureProfile.lawfulBasisReference}
             </dd>
@@ -624,13 +789,11 @@ export function NoticePanel({
               htmlFor="beskt-notice-ack"
               className="flex min-h-[44px] items-center text-sm font-medium leading-snug"
             >
-              {t("beskt.notice.acknowledge")}
+              {t(k("acknowledge"))}
             </Label>
             {/* Said plainly, because the record says it plainly: this is an
                 information receipt and not consent. */}
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t("beskt.notice.acknowledgeHint")}
-            </p>
+            <p className="mt-1 text-xs text-muted-foreground">{t(k("acknowledgeHint"))}</p>
           </div>
         </div>
         <Button
@@ -673,6 +836,7 @@ export function QuestionCard({
       tabIndex={-1}
       className="rounded-xl border p-4 sm:p-5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       data-testid={groupId}
+      data-addressed={isAddressed(item, draft) ? "true" : "false"}
       aria-labelledby={`${groupId}-legend`}
     >
       <fieldset>

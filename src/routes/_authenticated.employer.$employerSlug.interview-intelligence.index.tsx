@@ -116,6 +116,15 @@ function Page() {
         >
           {t("iiu.new.title")}
         </Link>
+        {/* The reports in these same cases, under the same access rules. */}
+        <Link
+          to="/employer/$employerSlug/reports"
+          params={{ employerSlug }}
+          className="ml-4 inline-flex min-h-11 items-center text-sm font-medium text-accent underline-offset-2 hover:underline"
+          data-testid="ii-reports-link"
+        >
+          {t("reports.title")}
+        </Link>
       </div>
 
       <section className="mt-8" aria-labelledby="ii-cases-heading">

@@ -119,6 +119,45 @@ const MESSAGE_FOR_CODE: Readonly<Record<string, TranslationKey>> = {
 
   // ---- The bridge between a preparation and an interview case -------------
   BCP_CASE_LINK_NOT_FOUND: "beskt.error.linkNotFound",
+
+  // ---- The owner's internal test activation (20261129090000) --------------
+  BCP_TEST_ACTIVATION_INCOMPLETE: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_EXPIRY: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_DECISION_REQUIRED: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_STATUS: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_NOT_FOUND: "beskt.error.testActivationRefused",
+  BCP_TEST_ACTIVATION_ALREADY_REVOKED: "beskt.error.testActivationRefused",
+  BESKT_CONTENT_ROLE_UNKNOWN: "beskt.error.notAuthorised",
+  BCP_TEST_ACTIVATION_EXISTS: "beskt.error.testActivationExists",
+
+  // ---- BESKT as a complete product (20261130090000) ------------------------
+  BCP_NOT_SECURITY_OFFICER: "beskt.error.notSecurityOfficer",
+  BCP_INTERVIEWER_NOT_SECURITY_OFFICER: "beskt.error.notSecurityOfficer",
+  BCP_SECURITY_OWNER_REQUIRED: "beskt.error.securityOwnerRequired",
+  BCP_ATTESTATION_REQUIRED: "beskt.error.attestationRequired",
+  BCP_LAWFUL_BASIS_REQUIRED: "beskt.error.lawfulBasisRequired",
+  BCP_INTERVIEWER_NOT_MEMBER: "beskt.error.interviewerNotMember",
+  BCP_CONTACT_REQUIRED: "beskt.error.contactRequired",
+  BCP_NOT_EMPLOYER_ADMIN: "beskt.error.notEmployerAdmin",
+  BCP_OFFICER_NOT_MEMBER: "beskt.error.interviewerNotMember",
+  BCP_OFFICER_EXISTS: "beskt.error.officerExists",
+  BCP_INVITATION_EXISTS: "beskt.error.invitationExists",
+  BCP_INVITATION_REPLAY: "beskt.error.invitationExists",
+  BCP_INVITATION_EMAIL_INVALID: "beskt.error.invitationEmail",
+  BCP_ROLE_TITLE_REQUIRED: "beskt.error.roleTitleRequired",
+  BCP_INVITATION_NOT_AVAILABLE: "beskt.invitation.notAvailable",
+  BCP_INVITATION_NOT_PENDING: "beskt.invitation.expired",
+  BCP_EMAIL_NOT_CONFIRMED: "beskt.invitation.emailNotConfirmed",
+  BCP_CANDIDATE_IS_EMPLOYER_MEMBER: "beskt.error.candidateIsMember",
+  BCP_SUPPLEMENT_LENGTH: "beskt.error.supplementLength",
+  BCP_NOT_RESPONSIBLE: "beskt.error.notResponsible",
+  BCP_POSITIONS_NOT_LOCKED: "beskt.error.positionsNotLocked",
+  BCP_STANCE_INCOMPLETE: "beskt.error.stanceIncomplete",
+  BCP_STANCE_WORDING: "beskt.error.stanceWording",
+  BCP_CORRECTION_REASON_REQUIRED: "beskt.error.stanceCorrectionReason",
+  BCP_ACTION_INCOMPLETE: "beskt.error.actionIncomplete",
+  BCP_CONDUCT_STANCE_MISSING: "beskt.error.reportStanceMissing",
+
   BCP_NOT_SUBMITTED: "beskt.error.caseLinkNotSubmitted",
   BCP_CASE_LINK_EXISTS: "beskt.error.caseLinkExists",
   BCP_CASE_MISMATCH: "beskt.error.caseLinkMismatch",
@@ -200,6 +239,10 @@ const MESSAGE_FOR_CODE: Readonly<Record<string, TranslationKey>> = {
   BESKT_NOT_EDITOR: "beskt.error.govNotEditor",
   BESKT_NOT_REVIEWER: "beskt.error.govNotReviewer",
   BESKT_NOT_PUBLISHER: "beskt.error.govNotPublisher",
+  // 20261201090000: availability in the employer offer.
+  BESKT_NOT_OPENABLE_INCOMPLETE: "beskt.error.notOpenableIncomplete",
+  BESKT_NOT_OPENABLE: "beskt.error.notOpenable",
+  BESKT_OPEN_FROZEN: "beskt.error.openFrozen",
   BESKT_NOT_PLATFORM_ADMIN: "beskt.error.govNotPlatformAdmin",
 
   // Who may decide which gate, and who may not decide at all.

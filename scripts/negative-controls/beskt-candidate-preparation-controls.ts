@@ -28,6 +28,7 @@ const PANEL = "src/components/beskt/CandidatePreparation.tsx";
 const DICTIONARIES = "src/i18n/dictionaries.ts";
 const RENDER_GUARD = "beskt-candidate-preparation-render:check";
 const EMPLOYER_PANEL = "src/components/beskt/BesktApplicationPanel.tsx";
+const START_DIALOG = "src/components/beskt/BesktStartDialog.tsx";
 const CLIENT = "src/lib/beskt/candidate-preparation.functions.ts";
 const ERRORS = "src/lib/beskt/errors.ts";
 
@@ -895,9 +896,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the navigation moves into onError as well, so a save that FAILED still leaves the page and the work looks saved",
     file: PANEL,
-    find: "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  const submitMutation",
+    find: "    onError: (e: unknown) => setActionError(besktErrorKey(e)),\n  });\n\n  // \"Nästa\" saves and moves on.",
     replace:
-      '    onError: (e: unknown) => {\n      setActionError(besktErrorKey(e));\n      void navigate({ to: "/my-career/applications" });\n    },\n  });\n\n  const submitMutation',
+      '    onError: (e: unknown) => {\n      setActionError(besktErrorKey(e));\n      void navigate({ to: "/my-career/applications" });\n    },\n  });\n\n  // \"Nästa\" saves and moves on.',
     guard: GUARD,
     expect: "BCP-SAVE-EXIT",
   },
@@ -927,9 +928,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BCP-NC-SILENT-FIRST-METHOD",
     defect:
       "THE ORIGINAL DEFECT: the employer's method choice goes back to whatever the database returned first",
-    file: EMPLOYER_PANEL,
-    find: "  const method = (methods.data ?? []).find((m) => m.methodVersionId === methodVersionId) ?? null;",
-    replace: "  const method = methods.data?.[0] ?? null;",
+    file: START_DIALOG,
+    find: "    versionsForMode.find((m) => m.methodVersionId === versionId) ?? versionsForMode[0] ?? null;",
+    replace: "    methods[0] ?? null;",
     guard: GUARD,
     expect: "BCP-METHOD-CHOICE",
   },
@@ -937,9 +938,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "BCP-NC-PROFILE-SURVIVES-METHOD-CHANGE",
     defect:
       "changing the method keeps the old profile, which belongs to the previous method and which the database will refuse",
-    file: EMPLOYER_PANEL,
-    find: '    setMethodVersionId(id);\n    setProfileId("");',
-    replace: "    setMethodVersionId(id);",
+    file: START_DIALOG,
+    find: '                    setVersionId(e.target.value);\n                    setProfileId("");',
+    replace: "                    setVersionId(e.target.value);",
     guard: GUARD,
     expect: "BCP-METHOD-CHOICE",
   },
@@ -1013,11 +1014,13 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Swedish sentence that tells the candidate the confirmation is NOT consent is softened, so the copy no longer matches the template digest PR 3A governs",
     file: DICTIONARIES,
-    // The sv-SE value itself, which occurs exactly once. Anchoring on the KEY
-    // would match both language blocks; anchoring on the sentence is also the
-    // honest target, because this control is about the WORDS drifting.
-    find: "Det är inte ett samtycke och det skapar ingen rättslig grund.",
-    replace: "Det skapar ingen rättslig grund.",
+    // The v1 key with its sv-SE value, which occurs exactly once: the key
+    // alone matches both language blocks, and the sentence alone also matches
+    // the later notice versions that reuse it. The control is still about the
+    // WORDS drifting.
+    find: '"beskt.notice.acknowledgeHint":\n      "Det här är en bekräftelse på att du fått informationen. Det är inte ett samtycke och det skapar ingen rättslig grund.",',
+    replace:
+      '"beskt.notice.acknowledgeHint":\n      "Det här är en bekräftelse på att du fått informationen. Det skapar ingen rättslig grund.",',
     guard: "beskt-notice-copy:check",
     expect: "sv-SE",
   },

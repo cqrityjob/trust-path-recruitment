@@ -270,7 +270,12 @@ LANGUAGE sql AS $$
     'scp_interview_conduct_guidance'])
   UNION ALL
   SELECT unnest(ARRAY[                             -- pre-existing assessment domain (2)
-    'scp_interview_guide_prompts','scp_interview_notes']);
+    'scp_interview_guide_prompts','scp_interview_notes'])
+  UNION ALL
+  SELECT unnest(ARRAY[                             -- interview starts (1)
+    -- Which case an intended start (a completed test, a BESKT assignment or a
+    -- chosen setup) led to. References only: no answer, score or result.
+    'scp_interview_starts']);
 $$;
 
 SELECT pg_temp.ok(
