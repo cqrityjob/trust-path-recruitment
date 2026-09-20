@@ -281,6 +281,7 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
     getMySecurityCareerProfile: ok(null),
     listSkillTypes: ok([]),
     listJurisdictions: ok([{ code: "SE", nameSv: "Sverige", nameEn: "Sweden" }]),
+    getHayatAvailability: ok({ linkSources: [] }),
     getInternationalPassportMetadata: ok({
       details: [],
       verificationEvents: [],
