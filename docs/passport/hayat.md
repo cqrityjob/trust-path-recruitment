@@ -25,8 +25,13 @@ correcting a credential):
 6. Issuer and credential type are **compared with the selection, never changed**. A
    document for a different catalogue credential is flagged with a "choose a different
    credential" action; a name that is simply not found is a softer note.
-7. The name on the document is compared with the account name when the caller supplies
-   one. A difference is reported as a difference — never as a conclusion.
+7. The name on the document is compared with the account's `profiles.display_name` (the
+   same canonical source as the Passport identity surface). It is a consistency check: a
+   match proves nothing about identity, and a difference is reported as a difference —
+   never as a conclusion.
+   A photo turned 90°, 180° or 270° is read the right way up: when the upright reading is
+   poor, a small copy is read in the other orientations and the full pass runs in the best
+   one. An upright document costs nothing extra.
 8. Replacing or removing the file **aborts the running reading and withdraws what it
    filled** (but keeps anything the holder edited). A late result from the old file is
    dropped by a generation check and can never land.
@@ -49,7 +54,8 @@ An upload still moves a claim to `document_provided` at most.
 | **Reader excluded from the server bundle** | The first build put pdf.js and Tesseract's Node build (~1.4 MB) into the Worker. The dynamic import is now behind `import.meta.env.SSR`, and the server output contains neither. |
 | **Verification = signed credential + pinned key, via `jose`** | The one path that needs nobody's permission: the evidence is a signature. `jose` runs on WebCrypto, which Workers provide. `@digitalbazaar/vc` was **not** installed: it serves Data Integrity proofs, needs a JSON-LD context loader (a second SSRF surface) and no issuer needs it yet. Blockcerts: no Blockcerts input exists. Docling/PaddleOCR/walt.id: not needed — the simple path passed the document tests. |
 | **Signed input arrives as a baked PNG** | Open Badges 3.0 "baking" stores the credential in a PNG `iTXt` chunk. It comes through the existing file control with no new file type, bucket rule or upload path. |
-| **Search aliases are not used for matching** | `sp_certification_issuer_aliases` are governed as search-only and never rendered; a mismatch message renders what it matched. HAYAT matches governed organisation names only. (The existing `passport-global-certification:check` caught the first draft doing otherwise.) |
+| **Approved issuer variations match; only the governed name is shown** | `sp_certification_issuer_aliases` are governed as "never rendered". HAYAT now lets them reach document **matching** through one pinned expression (`issuerMatchTerms`, issuing organisations only), so a certificate printed "(ISC)²" or under a historical name is recognised — and a mismatch is always reported under the governed name. The existing alias guard states and pins the new rule; `passport-hayat:check` 3.11–3.13 prove no alias can appear in a reading. |
+| **The first real source is Credly's hosted Open Badges 2.0 assertion — built, not enabled** | See [hayat-sources.md](hayat-sources.md). It is a different format from the signed-PNG verifier, carries no certificate number, and permission for automated retrieval is not confirmed. |
 
 ### Libraries (exact, pinned)
 
@@ -89,9 +95,13 @@ email) matched to the account's **confirmed** email, read from the session on th
 — reported as *email control*, explicitly not identity proofing. Revocation =
 `1EdTechRevocationList`, fetched only from hosts the issuer's policy lists.
 
+**Second adapter:** Open Badges 2.0 *hosted* assertions as Credly serves them
+(`hosted-open-badge.ts`) — complete, and disabled pending written permission. See
+[hayat-sources.md](hayat-sources.md).
+
 **Not supported, and reported as such:** Data Integrity (embedded) proofs,
 `BitstringStatusList`, Blockcerts, verifiable presentations (so nonce/replay does not
-arise yet), Credly, any register or issuer API.
+arise yet), any register or issuer API.
 
 ### The registry is empty in production — on purpose
 
@@ -103,7 +113,7 @@ complete and proven against synthetic issuers whose keys are generated inside th
 run. The server function never accepts a registry from a caller; adding a trust anchor
 is a reviewed code change.
 
-### A decision is shown, not recorded
+### In this PR a decision is shown, not recorded (recording is the next two PRs)
 
 `assessCredentialEvidence` returns `recorded: false` and writes nothing.
 `assertion_level` is untouched: the only writer of `verified` is still
@@ -147,9 +157,9 @@ suites `security_passport_phase3_test.sql` 1.3, 4.4).
 
 | Suite | Result |
 | --- | --- |
-| `bun run passport-hayat:check` — 219 deterministic checks (dates, fields sv/en, OCR errors, conflicts, limits, baked PNG, every verification acceptance case, SSRF, structure) | pass |
-| `bun run negative-controls:passport-hayat` — 8 planted defects, each must turn the guard red | see PR |
-| `e2e/passport-hayat-reading.spec.ts` — real pdf.js + Tesseract in Chromium, desktop and 375 px: text PDF (en), scanned PDF (sv), JPEG, ambiguous date, missing field, wrong credential, replacement mid-read, removal, oversized / unsupported / unreadable / password-protected / HEIC, baked PNG → server | 8/8 × 2 viewports |
+| `bun run passport-hayat:check` — 271 deterministic checks (dates, fields sv/en, OCR errors, conflicts, issuer variations, limits, baked PNG, every verification acceptance case for both adapters, SSRF, structure) | pass |
+| `bun run negative-controls:passport-hayat` — 8 planted defects, each must turn the guard red | 8/8 detected |
+| `e2e/passport-hayat-reading.spec.ts` — real pdf.js + Tesseract in Chromium: text PDF (en), scanned PDF (sv), JPEG, photos turned 90° and 180°, ambiguous date, missing field, wrong credential, replacement mid-read, removal, oversized / unsupported / unreadable / password-protected / HEIC, baked PNG → server, link field hidden/shown by availability | 12/12 on the dev server **and** 10/10 against the production build in workerd |
 
 Measured locally (Apple silicon, Chromium headless, cold engine each test): text PDF
 ≈ 1–2 s; one scanned page or photo ≈ 4–6 s including engine start. First OCR use
@@ -157,10 +167,19 @@ downloads ≈ 4 MB core + ≈ 5.5 MB language data from this origin (cached afte
 never fetched for text PDFs). No accuracy percentage is claimed from eight synthetic
 documents.
 
-**Not tested:** real certificates; rotated or skewed photos (no orientation detection —
-an upside-down image ends as "no legible text"); handwriting; Safari/Firefox; low-memory
-phones; a real issuer, real revocation list or real timeout against a live host;
-multi-page mixed text/scan documents beyond the unit level; HEIC on Safari.
+**Production build:** the same browser suite passes against `.output` served by
+`wrangler dev` (workerd, the real Workers runtime): pdf.js worker, OCR worker, WASM core and
+both language files load from the built assets (all 200, `.gz` without `Content-Encoding`).
+Run it with `E2E_SERVERFN_RESOLVER=.output/server/__23tanstack-start-server-fn-resolver-*.mjs`.
+
+**Not tested:** real certificates; skew beyond a few degrees; handwriting; Safari/Firefox;
+low-memory phones; a live issuer, a live Credly assertion, a real revocation or a real
+timeout against a live host; HEIC on Safari.
+
+`e2e/passport-credential-ui.spec.ts › a lapsed credential is never presented as current`
+fails identically on untouched `origin/main` (2df1a39, reproduced in a clean worktree): the
+page says "Expired · Documented" where the test expects "PREVIOUSLY VERIFIED". It is not in
+CI and is not caused by this change.
 
 ## 6. Rollback
 
