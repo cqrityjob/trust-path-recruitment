@@ -454,6 +454,9 @@ async function mount(
     serverCalls.push(name);
     switch (name) {
       /* ── the holder's Passport ─────────────────────────────────────── */
+      // Source availability is a read-only form dependency. No issuer is enabled.
+      case "getHayatAvailability":
+        return ok(route, { linkSources: [] });
       case "getInternationalPassportMetadata":
         return ok(route, {
           definitions: [

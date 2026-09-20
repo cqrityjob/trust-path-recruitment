@@ -5,6 +5,7 @@
 //     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { hayatOcrAssets } from "./scripts/vite/hayat-ocr-assets";
 
 // ── WHY mcpPlugin() IS GONE ────────────────────────────────────────────
 //
@@ -26,6 +27,9 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // and re-open the exposure. Do not do that without an owner decision.
 
 export default defineConfig({
+  // HAYAT reads documents in the browser; its OCR engine is served from this
+  // origin instead of a public CDN. See scripts/vite/hayat-ocr-assets.ts.
+  plugins: [hayatOcrAssets()],
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

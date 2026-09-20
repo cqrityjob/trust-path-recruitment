@@ -2,6 +2,10 @@ import { CredentialDefinitionContext } from "@/components/security-passport/Cred
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
 import {
+  assessCredentialEvidence,
+  getHayatAvailability,
+} from "@/lib/security-passport/hayat/hayat.functions";
+import {
   getInternationalPassportMetadata,
   saveInternationalCredential,
   type InternationalPassportMetadata,
@@ -89,6 +93,8 @@ function PassportEntryRoute() {
   const isClaim = kind === "claim";
 
   const saveInternational = useServerFn(saveInternationalCredential);
+  const assessEvidence = useServerFn(assessCredentialEvidence);
+  const hayatAvailability = useServerFn(getHayatAvailability);
   const loadInternational = useServerFn(getInternationalPassportMetadata);
   const [international, setInternational] = useState<InternationalPassportMetadata | null>(null);
   const loadPassport = useServerFn(getMyPassport);
@@ -800,6 +806,8 @@ function PassportEntryRoute() {
                     doUpload({ data: { ...file, claimId, periodId: null } })
                   }
                   onSave={(data) => saveInternational({ data })}
+                  onAssess={(data) => assessEvidence({ data })}
+                  onLoadAvailability={hayatAvailability}
                   key={claim.id}
                   initial={{
                     claim_id: claim.id,

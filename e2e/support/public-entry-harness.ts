@@ -49,9 +49,32 @@ const USER_ID = "00000000-0000-4000-8000-0000publicentry".slice(0, 36);
 /** The export name behind a `/_serverFn/<base64url>` URL. Same decoder as
  *  e2e/support/cv-fixture.ts; duplicated rather than imported so these
  *  suites do not depend on the CV fixture's model. */
+/**
+ * A PRODUCTION build does not put the export name in the URL: the segment is an
+ * opaque 64-hex id, and the build's own resolver holds the id -> export map.
+ * Point E2E_SERVERFN_RESOLVER at that file (.output/server/__23tanstack-start-
+ * server-fn-resolver-*.mjs) and a suite can run against the built output --
+ * which is the only way to prove what the build actually serves.
+ */
+let productionIds: Map<string, string> | null = null;
+function productionExportOf(id: string): string | null {
+  const file = process.env.E2E_SERVERFN_RESOLVER;
+  if (!file) return null;
+  if (!productionIds) {
+    productionIds = new Map();
+    const source = fs.readFileSync(file, "utf8");
+    for (const hit of source.matchAll(
+      /"([a-f0-9]{64})":\s*\{\s*functionName:\s*"([A-Za-z0-9_$]+)"/g,
+    ))
+      productionIds.set(hit[1]!, hit[2]!.replace(/_createServerFn_handler$/, ""));
+  }
+  return productionIds.get(id) ?? null;
+}
+
 export function exportOf(url: string): string | null {
   const m = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(url);
   if (!m) return null;
+  if (/^[a-f0-9]{64}$/.test(m[1]!)) return productionExportOf(m[1]!);
   try {
     const json = JSON.parse(
       Buffer.from(m[1]!.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),

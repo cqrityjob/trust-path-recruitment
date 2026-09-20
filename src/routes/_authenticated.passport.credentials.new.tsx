@@ -10,6 +10,10 @@ import {
   type InternationalCredentialInput,
   type InternationalPassportMetadata,
 } from "@/lib/security-passport/international.functions";
+import {
+  assessCredentialEvidence,
+  getHayatAvailability,
+} from "@/lib/security-passport/hayat/hayat.functions";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 
 export const Route = createFileRoute("/_authenticated/passport/credentials/new")({
@@ -27,6 +31,8 @@ function NewCredentialRoute() {
   const save = useServerFn(saveInternationalCredential);
   const upload = useServerFn(uploadEvidence);
   const readDraft = useServerFn(readApprovedCredentialDraft);
+  const assess = useServerFn(assessCredentialEvidence);
+  const hayatAvailability = useServerFn(getHayatAvailability);
   const [draft, setDraft] = useState<InternationalCredentialInput | undefined>();
   const [metadata, setMetadata] = useState<InternationalPassportMetadata | null>(null);
   const [failed, setFailed] = useState(false);
@@ -71,6 +77,8 @@ function NewCredentialRoute() {
           metadata={metadata}
           onSave={(data) => save({ data })}
           onUpload={(claimId, file) => upload({ data: { ...file, claimId, periodId: null } })}
+          onAssess={(data) => assess({ data })}
+          onLoadAvailability={hayatAvailability}
         />
       )}
     </div>

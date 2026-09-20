@@ -2230,6 +2230,160 @@ const sv = {
     "Kandidaten har själv valt att dela detta med er. Det är inte hämtat från ansökan och kan återkallas av kandidaten när som helst.",
   "ad.employerOnlyVerified":
     "Bara verifierade uppgifter visas här. Egenrapporterat delas aldrig i ett paket.",
+  // ── HAYAT — document reading and verification ──────────────────────────
+  "hayat.reading": "HAYAT läser dokumentet …",
+  "hayat.readBadge": "Avläst av HAYAT",
+  "hayat.read.title": "Dokument avläst",
+  "hayat.read.lead":
+    "Värdena är förslag från dokumentet. Kontrollera och rätta dem – du bestämmer vad som sparas.",
+  "hayat.read.ocr":
+    "Dokumentet är en bild eller skanning, så texten har tolkats maskinellt. Kontrollera tecknen extra noga.",
+  "hayat.read.pages": "Bara de första {read} av {total} sidorna lästes.",
+  "hayat.read.nothing":
+    "HAYAT hittade inga uppgifter att föreslå i dokumentet. Fyll i fälten själv.",
+  "hayat.private":
+    "Dokumentet lästes i din webbläsare. Ingen text från dokumentet har skickats eller sparats.",
+  "hayat.field.agrees": "Stämmer med dokumentet",
+  "hayat.field.conflict": "Dokumentet anger {value}. Ditt värde är kvar.",
+  "hayat.field.useDocument": "Använd dokumentets värde",
+  "hayat.field.use": "Använd {value}",
+  "hayat.field.choose.ambiguous_day_month":
+    "Datumet i dokumentet kan läsas på två sätt. Välj det som stämmer:",
+  "hayat.field.choose.low_ocr_confidence":
+    "HAYAT är osäker på tecknen. Jämför med dokumentet innan du använder värdet:",
+  "hayat.field.choose.confusable_characters":
+    "Numret innehåller tecken som lätt förväxlas, till exempel O och 0. Jämför med dokumentet innan du använder det:",
+  "hayat.field.choose.several_candidates":
+    "Dokumentet innehåller flera möjliga värden. Välj det som stämmer:",
+  "hayat.field.choose.inconsistent_dates":
+    "Datumen i dokumentet går inte ihop. Kontrollera innan du använder värdet:",
+  "hayat.field.noExpiryConflict":
+    "Dokumentet anger giltighet till {value}, men du har valt utan utgångsdatum.",
+  "hayat.field.notFound": "Hittades inte i dokumentet.",
+  "hayat.match.ok": "Utfärdare och merit i dokumentet stämmer med ditt val.",
+  "hayat.issuer.different":
+    "Dokumentet verkar vara utfärdat av {found}, inte av utfärdaren för den merit du valt. Ditt val har inte ändrats.",
+  "hayat.issuer.notFound": "HAYAT hittade inte den valda utfärdarens namn i dokumentet.",
+  "hayat.type.different":
+    "Dokumentet verkar gälla {found}, inte den merit du valt. Ditt val har inte ändrats.",
+  "hayat.type.notFound": "HAYAT hittade inte den valda meritens namn i dokumentet.",
+  "hayat.chooseOther": "Välj en annan merit",
+  "hayat.holder.differs":
+    "Namnet på dokumentet ({name}) skrivs inte som namnet på ditt konto. Det kan vara en stavningsvariant – HAYAT drar ingen slutsats av det.",
+  "hayat.holder.check": "Namn på dokumentet: {name}. Kontrollera att dokumentet är ditt.",
+  "hayat.fail.unsupported_format":
+    "Det här filformatet kan inte läsas automatiskt. Filen bifogas ändå – fyll i fälten själv, eller välj en PDF, JPG eller PNG.",
+  "hayat.fail.encrypted":
+    "PDF-filen är lösenordsskyddad och kan inte läsas. Spara en kopia utan lösenord och välj den, eller fyll i fälten själv.",
+  "hayat.fail.unreadable":
+    "Filen gick inte att öppna. Kontrollera att den inte är skadad och välj den igen, eller fyll i fälten själv.",
+  "hayat.fail.too_large_to_process":
+    "Dokumentet är för stort att läsa automatiskt – för många sidor eller för hög upplösning. Filen bifogas ändå. Fyll i fälten själv.",
+  "hayat.fail.timeout":
+    "Läsningen tog för lång tid och avbröts. Försök igen eller fyll i fälten själv.",
+  "hayat.fail.no_text":
+    "HAYAT hittade ingen läsbar text. Prova en skarpare, rättvänd bild – eller fyll i fälten själv.",
+  "hayat.fail.engine_unavailable":
+    "Dokumentläsaren kunde inte startas. Kontrollera anslutningen och försök igen, eller fyll i fälten själv.",
+  "hayat.fail.kept": "Dina ifyllda uppgifter är kvar.",
+  "hayat.retry": "Läs dokumentet igen",
+  "hayat.verify.title": "Verifiering",
+  "hayat.verify.separate": "Att dokumentet är avläst betyder inte att meriten är verifierad.",
+  "hayat.verify.checking": "Kontrolleras …",
+  "hayat.verify.status.verified": "Kontrollerna godkändes",
+  "hayat.verify.status.source_verified_binding_missing":
+    "Källa verifierad – innehavarkoppling saknas",
+  "hayat.verify.status.action_needed": "Komplettering behövs",
+  "hayat.verify.status.cannot_verify_automatically": "Kan inte verifieras automatiskt",
+  "hayat.verify.status.temporarily_unavailable": "Kontroll tillfälligt otillgänglig",
+  "hayat.verify.status.mismatch": "Uppgifter stämmer inte överens",
+  "hayat.verify.status.expired": "Utgången",
+  "hayat.verify.status.revoked": "Återkallad",
+  "hayat.verify.status.recheck_needed": "Ny kontroll behövs",
+  "hayat.verify.notRecorded":
+    "Resultatet visas bara här. Det sparas ännu inte på meriten, och statusen i ditt Passport ändras inte.",
+  "hayat.verify.unavailableCall":
+    "Kontrollen kunde inte göras just nu. Det säger ingenting om meriten. Försök igen senare.",
+  "hayat.verify.binding.email":
+    "Innehavarkoppling: kontroll över kontots bekräftade e-postadress. Det är inte en identitetskontroll.",
+  "hayat.verify.reason.no_verifiable_source":
+    "Ett uppladdat dokument visar vad som står i det, inte att det är äkta. För automatisk verifiering behövs en digitalt signerad merit från utfärdaren, och ingen sådan källa är ännu ansluten. Meriten sparas som registrerad av dig.",
+  "hayat.verify.reason.profile_not_supported":
+    "Filen innehåller en digital merit i ett format som HAYAT inte kan kontrollera.",
+  "hayat.verify.reason.data_integrity_proof_not_supported":
+    "Den digitala meriten använder en signaturtyp (Data Integrity) som HAYAT ännu inte stöder.",
+  "hayat.verify.reason.malformed_credential":
+    "Den digitala meriten i filen gick inte att tolka. Hämta originalfilen från utfärdaren igen.",
+  "hayat.verify.reason.issuer_not_trusted":
+    "Den digitala meriten är signerad, men utfärdaren är inte ansluten till CQrityjob. En giltig signatur räcker inte – utfärdaren måste vara godkänd.",
+  "hayat.verify.reason.issuer_not_authorised_for_type":
+    "Utfärdaren är godkänd, men inte för den merit du valt. Kontrollera att du valt rätt merit.",
+  "hayat.verify.reason.signature_invalid":
+    "Signaturen stämmer inte: filen har ändrats efter att den utfärdades. Hämta originalfilen från utfärdaren och välj den.",
+  "hayat.verify.reason.signing_key_not_trusted":
+    "Meriten är signerad med en nyckel som inte är godkänd för utfärdaren. Hämta originalfilen från utfärdaren och välj den.",
+  "hayat.verify.reason.claim_field_mismatch":
+    "Datumen du angett stämmer inte med den signerade meriten. Rätta fälten eller kontrollera att du valt rätt fil.",
+  "hayat.verify.reason.binding_not_present":
+    "Meriten är äkta, men den anger inte vem den tillhör på ett sätt som HAYAT kan kontrollera.",
+  "hayat.verify.reason.binding_mismatch":
+    "Meriten är äkta, men är utfärdad till en annan e-postadress än ditt kontos. HAYAT drar ingen slutsats om varför.",
+  "hayat.verify.reason.account_email_not_confirmed":
+    "Bekräfta e-postadressen på ditt konto, så kan meriten kopplas till dig.",
+  "hayat.verify.reason.not_yet_valid": "Meriten har inte börjat gälla ännu.",
+  "hayat.verify.reason.expired": "Den signerade meriten har ett utgångsdatum som har passerat.",
+  "hayat.verify.reason.revoked": "Utfärdaren har återkallat meriten.",
+  "hayat.verify.reason.status_not_offered":
+    "Meriten anger ingen återkallelsestatus, och det kräver utfärdarens policy.",
+  "hayat.verify.reason.status_type_not_supported":
+    "Meritens återkallelsestatus har ett format som HAYAT inte kan läsa.",
+  "hayat.verify.reason.status_source_not_allowed":
+    "Meriten pekar på en statuskälla som inte är godkänd för utfärdaren. Den hämtades inte.",
+  "hayat.verify.reason.status_source_unavailable":
+    "Utfärdarens statuskälla svarade inte. Det säger ingenting om meriten. Försök igen senare.",
+  "hayat.verify.reason.evidence_too_old":
+    "Den tidigare kontrollen är för gammal. Gör en ny kontroll.",
+  "hayat.verify.reason.ok":
+    "Utfärdare, merittyp, innehavarkoppling, giltighet och status kontrollerades mot källan utan anmärkning.",
+  "hayat.verify.reason.status_not_offered_accepted_by_policy":
+    "Utfärdaren publicerar ingen återkallelsestatus.",
+  "hayat.verify.reason.not_evaluated": "Kontrollen kunde inte slutföras.",
+  "hayat.verify.reason.source_not_enabled":
+    "Den här meriten utfärdas digitalt via en tjänst som CQrityjob ännu inte har tillstånd att kontrollera automatiskt.",
+  "hayat.verify.reason.link_not_recognised":
+    "Länken känns inte igen. Klistra in den offentliga länken till just din merit, till exempel https://www.credly.com/badges/…",
+  "hayat.verify.reason.evidence_not_found":
+    "Utfärdarens tjänst hittar ingen offentlig merit på den länken. Kontrollera länken, och att meriten är inställd som offentlig hos utfärdaren.",
+  "hayat.verify.reason.source_unavailable":
+    "Utfärdarens tjänst svarade inte. Det säger ingenting om meriten. Försök igen senare.",
+  "hayat.verify.scope.title": "Kontrollen omfattar inte:",
+  "hayat.verify.scope.revocation_not_published":
+    "återkallelse – utfärdaren publicerar ingen sådan status",
+  "hayat.verify.scope.credential_number_not_published":
+    "certifikatsnumret – källan publicerar inget nummer att jämföra med",
+  "hayat.verify.scope.issue_date_not_compared":
+    "utfärdandedatumet – källan daterar märket, inte certifieringen",
+  "hayat.verify.next.review":
+    "När meriten är sparad kan du skicka den för dokumentgranskning från meritens sida.",
+  "hayat.link.label": "Officiell meritlänk (valfritt)",
+  "hayat.link.help":
+    "Den offentliga länken till din merit hos {source}. HAYAT hämtar uppgifterna direkt från utfärdarens tjänst – inte från länken du klistrar in.",
+  "hayat.link.check": "Kontrollera länken",
+  "hayat.saved.title": "Automatisk kontroll (HAYAT)",
+  "hayat.saved.checkedAt": "Senast kontrollerad {date}",
+  "hayat.saved.source": "Källa: {source}",
+  "hayat.saved.historical": "Tidigare kontroll – gäller inte längre",
+  "hayat.saved.invalidated.fields_changed":
+    "Uppgifterna på meriten har ändrats sedan kontrollen. Gör en ny kontroll.",
+  "hayat.saved.invalidated.evidence_changed":
+    "Dokumentet har bytts ut eller tagits bort sedan kontrollen. Gör en ny kontroll.",
+  "hayat.saved.invalidated.superseded": "Ersatt av en senare kontroll.",
+  "hayat.saved.none":
+    "Ingen automatisk kontroll har gjorts. Ett bifogat dokument är underlag, inte en verifiering.",
+  "hayat.saved.recheck": "Kontrollera igen",
+  "hayat.saved.rechecking": "Kontrollerar …",
+  "hayat.saved.notStatus":
+    "Den här kontrollen ändrar inte meritens status i Passport och visas inte i delningar.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -4134,6 +4288,156 @@ const en: Record<PassportCopyKey, string> = {
     "The candidate chose to share this with you. It does not come from their application, and they can withdraw it at any time.",
   "ad.employerOnlyVerified":
     "Only verified records appear here. Self-declared entries are never part of a package.",
+  // ── HAYAT — document reading and verification ──────────────────────────
+  "hayat.reading": "HAYAT is reading the document …",
+  "hayat.readBadge": "Read by HAYAT",
+  "hayat.read.title": "Document read",
+  "hayat.read.lead":
+    "These values are suggestions from the document. Check and correct them – you decide what is saved.",
+  "hayat.read.ocr":
+    "The document is an image or a scan, so its text was machine-read. Check each character carefully.",
+  "hayat.read.pages": "Only the first {read} of {total} pages were read.",
+  "hayat.read.nothing":
+    "HAYAT found nothing to suggest in the document. Fill in the fields yourself.",
+  "hayat.private": "The document was read in your browser. No text from it was sent or stored.",
+  "hayat.field.agrees": "Matches the document",
+  "hayat.field.conflict": "The document says {value}. Your value was kept.",
+  "hayat.field.useDocument": "Use the document's value",
+  "hayat.field.use": "Use {value}",
+  "hayat.field.choose.ambiguous_day_month":
+    "The date in the document can be read two ways. Choose the correct one:",
+  "hayat.field.choose.low_ocr_confidence":
+    "HAYAT is unsure of these characters. Compare with the document before using the value:",
+  "hayat.field.choose.confusable_characters":
+    "The number contains easily confused characters, such as O and 0. Compare with the document before using it:",
+  "hayat.field.choose.several_candidates":
+    "The document contains several possible values. Choose the correct one:",
+  "hayat.field.choose.inconsistent_dates":
+    "The dates in the document do not add up. Check before using the value:",
+  "hayat.field.noExpiryConflict":
+    "The document states validity until {value}, but you chose no expiry.",
+  "hayat.field.notFound": "Not found in the document.",
+  "hayat.match.ok": "The issuer and credential in the document match your selection.",
+  "hayat.issuer.different":
+    "The document appears to be issued by {found}, not by the issuer of the credential you selected. Your selection was not changed.",
+  "hayat.issuer.notFound": "HAYAT did not find the selected issuer's name in the document.",
+  "hayat.type.different":
+    "The document appears to be for {found}, not the credential you selected. Your selection was not changed.",
+  "hayat.type.notFound": "HAYAT did not find the selected credential's name in the document.",
+  "hayat.chooseOther": "Choose a different credential",
+  "hayat.holder.differs":
+    "The name on the document ({name}) is not written like the name on your account. It may be a spelling variant – HAYAT draws no conclusion from it.",
+  "hayat.holder.check": "Name on the document: {name}. Check that the document is yours.",
+  "hayat.fail.unsupported_format":
+    "This file format cannot be read automatically. The file is still attached – fill in the fields yourself, or choose a PDF, JPG or PNG.",
+  "hayat.fail.encrypted":
+    "The PDF is password-protected and cannot be read. Save a copy without a password and choose that, or fill in the fields yourself.",
+  "hayat.fail.unreadable":
+    "The file could not be opened. Check that it is not damaged and choose it again, or fill in the fields yourself.",
+  "hayat.fail.too_large_to_process":
+    "The document is too large to read automatically – too many pages or too high a resolution. The file is still attached. Fill in the fields yourself.",
+  "hayat.fail.timeout":
+    "Reading took too long and was stopped. Try again or fill in the fields yourself.",
+  "hayat.fail.no_text":
+    "HAYAT found no legible text. Try a sharper, upright image – or fill in the fields yourself.",
+  "hayat.fail.engine_unavailable":
+    "The document reader could not start. Check your connection and try again, or fill in the fields yourself.",
+  "hayat.fail.kept": "Everything you entered is still here.",
+  "hayat.retry": "Read the document again",
+  "hayat.verify.title": "Verification",
+  "hayat.verify.separate": "A document being read does not mean the credential is verified.",
+  "hayat.verify.checking": "Checking …",
+  "hayat.verify.status.verified": "The checks passed",
+  "hayat.verify.status.source_verified_binding_missing": "Signature valid – holder binding missing",
+  "hayat.verify.status.action_needed": "Action needed",
+  "hayat.verify.status.cannot_verify_automatically": "Cannot be verified automatically",
+  "hayat.verify.status.temporarily_unavailable": "Check temporarily unavailable",
+  "hayat.verify.status.mismatch": "Details do not match",
+  "hayat.verify.status.expired": "Expired",
+  "hayat.verify.status.revoked": "Revoked",
+  "hayat.verify.status.recheck_needed": "New check needed",
+  "hayat.verify.notRecorded":
+    "This result is shown here only. It is not yet recorded on the credential, and the status in your Passport does not change.",
+  "hayat.verify.unavailableCall":
+    "The check could not be made right now. That says nothing about the credential. Try again later.",
+  "hayat.verify.binding.email":
+    "Holder binding: control of the account's confirmed email address. This is not an identity check.",
+  "hayat.verify.reason.no_verifiable_source":
+    "An uploaded document shows what it says, not that it is genuine. Automatic verification needs a digitally signed credential from the issuer, and no such source is connected yet. The credential is saved as registered by you.",
+  "hayat.verify.reason.profile_not_supported":
+    "The file contains a digital credential in a format HAYAT cannot check.",
+  "hayat.verify.reason.data_integrity_proof_not_supported":
+    "The digital credential uses a signature type (Data Integrity) that HAYAT does not support yet.",
+  "hayat.verify.reason.malformed_credential":
+    "The digital credential in the file could not be parsed. Download the original file from the issuer again.",
+  "hayat.verify.reason.issuer_not_trusted":
+    "The digital credential is signed, but its issuer is not connected to CQrityjob. A valid signature is not enough – the issuer must be approved.",
+  "hayat.verify.reason.issuer_not_authorised_for_type":
+    "The issuer is approved, but not for the credential you selected. Check that you selected the right credential.",
+  "hayat.verify.reason.signature_invalid":
+    "The signature does not verify: the file was changed after it was issued. Download the original file from the issuer and choose that.",
+  "hayat.verify.reason.signing_key_not_trusted":
+    "The credential is signed with a key that is not approved for this issuer. Download the original file from the issuer and choose that.",
+  "hayat.verify.reason.claim_field_mismatch":
+    "The dates you entered do not match the signed credential. Correct the fields or check that you chose the right file.",
+  "hayat.verify.reason.binding_not_present":
+    "The credential is genuine, but it does not say who it belongs to in a way HAYAT can check.",
+  "hayat.verify.reason.binding_mismatch":
+    "The credential is genuine, but it was issued to a different email address than your account's. HAYAT draws no conclusion about why.",
+  "hayat.verify.reason.account_email_not_confirmed":
+    "Confirm the email address on your account so the credential can be linked to you.",
+  "hayat.verify.reason.not_yet_valid": "The credential is not valid yet.",
+  "hayat.verify.reason.expired": "The signed credential's expiry date has passed.",
+  "hayat.verify.reason.revoked": "The issuer has revoked the credential.",
+  "hayat.verify.reason.status_not_offered":
+    "The credential states no revocation status, which this issuer's policy requires.",
+  "hayat.verify.reason.status_type_not_supported":
+    "The credential's revocation status uses a format HAYAT cannot read.",
+  "hayat.verify.reason.status_source_not_allowed":
+    "The credential points to a status source that is not approved for this issuer. It was not fetched.",
+  "hayat.verify.reason.status_source_unavailable":
+    "The issuer's status source did not answer. That says nothing about the credential. Try again later.",
+  "hayat.verify.reason.evidence_too_old": "The earlier check is too old. Run a new check.",
+  "hayat.verify.reason.ok":
+    "Issuer, credential type, holder binding, validity and status were checked against the source with no remarks.",
+  "hayat.verify.reason.status_not_offered_accepted_by_policy":
+    "The issuer publishes no revocation status.",
+  "hayat.verify.reason.not_evaluated": "The check could not be completed.",
+  "hayat.verify.reason.source_not_enabled":
+    "This credential is issued digitally through a service CQrityjob does not yet have permission to check automatically.",
+  "hayat.verify.reason.link_not_recognised":
+    "The link is not recognised. Paste the public link to your own credential, for example https://www.credly.com/badges/…",
+  "hayat.verify.reason.evidence_not_found":
+    "The issuer's service finds no public credential at that link. Check the link, and that the credential is set to public with the issuer.",
+  "hayat.verify.reason.source_unavailable":
+    "The issuer's service did not answer. That says nothing about the credential. Try again later.",
+  "hayat.verify.scope.title": "This check does not cover:",
+  "hayat.verify.scope.revocation_not_published": "revocation – the issuer publishes no such status",
+  "hayat.verify.scope.credential_number_not_published":
+    "the certificate number – the source publishes no number to compare with",
+  "hayat.verify.scope.issue_date_not_compared":
+    "the issue date – the source dates the badge, not the certification",
+  "hayat.verify.next.review":
+    "Once the credential is saved you can submit it for document review from its page.",
+  "hayat.link.label": "Official credential link (optional)",
+  "hayat.link.help":
+    "The public link to your credential at {source}. HAYAT fetches the details straight from the issuer's service – not from the link you paste.",
+  "hayat.link.check": "Check the link",
+  "hayat.saved.title": "Automatic check (HAYAT)",
+  "hayat.saved.checkedAt": "Last checked {date}",
+  "hayat.saved.source": "Source: {source}",
+  "hayat.saved.historical": "Earlier check – no longer current",
+  "hayat.saved.invalidated.fields_changed":
+    "The credential's details changed after this check. Run a new check.",
+  "hayat.saved.invalidated.evidence_changed":
+    "The document was replaced or removed after this check. Run a new check.",
+  "hayat.saved.invalidated.superseded": "Replaced by a later check.",
+  "hayat.saved.none":
+    "No automatic check has been made. An attached document is evidence, not verification.",
+  "hayat.saved.recheck": "Check again",
+  "hayat.saved.rechecking": "Checking …",
+  "hayat.saved.notStatus":
+    "This check does not change the credential's status in Passport and is not shown in shares.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {
