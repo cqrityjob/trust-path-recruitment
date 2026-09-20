@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-19",
-  "readBy": "Read-only Supabase management SQL on explicit owner project wrygicdfxwjnrugduxnt after PR #274 merged as 1631d5d3f481520e8f3a85f8220072959eff6855. Full 305-row ledger refreshed; includes 20261202090000 scp_interview_starts and 20261203090000 scp_interview_case_vetting_read. No migration executed or replayed.",
+  "readAt": "2026-09-20",
+  "readBy": "Read-only Supabase management SQL on explicit owner project wrygicdfxwjnrugduxnt after PR #276 merged as 39574bd83d03087f7f669cae91a2c0aef8714747. Full ledger refreshed; includes 20261204090000 sp_hayat_assessments. Seven function bodies, ACLs, RLS, policy, triggers, constraints and indexes verified against the merged migration. No migration manually executed or replayed.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1235,6 +1235,10 @@
     {
       "version": "20261203090000",
       "name": "scp_interview_case_vetting_read"
+    },
+    {
+      "version": "20261204090000",
+      "name": "sp_hayat_assessments"
     }
   ]
 }
