@@ -98,6 +98,49 @@ a named candidate. The only published route to ask is
   `source-registry.ts`.
 - Contact: `certification@asisonline.org`.
 
+## 2b. What the built adapter actually checks for ASIS — and what it does not
+
+`verification/hosted-open-badge.ts`, read against what Credly actually serves. This is the
+scope to put in front of anyone before it is switched on. **None of it is validated against
+a real ASIS badge yet.**
+
+### It checks
+
+| Check | How, exactly |
+| --- | --- |
+| **Which URL is fetched** | The holder's pasted link is parsed for a badge id only. The URL fetched is **built here** on the single allow-listed host `api.credly.com`: https, no redirects followed, 5 s, 256 kB, two attempts. A pasted link can never choose the destination. |
+| **That the answer is the badge asked for** | The assertion's `id` must end in `/badge_assertions/<the id we asked for>`, its `type` must be `Assertion`, and `verification.type` must be `hosted`. |
+| **Issuer** | The assertion's badge-class URL must be on the same allow-listed host, and its issuer id must equal ASIS's recorded Credly issuer `780a5807-…`. If the class URL omits the issuer, the class itself is fetched to resolve it. |
+| **Credential type** | The badge-template id must be one recorded for the catalogue definition the holder selected — CPP `71fbf093-…`, PSP `931c53b1-…`, PCI `7c038c8c-…`, APP `c59ac211-…`. A genuine PSP badge does not verify a CPP claim. |
+| **Holder binding** | The account's **confirmed** email is hashed and compared with `recipient.identity` (salted or not). Labelled **email control**, explicitly not identity proofing. |
+| **Validity** | `expires` in the past → *expired*; `validFrom`/`issuedOn` in the future → *not yet valid*. Credly returns 200 for an expired badge, so the date is compared here rather than trusted as a status. |
+| **Revocation** | HTTP **410** → *revoked*. A `revoked: true` body is also honoured. |
+| **Expiry claimed by the holder** | If the holder typed a "giltig till" date it must equal the assertion's `expires`, otherwise *mismatch*. |
+| **Unavailability** | A timeout or non-answer is *temporarily unavailable* — never a verdict about the credential. 404 asks the holder to check the link or make the badge public. |
+
+### It does **not** check
+
+| Not checked | Why it matters |
+| --- | --- |
+| **The certificate number** | The adapter never reads `evidence[]`. ASIS appears to publish a Candidate ID / Certificate ID there, so this is a real improvement available later — but it is unverified, so a positive result says only that *this check compared no number*. |
+| **The holder's name** | The assertion carries none. |
+| **The certification's own issue date** | `issuedOn` dates the **badge**, not the underlying certification. Reported as a scope limit. |
+| **Any cryptographic proof** | `verification.type: "hosted"` means trust rests on TLS plus Credly's control of `api.credly.com`. **There is no signature and no key.** It must never be presented as equivalent to the signed VC-JWT profile. |
+| **That the badge is the holder's *current* status** | It proves the badge exists, is live and is bound to that email. ASIS recertification happens outside Credly. |
+
+### Known gaps that need a real badge before enabling
+
+1. **Email normalisation** before hashing `recipient.identity` is unknown; a wrong guess
+   produces a false "not the holder".
+2. **Redirects.** Badge ids can 302. `safeFetchJson` refuses to follow redirects by design,
+   so such a badge would report *temporarily unavailable* rather than verify. Whether the
+   assertion endpoint (as opposed to the badge page) redirects is untested.
+3. **Rate limits** for this pattern are unpublished.
+4. **`evidence[]` shape** across all four ASIS credentials is unconfirmed.
+
+Any of these may require **further code changes** before a first real connection works.
+The adapter is complete against the documented format; it is not validated against reality.
+
 ## 3. The easiest proven first connection
 
 **It is the one already built.** Credly's OB2 hosted assertion is unauthenticated,

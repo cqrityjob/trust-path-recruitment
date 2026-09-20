@@ -43,6 +43,13 @@ correcting a credential):
 10. A separate **Verifiering** box states the verification result. For an uploaded PDF,
     scan or photo that is, truthfully, **"Kan inte verifieras automatiskt"**.
 
+**Reading and saving are different acts, and the privacy claim is only about the first.**
+Reading sends the server nothing: no page image, no OCR text, no extracted text. Saving
+performs the existing **private upload** of the file, into private Storage under the
+holder's own path, exactly as it did before HAYAT. The holder-facing string says precisely
+this: *"Dokumentet lästes i din webbläsare. Ingen text från dokumentet har skickats eller
+sparats."* — text, not the file.
+
 Saving is unchanged: claim first, then the existing private upload, then the entry page.
 An upload still moves a claim to `document_provided` at most.
 
@@ -50,7 +57,7 @@ An upload still moves a claim to `document_provided` at most.
 
 | Decision | Why |
 | --- | --- |
-| **Reading runs in the browser** | The server runtime is Cloudflare Workers (`vite.config.ts` → nitro/cloudflare). Tesseract's WASM + language data does not fit a Worker, and Docling is Python. Better still: the document never leaves the device in order to be read — no OCR text is uploaded, stored or logged. |
+| **Reading runs in the browser** | The server runtime is Cloudflare Workers (`vite.config.ts` → nitro/cloudflare). Tesseract's WASM + language data does not fit a Worker, and Docling is Python. And reading here means **no document content is sent to the server in order to read it** — no page image, no OCR text, no extracted text. **Saving is a different act:** it performs the existing **private upload** of the file itself, exactly as before HAYAT. So the file does reach the server, on save, into private Storage; what never reaches it is anything the reader derived from the file. |
 | **Deterministic parsing, no AI call** | The only approved AI integration (`selectProvider()` → Anthropic) is scoped to Interview Intelligence and its `scp_iv_ai_run_*` envelope is keyed to interview cases. Sending candidate certificates to it would be a new data category for an external processor — explicitly out of bounds without approval. A rule-based parser also has no prompt to inject. |
 | **OCR engine served from this origin** | Tesseract.js defaults to fetching worker, WASM core and language data from `cdn.jsdelivr.net`. `scripts/vite/hayat-ocr-assets.ts` publishes the lockfile-pinned files under `/hayat-ocr/` instead (dev: served from `node_modules`; build: emitted into the client output). Nothing binary is committed. |
 | **Reader excluded from the server bundle** | The first build put pdf.js and Tesseract's Node build (~1.4 MB) into the Worker. The dynamic import is now behind `import.meta.env.SSR`, and the server output contains neither. |
@@ -98,8 +105,11 @@ email) matched to the account's **confirmed** email, read from the session on th
 `1EdTechRevocationList`, fetched only from hosts the issuer's policy lists.
 
 **Second adapter:** Open Badges 2.0 *hosted* assertions as Credly serves them
-(`hosted-open-badge.ts`) — complete, and disabled pending written permission. See
-[hayat-sources.md](hayat-sources.md).
+(`hosted-open-badge.ts`) — complete against the documented format, and **disabled**.
+**Real Credly/ASIS verification has not been validated against a real badge**, and further
+code changes may be needed before it works (email normalisation for the recipient hash,
+redirect handling, rate limits, the shape of `evidence[]`). What it checks and what it does
+not is set out in [hayat-sources.md](hayat-sources.md) §2b.
 
 **Not supported, and reported as such:** Data Integrity (embedded) proofs,
 `BitstringStatusList`, Blockcerts, verifiable presentations (so nonce/replay does not

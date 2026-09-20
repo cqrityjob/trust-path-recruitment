@@ -92,8 +92,13 @@ Isolation, in the same environment:
 A scanned PDF timed out once in a real Chrome session during the earlier production walk.
 It could not be reproduced against the same production build at 1×, 4×, 8× or 12× CPU
 throttling, or at 8 and 20 Mbps: it reads in 1.3–8.4 s. Downloading the ~9.4 MB engine from
-production takes ~1.6 s. The most likely explanation is background-tab throttling in a
-headed browser, which Playwright's headless Chromium does not reproduce.
+production takes ~1.6 s.
+
+**The cause remains unknown.** Background-tab throttling in a headed browser is a
+hypothesis that fits the symptom and that Playwright's headless Chromium cannot reproduce
+— it is not an established explanation, and nothing here should be read as having
+diagnosed it. What is established is only that the failure is safe: the form is kept, the
+message is actionable, the retry works, and the abandoned reading cannot land.
 
 What *was* missing was a test. The reader's cancellation was only ever checked by reading
 its source (`passport-hayat:check` 9.18). A regression test now holds the OCR language
