@@ -1169,10 +1169,12 @@ async function main(): Promise<void> {
       !/assertion_level|sp_verifier_decide|sp_attach_evidence/.test(source),
       `9.2 ${file} writes no trust field`,
     );
-    ok(
-      !/SERVICE_ROLE|service_role|supabaseAdmin/.test(source),
-      `9.3 ${file} uses no service-role client`,
-    );
+    // One named exception, pinned in passport-separation:check and in group 10.
+    if (!file.endsWith("hayat-assessment.server.ts"))
+      ok(
+        !/SERVICE_ROLE|service_role|supabaseAdmin/.test(source),
+        `9.3 ${file} uses no service-role client`,
+      );
     ok(!/console\.(log|info|debug|warn|error)/.test(source), `9.4 ${file} logs nothing`);
     ok(
       !/cdn\.jsdelivr|unpkg\.com|cdnjs/.test(source),
@@ -1267,6 +1269,85 @@ async function main(): Promise<void> {
   );
   const added = walk("supabase/migrations").filter((f) => /hayat/i.test(f));
   ok(added.length === 0, "9.20 this change adds no migration");
+
+  // =======================================================================
+  group("10 · Saved assessments: recorded by the server, bound, and never promoted");
+  // =======================================================================
+  {
+    const fns = code("src/lib/security-passport/hayat/hayat.functions.ts");
+    const saved = fns.slice(fns.indexOf("export const assessSavedCredential"));
+    ok(saved.length > 200, "10.1 assessSavedCredential exists");
+    const savedKeys = /const savedInput = z\s*\.object\(\{([\s\S]*?)\}\)/.exec(fns)?.[1] ?? "";
+    ok(
+      /claimId/.test(savedKeys) &&
+        /badgeLink/.test(savedKeys) &&
+        !/signedCredential|status|decision|verified|holder/i.test(savedKeys),
+      "10.2 its input is a claim id and a link: no credential text, no result, no holder",
+    );
+    ok(
+      saved.indexOf("sp_hayat_claim_fingerprint") > 0 &&
+        saved.indexOf("sp_hayat_claim_fingerprint") < saved.indexOf("assessHostedBadge(") &&
+        saved.indexOf("sp_hayat_claim_fingerprint") < saved.indexOf("assessSignedCredential("),
+      "10.3 the claim's fingerprint is taken BEFORE the check runs",
+    );
+    ok(
+      /\.storage\.from\(EVIDENCE_BUCKET\)\.download/.test(saved) &&
+        /extractBakedCredential/.test(saved),
+      "10.4 a file's signed credential is extracted on the server from the stored bytes",
+    );
+    ok(
+      /holderUserId: context\.userId,/.test(saved),
+      "10.5 the holder passed to the writer is the verified session's",
+    );
+    ok(
+      /NOT_A_CHECK\.includes\(decision\.reasons\[0\]\)/.test(saved),
+      "10.6 a result that checked nothing is shown, never recorded",
+    );
+    ok(
+      !/registry:\s*data\.|source:\s*data\./.test(saved),
+      "10.7 neither registry nor source is an input",
+    );
+
+    const writer = code("src/lib/security-passport/hayat/hayat-assessment.server.ts");
+    ok(
+      /decision\.status === "temporarily_unavailable"\) return \{ recorded: false, why: "outage" \}/.test(
+        writer,
+      ),
+      "10.8 an outage is never recorded",
+    );
+    ok(
+      (writer.match(/\.rpc\(/g) ?? []).length === 1 &&
+        /"sp_hayat_record_assessment"/.test(writer) &&
+        !/\.from\(/.test(writer),
+      "10.9 the writer makes exactly one call and touches no table",
+    );
+    ok(
+      /_current_for_days: decision\.status === "verified" \? binding\.currentForDays : null/.test(
+        writer,
+      ),
+      "10.10 only a positive result gets a currency window",
+    );
+    ok(
+      !/assertion_level|sp_verifier_decide/.test(writer + saved),
+      "10.11 nothing here can move the claim's trust level",
+    );
+    ok(
+      /await onAssessSaved\(\{ claimId: savedId\.current, badgeLink: link \}\)\.catch\(\(\) => undefined\);/.test(
+        form,
+      ),
+      "10.12 a check that cannot run never blocks saving or opening the credential",
+    );
+    const card = readFileSync(
+      "src/components/security-passport/hayat/HayatSavedAssessment.tsx",
+      "utf8",
+    );
+    ok(
+      /hayat\.saved\.historical/.test(card) &&
+        /hayat\.saved\.notStatus/.test(card) &&
+        /hayat\.saved\.none/.test(card),
+      "10.13 the reopened credential tells current from historical from never-checked, and says it is not the trust level",
+    );
+  }
 
   console.log(`\n${checks - failures}/${checks} checks passed`);
   if (failures > 0) {

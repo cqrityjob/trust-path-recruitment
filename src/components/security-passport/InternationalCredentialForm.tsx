@@ -76,6 +76,7 @@ export function InternationalCredentialForm({
   onUpload,
   onAssess,
   onLoadAvailability,
+  onAssessSaved,
   accountName,
   documentReader,
 }: {
@@ -97,6 +98,10 @@ export function InternationalCredentialForm({
     signedCredential: string | null;
     badgeLink: string | null;
   }) => Promise<{ decision: HayatDecision; recorded: boolean }>;
+  /** Runs once the claim (and its document) exist: the server checks the saved
+   *  credential against its own evidence and RECORDS the result. Never blocks
+   *  saving -- a check that cannot run leaves a credential that is simply saved. */
+  onAssessSaved?: (input: { claimId: string; badgeLink: string | null }) => Promise<unknown>;
   /** The link-based sources the holder can use RIGHT NOW. A source HAYAT is not
    *  permitted to call is absent, so the link field is never a dead end. */
   onLoadAvailability?: () => Promise<{
@@ -397,6 +402,15 @@ export function InternationalCredentialForm({
           contentBase64,
         });
       }
+      // There is something a SOURCE can check only when the file carried a signed
+      // credential or the holder gave a link. Its failure is not a save failure.
+      const signed =
+        hayat.state.phase === "read" || hayat.state.phase === "failed"
+          ? hayat.state.signedCredential
+          : null;
+      const link = badgeLink.trim() || null;
+      if (onAssessSaved && (link || (file && signed)))
+        await onAssessSaved({ claimId: savedId.current, badgeLink: link }).catch(() => undefined);
       await navigate({
         to: "/passport/entry/$kind/$entryId",
         params: { kind: "claim", entryId: savedId.current },

@@ -75,7 +75,12 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async () => fixtures.close());
 test.setTimeout(150_000);
 
-async function mount(page: Page, lang: "sv" | "en", over: Record<string, unknown> = {}) {
+async function mount(
+  page: Page,
+  lang: "sv" | "en",
+  over: Record<string, unknown> = {},
+  path = "/passport/credentials/new?code=INTL_ASIS_CPP",
+) {
   const requests: Request[] = [];
   page.on("request", (r) => requests.push(r));
   const refusals = await installBoundary(page, {
@@ -106,6 +111,9 @@ async function mount(page: Page, lang: "sv" | "en", over: Record<string, unknown
     assessCredentialEvidence: { decision: unverifiable, recorded: false },
     // Production truth: no link-based source is enabled, so none is offered.
     getHayatAvailability: { linkSources: [] },
+    // Nothing has been checked unless a test says otherwise.
+    getSavedAssessment: null,
+    assessSavedCredential: { decision: unverifiable, recorded: true },
     ...over,
     listMyEvidence: [],
     listClaimVersions: [],
@@ -114,18 +122,17 @@ async function mount(page: Page, lang: "sv" | "en", over: Record<string, unknown
   const storageKey = await observeSupabaseStorageKey(page);
   await plantSession(page, storageKey);
   await page.evaluate((l) => localStorage.setItem("cqrityjob.lang", l), lang);
-  await page.goto(`${base}/passport/credentials/new?code=INTL_ASIS_CPP`);
-  await expect(page.locator("[data-international-credential-form]")).toBeVisible();
+  await page.goto(`${base}${path}`);
+  if (path.startsWith("/passport/credentials/new"))
+    await expect(page.locator("[data-international-credential-form]")).toBeVisible();
   return { refusals, requests };
 }
 
 /** Evidence is a by-product of the assertions, and only when asked for. */
-const shot = async (page: Page, name: string) => {
+const shot = async (page: Page, name: string, target = "[data-international-credential-form]") => {
   const dir = process.env.HAYAT_EVIDENCE_DIR;
   if (!dir) return;
-  await page
-    .locator("[data-international-credential-form]")
-    .screenshot({ path: `${dir}/${name}-${test.info().project.name}.png` });
+  await page.locator(target).screenshot({ path: `${dir}/${name}-${test.info().project.name}.png` });
 };
 const choose = (page: Page, name: string, mimeType: string, buffer: Buffer) =>
   page.locator('input[type="file"]').setInputFiles({ name, mimeType, buffer });
@@ -427,5 +434,154 @@ test("with a permitted source, a link is checked by the server and its scope is 
   expect(sent).toContain("credly.com/badges/11111111");
   expect(sent).not.toMatch(/verified|confidence/i);
   await shot(page, "link-verified-sv");
+  assertNoRefusals(refusals);
+});
+
+// ── Save, reopen, re-check ────────────────────────────────────────────────
+const savedClaim = {
+  ...source.claims[0],
+  id: CLAIM_ID,
+  claimType: "certification",
+  credentialCode: "INTL_ASIS_CPP",
+  titleSv: "Certified Protection Professional (CPP)",
+  titleEn: "Certified Protection Professional (CPP)",
+  issuerName: "ASIS International",
+  assertionLevel: "document_provided",
+  lifecycleState: "active",
+  issuedOn: "2024-03-12",
+  validUntil: "2027-03-31",
+  versionNo: 1,
+};
+const passportWith = (claims: unknown[]) => ({
+  profileIdentity: { displayName: "Test Holder Synthetic", titleSv: "x", titleEn: "x" },
+  profile: {
+    displayName: "Test Holder Synthetic",
+    headline: "x",
+    privacyMode: "full_name",
+    onboardingState: "completed",
+    onboardingAnswers: {},
+  },
+  holder: { ...source, claims, periods: [] },
+  eventCount: 0,
+});
+const savedCheck = (over: Record<string, unknown> = {}) => ({
+  status: "cannot_verify_automatically",
+  reasons: ["issuer_not_trusted"],
+  bindingLevel: "none",
+  scopeLimits: [],
+  sourceKind: "signed_credential",
+  ruleVersion: "hayat-rules/2",
+  checkedAt: "2026-09-20T09:00:00.000Z",
+  isCurrent: true,
+  notCurrentReason: null,
+  ...over,
+});
+const entry = `/passport/entry/claim/${CLAIM_ID}`;
+
+test("save: a file with a signed credential is checked BY THE SERVER, and the reopened credential shows the saved check", async ({
+  page,
+}) => {
+  const credential = "eyJhbGciOiJFZERTQSJ9.eyJzeW50aGV0aWMiOnRydWV9.c2lnbmF0dXJl";
+  const { refusals, requests } = await mount(page, "en", {
+    getMyPassport: passportWith([savedClaim]),
+    getSavedAssessment: savedCheck(),
+  });
+  await choose(
+    page,
+    "badge.png",
+    "image/png",
+    bakeCredential(await fixtures.png(ENGLISH_CPP), credential),
+  );
+  await expect(panel(page, "read")).toBeVisible({ timeout: 120_000 });
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(CLAIM_ID));
+
+  const names = requests.map((r) => exportOf(r.url())).filter(Boolean);
+  const order = ["saveInternationalCredential", "uploadEvidence", "assessSavedCredential"].map(
+    (n) => names.indexOf(n),
+  );
+  expect(order.every((i) => i >= 0) && order[0] < order[1] && order[1] < order[2]).toBe(true);
+  const sent =
+    requests.find((r) => exportOf(r.url()) === "assessSavedCredential")?.postData() ?? "";
+  expect(sent).toContain(CLAIM_ID);
+  // The server reads the stored file itself: the browser does not tell it what the file holds.
+  expect(sent).not.toContain(credential);
+  expect(sent).not.toMatch(/verified|status|decision/i);
+
+  const card = page.locator("[data-hayat-saved]");
+  await expect(card).toBeVisible();
+  await expect(card).toHaveAttribute("data-hayat-saved-status", "cannot_verify_automatically");
+  await expect(card).toHaveAttribute("data-hayat-saved-current", "true");
+  await expect(card).toContainText("Cannot be verified automatically");
+  await expect(card).toContainText("Last checked 20 September 2026");
+  await expect(card).toContainText("does not change the credential's status");
+  await shot(page, "reopened-saved-check-en", "[data-hayat-saved]");
+  assertNoRefusals(refusals);
+});
+
+test("save: a plain document asks the server to check nothing", async ({ page }) => {
+  const { refusals, requests } = await mount(page, "en", {
+    getMyPassport: passportWith([savedClaim]),
+  });
+  await choose(page, "certificate.pdf", "application/pdf", await fixtures.textPdf(ENGLISH_CPP));
+  await expect(panel(page, "read")).toBeVisible({ timeout: 60_000 });
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(CLAIM_ID));
+  expect(requests.map((r) => exportOf(r.url()))).not.toContain("assessSavedCredential");
+  const card = page.locator("[data-hayat-saved]");
+  await expect(card).toHaveAttribute("data-hayat-saved-status", "none");
+  await expect(card).toContainText("No automatic check has been made");
+  assertNoRefusals(refusals);
+});
+
+test("reopen: an earlier positive check is shown as HISTORY, with the reason, and can be re-run", async ({
+  page,
+}) => {
+  const { refusals, requests } = await mount(
+    page,
+    "sv",
+    {
+      getMyPassport: passportWith([savedClaim]),
+      getSavedAssessment: savedCheck({
+        status: "verified",
+        reasons: ["ok"],
+        bindingLevel: "email_control",
+        sourceKind: "hosted_open_badge",
+        scopeLimits: ["credential_number_not_published"],
+        isCurrent: false,
+        notCurrentReason: "recheck_needed",
+      }),
+      assessSavedCredential: {
+        decision: {
+          ...unverifiable,
+          status: "temporarily_unavailable",
+          reasons: ["source_unavailable"],
+        },
+        recorded: false,
+      },
+    },
+    entry,
+  );
+  const card = page.locator("[data-hayat-saved]");
+  await expect(card).toHaveAttribute("data-hayat-saved-current", "false");
+  await expect(card.locator("[data-hayat-saved-history]")).toHaveAttribute(
+    "data-hayat-saved-history",
+    "recheck_needed",
+  );
+  await expect(card).toContainText("Tidigare kontroll – gäller inte längre");
+  await expect(card).toContainText("Den tidigare kontrollen är för gammal");
+  await expect(card).toContainText("certifikatsnumret");
+  await card.getByRole("button", { name: "Kontrollera igen" }).click();
+  // The source is down: that is said, and the saved history is left as it was.
+  await expect(card.locator("[data-hayat-saved-outage]")).toContainText(
+    "säger ingenting om meriten",
+  );
+  await expect(card).toHaveAttribute("data-hayat-saved-current", "false");
+  const sent =
+    requests.find((r) => exportOf(r.url()) === "assessSavedCredential")?.postData() ?? "";
+  expect(sent).toContain(CLAIM_ID);
+  await shot(page, "reopened-history-sv", "[data-hayat-saved]");
   assertNoRefusals(refusals);
 });

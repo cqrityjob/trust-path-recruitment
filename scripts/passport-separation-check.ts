@@ -169,8 +169,25 @@ for (const file of passportFiles) {
 // once, and any second file reaching for the service role fails the build.
 const SERVICE_ROLE_EXCEPTION = path.join(PASSPORT_LIB, "public-disclosure.server.ts");
 
+// ── THE SECOND EXCEPTION (HAYAT, 2026-09-20) — AND WHY IT IS THE MIRROR IMAGE ──
+//
+// The recipient boundary needs the service role because it has NO identity for
+// RLS to key on. The HAYAT writer needs it because it has an identity that MUST
+// NOT be able to write: a HAYAT assessment says "a server checked this", and a
+// holder's session can call any `authenticated`-executable function directly
+// through PostgREST with any arguments. The only way to keep the writer out of a
+// holder's reach is to grant it to no role a session can assume
+// (sp_hayat_record_assessment: service_role only, 20261204090000).
+//
+// It is held to the same standard as the first: one named file, exactly ONE rpc,
+// no table access -- and the holder id it passes must come from the verified
+// session, never from request data. Adding a third exception means editing this
+// list in review, which is the control.
+const HAYAT_WRITER_EXCEPTION = path.join(PASSPORT_LIB, "hayat", "hayat-assessment.server.ts");
+const SERVICE_ROLE_EXCEPTIONS = new Set([SERVICE_ROLE_EXCEPTION, HAYAT_WRITER_EXCEPTION]);
+
 for (const file of passportFiles) {
-  if (file === SERVICE_ROLE_EXCEPTION) continue;
+  if (SERVICE_ROLE_EXCEPTIONS.has(file)) continue;
   const src = read(file);
   for (const line of importLines(src)) {
     expect(
@@ -211,6 +228,37 @@ for (const file of passportFiles) {
   expect(
     rpcNames.includes("sp_throttle_public_access"),
     "The public recipient path must go through the rate limit.",
+  );
+}
+
+// The HAYAT writer: one rpc, nothing else, and no identity taken from a request.
+{
+  const src = stripComments(read(HAYAT_WRITER_EXCEPTION));
+  expect(
+    !/\.from\s*\(/.test(src) && !/\.storage\b/.test(src),
+    "hayat-assessment.server.ts must never read or write a table or storage directly.",
+  );
+  const rpcNames = [...src.matchAll(/\.rpc\(\s*["']([a-z_]+)["']/g)].map((m) => m[1]);
+  expect(
+    rpcNames.length === 1 && rpcNames[0] === "sp_hayat_record_assessment",
+    `hayat-assessment.server.ts may call exactly one function, sp_hayat_record_assessment — found ${rpcNames.join(", ") || "none"}.`,
+  );
+  expect(
+    !/assertion_level|sp_verifier_decide|sp_verification_decisions/.test(src),
+    "The HAYAT writer must not touch the claim's trust level or a human decision.",
+  );
+  // Its only caller passes the holder from the verified session.
+  const caller = stripComments(read(path.join(PASSPORT_LIB, "hayat", "hayat.functions.ts")));
+  expect(
+    /holderUserId: context\.userId,/.test(caller) && !/holderUserId: data\./.test(caller),
+    "The HAYAT writer's holder id must come from the verified session, never from request data.",
+  );
+  const importers = passportFiles.filter(
+    (f) => f !== HAYAT_WRITER_EXCEPTION && /hayat-assessment\.server/.test(stripComments(read(f))),
+  );
+  expect(
+    importers.length === 1 && importers[0].endsWith(path.join("hayat", "hayat.functions.ts")),
+    `Only hayat.functions.ts may reach the HAYAT writer — found ${importers.map(rel).join(", ") || "none"}.`,
   );
 }
 

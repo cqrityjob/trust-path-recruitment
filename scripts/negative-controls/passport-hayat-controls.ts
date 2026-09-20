@@ -17,6 +17,7 @@ const MODEL = "src/lib/security-passport/hayat/verification/model.ts";
 const SIGNED = "src/lib/security-passport/hayat/verification/signed-credential.ts";
 const FETCH = "src/lib/security-passport/hayat/verification/safe-fetch.ts";
 const BOUNDARY = "src/lib/security-passport/hayat/hayat.functions.ts";
+const WRITER = "src/lib/security-passport/hayat/hayat-assessment.server.ts";
 const GUARD = "passport-hayat:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -92,6 +93,25 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "  .passthrough();",
     guard: GUARD,
     expect: "9.7 the server input refuses unknown keys",
+  },
+  {
+    id: "HAYAT-NC-OUTAGE-RECORDED",
+    defect: "a source outage is stored as if it were a result about the credential",
+    file: WRITER,
+    find: '  if (decision.status === "temporarily_unavailable") return { recorded: false, why: "outage" };\n',
+    replace: "",
+    guard: GUARD,
+    expect: "10.8 an outage is never recorded",
+  },
+  {
+    id: "HAYAT-NC-HOLDER-FROM-REQUEST",
+    defect:
+      "the holder the writer is told about comes from request data instead of the verified session",
+    file: BOUNDARY,
+    find: "      holderUserId: context.userId,",
+    replace: "      holderUserId: data.claimId,",
+    guard: GUARD,
+    expect: "10.5 the holder passed to the writer",
   },
 ];
 

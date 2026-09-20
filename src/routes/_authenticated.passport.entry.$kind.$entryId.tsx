@@ -1,9 +1,12 @@
 import { CredentialDefinitionContext } from "@/components/security-passport/CredentialDefinitionContext";
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
+import { HayatSavedAssessment } from "@/components/security-passport/hayat/HayatSavedAssessment";
 import {
   assessCredentialEvidence,
+  assessSavedCredential,
   getHayatAvailability,
+  getSavedAssessment,
 } from "@/lib/security-passport/hayat/hayat.functions";
 import {
   getInternationalPassportMetadata,
@@ -95,6 +98,8 @@ function PassportEntryRoute() {
   const saveInternational = useServerFn(saveInternationalCredential);
   const assessEvidence = useServerFn(assessCredentialEvidence);
   const hayatAvailability = useServerFn(getHayatAvailability);
+  const loadSavedAssessment = useServerFn(getSavedAssessment);
+  const assessSaved = useServerFn(assessSavedCredential);
   const loadInternational = useServerFn(getInternationalPassportMetadata);
   const [international, setInternational] = useState<InternationalPassportMetadata | null>(null);
   const loadPassport = useServerFn(getMyPassport);
@@ -649,6 +654,15 @@ function PassportEntryRoute() {
         <CredentialDefinitionContext code={claim.credentialCode} metadata={international} />
       )}
 
+      {claim && isPassportCredential(claim) && (
+        <HayatSavedAssessment
+          key={claim.id}
+          claimId={claim.id}
+          onLoad={(claimId) => loadSavedAssessment({ data: { claimId } })}
+          onRecheck={(claimId) => assessSaved({ data: { claimId, badgeLink: null } })}
+        />
+      )}
+
       <VerificationPanel
         assertionLevel={subject.assertionLevel}
         subjectKind={isClaim ? "credential" : "employment"}
@@ -808,6 +822,7 @@ function PassportEntryRoute() {
                   onSave={(data) => saveInternational({ data })}
                   onAssess={(data) => assessEvidence({ data })}
                   onLoadAvailability={hayatAvailability}
+                  onAssessSaved={(data) => assessSaved({ data })}
                   key={claim.id}
                   initial={{
                     claim_id: claim.id,
