@@ -21,9 +21,15 @@
 //
 // ── WHAT IT CANNOT PROVE ───────────────────────────────────────────────
 //
-// The assertion carries no certificate number and no holder name, and dates the
-// BADGE rather than the original certification. A positive result therefore
-// states `credential_number_not_published` and `issue_date_not_compared`.
+// This adapter compares no certificate number and no holder name, and the
+// assertion dates the BADGE rather than the original certification. A positive
+// result therefore states `credential_number_not_published` and
+// `issue_date_not_compared`.
+//
+// Those scope limits describe THIS CHECK, not the source. An issuer may put a
+// number in the assertion's `evidence[]` -- ASIS appears to -- and reading it
+// would be a real improvement, but only against a real badge from a real
+// issuer. It is not built on an assumption here.
 //
 // Nothing from the assertion is stored: Credly's terms forbid keeping API
 // content, hashed or not. A decision records our conclusion and the holder's

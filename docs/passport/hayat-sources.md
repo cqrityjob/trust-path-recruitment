@@ -1,131 +1,247 @@
-# HAYAT — verification sources: what exists, what we may use, what to ask for
+# HAYAT — verification sources: what is documented, what is unknown, what to ask for
 
-Investigated 2026-09-20 from primary sources. Where something could not be confirmed from
-a primary source it says **not confirmed** — nothing here is a guess. No badge belonging
-to any person was fetched; the only live reads were ASIS's own public issuer and
-badge-class metadata.
+Re-investigated 2026-09-20 from primary sources, after the first review was found to have
+reasoned badly. Everything below is tagged:
 
-## 1. The answer in one table
+- **ALLOWED** — a primary source explicitly permits it, quoted.
+- **FORBIDDEN** — a primary source explicitly forbids or restricts it, quoted.
+- **UNKNOWN** — no primary source either way. This is *not* a prohibition, and is never
+  written up as one.
 
-| | Credly public hosted assertion | Credly authenticated API | ASIS | ISC2 (the alternative evaluated) |
-| --- | --- | --- | --- | --- |
-| Exists | Yes — Open Badges 2.0 **hosted** assertion | Yes — `api.credly.com/v1/organizations/<id>/…` | Web directory only, behind a bot challenge | Web form; badges are on Credly too |
-| Covers other organisations' credentials | Any **public** badge whose id you have | **No** — scoped to the calling organisation | ASIS only | ISC2 only |
-| Authentication | None | Organisation token or OAuth `client_credentials`; tied to a signed Pearson agreement | — | — |
-| Supplies | badge class → issuer + template, `issuedOn`, `expires`, hashed recipient email; **HTTP 410 when revoked**, 404 unknown | state, dates, recipient email — to the issuer only | not confirmed (page not readable) | last name + member number → certifications, expiry (secondary source) |
-| **Certificate number** | **No** | not applicable | not confirmed | member number |
-| Holder binding | SHA-256 of the earner's email (lower-case; salt not confirmed) | none for a relying party | name only | name + number |
-| **Automated retrieval / storage / re-check permitted** | **Not confirmed.** Website + user terms prohibit bots/scraping without written permission; API terms cover signed clients only, forbid storing API content (hashes included), allow a 30-day cache; the page documenting these endpoints was removed from the live docs | Only under agreement | No API; handbook requires signed certificant permission for release | Website terms prohibit robots; bulk verification is for official partners, by email, 5 business days |
+## 0. Corrections to the first review
 
-**It is not the format of HAYAT's first verifier.** Credly does not hand a verifier a signed
-credential: the assertion is *hosted*, verified by where it is served, with no signature.
-HAYAT therefore has a second adapter written for what Credly actually serves.
+The first review (same day, superseded) drew two conclusions it had not earned. Both are
+withdrawn:
 
-## 2. What is built, and its state
+| First review said | Actually |
+| --- | --- |
+| "The OBI documentation page hard-404s while everything else redirects — deliberate removal." | **Wrong inference.** The docs moved to `docs.credly.com`. An archived snapshot of the old page (2025-05-22, HTTP 200) documents `GET /v1/obi/v2/badge_assertions/<id>` exactly as we implemented it. A 404 on a moved page says nothing about intent. |
+| "Automated retrieval is not permitted." | **Overstated.** No clause in any of Credly's three documents addresses a single, earner-initiated fetch of one public assertion URL the candidate gave us. It is **UNKNOWN** — unresolved, not forbidden. |
 
-`src/lib/security-passport/hayat/verification/hosted-open-badge.ts` — a complete
-server-side adapter:
+And the capability the first review implied was unavailable is in fact **live**: real ASIS
+CPP assertions were fetched today, unauthenticated, including a revoked badge answering
+`410 {"revoked":true}`.
 
-- The holder pastes their public badge link. **It is only parsed for a badge id.** The URL
-  that is fetched is built by HAYAT on the single allow-listed host (`api.credly.com`),
-  https, no redirects, 5 s, 256 kB, two attempts.
-- Issuer and credential type come from the assertion's badge class and must equal ASIS's
-  Credly issuer id and the template id recorded for the selected definition (CPP, PSP, PCI,
-  APP — each id confirmed by reading the public badge class and matching its name).
-- Expiry is compared with what the holder entered; `expires` in the past → *expired*;
-  HTTP 410 → *revoked*; 404 → "check the link / make the badge public"; no answer →
-  *temporarily unavailable*, never a verdict.
-- Holder binding = the account's **confirmed** email against the hashed recipient, labelled
-  **email control — not identity proofing**. Somebody else's public link verifies nothing.
-- A positive result states what it did **not** cover: the certificate number (the source
-  publishes none) and the issue date (the source dates the badge, not the certification).
-- **Nothing fetched is stored** — no assertion body, no recipient hash — which is what
-  Credly's API terms would require. Re-check window: 30 days, matching their cache limit.
+## 1. Credly — what is actually true
 
-**State: `enabled: false`** in `verification/source-registry.ts`, with the reason recorded.
-While it is disabled the adapter makes **no** request, and the form does not offer the link
-field — the UI never offers an action that cannot work. Enabling is a one-line reviewed
-change that must cite the written permission in `permission`. It is deliberately not an
-environment variable.
+**The endpoint works, today, without authentication** (verified live):
 
-Tested with synthetic assertions through the real adapter (`passport-hayat:check` 7b.1–22).
-**Not demonstrated against a live badge:** we have no permitted test badge and no
-permission to fetch anyone's.
+```
+GET https://api.credly.com/v1/obi/v2/badge_assertions/<badge-uuid>   200
+GET https://api.credly.com/api/v1/obi/v2/issuers/<id>/badge_classes/<id>   200
+GET https://api.credly.com/api/v1/obi/v2/issuers/<id>   200
+```
 
-## 3. What is genuinely blocking, precisely
+It returns an Open Badges **2.0 hosted** assertion: `issuedOn`, `expires`,
+`verification: {"type":"hosted"}`, `recipient: {type:"email", hashed:true,
+identity:"sha256$…"}`, `badge` → BadgeClass → issuer Profile. Revocation is real
+(`410 {"revoked":true}`). Expiry is a **field, not a status** — an expired badge still
+returns 200, so the verifier must compare the date itself, which ours does.
 
-> **Written permission from Credly / Pearson** for CQrityjob, as a relying party that is
-> not a Credly client, to (a) fetch a badge's public Open Badges hosted assertion from
-> `api.credly.com/v1/obi/v2/badge_assertions/<id>` when the badge's earner supplies the
-> link, (b) record our own verification result, and (c) re-check it periodically.
+Three facts that matter and that the first review got wrong or missed:
 
-Permission is an external prerequisite, not proof that the live integration works.
-Before activation, obtain an authorized test badge and validate the actual endpoint,
-recipient hash/salt handling, issuer and template identifiers, expiry and revocation
-semantics, and the scope of permitted result storage and re-checks. Confirm deployment
-of the assessment persistence prerequisites if saved results are part of the release.
-Only after those checks pass should `enabled: true` and a real permission reference be
-committed. Until then, end-to-end live CPP/PSP/PCI/APP verification remains unproven.
+- **There is no salt** on the recipient hash. Our adapter treats salt as optional, so this
+  works, but the exact email normalisation Credly hashes is **UNKNOWN** and must be
+  settled against one real badge before this is enabled.
+- **ASIS populates `evidence[]`** with what appear to be "Candidate ID" / "Certificate ID"
+  entries. So a certificate number may well be checkable. Our adapter does not read it,
+  and the scope limit it reports has been reworded to say what *this check* did rather
+  than what the source publishes.
+- **Badge uuids can redirect.** At least one uuid 302'd to a different uuid. Our
+  `safeFetchJson` refuses to follow redirects by design, so such a badge would report
+  *temporarily unavailable* rather than verify. Whether the assertion endpoint (as opposed
+  to the badge page) redirects is **UNKNOWN** and is a named test for the pilot.
 
-## 4. Ready-to-send requests (owner sends; nothing has been sent)
+**`verification.type: "hosted"` is not a signature.** Trust rests on TLS plus Credly's
+control of `api.credly.com`. It must never be presented as equivalent to the signed
+profile — the model already separates them, and the honest label is "source confirmed",
+not "cryptographically proven".
 
-### To Credly / Pearson — https://info.credly.com/schedule-a-demo · legal index https://info.credly.com/legal
+### Terms — precisely what they cover
 
-> Subject: Relying-party verification of public Credly badges — permission request
+| Document | Version / date | Binds |
+| --- | --- | --- |
+| Website ToS | 1.1, 3 Jan 2024 | anyone using the Website |
+| User ToS | 2.1, Jul 2023 | anyone "accessing … the Services" |
+| API ToS | 2.1, Jul 2023 | "Client" under the Pearson Workforce Skills Agreement |
+
+- **FORBIDDEN** — bulk/automated *data mining or scraping* of the Website or Services
+  "without the prior written permission of Pearson"; obtaining API Content "outside the
+  Pearson APIs".
+- **UNKNOWN** — a single fetch of one public assertion URL supplied by the candidate it
+  belongs to. No document addresses it.
+- **The nearest real exposure**, and the clause to put to a lawyer rather than wave away:
+  the User ToS bars "copy, use, disclose or distribute any information obtained from the
+  Services" without **Pearson's** consent — the earner's consent is not what that clause
+  asks for.
+- `robots.txt` disallows only `/talent-match`. That is a crawl directive, not permission.
+
+**No partner, verifier or relying-party programme is published (UNKNOWN).** Employers are
+a named Credly audience, but what is offered is sourcing and matching, not verification of
+a named candidate. The only published route to ask is
+<https://info.credly.com/schedule-a-demo>.
+
+## 2. ASIS International
+
+- **ALLOWED** — a public credential-holder lookup exists:
+  `external.asisonline.org/eweb/DynamicPage.aspx?webcode=ASISCredSearch`, "SEARCH FOR
+  CREDENTIAL HOLDERS", no login, first name / last name / certification number, exact
+  match. It is an ASP.NET form, **not** an API. No terms are displayed on it. (The 403 a
+  script gets is a Cloudflare bot filter, not a policy statement.)
+- **FORBIDDEN, with a consent carve-out** — the Certification Handbook (updated 4 Aug
+  2026): release of certificant information "is prohibited unless ASIS obtains signed
+  permission", and consent "must include to whom the … information can be released".
+- **UNKNOWN** — any ASIS employer/third-party verification API or bulk route. None found.
+- ASIS issues through Credly. Organisation `credly.com/org/asis-international`; OBI issuer
+  `780a5807-d294-4ded-be0a-f8ae225f997b`; the four badge classes (CPP `71fbf093…`, PSP
+  `931c53b1…`, PCI `7c038c8c…`, APP `c59ac211…`) all resolve. These are the ids already in
+  `source-registry.ts`.
+- Contact: `certification@asisonline.org`.
+
+## 2b. What the built adapter actually checks for ASIS — and what it does not
+
+`verification/hosted-open-badge.ts`, read against what Credly actually serves. This is the
+scope to put in front of anyone before it is switched on. **None of it is validated against
+a real ASIS badge yet.**
+
+### It checks
+
+| Check | How, exactly |
+| --- | --- |
+| **Which URL is fetched** | The holder's pasted link is parsed for a badge id only. The URL fetched is **built here** on the single allow-listed host `api.credly.com`: https, no redirects followed, 5 s, 256 kB, two attempts. A pasted link can never choose the destination. |
+| **That the answer is the badge asked for** | The assertion's `id` must end in `/badge_assertions/<the id we asked for>`, its `type` must be `Assertion`, and `verification.type` must be `hosted`. |
+| **Issuer** | The assertion's badge-class URL must be on the same allow-listed host, and its issuer id must equal ASIS's recorded Credly issuer `780a5807-…`. If the class URL omits the issuer, the class itself is fetched to resolve it. |
+| **Credential type** | The badge-template id must be one recorded for the catalogue definition the holder selected — CPP `71fbf093-…`, PSP `931c53b1-…`, PCI `7c038c8c-…`, APP `c59ac211-…`. A genuine PSP badge does not verify a CPP claim. |
+| **Holder binding** | The account's **confirmed** email is hashed and compared with `recipient.identity` (salted or not). Labelled **email control**, explicitly not identity proofing. |
+| **Validity** | `expires` in the past → *expired*; `validFrom`/`issuedOn` in the future → *not yet valid*. Credly returns 200 for an expired badge, so the date is compared here rather than trusted as a status. |
+| **Revocation** | HTTP **410** → *revoked*. A `revoked: true` body is also honoured. |
+| **Expiry claimed by the holder** | If the holder typed a "giltig till" date it must equal the assertion's `expires`, otherwise *mismatch*. |
+| **Unavailability** | A timeout or non-answer is *temporarily unavailable* — never a verdict about the credential. 404 asks the holder to check the link or make the badge public. |
+
+### It does **not** check
+
+| Not checked | Why it matters |
+| --- | --- |
+| **The certificate number** | The adapter never reads `evidence[]`. ASIS appears to publish a Candidate ID / Certificate ID there, so this is a real improvement available later — but it is unverified, so a positive result says only that *this check compared no number*. |
+| **The holder's name** | The assertion carries none. |
+| **The certification's own issue date** | `issuedOn` dates the **badge**, not the underlying certification. Reported as a scope limit. |
+| **Any cryptographic proof** | `verification.type: "hosted"` means trust rests on TLS plus Credly's control of `api.credly.com`. **There is no signature and no key.** It must never be presented as equivalent to the signed VC-JWT profile. |
+| **That the badge is the holder's *current* status** | It proves the badge exists, is live and is bound to that email. ASIS recertification happens outside Credly. |
+
+### Known gaps that need a real badge before enabling
+
+1. **Email normalisation** before hashing `recipient.identity` is unknown; a wrong guess
+   produces a false "not the holder".
+2. **Redirects.** Badge ids can 302. `safeFetchJson` refuses to follow redirects by design,
+   so such a badge would report *temporarily unavailable* rather than verify. Whether the
+   assertion endpoint (as opposed to the badge page) redirects is untested.
+3. **Rate limits** for this pattern are unpublished.
+4. **`evidence[]` shape** across all four ASIS credentials is unconfirmed.
+
+Any of these may require **further code changes** before a first real connection works.
+The adapter is complete against the documented format; it is not validated against reality.
+
+## 3. The easiest proven first connection
+
+**It is the one already built.** Credly's OB2 hosted assertion is unauthenticated,
+standards-shaped, live, carries expiry and real revocation — and the *same* endpoint
+pattern also resolves for ISC2, ISACA, CompTIA, AWS and Google Cloud badges. One adapter
+covers most of the security-certification market. Its weakness is holder binding: a hashed
+email and nothing else.
+
+Two things make this stronger than a bespoke integration:
+
+- **1EdTech operates a validator for exactly this format** — `vc.1ed.tech` exposes an
+  `OB20Inspector` ("Verifies Open Badges 2.0 files"), unauthenticated, and the code is
+  **Apache-2.0** (`1EdTech/digital-credentials-public-validator`). We can self-host it and
+  cross-check our own verdicts against the standards body's, without depending on anyone's
+  instance or terms. Their hosted instance's `termsOfService` is literally
+  `"TODO URL to terms of service"` — another reason to self-host.
+- Nothing needs inventing. We already parse, fetch and decide; what is missing is
+  permission and one real badge.
+
+### What was ruled out, and why (so it is not re-investigated)
+
+| Path | Verdict |
+| --- | --- |
+| OB3 / W3C VC with a resolvable key (our signed profile) | **Not found in the security sector.** `did:web` probes 404 at Accredible, Certifier, Sertifier, Badgr, Open Badge Factory; `credential.net` serves an SPA shell. CertDirectory does publish a real `did:web` + Ed25519 — but it signs with **Data Integrity** (`eddsa-rdfc-2022`), which our verifier deliberately does not support, and it is a very small platform. |
+| `id.1ed.tech` did:web entries | Resolve (200, JsonWebKey2020, incl. Credly) but whether those keys **sign credentials** or are only trust-registry identities is **UNKNOWN**. That one question decides the path. |
+| UK SIA | **FORBIDDEN** — GOV.UK, 24 Aug 2026: the SIA "does not provide any special APIs, dedicated data feeds, or other tools" for volume checks. |
+| Europass / EBSI / EUDI | Different crypto stacks (JAdES over eIDAS X.509; `did:ebsi`; SD-JWT VC). Each is a second verifier, not a reuse of ours. |
+| Sweden (Polisen, Transportstyrelsen) | Scraping explicitly forbidden; register access is permit-gated; the DIGG wallet lands Dec 2026. |
+| ISC2 | **ALLOWED with partnership** — a published partner batch route, written approval, signed consent per person, five business days. Not real-time. |
+| ISACA | **ALLOWED with consent** — third-party verification against a candidate-supplied certificate number plus signed written consent. No API (**UNKNOWN**). |
+
+## 4. Ready to send — nothing has been sent
+
+### To Credly / Pearson — <https://info.credly.com/schedule-a-demo>
+
+> Subject: Permission for candidate-initiated verification of a public Credly badge
 >
 > Hello,
 >
 > CQrityjob is a recruitment platform for the security industry. Our candidates hold
-> certifications issued through Credly (ASIS International CPP, PSP, PCI and APP, among
-> others) and ask us to confirm them to employers.
+> certifications issued through Credly — ASIS International CPP, PSP, PCI and APP, and
+> also ISC2, ISACA and CompTIA — and they ask us to confirm those credentials to
+> prospective employers.
 >
-> We would like to verify a badge **only when its earner gives us their own public badge
-> link**, by fetching that badge's Open Badges 2.0 hosted assertion
-> (`https://api.credly.com/v1/obi/v2/badge_assertions/<id>`) — one request per check, no
-> crawling, no profile pages, no search. We compare the assertion's issuer, badge template,
-> expiry and hashed recipient with what the earner told us, and we do not store the
-> assertion or any part of it — only our own result and the earner's link.
+> We would like written confirmation that we may do the following, and nothing beyond it:
 >
-> Could you confirm in writing:
-> 1. that a relying party that is not a Credly client may do this programmatically;
-> 2. that we may keep our own verification result, and re-check a badge periodically
->    (we propose at most every 30 days, and on the earner's request);
-> 3. whether these OBI endpoints are being retired — their documentation page was recently
->    removed — and, if so, what verifiers should use instead;
-> 4. whether an earner-consent (OAuth) flow for relying parties exists or is planned;
-> 5. how a verifier obtains and verifies an Open Badges 3.0 credential issued by Credly;
-> 6. whether a verifier or partner agreement is required, and its terms and cost.
+> 1. **Only when the earner gives us their own badge link**, fetch that one badge's
+>    public Open Badges 2.0 hosted assertion from
+>    `https://api.credly.com/v1/obi/v2/badge_assertions/<id>` — one request per check. No
+>    crawling, no profile pages, no search, no bulk access.
+> 2. From that assertion, check and record only our own conclusion about: the **issuer**
+>    and that it is the one we expect; the **badge template**, so we know which credential
+>    it is; **`issuedOn` and `expires`**, to judge validity; the **revocation** status you
+>    signal with HTTP 410; and **holder binding**, by hashing the email the candidate has
+>    already confirmed with us and comparing it to `recipient.identity`.
+> 3. **Re-check** that badge periodically — we propose at most once every 30 days, and on
+>    the candidate's request — so an employer is never shown a stale result.
+> 4. Store **only our own verification result and the candidate's own link**. We do not
+>    store the assertion, the recipient hash, or any other API content.
 >
-> Thank you,
+> Four questions where your documentation does not give us an answer:
+>
+> - Which normalisation do you apply to the email before hashing `recipient.identity`
+>   (lower-casing, trimming)? We want to avoid false "not the holder" results.
+> - Is there a rate limit we should respect for this pattern?
+> - Do badge ids remain stable, or can an assertion URL redirect to a different id?
+> - Is an Open Badges 3.0 / W3C Verifiable Credential representation available to
+>   verifiers for badges issued through Credly, and if so how is the issuer key resolved?
+>
+> If this needs a verifier or partner agreement, we would like to know its terms and cost.
+>
 > Mostafa Alshawi, CQrityjob
 
-### To ASIS International — certification@asisonline.org
+### To ASIS International — `certification@asisonline.org`
 
-> Subject: Verifying CPP / PSP / PCI / APP status with the certificant's consent
+> Subject: Verifying CPP / PSP / PCI / APP with the certificant's consent
 >
 > Hello,
 >
-> CQrityjob is a recruitment platform for the security industry. Candidates ask us to
+> CQrityjob is a recruitment platform for the security industry. Certificants ask us to
 > confirm their ASIS certifications to prospective employers, always with their consent.
 >
-> 1. Do you offer employers or platforms any automated or bulk status verification, under
->    signed certificant permission as your handbook requires?
-> 2. Would ASIS authorise read access to badges issued through its Credly organisation, or
->    confirm that verifying a certificant's public Credly badge is an accepted method?
-> 3. Could the certification number be included in the badge's evidence, so a verifier can
->    match it to the certificate the candidate holds?
+> 1. Your handbook allows release of certificant information with signed permission naming
+>    the recipient. Do you have a route for an employer-facing platform to use that, and
+>    what does the signed permission have to say?
+> 2. Would ASIS confirm that verifying a certificant's own public Credly badge is an
+>    accepted method of confirming CPP/PSP/PCI/APP status?
+> 3. Your Credly badges appear to carry a Candidate ID / Certificate ID in the assertion's
+>    evidence. Can we rely on that field to match the certificate number a candidate gives
+>    us, and is it present for all four credentials?
+> 4. May the public credential-holder search be used programmatically, one lookup per
+>    consenting candidate? If not, we will not do so.
 >
-> Thank you,
 > Mostafa Alshawi, CQrityjob
 
-## 5. The other issuers in the catalogue
+## 5. The order to do things in, once permission arrives
 
-ISC2 (evaluated as the alternative), ISACA and ACFE offer no public verification API. ISC2
-and ACFE issue through Credly, so the **same adapter and the same permission** would cover
-them: adding an issuer is a registry entry — its Credly issuer id and template ids,
-confirmed from its public badge classes — not new code. ISC2's own bulk verification is
-for official training partners, by email. ACAMS's platform: not confirmed.
-
-No issuer was added to the trusted registry with guessed keys or synthetic data.
-`PRODUCTION_ISSUER_POLICIES` (signed credentials) remains empty; `CREDLY_OB2` holds only
-identifiers read from ASIS's public metadata, and is disabled.
+1. Get **one real badge** from a consenting holder (or an ASIS-issued test badge).
+2. Settle the four unknowns: email normalisation, rate limit, id stability/redirects, and
+   whether `evidence[]` carries a usable certificate number.
+3. Stand up the **self-hosted 1EdTech OB20 validator** and cross-check our verdict against
+   it on that badge.
+4. Only then set `enabled: true` in `source-registry.ts` with the written permission cited
+   in `permission`, and only with the scope limits the badge actually supports.

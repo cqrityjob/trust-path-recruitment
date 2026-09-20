@@ -2360,7 +2360,7 @@ const sv = {
   "hayat.verify.scope.revocation_not_published":
     "återkallelse – utfärdaren publicerar ingen sådan status",
   "hayat.verify.scope.credential_number_not_published":
-    "certifikatsnumret – källan publicerar inget nummer att jämföra med",
+    "certifikatsnumret – kontrollen jämför inget nummer",
   "hayat.verify.scope.issue_date_not_compared":
     "utfärdandedatumet – källan daterar märket, inte certifieringen",
   "hayat.verify.next.review":
@@ -4414,7 +4414,7 @@ const en: Record<PassportCopyKey, string> = {
   "hayat.verify.scope.title": "This check does not cover:",
   "hayat.verify.scope.revocation_not_published": "revocation – the issuer publishes no such status",
   "hayat.verify.scope.credential_number_not_published":
-    "the certificate number – the source publishes no number to compare with",
+    "the certificate number – this check compares no number",
   "hayat.verify.scope.issue_date_not_compared":
     "the issue date – the source dates the badge, not the certification",
   "hayat.verify.next.review":
