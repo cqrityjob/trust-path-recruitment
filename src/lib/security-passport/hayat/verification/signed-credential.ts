@@ -29,6 +29,7 @@
 import { compactVerify, decodeJwt, decodeProtectedHeader, importJWK } from "jose";
 import { check, decide, unevaluated, type Check, type CheckKey, type HayatDecision } from "./model";
 import type { IssuerPolicy, SigningAlgorithm } from "./issuer-registry";
+import { emailBindingCheck, type RecipientIdentity } from "./holder-binding";
 import { safeFetchJson } from "./safe-fetch";
 
 export const SIGNED_CREDENTIAL_ADAPTER = "ob3-vc-jwt/1";
@@ -69,11 +70,6 @@ const instant = (v: unknown): number | null => {
 
 const COMPACT_JWS = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 const ACCEPTED: readonly SigningAlgorithm[] = ["EdDSA", "ES256", "RS256"];
-
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 export async function assessSignedCredential(
   input: AssessmentInput,
@@ -195,30 +191,14 @@ export async function assessSignedCredential(
 }
 
 async function bindingCheck(subject: Json, account: AssessmentInput["account"]): Promise<Check> {
-  const identities = asArray(subject.identifier)
+  const identities: RecipientIdentity[] = asArray(subject.identifier)
     .filter(isObject)
-    .filter((i) => String(i.identityType ?? "").toLowerCase() === "emailaddress");
-  if (identities.length === 0) return check("subject_binding", "unknown", "binding_not_present");
-  if (!account.email || !account.emailConfirmed)
-    return check("subject_binding", "unknown", "account_email_not_confirmed");
-  const spellings = [...new Set([account.email, account.email.toLowerCase()])];
-  for (const identity of identities) {
-    const hash = text(identity.identityHash);
-    if (!hash) continue;
-    if (identity.hashed === true) {
-      const [algorithm, expected] = hash.split("$");
-      if (algorithm !== "sha256" || !expected) continue;
-      const salt = text(identity.salt) ?? "";
-      for (const spelling of spellings)
-        if ((await sha256Hex(spelling + salt)) === expected.toLowerCase())
-          return check("subject_binding", "passed", "ok");
-    } else if (spellings.includes(hash) || hash.toLowerCase() === account.email.toLowerCase()) {
-      return check("subject_binding", "passed", "ok");
-    }
-  }
-  // Somebody else's credential, or the same person under another address.
-  // HAYAT cannot tell which and says neither.
-  return check("subject_binding", "failed", "binding_mismatch");
+    .filter((i) => String(i.identityType ?? "").toLowerCase() === "emailaddress")
+    .flatMap((i) => {
+      const identity = text(i.identityHash);
+      return identity ? [{ hashed: i.hashed === true, identity, salt: text(i.salt) }] : [];
+    });
+  return emailBindingCheck(identities, account);
 }
 
 async function revocationCheck(

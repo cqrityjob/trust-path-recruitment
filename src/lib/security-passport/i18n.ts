@@ -2306,10 +2306,8 @@ const sv = {
     "Kontrollen kunde inte göras just nu. Det säger ingenting om meriten. Försök igen senare.",
   "hayat.verify.binding.email":
     "Innehavarkoppling: kontroll över kontots bekräftade e-postadress. Det är inte en identitetskontroll.",
-  "hayat.verify.revocationNotCovered":
-    "Utfärdaren publicerar ingen återkallelsestatus. Kontrollen omfattar därför inte återkallelse.",
   "hayat.verify.reason.no_verifiable_source":
-    "Ett uppladdat dokument visar vad som står i det, inte att det är äkta. För automatisk verifiering behövs en digitalt signerad merit från utfärdaren, och ingen utfärdare är ännu ansluten. Meriten sparas som registrerad av dig.",
+    "Ett uppladdat dokument visar vad som står i det, inte att det är äkta. För automatisk verifiering behövs en digitalt signerad merit från utfärdaren, och ingen sådan källa är ännu ansluten. Meriten sparas som registrerad av dig.",
   "hayat.verify.reason.profile_not_supported":
     "Filen innehåller en digital merit i ett format som HAYAT inte kan kontrollera.",
   "hayat.verify.reason.data_integrity_proof_not_supported":
@@ -2350,6 +2348,42 @@ const sv = {
   "hayat.verify.reason.status_not_offered_accepted_by_policy":
     "Utfärdaren publicerar ingen återkallelsestatus.",
   "hayat.verify.reason.not_evaluated": "Kontrollen kunde inte slutföras.",
+  "hayat.verify.reason.source_not_enabled":
+    "Den här meriten utfärdas digitalt via en tjänst som CQrityjob ännu inte har tillstånd att kontrollera automatiskt.",
+  "hayat.verify.reason.link_not_recognised":
+    "Länken känns inte igen. Klistra in den offentliga länken till just din merit, till exempel https://www.credly.com/badges/…",
+  "hayat.verify.reason.evidence_not_found":
+    "Utfärdarens tjänst hittar ingen offentlig merit på den länken. Kontrollera länken, och att meriten är inställd som offentlig hos utfärdaren.",
+  "hayat.verify.reason.source_unavailable":
+    "Utfärdarens tjänst svarade inte. Det säger ingenting om meriten. Försök igen senare.",
+  "hayat.verify.scope.title": "Kontrollen omfattar inte:",
+  "hayat.verify.scope.revocation_not_published":
+    "återkallelse – utfärdaren publicerar ingen sådan status",
+  "hayat.verify.scope.credential_number_not_published":
+    "certifikatsnumret – källan publicerar inget nummer att jämföra med",
+  "hayat.verify.scope.issue_date_not_compared":
+    "utfärdandedatumet – källan daterar märket, inte certifieringen",
+  "hayat.verify.next.review":
+    "När meriten är sparad kan du skicka den för dokumentgranskning från meritens sida.",
+  "hayat.link.label": "Officiell meritlänk (valfritt)",
+  "hayat.link.help":
+    "Den offentliga länken till din merit hos {source}. HAYAT hämtar uppgifterna direkt från utfärdarens tjänst – inte från länken du klistrar in.",
+  "hayat.link.check": "Kontrollera länken",
+  "hayat.saved.title": "Automatisk kontroll (HAYAT)",
+  "hayat.saved.checkedAt": "Senast kontrollerad {date}",
+  "hayat.saved.source": "Källa: {source}",
+  "hayat.saved.historical": "Tidigare kontroll – gäller inte längre",
+  "hayat.saved.invalidated.fields_changed":
+    "Uppgifterna på meriten har ändrats sedan kontrollen. Gör en ny kontroll.",
+  "hayat.saved.invalidated.evidence_changed":
+    "Dokumentet har bytts ut eller tagits bort sedan kontrollen. Gör en ny kontroll.",
+  "hayat.saved.invalidated.superseded": "Ersatt av en senare kontroll.",
+  "hayat.saved.none":
+    "Ingen automatisk kontroll har gjorts. Ett bifogat dokument är underlag, inte en verifiering.",
+  "hayat.saved.recheck": "Kontrollera igen",
+  "hayat.saved.rechecking": "Kontrollerar …",
+  "hayat.saved.notStatus":
+    "Den här kontrollen ändrar inte meritens status i Passport och visas inte i delningar.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -4328,10 +4362,8 @@ const en: Record<PassportCopyKey, string> = {
     "The check could not be made right now. That says nothing about the credential. Try again later.",
   "hayat.verify.binding.email":
     "Holder binding: control of the account's confirmed email address. This is not an identity check.",
-  "hayat.verify.revocationNotCovered":
-    "The issuer publishes no revocation status, so this check does not cover revocation.",
   "hayat.verify.reason.no_verifiable_source":
-    "An uploaded document shows what it says, not that it is genuine. Automatic verification needs a digitally signed credential from the issuer, and no issuer is connected yet. The credential is saved as registered by you.",
+    "An uploaded document shows what it says, not that it is genuine. Automatic verification needs a digitally signed credential from the issuer, and no such source is connected yet. The credential is saved as registered by you.",
   "hayat.verify.reason.profile_not_supported":
     "The file contains a digital credential in a format HAYAT cannot check.",
   "hayat.verify.reason.data_integrity_proof_not_supported":
@@ -4371,6 +4403,41 @@ const en: Record<PassportCopyKey, string> = {
   "hayat.verify.reason.status_not_offered_accepted_by_policy":
     "The issuer publishes no revocation status.",
   "hayat.verify.reason.not_evaluated": "The check could not be completed.",
+  "hayat.verify.reason.source_not_enabled":
+    "This credential is issued digitally through a service CQrityjob does not yet have permission to check automatically.",
+  "hayat.verify.reason.link_not_recognised":
+    "The link is not recognised. Paste the public link to your own credential, for example https://www.credly.com/badges/…",
+  "hayat.verify.reason.evidence_not_found":
+    "The issuer's service finds no public credential at that link. Check the link, and that the credential is set to public with the issuer.",
+  "hayat.verify.reason.source_unavailable":
+    "The issuer's service did not answer. That says nothing about the credential. Try again later.",
+  "hayat.verify.scope.title": "This check does not cover:",
+  "hayat.verify.scope.revocation_not_published": "revocation – the issuer publishes no such status",
+  "hayat.verify.scope.credential_number_not_published":
+    "the certificate number – the source publishes no number to compare with",
+  "hayat.verify.scope.issue_date_not_compared":
+    "the issue date – the source dates the badge, not the certification",
+  "hayat.verify.next.review":
+    "Once the credential is saved you can submit it for document review from its page.",
+  "hayat.link.label": "Official credential link (optional)",
+  "hayat.link.help":
+    "The public link to your credential at {source}. HAYAT fetches the details straight from the issuer's service – not from the link you paste.",
+  "hayat.link.check": "Check the link",
+  "hayat.saved.title": "Automatic check (HAYAT)",
+  "hayat.saved.checkedAt": "Last checked {date}",
+  "hayat.saved.source": "Source: {source}",
+  "hayat.saved.historical": "Earlier check – no longer current",
+  "hayat.saved.invalidated.fields_changed":
+    "The credential's details changed after this check. Run a new check.",
+  "hayat.saved.invalidated.evidence_changed":
+    "The document was replaced or removed after this check. Run a new check.",
+  "hayat.saved.invalidated.superseded": "Replaced by a later check.",
+  "hayat.saved.none":
+    "No automatic check has been made. An attached document is evidence, not verification.",
+  "hayat.saved.recheck": "Check again",
+  "hayat.saved.rechecking": "Checking …",
+  "hayat.saved.notStatus":
+    "This check does not change the credential's status in Passport and is not shown in shares.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {

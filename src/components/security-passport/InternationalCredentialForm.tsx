@@ -75,6 +75,7 @@ export function InternationalCredentialForm({
   onSave,
   onUpload,
   onAssess,
+  onLoadAvailability,
   accountName,
   documentReader,
 }: {
@@ -93,14 +94,20 @@ export function InternationalCredentialForm({
     definitionCode: string;
     issuedOn: string | null;
     validUntil: string | null;
-    signedCredential: string;
+    signedCredential: string | null;
+    badgeLink: string | null;
   }) => Promise<{ decision: HayatDecision; recorded: boolean }>;
+  /** The link-based sources the holder can use RIGHT NOW. A source HAYAT is not
+   *  permitted to call is absent, so the link field is never a dead end. */
+  onLoadAvailability?: () => Promise<{
+    linkSources: readonly { id: string; name: string; definitionCodes: readonly string[] }[];
+  }>;
   /** The account's display name, for comparison with the name on the document. */
   accountName?: string | null;
   /** Replaceable document reader; defaults to the in-browser pdf.js + OCR reader. */
   documentReader?: DocumentReader;
 }) {
-  const { lang } = usePassportCopy();
+  const { lang, pt } = usePassportCopy();
   const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
   const navigate = useNavigate();
   const definitions = metadata?.definitions;
@@ -147,6 +154,20 @@ export function InternationalCredentialForm({
   const latestMarks = useRef(marks);
   latestMarks.current = marks;
   const assessRun = useRef(0);
+  const [badgeLink, setBadgeLink] = useState("");
+  const [linkSources, setLinkSources] = useState<
+    readonly { id: string; name: string; definitionCodes: readonly string[] }[]
+  >([]);
+  useEffect(() => {
+    let active = true;
+    // Best-effort: without it the link field is simply not offered.
+    void onLoadAvailability?.()
+      .then((a) => active && setLinkSources(a.linkSources))
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [onLoadAvailability]);
   const locations = metadata?.jurisdictions ?? [];
   const locationName = (code: string | null) => {
     const j = locations.find((j) => j.code === code);
@@ -274,10 +295,10 @@ export function InternationalCredentialForm({
     setNotices(applied.notices);
   };
   /** Verification is a separate question, asked of the server, never of the reading. */
-  const assess = async (signedCredential: string | null) => {
+  const assess = async (signedCredential: string | null, link: string | null = null) => {
     assessRun.current += 1;
     const mine = assessRun.current;
-    if (!signedCredential || !onAssess || !selected) {
+    if ((!signedCredential && !link) || !onAssess || !selected) {
       setAssessment({
         state: "done",
         decision: unverifiableDocument(new Date().toISOString()),
@@ -291,7 +312,10 @@ export function InternationalCredentialForm({
         definitionCode: selected.code,
         issuedOn: latestDraft.current.issued_on || null,
         validUntil: latestDraft.current.valid_until || null,
-        signedCredential,
+        // Exactly one kind of evidence per check; a link, when given, is the
+        // stronger source because the server fetches it independently.
+        signedCredential: link ? null : signedCredential,
+        badgeLink: link,
       });
       if (assessRun.current === mine) setAssessment({ state: "done", ...result });
     } catch {
@@ -899,6 +923,38 @@ export function InternationalCredentialForm({
                   </button>
                 )}
               </div>
+              {selected && linkSources.some((s) => s.definitionCodes.includes(selected.code)) && (
+                <div className="mt-4" data-hayat-link>
+                  <label>
+                    {pt("hayat.link.label")}
+                    <input
+                      type="url"
+                      inputMode="url"
+                      data-field="badge-link"
+                      className={inputClass}
+                      maxLength={400}
+                      placeholder="https://www.credly.com/badges/…"
+                      value={badgeLink}
+                      onChange={(e) => setBadgeLink(e.target.value)}
+                    />
+                  </label>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {pt("hayat.link.help").replace(
+                      "{source}",
+                      linkSources.find((s) => s.definitionCodes.includes(selected.code))?.name ??
+                        "",
+                    )}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={!badgeLink.trim()}
+                    className="mt-2 min-h-11 rounded-md border border-input bg-background px-4 text-sm disabled:opacity-50"
+                    onClick={() => void assess(null, badgeLink.trim())}
+                  >
+                    {pt("hayat.link.check")}
+                  </button>
+                </div>
+              )}
               <HayatPanel
                 reading={hayat.state}
                 notices={notices}

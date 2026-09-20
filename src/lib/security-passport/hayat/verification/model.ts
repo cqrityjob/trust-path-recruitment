@@ -48,6 +48,10 @@ export const CHECK_KEYS: readonly CheckKey[] = [
 export type ReasonCode =
   | "ok"
   | "no_verifiable_source" // an uploaded document with no signed credential in it
+  | "source_not_enabled" // the source exists, but we are not yet permitted to call it
+  | "link_not_recognised" // not a badge link from a source HAYAT knows
+  | "evidence_not_found" // the source has no such public credential (404, or made private)
+  | "source_unavailable" // the source did not answer: an outage, never a verdict
   | "profile_not_supported"
   | "data_integrity_proof_not_supported"
   | "malformed_credential"
@@ -100,15 +104,23 @@ export interface HayatDecision {
   /** The reasons that decided the status, most decisive first. */
   readonly reasons: readonly ReasonCode[];
   readonly bindingLevel: BindingLevel;
-  /** True when the issuer offers no status source and its policy accepts that:
-   *  the scope limitation the UI must state beside a positive result. */
-  readonly revocationNotCovered: boolean;
+  /**
+   * What this check did NOT cover, stated beside every positive result.
+   * "Verified" always means "verified as far as the source can say", and a source
+   * that publishes no certificate number has not verified a certificate number.
+   */
+  readonly scopeLimits: readonly ScopeLimit[];
   readonly ruleVersion: string;
   readonly adapter: string | null;
   readonly checkedAt: string;
 }
 
-export const HAYAT_RULE_VERSION = "hayat-rules/1";
+export type ScopeLimit =
+  | "revocation_not_published" // the issuer offers no status source; policy accepts that
+  | "credential_number_not_published" // the source carries no certificate number to match
+  | "issue_date_not_compared"; // the source dates the badge, not the certification
+
+export const HAYAT_RULE_VERSION = "hayat-rules/2";
 
 export const check = (key: CheckKey, result: CheckResult, reason: ReasonCode): Check => ({
   key,
@@ -136,14 +148,24 @@ const ok = (c: Check) => c.result === "passed" || c.result === "not_applicable";
  */
 export function decide(
   checks: HayatChecks,
-  meta: { bindingLevel: BindingLevel; adapter: string | null; checkedAt: string },
+  meta: {
+    bindingLevel: BindingLevel;
+    adapter: string | null;
+    checkedAt: string;
+    scopeLimits?: readonly ScopeLimit[];
+  },
 ): HayatDecision {
   const because = (status: HayatStatus, ...keys: CheckKey[]): HayatDecision => ({
     status,
     checks,
     reasons: keys.map((k) => checks[k].reason),
     bindingLevel: checks.subject_binding.result === "passed" ? meta.bindingLevel : "none",
-    revocationNotCovered: checks.revocation.result === "not_applicable",
+    scopeLimits: [
+      ...(checks.revocation.result === "not_applicable"
+        ? (["revocation_not_published"] as const)
+        : []),
+      ...(meta.scopeLimits ?? []),
+    ],
     ruleVersion: HAYAT_RULE_VERSION,
     adapter: meta.adapter,
     checkedAt: meta.checkedAt,
@@ -151,6 +173,10 @@ export function decide(
   const c = checks;
 
   if (!ok(c.supported_profile)) return because("cannot_verify_automatically", "supported_profile");
+  // The source did not answer. That is an outage, and it is answered before
+  // anything that would read like a statement about the credential.
+  if (c.authoritative_evidence.reason === "source_unavailable")
+    return because("temporarily_unavailable", "authoritative_evidence");
   // A broken signature stops everything after it: nothing in an altered
   // credential can be believed -- not its achievement, its dates or its status
   // pointer -- so it is answered before the issuer's scope is even considered.
@@ -209,5 +235,6 @@ export function ageDecision(
     bindingLevel: previous.bindingLevel,
     adapter: previous.adapter,
     checkedAt: previous.checkedAt,
+    scopeLimits: previous.scopeLimits.filter((l) => l !== "revocation_not_published"),
   });
 }

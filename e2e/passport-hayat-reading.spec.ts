@@ -61,7 +61,7 @@ const unverifiable = {
   status: "cannot_verify_automatically",
   reasons: ["issuer_not_trusted"],
   bindingLevel: "none",
-  revocationNotCovered: false,
+  scopeLimits: [],
   ruleVersion: "hayat-rules/1",
   adapter: "ob3-vc-jwt/1",
   checkedAt: "2026-09-18T10:00:00.000Z",
@@ -75,7 +75,7 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async () => fixtures.close());
 test.setTimeout(150_000);
 
-async function mount(page: Page, lang: "sv" | "en") {
+async function mount(page: Page, lang: "sv" | "en", over: Record<string, unknown> = {}) {
   const requests: Request[] = [];
   page.on("request", (r) => requests.push(r));
   const refusals = await installBoundary(page, {
@@ -104,6 +104,9 @@ async function mount(page: Page, lang: "sv" | "en") {
     saveInternationalCredential: { id: CLAIM_ID },
     uploadEvidence: { id: "fixture-evidence" },
     assessCredentialEvidence: { decision: unverifiable, recorded: false },
+    // Production truth: no link-based source is enabled, so none is offered.
+    getHayatAvailability: { linkSources: [] },
+    ...over,
     listMyEvidence: [],
     listClaimVersions: [],
     getCredentialPrivateFields: { credentialReference: null, holderNote: null },
@@ -381,5 +384,48 @@ test("a PNG carrying a signed credential asks the SERVER, and shows its answer",
   expect(sent).toContain("INTL_ASIS_CPP");
   // The server is never told what the browser read, or what to conclude.
   expect(sent).not.toMatch(/verified|confidence|ocr|This is to certify/i);
+  assertNoRefusals(refusals);
+});
+
+test("no link field is offered while no source is permitted", async ({ page }) => {
+  const { refusals } = await mount(page, "sv");
+  await expect(page.locator("[data-hayat-link]")).toHaveCount(0);
+  assertNoRefusals(refusals);
+});
+
+test("with a permitted source, a link is checked by the server and its scope is shown", async ({
+  page,
+}) => {
+  const verified = {
+    ...unverifiable,
+    status: "verified",
+    reasons: ["ok"],
+    bindingLevel: "email_control",
+    adapter: "credly-ob2-hosted/1",
+    scopeLimits: ["credential_number_not_published", "issue_date_not_compared"],
+  };
+  const { refusals, requests } = await mount(page, "sv", {
+    getHayatAvailability: {
+      linkSources: [{ id: "credly_ob2", name: "Credly", definitionCodes: ["INTL_ASIS_CPP"] }],
+    },
+    assessCredentialEvidence: { decision: verified, recorded: false },
+  });
+  const link = page.locator('[data-field="badge-link"]');
+  await expect(link).toBeVisible();
+  await link.fill("https://www.credly.com/badges/11111111-2222-4333-8444-555555555555");
+  await page.getByRole("button", { name: "Kontrollera länken" }).click();
+  const box = page.locator("[data-hayat-verification]");
+  await expect(box).toHaveAttribute("data-hayat-status", "verified");
+  await expect(box).toContainText("Kontrollerna godkändes");
+  await expect(box.locator("[data-hayat-scope-limit]")).toHaveCount(2);
+  await expect(box).toContainText("certifikatsnumret");
+  await expect(box).toContainText("Det är inte en identitetskontroll");
+  await expect(box).toHaveAttribute("data-hayat-recorded", "false");
+  await expect(box).toContainText("sparas ännu inte");
+  const call = requests.filter((r) => exportOf(r.url()) === "assessCredentialEvidence").pop();
+  const sent = call?.postData() ?? "";
+  expect(sent).toContain("credly.com/badges/11111111");
+  expect(sent).not.toMatch(/verified|confidence/i);
+  await shot(page, "link-verified-sv");
   assertNoRefusals(refusals);
 });

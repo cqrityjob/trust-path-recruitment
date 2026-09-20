@@ -123,7 +123,8 @@ export function HayatPanel({
   onChooseOther: () => void;
 }) {
   const { pt } = usePassportCopy();
-  if (reading.phase === "idle") return null;
+  // No file, but a link may have been checked: the verification box stands alone.
+  if (reading.phase === "idle") return <Verification assessment={assessment} />;
   const box = "mt-4 rounded-md border border-border bg-background p-4 text-sm";
 
   if (reading.phase === "reading")
@@ -273,9 +274,21 @@ function Verification({ assessment }: { assessment: HayatAssessmentState }) {
       {decision.bindingLevel === "email_control" && (
         <p className="mt-2 text-xs text-muted-foreground">{pt("hayat.verify.binding.email")}</p>
       )}
-      {decision.revocationNotCovered && decision.status === "verified" && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          {pt("hayat.verify.revocationNotCovered")}
+      {decision.status === "verified" && decision.scopeLimits.length > 0 && (
+        <div className="mt-2 text-xs text-muted-foreground" data-hayat-scope>
+          <p>{pt("hayat.verify.scope.title")}</p>
+          <ul className="mt-1 list-disc pl-5">
+            {decision.scopeLimits.map((limit) => (
+              <li key={limit} data-hayat-scope-limit={limit}>
+                {pt(`hayat.verify.scope.${limit}` as PassportCopyKey)}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {decision.status === "cannot_verify_automatically" && (
+        <p className="mt-2 text-xs text-foreground" data-hayat-next="review">
+          {pt("hayat.verify.next.review")}
         </p>
       )}
       {decision.status === "verified" && !recorded && (

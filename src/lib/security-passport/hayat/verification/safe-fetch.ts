@@ -32,7 +32,9 @@ export type FetchRefusal =
 export type SafeFetchResult =
   | { readonly ok: true; readonly body: unknown }
   | { readonly ok: false; readonly kind: "refused"; readonly refusal: FetchRefusal }
-  | { readonly ok: false; readonly kind: "unavailable" };
+  /** `status` is set when the source ANSWERED with something other than 200 --
+   *  a 404 or a 410 is information; a timeout is not. */
+  | { readonly ok: false; readonly kind: "unavailable"; readonly status?: number };
 
 export interface SafeFetchOptions {
   readonly allowedHosts: readonly string[];
@@ -83,7 +85,7 @@ export async function safeFetchJson(
       headers: { accept: "application/json" },
       signal: controller.signal,
     });
-    if (response.status !== 200) return { ok: false, kind: "unavailable" };
+    if (response.status !== 200) return { ok: false, kind: "unavailable", status: response.status };
     const declared = Number(response.headers.get("content-length") ?? "0");
     if (declared > maxBytes) return { ok: false, kind: "unavailable" };
     const reader = response.body?.getReader();

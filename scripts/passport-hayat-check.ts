@@ -52,6 +52,15 @@ import {
   safeFetchJson,
 } from "../src/lib/security-passport/hayat/verification/safe-fetch";
 import { assessSignedCredential } from "../src/lib/security-passport/hayat/verification/signed-credential";
+import {
+  assessHostedBadge,
+  badgeIdFromLink,
+} from "../src/lib/security-passport/hayat/verification/hosted-open-badge";
+import {
+  CREDLY_OB2,
+  PRODUCTION_SOURCES,
+  verifiableDefinitionCodes,
+} from "../src/lib/security-passport/hayat/verification/source-registry";
 import { EVIDENCE_MAX_BYTES } from "../src/lib/security-passport/evidence.functions";
 
 let failures = 0;
@@ -646,7 +655,10 @@ async function main(): Promise<void> {
     const d = await assess(good);
     ok(d.status === "verified", "7.1 trusted issuer + signature + binding + validity -> verified");
     ok(d.bindingLevel === "email_control", "7.2 the binding level is stated as email control");
-    ok(d.revocationNotCovered, "7.3 the revocation scope limit is stated beside the result");
+    ok(
+      d.scopeLimits.includes("revocation_not_published"),
+      "7.3 the revocation scope limit is stated beside the result",
+    );
     ok(
       Object.values(d.checks).every((c) => c.result === "passed" || c.result === "not_applicable"),
       "7.4 verified means EVERY check, not an average",
@@ -778,7 +790,7 @@ async function main(): Promise<void> {
       fetchImpl: answering({ revokedCredentials: [] }),
     });
     ok(
-      clear.status === "verified" && !clear.revocationNotCovered,
+      clear.status === "verified" && !clear.scopeLimits.includes("revocation_not_published"),
       "7.23 a status source that answers 'not revoked'",
     );
 
@@ -860,6 +872,227 @@ async function main(): Promise<void> {
       "7.34 a PDF, scan or photo: read, and honestly not verifiable",
     );
     ok(d.bindingLevel === "none", "7.35 ...with no binding claimed");
+  }
+
+  // =======================================================================
+  group("7b · The hosted Open Badges 2.0 source (Credly)");
+  // =======================================================================
+  {
+    // Production truth first: the source exists and is NOT enabled.
+    ok(
+      CREDLY_OB2.enabled === false && CREDLY_OB2.permission === null && !!CREDLY_OB2.blockedBy,
+      "7b.1 the Credly source is disabled in production until written permission is recorded",
+    );
+    ok(
+      verifiableDefinitionCodes(PRODUCTION_SOURCES).length === 0,
+      "7b.2 so no link field is offered",
+    );
+    let calls: string[] = [];
+    const serve = (
+      routes: Record<string, { status?: number; body?: unknown } | "down">,
+    ): typeof fetch =>
+      (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        calls.push(url);
+        const route = routes[url];
+        if (route === undefined) return new Response("{}", { status: 404 });
+        if (route === "down") throw new Error("timeout");
+        return new Response(JSON.stringify(route.body ?? {}), { status: route.status ?? 200 });
+      }) as unknown as typeof fetch;
+
+    const disabled = await assessHostedBadge(
+      {
+        link: "https://www.credly.com/badges/11111111-2222-4333-8444-555555555555",
+        claim: { definitionCode: "INTL_ASIS_CPP", validUntil: null },
+        account: { email: EMAIL, emailConfirmed: true },
+      },
+      { source: CREDLY_OB2, now: NOW, fetchImpl: serve({}) },
+    );
+    ok(
+      disabled.status === "cannot_verify_automatically" &&
+        disabled.reasons[0] === "source_not_enabled" &&
+        calls.length === 0,
+      "7b.3 a source we may not call is never called",
+    );
+
+    // Everything below runs against a TEST-enabled copy. It is not a production entry.
+    const source = {
+      ...CREDLY_OB2,
+      enabled: true,
+      blockedBy: null,
+      permission: "synthetic test run",
+    };
+    const BADGE = "11111111-2222-4333-8444-555555555555";
+    const ASIS = source.issuers.ASIS;
+    const CPP = ASIS.templates.INTL_ASIS_CPP[0];
+    const PSP = ASIS.templates.INTL_ASIS_PSP[0];
+    const API = `https://api.credly.com/v1/obi/v2/badge_assertions/${BADGE}`;
+    const classUrl = (template: string, issuer: string | null = ASIS.issuerId) =>
+      `https://api.credly.com/api/v1/obi/v2/${issuer ? `issuers/${issuer}/` : ""}badge_classes/${template}`;
+    const assertion = async (over: Record<string, unknown> = {}) => ({
+      "@context": "https://w3id.org/openbadges/v2",
+      type: "Assertion",
+      id: `https://api.credly.com/api/v1/obi/v2/badge_assertions/${BADGE}`,
+      badge: classUrl(CPP),
+      issuedOn: "2024-04-01T00:00:00.000Z",
+      expires: "2027-03-31T00:00:00.000Z",
+      recipient: { type: "email", hashed: true, identity: `sha256$${await sha256Hex(EMAIL)}` },
+      verification: { type: "hosted" },
+      ...over,
+    });
+    const run = async (
+      routes: Parameters<typeof serve>[0],
+      over: { link?: string; code?: string; validUntil?: string | null; email?: string } = {},
+    ) => {
+      calls = [];
+      return assessHostedBadge(
+        {
+          link: over.link ?? `https://www.credly.com/badges/${BADGE}/public_url`,
+          claim: {
+            definitionCode: over.code ?? "INTL_ASIS_CPP",
+            validUntil: over.validUntil ?? "2027-03-31",
+          },
+          account: { email: over.email ?? "Holder@Hayat-Fixture.example", emailConfirmed: true },
+        },
+        { source, now: NOW, fetchImpl: serve(routes) },
+      );
+    };
+
+    const links: [string, boolean][] = [
+      [`https://www.credly.com/badges/${BADGE}`, true],
+      [`https://www.credly.com/badges/${BADGE}/linked_in_profile?x=1#y`, true],
+      [`https://credly.com/badges/${BADGE.toUpperCase()}`, true],
+      [`http://www.credly.com/badges/${BADGE}`, false],
+      [`https://www.credly.com.evil.example/badges/${BADGE}`, false],
+      [`https://evil.example/badges/${BADGE}`, false],
+      [`https://www.credly.com/users/someone/badges`, false],
+      [`https://www.credly.com/badges/not-a-uuid`, false],
+      [`https://user:pw@www.credly.com/badges/${BADGE}`, false],
+      [`https://api.credly.com/v1/obi/v2/badge_assertions/${BADGE}`, false],
+      ["javascript:alert(1)", false],
+    ];
+    for (const [link, good] of links)
+      ok(
+        (badgeIdFromLink(link, source) !== null) === good,
+        `7b.4 ${good ? "accepts" : "refuses"} ${link}`,
+      );
+
+    const good = await run({ [API]: { body: await assertion() } });
+    ok(
+      good.status === "verified",
+      "7b.5 issuer + template + recipient + dates + status -> checks passed",
+    );
+    ok(
+      calls.length === 1 && calls[0] === API,
+      "7b.6 the ONLY URL fetched is the one built here, never the pasted link",
+    );
+    ok(
+      good.bindingLevel === "email_control",
+      "7b.7 binding is labelled as email control (account email matched case-insensitively)",
+    );
+    ok(
+      good.scopeLimits.includes("credential_number_not_published") &&
+        good.scopeLimits.includes("issue_date_not_compared"),
+      "7b.8 a positive result states that number and issue date were NOT checked",
+    );
+    ok(good.adapter === "credly-ob2-hosted/1", "7b.9 the decision names its adapter");
+
+    const wrongType = await run({ [API]: { body: await assertion({ badge: classUrl(PSP) }) } });
+    ok(
+      wrongType.reasons[0] === "issuer_not_authorised_for_type",
+      "7b.10 a PSP badge does not verify a CPP claim",
+    );
+    const stranger = await run({
+      [API]: {
+        body: await assertion({ badge: classUrl(CPP, "99999999-9999-4999-8999-999999999999") }),
+      },
+    });
+    ok(
+      stranger.reasons[0] === "issuer_not_trusted",
+      "7b.11 another organisation's badge class is not ASIS's",
+    );
+    const offHost = await run({
+      [API]: {
+        body: await assertion({
+          badge: `https://evil.example/v1/obi/v2/issuers/${ASIS.issuerId}/badge_classes/${CPP}`,
+        }),
+      },
+    });
+    ok(
+      offHost.reasons[0] === "issuer_not_trusted" && calls.length === 1,
+      "7b.12 a badge class on another host is neither trusted nor fetched",
+    );
+    const bare = classUrl(CPP, null).replace("/api/v1/", "/v1/");
+    const resolved = await run({
+      [API]: { body: await assertion({ badge: bare }) },
+      [bare]: {
+        body: {
+          type: "BadgeClass",
+          issuer: `https://api.credly.com/v1/obi/v2/issuers/${ASIS.issuerId}`,
+        },
+      },
+    });
+    ok(
+      resolved.status === "verified" && calls.length === 2,
+      "7b.13 a class URL without its issuer is resolved from the class itself, on the same host",
+    );
+
+    const other = await run(
+      { [API]: { body: await assertion() } },
+      { email: "someone.else@hayat-fixture.example" },
+    );
+    ok(
+      other.status === "source_verified_binding_missing" && other.bindingLevel === "none",
+      "7b.14 somebody else's public badge link verifies nothing for this account",
+    );
+    const revoked = await run({ [API]: { status: 410 } });
+    ok(revoked.status === "revoked", "7b.15 HTTP 410 Gone is a confirmed revocation");
+    const missing = await run({ [API]: { status: 404 } });
+    ok(
+      missing.status === "action_needed" && missing.reasons[0] === "evidence_not_found",
+      "7b.16 404 (unknown or private) asks the holder to check the link, and accuses nobody",
+    );
+    const down = await run({ [API]: "down" });
+    ok(
+      down.status === "temporarily_unavailable" && calls.length === 2,
+      "7b.17 a timeout is an outage, retried exactly once",
+    );
+    const redirected = await run({ [API]: { status: 302 } });
+    ok(
+      redirected.status === "temporarily_unavailable" && calls.length === 1,
+      "7b.18 a redirect is not followed and not retried",
+    );
+    const expired = await run(
+      { [API]: { body: await assertion({ expires: "2025-03-31T00:00:00Z" }) } },
+      { validUntil: "2025-03-31" },
+    );
+    ok(expired.status === "expired", "7b.19 an expired badge says expired");
+    const mismatch = await run(
+      { [API]: { body: await assertion() } },
+      { validUntil: "2030-01-01" },
+    );
+    ok(
+      mismatch.status === "mismatch",
+      "7b.20 a claimed expiry the source does not confirm is a mismatch",
+    );
+    const swapped = await run({
+      [API]: {
+        body: await assertion({
+          id: "https://api.credly.com/v1/obi/v2/badge_assertions/00000000-0000-4000-8000-000000000000",
+        }),
+      },
+    });
+    ok(
+      swapped.reasons[0] === "malformed_credential",
+      "7b.21 an assertion that is not the one asked for is refused",
+    );
+    const signedLooking = await run({
+      [API]: { body: await assertion({ verification: { type: "signed" } }) },
+    });
+    ok(
+      signedLooking.reasons[0] === "malformed_credential",
+      "7b.22 only a HOSTED assertion is accepted from a hosted source",
+    );
   }
 
   // =======================================================================
@@ -968,6 +1201,18 @@ async function main(): Promise<void> {
   ok(
     !/verified|status|decision|confidence|ocr|text/i.test(inputKeys),
     "9.11 the input has no field in which a client could assert a result",
+  );
+
+  const registry = code("src/lib/security-passport/hayat/verification/source-registry.ts");
+  ok(
+    /enabled: false,/.test(registry) && !/process\.env|import\.meta\.env/.test(registry),
+    "9.11b enabling a source is a reviewed code change, never an environment variable",
+  );
+  ok(
+    !/body|sha256|hash/i.test(
+      code("src/lib/security-passport/hayat/hayat.functions.ts").replace(/BAKED_[A-Z_]+/g, ""),
+    ),
+    "9.11c nothing fetched from a source is stored or hashed at the boundary",
   );
 
   const reader = code("src/lib/security-passport/hayat/browser-reader.ts");
