@@ -393,12 +393,28 @@ console.log("\n5. Both creation paths announce, and neither can lose the registr
     "the announcement runs AFTER the row exists",
     fns.indexOf("create_my_employer_company") < fns.indexOf("announceRegistration(ctx"),
   );
+  // Read the catch block ITSELF rather than "somewhere after the catch there
+  // is a return". The loose form passed with `throw err;` planted inside the
+  // catch, because the match ran on past it into the next function -- which
+  // the negative control found and this narrowing is the repair.
+  const announceBody = (() => {
+    const start = fns.indexOf("async function announceRegistration(");
+    const end = fns.indexOf("\nasync function writeAudit(");
+    return start >= 0 && end > start ? fns.slice(start, end) : "";
+  })();
+  const announceCatch = (() => {
+    const at = announceBody.indexOf("} catch (err) {");
+    return at >= 0 ? announceBody.slice(at) : "";
+  })();
   ck(
-    "a failed announcement is a value, never a throw",
-    /async function announceRegistration\([\s\S]*?\{\s*try \{[\s\S]*?\} catch \(err\) \{[\s\S]*?return \{/.test(
-      fns,
-    ),
+    "the announcement's catch returns a value",
+    /return \{[\s\S]*?applicant: \{ status: "failed"/.test(announceCatch),
     "an exception here would report a SAVED registration as failed and invite a duplicate",
+  );
+  ck(
+    "and rethrows nothing",
+    announceCatch.length > 0 && !/\bthrow\b/.test(announceCatch),
+    "a rethrow turns a delivery problem into a failed registration",
   );
   ck(
     "the recipient comes from the caller's own verified session",
