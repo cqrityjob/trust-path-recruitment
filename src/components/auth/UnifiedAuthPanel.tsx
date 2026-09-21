@@ -41,6 +41,10 @@ import {
   rememberOrganisationIntent,
 } from "@/lib/auth/oauth-return";
 import { hasEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
+// The employer-entrance predicate lives in its own pure module so the guard
+// script can prove it over hand-written inputs without mounting this panel —
+// same reason, and same shape, as employer-signup-intent.ts.
+import { registrationTargetsOrganisation } from "@/lib/auth/organisation-entrance";
 export type UnifiedAuthMode = "signin" | "signup";
 
 /** Where a person lands when nothing else was requested. The personal home
@@ -99,7 +103,15 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [forOrganisation, setForOrganisation] = useState(false);
+  // Opened and ticked when the person arrived through the employer entrance,
+  // so "register your company" collects a company. Lazy, because it reads the
+  // URL; safe against SSR because the form is not painted until `sessionKnown`
+  // is true, which only happens in a client effect.
+  const [forOrganisation, setForOrganisation] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : registrationTargetsOrganisation(window.location.search, mode === "signup"),
+  );
   const [companyName, setCompanyName] = useState("");
   const [companyCountry, setCompanyCountry] = useState("");
 
@@ -466,9 +478,7 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
            it does not arrive, and that the destination the person
            was heading for is still waiting for them. */
         <div data-testid="auth-awaiting-confirmation" className="mt-8">
-          <h2 className="text-lg font-semibold text-foreground">
-            {t("auth.confirm.heading")}
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">{t("auth.confirm.heading")}</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {t(forOrganisation ? "auth.confirm.bodyEmployer" : "auth.confirm.body")}
           </p>
@@ -487,12 +497,8 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
             </p>
           </div>
 
-          <p className="mt-3 text-sm text-muted-foreground">
-            {t("auth.confirm.notArrived")}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("auth.confirm.destinationKept")}
-          </p>
+          <p className="mt-3 text-sm text-muted-foreground">{t("auth.confirm.notArrived")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("auth.confirm.destinationKept")}</p>
 
           {/* Announced, not merely painted: a resend that only
               changes a colour tells a screen-reader user nothing. */}
@@ -567,10 +573,7 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
               aria-labelledby={`${ids}-errors-title`}
               className="mb-4 rounded-md border border-destructive/40 bg-destructive/5 p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <p
-                id={`${ids}-errors-title`}
-                className="text-sm font-semibold text-destructive"
-              >
+              <p id={`${ids}-errors-title`} className="text-sm font-semibold text-destructive">
                 {t("auth.error.title")}
               </p>
               <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm text-destructive">
@@ -645,10 +648,7 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
                 className={field}
               />
               {isSignup && (
-                <p
-                  id={`${ids}-password-hint`}
-                  className="mt-1.5 text-xs text-muted-foreground"
-                >
+                <p id={`${ids}-password-hint`} className="mt-1.5 text-xs text-muted-foreground">
                   {t("auth.password.hint")}
                 </p>
               )}
@@ -707,16 +707,22 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
                         className={field}
                       />
                     </div>
+                    {/* The three steps, in order, before any of them
+                        happens. Without this the verification email is the
+                        only thing the person hears about, and a message that
+                        says "confirm your address" is read as "you are in". */}
+                    <p
+                      data-testid="signup-organisation-note"
+                      className="text-xs leading-relaxed text-muted-foreground"
+                    >
+                      {t("auth.unified.organisation.note")}
+                    </p>
                   </div>
                 )}
               </div>
             )}
 
-            <PrimaryButton
-              type="submit"
-              disabled={busy}
-              className="w-full justify-center gap-2"
-            >
+            <PrimaryButton type="submit" disabled={busy} className="w-full justify-center gap-2">
               {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {busy
                 ? t(isSignup ? "auth.busy.signup" : "auth.busy.signin")

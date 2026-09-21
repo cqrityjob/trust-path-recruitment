@@ -21,6 +21,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
+import {
+  EMPLOYER_REGISTRATION_NOTICE_KEY,
+  type EmployerRegistrationNotice,
+} from "@/lib/job-intelligence/registration-notice-cache";
 
 export const Route = createFileRoute("/_authenticated/employer/pending")({
   ssr: false,
@@ -28,10 +32,32 @@ export const Route = createFileRoute("/_authenticated/employer/pending")({
   errorComponent: EmployerErrorState,
 });
 
+/** The three words this page must keep apart, and the order they happen in:
+ *  the address was verified, the registration was RECEIVED, and approval has
+ *  not happened yet. The steps are numbered so none of them can be read as
+ *  the others. */
+const NEXT_STEP_KEYS = [
+  "employer.pending.step.received",
+  "employer.pending.step.review",
+  "employer.pending.step.activated",
+] as const;
+
 function EmployerPendingPage() {
   const { t, lang } = useT();
   const navigate = useNavigate();
   const listWorkspaces = useServerFn(listMyEmployerWorkspaces);
+
+  // What the confirmation email actually did, if this visit follows the
+  // registration that sent it. Cache-only: nothing fetches this key, and a
+  // reload legitimately clears it -- at which point the page says nothing
+  // about email rather than repeating a claim it can no longer support.
+  const noticeQuery = useQuery<EmployerRegistrationNotice | null>({
+    queryKey: EMPLOYER_REGISTRATION_NOTICE_KEY,
+    queryFn: async () => null,
+    enabled: false,
+    staleTime: Infinity,
+  });
+  const notice = noticeQuery.data ?? null;
 
   // Approval happens somewhere else, in someone else's browser. Without a
   // poll, the person sitting on this page would keep reading that they are
@@ -202,6 +228,39 @@ function EmployerPendingPage() {
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               {t("employer.pending.access")}
             </p>
+
+            {/* The steps, numbered. "Your address is verified" and "your
+                company is approved" are different facts about different
+                things, and a page that runs them together is how a
+                verification email gets read as an approval. */}
+            <div className="mt-6" data-testid="employer-pending-next-steps">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("employer.pending.nextSteps.heading")}
+              </p>
+              <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground">
+                {NEXT_STEP_KEYS.map((key) => (
+                  <li key={key}>{t(key)}</li>
+                ))}
+              </ol>
+            </div>
+
+            {/* The email, said honestly or not said at all.
+                `sent` means a provider ACCEPTED the message -- never that
+                anybody received it, and the copy says exactly that. A send
+                that did not happen says so, and points at the page that is
+                authoritative regardless of mail: this one. */}
+            {notice && (
+              <p
+                data-testid="employer-pending-email-outcome"
+                className="mt-4 rounded-md border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-muted-foreground"
+              >
+                {t(
+                  notice.applicant.status === "sent"
+                    ? "employer.pending.email.sent"
+                    : "employer.pending.email.notSent",
+                )}
+              </p>
+            )}
           </>
         )}
 

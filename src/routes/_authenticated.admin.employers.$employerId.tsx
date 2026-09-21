@@ -30,8 +30,11 @@ import {
 } from "@/components/ui/dialog";
 import {
   adminGetEmployerForModeration,
+  adminGetEmployerRegistrationNotices,
   adminModerateEmployer,
+  adminResendEmployerRegistrationNotice,
   type AdminEmployerDetail,
+  type AdminEmployerNoticeState,
 } from "@/lib/job-intelligence/admin-employer-moderation.functions";
 import {
   adminGetEmployerDeletionImpact,
@@ -547,6 +550,8 @@ function AdminEmployerDetailPage() {
           )}
         </section>
 
+        <RegistrationNoticePanel employerId={employerId} />
+
         <section className="mt-6 rounded-lg border border-border bg-background p-5">
           <h2 className="text-sm font-semibold text-foreground">
             {t("admin.employers.detail.section.history")}
@@ -675,5 +680,145 @@ function Field({ label, value }: { label: string; value: string | null | undefin
       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="text-foreground">{value || "—"}</dd>
     </div>
+  );
+}
+
+/**
+ * Whether anybody was actually told about this registration, and a way to
+ * try again.
+ *
+ * ── WHY THIS IS ON THE PAGE AND NOT ONLY IN A LOG ──────────────────────
+ *
+ * The rule this implements is that a failed send may not be hidden behind a
+ * claim that mail was sent. A server log satisfies that rule only for
+ * somebody who reads server logs; the person who has to notice that a
+ * company was never confirmed is the administrator deciding about that
+ * company, on this page.
+ *
+ * ── WHAT EACH WORD MEANS, EXACTLY ──────────────────────────────────────
+ *
+ *   sent            a provider ACCEPTED the message. NOT "it arrived", and
+ *                   the copy never says it did.
+ *   failed          the provider was called and refused, or the call broke.
+ *                   The provider status is shown; never a response body.
+ *   not configured  no call was made, because a setting is absent. The
+ *                   names of the absent settings are shown -- never a value.
+ *
+ * ── AND WHY AN EMPTY LIST IS NOT "NOTHING WAS SENT" ────────────────────
+ *
+ * The trail lives in audit_logs, which needs the service-role client. When
+ * that read fails the panel says the trail could not be loaded, rather than
+ * rendering an empty list that an administrator would reasonably read as
+ * "this company was never contacted".
+ */
+function RegistrationNoticePanel({ employerId }: { employerId: string }) {
+  const { t, lang } = useT();
+  const qc = useQueryClient();
+  const getNotices = useServerFn(adminGetEmployerRegistrationNotices);
+  const resend = useServerFn(adminResendEmployerRegistrationNotice);
+  const [resendError, setResendError] = useState<string | null>(null);
+
+  const key = ["admin", "employer-registration-notices", employerId];
+  const q = useQuery<AdminEmployerNoticeState>({
+    queryKey: key,
+    queryFn: () => getNotices({ data: { employerId } }),
+    retry: false,
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: () => resend({ data: { employerId } }),
+    onSuccess: (next) => {
+      setResendError(null);
+      qc.setQueryData(key, next);
+    },
+    onError: (err) => setResendError(err instanceof Error ? err.message : "RESEND_FAILED"),
+  });
+
+  const CHANNEL_KEY: Record<string, TranslationKey> = {
+    applicant: "admin.employers.detail.notice.channel.applicant",
+    admin: "admin.employers.detail.notice.channel.admin",
+    unknown: "admin.employers.detail.notice.channel.unknown",
+  };
+  const STATUS_KEY: Record<string, TranslationKey> = {
+    sent: "admin.employers.detail.notice.status.sent",
+    failed: "admin.employers.detail.notice.status.failed",
+    not_configured: "admin.employers.detail.notice.status.notConfigured",
+    unknown: "admin.employers.detail.notice.status.unknown",
+  };
+
+  return (
+    <section
+      className="mt-6 rounded-lg border border-border bg-background p-5"
+      data-testid="admin-employer-registration-notices"
+    >
+      <h2 className="text-sm font-semibold text-foreground">
+        {t("admin.employers.detail.section.notices")}
+      </h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {t("admin.employers.detail.notice.intro")}
+      </p>
+
+      {q.isLoading && <p className="mt-3 text-sm text-muted-foreground">{t("admin.loading")}</p>}
+
+      {q.isError && (
+        <p className="mt-3 text-sm text-destructive">
+          {t("admin.employers.detail.notice.loadError")}
+        </p>
+      )}
+
+      {q.isSuccess && q.data.missingSettings.length > 0 && (
+        <p className="mt-3 rounded-md border border-border bg-secondary/40 p-3 text-sm text-foreground">
+          {t("admin.employers.detail.notice.notConfiguredWarning")}{" "}
+          <code className="text-xs">{q.data.missingSettings.join(", ")}</code>
+        </p>
+      )}
+
+      {q.isSuccess && q.data.history.length === 0 && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t("admin.employers.detail.notice.none")}
+        </p>
+      )}
+
+      {q.isSuccess && q.data.history.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {q.data.history.map((n) => (
+            <li
+              key={n.id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-sm"
+            >
+              <span className="font-medium text-foreground">{t(CHANNEL_KEY[n.channel])}</span>
+              <span className="text-muted-foreground">
+                {t(STATUS_KEY[n.status])}
+                {n.detail ? ` · ${n.detail}` : ""}
+              </span>
+              <span className="text-xs text-muted-foreground">{formatDateTime(n.at, lang)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={resendMutation.isPending}
+          onClick={() => resendMutation.mutate()}
+        >
+          {resendMutation.isPending
+            ? t("admin.employers.detail.notice.resending")
+            : t("admin.employers.detail.notice.resend")}
+        </Button>
+        <span className="text-xs text-muted-foreground">
+          {t("admin.employers.detail.notice.resendHelp")}
+        </span>
+      </div>
+
+      {resendError && (
+        <p role="alert" className="mt-2 text-sm text-destructive">
+          {t("admin.employers.detail.notice.resendError")}
+        </p>
+      )}
+    </section>
   );
 }

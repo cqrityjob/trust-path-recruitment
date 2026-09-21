@@ -53,11 +53,12 @@
 // that is the pattern it exists to avoid.
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { hasEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { EMPLOYER_REGISTRATION_NOTICE_KEY } from "@/lib/job-intelligence/registration-notice-cache";
 import {
   ensureMyEmployerCompanyFromSignup,
   type EnsureEmployerCompanyResult,
@@ -145,6 +146,7 @@ function useHasSignupIntent(): boolean | undefined {
 export function useEmployerSignupProvisioning(): EmployerSignupProvisioning {
   const hasIntent = useHasSignupIntent();
   const ensureCompany = useServerFn(ensureMyEmployerCompanyFromSignup);
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: EMPLOYER_SIGNUP_PROVISION_KEY,
@@ -162,6 +164,15 @@ export function useEmployerSignupProvisioning(): EmployerSignupProvisioning {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
+
+  // Publish what happened to the two announcement emails, so /employer/pending
+  // can state it rather than assert an inbox. Written once, when the answer
+  // first exists; read from the same cache, never re-fetched.
+  const result = query.data;
+  const notice = result && result.created ? result.notice : undefined;
+  useEffect(() => {
+    if (notice) queryClient.setQueryData(EMPLOYER_REGISTRATION_NOTICE_KEY, notice);
+  }, [notice, queryClient]);
 
   return {
     pending: hasIntent === undefined || (hasIntent === true && query.isPending && query.isFetching),

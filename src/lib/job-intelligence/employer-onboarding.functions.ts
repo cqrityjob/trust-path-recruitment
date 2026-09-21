@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { readEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
+// Type only — erased at build time. This file ships to the client bundle, so
+// the module itself is loaded with await import() inside the handlers, the
+// same way client.server.ts requires.
+import type { EmployerRegistrationNotice } from "@/lib/job-intelligence/employer-registration-notice.server";
 
 // -----------------------------------------------------------------------------
 // Phase H3.1 — Candidate / Employer Portal Foundation: self-service employer
@@ -39,6 +43,58 @@ function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+/**
+ * Announce a registration that has just been created, from either path.
+ *
+ * Reads the registrant from their OWN verified session rather than taking an
+ * address from the request: the confirmation goes to the person who
+ * registered, never to an address a form could nominate.
+ *
+ * Never throws — see the module it delegates to. A registration that is
+ * already saved must not be reported as failed because an email was not.
+ */
+async function announceRegistration(
+  ctx: Ctx,
+  employer: { id: string; name: string; country: string | null },
+): Promise<EmployerRegistrationNotice> {
+  try {
+    const { data: userData } = await ctx.supabase.auth.getUser();
+    const user = userData?.user;
+    const email = (user?.email as string | undefined) ?? "";
+    const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+    const displayName = typeof meta.display_name === "string" ? meta.display_name.trim() : "";
+    const locale = typeof meta.locale === "string" ? meta.locale : "";
+
+    if (!email) {
+      // An account with no address cannot be written to. Say so rather than
+      // reporting a send that could not have been attempted.
+      console.error("[employer-onboarding] no address on the registrant's account");
+      return {
+        applicant: { status: "failed", error: "NO_RECIPIENT_ADDRESS" },
+        admin: { status: "failed", error: "NO_RECIPIENT_ADDRESS" },
+      };
+    }
+
+    const { announceEmployerRegistration } =
+      await import("@/lib/job-intelligence/employer-registration-notice.server");
+    return await announceEmployerRegistration({
+      employerId: employer.id,
+      companyName: employer.name,
+      companyCountry: employer.country,
+      contactUserId: ctx.userId,
+      contactEmail: email,
+      contactName: displayName || null,
+      language: locale === "en" ? "en" : "sv",
+    });
+  } catch (err) {
+    console.error("[employer-onboarding] announcement failed", err);
+    return {
+      applicant: { status: "failed", error: "UNEXPECTED_ERROR" },
+      admin: { status: "failed", error: "UNEXPECTED_ERROR" },
+    };
+  }
 }
 
 async function writeAudit(params: {
@@ -112,7 +168,16 @@ const createCompanySchema = z.object({
 });
 
 export type CreateEmployerCompanyResult =
-  | { ok: true; employerId: string; employerSlug: string; membershipId: string }
+  | {
+      ok: true;
+      employerId: string;
+      employerSlug: string;
+      membershipId: string;
+      /** What actually happened to the two announcement emails. Carried back
+       *  so the page states it rather than assuming an inbox — see
+       *  employer-registration-notice.server.ts. */
+      notice: EmployerRegistrationNotice;
+    }
   | { ok: false; reason: "duplicate"; matchedEmployerId: string };
 
 export const createMyEmployerCompany = createServerFn({ method: "POST" })
@@ -155,11 +220,20 @@ export const createMyEmployerCompany = createServerFn({ method: "POST" })
     const row = (rows as any[] | null)?.[0];
     if (!row) throw new Error("Could not create the company. Please try again.");
 
+    // The registration is saved at this point and cannot be lost by anything
+    // below: the announcement returns its outcome as a value and never throws.
+    const notice = await announceRegistration(ctx, {
+      id: row.employer_id as string,
+      name: data.name.trim(),
+      country: data.country.trim(),
+    });
+
     return {
       ok: true,
       employerId: row.employer_id as string,
       employerSlug: row.employer_slug as string,
       membershipId: row.membership_id as string,
+      notice,
     };
   });
 
@@ -391,7 +465,14 @@ export const decideAccessRequest = createServerFn({ method: "POST" })
 // this is a shortcut through the form, never a shortcut through approval.
 
 export type EnsureEmployerCompanyResult =
-  | { created: true; employerId: string; employerSlug: string }
+  | {
+      created: true;
+      employerId: string;
+      employerSlug: string;
+      /** What actually happened to the two announcement emails, so the
+       *  review page can say it instead of implying an inbox. */
+      notice: EmployerRegistrationNotice;
+    }
   | { created: false; reason: "already_member" | "no_company_in_signup" | "duplicate" };
 
 export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST" })
@@ -445,5 +526,18 @@ export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST"
     const row = (rows as { employer_id: string; employer_slug: string }[] | null)?.[0];
     if (!row) throw new Error("Could not complete your company registration.");
 
-    return { created: true, employerId: row.employer_id, employerSlug: row.employer_slug };
+    // Exactly once per organisation, because reaching this line at all means
+    // this call is the one that created it — see the module's own note.
+    const notice = await announceRegistration(ctx, {
+      id: row.employer_id,
+      name,
+      country,
+    });
+
+    return {
+      created: true,
+      employerId: row.employer_id,
+      employerSlug: row.employer_slug,
+      notice,
+    };
   });

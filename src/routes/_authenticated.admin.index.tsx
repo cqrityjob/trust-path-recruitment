@@ -9,6 +9,10 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { useT } from "@/i18n/context";
 import { AdminShellChrome } from "@/components/admin/AdminShellChrome";
 import { adminGetOverviewMetrics } from "@/lib/job-intelligence/admin-overview.functions";
+import {
+  adminListEmployersForModeration,
+  type AdminEmployerListRow,
+} from "@/lib/job-intelligence/admin-employer-moderation.functions";
 import { passportReviewCounts } from "@/lib/security-passport/verification.functions";
 import { formatDateTime } from "@/lib/job-intelligence/date-format";
 
@@ -61,6 +65,31 @@ function AdminOverviewPage() {
     retry: false,
   });
   const passport = passportQ.data;
+
+  // ── THE ADMINISTRATOR'S NOTIFICATION THAT A COMPANY WANTS TO JOIN ────
+  //
+  // A pending count is a number. It does not say WHICH company, WHO
+  // registered it, how to reach them, or where to open it -- so an
+  // administrator who noticed it still had to go and look, which is exactly
+  // what "we were never notified" describes.
+  //
+  // This is the in-product half of the notification, and it is the half that
+  // does not depend on email working: it reads the same
+  // adminListEmployersForModeration the queue at /admin/employers reads, with
+  // the same admin-only RLS behind it, and it is correct even when no mail
+  // provider is configured at all.
+  //
+  // Its own query, so a failure here cannot take the rest of the dashboard
+  // down, and so it can say "we could not load this" rather than rendering a
+  // confident empty list -- an empty queue and an unread queue are not the
+  // same fact.
+  const pendingEmployersFn = useServerFn(adminListEmployersForModeration);
+  const pendingEmployersQ = useQuery({
+    queryKey: ["admin", "employers-moderation", "pending", ""],
+    queryFn: () => pendingEmployersFn({ data: { status: "pending" as const } }),
+    staleTime: 30_000,
+    retry: false,
+  });
 
   return (
     <SiteLayout>
@@ -116,6 +145,12 @@ function AdminOverviewPage() {
             />
           </div>
         </section>
+
+        <PendingEmployerApplications
+          rows={pendingEmployersQ.data ?? []}
+          loading={pendingEmployersQ.isLoading}
+          failed={pendingEmployersQ.isError}
+        />
 
         <section className="mt-8">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -245,5 +280,76 @@ function AdminOverviewPage() {
         </div>
       </AdminShellChrome>
     </SiteLayout>
+  );
+}
+
+/**
+ * Every company waiting for a decision, with what a decision needs.
+ *
+ * Four facts and a link, matching the administrator email exactly: which
+ * company, who registered it, how to reach them, and the row to open. The
+ * link goes to /admin/employers/<id>, which is inside the authenticated admin
+ * shell and behind `is_platform_admin` at the database -- holding the URL
+ * grants nothing.
+ *
+ * "Pending" is the only status shown here. An approved or rejected company is
+ * not waiting for anybody, and listing it would turn a to-do list into a log.
+ */
+function PendingEmployerApplications(props: {
+  rows: AdminEmployerListRow[];
+  loading: boolean;
+  failed: boolean;
+}) {
+  const { t, lang } = useT();
+  return (
+    <section className="mt-8" data-testid="admin-pending-employer-applications">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {t("admin.overview.section.pendingEmployers")}
+      </h2>
+
+      {props.loading && <p className="mt-3 text-sm text-muted-foreground">{t("admin.loading")}</p>}
+
+      {/* A read that did not answer is not an empty queue. */}
+      {props.failed && (
+        <p className="mt-3 text-sm text-destructive">
+          {t("admin.overview.pendingEmployers.loadError")}
+        </p>
+      )}
+
+      {!props.loading && !props.failed && props.rows.length === 0 && (
+        <p className="mt-3 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+          {t("admin.overview.pendingEmployers.empty")}
+        </p>
+      )}
+
+      {!props.loading && !props.failed && props.rows.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {props.rows.map((r) => (
+            <li
+              key={r.id}
+              className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-border bg-background p-4"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">{r.name}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {r.ownerDisplayName ?? t("admin.employers.list.ownerUnknown")}
+                  {r.ownerEmail ? ` · ${r.ownerEmail}` : ""}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {(r.country ?? "—") + " · " + formatDateTime(r.createdAt, lang)}
+                </p>
+              </div>
+              <Link
+                to="/admin/employers/$employerId"
+                params={{ employerId: r.id }}
+                className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted/40"
+              >
+                {t("admin.overview.pendingEmployers.open")}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
