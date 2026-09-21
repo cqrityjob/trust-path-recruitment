@@ -30,7 +30,7 @@
  * `fetch` is replaced with a trap that fails the run if it is called.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
 import { registrationTargetsOrganisation } from "../src/lib/auth/organisation-entrance";
 import { announceEmployerRegistration } from "../src/lib/job-intelligence/employer-registration-notice.server";
 import {
@@ -293,6 +293,94 @@ console.log("\n2. The transport is inert without configuration, and says so");
     /process\.env\.PUBLIC_SITE_URL \|\| SITE_ORIGIN/.test(
       read("src/lib/job-intelligence/employer-registration-notice.server.ts"),
     ),
+  );
+}
+
+// -----------------------------------------------------------------------------
+console.log("\n2b. The key never reaches a browser");
+// -----------------------------------------------------------------------------
+{
+  // ── WHY THIS IS A SOURCE RULE AND NOT A BUILD SCAN ──────────────────
+  //
+  // Verified once against a real production build: 492 client files contain
+  // none of these names, and the server bundle contains all of them. That is
+  // the fact; this is what keeps it true. Building the app inside a guard
+  // would cost minutes on every run, and the properties below are exactly the
+  // ones that make the leak impossible in the first place.
+  //
+  // The build config (`@lovable.dev/vite-tanstack-config`) injects only
+  // `VITE_*` into the client. So a secret is safe if and only if it is not
+  // named with that prefix AND the module that reads it is never pulled into
+  // a client-reachable import graph.
+
+  const SECRET_ENV = [...RESEND_ENV_KEYS, ADMIN_RECIPIENT_ENV_KEY];
+  for (const key of SECRET_ENV) {
+    ck(
+      `${key} is not a VITE_ variable`,
+      !key.startsWith("VITE_"),
+      "a VITE_ prefix publishes the value into the browser bundle",
+    );
+  }
+
+  // Server-only modules, by the convention this codebase already enforces for
+  // client.server.ts: a `.server.ts` suffix, and never a static import from
+  // anything that ships to the browser.
+  const SERVER_ONLY = [
+    "@/lib/email/send-employer-registration-email.server",
+    "@/lib/job-intelligence/employer-registration-notice.server",
+  ];
+
+  const offenders: string[] = [];
+  const walk = (dir: string): string[] => {
+    const out: string[] = [];
+    for (const entry of readdirSync(dir)) {
+      const full = `${dir}/${entry}`;
+      if (statSync(full).isDirectory()) out.push(...walk(full));
+      else if (/\.(ts|tsx)$/.test(entry)) out.push(full);
+    }
+    return out;
+  };
+  const srcRoot = new URL("src", root).pathname;
+  for (const file of walk(srcRoot)) {
+    const body = readFileSync(file, "utf8");
+    for (const mod of SERVER_ONLY) {
+      // A STATIC import is the leak. `await import(...)` inside a handler and
+      // `import type` (erased at build time) are both fine, and both are used
+      // deliberately -- see employer-onboarding.functions.ts.
+      const statik = new RegExp(
+        `import\\s+(?!type\\b)[^;]*?from\\s*["']${mod.replace(/[/.]/g, "\\$&")}["']`,
+        "s",
+      );
+      if (statik.test(body) && !file.endsWith(".server.ts")) {
+        offenders.push(`${file.slice(srcRoot.length + 1)} -> ${mod}`);
+      }
+    }
+  }
+  ck(
+    "no client-reachable module statically imports the sender or the announcer",
+    offenders.length === 0,
+    offenders.join(", "),
+  );
+
+  ck(
+    "the sender is a .server.ts module",
+    /\.server\.ts$/.test("src/lib/email/send-employer-registration-email.server.ts"),
+  );
+  ck(
+    "the announcer loads the sender, the admin client and the origin at run time",
+    (() => {
+      const notice = read("src/lib/job-intelligence/employer-registration-notice.server.ts");
+      return /await import\(\s*\n?\s*"@\/integrations\/supabase\/client\.server"/.test(notice);
+    })(),
+    "a top-level import of the service-role client would pull it into any graph that reaches this file",
+  );
+  ck(
+    "the provider endpoint appears only in the server-only sender",
+    (() => {
+      const hits = walk(srcRoot).filter((f) => readFileSync(f, "utf8").includes("api.resend.com"));
+      return hits.every((f) => f.endsWith(".server.ts"));
+    })(),
+    "the Resend endpoint outside a .server.ts module is a call the browser could make",
   );
 }
 

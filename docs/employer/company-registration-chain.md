@@ -93,21 +93,65 @@ returns a value and never throws.
 
 ## Reliability: what happens if the person closes the page
 
-The write and both sends happen **inside one server request**. There is no
-follow-up call from a browser to depend on, so closing the tab does not lose
-the notification.
+### The one thing that never depends on email
 
-That is measured, not assumed. Against a local stack, the page was closed the
-instant the provisioning request left the browser:
+**A saved registration is always visible in the admin queue.** `/admin` lists
+every `pending` employer with the company, the contact person, the contact
+address and a link, read straight from `employers` and `employer_memberships`.
+It does not read the delivery trail, it does not care whether a provider is
+configured, and it is unchanged by any send failing. If the person never comes
+back and both messages fail, the application is still there and still
+decidable.
 
-```
-provisioning request issued -> closing the page now
-closed: true
--> employers row created, status pending, owner membership 1
--> audit_logs: applicant -> not_configured, admin -> not_configured
-```
+Everything below is about the *notification*, which is a convenience on top of
+that queue — never the record itself.
 
-The server finished the handler after the client was gone.
+### Where the send happens
+
+The write and both sends are in **one server request**. There is no follow-up
+call from a browser to depend on.
+
+Measured on the local Node server: the page was closed the instant the
+provisioning request left the browser, and the handler still completed —
+`employers` row `pending`, owner membership, both attempts recorded.
+
+**That result does not transfer to production unchanged.** The deployment is
+Nitro on Cloudflare (`@lovable.dev/vite-tanstack-config` builds with the
+cloudflare target; the live site answers with `server: cloudflare`), and a
+Workers invocation may be cancelled when the client disconnects. So on
+production the honest claim is narrower: the send is *attempted inside the
+same request*, which is the best a request-bound send can do, and it has not
+been proven to survive a disconnect there.
+
+### The catch-up is an attempt, not a delivery guarantee
+
+If that request does not finish — a cancelled invocation, a redeploy between
+the commit and the send, a provider outage, a setting configured only
+afterwards — then **the next time the registrant opens the product, one more
+attempt is made**, for the channels that have never succeeded.
+
+Stated plainly, because the distinction matters:
+
+- it is **not** a scheduler, a queue or a background worker;
+- nothing runs while nobody is present;
+- **if the person never returns, no further automatic attempt is made at all.**
+
+What covers that case is not automation. It is the admin queue above, and an
+administrator who can see exactly what failed and press **Skicka igen**.
+
+The catch-up is bounded so it cannot become a nuisance: only a channel with no
+`sent` row, only while the organisation is `pending`, at most five recorded
+attempts, and an unreadable trail means send nothing rather than "probably not
+sent".
+
+### A successful notification is never sent twice
+
+Not by the catch-up, and not by the administrator's **Skicka igen**, which
+computes what is outstanding from the same trail the page renders, sends only
+that, and is disabled when both channels have already succeeded.
+
+Proven: with the company channel marked `sent`, the registrant's next visit
+produced exactly one new row — for the admin channel.
 
 ### Which branch the live project actually takes
 
@@ -154,22 +198,48 @@ shows it is needed.
 
 ## Configuration required (owner action)
 
-The sender runs in the **application server**, which Lovable hosts — not in a
-Supabase Edge Function. So these belong in the **Lovable project's environment
-variables / secrets**, the same place `SUPABASE_SERVICE_ROLE_KEY` and
-`SUPABASE_URL` are already set for this project (Lovable project
-`9ec625ef-34a1-4b4b-8cbb-712cae168579`). Setting them in Supabase's Edge
-Function secrets would have no effect on this path.
+### What the deployment actually is, verified
 
-| setting | what it is for | without it |
+| question | how it was answered |
+| --- | --- |
+| Is there a server runtime at all? | `/_serverFn/<nonsense>` on the live site returns **HTTP 500 from the app's own error page**, not a 404, and `/employers` arrives **server-rendered**. A static host does neither |
+| Which server? | `vite.config.ts` uses `@lovable.dev/vite-tanstack-config`, whose own comment states it includes *"nitro (build-only using cloudflare as a default target), VITE_\* env injection"*. The live site answers `server: cloudflare` with an `x-deployment-id` |
+| Does that server already hold non-`VITE_` variables? | `/sitemap.xml` returns **HTTP 200 with 56 URLs, 28 of them job rows**. That route calls `serverPublicClient()`, which throws unless `process.env.SUPABASE_URL` **and** `process.env.SUPABASE_PUBLISHABLE_KEY` are set. Neither is a `VITE_` name |
+| Can a secret leak to the browser? | A production build was made and scanned: **0 occurrences** of `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`, `SUPABASE_SERVICE_ROLE_KEY` or `api.resend.com` across **492 client files**; all present in the server bundle. The same scan over the **live** client bundle (52 files) finds none of them either, and does find the publishable key, which belongs there |
+
+So the settings go in the **server-side environment of the Lovable-hosted
+deployment** — the same store that already supplies `SUPABASE_URL` and
+`SUPABASE_PUBLISHABLE_KEY` to that sitemap route today. They are set in the
+Lovable project (`9ec625ef-34a1-4b4b-8cbb-712cae168579`) alongside the
+Supabase ones. Supabase **Edge Function** secrets are a different store and do
+not reach this code: the only edge function on the project is
+`passport-share`.
+
+### The four settings
+
+| setting | value | notes |
 | --- | --- | --- |
-| `RESEND_API_KEY` | the transport. **Reuses the existing service** — Resend is already the provider for invitation and application-status mail, and this adds no package, no vendor and no new secret name | no product email is sent at all |
-| `RESEND_FROM_EMAIL` | the sender. Must be an address on a domain verified with the provider, with SPF, DKIM and DMARC passing, or the mail is rejected or filed as spam | as above |
-| `ADMIN_NOTIFICATION_EMAIL` | the one mailbox new registrations are announced to. A monitored address, not a personal one | the administrator queue still shows every registration |
-| `PUBLIC_SITE_URL` | the origin used to build both links | links point at the `SITE_ORIGIN` fallback |
+| `RESEND_API_KEY` | a Resend API key | **Existing service.** Resend is already the provider for invitation and application-status mail. No new package, vendor or secret name |
+| `RESEND_FROM_EMAIL` | e.g. `no-reply@<verified-domain>` | Must be on a domain **verified in the Resend dashboard**, with SPF, DKIM and DMARC passing |
+| `ADMIN_NOTIFICATION_EMAIL` | a monitored CQrityjob mailbox | Where new registrations are announced |
+| `PUBLIC_SITE_URL` | the deployment's own origin | Used to build both links; otherwise the `SITE_ORIGIN` fallback is used |
 
-The repository does not know and must not guess the sender or the
-administrator address, so neither appears here or anywhere in the code.
+**Never name any of these with a `VITE_` prefix** — that prefix is exactly what
+publishes a value into the browser bundle. A guard fails the build if one of
+them ever acquires it.
+
+**A redeploy is required.** These are read from the server environment at run
+time, and the running Worker keeps the environment it was deployed with, so
+publish the project again after saving them.
+
+### What I could not verify from here
+
+Whether a **Resend account** exists and whether a **sending domain is already
+verified** on it. That is inside the Resend dashboard, which this repository
+has no credentials for and should not have. If there is no account or no
+verified domain yet, that is the first step and nothing else will work: an
+unverified sender is rejected by the provider, and the delivery trail will
+show `failed` rather than `sent`.
 
 ### What the current delivery records do and do not show
 

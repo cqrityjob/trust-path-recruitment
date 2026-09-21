@@ -189,6 +189,32 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "SELF-TEST FAILED",
   },
+  // ── THE SERVER-ONLY BOUNDARY ────────────────────────────────────────
+  //
+  // Both of these would put the mail provider -- and the environment variable
+  // that authenticates to it -- inside the browser bundle.
+  {
+    id: "ERN-NC-SENDER-STATICALLY-IMPORTED",
+    defect:
+      "a client-reachable module imports the announcer as a value instead of as a type, pulling the server-only sender and the service-role client into the browser bundle",
+    file: "src/lib/job-intelligence/registration-notice-cache.ts",
+    find: 'import type { EmployerRegistrationNotice } from "@/lib/job-intelligence/employer-registration-notice.server";',
+    replace:
+      'import { type EmployerRegistrationNotice, EMPLOYER_REGISTRATION_NOTICE_ACTION } from "@/lib/job-intelligence/employer-registration-notice.server";\nvoid EMPLOYER_REGISTRATION_NOTICE_ACTION;',
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
+  {
+    id: "ERN-NC-PROVIDER-ENDPOINT-OUTSIDE-SERVER",
+    defect:
+      "the provider endpoint appears in a module that is not server-only, which is a call the browser could be made to perform",
+    file: "src/lib/auth/organisation-entrance.ts",
+    find: 'import { safeReturnPath } from "./safe-redirect";',
+    replace:
+      'import { safeReturnPath } from "./safe-redirect";\nconst ENDPOINT = "https://api.resend.com/emails";\nvoid ENDPOINT;',
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
 ];
 
 await runControls("employer-registration-notice", MUTATIONS);
