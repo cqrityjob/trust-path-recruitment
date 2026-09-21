@@ -24,6 +24,8 @@
 // apart from indentation and the two layout-only imports the page kept.
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Building2, Loader2 } from "lucide-react";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
@@ -41,6 +43,13 @@ import {
   rememberOrganisationIntent,
 } from "@/lib/auth/oauth-return";
 import { hasEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
+// The employer-entrance predicate lives in its own pure module so the guard
+// script can prove it over hand-written inputs without mounting this panel —
+// same reason, and same shape, as employer-signup-intent.ts.
+import { registrationTargetsOrganisation } from "@/lib/auth/organisation-entrance";
+import { ensureMyEmployerCompanyFromSignup } from "@/lib/job-intelligence/employer-onboarding.functions";
+import { EMPLOYER_SIGNUP_PROVISION_KEY } from "@/lib/job-intelligence/use-employer-signup-provisioning";
+import { EMPLOYER_REGISTRATION_NOTICE_KEY } from "@/lib/job-intelligence/registration-notice-cache";
 export type UnifiedAuthMode = "signin" | "signup";
 
 /** Where a person lands when nothing else was requested. The personal home
@@ -94,12 +103,22 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
   const { t, lang } = useT();
   const navigate = useNavigate();
   const ids = useId();
+  const queryClient = useQueryClient();
+  const ensureCompany = useServerFn(ensureMyEmployerCompanyFromSignup);
 
   const [sessionKnown, setSessionKnown] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [forOrganisation, setForOrganisation] = useState(false);
+  // Opened and ticked when the person arrived through the employer entrance,
+  // so "register your company" collects a company. Lazy, because it reads the
+  // URL; safe against SSR because the form is not painted until `sessionKnown`
+  // is true, which only happens in a client effect.
+  const [forOrganisation, setForOrganisation] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : registrationTargetsOrganisation(window.location.search, mode === "signup"),
+  );
   const [companyName, setCompanyName] = useState("");
   const [companyCountry, setCompanyCountry] = useState("");
 
@@ -293,6 +312,43 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
         // still matters -- being taken somewhere that explains what happens
         // next is the difference between a product and a form that submitted.
         if (data.session) {
+          // ── SAVE THE APPLICATION IN THE REQUEST THEY ARE WAITING ON ──
+          //
+          // Provisioning is a lifecycle event of the authenticated shell, and
+          // that is still true — but it means the organisation is created by
+          // a SECOND call, issued after a navigation, from a page that has
+          // not mounted yet. Somebody who submits and immediately closes the
+          // tab is in that gap: their account exists, their company name sits
+          // in metadata, and no application was ever saved for an
+          // administrator to see.
+          //
+          // So it is done here as well, while the submit button is still
+          // spinning and the person is still on the page. The server creates
+          // the row and sends both messages inside this one request, so
+          // closing the tab after this point cannot lose either.
+          //
+          // It does not replace the shell's call and cannot conflict with it:
+          // `ensureMyEmployerCompanyFromSignup` refuses a caller who already
+          // holds a membership, so whichever runs second answers
+          // `already_member`. Seeding the shared cache simply saves it the
+          // round trip.
+          //
+          // A failure here is NOT fatal and is deliberately not shown: the
+          // account is real, the destination still explains where things
+          // stand, and the shell retries and owns the error state. Blocking
+          // the navigation on it would strand somebody whose account was
+          // created successfully.
+          if (forOrganisation) {
+            try {
+              const provisioned = await ensureCompany();
+              queryClient.setQueryData(EMPLOYER_SIGNUP_PROVISION_KEY, provisioned);
+              if (provisioned.created) {
+                queryClient.setQueryData(EMPLOYER_REGISTRATION_NOTICE_KEY, provisioned.notice);
+              }
+            } catch (err) {
+              console.error("[auth] could not provision the organisation at signup", err);
+            }
+          }
           goToDestination();
           return;
         }
@@ -707,6 +763,16 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
                         className={field}
                       />
                     </div>
+                    {/* The three steps, in order, before any of them
+                        happens. Without this the verification email is the
+                        only thing the person hears about, and a message that
+                        says "confirm your address" is read as "you are in". */}
+                    <p
+                      data-testid="signup-organisation-note"
+                      className="text-xs leading-relaxed text-muted-foreground"
+                    >
+                      {t("auth.unified.organisation.note")}
+                    </p>
                   </div>
                 )}
               </div>

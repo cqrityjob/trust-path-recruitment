@@ -1304,6 +1304,28 @@ jobs:
       - name: Employer registration and activation check
         run: bun run employer-registration:check
 
+      # THE REST OF THE SAME FRONT DOOR, found the second time a company was
+      # registered for real: the organisation was created and then NOBODY WAS
+      # TOLD. Three defects, one silence.
+      #
+      #   1. "Registrera företag" led to /signup?redirect=/employer, where the
+      #      organisation section was a collapsed, unticked checkbox -- so the
+      #      registration produced a CANDIDATE account, no company name, no
+      #      organisation intent, no `employers` row, and therefore genuinely
+      #      nothing for an administrator to review;
+      #   2. no registration email existed anywhere in this repository;
+      #   3. no administrator notification existed either, in any channel.
+      #
+      # This guard holds the chain rather than any one file: the entrance
+      # collects a company, both creation paths announce, the announcement can
+      # never take a SAVED registration down with it, the company is told
+      # RECEIVED and never APPROVED, the administrator gets the company, the
+      # contact, the address and an authenticated link, and no surface claims
+      # a send it did not make. Its planted controls run in
+      # negative-controls:all.
+      - name: Employer registration notification chain check
+        run: bun run employer-registration-notice:check
+
 
       # ── ADMIN PORTAL ────────────────────────────────────────────────────
       #

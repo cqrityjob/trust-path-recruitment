@@ -52,8 +52,24 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a sign-up that DOES return a session stops going to the destination, so somebody already signed in is told to read an email that was never sent",
     file: FORM,
-    find: "        if (data.session) {\n          goToDestination();",
-    replace: "        if (data.session) {\n          setInfo(null);",
+    // Anchored on the destination call itself rather than on its adjacency to
+    // `if (data.session) {`. Organisation provisioning now runs between the
+    // two, and an anchor that encoded the old adjacency would refuse to mutate
+    // rather than plant the defect -- which is a dead control, not a passing
+    // one.
+    find: "          goToDestination();\n          return;\n        }",
+    replace: "          setInfo(null);\n          return;\n        }",
+    guard: GUARD,
+    expect: "ACS-STATE",
+  },
+  {
+    id: "ACC-NC-SESSION-PATH-SHOWS-INBOX",
+    defect:
+      "a sign-up that returned a session is ALSO handed to the inbox panel, so somebody who is already signed in is told to go and read a message nobody sent",
+    file: FORM,
+    find: "          goToDestination();\n          return;\n        }",
+    replace:
+      "          setAwaitingConfirmation({ email: email.trim(), returnTo });\n          goToDestination();\n          return;\n        }",
     guard: GUARD,
     expect: "ACS-STATE",
   },
@@ -112,8 +128,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the resend outcome is painted but never announced, so a screen-reader user cannot tell whether pressing it did anything",
     file: FORM,
-    find:
-      '              role="status"\n              className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"',
+    find: '              role="status"\n              className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"',
     replace:
       '              data-was-status="true"\n              className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"',
     guard: GUARD,

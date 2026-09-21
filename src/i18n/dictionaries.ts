@@ -687,6 +687,24 @@ export const dictionaries = {
     "employer.pending.body": "Vi granskar nu företagets uppgifter innan kontot aktiveras.",
     "employer.pending.access":
       "Du får tillgång till arbetsgivarytan när registreringen har godkänts.",
+    // ── VERIFIERAD ADRESS, MOTTAGEN ANSÖKAN, GODKÄNT FÖRETAG ──────────
+    //
+    // Tre olika saker. Ett verifieringsmejl bevisar bara att personen kan
+    // läsa sin inkorg; det säger ingenting om företaget. Stegen numreras
+    // så att inget av dem kan läsas som något av de andra.
+    "employer.pending.nextSteps.heading": "Så här går det vidare",
+    "employer.pending.step.received":
+      "Din företagsansökan är mottagen och sparad. Den försvinner inte om du loggar ut.",
+    "employer.pending.step.review":
+      "En administratör på CQrityjob granskar företagets uppgifter. Företaget är ännu inte godkänt.",
+    "employer.pending.step.activated":
+      "När ansökan godkänns aktiveras arbetsgivarytan och du kommer åt den med samma inloggning.",
+    // "Skickat" betyder att e-posttjänsten tog emot meddelandet — aldrig
+    // att någon har fått det. Sidan påstår inget mer än så.
+    "employer.pending.email.sent":
+      "Vi har skickat en bekräftelse till din e-postadress. Att mejlet lämnats till e-posttjänsten betyder inte att det har kommit fram — den här sidan visar alltid aktuell status.",
+    "employer.pending.email.notSent":
+      "Något bekräftelsemejl kunde inte skickas just nu. Din ansökan är ändå sparad, och den här sidan visar alltid aktuell status.",
     "employer.pending.registered": "Registrerat",
     "employer.pending.company": "Företag",
     "employer.pending.signOut": "Logga ut",
@@ -786,6 +804,10 @@ export const dictionaries = {
     "auth.unified.benefit.context":
       "Är du också rekryterare byter du till din organisation — utan en andra inloggning.",
     "auth.unified.organisation.toggle": "Jag skapar kontot för en organisation",
+    // Säger de tre stegen innan de händer, så att verifieringsmejlet inte
+    // kan läsas som ett godkännande av företaget.
+    "auth.unified.organisation.note":
+      "Vi skapar ditt konto, du verifierar din e-postadress, och därefter granskar en administratör företaget. Arbetsgivarytan öppnas först när företaget har godkänts.",
     "auth.unified.organisation.help":
       "Vi förbereder då en organisationsyta åt dig. Din personliga profil påverkas inte.",
     "auth.password.hint": "Minst 8 tecken.",
@@ -2533,6 +2555,14 @@ export const dictionaries = {
     "admin.shell.subtitle": "Granskningskonsol. Alla åtgärder registreras i granskningsloggen.",
     "admin.overview.heading": "Översikt",
     "admin.overview.section.employers": "Arbetsgivare",
+    // Aviseringen om att ett företag vill ansluta. En siffra säger inte
+    // VILKET företag, VEM som registrerade det eller hur man når dem — och
+    // den här listan fungerar även när ingen e-posttjänst är konfigurerad.
+    "admin.overview.section.pendingEmployers": "Företagsansökningar att granska",
+    "admin.overview.pendingEmployers.empty": "Inga företagsansökningar väntar på granskning.",
+    "admin.overview.pendingEmployers.loadError":
+      "Vi kunde inte hämta väntande företagsansökningar. Det betyder inte att det saknas ansökningar — försök igen.",
+    "admin.overview.pendingEmployers.open": "Öppna ansökan",
     "admin.overview.section.jobsApplications": "Jobb & ansökningar",
     "admin.overview.section.assignments": "Testtilldelningar",
     "admin.overview.section.workforce": "Personal",
@@ -2826,6 +2856,30 @@ export const dictionaries = {
     "admin.employers.detail.section.employees": "Personal",
     "admin.employers.detail.section.assignments": "Testtilldelningar",
     "admin.employers.detail.section.history": "Tidigare granskningsbeslut",
+    "admin.employers.detail.section.notices": "Aviseringar om registreringen",
+    "admin.employers.detail.notice.intro":
+      "Vad som faktiskt skickades när företaget registrerades — till företaget och till administratörsadressen.",
+    "admin.employers.detail.notice.none": "Inga utskick har registrerats för den här ansökan.",
+    "admin.employers.detail.notice.loadError":
+      "Vi kunde inte hämta utskickshistoriken. En tom lista visas därför inte — vi vet inte om något skickades.",
+    "admin.employers.detail.notice.channel.applicant": "Bekräftelse till företaget",
+    "admin.employers.detail.notice.channel.admin": "Avisering till administratör",
+    "admin.employers.detail.notice.channel.unknown": "Okänd mottagare",
+    // "Skickat" = e-posttjänsten tog emot meddelandet. Aldrig "mottaget".
+    "admin.employers.detail.notice.status.sent": "Skickat (accepterat av e-posttjänsten)",
+    "admin.employers.detail.notice.status.failed": "Misslyckades",
+    "admin.employers.detail.notice.status.notConfigured": "Inte skickat — inställning saknas",
+    "admin.employers.detail.notice.status.unknown": "Okänd status",
+    "admin.employers.detail.notice.notConfiguredWarning":
+      "E-postavisering är inte konfigurerad. Ansökningar syns ändå här och i listan. Saknade inställningar:",
+    "admin.employers.detail.notice.resend": "Skicka aviseringarna igen",
+    "admin.employers.detail.notice.resending": "Skickar …",
+    "admin.employers.detail.notice.resendHelp":
+      "Skickar bara de aviseringar som inte redan har gått iväg. En avisering som lyckats skickas aldrig om. Skapar ingen ny ansökan och ändrar ingen status.",
+    "admin.employers.detail.notice.allSent":
+      "Båda aviseringarna har redan accepterats av e-posttjänsten. Knappen skickar därför ingenting.",
+    "admin.employers.detail.notice.resendError":
+      "Utskicket kunde inte göras om. Ansökan är oförändrad.",
     "admin.employers.detail.field.country": "Land",
     "admin.employers.detail.field.registrationNumber": "Organisationsnummer",
     "admin.employers.detail.field.website": "Webbplats",
@@ -8740,6 +8794,17 @@ export const dictionaries = {
       "We are reviewing your organisation before activating employer access.",
     "employer.pending.access":
       "You will receive access to the employer workspace once the registration has been approved.",
+    "employer.pending.nextSteps.heading": "What happens next",
+    "employer.pending.step.received":
+      "Your company registration has been received and saved. It does not disappear if you sign out.",
+    "employer.pending.step.review":
+      "A CQrityjob administrator reviews the company details. The company is not approved yet.",
+    "employer.pending.step.activated":
+      "Once the registration is approved, the employer workspace is activated and you reach it with the same sign-in.",
+    "employer.pending.email.sent":
+      "We have sent a confirmation to your email address. Handing a message to the email service is not the same as it arriving — this page always shows the current status.",
+    "employer.pending.email.notSent":
+      "A confirmation email could not be sent just now. Your registration is saved regardless, and this page always shows the current status.",
     "employer.pending.registered": "Registered",
     "employer.pending.company": "Company",
     "employer.pending.signOut": "Sign out",
@@ -8821,6 +8886,8 @@ export const dictionaries = {
     "auth.unified.benefit.context":
       "If you are also a recruiter, switch to your organisation — without a second sign-in.",
     "auth.unified.organisation.toggle": "I am creating this account for an organisation",
+    "auth.unified.organisation.note":
+      "We create your account, you verify your email address, and an administrator then reviews the company. The employer workspace opens only once the company has been approved.",
     "auth.unified.organisation.help":
       "We will prepare an organisation workspace for you. Your personal profile is unaffected.",
     "auth.password.hint": "At least 8 characters.",
@@ -10472,6 +10539,11 @@ export const dictionaries = {
     "admin.shell.subtitle": "Moderation console. All actions are recorded in the audit log.",
     "admin.overview.heading": "Overview",
     "admin.overview.section.employers": "Employers",
+    "admin.overview.section.pendingEmployers": "Company registrations to review",
+    "admin.overview.pendingEmployers.empty": "No company registrations are waiting for review.",
+    "admin.overview.pendingEmployers.loadError":
+      "We could not load pending company registrations. That does not mean there are none — please try again.",
+    "admin.overview.pendingEmployers.open": "Open registration",
     "admin.overview.section.jobsApplications": "Jobs & applications",
     "admin.overview.section.assignments": "Assessment assignments",
     "admin.overview.section.workforce": "Workforce",
@@ -10755,6 +10827,29 @@ export const dictionaries = {
     "admin.employers.detail.section.employees": "Employees",
     "admin.employers.detail.section.assignments": "Assessment assignments",
     "admin.employers.detail.section.history": "Prior moderation decisions",
+    "admin.employers.detail.section.notices": "Registration notifications",
+    "admin.employers.detail.notice.intro":
+      "What was actually sent when the company registered — to the company, and to the administrator address.",
+    "admin.employers.detail.notice.none": "No sends have been recorded for this registration.",
+    "admin.employers.detail.notice.loadError":
+      "We could not load the delivery trail. An empty list is therefore not shown — we do not know whether anything was sent.",
+    "admin.employers.detail.notice.channel.applicant": "Confirmation to the company",
+    "admin.employers.detail.notice.channel.admin": "Notification to administrator",
+    "admin.employers.detail.notice.channel.unknown": "Unknown recipient",
+    "admin.employers.detail.notice.status.sent": "Sent (accepted by the email service)",
+    "admin.employers.detail.notice.status.failed": "Failed",
+    "admin.employers.detail.notice.status.notConfigured": "Not sent — a setting is missing",
+    "admin.employers.detail.notice.status.unknown": "Unknown status",
+    "admin.employers.detail.notice.notConfiguredWarning":
+      "Email notification is not configured. Registrations still appear here and in the queue. Missing settings:",
+    "admin.employers.detail.notice.resend": "Send the notifications again",
+    "admin.employers.detail.notice.resending": "Sending …",
+    "admin.employers.detail.notice.resendHelp":
+      "Sends only the notifications that have not already gone out. A notification that succeeded is never sent again. Creates no new registration and changes no status.",
+    "admin.employers.detail.notice.allSent":
+      "Both notifications have already been accepted by the email service, so the button sends nothing.",
+    "admin.employers.detail.notice.resendError":
+      "The send could not be repeated. The registration is unchanged.",
     "admin.employers.detail.field.country": "Country",
     "admin.employers.detail.field.registrationNumber": "Registration number",
     "admin.employers.detail.field.website": "Website",

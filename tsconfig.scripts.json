@@ -165,6 +165,13 @@
     "scripts/beskt-conduct-report-check.ts",
     "scripts/negative-controls/beskt-conduct-report-controls.ts",
     "scripts/negative-controls/beskt-interview-conduct-controls.ts",
+    // The company-registration chain guard and its planted controls, on the
+    // same terms as the guards above: new, no pre-existing type debt, and the
+    // guard CALLS the real renderers and the real transport with typed
+    // arguments. A fixture that silently stopped matching the params type
+    // would assert nothing about the message a company actually receives.
+    "scripts/employer-registration-notice-check.ts",
+    "scripts/negative-controls/employer-registration-notice-controls.ts",
     "scripts/negative-controls/runner.ts",
     "src/**/*.ts",
     "src/**/*.tsx"

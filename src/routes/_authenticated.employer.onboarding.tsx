@@ -13,6 +13,10 @@ import {
   listMyAccessRequests,
   type MyAccessRequest,
 } from "@/lib/job-intelligence/employer-onboarding.functions";
+import {
+  EMPLOYER_REGISTRATION_NOTICE_KEY,
+  type EmployerRegistrationNotice,
+} from "@/lib/job-intelligence/registration-notice-cache";
 
 // Type-safe lookup, not a template-literal cast -- avoids both `any` and a
 // misleading fixed-literal assertion for what is genuinely a 3-way status.
@@ -143,9 +147,19 @@ function OnboardingFlow() {
         {choice === "create" && (
           <CreateCompanyForm
             onBack={() => setChoice(null)}
-            onCreated={(slug) => {
+            onCreated={(notice) => {
               void queryClient.invalidateQueries({ queryKey: ["employer", "my-workspaces"] });
-              navigate({ to: "/employer/$employerSlug", params: { employerSlug: slug } });
+              // What the announcement actually managed to send, so the review
+              // page states it instead of implying an inbox.
+              queryClient.setQueryData(EMPLOYER_REGISTRATION_NOTICE_KEY, notice);
+              // NOT the workspace. The organisation this form just created is
+              // `pending`, and roughly thirty RLS policies require
+              // employer_is_active_status() -- so the dashboard would load and
+              // then refuse every action on it. /employer/pending is the page
+              // that says where the registration stands, and it is where the
+              // signup path already lands. Sending the two paths to different
+              // places is how one of them ends in a broken-looking product.
+              navigate({ to: "/employer/pending" });
             }}
           />
         )}
@@ -183,7 +197,10 @@ function ContactGuidancePanel() {
   );
 }
 
-function CreateCompanyForm(props: { onBack: () => void; onCreated: (slug: string) => void }) {
+function CreateCompanyForm(props: {
+  onBack: () => void;
+  onCreated: (notice: EmployerRegistrationNotice) => void;
+}) {
   const { t } = useT();
   const createCompany = useServerFn(createMyEmployerCompany);
   const [name, setName] = useState("");
@@ -217,12 +234,17 @@ function CreateCompanyForm(props: { onBack: () => void; onCreated: (slug: string
       });
       if (!result.ok) {
         setDuplicateNotice(true);
+        setBusy(false);
         return;
       }
-      props.onCreated(result.employerSlug);
+      // Deliberately leaves `busy` set. The registration is saved and the
+      // navigation below is in flight; re-enabling the button for those frames
+      // is how a second submit reaches the server -- where it would be refused
+      // as a duplicate, but only after showing this person a screen telling
+      // them their own company already exists.
+      props.onCreated(result.notice);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("employer.onboarding.create.genericError"));
-    } finally {
       setBusy(false);
     }
   }

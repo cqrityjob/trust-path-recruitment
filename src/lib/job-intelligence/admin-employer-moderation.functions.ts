@@ -540,3 +540,197 @@ export const adminModerateEmployer = createServerFn({ method: "POST" })
       action: row.action as string,
     };
   });
+
+// -------------------- REGISTRATION NOTICES --------------------
+//
+// An administrator has to be able to answer two questions that the employer
+// list alone cannot: was this company actually told we have their
+// registration, and was anybody told there was one to review.
+//
+// Both answers live in audit_logs, written by
+// employer-registration-notice.server.ts at the moment the organisation was
+// created. audit_logs grants `authenticated` nothing at all -- by design,
+// established in the original schema -- so it is read through the
+// service-role client, exactly as adminGetOverviewMetrics reads the same
+// table and for the same reason. Narrowly scoped: one employer's rows, one
+// action, read-only.
+//
+// This is the "traceable" half of the brief's rule that a failed send must
+// not be hidden behind a claim that mail was sent. The resend below is the
+// other half.
+
+export type AdminEmployerRegistrationNotice = {
+  id: string;
+  channel: "applicant" | "admin" | "unknown";
+  status: "sent" | "failed" | "not_configured" | "unknown";
+  /** A provider status such as "HTTP 422", or the names of absent settings.
+   *  Never a provider response body and never a recipient address. */
+  detail: string | null;
+  at: string;
+};
+
+export type AdminEmployerNoticeState = {
+  history: AdminEmployerRegistrationNotice[];
+  /** Names of the environment settings this flow needs and does not have.
+   *  Names only -- no value of any of them is ever returned. */
+  missingSettings: string[];
+};
+
+const CHANNELS = new Set(["applicant", "admin"]);
+const STATUSES = new Set(["sent", "failed", "not_configured"]);
+
+/** The trail and the configuration state, shared by the read below and by
+ *  the resend, so a resend returns exactly what a reload would. */
+async function readNoticeState(employerId: string): Promise<AdminEmployerNoticeState> {
+  const [{ EMPLOYER_REGISTRATION_NOTICE_ACTION }, { missingEmployerRegistrationEmailSettings }] =
+    await Promise.all([
+      import("@/lib/job-intelligence/employer-registration-notice.server"),
+      import("@/lib/email/send-employer-registration-email.server"),
+    ]);
+
+  const missingSettings = missingEmployerRegistrationEmailSettings();
+
+  let history: AdminEmployerRegistrationNotice[] = [];
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin
+      .from("audit_logs")
+      .select("id, metadata, at")
+      .eq("action", EMPLOYER_REGISTRATION_NOTICE_ACTION)
+      .eq("subject_id", employerId)
+      .order("at", { ascending: false })
+      .limit(50);
+    if (error) throw error;
+    // The generated row type for audit_logs.metadata is `Json`, which is not
+    // indexable. Narrowed here rather than cast at each read, so the three
+    // fields this panel shows are named once and every unexpected shape falls
+    // through to the "unknown" labels below instead of throwing.
+    const noticeRows = (rows ?? []) as unknown as {
+      id: string;
+      metadata: Record<string, unknown> | null;
+      at: string;
+    }[];
+    history = noticeRows.map((r) => {
+      const meta = r.metadata ?? {};
+      const channel = String(meta.channel ?? "");
+      const status = String(meta.status ?? "");
+      const missing = Array.isArray(meta.missing) ? meta.missing.join(", ") : null;
+      return {
+        id: r.id,
+        channel: (CHANNELS.has(channel)
+          ? channel
+          : "unknown") as AdminEmployerRegistrationNotice["channel"],
+        status: (STATUSES.has(status)
+          ? status
+          : "unknown") as AdminEmployerRegistrationNotice["status"],
+        detail: typeof meta.error === "string" ? meta.error : missing,
+        at: r.at,
+      };
+    });
+  } catch (err) {
+    // No service-role key, or a failed read. An empty history is NOT
+    // "nothing was sent", so the caller is told the difference by the
+    // throw rather than shown a confident empty list.
+    console.error("[admin-employer-moderation] notice history read failed", err);
+    throw new Error("LOAD_NOTICES_FAILED");
+  }
+
+  return { history, missingSettings };
+}
+
+export const adminGetEmployerRegistrationNotices = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => detailSchema.parse(d))
+  .handler(async ({ data, context }): Promise<AdminEmployerNoticeState> => {
+    await assertAdmin(context as Ctx);
+    return readNoticeState(data.employerId);
+  });
+
+// -------------------- RESEND --------------------
+//
+// The deliberate, administrator-initiated retry the brief asks for: a failed
+// send must be recoverable without re-registering the company.
+//
+// It is NOT a second automatic attempt, and it cannot become one. It creates
+// nothing, changes no status and touches no membership -- it re-reads the
+// employer and its owner and hands the same two messages to the provider
+// again, appending the outcome to the same audit trail. Pressing it twice
+// sends twice, which is what an administrator pressing it twice means; the
+// automatic path stays exactly-once because it is bound to the creation call
+// and to nothing else.
+
+export const adminResendEmployerRegistrationNotice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => detailSchema.parse(d))
+  .handler(async ({ data, context }): Promise<AdminEmployerNoticeState> => {
+    const ctx = context as Ctx;
+    await assertAdmin(ctx);
+
+    // employers_admin_all already grants a verified admin this row.
+    const { data: employer, error: empErr } = await ctx.supabase
+      .from("employers")
+      .select("id, name, country")
+      .eq("id", data.employerId)
+      .maybeSingle();
+    if (empErr) {
+      console.error("[admin-employer-moderation] resend: employer read failed", empErr);
+      throw new Error("LOAD_EMPLOYER_FAILED");
+    }
+    if (!employer) throw new Error("EMPLOYER_NOT_FOUND");
+
+    const { data: owner, error: ownerErr } = await ctx.supabase
+      .from("employer_memberships")
+      .select("user_id")
+      .eq("employer_id", data.employerId)
+      .eq("role", "owner")
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (ownerErr) {
+      console.error("[admin-employer-moderation] resend: owner read failed", ownerErr);
+      throw new Error("LOAD_EMPLOYER_FAILED");
+    }
+    if (!owner) throw new Error("EMPLOYER_HAS_NO_OWNER");
+
+    // The applicant's address and name: auth.users has no RLS-bypassable
+    // read path for any role, so this is the same narrow, justified
+    // service-role lookup this file already performs for the queue.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: ownerUser } = await supabaseAdmin.auth.admin.getUserById(owner.user_id as string);
+    const contactEmail = (ownerUser?.user?.email as string | undefined) ?? "";
+    if (!contactEmail) throw new Error("EMPLOYER_OWNER_HAS_NO_EMAIL");
+    const meta = (ownerUser?.user?.user_metadata ?? {}) as Record<string, unknown>;
+    const displayName = typeof meta.display_name === "string" ? meta.display_name.trim() : "";
+    const locale = typeof meta.locale === "string" ? meta.locale : "";
+
+    const { announceEmployerRegistration, NOTICE_CHANNELS } =
+      await import("@/lib/job-intelligence/employer-registration-notice.server");
+
+    // Which channels are still outstanding, read from the same trail this
+    // page renders -- so what the administrator sees and what the button does
+    // cannot disagree. A channel already marked `sent` is left alone.
+    const before = await readNoticeState(data.employerId);
+    const succeeded = new Set(
+      before.history.filter((n) => n.status === "sent").map((n) => n.channel),
+    );
+    const only = new Set(NOTICE_CHANNELS.filter((c) => !succeeded.has(c)));
+    if (only.size === 0) return before;
+
+    await announceEmployerRegistration(
+      {
+        employerId: employer.id as string,
+        companyName: employer.name as string,
+        companyCountry: (employer.country as string | null) ?? null,
+        contactUserId: owner.user_id as string,
+        contactEmail,
+        contactName: displayName || null,
+        language: locale === "en" ? "en" : "sv",
+      },
+      { only },
+    );
+
+    // Return the refreshed trail rather than just this attempt's outcome, so
+    // the page shows the same history a reload would.
+    return readNoticeState(data.employerId);
+  });

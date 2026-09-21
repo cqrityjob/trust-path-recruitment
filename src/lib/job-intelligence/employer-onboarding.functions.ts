@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { readEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
+// Type only — erased at build time. This file ships to the client bundle, so
+// the module itself is loaded with await import() inside the handlers, the
+// same way client.server.ts requires.
+import type { EmployerRegistrationNotice } from "@/lib/job-intelligence/employer-registration-notice.server";
 
 // -----------------------------------------------------------------------------
 // Phase H3.1 — Candidate / Employer Portal Foundation: self-service employer
@@ -39,6 +43,102 @@ function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+/**
+ * Announce a registration that has just been created, from either path.
+ *
+ * Reads the registrant from their OWN verified session rather than taking an
+ * address from the request: the confirmation goes to the person who
+ * registered, never to an address a form could nominate.
+ *
+ * Never throws — see the module it delegates to. A registration that is
+ * already saved must not be reported as failed because an email was not.
+ */
+async function announceRegistration(
+  ctx: Ctx,
+  employer: { id: string; name: string; country: string | null },
+  options?: { only?: ReadonlySet<"applicant" | "admin"> },
+): Promise<EmployerRegistrationNotice> {
+  try {
+    const { data: userData } = await ctx.supabase.auth.getUser();
+    const user = userData?.user;
+    const email = (user?.email as string | undefined) ?? "";
+    const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+    const displayName = typeof meta.display_name === "string" ? meta.display_name.trim() : "";
+    const locale = typeof meta.locale === "string" ? meta.locale : "";
+
+    if (!email) {
+      // An account with no address cannot be written to. Say so rather than
+      // reporting a send that could not have been attempted.
+      console.error("[employer-onboarding] no address on the registrant's account");
+      return {
+        applicant: { status: "failed", error: "NO_RECIPIENT_ADDRESS" },
+        admin: { status: "failed", error: "NO_RECIPIENT_ADDRESS" },
+      };
+    }
+
+    const { announceEmployerRegistration } =
+      await import("@/lib/job-intelligence/employer-registration-notice.server");
+    return await announceEmployerRegistration(
+      {
+        employerId: employer.id,
+        companyName: employer.name,
+        companyCountry: employer.country,
+        contactUserId: ctx.userId,
+        contactEmail: email,
+        contactName: displayName || null,
+        language: locale === "en" ? "en" : "sv",
+      },
+      options ?? {},
+    );
+  } catch (err) {
+    console.error("[employer-onboarding] announcement failed", err);
+    return {
+      applicant: { status: "failed", error: "UNEXPECTED_ERROR" },
+      admin: { status: "failed", error: "UNEXPECTED_ERROR" },
+    };
+  }
+}
+
+/**
+ * Re-attempt any announcement channel that has never succeeded.
+ *
+ * Silent and best-effort by design: it runs on an ordinary page load, it is
+ * not what the caller asked for, and a failure here must not turn a working
+ * visit into an error. Every decision about whether to send at all is made by
+ * `outstandingNoticeChannels` against the durable trail.
+ */
+async function catchUpOutstandingNotice(ctx: Ctx, employerId: string | undefined): Promise<void> {
+  if (!employerId) return;
+  try {
+    const { outstandingNoticeChannels } =
+      await import("@/lib/job-intelligence/employer-registration-notice.server");
+    const outstanding = await outstandingNoticeChannels(employerId);
+    if (outstanding.size === 0) return;
+
+    // The company's own name and country, read through the caller's own
+    // RLS-scoped client — they are a member of it, so no service role is
+    // needed and none is taken.
+    const { data: employer, error } = await ctx.supabase
+      .from("employers")
+      .select("id, name, country")
+      .eq("id", employerId)
+      .maybeSingle();
+    if (error || !employer) return;
+
+    await announceRegistration(
+      ctx,
+      {
+        id: employer.id as string,
+        name: employer.name as string,
+        country: (employer.country as string | null) ?? null,
+      },
+      { only: outstanding },
+    );
+  } catch (err) {
+    console.error("[employer-onboarding] notice catch-up failed", err);
+  }
 }
 
 async function writeAudit(params: {
@@ -112,7 +212,16 @@ const createCompanySchema = z.object({
 });
 
 export type CreateEmployerCompanyResult =
-  | { ok: true; employerId: string; employerSlug: string; membershipId: string }
+  | {
+      ok: true;
+      employerId: string;
+      employerSlug: string;
+      membershipId: string;
+      /** What actually happened to the two announcement emails. Carried back
+       *  so the page states it rather than assuming an inbox — see
+       *  employer-registration-notice.server.ts. */
+      notice: EmployerRegistrationNotice;
+    }
   | { ok: false; reason: "duplicate"; matchedEmployerId: string };
 
 export const createMyEmployerCompany = createServerFn({ method: "POST" })
@@ -155,11 +264,20 @@ export const createMyEmployerCompany = createServerFn({ method: "POST" })
     const row = (rows as any[] | null)?.[0];
     if (!row) throw new Error("Could not create the company. Please try again.");
 
+    // The registration is saved at this point and cannot be lost by anything
+    // below: the announcement returns its outcome as a value and never throws.
+    const notice = await announceRegistration(ctx, {
+      id: row.employer_id as string,
+      name: data.name.trim(),
+      country: data.country.trim(),
+    });
+
     return {
       ok: true,
       employerId: row.employer_id as string,
       employerSlug: row.employer_slug as string,
       membershipId: row.membership_id as string,
+      notice,
     };
   });
 
@@ -391,7 +509,14 @@ export const decideAccessRequest = createServerFn({ method: "POST" })
 // this is a shortcut through the form, never a shortcut through approval.
 
 export type EnsureEmployerCompanyResult =
-  | { created: true; employerId: string; employerSlug: string }
+  | {
+      created: true;
+      employerId: string;
+      employerSlug: string;
+      /** What actually happened to the two announcement emails, so the
+       *  review page can say it instead of implying an inbox. */
+      notice: EmployerRegistrationNotice;
+    }
   | { created: false; reason: "already_member" | "no_company_in_signup" | "duplicate" };
 
 export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST" })
@@ -402,11 +527,32 @@ export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST"
     // Already has a workspace: nothing to provision, and nothing to race.
     const { data: existing, error: existingError } = await ctx.supabase
       .from("employer_memberships")
-      .select("id")
+      .select("id, employer_id")
       .eq("user_id", ctx.userId)
       .limit(1);
     if (existingError) throw new Error("Could not check your existing access.");
-    if ((existing ?? []).length > 0) return { created: false, reason: "already_member" };
+    if ((existing ?? []).length > 0) {
+      // ── THE CATCH-UP, AND WHY IT IS HERE ───────────────────────────
+      //
+      // The announcement happens inside the same server request that creates
+      // the organisation, so closing the tab does not lose it. What that does
+      // not cover is the request not finishing at all — a redeploy between
+      // the commit and the send — or a send that failed because a setting was
+      // absent at the time and has been configured since.
+      //
+      // This is the cheapest reliable moment to notice: the registrant's own
+      // next visit. The gate above already means only somebody carrying an
+      // unspent organisation intent reaches this function, so it costs every
+      // other user nothing, and `outstandingNoticeChannels` answers from the
+      // durable trail rather than from anything this process remembers.
+      //
+      // It cannot produce a duplicate. A channel that has succeeded is never
+      // in the returned set, an unreadable trail returns an empty set, an
+      // organisation that is no longer `pending` returns an empty set, and a
+      // channel stops being retried after MAX_AUTOMATIC_ATTEMPTS.
+      await catchUpOutstandingNotice(ctx, (existing ?? [])[0]?.employer_id as string | undefined);
+      return { created: false, reason: "already_member" };
+    }
 
     const { data: userData, error: userError } = await ctx.supabase.auth.getUser();
     if (userError || !userData?.user) throw new Error("Could not read your account.");
@@ -445,5 +591,18 @@ export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST"
     const row = (rows as { employer_id: string; employer_slug: string }[] | null)?.[0];
     if (!row) throw new Error("Could not complete your company registration.");
 
-    return { created: true, employerId: row.employer_id, employerSlug: row.employer_slug };
+    // Exactly once per organisation, because reaching this line at all means
+    // this call is the one that created it — see the module's own note.
+    const notice = await announceRegistration(ctx, {
+      id: row.employer_id,
+      name,
+      country,
+    });
+
+    return {
+      created: true,
+      employerId: row.employer_id,
+      employerSlug: row.employer_slug,
+      notice,
+    };
   });
