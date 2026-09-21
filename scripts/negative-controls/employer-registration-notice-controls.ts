@@ -122,6 +122,73 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "SELF-TEST FAILED",
   },
+  // ── THE RELIABILITY HALF ────────────────────────────────────────────
+  //
+  // "The user closed the page" and "do not resend what already worked" are
+  // the two properties that are invisible until they are wrong in
+  // production, so both of them are planted here.
+  {
+    id: "ERN-NC-PROVISION-DEFERRED-TO-A-LATER-PAGE",
+    defect:
+      "the signup stops provisioning in the request the person is waiting on, so closing the tab immediately leaves an account with no application and nothing for an administrator to see",
+    file: "src/components/auth/UnifiedAuthPanel.tsx",
+    find: "              const provisioned = await ensureCompany();",
+    replace: "              const provisioned = { created: false } as never;",
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
+  {
+    id: "ERN-NC-NO-CATCH-UP",
+    defect:
+      "a registration whose request died between the commit and the send is never announced, and nobody ever finds out",
+    file: "src/lib/job-intelligence/employer-onboarding.functions.ts",
+    find: "      await catchUpOutstandingNotice(ctx, (existing ?? [])[0]?.employer_id as string | undefined);",
+    replace: "      // catch-up removed",
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
+  {
+    id: "ERN-NC-UNREADABLE-TRAIL-RESENDS",
+    defect:
+      "an unreadable delivery trail is treated as 'probably not sent', so every page load puts another copy in the company's inbox",
+    file: "src/lib/job-intelligence/employer-registration-notice.server.ts",
+    find: `    console.error("[employer-registration-notice] could not read the delivery trail", err);
+    return none;`,
+    replace: `    console.error("[employer-registration-notice] could not read the delivery trail", err);
+    return new Set(NOTICE_CHANNELS);`,
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
+  {
+    id: "ERN-NC-APPROVED-ORG-ANNOUNCED-AGAIN",
+    defect:
+      "an organisation that has already been decided is announced again, so 'we have received your registration' arrives after the approval",
+    file: "src/lib/job-intelligence/employer-registration-notice.server.ts",
+    find: '    if (!employer || employer.status !== "pending") return none;',
+    replace: "    if (!employer) return none;",
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
+  {
+    id: "ERN-NC-RESEND-REPEATS-A-SUCCESS",
+    defect:
+      "the administrator's resend sends both channels regardless, so fixing a failed admin notification puts a second confirmation in the company's inbox",
+    file: "src/lib/job-intelligence/admin-employer-moderation.functions.ts",
+    find: "    if (only.size === 0) return before;",
+    replace: "    // outstanding check removed",
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
+  {
+    id: "ERN-NC-SKIPPED-CHANNEL-REPORTED-AS-SENT",
+    defect:
+      "a channel that was deliberately skipped is reported as sent, so a catch-up that did nothing reads as a delivery",
+    file: "src/lib/job-intelligence/employer-registration-notice.server.ts",
+    find: '  const skipped: EmailChannelOutcome = { status: "already_sent" };',
+    replace: '  const skipped: EmailChannelOutcome = { status: "sent" };',
+    guard: GUARD,
+    expect: "SELF-TEST FAILED",
+  },
 ];
 
 await runControls("employer-registration-notice", MUTATIONS);

@@ -27,15 +27,17 @@ Nothing downstream could recover from that:
 | `employers` | no row |
 | `/admin/employers?status=pending` | empty, correctly — there was nothing in it |
 
-Evidence on the hosted project (`wrygicdfxwjnrugduxnt`): the most recent
-account created carries no `company_name` and holds no `employer_memberships`
-row, and no `employers` row has been created since the August UAT.
+Evidence on the hosted project (`wrygicdfxwjnrugduxnt`), read 2026-09-21: the
+most recent account created carries no `company_name` and holds no
+`employer_memberships` row, and the newest `employers` row dates from the
+August UAT.
 
 ### 2 · No registration email existed
 
 Not a failed send — no send. The repository had exactly three email call
-sites, all of them about assessments and application status. Nothing has ever
-written to a company that registered.
+sites, all of them about assessments and application status, and none of them
+on the registration path. There was no code anywhere that wrote to a company
+about its own registration.
 
 ### 3 · No administrator notification existed either
 
@@ -89,26 +91,88 @@ the recipient's address.
 A failed send can never fail or delete a saved registration: the announcement
 returns a value and never throws.
 
+## Reliability: what happens if the person closes the page
+
+The write and both sends happen **inside one server request**. There is no
+follow-up call from a browser to depend on, so closing the tab does not lose
+the notification.
+
+That is measured, not assumed. Against a local stack, the page was closed the
+instant the provisioning request left the browser:
+
+```
+provisioning request issued -> closing the page now
+closed: true
+-> employers row created, status pending, owner membership 1
+-> audit_logs: applicant -> not_configured, admin -> not_configured
+```
+
+The server finished the handler after the client was gone.
+
+Two things are still bound to the browser, and both are handled:
+
+- **The call has to be issued at all.** It used to be issued only by the
+  authenticated shell, one navigation after the form was submitted. It is now
+  also issued from the submit itself, while the person is still on the page
+  and the button is still spinning. The shell's call remains as the path for a
+  registration completed later, after an email verification link.
+- **The request may not finish** — a redeploy between the commit and the send,
+  a provider outage, a setting configured only afterwards. A bounded catch-up
+  re-attempts on the registrant's next visit, and only ever a channel that has
+  **never succeeded**, only while the organisation is still `pending`, and at
+  most five times.
+
+A successful notification is never sent twice — not by the catch-up, and not by
+the administrator's **Send again**, which sends only what is outstanding and
+sends nothing at all when both channels have already succeeded.
+
+There is deliberately **no scheduler**. A sweep that runs when nobody is
+present would need pg_cron or a new edge function, which is a new moving part
+for a case the catch-up already covers. Worth revisiting only if the trail
+shows it is needed.
+
 ## Configuration required (owner action)
 
-None of these are in the repository, and none of them can be. Set them in the
-deployment's environment.
+The sender runs in the **application server**, which Lovable hosts — not in a
+Supabase Edge Function. So these belong in the **Lovable project's environment
+variables / secrets**, the same place `SUPABASE_SERVICE_ROLE_KEY` and
+`SUPABASE_URL` are already set for this project (Lovable project
+`9ec625ef-34a1-4b4b-8cbb-712cae168579`). Setting them in Supabase's Edge
+Function secrets would have no effect on this path.
 
 | setting | what it is for | without it |
 | --- | --- | --- |
-| `RESEND_API_KEY` | the mail transport, already used by invitation and application-status mail | no product email is sent at all |
-| `RESEND_FROM_EMAIL` | the sender, on a domain with SPF/DKIM/DMARC passing | as above |
-| `ADMIN_NOTIFICATION_EMAIL` | where a new registration is announced | the administrator queue still shows every registration |
-| `PUBLIC_SITE_URL` | the origin used in links; falls back to `SITE_ORIGIN` | links point at the fallback origin |
+| `RESEND_API_KEY` | the transport. **Reuses the existing service** — Resend is already the provider for invitation and application-status mail, and this adds no package, no vendor and no new secret name | no product email is sent at all |
+| `RESEND_FROM_EMAIL` | the sender. Must be an address on a domain verified with the provider, with SPF, DKIM and DMARC passing, or the mail is rejected or filed as spam | as above |
+| `ADMIN_NOTIFICATION_EMAIL` | the one mailbox new registrations are announced to. A monitored address, not a personal one | the administrator queue still shows every registration |
+| `PUBLIC_SITE_URL` | the origin used to build both links | links point at the `SITE_ORIGIN` fallback |
 
-**As of 2026-09-21 none of the three mail settings is configured on the live
-deployment.** That is not an inference: `assessment_assignments` holds 29 rows
-and every one of them is `email_delivery_status = 'not_attempted'`, and all 22
-`job_application_status_events` rows have `notified_at IS NULL`. No product
-email has ever been sent from this deployment.
+The repository does not know and must not guess the sender or the
+administrator address, so neither appears here or anywhere in the code.
+
+### What the current delivery records do and do not show
+
+`assessment_assignments` rows all read `email_delivery_status =
+'not_attempted'` and `job_application_status_events` rows all have
+`notified_at IS NULL`. That means **no provider was configured at the moment
+each of those rows was written**. It is not evidence about today's
+configuration, and it says nothing about any other path.
+
+The deployed product answers the question directly and without guessing: after
+this change, `/admin/employers/<id>` names any missing setting under
+**Aviseringar om registreringen**.
 
 Auth mail — verification, password reset — is a separate path this repository
 does not control. See [../release/auth-email-branding.md](../release/auth-email-branding.md).
+
+## Reading the messages before anything is configured
+
+```bash
+PUBLIC_SITE_URL=https://<the-deployment-origin> bun run employer-registration-mail:preview
+```
+
+Renders the real messages to `artifacts/employer-registration-mail/` and prints
+every link in them. No key, no network, nothing sent.
 
 ## How to check it yourself
 
@@ -126,6 +190,29 @@ does not control. See [../release/auth-email-branding.md](../release/auth-email-
 6. Approve from the same page. The company's own tab moves off the review page
    by itself.
 
+## The real email test, once the settings exist
+
+Three different claims, and they must not be run together:
+
+| claim | how it is established |
+| --- | --- |
+| **simulated** | `employer-registration-mail:preview` — the message was rendered, nothing left the machine |
+| **accepted by the email service** | `/admin/employers/<id>` shows *Skickat (accepterat av e-posttjänsten)*. This is the strongest claim the product can make on its own |
+| **actually received** | somebody opens the inbox and reads it. Only a human can report this, and nothing in the product may assert it |
+
+The test itself, with a fictitious company and addresses you control:
+
+1. Register from **Registrera företag** with a test address you can read.
+2. On **Företagskonto granskas**, note which sentence the page shows about the
+   confirmation email.
+3. Open `/admin/employers/<id>` as an administrator and record the status of
+   both channels.
+4. Open both inboxes. Record receipt separately from acceptance, and check the
+   links: the company's goes to the status page, the administrator's opens the
+   registration and must ask an unauthenticated browser to sign in.
+5. Press **Skicka aviseringarna igen**. If both channels already succeeded it
+   must send nothing and say so.
+
 ## Automated coverage
 
 - `bun run employer-registration-notice:check` — the chain as a contract:
@@ -133,6 +220,7 @@ does not control. See [../release/auth-email-branding.md](../release/auth-email-
   claims a send it did not make.
 - `bun run negative-controls:employer-registration-notice` — eight planted
   defects, each of which must break that guard.
+- `bun run employer-registration-mail:preview` — the exact messages and links.
 - `e2e/employer-registration.spec.ts` — the routed walk against a local stack,
   including the boundary checks through real PostgREST. Opt-in:
 

@@ -58,6 +58,7 @@ function slugify(input: string): string {
 async function announceRegistration(
   ctx: Ctx,
   employer: { id: string; name: string; country: string | null },
+  options?: { only?: ReadonlySet<"applicant" | "admin"> },
 ): Promise<EmployerRegistrationNotice> {
   try {
     const { data: userData } = await ctx.supabase.auth.getUser();
@@ -79,21 +80,64 @@ async function announceRegistration(
 
     const { announceEmployerRegistration } =
       await import("@/lib/job-intelligence/employer-registration-notice.server");
-    return await announceEmployerRegistration({
-      employerId: employer.id,
-      companyName: employer.name,
-      companyCountry: employer.country,
-      contactUserId: ctx.userId,
-      contactEmail: email,
-      contactName: displayName || null,
-      language: locale === "en" ? "en" : "sv",
-    });
+    return await announceEmployerRegistration(
+      {
+        employerId: employer.id,
+        companyName: employer.name,
+        companyCountry: employer.country,
+        contactUserId: ctx.userId,
+        contactEmail: email,
+        contactName: displayName || null,
+        language: locale === "en" ? "en" : "sv",
+      },
+      options ?? {},
+    );
   } catch (err) {
     console.error("[employer-onboarding] announcement failed", err);
     return {
       applicant: { status: "failed", error: "UNEXPECTED_ERROR" },
       admin: { status: "failed", error: "UNEXPECTED_ERROR" },
     };
+  }
+}
+
+/**
+ * Re-attempt any announcement channel that has never succeeded.
+ *
+ * Silent and best-effort by design: it runs on an ordinary page load, it is
+ * not what the caller asked for, and a failure here must not turn a working
+ * visit into an error. Every decision about whether to send at all is made by
+ * `outstandingNoticeChannels` against the durable trail.
+ */
+async function catchUpOutstandingNotice(ctx: Ctx, employerId: string | undefined): Promise<void> {
+  if (!employerId) return;
+  try {
+    const { outstandingNoticeChannels } =
+      await import("@/lib/job-intelligence/employer-registration-notice.server");
+    const outstanding = await outstandingNoticeChannels(employerId);
+    if (outstanding.size === 0) return;
+
+    // The company's own name and country, read through the caller's own
+    // RLS-scoped client — they are a member of it, so no service role is
+    // needed and none is taken.
+    const { data: employer, error } = await ctx.supabase
+      .from("employers")
+      .select("id, name, country")
+      .eq("id", employerId)
+      .maybeSingle();
+    if (error || !employer) return;
+
+    await announceRegistration(
+      ctx,
+      {
+        id: employer.id as string,
+        name: employer.name as string,
+        country: (employer.country as string | null) ?? null,
+      },
+      { only: outstanding },
+    );
+  } catch (err) {
+    console.error("[employer-onboarding] notice catch-up failed", err);
   }
 }
 
@@ -483,11 +527,32 @@ export const ensureMyEmployerCompanyFromSignup = createServerFn({ method: "POST"
     // Already has a workspace: nothing to provision, and nothing to race.
     const { data: existing, error: existingError } = await ctx.supabase
       .from("employer_memberships")
-      .select("id")
+      .select("id, employer_id")
       .eq("user_id", ctx.userId)
       .limit(1);
     if (existingError) throw new Error("Could not check your existing access.");
-    if ((existing ?? []).length > 0) return { created: false, reason: "already_member" };
+    if ((existing ?? []).length > 0) {
+      // ── THE CATCH-UP, AND WHY IT IS HERE ───────────────────────────
+      //
+      // The announcement happens inside the same server request that creates
+      // the organisation, so closing the tab does not lose it. What that does
+      // not cover is the request not finishing at all — a redeploy between
+      // the commit and the send — or a send that failed because a setting was
+      // absent at the time and has been configured since.
+      //
+      // This is the cheapest reliable moment to notice: the registrant's own
+      // next visit. The gate above already means only somebody carrying an
+      // unspent organisation intent reaches this function, so it costs every
+      // other user nothing, and `outstandingNoticeChannels` answers from the
+      // durable trail rather than from anything this process remembers.
+      //
+      // It cannot produce a duplicate. A channel that has succeeded is never
+      // in the returned set, an unreadable trail returns an empty set, an
+      // organisation that is no longer `pending` returns an empty set, and a
+      // channel stops being retried after MAX_AUTOMATIC_ATTEMPTS.
+      await catchUpOutstandingNotice(ctx, (existing ?? [])[0]?.employer_id as string | undefined);
+      return { created: false, reason: "already_member" };
+    }
 
     const { data: userData, error: userError } = await ctx.supabase.auth.getUser();
     if (userError || !userData?.user) throw new Error("Could not read your account.");

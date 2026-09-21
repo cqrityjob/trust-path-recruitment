@@ -2875,7 +2875,9 @@ export const dictionaries = {
     "admin.employers.detail.notice.resend": "Skicka aviseringarna igen",
     "admin.employers.detail.notice.resending": "Skickar …",
     "admin.employers.detail.notice.resendHelp":
-      "Skickar om bekräftelsen till företaget och aviseringen till administratören. Skapar ingen ny ansökan och ändrar ingen status.",
+      "Skickar bara de aviseringar som inte redan har gått iväg. En avisering som lyckats skickas aldrig om. Skapar ingen ny ansökan och ändrar ingen status.",
+    "admin.employers.detail.notice.allSent":
+      "Båda aviseringarna har redan accepterats av e-posttjänsten. Knappen skickar därför ingenting.",
     "admin.employers.detail.notice.resendError":
       "Utskicket kunde inte göras om. Ansökan är oförändrad.",
     "admin.employers.detail.field.country": "Land",
@@ -10843,7 +10845,9 @@ export const dictionaries = {
     "admin.employers.detail.notice.resend": "Send the notifications again",
     "admin.employers.detail.notice.resending": "Sending …",
     "admin.employers.detail.notice.resendHelp":
-      "Re-sends the confirmation to the company and the notification to the administrator. Creates no new registration and changes no status.",
+      "Sends only the notifications that have not already gone out. A notification that succeeded is never sent again. Creates no new registration and changes no status.",
+    "admin.employers.detail.notice.allSent":
+      "Both notifications have already been accepted by the email service, so the button sends nothing.",
     "admin.employers.detail.notice.resendError":
       "The send could not be repeated. The registration is unchanged.",
     "admin.employers.detail.field.country": "Country",

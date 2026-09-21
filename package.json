@@ -4,6 +4,7 @@
     "dev": "vite dev",
     "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts",
     "employer-registration-notice:check": "bun run scripts/employer-registration-notice-check.ts",
+    "employer-registration-mail:preview": "bun run scripts/employer-registration-mail-preview.ts",
     "negative-controls:employer-registration-notice": "bun run scripts/negative-controls/employer-registration-notice-controls.ts",
     "public-assessment-auth:check": "bun run scripts/public-assessment-auth-check.ts",
     "build": "vite build",

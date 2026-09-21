@@ -704,17 +704,31 @@ export const adminResendEmployerRegistrationNotice = createServerFn({ method: "P
     const displayName = typeof meta.display_name === "string" ? meta.display_name.trim() : "";
     const locale = typeof meta.locale === "string" ? meta.locale : "";
 
-    const { announceEmployerRegistration } =
+    const { announceEmployerRegistration, NOTICE_CHANNELS } =
       await import("@/lib/job-intelligence/employer-registration-notice.server");
-    await announceEmployerRegistration({
-      employerId: employer.id as string,
-      companyName: employer.name as string,
-      companyCountry: (employer.country as string | null) ?? null,
-      contactUserId: owner.user_id as string,
-      contactEmail,
-      contactName: displayName || null,
-      language: locale === "en" ? "en" : "sv",
-    });
+
+    // Which channels are still outstanding, read from the same trail this
+    // page renders -- so what the administrator sees and what the button does
+    // cannot disagree. A channel already marked `sent` is left alone.
+    const before = await readNoticeState(data.employerId);
+    const succeeded = new Set(
+      before.history.filter((n) => n.status === "sent").map((n) => n.channel),
+    );
+    const only = new Set(NOTICE_CHANNELS.filter((c) => !succeeded.has(c)));
+    if (only.size === 0) return before;
+
+    await announceEmployerRegistration(
+      {
+        employerId: employer.id as string,
+        companyName: employer.name as string,
+        companyCountry: (employer.country as string | null) ?? null,
+        contactUserId: owner.user_id as string,
+        contactEmail,
+        contactName: displayName || null,
+        language: locale === "en" ? "en" : "sv",
+      },
+      { only },
+    );
 
     // Return the refreshed trail rather than just this attempt's outcome, so
     // the page shows the same history a reload would.

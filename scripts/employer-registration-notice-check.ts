@@ -32,6 +32,7 @@
 
 import { readFileSync } from "node:fs";
 import { registrationTargetsOrganisation } from "../src/lib/auth/organisation-entrance";
+import { announceEmployerRegistration } from "../src/lib/job-intelligence/employer-registration-notice.server";
 import {
   ADMIN_RECIPIENT_ENV_KEY,
   RESEND_ENV_KEYS,
@@ -515,6 +516,180 @@ console.log("\n5. Both creation paths announce, and neither can lose the registr
 }
 
 // -----------------------------------------------------------------------------
+console.log("\n5b. The announcement survives the tab closing, and never repeats itself");
+// -----------------------------------------------------------------------------
+{
+  const fns = read("src/lib/job-intelligence/employer-onboarding.functions.ts");
+  const notice = read("src/lib/job-intelligence/employer-registration-notice.server.ts");
+  const panel = read("src/components/auth/UnifiedAuthPanel.tsx");
+  const admin = read("src/lib/job-intelligence/admin-employer-moderation.functions.ts");
+
+  // ── THE WRITE AND THE SEND ARE ONE REQUEST ──────────────────────────
+  //
+  // This is what makes "the user closed the page" harmless: there is no
+  // second call from a browser to depend on. Asserted structurally, because
+  // the day somebody moves the send to a follow-up call the symptom is
+  // silence, not an error.
+  const createBlock = fns.slice(
+    fns.indexOf("export const createMyEmployerCompany"),
+    fns.indexOf("// -------- requestAccessToEmployer --------"),
+  );
+  const ensureBlock = fns.slice(fns.indexOf("export const ensureMyEmployerCompanyFromSignup"));
+  for (const [name, block] of [
+    ["createMyEmployerCompany", createBlock],
+    ["ensureMyEmployerCompanyFromSignup", ensureBlock],
+  ] as const) {
+    ck(
+      `${name} sends inside the same request that writes`,
+      block.indexOf("create_my_employer_company") < block.indexOf("announceRegistration(ctx"),
+      "a send issued by a later browser call is lost when the tab closes",
+    );
+  }
+
+  // ── AND THE SUBMIT ITSELF PROVISIONS ────────────────────────────────
+  ck(
+    "a signup that returns a session provisions before navigating",
+    /if \(forOrganisation\) \{[\s\S]{0,400}await ensureCompany\(\)/.test(panel),
+    "the organisation would be created only by a page that has not mounted yet",
+  );
+  ck(
+    "and a failure there does not block the account",
+    /catch \(err\) \{[\s\S]{0,200}could not provision the organisation at signup[\s\S]{0,200}\}\s*\}\s*goToDestination\(\);/.test(
+      panel,
+    ),
+    "a created account must not be stranded by a provisioning problem",
+  );
+
+  // ── THE CATCH-UP, AND ITS BOUNDS ────────────────────────────────────
+  // The `already_member` branch, read as a block: the catch-up has to be
+  // INSIDE it, not merely somewhere in the file.
+  const alreadyMemberBranch = (() => {
+    const at = fns.indexOf("if ((existing ?? []).length > 0) {");
+    return at >= 0 ? fns.slice(at, fns.indexOf('reason: "already_member" };', at)) : "";
+  })();
+  ck(
+    "an outstanding notice is retried on the registrant's next visit",
+    /await catchUpOutstandingNotice\(ctx,/.test(alreadyMemberBranch),
+    "a registration whose request died between the commit and the send stays silent forever",
+  );
+  ck(
+    "the catch-up only ever sends what the trail says is outstanding",
+    /outstandingNoticeChannels\(employerId\)[\s\S]{0,200}if \(outstanding\.size === 0\) return;/.test(
+      fns,
+    ) && /\{ only: outstanding \}/.test(fns),
+  );
+  ck(
+    "it is silent and cannot break the visit it runs on",
+    /async function catchUpOutstandingNotice\([\s\S]*?try \{[\s\S]*?\} catch \(err\) \{[\s\S]{0,160}\}\s*\}/.test(
+      fns,
+    ),
+  );
+
+  const outstandingBody = notice.slice(
+    notice.indexOf("export async function outstandingNoticeChannels"),
+    notice.indexOf("export async function announceEmployerRegistration"),
+  );
+  ck(
+    "a channel that succeeded is never outstanding",
+    /if \(meta\.status === "sent"\) succeeded\.add\(channel\);/.test(outstandingBody) &&
+      /!succeeded\.has\(c\)/.test(outstandingBody),
+    "this is the only thing standing between a catch-up and a duplicate inbox",
+  );
+  ck(
+    "an unreadable trail sends NOTHING",
+    /catch \(err\) \{[\s\S]{0,240}return none;/.test(outstandingBody),
+    "'we cannot tell' must never be resolved as 'probably not sent'",
+  );
+  ck(
+    "an organisation that is no longer pending is never announced again",
+    /employer\.status !== "pending"\) return none;/.test(outstandingBody),
+    "'we have received your registration' arriving after a decision is worse than never",
+  );
+  ck(
+    "a permanently failing address stops being retried automatically",
+    /attempts\.get\(c\) \?\? 0\) < MAX_AUTOMATIC_ATTEMPTS/.test(outstandingBody),
+  );
+
+  // ── THE ADMIN RESEND DOES NOT REPEAT A SUCCESS ──────────────────────
+  const resendBlock = admin.slice(
+    admin.indexOf("export const adminResendEmployerRegistrationNotice"),
+  );
+  ck(
+    "the resend computes what is outstanding from the same trail the page shows",
+    /const before = await readNoticeState\(data\.employerId\);/.test(resendBlock) &&
+      /n\.status === "sent"/.test(resendBlock),
+  );
+  ck(
+    "and sends nothing at all when both channels already succeeded",
+    /if \(only\.size === 0\) return before;/.test(resendBlock),
+    "pressing Resend must not put a second copy in the company's inbox",
+  );
+
+  // ── AND A SKIPPED CHANNEL IS ITS OWN OUTCOME ────────────────────────
+  {
+    const saved = {
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+    };
+    delete process.env.RESEND_API_KEY;
+    delete process.env.RESEND_FROM_EMAIL;
+    // The trap records WHERE a call went. announceEmployerRegistration also
+    // writes the audit trail, which is a Supabase call and entirely legitimate
+    // -- an earlier version of this assertion counted that as a provider call
+    // and failed on correct code. What must not happen is a call to the mail
+    // provider with no key configured.
+    const realFetch = globalThis.fetch;
+    const calledUrls: string[] = [];
+    globalThis.fetch = (async (input: unknown) => {
+      calledUrls.push(String((input as { url?: string })?.url ?? input));
+      throw new Error("the guard's fetch trap was called");
+    }) as unknown as typeof fetch;
+    try {
+      const result = await announceEmployerRegistration(
+        {
+          employerId: "33333333-3333-3333-3333-333333333333",
+          companyName: "Testbolaget AB",
+          companyCountry: "SE",
+          contactUserId: "44444444-4444-4444-4444-444444444444",
+          contactEmail: "kontakt@example.test",
+          contactName: null,
+          language: "sv",
+        },
+        { only: new Set(["admin"] as const) },
+      );
+      ck(
+        "a channel excluded by `only` reports already_sent, never sent or failed",
+        result.applicant.status === "already_sent",
+        `got ${result.applicant.status}`,
+      );
+      ck(
+        "the included channel is still attempted",
+        result.admin.status === "not_configured",
+        `got ${result.admin.status}`,
+      );
+      ck(
+        "and no provider call was made with no key configured",
+        !calledUrls.some((u) => u.includes("api.resend.com")),
+        calledUrls.join(", "),
+      );
+    } finally {
+      globalThis.fetch = realFetch;
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  }
+  ck(
+    "a channel that was not attempted writes no attempt into the trail",
+    /applicant\.status === "already_sent"\s*\?\s*Promise\.resolve\(\)/.test(
+      notice.replace(/\s+/g, " ").replace(/ \? /g, " ? "),
+    ) || /already_sent"\s*\n?\s*\?\s*Promise\.resolve\(\)/.test(notice),
+    "recording an attempt that never happened would corrupt the retry bound",
+  );
+}
+
+// -----------------------------------------------------------------------------
 console.log("\n6. Nothing claims a send it did not make");
 // -----------------------------------------------------------------------------
 {
@@ -648,19 +823,40 @@ console.log("\n8. A company still cannot approve itself");
     "a registration that created an active organisation would be a self-approval",
   );
 
-  const changed = [
+  // Every file this work added or extended, checked for a WRITE to the
+  // employers table or a second call into the moderation RPC. Reads are
+  // fine and there are several -- `outstandingNoticeChannels` has to know
+  // whether the organisation is still pending. What must not exist is an
+  // `.update(` / `.upsert(` / `.delete(` on `employers`, or a
+  // `moderate_employer` call outside the administrator's own surface.
+  const touched = [
     "src/lib/email/send-employer-registration-email.server.ts",
     "src/lib/job-intelligence/employer-registration-notice.server.ts",
     "src/lib/job-intelligence/registration-notice-cache.ts",
     "src/lib/auth/organisation-entrance.ts",
+    "src/lib/job-intelligence/employer-onboarding.functions.ts",
+    "src/components/auth/UnifiedAuthPanel.tsx",
+    "src/routes/_authenticated.employer.pending.tsx",
+    "src/routes/_authenticated.employer.onboarding.tsx",
+    "src/routes/_authenticated.admin.index.tsx",
   ];
-  ck(
-    "nothing this work added writes employers.status",
-    changed.every(
-      (f) => !/employers[\s\S]{0,80}status/.test(read(f)) || !/update|insert/i.test(read(f)),
-    ),
-    "status transitions belong to moderate_employer and nowhere else",
-  );
+  for (const file of touched) {
+    const body = read(file);
+    const writesEmployers =
+      /from\("employers"\)[\s\S]{0,200}\.(update|upsert|delete|insert)\(/.test(body);
+    ck(
+      `${file.split("/").pop()} never writes employers`,
+      !writesEmployers,
+      "status transitions belong to moderate_employer and nowhere else",
+    );
+    // A CALL, not a mention: two of these files name the RPC in a comment
+    // precisely to say that approval is not theirs to perform.
+    ck(
+      `${file.split("/").pop()} never calls moderate_employer`,
+      !/rpc\(\s*["'`]moderate_employer/.test(body),
+      "a second approval path is a self-approval waiting to happen",
+    );
+  }
 
   const onboarding = read("src/routes/_authenticated.employer.onboarding.tsx");
   ck(

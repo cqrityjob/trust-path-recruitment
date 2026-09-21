@@ -63,7 +63,12 @@
 export type EmailChannelOutcome =
   | { readonly status: "sent" }
   | { readonly status: "not_configured"; readonly missing: readonly string[] }
-  | { readonly status: "failed"; readonly error: string };
+  | { readonly status: "failed"; readonly error: string }
+  /** Deliberately not attempted, because this channel has already succeeded.
+   *  Its own outcome rather than a `sent` or a `failed`, so a catch-up that
+   *  correctly did nothing can never be read as either a second delivery or
+   *  a problem. Only a caller that has READ the trail may produce it. */
+  | { readonly status: "already_sent" };
 
 export type EmployerRegistrationEmailParams = {
   readonly recipientEmail: string;

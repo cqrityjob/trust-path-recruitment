@@ -734,6 +734,14 @@ function RegistrationNoticePanel({ employerId }: { employerId: string }) {
     onError: (err) => setResendError(err instanceof Error ? err.message : "RESEND_FAILED"),
   });
 
+  // Both channels accepted by the provider: there is nothing outstanding, so
+  // pressing Resend would be a second copy of a message that arrived.
+  const allSent =
+    q.isSuccess &&
+    ["applicant", "admin"].every((c) =>
+      q.data.history.some((n) => n.channel === c && n.status === "sent"),
+    );
+
   const CHANNEL_KEY: Record<string, TranslationKey> = {
     applicant: "admin.employers.detail.notice.channel.applicant",
     admin: "admin.employers.detail.notice.channel.admin",
@@ -797,12 +805,21 @@ function RegistrationNoticePanel({ employerId }: { employerId: string }) {
         </ul>
       )}
 
+      {/* When nothing is outstanding the button is still offered, and still
+          honest about what pressing it will do. Hiding it would leave an
+          administrator wondering whether a resend is possible at all. */}
+      {q.isSuccess && allSent && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          {t("admin.employers.detail.notice.allSent")}
+        </p>
+      )}
+
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Button
           type="button"
           variant="outline"
           size="sm"
-          disabled={resendMutation.isPending}
+          disabled={resendMutation.isPending || allSent}
           onClick={() => resendMutation.mutate()}
         >
           {resendMutation.isPending

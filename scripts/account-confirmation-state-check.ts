@@ -72,9 +72,31 @@ check(
   !/setInfo\(\s*\n?\s*t\(forOrganisation \? "auth\.signup\.check_email_employer"/.test(form),
   "ACS-STATE: and no longer merely sets a notice line beside a live form",
 );
+// The session branch, read as a block rather than as "goToDestination is the
+// very next token".
+//
+// It stopped being the next token when organisation provisioning moved into
+// the submit: a registration that names a company now creates it in the
+// request the person is already waiting on, instead of leaving it to a page
+// that has not mounted yet. That is a deliberate improvement and this
+// assertion has to survive it -- but WITHOUT going soft on the thing it
+// actually protects, which is that a sign-up returning a session must not be
+// sent to the inbox panel for a message nobody sent.
+//
+// So both halves are asserted, and the second is stricter than the pattern it
+// replaces: the branch reaches the destination, and it never sets the
+// confirmation state.
+const sessionBranch = (() => {
+  const at = form.indexOf("if (data.session) {");
+  return at === -1 ? "" : form.slice(at, form.indexOf("return;", at));
+})();
 check(
-  /if \(data\.session\) \{\s*goToDestination\(\);/.test(form),
-  "ACS-STATE: a sign-up that DOES return a session still goes straight to the destination -- there is no email to read in that case",
+  sessionBranch.includes("goToDestination();"),
+  "ACS-STATE: a sign-up that DOES return a session still reaches the destination -- there is no email to read in that case",
+);
+check(
+  sessionBranch.length > 0 && !sessionBranch.includes("setAwaitingConfirmation"),
+  "ACS-STATE: and is never handed to the inbox panel, which would be a message nobody sent",
 );
 
 /* ---------------------------------------------------------------- */
@@ -107,10 +129,7 @@ check(
   /auth\.confirm\.destinationKept/.test(form),
   "ACS-SHOWS: and says in words that the destination survived -- a claimed Career Discovery result is the reason this matters",
 );
-check(
-  /auth\.confirm\.notArrived/.test(form),
-  "ACS-SHOWS: and what to do when nothing arrives",
-);
+check(/auth\.confirm\.notArrived/.test(form), "ACS-SHOWS: and what to do when nothing arrives");
 
 /* ---------------------------------------------------------------- */
 console.log("\n4 · send again, and change email");
