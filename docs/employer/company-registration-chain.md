@@ -109,6 +109,27 @@ closed: true
 
 The server finished the handler after the client was gone.
 
+### Which branch the live project actually takes
+
+`/auth/v1/settings` on `wrygicdfxwjnrugduxnt` reports `mailer_autoconfirm:
+false`, so **production requires email confirmation**. A company registering
+live therefore takes the longer branch:
+
+1. the form submits, no session is returned, and the inbox panel replaces it;
+2. they open the verification link, which returns to
+   `/login?redirect=/employer`;
+3. the first authenticated render creates the organisation and sends both
+   messages.
+
+The company name and country survive step 2 because they live in auth user
+metadata, written at sign-up. Verified locally: an unconfirmed account keeps
+`company_name`, holds no membership, and the first sign-in after confirmation
+produces the `pending` organisation and the owner membership by itself.
+
+The submit-time provisioning below therefore only fires where a session is
+returned immediately (a project without confirmation, and the local stack). It
+is the belt to the verification branch's braces, not a replacement for it.
+
 Two things are still bound to the browser, and both are handled:
 
 - **The call has to be issued at all.** It used to be issued only by the
