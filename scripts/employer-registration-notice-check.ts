@@ -208,6 +208,69 @@ console.log("\n2. The transport is inert without configuration, and says so");
     }
   }
 
+  // ── A PROVIDER THAT REFUSES ─────────────────────────────────────────
+  //
+  // The rule is that a failed send may not be hidden behind a claim that mail
+  // was sent. `not_configured` proves the no-key branch; this proves the
+  // branch that matters more, because it is the one that happens once a key
+  // IS configured and something goes wrong with an address.
+  //
+  // Hermetic: the provider is a stub, so this asserts the real code path
+  // without a network call and without a Resend account.
+  {
+    const saved = {
+      RESEND_API_KEY: process.env.RESEND_API_KEY,
+      RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+    };
+    process.env.RESEND_API_KEY = "re_guard_stub_key";
+    process.env.RESEND_FROM_EMAIL = "no-reply@example.test";
+    const realFetch = globalThis.fetch;
+    let sentBody: string | null = null;
+    globalThis.fetch = (async (_url: unknown, init: { body?: string } = {}) => {
+      sentBody = init.body ?? null;
+      return {
+        ok: false,
+        status: 422,
+        text: async () => "recipient kontakt@example.test is suppressed",
+      } as unknown as Response;
+    }) as unknown as typeof fetch;
+
+    try {
+      const refused = await sendEmployerRegistrationReceivedEmail({
+        recipientEmail: "kontakt@example.test",
+        language: "sv",
+        companyName: "Testbolaget AB",
+        contactName: null,
+        siteOrigin: "https://cqrityjob.test",
+      });
+      ck(
+        "a provider refusal is reported as failed, not as sent",
+        refused.status === "failed",
+        `got ${refused.status}`,
+      );
+      ck(
+        "and carries the provider status so it is traceable",
+        refused.status === "failed" && refused.error === "HTTP 422",
+        refused.status === "failed" ? refused.error : "",
+      );
+      ck(
+        "and carries no part of the provider's response body",
+        refused.status !== "failed" || !/suppressed|kontakt@/.test(refused.error),
+        "a provider body can carry the recipient address and this value is persisted and shown",
+      );
+      ck(
+        "the api key is never placed in the message body",
+        sentBody !== null && !String(sentBody).includes("re_guard_stub_key"),
+      );
+    } finally {
+      globalThis.fetch = realFetch;
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  }
+
   const sender = read("src/lib/email/send-employer-registration-email.server.ts");
   ck(
     "the api key is read from the environment, never module-scope-captured",
@@ -619,4 +682,4 @@ if (fails.length > 0) {
   for (const f of fails) console.error(`  - ${f}`);
   process.exit(1);
 }
-console.log("\nemployer-registration:check — all assertions hold\n");
+console.log("\nemployer-registration-notice:check — all assertions hold\n");

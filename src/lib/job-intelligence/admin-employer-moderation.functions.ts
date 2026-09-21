@@ -601,13 +601,22 @@ async function readNoticeState(employerId: string): Promise<AdminEmployerNoticeS
       .order("at", { ascending: false })
       .limit(50);
     if (error) throw error;
-    history = (rows ?? []).map((r: any) => {
-      const meta = (r.metadata ?? {}) as Record<string, unknown>;
+    // The generated row type for audit_logs.metadata is `Json`, which is not
+    // indexable. Narrowed here rather than cast at each read, so the three
+    // fields this panel shows are named once and every unexpected shape falls
+    // through to the "unknown" labels below instead of throwing.
+    const noticeRows = (rows ?? []) as unknown as {
+      id: string;
+      metadata: Record<string, unknown> | null;
+      at: string;
+    }[];
+    history = noticeRows.map((r) => {
+      const meta = r.metadata ?? {};
       const channel = String(meta.channel ?? "");
       const status = String(meta.status ?? "");
       const missing = Array.isArray(meta.missing) ? meta.missing.join(", ") : null;
       return {
-        id: r.id as string,
+        id: r.id,
         channel: (CHANNELS.has(channel)
           ? channel
           : "unknown") as AdminEmployerRegistrationNotice["channel"],
@@ -615,7 +624,7 @@ async function readNoticeState(employerId: string): Promise<AdminEmployerNoticeS
           ? status
           : "unknown") as AdminEmployerRegistrationNotice["status"],
         detail: typeof meta.error === "string" ? meta.error : missing,
-        at: r.at as string,
+        at: r.at,
       };
     });
   } catch (err) {
