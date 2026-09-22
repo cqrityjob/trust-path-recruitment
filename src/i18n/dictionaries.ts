@@ -2028,6 +2028,41 @@ export const dictionaries = {
     "employer.jobHub.facts.heading": "Om annonsen",
     "employer.jobHub.fact.location": "Plats",
     "employer.jobHub.fact.published": "Publicerad",
+    // ── The pipeline ────────────────────────────────────────────────
+    // Fem tal om EN annons. Varje tal är en räkning av rader som redan finns
+    // och landar på exakt de raderna. Inget av dem säger något om personerna.
+    "employer.applications.filter.assessmentOpen":
+      "Visar bara ansökningar där en bedömning pågår eller väntar på utfall.",
+    "employer.applications.filter.assessmentUnavailable":
+      "Bedömningsstatus kunde inte hämtas, så listan kan vara ofullständig.",
+    "employer.applications.filter.clearAssessment": "Ta bort bedömningsfiltret",
+    "employer.jobHub.pipeline.heading": "Rekryteringsflödet för den här annonsen",
+    "employer.jobHub.pipeline.lede":
+      "Var ansökningarna till den här tjänsten befinner sig just nu. Varje tal öppnar exakt de ansökningar det räknar. Ett streck betyder att siffran inte kunde hämtas — aldrig att den är noll.",
+    "employer.jobHub.pipeline.total": "Ansökningar totalt",
+    "employer.jobHub.pipeline.awaitingReview": "Väntar på första granskning",
+    // Räknar om en bedömning PÅGÅR, aldrig vad den visade.
+    "employer.jobHub.pipeline.assessmentOpen": "Bedömning pågår eller väntar på utfall",
+    "employer.jobHub.pipeline.interview": "I intervju",
+    "employer.jobHub.pipeline.hired": "Anställda",
+    "employer.jobHub.next.heading": "Nästa steg för annonsen",
+    "employer.jobHub.next.open": "Öppna dem",
+    "employer.jobHub.next.unavailable":
+      "Ansökningarna kunde inte hämtas, så inget nästa steg föreslås. Försök igen.",
+    "employer.jobHub.next.reviewNewApplications.one": "ny ansökan att granska.",
+    "employer.jobHub.next.reviewNewApplications.other": "nya ansökningar att granska.",
+    "employer.jobHub.next.prepareInterviews.one": "kandidat i intervjusteget.",
+    "employer.jobHub.next.prepareInterviews.other": "kandidater i intervjusteget.",
+    "employer.jobHub.next.awaitAssessments.one": "kandidat med en bedömning som pågår.",
+    "employer.jobHub.next.awaitAssessments.other": "kandidater med en bedömning som pågår.",
+    "employer.jobHub.next.noApplicationsYet":
+      "Annonsen är publicerad och ingen har ansökt ännu.",
+    "employer.jobHub.next.notPublished":
+      "Annonsen är inte publicerad, så den kan inte ta emot ansökningar ännu.",
+    "employer.jobHub.next.nothingOutstanding":
+      "Inget väntar på er i den här annonsens flöde just nu.",
+    "employer.jobHub.candidates.loadFailed":
+      "Ansökningarna till den här annonsen kunde inte hämtas. Det betyder inte att ingen har ansökt.",
     "employer.jobHub.candidates.heading": "Kandidater",
     "employer.jobHub.candidates.openList": "Visa i ansökningslistan",
     "employer.jobHub.candidates.emptyPublished":
@@ -2108,6 +2143,10 @@ export const dictionaries = {
     // stages only, nothing about a candidate, and nothing shown at zero.
     "employer.actions.interviewPlansToApprove.one": "intervjuplan väntar på godkännande",
     "employer.actions.interviewPlansToApprove.other": "intervjuplaner väntar på godkännande",
+    // First run. Not a count of anything -- one is the number of annonser it
+    // takes to begin, and nothing else in produkten can start before it.
+    "employer.actions.firstJob": "Skapa er första annons för att komma igång.",
+    "employer.actions.firstJob.cta": "Skapa annons",
     "employer.actions.interviewsReady.one": "intervju är redo att genomföras",
     "employer.actions.interviewsReady.other": "intervjuer är redo att genomföras",
     "employer.actions.interviewEvidenceToReview.one": "intervju behöver evidensgranskas",
@@ -8138,6 +8177,18 @@ export const dictionaries = {
     "iiu.ix.done": "Fastställda rapporter",
     "iiu.ix.empty":
       "Inga intervjuer ännu. Planera en för att förbereda, genomföra och dokumentera en kompetensbaserad intervju.",
+    // The stage a work-list row arrived with, and the way out of it.
+    "iiu.ix.stage.inPreparation": "Under förberedelse",
+    "iiu.ix.filtered": "Visar bara:",
+    "iiu.ix.clearFilter": "Visa alla intervjuer",
+    "iiu.ix.emptyForFilter":
+      "Inga intervjuer i det här steget just nu. Totalsiffrorna ovanför gäller hela organisationen.",
+    // The default path, said before the exception is offered. An intervju
+    // startad från en kandidat bär ansökan med sig; en fristående gör det inte
+    // och kan därför inte synas i någon kandidats process.
+    "iiu.ix.startFromCandidate":
+      "En intervju startas normalt från kandidaten, så att ansökan, jobbet och underlaget följer med.",
+    "iiu.ix.startFromCandidate.cta": "Gå till ansökningar",
     "iiu.ix.caption": "Intervjuer med status och väntande granskning",
     "iiu.ix.col.interview": "Kandidat",
     "iiu.ix.col.pack": "Roll",
@@ -10057,6 +10108,37 @@ export const dictionaries = {
     "employer.jobHub.facts.heading": "About this ad",
     "employer.jobHub.fact.location": "Location",
     "employer.jobHub.fact.published": "Published",
+    "employer.applications.filter.assessmentOpen":
+      "Showing only applications with an assessment under way or awaiting outcome.",
+    "employer.applications.filter.assessmentUnavailable":
+      "Assessment status could not be loaded, so this list may be incomplete.",
+    "employer.applications.filter.clearAssessment": "Clear the assessment filter",
+    "employer.jobHub.pipeline.heading": "This advertisement's recruitment pipeline",
+    "employer.jobHub.pipeline.lede":
+      "Where the applications for this vacancy stand right now. Each number opens exactly the applications it counts. A dash means the figure could not be loaded — never that it is zero.",
+    "employer.jobHub.pipeline.total": "Applications in total",
+    "employer.jobHub.pipeline.awaitingReview": "Awaiting a first review",
+    "employer.jobHub.pipeline.assessmentOpen": "Assessment under way or awaiting outcome",
+    "employer.jobHub.pipeline.interview": "At interview",
+    "employer.jobHub.pipeline.hired": "Hired",
+    "employer.jobHub.next.heading": "Next step for this advertisement",
+    "employer.jobHub.next.open": "Open them",
+    "employer.jobHub.next.unavailable":
+      "The applications could not be loaded, so no next step is proposed. Try again.",
+    "employer.jobHub.next.reviewNewApplications.one": "new application to review.",
+    "employer.jobHub.next.reviewNewApplications.other": "new applications to review.",
+    "employer.jobHub.next.prepareInterviews.one": "candidate at the interview stage.",
+    "employer.jobHub.next.prepareInterviews.other": "candidates at the interview stage.",
+    "employer.jobHub.next.awaitAssessments.one": "candidate with an assessment under way.",
+    "employer.jobHub.next.awaitAssessments.other": "candidates with an assessment under way.",
+    "employer.jobHub.next.noApplicationsYet":
+      "The advertisement is live and nobody has applied yet.",
+    "employer.jobHub.next.notPublished":
+      "The advertisement is not published, so it cannot receive applications yet.",
+    "employer.jobHub.next.nothingOutstanding":
+      "Nothing is waiting on you in this advertisement's pipeline right now.",
+    "employer.jobHub.candidates.loadFailed":
+      "The applications for this advertisement could not be loaded. That does not mean nobody has applied.",
     "employer.jobHub.candidates.heading": "Candidates",
     "employer.jobHub.candidates.openList": "Show in the applications list",
     "employer.jobHub.candidates.emptyPublished":
@@ -10131,6 +10213,8 @@ export const dictionaries = {
     // Interview Intelligence, in the same shape as every other action.
     "employer.actions.interviewPlansToApprove.one": "interview plan needs approval",
     "employer.actions.interviewPlansToApprove.other": "interview plans need approval",
+    "employer.actions.firstJob": "Create your first advertisement to get started.",
+    "employer.actions.firstJob.cta": "Create advertisement",
     "employer.actions.interviewsReady.one": "interview is ready to run",
     "employer.actions.interviewsReady.other": "interviews are ready to run",
     "employer.actions.interviewEvidenceToReview.one": "interview needs evidence review",
@@ -16037,6 +16121,14 @@ export const dictionaries = {
     "iiu.ix.done": "Finalised reports",
     "iiu.ix.empty":
       "No interviews yet. Plan one to prepare, conduct and document a competency-based interview.",
+    "iiu.ix.stage.inPreparation": "In preparation",
+    "iiu.ix.filtered": "Showing only:",
+    "iiu.ix.clearFilter": "Show all interviews",
+    "iiu.ix.emptyForFilter":
+      "No interviews at this stage right now. The totals above are for the whole organisation.",
+    "iiu.ix.startFromCandidate":
+      "An interview is normally started from the candidate, so the application, the job and the material travel with it.",
+    "iiu.ix.startFromCandidate.cta": "Go to applications",
     "iiu.ix.caption": "Interviews with status and pending review",
     "iiu.ix.col.interview": "Candidate",
     "iiu.ix.col.pack": "Role",

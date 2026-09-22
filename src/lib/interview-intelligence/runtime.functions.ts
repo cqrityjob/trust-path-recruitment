@@ -11,6 +11,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { parseReportPayload, type FinalReportReadback, type ReportPreview } from "./final-report";
+import { caseIsInStage, type CaseStage } from "./case-stage";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -204,13 +205,15 @@ export const getInterviewWorkload = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
 
     const cases = (rows ?? []) as Array<{ id: string; status: string }>;
-    const count = (...statuses: string[]) =>
-      cases.filter((c) => statuses.includes(c.status)).length;
+    // Counted through the shared stage table, not through a literal list of
+    // statuses. The destination each of these numbers links to filters with
+    // the same table, so a count and the list it opens cannot drift: there is
+    // one definition of what "ready to interview" covers, and both sides read
+    // it. See src/lib/interview-intelligence/case-stage.ts.
+    const count = (stage: CaseStage) => cases.filter((c) => caseIsInStage(c.status, stage)).length;
 
     let proposalsAwaitingReview = 0;
-    const openIds = cases
-      .filter((c) => c.status === "evidence_review" || c.status === "interview_complete")
-      .map((c) => c.id);
+    const openIds = cases.filter((c) => caseIsInStage(c.status, "inEvidenceReview")).map((c) => c.id);
     if (openIds.length > 0) {
       const { count: pending } = await db
         .from("scp_interview_evidence_proposals")
@@ -221,13 +224,13 @@ export const getInterviewWorkload = createServerFn({ method: "GET" })
     }
 
     return {
-      inPreparation: count("draft", "sources_ready"),
-      awaitingPlanApproval: count("prep_generated"),
-      readyToInterview: count("prep_approved"),
-      inEvidenceReview: count("interview_complete", "evidence_review"),
+      inPreparation: count("inPreparation"),
+      awaitingPlanApproval: count("awaitingPlanApproval"),
+      readyToInterview: count("readyToInterview"),
+      inEvidenceReview: count("inEvidenceReview"),
       proposalsAwaitingReview,
-      awaitingReport: count("assessed"),
-      reported: count("reported"),
+      awaitingReport: count("awaitingReport"),
+      reported: count("done"),
     };
   });
 

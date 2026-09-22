@@ -5,7 +5,9 @@
 // anything about a candidate.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { z } from "zod";
 import { useT } from "@/i18n/context";
+import type { TranslationKey } from "@/i18n/dictionaries";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
@@ -20,16 +22,58 @@ import {
   Panel,
   State,
   interviewErrorMessage,
-  BUTTON,
 } from "@/components/employer/interview/InterviewUi";
 import { listInterviewCases } from "@/lib/interview-intelligence/runtime.functions";
+import {
+  CASE_STAGES,
+  caseIsInStage,
+  type CaseStage,
+} from "@/lib/interview-intelligence/case-stage";
+
+// ── WHY THIS LIST TAKES A STAGE FROM THE URL ───────────────────────────
+//
+// The Overview counts four pieces of interview work and, until now, linked all
+// four to this page unfiltered -- while the application and assessment rows
+// beside them each carried a filter. A recruiter told "3 interviews ready"
+// arrived at every case the organisation has ever had.
+//
+// The stage is in the URL rather than in component state, so the view is
+// shareable, survives a reload, and can be linked to precisely by whoever is
+// naming the number. `catch` rather than a hard failure: a stale bookmark
+// shows the unfiltered list rather than a validation error, exactly as the
+// applications list already behaves.
+//
+// The stage NAMES the same statuses the counter counted, because both read
+// src/lib/interview-intelligence/case-stage.ts. A private copy here is how the
+// number and the list eventually disagree.
+const searchSchema = z.object({
+  stage: z.enum(CASE_STAGES).optional().catch(undefined),
+});
+
+/** The chip's own words. Reused from the work-list rows the filter arrives
+ *  from, so the label on the row and the label on the filter are one string. */
+const STAGE_LABEL: Record<CaseStage, TranslationKey> = {
+  inPreparation: "iiu.ix.stage.inPreparation",
+  awaitingPlanApproval: "employer.actions.interviewPlansToApprove.other",
+  readyToInterview: "employer.actions.interviewsReady.other",
+  inEvidenceReview: "employer.actions.interviewEvidenceToReview.other",
+  awaitingReport: "employer.actions.interviewReportsToFinalise.other",
+  active: "iiu.ix.active",
+  done: "iiu.ix.done",
+};
 
 export const Route = createFileRoute(
   "/_authenticated/employer/$employerSlug/interview-intelligence/",
-)({ ssr: false, component: Page, errorComponent: EmployerErrorState });
+)({
+  ssr: false,
+  component: Page,
+  errorComponent: EmployerErrorState,
+  validateSearch: (search) => searchSchema.parse(search),
+});
 
 function Page() {
   const { employerSlug } = Route.useParams();
+  const { stage } = Route.useSearch();
   const ws = useEmployerWorkspace(employerSlug);
   const { t } = useT();
   const listFn = useServerFn(listInterviewCases);
@@ -48,16 +92,20 @@ function Page() {
     );
   if (ws.isError || !ws.workspace) return <EmployerAccessDenied workspaces={ws.workspaces} />;
 
-  const cases = q.data?.cases ?? [];
-  const awaiting = cases.filter((c) => c.proposalsAwaitingReview > 0);
+  const allCases = q.data?.cases ?? [];
+  // The three summary numbers describe the ORGANISATION and never the filter:
+  // narrowing the list below must not make the totals above it shrink, or the
+  // reader is told their interviews disappeared.
+  const cases = stage ? allCases.filter((c) => caseIsInStage(c.status, stage)) : allCases;
+  const awaiting = allCases.filter((c) => c.proposalsAwaitingReview > 0);
   // `assessed` IS active: a human has assessed and the report still has to be
   // reviewed and locked, which is outstanding work. `reported` never is -- a
   // finalised report is a frozen document, not a case in flight.
-  const active = cases.filter((c) => !["reported", "cancelled"].includes(c.status));
+  const active = allCases.filter((c) => !["reported", "cancelled"].includes(c.status));
   // Counts `reported`, and only `reported`. A case at `assessed` has report
   // MATERIAL and is not counted here, which is what the corrected label above
   // it now says out loud.
-  const done = cases.filter((c) => c.status === "reported");
+  const done = allCases.filter((c) => c.status === "reported");
 
   // A NUMBER IS A CLAIM. Three zeros under three labels is a complete,
   // confident statement that this employer has no interviews -- and it was
@@ -107,12 +155,31 @@ function Page() {
         />
       </div>
 
-      <div className="mt-6">
+      {/* The default path, said before the exception is offered. */}
+      <p className="mt-6 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+        {t("iiu.ix.startFromCandidate")}{" "}
+        <Link
+          to="/employer/$employerSlug/applications"
+          params={{ employerSlug }}
+          search={{ job: undefined, status: undefined, q: undefined, sort: undefined }}
+          className="font-medium text-accent underline-offset-2 hover:underline"
+        >
+          {t("iiu.ix.startFromCandidate.cta")}
+        </Link>
+      </p>
+
+      <div className="mt-3">
         <Link
           to="/employer/$employerSlug/interview-intelligence/new"
           params={{ employerSlug }}
           search={{ applicationId: undefined, jobId: undefined }}
-          className={BUTTON}
+          // SECONDARY, deliberately. A standalone interview is legitimate and
+          // stays reachable, but it is the exception: a case created here
+          // belongs to no application, so it can appear in no candidate's
+          // process spine and no report can be reached from the person it is
+          // about. The default path is "Prepare an interview" on a candidate,
+          // and the lede beside this button says so.
+          className="inline-flex min-h-11 items-center rounded-[10px] border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {t("iiu.new.title")}
         </Link>
@@ -132,10 +199,34 @@ function Page() {
           {t("iiu.ix.heading")}
         </h2>
 
+        {/* The filter a work-list row arrived with, named and removable. A
+            filtered view that does not say it is filtered is how a recruiter
+            concludes their cases have vanished. */}
+        {stage && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-[color:var(--surface-subtle)] px-3 py-2 text-sm">
+            <span className="text-muted-foreground">{t("iiu.ix.filtered")}</span>
+            <span className="font-medium text-foreground">{t(STAGE_LABEL[stage])}</span>
+            <span className="tabular-nums text-muted-foreground">({cases.length})</span>
+            {/* A link rather than a button: removing a filter is navigation,
+                it belongs in the history, and it is middle-clickable. */}
+            <Link
+              to="/employer/$employerSlug/interview-intelligence"
+              params={{ employerSlug }}
+              search={{ stage: undefined }}
+              replace
+              className="ml-auto inline-flex min-h-11 items-center rounded-md px-2 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("iiu.ix.clearFilter")}
+            </Link>
+          </div>
+        )}
+
         <div className="mt-4">
           {q.isLoading && <State kind="loading" />}
           {q.isError && <State kind="error" message={interviewErrorMessage(q.error, t)} />}
-          {q.isSuccess && cases.length === 0 && <State kind="empty">{t("iiu.ix.empty")}</State>}
+          {q.isSuccess && cases.length === 0 && (
+            <State kind="empty">{stage ? t("iiu.ix.emptyForFilter") : t("iiu.ix.empty")}</State>
+          )}
 
           {q.isSuccess && cases.length > 0 && (
             <div className="overflow-x-auto rounded-lg border border-border">
