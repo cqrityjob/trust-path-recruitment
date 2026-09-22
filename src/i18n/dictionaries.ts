@@ -2419,6 +2419,11 @@ export const dictionaries = {
     "employer.person.assessments.released": "Delat",
     "employer.person.assessments.reviewsOpen": "Kvar att granska:",
     "employer.person.assessments.openReport": "Visa rapport",
+    "employer.person.startDate": "Anställd sedan",
+    // The lineage link. It names where the employment came from and makes no
+    // claim about the person.
+    "employer.person.hiredFrom": "Anställd via en ansökan hos er.",
+    "employer.person.hiredFrom.open": "Öppna ansökan",
     "employer.person.development.heading": "Kompetensutveckling",
     "employer.person.development.lede":
       "Tilldelade program och genomförd utveckling. Genomförd utbildning är utvecklingsaktivitet och utgör inte bevis på kompetens.",
@@ -8177,6 +8182,10 @@ export const dictionaries = {
     "continuity.track.assessment": "Bedömning",
     "continuity.track.interview": "Intervju",
     "continuity.track.report": "Rapport",
+    // The fifth row. It names WHERE THE BESLUTET HAR KOMMIT, never what the
+    // decision should be: every value below is a reading of
+    // job_applications.status, which a person wrote.
+    "continuity.track.decision": "Beslut",
     // How many records the row is one of. A row names ONE record and an
     // application can hold several; without this a reader has no way to know
     // the others exist.
@@ -8190,6 +8199,21 @@ export const dictionaries = {
     "continuity.assessment.unavailable": "Kunde inte hämtas",
     "continuity.assessment.refused": "Du saknar behörighet att se detta",
     "continuity.assessment.none": "Ingen bedömning skickad",
+
+    // Decision presentation states.
+    //
+    // "Inget beslut ännu" is about the PROCESSEN and not about the person:
+    // ansökan har inte nått ett steg där er egen övergångstabell erbjuder ett
+    // slutgiltigt beslut. It must never be read as "inte tillräckligt bra än",
+    // and the guard asserts that no word here recommends anything.
+    "continuity.decision.loading": "Hämtar …",
+    "continuity.decision.unavailable": "Kunde inte hämtas",
+    "continuity.decision.refused": "Du saknar behörighet att se detta",
+    "continuity.decision.notYet": "Inget beslut ännu",
+    "continuity.decision.awaitingHumanDecision": "Väntar på beslut av en människa",
+    "continuity.decision.hired": "Beslut registrerat: anställd",
+    "continuity.decision.rejected": "Beslut registrerat: gick vidare utan anställning",
+    "continuity.decision.withdrawn": "Kandidaten drog tillbaka sin ansökan",
 
     // Interview presentation states.
     "continuity.interview.loading": "Hämtar …",
@@ -8260,6 +8284,15 @@ export const dictionaries = {
       "Varken bedömning eller intervju har startats. Ingen av dem krävs — ansökan kan avgöras utan båda.",
     "continuity.next.nothingOutstanding":
       "Inget väntar i processen. Beslutet om ansökan tas längre ned på sidan.",
+    // The decision step. It says that a decision is due and where the controls
+    // are -- never which way to decide, and never a reason drawn from a
+    // bedömning or an intervju.
+    "continuity.next.recordDecision":
+      "Underlaget är inne. Nu behöver en människa fatta beslutet om den här ansökan.",
+    "continuity.next.recordDecision.cta": "Gå till beslutet",
+    "continuity.next.openHiredEmployee":
+      "Beslutet är registrerat som anställning. Personen finns nu under Medarbetare.",
+    "continuity.next.openHiredEmployee.cta": "Öppna medarbetarprofilen",
 
     // Process type. Said on every recruitment-linked and standalone surface,
     // because a reader must never have to guess which one they are looking at.
@@ -10402,6 +10435,9 @@ export const dictionaries = {
     "employer.person.assessments.released": "Shared",
     "employer.person.assessments.reviewsOpen": "Reviews outstanding:",
     "employer.person.assessments.openReport": "View report",
+    "employer.person.startDate": "Employed since",
+    "employer.person.hiredFrom": "Hired through an application with you.",
+    "employer.person.hiredFrom.open": "Open the application",
     "employer.person.development.heading": "Competence development",
     "employer.person.development.lede":
       "Assigned programmes and completed development. Completed training is development activity and is not proof of competence.",
@@ -16045,6 +16081,7 @@ export const dictionaries = {
     "continuity.track.assessment": "Assessment",
     "continuity.track.interview": "Interview",
     "continuity.track.report": "Report",
+    "continuity.track.decision": "Decision",
     "continuity.track.assessmentCount.one": "assessment in total",
     "continuity.track.assessmentCount.other": "assessments in total",
     "continuity.track.interviewCount.one": "interview in total",
@@ -16055,6 +16092,17 @@ export const dictionaries = {
     "continuity.assessment.unavailable": "Could not be loaded",
     "continuity.assessment.refused": "You are not authorised to see this",
     "continuity.assessment.none": "No assessment sent",
+
+    // Decision presentation states. "No decision yet" is about the PROCESS and
+    // never about the person.
+    "continuity.decision.loading": "Loading …",
+    "continuity.decision.unavailable": "Could not be loaded",
+    "continuity.decision.refused": "You are not authorised to see this",
+    "continuity.decision.notYet": "No decision yet",
+    "continuity.decision.awaitingHumanDecision": "Pending human decision",
+    "continuity.decision.hired": "Decision recorded: hired",
+    "continuity.decision.rejected": "Decision recorded: taken no further",
+    "continuity.decision.withdrawn": "The candidate withdrew their application",
 
     // Interview presentation states.
     "continuity.interview.loading": "Loading …",
@@ -16124,6 +16172,12 @@ export const dictionaries = {
       "Neither an assessment nor an interview has been started. Neither is required — the application can be decided without both.",
     "continuity.next.nothingOutstanding":
       "Nothing is pending in the process. The decision on the application is taken further down this page.",
+    "continuity.next.recordDecision":
+      "The evidence is in. A person now has to make the decision on this application.",
+    "continuity.next.recordDecision.cta": "Go to the decision",
+    "continuity.next.openHiredEmployee":
+      "The decision was recorded as a hire. This person is now under Workforce.",
+    "continuity.next.openHiredEmployee.cta": "Open the employee profile",
 
     // Process type. Said on every recruitment-linked and standalone surface,
     // because a reader must never have to guess which one they are looking at.

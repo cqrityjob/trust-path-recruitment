@@ -54,6 +54,12 @@ await mock.module("@tanstack/react-router", () => ({
     to,
     params,
     search,
+    // Rendered into the href like every other part of the destination.
+    // Without this it was spread onto the <a> as an attribute, so a link to a
+    // section of the current page produced `href="/…/applications/<id>"` and
+    // `hash="candidate-decision"` -- and an assertion about where the link
+    // goes would have been testing the wrong string.
+    hash,
     children,
     ...rest
   }: Record<string, unknown> & { children?: React.ReactNode }) => {
@@ -70,6 +76,7 @@ await mock.module("@tanstack/react-router", () => ({
         .join("&");
       if (q) href += `?${q}`;
     }
+    if (hash) href += `#${String(hash)}`;
     return React.createElement("a", { href, ...rest }, children);
   },
   createFileRoute: () => () => ({}),
@@ -88,6 +95,9 @@ await mock.module("@tanstack/react-router", () => ({
 const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
 const P = await import("../src/lib/employer-continuity/process-projection");
+const { APPLICATION_STATUS_LABEL_KEY } = await import(
+  "../src/lib/job-intelligence/application-status"
+);
 const { ProcessContinuityStrip } =
   await import("../src/components/employer/ProcessContinuityStrip");
 
@@ -158,6 +168,7 @@ const sv = dictionaries.sv as Record<string, string>;
 const en = dictionaries.en as Record<string, string>;
 
 const ROUTES = {
+  workforcePerson: "src/routes/_authenticated.employer.$employerSlug.workforce.$personId.tsx",
   application: "src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx",
   applications: "src/routes/_authenticated.employer.$employerSlug.applications.index.tsx",
   reviewAttempt:
@@ -185,6 +196,15 @@ const APP_ID = "11111111-1111-4111-8111-111111111111";
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
 const ATTEMPT_ID = "33333333-3333-4333-8333-333333333333";
 const CASE_ID = "44444444-4444-4444-8444-444444444444";
+const EMPLOYEE_ID = "55555555-5555-4555-8555-555555555555";
+
+/** Every value `job_applications.status` can hold, as the transition table and
+ *  the label map already enumerate them. Written from the shared module rather
+ *  than by hand so a status added to the lifecycle is covered here without
+ *  anybody remembering this file. */
+const APPLICATION_STATUSES: readonly string[] = Object.keys(
+  APPLICATION_STATUS_LABEL_KEY,
+) as readonly string[];
 
 function attempt(over: Partial<Assessment> = {}): Assessment {
   return {
@@ -245,17 +265,27 @@ function project(
     assessments?: Assessment[];
     cases?: Case[];
     caps?: ContinuityCapabilities;
+    /** The employment record a recorded hire produced, as the page would have
+     *  read it. Defaults to absent, which is the honest default: most
+     *  applications are not hires, and a hire whose record could not be read
+     *  must not be given a door. */
+    hiredEmployeeId?: string | null;
   } = {},
 ) {
   const aRead = opts.aRead ?? "ready";
   const iRead = opts.iRead ?? "ready";
   const assessments = opts.assessments ?? [];
   const cases = opts.cases ?? [];
+  const appStatus = opts.appStatus ?? "submitted";
   return P.projectProcess({
-    application: { read: "ready", status: opts.appStatus ?? "submitted" },
+    application: { read: "ready", status: appStatus },
     assessment: P.projectAssessmentTrack(aRead, assessments),
     interview: P.projectInterviewTrack(iRead, cases),
     report: P.projectReportTrack(iRead, cases),
+    // Built from the application status the caller passed, exactly as the page
+    // builds it -- so every existing assertion below is now also an assertion
+    // that adding the decision row changed nothing about the other four.
+    decision: P.projectDecisionTrack("ready", appStatus, opts.hiredEmployeeId ?? null),
     capabilities: opts.caps ?? ALL_CAPS,
   });
 }
@@ -1289,9 +1319,26 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
 /* ================================================================== */
 {
   const proj = read(COMPONENTS.projection);
+
+  // ── NAMING A RECORDED OUTCOME IS NOT PROPOSING ONE ──────────────────
+  //
+  // This list used to ban the substring "hire" outright, which was the right
+  // rule while the spine stopped before the decision: nothing in the product
+  // could legitimately say the word. Now one thing can. After a human has
+  // written `hired` through set_application_status, the useful next step is
+  // the door to the employment record it produced, and a destination called
+  // `openHiredEmployee` describes navigation to a FACT the employer recorded.
+  //
+  // So the ban is narrowed rather than dropped, and narrowed by name rather
+  // than by pattern: exactly one member is exempt, and only from the two
+  // outcome words. Everything that could express an OPINION -- recommend,
+  // suitable, rank, score, shortlist, best/top candidate -- stays forbidden
+  // for every member including this one, so `recommendHire` is still refused,
+  // and so is any new member that merely spells "hire" differently.
+  const DECISION_NAVIGATION = new Set(["openHiredEmployee"]);
+  const OUTCOME_WORDS = ["hire", "reject"];
   const FORBIDDEN = [
-    "hire",
-    "reject",
+    ...OUTCOME_WORDS,
     "shortlist",
     "recommend",
     "suitab",
@@ -1313,10 +1360,22 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
     ok(members.includes(m), `13 · "${m}" is its own action`);
   }
   for (const f of FORBIDDEN) {
-    ok(
-      !members.some((m) => m.toLowerCase().includes(f.toLowerCase())),
-      `13 · no action member mentions "${f}"`,
+    const offenders = members.filter(
+      (m) =>
+        m.toLowerCase().includes(f.toLowerCase()) &&
+        !(OUTCOME_WORDS.includes(f) && DECISION_NAVIGATION.has(m)),
     );
+    ok(offenders.length === 0, `13 · no action member mentions "${f}"`);
+  }
+  // The exemption is not a hole: the one member that may name an outcome must
+  // exist, and nothing else may join it without editing the set above.
+  for (const m of DECISION_NAVIGATION) {
+    ok(members.includes(m), `13 · the exempt member "${m}" is a real action`);
+  }
+  // Both decision actions exist and are distinct pieces of work: "a person
+  // must decide" and "the decision was a hire, here is the record".
+  for (const m of ["recordDecision", "openHiredEmployee"]) {
+    ok(members.includes(m), `13 · "${m}" is its own action`);
   }
   // And behaviourally: every reachable action is one of the operational set.
   const OPERATIONAL = new Set(members);
@@ -1343,13 +1402,39 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   ok(allOperational, "13 · every reachable action over every state is in the operational set");
 
   // The copy for each action says what to DO, and never what to decide.
+  //
+  // Two rules, because the sentences are two kinds. A recommendation is
+  // forbidden everywhere -- no member, exempt or not, may tell a recruiter
+  // what the outcome should be. Naming an outcome is forbidden everywhere
+  // EXCEPT in the sentence about a decision already recorded, and there it is
+  // required to read as a record: the guard demands the word that makes it one
+  // ("registrerat" / "recorded"), so "Anställ den här kandidaten" could not
+  // pass by sitting in the exempt member.
+  const RECOMMENDS =
+    /\brekommend|\blämplig|\bpassar\b|\bbör\b|\bbäst|recommend|suitab|\bshould\b|\bbest\b|\brank|\bscore\b|\bpoäng/;
+  const NAMES_AN_OUTCOME = /\banstäl|\bavslå|\bhire|\breject/;
   for (const m of members) {
     const key = `continuity.next.${m}`;
     if (!(key in sv)) continue;
     const text = `${sv[key]} ${en[key] ?? ""}`.toLowerCase();
+    ok(!RECOMMENDS.test(text), `13 · "${m}" copy recommends nothing`);
+    if (DECISION_NAVIGATION.has(m)) {
+      ok(
+        /registrerat|recorded/.test(text),
+        `13 · "${m}" copy describes a decision already recorded`,
+      );
+    } else {
+      ok(!NAMES_AN_OUTCOME.test(text), `13 · "${m}" copy names no outcome`);
+    }
+    const cta = `${sv[`${key}.cta`] ?? ""} ${en[`${key}.cta`] ?? ""}`.toLowerCase();
+    ok(!RECOMMENDS.test(cta), `13 · "${m}" call to action recommends nothing`);
+  }
+  // And the sentence that asks for a decision asks for one without hinting at
+  // it: it may not contain an outcome word at all, exempt member or not.
+  for (const lang of [sv, en]) {
     ok(
-      !/\banstäl|\bavslå|\brekommend|\blämplig|\brank|recommend|suitab|hire\b|reject\b/.test(text),
-      `13 · "${m}" copy is operational`,
+      !NAMES_AN_OUTCOME.test(String(lang["continuity.next.recordDecision"]).toLowerCase()),
+      "13 · the request for a decision names neither outcome",
     );
   }
 }
@@ -1607,13 +1692,22 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
       ]) {
         for (const caps of [ALL_CAPS, NO_CAPS]) {
           for (const aRead of ["ready", "loading", "failed", "refused"] as const) {
-            const p = project({
-              assessments: a as Assessment[],
-              cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
-              aRead,
-              caps,
-            });
-            produced.add(p.nextAction.destination.kind);
+            // The application's own status varies here too. It did not before,
+            // so every state in the space carried `submitted` -- which is
+            // exactly the status at which no decision is due, and a decision
+            // destination would have been unreachable in this sweep however
+            // reachable it is in the product.
+            for (const appStatus of APPLICATION_STATUSES) {
+              const p = project({
+                assessments: a as Assessment[],
+                cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
+                aRead,
+                caps,
+                appStatus,
+                hiredEmployeeId: appStatus === "hired" ? EMPLOYEE_ID : null,
+              });
+              produced.add(p.nextAction.destination.kind);
+            }
           }
         }
       }
@@ -1830,6 +1924,230 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   // claim a report exists.
   const rep = project({ cases: [iCase({ status: "reported", reportFinalised: true })] });
   ok(rep.nextAction.kind === "openFinalisedReport", "T · reported opens the finalised report");
+}
+
+/* ================================================================== */
+/* 24 · The decision is a step in the spine, and never a judgement      */
+/* ================================================================== */
+//
+// Phase 1 of the employer lifecycle work. The acceptance criteria are asserted
+// here in the order they were written, and each one is exercised rather than
+// read: the projection is run over the state space and the strip is rendered,
+// in both languages.
+{
+  const REPORTED = iCase({ status: "reported", reportFinalised: true });
+
+  // ── 24.1 · the hinge that was missing ───────────────────────────────
+  //
+  // An application at `interview` with a finalised report. Before this work
+  // the ladder reached `openFinalisedReport` and then, once the report had
+  // been opened, `nothingOutstanding` -- while the one act the whole process
+  // exists for had not happened.
+  const pending = project({ appStatus: "interview", cases: [REPORTED] });
+  ok(pending.decision.state === "awaitingHumanDecision", "24.1 · the decision row is pending");
+  ok(pending.nextAction.kind === "recordDecision", "24.1 · and the next action asks for one");
+  ok(
+    pending.nextAction.destination.kind === "applicationDecision",
+    "24.1 · which leads to the decision controls",
+  );
+  ok(
+    pending.nextAction.kind !== "nothingOutstanding",
+    "24.1 · and never to nothing outstanding",
+  );
+  ok(pending.needsHumanAttention, "24.1 · a decision due is human attention");
+  for (const lang of ["sv", "en"] as const) {
+    const out = strip(pending, lang);
+    const word = lang === "sv" ? sv : en;
+    ok(
+      out.includes(word["continuity.decision.awaitingHumanDecision"]),
+      `24.1 · the ${lang} strip renders the pending-decision row`,
+    );
+    ok(
+      out.includes(`href="/employer/acme/applications/${APP_ID}#candidate-decision"`),
+      `24.1 · and the ${lang} call to action lands on the decision controls`,
+    );
+  }
+
+  // ── 24.2 · outstanding work still outranks the decision ─────────────
+  //
+  // A decision taken while a colleague still owes a review is a decision taken
+  // on an incomplete record. The ladder must not offer it first.
+  const owing = project({
+    appStatus: "interview",
+    assessments: [attempt({ reviewsOutstanding: 1 })],
+    cases: [REPORTED],
+  });
+  ok(
+    owing.nextAction.kind === "reviewAssessmentResponses",
+    "24.2 · outstanding review work outranks the decision",
+  );
+  ok(
+    owing.decision.state === "awaitingHumanDecision",
+    "24.2 · while the decision row still says a decision is due",
+  );
+
+  // ── 24.3 · the decision derives from the application and nothing else ─
+  //
+  // Every assessment shape and every interview status, against a fixed
+  // application status. If any of them moves the decision, the spine has
+  // become a funnel and the governance rule is broken.
+  for (const appStatus of APPLICATION_STATUSES) {
+    const baseline = project({ appStatus }).decision.state;
+    let constant = true;
+    for (const cs of ALL_CASE_STATUSES) {
+      for (const a of [
+        [],
+        [attempt()],
+        [attempt({ answered: 5 })],
+        [attempt({ reviewsOutstanding: 3 })],
+        [attempt({ attemptStatus: "scored" })],
+        [attempt({ reportAvailable: true })],
+        [attempt({ attemptStatus: "scored" }), attempt({ reviewsOutstanding: 1 })],
+      ]) {
+        for (const caps of [ALL_CAPS, NO_CAPS]) {
+          for (const iRead of ["ready", "failed", "refused", "loading"] as const) {
+            const p = project({
+              appStatus,
+              assessments: a as Assessment[],
+              cases: [iCase({ status: cs, reportFinalised: cs === "reported" })],
+              iRead,
+              caps,
+            });
+            if (p.decision.state !== baseline) constant = false;
+          }
+        }
+      }
+    }
+    ok(constant, `24.3 · at "${appStatus}" no assessment or interview state moves the decision`);
+  }
+
+  // ── 24.4 · and the derivation is the transition table, not a guess ──
+  ok(
+    project({ appStatus: "submitted" }).decision.state === "notYet",
+    "24.4 · a new application has no decision due",
+  );
+  ok(
+    project({ appStatus: "reviewing" }).decision.state === "notYet",
+    "24.4 · nor one under review, where the table offers no hire",
+  );
+  ok(
+    project({ appStatus: "rejected" }).decision.state === "rejected",
+    "24.4 · a recorded rejection reads as recorded",
+  );
+  ok(
+    project({ appStatus: "withdrawn" }).decision.state === "withdrawn",
+    "24.4 · and a withdrawal is the candidate's own act",
+  );
+  // A status this build has never heard of offers nothing rather than guessing.
+  ok(
+    project({ appStatus: "some_future_status" }).decision.state === "notYet",
+    "24.4 · an unrecognised status proposes no decision",
+  );
+
+  // ── 24.5 · a hire opens the employment record it produced ───────────
+  const hired = project({ appStatus: "hired", hiredEmployeeId: EMPLOYEE_ID, cases: [REPORTED] });
+  ok(hired.decision.state === "hired", "24.5 · the row reports the recorded hire");
+  ok(hired.nextAction.kind === "openHiredEmployee", "24.5 · and offers the employee profile");
+  ok(
+    hired.nextAction.destination.kind === "employeeProfile" &&
+      hired.nextAction.destination.employeeId === EMPLOYEE_ID,
+    "24.5 · carrying the employment record the server resolved",
+  );
+  ok(
+    strip(hired).includes(`href="/employer/acme/workforce/${EMPLOYEE_ID}"`),
+    "24.5 · which the strip draws as the workforce route",
+  );
+
+  // ── 24.6 · and never invents a door that does not exist ─────────────
+  //
+  // Keyed on the record rather than the state, so a hire whose employment
+  // record could not be read says so and offers nothing, instead of linking to
+  // "null".
+  const hiredNoRecord = project({ appStatus: "hired", hiredEmployeeId: null, cases: [REPORTED] });
+  ok(
+    hiredNoRecord.decision.state === "hired",
+    "24.6 · a hire with no readable record is still a hire",
+  );
+  ok(
+    hiredNoRecord.nextAction.destination.kind !== "employeeProfile",
+    "24.6 · but no employee destination is produced",
+  );
+  ok(
+    !/href="[^"]*workforce[^"]*(null|undefined)/.test(strip(hiredNoRecord)),
+    "24.6 · and no link to a missing record is drawn",
+  );
+
+  // ── 24.7 · the decision row never names an unrecorded outcome ───────
+  //
+  // Rendered, in both languages, for every status at which nothing has been
+  // decided. The words for a recorded hire or rejection may appear only where
+  // a person actually wrote one.
+  const OUTCOME = /anstäl|avslå|hire|reject/i;
+  for (const appStatus of ["submitted", "reviewing", "interview"]) {
+    for (const lang of ["sv", "en"] as const) {
+      const word = lang === "sv" ? sv : en;
+      const p = project({ appStatus, cases: [REPORTED] });
+      const rendered = String(
+        word[
+          p.decision.state === "awaitingHumanDecision"
+            ? "continuity.decision.awaitingHumanDecision"
+            : "continuity.decision.notYet"
+        ],
+      );
+      ok(
+        !OUTCOME.test(rendered),
+        `24.7 · the ${lang} decision word at "${appStatus}" names no outcome`,
+      );
+    }
+  }
+
+  // ── 24.8 · the decision vocabulary recommends nothing ───────────────
+  const decisionKeys = Object.keys(sv).filter((k) => k.startsWith("continuity.decision."));
+  ok(decisionKeys.length >= 8, "24.8 · the decision vocabulary is enumerated");
+  for (const k of decisionKeys) {
+    ok(typeof en[k] === "string" && en[k].trim().length > 0, `24.8 · ${k} exists in English`);
+    const text = `${sv[k]} ${en[k]}`.toLowerCase();
+    ok(
+      !/rekommend|lämplig|passar|bäst|recommend|suitab|\bbest\b|\bshould\b|poäng|\bscore\b/.test(
+        text,
+      ),
+      `24.8 · ${k} recommends nothing`,
+    );
+  }
+
+  // ── 24.9 · the projection is still pure ─────────────────────────────
+  //
+  // Section 14 proves the module performs no I/O. This proves the same thing
+  // about the new function specifically, by calling it: same inputs, same
+  // answer, no clock, no order dependence.
+  const a1 = P.projectDecisionTrack("ready", "interview", null);
+  const a2 = P.projectDecisionTrack("ready", "interview", null);
+  ok(
+    JSON.stringify(a1) === JSON.stringify(a2),
+    "24.9 · the decision track is a pure function of its inputs",
+  );
+  for (const r of ["loading", "failed", "refused"] as const) {
+    const d = P.projectDecisionTrack(r, "hired", EMPLOYEE_ID);
+    ok(
+      d.state !== "hired" && d.hiredEmployeeId === null,
+      `24.9 · a ${r} read never reports a decision it did not read`,
+    );
+  }
+
+  // ── 24.10 · and the reverse link exists on the employee ─────────────
+  //
+  // The other half of the join. Source-level, because the workforce page's own
+  // render proof lives in the lifecycle guard; what matters here is that the
+  // door back is built from the lineage column and not from a name.
+  const workforce = read(ROUTES.workforcePerson);
+  ok(
+    workforce.includes("hiredFromApplicationId"),
+    "24.10 · the employee page reads the application it came from",
+  );
+  ok(
+    workforce.includes("/employer/$employerSlug/applications/$applicationId"),
+    "24.10 · and links back to it",
+  );
 }
 
 /* ================================================================== */

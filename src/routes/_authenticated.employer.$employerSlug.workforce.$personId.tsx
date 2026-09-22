@@ -16,7 +16,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ClipboardList } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { WorkforcePage } from "@/components/academy/AcademyWorkspace";
@@ -26,6 +26,7 @@ import {
   type PersonAssessmentRow,
 } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { listEmployerEmployees } from "@/lib/job-intelligence/employer-workforce.functions";
+import { formatDate } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/workforce/$personId")({
   ssr: false,
@@ -88,17 +89,49 @@ function PersonDetail({
         {person ? `${person.firstName} ${person.lastName}` : t("employer.person.unknown")}
       </h1>
       {person && (
-        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-          <Fact label={t("employer.person.roleTitle")}>{person.roleTitle ?? "—"}</Fact>
-          <Fact label={t("employer.person.site")}>{person.siteName ?? "—"}</Fact>
-          <Fact label={t("employer.person.status")}>
-            {t(
-              person.employmentStatus === "active"
-                ? "employer.workforce.status.active"
-                : "employer.workforce.status.inactive",
-            )}
-          </Fact>
-        </dl>
+        <>
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
+            <Fact label={t("employer.person.roleTitle")}>{person.roleTitle ?? "—"}</Fact>
+            <Fact label={t("employer.person.site")}>{person.siteName ?? "—"}</Fact>
+            <Fact label={t("employer.person.startDate")}>
+              {person.startDate ? formatDate(person.startDate, lang) : "—"}
+            </Fact>
+            <Fact label={t("employer.person.status")}>
+              {t(
+                person.employmentStatus === "active"
+                  ? "employer.workforce.status.active"
+                  : "employer.workforce.status.inactive",
+              )}
+            </Fact>
+          </dl>
+
+          {/* ── THE DOOR BACK ──────────────────────────────────────────
+           *
+           *  The candidate page has offered the door forwards since the hire
+           *  bridge landed -- "this person is now in Medarbetare" -- and there
+           *  was no way back. An employer looking at a colleague and wanting
+           *  the assessment, the interview and the report behind the decision
+           *  to hire them had to find the application by name, which is how
+           *  one person becomes two records in somebody's head.
+           *
+           *  Drawn only when the lineage column actually carries an
+           *  application. An employee added by hand has none, and this block
+           *  simply is not there -- it never says "added directly", because
+           *  that is a fact about the record and not about the person. */}
+          {person.hiredFromApplicationId && (
+            <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm text-foreground">
+              <ClipboardList className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+              {t("employer.person.hiredFrom")}
+              <Link
+                to="/employer/$employerSlug/applications/$applicationId"
+                params={{ employerSlug, applicationId: person.hiredFromApplicationId }}
+                className="font-medium text-accent underline-offset-2 hover:underline"
+              >
+                {t("employer.person.hiredFrom.open")}
+              </Link>
+            </p>
+          )}
+        </>
       )}
 
       {/* ── Tester & bedömningar ───────────────────────────────────── */}

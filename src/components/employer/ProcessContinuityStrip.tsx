@@ -19,13 +19,19 @@
 // them here would create a second version of a report that can drift from the
 // first. Four rows and one action is the whole design.
 //
-// ── THE FOUR ROWS NEVER MERGE ───────────────────────────────────────────
+// ── THE FIVE ROWS NEVER MERGE ───────────────────────────────────────────
 //
-// Application, assessment, interview and report each render their own state
-// from their own source, in their own row, with their own words. There is no
-// combined chip anywhere in this file and no expression that reads one track
-// to describe another. The lede says so to the reader as well, because a
-// four-row block is exactly the shape a person expects to be a funnel.
+// Application, assessment, interview, report and decision each render their
+// own state from their own source, in their own row, with their own words.
+// There is no combined chip anywhere in this file and no expression that reads
+// one track to describe another. The lede says so to the reader as well,
+// because a five-row block is exactly the shape a person expects to be a
+// funnel.
+//
+// The decision row is the newest and the one most likely to be misread, so it
+// is worth saying here too: it reports what a person has already recorded, or
+// that a person now has to record something. It never proposes an outcome, and
+// the value it shows was derived from `job_applications.status` alone.
 
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowRight, Clock, UserRound } from "lucide-react";
@@ -39,6 +45,7 @@ import { CASE_STATUS_LABEL } from "@/components/employer/interview/InterviewUi";
 import type {
   ActionDestination,
   AssessmentState,
+  DecisionState,
   InterviewState,
   NextActionKind,
   ProcessProjection,
@@ -98,6 +105,28 @@ const REPORT_LABEL: Record<ReportAvailability, TranslationKey> = {
   materialAndFinalised: "continuity.report.materialAndFinalised",
 };
 
+/** The decision row's word. Total, like the other three: a decision state
+ *  added to the projection without a word here is a type error rather than a
+ *  blank chip in front of a recruiter.
+ *
+ *  Its own keys rather than APPLICATION_STATUS_LABEL_KEY's, although both are
+ *  read from the same column. The application row answers "where is this
+ *  application", and "Anställd" is the right word there. This row answers
+ *  "has a person decided", and the right words are "no decision yet",
+ *  "pending human decision" and "decision recorded: …" -- which is a different
+ *  sentence about the same fact, and saying it in the status vocabulary would
+ *  make the two rows look like one repeated. */
+const DECISION_LABEL: Record<DecisionState, TranslationKey> = {
+  loading: "continuity.decision.loading",
+  unavailable: "continuity.decision.unavailable",
+  refused: "continuity.decision.refused",
+  notYet: "continuity.decision.notYet",
+  awaitingHumanDecision: "continuity.decision.awaitingHumanDecision",
+  hired: "continuity.decision.hired",
+  rejected: "continuity.decision.rejected",
+  withdrawn: "continuity.decision.withdrawn",
+};
+
 /** The sentence under "Nästa steg", per action. Total for the same reason. */
 const NEXT_BODY: Record<NextActionKind, TranslationKey> = {
   loading: "continuity.next.loading",
@@ -113,6 +142,8 @@ const NEXT_BODY: Record<NextActionKind, TranslationKey> = {
   awaitCandidateAssessment: "continuity.next.awaitCandidateAssessment",
   awaitColleague: "continuity.next.awaitColleague",
   openFinalisedReport: "continuity.next.openFinalisedReport",
+  recordDecision: "continuity.next.recordDecision",
+  openHiredEmployee: "continuity.next.openHiredEmployee",
   nothingStarted: "continuity.next.nothingStarted",
   nothingOutstanding: "continuity.next.nothingOutstanding",
 };
@@ -131,6 +162,8 @@ const NEXT_CTA: Partial<Record<NextActionKind, TranslationKey>> = {
   prepareInterview: "continuity.next.prepareInterview.cta",
   shareAssessmentBrief: "continuity.next.shareAssessmentBrief.cta",
   openFinalisedReport: "continuity.next.openFinalisedReport.cta",
+  recordDecision: "continuity.next.recordDecision.cta",
+  openHiredEmployee: "continuity.next.openHiredEmployee.cta",
 };
 
 /* ------------------------------------------------------------------ */
@@ -248,6 +281,39 @@ function DestinationLink({
           {icon}
         </Link>
       );
+    case "applicationDecision":
+      // The same route this strip is already on, with the decision section's
+      // own anchor. Typed like every other destination, so renaming the route
+      // breaks the build rather than the link -- and a hash rather than a new
+      // page, because the controls are a section of THIS page and always have
+      // been. Nothing about the decision is taken here: this moves the
+      // recruiter to the buttons that call set_application_status.
+      return (
+        <Link
+          to="/employer/$employerSlug/applications/$applicationId"
+          params={{ employerSlug, applicationId }}
+          hash="candidate-decision"
+          className={cls}
+        >
+          {label}
+          {icon}
+        </Link>
+      );
+    case "employeeProfile":
+      // An opaque server-issued employment-record id, exactly like the attempt
+      // and case ids above: no name, no address, no role title. It grants
+      // nothing -- the workforce route re-establishes membership on arrival
+      // and the read model is scoped by the database.
+      return (
+        <Link
+          to="/employer/$employerSlug/workforce/$personId"
+          params={{ employerSlug, personId: destination.employeeId }}
+          className={cls}
+        >
+          {label}
+          {icon}
+        </Link>
+      );
   }
 }
 
@@ -268,7 +334,7 @@ export function ProcessContinuityStrip({
   onRetry: () => void;
 }) {
   const { t } = useT();
-  const { application, assessment, interview, report, nextAction } = projection;
+  const { application, assessment, interview, report, decision, nextAction } = projection;
 
   const appStatus = asApplicationStatus(application.status ?? "");
   const applicationWord =
@@ -354,6 +420,18 @@ export function ProcessContinuityStrip({
           term={t("continuity.track.report")}
           value={t(REPORT_LABEL[report.availability])}
           degraded={report.read === "failed" || report.read === "refused"}
+        />
+        {/* THE FIFTH ROW.
+         *
+         *  Fed by the same pure projection as the other four and derived from
+         *  `job_applications.status` alone. It is last because it is the step
+         *  that comes last, not because it summarises the rows above it --
+         *  there is no expression in this file that reads one of them to
+         *  produce this one. */}
+        <TrackRow
+          term={t("continuity.track.decision")}
+          value={t(DECISION_LABEL[decision.state])}
+          degraded={decision.read === "failed" || decision.read === "refused"}
         />
       </dl>
 

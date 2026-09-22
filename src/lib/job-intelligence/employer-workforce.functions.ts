@@ -31,6 +31,18 @@ export type EmployerEmployeeRow = {
   siteName: string | null;
   employmentStatus: EmploymentStatus;
   startDate: string | null;
+  /** The application this employment relationship came out of, when it came out
+   *  of one. Lineage, not a dependency: an employee added by hand carries null
+   *  and every surface works exactly as before.
+   *
+   *  It is the other half of the join the candidate page already draws. The
+   *  column has existed since 20260903092000 and nothing read it, so a hire
+   *  could be followed forwards and never backwards -- and an employer wanting
+   *  to see the assessment and interview behind a colleague had to find the
+   *  application by name. An application id is an opaque server-issued
+   *  identifier and grants nothing: the candidate route re-establishes
+   *  membership on arrival. */
+  hiredFromApplicationId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -45,6 +57,7 @@ type EmployeeDbRow = {
   site_name: string | null;
   employment_status: EmploymentStatus;
   start_date: string | null;
+  hired_from_application_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -60,13 +73,14 @@ function fromDbRow(row: EmployeeDbRow): EmployerEmployeeRow {
     siteName: row.site_name,
     employmentStatus: row.employment_status,
     startDate: row.start_date,
+    hiredFromApplicationId: row.hired_from_application_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
 const EMPLOYEE_SELECT =
-  "id, employer_id, first_name, last_name, email, role_title, site_name, employment_status, start_date, created_at, updated_at";
+  "id, employer_id, first_name, last_name, email, role_title, site_name, employment_status, start_date, hired_from_application_id, created_at, updated_at";
 
 async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<void> {
   const { data: membership, error } = await ctx.supabase
