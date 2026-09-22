@@ -8292,7 +8292,7 @@ export const dictionaries = {
     // status, and none of them says anything about the candidate.
     "continuity.heading": "Processen för den här ansökan",
     "continuity.lede":
-      "Fyra separata processer, var och en med sin egen status. Bedömning och intervju är valfria och styrs av er process — de ändrar aldrig ansökans steg automatiskt.",
+      "Fem separata rader, var och en med sin egen källa. Bedömning och intervju är valfria och styrs av er process — de ändrar aldrig ansökans steg automatiskt, och de avgör aldrig beslutet. Beslutsraden läses enbart av ansökans egen status och fattas av en människa.",
     "continuity.track.application": "Ansökan",
     "continuity.track.assessment": "Bedömning",
     "continuity.track.interview": "Intervju",
@@ -16272,7 +16272,7 @@ export const dictionaries = {
     // status, and none of them says anything about the candidate.
     "continuity.heading": "This application's process",
     "continuity.lede":
-      "Four separate processes, each with its own status. Assessment and interview are optional and follow your own process — neither ever changes the application's stage automatically.",
+      "Five separate rows, each from its own source. Assessment and interview are optional and follow your own process — neither ever changes the application's stage automatically, and neither decides the outcome. The decision row is read from the application's own status, and the decision is a person's.",
     "continuity.track.application": "Application",
     "continuity.track.assessment": "Assessment",
     "continuity.track.interview": "Interview",

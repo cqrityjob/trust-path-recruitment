@@ -237,21 +237,26 @@ function PersonDetail({
                 ))}
               </ul>
             )}
-
-            {/* WHAT THE ORGANISATION ACTUALLY HOLDS, said as a count of
-                documents and never as a verdict. An employer may see a
-                released report and nothing else about a person's competence;
-                claiming more than that on this page would be inventing
-                evidence that does not exist. */}
-            <p className="mt-4 flex flex-wrap items-start gap-2 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm text-foreground">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-              <span>
-                {releasedReports > 0
-                  ? t("employer.person.competence.evidenceSome")
-                  : t("employer.person.competence.evidenceNone")}
-              </span>
-            </p>
           </>
+        )}
+
+        {/* WHAT THE ORGANISATION ACTUALLY HOLDS, said as a count of documents
+            and never as a verdict. An employer may see a released report and
+            nothing else about a person's competence; claiming more than that
+            on this page would be inventing evidence that does not exist.
+
+            Outside the profession branch on purpose: this is a fact about the
+            PERSON, and it is equally true when no role is recorded against
+            their employment. */}
+        {!competence.isLoading && !competence.isError && (
+          <p className="mt-4 flex flex-wrap items-start gap-2 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm text-foreground">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+            <span>
+              {releasedReports > 0
+                ? t("employer.person.competence.evidenceSome")
+                : t("employer.person.competence.evidenceNone")}
+            </span>
+          </p>
         )}
       </section>
 
