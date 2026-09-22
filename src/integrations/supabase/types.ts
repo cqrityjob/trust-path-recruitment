@@ -509,7 +509,7 @@ export type Database = {
       bcp_assignments: {
         Row: {
           acknowledged_at: string | null
-          application_id: string
+          application_id: string | null
           assigned_at: string
           assigned_by: string
           available_from: string
@@ -517,13 +517,16 @@ export type Database = {
           cancelled_by: string | null
           cancelled_reason: string | null
           candidate_user_id: string
+          contact_statement: string | null
           created_at: string
           due_at: string | null
           employer_id: string
           exposure_profile_id: string
           first_opened_at: string | null
           id: string
-          job_id: string
+          invitation_id: string | null
+          job_id: string | null
+          lawful_basis_statement: string | null
           lifecycle_state: string
           method_version_id: string
           mode: string
@@ -531,13 +534,17 @@ export type Database = {
           pinned_content_hash: string
           pinned_content_hash_algorithm: string
           pinned_release_scope: string
+          responsible_interviewer_id: string | null
           revision: number
+          role_security_attestation: string | null
+          role_title: string | null
+          security_owner_id: string | null
           submitted_at: string | null
           updated_at: string
         }
         Insert: {
           acknowledged_at?: string | null
-          application_id: string
+          application_id?: string | null
           assigned_at?: string
           assigned_by: string
           available_from?: string
@@ -545,13 +552,16 @@ export type Database = {
           cancelled_by?: string | null
           cancelled_reason?: string | null
           candidate_user_id: string
+          contact_statement?: string | null
           created_at?: string
           due_at?: string | null
           employer_id: string
           exposure_profile_id: string
           first_opened_at?: string | null
           id?: string
-          job_id: string
+          invitation_id?: string | null
+          job_id?: string | null
+          lawful_basis_statement?: string | null
           lifecycle_state?: string
           method_version_id: string
           mode?: string
@@ -559,13 +569,17 @@ export type Database = {
           pinned_content_hash: string
           pinned_content_hash_algorithm?: string
           pinned_release_scope: string
+          responsible_interviewer_id?: string | null
           revision?: number
+          role_security_attestation?: string | null
+          role_title?: string | null
+          security_owner_id?: string | null
           submitted_at?: string | null
           updated_at?: string
         }
         Update: {
           acknowledged_at?: string | null
-          application_id?: string
+          application_id?: string | null
           assigned_at?: string
           assigned_by?: string
           available_from?: string
@@ -573,13 +587,16 @@ export type Database = {
           cancelled_by?: string | null
           cancelled_reason?: string | null
           candidate_user_id?: string
+          contact_statement?: string | null
           created_at?: string
           due_at?: string | null
           employer_id?: string
           exposure_profile_id?: string
           first_opened_at?: string | null
           id?: string
-          job_id?: string
+          invitation_id?: string | null
+          job_id?: string | null
+          lawful_basis_statement?: string | null
           lifecycle_state?: string
           method_version_id?: string
           mode?: string
@@ -587,7 +604,11 @@ export type Database = {
           pinned_content_hash?: string
           pinned_content_hash_algorithm?: string
           pinned_release_scope?: string
+          responsible_interviewer_id?: string | null
           revision?: number
+          role_security_attestation?: string | null
+          role_title?: string | null
+          security_owner_id?: string | null
           submitted_at?: string | null
           updated_at?: string
         }
@@ -614,6 +635,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bcp_assignments_invitation_fk"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_invitations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bcp_assignments_job_id_fkey"
             columns: ["job_id"]
             isOneToOne: false
@@ -629,9 +657,60 @@ export type Database = {
           },
         ]
       }
+      bcp_candidate_supplements: {
+        Row: {
+          assignment_id: string
+          body: string
+          candidate_user_id: string
+          id: string
+          item_key: string | null
+          operation_id: string
+          response_id: string
+          submitted_at: string
+          supplement_kind: string
+        }
+        Insert: {
+          assignment_id: string
+          body: string
+          candidate_user_id: string
+          id?: string
+          item_key?: string | null
+          operation_id: string
+          response_id: string
+          submitted_at?: string
+          supplement_kind: string
+        }
+        Update: {
+          assignment_id?: string
+          body?: string
+          candidate_user_id?: string
+          id?: string
+          item_key?: string | null
+          operation_id?: string
+          response_id?: string
+          submitted_at?: string
+          supplement_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_candidate_supplements_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_candidate_supplements_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bcp_case_links: {
         Row: {
-          application_id: string
+          application_id: string | null
           assignment_id: string
           bound_answers_content_hash: string
           bound_assignment_revision: number
@@ -659,7 +738,7 @@ export type Database = {
           unlinked_reason: string | null
         }
         Insert: {
-          application_id: string
+          application_id?: string | null
           assignment_id: string
           bound_answers_content_hash: string
           bound_assignment_revision: number
@@ -687,7 +766,7 @@ export type Database = {
           unlinked_reason?: string | null
         }
         Update: {
-          application_id?: string
+          application_id?: string | null
           assignment_id?: string
           bound_answers_content_hash?: string
           bound_assignment_revision?: number
@@ -783,6 +862,7 @@ export type Database = {
           item_key: string
           link_id: string
           topic_reason: string
+          trigger_rule_key: string | null
         }
         Insert: {
           created_at?: string
@@ -793,6 +873,7 @@ export type Database = {
           item_key: string
           link_id: string
           topic_reason: string
+          trigger_rule_key?: string | null
         }
         Update: {
           created_at?: string
@@ -803,6 +884,7 @@ export type Database = {
           item_key?: string
           link_id?: string
           topic_reason?: string
+          trigger_rule_key?: string | null
         }
         Relationships: [
           {
@@ -828,29 +910,93 @@ export type Database = {
           },
         ]
       }
+      bcp_conduct_actions: {
+        Row: {
+          action_key: string
+          description: string
+          due_on: string | null
+          id: string
+          note: string | null
+          operation_id: string
+          recorded_at: string
+          recorded_by: string
+          responsible: string
+          review_on: string | null
+          session_id: string
+          status: string
+          version: number
+        }
+        Insert: {
+          action_key: string
+          description: string
+          due_on?: string | null
+          id?: string
+          note?: string | null
+          operation_id: string
+          recorded_at?: string
+          recorded_by: string
+          responsible: string
+          review_on?: string | null
+          session_id: string
+          status: string
+          version?: number
+        }
+        Update: {
+          action_key?: string
+          description?: string
+          due_on?: string | null
+          id?: string
+          note?: string | null
+          operation_id?: string
+          recorded_at?: string
+          recorded_by?: string
+          responsible?: string
+          review_on?: string | null
+          session_id?: string
+          status?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_actions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bcp_conduct_entries: {
         Row: {
           alternative_explanation: string | null
           candidate_explanation: string | null
+          candidate_response: string | null
+          consequence: string | null
+          contradicting_information: string | null
           correction_reason: string | null
           created_at: string
           entry_version: number
+          event_timing: string | null
           id: string
+          information_gap: string | null
           interviewer_interpretation: string | null
           item_id: string
           item_key: string
           live_item_slot: string | null
           live_slot: string | null
+          measures_taken: string | null
           observable_fact: string | null
           position_id: string
           protective_factor: string | null
           recorded_at: string
           recorded_by: string
+          role_link: string | null
           save_operation_id: string
           sensitivity_class: string
           session_id: string
           superseded_by_entry_id: string | null
           supersedes_entry_id: string | null
+          supporting_information: string | null
           topic_basis: string
           topic_id: string | null
           verification_need: string | null
@@ -860,25 +1006,33 @@ export type Database = {
         Insert: {
           alternative_explanation?: string | null
           candidate_explanation?: string | null
+          candidate_response?: string | null
+          consequence?: string | null
+          contradicting_information?: string | null
           correction_reason?: string | null
           created_at?: string
           entry_version?: number
+          event_timing?: string | null
           id?: string
+          information_gap?: string | null
           interviewer_interpretation?: string | null
           item_id: string
           item_key: string
           live_item_slot?: string | null
           live_slot?: string | null
+          measures_taken?: string | null
           observable_fact?: string | null
           position_id: string
           protective_factor?: string | null
           recorded_at?: string
           recorded_by: string
+          role_link?: string | null
           save_operation_id: string
           sensitivity_class?: string
           session_id: string
           superseded_by_entry_id?: string | null
           supersedes_entry_id?: string | null
+          supporting_information?: string | null
           topic_basis: string
           topic_id?: string | null
           verification_need?: string | null
@@ -888,25 +1042,33 @@ export type Database = {
         Update: {
           alternative_explanation?: string | null
           candidate_explanation?: string | null
+          candidate_response?: string | null
+          consequence?: string | null
+          contradicting_information?: string | null
           correction_reason?: string | null
           created_at?: string
           entry_version?: number
+          event_timing?: string | null
           id?: string
+          information_gap?: string | null
           interviewer_interpretation?: string | null
           item_id?: string
           item_key?: string
           live_item_slot?: string | null
           live_slot?: string | null
+          measures_taken?: string | null
           observable_fact?: string | null
           position_id?: string
           protective_factor?: string | null
           recorded_at?: string
           recorded_by?: string
+          role_link?: string | null
           save_operation_id?: string
           sensitivity_class?: string
           session_id?: string
           superseded_by_entry_id?: string | null
           supersedes_entry_id?: string | null
+          supporting_information?: string | null
           topic_basis?: string
           topic_id?: string | null
           verification_need?: string | null
@@ -1369,6 +1531,72 @@ export type Database = {
           },
         ]
       }
+      bcp_conduct_stances: {
+        Row: {
+          correction_reason: string | null
+          decided_at: string
+          decided_by: string
+          decided_by_name: string
+          decided_role: string
+          id: string
+          operation_id: string
+          rationale: string
+          session_id: string
+          stance: string
+          sufficiency: string
+          sufficiency_reason: string
+          supersedes_stance_id: string | null
+          version: number
+        }
+        Insert: {
+          correction_reason?: string | null
+          decided_at?: string
+          decided_by: string
+          decided_by_name: string
+          decided_role: string
+          id?: string
+          operation_id: string
+          rationale: string
+          session_id: string
+          stance: string
+          sufficiency: string
+          sufficiency_reason: string
+          supersedes_stance_id?: string | null
+          version?: number
+        }
+        Update: {
+          correction_reason?: string | null
+          decided_at?: string
+          decided_by?: string
+          decided_by_name?: string
+          decided_role?: string
+          id?: string
+          operation_id?: string
+          rationale?: string
+          session_id?: string
+          stance?: string
+          sufficiency?: string
+          sufficiency_reason?: string
+          supersedes_stance_id?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_conduct_stances_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_conduct_stances_supersedes_stance_id_fkey"
+            columns: ["supersedes_stance_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_conduct_stances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bcp_conduct_verifications: {
         Row: {
           entry_id: string
@@ -1511,6 +1739,191 @@ export type Database = {
             columns: ["response_id"]
             isOneToOne: false
             referencedRelation: "bcp_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_internal_test_activations: {
+        Row: {
+          decided_at: string
+          decided_by: string
+          decision_reference: string
+          employer_id: string
+          expires_on: string
+          grant_operation_id: string
+          id: string
+          method_version_id: string
+          pinned_content_hash: string
+          revoke_operation_id: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          decided_at?: string
+          decided_by: string
+          decision_reference: string
+          employer_id: string
+          expires_on: string
+          grant_operation_id: string
+          id?: string
+          method_version_id: string
+          pinned_content_hash: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          decided_at?: string
+          decided_by?: string
+          decision_reference?: string
+          employer_id?: string
+          expires_on?: string
+          grant_operation_id?: string
+          id?: string
+          method_version_id?: string
+          pinned_content_hash?: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_internal_test_activations_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_internal_test_activations_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          assignment_id: string | null
+          candidate_display_name: string | null
+          contact_statement: string
+          create_operation_id: string
+          created_at: string
+          created_by: string
+          due_at: string | null
+          employer_id: string
+          expires_at: string
+          exposure_profile_id: string
+          id: string
+          invited_email: string
+          lawful_basis_statement: string | null
+          method_version_id: string
+          mode: string
+          notice_version: string
+          pinned_content_hash: string
+          responsible_interviewer_id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          role_security_attestation: string | null
+          role_title: string
+          security_owner_id: string | null
+          state: string
+          token_digest: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          assignment_id?: string | null
+          candidate_display_name?: string | null
+          contact_statement: string
+          create_operation_id: string
+          created_at?: string
+          created_by: string
+          due_at?: string | null
+          employer_id: string
+          expires_at: string
+          exposure_profile_id: string
+          id?: string
+          invited_email: string
+          lawful_basis_statement?: string | null
+          method_version_id: string
+          mode: string
+          notice_version: string
+          pinned_content_hash: string
+          responsible_interviewer_id: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_security_attestation?: string | null
+          role_title: string
+          security_owner_id?: string | null
+          state?: string
+          token_digest: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          assignment_id?: string | null
+          candidate_display_name?: string | null
+          contact_statement?: string
+          create_operation_id?: string
+          created_at?: string
+          created_by?: string
+          due_at?: string | null
+          employer_id?: string
+          expires_at?: string
+          exposure_profile_id?: string
+          id?: string
+          invited_email?: string
+          lawful_basis_statement?: string | null
+          method_version_id?: string
+          mode?: string
+          notice_version?: string
+          pinned_content_hash?: string
+          responsible_interviewer_id?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role_security_attestation?: string | null
+          role_title?: string
+          security_owner_id?: string | null
+          state?: string
+          token_digest?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_invitations_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_invitations_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_invitations_exposure_profile_id_fkey"
+            columns: ["exposure_profile_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_exposure_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bcp_invitations_method_version_id_fkey"
+            columns: ["method_version_id"]
+            isOneToOne: false
+            referencedRelation: "beskt_method_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -1659,6 +2072,56 @@ export type Database = {
             columns: ["assignment_id"]
             isOneToOne: false
             referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bcp_security_officers: {
+        Row: {
+          appoint_operation_id: string
+          appointed_at: string
+          appointed_by: string
+          appointment_reason: string
+          employer_id: string
+          id: string
+          revoke_operation_id: string | null
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          user_id: string
+        }
+        Insert: {
+          appoint_operation_id: string
+          appointed_at?: string
+          appointed_by: string
+          appointment_reason: string
+          employer_id: string
+          id?: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id: string
+        }
+        Update: {
+          appoint_operation_id?: string
+          appointed_at?: string
+          appointed_by?: string
+          appointment_reason?: string
+          employer_id?: string
+          id?: string
+          revoke_operation_id?: string | null
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcp_security_officers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
             referencedColumns: ["id"]
           },
         ]
@@ -2138,6 +2601,7 @@ export type Database = {
           mode: string
           open_slot: string | null
           pack_id: string
+          pilot_availability: string
           published_at: string | null
           published_by: string | null
           release_scope: string
@@ -2170,6 +2634,7 @@ export type Database = {
           mode: string
           open_slot?: string | null
           pack_id: string
+          pilot_availability?: string
           published_at?: string | null
           published_by?: string | null
           release_scope?: string
@@ -2202,6 +2667,7 @@ export type Database = {
           mode?: string
           open_slot?: string | null
           pack_id?: string
+          pilot_availability?: string
           published_at?: string | null
           published_by?: string | null
           release_scope?: string
@@ -6733,6 +7199,61 @@ export type Database = {
           },
         ]
       }
+      scp_assessment_setups: {
+        Row: {
+          assessment_assignment_id: string
+          created_at: string
+          created_by: string
+          employer_id: string
+          environment: string
+          method: string
+          role_group: string
+          role_profile: string
+        }
+        Insert: {
+          assessment_assignment_id: string
+          created_at?: string
+          created_by: string
+          employer_id: string
+          environment: string
+          method: string
+          role_group: string
+          role_profile: string
+        }
+        Update: {
+          assessment_assignment_id?: string
+          created_at?: string
+          created_by?: string
+          employer_id?: string
+          environment?: string
+          method?: string
+          role_group?: string
+          role_profile?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_assessment_setups_assessment_assignment_id_fkey"
+            columns: ["assessment_assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assessment_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_setups_assessment_assignment_id_fkey"
+            columns: ["assessment_assignment_id"]
+            isOneToOne: true
+            referencedRelation: "scp_rm_employer_assignments"
+            referencedColumns: ["assignment_id"]
+          },
+          {
+            foreignKeyName: "scp_assessment_setups_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scp_assessment_versions: {
         Row: {
           approved_at: string | null
@@ -7657,6 +8178,39 @@ export type Database = {
           subject_id?: string | null
           subject_ref?: string | null
           subject_type?: string
+        }
+        Relationships: []
+      }
+      scp_content_role_changes: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string
+          id: string
+          operation_id: string
+          reason: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by: string
+          id?: string
+          operation_id: string
+          reason: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string
+          id?: string
+          operation_id?: string
+          reason?: string
+          role?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -11072,6 +11626,77 @@ export type Database = {
           },
         ]
       }
+      scp_interview_starts: {
+        Row: {
+          application_id: string | null
+          created_at: string
+          created_by: string
+          employer_id: string
+          id: string
+          interview_case_id: string
+          source_id: string | null
+          source_kind: string
+          start_key: string
+          superseded_at: string | null
+          superseded_reason: string | null
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string
+          created_by: string
+          employer_id: string
+          id?: string
+          interview_case_id: string
+          source_id?: string | null
+          source_kind: string
+          start_key: string
+          superseded_at?: string | null
+          superseded_reason?: string | null
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string
+          created_by?: string
+          employer_id?: string
+          id?: string
+          interview_case_id?: string
+          source_id?: string | null
+          source_kind?: string
+          start_key?: string
+          superseded_at?: string | null
+          superseded_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_interview_starts_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_starts_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_starts_interview_case_id_fkey"
+            columns: ["interview_case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_interview_starts_interview_case_id_fkey"
+            columns: ["interview_case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
+          },
+        ]
+      }
       scp_interview_verification_rules: {
         Row: {
           code: string
@@ -12125,6 +12750,152 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "scp_processing_purposes"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      scp_recruitment_content_links: {
+        Row: {
+          assessment_definition_id: string | null
+          created_at: string
+          environment: string
+          id: string
+          interview_pack_id: string
+          role_profile: string
+        }
+        Insert: {
+          assessment_definition_id?: string | null
+          created_at?: string
+          environment: string
+          id?: string
+          interview_pack_id: string
+          role_profile: string
+        }
+        Update: {
+          assessment_definition_id?: string | null
+          created_at?: string
+          environment?: string
+          id?: string
+          interview_pack_id?: string
+          role_profile?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_recruitment_content_links_assessment_definition_id_fkey"
+            columns: ["assessment_definition_id"]
+            isOneToOne: false
+            referencedRelation: "scp_assessment_definitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_recruitment_content_links_interview_pack_id_fkey"
+            columns: ["interview_pack_id"]
+            isOneToOne: false
+            referencedRelation: "scp_interview_packs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_recruitment_content_links_role_profile_fkey"
+            columns: ["role_profile"]
+            isOneToOne: false
+            referencedRelation: "scp_recruitment_role_profiles"
+            referencedColumns: ["role_profile"]
+          },
+        ]
+      }
+      scp_recruitment_role_profiles: {
+        Row: {
+          created_at: string
+          role_group: string
+          role_id: string
+          role_profile: string
+        }
+        Insert: {
+          created_at?: string
+          role_group: string
+          role_id: string
+          role_profile: string
+        }
+        Update: {
+          created_at?: string
+          role_group?: string
+          role_id?: string
+          role_profile?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_recruitment_role_profiles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "scp_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scp_recruitment_setups: {
+        Row: {
+          beskt_assignment_id: string | null
+          created_at: string
+          created_by: string
+          employer_id: string
+          environment: string
+          id: string
+          interview_case_id: string | null
+          method: string
+          role_group: string
+          role_profile: string
+        }
+        Insert: {
+          beskt_assignment_id?: string | null
+          created_at?: string
+          created_by: string
+          employer_id: string
+          environment: string
+          id?: string
+          interview_case_id?: string | null
+          method: string
+          role_group: string
+          role_profile: string
+        }
+        Update: {
+          beskt_assignment_id?: string | null
+          created_at?: string
+          created_by?: string
+          employer_id?: string
+          environment?: string
+          id?: string
+          interview_case_id?: string | null
+          method?: string
+          role_group?: string
+          role_profile?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scp_recruitment_setups_beskt_assignment_id_fkey"
+            columns: ["beskt_assignment_id"]
+            isOneToOne: true
+            referencedRelation: "bcp_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_recruitment_setups_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_recruitment_setups_interview_case_id_fkey"
+            columns: ["interview_case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_recruitment_setups_interview_case_id_fkey"
+            columns: ["interview_case_id"]
+            isOneToOne: true
+            referencedRelation: "scp_interview_process_quality"
+            referencedColumns: ["case_id"]
           },
         ]
       }
@@ -15264,6 +16035,96 @@ export type Database = {
           },
         ]
       }
+      sp_hayat_assessments: {
+        Row: {
+          adapter: string
+          binding_level: string
+          checked_at: string
+          checks: Json
+          claim_id: string
+          claim_version_no: number
+          created_at: string
+          current_until: string | null
+          evidence_id: string | null
+          evidence_sha256: string | null
+          fields_fingerprint: string
+          holder_user_id: string
+          id: string
+          invalidated_at: string | null
+          invalidated_reason: string | null
+          reasons: string[]
+          rule_version: string
+          scope_limits: string[]
+          seq: number
+          source_kind: string
+          source_reference: string | null
+          status: string
+        }
+        Insert: {
+          adapter: string
+          binding_level: string
+          checked_at: string
+          checks: Json
+          claim_id: string
+          claim_version_no: number
+          created_at?: string
+          current_until?: string | null
+          evidence_id?: string | null
+          evidence_sha256?: string | null
+          fields_fingerprint: string
+          holder_user_id: string
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          reasons?: string[]
+          rule_version: string
+          scope_limits?: string[]
+          seq?: never
+          source_kind: string
+          source_reference?: string | null
+          status: string
+        }
+        Update: {
+          adapter?: string
+          binding_level?: string
+          checked_at?: string
+          checks?: Json
+          claim_id?: string
+          claim_version_no?: number
+          created_at?: string
+          current_until?: string | null
+          evidence_id?: string | null
+          evidence_sha256?: string | null
+          fields_fingerprint?: string
+          holder_user_id?: string
+          id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
+          reasons?: string[]
+          rule_version?: string
+          scope_limits?: string[]
+          seq?: never
+          source_kind?: string
+          source_reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_hayat_assessments_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_hayat_assessments_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "sp_evidence"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sp_jurisdictions: {
         Row: {
           code: string
@@ -16767,6 +17628,10 @@ export type Database = {
         }[]
       }
       assert_cig_family_id: { Args: { p_family_id: string }; Returns: boolean }
+      bcp_accept_invitation: {
+        Args: { _operation_id: string; _token: string }
+        Returns: Json
+      }
       bcp_acknowledge_notice: {
         Args: {
           _assignment_id: string
@@ -16780,6 +17645,15 @@ export type Database = {
       bcp_answers_content_hash: {
         Args: { _response_id: string }
         Returns: string
+      }
+      bcp_appoint_security_officer: {
+        Args: {
+          _employer_id: string
+          _operation_id: string
+          _reason: string
+          _user_id: string
+        }
+        Returns: Json
       }
       bcp_assign: {
         Args: {
@@ -16811,7 +17685,9 @@ export type Database = {
       bcp_assignable_method_versions: {
         Args: { _employer_id: string }
         Returns: {
+          availability: string
           content_hash: string
+          content_status: string
           grant_expires_on: string
           method_version_id: string
           mode: string
@@ -16825,6 +17701,16 @@ export type Database = {
           summary_sv: string
           validation_label: string
           version_number: number
+        }[]
+      }
+      bcp_assignment_supplements: {
+        Args: { _assignment_id: string }
+        Returns: {
+          body: string
+          item_key: string
+          submitted_at: string
+          supplement_id: string
+          supplement_kind: string
         }[]
       }
       bcp_cancel: {
@@ -16847,6 +17733,8 @@ export type Database = {
           lifecycle_state: string
           method_name_en: string
           method_name_sv: string
+          mode: string
+          role_title: string
           submitted_at: string
         }[]
       }
@@ -16855,7 +17743,65 @@ export type Database = {
         Returns: Json
       }
       bcp_canonical_answers: { Args: { _response_id: string }; Returns: Json }
+      bcp_case_access_ok: { Args: { _case_id: string }; Returns: boolean }
       bcp_case_preparation_basis: { Args: { _case_id: string }; Returns: Json }
+      bcp_case_vetting_restricted: {
+        Args: { _case_id: string }
+        Returns: boolean
+      }
+      bcp_check_start: {
+        Args: {
+          _contact_statement: string
+          _employer_id: string
+          _expected_content_hash: string
+          _exposure_profile_id: string
+          _lawful_basis_statement: string
+          _method_version_id: string
+          _mode: string
+          _responsible_interviewer_id: string
+          _role_security_attestation: string
+          _security_owner_id: string
+        }
+        Returns: {
+          content_hash: string | null
+          content_hash_algorithm: string
+          content_provenance: string
+          content_status: string
+          created_at: string
+          created_by: string | null
+          id: string
+          locale_en: string
+          locale_sv: string
+          mode: string
+          open_slot: string | null
+          pack_id: string
+          pilot_availability: string
+          published_at: string | null
+          published_by: string | null
+          release_scope: string
+          retired_at: string | null
+          retired_by: string | null
+          retired_reason: string | null
+          review_cycle: number
+          revision: number
+          source_document_version: string
+          source_reference: string
+          summary_en: string | null
+          summary_sv: string | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspended_reason: string | null
+          updated_at: string
+          validation_label: string
+          version_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "beskt_method_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       bcp_conduct_basis_hash: { Args: { _payload: Json }; Returns: string }
       bcp_conduct_build_report_basis: {
         Args: { _session_id: string }
@@ -16865,6 +17811,7 @@ export type Database = {
         Args: { _session_id: string }
         Returns: boolean
       }
+      bcp_conduct_decision: { Args: { _session_id: string }; Returns: Json }
       bcp_conduct_entry_history: { Args: { _entry_id: string }; Returns: Json }
       bcp_conduct_final_report: { Args: { _session_id: string }; Returns: Json }
       bcp_conduct_finalise_report: {
@@ -16891,6 +17838,10 @@ export type Database = {
         }
         Returns: Json
       }
+      bcp_conduct_may_record_stance: {
+        Args: { _session_id: string }
+        Returns: boolean
+      }
       bcp_conduct_may_see_others: {
         Args: { _session_id: string }
         Returns: boolean
@@ -16903,22 +17854,46 @@ export type Database = {
         Args: { _session_id: string }
         Returns: Json
       }
+      bcp_conduct_record_action: {
+        Args: {
+          _action_key: string
+          _description: string
+          _due_on: string
+          _expected_version: number
+          _note: string
+          _operation_id: string
+          _responsible: string
+          _review_on: string
+          _session_id: string
+          _status: string
+        }
+        Returns: Json
+      }
       bcp_conduct_record_resolution: {
         Args: {
-          // Nullable in the SQL signature, and the generator does not carry
-          // that through. The table's shape constraint REQUIRES a null here:
-          // an agreed resolution must have divergent_statement IS NULL and a
-          // disagreed one must carry the divergent words, and an empty string
-          // satisfies neither. Restored by hand, as PR #236 restored
-          // scp_iv_finalise_previewed_report for the same reason.
-          _agreed_statement: string | null
-          _divergent_statement: string | null
+          _agreed_statement: string
+          _divergent_statement: string
           _expected_revision: number
           _item_key: string
           _operation_id: string
           _panel_id: string
           _rationale: string
           _resolution_kind: string
+        }
+        Returns: Json
+      }
+      bcp_conduct_record_stance: {
+        Args: {
+          _correction_reason?: string
+          _decided_by_name: string
+          _decided_role: string
+          _expected_version: number
+          _operation_id: string
+          _rationale: string
+          _session_id: string
+          _stance: string
+          _sufficiency: string
+          _sufficiency_reason: string
         }
         Returns: Json
       }
@@ -16948,6 +17923,10 @@ export type Database = {
           code: string
           message: string
         }[]
+      }
+      bcp_conduct_report_extensions: {
+        Args: { _session_id: string }
+        Returns: Json
       }
       bcp_conduct_report_versions: {
         Args: { _session_id: string }
@@ -16981,6 +17960,26 @@ export type Database = {
         Returns: Json
       }
       bcp_conduct_workspace: { Args: { _session_id: string }; Returns: Json }
+      bcp_create_invitation: {
+        Args: {
+          _candidate_display_name: string
+          _contact_statement: string
+          _due_at?: string
+          _employer_id: string
+          _expected_content_hash: string
+          _exposure_profile_id: string
+          _invited_email: string
+          _lawful_basis_statement?: string
+          _method_version_id: string
+          _mode: string
+          _operation_id: string
+          _responsible_interviewer_id: string
+          _role_security_attestation?: string
+          _role_title: string
+          _security_owner_id?: string
+        }
+        Returns: Json
+      }
       bcp_employer_assignments: {
         Args: { _employer_id: string }
         Returns: {
@@ -17000,11 +17999,67 @@ export type Database = {
           submitted_at: string
         }[]
       }
+      bcp_employer_beskt_assignments: {
+        Args: { _employer_id: string }
+        Returns: {
+          application_id: string
+          assigned_at: string
+          assignment_id: string
+          candidate_display_name: string
+          case_id: string
+          invitation_id: string
+          lifecycle_state: string
+          method_name_en: string
+          method_name_sv: string
+          mode: string
+          report_finalised: boolean
+          responsible_interviewer_id: string
+          role_title: string
+          submitted_at: string
+        }[]
+      }
       bcp_employer_can_read_assignment: {
         Args: { _assignment_id: string }
         Returns: boolean
       }
+      bcp_employer_invitations: {
+        Args: { _employer_id: string }
+        Returns: {
+          accepted_at: string
+          assignment_id: string
+          candidate_display_name: string
+          created_at: string
+          expires_at: string
+          invitation_id: string
+          invited_email: string
+          mode: string
+          role_title: string
+          state: string
+        }[]
+      }
+      bcp_employer_party: { Args: { _assignment_id: string }; Returns: boolean }
+      bcp_employer_people: {
+        Args: { _employer_id: string }
+        Returns: {
+          display_name: string
+          email: string
+          employer_role: string
+          is_security_officer: boolean
+          officer_id: string
+          user_id: string
+        }[]
+      }
       bcp_employer_readback: { Args: { _assignment_id: string }; Returns: Json }
+      bcp_grant_internal_test_activation: {
+        Args: {
+          _decision_reference: string
+          _employer_id: string
+          _expires_on: string
+          _method_version_id: string
+          _operation_id: string
+        }
+        Returns: Json
+      }
       bcp_grant_pilot: {
         Args: {
           _employer_id: string
@@ -17015,8 +18070,47 @@ export type Database = {
         }
         Returns: Json
       }
+      bcp_internal_test_activation_active: {
+        Args: { _employer_id: string; _method_version_id: string }
+        Returns: boolean
+      }
+      bcp_internal_test_activation_covers: {
+        Args: {
+          _employer_id: string
+          _method_version_id: string
+          _pinned_content_hash: string
+        }
+        Returns: boolean
+      }
+      bcp_internal_test_activations_for: {
+        Args: { _employer_id?: string; _method_version_id?: string }
+        Returns: {
+          activation_id: string
+          decided_at: string
+          decided_by: string
+          decision_reference: string
+          employer_id: string
+          employer_name: string
+          expires_on: string
+          is_live: boolean
+          method_version_id: string
+          pinned_content_hash: string
+          revoke_reason: string
+          revoked_at: string
+        }[]
+      }
+      bcp_interview_preparation: {
+        Args: { _session_id: string }
+        Returns: Json
+      }
+      bcp_invitation_for_token: { Args: { _token: string }; Returns: Json }
+      bcp_invitation_token_digest: { Args: { _token: string }; Returns: string }
       bcp_is_assignment_candidate: {
         Args: { _assignment_id: string }
+        Returns: boolean
+      }
+      bcp_is_security_officer: {
+        Args: { _employer_id: string; _user_id: string }
         Returns: boolean
       }
       bcp_link_preparation_to_case: {
@@ -17042,6 +18136,14 @@ export type Database = {
         Args: { _assignment_id: string; _operation_id: string }
         Returns: Json
       }
+      bcp_method_preview: {
+        Args: {
+          _employer_id: string
+          _exposure_profile_id: string
+          _method_version_id: string
+        }
+        Returns: Json
+      }
       bcp_my_preparation_link: {
         Args: { _assignment_id: string }
         Returns: Json
@@ -17051,6 +18153,10 @@ export type Database = {
         Returns: string
       }
       bcp_notice_copy_keys: { Args: never; Returns: string[] }
+      bcp_notice_copy_keys_for: {
+        Args: { _notice_version: string }
+        Returns: string[]
+      }
       bcp_notice_descriptor: {
         Args: { _assignment_id: string; _locale: string }
         Returns: Json
@@ -17061,7 +18167,28 @@ export type Database = {
       }
       bcp_notice_locales: { Args: never; Returns: string[] }
       bcp_notice_sections: { Args: never; Returns: string[] }
+      bcp_notice_sections_for: {
+        Args: { _notice_version: string }
+        Returns: string[]
+      }
       bcp_notice_version: { Args: never; Returns: string }
+      bcp_notice_version_for: { Args: { _mode: string }; Returns: string }
+      bcp_offer_content_covers: {
+        Args: {
+          _employer_id: string
+          _method_version_id: string
+          _pinned_content_hash: string
+        }
+        Returns: boolean
+      }
+      bcp_offer_covers: {
+        Args: { _employer_id: string; _method_version_id: string }
+        Returns: boolean
+      }
+      bcp_open_pilot_available: {
+        Args: { _method_version_id: string }
+        Returns: boolean
+      }
       bcp_operation_begin: {
         Args: { _operation_id: string; _request_hash: string }
         Returns: Json
@@ -17093,6 +18220,14 @@ export type Database = {
         }
         Returns: string
       }
+      bcp_revoke_internal_test_activation: {
+        Args: { _activation_id: string; _operation_id: string; _reason: string }
+        Returns: Json
+      }
+      bcp_revoke_invitation: {
+        Args: { _invitation_id: string; _operation_id: string; _reason: string }
+        Returns: Json
+      }
       bcp_revoke_pilot: {
         Args: {
           _employer_id: string
@@ -17100,6 +18235,10 @@ export type Database = {
           _operation_id: string
           _reason: string
         }
+        Returns: Json
+      }
+      bcp_revoke_security_officer: {
+        Args: { _officer_id: string; _operation_id: string; _reason: string }
         Returns: Json
       }
       bcp_routing_answers: { Args: { _response_id: string }; Returns: Json }
@@ -17112,6 +18251,23 @@ export type Database = {
         }
         Returns: Json
       }
+      bcp_start_beskt: {
+        Args: {
+          _application_id: string
+          _contact_statement: string
+          _due_at?: string
+          _expected_content_hash: string
+          _exposure_profile_id: string
+          _lawful_basis_statement?: string
+          _method_version_id: string
+          _mode: string
+          _operation_id: string
+          _responsible_interviewer_id: string
+          _role_security_attestation?: string
+          _security_owner_id?: string
+        }
+        Returns: Json
+      }
       bcp_submit: {
         Args: {
           _assignment_id: string
@@ -17120,11 +18276,29 @@ export type Database = {
         }
         Returns: Json
       }
+      bcp_submit_supplement: {
+        Args: {
+          _assignment_id: string
+          _body: string
+          _item_key: string
+          _operation_id: string
+          _supplement_kind: string
+        }
+        Returns: Json
+      }
       bcp_unlink_preparation_from_case: {
         Args: { _link_id: string; _operation_id: string; _reason: string }
         Returns: Json
       }
       bcp_version_is_candidate_safe: {
+        Args: { _method_version_id: string }
+        Returns: boolean
+      }
+      bcp_version_is_runnable: {
+        Args: { _method_version_id: string }
+        Returns: boolean
+      }
+      bcp_version_is_structurally_candidate_safe: {
         Args: { _method_version_id: string }
         Returns: boolean
       }
@@ -17308,6 +18482,7 @@ export type Database = {
           mode: string
           open_slot: string | null
           pack_id: string
+          pilot_availability: string
           published_at: string | null
           published_by: string | null
           release_scope: string
@@ -17437,6 +18612,25 @@ export type Database = {
       }
       beskt_revoke_governance: {
         Args: { _grant_id: string; _operation_id: string; _reason: string }
+        Returns: Json
+      }
+      beskt_set_content_role: {
+        Args: {
+          _email: string
+          _grant: boolean
+          _operation_id: string
+          _reason: string
+          _role: string
+        }
+        Returns: Json
+      }
+      beskt_set_pilot_availability: {
+        Args: {
+          _available: boolean
+          _method_version_id: string
+          _operation_id: string
+          _reason: string
+        }
         Returns: Json
       }
       beskt_sorted_array: { Args: { _arr: string[] }; Returns: Json }
@@ -18580,6 +19774,10 @@ export type Database = {
         }[]
       }
       scp_iv_case_employer: { Args: { _case_id: string }; Returns: string }
+      scp_iv_case_row_visible: {
+        Args: { _case_id: string; _employer_id: string }
+        Returns: boolean
+      }
       scp_iv_case_start_basis: {
         Args: {
           _employer_id: string
@@ -18663,7 +19861,11 @@ export type Database = {
         }[]
       }
       scp_iv_finalise_previewed_report: {
-        Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }
+        Args: {
+          _case_id: string
+          _draft_run_id: string
+          _expected_basis_hash: string
+        }
         Returns: string
       }
       scp_iv_finalise_report: {
@@ -18829,6 +20031,40 @@ export type Database = {
         Returns: undefined
       }
       scp_iv_source_case: { Args: { _source_id: string }; Returns: string }
+      scp_iv_start_choices: {
+        Args: { _assessment_assignment_id?: string; _employer_id: string }
+        Returns: {
+          environment: string
+          role_group: string
+          role_profile: string
+        }[]
+      }
+      scp_iv_start_interview: {
+        Args: {
+          _application_id: string
+          _employer_id: string
+          _environment?: string
+          _method: string
+          _pack_version_id?: string
+          _role_group?: string
+          _role_profile?: string
+          _source_id: string
+          _source_kind: string
+          _title?: string
+        }
+        Returns: Json
+      }
+      scp_iv_start_result: {
+        Args: {
+          _case_id: string
+          _created: boolean
+          _e: string
+          _g: string
+          _method: string
+          _r: string
+        }
+        Returns: Json
+      }
       scp_iv_start_session: {
         Args: { _case_id: string; _interviewer_names?: string }
         Returns: string
@@ -19003,6 +20239,16 @@ export type Database = {
           subject_id: string
         }[]
       }
+      scp_record_assessment_setup: {
+        Args: {
+          _assessment_assignment_id: string
+          _employer_id: string
+          _environment: string
+          _role_group: string
+          _role_profile: string
+        }
+        Returns: undefined
+      }
       scp_record_employer_decision: {
         Args: {
           _action: string
@@ -19021,6 +20267,18 @@ export type Database = {
           _attempt_id: string
           _note?: string
           _outcome: string
+        }
+        Returns: string
+      }
+      scp_record_recruitment_setup: {
+        Args: {
+          _beskt_assignment_id: string
+          _employer_id: string
+          _environment: string
+          _interview_case_id: string
+          _method: string
+          _role_group: string
+          _role_profile: string
         }
         Returns: string
       }
@@ -19385,6 +20643,53 @@ export type Database = {
       sp_grant_pilot_member: {
         Args: { _market_pack_code: string; _note?: string; _user_id: string }
         Returns: undefined
+      }
+      sp_hayat_claim_fingerprint: {
+        Args: { _claim_id: string }
+        Returns: string
+      }
+      sp_hayat_current_assessment: {
+        Args: { _claim_id: string }
+        Returns: {
+          adapter: string
+          binding_level: string
+          checked_at: string
+          checks: Json
+          current_until: string
+          id: string
+          is_current: boolean
+          not_current_reason: string
+          reasons: string[]
+          rule_version: string
+          scope_limits: string[]
+          source_kind: string
+          source_reference: string
+          status: string
+        }[]
+      }
+      sp_hayat_fields_fingerprint: {
+        Args: { _claim: Database["public"]["Tables"]["sp_claims"]["Row"] }
+        Returns: string
+      }
+      sp_hayat_record_assessment: {
+        Args: {
+          _adapter: string
+          _assessed_fingerprint: string
+          _binding_level: string
+          _checked_at: string
+          _checks: Json
+          _claim_id: string
+          _current_for_days: number
+          _evidence_id: string
+          _holder_user_id: string
+          _reasons: string[]
+          _rule_version: string
+          _scope_limits: string[]
+          _source_kind: string
+          _source_reference: string
+          _status: string
+        }
+        Returns: string
       }
       sp_is_passport_credential: {
         Args: { _code: string; _type: string }
