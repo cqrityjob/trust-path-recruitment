@@ -332,7 +332,7 @@
     "@types/react": "^19.2.0",
     "eslint": "^9.32.0",
     "typescript-eslint": "^8.56.1",
-    "@lovable.dev/vite-tanstack-config": "2.13.1",
+    "@lovable.dev/vite-tanstack-config": "2.23.1",
     "prettier": "^3.7.3",
     "vite": "^8.0.16",
     "eslint-plugin-react-refresh": "^0.4.20",
