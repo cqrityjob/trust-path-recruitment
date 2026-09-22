@@ -68,8 +68,14 @@ SELECT
   'e1f00000-0000-0000-0000-00000000000d'::uuid AS owner_archived,
   'e1f00000-0000-0000-0000-00000000000e'::uuid AS owner_other,
   'e1f00000-0000-0000-0000-00000000000f'::uuid AS member_active,
+  'e1f00000-0000-0000-0000-0000000000aa'::uuid AS platform_admin,
   'e1f00000-2222-0000-0000-000000000001'::uuid AS learner,
   'e1f00000-2222-0000-0000-000000000002'::uuid AS other_learner,
+  -- A third account, because scp_training_assignment_one_live allows one live
+  -- assignment of one programme per subject: the back-compat call below must
+  -- be refused for its ARGUMENTS if it is refused at all, never for colliding
+  -- with an assignment this suite made two assertions earlier.
+  'e1f00000-2222-0000-0000-000000000003'::uuid AS third_learner,
   'e1f00000-3333-0000-0000-000000000001'::uuid AS employee_unbound,
   'e1f00000-3333-0000-0000-000000000002'::uuid AS employee_bound_elsewhere,
   'e1f00000-3333-0000-0000-000000000003'::uuid AS employee_other_org;
@@ -81,18 +87,25 @@ INSERT INTO auth.users (id, email) VALUES
   ((SELECT owner_archived FROM elf), 'owner-archived@lifecycle.test'),
   ((SELECT owner_other    FROM elf), 'owner-other@lifecycle.test'),
   ((SELECT member_active  FROM elf), 'member-active@lifecycle.test'),
+  ((SELECT platform_admin FROM elf), 'platform-admin@lifecycle.test'),
   ((SELECT learner        FROM elf), 'learner@lifecycle.test'),
-  ((SELECT other_learner  FROM elf), 'other-learner@lifecycle.test');
+  ((SELECT other_learner  FROM elf), 'other-learner@lifecycle.test'),
+  ((SELECT third_learner  FROM elf), 'third-learner@lifecycle.test');
 
--- The archived organisation is created active and archived afterwards: its own
--- INSERT would otherwise be refused by the operational guard, which is the
--- rule the older half of this suite is about.
+-- Each organisation is CREATED at the status it is needed at. employers.status
+-- may only move through moderate_employer(), and a suite that set the
+-- transaction-local marker itself would be exercising the bypass rather than
+-- the product -- so the one transition this suite genuinely needs (W6) goes
+-- through moderation, and the rest are simply born where they belong.
 INSERT INTO public.employers (id, name, slug, status) VALUES
   ((SELECT employer_active   FROM elf), 'Lifecycle Aktiv AB',   'lifecycle-aktiv',   'active'),
   ((SELECT employer_pending  FROM elf), 'Lifecycle Vantande AB','lifecycle-vantande','pending'),
   ((SELECT employer_draft    FROM elf), 'Lifecycle Utkast AB',  'lifecycle-utkast',  'draft'),
-  ((SELECT employer_archived FROM elf), 'Lifecycle Arkiv AB',   'lifecycle-arkiv',   'active'),
+  ((SELECT employer_archived FROM elf), 'Lifecycle Arkiv AB',   'lifecycle-arkiv',   'archived'),
   ((SELECT employer_other    FROM elf), 'Lifecycle Annan AB',   'lifecycle-annan',   'active');
+
+INSERT INTO public.user_roles (user_id, role)
+SELECT platform_admin, 'admin' FROM elf;
 
 INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
 SELECT employer_active,   owner_active,   'owner',  'active' FROM elf
@@ -102,7 +115,7 @@ UNION ALL SELECT employer_draft,    owner_draft,    'owner',  'active' FROM elf
 UNION ALL SELECT employer_archived, owner_archived, 'owner',  'active' FROM elf
 UNION ALL SELECT employer_other,    owner_other,    'owner',  'active' FROM elf;
 
-GRANT SELECT ON elf TO authenticated;
+GRANT SELECT ON elf TO authenticated, service_role;
 
 DO $$ BEGIN RAISE NOTICE 'GROUP W — workforce records belong to an approved organisation'; END $$;
 
@@ -148,9 +161,6 @@ RESET ROLE; RESET request.jwt.claim.sub;
 -- The archived organisation keeps the OLDER refusal, with the older code. The
 -- admin lifecycle suite asserts that code; this proves the new rule did not
 -- quietly take it over and change what an operator reads.
-UPDATE public.employers SET status = 'archived'
- WHERE id = (SELECT employer_archived FROM elf);
-
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'e1f00000-0000-0000-0000-00000000000d';
 SELECT pg_temp.must_fail(format(
@@ -177,9 +187,17 @@ SELECT pg_temp.must_fail(format(
   'W5 service_role, which RLS does not constrain, is refused as well');
 RESET ROLE;
 
--- The permitted half, from the same seat that was just refused.
-UPDATE public.employers SET status = 'active'
- WHERE id = (SELECT employer_pending FROM elf);
+-- The permitted half, from the same seat that was just refused -- and the
+-- organisation is approved the way the product approves one, by a platform
+-- admin through moderate_employer(), not by writing the column.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e1f00000-0000-0000-0000-0000000000aa';
+SELECT public.moderate_employer((SELECT employer_pending FROM elf), 'approved', NULL);
+RESET ROLE; RESET request.jwt.claim.sub;
+
+SELECT pg_temp.ok(
+  (SELECT status FROM public.employers e, elf WHERE e.id = elf.employer_pending) = 'active',
+  'W6a moderation approved the organisation');
 
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'e1f00000-0000-0000-0000-00000000000b';
@@ -190,12 +208,12 @@ RESET ROLE; RESET request.jwt.claim.sub;
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.employees e, elf
     WHERE e.employer_id = elf.employer_pending) = 1,
-  'W6 once approved, the same owner may create the record that was refused');
+  'W6b once approved, the same owner may create the record that was refused');
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_policy pol
     WHERE pol.polrelid = 'public.employees'::regclass
-      AND pol.polname IN ('employees_employer_select', 'employees_employer_update')) = 2,
+      AND pol.polname IN ('employees_employer_select_own', 'employees_employer_update')) = 2,
   'W7 reading and correcting existing records is untouched');
 
 DO $$ BEGIN RAISE NOTICE 'GROUP D — assigning development keeps the person'; END $$;
@@ -306,7 +324,7 @@ SET LOCAL request.jwt.claim.sub = 'e1f00000-0000-0000-0000-00000000000a';
 SELECT public.scp_assign_training(
   (SELECT employer_active FROM elf),
   (SELECT program_version_id FROM elf_prog),
-  'learner@lifecycle.test', 'sv', NULL, NULL, NULL,
+  'other-learner@lifecycle.test', 'sv', NULL, NULL, NULL,
   (SELECT employee_bound_elsewhere FROM elf));
 RESET ROLE; RESET request.jwt.claim.sub;
 
@@ -325,7 +343,7 @@ CREATE TEMP TABLE elf_a2 AS
 SELECT * FROM public.scp_assign_training(
   (SELECT employer_active FROM elf),
   (SELECT program_version_id FROM elf_prog),
-  'other-learner@lifecycle.test');
+  'third-learner@lifecycle.test');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SELECT pg_temp.ok(

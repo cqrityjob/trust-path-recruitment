@@ -1344,21 +1344,38 @@ for elf_round in before after; do
     [ "${elf_gate}${elf_guard}" = "00" ] || { echo "FAIL: 20261205090000 rollback left the workforce gate in place (policy=$elf_gate guard=$elf_guard)"; exit 1; }
     echo "    ok  workforce active-only rollback stood down: policy and guard back to the pending-permitted shape"
 
-    # And with the gate down, the refusal genuinely disappears -- which is what
-    # makes the "after" round evidence about these migrations and not about
-    # something else that happens to refuse.
-    elf_actor="$(psql_q -d "$TEST_DB" -Atc "SELECT id FROM auth.users ORDER BY created_at LIMIT 1")"
-    if [ -n "$elf_actor" ]; then
-      psql_q -d "$TEST_DB" -c "INSERT INTO public.employers (id, name, slug, status) VALUES ('e1f00000-9999-0000-0000-000000000001','Rollback Proof AB','rollback-proof-elf','pending');" >/dev/null
-      psql_q -d "$TEST_DB" -c "INSERT INTO public.employees (employer_id, first_name, last_name, created_by) VALUES ('e1f00000-9999-0000-0000-000000000001','Utan','Grind','${elf_actor}');" >/dev/null \
-        || { echo "FAIL: with 20261205090000 rolled back, a pending organisation was still refused an employment record -- the refusal is coming from somewhere else"; exit 1; }
-      psql_q -d "$TEST_DB" -c "DELETE FROM public.employees WHERE employer_id='e1f00000-9999-0000-0000-000000000001'; DELETE FROM public.employers WHERE id='e1f00000-9999-0000-0000-000000000001';" >/dev/null
-      echo "    ok  with the gate down a pending organisation CAN create an employment record (negative control)"
-    fi
+    # THE NEGATIVE CONTROL.
+    #
+    # With the gate down the refusal must genuinely disappear. Without this,
+    # the "after" round would pass just as happily if the refusal came from
+    # somewhere else entirely and these migrations did nothing.
+    #
+    # It creates its OWN actor rather than looking for one: every suite in this
+    # script ends in ROLLBACK, so auth.users is empty here, and a control that
+    # silently skips is not a control. The row outlives the reapply on purpose
+    # -- 20261205090000's own apply-time proof needs an author to exist, and
+    # skips its executed half when there is none.
+    elf_actor='e1f00000-8888-0000-0000-000000000001'
+    psql_q -d "$TEST_DB" -c "INSERT INTO auth.users (id, email) VALUES ('${elf_actor}','rollback-control@lifecycle.test');" >/dev/null
+    psql_q -d "$TEST_DB" -c "INSERT INTO public.employers (id, name, slug, status) VALUES ('e1f00000-9999-0000-0000-000000000001','Rollback Proof AB','rollback-proof-elf','pending');" >/dev/null
+    psql_q -d "$TEST_DB" -c "INSERT INTO public.employees (employer_id, first_name, last_name, created_by) VALUES ('e1f00000-9999-0000-0000-000000000001','Utan','Grind','${elf_actor}');" >/dev/null \
+      || { echo "FAIL: with 20261205090000 rolled back, a pending organisation was still refused an employment record -- the refusal is coming from somewhere else, so the 'after' round proves nothing"; exit 1; }
+    psql_q -d "$TEST_DB" -c "DELETE FROM public.employees WHERE employer_id='e1f00000-9999-0000-0000-000000000001';" >/dev/null
+    echo "    ok  with the gate down a pending organisation CAN create an employment record (negative control)"
 
     psql_q -d "$TEST_DB" -f supabase/migrations/20261205090000_employer_workforce_active_only.sql >/dev/null
     psql_q -d "$TEST_DB" -f supabase/migrations/20261206090000_scp_training_assignment_person_context.sql >/dev/null
     echo "    ok  both employer lifecycle migrations reapplied"
+
+    # The same insert, now refused. Proves the reapply restored the rule rather
+    # than merely running, and does it from the shell so the assertion survives
+    # this suite's own ROLLBACK.
+    if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+         -c "INSERT INTO public.employees (employer_id, first_name, last_name, created_by) VALUES ('e1f00000-9999-0000-0000-000000000001','Med','Grind','${elf_actor}');" >/dev/null 2>&1; then
+      echo "FAIL: after reapplying 20261205090000 a pending organisation could still create an employment record"; exit 1
+    fi
+    echo "    ok  and refused again once the migration is back (positive control)"
+    psql_q -d "$TEST_DB" -c "DELETE FROM public.employees WHERE employer_id='e1f00000-9999-0000-0000-000000000001'; DELETE FROM public.employers WHERE id='e1f00000-9999-0000-0000-000000000001'; DELETE FROM auth.users WHERE id='${elf_actor}';" >/dev/null
   fi
 done
 

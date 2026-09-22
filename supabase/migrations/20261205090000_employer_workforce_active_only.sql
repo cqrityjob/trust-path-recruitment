@@ -139,7 +139,8 @@ COMMENT ON FUNCTION public.employer_operational_guard() IS
 DO $$
 DECLARE
   _qual text;
-  _employer uuid := gen_random_uuid();
+  _pending uuid := gen_random_uuid();
+  _active  uuid := gen_random_uuid();
   _actor uuid;
   _raised text := NULL;
 BEGIN
@@ -162,41 +163,50 @@ BEGIN
       'workforce rule, so service_role could still create the record.';
   END IF;
 
-  -- A pending organisation, and an author who really exists: created_by is a
+  -- The executed half needs an author who really exists: created_by is a
   -- foreign key into auth.users, and a made-up uuid would fail for that reason
-  -- instead of the one being proved.
+  -- instead of the one being proved. On a replay against an empty database
+  -- there is nobody, and the suite
+  -- (supabase/tests/employer_lifecycle_phase1_3_test.sql) carries the
+  -- behavioural proof instead -- twice, around a rollback cycle.
   SELECT id INTO _actor FROM auth.users ORDER BY created_at LIMIT 1;
   IF _actor IS NULL THEN
     RAISE NOTICE 'WORKFORCE_ACTIVE_GATE: no auth.users row on this database; '
-                 'the executed half of the proof is skipped.';
+                 'the executed half of the proof is skipped. The read-back '
+                 'assertions above did run.';
     RETURN;
   END IF;
 
-  INSERT INTO public.employers (id, name, slug, status)
-  VALUES (_employer, 'Gate Proof AB', 'gate-proof-' || replace(_employer::text, '-', ''), 'pending');
+  -- TWO throwaway organisations rather than one that changes status:
+  -- employers.status may only move through moderate_employer(), and a DO block
+  -- that set the transaction-local marker itself would be demonstrating the
+  -- bypass rather than the rule.
+  INSERT INTO public.employers (id, name, slug, status) VALUES
+    (_pending, 'Gate Proof Pending AB', 'gate-proof-p-' || replace(_pending::text, '-', ''), 'pending'),
+    (_active,  'Gate Proof Active AB',  'gate-proof-a-' || replace(_active::text,  '-', ''), 'active');
 
   BEGIN
     INSERT INTO public.employees (employer_id, first_name, last_name, created_by)
-    VALUES (_employer, 'Ska', 'Refuseras', _actor);
+    VALUES (_pending, 'Ska', 'Refuseras', _actor);
   EXCEPTION WHEN OTHERS THEN
     _raised := SQLERRM;
   END;
 
   IF _raised IS NULL OR _raised NOT LIKE '%EMPLOYER_NOT_ACTIVE_FOR_WORKFORCE%' THEN
-    DELETE FROM public.employees WHERE employer_id = _employer;
-    DELETE FROM public.employers WHERE id = _employer;
+    DELETE FROM public.employees WHERE employer_id IN (_pending, _active);
+    DELETE FROM public.employers WHERE id IN (_pending, _active);
     RAISE EXCEPTION
       'WORKFORCE_ACTIVE_GATE_NOT_ENFORCED: a pending organisation created an '
       'employment record (error was: %).', coalesce(_raised, 'none');
   END IF;
 
-  -- And the same organisation, once approved, may.
-  UPDATE public.employers SET status = 'active' WHERE id = _employer;
+  -- And an approved one may, so the gate refuses the right thing rather than
+  -- everything.
   INSERT INTO public.employees (employer_id, first_name, last_name, created_by)
-  VALUES (_employer, 'Ska', 'Tillatas', _actor);
+  VALUES (_active, 'Ska', 'Tillatas', _actor);
 
-  DELETE FROM public.employees WHERE employer_id = _employer;
-  DELETE FROM public.employers WHERE id = _employer;
+  DELETE FROM public.employees WHERE employer_id IN (_pending, _active);
+  DELETE FROM public.employers WHERE id IN (_pending, _active);
 
   RAISE NOTICE 'WORKFORCE_ACTIVE_GATE: pending refused, active permitted.';
 END $$;
