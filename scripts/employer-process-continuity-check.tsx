@@ -156,8 +156,24 @@ const ALL_CASE_STATUSES: readonly CaseStatusLiteral[] = [...CASE_FLOW, "cancelle
 
 /** Source with comments stripped, so a guard never trips on the prose that
  *  explains the rule it checks. */
+// Three steps, and the FIRST one is why.
+//
+// A `//` line that contains a `/*` -- a path, an example, a sketch of a block
+// comment -- makes the block-comment regex treat it as an opener and swallow
+// everything up to the next `*/`. Every assertion over such a file goes on
+// passing, because the strings it looks for are gone along with the code: a
+// guard reading an empty string cannot fail. Dropping whole line comments
+// before the block regex runs removes that possibility entirely.
+//
+// The remaining two steps are the original ones, in the original order: strip
+// block comments, then drop the JSDoc continuation lines the block regex did
+// not own. No file read here is affected today, and this keeps that a property
+// of the guard rather than of the files it happens to read.
 const codeOnly = (source: string) =>
   source
+    .split("\n")
+    .filter((l) => !/^\s*\/\//.test(l))
+    .join("\n")
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .split("\n")
     .filter((l) => !/^\s*(\/\/|\*)/.test(l))
