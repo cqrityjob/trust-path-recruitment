@@ -399,6 +399,11 @@ function pRow(over: Partial<PipelineRow> & { attemptId: string }): PipelineRow {
       assessment: P.projectAssessmentTrack("ready", []),
       interview: P.projectInterviewTrack("ready", []),
       report: { read: "ready", finalisedCaseId: null, materialCaseId: null, caseCount: 0 },
+      decision: P.projectDecisionTrack("ready", "reviewing", null),
+      // Built from the same application status this call already passes. E2 is
+      // about the assessment ladder; the decision row is an input like every
+      // other track and must not be left undefined.
+      decision: P.projectDecisionTrack("ready", "reviewing", null),
       capabilities: { canReviewAssessment: false, canShareAssessmentBrief: true },
     });
 
@@ -435,6 +440,7 @@ function pRow(over: Partial<PipelineRow> & { attemptId: string }): PipelineRow {
     assessment: track,
     interview: P.projectInterviewTrack("ready", []),
     report: { read: "ready", finalisedCaseId: null, materialCaseId: null, caseCount: 0 },
+    decision: P.projectDecisionTrack("ready", "reviewing", null),
     capabilities: { canReviewAssessment: false, canShareAssessmentBrief: true },
   });
   ok(proj.nextAction.kind === "shareAssessmentBrief", "4 · and the ladder proposes sharing it");
