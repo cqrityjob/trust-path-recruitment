@@ -82,7 +82,48 @@ function fromDbRow(row: EmployeeDbRow): EmployerEmployeeRow {
 const EMPLOYEE_SELECT =
   "id, employer_id, first_name, last_name, email, role_title, site_name, employment_status, start_date, hired_from_application_id, created_at, updated_at";
 
+/**
+ * Creating or importing an employment record requires an APPROVED organisation.
+ *
+ * ── WHY THIS IS A SEPARATE GATE ─────────────────────────────────────────
+ *
+ * `assertActiveMembership` below admits a `pending` organisation on purpose:
+ * a new owner builds job drafts while they wait for approval, and reading and
+ * correcting existing records must keep working through a suspension, or a
+ * suspension destroys data rather than stopping new work.
+ *
+ * A JOB DRAFT and an EMPLOYMENT RECORD are not the same act. The second one
+ * names a person and becomes the spine their assessment, training and Passport
+ * history hangs off, and the Product Owner has decided it waits for approval.
+ *
+ * This is defence in depth and an honest error message, NOT the boundary. The
+ * boundary is in the database: `employees_employer_insert` requires
+ * `employer_is_active_status()`, and `employer_operational_guard()` refuses
+ * the insert for every Postgres role including service_role
+ * (20261205090000). A caller that reaches PostgREST directly meets the same
+ * refusal this one gives.
+ */
+async function assertActiveEmployerForWorkforceWrite(ctx: Ctx, employerId: string): Promise<void> {
+  const status = await employerStatusForActiveMember(ctx, employerId);
+  if (status === null) throw new Error("ACCESS_NOT_AVAILABLE");
+  // Named rather than folded into ACCESS_NOT_AVAILABLE: an owner whose
+  // organisation is still being reviewed has done nothing wrong and needs to
+  // know that waiting is the answer.
+  if (status !== "active") throw new Error("EMPLOYER_NOT_ACTIVE_FOR_WORKFORCE");
+}
+
 async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<void> {
+  const status = await employerStatusForActiveMember(ctx, employerId);
+  if (status !== "active" && status !== "pending") throw new Error("ACCESS_NOT_AVAILABLE");
+}
+
+/** The caller's organisation status, or null when they are not an active
+ *  member of it.
+ *
+ *  One read, written once, because the two gates above ask the same question
+ *  and only disagree about which answers they accept. Two copies is how they
+ *  eventually disagree about the question too. */
+async function employerStatusForActiveMember(ctx: Ctx, employerId: string): Promise<string | null> {
   const { data: membership, error } = await ctx.supabase
     .from("employer_memberships")
     .select("id, employers!inner(status)")
@@ -90,14 +131,10 @@ async function assertActiveMembership(ctx: Ctx, employerId: string): Promise<voi
     .eq("employer_id", employerId)
     .eq("status", "active")
     .maybeSingle();
-  if (error) throw new Error("ACCESS_NOT_AVAILABLE");
-  if (!membership) throw new Error("ACCESS_NOT_AVAILABLE");
-  const emp = Array.isArray((membership as any).employers)
-    ? (membership as any).employers[0]
-    : (membership as any).employers;
-  if (!emp || (emp.status !== "active" && emp.status !== "pending")) {
-    throw new Error("ACCESS_NOT_AVAILABLE");
-  }
+  if (error || !membership) return null;
+  const joined = (membership as { employers?: unknown }).employers;
+  const emp = (Array.isArray(joined) ? joined[0] : joined) as { status?: string } | undefined;
+  return emp?.status ?? null;
 }
 
 // -------- listEmployerEmployees --------
@@ -140,7 +177,7 @@ export const createEmployerEmployee = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => createSchema.parse(d))
   .handler(async ({ data, context }): Promise<{ id: string }> => {
     const ctx = context as Ctx;
-    await assertActiveMembership(ctx, data.employerId);
+    await assertActiveEmployerForWorkforceWrite(ctx, data.employerId);
 
     const { data: inserted, error } = await ctx.supabase
       .from("employees")
@@ -157,6 +194,13 @@ export const createEmployerEmployee = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) {
+      // The database's own refusal, carried through with its meaning intact
+      // rather than flattened into "could not add". It reaches here when the
+      // organisation's status changed between the check above and the write,
+      // and when anything else creates an employee by another route.
+      if (String(error.message ?? "").includes("EMPLOYER_NOT_ACTIVE_FOR_WORKFORCE")) {
+        throw new Error("EMPLOYER_NOT_ACTIVE_FOR_WORKFORCE");
+      }
       console.error("[employer-workforce] create failed", error);
       throw new Error("Could not add this employee.");
     }

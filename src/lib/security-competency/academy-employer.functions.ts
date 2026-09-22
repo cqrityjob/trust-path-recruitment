@@ -1915,7 +1915,8 @@ export const cancelInvitation = createServerFn({ method: "POST" })
 export type ApplicationAssessment = {
   assignmentId: string;
   attemptId: string;
-  subjectId: string;
+  // No subject. Nothing on the candidate page read it; the panel works from
+  // the assignment and the attempt, which is what its actions take.
   assessmentSlug: string;
   nameSv: string;
   nameEn: string;

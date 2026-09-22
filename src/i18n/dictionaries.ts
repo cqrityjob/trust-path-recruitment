@@ -1964,6 +1964,13 @@ export const dictionaries = {
     "employer.workforce.action.deactivate": "Inaktivera",
     "employer.workforce.action.reactivate": "Återaktivera",
     "employer.workforce.error.save": "Kunde inte spara medarbetaren.",
+    // Not a failure. En ägare vars organisation fortfarande granskas har inte
+    // gjort något fel, och "kunde inte spara" skulle skicka dem att leta efter
+    // ett misstag i formuläret.
+    "employer.workforce.error.notActive":
+      "Organisationen är inte godkänd ännu, så medarbetare kan inte läggas till. Annonsutkast fungerar som vanligt under tiden.",
+    "employer.workforce.notActive":
+      "Medarbetare kan läggas till när organisationen har godkänts. Ni kan förbereda annonsutkast redan nu — en anställning handlar om en namngiven person och väntar därför på godkännandet.",
     "employer.workforce.error.load": "Kunde inte läsa in medarbetarlistan.",
     "employer.workforce.empty.heading": "Inga medarbetare ännu",
     "employer.workforce.empty.body":
@@ -10094,6 +10101,10 @@ export const dictionaries = {
     "employer.workforce.action.deactivate": "Deactivate",
     "employer.workforce.action.reactivate": "Reactivate",
     "employer.workforce.error.save": "Could not save this employee.",
+    "employer.workforce.error.notActive":
+      "The organisation is not approved yet, so employees cannot be added. Job drafts work as usual in the meantime.",
+    "employer.workforce.notActive":
+      "Employees can be added once the organisation has been approved. You can prepare job drafts now — an employment record is about a named person, so it waits for the approval.",
     "employer.workforce.error.load": "Could not load the employee list.",
     "employer.workforce.empty.heading": "No employees yet",
     "employer.workforce.empty.body":
