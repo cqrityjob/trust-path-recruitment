@@ -191,6 +191,13 @@ for (const entry of notApplied) {
  *  SCHEMA half, and it is exactly what we want people to merge first. */
 const SCHEMA_SAFE = [
   /^supabase\/migrations\//,
+  // A rollback script is SQL that the application never executes. It was
+  // missing from this list, and the omission only shows when a schema branch
+  // changes the SIGNATURE of a function the application already calls by name:
+  // the branch is then not "schema-only", the blocker is the existing call,
+  // and the guard demands a split that has already happened. Migrations and
+  // suites were already here for exactly the same reason.
+  /^supabase\/rollback\//,
   /^supabase\/tests\//,
   /^supabase\/release-state\.json$/,
   /^supabase\/deployment-targets\.json$/,
