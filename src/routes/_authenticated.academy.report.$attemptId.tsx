@@ -68,16 +68,20 @@ function ParticipantReport() {
     queryFn: () => reportFn({ data: { attemptId, audience: "participant" as const } }),
   });
 
-  const subjectId = report.data?.subjectId;
+  // Keyed on the attempt, with the audience that opened the report. The
+  // snapshot no longer carries a subject and neither does this browser: the
+  // server resolves it through the same audience RPC that returned the report,
+  // so these two reads cannot answer for a report this reader could not open.
+  const hasReport = Boolean(report.data);
   const recs = useQuery({
-    queryKey: ["academy", "recs", subjectId],
-    queryFn: () => recsFn({ data: { subjectId: subjectId! } }),
-    enabled: Boolean(subjectId),
+    queryKey: ["academy", "recs", "participant", attemptId],
+    queryFn: () => recsFn({ data: { attemptId, audience: "participant" as const } }),
+    enabled: hasReport,
   });
   const progress = useQuery({
-    queryKey: ["academy", "progress", subjectId],
-    queryFn: () => progressFn({ data: { subjectId: subjectId! } }),
-    enabled: Boolean(subjectId),
+    queryKey: ["academy", "progress", "participant", attemptId],
+    queryFn: () => progressFn({ data: { attemptId, audience: "participant" as const } }),
+    enabled: hasReport,
   });
 
   if (report.isLoading) {

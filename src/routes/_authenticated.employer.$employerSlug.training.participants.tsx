@@ -10,8 +10,17 @@
 // formative activity are theirs, and "it is only training" is exactly the
 // argument that would erode that.
 //
-// Identity stays pseudonymous behind the same subject reference the assessment
-// participant list uses.
+// ── AND NO SUBJECT REFERENCE ────────────────────────────────────────────
+//
+// This surface used to print eight characters of a subject id under every
+// programme. It was commented as a deliberate pseudonymous handle rather than
+// a name, and it was -- but governance rule 10 says an employer read model
+// never carries a subject reference, and the Product Owner has now settled
+// that the rule wins: it is removed from the screen AND from the row, so there
+// is nothing here to print back.
+//
+// The row was already identity-free in every other respect. What it shows is a
+// programme, a state, module counts and dates.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
@@ -105,11 +114,6 @@ function TrainingStatusItem({ row, lang }: { row: TrainingStatusRow; lang: strin
             {t(stateKey as never)}
           </span>
         </div>
-        {/* The subject reference, not a name. Identity resolution is a separate,
-            governed act and this surface is not it. */}
-        <p className="mt-1 font-mono text-[12px] text-muted-foreground">
-          {t("academy.participants.subject")} {row.subjectId.slice(0, 8)}
-        </p>
         <p className="mt-1.5 flex flex-wrap items-center gap-x-3 text-[13px] text-muted-foreground">
           <span className="tabular-nums">
             {row.modulesCompleted}/{row.modulesTotal} {t("employer.training.modules")}

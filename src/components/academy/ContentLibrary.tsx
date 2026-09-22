@@ -78,6 +78,7 @@ import {
   listContentLibrary,
   type ContentLibraryEntry,
 } from "@/lib/security-competency/academy-employer.functions";
+import { assignDevelopmentProgrammeToEmployee } from "@/lib/security-competency/employee-development.functions";
 
 /** The four sections, in the order an employer cares about them.
  *
@@ -176,12 +177,29 @@ export function ContentLibrary({
   area,
   title,
   lede,
+  employeeId = null,
 }: {
   employerId: string;
   canAssign: boolean;
   area: LibraryArea;
   title: string;
   lede: string;
+  /** The employment record this library was opened FROM, when it was opened
+   *  from one.
+   *
+   *  ── WHY IT TRAVELS THROUGH FOUR COMPONENTS ─────────────────────────
+   *
+   *  "Assign a development programme" on an employee used to link here with no
+   *  person attached, so the employer arrived at a catalogue, chose a
+   *  programme, and was then asked to type the address of the colleague whose
+   *  page they had just left. The assessment path solved this years ago --
+   *  assignFromApplication carries the application -- and the training path
+   *  never did.
+   *
+   *  It is a product-level identifier and never a subject: the server resolves
+   *  who the person is from the employment record, and the browser neither
+   *  holds nor sends a subject reference. */
+  employeeId?: string | null;
 }) {
   const { t, lang } = useT();
   const listLibrary = useServerFn(listContentLibrary);
@@ -269,6 +287,7 @@ export function ContentLibrary({
                     canAssign={canAssign}
                     lang={lang}
                     area={area}
+                    employeeId={employeeId}
                   />
                 );
               })}
@@ -318,6 +337,7 @@ function Section({
   canAssign,
   lang,
   area,
+  employeeId,
 }: {
   sectionKey: SectionKey;
   icon: typeof ShieldCheck;
@@ -326,6 +346,7 @@ function Section({
   canAssign: boolean;
   lang: string;
   area: LibraryArea;
+  employeeId: string | null;
 }) {
   const { t } = useT();
   return (
@@ -354,6 +375,7 @@ function Section({
             canAssign={canAssign}
             lang={lang}
             area={area}
+            employeeId={employeeId}
           />
         ))}
       </ul>
@@ -369,12 +391,14 @@ function LibraryRow({
   canAssign,
   lang,
   area,
+  employeeId,
 }: {
   entry: ContentLibraryEntry;
   employerId: string;
   canAssign: boolean;
   lang: string;
   area: LibraryArea;
+  employeeId: string | null;
 }) {
   const { t } = useT();
   const [open, setOpen] = useState(false);
@@ -479,6 +503,7 @@ function LibraryRow({
             canAssign={canAssign}
             lang={lang}
             area={area}
+            employeeId={employeeId}
             assigning={assigning}
             onStartAssign={() => setAssigning(true)}
             onDoneAssign={() => setAssigning(false)}
@@ -568,6 +593,7 @@ function ProgrammeDetail({
   canAssign,
   lang,
   area,
+  employeeId,
   assigning,
   onStartAssign,
   onDoneAssign,
@@ -577,6 +603,7 @@ function ProgrammeDetail({
   canAssign: boolean;
   lang: string;
   area: LibraryArea;
+  employeeId: string | null;
   assigning: boolean;
   onStartAssign: () => void;
   onDoneAssign: () => void;
@@ -715,6 +742,7 @@ function ProgrammeDetail({
               entry={entry}
               lang={lang}
               area={area}
+              employeeId={employeeId}
               onDone={onDoneAssign}
             />
           ) : (
@@ -870,19 +898,33 @@ function AssignForm({
   entry,
   lang,
   area,
+  employeeId,
   onDone,
 }: {
   employerId: string;
   entry: ContentLibraryEntry;
   lang: string;
   area: LibraryArea;
+  employeeId: string | null;
   onDone: () => void;
 }) {
   const { t } = useT();
   const qc = useQueryClient();
   const assign = useServerFn(assignAcademyProgramme);
   const assignTraining = useServerFn(assignTrainingProgramme);
+  const assignToEmployee = useServerFn(assignDevelopmentProgrammeToEmployee);
   const isTraining = entry.libraryKind === "training";
+  // THE PERSON-BOUND PATH.
+  //
+  // Reached only when the library was opened from an employee AND the entry is
+  // a development programme: an assessment assigned to an employee goes
+  // through its own governed path, and a development programme opened from the
+  // catalogue itself still asks who it is for.
+  //
+  // When it is taken, no address field is drawn at all. The recipient is read
+  // from the employment record server-side, so the employer cannot mistype the
+  // colleague they were just looking at, and the browser never holds a subject.
+  const boundToEmployee = isTraining && employeeId !== null;
   // The library pins the VERSION, never the definition, so an assignment stays
   // reproducible after a v2 is published. For training that version is a
   // programme version; for an assessment it is an assessment version. Same
@@ -903,6 +945,23 @@ function AssignForm({
 
   const mutation = useMutation({
     mutationFn: async () => {
+      if (boundToEmployee) {
+        const outcome = await assignToEmployee({
+          data: {
+            employerId,
+            employeeId: employeeId!,
+            programVersionId: assessmentVersionId,
+            language,
+            deadline: deadline ? new Date(deadline).toISOString() : null,
+            message: null,
+          },
+        });
+        if (outcome.kind === "refused") throw new Error(`REFUSED:${outcome.reason}`);
+        return {
+          academyUrl: `${window.location.origin}/academy`,
+          notification: "not_configured" as const,
+        };
+      }
       if (isTraining) {
         await assignTraining({
           data: {
@@ -938,6 +997,14 @@ function AssignForm({
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
       void qc.invalidateQueries({ queryKey: ["academy", "my-work-count"] });
       void qc.invalidateQueries({ queryKey: ["academy", "training-status"] });
+      // The employee's own page, so returning to it shows the programme that
+      // was just assigned rather than the list as it stood a minute ago. The
+      // binding the RPC performs is what makes the read find it at all.
+      if (employeeId) {
+        void qc.invalidateQueries({
+          queryKey: ["employer", employerId, "person", employeeId, "development"],
+        });
+      }
       setError(null);
       // Deliberately does NOT close the form. The employer needs the link and
       // the delivery outcome, and closing on success would throw both away at
@@ -946,6 +1013,29 @@ function AssignForm({
     },
     onError: (e: unknown) => {
       const code = (e as { code?: string }).code ?? "";
+      // The person-bound path returns a NAMED refusal rather than throwing a
+      // provider error, so each one keeps its own sentence. "Could not assign"
+      // is not a message anybody can act on.
+      const message = (e as { message?: string }).message ?? "";
+      if (message.startsWith("REFUSED:")) {
+        const reason = message.slice("REFUSED:".length);
+        setError(
+          t(
+            reason === "noEmailOnRecord"
+              ? "academy.assign.employee.noEmail"
+              : reason === "noAccount"
+                ? "academy.assign.noAccount"
+                : reason === "notAuthorised"
+                  ? "academy.assign.employee.notAuthorised"
+                  : reason === "programmeNotAssignable"
+                    ? "academy.assign.notAssignable"
+                    : reason === "employeeNotFound"
+                      ? "academy.assign.employee.notFound"
+                      : "academy.assign.failed",
+          ),
+        );
+        return;
+      }
       setError(
         code === "SCP_RECIPIENT_HAS_NO_ACCOUNT"
           ? t("academy.assign.noAccount")
@@ -980,22 +1070,34 @@ function AssignForm({
         mutation.mutate();
       }}
     >
-      <div>
-        <label
-          htmlFor={`email-${assessmentVersionId}`}
-          className="mb-1.5 block text-xs font-medium text-foreground"
+      {boundToEmployee ? (
+        /* No address field at all. The person came with the navigation and the
+           server reads their address from the employment record, so there is
+           nothing here to mistype -- and nothing for the browser to hold. */
+        <p
+          className="rounded-[10px] border border-border bg-card px-3 py-2.5 text-[13px] text-foreground"
+          data-testid="assign-bound-to-employee"
         >
-          {t("academy.assign.email")}
-        </label>
-        <input
-          id={`email-${assessmentVersionId}`}
-          type="email"
-          required
-          value={email}
-          onChange={(ev) => setEmail(ev.target.value)}
-          className="h-11 w-full rounded-[10px] border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        />
-      </div>
+          {t("academy.assign.employee.forThisPerson")}
+        </p>
+      ) : (
+        <div>
+          <label
+            htmlFor={`email-${assessmentVersionId}`}
+            className="mb-1.5 block text-xs font-medium text-foreground"
+          >
+            {t("academy.assign.email")}
+          </label>
+          <input
+            id={`email-${assessmentVersionId}`}
+            type="email"
+            required
+            value={email}
+            onChange={(ev) => setEmail(ev.target.value)}
+            className="h-11 w-full rounded-[10px] border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </div>
+      )}
       <div>
         <label
           htmlFor={`deadline-${assessmentVersionId}`}

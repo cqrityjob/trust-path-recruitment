@@ -95,9 +95,8 @@ await mock.module("@tanstack/react-router", () => ({
 const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
 const P = await import("../src/lib/employer-continuity/process-projection");
-const { APPLICATION_STATUS_LABEL_KEY } = await import(
-  "../src/lib/job-intelligence/application-status"
-);
+const { APPLICATION_STATUS_LABEL_KEY } =
+  await import("../src/lib/job-intelligence/application-status");
 const { ProcessContinuityStrip } =
   await import("../src/components/employer/ProcessContinuityStrip");
 
@@ -635,9 +634,25 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
 
   const list = codeOnly(read(ROUTES.iiIndex));
   ok(
-    list.includes('cases.filter((c) => c.status === "reported")'),
+    list.includes('allCases.filter((c) => c.status === "reported")'),
     "8 · the finished counter counts `reported` only",
   );
+  // AND IT COUNTS THE WHOLE ORGANISATION.
+  //
+  // The list took a stage filter, so there are now two collections on that
+  // page: everything, and the rows the filter matched. The three summary
+  // numbers describe the organisation and must read the first -- a total that
+  // shrinks when a recruiter narrows the list below it tells them their
+  // interviews disappeared.
+  for (const counter of ["active", "awaiting", "done"]) {
+    const expr =
+      counter === "active"
+        ? "const active = allCases.filter"
+        : counter === "awaiting"
+          ? "const awaiting = allCases.filter"
+          : "const done = allCases.filter";
+    ok(list.includes(expr), `8 · the ${counter} counter is not narrowed by the stage filter`);
+  }
   ok(
     list.includes('!["reported", "cancelled"].includes(c.status)'),
     "8 · and the active counter excludes it",
@@ -1950,10 +1965,7 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
     pending.nextAction.destination.kind === "applicationDecision",
     "24.1 · which leads to the decision controls",
   );
-  ok(
-    pending.nextAction.kind !== "nothingOutstanding",
-    "24.1 · and never to nothing outstanding",
-  );
+  ok(pending.nextAction.kind !== "nothingOutstanding", "24.1 · and never to nothing outstanding");
   ok(pending.needsHumanAttention, "24.1 · a decision due is human attention");
   for (const lang of ["sv", "en"] as const) {
     const out = strip(pending, lang);

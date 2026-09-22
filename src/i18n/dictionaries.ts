@@ -1886,7 +1886,13 @@ export const dictionaries = {
 
     "employer.nav.workforce": "Medarbetare",
     "employer.nav.competencies": "Kompetenser & certifikat",
-    "employer.nav.training": "Kompetensutveckling",
+    // ── Utveckling, not Kompetensutveckling ─────────────────────────
+    // The Product Owner's decision. "People" now reads as the post-hire half
+    // of the lifecycle rather than as a course catalogue, and the underlying
+    // database concept is untouched: training is still training in
+    // scp_training_assignments, in the RPCs and in the evidence source type.
+    // This is presentation, and only presentation.
+    "employer.nav.training": "Utveckling",
     "employer.nav.sites": "Platser & risk",
     "employer.nav.reports": "Rapporter",
     "employer.nav.library": "Bibliotek",
@@ -1921,7 +1927,7 @@ export const dictionaries = {
     "employer.competencies.purpose":
       "Ett gemensamt kompetensramverk som beskriver vad varje roll kräver, och ett register över personalens certifikat och deras giltighetstid.",
 
-    "employer.training.heading": "Kompetensutveckling",
+    "employer.training.heading": "Utveckling",
     "employer.training.purpose":
       "Rekommendera och följa upp riktad utbildning utifrån identifierade kompetensluckor hos befintlig personal.",
 
@@ -2005,7 +2011,8 @@ export const dictionaries = {
     "employer.overview.card.tests.action.assign": "Tilldela bedömning",
     "employer.overview.card.tests.action.activity": "Pågående tilldelningar",
 
-    "employer.overview.card.development.title": "Kompetensutveckling",
+    // The same area the sidebar names, so the card and the navigation agree.
+    "employer.overview.card.development.title": "Utveckling",
     "employer.overview.card.development.body":
       "Planera och följ kompetensutveckling för dina medarbetare.",
 
@@ -2458,16 +2465,66 @@ export const dictionaries = {
     "employer.person.assessments.released": "Delat",
     "employer.person.assessments.reviewsOpen": "Kvar att granska:",
     "employer.person.assessments.openReport": "Visa rapport",
+    // ── Employee 360, section 2: what the ROLE requires ─────────────
+    // Ingenting här säger något om personen. Det finns ingen beräknad
+    // "readiness", inget gap i procent, inget uppfyllt/ej uppfyllt -- om en
+    // person uppfyller ett krav är en styrd bedömnings svar, och produkten
+    // gissar det inte.
+    // Assigning from an employee's own page. Ingen adress skrivs in: personen
+    // följde med navigeringen och servern läser adressen ur anställningen.
+    "academy.assign.employee.forThisPerson":
+      "Tilldelas den medarbetare du kom från. Ingen adress behöver skrivas in — den läses från anställningen.",
+    "academy.assign.employee.noEmail":
+      "Anställningen saknar e-postadress, så programmet kan inte tilldelas. Utveckling knyts till en person, inte till en post.",
+    "academy.assign.employee.notAuthorised":
+      "Att tilldela utvecklingsprogram kräver ägare eller administratör i organisationen.",
+    "academy.assign.employee.notFound": "Medarbetaren hör inte till den här organisationen.",
+    "academy.assign.employee.backToPerson": "Tillbaka till medarbetaren",
+    "employer.person.competence.heading": "Kompetens i rollen",
+    "employer.person.competence.lede":
+      "Vad yrket kräver enligt den gemensamma yrkeskatalogen, och vilket underlag er organisation faktiskt har om den här personen. Listan beskriver rollen — inte personen.",
+    "employer.person.competence.profession": "Yrke:",
+    "employer.person.competence.loadError": "Kompetenskraven kunde inte hämtas.",
+    "employer.person.competence.noProfession":
+      "Inget yrke är kopplat till den här anställningen, så det finns inga kompetenskrav att visa. Yrket sätts när någon anställs via en annons.",
+    "employer.person.competence.professionNotPublished":
+      "Yrket som är kopplat till anställningen finns inte publicerat i yrkeskatalogen ännu, så dess kompetenskrav kan inte visas.",
+    "employer.person.competence.noRequirements":
+      "Yrket är publicerat men har inga publicerade kompetenskrav ännu.",
+    "employer.person.competence.criticality": "Krav",
+    "employer.person.competence.criticality.essential": "Avgörande",
+    "employer.person.competence.criticality.important": "Viktigt",
+    "employer.person.competence.criticality.supporting": "Stödjande",
+    // Underlaget räknas som DOKUMENT, aldrig som ett omdöme.
+    "employer.person.competence.evidenceSome":
+      "Er organisation har minst en delad bedömningsrapport om den här personen. Den finns under Tester & bedömningar nedan.",
+    "employer.person.competence.evidenceNone":
+      "Er organisation har ingen delad bedömningsrapport om den här personen. En styrd bedömning är det enda underlag som ger kompetensbevis här.",
     "employer.person.startDate": "Anställd sedan",
     // The lineage link. It names where the employment came from and makes no
     // claim about the person.
     "employer.person.hiredFrom": "Anställd via en ansökan hos er.",
     "employer.person.hiredFrom.open": "Öppna ansökan",
-    "employer.person.development.heading": "Kompetensutveckling",
+    // ── Employee 360, section 3: THIS person's development ───────────
+    // Bara den här personens tilldelningar. Tidigare länkade rubriken till
+    // hela organisationens lista, vilket inte var en person-sida.
+    "employer.person.development.heading": "Utveckling",
     "employer.person.development.lede":
-      "Tilldelade program och genomförd utveckling. Genomförd utbildning är utvecklingsaktivitet och utgör inte bevis på kompetens.",
-    "employer.person.development.open": "Öppna Kompetensutveckling",
+      "Program som är tilldelade den här personen, och hur långt de har kommit. Genomförd utbildning är en utvecklingsaktivitet och är aldrig bevis på styrkt kompetens.",
+    "employer.person.development.open": "Öppna Utveckling",
     "employer.person.development.assign": "Tilldela utvecklingsprogram",
+    "employer.person.development.loadError": "Utvecklingsaktiviteten kunde inte hämtas.",
+    "employer.person.development.empty":
+      "Inga utvecklingsprogram är tilldelade den här personen ännu.",
+    // En anställning som inte är knuten till en person kan inte tillskrivas
+    // någon utveckling. En tom lista här skulle vara ett påstående om personen.
+    "employer.person.development.unlinked":
+      "Den här anställningen är ännu inte knuten till ett CQrityjob-konto, så utvecklingsaktivitet kan inte tillskrivas personen. Kopplingen skapas automatiskt när ni tilldelar ett program eller en bedömning härifrån.",
+    // ORDVALET. "Genomfört program", aldrig "styrkt kompetens".
+    "employer.person.development.state.assigned": "Tilldelat",
+    "employer.person.development.state.inProgress": "Pågår",
+    "employer.person.development.state.completed": "Genomfört program",
+    "employer.person.development.state.cancelled": "Avbrutet",
     "employer.person.credentials.heading": "Kompetenser & certifikat",
     "employer.person.credentials.lede":
       "Verifierade intyg och kompetensbevis visas här när de finns. Ett intyg är inte samma sak som ett testresultat.",
@@ -5587,7 +5644,7 @@ export const dictionaries = {
       "Utbildningsleverans är ännu inte aktiverad.",
     "training.nav.programmes": "Program",
     "training.nav.participants": "Tilldelade utbildningar",
-    "training.overview.title": "Kompetensutveckling",
+    "training.overview.title": "Utveckling",
     "training.overview.lede":
       "Utvecklingsprogram som din organisation har tilldelat, och hur långt medarbetarna har kommit.",
     "training.overview.stat.active": "Pågående",
@@ -9969,7 +10026,7 @@ export const dictionaries = {
 
     "employer.nav.workforce": "Employees",
     "employer.nav.competencies": "Competencies & certificates",
-    "employer.nav.training": "Competence development",
+    "employer.nav.training": "Development",
     "employer.nav.sites": "Sites & risk",
     "employer.nav.reports": "Reports",
     "employer.nav.library": "Library",
@@ -10000,7 +10057,7 @@ export const dictionaries = {
     "employer.competencies.purpose":
       "A shared competency framework describing what each role requires, and a register of employee certificates and their validity periods.",
 
-    "employer.training.heading": "Skills development",
+    "employer.training.heading": "Development",
     "employer.training.purpose":
       "Recommend and track targeted training based on identified competence gaps in the existing workforce.",
 
@@ -10084,7 +10141,7 @@ export const dictionaries = {
     "employer.overview.card.tests.action.assign": "Assign assessment",
     "employer.overview.card.tests.action.activity": "Assignments in progress",
 
-    "employer.overview.card.development.title": "Competence development",
+    "employer.overview.card.development.title": "Development",
     "employer.overview.card.development.body":
       "Plan and follow competence development for your employees.",
 
@@ -10519,14 +10576,50 @@ export const dictionaries = {
     "employer.person.assessments.released": "Shared",
     "employer.person.assessments.reviewsOpen": "Reviews outstanding:",
     "employer.person.assessments.openReport": "View report",
+    "academy.assign.employee.forThisPerson":
+      "Assigned to the employee you came from. No address needs typing — it is read from the employment record.",
+    "academy.assign.employee.noEmail":
+      "This employment record has no email address, so the programme cannot be assigned. Development is attached to a person, not to a record.",
+    "academy.assign.employee.notAuthorised":
+      "Assigning a development programme requires owner or administrator in the organisation.",
+    "academy.assign.employee.notFound": "That employee does not belong to this organisation.",
+    "academy.assign.employee.backToPerson": "Back to the employee",
+    "employer.person.competence.heading": "Competence in the role",
+    "employer.person.competence.lede":
+      "What the profession requires according to the shared occupational catalogue, and what evidence your organisation actually holds about this person. The list describes the role — not the person.",
+    "employer.person.competence.profession": "Profession:",
+    "employer.person.competence.loadError": "The competence requirements could not be loaded.",
+    "employer.person.competence.noProfession":
+      "No profession is linked to this employment, so there are no competence requirements to show. The profession is set when somebody is hired through an advertisement.",
+    "employer.person.competence.professionNotPublished":
+      "The profession linked to this employment is not published in the occupational catalogue yet, so its competence requirements cannot be shown.",
+    "employer.person.competence.noRequirements":
+      "The profession is published but has no published competence requirements yet.",
+    "employer.person.competence.criticality": "Requirement",
+    "employer.person.competence.criticality.essential": "Essential",
+    "employer.person.competence.criticality.important": "Important",
+    "employer.person.competence.criticality.supporting": "Supporting",
+    "employer.person.competence.evidenceSome":
+      "Your organisation holds at least one shared assessment report about this person. It is under Tests & assessments below.",
+    "employer.person.competence.evidenceNone":
+      "Your organisation holds no shared assessment report about this person. A governed assessment is the only evidence of competence here.",
     "employer.person.startDate": "Employed since",
     "employer.person.hiredFrom": "Hired through an application with you.",
     "employer.person.hiredFrom.open": "Open the application",
-    "employer.person.development.heading": "Competence development",
+    "employer.person.development.heading": "Development",
     "employer.person.development.lede":
-      "Assigned programmes and completed development. Completed training is development activity and is not proof of competence.",
-    "employer.person.development.open": "Open Competence development",
+      "Programmes assigned to this person, and how far they have got. A completed programme is a development activity and is never evidence of verified competence.",
+    "employer.person.development.open": "Open Development",
     "employer.person.development.assign": "Assign a development programme",
+    "employer.person.development.loadError": "The development activity could not be loaded.",
+    "employer.person.development.empty":
+      "No development programmes are assigned to this person yet.",
+    "employer.person.development.unlinked":
+      "This employment is not linked to a CQrityjob account yet, so development activity cannot be attributed to the person. The link is made automatically when you assign a programme or an assessment from here.",
+    "employer.person.development.state.assigned": "Assigned",
+    "employer.person.development.state.inProgress": "In progress",
+    "employer.person.development.state.completed": "Programme completed",
+    "employer.person.development.state.cancelled": "Cancelled",
     "employer.person.credentials.heading": "Competencies & certificates",
     "employer.person.credentials.lede":
       "Verified credentials appear here once they exist. A credential is not the same thing as an assessment result.",
@@ -13572,7 +13665,7 @@ export const dictionaries = {
     "academy.library.reason.training_delivery_pending": "Training delivery is not enabled yet.",
     "training.nav.programmes": "Programmes",
     "training.nav.participants": "Assigned training",
-    "training.overview.title": "Competence development",
+    "training.overview.title": "Development",
     "training.overview.lede":
       "Development programmes your organisation has assigned, and how far the employees have got.",
     "training.overview.stat.active": "In progress",

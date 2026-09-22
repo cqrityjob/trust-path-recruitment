@@ -547,7 +547,7 @@ function CandidateCard({
   const reviewed = Math.max(row.reviewsTotal - row.reviewsOpen, 0);
 
   const identityM = useMutation({
-    mutationFn: () => resolve({ data: { employerId, subjectId: row.subjectId } }),
+    mutationFn: () => resolve({ data: { employerId, attemptId: row.attemptId } }),
     onSuccess: (r) => setIdentity(r?.email ?? t("academy.participants.identityRefused")),
   });
 
@@ -658,7 +658,7 @@ function CandidateCard({
   });
 
   const reassessM = useMutation({
-    mutationFn: () => reassess({ data: { employerId, subjectId: row.subjectId, deadline: null } }),
+    mutationFn: () => reassess({ data: { employerId, attemptId: row.attemptId, deadline: null } }),
     onSuccess: () => {
       setNotice(t("academy.participants.reassessmentScheduled"));
       void qc.invalidateQueries({ queryKey: ["academy", "participants"] });
