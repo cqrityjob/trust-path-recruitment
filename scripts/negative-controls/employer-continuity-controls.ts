@@ -243,9 +243,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "E1-EMPLOYER-REPORT-MATERIAL-IN-THE-STRIP",
     defect: "the strip starts carrying the finalised report's own integrity hash",
     file: STRIP,
-    find: "  const { application, assessment, interview, report, nextAction } = projection;",
+    find: "  const { application, assessment, interview, report, decision, nextAction } = projection;",
     replace:
-      "  const { application, assessment, interview, report, nextAction } = projection;\n  const reportContentHash = (report as { contentHash?: string }).contentHash ?? null;\n  void reportContentHash;",
+      "  const { application, assessment, interview, report, decision, nextAction } = projection;\n  const reportContentHash = (report as { contentHash?: string }).contentHash ?? null;\n  void reportContentHash;",
     guard: E1,
     expect: "20 · the strip reads no reportContentHash",
   },
