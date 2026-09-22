@@ -1292,6 +1292,77 @@ if [ "$TRJ_PASSED" -lt 45 ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-bis. The employer lifecycle, phases 1-3
+#
+# Two database rules, each run TWICE around a rollback/reapply cycle of its own
+# migration. Running the suite once would prove the rules hold; running it
+# either side of the stand-down proves the migrations are the reason they do,
+# and that standing them down restores exactly the previous behaviour rather
+# than a similar-looking one.
+#
+# Runs BEFORE the rollback step: it reads scp_subjects, scp_training_assignments
+# and the employer training read model, all of which that step drops.
+# ---------------------------------------------------------------------------
+for elf_round in before after; do
+  echo "==> Running employer lifecycle phase 1-3 assertions (${elf_round} rollback/reapply)"
+  set +e
+  ELF_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_lifecycle_phase1_3_test.sql 2>&1)"
+  ELF_RC=$?
+  set -e
+
+  echo "$ELF_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  ELF_PASSED="$(echo "$ELF_OUT" | grep -c "ok  " || true)"
+
+  if [ "$ELF_RC" -ne 0 ]; then
+    echo ""
+    echo "FAIL: the employer lifecycle suite exited with code ${ELF_RC} (${elf_round} rollback/reapply)." >&2
+    echo "$ELF_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    exit 1
+  fi
+
+  echo "    ok  ${ELF_PASSED} employer lifecycle assertions passed (${elf_round} rollback/reapply)"
+
+  if [ "$ELF_PASSED" -lt 18 ]; then
+    echo "FAIL: expected at least 18 employer lifecycle assertions, only ${ELF_PASSED} ran." >&2
+    exit 1
+  fi
+
+  if [ "$elf_round" = before ]; then
+    # Newest first. Each rollback must STAND THE CHANGE DOWN -- the assertions
+    # below read the resulting state rather than trusting that the file ran.
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261206090000_scp_training_assignment_person_context_rollback.sql >/dev/null
+    elf_args="$(psql_q -d "$TEST_DB" -Atc "SELECT coalesce(string_agg(pg_get_function_arguments(p.oid), '|'), 'none') FROM pg_proc p WHERE p.pronamespace='public'::regnamespace AND p.proname='scp_assign_training'")"
+    case "$elf_args" in
+      *_employee_id*) echo "FAIL: 20261206090000 rollback left _employee_id on scp_assign_training"; exit 1 ;;
+      *\|*) echo "FAIL: 20261206090000 rollback left more than one scp_assign_training definition"; exit 1 ;;
+    esac
+    echo "    ok  training person-context rollback stood down: one definition, no _employee_id"
+
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261205090000_employer_workforce_active_only_rollback.sql >/dev/null
+    elf_gate="$(psql_q -d "$TEST_DB" -Atc "SELECT (pg_get_expr(pol.polwithcheck, pol.polrelid) LIKE '%employer_is_active_status%')::int FROM pg_policy pol WHERE pol.polrelid='public.employees'::regclass AND pol.polname='employees_employer_insert'")"
+    elf_guard="$(psql_q -d "$TEST_DB" -Atc "SELECT (prosrc LIKE '%EMPLOYER_NOT_ACTIVE_FOR_WORKFORCE%')::int FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='employer_operational_guard'")"
+    [ "${elf_gate}${elf_guard}" = "00" ] || { echo "FAIL: 20261205090000 rollback left the workforce gate in place (policy=$elf_gate guard=$elf_guard)"; exit 1; }
+    echo "    ok  workforce active-only rollback stood down: policy and guard back to the pending-permitted shape"
+
+    # And with the gate down, the refusal genuinely disappears -- which is what
+    # makes the "after" round evidence about these migrations and not about
+    # something else that happens to refuse.
+    elf_actor="$(psql_q -d "$TEST_DB" -Atc "SELECT id FROM auth.users ORDER BY created_at LIMIT 1")"
+    if [ -n "$elf_actor" ]; then
+      psql_q -d "$TEST_DB" -c "INSERT INTO public.employers (id, name, slug, status) VALUES ('e1f00000-9999-0000-0000-000000000001','Rollback Proof AB','rollback-proof-elf','pending');" >/dev/null
+      psql_q -d "$TEST_DB" -c "INSERT INTO public.employees (employer_id, first_name, last_name, created_by) VALUES ('e1f00000-9999-0000-0000-000000000001','Utan','Grind','${elf_actor}');" >/dev/null \
+        || { echo "FAIL: with 20261205090000 rolled back, a pending organisation was still refused an employment record -- the refusal is coming from somewhere else"; exit 1; }
+      psql_q -d "$TEST_DB" -c "DELETE FROM public.employees WHERE employer_id='e1f00000-9999-0000-0000-000000000001'; DELETE FROM public.employers WHERE id='e1f00000-9999-0000-0000-000000000001';" >/dev/null
+      echo "    ok  with the gate down a pending organisation CAN create an employment record (negative control)"
+    fi
+
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261205090000_employer_workforce_active_only.sql >/dev/null
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261206090000_scp_training_assignment_person_context.sql >/dev/null
+    echo "    ok  both employer lifecycle migrations reapplied"
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
