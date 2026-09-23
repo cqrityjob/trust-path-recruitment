@@ -187,10 +187,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // bodies byte-identical to the merged source by md5, the two CONTRACT
 // triggers absent as intended, and no row changed. It came off this list in
 // the change that marked it applied.
-// 20261208090000 (its CONTRACT half, the job_applications backstops) is
-// pending by design: merged only after the application (#283) is published,
-// then applied by the integration and recorded, which takes it off this list.
-const expectedPending: string[] = ["20261208090000_recruitment_workspace_backstops.sql"];
+// 20261208090000 (its CONTRACT half, the job_applications backstops) merged as
+// PR #284 (20f49eb) after the application was published; the integration
+// applied it and it was verified read-only on 2026-09-23 -- canonical version
+// and slug, both trigger bodies byte-identical by md5, no row changed. It
+// comes off this list in the same change that marks it applied.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
