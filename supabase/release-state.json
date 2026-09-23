@@ -1767,11 +1767,91 @@
     },
     {
       "file": "20261209090000_recruitment_assignment_idempotency.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20261209090000",
+      "hostedName": "recruitment_assignment_idempotency",
+      "evidenceSource": "docs/security-intelligence/hosted-baseline.md",
       "introduces": [],
       "rollback": "supabase/rollback/20261209090000_recruitment_assignment_idempotency_rollback.sql",
-      "note": "Makes the existing scp_employer_assign RPC retry-safe for application + test definition. Serialises on the application row after ownership checks and returns the existing non-abandoned attempt after all existing governance and purpose checks. scp_assign_from_application delegates here. Workforce and standalone assignments are unchanged. No personal rows changed. Rejects unexpected prior function bodies or existing duplicate live attempts. Not applied to production.",
+      "note": "Makes the existing scp_employer_assign RPC retry-safe for application + test definition. Serialises on the application row after ownership checks and returns the existing non-abandoned attempt after all existing governance and purpose checks. scp_assign_from_application delegates here. Workforce and standalone assignments are unchanged. No personal rows changed. Rejects unexpected prior function bodies or existing duplicate live attempts. Applied by the official integration after PR #286; verified read-only on 2026-09-23.",
       "verify": "SELECT position('Serialise all assignment entry points' in prosrc) > 0 FROM pg_proc WHERE oid='public.scp_employer_assign(uuid,uuid,text,timestamptz,text,text,uuid,text,uuid,uuid)'::regprocedure; -- expect true; also compare full body digest to local replay and verify authenticated=true, anon=false EXECUTE privileges."
+    },
+    {
+      "file": "20261210090000_security_work_foundation.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sw_workspaces"
+        },
+        {
+          "kind": "table",
+          "object": "sw_workspace_memberships"
+        },
+        {
+          "kind": "table",
+          "object": "sw_monitoring_profiles"
+        },
+        {
+          "kind": "table",
+          "object": "sw_intelligence_requirements"
+        },
+        {
+          "kind": "table",
+          "object": "sw_sources"
+        },
+        {
+          "kind": "table",
+          "object": "sw_source_items"
+        },
+        {
+          "kind": "table",
+          "object": "sw_intelligence_items"
+        },
+        {
+          "kind": "table",
+          "object": "sw_assessments"
+        },
+        {
+          "kind": "table",
+          "object": "sw_risks"
+        },
+        {
+          "kind": "table",
+          "object": "sw_controls"
+        },
+        {
+          "kind": "table",
+          "object": "sw_actions"
+        },
+        {
+          "kind": "table",
+          "object": "sw_reports"
+        },
+        {
+          "kind": "table",
+          "object": "sw_citations"
+        },
+        {
+          "kind": "table",
+          "object": "sw_ai_runs"
+        },
+        {
+          "kind": "table",
+          "object": "sw_audit_events"
+        },
+        {
+          "kind": "table",
+          "object": "sw_record_versions"
+        },
+        {
+          "kind": "function",
+          "object": "sw_create_personal_workspace(text)"
+        }
+      ],
+      "rollback": "supabase/rollback/20261210090000_security_work_foundation_rollback.sql",
+      "note": "Security Intelligence PR A: independent workspaces and explicit memberships, monitoring/requirements, manual source facts, intelligence triage, assessments, risks/controls/actions, eight-section reports, citations, AI provenance (inactive), protected audit/version history. Composite workspace foreign keys, RLS, immutable ownership and human approval constraints. No employer/candidate/Passport authorization, no runtime consumers, provider/worker grants, uploads, fetching or schedules. Owner merge/application gate remains; see docs/security-intelligence/release.md.",
+      "verify": "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND relname LIKE 'sw\\_%' AND relrowsecurity; -- expect 16. SELECT has_function_privilege('anon','public.sw_create_personal_workspace(text)','EXECUTE'), has_function_privilege('authenticated','public.sw_create_personal_workspace(text)','EXECUTE'), has_function_privilege('service_role','public.sw_create_personal_workspace(text)','EXECUTE'); -- expect f,t,f. Verify every new object's exact grants, pinned private helpers, schema exposure, constraints, triggers and definitions against isolated replay; no business writes needed."
     }
   ], 
   "policyVersion": 2, 

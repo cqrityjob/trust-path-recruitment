@@ -124,7 +124,11 @@ LANGUAGE sql STABLE AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb
-LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;
+LANGUAGE sql STABLE AS $$
+  -- PostgREST passes the verified JWT as one JSON object. Keep this reader
+  -- faithful so anonymous-session and claim-based boundaries are exercised.
+  SELECT COALESCE(NULLIF(current_setting('request.jwt.claims', true), ''), '{}')::jsonb;
+$$;
 
 GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
 GRANT SELECT ON auth.users TO anon, authenticated, service_role;

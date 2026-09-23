@@ -192,13 +192,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // applied it and it was verified read-only on 2026-09-23 -- canonical version
 // and slug, both trigger bodies byte-identical by md5, no row changed. It
 // comes off this list in the same change that marks it applied.
-// PR #286: retry-safe recruitment assignment (20261209090000) is pending
-// until the official integration applies the reviewed migration after merge.
-// Remove this entry when hosted evidence is recorded in release-state.json
-// and hosted-ledger.json; a green PR is not evidence of production application.
-const expectedPending: string[] = [
-  "20261209090000_recruitment_assignment_idempotency.sql",
-];
+// PR #286 (20261209090000) was verified applied read-only after merge;
+// docs/security-intelligence/hosted-baseline.md records ledger and body digests.
+// Security Work foundation is schema-only and remains pending until its own
+// owner merge/application gate and fresh hosted evidence.
+const expectedPending: string[] = ["20261210090000_security_work_foundation.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
