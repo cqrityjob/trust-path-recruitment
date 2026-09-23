@@ -186,7 +186,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // recorded, at which point it comes off this list in the same change that
 // marks it applied. The application PR that reads its tables must not merge
 // before then -- schema-first-release:check holds it.
-const expectedPending: string[] = ["20261207090000_recruitment_workspace.sql"];
+const expectedPending: string[] = [
+  "20261207090000_recruitment_workspace.sql",
+  "20261208090000_recruitment_workspace_backstops.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
