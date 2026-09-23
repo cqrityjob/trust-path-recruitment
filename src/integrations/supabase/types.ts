@@ -6136,6 +6136,64 @@ export type Database = {
           },
         ]
       }
+      job_application_answers: {
+        Row: {
+          answer_bool: boolean | null
+          answer_kind: string
+          answer_text: string | null
+          application_id: string
+          created_at: string
+          employer_id: string
+          prompt_en_snapshot: string | null
+          prompt_sv_snapshot: string | null
+          question_id: string
+        }
+        Insert: {
+          answer_bool?: boolean | null
+          answer_kind: string
+          answer_text?: string | null
+          application_id: string
+          created_at?: string
+          employer_id: string
+          prompt_en_snapshot?: string | null
+          prompt_sv_snapshot?: string | null
+          question_id: string
+        }
+        Update: {
+          answer_bool?: boolean | null
+          answer_kind?: string
+          answer_text?: string | null
+          application_id?: string
+          created_at?: string
+          employer_id?: string
+          prompt_en_snapshot?: string | null
+          prompt_sv_snapshot?: string | null
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_application_answers_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_application_answers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_application_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "recruitment_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_application_status_events: {
         Row: {
           actor_role: string
@@ -6672,6 +6730,462 @@ export type Database = {
             columns: ["target_profession_id"]
             isOneToOne: false
             referencedRelation: "target_professions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruitment_application_meta: {
+        Row: {
+          application_id: string
+          employer_id: string
+          first_viewed_at: string | null
+          first_viewed_by: string | null
+          job_id: string
+          responsible_user_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          application_id: string
+          employer_id: string
+          first_viewed_at?: string | null
+          first_viewed_by?: string | null
+          job_id: string
+          responsible_user_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          application_id?: string
+          employer_id?: string
+          first_viewed_at?: string | null
+          first_viewed_by?: string | null
+          job_id?: string
+          responsible_user_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_application_meta_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: true
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_application_meta_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_application_meta_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruitment_comments: {
+        Row: {
+          application_id: string
+          author_user_id: string | null
+          body: string
+          created_at: string
+          employer_id: string
+          id: string
+          job_id: string
+        }
+        Insert: {
+          application_id: string
+          author_user_id?: string | null
+          body: string
+          created_at?: string
+          employer_id: string
+          id?: string
+          job_id: string
+        }
+        Update: {
+          application_id?: string
+          author_user_id?: string | null
+          body?: string
+          created_at?: string
+          employer_id?: string
+          id?: string
+          job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_comments_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_comments_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_comments_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruitment_interview_bookings: {
+        Row: {
+          application_id: string
+          cancelled_reason: string | null
+          candidate_response_at: string | null
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          employer_id: string
+          id: string
+          interviewer_names: string | null
+          invited_at: string | null
+          job_id: string
+          location_kind: string
+          location_text: string | null
+          meeting_url: string | null
+          starts_at: string
+          status: string
+          timezone: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          application_id: string
+          cancelled_reason?: string | null
+          candidate_response_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes: number
+          employer_id: string
+          id?: string
+          interviewer_names?: string | null
+          invited_at?: string | null
+          job_id: string
+          location_kind: string
+          location_text?: string | null
+          meeting_url?: string | null
+          starts_at: string
+          status?: string
+          timezone: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          application_id?: string
+          cancelled_reason?: string | null
+          candidate_response_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          employer_id?: string
+          id?: string
+          interviewer_names?: string | null
+          invited_at?: string | null
+          job_id?: string
+          location_kind?: string
+          location_text?: string | null
+          meeting_url?: string | null
+          starts_at?: string
+          status?: string
+          timezone?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_interview_bookings_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_interview_bookings_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_interview_bookings_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruitment_messages: {
+        Row: {
+          application_id: string
+          body: string
+          booking_id: string | null
+          created_at: string
+          created_by: string | null
+          email_attempts: number
+          email_claimed_at: string | null
+          email_error: string | null
+          email_status: string
+          employer_id: string
+          id: string
+          idempotency_key: string | null
+          job_id: string
+          kind: string
+          language: string
+          sent_at: string | null
+          sent_by: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          application_id: string
+          body: string
+          booking_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email_attempts?: number
+          email_claimed_at?: string | null
+          email_error?: string | null
+          email_status?: string
+          employer_id: string
+          id?: string
+          idempotency_key?: string | null
+          job_id: string
+          kind: string
+          language: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          application_id?: string
+          body?: string
+          booking_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          email_attempts?: number
+          email_claimed_at?: string | null
+          email_error?: string | null
+          email_status?: string
+          employer_id?: string
+          id?: string
+          idempotency_key?: string | null
+          job_id?: string
+          kind?: string
+          language?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_messages_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_messages_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "recruitment_interview_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_messages_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_messages_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruitment_questions: {
+        Row: {
+          answer_kind: string
+          created_at: string
+          employer_id: string
+          id: string
+          is_required: boolean
+          job_id: string
+          position: number
+          prompt_en: string | null
+          prompt_sv: string | null
+          requirement_id: string | null
+        }
+        Insert: {
+          answer_kind: string
+          created_at?: string
+          employer_id: string
+          id?: string
+          is_required?: boolean
+          job_id: string
+          position?: number
+          prompt_en?: string | null
+          prompt_sv?: string | null
+          requirement_id?: string | null
+        }
+        Update: {
+          answer_kind?: string
+          created_at?: string
+          employer_id?: string
+          id?: string
+          is_required?: boolean
+          job_id?: string
+          position?: number
+          prompt_en?: string | null
+          prompt_sv?: string | null
+          requirement_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_questions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_questions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_questions_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "recruitment_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruitment_requirements: {
+        Row: {
+          created_at: string
+          employer_id: string
+          id: string
+          job_id: string
+          kind: string
+          label_en: string | null
+          label_sv: string | null
+          position: number
+        }
+        Insert: {
+          created_at?: string
+          employer_id: string
+          id?: string
+          job_id: string
+          kind: string
+          label_en?: string | null
+          label_sv?: string | null
+          position?: number
+        }
+        Update: {
+          created_at?: string
+          employer_id?: string
+          id?: string
+          job_id?: string
+          kind?: string
+          label_en?: string | null
+          label_sv?: string | null
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_requirements_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_requirements_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recruitment_settings: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          completion_state: string
+          created_at: string
+          employer_id: string
+          job_id: string
+          responsible_user_id: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_note?: string | null
+          completion_state?: string
+          created_at?: string
+          employer_id: string
+          job_id: string
+          responsible_user_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          completion_note?: string | null
+          completion_state?: string
+          created_at?: string
+          employer_id?: string
+          job_id?: string
+          responsible_user_id?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recruitment_settings_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recruitment_settings_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
             referencedColumns: ["id"]
           },
         ]
@@ -18944,6 +19458,152 @@ export type Database = {
           note: string
           previous_status: string
         }[]
+      }
+      rec_add_comment: {
+        Args: { _application_id: string; _body: string }
+        Returns: string
+      }
+      rec_claim_message_send: {
+        Args: { _message_id: string }
+        Returns: {
+          application_id: string
+          body: string
+          employer_name: string
+          job_title: string
+          language: string
+          outcome: string
+          recipient_email: string
+          subject: string
+        }[]
+      }
+      rec_complete_recruitment: {
+        Args: {
+          _expected_version?: number
+          _job_id: string
+          _note?: string
+          _state: string
+        }
+        Returns: number
+      }
+      rec_discard_message_draft: {
+        Args: { _message_id: string }
+        Returns: undefined
+      }
+      rec_mark_application_viewed: {
+        Args: { _application_id: string }
+        Returns: string
+      }
+      rec_respond_to_booking: {
+        Args: { _booking_id: string; _response: string }
+        Returns: string
+      }
+      rec_save_booking: {
+        Args: {
+          _application_id: string
+          _booking_id: string
+          _duration_minutes: number
+          _expected_version?: number
+          _interviewer_names: string
+          _location_kind: string
+          _location_text: string
+          _meeting_url: string
+          _starts_at: string
+          _timezone: string
+        }
+        Returns: Json
+      }
+      rec_save_message_draft: {
+        Args: {
+          _application_id: string
+          _body: string
+          _booking_id?: string
+          _idempotency_key?: string
+          _kind: string
+          _language: string
+          _message_id: string
+          _subject: string
+        }
+        Returns: string
+      }
+      rec_save_vacancy_structure: {
+        Args: { _job_id: string; _questions: Json; _requirements: Json }
+        Returns: Json
+      }
+      rec_set_application_responsible: {
+        Args: {
+          _application_id: string
+          _expected_version?: number
+          _user_id: string
+        }
+        Returns: number
+      }
+      rec_set_application_stage: {
+        Args: {
+          _application_id: string
+          _expected_status: string
+          _new_status: string
+          _note?: string
+        }
+        Returns: {
+          application_id: string
+          new_status: string
+          previous_status: string
+          updated_at: string
+        }[]
+      }
+      rec_set_booking_status: {
+        Args: {
+          _booking_id: string
+          _expected_version?: number
+          _reason?: string
+          _status: string
+        }
+        Returns: number
+      }
+      rec_set_recruitment_responsible: {
+        Args: { _expected_version?: number; _job_id: string; _user_id: string }
+        Returns: number
+      }
+      rec_settings_row: {
+        Args: { _job_id: string }
+        Returns: {
+          completed_at: string | null
+          completed_by: string | null
+          completion_note: string | null
+          completion_state: string
+          created_at: string
+          employer_id: string
+          job_id: string
+          responsible_user_id: string | null
+          updated_at: string
+          version: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "recruitment_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rec_settle_message_send: {
+        Args: { _error?: string; _message_id: string; _result: string }
+        Returns: string
+      }
+      rec_submit_application: {
+        Args: {
+          _answers?: Json
+          _application_id: string
+          _cover_note: string
+          _cv_document_id?: string
+          _cv_original_filename: string
+          _cv_size_bytes: number
+          _cv_source?: string
+          _cv_storage_path: string
+          _include_passport?: boolean
+          _job_id: string
+          _phone: string
+        }
+        Returns: Json
       }
       reject_job: {
         Args: { _job_id: string; _note: string }
