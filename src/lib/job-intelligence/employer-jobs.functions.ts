@@ -810,5 +810,48 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       before: { source_job_id: data.jobId, source_slug: src.slug },
       after: { new_job_id: inserted.id, new_slug: inserted.slug },
     });
+
+    // The vacancy's requirements and application questions come with it
+    // (20261207090000), so a recruitment the organisation runs again starts
+    // from its own last frame. Best-effort: the copy is a new, unlocked draft
+    // the employer edits anyway, and a failure here leaves a draft with an
+    // empty frame rather than no draft.
+    try {
+      const [reqRes, qRes] = await Promise.all([
+        ctx.supabase
+          .from("recruitment_requirements")
+          .select("id, kind, label_sv, label_en")
+          .eq("job_id", data.jobId)
+          .order("position"),
+        ctx.supabase
+          .from("recruitment_questions")
+          .select("requirement_id, prompt_sv, prompt_en, answer_kind, is_required")
+          .eq("job_id", data.jobId)
+          .order("position"),
+      ]);
+      const requirements = (reqRes.data ?? []) as Record<string, unknown>[];
+      const questions = (qRes.data ?? []) as Record<string, unknown>[];
+      if (!reqRes.error && !qRes.error && (requirements.length > 0 || questions.length > 0)) {
+        const { error: sErr } = await ctx.supabase.rpc("rec_save_vacancy_structure", {
+          _job_id: inserted.id,
+          _requirements: requirements.map((r) => ({
+            key: r.id,
+            kind: r.kind,
+            label_sv: r.label_sv,
+            label_en: r.label_en,
+          })),
+          _questions: questions.map((q) => ({
+            requirement_key: q.requirement_id,
+            prompt_sv: q.prompt_sv,
+            prompt_en: q.prompt_en,
+            answer_kind: q.answer_kind,
+            is_required: q.is_required,
+          })),
+        });
+        if (sErr) console.error("[employer-jobs] duplicate: vacancy frame not copied", sErr);
+      }
+    } catch (e) {
+      console.error("[employer-jobs] duplicate: vacancy frame not copied", e);
+    }
     return { id: inserted.id as string };
   });

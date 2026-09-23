@@ -38,12 +38,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Plus, Search } from "lucide-react";
+import { z } from "zod";
+import { PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
+import { getRecruitmentOverview } from "@/lib/recruitment/recruitment.functions";
+import { matchesPhaseFilter, PHASE_FILTERS, type PhaseFilter } from "@/lib/recruitment/definitions";
+import { formatDay } from "@/lib/recruitment/format";
+import type { TranslationKey } from "@/i18n/dictionaries";
+
+// Every filter is in the URL, so the overview's "active recruitments" count can
+// link to exactly the rows it counted, and a reload keeps the view.
+const searchSchema = z.object({
+  q: z.string().trim().max(100).optional().catch(undefined),
+  phase: z.enum(PHASE_FILTERS).optional().catch(undefined),
+  owner: z.string().max(40).optional().catch(undefined),
+});
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/")({
   ssr: false,
   component: EmployerJobsListPage,
   errorComponent: EmployerErrorState,
+  validateSearch: (search) => searchSchema.parse(search),
 });
 
 function EmployerJobsListPage() {
@@ -150,11 +165,21 @@ function JobsList({
   }
 
   const [actionError, setActionError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  // Closed is a separate view rather than another row in the same list.
-  // Ending a recruitment has to actually clear it from the working list, or
-  // the feature has not solved the clutter it exists for.
-  const [showArchived, setShowArchived] = useState(false);
+  const view = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [search, setSearch] = useState(view.q ?? "");
+  const phaseFilter: PhaseFilter = view.phase ?? "active";
+  const loadOverview = useServerFn(getRecruitmentOverview);
+  // Phase, responsible person and counts come from the same overview read the
+  // dashboard uses, so a count there and a row here are computed once.
+  const overviewQuery = useQuery({
+    queryKey: ["employer", employerId, "recruitment-overview"],
+    queryFn: () => loadOverview({ data: { employerId } }),
+  });
+  const summaryByJob = new Map((overviewQuery.data?.recruitments ?? []).map((r) => [r.jobId, r]));
+  function setView(next: Partial<z.infer<typeof searchSchema>>) {
+    void navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
+  }
   const [pending, setPending] = usePendingConfirm<"delete" | "close" | "duplicate">();
   // Advertisements the database refused to delete. The list cannot see whether
   // a draft has assessment assignments or invitations hanging off it -- only
@@ -206,10 +231,20 @@ function JobsList({
   });
 
   const allRows: EmployerJobRow[] = jobsQuery.data ?? [];
-  const archivedCount = allRows.filter((r) => r.status === "archived").length;
-  const needle = search.trim().toLowerCase();
+  const needle = (view.q ?? "").trim().toLowerCase();
   const rows = allRows
-    .filter((r) => (showArchived ? r.status === "archived" : r.status !== "archived"))
+    .filter((r) => {
+      const summary = summaryByJob.get(r.id);
+      // Until the overview has answered, the phase of a row is unknown, and a
+      // row whose phase is unknown is shown rather than silently hidden.
+      if (!summary) return overviewQuery.isSuccess ? phaseFilter === "all" : true;
+      return matchesPhaseFilter(phaseFilter, summary.phase, summary.unresolved);
+    })
+    .filter((r) => {
+      if (!view.owner) return true;
+      const owner = summaryByJob.get(r.id)?.responsibleUserId ?? null;
+      return view.owner === "none" ? owner === null : owner === view.owner;
+    })
     .filter(
       (r) =>
         needle === "" ||
@@ -217,6 +252,15 @@ function JobsList({
         (r.title_en ?? "").toLowerCase().includes(needle) ||
         (r.short_id ?? "").toLowerCase().includes(needle),
     );
+  const phaseCounts = new Map<PhaseFilter, number>(
+    PHASE_FILTERS.map((f) => [
+      f,
+      allRows.filter((r) => {
+        const s = summaryByJob.get(r.id);
+        return s ? matchesPhaseFilter(f, s.phase, s.unresolved) : false;
+      }).length,
+    ]),
+  );
 
   return (
     <EmployerAppShell
@@ -228,15 +272,19 @@ function JobsList({
       hasMultipleWorkspaces={hasMultipleWorkspaces}
     >
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          {t("employer.jobs.list.heading")}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
+            {t("rec.list.heading")}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("rec.list.lede")}</p>
+        </div>
         <Link
           to="/employer/$employerSlug/jobs/new"
           params={{ employerSlug }}
-          className="rounded-md bg-foreground px-3 py-2 text-sm font-medium text-background"
+          className="inline-flex min-h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          {t("employer.jobs.list.newJob")}
+          <Plus className="h-4 w-4" aria-hidden="true" />
+          {t("rec.overview.create")}
         </Link>
       </div>
 
@@ -246,45 +294,69 @@ function JobsList({
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap items-center gap-3">
-        <label className="sr-only" htmlFor="job-search">
-          {t("employer.jobs.list.searchLabel")}
+      <div className="mt-6 flex flex-wrap items-end gap-3">
+        <label className="relative min-w-[14rem] flex-1 sm:max-w-xs" htmlFor="job-search">
+          <span className="sr-only">{t("employer.jobs.list.searchLabel")}</span>
+          <Search
+            className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <input
+            id="job-search"
+            type="search"
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setView({ q: e.target.value || undefined });
+            }}
+            placeholder={t("employer.jobs.list.searchLabel")}
+            className="h-10 w-full rounded-md border border-border bg-card pl-8 pr-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
         </label>
-        <input
-          id="job-search"
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("employer.jobs.list.searchLabel")}
-          className="h-10 w-full max-w-xs rounded-md border border-border bg-card px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        />
-        <div className="inline-flex overflow-hidden rounded-md border border-border" role="group">
-          <button
-            type="button"
-            aria-pressed={!showArchived}
-            onClick={() => setShowArchived(false)}
-            className={
-              !showArchived
-                ? "bg-foreground px-3 py-2 text-xs font-semibold text-background"
-                : "px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/40"
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+          {t("rec.list.filterStatus")}
+          <select
+            value={phaseFilter}
+            onChange={(e) =>
+              setView({
+                phase: e.target.value === "active" ? undefined : (e.target.value as PhaseFilter),
+              })
             }
+            className="h-10 rounded-md border border-border bg-card px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {t("employer.jobs.list.filterActive")}
-          </button>
-          <button
-            type="button"
-            aria-pressed={showArchived}
-            onClick={() => setShowArchived(true)}
-            className={
-              showArchived
-                ? "bg-foreground px-3 py-2 text-xs font-semibold text-background"
-                : "px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted/40"
-            }
+            {PHASE_FILTERS.map((f) => (
+              <option key={f} value={f}>
+                {t(`rec.list.phase.${f}` as TranslationKey)}
+                {overviewQuery.isSuccess ? ` (${phaseCounts.get(f) ?? 0})` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+          {t("rec.col.responsible")}
+          <select
+            value={view.owner ?? ""}
+            onChange={(e) => setView({ owner: e.target.value || undefined })}
+            className="h-10 rounded-md border border-border bg-card px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            {t("employer.jobs.list.filterArchived")} ({archivedCount})
-          </button>
-        </div>
+            <option value="">{t("rec.filter.owner.all")}</option>
+            <option value="none">{t("rec.filter.owner.none")}</option>
+            {(overviewQuery.data?.team ?? []).map((m) => (
+              <option key={m.userId} value={m.userId}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+      {overviewQuery.isError && (
+        <p
+          role="alert"
+          className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+        >
+          {t("rec.overview.unavailable")}
+        </p>
+      )}
 
       {/* One dialog for the whole list. The pending row decides what it says,
           so a five-row table does not carry five dialogs able to open at once. */}
@@ -333,11 +405,11 @@ function JobsList({
           <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
         ) : rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-sm text-muted-foreground">
-            {needle !== ""
+            {needle !== "" || view.owner
               ? t("employer.jobs.list.emptySearch")
-              : showArchived
-                ? t("employer.jobs.list.emptyArchived")
-                : t("employer.jobs.list.empty")}
+              : allRows.length === 0
+                ? t("employer.jobs.list.empty")
+                : t("rec.list.emptyPhase")}
           </div>
         ) : (
           // Five columns and a row of actions do not fit a phone. The wrapper
@@ -347,11 +419,11 @@ function JobsList({
             <table className="w-full min-w-[46rem] text-left text-sm">
               <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3">{t("employer.jobs.list.title")}</th>
+                  <th className="px-4 py-3">{t("rec.col.role")}</th>
                   <th className="px-4 py-3">{t("employer.jobs.list.status")}</th>
                   <th className="px-4 py-3">{t("employer.jobs.list.applications")}</th>
-                  <th className="px-4 py-3">{t("employer.jobs.list.expires")}</th>
-                  <th className="px-4 py-3">{t("employer.jobs.list.updated")}</th>
+                  <th className="px-4 py-3">{t("rec.col.responsible")}</th>
+                  <th className="px-4 py-3">{t("rec.col.next")}</th>
                   <th className="px-4 py-3 text-right">&nbsp;</th>
                 </tr>
               </thead>
@@ -409,9 +481,13 @@ function JobsList({
                         <div className="text-xs text-muted-foreground">{r.short_id}</div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
-                          {jobStatusLabel(r.status, lang) || r.status}
-                        </span>
+                        {summaryByJob.get(r.id) ? (
+                          <PhaseBadge phase={summaryByJob.get(r.id)!.phase} />
+                        ) : (
+                          <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
+                            {jobStatusLabel(r.status, lang) || r.status}
+                          </span>
+                        )}
                       </td>
                       {/* Applications, and how many nobody has looked at yet.
                           The whole cell is the way into exactly those rows, so
@@ -426,9 +502,9 @@ function JobsList({
                               return <span className="text-muted-foreground">—</span>;
                             return (
                               <Link
-                                to="/employer/$employerSlug/applications"
-                                params={{ employerSlug }}
-                                search={{ job: r.id }}
+                                to="/employer/$employerSlug/jobs/$jobId"
+                                params={{ employerSlug, jobId: r.id }}
+                                search={{ tab: "candidates" as const, stage: "all" as const }}
                                 className="inline-flex flex-wrap items-baseline gap-x-1.5 text-muted-foreground hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               >
                                 <span className="font-medium tabular-nums text-foreground">
@@ -449,10 +525,24 @@ function JobsList({
                         )}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {r.expires_at ? formatDate(r.expires_at, lang) : "—"}
+                        {summaryByJob.get(r.id)?.responsibleName ?? "—"}
                       </td>
                       <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {formatDate(r.updated_at, lang)}
+                        {(() => {
+                          const sm = summaryByJob.get(r.id);
+                          if (sm?.nextInterviewAt)
+                            return `${t("rec.overview.nextInterview")} ${formatDay(sm.nextInterviewAt, lang)}`;
+                          if (sm?.phase === "published" && r.deadline_at)
+                            return `${t("rec.overview.deadline")} ${formatDay(r.deadline_at, lang)}`;
+                          if (sm?.phase === "closed")
+                            return sm.unresolved > 0
+                              ? t("rec.overview.decideRemaining").replace(
+                                  "{n}",
+                                  String(sm.unresolved),
+                                )
+                              : t("rec.list.readyToComplete");
+                          return `${t("employer.jobs.list.updated")} ${formatDate(r.updated_at, lang)}`;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-right">
                         {/* ── ONE PRIMARY, THE REST IN A MENU ────────────

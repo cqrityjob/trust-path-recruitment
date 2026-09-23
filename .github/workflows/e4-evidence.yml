@@ -148,12 +148,30 @@ jobs:
       # would otherwise replay it before anything has had a chance to match the
       # privilege baseline below -- and the replay fails on a stock stack. See
       # the next step but one for the evidence.
+      # ── WHEN THE REGISTRY, NOT THE CODE, REFUSES ─────────────────────
+      #
+      # On 2026-09-23 three consecutive runs of this job never reached a line
+      # of the repository: every anonymous image pull from ghcr.io was
+      # throttled (`toomanyrequests`), `supabase start` exited 1, and the scan
+      # and verify steps then -- correctly -- refused an empty artifact. The
+      # CLI's own retries go back to the same registry within milliseconds.
+      #
+      # So one fallback, and only on failure: stop whatever half-started, and
+      # pull the SAME pinned images from Supabase's public mirror at
+      # public.ecr.aws (the CLI's SUPABASE_INTERNAL_IMAGE_REGISTRY). No
+      # credential, no secret, no wider permission: the job stays at
+      # `contents: read`, and every check after this step is unchanged. A
+      # second failure fails the job exactly as before.
       - name: Start the local Supabase stack, history held back
         run: |
           set -euo pipefail
           mv supabase/migrations /tmp/e4-migrations
           mkdir -p supabase/migrations
-          supabase start
+          if ! supabase start; then
+            echo "::warning::supabase start failed; retrying once with the images from public.ecr.aws"
+            supabase stop --no-backup || true
+            SUPABASE_INTERNAL_IMAGE_REGISTRY=public.ecr.aws supabase start
+          fi
           rmdir supabase/migrations
           mv /tmp/e4-migrations supabase/migrations
           test -d supabase/migrations

@@ -59,6 +59,11 @@ import type { CvApplicationBlock } from "@/lib/professional-identity/cv/applicat
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import { ShieldCheck } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import {
+  getPublicVacancyStructure,
+  type PublicQuestion,
+  type PublicRequirement,
+} from "@/lib/job-intelligence/public-queries";
 
 const MAX_CV_BYTES = 5 * 1024 * 1024;
 
@@ -75,6 +80,10 @@ const ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
   CV_DOCUMENT_NOT_FOUND: "jobs.apply.error.cvDocumentNotFound",
   CV_DOCUMENT_NOT_READY: "jobs.apply.error.cvDocumentNotReady",
   SUBMISSION_FAILED: "jobs.apply.error.generic",
+  // 20261207090000: the database's own refusals, each with its own sentence.
+  VACANCY_CLOSED: "rec.apply.error.closed",
+  APPLICATION_ANSWERS_MISSING: "rec.apply.error.answersMissing",
+  APPLICATION_ANSWERS_INVALID: "rec.apply.error.answersInvalid",
   JOB_LOOKUP_FAILED: "jobs.apply.error.generic",
   DUPLICATE_CHECK_FAILED: "jobs.apply.error.generic",
 };
@@ -85,8 +94,23 @@ const BLOCK_MESSAGE_KEY: Record<CvApplicationBlock, TranslationKey> = {
 };
 
 function translateSubmitError(code: string | undefined, t: (k: TranslationKey) => string): string {
-  const key = (code && ERROR_MESSAGE_KEYS[code]) || "jobs.apply.error.generic";
-  return t(key);
+  if (code && ERROR_MESSAGE_KEYS[code]) return t(ERROR_MESSAGE_KEYS[code]);
+  // The request never came back. Whether it landed is unknown -- so the form
+  // says so, and a retry reuses the same attempt id and cannot duplicate.
+  if (code && /fetch|network|Failed to fetch|NetworkError|timeout/i.test(code))
+    return t("rec.apply.error.network");
+  if (code && /Unauthorized|JWT|session|401/i.test(code)) return t("rec.apply.error.session");
+  return t("jobs.apply.error.generic");
+}
+
+type AnswerState = Record<string, { text?: string; bool?: boolean }>;
+
+function newAttemptId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) =>
+        (Number(c) ^ ((Math.random() * 16) >> (Number(c) / 4))).toString(16),
+      );
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -158,6 +182,22 @@ export function ApplyInternalDialog({
   const [passportShared, setPassportShared] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submitFn = useServerFn(submitJobApplication);
+  // ── THE VACANCY'S QUESTIONS ──────────────────────────────────────────
+  const [structure, setStructure] = useState<
+    | { status: "loading" }
+    | { status: "ready"; questions: PublicQuestion[]; requirements: PublicRequirement[] }
+    | { status: "unavailable" }
+  >({ status: "loading" });
+  const [answers, setAnswers] = useState<AnswerState>({});
+  const [answerErrors, setAnswerErrors] = useState<Record<string, boolean>>({});
+  // One id per ATTEMPT, kept across retries: a submit whose response was lost
+  // is recognised as the same application instead of refused as a duplicate.
+  const attemptId = useRef<string>(newAttemptId());
+  // An interrupted session (a closed tab, an expired sign-in) keeps what the
+  // candidate typed. The CV file itself cannot be kept -- a browser does not
+  // allow it -- and the form says so when it restores.
+  const draftKey = `cqj.apply-draft.${jobId}`;
+  const [restored, setRestored] = useState(false);
   const offerFn = useServerFn(getApplicationPassportOffer);
   const cvOptionsFn = useServerFn(listMyApplicationCvOptions);
 
@@ -233,7 +273,51 @@ export function ApplyInternalDialog({
     setCvSource(usable.length === 1 && !hasFile ? "cqrityjob_cv" : "upload");
   }
 
+  // Questions load when the dialog opens; a failed read is shown as a failed
+  // read, and the form cannot be submitted without the questions it owes.
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    setStructure({ status: "loading" });
+    getPublicVacancyStructure(jobId)
+      .then((res) => {
+        if (alive) setStructure({ status: "ready", ...res });
+      })
+      .catch(() => {
+        if (alive) setStructure({ status: "unavailable" });
+      });
+    try {
+      const raw = window.sessionStorage.getItem(draftKey);
+      if (raw) {
+        const d = JSON.parse(raw) as { phone?: string; coverNote?: string; answers?: AnswerState };
+        if (d.phone) setPhone(d.phone);
+        if (d.coverNote) setCoverNote(d.coverNote);
+        if (d.answers) setAnswers(d.answers);
+        setRestored(true);
+      }
+    } catch {
+      /* storage unavailable */
+    }
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, jobId]);
+
+  useEffect(() => {
+    if (!open || success) return;
+    try {
+      window.sessionStorage.setItem(draftKey, JSON.stringify({ phone, coverNote, answers }));
+    } catch {
+      /* storage unavailable */
+    }
+  }, [open, success, phone, coverNote, answers, draftKey]);
+
   function resetForm() {
+    setAnswers({});
+    setAnswerErrors({});
+    setRestored(false);
+    attemptId.current = newAttemptId();
     setPhone("");
     setCoverNote("");
     setConsent(false);
@@ -301,7 +385,10 @@ export function ApplyInternalDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, cvOptions.status, cvOptionsFn]);
 
-  const canSubmit = consent && (cvSource === "upload" ? file !== null : selectedCvId !== null);
+  const canSubmit =
+    consent &&
+    structure.status === "ready" &&
+    (cvSource === "upload" ? file !== null : selectedCvId !== null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -315,6 +402,23 @@ export function ApplyInternalDialog({
       return;
     }
     if (!consent) return;
+    if (structure.status !== "ready") return;
+    // Required questions first, each marked where it is. The database checks
+    // the same rule at COMMIT; this only saves a round trip.
+    const missing: Record<string, boolean> = {};
+    for (const q of structure.questions) {
+      if (!q.is_required) continue;
+      const a = answers[q.id];
+      const ok =
+        q.answer_kind === "yes_no" ? typeof a?.bool === "boolean" : Boolean(a?.text?.trim());
+      if (!ok) missing[q.id] = true;
+    }
+    setAnswerErrors(missing);
+    if (Object.keys(missing).length > 0) {
+      setSubmitError(t("rec.apply.error.answersMissing"));
+      document.getElementById(`apply-q-${Object.keys(missing)[0]}`)?.focus();
+      return;
+    }
     setSubmitting(true);
     try {
       const base = {
@@ -325,6 +429,14 @@ export function ApplyInternalDialog({
         // Only ever true when the candidate left it on AND has something
         // verified: the confirmation must not be able to overstate.
         includePassport: includePassport && (offer?.hasShareableContent ?? false),
+        applicationId: attemptId.current,
+        answers: structure.questions
+          .filter((q) => answers[q.id] !== undefined)
+          .map((q) =>
+            q.answer_kind === "yes_no"
+              ? { questionId: q.id, answerBool: answers[q.id]?.bool ?? null }
+              : { questionId: q.id, answerText: answers[q.id]?.text?.trim() || null },
+          ),
       };
       const res = await submitFn({
         data:
@@ -340,6 +452,11 @@ export function ApplyInternalDialog({
       setPassportShared(res.passportShared);
       setSubmittedSource(res.cvSource);
       setSuccess(true);
+      try {
+        window.sessionStorage.removeItem(draftKey);
+      } catch {
+        /* storage unavailable */
+      }
     } catch (err) {
       setSubmitError(translateSubmitError(err instanceof Error ? err.message : undefined, t));
     } finally {
@@ -456,6 +573,115 @@ export function ApplyInternalDialog({
                   className="mt-1"
                 />
               </div>
+
+              {/* ── THE VACANCY'S QUESTIONS ─────────────────────────────────
+                  Each beside the requirement it asks about, so the candidate
+                  knows why it is asked. Required ones are marked in text, not
+                  colour alone. */}
+              {restored && (
+                <p className="rounded-md border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                  {t("rec.apply.restored")}
+                </p>
+              )}
+              {structure.status === "loading" ? (
+                <p className="text-sm text-muted-foreground">{t("rec.apply.questionsLoading")}</p>
+              ) : structure.status === "unavailable" ? (
+                <p
+                  role="alert"
+                  className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+                >
+                  {t("rec.apply.questionsUnavailable")}
+                </p>
+              ) : structure.questions.length > 0 ? (
+                <fieldset className="space-y-4 rounded-lg border border-border p-4">
+                  <legend className="px-1 text-sm font-medium text-foreground">
+                    {t("rec.apply.questionsLegend")}
+                  </legend>
+                  {structure.questions.map((q) => {
+                    const prompt =
+                      (lang === "en" ? q.prompt_en || q.prompt_sv : q.prompt_sv || q.prompt_en) ??
+                      "";
+                    const req = structure.requirements.find((r) => r.id === q.requirement_id);
+                    const reqLabel = req
+                      ? lang === "en"
+                        ? req.label_en || req.label_sv
+                        : req.label_sv || req.label_en
+                      : null;
+                    const err = answerErrors[q.id];
+                    return (
+                      <div key={q.id}>
+                        <p
+                          id={`apply-q-${q.id}-label`}
+                          className="text-sm font-medium text-foreground"
+                        >
+                          {prompt}
+                          {q.is_required && (
+                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                              ({t("rec.question.required")})
+                            </span>
+                          )}
+                        </p>
+                        {reqLabel && (
+                          <p className="text-xs text-muted-foreground">
+                            {t(
+                              req?.kind === "mandatory"
+                                ? "rec.requirement.mandatory"
+                                : "rec.requirement.desirable",
+                            )}
+                            : {reqLabel}
+                          </p>
+                        )}
+                        {q.answer_kind === "yes_no" ? (
+                          <div
+                            role="radiogroup"
+                            aria-labelledby={`apply-q-${q.id}-label`}
+                            aria-invalid={err || undefined}
+                            className="mt-1.5 flex gap-4"
+                          >
+                            {([true, false] as const).map((v) => (
+                              <label
+                                key={String(v)}
+                                className="inline-flex items-center gap-2 text-sm"
+                              >
+                                <input
+                                  id={v ? `apply-q-${q.id}` : undefined}
+                                  type="radio"
+                                  name={`apply-q-${q.id}`}
+                                  checked={answers[q.id]?.bool === v}
+                                  onChange={() => {
+                                    setAnswers((a) => ({ ...a, [q.id]: { bool: v } }));
+                                    setAnswerErrors((e) => ({ ...e, [q.id]: false }));
+                                  }}
+                                />
+                                {v ? t("rec.answers.yes") : t("rec.answers.no")}
+                              </label>
+                            ))}
+                          </div>
+                        ) : (
+                          <Textarea
+                            id={`apply-q-${q.id}`}
+                            aria-labelledby={`apply-q-${q.id}-label`}
+                            aria-invalid={err || undefined}
+                            value={answers[q.id]?.text ?? ""}
+                            maxLength={2000}
+                            rows={3}
+                            onChange={(e) => {
+                              setAnswers((a) => ({ ...a, [q.id]: { text: e.target.value } }));
+                              setAnswerErrors((x) => ({ ...x, [q.id]: false }));
+                            }}
+                            className="mt-1.5"
+                          />
+                        )}
+                        {err && (
+                          <p className="mt-1 text-xs text-destructive">
+                            {t("rec.apply.answerRequired")}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </fieldset>
+              ) : null}
 
               {/* ── WHICH CV ──────────────────────────────────────────────
                   A fieldset, because these are two options for one decision

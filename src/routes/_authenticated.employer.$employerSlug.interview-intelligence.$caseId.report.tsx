@@ -284,7 +284,19 @@ function Page() {
 
   return shell(
     <>
-      <nav aria-label={t("iiu.breadcrumbs")} className="text-sm">
+      {/* Straight back to the application the case belongs to -- the case's
+       *  own persisted column, as on the case overview -- so a finalised
+       *  report is not a dead end two clicks from the candidate. */}
+      <nav aria-label={t("iiu.breadcrumbs")} className="flex flex-wrap gap-4 text-sm">
+        {d.applicationId && (
+          <Link
+            to="/employer/$employerSlug/applications/$applicationId"
+            params={{ employerSlug, applicationId: d.applicationId }}
+            className="inline-flex min-h-11 items-center text-accent underline-offset-2 hover:underline"
+          >
+            {t("continuity.backToApplication")}
+          </Link>
+        )}
         <Link
           to="/employer/$employerSlug/interview-intelligence/$caseId"
           params={{ employerSlug, caseId }}

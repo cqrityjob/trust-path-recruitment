@@ -31,13 +31,16 @@
 // allow-list permits from the current status are ever offered as buttons —
 // an employer can never be shown (or send) 'withdrawn'.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
 import { z } from "zod";
 import { NoEvidenceState } from "@/components/academy/MaturityDisplay";
 import { ApplicationAssessmentChip } from "@/components/academy/ApplicationAssessmentPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getRecruitmentOverview } from "@/lib/recruitment/recruitment.functions";
+import { consumeScrollRestore, listKeyFor, saveListContext } from "@/lib/recruitment/list-context";
+import { recruitmentErrorKey } from "@/components/recruitment/errors";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
@@ -212,6 +215,7 @@ function ApplicationsList({
     applicationId: string;
     candidate: string;
     newStatus: EmployerSettableStatus;
+    expectedStatus: "submitted" | "reviewing" | "interview";
   } | null>(null);
 
   const query = useQuery({
@@ -235,14 +239,51 @@ function ApplicationsList({
   const openAssessments = useOpenAssessmentApplications(employerId, assessmentFilter !== undefined);
 
   const setStatus = useMutation({
-    mutationFn: (vars: { applicationId: string; newStatus: EmployerSettableStatus }) =>
-      setStatusFn({ data: { applicationId: vars.applicationId, newStatus: vars.newStatus } }),
+    // From the stage the row SHOWED, so a colleague's move in the meantime is
+    // reported instead of silently overwritten.
+    mutationFn: (vars: {
+      applicationId: string;
+      newStatus: EmployerSettableStatus;
+      expectedStatus: "submitted" | "reviewing" | "interview";
+    }) =>
+      setStatusFn({
+        data: {
+          applicationId: vars.applicationId,
+          newStatus: vars.newStatus,
+          expectedStatus: vars.expectedStatus,
+        },
+      }),
     onSuccess: () => {
       setActionError(null);
       qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment-overview"] });
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "candidates"] });
     },
-    onError: () => setActionError(t("employer.applications.error.statusUpdate")),
+    onError: (e: unknown) => {
+      const code = (e as { message?: string })?.message ?? "";
+      setActionError(
+        code === "STATUS_UPDATE_FAILED" || code === ""
+          ? t("employer.applications.error.statusUpdate")
+          : t(recruitmentErrorKey(code)),
+      );
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
+    },
   });
+
+  // Who may record a decision on which vacancy: owner/admin everywhere, a
+  // member where they are the responsible person. The same rule the database
+  // enforces; this only decides which options to offer.
+  const loadOverview = useServerFn(getRecruitmentOverview);
+  const overviewQuery = useQuery({
+    queryKey: ["employer", employerId, "recruitment-overview"],
+    queryFn: () => loadOverview({ data: { employerId } }),
+  });
+  const canDecideFor = (jobId: string): boolean => {
+    if (role === "owner" || role === "admin") return true;
+    const o = overviewQuery.data;
+    if (!o) return false;
+    return o.recruitments.find((r) => r.jobId === jobId)?.responsibleUserId === o.myUserId;
+  };
 
   function setSearch(next: Partial<{ q: string | undefined; sort: SortKey | undefined }>) {
     void navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
@@ -299,6 +340,26 @@ function ApplicationsList({
       }
       return b.createdAt.localeCompare(a.createdAt);
     });
+  // ── BACK TO THE SAME LIST ─────────────────────────────────────────────
+  const location = useRouterState({ select: (st) => st.location });
+  const listKey = listKeyFor(location.pathname + "#apps");
+  function rememberList() {
+    saveListContext(listKey, {
+      ids: rows.map((r) => r.id),
+      href: location.href,
+      scrollY: window.scrollY,
+      labelKey: "applications",
+      restorePending: false,
+    });
+  }
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current || !query.isSuccess) return;
+    restored.current = true;
+    const y = consumeScrollRestore(listKey);
+    if (y !== null) window.requestAnimationFrame(() => window.scrollTo({ top: y }));
+  }, [query.isSuccess, listKey]);
+
   const filtered =
     jobFilter !== undefined ||
     statusFilter !== undefined ||
@@ -467,7 +528,11 @@ function ApplicationsList({
           onConfirm={() => {
             const p = pendingStatus;
             setPendingStatus(null);
-            setStatus.mutate({ applicationId: p.applicationId, newStatus: p.newStatus });
+            setStatus.mutate({
+              applicationId: p.applicationId,
+              newStatus: p.newStatus,
+              expectedStatus: p.expectedStatus,
+            });
           }}
         />
       )}
@@ -525,7 +590,9 @@ function ApplicationsList({
                 r.jobTitleSv ||
                 r.jobTitleEn ||
                 "\u2014";
-              const nextStatuses = EMPLOYER_NEXT_STATUSES[r.status] ?? [];
+              const nextStatuses = (EMPLOYER_NEXT_STATUSES[r.status] ?? []).filter(
+                (n) => canDecideFor(r.jobId) || (n !== "hired" && n !== "rejected"),
+              );
               const candidateName =
                 r.applicantDisplayName ?? t("employer.applications.anonymousCandidate");
               return (
@@ -537,6 +604,8 @@ function ApplicationsList({
                     <Link
                       to="/employer/$employerSlug/applications/$applicationId"
                       params={{ employerSlug, applicationId: r.id }}
+                      search={{ list: listKey }}
+                      onClick={rememberList}
                       className="text-sm font-semibold text-foreground hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                       {candidateName}
@@ -584,6 +653,8 @@ function ApplicationsList({
                     <Link
                       to="/employer/$employerSlug/applications/$applicationId"
                       params={{ employerSlug, applicationId: r.id }}
+                      search={{ list: listKey }}
+                      onClick={rememberList}
                       className="inline-flex h-8 items-center rounded-md bg-accent px-3 text-xs font-semibold text-accent-foreground hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                       {t("employer.candidate.openAction")}
@@ -617,14 +688,23 @@ function ApplicationsList({
                                 }
                                 onSelect={() => {
                                   setActionError(null);
+                                  const expectedStatus = r.status as
+                                    | "submitted"
+                                    | "reviewing"
+                                    | "interview";
                                   if (terminal) {
                                     setPendingStatus({
                                       applicationId: r.id,
                                       candidate: candidateName,
                                       newStatus: next,
+                                      expectedStatus,
                                     });
                                   } else {
-                                    setStatus.mutate({ applicationId: r.id, newStatus: next });
+                                    setStatus.mutate({
+                                      applicationId: r.id,
+                                      newStatus: next,
+                                      expectedStatus,
+                                    });
                                   }
                                 }}
                               >

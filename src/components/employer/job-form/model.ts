@@ -289,12 +289,17 @@ export function countryOptionsFor(current: string): { code: string; sv: string; 
 // Steps.
 // -----------------------------------------------------------------------------
 
-export type StepId = "job" | "description" | "application" | "review";
+// Role and workplace -> requirements -> vacancy text -> application and
+// questions -> preview and publication. Requirements come BEFORE the text so
+// the text can be written (by hand or drafted) from them, and questions come
+// after both so each can be linked to the requirement it asks about.
+export type StepId = "job" | "requirements" | "description" | "application" | "review";
 
-export const STEP_IDS: StepId[] = ["job", "description", "application", "review"];
+export const STEP_IDS: StepId[] = ["job", "requirements", "description", "application", "review"];
 
 export const STEP_LABEL_KEYS: Record<StepId, TranslationKey> = {
   job: "employer.jobs.form.step.job",
+  requirements: "employer.jobs.form.step.requirements",
   description: "employer.jobs.form.step.description",
   application: "employer.jobs.form.step.application",
   review: "employer.jobs.form.step.review",

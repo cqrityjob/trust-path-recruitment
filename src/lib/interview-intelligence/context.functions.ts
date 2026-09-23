@@ -57,6 +57,7 @@ import {
   normaliseRequirements,
   resolveSourceRead,
   standaloneContext,
+  type ContextAnswerInput,
   type ContextAssessmentInput,
   type ContextCvInput,
   type ContextJobInput,
@@ -207,17 +208,21 @@ export const getInterviewCaseContext = createServerFn({ method: "GET" })
         : { kind: "any" };
     if (start.error) console.error("[interview-context] case start unavailable", start.error);
 
+    // Started beside the three reads below and awaited after them. It never
+    // rejects: a failed read resolves to null, which the surface states.
+    const answersRead = readAnswers(db, applicationId);
     const [job, cv, assessment] = await Promise.all([
       readJob(db, jobId, employerId),
       readCv(applicationId),
       readAssessment(db, applicationId, source),
     ]);
+    const answers = await answersRead;
 
     return {
       kind: "context",
       context: buildInterviewContext({
         candidateName,
-        application,
+        application: { ...application, answers },
         job: job.value,
         cv: cv.value,
         assessment: assessment.brief,
@@ -346,12 +351,31 @@ async function readJob(
   // Through `unknown`, because the two types genuinely do not overlap and a
   // direct assertion would be the compiler agreeing to something untrue.
   const j = data as unknown as Row;
+  // The vacancy's own requirement rows (20261207090000), which the employer
+  // wrote as mandatory or desirable. Carried into the interview so the guide
+  // and the vacancy are read side by side; a failed read costs these lines
+  // and nothing else, because the advert itself was read above.
+  const { data: structured, error: structuredError } = await db
+    .from("recruitment_requirements")
+    .select("kind, label_sv, label_en, position")
+    .eq("job_id", jobId)
+    .order("position");
+  if (structuredError)
+    console.error("[interview-context] vacancy requirements unavailable", structuredError);
+  const vacancyRequirements = ((structured ?? []) as Row[])
+    .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "mandatory" ? -1 : 1))
+    .map((r) => {
+      const label = str(r.label_sv) ?? str(r.label_en);
+      if (!label) return null;
+      return r.kind === "mandatory" ? `Krav: ${label}` : `Meriterande: ${label}`;
+    })
+    .filter((x): x is string => x !== null);
   return {
     read: "ok",
     value: {
       titleSv: str(j.title_sv),
       titleEn: str(j.title_en),
-      requirements: normaliseRequirements(j.requirements),
+      requirements: [...vacancyRequirements, ...normaliseRequirements(j.requirements)],
       formalRequirements: strArray(j.formal_requirement_ids),
       languageRequirements: strArray(j.language_requirements),
       experienceLevel: str(j.experience_level),
@@ -371,6 +395,39 @@ async function readJob(
  *  the application page shows can never disagree — and the omissions that read
  *  makes (the candidate's private title for the document above all) hold here
  *  without being restated. */
+/**
+ * The candidate's answers to the vacancy's application questions, as the
+ * interviewer's team already sees them on the application. Read under RLS
+ * with the caller's own client (job_application_answers_member_read), keyed on
+ * the application id taken from the CASE ROW, never from the request. Shown to
+ * the interviewer only: nothing here becomes a case source, so no answer
+ * reaches a model prompt. `null` means the read broke, and the surface says so.
+ */
+async function readAnswers(db: Db, applicationId: string): Promise<ContextAnswerInput[] | null> {
+  const { data, error } = await db
+    .from("job_application_answers")
+    .select(
+      "question_id, prompt_sv_snapshot, prompt_en_snapshot, answer_kind, answer_text, answer_bool, recruitment_questions(position)",
+    )
+    .eq("application_id", applicationId);
+  if (error) {
+    console.error("[interview-context] application answers unavailable", error);
+    return null;
+  }
+  return ((data ?? []) as Row[])
+    .map((r) => ({
+      questionId: String(r.question_id),
+      promptSv: str(r.prompt_sv_snapshot),
+      promptEn: str(r.prompt_en_snapshot),
+      kind: (r.answer_kind === "yes_no" ? "yes_no" : "text") as "yes_no" | "text",
+      text: str(r.answer_text),
+      bool: typeof r.answer_bool === "boolean" ? r.answer_bool : null,
+      position: Number((r.recruitment_questions as Row | null)?.position ?? 0),
+    }))
+    .sort((a, b) => a.position - b.position)
+    .map(({ position: _position, ...a }) => a);
+}
+
 async function readCv(applicationId: string): Promise<Sourced<ContextCvInput>> {
   try {
     const submitted = await getApplicationSubmittedCv({ data: { applicationId } });

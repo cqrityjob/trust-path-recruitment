@@ -163,7 +163,7 @@ if (formatDate("not-a-date", "sv") !== "" || formatDateTime("not-a-date", "en") 
 }
 
 // -----------------------------------------------------------------------------
-// 4. Job posting UX redesign — the four-step flow's contract.
+// 4. Job posting UX redesign — the step flow's contract.
 //
 // These guard the redesign's actual promises, each of which is a thing a
 // first-time employer tester got wrong on the old form:
@@ -385,8 +385,17 @@ for (const id of STEP_IDS) {
     }
   }
 }
-if (STEP_IDS.length !== 4) {
-  errors.push(`Expected a four-step flow; STEP_IDS has ${STEP_IDS.length} entries.`);
+// Five steps, in the order a recruitment is written: role and workplace ->
+// requirements -> vacancy text -> application and questions -> review. The
+// order is the contract, not only the count: requirements must precede the
+// text drafted from them and the questions linked to them.
+if (
+  JSON.stringify(STEP_IDS) !==
+  JSON.stringify(["job", "requirements", "description", "application", "review"])
+) {
+  errors.push(
+    `Expected the five-step flow job > requirements > description > application > review; got ${STEP_IDS.join(" > ")}.`,
+  );
 }
 
 // 4.8 Every employer.jobs.form.* key exists in BOTH languages and is

@@ -184,33 +184,47 @@ console.log("\n4. The rule about internal transitions lives in the database");
   );
 }
 
-console.log("\n5. The address never leaves the server");
+console.log("\n5. A stage change sends nothing; a sent message never returns the address");
 {
-  // Comment-stripped: the assertions below measure windows in code, and the
-  // paragraphs explaining the design sit inside those windows.
-  const app = read("src/lib/job-intelligence/applications.functions.ts")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
-  const fn = app.slice(app.indexOf("async function notifyCandidate"));
+  // Comment-stripped, line comments first (a "/*" inside a "//" line would
+  // otherwise swallow the file -- see employer-lifecycle-check).
+  const strip = (src: string) => src.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const app = strip(read("src/lib/job-intelligence/applications.functions.ts"));
+  const statusStart = app.indexOf("export const updateApplicationStatusAsEmployer");
+  const statusFn = app.slice(statusStart, app.indexOf("export const", statusStart + 10));
+  ck(
+    "moving a candidate between stages sends no e-mail",
+    statusStart > 0 &&
+      !/send[A-Za-z]*Email|jase_notification_payload|notifyCandidate|recruitment_messages/.test(
+        statusFn,
+      ),
+    "communication is an explicit act: a rejection must never leave because a stage was clicked",
+  );
+  ck("the automatic notifier is gone, not merely uncalled", !/notifyCandidate/.test(app));
+
+  const rec = strip(read("src/lib/recruitment/recruitment.functions.ts"));
+  const fn = rec.slice(rec.indexOf("async function sendOne"));
   const body = fn.slice(0, fn.indexOf("\n}\n") + 3);
   ck(
-    "notifyCandidate returns a verdict, not a recipient",
-    /Promise<"sent" \| "skipped" \| "failed" \| "not_applicable">/.test(fn.slice(0, 400)),
-  );
-  ck(
-    "the address is not returned to the caller",
-    !/return[^;]*recipient/i.test(body),
+    "sending reports an outcome, not a recipient",
+    /Promise<SendOutcome>/.test(fn.slice(0, 200)) && !/return[^;]*recipient/i.test(body),
     "an employer surface must not learn the candidate's address this way",
   );
   ck(
-    "a send failure does not fail the status change",
+    "a send failure does not throw",
     !/throw/.test(body),
-    "the employer's decision happened and stands whatever the provider did",
+    "the message is already delivered in CQrityjob; the e-mail copy has its own state",
   );
   ck(
-    "an unconfigured provider is not counted as an attempt",
-    /skipped[\s\S]{0,200}return "skipped"/.test(body),
-    "otherwise the retry budget burns down in an environment that never sends",
+    "the database claims before anything is sent, and settles after",
+    body.indexOf("rec_claim_message_send") > -1 &&
+      body.indexOf("rec_claim_message_send") < body.indexOf("sendRecruitmentMessageEmail(") &&
+      body.indexOf("sendRecruitmentMessageEmail(") < body.indexOf("rec_settle_message_send"),
+    "the claim is the whole duplicate protection; sending before it would allow two e-mails",
+  );
+  ck(
+    "an in-flight or already-sent claim sends nothing",
+    /already_sent[\s\S]{0,160}return[\s\S]{0,200}in_progress[\s\S]{0,160}return/.test(body),
   );
 }
 
@@ -234,11 +248,7 @@ console.log("\n6. Sending is inert without a provider");
 
 console.log("\n7. The link goes where the rest of the product goes");
 {
-  // A candidate email is the only outbound link a candidate ever gets from
-  // this product, and a hard-coded domain here would be the one place whose
-  // links pointed at a different environment from every canonical URL,
-  // sitemap entry and assessment invitation the app emits.
-  const caller = read("src/lib/job-intelligence/applications.functions.ts");
+  const caller = read("src/lib/recruitment/recruitment.functions.ts");
   ck(
     "the origin comes from the shared resolution",
     /siteOrigin: process\.env\.PUBLIC_SITE_URL \|\| SITE_ORIGIN/.test(caller),
@@ -249,6 +259,12 @@ console.log("\n7. The link goes where the rest of the product goes");
     !/process\.env\.SITE_ORIGIN/.test(caller),
     "SITE_ORIGIN is a module constant in seo.ts, not an environment variable anything sets",
   );
+  const sender = read("src/lib/email/send-recruitment-message-email.server.ts");
+  ck(
+    "the recruitment sender is inert without a provider",
+    /if \(!apiKey \|\| !fromEmail\) return \{ result: "not_configured" \}/.test(sender),
+  );
+  ck("and never persists a provider body", !/res\.text\(\)|res\.json\(\)/.test(sender));
 }
 
 console.log(

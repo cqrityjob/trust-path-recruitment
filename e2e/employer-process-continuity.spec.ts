@@ -220,7 +220,7 @@ test.describe("E1 · the distinctions", () => {
     await openApplication(page, F.appNothing);
     const strip = stripOf(page);
     await expect(strip).toContainText(/Ingen bedömning skickad/);
-    await expect(strip).toContainText(/Ingen intervju planerad/);
+    await expect(strip).toContainText(/Ingen strukturerad intervju påbörjad/);
     await expect(strip).toContainText(/Ingen rapport/);
     // The message is that neither is required.
     await expect(strip).toContainText(/Ingen av dem krävs/);
@@ -280,7 +280,7 @@ test.describe("E1 · truthfulness", () => {
     const strip = stripOf(page);
     await expect(strip).toContainText(/Kunde inte hämtas/, { timeout: 30_000 });
     // Never "no interview planned".
-    await expect(strip).not.toContainText(/Ingen intervju planerad/);
+    await expect(strip).not.toContainText(/Ingen strukturerad intervju påbörjad/);
     // And a retry that keeps the route.
     await expect(strip.getByRole("button", { name: /Försök igen/i })).toBeVisible();
     expect(page.url()).toContain(`/applications/${F.appUnderway}`);
