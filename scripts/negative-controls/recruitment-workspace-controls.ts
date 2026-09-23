@@ -73,7 +73,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "RW-SEND-WITHOUT-CLAIM",
     defect: "the e-mail goes out without the database claim that makes a double-click one message",
     file: FNS,
-    find: 'const { data: rows, error } = await ctx.supabase.rpc("rec_claim_message_send", { _message_id: messageId });',
+    find: 'const { data: rows, error } = await ctx.supabase.rpc("rec_claim_message_send", {\n    _message_id: messageId,\n  });',
     replace:
       'const { data: rows, error } = { data: [{ outcome: "claimed" }], error: null } as any;',
     guard: G,
@@ -92,7 +92,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "RW-DECISION-UNCONFIRMED",
     defect: "a hire or rejection is recorded on one click, with no statement of what it does",
     file: CANDIDATE,
-    find: 'next === "hired" || next === "rejected" ? setPendingDecision(next) : setStatus.mutate(next)',
+    find: 'next === "hired" || next === "rejected"\n                    ? setPendingDecision(next)\n                    : setStatus.mutate(next)',
     replace: "setStatus.mutate(next)",
     guard: G,
     expect: "a decision is confirmed before it is recorded",
