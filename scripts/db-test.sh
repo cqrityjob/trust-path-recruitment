@@ -1380,14 +1380,18 @@ for elf_round in before after; do
 done
 
 # ---------------------------------------------------------------------------
-# 5l-ter. The recruitment workspace, EXPAND half (20261207090000)
+# 5l-ter. The recruitment workspace: EXPAND (20261207090000) and CONTRACT
+# (20261208090000, the job_applications backstops)
 #
-# Run TWICE around a rollback/reapply cycle of its own migration, like 5l-bis.
-# Between the rounds the transition suite runs in the state the OLD
-# application (main before this work) meets between the schema release and
-# the application release: its apply dialog and decision buttons must work as
-# before, and the new application's own path must still hold both rules. The
-# job_applications backstops are 20261208090000 (CONTRACT), not applied here.
+# Run TWICE around a rollback/reapply cycle of both migrations, like 5l-bis.
+# Between the rounds the CONTRACT half is stood down ALONE and the transition
+# suite runs in the state the OLD application meets twice in a release --
+# between the schema and application releases, and after an application
+# rollback: its apply dialog and decision buttons must work as before, and the
+# new application's own path must still hold both rules. The transition
+# suite's X3 (a plain member CAN reject through set_application_status once
+# the backstops are down) is also the negative control for the backstops
+# suite's K5: the refusal it asserts comes from 20261208090000 and nothing else.
 #
 # Runs BEFORE the rollback step: its fixture reads nothing that step drops,
 # but it must see the full schema the application will run against.
@@ -1410,8 +1414,31 @@ for rw_round in before after; do
     exit 1
   fi
   echo "    ok  ${RW_PASSED} recruitment workspace assertions passed"
+  set +e
+  RWK_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_workspace_backstops_test.sql 2>&1)"
+  RWK_RC=$?
+  set -e
+  echo "$RWK_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  RWK_PASSED="$(echo "$RWK_OUT" | grep -c "ok  " || true)"
+  if [ "$RWK_RC" -ne 0 ]; then
+    echo "FAIL: the recruitment backstops suite exited with code ${RWK_RC} (${rw_round:-})." >&2
+    echo "$RWK_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    exit 1
+  fi
+  if [ "$RWK_PASSED" -lt 8 ]; then
+    echo "FAIL: expected at least 8 recruitment backstops assertions, only ${RWK_PASSED} ran." >&2
+    exit 1
+  fi
+  echo "    ok  ${RWK_PASSED} recruitment backstops assertions passed"
 
   if [ "$rw_round" = before ]; then
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261208090000_recruitment_workspace_backstops_rollback.sql >/dev/null
+    rw_bs="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_trigger WHERE tgrelid='public.job_applications'::regclass AND tgname IN ('job_applications_required_answers','job_applications_decision_guard'))::text || '/' || (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'rec\\_%')::text")"
+    case "$rw_bs" in
+      0/0) echo "FAIL: the backstops rollback took the EXPAND functions with it"; exit 1 ;;
+      0/*) echo "    ok  backstops stood down alone; the EXPAND half is intact" ;;
+      *) echo "FAIL: 20261208090000 rollback left a backstop trigger behind ($rw_bs)"; exit 1 ;;
+    esac
     echo "==> Running recruitment transition assertions (EXPAND only: the old application)"
     set +e
     RWT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_workspace_transition_test.sql 2>&1)"
@@ -1436,7 +1463,8 @@ for rw_round in before after; do
     echo "    ok  recruitment workspace rollback stood down: no table, function or trigger left"
 
     psql_q -d "$TEST_DB" -f supabase/migrations/20261207090000_recruitment_workspace.sql >/dev/null
-    echo "    ok  recruitment workspace migration reapplied"
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261208090000_recruitment_workspace_backstops.sql >/dev/null
+    echo "    ok  recruitment workspace migrations reapplied (EXPAND, then CONTRACT)"
   fi
 done
 
