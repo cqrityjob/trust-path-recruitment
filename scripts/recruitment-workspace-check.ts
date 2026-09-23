@@ -483,6 +483,41 @@ console.log("recruitment workspace\n");
     "G · interview notes from the same candidate's other application stay off this one",
   );
 
+  // A test is offered only for a candidate still in the process.
+  ok(
+    /canAssign=\{canAssign && !completed && status !== null && isUnresolved\(status\)\}/.test(cand),
+    "G · no test is offered for a decided or withdrawn candidate, or in a completed recruitment",
+  );
+
+  // Back from a report or an interview (no ?list=), the list is recalled --
+  // but only one that holds this very candidate.
+  {
+    const store = new Map<string, string>();
+    (globalThis as unknown as { window: unknown }).window = {
+      sessionStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+      },
+    };
+    const L = await import("../src/lib/recruitment/list-context");
+    L.saveListContext("k1", {
+      ids: ["a1", "a2"],
+      href: "/employer/x/jobs/j?stage=new",
+      scrollY: 120,
+      labelKey: "recruitment",
+      restorePending: false,
+    });
+    ok(L.recallListKeyFor("a2") === "k1", "G · the list a candidate was opened from is recalled");
+    ok(
+      L.recallListKeyFor("zz") === undefined,
+      "G · a list that does not hold this candidate is never recalled",
+    );
+    ok(
+      /const key = listParam \?\? recallListKeyFor\(applicationId\)/.test(cand),
+      "G · the candidate view falls back to the recalled list only when the URL carries none",
+    );
+  }
+
   // The overview has one recruitment entry point, not a second card for it.
   const ov = code(F.overview);
   ok(
