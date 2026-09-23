@@ -2,7 +2,7 @@
 CREATE OR REPLACE FUNCTION pg_temp.ok(cond boolean, label text) RETURNS void
 LANGUAGE plpgsql AS $$
 BEGIN
-  IF NOT cond THEN RAISE EXCEPTION 'ASSERTION FAILED: %', label; END IF;
+  IF cond IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %', label; END IF;
   RAISE NOTICE 'ok  %', label;
 END $$;
 
