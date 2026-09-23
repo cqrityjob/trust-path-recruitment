@@ -88,6 +88,7 @@ import {
 import { ProcessContinuityStrip } from "@/components/employer/ProcessContinuityStrip";
 import {
   projectAssessmentTrack,
+  projectDecisionTrack,
   projectInterviewTrack,
   projectProcess,
   projectReportTrack,
@@ -356,11 +357,25 @@ function Candidate360({
         ?.basis ?? null)
     : null;
 
+  // ── THE DECISION, DERIVED FROM THE APPLICATION AND NOTHING ELSE ─────
+  //
+  // Same read as the application row, because it is the same read: the status
+  // this page already loaded. It is built here rather than inside
+  // `projectProcess` for the reason every other track is -- the projection
+  // performs no I/O and must be handed what the page already has.
+  //
+  // The employment record is passed in too. `hiredNow` is the mutation's own
+  // answer so the door appears the instant a hire lands; the query catches up
+  // on the next visit and gives the same answer to somebody returning
+  // tomorrow.
+  const decisionTrack = projectDecisionTrack("ready", c.applicationStatus, hiredEmployeeId);
+
   const projection = projectProcess({
     application: { read: "ready", status: c.applicationStatus },
     assessment: assessmentTrack,
     interview: interviewTrack,
     report: reportTrack,
+    decision: decisionTrack,
     capabilities: {
       canReviewAssessment: reviewBasis === "authorised" || reviewBasis === "break_glass",
       canShareAssessmentBrief: canAssign,

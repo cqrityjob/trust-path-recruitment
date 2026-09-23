@@ -92,6 +92,14 @@ pw.shots.mjs
 # describe a commit nobody is looking at.
 /artifacts/employer-final-report-e4/manifest.json
 
+# The employer-lifecycle captures (phases 2 and 3), under the same rules as E1:
+# artifacts/employer-lifecycle/INDEX.md carries the HEAD, the fixture commands
+# and the Playwright command that regenerate them. What they show cannot be
+# read off a diff -- a pipeline of five counts, a decision row that says a
+# person must now decide, an employment record with nobody bound to it -- and
+# the point of the change is what those screens say.
+!/artifacts/employer-lifecycle/
+
 # The BESKT PR 3 candidate-preparation captures, under the same rules as E1
 # and E4 above: committed so a reviewer can READ the Swedish and English
 # screens at both widths in the pull request itself. Several of the states

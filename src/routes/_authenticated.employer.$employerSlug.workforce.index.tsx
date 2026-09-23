@@ -146,7 +146,11 @@ function WorkforceDirectory({
   const updateFn = useServerFn(updateEmployerEmployee);
   const setStatusFn = useServerFn(setEmployerEmployeeStatus);
 
-  const [showAdd, setShowAdd] = useState(openAddOnLoad);
+  // An employment record names a person, so it waits for approval. A job draft
+  // does not, and nothing here touches that.
+  const canAddWorkforce = status === "active";
+
+  const [showAdd, setShowAdd] = useState(openAddOnLoad && status === "active");
   const [addForm, setAddForm] = useState<FormValues>(EMPTY_FORM);
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<FormValues>(EMPTY_FORM);
@@ -192,7 +196,17 @@ function WorkforceDirectory({
       setFormError(null);
       invalidate();
     },
-    onError: () => setFormError(t("employer.workforce.error.save")),
+    // The one refusal that is not a failure. An owner whose organisation is
+    // still being reviewed has done nothing wrong, and "could not save" would
+    // send them looking for a mistake in the form.
+    onError: (e: unknown) =>
+      setFormError(
+        String((e as { message?: string })?.message ?? "").includes(
+          "EMPLOYER_NOT_ACTIVE_FOR_WORKFORCE",
+        )
+          ? t("employer.workforce.error.notActive")
+          : t("employer.workforce.error.save"),
+      ),
   });
 
   const updateMutation = useMutation({
@@ -257,17 +271,30 @@ function WorkforceDirectory({
             {t("employer.workforce.subheading")}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setShowAdd((v) => !v);
-            setFormError(null);
-          }}
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          {t("employer.workforce.action.add")}
-        </button>
+        {/* Absent, not disabled, while the organisation is being reviewed.
+            A disabled button is a promise with no date on it; the sentence
+            below says what is actually happening. The refusal itself lives in
+            the database and in the server function -- this only stops offering
+            work that would be refused. */}
+        {canAddWorkforce && (
+          <button
+            type="button"
+            onClick={() => {
+              setShowAdd((v) => !v);
+              setFormError(null);
+            }}
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
+          >
+            {t("employer.workforce.action.add")}
+          </button>
+        )}
       </div>
+
+      {!canAddWorkforce && (
+        <p className="mt-4 rounded-md border border-border bg-[color:var(--surface-subtle)] p-3 text-sm text-muted-foreground">
+          {t("employer.workforce.notActive")}
+        </p>
+      )}
 
       {formError && (
         <p

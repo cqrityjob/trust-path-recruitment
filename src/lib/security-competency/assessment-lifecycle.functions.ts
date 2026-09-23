@@ -41,7 +41,10 @@ export type LifecycleState =
 export type PipelineRow = {
   attemptId: string;
   assignmentId: string | null;
-  subjectId: string;
+  // No subject. Nothing in a browser needed one -- every action on a pipeline
+  // row takes the ATTEMPT and the server resolves the person behind it -- and
+  // governance rule 10 says an employer read model does not carry one. The
+  // resolution helpers live in academy-employer.functions.ts.
   employeeId: string | null;
   participantRef: string;
   participantName: string | null;
@@ -70,7 +73,6 @@ export type PipelineRow = {
 const mapPipeline = (r: Record<string, unknown>): PipelineRow => ({
   attemptId: r.attempt_id as string,
   assignmentId: (r.assignment_id as string | null) ?? null,
-  subjectId: r.subject_id as string,
   employeeId: (r.employee_id as string | null) ?? null,
   participantRef: r.participant_ref as string,
   participantName: (r.participant_name as string | null) ?? null,

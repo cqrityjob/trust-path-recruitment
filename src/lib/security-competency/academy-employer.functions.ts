@@ -46,7 +46,9 @@ export type LibraryEntry = {
 };
 
 export type ParticipantRow = {
-  subjectId: string;
+  // No subject. The attempt is the identifier every action on this row takes,
+  // and the person behind it is resolved server-side; see the resolution
+  // helpers above.
   attemptId: string;
   assignmentId: string | null;
   programmeNameSv: string | null;
@@ -293,7 +295,9 @@ export type ReportBrief = {
 export type ReportSnapshot = {
   id: string;
   attemptId: string;
-  subjectId: string;
+  // No subject. The snapshot crosses to a browser -- an employer's and a
+  // participant's -- and the two follow-on reads that used to take the subject
+  // from here now take the ATTEMPT and resolve it server-side.
   audience: "participant" | "employer";
   releasedAt: string;
   context: ReportContext | null;
@@ -623,7 +627,6 @@ async function notifyParticipant(
 
 export type TrainingStatusRow = {
   assignmentId: string;
-  subjectId: string;
   programmeNameSv: string;
   programmeNameEn: string;
   versionNumber: number;
@@ -659,30 +662,26 @@ export const assignTrainingProgramme = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(
-    async ({
-      data,
-      context,
-    }): Promise<{ assignmentId: string; subjectId: string; modulesSeeded: number }> => {
-      const ctx = context as Ctx;
-      const { data: rows, error } = await ctx.supabase.rpc("scp_assign_training", {
-        _employer_id: data.employerId,
-        _program_version_id: data.programVersionId,
-        _recipient_email: data.recipientEmail,
-        _language: data.language,
-        _due_at: data.deadline,
-        _message: data.message,
-        _source_decision_id: data.sourceDecisionId,
-      });
-      if (error) throw fail(error.message, "assign_training_failed");
-      const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
-      return {
-        assignmentId: String(r.assignment_id),
-        subjectId: String(r.subject_id),
-        modulesSeeded: Number(r.modules_seeded ?? 0),
-      };
-    },
-  );
+  .handler(async ({ data, context }): Promise<{ assignmentId: string; modulesSeeded: number }> => {
+    const ctx = context as Ctx;
+    const { data: rows, error } = await ctx.supabase.rpc("scp_assign_training", {
+      _employer_id: data.employerId,
+      _program_version_id: data.programVersionId,
+      _recipient_email: data.recipientEmail,
+      _language: data.language,
+      _due_at: data.deadline,
+      _message: data.message,
+      _source_decision_id: data.sourceDecisionId,
+    });
+    if (error) throw fail(error.message, "assign_training_failed");
+    const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow;
+    // The RPC returns the subject it resolved; it stops here. The caller
+    // has no use for it and governance rule 10 says it must not have it.
+    return {
+      assignmentId: String(r.assignment_id),
+      modulesSeeded: Number(r.modules_seeded ?? 0),
+    };
+  });
 
 /** Status and progress only. The RPC returns no response, no answer and no
  *  identity -- `identityResolvable` says whether the employer could ask, not
@@ -698,7 +697,6 @@ export const listTrainingStatus = createServerFn({ method: "GET" })
     if (error) throw fail(error.message, "training_status_failed");
     return (rows ?? []).map((r: RpcRow) => ({
       assignmentId: String(r.assignment_id),
-      subjectId: String(r.subject_id),
       programmeNameSv: String(r.programme_name_sv),
       programmeNameEn: String(r.programme_name_en),
       versionNumber: Number(r.version_number ?? 1),
@@ -877,7 +875,6 @@ export const listAcademyParticipants = createServerFn({ method: "GET" })
     });
     if (error) throw fail(error.message, "participants_failed");
     return (rows ?? []).map((r: RpcRow) => ({
-      subjectId: String(r.subject_id),
       attemptId: String(r.attempt_id),
       assignmentId: r.assignment_id ? String(r.assignment_id) : null,
       programmeNameSv: r.programme_name_sv ?? null,
@@ -990,6 +987,66 @@ export const getMyReviewCapability = createServerFn({ method: "GET" })
     };
   });
 
+/* ------------------------------------------------------------------ */
+/* Subject resolution, server-side and nowhere else                    */
+/* ------------------------------------------------------------------ */
+//
+// ── THE RULE, AND THE PRACTICE THAT DID NOT MATCH IT ────────────────────
+//
+// Governance rule 10 says an employer read model never carries a subject
+// reference. In practice this file handed one to the browser in a dozen
+// places, and the participants list printed eight characters of one under
+// every name. The code called it an opaque handle for authorised RPCs, and
+// that is a fair description of what it was used for -- but it left the stable
+// identifier for a person's whole professional history sitting in a recruiter's
+// browser, in query caches and in anything that logs a request body, to make
+// calls the server could make for itself.
+//
+// The Product Owner has settled it: the browser passes a PRODUCT-LEVEL
+// identifier -- an attempt, an assignment, an employment record -- and the
+// server resolves canonical identity behind it. These helpers are that
+// resolution. They are not the authorisation: every RPC they feed re-decides
+// on its own, and each one is scoped by the database to this organisation.
+
+/** The subject behind one of THIS employer's attempts.
+ *
+ *  Reads the employer's own governed pipeline, which is scoped to an active
+ *  member in the database. An attempt this organisation cannot see resolves to
+ *  null, and every caller then answers exactly as it answers a refusal --
+ *  which is what keeps this from becoming an oracle for whether an attempt
+ *  exists. */
+async function subjectOfEmployerAttempt(
+  ctx: Ctx,
+  employerId: string,
+  attemptId: string,
+): Promise<string | null> {
+  const { data: rows, error } = await ctx.supabase.rpc("scp_employer_assessment_pipeline", {
+    _employer_id: employerId,
+  });
+  if (error) return null;
+  const row = ((rows ?? []) as RpcRow[]).find((r) => String(r.attempt_id) === attemptId);
+  return row?.subject_id ? String(row.subject_id) : null;
+}
+
+/** The subject behind one released report snapshot, for the audience asking.
+ *
+ *  Goes through the same audience RPC `getAcademyReport` uses, so "may this
+ *  caller see this report" is answered once, by the database, and this cannot
+ *  resolve a subject for a report the caller could not have opened. */
+async function subjectOfReport(
+  ctx: Ctx,
+  attemptId: string,
+  audience: "participant" | "employer",
+): Promise<string | null> {
+  const { data: rows, error } =
+    audience === "participant"
+      ? await ctx.supabase.rpc("scp_participant_report", { _attempt_id: attemptId })
+      : await ctx.supabase.rpc("scp_employer_report", { _attempt_id: attemptId });
+  if (error) return null;
+  const row = (Array.isArray(rows) ? rows[0] : undefined) as RpcRow | undefined;
+  return row?.subject_id ? String(row.subject_id) : null;
+}
+
 /**
  * Resolve one pseudonymous subject to a person.
  *
@@ -1000,13 +1057,19 @@ export const getMyReviewCapability = createServerFn({ method: "GET" })
 export const resolveParticipantIdentity = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ employerId: z.string().uuid(), subjectId: z.string().uuid() }).parse(d),
+    // The ATTEMPT, not the subject. The caller names a record it is already
+    // looking at; the person behind it is resolved here.
+    z.object({ employerId: z.string().uuid(), attemptId: z.string().uuid() }).parse(d),
   )
   .handler(async ({ data, context }): Promise<{ email: string } | null> => {
     const ctx = context as Ctx;
+    const subjectId = await subjectOfEmployerAttempt(ctx, data.employerId, data.attemptId);
+    // Null for an attempt this organisation cannot see, which is the same
+    // answer the RPC gives for a refusal -- so this adds no oracle.
+    if (!subjectId) return null;
     const { data: rows, error } = await ctx.supabase.rpc("scp_resolve_participant_identity", {
       _employer_id: data.employerId,
-      _subject_id: data.subjectId,
+      _subject_id: subjectId,
     });
     if (error) return null;
     const r = (Array.isArray(rows) ? rows[0] : rows) as RpcRow | undefined;
@@ -1067,16 +1130,19 @@ export const scheduleAcademyReassessment = createServerFn({ method: "POST" })
     z
       .object({
         employerId: z.string().uuid(),
-        subjectId: z.string().uuid(),
+        /** The attempt being re-run, not the person behind it. */
+        attemptId: z.string().uuid(),
         deadline: z.string().nullable().default(null),
       })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<{ attemptId: string }> => {
     const ctx = context as Ctx;
+    const subjectId = await subjectOfEmployerAttempt(ctx, data.employerId, data.attemptId);
+    if (!subjectId) throw fail("attempt not visible to this employer", "reassessment_failed");
     const { data: rows, error } = await ctx.supabase.rpc("scp_schedule_reassessment", {
       _employer_id: data.employerId,
-      _subject_id: data.subjectId,
+      _subject_id: subjectId,
       _deadline: data.deadline,
     });
     if (error) throw fail(error.message, "reassessment_failed");
@@ -1377,7 +1443,6 @@ function mapReportSnapshot(row: RpcRow): ReportSnapshot {
   return {
     id: String(row.id),
     attemptId: String(row.attempt_id),
-    subjectId: String(row.subject_id),
     audience: row.audience as ReportSnapshot["audience"],
     releasedAt: String(row.released_at),
     context: mapContext(row.context as RpcRow | null),
@@ -1453,11 +1518,23 @@ export const getParticipantReportAsIssuer = createServerFn({ method: "GET" })
 
 export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ subjectId: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) =>
+    // Keyed on the report the reader has open, with the audience that let them
+    // open it. The subject is resolved through the same audience RPC, so this
+    // cannot answer for a report the caller could not have read.
+    z
+      .object({
+        attemptId: z.string().uuid(),
+        audience: z.enum(["participant", "employer"]),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }): Promise<DevelopmentRecommendation[]> => {
     const ctx = context as Ctx;
+    const subjectId = await subjectOfReport(ctx, data.attemptId, data.audience);
+    if (!subjectId) return [];
     const { data: rows, error } = await ctx.supabase.rpc("scp_development_recommendations", {
-      _subject_id: data.subjectId,
+      _subject_id: subjectId,
     });
     // Throw rather than return [] -- an empty array is indistinguishable from
     // "no recommendations", which is how a missing RPC became a silent blank.
@@ -1477,11 +1554,20 @@ export const getDevelopmentRecommendations = createServerFn({ method: "GET" })
 
 export const getSubjectProgress = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ subjectId: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        attemptId: z.string().uuid(),
+        audience: z.enum(["participant", "employer"]),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }): Promise<ProgressRow[]> => {
     const ctx = context as Ctx;
+    const subjectId = await subjectOfReport(ctx, data.attemptId, data.audience);
+    if (!subjectId) return [];
     const { data: rows, error } = await ctx.supabase.rpc("scp_subject_progress", {
-      _subject_id: data.subjectId,
+      _subject_id: subjectId,
     });
     if (error) throw fail(error.message, "progress_failed");
     return (rows ?? []).map((r: RpcRow) => ({
@@ -1708,7 +1794,6 @@ export type InviteResult = {
   invitationId: string | null;
   assignmentId: string | null;
   attemptId: string | null;
-  subjectId: string | null;
   governanceMode: "development" | "closed_test" | "recruitment" | null;
 };
 
@@ -1749,7 +1834,7 @@ export const inviteParticipant = createServerFn({ method: "POST" })
       invitationId: r?.invitation_id ? String(r.invitation_id) : null,
       assignmentId: r?.assignment_id ? String(r.assignment_id) : null,
       attemptId: r?.attempt_id ? String(r.attempt_id) : null,
-      subjectId: r?.subject_id ? String(r.subject_id) : null,
+
       governanceMode: (r?.governance_mode ?? null) as InviteResult["governanceMode"],
     };
   });
@@ -1830,7 +1915,8 @@ export const cancelInvitation = createServerFn({ method: "POST" })
 export type ApplicationAssessment = {
   assignmentId: string;
   attemptId: string;
-  subjectId: string;
+  // No subject. Nothing on the candidate page read it; the panel works from
+  // the assignment and the attempt, which is what its actions take.
   assessmentSlug: string;
   nameSv: string;
   nameEn: string;
@@ -1861,7 +1947,6 @@ export const listApplicationAssessments = createServerFn({ method: "GET" })
     return (rows ?? []).map((r: RpcRow) => ({
       assignmentId: String(r.assignment_id),
       attemptId: String(r.attempt_id),
-      subjectId: String(r.subject_id),
       assessmentSlug: String(r.assessment_slug ?? ""),
       nameSv: String(r.name_sv ?? ""),
       nameEn: String(r.name_en ?? ""),
@@ -2059,7 +2144,9 @@ export const assignFromApplication = createServerFn({ method: "POST" })
     }): Promise<{
       assignmentId: string;
       attemptId: string;
-      subjectId: string;
+      // The RPC resolves a subject and it stops at this boundary: the panel
+      // works from the assignment and the attempt, and an employer read model
+      // does not carry a subject reference.
       governanceMode: "development" | "closed_test" | "recruitment";
     }> => {
       const ctx = context as Ctx;
@@ -2075,7 +2162,6 @@ export const assignFromApplication = createServerFn({ method: "POST" })
       return {
         assignmentId: String(r.assignment_id),
         attemptId: String(r.attempt_id),
-        subjectId: String(r.subject_id),
         governanceMode: r.governance_mode as "development" | "closed_test" | "recruitment",
       };
     },

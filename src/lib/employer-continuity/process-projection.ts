@@ -40,6 +40,10 @@
 // `unknown` and is reported as such, rather than falling into whichever
 // branch happened to be last.
 
+import {
+  EMPLOYER_NEXT_STATUSES,
+  asApplicationStatus,
+} from "@/lib/job-intelligence/application-status";
 import type { ApplicationAssessment } from "@/lib/security-competency/academy-employer.functions";
 import type {
   ApplicationInterviewCase,
@@ -677,6 +681,120 @@ export function projectReportTrack(
 }
 
 /* ------------------------------------------------------------------ */
+/* Track 5 — the decision                                              */
+/* ------------------------------------------------------------------ */
+//
+// ── WHY THE SPINE STOPPED ONE STEP SHORT ────────────────────────────────
+//
+// Four tracks described the application, the assessment, the interview and
+// the report -- and then fell silent. When every piece of evidence was in and
+// the only thing left was for a person to decide, the strip said "nothing
+// outstanding". The decision, which is the point of the whole process, was the
+// one step the guidance did not name.
+//
+// ── WHAT THIS IS, AND WHAT IT IS EMPHATICALLY NOT ───────────────────────
+//
+// It is a READ of `job_applications.status` and of the transition table the
+// database already enforces. That is the whole derivation, and it is the
+// reason this module can carry a decision row without becoming a decision
+// engine:
+//
+//   * It NEVER reads the assessment track. A finished test says nothing about
+//     whether a person should be hired, and there is no expression below
+//     through which it could.
+//   * It NEVER reads the interview track or the report. A finalised report is
+//     evidence a human weighs; it is not an outcome.
+//   * It NEVER names an outcome the employer has not already recorded. `hired`
+//     and `rejected` are readings of a status a person wrote through
+//     set_application_status; they are not proposals, and nothing here
+//     produces one.
+//
+// `awaitingHumanDecision` therefore means exactly one thing: the application
+// has reached a stage from which the employer's own transition table offers a
+// terminal outcome, so a person -- not this product -- now has to choose. The
+// guard asserts the vocabulary, and asserts that moving an assessment or an
+// interview through every state it has leaves this track untouched.
+
+/**
+ * Where the employer's own decision has got to.
+ *
+ * `notYet` is a statement about the PROCESS, not about the candidate: the
+ * application has not reached a stage where the transition table offers a
+ * terminal outcome. It is not "not good enough yet" and the copy must never
+ * read that way.
+ */
+export type DecisionState =
+  | "loading"
+  | "unavailable"
+  | "refused"
+  | "notYet"
+  | "awaitingHumanDecision"
+  | "hired"
+  | "rejected"
+  | "withdrawn";
+
+export interface DecisionTrack {
+  readonly read: TrackRead;
+  readonly state: DecisionState;
+  /**
+   * The employment record this hire produced, when the caller found one.
+   *
+   * An input like every other: the projection performs no I/O, so the page
+   * hands it the answer `getHiredEmployeeForApplication` already gave. Null
+   * covers "not hired", "not read yet" and "hired but no employment record
+   * came back" -- and the last of those is why the ladder tests this field
+   * rather than the state: a door is only offered when there is somewhere to
+   * go.
+   */
+  readonly hiredEmployeeId: string | null;
+}
+
+/**
+ * The application's status, and the transition table, and nothing else.
+ *
+ * `EMPLOYER_NEXT_STATUSES` is the same table the candidate page renders its
+ * buttons from and the same one `set_application_status` enforces, so
+ * "a decision is available here" cannot drift from "a decision can be
+ * recorded here". A status this build does not recognise yields `notYet`,
+ * which offers nothing -- the honest answer for a stage we cannot reason
+ * about.
+ */
+export function projectDecisionTrack(
+  read: TrackRead,
+  status: string | null,
+  hiredEmployeeId: string | null,
+): DecisionTrack {
+  if (read !== "ready") {
+    return {
+      read,
+      state: read === "loading" ? "loading" : read === "refused" ? "refused" : "unavailable",
+      hiredEmployeeId: null,
+    };
+  }
+
+  const known = asApplicationStatus(status ?? "");
+  if (known === "hired") return { read, state: "hired", hiredEmployeeId };
+  if (known === "rejected") return { read, state: "rejected", hiredEmployeeId: null };
+  if (known === "withdrawn") return { read, state: "withdrawn", hiredEmployeeId: null };
+
+  // A terminal outcome is offered from here, so a person owes a choice. Read
+  // from the transition table rather than hardcoded, so a future stage that
+  // gains "hired" is covered without anybody remembering this file.
+  const next = known ? (EMPLOYER_NEXT_STATUSES[known] ?? []) : [];
+  const terminal = next.includes("hired") || next.includes("rejected");
+  // "reviewing" offers `rejected` and not `hired`, and calling that a pending
+  // decision would put a decision row on every application the moment it was
+  // opened. The decision this row is about is the one that ENDS the process.
+  const endsProcess = next.includes("hired");
+
+  return {
+    read,
+    state: terminal && endsProcess ? "awaitingHumanDecision" : "notYet",
+    hiredEmployeeId: null,
+  };
+}
+
+/* ------------------------------------------------------------------ */
 /* Linkage                                                             */
 /* ------------------------------------------------------------------ */
 
@@ -730,6 +848,21 @@ export type NextActionKind =
   | "awaitCandidateAssessment"
   | "awaitColleague"
   | "openFinalisedReport"
+  /** Every stage the process has reached is settled and the employer's own
+   *  transition table now offers a terminal outcome, so a PERSON has to
+   *  choose. It says that a decision is due and where the controls are. It
+   *  does not say what the decision should be, it is derived from
+   *  `job_applications.status` alone, and no assessment or interview state can
+   *  produce it, prevent it or colour it. */
+  | "recordDecision"
+  /** The decision was recorded as a hire and the employment record exists, so
+   *  the door to it is the next thing to offer.
+   *
+   *  It NAMES a recorded outcome and does not propose one -- which is the
+   *  whole distinction this union is built on, and why the guard's
+   *  recommendation vocabulary allows this member by name and refuses anything
+   *  that would suggest an outcome instead. */
+  | "openHiredEmployee"
   /** Nothing has been started, and nothing is required to be. Deliberately a
    *  STATEMENT and not a call to action: assessment and interview are both
    *  optional, and picking one of them as "the next step" would turn a
@@ -773,7 +906,15 @@ export type ActionDestination =
    *  silently showing everything. */
   | { readonly kind: "assessmentParticipants"; readonly attemptId: string }
   | { readonly kind: "interviewCase"; readonly caseId: string }
-  | { readonly kind: "interviewReport"; readonly caseId: string };
+  | { readonly kind: "interviewReport"; readonly caseId: string }
+  /** The decision controls, which are on the candidate page the strip is
+   *  already on. A hash rather than a route: the controls are a section of
+   *  this page and sending the recruiter somewhere else to reach them would
+   *  invent a surface the product does not have. */
+  | { readonly kind: "applicationDecision" }
+  /** The employment record a recorded hire produced. This is the join between
+   *  the two halves of the lifecycle, and it costs exactly one destination. */
+  | { readonly kind: "employeeProfile"; readonly employeeId: string };
 
 export interface NextAction {
   readonly kind: NextActionKind;
@@ -825,6 +966,7 @@ export interface ProcessProjection {
   readonly assessment: AssessmentTrack;
   readonly interview: InterviewTrack;
   readonly report: ReportTrack;
+  readonly decision: DecisionTrack;
   readonly nextAction: NextAction;
   /** True when a human — this one or a colleague — owes this process work. */
   readonly needsHumanAttention: boolean;
@@ -846,12 +988,14 @@ export function projectProcess(input: {
   readonly assessment: AssessmentTrack;
   readonly interview: InterviewTrack;
   readonly report: ReportTrack;
+  readonly decision: DecisionTrack;
   readonly capabilities: ContinuityCapabilities;
 }): ProcessProjection {
   const nextAction = deriveNextAction(
     input.assessment,
     input.interview,
     input.report,
+    input.decision,
     input.capabilities,
   );
   return {
@@ -862,6 +1006,10 @@ export function projectProcess(input: {
     assessment: input.assessment,
     interview: input.interview,
     report: input.report,
+    // Copied through for the same reason, and it is worth saying twice: the
+    // decision arrived derived from the application's own status, and nothing
+    // in this function touches it.
+    decision: input.decision,
     nextAction,
     needsHumanAttention:
       nextAction.waitingOn === "employer" || nextAction.waitingOn === "colleague",
@@ -872,6 +1020,7 @@ function deriveNextAction(
   assessment: AssessmentTrack,
   interview: InterviewTrack,
   report: ReportTrack,
+  decision: DecisionTrack,
   cap: ContinuityCapabilities,
 ): NextAction {
   // ── 0. Still reading ───────────────────────────────────────────────
@@ -1045,6 +1194,45 @@ function deriveNextAction(
       kind: "awaitCandidateAssessment",
       waitingOn: "candidate",
       destination: NO_DESTINATION,
+      unavailableTrack: null,
+    };
+  }
+
+  // ── 8b. A decision a person owes ───────────────────────────────────
+  //
+  // Below every piece of outstanding PROCESS work and above every terminal
+  // state, which is exactly where it belongs: a review a human still owes is
+  // work the decision should wait for, and a finished report is not a reason
+  // to say "nothing outstanding" when somebody still has to decide.
+  //
+  // This is the branch the audit called the missing hinge. Before it, an
+  // application at `interview` with a finalised report was told the report
+  // could be opened and then, on the next visit, that there was nothing
+  // outstanding -- while the one act the whole process exists for had not
+  // happened.
+  //
+  // It reads `decision` and nothing else. `awaitingHumanDecision` came from
+  // the application's own status; no assessment, interview or report value is
+  // consulted here or in the function that produced it.
+  if (decision.state === "awaitingHumanDecision") {
+    return {
+      kind: "recordDecision",
+      waitingOn: "employer",
+      destination: { kind: "applicationDecision" },
+      unavailableTrack: null,
+    };
+  }
+
+  // ── 8c. A recorded hire with somewhere to go ───────────────────────
+  //
+  // Keyed on the EMPLOYMENT RECORD, not on the state: a hire whose employment
+  // record could not be read is still a hire, and the row says so, but there
+  // is no door to offer and inventing one would produce a link to nowhere.
+  if (decision.state === "hired" && decision.hiredEmployeeId) {
+    return {
+      kind: "openHiredEmployee",
+      waitingOn: "nobody",
+      destination: { kind: "employeeProfile", employeeId: decision.hiredEmployeeId },
       unavailableTrack: null,
     };
   }

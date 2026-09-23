@@ -1008,6 +1008,21 @@ jobs:
       - name: Employer process continuity check (E1)
         run: bun run employer-process-continuity:check
 
+      # The other two halves of the employer lifecycle, from the 2026-09-22
+      # audit: a vacancy summarises its own pipeline and every count lands on
+      # exactly the rows it counted; a read that failed is never rendered as a
+      # zero; one colleague's page shows that colleague's own development and
+      # carries them into an assignment; no subject reference reaches an
+      # employer's browser; a completed programme is never called verified
+      # competence; and an employment record waits for an approved
+      # organisation while job drafts keep working.
+      #
+      # Its negative controls run in the `negative-controls:all` step above --
+      # six of these assertions were dead when first written, and every one was
+      # found by planting the real defect.
+      - name: Employer lifecycle check (phases 2 and 3)
+        run: bun run employer-lifecycle:check
+
       # E3: the context an interview inherits, and what the CANDIDATE is told.
       #
       # The bridge already read the application, the advert and the assessment.

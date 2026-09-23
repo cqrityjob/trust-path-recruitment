@@ -166,16 +166,20 @@ function Report({
     queryFn: () => reportFn({ data: { attemptId, audience: "employer" as const } }),
   });
 
-  const subjectId = report.data?.subjectId;
+  // The ATTEMPT and the audience, never a subject. This page used to take the
+  // subject out of the snapshot and hand it back to the server on three calls;
+  // the identifier for a person's whole professional history has no business
+  // in a recruiter's browser to make a call the server can make for itself.
+  const hasReport = Boolean(report.data);
   const recs = useQuery({
-    queryKey: ["academy", "recs", subjectId],
-    queryFn: () => recsFn({ data: { subjectId: subjectId! } }),
-    enabled: Boolean(subjectId),
+    queryKey: ["academy", "recs", "employer", attemptId],
+    queryFn: () => recsFn({ data: { attemptId, audience: "employer" as const } }),
+    enabled: hasReport,
   });
   const progress = useQuery({
-    queryKey: ["academy", "progress", subjectId],
-    queryFn: () => progressFn({ data: { subjectId: subjectId! } }),
-    enabled: Boolean(subjectId),
+    queryKey: ["academy", "progress", "employer", attemptId],
+    queryFn: () => progressFn({ data: { attemptId, audience: "employer" as const } }),
+    enabled: hasReport,
   });
 
   if (report.isLoading) {
@@ -244,7 +248,7 @@ function Report({
         canDecide={canDecide}
         identity={identity}
         onResolveIdentity={() =>
-          void resolveFn({ data: { employerId, subjectId: r.subjectId } }).then((x) =>
+          void resolveFn({ data: { employerId, attemptId: r.attemptId } }).then((x) =>
             setIdentity(x?.email ?? t("academy.participants.identityRefused")),
           )
         }
@@ -281,7 +285,7 @@ function Report({
             <button
               type="button"
               onClick={() =>
-                void resolveFn({ data: { employerId, subjectId: r.subjectId } }).then((x) =>
+                void resolveFn({ data: { employerId, attemptId: r.attemptId } }).then((x) =>
                   setIdentity(x?.email ?? t("academy.participants.identityRefused")),
                 )
               }

@@ -319,6 +319,11 @@ function EmployerOverview({
   };
 
   const jobs: EmployerJobRow[] = jobsQuery.data ?? [];
+  // "This organisation has no advertisements" is a CLAIM, and `?? []` cannot
+  // tell it apart from "we have not found out yet" or "the read failed". The
+  // first-run row below says it out loud, so it is only drawn when the read
+  // actually succeeded.
+  const jobsKnown = jobsQuery.isSuccess;
   const applications: EmployerApplicationRow[] = applicationsQuery.data ?? [];
   const catalog: EmployerAssessmentCatalogEntry[] = catalogQuery.data ?? [];
   const assignments = assignmentsQuery.data ?? [];
@@ -482,6 +487,33 @@ function EmployerOverview({
     });
   }
 
+  // ── FIRST RUN ──────────────────────────────────────────────────────
+  //
+  // An approved organisation with no advertisement has a work list that is
+  // empty by design -- every row is zero-suppressed -- and four cards of
+  // zeroes. It is the one moment where the honest answer is not "nothing to
+  // do": there is exactly one thing to do, and nothing else in the product can
+  // start until it is done.
+  //
+  // Unshifted rather than pushed, so it is the FIRST row whatever else is
+  // there, and gated on `active` so a pending organisation is not invited to
+  // start work its approval has not reached yet. `jobsKnown` keeps it off the
+  // page while the read is in flight or has failed: "you have no
+  // advertisements" is a claim, and a failed read is not evidence for it.
+  if (status === "active" && jobsKnown && jobs.length === 0) {
+    actions.unshift({
+      key: "first-job",
+      icon: <Briefcase className="h-4 w-4" />,
+      // Not a count of anything. One is the number of advertisements it takes
+      // to begin, and the row would be dishonest with any other number.
+      count: 1,
+      text: t("employer.actions.firstJob"),
+      linkProps: { to: "/employer/$employerSlug/jobs/new", params: { employerSlug } },
+      actionLabel: t("employer.actions.firstJob.cta"),
+      tone: "todo",
+    });
+  }
+
   if (data.draftJobs > 0) {
     actions.push({
       key: "draft-jobs",
@@ -506,6 +538,10 @@ function EmployerOverview({
       linkProps: {
         to: "/employer/$employerSlug/interview-intelligence",
         params: { employerSlug },
+        // The exact cases, not the list they live in. The stage names the same
+        // statuses this count counted -- both read case-stage.ts -- so the
+        // number and the rows it opens cannot disagree.
+        search: { stage: "awaitingPlanApproval" as const },
       },
       actionLabel: t("employer.actions.review"),
       tone: "todo",
@@ -521,6 +557,10 @@ function EmployerOverview({
       linkProps: {
         to: "/employer/$employerSlug/interview-intelligence",
         params: { employerSlug },
+        // The exact cases, not the list they live in. The stage names the same
+        // statuses this count counted -- both read case-stage.ts -- so the
+        // number and the rows it opens cannot disagree.
+        search: { stage: "readyToInterview" as const },
       },
       actionLabel: t("employer.actions.open"),
       tone: "todo",
@@ -536,6 +576,10 @@ function EmployerOverview({
       linkProps: {
         to: "/employer/$employerSlug/interview-intelligence",
         params: { employerSlug },
+        // The exact cases, not the list they live in. The stage names the same
+        // statuses this count counted -- both read case-stage.ts -- so the
+        // number and the rows it opens cannot disagree.
+        search: { stage: "inEvidenceReview" as const },
       },
       actionLabel: t("employer.actions.review"),
       tone: "todo",
@@ -551,6 +595,10 @@ function EmployerOverview({
       linkProps: {
         to: "/employer/$employerSlug/interview-intelligence",
         params: { employerSlug },
+        // The exact cases, not the list they live in. The stage names the same
+        // statuses this count counted -- both read case-stage.ts -- so the
+        // number and the rows it opens cannot disagree.
+        search: { stage: "awaitingReport" as const },
       },
       actionLabel: t("employer.actions.open"),
       tone: "todo",

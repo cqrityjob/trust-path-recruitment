@@ -17,16 +17,32 @@
 // This page is that join, rendered. One vacancy, its state, and everyone in
 // its pipeline, on one screen.
 //
-// ── WHAT IS DELIBERATELY NOT HERE ───────────────────────────────────────
+// ── THE PIPELINE, AND WHERE ITS NUMBERS COME FROM ───────────────────────
 //
-// No assessment aggregate. A recruiter would reasonably want "3 sent, 1
-// completed, 7 responses to review" per vacancy, and the honest position is
-// that the platform cannot answer it in one read today: scp_application_
-// assessments is scoped to ONE application, so a per-job total would mean
-// either N round trips or a new read model, and a new read model is a hosted
-// migration. Each candidate carries their own assessment state on their own
-// page, which is where a recruiter acts on it anyway. Inventing a number here
-// that no read model produces would be worse than not showing one.
+// This page used to say that a per-vacancy assessment aggregate could not be
+// answered in one read, and that was true of the read it was looking at:
+// scp_application_assessments is scoped to ONE application, so a per-job total
+// through it means N round trips.
+//
+// It is answerable through a different pair, and both of them already exist:
+// the governed assessment pipeline carries one row per attempt WITH its
+// assignment, and assessment_assignments maps an assignment to an application.
+// Joined, they give every application in the organisation the state of its
+// assessments -- employer-wide, two requests, on the cache keys the assessment
+// workspace already uses, and no new read model and no migration. See
+// src/lib/employer-continuity/open-assessments.ts.
+//
+// What is still deliberately absent is any number that would require the page
+// to read a SCORE: no "3 passed", no average, no quality. The assessment
+// column counts whether a process is open, which is a process fact.
+//
+// ── AND A NUMBER IS NEVER INVENTED ──────────────────────────────────────
+//
+// Every count on this page can be `null`, and `null` draws a dash and names
+// the reason. `applicationsQuery.data ?? []` used to be the whole story, so a
+// failed read rendered as "no applications yet" under a published
+// advertisement -- a confident, wrong sentence about the employer's own
+// vacancy. The projection has no path from a failed read to a zero.
 //
 // No new lifecycle vocabulary. The columns below are job_applications.status
 // as it already is, labelled through APPLICATION_STATUS_LABEL_KEY, in the
@@ -42,7 +58,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, CircleDashed, ExternalLink, Users } from "lucide-react";
-import { useT } from "@/i18n/context";
+import { useT, type PluralKey } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { ConfirmAction, usePendingConfirm } from "@/components/employer/ConfirmAction";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -67,6 +83,14 @@ import {
 import { APPLICATION_STATUS_LABEL_KEY } from "@/lib/job-intelligence/application-status";
 import type { ApplicationStatus } from "@/lib/job-intelligence/applications.functions";
 import { checkJobReadiness, type JobReadinessInput } from "@/lib/job-intelligence/job-readiness";
+import {
+  projectJobPipeline,
+  type JobNextActionKind,
+  type JobPipelineStage,
+  type PipelineRead,
+  type StageCount,
+} from "@/lib/employer-continuity/job-pipeline";
+import { useOpenAssessmentApplications } from "@/lib/employer-continuity/open-assessments";
 
 /** What this page reads off the row. getEmployerJob() is a `select("*")` and
  *  is typed as the untyped Supabase row, so the shape is declared here rather
@@ -128,7 +152,7 @@ function JobHub({
   jobId: string;
   canEdit: boolean;
 }) {
-  const { t, lang } = useT();
+  const { t, tp, lang } = useT();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const getFn = useServerFn(getEmployerJob);
@@ -158,6 +182,12 @@ function JobHub({
     queryKey: ["employer", employerId, "applications", "job", jobId],
     queryFn: () => listApplicationsFn({ data: { employerId, jobId } }),
   });
+
+  // The assessment half of the pipeline. Always on here -- this is the one
+  // surface whose job is to summarise the vacancy -- and shared with the
+  // assessment workspace's own cache keys, so an employer who has both open
+  // pays for one fetch.
+  const openAssessments = useOpenAssessmentApplications(employerId, true);
 
   /** Every mutation on this page refreshes the same three caches: this job,
    *  the list it came from, and the dashboard counters that read both. */
@@ -254,6 +284,24 @@ function JobHub({
 
   const readiness = checkJobReadiness(job);
   const rows: EmployerApplicationRow[] = applicationsQuery.data ?? [];
+
+  // How the read WENT, kept apart from what it found. There is no client-side
+  // way to tell a policy refusal from any other failure here, and guessing
+  // would be the same lie in the other direction, so both are reported as
+  // "could not be read" -- which is what we actually know.
+  const applicationsRead: PipelineRead = applicationsQuery.isLoading
+    ? "loading"
+    : applicationsQuery.isError
+      ? "failed"
+      : "ready";
+
+  const pipeline = projectJobPipeline({
+    jobStatus: status,
+    applicationsRead,
+    applications: rows,
+    assessmentRead: openAssessments.read,
+    applicationsWithOpenAssessment: openAssessments.ids,
+  });
 
   const editable = status === "draft" || status === "rejected";
   const submittable = editable;
@@ -493,6 +541,77 @@ function JobHub({
         </dl>
       </section>
 
+      {/* ── The pipeline ───────────────────────────────────────────── */}
+      <section className="mt-10" aria-labelledby="job-pipeline">
+        <h2 id="job-pipeline" className="text-lg font-semibold text-foreground">
+          {t("employer.jobHub.pipeline.heading")}
+        </h2>
+        <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
+          {t("employer.jobHub.pipeline.lede")}
+        </p>
+
+        <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {PIPELINE_CARDS.map((card) => (
+            <PipelineCard
+              key={card.stage}
+              labelKey={card.labelKey}
+              count={pipeline.counts[card.stage]}
+              employerSlug={employerSlug}
+              jobId={jobId}
+              search={card.search}
+            />
+          ))}
+        </dl>
+
+        {/* ── The one next thing ──────────────────────────────────────
+            One sentence about this vacancy's own work, and never about the
+            people in it: no ranking, no assessment of the field, no advice to
+            close or extend. Where the honest answer is a statement it is a
+            statement, and no button is drawn. */}
+        <div className="mt-4 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            {t("employer.jobHub.next.heading")}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <p className="max-w-[68ch] text-[13px] leading-relaxed text-foreground" role="status">
+              {(() => {
+                // A quantity where there is one, a sentence where there is
+                // not. The three quantified actions are the only ones whose
+                // number means anything; the rest are statements and reading
+                // "0 …" for them would be noise.
+                const plural = JOB_NEXT_PLURAL[pipeline.nextAction.kind];
+                return plural && pipeline.nextAction.count > 0
+                  ? `${pipeline.nextAction.count} ${tp(plural, pipeline.nextAction.count)}`
+                  : t(JOB_NEXT_BODY[pipeline.nextAction.kind]);
+              })()}
+            </p>
+            {pipeline.nextAction.stage && (
+              <Link
+                to="/employer/$employerSlug/applications"
+                params={{ employerSlug }}
+                search={{
+                  job: jobId,
+                  ...(PIPELINE_SEARCH[pipeline.nextAction.stage] ?? {}),
+                }}
+                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("employer.jobHub.next.open")}
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            )}
+            {pipeline.nextAction.kind === "unavailable" && (
+              <button
+                type="button"
+                onClick={() => void applicationsQuery.refetch()}
+                className="inline-flex min-h-11 shrink-0 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("continuity.next.retry")}
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ── The people ─────────────────────────────────────────────── */}
       <section className="mt-10 pb-4" aria-labelledby="job-candidates">
         <div className="flex flex-wrap items-end justify-between gap-3">
@@ -514,6 +633,23 @@ function JobHub({
 
         {applicationsQuery.isLoading ? (
           <p className="mt-4 text-sm text-muted-foreground">{t("employer.loading")}</p>
+        ) : applicationsQuery.isError ? (
+          /* NOT an empty state. "Nobody has applied" and "we could not find
+             out who applied" are different sentences, and the second one is
+             the only honest thing to say here. */
+          <div
+            role="alert"
+            className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-900 dark:text-amber-200"
+          >
+            <p>{t("employer.jobHub.candidates.loadFailed")}</p>
+            <button
+              type="button"
+              onClick={() => void applicationsQuery.refetch()}
+              className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("continuity.next.retry")}
+            </button>
+          </div>
         ) : rows.length === 0 ? (
           <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
             {status === "published"
@@ -575,5 +711,111 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
       <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 break-words text-foreground">{children}</dd>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* The pipeline's five cards                                           */
+/* ------------------------------------------------------------------ */
+
+/** The search parameters that land on exactly the rows a count counted.
+ *
+ *  Written once and used by both the cards and the next action, so the number
+ *  and the list it opens can never be filtered differently. `total` carries
+ *  only the job: a vacancy's total includes its closed outcomes, and a status
+ *  filter would show fewer rows than the number promised. */
+const PIPELINE_SEARCH: Record<
+  JobPipelineStage,
+  { status?: "submitted" | "interview" | "hired"; assessment?: "open" }
+> = {
+  total: {},
+  awaitingReview: { status: "submitted" },
+  assessmentOpen: { assessment: "open" },
+  interview: { status: "interview" },
+  hired: { status: "hired" },
+};
+
+const PIPELINE_CARDS: {
+  stage: JobPipelineStage;
+  labelKey: TranslationKey;
+  search: (typeof PIPELINE_SEARCH)[JobPipelineStage];
+}[] = (
+  [
+    ["total", "employer.jobHub.pipeline.total"],
+    ["awaitingReview", "employer.jobHub.pipeline.awaitingReview"],
+    ["assessmentOpen", "employer.jobHub.pipeline.assessmentOpen"],
+    ["interview", "employer.jobHub.pipeline.interview"],
+    ["hired", "employer.jobHub.pipeline.hired"],
+  ] satisfies [JobPipelineStage, TranslationKey][]
+).map(([stage, labelKey]) => ({ stage, labelKey, search: PIPELINE_SEARCH[stage] }));
+
+/** The sentence for a next action that names no quantity. */
+const JOB_NEXT_BODY: Record<JobNextActionKind, TranslationKey> = {
+  loading: "employer.loading",
+  unavailable: "employer.jobHub.next.unavailable",
+  reviewNewApplications: "employer.jobHub.next.reviewNewApplications.other",
+  awaitAssessments: "employer.jobHub.next.awaitAssessments.other",
+  prepareInterviews: "employer.jobHub.next.prepareInterviews.other",
+  noApplicationsYet: "employer.jobHub.next.noApplicationsYet",
+  notPublished: "employer.jobHub.next.notPublished",
+  nothingOutstanding: "employer.jobHub.next.nothingOutstanding",
+};
+
+/** And the plural base for the three that do. */
+const JOB_NEXT_PLURAL: Partial<Record<JobNextActionKind, PluralKey>> = {
+  reviewNewApplications: "employer.jobHub.next.reviewNewApplications",
+  awaitAssessments: "employer.jobHub.next.awaitAssessments",
+  prepareInterviews: "employer.jobHub.next.prepareInterviews",
+};
+
+/** One count.
+ *
+ *  A `null` value draws an em dash and, when the read actually failed, says so
+ *  underneath. There is no branch here that renders a zero for an unknown
+ *  number, and the whole card stops being a link when there is nothing to open
+ *  -- a link promising "0 awaiting review" is a link to an empty list. */
+function PipelineCard({
+  labelKey,
+  count,
+  employerSlug,
+  jobId,
+  search,
+}: {
+  labelKey: TranslationKey;
+  count: StageCount;
+  employerSlug: string;
+  jobId: string;
+  search: { status?: "submitted" | "interview" | "hired"; assessment?: "open" };
+}) {
+  const { t } = useT();
+  const body = (
+    <>
+      <dd className="text-2xl font-semibold tabular-nums text-foreground">
+        {count.value === null ? <span aria-hidden="true">—</span> : count.value}
+      </dd>
+      <dt className="mt-1 text-xs leading-snug text-muted-foreground">{t(labelKey)}</dt>
+      {count.read === "failed" && (
+        <p className="mt-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+          {t("continuity.report.unavailable")}
+        </p>
+      )}
+    </>
+  );
+
+  const cls =
+    "rounded-[12px] border border-border bg-card p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+  if (count.value === null || count.value === 0) {
+    return <div className={cls}>{body}</div>;
+  }
+  return (
+    <Link
+      to="/employer/$employerSlug/applications"
+      params={{ employerSlug }}
+      search={{ job: jobId, ...search }}
+      className={`${cls} block transition-colors hover:border-accent/60`}
+    >
+      {body}
+    </Link>
   );
 }

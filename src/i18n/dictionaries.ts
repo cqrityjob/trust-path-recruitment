@@ -1886,7 +1886,13 @@ export const dictionaries = {
 
     "employer.nav.workforce": "Medarbetare",
     "employer.nav.competencies": "Kompetenser & certifikat",
-    "employer.nav.training": "Kompetensutveckling",
+    // ── Utveckling, not Kompetensutveckling ─────────────────────────
+    // The Product Owner's decision. "People" now reads as the post-hire half
+    // of the lifecycle rather than as a course catalogue, and the underlying
+    // database concept is untouched: training is still training in
+    // scp_training_assignments, in the RPCs and in the evidence source type.
+    // This is presentation, and only presentation.
+    "employer.nav.training": "Utveckling",
     "employer.nav.sites": "Platser & risk",
     "employer.nav.reports": "Rapporter",
     "employer.nav.library": "Bibliotek",
@@ -1921,7 +1927,7 @@ export const dictionaries = {
     "employer.competencies.purpose":
       "Ett gemensamt kompetensramverk som beskriver vad varje roll kräver, och ett register över personalens certifikat och deras giltighetstid.",
 
-    "employer.training.heading": "Kompetensutveckling",
+    "employer.training.heading": "Utveckling",
     "employer.training.purpose":
       "Rekommendera och följa upp riktad utbildning utifrån identifierade kompetensluckor hos befintlig personal.",
 
@@ -1958,6 +1964,13 @@ export const dictionaries = {
     "employer.workforce.action.deactivate": "Inaktivera",
     "employer.workforce.action.reactivate": "Återaktivera",
     "employer.workforce.error.save": "Kunde inte spara medarbetaren.",
+    // Not a failure. En ägare vars organisation fortfarande granskas har inte
+    // gjort något fel, och "kunde inte spara" skulle skicka dem att leta efter
+    // ett misstag i formuläret.
+    "employer.workforce.error.notActive":
+      "Organisationen är inte godkänd ännu, så medarbetare kan inte läggas till. Annonsutkast fungerar som vanligt under tiden.",
+    "employer.workforce.notActive":
+      "Medarbetare kan läggas till när organisationen har godkänts. Ni kan förbereda annonsutkast redan nu — en anställning handlar om en namngiven person och väntar därför på godkännandet.",
     "employer.workforce.error.load": "Kunde inte läsa in medarbetarlistan.",
     "employer.workforce.empty.heading": "Inga medarbetare ännu",
     "employer.workforce.empty.body":
@@ -2005,7 +2018,8 @@ export const dictionaries = {
     "employer.overview.card.tests.action.assign": "Tilldela bedömning",
     "employer.overview.card.tests.action.activity": "Pågående tilldelningar",
 
-    "employer.overview.card.development.title": "Kompetensutveckling",
+    // The same area the sidebar names, so the card and the navigation agree.
+    "employer.overview.card.development.title": "Utveckling",
     "employer.overview.card.development.body":
       "Planera och följ kompetensutveckling för dina medarbetare.",
 
@@ -2028,6 +2042,41 @@ export const dictionaries = {
     "employer.jobHub.facts.heading": "Om annonsen",
     "employer.jobHub.fact.location": "Plats",
     "employer.jobHub.fact.published": "Publicerad",
+    // ── The pipeline ────────────────────────────────────────────────
+    // Fem tal om EN annons. Varje tal är en räkning av rader som redan finns
+    // och landar på exakt de raderna. Inget av dem säger något om personerna.
+    "employer.applications.filter.assessmentOpen":
+      "Visar bara ansökningar där en bedömning pågår eller väntar på utfall.",
+    "employer.applications.filter.assessmentUnavailable":
+      "Bedömningsstatus kunde inte hämtas, så listan kan vara ofullständig.",
+    "employer.applications.filter.clearAssessment": "Ta bort bedömningsfiltret",
+    "employer.jobHub.pipeline.heading": "Rekryteringsflödet för den här annonsen",
+    "employer.jobHub.pipeline.lede":
+      "Var ansökningarna till den här tjänsten befinner sig just nu. Varje tal öppnar exakt de ansökningar det räknar. Ett streck betyder att siffran inte kunde hämtas — aldrig att den är noll.",
+    "employer.jobHub.pipeline.total": "Ansökningar totalt",
+    "employer.jobHub.pipeline.awaitingReview": "Väntar på första granskning",
+    // Räknar om en bedömning PÅGÅR, aldrig vad den visade.
+    "employer.jobHub.pipeline.assessmentOpen": "Bedömning pågår eller väntar på utfall",
+    "employer.jobHub.pipeline.interview": "I intervju",
+    "employer.jobHub.pipeline.hired": "Anställda",
+    "employer.jobHub.next.heading": "Nästa steg för annonsen",
+    "employer.jobHub.next.open": "Öppna dem",
+    "employer.jobHub.next.unavailable":
+      "Ansökningarna kunde inte hämtas, så inget nästa steg föreslås. Försök igen.",
+    "employer.jobHub.next.reviewNewApplications.one": "ny ansökan att granska.",
+    "employer.jobHub.next.reviewNewApplications.other": "nya ansökningar att granska.",
+    "employer.jobHub.next.prepareInterviews.one": "kandidat i intervjusteget.",
+    "employer.jobHub.next.prepareInterviews.other": "kandidater i intervjusteget.",
+    "employer.jobHub.next.awaitAssessments.one": "kandidat med en bedömning som pågår.",
+    "employer.jobHub.next.awaitAssessments.other": "kandidater med en bedömning som pågår.",
+    "employer.jobHub.next.noApplicationsYet":
+      "Annonsen är publicerad och ingen har ansökt ännu.",
+    "employer.jobHub.next.notPublished":
+      "Annonsen är inte publicerad, så den kan inte ta emot ansökningar ännu.",
+    "employer.jobHub.next.nothingOutstanding":
+      "Inget väntar på er i den här annonsens flöde just nu.",
+    "employer.jobHub.candidates.loadFailed":
+      "Ansökningarna till den här annonsen kunde inte hämtas. Det betyder inte att ingen har ansökt.",
     "employer.jobHub.candidates.heading": "Kandidater",
     "employer.jobHub.candidates.openList": "Visa i ansökningslistan",
     "employer.jobHub.candidates.emptyPublished":
@@ -2108,6 +2157,10 @@ export const dictionaries = {
     // stages only, nothing about a candidate, and nothing shown at zero.
     "employer.actions.interviewPlansToApprove.one": "intervjuplan väntar på godkännande",
     "employer.actions.interviewPlansToApprove.other": "intervjuplaner väntar på godkännande",
+    // First run. Not a count of anything -- one is the number of annonser it
+    // takes to begin, and nothing else in produkten can start before it.
+    "employer.actions.firstJob": "Skapa er första annons för att komma igång.",
+    "employer.actions.firstJob.cta": "Skapa annons",
     "employer.actions.interviewsReady.one": "intervju är redo att genomföras",
     "employer.actions.interviewsReady.other": "intervjuer är redo att genomföras",
     "employer.actions.interviewEvidenceToReview.one": "intervju behöver evidensgranskas",
@@ -2419,11 +2472,66 @@ export const dictionaries = {
     "employer.person.assessments.released": "Delat",
     "employer.person.assessments.reviewsOpen": "Kvar att granska:",
     "employer.person.assessments.openReport": "Visa rapport",
-    "employer.person.development.heading": "Kompetensutveckling",
+    // ── Employee 360, section 2: what the ROLE requires ─────────────
+    // Ingenting här säger något om personen. Det finns ingen beräknad
+    // "readiness", inget gap i procent, inget uppfyllt/ej uppfyllt -- om en
+    // person uppfyller ett krav är en styrd bedömnings svar, och produkten
+    // gissar det inte.
+    // Assigning from an employee's own page. Ingen adress skrivs in: personen
+    // följde med navigeringen och servern läser adressen ur anställningen.
+    "academy.assign.employee.forThisPerson":
+      "Tilldelas den medarbetare du kom från. Ingen adress behöver skrivas in — den läses från anställningen.",
+    "academy.assign.employee.noEmail":
+      "Anställningen saknar e-postadress, så programmet kan inte tilldelas. Utveckling knyts till en person, inte till en post.",
+    "academy.assign.employee.notAuthorised":
+      "Att tilldela utvecklingsprogram kräver ägare eller administratör i organisationen.",
+    "academy.assign.employee.notFound": "Medarbetaren hör inte till den här organisationen.",
+    "academy.assign.employee.backToPerson": "Tillbaka till medarbetaren",
+    "employer.person.competence.heading": "Kompetens i rollen",
+    "employer.person.competence.lede":
+      "Vad yrket kräver enligt den gemensamma yrkeskatalogen, och vilket underlag er organisation faktiskt har om den här personen. Listan beskriver rollen — inte personen.",
+    "employer.person.competence.profession": "Yrke:",
+    "employer.person.competence.loadError": "Kompetenskraven kunde inte hämtas.",
+    "employer.person.competence.noProfession":
+      "Inget yrke är kopplat till den här anställningen, så det finns inga kompetenskrav att visa. Yrket sätts när någon anställs via en annons.",
+    "employer.person.competence.professionNotPublished":
+      "Yrket som är kopplat till anställningen finns inte publicerat i yrkeskatalogen ännu, så dess kompetenskrav kan inte visas.",
+    "employer.person.competence.noRequirements":
+      "Yrket är publicerat men har inga publicerade kompetenskrav ännu.",
+    "employer.person.competence.criticality": "Krav",
+    "employer.person.competence.criticality.essential": "Avgörande",
+    "employer.person.competence.criticality.important": "Viktigt",
+    "employer.person.competence.criticality.supporting": "Stödjande",
+    // Underlaget räknas som DOKUMENT, aldrig som ett omdöme.
+    "employer.person.competence.evidenceSome":
+      "Er organisation har minst en delad bedömningsrapport om den här personen. Den finns under Tester & bedömningar nedan.",
+    "employer.person.competence.evidenceNone":
+      "Er organisation har ingen delad bedömningsrapport om den här personen. En styrd bedömning är det enda underlag som ger kompetensbevis här.",
+    "employer.person.startDate": "Anställd sedan",
+    // The lineage link. It names where the employment came from and makes no
+    // claim about the person.
+    "employer.person.hiredFrom": "Anställd via en ansökan hos er.",
+    "employer.person.hiredFrom.open": "Öppna ansökan",
+    // ── Employee 360, section 3: THIS person's development ───────────
+    // Bara den här personens tilldelningar. Tidigare länkade rubriken till
+    // hela organisationens lista, vilket inte var en person-sida.
+    "employer.person.development.heading": "Utveckling",
     "employer.person.development.lede":
-      "Tilldelade program och genomförd utveckling. Genomförd utbildning är utvecklingsaktivitet och utgör inte bevis på kompetens.",
-    "employer.person.development.open": "Öppna Kompetensutveckling",
+      "Program som är tilldelade den här personen, och hur långt de har kommit. Genomförd utbildning är en utvecklingsaktivitet och är aldrig bevis på styrkt kompetens.",
+    "employer.person.development.open": "Öppna Utveckling",
     "employer.person.development.assign": "Tilldela utvecklingsprogram",
+    "employer.person.development.loadError": "Utvecklingsaktiviteten kunde inte hämtas.",
+    "employer.person.development.empty":
+      "Inga utvecklingsprogram är tilldelade den här personen ännu.",
+    // En anställning som inte är knuten till en person kan inte tillskrivas
+    // någon utveckling. En tom lista här skulle vara ett påstående om personen.
+    "employer.person.development.unlinked":
+      "Den här anställningen är ännu inte knuten till ett CQrityjob-konto, så utvecklingsaktivitet kan inte tillskrivas personen. Kopplingen skapas automatiskt när ni tilldelar ett program eller en bedömning härifrån.",
+    // ORDVALET. "Genomfört program", aldrig "styrkt kompetens".
+    "employer.person.development.state.assigned": "Tilldelat",
+    "employer.person.development.state.inProgress": "Pågår",
+    "employer.person.development.state.completed": "Genomfört program",
+    "employer.person.development.state.cancelled": "Avbrutet",
     "employer.person.credentials.heading": "Kompetenser & certifikat",
     "employer.person.credentials.lede":
       "Verifierade intyg och kompetensbevis visas här när de finns. Ett intyg är inte samma sak som ett testresultat.",
@@ -5543,7 +5651,7 @@ export const dictionaries = {
       "Utbildningsleverans är ännu inte aktiverad.",
     "training.nav.programmes": "Program",
     "training.nav.participants": "Tilldelade utbildningar",
-    "training.overview.title": "Kompetensutveckling",
+    "training.overview.title": "Utveckling",
     "training.overview.lede":
       "Utvecklingsprogram som din organisation har tilldelat, och hur långt medarbetarna har kommit.",
     "training.overview.stat.active": "Pågående",
@@ -8133,6 +8241,18 @@ export const dictionaries = {
     "iiu.ix.done": "Fastställda rapporter",
     "iiu.ix.empty":
       "Inga intervjuer ännu. Planera en för att förbereda, genomföra och dokumentera en kompetensbaserad intervju.",
+    // The stage a work-list row arrived with, and the way out of it.
+    "iiu.ix.stage.inPreparation": "Under förberedelse",
+    "iiu.ix.filtered": "Visar bara:",
+    "iiu.ix.clearFilter": "Visa alla intervjuer",
+    "iiu.ix.emptyForFilter":
+      "Inga intervjuer i det här steget just nu. Totalsiffrorna ovanför gäller hela organisationen.",
+    // The default path, said before the exception is offered. An intervju
+    // startad från en kandidat bär ansökan med sig; en fristående gör det inte
+    // och kan därför inte synas i någon kandidats process.
+    "iiu.ix.startFromCandidate":
+      "En intervju startas normalt från kandidaten, så att ansökan, jobbet och underlaget följer med.",
+    "iiu.ix.startFromCandidate.cta": "Gå till ansökningar",
     "iiu.ix.caption": "Intervjuer med status och väntande granskning",
     "iiu.ix.col.interview": "Kandidat",
     "iiu.ix.col.pack": "Roll",
@@ -8172,11 +8292,15 @@ export const dictionaries = {
     // status, and none of them says anything about the candidate.
     "continuity.heading": "Processen för den här ansökan",
     "continuity.lede":
-      "Fyra separata processer, var och en med sin egen status. Bedömning och intervju är valfria och styrs av er process — de ändrar aldrig ansökans steg automatiskt.",
+      "Fem separata rader, var och en med sin egen källa. Bedömning och intervju är valfria och styrs av er process — de ändrar aldrig ansökans steg automatiskt, och de avgör aldrig beslutet. Beslutsraden läses enbart av ansökans egen status och fattas av en människa.",
     "continuity.track.application": "Ansökan",
     "continuity.track.assessment": "Bedömning",
     "continuity.track.interview": "Intervju",
     "continuity.track.report": "Rapport",
+    // The fifth row. It names WHERE THE BESLUTET HAR KOMMIT, never what the
+    // decision should be: every value below is a reading of
+    // job_applications.status, which a person wrote.
+    "continuity.track.decision": "Beslut",
     // How many records the row is one of. A row names ONE record and an
     // application can hold several; without this a reader has no way to know
     // the others exist.
@@ -8190,6 +8314,21 @@ export const dictionaries = {
     "continuity.assessment.unavailable": "Kunde inte hämtas",
     "continuity.assessment.refused": "Du saknar behörighet att se detta",
     "continuity.assessment.none": "Ingen bedömning skickad",
+
+    // Decision presentation states.
+    //
+    // "Inget beslut ännu" is about the PROCESSEN and not about the person:
+    // ansökan har inte nått ett steg där er egen övergångstabell erbjuder ett
+    // slutgiltigt beslut. It must never be read as "inte tillräckligt bra än",
+    // and the guard asserts that no word here recommends anything.
+    "continuity.decision.loading": "Hämtar …",
+    "continuity.decision.unavailable": "Kunde inte hämtas",
+    "continuity.decision.refused": "Du saknar behörighet att se detta",
+    "continuity.decision.notYet": "Inget beslut ännu",
+    "continuity.decision.awaitingHumanDecision": "Väntar på beslut av en människa",
+    "continuity.decision.hired": "Beslut registrerat: anställd",
+    "continuity.decision.rejected": "Beslut registrerat: gick vidare utan anställning",
+    "continuity.decision.withdrawn": "Kandidaten drog tillbaka sin ansökan",
 
     // Interview presentation states.
     "continuity.interview.loading": "Hämtar …",
@@ -8260,6 +8399,15 @@ export const dictionaries = {
       "Varken bedömning eller intervju har startats. Ingen av dem krävs — ansökan kan avgöras utan båda.",
     "continuity.next.nothingOutstanding":
       "Inget väntar i processen. Beslutet om ansökan tas längre ned på sidan.",
+    // The decision step. It says that a decision is due and where the controls
+    // are -- never which way to decide, and never a reason drawn from a
+    // bedömning or an intervju.
+    "continuity.next.recordDecision":
+      "Underlaget är inne. Nu behöver en människa fatta beslutet om den här ansökan.",
+    "continuity.next.recordDecision.cta": "Gå till beslutet",
+    "continuity.next.openHiredEmployee":
+      "Beslutet är registrerat som anställning. Personen finns nu under Medarbetare.",
+    "continuity.next.openHiredEmployee.cta": "Öppna medarbetarprofilen",
 
     // Process type. Said on every recruitment-linked and standalone surface,
     // because a reader must never have to guess which one they are looking at.
@@ -9885,7 +10033,7 @@ export const dictionaries = {
 
     "employer.nav.workforce": "Employees",
     "employer.nav.competencies": "Competencies & certificates",
-    "employer.nav.training": "Competence development",
+    "employer.nav.training": "Development",
     "employer.nav.sites": "Sites & risk",
     "employer.nav.reports": "Reports",
     "employer.nav.library": "Library",
@@ -9916,7 +10064,7 @@ export const dictionaries = {
     "employer.competencies.purpose":
       "A shared competency framework describing what each role requires, and a register of employee certificates and their validity periods.",
 
-    "employer.training.heading": "Skills development",
+    "employer.training.heading": "Development",
     "employer.training.purpose":
       "Recommend and track targeted training based on identified competence gaps in the existing workforce.",
 
@@ -9953,6 +10101,10 @@ export const dictionaries = {
     "employer.workforce.action.deactivate": "Deactivate",
     "employer.workforce.action.reactivate": "Reactivate",
     "employer.workforce.error.save": "Could not save this employee.",
+    "employer.workforce.error.notActive":
+      "The organisation is not approved yet, so employees cannot be added. Job drafts work as usual in the meantime.",
+    "employer.workforce.notActive":
+      "Employees can be added once the organisation has been approved. You can prepare job drafts now — an employment record is about a named person, so it waits for the approval.",
     "employer.workforce.error.load": "Could not load the employee list.",
     "employer.workforce.empty.heading": "No employees yet",
     "employer.workforce.empty.body":
@@ -10000,7 +10152,7 @@ export const dictionaries = {
     "employer.overview.card.tests.action.assign": "Assign assessment",
     "employer.overview.card.tests.action.activity": "Assignments in progress",
 
-    "employer.overview.card.development.title": "Competence development",
+    "employer.overview.card.development.title": "Development",
     "employer.overview.card.development.body":
       "Plan and follow competence development for your employees.",
 
@@ -10024,6 +10176,37 @@ export const dictionaries = {
     "employer.jobHub.facts.heading": "About this ad",
     "employer.jobHub.fact.location": "Location",
     "employer.jobHub.fact.published": "Published",
+    "employer.applications.filter.assessmentOpen":
+      "Showing only applications with an assessment under way or awaiting outcome.",
+    "employer.applications.filter.assessmentUnavailable":
+      "Assessment status could not be loaded, so this list may be incomplete.",
+    "employer.applications.filter.clearAssessment": "Clear the assessment filter",
+    "employer.jobHub.pipeline.heading": "This advertisement's recruitment pipeline",
+    "employer.jobHub.pipeline.lede":
+      "Where the applications for this vacancy stand right now. Each number opens exactly the applications it counts. A dash means the figure could not be loaded — never that it is zero.",
+    "employer.jobHub.pipeline.total": "Applications in total",
+    "employer.jobHub.pipeline.awaitingReview": "Awaiting a first review",
+    "employer.jobHub.pipeline.assessmentOpen": "Assessment under way or awaiting outcome",
+    "employer.jobHub.pipeline.interview": "At interview",
+    "employer.jobHub.pipeline.hired": "Hired",
+    "employer.jobHub.next.heading": "Next step for this advertisement",
+    "employer.jobHub.next.open": "Open them",
+    "employer.jobHub.next.unavailable":
+      "The applications could not be loaded, so no next step is proposed. Try again.",
+    "employer.jobHub.next.reviewNewApplications.one": "new application to review.",
+    "employer.jobHub.next.reviewNewApplications.other": "new applications to review.",
+    "employer.jobHub.next.prepareInterviews.one": "candidate at the interview stage.",
+    "employer.jobHub.next.prepareInterviews.other": "candidates at the interview stage.",
+    "employer.jobHub.next.awaitAssessments.one": "candidate with an assessment under way.",
+    "employer.jobHub.next.awaitAssessments.other": "candidates with an assessment under way.",
+    "employer.jobHub.next.noApplicationsYet":
+      "The advertisement is live and nobody has applied yet.",
+    "employer.jobHub.next.notPublished":
+      "The advertisement is not published, so it cannot receive applications yet.",
+    "employer.jobHub.next.nothingOutstanding":
+      "Nothing is waiting on you in this advertisement's pipeline right now.",
+    "employer.jobHub.candidates.loadFailed":
+      "The applications for this advertisement could not be loaded. That does not mean nobody has applied.",
     "employer.jobHub.candidates.heading": "Candidates",
     "employer.jobHub.candidates.openList": "Show in the applications list",
     "employer.jobHub.candidates.emptyPublished":
@@ -10098,6 +10281,8 @@ export const dictionaries = {
     // Interview Intelligence, in the same shape as every other action.
     "employer.actions.interviewPlansToApprove.one": "interview plan needs approval",
     "employer.actions.interviewPlansToApprove.other": "interview plans need approval",
+    "employer.actions.firstJob": "Create your first advertisement to get started.",
+    "employer.actions.firstJob.cta": "Create advertisement",
     "employer.actions.interviewsReady.one": "interview is ready to run",
     "employer.actions.interviewsReady.other": "interviews are ready to run",
     "employer.actions.interviewEvidenceToReview.one": "interview needs evidence review",
@@ -10402,11 +10587,50 @@ export const dictionaries = {
     "employer.person.assessments.released": "Shared",
     "employer.person.assessments.reviewsOpen": "Reviews outstanding:",
     "employer.person.assessments.openReport": "View report",
-    "employer.person.development.heading": "Competence development",
+    "academy.assign.employee.forThisPerson":
+      "Assigned to the employee you came from. No address needs typing — it is read from the employment record.",
+    "academy.assign.employee.noEmail":
+      "This employment record has no email address, so the programme cannot be assigned. Development is attached to a person, not to a record.",
+    "academy.assign.employee.notAuthorised":
+      "Assigning a development programme requires owner or administrator in the organisation.",
+    "academy.assign.employee.notFound": "That employee does not belong to this organisation.",
+    "academy.assign.employee.backToPerson": "Back to the employee",
+    "employer.person.competence.heading": "Competence in the role",
+    "employer.person.competence.lede":
+      "What the profession requires according to the shared occupational catalogue, and what evidence your organisation actually holds about this person. The list describes the role — not the person.",
+    "employer.person.competence.profession": "Profession:",
+    "employer.person.competence.loadError": "The competence requirements could not be loaded.",
+    "employer.person.competence.noProfession":
+      "No profession is linked to this employment, so there are no competence requirements to show. The profession is set when somebody is hired through an advertisement.",
+    "employer.person.competence.professionNotPublished":
+      "The profession linked to this employment is not published in the occupational catalogue yet, so its competence requirements cannot be shown.",
+    "employer.person.competence.noRequirements":
+      "The profession is published but has no published competence requirements yet.",
+    "employer.person.competence.criticality": "Requirement",
+    "employer.person.competence.criticality.essential": "Essential",
+    "employer.person.competence.criticality.important": "Important",
+    "employer.person.competence.criticality.supporting": "Supporting",
+    "employer.person.competence.evidenceSome":
+      "Your organisation holds at least one shared assessment report about this person. It is under Tests & assessments below.",
+    "employer.person.competence.evidenceNone":
+      "Your organisation holds no shared assessment report about this person. A governed assessment is the only evidence of competence here.",
+    "employer.person.startDate": "Employed since",
+    "employer.person.hiredFrom": "Hired through an application with you.",
+    "employer.person.hiredFrom.open": "Open the application",
+    "employer.person.development.heading": "Development",
     "employer.person.development.lede":
-      "Assigned programmes and completed development. Completed training is development activity and is not proof of competence.",
-    "employer.person.development.open": "Open Competence development",
+      "Programmes assigned to this person, and how far they have got. A completed programme is a development activity and is never evidence of verified competence.",
+    "employer.person.development.open": "Open Development",
     "employer.person.development.assign": "Assign a development programme",
+    "employer.person.development.loadError": "The development activity could not be loaded.",
+    "employer.person.development.empty":
+      "No development programmes are assigned to this person yet.",
+    "employer.person.development.unlinked":
+      "This employment is not linked to a CQrityjob account yet, so development activity cannot be attributed to the person. The link is made automatically when you assign a programme or an assessment from here.",
+    "employer.person.development.state.assigned": "Assigned",
+    "employer.person.development.state.inProgress": "In progress",
+    "employer.person.development.state.completed": "Programme completed",
+    "employer.person.development.state.cancelled": "Cancelled",
     "employer.person.credentials.heading": "Competencies & certificates",
     "employer.person.credentials.lede":
       "Verified credentials appear here once they exist. A credential is not the same thing as an assessment result.",
@@ -13452,7 +13676,7 @@ export const dictionaries = {
     "academy.library.reason.training_delivery_pending": "Training delivery is not enabled yet.",
     "training.nav.programmes": "Programmes",
     "training.nav.participants": "Assigned training",
-    "training.overview.title": "Competence development",
+    "training.overview.title": "Development",
     "training.overview.lede":
       "Development programmes your organisation has assigned, and how far the employees have got.",
     "training.overview.stat.active": "In progress",
@@ -16001,6 +16225,14 @@ export const dictionaries = {
     "iiu.ix.done": "Finalised reports",
     "iiu.ix.empty":
       "No interviews yet. Plan one to prepare, conduct and document a competency-based interview.",
+    "iiu.ix.stage.inPreparation": "In preparation",
+    "iiu.ix.filtered": "Showing only:",
+    "iiu.ix.clearFilter": "Show all interviews",
+    "iiu.ix.emptyForFilter":
+      "No interviews at this stage right now. The totals above are for the whole organisation.",
+    "iiu.ix.startFromCandidate":
+      "An interview is normally started from the candidate, so the application, the job and the material travel with it.",
+    "iiu.ix.startFromCandidate.cta": "Go to applications",
     "iiu.ix.caption": "Interviews with status and pending review",
     "iiu.ix.col.interview": "Candidate",
     "iiu.ix.col.pack": "Role",
@@ -16040,11 +16272,12 @@ export const dictionaries = {
     // status, and none of them says anything about the candidate.
     "continuity.heading": "This application's process",
     "continuity.lede":
-      "Four separate processes, each with its own status. Assessment and interview are optional and follow your own process — neither ever changes the application's stage automatically.",
+      "Five separate rows, each from its own source. Assessment and interview are optional and follow your own process — neither ever changes the application's stage automatically, and neither decides the outcome. The decision row is read from the application's own status, and the decision is a person's.",
     "continuity.track.application": "Application",
     "continuity.track.assessment": "Assessment",
     "continuity.track.interview": "Interview",
     "continuity.track.report": "Report",
+    "continuity.track.decision": "Decision",
     "continuity.track.assessmentCount.one": "assessment in total",
     "continuity.track.assessmentCount.other": "assessments in total",
     "continuity.track.interviewCount.one": "interview in total",
@@ -16055,6 +16288,17 @@ export const dictionaries = {
     "continuity.assessment.unavailable": "Could not be loaded",
     "continuity.assessment.refused": "You are not authorised to see this",
     "continuity.assessment.none": "No assessment sent",
+
+    // Decision presentation states. "No decision yet" is about the PROCESS and
+    // never about the person.
+    "continuity.decision.loading": "Loading …",
+    "continuity.decision.unavailable": "Could not be loaded",
+    "continuity.decision.refused": "You are not authorised to see this",
+    "continuity.decision.notYet": "No decision yet",
+    "continuity.decision.awaitingHumanDecision": "Pending human decision",
+    "continuity.decision.hired": "Decision recorded: hired",
+    "continuity.decision.rejected": "Decision recorded: taken no further",
+    "continuity.decision.withdrawn": "The candidate withdrew their application",
 
     // Interview presentation states.
     "continuity.interview.loading": "Loading …",
@@ -16124,6 +16368,12 @@ export const dictionaries = {
       "Neither an assessment nor an interview has been started. Neither is required — the application can be decided without both.",
     "continuity.next.nothingOutstanding":
       "Nothing is pending in the process. The decision on the application is taken further down this page.",
+    "continuity.next.recordDecision":
+      "The evidence is in. A person now has to make the decision on this application.",
+    "continuity.next.recordDecision.cta": "Go to the decision",
+    "continuity.next.openHiredEmployee":
+      "The decision was recorded as a hire. This person is now under Workforce.",
+    "continuity.next.openHiredEmployee.cta": "Open the employee profile",
 
     // Process type. Said on every recruitment-linked and standalone surface,
     // because a reader must never have to guess which one they are looking at.

@@ -64,6 +64,7 @@ import {
 } from "@/lib/job-intelligence/application-status";
 import { listEmployerJobs } from "@/lib/job-intelligence/employer-jobs.functions";
 import { ConfirmAction } from "@/components/employer/ConfirmAction";
+import { useOpenAssessmentApplications } from "@/lib/employer-continuity/open-assessments";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,9 +98,18 @@ const STATUS_FILTERS = ["submitted", "reviewing", "interview", "hired", "rejecte
 const SORTS = ["newest", "oldest", "waiting"] as const;
 type SortKey = (typeof SORTS)[number];
 
+// The assessment filter is a PROCESS filter and has exactly one value: an
+// assessment exists for this application and has not yet produced a released
+// result. There is deliberately no value that filters by what an assessment
+// FOUND -- no "passed", no band, no score -- because that would make the
+// applications list a ranking, and the employer's own transition table is the
+// only thing that moves a candidate along.
+const ASSESSMENT_FILTERS = ["open"] as const;
+
 const searchSchema = z.object({
   job: z.string().uuid().optional().catch(undefined),
   status: z.enum(STATUS_FILTERS).optional().catch(undefined),
+  assessment: z.enum(ASSESSMENT_FILTERS).optional().catch(undefined),
   q: z.string().trim().max(100).optional().catch(undefined),
   sort: z.enum(SORTS).optional().catch(undefined),
 });
@@ -183,7 +193,13 @@ function ApplicationsList({
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
   const listJobsFn = useServerFn(listEmployerJobs);
   const [actionError, setActionError] = useState<string | null>(null);
-  const { job: jobFilter, status: statusFilter, q: searchTerm, sort: sortKey } = Route.useSearch();
+  const {
+    job: jobFilter,
+    status: statusFilter,
+    assessment: assessmentFilter,
+    q: searchTerm,
+    sort: sortKey,
+  } = Route.useSearch();
   const navigate = Route.useNavigate();
 
   // A terminal transition is confirmed; a progression is not. `hired` and
@@ -211,6 +227,12 @@ function ApplicationsList({
     queryFn: () => listJobsFn({ data: { employerId } }),
     enabled: jobFilter !== undefined,
   });
+
+  // Two employer-wide reads, and only when the filter is actually on: a list
+  // nobody has filtered by assessment never pays for them. They are the same
+  // pair the job hub's pipeline uses, on the same cache keys, so the count
+  // that linked here and the rows that arrive cannot be filtered differently.
+  const openAssessments = useOpenAssessmentApplications(employerId, assessmentFilter !== undefined);
 
   const setStatus = useMutation({
     mutationFn: (vars: { applicationId: string; newStatus: EmployerSettableStatus }) =>
@@ -250,6 +272,12 @@ function ApplicationsList({
     .filter((r) => {
       const jobMatches = jobFilter === undefined || r.jobId === jobFilter;
       const statusMatches = statusFilter === undefined || r.status === statusFilter;
+      // Withheld rather than guessed while the pair of reads is in flight or
+      // has failed: a list that quietly showed everything would tell the
+      // recruiter the filter found no one.
+      const assessmentMatches =
+        assessmentFilter === undefined ||
+        (openAssessments.read === "ready" && openAssessments.ids.has(r.id));
       const textMatches =
         needle === "" ||
         [r.applicantDisplayName, r.jobTitleSv, r.jobTitleEn]
@@ -257,7 +285,7 @@ function ApplicationsList({
           .join(" ")
           .toLocaleLowerCase()
           .includes(needle);
-      return jobMatches && statusMatches && textMatches;
+      return jobMatches && statusMatches && assessmentMatches && textMatches;
     })
     .sort((a, b) => {
       if (sortKey === "oldest") return a.createdAt.localeCompare(b.createdAt);
@@ -272,7 +300,10 @@ function ApplicationsList({
       return b.createdAt.localeCompare(a.createdAt);
     });
   const filtered =
-    jobFilter !== undefined || statusFilter !== undefined || (searchTerm ?? "") !== "";
+    jobFilter !== undefined ||
+    statusFilter !== undefined ||
+    assessmentFilter !== undefined ||
+    (searchTerm ?? "") !== "";
   const filteredJobTitle = jobFilter
     ? (() => {
         const j = (jobsQuery.data ?? []).find((row) => row.id === jobFilter);
@@ -340,6 +371,39 @@ function ApplicationsList({
             className="text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
           >
             {t("employer.applications.filter.clearJob")}
+          </button>
+        </div>
+      )}
+
+      {/* The assessment filter, named and removable like the job one. It also
+          says when its own two reads have not answered yet or have failed,
+          because a filter that silently matches nothing reads as "nobody is
+          being assessed" -- which is a claim, and not one a failed read
+          supports. */}
+      {assessmentFilter !== undefined && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">
+            {t("employer.applications.filter.assessmentOpen")}
+          </span>
+          {openAssessments.read === "loading" && (
+            <span className="text-xs text-muted-foreground">{t("employer.loading")}</span>
+          )}
+          {openAssessments.read === "failed" && (
+            <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+              {t("employer.applications.filter.assessmentUnavailable")}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() =>
+              void navigate({
+                search: (prev) => ({ ...prev, assessment: undefined }),
+                replace: true,
+              })
+            }
+            className="text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"
+          >
+            {t("employer.applications.filter.clearAssessment")}
           </button>
         </div>
       )}
