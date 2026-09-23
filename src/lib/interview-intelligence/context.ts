@@ -332,6 +332,39 @@ export interface ContextApplicationInput {
   readonly coverNote: string | null;
   readonly jobTitleSv: string | null;
   readonly jobTitleEn: string | null;
+  /** The candidate's answers to the vacancy's application questions, with
+   *  each question as it was asked. `null` when the read broke: that is said
+   *  on the surface, never shown as "no answers". Absent for callers that
+   *  predate the questions. */
+  readonly answers?: readonly ContextAnswerInput[] | null;
+}
+
+/** One answer to an application question. Candidate-declared, always. */
+export interface ContextAnswerInput {
+  readonly questionId: string;
+  readonly promptSv: string | null;
+  readonly promptEn: string | null;
+  readonly kind: "text" | "yes_no";
+  readonly text: string | null;
+  readonly bool: boolean | null;
+}
+
+/** An answer as one line: the question as asked, then what was answered. */
+function answerFact(a: ContextAnswerInput): ContextFact | null {
+  const promptSv = clean(a.promptSv) || clean(a.promptEn);
+  const promptEn = clean(a.promptEn) || promptSv;
+  if (promptSv === "") return null;
+  const valueSv =
+    a.kind === "yes_no" ? (a.bool === null ? "" : a.bool ? "Ja" : "Nej") : clean(a.text);
+  const valueEn =
+    a.kind === "yes_no" ? (a.bool === null ? "" : a.bool ? "Yes" : "No") : clean(a.text);
+  if (valueSv === "") return null;
+  return {
+    key: `answer-${a.questionId}`,
+    sv: `${promptSv} — ${valueSv}`,
+    en: `${promptEn} — ${valueEn}`,
+    from: "application",
+  };
 }
 
 /** The advert's own words. Read from `jobs`, which already holds structured
@@ -504,6 +537,20 @@ function candidateFacts(
 
   const note = clean(application?.coverNote);
   if (note !== "") out.push({ key: "cover-note", sv: note, en: note, from: "application" });
+
+  if (application?.answers === null) {
+    out.push({
+      key: "answers-unreadable",
+      sv: "Svaren på ansökningsfrågorna kunde inte läsas just nu.",
+      en: "The answers to the application questions could not be read right now.",
+      from: "application",
+    });
+  } else {
+    for (const a of application?.answers ?? []) {
+      const fact = answerFact(a);
+      if (fact) out.push(fact);
+    }
+  }
 
   const doc = cv?.document ?? null;
   if (!doc) return out;

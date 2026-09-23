@@ -57,6 +57,7 @@ import {
   normaliseRequirements,
   resolveSourceRead,
   standaloneContext,
+  type ContextAnswerInput,
   type ContextAssessmentInput,
   type ContextCvInput,
   type ContextJobInput,
@@ -207,17 +208,18 @@ export const getInterviewCaseContext = createServerFn({ method: "GET" })
         : { kind: "any" };
     if (start.error) console.error("[interview-context] case start unavailable", start.error);
 
-    const [job, cv, assessment] = await Promise.all([
+    const [job, cv, assessment, answers] = await Promise.all([
       readJob(db, jobId, employerId),
       readCv(applicationId),
       readAssessment(db, applicationId, source),
+      readAnswers(db, applicationId),
     ]);
 
     return {
       kind: "context",
       context: buildInterviewContext({
         candidateName,
-        application,
+        application: { ...application, answers },
         job: job.value,
         cv: cv.value,
         assessment: assessment.brief,
@@ -390,6 +392,39 @@ async function readJob(
  *  the application page shows can never disagree — and the omissions that read
  *  makes (the candidate's private title for the document above all) hold here
  *  without being restated. */
+/**
+ * The candidate's answers to the vacancy's application questions, as the
+ * interviewer's team already sees them on the application. Read under RLS
+ * with the caller's own client (job_application_answers_member_read), keyed on
+ * the application id taken from the CASE ROW, never from the request. Shown to
+ * the interviewer only: nothing here becomes a case source, so no answer
+ * reaches a model prompt. `null` means the read broke, and the surface says so.
+ */
+async function readAnswers(db: Db, applicationId: string): Promise<ContextAnswerInput[] | null> {
+  const { data, error } = await db
+    .from("job_application_answers")
+    .select(
+      "question_id, prompt_sv_snapshot, prompt_en_snapshot, answer_kind, answer_text, answer_bool, recruitment_questions(position)",
+    )
+    .eq("application_id", applicationId);
+  if (error) {
+    console.error("[interview-context] application answers unavailable", error);
+    return null;
+  }
+  return ((data ?? []) as Row[])
+    .map((r) => ({
+      questionId: String(r.question_id),
+      promptSv: str(r.prompt_sv_snapshot),
+      promptEn: str(r.prompt_en_snapshot),
+      kind: (r.answer_kind === "yes_no" ? "yes_no" : "text") as "yes_no" | "text",
+      text: str(r.answer_text),
+      bool: typeof r.answer_bool === "boolean" ? r.answer_bool : null,
+      position: Number((r.recruitment_questions as Row | null)?.position ?? 0),
+    }))
+    .sort((a, b) => a.position - b.position)
+    .map(({ position: _position, ...a }) => a);
+}
+
 async function readCv(applicationId: string): Promise<Sourced<ContextCvInput>> {
   try {
     const submitted = await getApplicationSubmittedCv({ data: { applicationId } });

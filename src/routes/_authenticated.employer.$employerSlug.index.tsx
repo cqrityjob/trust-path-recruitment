@@ -1034,47 +1034,14 @@ function EmployerOverview({
         </section>
       </div>
 
-      {/* E. The other areas of the product, compact and below the work. */}
+      {/* E. The other areas of the product, below the work. Recruitment has
+          no card here: the header action, the three counts and the table above
+          ARE the recruitment area, and a fourth copy of them read as a second,
+          competing entry point. */}
       <h2 className="mt-10 text-lg font-semibold text-foreground">
         {t("rec.overview.otherAreas")}
       </h2>
-      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <PrimaryCard
-          icon={<Briefcase className="h-4 w-4" />}
-          title={t("employer.overview.card.jobs.title")}
-          body={t("employer.overview.card.jobs.body")}
-          linkProps={{ to: "/employer/$employerSlug/jobs", params: { employerSlug } }}
-          stats={[
-            {
-              label: t("employer.overview.card.jobs.stat.active"),
-              value: data.activeJobs,
-              loading: stats.isLoading,
-            },
-            {
-              label: t("employer.overview.card.jobs.stat.drafts"),
-              value: data.draftJobs,
-              loading: stats.isLoading,
-              linkProps: { to: "/employer/$employerSlug/jobs", params: { employerSlug } },
-            },
-            {
-              label: t("employer.overview.card.jobs.stat.applications"),
-              value: data.applications,
-              loading: stats.isLoading,
-              linkProps: { to: "/employer/$employerSlug/applications", params: { employerSlug } },
-            },
-          ]}
-          actions={[
-            {
-              label: t("employer.overview.card.jobs.action.create"),
-              linkProps: { to: "/employer/$employerSlug/jobs/new", params: { employerSlug } },
-            },
-            {
-              label: t("employer.overview.card.jobs.action.applications"),
-              linkProps: { to: "/employer/$employerSlug/applications", params: { employerSlug } },
-            },
-          ]}
-        />
-
+      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
         <PrimaryCard
           icon={<Users className="h-4 w-4" />}
           title={t("employer.overview.card.people.title")}

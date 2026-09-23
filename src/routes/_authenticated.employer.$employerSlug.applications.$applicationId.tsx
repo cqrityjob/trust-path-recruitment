@@ -591,7 +591,18 @@ function Candidate360({
   const jobTitle = pickTitle(c.jobTitleSv, c.jobTitleEn, lang) ?? t("employer.candidate.noJob");
   const name = c.displayName ?? t("employer.applications.anonymousCandidate");
 
-  const interviewNotes = c.timeline.filter((r) => r.rowKind === "interview_note");
+  // The person overview is per PERSON: its interview notes cover every
+  // assessment this organisation ran for them. Only the notes on THIS
+  // application's own attempts belong on this page -- a note from the same
+  // candidate's other application is not evidence about this one.
+  const ownAttempts = new Set(
+    c.timeline
+      .filter((r) => r.rowKind === "assessment" && r.applicationId === c.applicationId)
+      .map((r) => r.attemptId),
+  );
+  const interviewNotes = c.timeline.filter(
+    (r) => r.rowKind === "interview_note" && r.attemptId !== null && ownAttempts.has(r.attemptId),
+  );
   const otherApplications = c.timeline.filter(
     (r) => r.rowKind === "application" && r.rowId !== c.applicationId,
   );

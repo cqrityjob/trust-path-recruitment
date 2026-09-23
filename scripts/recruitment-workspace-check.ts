@@ -27,6 +27,7 @@ import { dictionaries } from "../src/i18n/dictionaries";
 import { recruitmentSv, recruitmentEn } from "../src/i18n/recruitment-copy";
 import * as D from "../src/lib/recruitment/definitions";
 import { messageTemplate, MESSAGE_KINDS } from "../src/lib/recruitment/message-templates";
+import { buildInterviewContext } from "../src/lib/interview-intelligence/context";
 
 const fails: string[] = [];
 let passed = 0;
@@ -54,6 +55,8 @@ const F = {
   panels: "src/components/recruitment/ApplicationPanels.tsx",
   composer: "src/components/recruitment/MessageComposer.tsx",
   apply: "src/components/jobs/ApplyInternalDialog.tsx",
+  ivContext: "src/lib/interview-intelligence/context.functions.ts",
+  assessmentPanel: "src/components/academy/ApplicationAssessmentPanel.tsx",
 };
 
 console.log("recruitment workspace\n");
@@ -374,6 +377,118 @@ console.log("recruitment workspace\n");
       fails.push(`E · "${k}" expresses an opinion about candidates`);
     }
   }
+}
+
+/* ================================================================== */
+/* G · The hand-offs from the application                              */
+/* ================================================================== */
+{
+  // The interview sees the candidate's answers -- as facts beside the cover
+  // note, read for the case's OWN application, and never as a model input.
+  const withAnswers = (answers: Parameters<typeof buildInterviewContext>[0]["application"]) =>
+    buildInterviewContext({
+      candidateName: "Kim Kandidat",
+      application: answers,
+      job: null,
+      cv: null,
+      assessment: null,
+      assessmentPending: false,
+      reads: { application: "ok", job: "ok", cv: "ok", assessment: "ok" },
+    }).known;
+  const app = {
+    status: "reviewing",
+    appliedAt: "2026-09-23T10:00:00Z",
+    coverNote: null,
+    jobTitleSv: "Väktare",
+    jobTitleEn: "Security officer",
+  };
+  const known = withAnswers({
+    ...app,
+    answers: [
+      {
+        questionId: "q1",
+        promptSv: "Har du väktarutbildning?",
+        promptEn: "Security officer training?",
+        kind: "yes_no",
+        text: null,
+        bool: false,
+      },
+      {
+        questionId: "q2",
+        promptSv: "Berätta om din erfarenhet.",
+        promptEn: null,
+        kind: "text",
+        text: "Fem år i butik.",
+        bool: null,
+      },
+    ],
+  });
+  ok(
+    known.some(
+      (f) =>
+        f.sv === "Har du väktarutbildning? — Nej" && f.en === "Security officer training? — No",
+    ),
+    "G · a yes/no answer reaches the interviewer as the question and the answer, in both languages",
+  );
+  ok(
+    known.some(
+      (f) => f.sv === "Berätta om din erfarenhet. — Fem år i butik." && f.from === "application",
+    ),
+    "G · a text answer reaches the interviewer, attributed to the application",
+  );
+  ok(
+    known.every((f) => f.verified === undefined),
+    "G · an answer is never presented as verified",
+  );
+  ok(
+    withAnswers({ ...app, answers: null }).some((f) => f.key === "answers-unreadable"),
+    "G · a failed answers read is said on the surface, never shown as 'no answers'",
+  );
+
+  const ctx = code(F.ivContext);
+  ok(
+    /readAnswers\(db, applicationId\)/.test(ctx) &&
+      /const applicationId = str\(c\.application_id\)/.test(ctx) &&
+      /\.from\("job_application_answers"\)[\s\S]{0,300}\.eq\("application_id", applicationId\)/.test(
+        ctx,
+      ),
+    "G · answers are read for the case row's own application, never one named by the request",
+  );
+  ok(
+    !/case_source|scp_iv_add_case_source|addCaseSource/.test(
+      ctx.slice(ctx.indexOf("async function readAnswers"), ctx.indexOf("async function readCv")),
+    ),
+    "G · answers are shown to the interviewer and never become a case source a model reads",
+  );
+
+  // An assessment already sent on this application is not offered again.
+  const panel = code(F.assessmentPanel);
+  ok(
+    /alreadySent = new Set\([\s\S]{0,160}attemptStatus !== "abandoned"[\s\S]{0,80}assessmentSlug/.test(
+      panel,
+    ) &&
+      /const sendable = options\.filter\(\(o\) => !alreadySent\.has\(o\.slug\)\)/.test(panel) &&
+      /sendable\.map\(\(o\)/.test(panel) &&
+      !/options\.map\(\(o\)/.test(panel),
+    "G · the send button is withheld for an assessment already sent on this application",
+  );
+
+  // The candidate page's interview notes are this application's own.
+  const cand = code(F.candidate);
+  ok(
+    /r\.rowKind === "assessment" && r\.applicationId === c\.applicationId/.test(cand) &&
+      /r\.rowKind === "interview_note" && r\.attemptId !== null && ownAttempts\.has\(r\.attemptId\)/.test(
+        cand,
+      ),
+    "G · interview notes from the same candidate's other application stay off this one",
+  );
+
+  // The overview has one recruitment entry point, not a second card for it.
+  const ov = code(F.overview);
+  ok(
+    !ov.includes('title={t("employer.overview.card.jobs.title")}'),
+    "G · the overview no longer repeats recruitment as a card below the recruitment table",
+  );
 }
 
 console.log(`${passed} assertions`);

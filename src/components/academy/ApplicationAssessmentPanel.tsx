@@ -161,6 +161,13 @@ export function ApplicationAssessmentPanel({
 
   const rows = assessments.data ?? [];
   const options = library.data ?? [];
+  // An assessment already sent on THIS application is not offered again: the
+  // assign path does not refuse a second assignment, so a second click would
+  // send the candidate the same test twice. Only an abandoned attempt frees it.
+  const alreadySent = new Set(
+    rows.filter((a) => a.attemptStatus !== "abandoned").map((a) => a.assessmentSlug),
+  );
+  const sendable = options.filter((o) => !alreadySent.has(o.slug));
 
   // ── A READ THAT FAILED IS NOT AN ABSENCE ────────────────────────────
   //
@@ -254,9 +261,9 @@ export function ApplicationAssessmentPanel({
         <p className="mt-2 text-[13px] text-muted-foreground">{t("journey.noAssessmentYet")}</p>
       )}
 
-      {canAssign && options.length > 0 && (
+      {canAssign && sendable.length > 0 && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {options.map((o) => (
+          {sendable.map((o) => (
             <button
               key={o.itemId}
               type="button"

@@ -26,6 +26,9 @@ const CANDIDATE =
 const PANELS = "src/components/recruitment/ApplicationPanels.tsx";
 const COMPOSER = "src/components/recruitment/MessageComposer.tsx";
 const APPLY = "src/components/jobs/ApplyInternalDialog.tsx";
+const IV_CONTEXT = "src/lib/interview-intelligence/context.functions.ts";
+const IV_DERIVE = "src/lib/interview-intelligence/context.ts";
+const ASSESSMENT_PANEL = "src/components/academy/ApplicationAssessmentPanel.tsx";
 const G = "recruitment-workspace:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -163,6 +166,43 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "applicationId: undefined,",
     guard: G,
     expect: "a submission retry reuses its attempt id",
+  },
+  {
+    id: "RW-ASSESSMENT-SENT-TWICE",
+    defect:
+      "the send button stays after the test was sent, so a second click sends the candidate the same test again",
+    file: ASSESSMENT_PANEL,
+    find: "const sendable = options.filter((o) => !alreadySent.has(o.slug));",
+    replace: "const sendable = options;",
+    guard: G,
+    expect: "the send button is withheld for an assessment already sent on this application",
+  },
+  {
+    id: "RW-NOTES-FROM-OTHER-APPLICATION",
+    defect: "interview notes from the same candidate's other application appear on this one",
+    file: CANDIDATE,
+    find: '(r) => r.rowKind === "interview_note" && r.attemptId !== null && ownAttempts.has(r.attemptId),',
+    replace: '(r) => r.rowKind === "interview_note",',
+    guard: G,
+    expect: "interview notes from the same candidate's other application stay off this one",
+  },
+  {
+    id: "RW-ANSWERS-FOR-ANOTHER-ID",
+    defect: "the interview reads answers for an id that is not the case row's own application",
+    file: IV_CONTEXT,
+    find: "readAnswers(db, applicationId),",
+    replace: "readAnswers(db, data.caseId),",
+    guard: G,
+    expect: "answers are read for the case row's own application",
+  },
+  {
+    id: "RW-UNREADABLE-ANSWERS-AS-NONE",
+    defect: "a failed answers read is shown to the interviewer as a candidate who answered nothing",
+    file: IV_DERIVE,
+    find: "  if (application?.answers === null) {",
+    replace: "  if (false) {",
+    guard: G,
+    expect: "a failed answers read is said on the surface",
   },
 ];
 
