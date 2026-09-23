@@ -14,7 +14,7 @@
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
   "readAt": "2026-09-23",
-  "readBy": "Read-only Supabase management SQL on explicit owner project wrygicdfxwjnrugduxnt after PR #280 merged as 1c987a3b9ddc3357419c678550f868f6587b1dc8. Two rows appended: 20261205090000 employer_workforce_active_only and 20261206090000 scp_training_assignment_person_context. Proved faithful rather than assumed: production holds 308 rows, and md5(string_agg(version || ':' || name, ',' ORDER BY version)) over the rows up to and including 20261204090000 is 0e5f297d964bbf5a5fcc6336dbbce09e computed both by production and over the previous committed snapshot, so no earlier row changed; over all 308 rows production gives 503175a4935e9dc6796a1b22876dfc4a. Both new function bodies were compared by md5 against the merged migration sources and are byte-identical. No migration manually executed or replayed, and no hosted write of any kind.",
+  "readBy": "Read-only Supabase management SQL on explicit owner project wrygicdfxwjnrugduxnt after PR #282 merged as c96acf2. One row appended: 20261207090000 recruitment_workspace. Proved faithful rather than assumed: production holds 309 rows, and md5(string_agg(version || ':' || name, ',' ORDER BY version)) over the rows up to and including 20261206090000 is 503175a4935e9dc6796a1b22876dfc4a computed both by production and over the previous committed snapshot (308 rows), so no earlier row changed; over all 309 rows production gives e2c0761d3508037b7d3317efed2e26f7. All 21 rec_* function bodies were compared by md5 against a replay of the merged migration and are byte-identical. No migration manually executed or replayed, and no hosted write of any kind.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1247,6 +1247,10 @@
     {
       "version": "20261206090000",
       "name": "scp_training_assignment_person_context"
+    },
+    {
+      "version": "20261207090000",
+      "name": "recruitment_workspace"
     }
   ]
 }
