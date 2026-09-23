@@ -113,11 +113,33 @@ SELECT pg_temp.expect_assertion('SELECT pg_temp.assert_closed_role(''SW-SERVICE'
 RESET ROLE;
 ROLLBACK TO SAVEPOINT sw_nc_service;
 
+SAVEPOINT sw_nc_privilege;
+GRANT EXECUTE ON FUNCTION sw_private.can_read(uuid) TO PUBLIC;
+SELECT pg_temp.expect_assertion('SELECT pg_temp.assert_function_privileges()',
+  'SW-PRIV no new function is executable by PUBLIC, anon, or service', '11 inherited function privilege');
+ROLLBACK TO SAVEPOINT sw_nc_privilege;
+
+SAVEPOINT sw_nc_triage;
+DO $$
+DECLARE definition text; anchor text := 'IF NOT _changed AND _before <> ''pending'' AND NEW.human_rationale IS DISTINCT FROM OLD.human_rationale THEN';
+BEGIN
+  SELECT pg_get_functiondef('sw_private.guard_lifecycle()'::regprocedure) INTO definition;
+  IF position(anchor IN definition)=0 THEN RAISE EXCEPTION 'triage mutation anchor missing'; END IF;
+  EXECUTE replace(definition,anchor,'IF false THEN');
+END $$;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.login((SELECT owner_b FROM sw));
+SELECT pg_temp.expect_assertion('SELECT pg_temp.assert_triage_attribution()',
+  'SW-TRIAGE decided rationale changes require new decision', '12 original triage attribution defect');
+RESET ROLE;
+ROLLBACK TO SAVEPOINT sw_nc_triage;
+
 -- Prove restoration, not merely successful detection. None of the intentionally
 -- removed policies, constraints, grants or triggers survives its savepoint.
 SET LOCAL ROLE authenticated;
 SELECT pg_temp.login((SELECT owner_b FROM sw));
 SELECT pg_temp.assert_no_workspace_rows((SELECT id FROM sw_a), 'SW-RESTORED isolation');
+SELECT pg_temp.assert_triage_attribution();
 SELECT pg_temp.login((SELECT editor FROM sw));
 SELECT pg_temp.assert_workspace_immutable();
 SELECT pg_temp.assert_cross_workspace_fk();
@@ -129,4 +151,5 @@ SELECT pg_temp.assert_approved_citation();
 RESET ROLE;
 SELECT pg_temp.assert_history_immutable();
 SELECT pg_temp.assert_source_immutable();
+SELECT pg_temp.assert_function_privileges();
 ROLLBACK;

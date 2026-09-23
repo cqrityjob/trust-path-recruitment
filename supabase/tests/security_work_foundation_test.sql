@@ -160,6 +160,30 @@ SELECT pg_temp.ok((SELECT count(*) FROM sw_tables t
   JOIN pg_class c ON c.oid = to_regclass('public.' || t.name)
   WHERE c.relrowsecurity) = 16, 'SW-SURFACE all sixteen tables enable RLS');
 
+CREATE OR REPLACE FUNCTION pg_temp.assert_function_privileges() RETURNS void
+LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_temp.ok(NOT EXISTS (
+    SELECT 1 FROM pg_proc p WHERE (p.pronamespace='sw_private'::regnamespace
+      OR (p.pronamespace='public'::regnamespace AND p.proname='sw_create_personal_workspace'))
+      AND (has_function_privilege('anon',p.oid,'EXECUTE')
+        OR has_function_privilege('service_role',p.oid,'EXECUTE')
+        OR EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a WHERE a.grantee=0 AND a.privilege_type='EXECUTE'))
+    ), 'SW-PRIV no new function is executable by PUBLIC, anon, or service');
+END $$;
+SELECT pg_temp.assert_function_privileges();
+SELECT pg_temp.ok(NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace='sw_private'::regnamespace
+  AND NOT coalesce(p.proconfig @> ARRAY['search_path=""'],false)),
+  'SW-PRIV every private helper pins an empty search path');
+SELECT pg_temp.ok(NOT (SELECT prosecdef FROM pg_proc WHERE oid='public.sw_create_personal_workspace(text)'::regprocedure)
+  AND NOT has_schema_privilege('authenticated','sw_private','CREATE')
+  AND NOT has_schema_privilege('anon','sw_private','USAGE'),
+  'SW-PRIV public wrapper is invoker and private schema has no caller DDL');
+SELECT pg_temp.ok(NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace='sw_private'::regnamespace
+  AND p.proname NOT IN ('is_human','can_read','can_edit','can_approve','create_personal_workspace')
+  AND has_function_privilege('authenticated',p.oid,'EXECUTE')),
+  'SW-PRIV internal trigger helpers have no direct authenticated execution');
+
 RESET ROLE;
 SELECT pg_temp.login(NULL);
 INSERT INTO public.job_applications
@@ -237,6 +261,15 @@ INSERT INTO public.sw_intelligence_items(id, workspace_id, source_item_id, title
 SELECT signal_b, (SELECT id FROM sw_b), item_b, 'Workspace B intelligence' FROM sw_ids;
 INSERT INTO public.sw_assessments(id, workspace_id, intelligence_item_id, title)
 SELECT assessment_b, (SELECT id FROM sw_b), signal_b, 'Workspace B assessment' FROM sw_ids;
+UPDATE public.sw_intelligence_items SET status='relevant', human_rationale='Original workspace B decision'
+WHERE id=(SELECT signal_b FROM sw_ids);
+CREATE OR REPLACE FUNCTION pg_temp.assert_triage_attribution() RETURNS void
+LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_temp.must_fail(format('UPDATE public.sw_intelligence_items SET human_rationale=''Tampered decision'' WHERE id=%L',
+    (SELECT signal_b FROM sw_ids)), '23514', 'SW-TRIAGE decided rationale changes require new decision');
+END $$;
+SELECT pg_temp.assert_triage_attribution();
 RESET ROLE;
 
 -- AI provenance is inert in this phase: an operator fixture proves reads are
@@ -387,6 +420,25 @@ WHERE id = (SELECT signal_a FROM sw_ids);
 SELECT pg_temp.ok((SELECT status = 'relevant' AND decided_by = (SELECT editor FROM sw) AND decided_at IS NOT NULL
   FROM public.sw_intelligence_items WHERE id = (SELECT signal_a FROM sw_ids)),
   'SW-TRIAGE relevant decision is stamped with the actual human');
+SELECT pg_temp.login((SELECT owner_a FROM sw));
+SELECT pg_temp.must_fail(format('UPDATE public.sw_intelligence_items SET human_rationale=''Rewritten by another editor'' WHERE id=%L',
+  (SELECT signal_a FROM sw_ids)), '23514', 'SW-TRIAGE same-status rationale cannot retain another actor attribution');
+SELECT pg_temp.must_fail(format('UPDATE public.sw_intelligence_items SET human_rationale='''' WHERE id=%L',
+  (SELECT signal_a FROM sw_ids)), '23514', 'SW-TRIAGE decided rationale cannot be erased');
+UPDATE public.sw_intelligence_items SET status='dismissed', human_rationale='Synthetic alternate route removes relevance'
+WHERE id=(SELECT signal_a FROM sw_ids);
+SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.sw_audit_events WHERE entity_id=(SELECT signal_a FROM sw_ids)
+  AND old_status='relevant' AND new_status='dismissed'
+  AND details->'before'->>'rationale'='Synthetic closure affects our route'
+  AND details->'before'->>'decided_by'=(SELECT editor::text FROM sw)
+  AND details->'after'->>'rationale'='Synthetic alternate route removes relevance'
+  AND details->'after'->>'decided_by'=(SELECT owner_a::text FROM sw)),
+  'SW-TRIAGE successive decisions preserve both rationales and human actors');
+SELECT pg_temp.must_fail(format('UPDATE public.sw_intelligence_items SET human_rationale=''Dismissal rewrite'' WHERE id=%L',
+  (SELECT signal_a FROM sw_ids)), '23514', 'SW-TRIAGE dismissed rationale is also protected');
+SELECT pg_temp.login((SELECT editor FROM sw));
+UPDATE public.sw_intelligence_items SET status='relevant', human_rationale='Synthetic new planning need requires review'
+WHERE id=(SELECT signal_a FROM sw_ids);
 UPDATE public.sw_intelligence_items SET status = 'promoted', human_rationale = 'Assessment created for follow-up'
 WHERE id = (SELECT signal_a FROM sw_ids);
 SELECT pg_temp.ok((SELECT status = 'promoted' FROM public.sw_intelligence_items WHERE id = (SELECT signal_a FROM sw_ids)),

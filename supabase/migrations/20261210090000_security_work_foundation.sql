@@ -127,7 +127,7 @@ CREATE TABLE public.sw_intelligence_items (
   title text NOT NULL CHECK (char_length(btrim(title)) BETWEEN 1 AND 500),
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'relevant', 'dismissed', 'promoted')),
   urgency text NOT NULL DEFAULT 'routine' CHECK (urgency IN ('routine', 'soon', 'urgent')),
-  human_rationale text NOT NULL DEFAULT '',
+  human_rationale text NOT NULL DEFAULT '' CHECK (octet_length(human_rationale) <= 2000),
   decided_by uuid REFERENCES auth.users(id),
   decided_at timestamptz,
   created_by uuid NOT NULL DEFAULT auth.uid() REFERENCES auth.users(id),
@@ -138,6 +138,7 @@ CREATE TABLE public.sw_intelligence_items (
   UNIQUE (workspace_id, source_item_id),
   FOREIGN KEY (workspace_id, source_item_id) REFERENCES public.sw_source_items(workspace_id, id),
   FOREIGN KEY (workspace_id, requirement_id) REFERENCES public.sw_intelligence_requirements(workspace_id, id),
+  CHECK (status = 'pending' OR btrim(human_rationale) <> ''),
   CHECK ((status = 'pending' AND decided_by IS NULL AND decided_at IS NULL) OR
          (status <> 'pending' AND decided_by IS NOT NULL AND decided_at IS NOT NULL))
 );
@@ -504,6 +505,9 @@ BEGIN
       RAISE EXCEPTION 'SW_INVALID_TRANSITION' USING ERRCODE = '23514';
     END IF;
     IF _before = 'promoted' THEN RAISE EXCEPTION 'SW_RECORD_FINAL' USING ERRCODE = '23514'; END IF;
+    IF NOT _changed AND _before <> 'pending' AND NEW.human_rationale IS DISTINCT FROM OLD.human_rationale THEN
+      RAISE EXCEPTION 'SW_DECISION_RATIONALE_IMMUTABLE' USING ERRCODE = '23514';
+    END IF;
     IF _changed THEN
       IF btrim(NEW.human_rationale) = '' THEN RAISE EXCEPTION 'SW_DECISION_RATIONALE_REQUIRED' USING ERRCODE = '23514'; END IF;
       IF _after = 'promoted' AND NOT EXISTS (SELECT 1 FROM public.sw_assessments a WHERE a.workspace_id = NEW.workspace_id AND a.intelligence_item_id = NEW.id) THEN
@@ -636,6 +640,12 @@ BEGIN
     _details := jsonb_build_object(
       'before', CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE jsonb_build_object('role', OLD.role, 'active', OLD.active, 'can_approve', OLD.can_approve) END,
       'after', CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE jsonb_build_object('role', NEW.role, 'active', NEW.active, 'can_approve', NEW.can_approve) END);
+  ELSIF TG_TABLE_NAME = 'sw_intelligence_items' THEN
+    -- Preserve each attributed decision when triage moves to another state.
+    -- Rationale is byte-bounded so both sides fit the audit details limit.
+    _details := jsonb_build_object(
+      'before', CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE jsonb_build_object('status', OLD.status, 'rationale', OLD.human_rationale, 'decided_by', OLD.decided_by, 'decided_at', OLD.decided_at) END,
+      'after', CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE jsonb_build_object('status', NEW.status, 'rationale', NEW.human_rationale, 'decided_by', NEW.decided_by, 'decided_at', NEW.decided_at) END);
   END IF;
   INSERT INTO public.sw_audit_events (workspace_id, actor_user_id, entity_table, entity_id, operation, old_status, new_status, record_version, details)
     VALUES (_workspace, auth.uid(), TG_TABLE_NAME, _entity, TG_OP, to_jsonb(OLD)->>'status', to_jsonb(NEW)->>'status', (_row->>'version')::integer, _details);

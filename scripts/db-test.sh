@@ -169,14 +169,14 @@ for sw_round in before after; do
   echo "==> Running Security Work foundation assertions (${sw_round} rollback/reapply)"
   SW_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SW_OUT"; exit 1; }
   SW_PASSED="$(printf '%s\n' "$SW_OUT" | grep -c 'NOTICE:  ok  ' || true)"
-  [ "$SW_PASSED" -ge 313 ] || { echo "$SW_OUT"; echo "FAIL: Security Work foundation assertion shortfall: $SW_PASSED (floor 313)"; exit 1; }
+  [ "$SW_PASSED" -ge 322 ] || { echo "$SW_OUT"; echo "FAIL: Security Work foundation assertion shortfall: $SW_PASSED (floor 322)"; exit 1; }
   echo "    ok  $SW_PASSED Security Work foundation assertions passed"
 
   if [ "$sw_round" = before ]; then
     echo "==> Proving Security Work planted defects are detected"
     SW_NC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_negative_controls.sql 2>&1)" || { echo "$SW_NC_OUT"; exit 1; }
     SW_NC_PASSED="$(printf '%s\n' "$SW_NC_OUT" | grep -c 'NOTICE:  ok  SW-NC ' || true)"
-    [ "$SW_NC_PASSED" -ge 10 ] || { echo "$SW_NC_OUT"; echo "FAIL: Security Work negative-control shortfall: $SW_NC_PASSED (floor 10)"; exit 1; }
+    [ "$SW_NC_PASSED" -ge 12 ] || { echo "$SW_NC_OUT"; echo "FAIL: Security Work negative-control shortfall: $SW_NC_PASSED (floor 12)"; exit 1; }
     echo "    ok  $SW_NC_PASSED Security Work mutations detected by their original assertions"
 
     echo "==> Proving Security Work rollback preserves adopted work"
