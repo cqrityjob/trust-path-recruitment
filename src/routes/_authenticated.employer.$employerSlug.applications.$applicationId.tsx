@@ -49,11 +49,41 @@
 // the platform does not make.
 
 import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
-import { ArrowLeft, ClipboardList, FileText, MessagesSquare, UserCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { z } from "zod";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardList,
+  FileText,
+  Lock,
+  MessagesSquare,
+  Send,
+  UserCheck,
+} from "lucide-react";
+import { ConfirmAction } from "@/components/employer/ConfirmAction";
+import {
+  AnswersPanel,
+  BookingsPanel,
+  CommunicationPanel,
+  HistoryPanel,
+  InternalNotesPanel,
+  PanelSection,
+  ResponsiblePicker,
+} from "@/components/recruitment/ApplicationPanels";
+import { StageBadge } from "@/components/recruitment/RecruitmentStatus";
+import { recruitmentErrorKey } from "@/components/recruitment/errors";
+import {
+  getApplicationWorkspace,
+  markApplicationViewed,
+} from "@/lib/recruitment/recruitment.functions";
+import { markReturning, readListContext, type ListContext } from "@/lib/recruitment/list-context";
+import { formatStamp } from "@/lib/recruitment/format";
+import type { MessageKind } from "@/lib/recruitment/message-templates";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -101,6 +131,11 @@ export const Route = createFileRoute(
   ssr: false,
   component: CandidateRoute,
   errorComponent: EmployerErrorState,
+  // `list` names the candidate list this application was opened from, so the
+  // page can offer previous/next and return to the same filters and position.
+  // A pasted link has none and still works; see lib/recruitment/list-context.
+  validateSearch: (search) =>
+    z.object({ list: z.string().max(20).optional().catch(undefined) }).parse(search),
 });
 
 function CandidateRoute() {
@@ -109,8 +144,10 @@ function CandidateRoute() {
     <RecruitmentPage employerSlug={employerSlug}>
       {(ws) => (
         <Candidate360
+          key={applicationId}
           employerId={ws.employerId}
           employerSlug={employerSlug}
+          employerName={ws.employerName}
           applicationId={applicationId}
           canAssign={ws.role === "owner" || ws.role === "admin"}
         />
@@ -122,11 +159,13 @@ function CandidateRoute() {
 function Candidate360({
   employerId,
   employerSlug,
+  employerName,
   applicationId,
   canAssign,
 }: {
   employerId: string;
   employerSlug: string;
+  employerName: string;
   applicationId: string;
   canAssign: boolean;
 }) {
@@ -139,13 +178,73 @@ function Candidate360({
   const submittedCvFn = useServerFn(getApplicationSubmittedCv);
   const interviewCasesFn = useServerFn(listInterviewCasesForApplication);
   const [actionError, setActionError] = useState<string | null>(null);
+  const router = useRouter();
+  const { list: listKey } = Route.useSearch();
+  const workspaceFn = useServerFn(getApplicationWorkspace);
+  const viewedFn = useServerFn(markApplicationViewed);
+  const [listCtx, setListCtx] = useState<ListContext | null>(null);
+  const [pendingDecision, setPendingDecision] = useState<EmployerSettableStatus | null>(null);
+  const [composeRequest, setComposeRequest] = useState<{
+    kind: MessageKind;
+    bookingId: string | null;
+    nonce: number;
+  } | null>(null);
 
   const candidateKey = ["employer", employerId, "application", applicationId, "candidate"];
+  const recruitmentKey = ["employer", employerId, "application", applicationId, "recruitment"];
+
+  // The list this was opened from, read once on the client.
+  useEffect(() => setListCtx(readListContext(listKey)), [listKey]);
+
+  // The recruitment half: answers, responsible person, bookings, messages,
+  // internal notes and the stage history. One read, membership-checked.
+  const workspaceQuery = useQuery({
+    queryKey: recruitmentKey,
+    queryFn: () => workspaceFn({ data: { employerId, applicationId } }),
+  });
+  const rw = workspaceQuery.data ?? null;
+
+  // Opening the application is recorded as having been opened -- once, and
+  // never as a stage change. The list shows "unopened" from this, and the
+  // stage stays exactly where a person last put it.
+  const viewedOnce = useRef(false);
+  useEffect(() => {
+    if (viewedOnce.current) return;
+    viewedOnce.current = true;
+    viewedFn({ data: { applicationId } })
+      .then(() => {
+        void qc.invalidateQueries({ queryKey: ["employer", employerId, "candidates"] });
+      })
+      .catch(() => {
+        /* a missed receipt is not worth an error on the page */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applicationId]);
+
+  function refreshRecruitment() {
+    void qc.invalidateQueries({ queryKey: recruitmentKey });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId, "candidates"] });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment-overview"] });
+  }
 
   const query = useQuery({
     queryKey: candidateKey,
     queryFn: () => candidateFn({ data: { applicationId } }),
   });
+
+  // A link to a section (the overview's upcoming interview opens
+  // #candidate-bookings) lands before the sections exist, so the browser's own
+  // jump finds nothing. Scroll once the page has rendered them.
+  const hashScrolled = useRef(false);
+  useEffect(() => {
+    if (hashScrolled.current || !query.data || !rw) return;
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    hashScrolled.current = true;
+    window.requestAnimationFrame(() =>
+      document.getElementById(id)?.scrollIntoView({ block: "start" }),
+    );
+  }, [query.data, rw]);
 
   // ── THE CV THE CANDIDATE ACTUALLY SUBMITTED ────────────────────────
   //
@@ -242,11 +341,25 @@ function Candidate360({
   const hiredEmployeeId = hiredNow ?? hiredEmployeeQuery.data?.employeeId ?? null;
 
   const setStatus = useMutation({
+    // From the stage this page SHOWED: if a colleague moved the candidate in
+    // the meantime the move is refused and the page reloads, rather than
+    // silently applying over their change.
     mutationFn: (newStatus: EmployerSettableStatus) =>
-      setStatusFn({ data: { applicationId, newStatus } }),
+      setStatusFn({
+        data: {
+          applicationId,
+          newStatus,
+          expectedStatus: (query.data?.applicationStatus ?? undefined) as
+            | "submitted"
+            | "reviewing"
+            | "interview"
+            | undefined,
+        },
+      }),
     onSuccess: (r) => {
       setActionError(null);
       setHiredNow(r.employeeId ?? null);
+      refreshRecruitment();
       qc.invalidateQueries({ queryKey: candidateKey });
       // The list this page was opened from shows the same status.
       qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
@@ -257,7 +370,16 @@ function Candidate360({
         queryKey: ["employer", employerId, "application", applicationId, "hired-employee"],
       });
     },
-    onError: () => setActionError(t("employer.applications.error.statusUpdate")),
+    onError: (e: unknown) => {
+      const code = (e as { message?: string })?.message ?? "";
+      setActionError(
+        code === "STATUS_UPDATE_FAILED" || code === ""
+          ? t("employer.applications.error.statusUpdate")
+          : t(recruitmentErrorKey(code)),
+      );
+      qc.invalidateQueries({ queryKey: candidateKey });
+      refreshRecruitment();
+    },
   });
 
   async function onDownloadCv() {
@@ -272,15 +394,99 @@ function Candidate360({
     }
   }
 
-  const backLink = (
-    <Link
-      to="/employer/$employerSlug/applications"
-      params={{ employerSlug }}
-      className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+  // ── BACK TO THE SAME LIST ─────────────────────────────────────────────
+  //
+  // With a list context: to exactly the address the recruiter came from --
+  // same filters, same sorting -- and the list scrolls back to where they
+  // were. Without one (a pasted link, a new tab): to this recruitment's
+  // candidate list, which is always a correct place to land.
+  const jobIdForBack = query.data?.jobId ?? rw?.jobId ?? null;
+  const backCls =
+    "inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+  const backLink = listCtx ? (
+    <button
+      type="button"
+      className={backCls}
+      onClick={() => {
+        if (listKey) markReturning(listKey);
+        router.history.push(listCtx.href);
+      }}
     >
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+      {t("rec.candidate.backToList")}
+    </button>
+  ) : jobIdForBack ? (
+    <Link
+      to="/employer/$employerSlug/jobs/$jobId"
+      params={{ employerSlug, jobId: jobIdForBack }}
+      className={backCls}
+    >
+      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+      {t("rec.candidate.backToRecruitment")}
+    </Link>
+  ) : (
+    <Link to="/employer/$employerSlug/applications" params={{ employerSlug }} className={backCls}>
       <ArrowLeft className="h-4 w-4" aria-hidden="true" />
       {t("employer.candidate.backToApplications")}
     </Link>
+  );
+
+  const position = listCtx ? listCtx.ids.indexOf(applicationId) : -1;
+  const previousId = position > 0 ? listCtx!.ids[position - 1] : null;
+  const nextId =
+    listCtx && position >= 0 && position < listCtx.ids.length - 1
+      ? listCtx.ids[position + 1]
+      : null;
+  const stepCls =
+    "inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2.5 text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+  const topBar = (
+    <nav
+      aria-label={t("rec.candidate.navigation")}
+      className="flex flex-wrap items-center justify-between gap-2"
+    >
+      {backLink}
+      {listCtx && position >= 0 && (
+        <span className="flex items-center gap-2">
+          {previousId ? (
+            <Link
+              to="/employer/$employerSlug/applications/$applicationId"
+              params={{ employerSlug, applicationId: previousId }}
+              search={{ list: listKey }}
+              className={stepCls}
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              {t("rec.candidate.previous")}
+            </Link>
+          ) : (
+            <span className={`${stepCls} opacity-40`} aria-disabled="true">
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              {t("rec.candidate.previous")}
+            </span>
+          )}
+          <span className="text-xs tabular-nums text-muted-foreground">
+            {t("rec.candidate.position")
+              .replace("{n}", String(position + 1))
+              .replace("{total}", String(listCtx.ids.length))}
+          </span>
+          {nextId ? (
+            <Link
+              to="/employer/$employerSlug/applications/$applicationId"
+              params={{ employerSlug, applicationId: nextId }}
+              search={{ list: listKey }}
+              className={stepCls}
+            >
+              {t("rec.candidate.next")}
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          ) : (
+            <span className={`${stepCls} opacity-40`} aria-disabled="true">
+              {t("rec.candidate.next")}
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </span>
+          )}
+        </span>
+      )}
+    </nav>
   );
 
   if (query.isLoading) {
@@ -390,9 +596,23 @@ function Candidate360({
     (r) => r.rowKind === "application" && r.rowId !== c.applicationId,
   );
 
+  const completed = rw ? rw.completionState !== "open" : false;
+  const canDecide = rw?.canManage ?? false;
+  const decisionNext = nextStatuses.filter((n) => canDecide || (n !== "hired" && n !== "rejected"));
+  const sectionLinks: [string, TranslationKey][] = [
+    ["candidate-application", "rec.section.application"],
+    ["candidate-assessment", "rec.section.tests"],
+    ["candidate-bookings", "rec.section.interviews"],
+    ["candidate-passport", "employer.candidate.passport.heading"],
+    ["candidate-decision", "rec.section.decision"],
+    ["candidate-communication", "rec.section.communication"],
+    ["candidate-notes", "rec.section.notes"],
+    ["candidate-timeline", "rec.section.history"],
+  ];
+
   return (
     <div className="mx-auto w-full max-w-4xl">
-      {backLink}
+      {topBar}
 
       {/* ── Who, and for what ───────────────────────────────────────── */}
       <header className="mt-4">
@@ -416,9 +636,9 @@ function Candidate360({
           {t("employer.candidate.appliedOn")} {formatDate(c.appliedAt, lang)}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-medium text-foreground">
-            {status ? t(APPLICATION_STATUS_LABEL_KEY[status]) : c.applicationStatus}
-          </span>
+          {/* Stage and decision in the one vocabulary every recruitment list
+              uses, as text with an icon. */}
+          <StageBadge status={c.applicationStatus} />
           {/* The vacancy itself, not the list it is somewhere in. This link
               used to land on Mina annonser and leave the recruiter to find the
               job again by name -- and a published job had no page to land on
@@ -435,7 +655,69 @@ function Candidate360({
             </Link>
           )}
         </div>
+        {/* Stage, responsible person and whether it has been opened: three
+            different facts, each said once. */}
+        {rw && (
+          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("rec.col.responsible")}
+              </dt>
+              <dd className="mt-1">
+                <ResponsiblePicker ws={rw} onChanged={refreshRecruitment} />
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                {t("rec.candidate.firstOpened")}
+              </dt>
+              <dd className="mt-1 text-muted-foreground">
+                {rw.meta.firstViewedAt
+                  ? formatStamp(rw.meta.firstViewedAt, lang)
+                  : t("rec.candidate.openedNow")}
+              </dd>
+            </div>
+          </dl>
+        )}
+        {workspaceQuery.isError && (
+          <p
+            role="alert"
+            className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+          >
+            {t("rec.candidate.recruitmentUnavailable")}{" "}
+            <button
+              type="button"
+              className="font-medium underline"
+              onClick={() => void workspaceQuery.refetch()}
+            >
+              {t("continuity.next.retry")}
+            </button>
+          </p>
+        )}
+        {completed && (
+          <p className="mt-3 flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm">
+            <Lock className="h-4 w-4" aria-hidden="true" />
+            {t("rec.candidate.completedNotice")}
+          </p>
+        )}
       </header>
+
+      {/* Jump to a section: the page is long because a recruitment is, and
+          every part of it belongs to this one application. */}
+      <nav
+        aria-label={t("rec.candidate.sections")}
+        className="sticky top-0 z-10 -mx-1 mt-4 flex gap-1 overflow-x-auto bg-background/95 px-1 py-2 backdrop-blur"
+      >
+        {sectionLinks.map(([id, key]) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t(key)}
+          </a>
+        ))}
+      </nav>
 
       {/* ── The process, before anything long ────────────────────────
           Candidate, role, application status and the one next step are all
@@ -494,6 +776,27 @@ function Candidate360({
             </p>
           </div>
         )}
+
+        {/* The candidate's answers to this vacancy's questions, each beside the
+            requirement it asks about. A "no" to a mandatory requirement is
+            shown as what it is -- the candidate's own answer -- and never
+            removes anybody from the list: the decision stays a person's. */}
+        <div className="mt-6">
+          <h3 className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            {t("rec.answers.heading")}
+          </h3>
+          <div className="mt-2">
+            {rw ? (
+              <AnswersPanel answers={rw.answers} />
+            ) : workspaceQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {t("rec.candidate.recruitmentUnavailable")}
+              </p>
+            )}
+          </div>
+        </div>
 
         {/* An UPLOADED CV is a file, and a file is downloaded. Unchanged. */}
         {c.hasCv && (
@@ -589,6 +892,42 @@ function Candidate360({
           prepareInterview
         />
       </section>
+
+      {/* ── Interview times ─────────────────────────────────────────── */}
+      <div className="mt-10">
+        <PanelSection
+          id="candidate-bookings"
+          title={t("rec.booking.heading")}
+          lede={t("rec.booking.lede")}
+        >
+          {rw ? (
+            <BookingsPanel
+              ws={rw}
+              employerId={employerId}
+              candidateName={c.displayName}
+              employerName={employerName}
+              jobTitle={jobTitle}
+              onChanged={refreshRecruitment}
+              onInvite={(bookingId) => {
+                setComposeRequest({ kind: "interview_invitation", bookingId, nonce: Date.now() });
+                window.setTimeout(
+                  () =>
+                    document
+                      .getElementById("candidate-communication")
+                      ?.scrollIntoView({ behavior: "smooth" }),
+                  50,
+                );
+              }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {workspaceQuery.isLoading
+                ? t("employer.loading")
+                : t("rec.candidate.recruitmentUnavailable")}
+            </p>
+          )}
+        </PanelSection>
+      </div>
 
       {/* ── Interview ───────────────────────────────────────────────── */}
       <section className="mt-10" aria-labelledby="candidate-interview">
@@ -856,18 +1195,75 @@ function Candidate360({
           </p>
         ) : (
           <div className="mt-4 flex flex-wrap gap-2">
-            {nextStatuses.map((next) => (
+            {decisionNext.map((next) => (
               <button
                 key={next}
                 type="button"
-                disabled={setStatus.isPending}
-                onClick={() => setStatus.mutate(next)}
+                disabled={setStatus.isPending || completed}
+                onClick={() =>
+                  next === "hired" || next === "rejected"
+                    ? setPendingDecision(next)
+                    : setStatus.mutate(next)
+                }
                 className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
               >
                 {t(APPLICATION_ACTION_LABEL_KEY[next])}
               </button>
             ))}
           </div>
+        )}
+        {/* Restricted seats see why the decision buttons are absent, rather
+            than wondering where they went. The database refuses the act for
+            them either way. */}
+        {rw && !canDecide && nextStatuses.some((n) => n === "hired" || n === "rejected") && (
+          <p className="mt-2 text-xs text-muted-foreground">{t("rec.decision.restricted")}</p>
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">{t("rec.decision.noAutoMessage")}</p>
+        {/* After an outcome is recorded, telling the candidate is one click
+            away -- and still a separate, reviewed act. */}
+        {(c.applicationStatus === "rejected" || c.applicationStatus === "hired") && canDecide && (
+          <button
+            type="button"
+            onClick={() => {
+              setComposeRequest({
+                kind: c.applicationStatus === "rejected" ? "rejection" : "offer",
+                bookingId: null,
+                nonce: Date.now(),
+              });
+              window.setTimeout(
+                () =>
+                  document
+                    .getElementById("candidate-communication")
+                    ?.scrollIntoView({ behavior: "smooth" }),
+                50,
+              );
+            }}
+            className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40"
+          >
+            <Send className="h-4 w-4" aria-hidden="true" />
+            {t("rec.decision.tellCandidate")}
+          </button>
+        )}
+        {pendingDecision && (
+          <ConfirmAction
+            open
+            onOpenChange={(o) => !o && setPendingDecision(null)}
+            tone={pendingDecision === "rejected" ? "destructive" : "default"}
+            busy={setStatus.isPending}
+            title={`${t(APPLICATION_ACTION_LABEL_KEY[pendingDecision])} \u2014 ${name}`}
+            consequence={t(
+              pendingDecision === "hired"
+                ? "rec.decision.confirmHired"
+                : "rec.decision.confirmRejected",
+            )}
+            confirmLabel={t(APPLICATION_ACTION_LABEL_KEY[pendingDecision])}
+            cancelLabel={t("rec.common.cancel")}
+            onConfirm={() => {
+              const d = pendingDecision;
+              setPendingDecision(null);
+              setStatus.mutate(d);
+            }}
+          />
         )}
 
         {/* Hiring used to end here, with a status and nowhere to go. The same
@@ -888,6 +1284,51 @@ function Candidate360({
           </p>
         )}
       </section>
+
+      {/* ── Communication with the candidate ───────────────────────── */}
+      <div className="mt-10 space-y-6">
+        <PanelSection
+          id="candidate-communication"
+          title={t("rec.message.heading")}
+          lede={t("rec.message.lede")}
+        >
+          {rw ? (
+            <CommunicationPanel
+              ws={rw}
+              employerId={employerId}
+              candidateName={c.displayName}
+              employerName={employerName}
+              jobTitle={jobTitle}
+              composeRequest={composeRequest}
+              onComposeHandled={() => setComposeRequest(null)}
+              onChanged={refreshRecruitment}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {workspaceQuery.isLoading
+                ? t("employer.loading")
+                : t("rec.candidate.recruitmentUnavailable")}
+            </p>
+          )}
+        </PanelSection>
+
+        {/* ── Internal notes: the team's, never the candidate's ────────── */}
+        <PanelSection
+          id="candidate-notes"
+          title={t("rec.notes.heading")}
+          lede={t("rec.notes.lede")}
+        >
+          {rw ? <InternalNotesPanel ws={rw} onChanged={refreshRecruitment} /> : null}
+        </PanelSection>
+
+        <PanelSection
+          id="candidate-timeline"
+          title={t("rec.history.heading")}
+          lede={t("rec.history.lede")}
+        >
+          {rw ? <HistoryPanel ws={rw} /> : null}
+        </PanelSection>
+      </div>
 
       {/* ── The rest of this person's history with THIS organisation ── */}
       {otherApplications.length > 0 && (

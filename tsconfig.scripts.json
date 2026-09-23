@@ -38,6 +38,9 @@
     // pre-existing type debt, and it exists because a silent change to a
     // generated file went unnoticed four times.
     "scripts/nullable-rpc-contract-check.ts",
+    // The recruitment workspace guard and its planted controls: new, no type debt.
+    "scripts/recruitment-workspace-check.ts",
+    "scripts/negative-controls/recruitment-workspace-controls.ts",
     "scripts/negative-controls/nullable-rpc-contract-controls.ts",
     "scripts/cd-outstanding-reviews-check.ts",
     "scripts/negative-controls/cd-outstanding-reviews-controls.ts",

@@ -346,12 +346,31 @@ async function readJob(
   // Through `unknown`, because the two types genuinely do not overlap and a
   // direct assertion would be the compiler agreeing to something untrue.
   const j = data as unknown as Row;
+  // The vacancy's own requirement rows (20261207090000), which the employer
+  // wrote as mandatory or desirable. Carried into the interview so the guide
+  // and the vacancy are read side by side; a failed read costs these lines
+  // and nothing else, because the advert itself was read above.
+  const { data: structured, error: structuredError } = await db
+    .from("recruitment_requirements")
+    .select("kind, label_sv, label_en, position")
+    .eq("job_id", jobId)
+    .order("position");
+  if (structuredError)
+    console.error("[interview-context] vacancy requirements unavailable", structuredError);
+  const vacancyRequirements = ((structured ?? []) as Row[])
+    .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "mandatory" ? -1 : 1))
+    .map((r) => {
+      const label = str(r.label_sv) ?? str(r.label_en);
+      if (!label) return null;
+      return r.kind === "mandatory" ? `Krav: ${label}` : `Meriterande: ${label}`;
+    })
+    .filter((x): x is string => x !== null);
   return {
     read: "ok",
     value: {
       titleSv: str(j.title_sv),
       titleEn: str(j.title_en),
-      requirements: normaliseRequirements(j.requirements),
+      requirements: [...vacancyRequirements, ...normaliseRequirements(j.requirements)],
       formalRequirements: strArray(j.formal_requirement_ids),
       languageRequirements: strArray(j.language_requirements),
       experienceLevel: str(j.experience_level),

@@ -100,6 +100,12 @@ pw.shots.mjs
 # the point of the change is what those screens say.
 !/artifacts/employer-lifecycle/
 
+# The recruitment workspace walk (overview -> recruitment -> candidate ->
+# interview -> decision -> completion, plus the candidate's side). Committed so
+# a reviewer can read what each screen SAYS; INDEX.md names the synthetic
+# fixture and what every capture is evidence of.
+!/artifacts/recruitment-workspace/
+
 # The BESKT PR 3 candidate-preparation captures, under the same rules as E1
 # and E4 above: committed so a reviewer can READ the Swedish and English
 # screens at both widths in the pull request itself. Several of the states

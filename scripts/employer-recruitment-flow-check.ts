@@ -86,9 +86,14 @@ expect(
 // 2. The hub reaches its people, and its people reach it back.
 // -----------------------------------------------------------------------------
 
+// The hub renders its candidates through the shared candidate table, so the
+// link to each candidate's own page lives in that component -- which the hub
+// must actually render.
 const hub = read(JOB_HUB);
+const candidateTable = read("src/components/recruitment/CandidateTable.tsx");
 expect(
-  hub.includes('to="/employer/$employerSlug/applications/$applicationId"'),
+  hub.includes("<CandidateTable") &&
+    candidateTable.includes('to="/employer/$employerSlug/applications/$applicationId"'),
   `${JOB_HUB}: each candidate in the pipeline must open that candidate's own page.`,
 );
 // The "show these candidates in the full list" link has to carry the job, or

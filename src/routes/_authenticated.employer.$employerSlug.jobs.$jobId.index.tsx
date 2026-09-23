@@ -76,12 +76,27 @@ import {
   CLOSEABLE_STATUSES,
   DELETE_REFUSED_CODES,
 } from "@/lib/job-intelligence/employer-jobs.functions";
-import {
-  listApplicationsForEmployer,
-  type EmployerApplicationRow,
-} from "@/lib/job-intelligence/applications.functions";
-import { APPLICATION_STATUS_LABEL_KEY } from "@/lib/job-intelligence/application-status";
 import type { ApplicationStatus } from "@/lib/job-intelligence/applications.functions";
+import { z } from "zod";
+import { CandidateTable } from "@/components/recruitment/CandidateTable";
+import { PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
+import {
+  RecruitmentActivity,
+  RecruitmentSettings,
+  VacancyStructureSummary,
+} from "@/components/recruitment/RecruitmentWorkspaceTabs";
+import {
+  getRecruitment,
+  listRecruitmentCandidates,
+  type CandidateRow,
+} from "@/lib/recruitment/recruitment.functions";
+import {
+  candidateViewSchema,
+  compactView,
+  isUnresolved,
+  phaseOf,
+  type CandidateView,
+} from "@/lib/recruitment/definitions";
 import { checkJobReadiness, type JobReadinessInput } from "@/lib/job-intelligence/job-readiness";
 import {
   projectJobPipeline,
@@ -104,10 +119,20 @@ type JobHubRow = JobReadinessInput & {
   updated_at: string;
 };
 
+// The recruitment workspace's own view state: which tab, and the candidate
+// list's search, stage, owner and sort. In the URL, so a reload, a shared link
+// and a return from a candidate all land on the same view.
+const HUB_TABS = ["candidates", "vacancy", "activity", "team"] as const;
+type HubTab = (typeof HUB_TABS)[number];
+const hubSearchSchema = candidateViewSchema.extend({
+  tab: z.enum(HUB_TABS).optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/$jobId/")({
   ssr: false,
   component: JobHubRoute,
   errorComponent: EmployerErrorState,
+  validateSearch: (search) => hubSearchSchema.parse(search),
 });
 
 function JobHubRoute() {
@@ -118,6 +143,7 @@ function JobHubRoute() {
         <JobHub
           employerId={ws.employerId}
           employerSlug={employerSlug}
+          employerName={ws.employerName}
           jobId={jobId}
           canEdit={ws.role === "owner" || ws.role === "admin"}
         />
@@ -126,37 +152,33 @@ function JobHubRoute() {
   );
 }
 
-/** The pipeline columns, in the order a recruitment actually moves. `withdrawn`
- *  is the candidate's own action and belongs with the closed outcomes, not in
- *  its own column. */
-const PIPELINE: { key: string; statuses: ApplicationStatus[]; labelKey: TranslationKey }[] = [
-  { key: "new", statuses: ["submitted"], labelKey: "employer.jobHub.stage.new" },
-  { key: "reviewing", statuses: ["reviewing"], labelKey: "employer.jobHub.stage.reviewing" },
-  { key: "interview", statuses: ["interview"], labelKey: "employer.jobHub.stage.interview" },
-  { key: "hired", statuses: ["hired"], labelKey: "employer.jobHub.stage.hired" },
-  {
-    key: "closed",
-    statuses: ["rejected", "withdrawn"],
-    labelKey: "employer.jobHub.stage.closed",
-  },
-];
-
 function JobHub({
   employerId,
   employerSlug,
+  employerName,
   jobId,
   canEdit,
 }: {
   employerId: string;
   employerSlug: string;
+  employerName: string;
   jobId: string;
   canEdit: boolean;
 }) {
+  const search = Route.useSearch();
+  const candidateView: CandidateView = {
+    q: search.q,
+    stage: search.stage,
+    owner: search.owner,
+    sort: search.sort,
+    dir: search.dir,
+  };
+  const recruitmentFn = useServerFn(getRecruitment);
   const { t, tp, lang } = useT();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const getFn = useServerFn(getEmployerJob);
-  const listApplicationsFn = useServerFn(listApplicationsForEmployer);
+  const listApplicationsFn = useServerFn(listRecruitmentCandidates);
   const submitFn = useServerFn(submitEmployerJob);
   const closeFn = useServerFn(closeEmployerJob);
   const deleteFn = useServerFn(deleteEmployerJob);
@@ -179,7 +201,7 @@ function JobHub({
   // already takes a jobId and applies it to the RLS-scoped query, so this page
   // never holds another vacancy's candidates.
   const applicationsQuery = useQuery({
-    queryKey: ["employer", employerId, "applications", "job", jobId],
+    queryKey: ["employer", employerId, "candidates", "job", jobId],
     queryFn: () => listApplicationsFn({ data: { employerId, jobId } }),
   });
 
@@ -195,6 +217,8 @@ function JobHub({
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "job", jobId] });
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment-overview"] });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment", jobId] });
   }
 
   const mutationOptions = {
@@ -240,20 +264,55 @@ function JobHub({
     ...mutationOptions,
   });
 
-  const backLink = (
-    <Link
-      to="/employer/$employerSlug/jobs"
-      params={{ employerSlug }}
-      className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-    >
-      <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-      {t("employer.jobHub.backToJobs")}
-    </Link>
+  const recruitmentQuery = useQuery({
+    queryKey: ["employer", employerId, "recruitment", jobId],
+    queryFn: () => recruitmentFn({ data: { employerId, jobId } }),
+  });
+  const recruitment = recruitmentQuery.data ?? null;
+
+  const crumbRow = jobQuery.data as unknown as
+    | { title_sv?: string | null; title_en?: string | null }
+    | undefined;
+  const breadcrumbTitle = crumbRow
+    ? (lang === "en" ? crumbRow.title_en : crumbRow.title_sv) ||
+      crumbRow.title_sv ||
+      crumbRow.title_en ||
+      t("employer.jobs.list.untitled")
+    : "…";
+  const breadcrumb = (
+    <nav aria-label={t("rec.breadcrumb.label")} className="text-sm text-muted-foreground">
+      <ol className="flex flex-wrap items-center gap-1.5">
+        <li>
+          <Link
+            to="/employer/$employerSlug"
+            params={{ employerSlug }}
+            className="hover:text-foreground hover:underline"
+          >
+            {t("rec.breadcrumb.employer")}
+          </Link>
+        </li>
+        <li aria-hidden="true">/</li>
+        <li>
+          <Link
+            to="/employer/$employerSlug/jobs"
+            params={{ employerSlug }}
+            className="hover:text-foreground hover:underline"
+          >
+            {t("rec.breadcrumb.recruitments")}
+          </Link>
+        </li>
+        <li aria-hidden="true">/</li>
+        <li aria-current="page" className="max-w-[40ch] truncate font-medium text-foreground">
+          {breadcrumbTitle}
+        </li>
+      </ol>
+    </nav>
   );
+  const backLink = breadcrumb;
 
   if (jobQuery.isLoading) {
     return (
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-6xl">
         {backLink}
         <p className="mt-6 text-sm text-muted-foreground">{t("employer.loading")}</p>
       </div>
@@ -262,7 +321,7 @@ function JobHub({
 
   if (jobQuery.isError || !jobQuery.data) {
     return (
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-6xl">
         {backLink}
         <h1 className="mt-4 text-2xl font-semibold text-foreground">
           {t("employer.jobHub.notFound")}
@@ -283,7 +342,11 @@ function JobHub({
     t("employer.jobs.list.untitled");
 
   const readiness = checkJobReadiness(job);
-  const rows: EmployerApplicationRow[] = applicationsQuery.data ?? [];
+  const candidateRows: CandidateRow[] = applicationsQuery.data ?? [];
+  const rows = candidateRows.map((r) => ({
+    id: r.applicationId,
+    status: r.status as ApplicationStatus,
+  }));
 
   // How the read WENT, kept apart from what it found. There is no client-side
   // way to tell a policy refusal from any other failure here, and guessing
@@ -303,6 +366,25 @@ function JobHub({
     applicationsWithOpenAssessment: openAssessments.ids,
   });
 
+  const phase = phaseOf(
+    {
+      jobStatus: status,
+      publishedAt: job.published_at ?? null,
+      deadlineAt: (job as { deadline_at?: string | null }).deadline_at ?? null,
+      expiresAt: (job as { expires_at?: string | null }).expires_at ?? null,
+      completionState: recruitment?.settings.completionState ?? null,
+    },
+    new Date(),
+  );
+  const unresolved = candidateRows.filter((r) => isUnresolved(r.status));
+  // Candidates is where an active recruitment opens. A draft opens on its
+  // vacancy, because there is nobody to list yet and the work is the advert.
+  const tab: HubTab = search.tab ?? (phase === "draft" ? "vacancy" : "candidates");
+  const responsibleName = recruitment?.settings.responsibleUserId
+    ? (recruitment.team.find((m) => m.userId === recruitment.settings.responsibleUserId)?.name ??
+      null)
+    : null;
+
   const editable = status === "draft" || status === "rejected";
   const submittable = editable;
   // Same rule as the list, from the same constants the server enforces: a
@@ -311,7 +393,7 @@ function JobHub({
   const deletable =
     job !== null && status === "draft" && job.published_at === null && !deleteRefused;
   const closeable = !deletable && CLOSEABLE_STATUSES.includes(status);
-  const restorable = status === "archived";
+  const restorable = status === "archived" && phase !== "completed" && phase !== "cancelled";
   const busy =
     submitMutation.isPending ||
     closeMutation.isPending ||
@@ -319,41 +401,102 @@ function JobHub({
     restoreMutation.isPending ||
     dupMutation.isPending;
 
+  function setTab(next: HubTab) {
+    void navigate({
+      to: "/employer/$employerSlug/jobs/$jobId",
+      params: { employerSlug, jobId },
+      search: { ...search, tab: next },
+      replace: true,
+    });
+  }
+  function setView(next: CandidateView) {
+    void navigate({
+      to: "/employer/$employerSlug/jobs/$jobId",
+      params: { employerSlug, jobId },
+      search: { tab: search.tab, ...compactView(next) },
+      replace: true,
+    });
+  }
+
+  // The one primary action the header offers, by phase.
+  const primary =
+    phase === "draft" && editable && canEdit ? (
+      <Link
+        to="/employer/$employerSlug/jobs/$jobId/edit"
+        params={{ employerSlug, jobId }}
+        className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {t("rec.hub.primary.continueVacancy")}
+      </Link>
+    ) : phase === "closed" && unresolved.length === 0 && recruitment?.canManage ? (
+      <button
+        type="button"
+        onClick={() => setTab("team")}
+        className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {t("rec.hub.primary.complete")}
+      </button>
+    ) : (phase === "published" || phase === "closed") &&
+      candidateRows.some((r) => r.status === "submitted") ? (
+      <button
+        type="button"
+        onClick={() => setView({ stage: "new" })}
+        className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        {t("rec.hub.primary.reviewNew")}
+      </button>
+    ) : null;
+
+  const TABS: [HubTab, TranslationKey, number | null][] = [
+    [
+      "candidates",
+      "rec.hub.tab.candidates",
+      applicationsQuery.isSuccess ? candidateRows.length : null,
+    ],
+    ["vacancy", "rec.hub.tab.vacancy", null],
+    ["activity", "rec.hub.tab.activity", null],
+    ["team", "rec.hub.tab.team", null],
+  ];
+
   return (
-    <div className="mx-auto w-full max-w-4xl">
+    <div className="mx-auto w-full max-w-6xl">
       {backLink}
 
-      {/* ── The advertisement ───────────────────────────────────────── */}
-      <header className="mt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-          {t("employer.jobHub.eyebrow")}
-        </p>
-        <h1
-          className="mt-1 text-[1.5rem] font-semibold leading-tight tracking-tight text-foreground sm:text-3xl"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
-          {title}
-        </h1>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-medium text-foreground">
-            {jobStatusLabel(status, lang) || status}
-          </span>
-          <span className="text-xs text-muted-foreground">{job.short_id}</span>
-          {/* The live advertisement, as a candidate sees it. Only offered when
-              there genuinely is one to look at. */}
-          {status === "published" && job.slug && (
-            <Link
-              to="/jobs/$slug"
-              params={{ slug: String(job.slug) }}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
-            >
-              {t("employer.jobHub.viewPublic")}
-              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-            </Link>
-          )}
+      {/* ── The recruitment ─────────────────────────────────────────── */}
+      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1
+            className="text-[1.5rem] font-semibold leading-tight tracking-tight text-foreground sm:text-3xl"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {title}
+          </h1>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+            <PhaseBadge phase={phase} />
+            <span className="text-muted-foreground">
+              {t("rec.hub.responsible")}:{" "}
+              <span className="font-medium text-foreground">
+                {responsibleName ?? t("rec.hub.noResponsible")}
+              </span>
+            </span>
+            <span className="text-xs text-muted-foreground">{job.short_id}</span>
+            {/* The live advertisement, as a candidate sees it. Only offered when
+                there genuinely is one to look at. */}
+            {status === "published" && job.slug && (
+              <Link
+                to="/jobs/$slug"
+                params={{ slug: String(job.slug) }}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
+              >
+                {t("employer.jobHub.viewPublic")}
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              </Link>
+            )}
+          </div>
         </div>
+        {primary}
       </header>
 
       {actionError && (
@@ -365,342 +508,397 @@ function JobHub({
         </div>
       )}
 
-      {/* ── What to do with the advertisement itself ────────────────── */}
-      {canEdit && (
-        <div className="mt-6 flex flex-wrap gap-2">
-          {editable && (
-            <Link
-              to="/employer/$employerSlug/jobs/$jobId/edit"
-              params={{ employerSlug, jobId }}
-              className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("employer.jobs.list.edit")}
-            </Link>
-          )}
-          {submittable && (
-            // Disabled only while something is genuinely outstanding, and the
-            // checklist below says what. A submit that the server will refuse
-            // is not an action, it is a trap.
-            <button
-              type="button"
-              disabled={busy || !readiness.ready}
-              onClick={() => submitMutation.mutate()}
-              className="inline-flex min-h-[36px] items-center rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
-            >
-              {t("employer.jobHub.action.submit")}
-            </button>
-          )}
+      {/* ── Tabs ────────────────────────────────────────────────────── */}
+      <div
+        role="tablist"
+        aria-label={t("rec.hub.tabs")}
+        className="mt-5 flex gap-1 overflow-x-auto border-b border-border"
+      >
+        {TABS.map(([key, label, count]) => (
           <button
+            key={key}
+            role="tab"
             type="button"
-            disabled={busy}
-            onClick={() => {
-              setActionError(null);
-              setPending({ kind: "duplicate", id: jobId });
-            }}
-            className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            id={`tab-${key}`}
+            aria-selected={tab === key}
+            aria-controls={`panel-${key}`}
+            onClick={() => setTab(key)}
+            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              tab === key
+                ? "border-accent text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
           >
-            {t("employer.jobs.list.duplicate")}
+            {t(label)}
+            {count !== null && (
+              <span className="ml-1.5 tabular-nums text-muted-foreground">({count})</span>
+            )}
           </button>
-          {restorable && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setActionError(null);
-                restoreMutation.mutate();
-              }}
-              className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("employer.jobs.list.restore")}
-            </button>
-          )}
-          {deletable && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setActionError(null);
-                setPending({ kind: "delete", id: jobId });
-              }}
-              className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("employer.jobs.list.delete")}
-            </button>
-          )}
-          {pending && (
-            <ConfirmAction
-              open
-              onOpenChange={(o) => {
-                if (!o) setPending(null);
-              }}
-              tone={pending.kind === "delete" ? "destructive" : "default"}
-              busy={busy}
-              title={t(
-                pending.kind === "delete"
-                  ? "employer.jobs.confirm.delete.title"
-                  : pending.kind === "close"
-                    ? "employer.jobs.confirm.close.title"
-                    : "employer.jobs.confirm.duplicate.title",
-              )}
-              consequence={t(
-                pending.kind === "delete"
-                  ? "employer.jobs.confirm.delete.body"
-                  : pending.kind === "close"
-                    ? "employer.jobs.confirm.close.body"
-                    : "employer.jobs.confirm.duplicate.body",
-              )}
-              confirmLabel={t(
-                pending.kind === "delete"
-                  ? "employer.jobs.list.delete"
-                  : pending.kind === "close"
-                    ? "employer.jobs.list.close"
-                    : "employer.jobs.list.duplicate",
-              )}
-              cancelLabel={t("employer.workforce.form.cancel")}
-              onConfirm={() => {
-                const { kind } = pending;
-                setPending(null);
-                if (kind === "delete") deleteMutation.mutate();
-                else if (kind === "close") closeMutation.mutate();
-                else dupMutation.mutate();
-              }}
-            />
-          )}
-          {closeable && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                setActionError(null);
-                setPending({ kind: "close", id: jobId });
-              }}
-              className="inline-flex min-h-[36px] items-center rounded-md border border-destructive/60 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("employer.jobs.list.close")}
-            </button>
-          )}
+        ))}
+      </div>
+
+      {tab === "candidates" && (
+        <div
+          role="tabpanel"
+          id="panel-candidates"
+          aria-labelledby="tab-candidates"
+          className="pt-5"
+        >
+          {/* ── The pipeline ───────────────────────────────────────────── */}
+          <section aria-labelledby="job-pipeline">
+            <h2 id="job-pipeline" className="sr-only">
+              {t("employer.jobHub.pipeline.heading")}
+            </h2>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {PIPELINE_CARDS.map((card) => (
+                <PipelineCard
+                  key={card.stage}
+                  labelKey={card.labelKey}
+                  count={pipeline.counts[card.stage]}
+                  employerSlug={employerSlug}
+                  jobId={jobId}
+                  search={card.search}
+                />
+              ))}
+            </dl>
+
+            {/* ── The one next thing ──────────────────────────────────────
+                One sentence about this vacancy's own work, and never about the
+                people in it: no ranking, no assessment of the field, no advice to
+                close or extend. Where the honest answer is a statement it is a
+                statement, and no button is drawn. */}
+            <div className="mt-3 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-3">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                <p
+                  className="max-w-[68ch] text-[13px] leading-relaxed text-foreground"
+                  role="status"
+                >
+                  <span className="mr-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                    {t("employer.jobHub.next.heading")}
+                  </span>
+                  {(() => {
+                    // A quantity where there is one, a sentence where there is
+                    // not. The three quantified actions are the only ones whose
+                    // number means anything; the rest are statements and reading
+                    // "0 …" for them would be noise.
+                    const plural = JOB_NEXT_PLURAL[pipeline.nextAction.kind];
+                    return plural && pipeline.nextAction.count > 0
+                      ? `${pipeline.nextAction.count} ${tp(plural, pipeline.nextAction.count)}`
+                      : t(JOB_NEXT_BODY[pipeline.nextAction.kind]);
+                  })()}
+                </p>
+                {pipeline.nextAction.stage && (
+                  <Link
+                    to="/employer/$employerSlug/applications"
+                    params={{ employerSlug }}
+                    search={{
+                      job: jobId,
+                      ...(PIPELINE_SEARCH[pipeline.nextAction.stage] ?? {}),
+                    }}
+                    className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-[10px] border border-border px-3 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {t("employer.jobHub.next.open")}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                )}
+                {pipeline.nextAction.kind === "unavailable" && (
+                  <button
+                    type="button"
+                    onClick={() => void applicationsQuery.refetch()}
+                    className="inline-flex min-h-10 shrink-0 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {t("continuity.next.retry")}
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* ── The people ─────────────────────────────────────────────── */}
+          <section className="mt-6 pb-4" aria-labelledby="job-candidates">
+            <h2 id="job-candidates" className="text-lg font-semibold text-foreground">
+              {t("employer.jobHub.candidates.heading")}
+            </h2>
+
+            {applicationsQuery.isLoading ? (
+              <p className="mt-4 text-sm text-muted-foreground">{t("employer.loading")}</p>
+            ) : applicationsQuery.isError ? (
+              /* NOT an empty state. "Nobody has applied" and "we could not find
+                 out who applied" are different sentences, and the second one is
+                 the only honest thing to say here. */
+              <div
+                role="alert"
+                className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-900 dark:text-amber-200"
+              >
+                <p>{t("employer.jobHub.candidates.loadFailed")}</p>
+                <button
+                  type="button"
+                  onClick={() => void applicationsQuery.refetch()}
+                  className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("continuity.next.retry")}
+                </button>
+              </div>
+            ) : candidateRows.length === 0 ? (
+              <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                {status === "published"
+                  ? t("employer.jobHub.candidates.emptyPublished")
+                  : job.application_method && job.application_method !== "internal"
+                    ? t("rec.hub.externalApplications")
+                    : t("employer.jobHub.candidates.emptyUnpublished")}
+              </p>
+            ) : (
+              <div className="mt-3">
+                <CandidateTable
+                  employerId={employerId}
+                  employerSlug={employerSlug}
+                  employerName={employerName}
+                  rows={candidateRows}
+                  view={candidateView}
+                  onViewChange={setView}
+                  showVacancy={false}
+                  team={recruitment?.team ?? []}
+                  canManageJob={() => recruitment?.canManage ?? false}
+                  openAssessmentIds={openAssessments.read === "ready" ? openAssessments.ids : null}
+                  onChanged={() => {
+                    void applicationsQuery.refetch();
+                    invalidateAll();
+                  }}
+                  labelKey="recruitment"
+                />
+              </div>
+            )}
+          </section>
         </div>
       )}
 
-      {/* ── Ready to publish? ───────────────────────────────────────── */}
-      {/*  Shown only where it can still change something: once an
-          advertisement is in a moderator's queue or live, a checklist telling
-          the employer what to fill in is describing a decision they no longer
-          own. */}
-      {editable && (
-        <section className="mt-8" aria-labelledby="job-readiness">
-          <h2 id="job-readiness" className="text-lg font-semibold text-foreground">
-            {t("employer.jobHub.readiness.heading")}
-          </h2>
-          <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
-            {readiness.ready
-              ? t("employer.jobHub.readiness.ready")
-              : t("employer.jobHub.readiness.notReady")}
-          </p>
-          <ul className="mt-4 space-y-1.5">
-            {readiness.checks.map((c) => (
-              <li key={c.id} className="flex items-start gap-2 text-sm">
-                {c.ok ? (
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-                ) : (
-                  <CircleDashed
-                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                )}
-                <span className={c.ok ? "text-muted-foreground" : "text-foreground"}>
-                  {t(c.labelKey)}
-                  {!c.blocking && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {t("employer.jobHub.readiness.optional")}
-                    </span>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* ── The facts ──────────────────────────────────────────────── */}
-      <section className="mt-8" aria-labelledby="job-facts">
-        <h2 id="job-facts" className="text-lg font-semibold text-foreground">
-          {t("employer.jobHub.facts.heading")}
-        </h2>
-        <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-3">
-          <Fact label={t("employer.jobHub.fact.location")}>
-            {job.location_text || job.city || "—"}
-          </Fact>
-          <Fact label={t("employer.jobHub.fact.published")}>
-            {job.published_at ? formatDate(job.published_at, lang) : "—"}
-          </Fact>
-          <Fact label={t("employer.jobs.list.expires")}>
-            {job.expires_at ? formatDate(job.expires_at, lang) : "—"}
-          </Fact>
-          <Fact label={t("employer.jobs.list.updated")}>{formatDate(job.updated_at, lang)}</Fact>
-        </dl>
-      </section>
-
-      {/* ── The pipeline ───────────────────────────────────────────── */}
-      <section className="mt-10" aria-labelledby="job-pipeline">
-        <h2 id="job-pipeline" className="text-lg font-semibold text-foreground">
-          {t("employer.jobHub.pipeline.heading")}
-        </h2>
-        <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
-          {t("employer.jobHub.pipeline.lede")}
-        </p>
-
-        <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {PIPELINE_CARDS.map((card) => (
-            <PipelineCard
-              key={card.stage}
-              labelKey={card.labelKey}
-              count={pipeline.counts[card.stage]}
-              employerSlug={employerSlug}
-              jobId={jobId}
-              search={card.search}
-            />
-          ))}
-        </dl>
-
-        {/* ── The one next thing ──────────────────────────────────────
-            One sentence about this vacancy's own work, and never about the
-            people in it: no ranking, no assessment of the field, no advice to
-            close or extend. Where the honest answer is a statement it is a
-            statement, and no button is drawn. */}
-        <div className="mt-4 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-4">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            {t("employer.jobHub.next.heading")}
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <p className="max-w-[68ch] text-[13px] leading-relaxed text-foreground" role="status">
-              {(() => {
-                // A quantity where there is one, a sentence where there is
-                // not. The three quantified actions are the only ones whose
-                // number means anything; the rest are statements and reading
-                // "0 …" for them would be noise.
-                const plural = JOB_NEXT_PLURAL[pipeline.nextAction.kind];
-                return plural && pipeline.nextAction.count > 0
-                  ? `${pipeline.nextAction.count} ${tp(plural, pipeline.nextAction.count)}`
-                  : t(JOB_NEXT_BODY[pipeline.nextAction.kind]);
-              })()}
-            </p>
-            {pipeline.nextAction.stage && (
-              <Link
-                to="/employer/$employerSlug/applications"
-                params={{ employerSlug }}
-                search={{
-                  job: jobId,
-                  ...(PIPELINE_SEARCH[pipeline.nextAction.stage] ?? {}),
-                }}
-                className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[10px] bg-accent px-4 text-[13px] font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {t("employer.jobHub.next.open")}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-            )}
-            {pipeline.nextAction.kind === "unavailable" && (
+      {tab === "vacancy" && (
+        <div role="tabpanel" id="panel-vacancy" aria-labelledby="tab-vacancy" className="pt-5">
+          {/* ── What to do with the advertisement itself ────────────────── */}
+          {canEdit && (
+            <div className="flex flex-wrap gap-2">
+              {editable && (
+                <Link
+                  to="/employer/$employerSlug/jobs/$jobId/edit"
+                  params={{ employerSlug, jobId }}
+                  className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("employer.jobs.list.edit")}
+                </Link>
+              )}
+              {submittable && (
+                // Disabled only while something is genuinely outstanding, and the
+                // checklist below says what. A submit that the server will refuse
+                // is not an action, it is a trap.
+                <button
+                  type="button"
+                  disabled={busy || !readiness.ready}
+                  onClick={() => submitMutation.mutate()}
+                  className="inline-flex min-h-[36px] items-center rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
+                >
+                  {t("employer.jobHub.action.submit")}
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => void applicationsQuery.refetch()}
-                className="inline-flex min-h-11 shrink-0 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                disabled={busy}
+                onClick={() => {
+                  setActionError(null);
+                  setPending({ kind: "duplicate", id: jobId });
+                }}
+                className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                {t("continuity.next.retry")}
+                {t("employer.jobs.list.duplicate")}
               </button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── The people ─────────────────────────────────────────────── */}
-      <section className="mt-10 pb-4" aria-labelledby="job-candidates">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h2 id="job-candidates" className="text-lg font-semibold text-foreground">
-            {t("employer.jobHub.candidates.heading")}
-          </h2>
-          {rows.length > 0 && (
-            <Link
-              to="/employer/$employerSlug/applications"
-              params={{ employerSlug }}
-              search={{ job: jobId }}
-              className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
-            >
-              {t("employer.jobHub.candidates.openList")}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
+              {restorable && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setActionError(null);
+                    restoreMutation.mutate();
+                  }}
+                  className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("employer.jobs.list.restore")}
+                </button>
+              )}
+              {deletable && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setActionError(null);
+                    setPending({ kind: "delete", id: jobId });
+                  }}
+                  className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("employer.jobs.list.delete")}
+                </button>
+              )}
+            </div>
           )}
-        </div>
 
-        {applicationsQuery.isLoading ? (
-          <p className="mt-4 text-sm text-muted-foreground">{t("employer.loading")}</p>
-        ) : applicationsQuery.isError ? (
-          /* NOT an empty state. "Nobody has applied" and "we could not find
-             out who applied" are different sentences, and the second one is
-             the only honest thing to say here. */
-          <div
-            role="alert"
-            className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-900 dark:text-amber-200"
-          >
-            <p>{t("employer.jobHub.candidates.loadFailed")}</p>
-            <button
-              type="button"
-              onClick={() => void applicationsQuery.refetch()}
-              className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("continuity.next.retry")}
-            </button>
-          </div>
-        ) : rows.length === 0 ? (
-          <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-            {status === "published"
-              ? t("employer.jobHub.candidates.emptyPublished")
-              : t("employer.jobHub.candidates.emptyUnpublished")}
-          </p>
-        ) : (
-          <div className="mt-4 space-y-6">
-            {PIPELINE.map((stage) => {
-              const inStage = rows.filter((r) => stage.statuses.includes(r.status));
-              if (inStage.length === 0) return null;
-              return (
-                <div key={stage.key}>
-                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                    {t(stage.labelKey)}
-                    <span className="tabular-nums">({inStage.length})</span>
-                  </h3>
-                  <ul className="mt-2 space-y-2">
-                    {inStage.map((r) => (
-                      <li
-                        key={r.id}
-                        className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-lg border border-border bg-background p-3"
-                      >
-                        {/* The person is the link. Everything an employer
-                            does next -- assessment, review, interview,
-                            decision -- happens on their page. */}
-                        <Link
-                          to="/employer/$employerSlug/applications/$applicationId"
-                          params={{ employerSlug, applicationId: r.id }}
-                          className="min-w-0 text-sm font-medium text-foreground hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                        >
-                          {r.applicantDisplayName ?? t("employer.applications.anonymousCandidate")}
-                        </Link>
-                        <span className="flex items-center gap-3">
-                          <span className="text-xs text-muted-foreground">
-                            {t(APPLICATION_STATUS_LABEL_KEY[r.status])}
-                          </span>
-                          <span className="text-xs tabular-nums text-muted-foreground">
-                            {formatDate(r.createdAt, lang)}
-                          </span>
+          {/* ── Ready to publish? ───────────────────────────────────────── */}
+          {/*  Shown only where it can still change something: once an
+              advertisement is in a moderator's queue or live, a checklist telling
+              the employer what to fill in is describing a decision they no longer
+              own. */}
+          {editable && (
+            <section className="mt-6" aria-labelledby="job-readiness">
+              <h2 id="job-readiness" className="text-lg font-semibold text-foreground">
+                {t("employer.jobHub.readiness.heading")}
+              </h2>
+              <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
+                {readiness.ready
+                  ? t("employer.jobHub.readiness.ready")
+                  : t("employer.jobHub.readiness.notReady")}
+              </p>
+              <ul className="mt-4 space-y-1.5">
+                {readiness.checks.map((c) => (
+                  <li key={c.id} className="flex items-start gap-2 text-sm">
+                    {c.ok ? (
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+                    ) : (
+                      <CircleDashed
+                        className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className={c.ok ? "text-muted-foreground" : "text-foreground"}>
+                      {t(c.labelKey)}
+                      {!c.blocking && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {t("employer.jobHub.readiness.optional")}
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* ── The facts ──────────────────────────────────────────────── */}
+          <section className="mt-6" aria-labelledby="job-facts">
+            <h2 id="job-facts" className="text-lg font-semibold text-foreground">
+              {t("employer.jobHub.facts.heading")}
+            </h2>
+            <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
+              <Fact label={t("employer.jobHub.fact.location")}>
+                {job.location_text || job.city || "—"}
+              </Fact>
+              <Fact label={t("employer.jobHub.fact.published")}>
+                {job.published_at ? formatDate(job.published_at, lang) : "—"}
+              </Fact>
+              <Fact label={t("rec.hub.deadline")}>
+                {(job as { deadline_at?: string | null }).deadline_at
+                  ? formatDate(String((job as { deadline_at?: string | null }).deadline_at), lang)
+                  : "—"}
+              </Fact>
+              <Fact label={t("employer.jobs.list.expires")}>
+                {job.expires_at ? formatDate(job.expires_at, lang) : "—"}
+              </Fact>
+              <Fact label={t("employer.jobs.list.updated")}>
+                {formatDate(job.updated_at, lang)}
+              </Fact>
+              <Fact label={t("rec.hub.applicationMethod")}>
+                {t(`rec.hub.method.${job.application_method ?? "unavailable"}` as TranslationKey)}
+              </Fact>
+            </dl>
+          </section>
+
+          <section className="mt-8" aria-labelledby="job-requirements">
+            <h2 id="job-requirements" className="text-lg font-semibold text-foreground">
+              {t("rec.vacancy.requirementsHeading")}
+            </h2>
+            {recruitmentQuery.isError ? (
+              <p role="alert" className="mt-2 text-sm text-amber-900 dark:text-amber-200">
+                {t("rec.hub.recruitmentUnavailable")}
+              </p>
+            ) : !recruitment ? (
+              <p className="mt-2 text-sm text-muted-foreground">{t("employer.loading")}</p>
+            ) : (
+              <VacancyStructureSummary
+                requirements={recruitment.requirements}
+                questions={recruitment.questions}
+                locked={recruitment.structureLocked}
+                editHref={editable ? { employerSlug, jobId } : null}
+              />
+            )}
+          </section>
+        </div>
+      )}
+
+      {tab === "activity" && (
+        <div role="tabpanel" id="panel-activity" aria-labelledby="tab-activity" className="pt-5">
+          <RecruitmentActivity employerId={employerId} employerSlug={employerSlug} jobId={jobId} />
+        </div>
+      )}
+
+      {tab === "team" && (
+        <div role="tabpanel" id="panel-team" aria-labelledby="tab-team" className="pt-5">
+          <RecruitmentSettings
+            employerId={employerId}
+            employerSlug={employerSlug}
+            jobId={jobId}
+            recruitment={recruitment}
+            recruitmentError={recruitmentQuery.isError}
+            phase={phase}
+            unresolved={unresolved}
+            closeable={closeable && canEdit}
+            busy={busy}
+            onClose={() => {
+              setActionError(null);
+              setPending({ kind: "close", id: jobId });
+            }}
+            onChanged={() => {
+              void recruitmentQuery.refetch();
+              invalidateAll();
+            }}
+          />
+        </div>
+      )}
+
+      {pending && (
+        <ConfirmAction
+          open
+          onOpenChange={(o) => {
+            if (!o) setPending(null);
+          }}
+          tone={pending.kind === "delete" ? "destructive" : "default"}
+          busy={busy}
+          title={t(
+            pending.kind === "delete"
+              ? "employer.jobs.confirm.delete.title"
+              : pending.kind === "close"
+                ? "employer.jobs.confirm.close.title"
+                : "employer.jobs.confirm.duplicate.title",
+          )}
+          consequence={t(
+            pending.kind === "delete"
+              ? "employer.jobs.confirm.delete.body"
+              : pending.kind === "close"
+                ? "rec.hub.closeBody"
+                : "employer.jobs.confirm.duplicate.body",
+          )}
+          confirmLabel={t(
+            pending.kind === "delete"
+              ? "employer.jobs.list.delete"
+              : pending.kind === "close"
+                ? "rec.hub.closeApplications"
+                : "employer.jobs.list.duplicate",
+          )}
+          cancelLabel={t("employer.workforce.form.cancel")}
+          onConfirm={() => {
+            const { kind } = pending;
+            setPending(null);
+            if (kind === "delete") deleteMutation.mutate();
+            else if (kind === "close") closeMutation.mutate();
+            else dupMutation.mutate();
+          }}
+        />
+      )}
     </div>
   );
 }

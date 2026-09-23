@@ -25,6 +25,7 @@ import {
   pickLocalized,
   formatJobDate as formatDate,
 } from "@/components/jobs/JobAdContent";
+import { getPublicVacancyStructure } from "@/lib/job-intelligence/public-queries";
 import { Button } from "@/components/ui/button";
 import { ExternalApplyDialog } from "@/components/jobs/ExternalApplyDialog";
 import { ApplyInternalDialog } from "@/components/jobs/ApplyInternalDialog";
@@ -134,6 +135,8 @@ function JobDetailPage() {
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
           <article className="min-w-0 space-y-8">
             <JobAdSections job={job} />
+
+            <VacancyRequirements jobId={job.id} />
 
             {employer && (employer.name || employerDesc || employer.website) && (
               <EmployerCard employer={employer} description={employerDesc} />
@@ -415,5 +418,48 @@ function ErrorState({ message }: { message: string }) {
         <p className="mt-2 text-sm text-muted-foreground">{message}</p>
       </Section>
     </SiteLayout>
+  );
+}
+
+/** The vacancy's own requirements, mandatory and desirable, as the employer
+ *  listed them. Read through the public RLS: shown for a live advertisement,
+ *  and a failed read hides the section rather than claiming there are none. */
+function VacancyRequirements({ jobId }: { jobId: string }) {
+  const { t, lang } = useT();
+  const q = useQuery({
+    queryKey: ["public", "vacancy-structure", jobId],
+    queryFn: () => getPublicVacancyStructure(jobId),
+  });
+  const reqs = q.data?.requirements ?? [];
+  if (reqs.length === 0) return null;
+  const label = (r: { label_sv: string | null; label_en: string | null }) =>
+    (lang === "en" ? r.label_en || r.label_sv : r.label_sv || r.label_en) ?? "";
+  const groups: [
+    "mandatory" | "desirable",
+    "rec.requirement.mandatoryPlural" | "rec.requirement.desirablePlural",
+  ][] = [
+    ["mandatory", "rec.requirement.mandatoryPlural"],
+    ["desirable", "rec.requirement.desirablePlural"],
+  ];
+  return (
+    <section className="rounded-lg border border-border bg-background p-5">
+      <h2 className="text-xl font-semibold">{t("rec.vacancy.requirementsHeading")}</h2>
+      <div className="mt-4 grid gap-5 sm:grid-cols-2">
+        {groups.map(([kind, key]) => {
+          const rows = reqs.filter((r) => r.kind === kind);
+          if (rows.length === 0) return null;
+          return (
+            <div key={kind}>
+              <h3 className="text-sm font-semibold">{t(key)}</h3>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                {rows.map((r) => (
+                  <li key={r.id}>{label(r)}</li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

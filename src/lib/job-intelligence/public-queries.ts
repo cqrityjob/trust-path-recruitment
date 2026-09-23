@@ -205,3 +205,51 @@ export function isJobExpired(job: {
   if (!Number.isFinite(d)) return false;
   return d < Date.now();
 }
+
+// ── The vacancy's requirements and application questions ─────────────────
+//
+// Read through the same browser client and the same RLS: the policies on
+// recruitment_requirements / recruitment_questions show a vacancy's frame to
+// whoever may see the vacancy itself, so an active advertisement's frame is
+// public and a draft's is nobody's outside its organisation.
+
+export type PublicRequirement = {
+  id: string;
+  kind: "mandatory" | "desirable";
+  label_sv: string | null;
+  label_en: string | null;
+};
+export type PublicQuestion = {
+  id: string;
+  requirement_id: string | null;
+  prompt_sv: string | null;
+  prompt_en: string | null;
+  answer_kind: "text" | "yes_no";
+  is_required: boolean;
+};
+
+export async function getPublicVacancyStructure(
+  jobId: string,
+): Promise<{ requirements: PublicRequirement[]; questions: PublicQuestion[] }> {
+  const [r, q] = await Promise.all([
+    supabase
+      .from("recruitment_requirements")
+      .select("id, kind, label_sv, label_en")
+      .eq("job_id", jobId)
+      .order("position"),
+    supabase
+      .from("recruitment_questions")
+      .select("id, requirement_id, prompt_sv, prompt_en, answer_kind, is_required")
+      .eq("job_id", jobId)
+      .order("position"),
+  ]);
+  // A failed read is thrown, never returned as "no questions": an application
+  // form that silently lost its required questions would then be refused at
+  // submission for answers the candidate was never shown.
+  if (r.error) throw r.error;
+  if (q.error) throw q.error;
+  return {
+    requirements: (r.data ?? []) as PublicRequirement[],
+    questions: (q.data ?? []) as PublicQuestion[],
+  };
+}

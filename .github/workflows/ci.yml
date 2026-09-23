@@ -1023,6 +1023,15 @@ jobs:
       - name: Employer lifecycle check (phases 2 and 3)
         run: bun run employer-lifecycle:check
 
+      # The recruitment workspace (20261207090000): one vocabulary for what the
+      # overview counts and the lists open, no contact with a candidate except
+      # an explicit reviewed send, decisions withheld from seats the database
+      # refuses, and AI help that reads no candidate material. The database
+      # half is proved in the database job; its planted controls run in
+      # `negative-controls:all` above.
+      - name: Recruitment workspace check
+        run: bun run recruitment-workspace:check
+
       # E3: the context an interview inherits, and what the CANDIDATE is told.
       #
       # The bridge already read the application, the advert and the assessment.

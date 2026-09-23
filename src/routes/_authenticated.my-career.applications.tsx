@@ -16,6 +16,9 @@ import { formatDate } from "@/lib/job-intelligence/date-format";
 import { APPLICATION_STATUS_LABEL_KEY } from "@/lib/job-intelligence/application-status-labels";
 import { ApplicationPassportShare } from "@/components/jobs/ApplicationPassportShare";
 import { MyPreparations } from "@/components/beskt/MyPreparations";
+import { ConfirmAction } from "@/components/employer/ConfirmAction";
+import { CandidateApplicationInbox } from "@/components/recruitment/CandidateApplicationInbox";
+import { listMyRecruitmentInbox } from "@/lib/recruitment/recruitment.functions";
 import {
   listMyApplications,
   withdrawMyApplication,
@@ -49,11 +52,20 @@ function MyApplicationsPage() {
   const withdrawFn = useServerFn(withdrawMyApplication);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [withdrawing, setWithdrawing] = useState<MyApplicationRow | null>(null);
+  const inboxFn = useServerFn(listMyRecruitmentInbox);
 
   const query = useQuery({
     queryKey: ["my-career", "applications"],
     queryFn: () => listFn(),
   });
+  // What employers have sent: interview invitations and messages. Its own
+  // read, so a failure here costs these cards and not the application list.
+  const inboxQuery = useQuery({
+    queryKey: ["my-career", "recruitment-inbox"],
+    queryFn: () => inboxFn(),
+  });
+  const inbox = new Map((inboxQuery.data ?? []).map((i) => [i.applicationId, i]));
 
   const withdraw = useMutation({
     mutationFn: (applicationId: string) => withdrawFn({ data: { applicationId } }),
@@ -163,7 +175,7 @@ function MyApplicationsPage() {
                         <button
                           type="button"
                           disabled={withdraw.isPending}
-                          onClick={() => withdraw.mutate(r.id)}
+                          onClick={() => setWithdrawing(r)}
                           className="rounded-md border border-border px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
                         >
                           {t("candidate.applications.action.withdraw")}
@@ -175,12 +187,48 @@ function MyApplicationsPage() {
                         employer it concerns — not in a sharing centre, and
                         never as a link pasted into a cover note. */}
                     <ApplicationPassportShare applicationId={r.id} />
+
+                    <CandidateApplicationInbox
+                      item={inbox.get(r.id)}
+                      employerName={r.employerName ?? ""}
+                      jobTitle={jobTitle}
+                      onChanged={() => void inboxQuery.refetch()}
+                    />
                   </li>
                 );
               })}
             </ul>
           )}
         </div>
+
+        {inboxQuery.isError && (
+          <p
+            role="alert"
+            className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+          >
+            {t("rec.inbox.unavailable")}
+          </p>
+        )}
+
+        {/* Withdrawing ends the application for this employer; it is asked
+            once, with what it means, rather than one stray click away. */}
+        {withdrawing && (
+          <ConfirmAction
+            open
+            onOpenChange={(o) => !o && setWithdrawing(null)}
+            tone="destructive"
+            busy={withdraw.isPending}
+            title={t("rec.withdraw.title")}
+            consequence={t("rec.withdraw.body")}
+            confirmLabel={t("candidate.applications.action.withdraw")}
+            cancelLabel={t("rec.common.cancel")}
+            onConfirm={() => {
+              const id = withdrawing.id;
+              setWithdrawing(null);
+              withdraw.mutate(id);
+            }}
+          />
+        )}
 
         {/* BESKT preparation — part of the application journey, next to the
             applications it belongs to. It shows a truthful state and a way

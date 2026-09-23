@@ -23,6 +23,13 @@ import {
   type EmployerJobFormValues,
 } from "@/components/employer/EmployerJobForm";
 
+import { saveVacancyStructure } from "@/lib/recruitment/recruitment.functions";
+import { structurePayload, type VacancyStructureDraft } from "@/lib/recruitment/vacancy-structure";
+
+/** Unsaved work on a brand-new advert, kept in this browser until the first
+ *  save creates the draft on the server. */
+const NEW_DRAFT_KEY = "cqj.job-draft.new";
+
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/new")({
   ssr: false,
   component: EmployerJobNewPage,
@@ -38,6 +45,7 @@ function EmployerJobNewPage() {
   const saveFn = useServerFn(saveEmployerJobDraft);
   const submitFn = useServerFn(submitEmployerJob);
   const publishFn = useServerFn(publishEmployerJob);
+  const structureFn = useServerFn(saveVacancyStructure);
 
   const workspacesQuery = useQuery({
     queryKey: ["employer", "my-workspaces"],
@@ -50,13 +58,28 @@ function EmployerJobNewPage() {
    *  instead of navigating away in silence. */
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
 
+  // The first save creates the draft; its requirements and questions are then
+  // saved onto it. From here on the employer is on /edit, where every later
+  // save updates the same draft, so a reload or a new sign-in resumes it.
   const saveMutation = useMutation({
-    mutationFn: async (values: EmployerJobFormValues) => {
+    mutationFn: async (vars: {
+      values: EmployerJobFormValues;
+      structure: VacancyStructureDraft;
+    }) => {
       if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
-      return saveFn({ data: { employerId: workspace.employerId, ...toServerPayload(values) } });
+      const saved = await saveFn({
+        data: { employerId: workspace.employerId, ...toServerPayload(vars.values) },
+      });
+      await structureFn({ data: { jobId: saved.id, ...structurePayload(vars.structure) } });
+      return saved;
     },
     onSuccess: (result) => {
       if (!workspace) return;
+      try {
+        window.localStorage.removeItem(NEW_DRAFT_KEY);
+      } catch {
+        /* storage unavailable */
+      }
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
       navigate({
@@ -71,11 +94,15 @@ function EmployerJobNewPage() {
   // row before the database validates it, or publication would judge a
   // version of the advert nobody is looking at.
   const publishMutation = useMutation({
-    mutationFn: async (values: EmployerJobFormValues) => {
+    mutationFn: async (vars: {
+      values: EmployerJobFormValues;
+      structure: VacancyStructureDraft;
+    }) => {
       if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       const saved = await saveFn({
-        data: { employerId: workspace.employerId, ...toServerPayload(values) },
+        data: { employerId: workspace.employerId, ...toServerPayload(vars.values) },
       });
+      await structureFn({ data: { jobId: saved.id, ...structurePayload(vars.structure) } });
       if (PUBLICATION_MODEL === "moderated") {
         await submitFn({ data: { employerId: workspace.employerId, jobId: saved.id } });
         return null;
@@ -84,8 +111,16 @@ function EmployerJobNewPage() {
     },
     onSuccess: (result) => {
       if (!workspace) return;
+      try {
+        window.localStorage.removeItem(NEW_DRAFT_KEY);
+      } catch {
+        /* storage unavailable */
+      }
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
+      qc.invalidateQueries({
+        queryKey: ["employer", workspace.employerId, "recruitment-overview"],
+      });
       if (result?.slug) {
         setPublishedSlug(result.slug);
         return;
@@ -135,18 +170,20 @@ function EmployerJobNewPage() {
 
           <EmployerJobForm
             initial={emptyValues}
+            employerId={workspace.employerId}
+            draftStorageKey={NEW_DRAFT_KEY}
             employerName={workspace.employerName}
             employerStatus={workspace.employerStatus}
             saving={saveMutation.isPending}
             submitting={publishMutation.isPending}
             error={formError}
-            onSaveDraft={(v) => {
+            onSaveDraft={(v, structure) => {
               setFormError(null);
-              saveMutation.mutate(v);
+              saveMutation.mutate({ values: v, structure });
             }}
-            onPublish={(v) => {
+            onPublish={(v, structure) => {
               setFormError(null);
-              publishMutation.mutate(v);
+              publishMutation.mutate({ values: v, structure });
             }}
           />
         </>

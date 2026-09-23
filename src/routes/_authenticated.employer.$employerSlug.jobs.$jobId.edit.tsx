@@ -29,6 +29,12 @@ import {
 import { jobStatusLabel } from "@/lib/job-intelligence/enum-labels";
 import { PUBLICATION_MODEL } from "@/components/employer/job-form/model";
 import { JobPublishedPanel } from "@/components/employer/job-form/JobPublishedPanel";
+import { getRecruitment, saveVacancyStructure } from "@/lib/recruitment/recruitment.functions";
+import {
+  structureFromRows,
+  structurePayload,
+  type VacancyStructureDraft,
+} from "@/lib/recruitment/vacancy-structure";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/$jobId/edit")({
   ssr: false,
@@ -49,6 +55,9 @@ function EmployerJobEditPage() {
   const publishFn = useServerFn(publishEmployerJob);
   const closeFn = useServerFn(closeEmployerJob);
   const dupFn = useServerFn(duplicateEmployerJob);
+  const recruitmentFn = useServerFn(getRecruitment);
+  const structureFn = useServerFn(saveVacancyStructure);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
 
   const workspacesQuery = useQuery({
     queryKey: ["employer", "my-workspaces"],
@@ -62,19 +71,38 @@ function EmployerJobEditPage() {
     enabled: !!workspace,
   });
 
+  // Requirements and questions, which live beside the job rather than on it.
+  const recruitmentQuery = useQuery({
+    queryKey: ["employer", workspace?.employerId ?? "_", "recruitment", jobId],
+    queryFn: () => recruitmentFn({ data: { employerId: workspace!.employerId, jobId } }),
+    enabled: !!workspace && workspace.employerStatus === "active",
+  });
+
+  async function saveStructure(structure: VacancyStructureDraft) {
+    if (recruitmentQuery.data?.structureLocked) return;
+    await structureFn({ data: { jobId, ...structurePayload(structure) } });
+  }
+
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = usePendingConfirm<"close" | "duplicate">();
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
 
   const saveMutation = useMutation({
-    mutationFn: async (values: EmployerJobFormValues) => {
+    mutationFn: async (vars: {
+      values: EmployerJobFormValues;
+      structure: VacancyStructureDraft;
+    }) => {
       if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
-      return saveFn({
-        data: { employerId: workspace.employerId, id: jobId, ...toServerPayload(values) },
+      const saved = await saveFn({
+        data: { employerId: workspace.employerId, id: jobId, ...toServerPayload(vars.values) },
       });
+      await saveStructure(vars.structure);
+      return saved;
     },
     onSuccess: () => {
       if (!workspace) return;
+      setLastSavedAt(new Date().toISOString());
+      qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "recruitment", jobId] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "job", jobId] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
     },
@@ -84,11 +112,15 @@ function EmployerJobEditPage() {
   // Save first, then publish, for the same reason as the create route: the
   // database validates the stored row, not the form state.
   const publishMutation = useMutation({
-    mutationFn: async (values: EmployerJobFormValues) => {
+    mutationFn: async (vars: {
+      values: EmployerJobFormValues;
+      structure: VacancyStructureDraft;
+    }) => {
       if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
       await saveFn({
-        data: { employerId: workspace.employerId, id: jobId, ...toServerPayload(values) },
+        data: { employerId: workspace.employerId, id: jobId, ...toServerPayload(vars.values) },
       });
+      await saveStructure(vars.structure);
       if (PUBLICATION_MODEL === "moderated") {
         await submitFn({ data: { employerId: workspace.employerId, jobId } });
         return null;
@@ -97,9 +129,13 @@ function EmployerJobEditPage() {
     },
     onSuccess: (result) => {
       if (!workspace) return;
+      setLastSavedAt(new Date().toISOString());
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "job", jobId] });
+      qc.invalidateQueries({
+        queryKey: ["employer", workspace.employerId, "recruitment-overview"],
+      });
       if (result?.slug) {
         setPublishedSlug(result.slug);
         return;
@@ -143,7 +179,11 @@ function EmployerJobEditPage() {
     onError: (e: any) => setFormError(e?.message ?? "DUPLICATE_JOB_FAILED"),
   });
 
-  if (workspacesQuery.isLoading || (workspace && jobQuery.isLoading)) {
+  if (
+    workspacesQuery.isLoading ||
+    (workspace && jobQuery.isLoading) ||
+    (workspace && workspace.employerStatus === "active" && recruitmentQuery.isLoading)
+  ) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
         <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
@@ -260,8 +300,29 @@ function EmployerJobEditPage() {
             </div>
           )}
 
+          {recruitmentQuery.isError && (
+            <div
+              role="alert"
+              className="mb-6 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm"
+            >
+              {t("rec.hub.recruitmentUnavailable")}
+            </div>
+          )}
           <EmployerJobForm
+            key={recruitmentQuery.dataUpdatedAt ? "loaded" : "pending"}
             initial={fromJobRow(job)}
+            employerId={workspace.employerId}
+            initialStructure={
+              recruitmentQuery.data
+                ? structureFromRows(
+                    recruitmentQuery.data.requirements,
+                    recruitmentQuery.data.questions,
+                  )
+                : undefined
+            }
+            structureLocked={recruitmentQuery.data?.structureLocked ?? false}
+            draftStorageKey={`cqj.job-draft.${jobId}`}
+            lastSavedAt={lastSavedAt}
             readOnly={!editable}
             editableStatus={job.status}
             employerName={workspace.employerName}
@@ -269,15 +330,15 @@ function EmployerJobEditPage() {
             saving={saveMutation.isPending}
             submitting={publishMutation.isPending}
             error={formError}
-            onSaveDraft={(v) => {
+            onSaveDraft={(v, structure) => {
               setFormError(null);
-              saveMutation.mutate(v);
+              saveMutation.mutate({ values: v, structure });
             }}
             onPublish={
               editable
-                ? (v) => {
+                ? (v, structure) => {
                     setFormError(null);
-                    publishMutation.mutate(v);
+                    publishMutation.mutate({ values: v, structure });
                   }
                 : undefined
             }

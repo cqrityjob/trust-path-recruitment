@@ -37,6 +37,7 @@ import {
   Inbox,
   Info,
   MessagesSquare,
+  Plus,
   ShieldCheck,
   Sparkles,
   UserCheck,
@@ -79,6 +80,10 @@ import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-as
 import { listTrainingStatus } from "@/lib/security-competency/academy-employer.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { LAST_EMPLOYER_SLUG_KEY } from "@/lib/job-intelligence/last-employer-slug";
+import { getRecruitmentOverview } from "@/lib/recruitment/recruitment.functions";
+import { isActiveRecruitment, isReadyToComplete } from "@/lib/recruitment/definitions";
+import { formatDay, formatInZone } from "@/lib/recruitment/format";
+import { BookingBadge, PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/")({
   ssr: false,
@@ -243,6 +248,7 @@ function EmployerOverview({
   const loadPipeline = useServerFn(getEmployerAssessmentPipeline);
   const loadReviewBoard = useServerFn(getEmployerReviewBoard);
   const loadEmploymentVerifications = useServerFn(employerVerificationCounts);
+  const loadOverview = useServerFn(getRecruitmentOverview);
 
   const stats = useQuery({
     queryKey: ["employer", employerId, "dashboard-stats"],
@@ -715,6 +721,45 @@ function EmployerOverview({
     day: "numeric",
   }).format(new Date());
 
+  // ── THE RECRUITMENT OVERVIEW ─────────────────────────────────────────
+  //
+  // One read gives the summary row, the recruitment table and the upcoming
+  // interviews, computed with lib/recruitment/definitions -- the SAME
+  // predicates the destination lists filter with, so "3 new applications"
+  // opens exactly three rows.
+  const overviewQuery = useQuery({
+    queryKey: ["employer", employerId, "recruitment-overview"],
+    queryFn: () => loadOverview({ data: { employerId } }),
+  });
+  const overview = overviewQuery.data ?? null;
+  const recruitmentRows = (overview?.recruitments ?? []).filter((r) =>
+    isActiveRecruitment(r.phase, r.unresolved),
+  );
+  const readyToComplete = (overview?.recruitments ?? []).filter((r) =>
+    isReadyToComplete(r.phase, r.unresolved),
+  );
+  const newApplicationsTotal = (overview?.recruitments ?? []).reduce((n, r) => n + r.newCount, 0);
+  const upcoming = overview?.upcomingInterviews ?? [];
+
+  if (readyToComplete.length > 0) {
+    actions.push({
+      key: "ready-to-complete",
+      icon: <Briefcase className="h-4 w-4" />,
+      count: readyToComplete.length,
+      text: tp("rec.overview.readyToComplete", readyToComplete.length),
+      linkProps: {
+        to: "/employer/$employerSlug/jobs",
+        params: { employerSlug },
+        search: { phase: "closed" as const },
+      },
+      actionLabel: t("employer.actions.open"),
+      tone: "todo",
+    });
+  }
+
+  const titleOf = (sv: string | null, en: string | null) =>
+    (lang === "en" ? en || sv : sv || en) || t("employer.jobs.list.untitled");
+
   return (
     <EmployerAppShell
       employerSlug={employerSlug}
@@ -723,79 +768,277 @@ function EmployerOverview({
       status={status}
       activeSection="overview"
       hasMultipleWorkspaces={hasMultipleWorkspaces}
+      wide
     >
-      {/* A. Header */}
-      <div className="max-w-2xl">
-        <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          {currentPeriod}
-        </p>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          {t("employer.overview.heading")}
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {t("employer.overview.subheading")}
-        </p>
+      {/* A. Header: who, and the one thing that always starts work. */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            {currentPeriod}
+          </p>
+          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            {employerName}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("employer.overview.heading")}</p>
+        </div>
+        {status === "active" && (
+          <Link
+            to="/employer/$employerSlug/jobs/new"
+            params={{ employerSlug }}
+            className="inline-flex min-h-11 items-center gap-2 rounded-md bg-accent px-5 text-sm font-semibold text-accent-foreground shadow-sm hover:bg-accent/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {t("rec.overview.create")}
+          </Link>
+        )}
       </div>
 
-      {/* B. Today's work, above the status cards.
-       *
-       *  Order matters here and it changed: the four area cards used to be the
-       *  first thing on the page, so an employer with five new applications
-       *  and seven responses to review landed on four totals and had to go
-       *  looking. Work first, totals second. */}
-      <section className="mt-6" aria-labelledby="employer-actions">
-        <h2 id="employer-actions" className="text-lg font-semibold text-foreground">
-          {t("employer.actions.heading")}
-        </h2>
-        {actions.length === 0 ? (
-          <p className="mt-3 text-sm text-muted-foreground">{t("employer.actions.empty")}</p>
+      {/* B. The summary row. Every number opens the records it counted. */}
+      <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <SummaryStat
+          label={t("rec.overview.stat.active")}
+          value={overviewQuery.isSuccess ? recruitmentRows.length : null}
+          failed={overviewQuery.isError}
+          linkProps={{
+            to: "/employer/$employerSlug/jobs",
+            params: { employerSlug },
+            search: { phase: "active" as const },
+          }}
+        />
+        <SummaryStat
+          label={t("rec.overview.stat.new")}
+          value={overviewQuery.isSuccess ? newApplicationsTotal : null}
+          failed={overviewQuery.isError}
+          linkProps={{
+            to: "/employer/$employerSlug/applications",
+            params: { employerSlug },
+            search: { status: "submitted" as const },
+          }}
+        />
+        <SummaryStat
+          label={t("rec.overview.stat.interviews")}
+          value={overviewQuery.isSuccess ? upcoming.length : null}
+          failed={overviewQuery.isError}
+          href="#upcoming-interviews"
+        />
+      </dl>
+
+      {/* C. Active recruitments, as a table a recruiter reads down. */}
+      <section className="mt-6" aria-labelledby="active-recruitments">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <h2 id="active-recruitments" className="text-lg font-semibold text-foreground">
+            {t("rec.overview.activeHeading")}
+          </h2>
+          <Link
+            to="/employer/$employerSlug/jobs"
+            params={{ employerSlug }}
+            className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:underline"
+          >
+            {t("rec.overview.allRecruitments")}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </div>
+        {overviewQuery.isLoading ? (
+          <p className="mt-3 text-sm text-muted-foreground">{t("employer.loading")}</p>
+        ) : overviewQuery.isError ? (
+          <div
+            role="alert"
+            className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm"
+          >
+            {t("rec.overview.unavailable")}{" "}
+            <button
+              type="button"
+              onClick={() => void overviewQuery.refetch()}
+              className="font-medium underline"
+            >
+              {t("continuity.next.retry")}
+            </button>
+          </div>
+        ) : recruitmentRows.length === 0 ? (
+          <div className="mt-3 rounded-lg border border-dashed border-border px-4 py-6 text-sm">
+            <p className="font-medium text-foreground">
+              {(overview?.recruitments.length ?? 0) === 0
+                ? t("rec.overview.firstUseTitle")
+                : t("rec.overview.noneActive")}
+            </p>
+            <p className="mt-1 max-w-[68ch] text-muted-foreground">
+              {(overview?.recruitments.length ?? 0) === 0
+                ? t("rec.overview.firstUseBody")
+                : t("rec.overview.noneActiveBody")}
+            </p>
+          </div>
         ) : (
-          <ul className="mt-4 space-y-2">
-            {actions.map((item) => (
-              <li key={item.key}>
-                {/* The whole row is the link. A number that is described as
-                    actionable and then needs a second, smaller target to act
-                    on is a number the employer has to aim at. */}
-                <Link
-                  {...item.linkProps}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 shadow-sm transition-colors hover:border-accent/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <span className="flex min-w-0 items-center gap-3">
-                    <span
-                      className={
-                        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md " +
-                        (item.tone === "todo"
-                          ? "bg-accent/10 text-accent"
-                          : "bg-muted text-muted-foreground")
-                      }
-                      aria-hidden="true"
-                    >
-                      {item.icon}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-medium text-foreground">
-                        <span className="tabular-nums">{item.count}</span> {item.text}
-                      </span>
-                      {item.tone === "waiting" && (
-                        <span className="block text-xs text-muted-foreground">
-                          {t("employer.actions.waitingLabel")}
-                        </span>
+          <div className="mt-3 overflow-x-auto rounded-lg border border-border">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">{t("rec.col.role")}</th>
+                  <th className="px-3 py-2">{t("rec.col.status")}</th>
+                  <th className="px-3 py-2 text-right">{t("rec.col.applications")}</th>
+                  <th className="px-3 py-2 text-right">{t("rec.col.new")}</th>
+                  <th className="px-3 py-2">{t("rec.col.responsible")}</th>
+                  <th className="px-3 py-2">{t("rec.col.next")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {recruitmentRows.slice(0, 12).map((r) => (
+                  <tr key={r.jobId} className="hover:bg-muted/20">
+                    <td className="px-3 py-2">
+                      <Link
+                        to="/employer/$employerSlug/jobs/$jobId"
+                        params={{ employerSlug, jobId: r.jobId }}
+                        className="font-medium text-foreground hover:text-accent hover:underline"
+                      >
+                        {titleOf(r.titleSv, r.titleEn)}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2">
+                      <PhaseBadge phase={r.phase} />
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      <Link
+                        to="/employer/$employerSlug/jobs/$jobId"
+                        params={{ employerSlug, jobId: r.jobId }}
+                        search={{ tab: "candidates" as const, stage: "all" as const }}
+                        className="hover:text-accent hover:underline"
+                      >
+                        {r.total}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {r.newCount > 0 ? (
+                        <Link
+                          to="/employer/$employerSlug/jobs/$jobId"
+                          params={{ employerSlug, jobId: r.jobId }}
+                          search={{ tab: "candidates" as const, stage: "new" as const }}
+                          className="font-semibold text-accent hover:underline"
+                        >
+                          {r.newCount}
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">0</span>
                       )}
-                    </span>
-                  </span>
-                  <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-accent">
-                    {item.actionLabel}
-                    <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground">{r.responsibleName ?? "—"}</td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">
+                      {r.nextInterviewAt
+                        ? `${t("rec.overview.nextInterview")} ${formatDay(r.nextInterviewAt, lang)}`
+                        : r.phase === "published" && r.deadlineAt
+                          ? `${t("rec.overview.deadline")} ${formatDay(r.deadlineAt, lang)}`
+                          : r.phase === "closed"
+                            ? t("rec.overview.decideRemaining").replace("{n}", String(r.unresolved))
+                            : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
 
-      {/* C. The four working areas, at equal weight. */}
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* D. Tasks and upcoming interviews, side by side when there is room. */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <section aria-labelledby="employer-actions">
+          <h2 id="employer-actions" className="text-lg font-semibold text-foreground">
+            {t("employer.actions.heading")}
+          </h2>
+          {actions.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">{t("employer.actions.empty")}</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {actions.map((item) => (
+                <li key={item.key}>
+                  {/* The whole row is the link. A number that is described as
+                    actionable and then needs a second, smaller target to act
+                    on is a number the employer has to aim at. */}
+                  <Link
+                    {...item.linkProps}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 shadow-sm transition-colors hover:border-accent/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={
+                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md " +
+                          (item.tone === "todo"
+                            ? "bg-accent/10 text-accent"
+                            : "bg-muted text-muted-foreground")
+                        }
+                        aria-hidden="true"
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-foreground">
+                          <span className="tabular-nums">{item.count}</span> {item.text}
+                        </span>
+                        {item.tone === "waiting" && (
+                          <span className="block text-xs text-muted-foreground">
+                            {t("employer.actions.waitingLabel")}
+                          </span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-accent">
+                      {item.actionLabel}
+                      <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section
+          id="upcoming-interviews"
+          aria-labelledby="upcoming-interviews-h"
+          className="scroll-mt-24"
+        >
+          <h2 id="upcoming-interviews-h" className="text-lg font-semibold text-foreground">
+            {t("rec.overview.upcomingHeading")}
+          </h2>
+          {overviewQuery.isError ? (
+            <p className="mt-3 text-sm text-muted-foreground">{t("rec.overview.unavailable")}</p>
+          ) : upcoming.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {overviewQuery.isLoading ? t("employer.loading") : t("rec.overview.upcomingEmpty")}
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {upcoming.slice(0, 8).map((u) => (
+                <li key={u.bookingId}>
+                  <Link
+                    to="/employer/$employerSlug/applications/$applicationId"
+                    params={{ employerSlug, applicationId: u.applicationId }}
+                    hash="candidate-bookings"
+                    className="block rounded-xl border border-border bg-background p-3 shadow-sm hover:border-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <span className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-sm font-medium tabular-nums">
+                        {formatInZone(u.startsAt, u.timezone, lang)}
+                      </span>
+                      <BookingBadge status={u.status} />
+                    </span>
+                    <span className="mt-0.5 block text-sm text-foreground">
+                      {u.candidateName ?? t("employer.applications.anonymousCandidate")}
+                    </span>
+                    <span className="block text-xs text-muted-foreground">
+                      {titleOf(u.jobTitleSv, u.jobTitleEn)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      {/* E. The other areas of the product, compact and below the work. */}
+      <h2 className="mt-10 text-lg font-semibold text-foreground">
+        {t("rec.overview.otherAreas")}
+      </h2>
+      <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <PrimaryCard
           icon={<Briefcase className="h-4 w-4" />}
           title={t("employer.overview.card.jobs.title")}
@@ -1158,5 +1401,53 @@ function PrimaryCard({
         </div>
       )}
     </section>
+  );
+}
+
+/** One number in the summary row, and the way into exactly what it counted.
+ *  An unknown number is a dash with the reason under it -- never a zero. */
+function SummaryStat({
+  label,
+  value,
+  failed,
+  linkProps,
+  href,
+}: {
+  label: string;
+  value: number | null;
+  failed: boolean;
+  linkProps?: LinkComponentProps;
+  href?: string;
+}) {
+  const { t } = useT();
+  const body = (
+    <>
+      <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+      <dd className="mt-1 flex items-baseline justify-between gap-2">
+        <span className="text-2xl font-semibold tabular-nums text-foreground">
+          {value === null ? "—" : value}
+        </span>
+        <ArrowRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+      </dd>
+      {failed && (
+        <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-200">
+          {t("rec.overview.unavailableShort")}
+        </p>
+      )}
+    </>
+  );
+  const cls =
+    "block rounded-xl border border-border bg-background px-4 py-3 shadow-sm hover:border-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+  if (href) {
+    return (
+      <a href={href} className={cls}>
+        {body}
+      </a>
+    );
+  }
+  return (
+    <Link {...linkProps} className={cls}>
+      {body}
+    </Link>
   );
 }

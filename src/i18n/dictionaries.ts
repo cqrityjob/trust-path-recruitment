@@ -1,3 +1,5 @@
+import { recruitmentEn, recruitmentSv } from "./recruitment-copy";
+
 export type Lang = "sv" | "en";
 
 export const dictionaries = {
@@ -1616,10 +1618,10 @@ export const dictionaries = {
     "employer.jobs.list.moreActions": "Fler åtgärder",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Går ut",
-    "employer.jobs.new.heading": "Ny jobbannons",
+    "employer.jobs.new.heading": "Ny rekrytering",
     "employer.jobs.new.lede":
-      "Fyra korta steg: jobbet, beskrivningen, ansökan och en granskning innan annonsen skickas för publicering.",
-    "employer.jobs.edit.heading": "Redigera jobbannons",
+      "Fem steg: roll och arbetsplats, krav, annonstext, ansökan och frågor, och en granskning innan ni publicerar. Spara ett utkast när som helst och fortsätt senare.",
+    "employer.jobs.edit.heading": "Redigera rekryteringens annons",
     "employer.jobs.edit.viewPublic": "Visa publik vy",
     "employer.jobs.published.heading": "Annonsen är publicerad.",
     "employer.jobs.published.body": "Annonsen är nu synlig för kandidater på CQrityjob.",
@@ -1746,11 +1748,11 @@ export const dictionaries = {
       "Om rollen…\n\nVi söker dig som…\n\nVi erbjuder…",
     "employer.jobs.form.field.descriptionEnglish": "Jobbeskrivning på engelska",
     "employer.jobs.form.field.descriptionSwedish": "Jobbeskrivning på svenska",
-    "employer.jobs.form.field.requirements": "Vad söker ni hos kandidaten?",
+    "employer.jobs.form.field.requirements": "Övrigt ni söker (valfritt)",
     "employer.jobs.form.field.requirementsHelp":
-      "Beskriv de viktigaste kraven, erfarenheterna eller egenskaperna för rollen.",
+      "Fritext utöver listorna ovan, till exempel personliga egenskaper eller arbetstider.",
     "employer.jobs.form.field.requirementsPlaceholder":
-      "Krav…\n\nMeriterande…\n\nPersonliga egenskaper…",
+      "Till exempel: lugn under press, van vid kvällsarbete …",
     "employer.jobs.form.field.requirementsEnglish": "Kandidatkrav på engelska",
     "employer.jobs.form.field.requirementsSwedish": "Kandidatkrav på svenska",
     "employer.jobs.form.section.category": "Jobbkategori",
@@ -1811,7 +1813,7 @@ export const dictionaries = {
     "employer.jobs.form.preview.applyMissing": "Inget ansökningssätt är valt ännu.",
 
     "employer.nav.overview": "Översikt",
-    "employer.nav.jobs": "Mina annonser",
+    "employer.nav.jobs": "Rekryteringar",
     "employer.nav.applications": "Ansökningar",
     "employer.nav.assessments": "Tester & bedömningar",
     "employer.nav.settings": "Inställningar",
@@ -1993,13 +1995,13 @@ export const dictionaries = {
     "employer.overview.subheading":
       "Hantera rekrytering, medarbetare, tester och kompetensutveckling på ett ställe.",
 
-    "employer.overview.card.jobs.title": "Mina annonser",
+    "employer.overview.card.jobs.title": "Rekryteringar",
     "employer.overview.card.jobs.body":
-      "Skapa och hantera jobbannonser och följ inkomna ansökningar.",
+      "Skapa rekryteringar, publicera annonser och följ inkomna ansökningar.",
     "employer.overview.card.jobs.stat.active": "Aktiva",
     "employer.overview.card.jobs.stat.drafts": "Utkast",
     "employer.overview.card.jobs.stat.applications": "Ansökningar",
-    "employer.overview.card.jobs.action.create": "Skapa jobbannons",
+    "employer.overview.card.jobs.action.create": "Skapa rekrytering",
     "employer.overview.card.jobs.action.applications": "Visa ansökningar",
 
     "employer.overview.card.people.title": "Medarbetare",
@@ -2324,7 +2326,7 @@ export const dictionaries = {
     "employer.applications.status.hired": "Anställd",
     "employer.applications.status.withdrawn": "Återkallad",
     "employer.applications.action.markReviewing": "Markera som under granskning",
-    "employer.applications.action.markInterview": "Kalla till intervju",
+    "employer.applications.action.markInterview": "Flytta till intervju",
     "employer.applications.action.markRejected": "Markera som ej aktuell",
     "employer.applications.action.markHired": "Markera som anställd",
     "employer.applications.action.downloadCv": "Ladda ner CV",
@@ -2342,7 +2344,7 @@ export const dictionaries = {
       "Ansökan finns inte i er organisation, eller har tagits bort. Gå tillbaka till ansökningar för att se aktuella kandidater.",
     "employer.candidate.noJob": "Tjänsten är inte längre tillgänglig",
     "employer.candidate.appliedOn": "Ansökte",
-    "employer.candidate.openJob": "Visa jobbannonser",
+    "employer.candidate.openJob": "Öppna rekryteringen",
     "employer.candidate.application.heading": "Ansökan",
     "employer.candidate.fact.status": "Status",
     "employer.candidate.fact.applied": "Ansökningsdatum",
@@ -8433,6 +8435,7 @@ export const dictionaries = {
       "Intervjuerna för den här ansökan kunde inte hämtas just nu. Det betyder inte att ingen intervju är planerad — försök igen innan du planerar en ny.",
     "iiu.new.prefill.unavailable":
       "Uppgifterna från ansökan kunde inte hämtas, så fälten nedan är tomma. Intervjun kopplas ändå till ansökan när den skapas.",
+    ...recruitmentSv,
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -9764,10 +9767,10 @@ export const dictionaries = {
     "employer.jobs.list.moreActions": "More actions",
     "employer.jobs.list.status": "Status",
     "employer.jobs.list.expires": "Expires",
-    "employer.jobs.new.heading": "New job",
+    "employer.jobs.new.heading": "New recruitment",
     "employer.jobs.new.lede":
-      "Four short steps: the job, the description, how candidates apply, and a review before the ad is sent for publication.",
-    "employer.jobs.edit.heading": "Edit job",
+      "Five steps: role and workplace, requirements, advert text, application and questions, and a review before you publish. Save a draft at any time and continue later.",
+    "employer.jobs.edit.heading": "Edit the recruitment's advert",
     "employer.jobs.edit.viewPublic": "View public page",
     "employer.jobs.published.heading": "The ad is published.",
     "employer.jobs.published.body": "It is now visible to candidates on CQrityjob.",
@@ -9894,11 +9897,11 @@ export const dictionaries = {
       "About the role…\n\nWe are looking for someone who…\n\nWe offer…",
     "employer.jobs.form.field.descriptionEnglish": "Job description in English",
     "employer.jobs.form.field.descriptionSwedish": "Job description in Swedish",
-    "employer.jobs.form.field.requirements": "What are you looking for in the candidate?",
+    "employer.jobs.form.field.requirements": "Anything else you are looking for (optional)",
     "employer.jobs.form.field.requirementsHelp":
-      "Describe the most important requirements, experience or qualities for the role.",
+      "Free text beyond the lists above, for example personal qualities or working hours.",
     "employer.jobs.form.field.requirementsPlaceholder":
-      "Requirements…\n\nNice to have…\n\nPersonal qualities…",
+      "For example: calm under pressure, used to evening work …",
     "employer.jobs.form.field.requirementsEnglish": "Candidate requirements in English",
     "employer.jobs.form.field.requirementsSwedish": "Candidate requirements in Swedish",
     "employer.jobs.form.section.category": "Job category",
@@ -9958,7 +9961,7 @@ export const dictionaries = {
     "employer.jobs.form.preview.applyMissing": "No application method has been chosen yet.",
 
     "employer.nav.overview": "Overview",
-    "employer.nav.jobs": "My job ads",
+    "employer.nav.jobs": "Recruitments",
     "employer.nav.applications": "Applications",
     "employer.nav.assessments": "Tests & assessments",
     "employer.nav.settings": "Settings",
@@ -10127,13 +10130,13 @@ export const dictionaries = {
     "employer.overview.subheading":
       "Manage recruitment, employees, tests and competence development in one place.",
 
-    "employer.overview.card.jobs.title": "My job ads",
+    "employer.overview.card.jobs.title": "Recruitments",
     "employer.overview.card.jobs.body":
-      "Create and manage job ads and follow the applications that come in.",
+      "Create recruitments, publish adverts and follow the applications that come in.",
     "employer.overview.card.jobs.stat.active": "Active",
     "employer.overview.card.jobs.stat.drafts": "Drafts",
     "employer.overview.card.jobs.stat.applications": "Applications",
-    "employer.overview.card.jobs.action.create": "Create job ad",
+    "employer.overview.card.jobs.action.create": "Create recruitment",
     "employer.overview.card.jobs.action.applications": "View applications",
 
     "employer.overview.card.people.title": "Employees",
@@ -10448,7 +10451,7 @@ export const dictionaries = {
     "employer.applications.status.hired": "Hired",
     "employer.applications.status.withdrawn": "Withdrawn",
     "employer.applications.action.markReviewing": "Mark as reviewing",
-    "employer.applications.action.markInterview": "Invite to interview",
+    "employer.applications.action.markInterview": "Move to interview",
     "employer.applications.action.markRejected": "Mark as not proceeding",
     "employer.applications.action.markHired": "Mark as hired",
     "employer.applications.action.downloadCv": "Download CV",
@@ -10466,7 +10469,7 @@ export const dictionaries = {
       "The application is not part of your organisation, or it has been removed. Go back to applications to see your current candidates.",
     "employer.candidate.noJob": "The role is no longer available",
     "employer.candidate.appliedOn": "Applied",
-    "employer.candidate.openJob": "View job advertisements",
+    "employer.candidate.openJob": "Open the recruitment",
     "employer.candidate.application.heading": "Application",
     "employer.candidate.fact.status": "Status",
     "employer.candidate.fact.applied": "Application date",
@@ -16399,6 +16402,7 @@ export const dictionaries = {
       "The interviews for this application could not be loaded right now. That does not mean none is planned — try again before you plan a new one.",
     "iiu.new.prefill.unavailable":
       "The details from the application could not be loaded, so the fields below are empty. The interview is still linked to the application when it is created.",
+    ...recruitmentEn,
   },
 } as const;
 

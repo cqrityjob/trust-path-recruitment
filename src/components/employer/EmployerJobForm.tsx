@@ -61,6 +61,13 @@ import { formatDate } from "@/lib/job-intelligence/date-format";
 import { listPublishedProfessionsV2 } from "@/lib/knowledge-graph/read-v2.functions";
 import { JobAdPreview } from "./job-form/JobAdPreview";
 import {
+  QuestionsEditor,
+  RequirementsEditor,
+} from "@/components/recruitment/VacancyStructureEditor";
+import { emptyStructure, type VacancyStructureDraft } from "@/lib/recruitment/vacancy-structure";
+import { draftVacancyText } from "@/lib/recruitment/ai.functions";
+import { Sparkles } from "lucide-react";
+import {
   STEP_IDS,
   STEP_LABEL_KEYS,
   MAX_DISPLAY_DAYS,
@@ -93,12 +100,12 @@ type Props = {
   saving?: boolean;
   submitting?: boolean;
   error?: string | null;
-  onSaveDraft: (values: EmployerJobFormValues) => void;
+  onSaveDraft: (values: EmployerJobFormValues, structure: VacancyStructureDraft) => void;
   /** The employer's primary act on the review step. Named for what it now
    *  does: an ACTIVE employer publishes. Under PUBLICATION_MODEL
    *  "moderated" the caller wires this to submit-for-review instead — the
    *  form does not choose, it only labels the button correctly. */
-  onPublish?: (values: EmployerJobFormValues) => void;
+  onPublish?: (values: EmployerJobFormValues, structure: VacancyStructureDraft) => void;
   editableStatus?: string;
   /** Shown in the preview so the employer sees their own advert. */
   employerName?: string | null;
@@ -112,6 +119,17 @@ type Props = {
    * not another rewrite of this step.
    */
   descriptionAssistSlot?: ReactNode;
+  /** The organisation, for the writing help and the requirement template. */
+  employerId?: string;
+  /** Requirements and questions as saved. */
+  initialStructure?: VacancyStructureDraft;
+  /** True once applications exist: the frame is then read-only. */
+  structureLocked?: boolean;
+  /** Where unsaved edits are kept in this browser, so a reload, an expired
+   *  session or a sign-in does not lose them. */
+  draftStorageKey?: string;
+  /** Set by the page after every successful save. */
+  lastSavedAt?: string | null;
 };
 
 type TitleKey = "title_sv" | "title_en";
@@ -201,9 +219,84 @@ export function EmployerJobForm({
   employerName,
   employerStatus,
   descriptionAssistSlot,
+  employerId,
+  initialStructure,
+  structureLocked = false,
+  draftStorageKey,
+  lastSavedAt = null,
 }: Props) {
   const { t, lang } = useT();
   const [values, setValues] = useState<EmployerJobFormValues>(initial);
+  const [structure, setStructure] = useState<VacancyStructureDraft>(
+    initialStructure ?? emptyStructure,
+  );
+  const [dirty, setDirty] = useState(false);
+  const [backup, setBackup] = useState<{
+    values: EmployerJobFormValues;
+    structure: VacancyStructureDraft;
+    at: string;
+  } | null>(null);
+  const [assist, setAssist] = useState<{
+    busy: boolean;
+    note: string | null;
+    proposal: string | null;
+  }>({
+    busy: false,
+    note: null,
+    proposal: null,
+  });
+  const draftTextFn = useServerFn(draftVacancyText);
+
+  // ── UNSAVED WORK SURVIVES A RELOAD ──────────────────────────────────
+  //
+  // Every change is copied to this browser under the page's key; a saved
+  // draft clears it. On the next visit an unsaved copy newer than the saved
+  // draft is OFFERED back, never applied silently.
+  useEffect(() => {
+    if (!draftStorageKey) return;
+    try {
+      const raw = window.localStorage.getItem(draftStorageKey);
+      if (raw) setBackup(JSON.parse(raw));
+    } catch {
+      /* storage unavailable */
+    }
+  }, [draftStorageKey]);
+  useEffect(() => {
+    if (!draftStorageKey || !dirty) return;
+    const id = window.setTimeout(() => {
+      try {
+        window.localStorage.setItem(
+          draftStorageKey,
+          JSON.stringify({ values, structure, at: new Date().toISOString() }),
+        );
+      } catch {
+        /* storage unavailable */
+      }
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, [values, structure, dirty, draftStorageKey]);
+  useEffect(() => {
+    if (!lastSavedAt || !draftStorageKey) return;
+    setDirty(false);
+    try {
+      window.localStorage.removeItem(draftStorageKey);
+    } catch {
+      /* storage unavailable */
+    }
+  }, [lastSavedAt, draftStorageKey]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  function updateStructure(next: VacancyStructureDraft) {
+    setStructure(next);
+    setDirty(true);
+  }
   const [step, setStep] = useState<StepId>("job");
   const [draftErrors, setDraftErrors] = useState<DraftFieldErrors>({});
   /** Blockers are only shown once the employer has actually tried to
@@ -275,6 +368,7 @@ export function EmployerJobForm({
 
   function set<K extends keyof EmployerJobFormValues>(key: K, value: EmployerJobFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
+    setDirty(true);
     if (draftErrors[key]) {
       setDraftErrors((fe) => {
         const next = { ...fe };
@@ -298,7 +392,7 @@ export function EmployerJobForm({
       setPendingFocus(firstKey);
       return;
     }
-    onSaveDraft(values);
+    onSaveDraft(values, structure);
   }
 
   function handlePublish() {
@@ -311,7 +405,44 @@ export function EmployerJobForm({
       window.setTimeout(() => blockerPanelRef.current?.focus(), 0);
       return;
     }
-    onPublish?.(values);
+    onPublish?.(values, structure);
+  }
+
+  async function draftDescription() {
+    if (!employerId) return;
+    setAssist({ busy: true, note: null, proposal: null });
+    const labelOf = (r: VacancyStructureDraft["requirements"][number]) =>
+      (lang === "en" ? r.label_en || r.label_sv : r.label_sv || r.label_en).trim();
+    try {
+      const res = await draftTextFn({
+        data: {
+          employerId,
+          language: lang,
+          employerName: employerName ?? "",
+          title: String(values[titlePrimary] || values[titleSecondary] || ""),
+          location: [values.city, values.location_text].filter(Boolean).join(", ") || null,
+          employmentType: values.employment_type
+            ? employmentTypeLabel(values.employment_type, lang)
+            : null,
+          requirements: structure.requirements
+            .map((r) => ({ key: r.key, kind: r.kind, label: labelOf(r) }))
+            .filter((r) => r.label),
+          notes: String(values[reqPrimary] || "") || null,
+        },
+      });
+      // Offered, not applied: the employer reads the draft and chooses to use
+      // it, so nothing they already wrote is overwritten by a click.
+      setAssist({
+        busy: false,
+        proposal: res.text,
+        note:
+          res.source === "ai"
+            ? t("rec.ai.vacancyReady")
+            : `${t("rec.ai.vacancyTemplate")} ${res.reason ? t(`rec.ai.reason.${res.reason}` as TranslationKey) : ""}`,
+      });
+    } catch {
+      setAssist({ busy: false, note: t("rec.ai.failed"), proposal: null });
+    }
   }
 
   // ---------------------------------------------------------------------
@@ -513,113 +644,6 @@ export function EmployerJobForm({
           </select>
         </Question>
       </div>
-    </div>
-  );
-
-  // ---------------------------------------------------------------------
-  // Step 2 — Beskrivning
-  // ---------------------------------------------------------------------
-
-  const stepDescription = (
-    <div className="space-y-7">
-      <StepHeading
-        title={t("employer.jobs.form.step.description")}
-        lede={t("employer.jobs.form.step.descriptionLede")}
-      />
-
-      <Question
-        id="job-description"
-        label={t("employer.jobs.form.field.description")}
-        help={t("employer.jobs.form.field.descriptionHelp")}
-        required
-      >
-        <textarea
-          id="job-description"
-          aria-describedby="job-description-help"
-          ref={(el) => {
-            fieldRefs.current[descPrimary] = el;
-          }}
-          className={inputCls}
-          rows={12}
-          value={values[descPrimary]}
-          onChange={(e) => set(descPrimary, e.target.value)}
-          placeholder={t("employer.jobs.form.field.descriptionPlaceholder")}
-        />
-        {descriptionAssistSlot}
-        <SecondaryLanguageField
-          open={secondDescOpen}
-          onOpen={() => setSecondDescOpen(true)}
-          openLabel={t(
-            secondaryLang === "en"
-              ? "employer.jobs.form.lang.addEnglish"
-              : "employer.jobs.form.lang.addSwedish",
-          )}
-          label={t(
-            secondaryLang === "en"
-              ? "employer.jobs.form.field.descriptionEnglish"
-              : "employer.jobs.form.field.descriptionSwedish",
-          )}
-          id="job-description-secondary"
-        >
-          <textarea
-            id="job-description-secondary"
-            className={inputCls}
-            rows={10}
-            value={values[descSecondary]}
-            onChange={(e) => set(descSecondary, e.target.value)}
-          />
-        </SecondaryLanguageField>
-      </Question>
-
-      {/* "Vad söker ni hos kandidaten?" — the question a recruiter asks
-          out loud, and the one the ad could not answer before. Optional,
-          and deliberately not marked required: the backend does not
-          require it, and the whole rule of this form is that a field the
-          employer is not obliged to fill in is never dressed up as though
-          they were. Same progressive-disclosure shape as the description:
-          the reading language first, the other one a click away. */}
-      <Question
-        id="job-requirements"
-        label={t("employer.jobs.form.field.requirements")}
-        help={t("employer.jobs.form.field.requirementsHelp")}
-      >
-        <textarea
-          id="job-requirements"
-          aria-describedby="job-requirements-help"
-          ref={(el) => {
-            fieldRefs.current[reqPrimary] = el;
-          }}
-          className={inputCls}
-          rows={8}
-          value={values[reqPrimary]}
-          onChange={(e) => set(reqPrimary, e.target.value)}
-          placeholder={t("employer.jobs.form.field.requirementsPlaceholder")}
-        />
-        <SecondaryLanguageField
-          open={secondReqOpen}
-          onOpen={() => setSecondReqOpen(true)}
-          openLabel={t(
-            secondaryLang === "en"
-              ? "employer.jobs.form.lang.addEnglish"
-              : "employer.jobs.form.lang.addSwedish",
-          )}
-          label={t(
-            secondaryLang === "en"
-              ? "employer.jobs.form.field.requirementsEnglish"
-              : "employer.jobs.form.field.requirementsSwedish",
-          )}
-          id="job-requirements-secondary"
-        >
-          <textarea
-            id="job-requirements-secondary"
-            className={inputCls}
-            rows={7}
-            value={values[reqSecondary]}
-            onChange={(e) => set(reqSecondary, e.target.value)}
-          />
-        </SecondaryLanguageField>
-      </Question>
-
       <div className="rounded-lg border border-border bg-muted/20 p-4 sm:p-5">
         <h3 className="text-sm font-semibold text-foreground">
           {t("employer.jobs.form.section.category")}
@@ -719,6 +743,179 @@ export function EmployerJobForm({
   );
 
   // ---------------------------------------------------------------------
+  // Step 2 — Krav
+  // ---------------------------------------------------------------------
+
+  const stepRequirements = (
+    <div className="space-y-7">
+      <StepHeading
+        title={t("employer.jobs.form.step.requirements")}
+        lede={t("employer.jobs.form.step.requirementsLede")}
+      />
+      <RequirementsEditor
+        value={structure}
+        onChange={updateStructure}
+        locked={structureLocked}
+        professionSlug={
+          values.profession_slug && values.profession_slug !== OTHER_OPTION
+            ? values.profession_slug
+            : null
+        }
+      />
+      {/* "Vad söker ni hos kandidaten?" — the question a recruiter asks
+          out loud, and the one the ad could not answer before. Optional,
+          and deliberately not marked required: the backend does not
+          require it, and the whole rule of this form is that a field the
+          employer is not obliged to fill in is never dressed up as though
+          they were. Same progressive-disclosure shape as the description:
+          the reading language first, the other one a click away. */}
+      <Question
+        id="job-requirements"
+        label={t("employer.jobs.form.field.requirements")}
+        help={t("employer.jobs.form.field.requirementsHelp")}
+      >
+        <textarea
+          id="job-requirements"
+          aria-describedby="job-requirements-help"
+          ref={(el) => {
+            fieldRefs.current[reqPrimary] = el;
+          }}
+          className={inputCls}
+          rows={8}
+          value={values[reqPrimary]}
+          onChange={(e) => set(reqPrimary, e.target.value)}
+          placeholder={t("employer.jobs.form.field.requirementsPlaceholder")}
+        />
+        <SecondaryLanguageField
+          open={secondReqOpen}
+          onOpen={() => setSecondReqOpen(true)}
+          openLabel={t(
+            secondaryLang === "en"
+              ? "employer.jobs.form.lang.addEnglish"
+              : "employer.jobs.form.lang.addSwedish",
+          )}
+          label={t(
+            secondaryLang === "en"
+              ? "employer.jobs.form.field.requirementsEnglish"
+              : "employer.jobs.form.field.requirementsSwedish",
+          )}
+          id="job-requirements-secondary"
+        >
+          <textarea
+            id="job-requirements-secondary"
+            className={inputCls}
+            rows={7}
+            value={values[reqSecondary]}
+            onChange={(e) => set(reqSecondary, e.target.value)}
+          />
+        </SecondaryLanguageField>
+      </Question>
+    </div>
+  );
+
+  // ---------------------------------------------------------------------
+  // Step 2 — Beskrivning
+  // ---------------------------------------------------------------------
+
+  const stepDescription = (
+    <div className="space-y-7">
+      <StepHeading
+        title={t("employer.jobs.form.step.description")}
+        lede={t("employer.jobs.form.step.descriptionLede")}
+      />
+
+      <Question
+        id="job-description"
+        label={t("employer.jobs.form.field.description")}
+        help={t("employer.jobs.form.field.descriptionHelp")}
+        required
+      >
+        <textarea
+          id="job-description"
+          aria-describedby="job-description-help"
+          ref={(el) => {
+            fieldRefs.current[descPrimary] = el;
+          }}
+          className={inputCls}
+          rows={12}
+          value={values[descPrimary]}
+          onChange={(e) => set(descPrimary, e.target.value)}
+          placeholder={t("employer.jobs.form.field.descriptionPlaceholder")}
+        />
+        {descriptionAssistSlot}
+        {employerId && !readOnly && (
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={assist.busy}
+              onClick={() => void draftDescription()}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/50 disabled:opacity-60"
+            >
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+              {assist.busy ? t("rec.ai.working") : t("rec.ai.draftVacancy")}
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {assist.note ?? t("rec.ai.vacancyHelp")}
+            </span>
+          </div>
+        )}
+        {assist.proposal && (
+          <div className="mt-3 rounded-lg border border-accent/40 bg-accent/5 p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("rec.ai.proposalHeading")}
+            </p>
+            <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap font-[inherit] text-sm">
+              {assist.proposal}
+            </pre>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  set(descPrimary, assist.proposal as EmployerJobFormValues[typeof descPrimary]);
+                  setAssist({ busy: false, note: t("rec.ai.used"), proposal: null });
+                }}
+                className="min-h-9 rounded-md bg-accent px-3 text-sm font-semibold text-accent-foreground"
+              >
+                {t("rec.ai.useProposal")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAssist({ busy: false, note: null, proposal: null })}
+                className="min-h-9 rounded-md px-3 text-sm text-muted-foreground hover:text-foreground"
+              >
+                {t("rec.ai.discardProposal")}
+              </button>
+            </div>
+          </div>
+        )}
+        <SecondaryLanguageField
+          open={secondDescOpen}
+          onOpen={() => setSecondDescOpen(true)}
+          openLabel={t(
+            secondaryLang === "en"
+              ? "employer.jobs.form.lang.addEnglish"
+              : "employer.jobs.form.lang.addSwedish",
+          )}
+          label={t(
+            secondaryLang === "en"
+              ? "employer.jobs.form.field.descriptionEnglish"
+              : "employer.jobs.form.field.descriptionSwedish",
+          )}
+          id="job-description-secondary"
+        >
+          <textarea
+            id="job-description-secondary"
+            className={inputCls}
+            rows={10}
+            value={values[descSecondary]}
+            onChange={(e) => set(descSecondary, e.target.value)}
+          />
+        </SecondaryLanguageField>
+      </Question>
+    </div>
+  );
+
+  // ---------------------------------------------------------------------
   // Step 3 — Ansökan
   // ---------------------------------------------------------------------
 
@@ -794,6 +991,33 @@ export function EmployerJobForm({
           ))}
         </div>
       </fieldset>
+
+      {values.application_method === "internal" ? (
+        <section
+          aria-labelledby="job-questions"
+          className="rounded-lg border border-border p-4 sm:p-5"
+        >
+          <h3 id="job-questions" className="text-sm font-semibold text-foreground">
+            {t("employer.jobs.form.section.questions")}
+          </h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("employer.jobs.form.section.questionsHelp")}
+          </p>
+          <div className="mt-4">
+            <QuestionsEditor
+              value={structure}
+              onChange={updateStructure}
+              locked={structureLocked}
+              employerId={employerId ?? null}
+              title={String(values[titlePrimary] || values[titleSecondary] || "")}
+            />
+          </div>
+        </section>
+      ) : values.application_method === "external" || values.application_method === "email" ? (
+        <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+          {t("employer.jobs.form.section.questionsExternal")}
+        </p>
+      ) : null}
 
       {values.application_method === "external" && (
         <Question
@@ -918,6 +1142,14 @@ export function EmployerJobForm({
   // summary shows what a candidate will actually read rather than a blank
   // where the employer wrote in the other language.
   const localReq = values[reqPrimary] || values[reqSecondary];
+  const requirementLines = (kind: "mandatory" | "desirable") =>
+    structure.requirements
+      .filter((r) => r.kind === kind)
+      .map(
+        (r) => `• ${(lang === "en" ? r.label_en || r.label_sv : r.label_sv || r.label_en).trim()}`,
+      )
+      .filter((l) => l.length > 2)
+      .join("\n");
   const locationSummary = [values.city, values.region, values.location_text]
     .map((s) => s.trim())
     .filter(Boolean)
@@ -1032,6 +1264,28 @@ export function EmployerJobForm({
             ]}
           />
           <ReviewSection
+            title={t("employer.jobs.form.step.requirements")}
+            onEdit={readOnly ? undefined : () => setStep("requirements")}
+            editLabel={t("employer.jobs.form.review.edit")}
+            rows={[
+              {
+                label: t("rec.requirement.mandatoryPlural"),
+                ...summaryValue(requirementLines("mandatory")),
+                multiline: true,
+              },
+              {
+                label: t("rec.requirement.desirablePlural"),
+                ...summaryValue(requirementLines("desirable")),
+                multiline: true,
+              },
+              {
+                label: t("employer.jobs.form.field.requirements"),
+                ...summaryValue(localReq),
+                multiline: true,
+              },
+            ]}
+          />
+          <ReviewSection
             title={t("employer.jobs.form.step.description")}
             onEdit={readOnly ? undefined : () => setStep("description")}
             editLabel={t("employer.jobs.form.review.edit")}
@@ -1039,11 +1293,6 @@ export function EmployerJobForm({
               {
                 label: t("employer.jobs.form.field.description"),
                 ...summaryValue(localDesc),
-                multiline: true,
-              },
-              {
-                label: t("employer.jobs.form.field.requirements"),
-                ...summaryValue(localReq),
                 multiline: true,
               },
             ]}
@@ -1061,6 +1310,24 @@ export function EmployerJobForm({
                 label: t("employer.jobs.form.review.applicationTarget"),
                 ...summaryValue(applicationTarget),
               },
+              ...(values.application_method === "internal"
+                ? [
+                    {
+                      label: t("employer.jobs.form.section.questions"),
+                      ...summaryValue(
+                        structure.questions
+                          .map(
+                            (q, i) =>
+                              `${i + 1}. ${(lang === "en" ? q.prompt_en || q.prompt_sv : q.prompt_sv || q.prompt_en).trim()}${
+                                q.is_required ? " *" : ""
+                              }`,
+                          )
+                          .join("\n"),
+                      ),
+                      multiline: true,
+                    },
+                  ]
+                : []),
               {
                 label: t("employer.jobs.form.field.deadlineAt"),
                 ...summaryValue(formatDate(fromDateInput(values.deadline_at), lang)),
@@ -1073,7 +1340,7 @@ export function EmployerJobForm({
           />
           <ReviewSection
             title={t("employer.jobs.form.section.category")}
-            onEdit={readOnly ? undefined : () => setStep("description")}
+            onEdit={readOnly ? undefined : () => setStep("job")}
             editLabel={t("employer.jobs.form.review.edit")}
             rows={[
               { label: t("employer.jobs.form.field.familyId"), ...summaryValue(familyName) },
@@ -1160,11 +1427,13 @@ export function EmployerJobForm({
   const content =
     step === "job"
       ? stepJob
-      : step === "description"
-        ? stepDescription
-        : step === "application"
-          ? stepApplication
-          : stepReview;
+      : step === "requirements"
+        ? stepRequirements
+        : step === "description"
+          ? stepDescription
+          : step === "application"
+            ? stepApplication
+            : stepReview;
 
   return (
     <form
@@ -1229,6 +1498,46 @@ export function EmployerJobForm({
         {t("employer.jobs.form.draftLegend")}
       </p>
 
+      {backup && !dirty && (
+        <div
+          role="status"
+          className="mb-6 flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 text-sm"
+        >
+          <span>
+            {t("employer.jobs.form.backup.found").replace(
+              "{at}",
+              new Date(backup.at).toLocaleString(lang === "sv" ? "sv-SE" : "en-GB"),
+            )}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setValues(backup.values);
+              setStructure(backup.structure);
+              setDirty(true);
+              setBackup(null);
+            }}
+            className="rounded-md border border-border bg-background px-3 py-1.5 font-medium"
+          >
+            {t("employer.jobs.form.backup.restore")}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setBackup(null);
+              try {
+                if (draftStorageKey) window.localStorage.removeItem(draftStorageKey);
+              } catch {
+                /* storage unavailable */
+              }
+            }}
+            className="rounded-md px-3 py-1.5 text-muted-foreground underline"
+          >
+            {t("employer.jobs.form.backup.discard")}
+          </button>
+        </div>
+      )}
+
       {orgNotApproved && (
         <div className="mb-6 rounded-lg border border-border bg-muted/30 p-4 text-sm text-muted-foreground">
           {t("employer.jobs.form.orgPendingNotice")}
@@ -1269,6 +1578,19 @@ export function EmployerJobForm({
         >
           {saving ? t("employer.jobs.form.saving") : t("employer.jobs.form.saveDraft")}
         </button>
+        <span className="text-xs text-muted-foreground" aria-live="polite">
+          {dirty
+            ? t("employer.jobs.form.status.unsaved")
+            : lastSavedAt
+              ? t("employer.jobs.form.status.saved").replace(
+                  "{at}",
+                  new Date(lastSavedAt).toLocaleTimeString(lang === "sv" ? "sv-SE" : "en-GB", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                )
+              : ""}
+        </span>
 
         <div className="ml-auto flex flex-wrap items-center gap-3">
           {step === "review" && (
