@@ -20,7 +20,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { isUnresolved, isNewApplication, phaseOf, type RecruitmentPhase } from "./definitions";
+import {
+  isNewApplication,
+  isOpenInterview,
+  isUnresolved,
+  phaseOf,
+  type RecruitmentPhase,
+} from "./definitions";
 
 // PostgREST rows and the request-scoped client, as every server function in
 // src/lib/job-intelligence types them: the joined selects here are wider than
@@ -232,11 +238,22 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
       status: string;
       applicant_user_id: string;
     }[];
-    const bookings = (bookingsRes.data ?? []) as Loose[];
+    // Only interviews in a live process: an open booking for a candidate who
+    // has since been decided on, or in a completed recruitment, is not
+    // upcoming work (isOpenInterview).
+    const statusOf = new Map(apps.map((a) => [a.id, a.status]));
+    const now = new Date();
+    const bookings = ((bookingsRes.data ?? []) as Loose[]).filter((b) =>
+      isOpenInterview(
+        { status: b.status, startsAt: b.starts_at },
+        statusOf.get(b.application_id) ?? "",
+        settings.get(b.job_id)?.completion ?? null,
+        now,
+      ),
+    );
     const nextByJob = new Map<string, string>();
     for (const b of bookings) if (!nextByJob.has(b.job_id)) nextByJob.set(b.job_id, b.starts_at);
 
-    const now = new Date();
     const recruitments: RecruitmentSummary[] = (jobsRes.data ?? []).map((j: Loose) => {
       const s = settings.get(j.id);
       const mine = apps.filter((a) => a.job_id === j.id);
@@ -669,9 +686,10 @@ export const listRecruitmentCandidates = createServerFn({ method: "POST" })
           ? (teamNames.get(m.responsible_user_id) ?? null)
           : null,
         metaVersion: (m?.version as number) ?? 1,
-        nextActivityAt: b?.starts_at ?? null,
-        nextActivityTimezone: b?.timezone ?? null,
-        nextActivityStatus: b?.status ?? null,
+        // A leftover booking is not the next activity of a decided candidate.
+        nextActivityAt: isUnresolved(a.status) ? (b?.starts_at ?? null) : null,
+        nextActivityTimezone: isUnresolved(a.status) ? (b?.timezone ?? null) : null,
+        nextActivityStatus: isUnresolved(a.status) ? (b?.status ?? null) : null,
         hasCv: Boolean(a.cv_storage_path) || a.cv_source === "cqrityjob_cv",
         mandatoryNoCount: ans?.mandatoryNo ?? 0,
         answeredCount: ans?.count ?? 0,

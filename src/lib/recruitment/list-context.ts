@@ -8,9 +8,13 @@
 //
 // sessionStorage, deliberately: it survives a reload and the tab's own
 // history, and dies with the tab. The key is not a secret and the ids are ids
-// the reader is already authorised to see. A candidate view opened without a
-// key -- a pasted link, a new tab -- simply offers no previous/next and goes
-// back to the recruitment's candidate list, which is always correct.
+// the reader is already authorised to see.
+//
+// A candidate view reached WITHOUT a key -- the way back from an assessment
+// report or an interview, which do not carry it -- recalls the list this tab
+// last opened, but only if that list contains this very candidate. A pasted
+// link or a new tab has no such list, offers no previous/next, and goes back to
+// the recruitment's candidate list, which is always correct.
 
 export type ListContext = {
   ids: string[];
@@ -30,9 +34,12 @@ export function listKeyFor(href: string): string {
   return (h >>> 0).toString(36);
 }
 
+const LAST = "cqj.recruitment.list-last";
+
 export function saveListContext(key: string, ctx: ListContext): void {
   try {
     window.sessionStorage.setItem(PREFIX + key, JSON.stringify(ctx));
+    window.sessionStorage.setItem(LAST, key);
   } catch {
     /* storage unavailable: previous/next is a convenience, never required */
   }
@@ -50,6 +57,18 @@ export function readListContext(key: string | undefined): ListContext | null {
     return parsed;
   } catch {
     return null;
+  }
+}
+
+/** The key of the list this tab last opened a candidate from, when that list
+ *  holds `applicationId`; otherwise undefined. */
+export function recallListKeyFor(applicationId: string): string | undefined {
+  try {
+    const key = window.sessionStorage.getItem(LAST) ?? undefined;
+    const ctx = readListContext(key);
+    return ctx && ctx.ids.includes(applicationId) ? key : undefined;
+  } catch {
+    return undefined;
   }
 }
 

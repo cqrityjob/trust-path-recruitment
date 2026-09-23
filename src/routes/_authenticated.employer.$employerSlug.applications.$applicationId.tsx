@@ -81,7 +81,13 @@ import {
   getApplicationWorkspace,
   markApplicationViewed,
 } from "@/lib/recruitment/recruitment.functions";
-import { markReturning, readListContext, type ListContext } from "@/lib/recruitment/list-context";
+import { isUnresolved } from "@/lib/recruitment/definitions";
+import {
+  markReturning,
+  readListContext,
+  recallListKeyFor,
+  type ListContext,
+} from "@/lib/recruitment/list-context";
 import { formatStamp } from "@/lib/recruitment/format";
 import type { MessageKind } from "@/lib/recruitment/message-templates";
 import { useT } from "@/i18n/context";
@@ -179,7 +185,11 @@ function Candidate360({
   const interviewCasesFn = useServerFn(listInterviewCasesForApplication);
   const [actionError, setActionError] = useState<string | null>(null);
   const router = useRouter();
-  const { list: listKey } = Route.useSearch();
+  const { list: listParam } = Route.useSearch();
+  // The list key in the URL, or -- on the way back from a report or an
+  // interview, which do not carry it -- the list this tab opened this
+  // candidate from. Resolved on the client, where sessionStorage lives.
+  const [listKey, setListKey] = useState<string | undefined>(listParam);
   const workspaceFn = useServerFn(getApplicationWorkspace);
   const viewedFn = useServerFn(markApplicationViewed);
   const [listCtx, setListCtx] = useState<ListContext | null>(null);
@@ -194,7 +204,11 @@ function Candidate360({
   const recruitmentKey = ["employer", employerId, "application", applicationId, "recruitment"];
 
   // The list this was opened from, read once on the client.
-  useEffect(() => setListCtx(readListContext(listKey)), [listKey]);
+  useEffect(() => {
+    const key = listParam ?? recallListKeyFor(applicationId);
+    setListKey(key);
+    setListCtx(readListContext(key));
+  }, [listParam, applicationId]);
 
   // The recruitment half: answers, responsible person, bookings, messages,
   // internal notes and the stage history. One read, membership-checked.
@@ -899,7 +913,10 @@ function Candidate360({
           employerId={employerId}
           employerSlug={employerSlug}
           applicationId={applicationId}
-          canAssign={canAssign}
+          // A test is for a candidate still in the process: not for one who
+          // has been decided on or has withdrawn, and not in a completed
+          // recruitment. What was already sent stays visible either way.
+          canAssign={canAssign && !completed && status !== null && isUnresolved(status)}
           prepareInterview
         />
       </section>

@@ -23,11 +23,43 @@ template fallback.
 
 | File | What it is evidence of |
 | --- | --- |
-| `final-01-overview.png` | Overview: company name, "Skapa rekrytering", three counts (ongoing recruitments, new applications, upcoming interviews), the active-recruitments table (role, status, applications, new, responsible, next activity), today's tasks and the confirmed interview. |
+| `final-01-overview.png` / `final-01b-overview-full.png` | Overview: company name, "Skapa rekrytering", three counts (ongoing recruitments 2, new applications 3, upcoming interviews 1), each linking to exactly the rows it counted; the active-recruitments table; today's tasks; the one upcoming interview in a live process; "Andra delar av arbetsplatsen" without a second recruitment card. |
 | `final-02-recruitments.png` | Recruitments list: search, phase and responsible filters, drafts / active / completed in one list. |
-| `final-03-workspace-candidates.png` | Workspace: breadcrumb Arbetsgivare / Rekryteringar / Väktare, Solna; status, responsible, primary action; tabs with Candidates as default; filter, sort and counts above the table; "Oöppnad" marker. |
-| `final-04-candidate-view.png` | Candidate view: back to the list, previous / next with position ("1 av 2"), stage badge, responsible, first-opened stamp, section navigation, the five separate process rows. |
-| `final-05-new-applications.png` | Where the overview's "Nya ansökningar" count lands: exactly the two rows it counted. |
+| `final-03-workspace-candidates.png` | Workspace: breadcrumb, status, responsible, primary action; tabs with Candidates as default; filters, sort and counts above the table. |
+| `final-04-candidate-view.png` | Candidate view opened from that list: back to the list, previous / next ("1 av 2"), stage badge, responsible, first opened, section navigation, the process rows (assessment "Slutförd"). |
+| `final-05-new-applications.png` | Where "Nya ansökningar 3" lands: the three applications it counted. |
+| `final-06..08-*-en.png` | The same three views in English. |
+| `final-09..11-*-mobile.png` | The same three views at 375 px; `scrollWidth` equals the viewport on each. |
+
+## The assessment journey (`j2-*`), 2026-09-23
+
+Lars applied to *Väktare, Solna* and also has a rejected application to *Ordningsvakt, Kista*.
+
+| File | Step |
+| --- | --- |
+| `j2-01` | Employer opens Lars's Solna application from the workspace; "Skicka bedömning · Väktare – Recruitment Assessment". |
+| `j2-02` | Sent: "Tilldelad 0/50", and the send button is gone (a second click can no longer send the same test twice). |
+| `j2-03` | Candidate answered all 50 items under /academy ("Gäller ansökan: Väktare, Solna") and submitted. |
+| `j2-04` | Employer: "Väntar på granskning 50/50" with the reason no review is possible yet and where to grant it. |
+| `j2-05` | Owner grants a colleague (not the assigner) a review seat in Team & behörigheter; the colleague completed the 7 human reviews. |
+| `j2-06` | "Underlag klart"; released through the existing "Dela kandidatunderlaget" confirmation (immutable snapshots, two audiences). |
+| `j2-07`, `j2-08` | "Slutförd" and "Öppna kandidatunderlag" on the same application; the report page offers "Tillbaka till kandidaten", and the list context is recalled ("Tillbaka till listan" returns to the workspace with its sorting). |
+| `j2-09` | Lars's Kista application: "Ingen bedömning har skickats för den här ansökan". Nothing crossed over. |
+
+## The interview and report journey (`j3-*`), 2026-09-23
+
+Nora applied to a vacancy with two required questions.
+
+| File | Step |
+| --- | --- |
+| `j3-01` | The apply dialog with the two questions answered (yes/no and text). |
+| `j3-02` | "Förbered intervju" on the application; setup chosen (no test sent). |
+| `j3-03` | The interview context: Nora's answers under "Det här vet vi redan" (attributed to the application), the vacancy's requirements under "Krav i annonsen". |
+| `j3-04` | Plan saved and approved (manual path, AI off). |
+| `j3-05` | Interview paused after four questions and the page reloaded: four notes persisted, "Återuppta" offered. Resumed, eight questions noted, interview finished. |
+| `j3-06`, `j3-07` | Evidence confirmed for all eight questions; eight human assessments; "Klar med bedömningen". |
+| `j3-08`, `j3-09` | Preview required before "Slutför rapporten"; finalised as version 1, "Slutlig och oföränderlig", sha256 content sum. Verified outside the UI: the hash recomputes; an UPDATE as the database owner is refused (`SCP_IV_REPORT_IMMUTABLE`); a PATCH as the owner over PostgREST gets `42501`; `scp_iv_final_report` returns `hash_verified: true`. |
+| `j3-10` | "Tillbaka till ansökan" from the report straight to Nora's application ("Rapport fastställd"). Her other application is untouched. |
 
 ## The journey (`01`–`32`)
 

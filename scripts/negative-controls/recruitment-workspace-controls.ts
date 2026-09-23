@@ -204,6 +204,15 @@ const MUTATIONS: readonly Mutation[] = [
     guard: G,
     expect: "a failed answers read is said on the surface",
   },
+  {
+    id: "RW-CLOSED-CASE-INTERVIEW-UPCOMING",
+    defect: "a hired candidate's leftover booking is still counted as an upcoming interview",
+    file: DEFS,
+    find: "    isUnresolved(applicationStatus) &&\n",
+    replace: "",
+    guard: G,
+    expect: "a hired candidate's leftover booking is not upcoming",
+  },
 ];
 
 await runControls("recruitment-workspace", MUTATIONS);
