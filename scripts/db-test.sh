@@ -1380,13 +1380,14 @@ for elf_round in before after; do
 done
 
 # ---------------------------------------------------------------------------
-# 5l-ter. The recruitment workspace (20261207090000)
+# 5l-ter. The recruitment workspace, EXPAND half (20261207090000)
 #
 # Run TWICE around a rollback/reapply cycle of its own migration, like 5l-bis.
-# Between the rounds a negative control proves the decision rule is this
-# migration's: with it stood down, a member who is not responsible CAN reject
-# a candidate again, so the refusal the suite asserts cannot be coming from
-# somewhere else.
+# Between the rounds the transition suite runs in the state the OLD
+# application (main before this work) meets between the schema release and
+# the application release: its apply dialog and decision buttons must work as
+# before, and the new application's own path must still hold both rules. The
+# job_applications backstops are 20261208090000 (CONTRACT), not applied here.
 #
 # Runs BEFORE the rollback step: its fixture reads nothing that step drops,
 # but it must see the full schema the application will run against.
@@ -1397,61 +1398,42 @@ for rw_round in before after; do
   RW_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_workspace_test.sql 2>&1)"
   RW_RC=$?
   set -e
-
   echo "$RW_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
   RW_PASSED="$(echo "$RW_OUT" | grep -c "ok  " || true)"
-
   if [ "$RW_RC" -ne 0 ]; then
-    echo ""
-    echo "FAIL: the recruitment workspace suite exited with code ${RW_RC} (${rw_round} rollback/reapply)." >&2
+    echo "FAIL: the recruitment workspace suite exited with code ${RW_RC} (${rw_round:-})." >&2
     echo "$RW_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
     exit 1
   fi
-
-  echo "    ok  ${RW_PASSED} recruitment workspace assertions passed (${rw_round} rollback/reapply)"
-
-  if [ "$RW_PASSED" -lt 74 ]; then
-    echo "FAIL: expected at least 74 recruitment workspace assertions, only ${RW_PASSED} ran." >&2
+  if [ "$RW_PASSED" -lt 73 ]; then
+    echo "FAIL: expected at least 73 recruitment workspace assertions, only ${RW_PASSED} ran." >&2
     exit 1
   fi
+  echo "    ok  ${RW_PASSED} recruitment workspace assertions passed"
 
   if [ "$rw_round" = before ]; then
+    echo "==> Running recruitment transition assertions (EXPAND only: the old application)"
+    set +e
+    RWT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_workspace_transition_test.sql 2>&1)"
+    RWT_RC=$?
+    set -e
+    echo "$RWT_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+    RWT_PASSED="$(echo "$RWT_OUT" | grep -c "ok  " || true)"
+    if [ "$RWT_RC" -ne 0 ]; then
+      echo "FAIL: the recruitment transition suite exited with code ${RWT_RC} (${rw_round:-})." >&2
+      echo "$RWT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+      exit 1
+    fi
+    if [ "$RWT_PASSED" -lt 9 ]; then
+      echo "FAIL: expected at least 9 recruitment transition assertions, only ${RWT_PASSED} ran." >&2
+      exit 1
+    fi
+    echo "    ok  ${RWT_PASSED} recruitment transition assertions passed"
+
     psql_q -d "$TEST_DB" -f supabase/rollback/20261207090000_recruitment_workspace_rollback.sql >/dev/null
     rw_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND (relname LIKE 'recruitment\_%' OR relname='job_application_answers')) + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'rec\_%') + (SELECT count(*) FROM pg_trigger WHERE tgrelid='public.job_applications'::regclass AND tgname IN ('job_applications_window_guard','job_applications_required_answers','job_applications_decision_guard'))")"
     [ "$rw_left" = "0" ] || { echo "FAIL: 20261207090000 rollback left $rw_left recruitment object(s) behind"; exit 1; }
     echo "    ok  recruitment workspace rollback stood down: no table, function or trigger left"
-
-    # THE NEGATIVE CONTROL: with the migration down, a plain member rejects a
-    # candidate through the canonical RPC, exactly as before this work.
-    rw_ctl="$(psql -v ON_ERROR_STOP=1 -q -At -d "$TEST_DB" <<'SQL'
-BEGIN;
-INSERT INTO auth.users (id, email) VALUES
-  ('ae100000-0000-0000-0000-000000000001','ctl-owner@rec.test'),
-  ('ae100000-0000-0000-0000-000000000002','ctl-member@rec.test'),
-  ('ae100000-0000-0000-0000-000000000003','ctl-cand@rec.test'),
-  ('ae100000-0000-0000-0000-0000000000ad','ctl-mod@rec.test');
-INSERT INTO public.user_roles (user_id, role) VALUES ('ae100000-0000-0000-0000-0000000000ad','admin');
-INSERT INTO public.employers (id, name, slug, status) VALUES ('ae100000-1111-0000-0000-000000000001','Kontroll AB','kontroll-rec','active');
-INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VALUES
-  ('ae100000-1111-0000-0000-000000000001','ae100000-0000-0000-0000-000000000001','owner','active'),
-  ('ae100000-1111-0000-0000-000000000001','ae100000-0000-0000-0000-000000000002','member','active');
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = 'ae100000-0000-0000-0000-0000000000ad';
-INSERT INTO public.jobs (id, slug, short_id, employer_id, title_sv, application_method, status, published_at, expires_at)
-VALUES ('ae100000-2222-0000-0000-000000000001','ctl-rec','CTLREC01','ae100000-1111-0000-0000-000000000001','Kontroll','internal','published', now() - interval '1 day', now() + interval '10 days');
-RESET ROLE; RESET request.jwt.claim.sub;
-INSERT INTO public.job_applications (id, job_id, employer_id, applicant_user_id, status, consent_given_at)
-VALUES ('ae100000-3333-0000-0000-000000000001','ae100000-2222-0000-0000-000000000001','ae100000-1111-0000-0000-000000000001','ae100000-0000-0000-0000-000000000003','submitted', now());
-SET LOCAL ROLE authenticated;
-SET LOCAL request.jwt.claim.sub = 'ae100000-0000-0000-0000-000000000002';
-SELECT new_status FROM public.set_application_status('ae100000-3333-0000-0000-000000000001','rejected',NULL);
-ROLLBACK;
-SQL
-)" || { echo "FAIL: with 20261207090000 rolled back, a member was still refused a rejection -- the refusal comes from somewhere else, so the 'after' round proves nothing"; exit 1; }
-    case "$rw_ctl" in
-      *rejected*) echo "    ok  with the migration down a plain member CAN reject again (negative control)" ;;
-      *) echo "FAIL: negative control did not reach the rejection (got: $rw_ctl)"; exit 1 ;;
-    esac
 
     psql_q -d "$TEST_DB" -f supabase/migrations/20261207090000_recruitment_workspace.sql >/dev/null
     echo "    ok  recruitment workspace migration reapplied"
