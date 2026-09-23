@@ -162,8 +162,8 @@ export function ApplicationAssessmentPanel({
   const rows = assessments.data ?? [];
   const options = library.data ?? [];
   // An assessment already sent on THIS application is not offered again: the
-  // assign path does not refuse a second assignment, so a second click would
-  // send the candidate the same test twice. Only an abandoned attempt frees it.
+  // database also reuses the existing attempt on retries. Only an abandoned
+  // attempt frees the test for a new assignment.
   const alreadySent = new Set(
     rows.filter((a) => a.attemptStatus !== "abandoned").map((a) => a.assessmentSlug),
   );
