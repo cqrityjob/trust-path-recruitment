@@ -208,12 +208,15 @@ export const getInterviewCaseContext = createServerFn({ method: "GET" })
         : { kind: "any" };
     if (start.error) console.error("[interview-context] case start unavailable", start.error);
 
-    const [job, cv, assessment, answers] = await Promise.all([
+    // Started beside the three reads below and awaited after them. It never
+    // rejects: a failed read resolves to null, which the surface states.
+    const answersRead = readAnswers(db, applicationId);
+    const [job, cv, assessment] = await Promise.all([
       readJob(db, jobId, employerId),
       readCv(applicationId),
       readAssessment(db, applicationId, source),
-      readAnswers(db, applicationId),
     ]);
+    const answers = await answersRead;
 
     return {
       kind: "context",
