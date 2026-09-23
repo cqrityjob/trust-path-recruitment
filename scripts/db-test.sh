@@ -1380,6 +1380,67 @@ for elf_round in before after; do
 done
 
 # ---------------------------------------------------------------------------
+# 5l-ter. The recruitment workspace, EXPAND half (20261207090000)
+#
+# Run TWICE around a rollback/reapply cycle of its own migration, like 5l-bis.
+# Between the rounds the transition suite runs in the state the OLD
+# application (main before this work) meets between the schema release and
+# the application release: its apply dialog and decision buttons must work as
+# before, and the new application's own path must still hold both rules. The
+# job_applications backstops are 20261208090000 (CONTRACT), not applied here.
+#
+# Runs BEFORE the rollback step: its fixture reads nothing that step drops,
+# but it must see the full schema the application will run against.
+# ---------------------------------------------------------------------------
+for rw_round in before after; do
+  echo "==> Running recruitment workspace assertions (${rw_round} rollback/reapply)"
+  set +e
+  RW_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_workspace_test.sql 2>&1)"
+  RW_RC=$?
+  set -e
+  echo "$RW_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  RW_PASSED="$(echo "$RW_OUT" | grep -c "ok  " || true)"
+  if [ "$RW_RC" -ne 0 ]; then
+    echo "FAIL: the recruitment workspace suite exited with code ${RW_RC} (${rw_round:-})." >&2
+    echo "$RW_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    exit 1
+  fi
+  if [ "$RW_PASSED" -lt 73 ]; then
+    echo "FAIL: expected at least 73 recruitment workspace assertions, only ${RW_PASSED} ran." >&2
+    exit 1
+  fi
+  echo "    ok  ${RW_PASSED} recruitment workspace assertions passed"
+
+  if [ "$rw_round" = before ]; then
+    echo "==> Running recruitment transition assertions (EXPAND only: the old application)"
+    set +e
+    RWT_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_workspace_transition_test.sql 2>&1)"
+    RWT_RC=$?
+    set -e
+    echo "$RWT_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+    RWT_PASSED="$(echo "$RWT_OUT" | grep -c "ok  " || true)"
+    if [ "$RWT_RC" -ne 0 ]; then
+      echo "FAIL: the recruitment transition suite exited with code ${RWT_RC} (${rw_round:-})." >&2
+      echo "$RWT_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+      exit 1
+    fi
+    if [ "$RWT_PASSED" -lt 9 ]; then
+      echo "FAIL: expected at least 9 recruitment transition assertions, only ${RWT_PASSED} ran." >&2
+      exit 1
+    fi
+    echo "    ok  ${RWT_PASSED} recruitment transition assertions passed"
+
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261207090000_recruitment_workspace_rollback.sql >/dev/null
+    rw_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND (relname LIKE 'recruitment\_%' OR relname='job_application_answers')) + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'rec\_%') + (SELECT count(*) FROM pg_trigger WHERE tgrelid='public.job_applications'::regclass AND tgname IN ('job_applications_window_guard','job_applications_required_answers','job_applications_decision_guard'))")"
+    [ "$rw_left" = "0" ] || { echo "FAIL: 20261207090000 rollback left $rw_left recruitment object(s) behind"; exit 1; }
+    echo "    ok  recruitment workspace rollback stood down: no table, function or trigger left"
+
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261207090000_recruitment_workspace.sql >/dev/null
+    echo "    ok  recruitment workspace migration reapplied"
+  fi
+done
+
+# ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
 #
 # Runs BEFORE the rollback step: it reads scp_subject_identities and the
