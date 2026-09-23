@@ -33,6 +33,7 @@ DECLARE
   _is_fixture boolean; _retired timestamptz; _has_items boolean;
   _mode public.scp_governance_mode; _grant uuid; _purpose_code text;
   _app_employer uuid; _app_job uuid; _app_user uuid;
+  _existing record;
 BEGIN
   IF _use_case NOT IN ('workforce', 'recruitment') THEN
     RAISE EXCEPTION 'SCP_UNKNOWN_USE_CASE: % is not a valid assignment context.', _use_case
@@ -251,8 +252,9 @@ BEGIN
   -- only an explicitly abandoned attempt permits a new assignment.
   -- All existing permission, governance and purpose gates above still run.
   IF _application_id IS NOT NULL THEN
-    RETURN QUERY
-      SELECT aa.id, atp.id, atp.subject_id, atp.governance_mode
+    SELECT aa.id AS assignment_id, atp.id AS attempt_id, atp.subject_id,
+           atp.governance_mode, aa.recipient_user_id, atp.issuer_organization_id
+      INTO _existing
         FROM public.assessment_assignments aa
         JOIN public.scp_attempts atp ON atp.assignment_id = aa.id
         JOIN public.scp_assessment_versions av ON av.id = aa.scp_assessment_version_id
@@ -262,7 +264,17 @@ BEGIN
          AND atp.status <> 'abandoned'
        ORDER BY atp.started_at, atp.id
        LIMIT 1;
-    IF FOUND THEN RETURN; END IF;
+    IF FOUND THEN
+      IF _existing.recipient_user_id IS DISTINCT FROM _user
+         OR _existing.subject_id IS DISTINCT FROM _subject
+         OR _existing.issuer_organization_id IS DISTINCT FROM _employer_id THEN
+        RAISE EXCEPTION 'SCP_APPLICATION_ASSIGNMENT_CONTEXT_MISMATCH: existing work does not belong to this applicant and organisation'
+          USING ERRCODE = 'check_violation';
+      END IF;
+      RETURN QUERY SELECT _existing.assignment_id, _existing.attempt_id,
+                          _existing.subject_id, _existing.governance_mode;
+      RETURN;
+    END IF;
   END IF;
 
   INSERT INTO public.assessment_assignments
