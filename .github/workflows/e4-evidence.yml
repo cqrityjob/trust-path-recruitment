@@ -150,27 +150,42 @@ jobs:
       # the next step but one for the evidence.
       # ── WHEN THE REGISTRY, NOT THE CODE, REFUSES ─────────────────────
       #
-      # On 2026-09-23 three consecutive runs of this job never reached a line
-      # of the repository: every anonymous image pull from ghcr.io was
-      # throttled (`toomanyrequests`), `supabase start` exited 1, and the scan
-      # and verify steps then -- correctly -- refused an empty artifact. The
-      # CLI's own retries go back to the same registry within milliseconds.
+      # On 2026-09-23 runs of this job never reached a line of the repository:
+      # anonymous image pulls were throttled (`toomanyrequests`) -- first by
+      # ghcr.io, then, when the job fell back to it, by public.ecr.aws too
+      # ("Rate exceeded"). `supabase start` pulls a dozen images at once and
+      # its own retries return to the same registry within milliseconds, so a
+      # burst limit fails the whole start; the scan and verify steps then --
+      # correctly -- refuse an empty artifact.
       #
-      # So one fallback, and only on failure: stop whatever half-started, and
-      # pull the SAME pinned images from Supabase's public mirror at
-      # public.ecr.aws (the CLI's SUPABASE_INTERNAL_IMAGE_REGISTRY). No
-      # credential, no secret, no wider permission: the job stays at
-      # `contents: read`, and every check after this step is unchanged. A
-      # second failure fails the job exactly as before.
+      # So a bounded retry: at most four starts, alternating ghcr.io and
+      # Supabase's public mirror at public.ecr.aws (the CLI's
+      # SUPABASE_INTERNAL_IMAGE_REGISTRY, which setup-cli sets to ghcr.io),
+      # with 30/60/90 seconds between them. Every image an attempt DID pull
+      # stays in the runner's cache, and the CLI uses a local image before it
+      # pulls, so each attempt only fetches what is still missing. Same pinned
+      # images; no credential, no secret, no wider permission -- the job stays
+      # at `contents: read` -- and every step after this one is unchanged. If
+      # all four fail, the job fails with a named reason, as it did before.
       - name: Start the local Supabase stack, history held back
         run: |
           set -euo pipefail
           mv supabase/migrations /tmp/e4-migrations
           mkdir -p supabase/migrations
-          if ! supabase start; then
-            echo "::warning::supabase start failed; retrying once with the images from public.ecr.aws"
+          started=0
+          for attempt in 1 2 3 4; do
+            case "$attempt" in 1|3) registry=ghcr.io ;; *) registry=public.ecr.aws ;; esac
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY="$registry" supabase start; then
+              started=1
+              break
+            fi
+            echo "::warning::supabase start attempt ${attempt} (${registry}) failed"
             supabase stop --no-backup || true
-            SUPABASE_INTERNAL_IMAGE_REGISTRY=public.ecr.aws supabase start
+            if [ "$attempt" -lt 4 ]; then sleep $((attempt * 30)); fi
+          done
+          if [ "$started" -ne 1 ]; then
+            echo "STACK REFUSED: supabase start failed four times across ghcr.io and public.ecr.aws" >&2
+            exit 1
           fi
           rmdir supabase/migrations
           mv /tmp/e4-migrations supabase/migrations
