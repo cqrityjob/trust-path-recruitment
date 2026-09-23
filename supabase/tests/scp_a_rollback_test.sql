@@ -795,6 +795,10 @@ DROP FUNCTION IF EXISTS public.scp_attempt_evidence_state(uuid, uuid, text) CASC
 DROP TABLE    IF EXISTS public.scp_employer_reviewers CASCADE;
 DROP TABLE    IF EXISTS public.scp_training_module_progress CASCADE;
 DROP TABLE    IF EXISTS public.scp_training_assignments CASCADE;
+-- Both signatures: 20261206090000 re-created this one with an eighth
+-- argument, and a DROP IF EXISTS naming only the old shape would leave the
+-- function standing while reporting success.
+DROP FUNCTION IF EXISTS public.scp_assign_training(uuid, uuid, text, text, timestamptz, text, uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_assign_training(uuid, uuid, text, text, timestamptz, text, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_my_academy_work() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_my_training_programme(uuid) CASCADE;

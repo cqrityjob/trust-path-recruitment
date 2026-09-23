@@ -23,6 +23,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # The schema-first gate has to know WHICH FILES this branch changed,
+          # and it answers that with `git diff $(merge-base <base> HEAD)...HEAD`.
+          # The default shallow checkout has no base ref to merge-base against,
+          # so the question could not be answered and every branch was treated
+          # as an application release -- including the schema-only ones the
+          # gate exists to let through.
+          fetch-depth: 0
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2

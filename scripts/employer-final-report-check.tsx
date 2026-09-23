@@ -2959,12 +2959,27 @@ console.log("\n14. CUTOVER: no runtime path calls the legacy finalisation");
     "14.2 exactly one server function calls the previewed contract",
   );
   const types = read("src/integrations/supabase/types.ts");
+  // Read out of the function's OWN Args block rather than matched as one line.
+  //
+  // The generator writes short argument lists on one line and long ones over
+  // several, in alphabetical order, and it moved this one when it regenerated
+  // on 2026-09-22. A pattern pinned to the old spelling then failed while every
+  // argument it was asserting was present and correct -- the assertion was
+  // about the formatting, not about the contract.
+  const previewedArgs = (() => {
+    const at = types.indexOf("      scp_iv_finalise_previewed_report: {");
+    if (at < 0) return "";
+    return types.slice(at, types.indexOf("\n      }", at));
+  })();
   ok(
-    /scp_iv_finalise_previewed_report:\s*\{\s*Args:\s*\{\s*_case_id: string; _expected_basis_hash: string; _draft_run_id: string \| null\s*\}/.test(
-      types,
-    ),
+    previewedArgs.includes("_case_id: string") &&
+      previewedArgs.includes("_expected_basis_hash: string") &&
+      /_draft_run_id: string \| null/.test(previewedArgs),
     "14.3 the client types declare the previewed contract with all three arguments",
   );
+  // And the nullable one is not quietly made optional instead: there is no SQL
+  // default, so PostgREST could not resolve the function without it.
+  ok(!/_draft_run_id\?/.test(previewedArgs), "14.3 and the draft run id is required, not optional");
   ok(
     /scp_iv_finalise_report:\s*\{\s*Args:\s*\{\s*_case_id: string; _draft_run_id\?: string\s*\}/.test(
       types,

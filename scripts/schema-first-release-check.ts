@@ -191,21 +191,64 @@ for (const entry of notApplied) {
  *  SCHEMA half, and it is exactly what we want people to merge first. */
 const SCHEMA_SAFE = [
   /^supabase\/migrations\//,
+  // A rollback script is SQL that the application never executes. It was
+  // missing from this list, and the omission only shows when a schema branch
+  // changes the SIGNATURE of a function the application already calls by name:
+  // the branch is then not "schema-only", the blocker is the existing call,
+  // and the guard demands a split that has already happened. Migrations and
+  // suites were already here for exactly the same reason.
+  /^supabase\/rollback\//,
   /^supabase\/tests\//,
   /^supabase\/release-state\.json$/,
   /^supabase\/deployment-targets\.json$/,
   /^supabase\/migrations-policy\.json$/,
+  // The generated Supabase types. This file DESCRIBES a schema, it does not
+  // call one -- which is the same reason it is already excluded from the
+  // reference scan above (`EXCLUDED`), and the same reason release-parity
+  // excludes it. Changing a declared argument type cannot make running code
+  // ask the database for an object that is not there; it can only make the
+  // compiler agree or disagree with a call that was already being made.
+  //
+  // It is here because restoring the three hand-maintained `| null` widenings
+  // after a regeneration is the one edit a schema-only branch legitimately has
+  // to make in src/, and without this a schema PR carrying that repair is
+  // reclassified as an application release and refused.
+  /^src\/integrations\/supabase\/types\.ts$/,
   /^docs\//,
   /^scripts\//,
   /^\.github\//,
 ];
 
 function changedFiles(): string[] | null {
-  // Compare against the merge base with main. On main itself this is empty,
-  // and the guard falls through to the standing-state check below — which is
-  // the right behaviour: if main's code depends on an unapplied migration,
-  // that is a live incident and CI should say so.
-  for (const base of ["origin/main", "main"]) {
+  // Compare against the merge base with the BASE BRANCH.
+  //
+  // ── WHY GITHUB_BASE_REF COMES FIRST, AND WHY IT MATTERS ───────────────
+  //
+  // On a pull request this runs against the merge commit, and `origin/main`
+  // resolved locally and nowhere else: the workflow checkout has to fetch
+  // enough history for the ref to exist. When it does not, `changedFiles()`
+  // returned null, `isSchemaOnlyBranch` was false whatever the branch
+  // contained, and a SCHEMA RELEASE could never be recognised as one in the
+  // only place this gate actually runs. A schema-only branch was told to split
+  // itself into the two halves it already was.
+  //
+  // It was invisible because it only shows on a branch that has blockers AND
+  // changes no application code -- exactly the branch this gate exists to let
+  // through. Every schema PR before it introduced objects nothing referenced
+  // yet, so `blockers` was empty and the classification was never reached.
+  //
+  // GITHUB_BASE_REF is the branch the pull request targets, set by Actions and
+  // absent locally, so it is tried first and the local names remain the
+  // fallback. The RULE is unchanged either way: application code plus an
+  // unapplied migration is blocked. What changes is that the guard can see
+  // which of the two a branch is.
+  const bases = [
+    process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null,
+    process.env.GITHUB_BASE_REF,
+    "origin/main",
+    "main",
+  ].filter((b): b is string => Boolean(b));
+  for (const base of bases) {
     try {
       const mergeBase = execFileSync("git", ["merge-base", base, "HEAD"], {
         cwd: root,

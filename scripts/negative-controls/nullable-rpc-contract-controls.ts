@@ -40,8 +40,12 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a types regeneration rewrites the finalisation RPC's draft run id back to a bare string",
     file: TYPES,
-    find: "Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }",
-    replace: "Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string }",
+    // The generator writes this function's arguments over several lines and in
+    // alphabetical order, which the 2026-09-22 regeneration changed it to; the
+    // one-line anchor this control used stopped matching and the control
+    // reported "anchor appears 0 times" rather than a missed defect.
+    find: "          _draft_run_id: string | null\n          _expected_basis_hash: string",
+    replace: "          _draft_run_id: string\n          _expected_basis_hash: string",
     guard: GUARD,
     expect: "_draft_run_id is typed `string | null`",
   },
@@ -52,9 +56,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "somebody 'fixes' the type by making the argument optional, which compiles and then fails at runtime: there is no SQL default, so PostgREST cannot resolve the function without it",
     file: TYPES,
-    find: "Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id: string | null }",
-    replace:
-      "Args: { _case_id: string; _expected_basis_hash: string; _draft_run_id?: string | null }",
+    find: "          _draft_run_id: string | null\n          _expected_basis_hash: string",
+    replace: "          _draft_run_id?: string | null\n          _expected_basis_hash: string",
     guard: GUARD,
     expect: "_draft_run_id is not optional",
   },

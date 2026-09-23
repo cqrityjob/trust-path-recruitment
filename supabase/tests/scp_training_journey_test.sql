@@ -487,7 +487,12 @@ SELECT pg_temp.ok(
   'T7.1 anon cannot read either training table');
 
 SELECT pg_temp.ok(
-  NOT has_function_privilege('anon', 'public.scp_assign_training(uuid,uuid,text,text,timestamptz,text,uuid)', 'EXECUTE')
+  -- Eight arguments since 20261206090000: the last one names the employment
+  -- record a development activity is about. A stale signature here does not
+  -- weaken to a pass -- has_function_privilege raises on a function that does
+  -- not exist -- but it does turn a privilege assertion into a crash, so it is
+  -- kept current deliberately.
+  NOT has_function_privilege('anon', 'public.scp_assign_training(uuid,uuid,text,text,timestamptz,text,uuid,uuid)', 'EXECUTE')
   AND NOT has_function_privilege('anon', 'public.scp_my_academy_work()', 'EXECUTE')
   AND NOT has_function_privilege('anon', 'public.scp_start_training_module(uuid,uuid)', 'EXECUTE')
   AND NOT has_function_privilege('anon', 'public.scp_complete_training_programme(uuid)', 'EXECUTE'),
