@@ -175,12 +175,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // It was applied and recorded on 2026-09-21, so it is off this list.
 // 20261205090000 (workforce records require an approved organisation) and
 // 20261206090000 (a development assignment carries the employment record) are
-// the schema half of the employer lifecycle phases 1-3. They merge alone; the
-// application code that passes employeeId waits for their hosted evidence.
-const expectedPending: string[] = [
-  "20261205090000_employer_workforce_active_only.sql",
-  "20261206090000_scp_training_assignment_person_context.sql",
-];
+// the schema half of the employer lifecycle phases 1-3. PR #280 merged as
+// 1c987a3 and the integration applied both; each was verified read-only on
+// 2026-09-23 -- the hosted ledger carries the canonical version and slug, both
+// function bodies are byte-identical to the merged source by md5, and neither
+// apply changed a row. They come off this list in the same change that marks
+// them applied, which is this one.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
