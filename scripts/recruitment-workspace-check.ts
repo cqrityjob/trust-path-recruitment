@@ -518,6 +518,29 @@ console.log("recruitment workspace\n");
     );
   }
 
+  // "Upcoming interviews" counts only live processes.
+  {
+    const now = new Date("2026-10-01T12:00:00Z");
+    const soon = { status: "confirmed", startsAt: "2026-10-02T12:00:00Z" };
+    ok(
+      D.isOpenInterview(soon, "interview", "open", now),
+      "G · an open candidate's interview is upcoming",
+    );
+    ok(
+      !D.isOpenInterview(soon, "hired", "open", now),
+      "G · a hired candidate's leftover booking is not upcoming",
+    );
+    ok(!D.isOpenInterview(soon, "withdrawn", null, now), "G · nor a withdrawn candidate's");
+    ok(
+      !D.isOpenInterview(soon, "interview", "completed", now),
+      "G · nor any in a completed recruitment",
+    );
+    ok(
+      /\.filter\(\(b\) =>\s*isOpenInterview\(/.test(code(F.fns)),
+      "G · the overview's upcoming interviews go through isOpenInterview",
+    );
+  }
+
   // The overview has one recruitment entry point, not a second card for it.
   const ov = code(F.overview);
   ok(

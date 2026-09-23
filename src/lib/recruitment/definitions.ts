@@ -288,6 +288,24 @@ export function messageDeliveryOf(status: string, emailStatus: string): MessageD
 
 export const BOOKING_OPEN_STATUSES = ["planned", "invited", "confirmed"] as const;
 
+/** An interview still ahead IN A LIVE PROCESS: the booking is open and not
+ *  long past, the candidate has no outcome yet, and the recruitment has not
+ *  been completed or cancelled. A confirmed time for somebody who has since
+ *  been hired, rejected or has withdrawn is history, not an upcoming
+ *  interview -- counting it would send the recruiter to a closed case. */
+export function isOpenInterview(
+  b: { status: string; startsAt: string },
+  applicationStatus: string,
+  completionState: string | null,
+  now: Date,
+): boolean {
+  return (
+    isUpcomingBooking(b.status, b.startsAt, now) &&
+    isUnresolved(applicationStatus) &&
+    (completionState === null || completionState === "open")
+  );
+}
+
 export function isUpcomingBooking(status: string, startsAt: string, now: Date): boolean {
   return (
     (BOOKING_OPEN_STATUSES as readonly string[]).includes(status) &&
