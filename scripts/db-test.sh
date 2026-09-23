@@ -889,6 +889,29 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 5l-d3b. Retry-safe recruitment assignment, including two real connections.
+# The old body must fail the new suite; restore the migration afterwards.
+# ---------------------------------------------------------------------------
+echo "==> Running recruitment assignment idempotency assertions"
+psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_assignment_idempotency_test.sql
+psql_q -d "$TEST_DB" -f supabase/rollback/20261209090000_recruitment_assignment_idempotency_rollback.sql >/dev/null
+ASSIGN_OLD_OUT="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_assignment_idempotency_test.sql >"$ASSIGN_OLD_OUT" 2>&1; then
+  rm -f "$ASSIGN_OLD_OUT"
+  echo "FAIL: assignment idempotency suite accepted the old function" >&2
+  exit 1
+fi
+if ! grep -q 'SCP_ASSIGNMENT_ALREADY_OPEN' "$ASSIGN_OLD_OUT"; then
+  cat "$ASSIGN_OLD_OUT" >&2
+  rm -f "$ASSIGN_OLD_OUT"
+  echo "FAIL: old body failed for a reason other than the intended retry regression" >&2
+  exit 1
+fi
+rm -f "$ASSIGN_OLD_OUT"
+psql_q -d "$TEST_DB" -f supabase/migrations/20261209090000_recruitment_assignment_idempotency.sql >/dev/null
+bash scripts/recruitment-assignment-race-test.sh
+
+# ---------------------------------------------------------------------------
 # 5l-d4. The P0 lifecycle bridges.
 #
 # Application-scoped Passport disclosure, and hired -> employee against the
