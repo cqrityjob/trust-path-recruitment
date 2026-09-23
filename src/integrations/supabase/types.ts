@@ -19463,6 +19463,7 @@ export type Database = {
         Args: { _application_id: string; _body: string }
         Returns: string
       }
+      rec_can_manage: { Args: { _job_id: string }; Returns: boolean }
       rec_claim_message_send: {
         Args: { _message_id: string }
         Returns: {
@@ -19489,10 +19490,12 @@ export type Database = {
         Args: { _message_id: string }
         Returns: undefined
       }
+      rec_is_member: { Args: { _employer_id: string }; Returns: boolean }
       rec_mark_application_viewed: {
         Args: { _application_id: string }
         Returns: string
       }
+      rec_reopen_recruitment: { Args: { _job_id: string }; Returns: number }
       rec_respond_to_booking: {
         Args: { _booking_id: string; _response: string }
         Returns: string

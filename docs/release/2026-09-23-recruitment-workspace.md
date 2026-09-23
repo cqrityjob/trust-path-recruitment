@@ -1,139 +1,132 @@
-# 20261207090000 — the recruitment workspace
+# 20261207090000 + 20261208090000 — the recruitment workspace
 
-Two pull requests, in this order. Neither is released without the Product Owner's
-approval.
+Three pull requests, merged in this order. Nothing goes to production without
+Mostafa's approval at each step.
 
-| # | Branch | Contains | Class |
-| --- | --- | --- | --- |
-| 1 | `claude/recruitment-workspace-schema` | the migration, its rollback, `supabase/tests/recruitment_workspace_test.sql`, its registration in `scripts/db-test.sh`, the pending `release-state.json` entry, the generated types, this document | SCHEMA RELEASE |
-| 2 | `claude/cqrityjob-employer-recruitment-896896` | everything in `src/`, the guards, the negative controls, CI registration, the browser evidence in `artifacts/recruitment-workspace/` | APP RELEASE |
+| # | Branch | Contains | Class | Merge when |
+| --- | --- | --- | --- | --- |
+| 1 | `claude/recruitment-workspace-schema` | **EXPAND** migration `20261207090000`, its rollback, `recruitment_workspace_test.sql`, `recruitment_workspace_transition_test.sql`, db-test registration, pending ledger entry, generated types, this document | SCHEMA RELEASE | first |
+| 2 | `claude/cqrityjob-employer-recruitment-896896` | all application code, guards, negative controls, CI registration, browser evidence | APP RELEASE | after 1 is applied hosted and recorded |
+| 3 | `claude/recruitment-workspace-backstops` | **CONTRACT** migration `20261208090000` (two triggers on `job_applications`), its rollback, `recruitment_workspace_backstops_test.sql` | SCHEMA RELEASE | after 2 is **published** in Lovable |
 
-PR 2 is stacked on PR 1. Its `schema-first-release:check` is **red by design** until
-the migration is applied hosted and recorded: the application code calls
-`rec_submit_application`, `rec_set_application_stage`, `rec_claim_message_send` and
-thirteen other functions that do not exist on the live database until then. Lovable
-rebuilds the site from `main` the moment code merges; the migration runs only when the
-Supabase GitHub integration applies it. Merging PR 2 first would break submitting an
-application on every published vacancy.
+## Why three, and why in this order
 
-## What the migration adds
+The database rule this work introduces — *only an owner, an admin or the
+recruitment's responsible person records hired / rejected* — must also hold for
+someone who calls `set_application_status()` by hand. That backstop is a
+trigger on `job_applications`. So is the rule that every required application
+question is answered.
 
-Eight tables, all tied to the existing `jobs` / `job_applications` rows. There is no
-second candidate database: an application is still one `job_applications` row, and
-everything below hangs off it by foreign key.
+Both triggers refuse something **today's application** does as a matter of
+course:
 
-| Table | Holds |
+| Today's application (main before this work) | What the trigger would do to it |
 | --- | --- |
-| `recruitment_settings` | per job: responsible person, `open / completed / cancelled`, version |
-| `recruitment_requirements` | mandatory / desirable requirements, SV + EN labels |
-| `recruitment_questions` | application questions (text or yes/no), optionally linked to a requirement |
-| `job_application_answers` | the candidate's answers, with the prompt snapshotted |
-| `recruitment_application_meta` | per application: responsible person, first opened |
-| `recruitment_comments` | internal notes — never visible to the candidate |
-| `recruitment_interview_bookings` | time, duration, **time zone**, onsite / video / phone, status |
-| `recruitment_messages` | drafts and sent messages, with e-mail status reported separately |
+| Shows hire / reject to every member and calls `set_application_status()` | Refuses a plain member. The old page can only say *"Kunde inte uppdatera ansökans status."* |
+| Its apply dialog sends no answers | Refuses every application to a vacancy that has required questions |
 
-### Access
+The Supabase GitHub integration applies a migration **when it merges**; Lovable
+serves new code only **when Mostafa publishes**. A trigger that merged with the
+application would therefore go live while the old application is still being
+served. So the two triggers are their own, last PR, merged once the new
+application is published — the repository's expand/contract rule.
 
-- Every table: `REVOKE ALL` from `PUBLIC`, `anon`, `authenticated`, then `SELECT` only,
-  behind RLS. Hosted default privileges would otherwise hand `anon` INSERT, UPDATE,
-  DELETE and TRUNCATE on each new table.
-- `anon` may read requirements and questions of a *published* vacancy only (through the
-  existing `jobs` policy), so the public page can show them.
-- A candidate may INSERT answer columns for their own application, nothing else.
-- Every write an employer makes goes through a `SECURITY DEFINER` `rec_*` function that
-  checks active membership of an active organisation. Decisions (`hired`, `rejected`)
-  additionally require owner/admin or the recruitment's responsible person; the
-  database refuses anyone else with `42501 RECRUITMENT_DECISION_NOT_PERMITTED`,
-  whichever client sends it.
+Nothing is weaker in the meantime. The new application's only ways to record a
+decision and to submit an application — `rec_set_application_stage()` and
+`rec_submit_application()` — enforce both rules themselves (EXPAND). Between
+PR 2 and PR 3 the only unguarded paths are the ones unguarded on `main` today:
+a plain member hand-calling `set_application_status()`, or a candidate
+hand-calling the old apply RPC for a vacancy with required questions. PR 3
+closes them.
 
-### Rules the database enforces, not the interface
+## What each state does — proved, not described
 
-| Rule | Where |
-| --- | --- |
-| No application after the deadline, after expiry, or once completed (`VACANCY_CLOSED`) | `job_applications_window_guard` |
-| Required questions answered, checked at COMMIT (`APPLICATION_ANSWERS_MISSING`) | deferred constraint trigger |
-| A stage change states what it expects to replace (`STALE_APPLICATION_STAGE`), so two recruiters never overwrite each other silently | `rec_set_application_stage` |
-| Nothing is decided in a completed recruitment (`RECRUITMENT_COMPLETED`) | `job_applications_decision_guard` |
-| Requirements and questions freeze once applications exist | `rec_save_vacancy_structure` |
-| Submitting twice with the same attempt id returns the same application | `rec_submit_application` |
-| Sending twice (double-click, retry) sends one message; a stuck send can be retried after two minutes | `rec_claim_message_send` / `rec_settle_message_send` |
-| A stage change sends nothing | no trigger writes a message; the old automatic status e-mail is removed from `updateApplicationStatusAsEmployer` |
+| State | Application served | Proof |
+| --- | --- | --- |
+| PR 1 applied, PR 2 not yet published | today's | `recruitment_workspace_transition_test.sql`: the old apply RPC still applies to a vacancy with a required question (X1); a plain member still records a decision through the old buttons (X3); an application past its deadline is refused with **23514**, which today's dialog already shows as *"Den här tjänsten går inte längre att söka via CQrityjob."* (X2) — the one behaviour change, and a true sentence |
+| PR 2 published, PR 3 not yet merged | new | the same suite's group N: the new paths refuse a missing required answer (N1) and a plain member's decision (N4) on their own; `recruitment_workspace_test.sql` (73 assertions) holds in this state |
+| PR 3 applied | new | `recruitment_workspace_backstops_test.sql`: the hand-made paths are refused (K1 required answer at COMMIT, K5 plain member's decision, `42501`) |
+| Application rolled back, PR 3's rollback run | today's | identical to the first row: `db-test.sh` stands PR 3 down alone and runs the transition suite against exactly that database |
 
-Existing report tables, report immutability, Passport sharing and assessment
-assignment are **not touched**.
+`scripts/db-test.sh` step 5l-ter runs the suites around a full
+stand-down/reapply of the migrations on a clean postgres:16 replay.
 
-## Proof before merge
+## The deployment path accepts this history
 
-- `supabase/tests/recruitment_workspace_test.sql` — 74 assertions (groups V, S, A, T,
-  B, M, C, Z), run by `scripts/db-test.sh` as step 5l-ter: applied, stood down with the
-  rollback, a negative control that proves the "refused" cases really depended on
-  this migration, then reapplied and run again.
-- `bun run recruitment-workspace:check` — 473 static assertions over the application
-  code (shared count/list definitions, no automatic sending, no match percentage,
-  status labels carry text, every read error is rendered as an error and never as an
-  empty list).
-- `bun run negative-controls:recruitment-workspace` — 14 mutations, each of which must
-  turn the guard red.
+- `bun run deploy-plan:check` against the hosted-ledger snapshot (read
+  2026-09-23): *WOULD APPLY* `20261207090000_recruitment_workspace.sql` and
+  nothing else; on PR 3's branch, `20261208090000` as well. Nothing already
+  applied is replayed; production is never re-bootstrapped.
+- The integration applied `20261205090000` and `20261206090000` on 2026-09-23
+  (PR #280) against this same history, under their canonical versions.
+- The one migration-history error seen in local testing is **not** in this
+  path: `supabase start` on an empty project stops at `20261028090000` because
+  the earlier ledger repair `20260907071826_…` writes that version's alias row
+  itself (its purpose on hosted). It affects only a from-scratch CLI bootstrap
+  of a new local stack, is pre-existing on `main`, and is why the local UAT
+  stack was built by replaying the files with psql. Both new versions are
+  unique and above every hosted version.
+
+## Types
+
+`src/integrations/supabase/types.ts` carries the 8 new tables and 19 `rec_*`
+functions exactly as `supabase gen types typescript` emits them against a
+database with the EXPAND migration applied — the generator Lovable runs after a
+hosted apply. A fresh generation was compared object by object: 27 of 27
+identical, none missing, so a regeneration changes nothing here. PR 3 adds no
+type (trigger functions are not exposed).
 
 ## Release order
 
-1. **Review and merge PR 1** (Product Owner).
-2. **The Supabase GitHub integration applies** `20261207090000` to the hosted project.
-   Nobody applies it by hand, and nobody applies it through Lovable's
-   `query_database`.
-3. **Verify hosted** with the anon publishable key (the only read path to hosted):
-   - `GET /rest/v1/recruitment_messages?select=id&limit=1` as anon → a permission error (`42501`), not an empty array;
-   - `POST /rest/v1/rpc/rec_complete_recruitment` as anon → `42501`;
-   - `GET /rest/v1/recruitment_requirements?select=id&limit=1` as anon → `200` (requirements and questions are the only two tables anon may read, and only
-     for published vacancies).
-4. **Record it**: move the `release-state.json` entry from `pending` to `applied` with
-   the hosted ledger version, refresh the hosted-ledger snapshot, and empty
-   `expectedPending` in `scripts/release-frontier-check.ts`. `deploy-plan` fails if
-   the snapshot is not refreshed with it.
-5. **Merge `main` into PR 2's branch** (a merge, not a rebase: its commits are already
-   pushed). `schema-first-release:check` turns green once step 4 is on `main`. CI must be green on the new head.
-6. **Review and merge PR 2** (Product Owner). Lovable rebuilds from `main`; publishing
-   is the Product Owner's action in Lovable.
+1. **PR 1** — review and merge (Mostafa). The GitHub integration applies
+   `20261207090000`. Verify hosted with the anon publishable key:
+   - `GET /rest/v1/recruitment_messages?select=id&limit=1` → permission error
+     (`42501`), not an empty array;
+   - `POST /rest/v1/rpc/rec_complete_recruitment` → `42501`;
+   - `GET /rest/v1/recruitment_requirements?select=id&limit=1` → `200`
+     (requirements and questions are the only two tables anon may read, and
+     only for published vacancies).
 
-### Between steps 2 and 6: today's code on the new schema
+   Record it: the `release-state.json` entry to `applied` with evidence, the
+   hosted-ledger snapshot refreshed, `expectedPending` in
+   `scripts/release-frontier-check.ts` emptied. `deploy-plan` fails until the
+   snapshot is refreshed.
+2. **PR 2** — merge `main` into its branch (a merge: its commits are pushed),
+   CI green on the new head, review and merge (Mostafa). **Publish in Lovable**
+   (Mostafa). Smoke test: create a draft recruitment, open an application.
+3. **PR 3** — merge `main` into its branch, CI green, review and merge
+   (Mostafa). The integration applies `20261208090000`; verify
+   `SELECT count(*) FROM pg_trigger WHERE tgrelid='public.job_applications'::regclass AND tgname IN ('job_applications_required_answers','job_applications_decision_guard')`
+   = 2, and record it as in step 1.
 
-The migration changes no grant or policy on `job_applications`; it adds three
-triggers. Today's code on `main` keeps working against them, with two tightenings:
+### Configuration Mostafa sets in Lovable (not code)
 
-| Today's behaviour | With the migration applied |
+| Setting | Without it |
 | --- | --- |
-| Candidates apply by direct INSERT | Unchanged. No vacancy has required questions yet (only the new editor creates them), so the answers trigger has nothing to require. **Applying to a still-`published` vacancy whose deadline or expiry has passed is now refused** (today's code checks only `status = 'published'`); the old dialog shows its generic failure for it. |
-| Any active member records hired / rejected through `set_application_status` | Owner, admin and a recruitment's responsible person: unchanged. **A plain member is now refused** and sees today's generic "status update failed". This is the intended rule, arriving before its explanation does. |
-| The automatic status e-mail on interview / rejected / hired | Unchanged until PR 2 removes it. |
-
-Keep steps 2 → 6 short for that reason.
-
-### Configuration the Product Owner sets in Lovable (not code)
-
-| Variable | Without it |
-| --- | --- |
-| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Messages are delivered inside CQrityjob (Mina ansökningar) and the e-mail status reads "e-post är inte konfigurerad". Nothing claims an e-mail was sent. |
-| `INTERVIEW_AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, and the kill switch `scp_iv_ai_real_model_permitted` set by service role | Every AI button returns an editable template, labelled as a template. The manual workflow is complete without AI. |
+| `RESEND_API_KEY`, `RESEND_FROM_EMAIL` (a sender on a domain verified in Resend) | Messages arrive in the candidate's CQrityjob inbox (Mina ansökningar); the e-mail status reads "e-post är inte konfigurerad". Nothing claims an e-mail was sent. |
+| `INTERVIEW_AI_PROVIDER=anthropic`, `ANTHROPIC_API_KEY`, and `scp_interview_ai_config.ai_enabled = true` (the platform kill switch, set by a platform admin) | Every AI button returns an editable template, labelled as a template. The manual workflow is complete without AI. |
 
 ## Rollback
 
-In the reverse order of release:
+**Application rollback, keeping the data** (the normal case):
 
-1. **Revert PR 2** on `main` (a revert commit — never a force-push). The site returns
-   to the previous employer pages; the new tables stay and are simply unused. Two
-   effects of the schema remain: a vacancy created with **required** questions refuses
-   applications from the old apply dialog (`APPLICATION_ANSWERS_MISSING`, because it
-   sends no answers) — unpublish such vacancies or clear their questions with
-   `rec_save_vacancy_structure` while they have no applications — and plain members
-   still cannot record hired / rejected (see the table above).
-2. **Only if the schema itself must go**: run
-   `supabase/rollback/20261207090000_recruitment_workspace_rollback.sql` as a new,
-   reviewed migration. It drops the eight tables, their triggers and the `rec_*`
-   functions, and removes the three triggers it added to `job_applications`. **This deletes
-   requirements, questions, answers, internal notes, bookings and messages** written
-   since release; `job_applications` rows themselves are untouched. Export those
-   tables first if anything in them must be kept.
+1. Stand the backstops down: a new, reviewed migration carrying
+   `supabase/rollback/20261208090000_recruitment_workspace_backstops_rollback.sql`
+   (two triggers, two functions; no table, no row). Merge it first.
+2. Revert PR 2 on `main` (a revert commit — never a force-push) and publish.
 
-Step 1 alone is safe at any time. Step 2 is never run while PR 2's code is live: the
-code calls the functions it drops.
+The database is then exactly the "PR 1 applied" state above: today's
+application works as it does now, and every requirement, question, answer,
+note, booking and message is kept for when the application returns. If step 2
+is published before step 1 is applied, plain members see "Kunde inte uppdatera
+ansökans status." on a decision until step 1 lands — so do step 1 first.
+
+If PR 3 was never merged, step 1 is skipped.
+
+**Removing the schema** (only if the tables themselves must go): after the
+application rollback, a reviewed migration carrying
+`supabase/rollback/20261207090000_recruitment_workspace_rollback.sql`. **This
+deletes** requirements, questions, answers, internal notes, bookings and
+messages; `job_applications` rows are untouched. Export first if anything must
+be kept. Never run it while PR 2's code is live: the code calls the functions
+it drops.

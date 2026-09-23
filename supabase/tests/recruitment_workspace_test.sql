@@ -332,9 +332,9 @@ SELECT pg_temp.ok(
 SELECT pg_temp.must_fail(format($f$SELECT * FROM public.rec_set_application_stage(%L, 'reviewing', 'rejected')$f$,
   (SELECT app1 FROM rw)), 'RECRUITMENT_DECISION_NOT_PERMITTED',
   'T4 a member who is not responsible for the recruitment cannot record a rejection');
-SELECT pg_temp.must_fail(format($f$SELECT * FROM public.set_application_status(%L, 'rejected', NULL)$f$,
-  (SELECT app1 FROM rw)), 'RECRUITMENT_DECISION_NOT_PERMITTED',
-  'T5 nor by calling the canonical RPC directly, around every server function');
+-- T5, the same refusal by calling set_application_status() around every
+-- server function, is the CONTRACT half's (recruitment_workspace_backstops_test
+-- K5): this suite holds in the EXPAND state, where that path is today's.
 SELECT pg_temp.must_fail(format($f$SELECT public.rec_set_recruitment_responsible(%L, %L)$f$,
   (SELECT job1 FROM rw), (SELECT member_a FROM rw)), 'RECRUITMENT_NOT_PERMITTED',
   'T6 a member cannot appoint themselves responsible');

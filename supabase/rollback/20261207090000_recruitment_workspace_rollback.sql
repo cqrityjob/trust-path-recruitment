@@ -12,7 +12,10 @@
 -- only the in-product copy disappears.
 --
 -- The application code that reads these objects must be rolled back FIRST
--- (revert the application PR), or every recruitment workspace read fails.
+-- (revert the application PR), or every recruitment workspace read fails, and
+-- 20261208090000's backstops must already be stood down by their own rollback.
+-- Their two triggers and functions are dropped here as well, IF EXISTS, so a
+-- forgotten step cannot leave a trigger calling a function this file drops.
 
 BEGIN;
 
