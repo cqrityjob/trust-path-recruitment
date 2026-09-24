@@ -106,6 +106,13 @@ pw.shots.mjs
 # fixture and what every capture is evidence of.
 !/artifacts/recruitment-workspace/
 
+# The Varbi-shaped recruitment case walk (dashboard -> case -> five steps ->
+# paged candidate table -> booking -> candidate review -> decision & close,
+# at 1440 / 1280 / 375). Same rules: committed so a reviewer can read the
+# screens beside Varbi's reference views; INDEX.md names the synthetic
+# fixture and what every capture is evidence of.
+!/artifacts/recruitment-case-varbi/
+
 # The BESKT PR 3 candidate-preparation captures, under the same rules as E1
 # and E4 above: committed so a reviewer can READ the Swedish and English
 # screens at both widths in the pull request itself. Several of the states
