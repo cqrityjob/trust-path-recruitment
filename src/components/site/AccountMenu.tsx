@@ -43,7 +43,16 @@
 // decides a label and a destination, and grants nothing either way.
 
 import { Link } from "@tanstack/react-router";
-import { Building2, Check, ChevronDown, Gavel, LogOut, UserPen, UserRound } from "lucide-react";
+import {
+  Building2,
+  Check,
+  ChevronDown,
+  Gavel,
+  LogOut,
+  ShieldCheck,
+  UserPen,
+  UserRound,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -79,7 +88,11 @@ export type AccountIdentity = {
   readonly reviewQueueCount: number;
   /** Which workspace the current route is in, so the menu can show where the
    *  person already is instead of offering it as a destination. */
-  readonly currentContext: "personal" | "reviewer" | { readonly employerSlug: string };
+  readonly currentContext:
+    | "personal"
+    | "security-work"
+    | "reviewer"
+    | { readonly employerSlug: string };
 };
 
 /** First letter of the name, for the trigger. Falls back to the email so the
@@ -105,7 +118,7 @@ export function AccountMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         aria-label={t("account.menu.label")}
       >
         <span
@@ -125,7 +138,10 @@ export function AccountMenu({
         <ChevronDown className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-72">
+      <DropdownMenuContent
+        align="end"
+        className="w-72 max-w-[calc(100vw-2rem)] [&_[role=menuitem]]:min-h-11"
+      >
         {/* Identity first: a menu that can sign you out has to say who it
             would be signing out. */}
         <DropdownMenuLabel className="font-normal">
@@ -151,6 +167,16 @@ export function AccountMenu({
             <UserRound className="mr-2 h-4 w-4" aria-hidden="true" />
             <span className="flex-1">{t("account.context.personal")}</span>
             {inPersonal && <Check className="ml-2 h-3.5 w-3.5 text-accent" aria-hidden="true" />}
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <Link to="/security-work" className="cursor-pointer" data-workspace="security-work">
+            <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+            <span className="flex-1">{t("sw.name")}</span>
+            {identity.currentContext === "security-work" && (
+              <Check className="ml-2 h-3.5 w-3.5 text-accent" aria-hidden="true" />
+            )}
           </Link>
         </DropdownMenuItem>
 

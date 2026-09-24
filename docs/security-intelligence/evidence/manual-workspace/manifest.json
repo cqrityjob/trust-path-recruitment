@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "commit": "14e25672551657a7cafb67870fb7a28ac47a05c9",
+  "workingTreeDirty": true,
+  "environment": "disposable-local-gotrue-postgrest-postgresql",
+  "supabaseCli": "2.111.0",
+  "cases": [
+    {
+      "project": "chromium",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "chromium",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "project": "mobile-375",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "mobile-375",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "project": "mobile-390",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "mobile-390",
+      "language": "en",
+      "passed": true
+    }
+  ],
+  "captures": [
+    {
+      "file": "chromium-en-access-denied.png",
+      "sha256": "346bc3467981461b47d9ddd6513d38f932f3fb00c67df48aeee40ff49529df37"
+    },
+    {
+      "file": "chromium-en-monitoring.png",
+      "sha256": "126b353cc1aedb056af470380ed470af4a1e80edd83ee4a2c1ba3fd00b6b4aef"
+    },
+    {
+      "file": "chromium-en-settings.png",
+      "sha256": "aa226b6413e15ed1c35e482a58ea4dff283c984f0b3cbd6e8c59e103ad54609d"
+    },
+    {
+      "file": "chromium-en-sources.png",
+      "sha256": "a885215d256e5771118827dd2b2117dede2880e2f5d8f0e6b574f1df4d0c07e5"
+    },
+    {
+      "file": "chromium-sv-access-denied.png",
+      "sha256": "2bbb76e609f4f29322a0b61c8b58b4240f9bab5387cc9017f7415c6c0408d879"
+    },
+    {
+      "file": "chromium-sv-monitoring.png",
+      "sha256": "21577312ee7a981b7e3966532f0a4d748d5a22b9b542a94339f87822eae99009"
+    },
+    {
+      "file": "chromium-sv-settings.png",
+      "sha256": "e77ccd38990386825ac60c3d9a0d00e5c1edb0edc734d8a89201db742f1ab7c1"
+    },
+    {
+      "file": "chromium-sv-sources.png",
+      "sha256": "3ab4f1944e421f04a9f472ff5b764bbd61d91a48bfb39fe7f68837d918313073"
+    },
+    {
+      "file": "mobile-375-en-access-denied.png",
+      "sha256": "215088f1498dc2ac9e70f1c598ca349cbd7392650301b494c8a5db40de2a61af"
+    },
+    {
+      "file": "mobile-375-en-monitoring.png",
+      "sha256": "6ab3e4df20a7f5e18b167aa7cec4cfeeb3760b4ae81ace157e80859dc47489c3"
+    },
+    {
+      "file": "mobile-375-en-settings.png",
+      "sha256": "93c5c582e000afc37e2d74d204f3482c9f97763d4697aa5fc58c771822a677fb"
+    },
+    {
+      "file": "mobile-375-en-sources.png",
+      "sha256": "166d02838e61295f03386d7258bf773e2998bd68664307fa63984af6d559e3d5"
+    },
+    {
+      "file": "mobile-375-sv-access-denied.png",
+      "sha256": "d201cab7ecb7ab65fb6fcb4ac5849cea580e466ebd756b98cf1dfc4279beba7d"
+    },
+    {
+      "file": "mobile-375-sv-monitoring.png",
+      "sha256": "cc23a4b68e7829d3563135ec685a9f29bbd52a9cc9f285f412ddd97b16bdc53b"
+    },
+    {
+      "file": "mobile-375-sv-settings.png",
+      "sha256": "7ebacf94a6b9a62a12719e0e4c81bb938a8f10e34cb3c4baa4dd85331865fe59"
+    },
+    {
+      "file": "mobile-375-sv-sources.png",
+      "sha256": "f90edca36c8b69a45ed3a8544ff15efa913c4fe091d2e68d594e44fd9409406c"
+    },
+    {
+      "file": "mobile-390-en-access-denied.png",
+      "sha256": "b6be933dac6d2e3700944b9da1cd436e3bb92e9de74d8e189885f2b15b9aca49"
+    },
+    {
+      "file": "mobile-390-en-monitoring.png",
+      "sha256": "e574f023e17e5c87448d07004c341c39fa72edcde79054f87dacd4d21935a0ca"
+    },
+    {
+      "file": "mobile-390-en-settings.png",
+      "sha256": "855542461e5f4f3f77f37731120fb0e8fb6f88ade228f5f5c9b6b80270649f47"
+    },
+    {
+      "file": "mobile-390-en-sources.png",
+      "sha256": "945dfe9597dcc1804fd73170258fc07806a9f4f6d5b31a976d69ecde10c2c102"
+    },
+    {
+      "file": "mobile-390-sv-access-denied.png",
+      "sha256": "c999fa6d304e58136604bfa00de2580a6b26085b3f6d0c43b06a4a3bd8c65b29"
+    },
+    {
+      "file": "mobile-390-sv-monitoring.png",
+      "sha256": "a328bdeb2b8327eaef00208c7b0e80259f73d019c76c685515fe0fba871b1715"
+    },
+    {
+      "file": "mobile-390-sv-settings.png",
+      "sha256": "fa684709ba768696df6345c56e0270f17634aeca4635ac3a4d0b189ee27ac9d7"
+    },
+    {
+      "file": "mobile-390-sv-sources.png",
+      "sha256": "31e3583e4f76ce39446c1ad0aac269ed17a66380f3b42695283f7084aca648a5"
+    }
+  ],
+  "rawAuthenticatedArtifactsPublished": false
+}

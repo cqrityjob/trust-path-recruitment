@@ -17,6 +17,7 @@ import {
   Menu,
   MessagesSquare,
   Settings2,
+  ShieldCheck,
   Sparkles,
   MapPin,
   User as UserIcon,
@@ -541,6 +542,12 @@ function SidebarFooter({
             <Link to="/my-career">
               <UserIcon className="mr-2 h-4 w-4" aria-hidden="true" />
               {t("account.context.personal")}
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/security-work" className="min-h-11" data-workspace="security-work">
+              <ShieldCheck className="mr-2 h-4 w-4" aria-hidden="true" />
+              {t("sw.name")}
             </Link>
           </DropdownMenuItem>
 

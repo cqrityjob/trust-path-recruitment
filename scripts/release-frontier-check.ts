@@ -194,9 +194,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // comes off this list in the same change that marks it applied.
 // PR #286 (20261209090000) was verified applied read-only after merge;
 // docs/security-intelligence/hosted-baseline.md records ledger and body digests.
-// Security Work foundation is schema-only and remains pending until its own
-// owner merge/application gate and fresh hosted evidence.
-const expectedPending: string[] = ["20261210090000_security_work_foundation.sql"];
+// PR #287 (20261210090000) merged as 14e2567. Read-only verification on
+// 2026-09-24 matched all 16 tables and 11 functions, their grants, policies,
+// constraints and triggers to isolated replay. Data API rejects sw_private.
+// Evidence: docs/security-intelligence/hosted-application.md.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

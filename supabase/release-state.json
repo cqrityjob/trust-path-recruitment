@@ -1778,7 +1778,7 @@
     },
     {
       "file": "20261210090000_security_work_foundation.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "kind": "table",
@@ -1850,8 +1850,11 @@
         }
       ],
       "rollback": "supabase/rollback/20261210090000_security_work_foundation_rollback.sql",
-      "note": "Security Intelligence PR A: independent workspaces and explicit memberships, monitoring/requirements, manual source facts, intelligence triage, assessments, risks/controls/actions, eight-section reports, citations, AI provenance (inactive), protected audit/version history. Composite workspace foreign keys, RLS, immutable ownership and human approval constraints. No employer/candidate/Passport authorization, no runtime consumers, provider/worker grants, uploads, fetching or schedules. Owner merge/application gate remains; see docs/security-intelligence/release.md.",
-      "verify": "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND relname LIKE 'sw\\_%' AND relrowsecurity; -- expect 16. SELECT has_function_privilege('anon','public.sw_create_personal_workspace(text)','EXECUTE'), has_function_privilege('authenticated','public.sw_create_personal_workspace(text)','EXECUTE'), has_function_privilege('service_role','public.sw_create_personal_workspace(text)','EXECUTE'); -- expect f,t,f. Verify every new object's exact grants, pinned private helpers, schema exposure, constraints, triggers and definitions against isolated replay; no business writes needed."
+      "note": "Security Intelligence PR A: independent workspaces and explicit memberships, monitoring/requirements, manual source facts, intelligence triage, assessments, risks/controls/actions, eight-section reports, citations, AI provenance (inactive), protected audit/version history. Composite workspace foreign keys, RLS, immutable ownership and human approval constraints. No employer/candidate/Passport authorization, no runtime consumers, provider/worker grants, uploads, fetching or schedules. Merged in PR #287 and verified applied read-only on 2026-09-24; see docs/security-intelligence/hosted-application.md. PR B may now consume this verified foundation.",
+      "verify": "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relkind='r' AND relname LIKE 'sw\\_%' AND relrowsecurity; -- expect 16. SELECT has_function_privilege('anon','public.sw_create_personal_workspace(text)','EXECUTE'), has_function_privilege('authenticated','public.sw_create_personal_workspace(text)','EXECUTE'), has_function_privilege('service_role','public.sw_create_personal_workspace(text)','EXECUTE'); -- expect f,t,f. Verify every new object's exact grants, pinned private helpers, schema exposure, constraints, triggers and definitions against isolated replay; no business writes needed.",
+      "hostedVersion": "20261210090000",
+      "hostedName": "security_work_foundation",
+      "evidenceSource": "docs/security-intelligence/hosted-application.md"
     }
   ], 
   "policyVersion": 2, 
