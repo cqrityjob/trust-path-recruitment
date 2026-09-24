@@ -1,6 +1,8 @@
 {
   "private": true,
   "scripts": {
+    "security-work:service-check": "bun run scripts/security-work-service-check.ts",
+    "security-work:browser": "bash scripts/security-work-browser-run.sh",
     "dev": "vite dev",
     "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts",
     "employer-registration-notice:check": "bun run scripts/employer-registration-notice-check.ts",

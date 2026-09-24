@@ -25,6 +25,7 @@
   // application's.
   "extends": "./tsconfig.json",
   "include": [
+    "scripts/security-work-*.ts",
     "scripts/passport-*.ts",
     // The security guard is added on its own terms rather than by widening the
     // net: it is new, it carries no pre-existing type debt, and a guard that

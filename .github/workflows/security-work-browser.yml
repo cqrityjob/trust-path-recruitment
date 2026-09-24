@@ -1,0 +1,79 @@
+name: Security Work manual browser evidence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "e2e/security-work*.spec.ts"
+      - "scripts/security-work*"
+      - "scripts/fixtures/security-work*"
+      - "scripts/e4-evidence-scan.ts"
+      - "supabase/migrations/**"
+      - "playwright.config.ts"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/security-work-browser.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: security-work-browser-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      SUPABASE_CLI_VERSION: "2.111.0"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Allocate this run's private stack directory
+        run: echo "SW_BROWSER_STATE_DIR=$RUNNER_TEMP/security-work-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Verify pinned local CLI surface
+        run: |
+          test "$(supabase --version)" = "$SUPABASE_CLI_VERSION"
+          supabase start --help >/dev/null
+          supabase stop --help >/dev/null
+          supabase status --help >/dev/null
+          docker --version
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+      - name: Verify evidence publication gate with failing controls
+        run: bun run scripts/security-work-browser-evidence-check.ts
+      - name: Start dedicated local stack and replay migrations
+        run: bash scripts/security-work-browser-stack.sh up
+      - name: Caller-scoped service behavior against real RLS and sessions
+        run: |
+          source "$SW_BROWSER_STATE_DIR/run.env"
+          bun run security-work:service-check
+      - name: Real authenticated SV/EN desktop and mobile journeys
+        id: browser
+        run: bash scripts/security-work-browser-run.sh
+      # This output is written only after every journey and the leak scan pass.
+      # Never include stack logs, env, storage state, raw reports or traces.
+      - name: Publish validated screenshots and manifest
+        if: success() && steps.browser.outputs.evidence_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-work-manual-browser
+          path: ${{ steps.browser.outputs.evidence_dir }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Stop only this workflow's local stack
+        if: always()
+        run: |
+          if test -f "$SW_BROWSER_STATE_DIR/owned-stack"; then
+            bash scripts/security-work-browser-stack.sh down
+          fi

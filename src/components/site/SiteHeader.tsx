@@ -802,6 +802,15 @@ export function SiteHeader() {
                 <UserRound className="h-4 w-4 shrink-0" aria-hidden="true" />
                 <span className="min-w-0 flex-1 truncate">{t("account.context.personal")}</span>
               </Link>
+              <Link
+                to="/security-work"
+                onClick={() => setOpen(false)}
+                data-workspace="security-work"
+                className="mt-1 flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-md px-2 py-2 text-sm font-medium text-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1 truncate">{t("sw.name")}</span>
+              </Link>
               {hasEmployerWorkspace && (
                 <>
                   {/* Same rule as the desktop menu, and it has to be the

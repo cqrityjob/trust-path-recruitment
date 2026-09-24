@@ -1,4 +1,5 @@
 import { recruitmentEn, recruitmentSv } from "./recruitment-copy";
+import { securityWorkEn, securityWorkSv } from "./security-work-copy";
 
 export type Lang = "sv" | "en";
 
@@ -8436,6 +8437,7 @@ export const dictionaries = {
     "iiu.new.prefill.unavailable":
       "Uppgifterna från ansökan kunde inte hämtas, så fälten nedan är tomma. Intervjun kopplas ändå till ansökan när den skapas.",
     ...recruitmentSv,
+    ...securityWorkSv,
   },
   en: {
     "nav.careers": "Security Career Center",
@@ -16403,6 +16405,7 @@ export const dictionaries = {
     "iiu.new.prefill.unavailable":
       "The details from the application could not be loaded, so the fields below are empty. The interview is still linked to the application when it is created.",
     ...recruitmentEn,
+    ...securityWorkEn,
   },
 } as const;
 
