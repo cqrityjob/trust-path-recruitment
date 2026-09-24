@@ -31,13 +31,13 @@ that is the truthful state, not a stand-in for delivery.
 | `06-step-1-kravprofil.png` | Step 1: the structured requirements and selection questions the case holds, with the edit link into the editor's requirements step, or the lock note once a decision exists. |
 | `07-step-2-annons.png` | Step 2: the advert's facts and description, and the same preview. |
 | `08-step-3-publiceringslage.png` | Step 3: real status and dates, the actions that apply to this phase (publish / close / restore / duplicate / delete), and a readiness checklist that names what is missing. Publishing from here flipped steps 1–3 to ✓ without a reload. |
-| `09-page-1-of-2.png` | Server paging: "Visar 1–25 av 30", page 1 of 2. Page 2 holds the remaining 5; the union of both pages is 30 distinct ids; `?page=9` clamps to page 2. |
+| `09-page-1-of-2.png` | Paging: "Visar 1–25 av 30", page 1 of 2. Page 2 holds the remaining 5; the union of both pages is 30 distinct ids; `?page=9` clamps to page 2. (Since the second review the page comes from `rec_candidate_view`; see 26.) |
 | `10-three-selected.png` | Three rows selected: "3 markerade", "Visa ansökan" disabled (it needs exactly one), every other action live. |
 | `11-booking-dialog-three-candidates.png` | "Intervju" with three selected: the dialog says "3 separata bokningar, en per kandidat"; one start per candidate, prefilled back to back (10:00, 10:45, 11:30) so no two get the same slot; place / video link / phone; interviewer; the note that title and contact go in the invitation, which is a separate step. There is no send button here. |
 | `12-booking-saved-per-candidate.png` | After "Spara 3 tider": a per-candidate result list, and the table's "Nästa aktivitet" column shows each booking as "Planerad – inte skickad" without a reload. |
 | `13-batch-partial-result.png` | "Ändra status → Flytta till granskning" on one new and one already-reviewed candidate: "1 flyttade. 1 hoppades över…", each named with its outcome; the skipped one stays selected so it can be acted on again. |
 | `14-assign-test-result.png` | "Tilldela test" on two candidates: "2 av 2 kandidater har nu testet". Run twice on the same two: the same result, and the database holds exactly one assignment each. |
-| `15-candidate-review-prev-next.png` | Opening a candidate from the list: "Tillbaka till listan", Föregående / Nästa with "2 av 30" walking the server's full filtered order across page boundaries, then the existing candidate view unchanged. Back restores `?step=applications&sort=name&page=2`. |
+| `15-candidate-review-prev-next.png` | Opening a candidate from the list: "Tillbaka till listan", Föregående / Nästa with "2 av 30" walking the server's filtered order across page boundaries (the position and the neighbours are asked of the server; the browser holds the list's definition, never its ids), then the existing candidate view unchanged. Back restores `?step=applications&sort=name&page=2`. |
 | `16-step-5-beslut-avslut.png` | Step 5: close applications, then complete the recruitment once every candidate has a decision; the history stays. Hiring is one candidate at a time on the candidate page; there is no batch hire. |
 | `17-case-en.png` | The same case in English. |
 | `18-case-1280.png`, `19-dashboard-1280.png` | At 1280 px the page is 1280 wide; the table scrolls inside its own frame (1040 px minimum), the page never does. |
@@ -45,6 +45,24 @@ that is the truthful state, not a stand-in for delivery.
 | `22-booking-dialog-375.png` | The booking dialog at 375 px, one candidate: date, start, end with the derived duration, timezone, kind, place, interviewer. |
 | `23-candidate-review-375.png` | The candidate view at 375 px with "1 av 30" and prev / next. |
 | `24-step-5-375.png` | Step 5 at 375 px. |
+
+## The second review's two defects, fixed (2026-09-24)
+
+The review found that the case page read at most 5 000 applications into
+memory (PostgREST's row cap made it 1 000 in practice) and paged them
+there, and that the booking dialog clamped a slot past midnight to 23:59.
+Both are gone; the captures below are the proof, taken against the same
+local stack after `scripts/fixtures/recruitment-workspace-fixture.sql`
+added *Väktare, Norrköping* with 5 050 applications.
+
+| File | What it is evidence of |
+| --- | --- |
+| `25-dashboard-5050-applications.png` | Overview after the 5 050-application vacancy: "Nya ansökningar 5015", the per-case "Nya" column (5000 + 12 + 1 + 2), and "5015 nya ansökningar" under Att göra idag -- every one of them the database's own count (`rec_job_counts`), not a sample. |
+| `26-norrkoping-page-202-of-202.png` | The case page on the last page: "Visar 5026–5050 av 5050 · Sida 202 av 202", ranks 5026.. in the # column, the oldest applicant (Sökande 0001) last -- rows the old read could never have shown. One page from `rec_candidate_view`; no id of any other page reaches the browser. |
+| `27-booking-25-candidates-refused.png` | The reproduction: 25 candidates, 45 minutes from 10:00. Slots 20–25 are empty and flagged "ryms inte inom dagen" -- never 23:59 -- and "Spara 25 tider" is refused as a whole: "18 av 25 tider får plats från 10:00 … Inget har sparats." The booking count in the database is unchanged; the input stays. |
+| `28-booking-overlap-refused.png` | A slot typed by hand into another's time (10:00, 10:45, 10:20 with 45 minutes): "Sökande 5050 och Sökande 5048 har tider som överlappar varandra … Inget har sparats." |
+| `29-booking-dst-refused.png` | 02:30 on 25 October 2026 in Europe/Stockholm: "inträffar två gånger … sommartiden slutar då". 02:30 on 29 March is refused as a time that does not exist. Neither is guessed at. |
+| `30-applications-list-capped.png` | The organisation-wide list (the H1 page the overview's count links to) reads the newest rows in one go and now says so: "visar de 1000 senaste ansökningarna av 5088" with a pointer to the paged case pages. |
 
 ## Beside Varbi
 
@@ -76,32 +94,54 @@ its "Nytt intervjutillfälle" dialog and its "Intervju" dropdown. Read against
 
 ## Automated checks that back this
 
-- `bun run recruitment-workspace:check` — 608 static assertions, section H
-  covers the step model, page slicing, answer filters, select-all-on-page,
-  per-item batch results, the ordered-ids handoff, and the booking dialog's
-  "sends nothing" contract.
-- `bun run negative-controls:recruitment-workspace` — 25 planted defects,
-  six new (a step done by visit, a page past the end shown empty, select-all
-  reaching other pages, "no" matching the unanswered, a booking that sends,
-  the case loading the whole list); each is caught and each file is restored
-  byte for byte.
-- `e2e/recruitment-workspace.spec.ts` — the walk above, in a browser, against
-  a local stack: page order, no row twice across pages, count / filter / rows
-  agreement, list context across a candidate visit, select-all is this page,
-  per-candidate batch result, two separate bookings with no send, another
-  organisation's owner sees no table, a candidate's page never carries an
-  internal note.
+- `supabase/tests/recruitment_candidate_view_test.sql` — the database
+  read, EXECUTED with 5 200 applications on one vacancy as the roles that
+  really call it: 47 assertions over counts, pages (no row twice, none lost,
+  a page past the end is the last), stable sorting (ties on the id, Swedish
+  order, unnamed and unplanned last), filters ("no" is answered-no), the
+  neighbours read, isolation (another organisation, a candidate, a stranger
+  and anon), and malformed input. Runs in `scripts/db-test.sh` before and
+  after a rollback/reapply cycle, with a negative control that the suite
+  fails without the migration. Migration: `20261212090000_recruitment_candidate_view.sql`.
+- `bun run recruitment-workspace:check` — 635 assertions. It executes the
+  booking arithmetic (25 candidates, 45 minutes from 10:00 → 18 fit, the
+  20th slot and later are null and never 23:59; overlaps in any entry
+  order; the 2026 Stockholm gap and repeat) and reads the migration for the
+  list's rules, the server for "one page, no limit, no ids", the table for
+  "remember the definition, never the ids", and the candidate page for
+  "previous/next from the server".
+- `bun run negative-controls:recruitment-workspace` — 34 planted defects,
+  each caught and each file restored byte for byte, among them: the read
+  paging in memory again, the overview sampling applications, the chips
+  counting the page, previous/next from browser ids, midnight clamped, the
+  series saved despite a problem, an overlap unchecked, a DST gap or repeat
+  booked silently.
+- `e2e/recruitment-workspace.spec.ts` — the walk above, in a browser,
+  against a local stack: 11 tests, including the 5 050-application vacancy
+  (total, last page, search for the oldest applicant, a filter over the
+  whole list), previous/next across a page edge with the session holding no
+  ids, the 25-candidate refusal with a database count that nothing was
+  saved, the overlap and the two DST refusals, another organisation's owner
+  seeing no table, a candidate's page never carrying an internal note.
+- `.github/workflows/recruitment-evidence.yml` — runs that spec in GitHub
+  CI on an isolated local Supabase stack (history replayed as postgres,
+  fixture seeded twice to prove it is a no-op the second time, loopback
+  proven), and `scripts/recruitment-evidence-verify.ts` then refuses the
+  report unless every desktop test ran and passed: a green job where the
+  tests skipped is not evidence.
 
-Run it:
+Run it locally against the rec-uat stack:
 
 ```bash
+psql "postgresql://postgres:postgres@127.0.0.1:56322/postgres" \
+  -v ON_ERROR_STOP=1 -f scripts/fixtures/recruitment-workspace-fixture.sql
 E2E_LOCAL_STACK=1 E2E_BASE_URL=http://localhost:8093 \
 E2E_SUPABASE_URL=http://127.0.0.1:56321 \
 E2E_SUPABASE_SERVICE_ROLE_KEY=<local service-role key> \
 E2E_SUPABASE_ANON_KEY=<local publishable key> \
-E2E_REC_JOB_ID=44444444-dddd-4000-8000-000000000004 \
-bunx playwright test e2e/recruitment-workspace.spec.ts --project=chromium
+E2E_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:56322/postgres" \
+bunx playwright test e2e/recruitment-workspace.spec.ts --project=chromium --workers=1
 ```
 
-Result on this branch: 7 passed on chromium, 14 skipped on the two phone
-projects by design (the table is read as a table).
+Result on this branch: 11 passed on chromium (31 s); the two phone
+projects skip by design (the table is read as a table).
