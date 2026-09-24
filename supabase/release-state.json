@@ -1855,6 +1855,172 @@
       "hostedVersion": "20261210090000",
       "hostedName": "security_work_foundation",
       "evidenceSource": "docs/security-intelligence/hosted-application.md"
+    },
+    {
+      "file": "20261211090000_security_work_analysis_contract.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "sw_method_versions"
+        },
+        {
+          "kind": "table",
+          "object": "sw_report_templates"
+        },
+        {
+          "kind": "table",
+          "object": "sw_analysis_inputs"
+        },
+        {
+          "kind": "table",
+          "object": "sw_analysis_questions"
+        },
+        {
+          "kind": "table",
+          "object": "sw_documents"
+        },
+        {
+          "kind": "table",
+          "object": "sw_extraction_segments"
+        },
+        {
+          "kind": "table",
+          "object": "sw_report_approvals"
+        },
+        {
+          "kind": "table",
+          "object": "sw_revision_requests"
+        },
+        {
+          "kind": "table",
+          "object": "sw_ai_activations"
+        },
+        {
+          "kind": "table",
+          "object": "sw_ai_activation_revocations"
+        },
+        {
+          "kind": "table",
+          "object": "sw_processing_jobs"
+        },
+        {
+          "kind": "table",
+          "object": "sw_report_exports"
+        },
+        {
+          "kind": "table",
+          "object": "sw_ai_draft_applications"
+        },
+        {
+          "kind": "function",
+          "object": "sw_preview_report(uuid,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_approve_report(uuid,uuid,integer,text)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_revise_analysis(uuid,uuid,integer,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_revise_report(uuid,uuid,integer,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_reserve_document(uuid,uuid,text,text,bigint,text)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_reserve_processing(uuid,uuid,text,uuid,uuid,integer,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_dispatch_processing(uuid,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_complete_processing(uuid,uuid,uuid,text,text,text)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_export_report(uuid,uuid,uuid,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sw_apply_ai_draft(uuid,uuid,integer,uuid)"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "analysis_type"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "method_version_id"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "purpose"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "horizon"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "context_snapshot"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "knowledge_gaps"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "conflicts"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "supersedes_id"
+        },
+        {
+          "kind": "column",
+          "table": "sw_assessments",
+          "object": "supersedes_version"
+        },
+        {
+          "kind": "column",
+          "table": "sw_reports",
+          "object": "template_version_id"
+        },
+        {
+          "kind": "column",
+          "table": "sw_reports",
+          "object": "sections"
+        },
+        {
+          "kind": "column",
+          "table": "sw_reports",
+          "object": "supersedes_id"
+        },
+        {
+          "kind": "column",
+          "table": "sw_reports",
+          "object": "supersedes_version"
+        }
+      ],
+      "rollback": "supabase/rollback/20261211090000_security_work_analysis_contract_rollback.sql",
+      "note": "Schema-only Security Work analysis contract: immutable method/template versions, owner-approved explicit RSA matrix, nullable unknown RSA risk proposals, private documents and signed extraction, workspace-scoped processing approval and single-dispatch jobs, exact reviewed report bundles and explicit revision/export receipts. No keys, provider activation or hosted application performed. Dependent application code must remain blocked until hosted application is verified with evidence.",
+      "verify": "See docs/security-intelligence/analysis-release.md. Verify exact function bodies, grants, RLS, private bucket and migration ledger against isolated replay; never infer application from Git merge alone."
     }
   ], 
   "policyVersion": 2, 
