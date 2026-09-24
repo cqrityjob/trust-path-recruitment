@@ -166,7 +166,7 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};"
 echo "==> Running Security Work analysis contract assertions"
 SWA_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_analysis_contract_test.sql 2>&1)" || { echo "$SWA_OUT"; exit 1; }
 SWA_PASSED="$(printf '%s\n' "$SWA_OUT" | grep -c 'NOTICE:  ok ' || true)"
-[ "$SWA_PASSED" -ge 58 ] || { echo "$SWA_OUT"; echo 'FAIL: analysis assertion shortfall'; exit 1; }
+[ "$SWA_PASSED" -ge 69 ] || { echo "$SWA_OUT"; echo 'FAIL: analysis assertion shortfall'; exit 1; }
 echo "    ok  $SWA_PASSED analysis assertions passed"
 SWA_LOG="$(mktemp)"
 if psql -v ON_ERROR_STOP=1 -v sw_analysis_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/rollback/20261211090000_security_work_analysis_contract_rollback.sql >"$SWA_LOG" 2>&1; then

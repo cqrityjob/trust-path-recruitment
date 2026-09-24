@@ -1,6 +1,9 @@
 -- Created by `supabase migration new security_work_analysis_contract` as
 -- 20260924060136; moved to next canonical ledger slot (ledger leads clock).
 -- Schema-only. No provider/key activation, runtime deployment or private data.
+-- Business conflicts use PT409 (HTTP 409), never serialization_failure 40001:
+-- PostgREST retries 40001. These are final stale-input decisions, not transient
+-- database serialization failures. See analysis-release.md for the vendor note.
 BEGIN;
 
 CREATE TABLE public.sw_method_versions (
@@ -414,13 +417,13 @@ BEGIN
  IF NOT sw_private.can_approve(_workspace_id) THEN RAISE EXCEPTION 'SW_APPROVER_REQUIRED' USING ERRCODE='42501'; END IF;
  b:=sw_private.report_bundle(_workspace_id,_report_id);
  SELECT * INTO r FROM public.sw_reports WHERE workspace_id=_workspace_id AND id=_report_id;
- IF r.version IS DISTINCT FROM _expected_version OR sw_private.hash_text(b::text) IS DISTINCT FROM _expected_bundle_hash THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
+ IF r.version IS DISTINCT FROM _expected_version OR sw_private.hash_text(b::text) IS DISTINCT FROM _expected_bundle_hash THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
  SELECT * INTO a FROM public.sw_assessments WHERE workspace_id=_workspace_id AND id=r.assessment_id;
  IF a.status='draft' THEN UPDATE public.sw_assessments SET status='in_review' WHERE workspace_id=_workspace_id AND id=a.id; END IF;
  IF a.status IN ('draft','in_review') THEN UPDATE public.sw_assessments SET status='approved' WHERE workspace_id=_workspace_id AND id=a.id; END IF;
  INSERT INTO sw_private.approval_intents(report_id,transaction_id,actor) VALUES(_report_id,txid_current(),auth.uid());
  UPDATE public.sw_reports SET status='approved' WHERE workspace_id=_workspace_id AND id=_report_id AND version=_expected_version AND status='draft';
- IF NOT FOUND THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
+ IF NOT FOUND THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
  DELETE FROM sw_private.approval_intents WHERE report_id=_report_id;
  SELECT * INTO receipt FROM public.sw_report_approvals WHERE workspace_id=_workspace_id AND report_id=_report_id ORDER BY report_version DESC LIMIT 1;
  RETURN receipt;
@@ -443,7 +446,7 @@ BEGIN
  INSERT INTO public.sw_revision_requests(id,workspace_id,kind,original_id,original_version,new_id,created_by) VALUES(_request_id,_workspace_id,_kind,_id,_version,new_id,auth.uid());
  IF _kind='assessment' THEN
   SELECT * INTO a FROM public.sw_assessments WHERE workspace_id=_workspace_id AND id=_id FOR UPDATE;
-  IF a.id IS NULL OR a.version IS DISTINCT FROM _version OR a.status NOT IN ('approved','archived') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
+  IF a.id IS NULL OR a.version IS DISTINCT FROM _version OR a.status NOT IN ('approved','archived') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
   INSERT INTO public.sw_assessments(id,workspace_id,title,situation,scope,affected_activity,assets,threat,vulnerability,existing_controls,likelihood,consequence,uncertainty,assumptions,proposed_measures,professional_conclusion,analysis_type,method_version_id,purpose,horizon,context_snapshot,knowledge_gaps,conflicts,supersedes_id,supersedes_version)
   VALUES(new_id,_workspace_id,a.title,a.situation,a.scope,a.affected_activity,a.assets,a.threat,a.vulnerability,a.existing_controls,a.likelihood,a.consequence,a.uncertainty,a.assumptions,a.proposed_measures,a.professional_conclusion,a.analysis_type,a.method_version_id,a.purpose,a.horizon,a.context_snapshot,a.knowledge_gaps,a.conflicts,a.id,a.version);
   INSERT INTO public.sw_analysis_inputs(workspace_id,assessment_id,source_item_id,review_status,review_note) SELECT _workspace_id,new_id,source_item_id,'pending',review_note FROM public.sw_analysis_inputs WHERE workspace_id=_workspace_id AND assessment_id=_id;
@@ -456,7 +459,7 @@ BEGIN
   END LOOP;
  ELSE
   SELECT * INTO r FROM public.sw_reports WHERE workspace_id=_workspace_id AND id=_id FOR UPDATE;
-  IF r.id IS NULL OR r.version IS DISTINCT FROM _version OR r.status NOT IN ('approved','exported','archived') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
+  IF r.id IS NULL OR r.version IS DISTINCT FROM _version OR r.status NOT IN ('approved','exported','archived') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
   INSERT INTO public.sw_reports(id,workspace_id,assessment_id,title,report_type,language,executive_summary,overall_description,risk_assessment,identified_risks,security_arrangement,preparedness_incident_management,conclusion,contacts,uncertainty,template_version_id,sections,supersedes_id,supersedes_version)
   VALUES(new_id,_workspace_id,r.assessment_id,r.title,r.report_type,r.language,r.executive_summary,r.overall_description,r.risk_assessment,r.identified_risks,r.security_arrangement,r.preparedness_incident_management,r.conclusion,r.contacts,r.uncertainty,r.template_version_id,r.sections,r.id,r.version);
   INSERT INTO public.sw_citations(workspace_id,report_id,source_item_id,claim,excerpt,locator) SELECT _workspace_id,new_id,source_item_id,claim,excerpt,locator FROM public.sw_citations WHERE workspace_id=_workspace_id AND report_id=_id;
@@ -512,7 +515,7 @@ BEGIN
   SELECT * INTO cfg FROM public.sw_ai_activations WHERE id=_activation_id AND workspace_id=_workspace_id AND valid_until>now() AND NOT EXISTS(SELECT 1 FROM public.sw_ai_activation_revocations v WHERE v.activation_id=_activation_id);
   IF cfg.id IS NULL OR NOT EXISTS(SELECT 1 FROM sw_private.worker_keys WHERE active) THEN RAISE EXCEPTION 'SW_AI_NOT_ACTIVATED' USING ERRCODE='42501'; END IF;
   SELECT * INTO a FROM public.sw_assessments WHERE workspace_id=_workspace_id AND id=_assessment_id FOR UPDATE;
-  IF a.id IS NULL OR a.version IS DISTINCT FROM _expected_version OR a.status NOT IN ('draft','in_review') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
+  IF a.id IS NULL OR a.version IS DISTINCT FROM _expected_version OR a.status NOT IN ('draft','in_review') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
   IF EXISTS(SELECT 1 FROM public.sw_analysis_inputs i WHERE i.workspace_id=_workspace_id AND i.assessment_id=a.id AND i.review_status='pending') THEN RAISE EXCEPTION 'SW_SOURCE_REVIEW_REQUIRED' USING ERRCODE='23514'; END IF;
   manifest:=jsonb_build_object('assessment',to_jsonb(a),'method',(SELECT to_jsonb(m) FROM public.sw_method_versions m WHERE id=a.method_version_id),
    'activation',to_jsonb(cfg),'questions',coalesce((SELECT jsonb_agg(to_jsonb(q) ORDER BY q.position,q.id) FROM public.sw_analysis_questions q WHERE q.workspace_id=_workspace_id AND q.assessment_id=a.id),'[]'),
@@ -544,8 +547,15 @@ BEGIN
  IF j.kind='ai' THEN
   SELECT * INTO cfg FROM public.sw_ai_activations WHERE id=j.activation_id AND workspace_id=_workspace_id AND valid_until>now() AND NOT EXISTS(SELECT 1 FROM public.sw_ai_activation_revocations WHERE activation_id=j.activation_id);
   IF cfg.id IS NULL THEN RAISE EXCEPTION 'SW_AI_NOT_ACTIVATED' USING ERRCODE='42501'; END IF;
-  IF EXISTS(SELECT 1 FROM jsonb_array_elements(j.input_manifest->'sources') source WHERE NOT EXISTS(SELECT 1 FROM public.sw_analysis_inputs i WHERE i.workspace_id=_workspace_id AND i.assessment_id=j.assessment_id AND i.source_item_id=(source->>'sourceItemId')::uuid AND i.review_status='accepted' AND i.version=(source->>'reviewVersion')::integer)) OR j.input_manifest->'questions' IS DISTINCT FROM coalesce((SELECT jsonb_agg(to_jsonb(q) ORDER BY q.position,q.id) FROM public.sw_analysis_questions q WHERE q.workspace_id=_workspace_id AND q.assessment_id=j.assessment_id),'[]') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
-  IF NOT EXISTS(SELECT 1 FROM public.sw_assessments WHERE workspace_id=_workspace_id AND id=j.assessment_id AND version=j.expected_version AND status IN ('draft','in_review')) THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
+  -- Child review writes take this same lock. Read their committed state only
+  -- after acquiring it, and hold it until dispatch has been recorded.
+  PERFORM 1 FROM public.sw_assessments WHERE workspace_id=_workspace_id AND id=j.assessment_id AND version=j.expected_version AND status IN ('draft','in_review') FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
+  -- Sources are unique per assessment and in the server-built manifest.
+  -- Equal cardinality plus the ID/version check below proves exact equality,
+  -- including a newly accepted input that did not bump assessment.version.
+  IF (SELECT count(*) FROM public.sw_analysis_inputs WHERE workspace_id=_workspace_id AND assessment_id=j.assessment_id AND review_status='accepted') <> jsonb_array_length(j.input_manifest->'sources') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
+  IF EXISTS(SELECT 1 FROM jsonb_array_elements(j.input_manifest->'sources') source WHERE NOT EXISTS(SELECT 1 FROM public.sw_analysis_inputs i WHERE i.workspace_id=_workspace_id AND i.assessment_id=j.assessment_id AND i.source_item_id=(source->>'sourceItemId')::uuid AND i.review_status='accepted' AND i.version=(source->>'reviewVersion')::integer)) OR j.input_manifest->'questions' IS DISTINCT FROM coalesce((SELECT jsonb_agg(to_jsonb(q) ORDER BY q.position,q.id) FROM public.sw_analysis_questions q WHERE q.workspace_id=_workspace_id AND q.assessment_id=j.assessment_id),'[]') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
  END IF;
  UPDATE public.sw_processing_jobs SET status='dispatched',fence=gen_random_uuid(),dispatched_at=now() WHERE id=j.id RETURNING * INTO j;
  RETURN jsonb_build_object('job',to_jsonb(j),'dispatch',true);
@@ -683,8 +693,11 @@ BEGIN
  END IF;
  SELECT * INTO j FROM public.sw_processing_jobs WHERE workspace_id=_workspace_id AND id=_job_id FOR UPDATE;
  SELECT * INTO a FROM public.sw_assessments WHERE workspace_id=_workspace_id AND id=j.assessment_id FOR UPDATE;
- IF j.id IS NULL OR j.kind<>'ai' OR j.status<>'succeeded' OR j.expected_version IS DISTINCT FROM _expected_version OR a.version IS DISTINCT FROM _expected_version OR a.status NOT IN ('draft','in_review') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
- IF EXISTS(SELECT 1 FROM jsonb_array_elements(j.input_manifest->'sources') source WHERE NOT EXISTS(SELECT 1 FROM public.sw_analysis_inputs i WHERE i.workspace_id=_workspace_id AND i.assessment_id=a.id AND i.source_item_id=(source->>'sourceItemId')::uuid AND i.review_status='accepted' AND i.version=(source->>'reviewVersion')::integer)) OR j.input_manifest->'questions' IS DISTINCT FROM coalesce((SELECT jsonb_agg(to_jsonb(q) ORDER BY q.position,q.id) FROM public.sw_analysis_questions q WHERE q.workspace_id=_workspace_id AND q.assessment_id=a.id),'[]') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='40001'; END IF;
+ IF j.id IS NULL OR j.kind<>'ai' OR j.status<>'succeeded' OR j.expected_version IS DISTINCT FROM _expected_version OR a.version IS DISTINCT FROM _expected_version OR a.status NOT IN ('draft','in_review') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
+ -- The assessment lock also serializes source review. Match the whole accepted
+ -- set, not just the sources that happened to exist when this job was reserved.
+ IF (SELECT count(*) FROM public.sw_analysis_inputs WHERE workspace_id=_workspace_id AND assessment_id=a.id AND review_status='accepted') <> jsonb_array_length(j.input_manifest->'sources') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(j.input_manifest->'sources') source WHERE NOT EXISTS(SELECT 1 FROM public.sw_analysis_inputs i WHERE i.workspace_id=_workspace_id AND i.assessment_id=a.id AND i.source_item_id=(source->>'sourceItemId')::uuid AND i.review_status='accepted' AND i.version=(source->>'reviewVersion')::integer)) OR j.input_manifest->'questions' IS DISTINCT FROM coalesce((SELECT jsonb_agg(to_jsonb(q) ORDER BY q.position,q.id) FROM public.sw_analysis_questions q WHERE q.workspace_id=_workspace_id AND q.assessment_id=a.id),'[]') THEN RAISE EXCEPTION 'SW_CONFLICT' USING ERRCODE='PT409'; END IF;
  IF j.output->>'schemaVersion'<>'sw-analysis-output-1.0.0' OR jsonb_typeof(j.output->'risks') IS DISTINCT FROM 'array' OR jsonb_array_length(j.output->'risks')>20 THEN RAISE EXCEPTION 'SW_AI_OUTPUT_INVALID' USING ERRCODE='23514'; END IF;
  UPDATE public.sw_assessments SET
   assumptions=concat_ws(E'\n\n',nullif(assumptions,''),(SELECT string_agg(sw_private.narrative_text(value,lang),E'\n\n') FROM jsonb_array_elements(j.output->'assumptions'))),

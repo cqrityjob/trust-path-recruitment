@@ -56,3 +56,50 @@ wait "$first_pid"
 grep -q '^true$' "$SWA_LOG_DIR/dispatch-first"
 grep -q '^false$' "$SWA_LOG_DIR/dispatch-second"
 echo '    ok  SWA-R3 competing dispatches grant exactly one provider attempt'
+
+# Source-review changes do not bump assessment.version. They and AI dispatch
+# must nevertheless serialize on the assessment row and compare the full set.
+q -c "INSERT INTO sw_ai_activations(id,workspace_id,environment,purpose,provider,model,task_version,prompt_version,policy_version,output_schema_version,data_processing_approval,approved_by,valid_until,max_cost_micros,daily_budget_micros,max_output_tokens,timeout_ms) VALUES('54000000-0000-4000-8000-000000000060','$workspace','internal_qa','draft_analysis','synthetic','synthetic-model','v1','v1','v1','v1','Synthetic race only','54000000-0000-4000-8000-000000000001',now()+interval '1 hour',100,200,2048,10000);"
+q -c "$login" -f /dev/stdin >/dev/null <<SQL
+INSERT INTO sw_assessments(id,workspace_id,title,analysis_type,method_version_id) VALUES('54000000-0000-4000-8000-000000000022','$workspace','Synthetic source review race','rsa','rsa-v1');
+INSERT INTO sw_source_items(id,workspace_id,source_id,deduplication_key,original_title,factual_extract) VALUES('54000000-0000-4000-8000-000000000012','$workspace','54000000-0000-4000-8000-000000000010','race-extra','Synthetic new original','Synthetic additional dependency.');
+INSERT INTO sw_analysis_inputs(workspace_id,assessment_id,source_item_id,review_status) VALUES
+('$workspace','54000000-0000-4000-8000-000000000022','54000000-0000-4000-8000-000000000011','accepted'),
+('$workspace','54000000-0000-4000-8000-000000000022','54000000-0000-4000-8000-000000000012','rejected');
+SELECT sw_reserve_processing('$workspace','54000000-0000-4000-8000-000000000061','ai','54000000-0000-4000-8000-000000000022',NULL,1,'54000000-0000-4000-8000-000000000060');
+SQL
+wait_for_lock() {
+ for attempt in $(seq 1 100); do
+  if [ "$(q -c "SELECT count(*) FROM pg_stat_activity WHERE application_name='$1' AND wait_event_type='Lock'")" = 1 ]; then return; fi
+  sleep 0.05
+ done
+ echo 'Race actor did not wait for the assessment serialization lock' >&2; exit 1
+}
+accept_extra="UPDATE sw_analysis_inputs SET review_status='accepted' WHERE workspace_id='$workspace' AND assessment_id='54000000-0000-4000-8000-000000000022' AND source_item_id='54000000-0000-4000-8000-000000000012';"
+dispatch_ai="SELECT sw_dispatch_processing('$workspace','54000000-0000-4000-8000-000000000061')->>'dispatch';"
+PGAPPNAME=swa_accept_first q -c "$login BEGIN; $accept_extra SELECT pg_sleep(2); COMMIT;" >"$SWA_LOG_DIR/accept-first" 2>&1 &
+first_pid=$!
+wait_for_sleep swa_accept_first
+PGAPPNAME=swa_dispatch_waiting q -v VERBOSITY=verbose -c "$login $dispatch_ai" >"$SWA_LOG_DIR/dispatch-stale" 2>&1 &
+second_pid=$!
+wait_for_lock swa_dispatch_waiting
+wait "$first_pid"
+if wait "$second_pid"; then echo 'Dispatch wrongly accepted a newly committed source' >&2; exit 1; fi
+grep -q 'PT409: SW_CONFLICT' "$SWA_LOG_DIR/dispatch-stale" || { cat "$SWA_LOG_DIR/dispatch-stale"; exit 1; }
+[ "$(q -c "$login SELECT (SELECT status='reserved' AND fence IS NULL FROM sw_processing_jobs WHERE id='54000000-0000-4000-8000-000000000061') AND (SELECT version=1 FROM sw_assessments WHERE id='54000000-0000-4000-8000-000000000022');")" = t ] || { echo 'Stale dispatch changed the job or assessment' >&2; exit 1; }
+echo '    ok  SWA-R4 source acceptance wins and waiting dispatch rejects the expanded set'
+
+# Restoring the excluded source to rejected restores the exact reserved set;
+# its review version is irrelevant because it is not in the manifest.
+q -c "$login UPDATE sw_analysis_inputs SET review_status='rejected' WHERE workspace_id='$workspace' AND assessment_id='54000000-0000-4000-8000-000000000022' AND source_item_id='54000000-0000-4000-8000-000000000012';"
+PGAPPNAME=swa_ai_dispatch_first q -c "$login BEGIN; $dispatch_ai SELECT pg_sleep(2); COMMIT;" >"$SWA_LOG_DIR/ai-dispatch-first" 2>&1 &
+first_pid=$!
+wait_for_sleep swa_ai_dispatch_first
+PGAPPNAME=swa_accept_waiting q -c "$login $accept_extra" >"$SWA_LOG_DIR/accept-waiting" 2>&1 &
+second_pid=$!
+wait_for_lock swa_accept_waiting
+wait "$first_pid"
+wait "$second_pid"
+grep -q '^true$' "$SWA_LOG_DIR/ai-dispatch-first"
+[ "$(q -c "$login SELECT (SELECT status='dispatched' FROM sw_processing_jobs WHERE id='54000000-0000-4000-8000-000000000061') AND (SELECT review_status='accepted' FROM sw_analysis_inputs WHERE assessment_id='54000000-0000-4000-8000-000000000022' AND source_item_id='54000000-0000-4000-8000-000000000012') AND (SELECT version=1 FROM sw_assessments WHERE id='54000000-0000-4000-8000-000000000022');")" = t ] || { echo 'Dispatch/review serialization did not preserve both outcomes' >&2; exit 1; }
+echo '    ok  SWA-R5 dispatch wins and source review waits until its attempt is recorded'

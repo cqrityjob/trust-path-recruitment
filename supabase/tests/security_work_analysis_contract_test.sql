@@ -33,7 +33,7 @@ INSERT INTO sw_reports(workspace_id,assessment_id,title,report_type,template_ver
 INSERT INTO sw_citations(workspace_id,report_id,source_item_id,claim,excerpt) VALUES(:'w',:'report',:'item','Interruption observed','Synthetic service dependency interrupted.');
 SELECT sw_preview_report(:'w',:'report')->>'bundle_hash' AS hash \gset
 UPDATE sw_analysis_questions SET answer='Updated duration gap' WHERE id=:'question';
-SELECT pg_temp.fail(format('SELECT sw_approve_report(%L,%L,1,%L)',:'w',:'report',:'hash'),'40001','dependency change invalidates reviewed bundle');
+SELECT pg_temp.fail(format('SELECT sw_approve_report(%L,%L,1,%L)',:'w',:'report',:'hash'),'PT409','dependency change invalidates reviewed bundle');
 SELECT pg_temp.fail(format('UPDATE sw_reports SET status=''approved'' WHERE id=%L',:'report'),'42501','direct typed approval cannot skip reviewed bundle');
 SELECT sw_preview_report(:'w',:'report')->>'bundle_hash' AS hash \gset
 SELECT (sw_approve_report(:'w',:'report',1,:'hash')).id AS approval \gset
@@ -84,8 +84,25 @@ INSERT INTO sw_ai_activations(id,workspace_id,environment,purpose,provider,model
 VALUES('53000000-0000-4000-8000-000000000040',:'w','internal_qa','draft_analysis','synthetic','synthetic-model','v1','v1','v1','v1','Synthetic approval only','53000000-0000-4000-8000-000000000001',now()+interval '1 hour',100,200,2048,10000);
 SET LOCAL ROLE authenticated;
 UPDATE sw_analysis_inputs SET review_status='accepted' WHERE assessment_id=:'revision';
+-- The signed extraction exists, but is excluded from the reserved AI input.
+INSERT INTO sw_analysis_inputs(workspace_id,assessment_id,source_item_id,review_status) VALUES(:'w',:'revision','53000000-0000-4000-8000-000000000031','rejected');
 SELECT (sw_reserve_processing(:'w','53000000-0000-4000-8000-000000000041','ai',:'revision',NULL,1,'53000000-0000-4000-8000-000000000040')).id AS aijob \gset
 SELECT pg_temp.ok((sw_reserve_processing(:'w',:'aijob','ai',:'revision',NULL,1,'53000000-0000-4000-8000-000000000040')).id=:'aijob','AI retry reuses reservation and charge');
+SAVEPOINT newly_accepted_dispatch;
+UPDATE sw_analysis_inputs SET review_status='accepted' WHERE assessment_id=:'revision' AND source_item_id='53000000-0000-4000-8000-000000000031';
+SELECT pg_temp.ok((SELECT version=1 FROM sw_assessments WHERE id=:'revision'),'new source acceptance leaves assessment version unchanged before dispatch');
+SELECT pg_temp.fail(format('SELECT sw_dispatch_processing(%L,%L)',:'w',:'aijob'),'PT409','AI dispatch rejects newly accepted source outside reserved manifest');
+SELECT pg_temp.ok((SELECT status='reserved' AND fence IS NULL FROM sw_processing_jobs WHERE id=:'aijob'),'stale source set consumes no dispatch attempt');
+ROLLBACK TO SAVEPOINT newly_accepted_dispatch;
+SAVEPOINT replaced_dispatch_source;
+UPDATE sw_analysis_inputs SET review_status=CASE WHEN source_item_id=:'item' THEN 'rejected' ELSE 'accepted' END WHERE assessment_id=:'revision';
+SELECT pg_temp.ok((SELECT count(*)=1 FROM sw_analysis_inputs WHERE assessment_id=:'revision' AND review_status='accepted'),'replacement keeps accepted source cardinality unchanged');
+SELECT pg_temp.fail(format('SELECT sw_dispatch_processing(%L,%L)',:'w',:'aijob'),'PT409','AI dispatch rejects source replacement with equal cardinality');
+ROLLBACK TO SAVEPOINT replaced_dispatch_source;
+SAVEPOINT changed_dispatch_review;
+UPDATE sw_analysis_inputs SET review_note='Additional human review' WHERE assessment_id=:'revision' AND source_item_id=:'item';
+SELECT pg_temp.fail(format('SELECT sw_dispatch_processing(%L,%L)',:'w',:'aijob'),'PT409','AI dispatch rejects changed review version with unchanged source IDs');
+ROLLBACK TO SAVEPOINT changed_dispatch_review;
 SELECT sw_dispatch_processing(:'w',:'aijob')->'job'->>'fence' AS aifence \gset
 SELECT '{"status":"outcome_unknown","errorCode":"PROVIDER_RESPONSE_LOST"}' AS unknownpayload \gset
 RESET ROLE;
@@ -114,8 +131,22 @@ SET LOCAL ROLE authenticated;
 SELECT pg_temp.ok((sw_complete_processing(:'w','53000000-0000-4000-8000-000000000042',:'successfence','synthetic-test-key',:'successpayload',:'successsig')).status='succeeded','signed AI result persists without invented financial charge');
 SAVEPOINT stale_apply;
 UPDATE sw_analysis_questions SET answer='New human context' WHERE assessment_id=:'revision';
-SELECT pg_temp.fail(format('SELECT sw_apply_ai_draft(%L,''53000000-0000-4000-8000-000000000042'',2,gen_random_uuid())',:'w'),'40001','AI application rejects changed human context');
+SELECT pg_temp.fail(format('SELECT sw_apply_ai_draft(%L,''53000000-0000-4000-8000-000000000042'',2,gen_random_uuid())',:'w'),'PT409','AI application rejects changed human context');
 ROLLBACK TO SAVEPOINT stale_apply;
+SAVEPOINT newly_accepted_apply;
+UPDATE sw_analysis_inputs SET review_status='accepted' WHERE assessment_id=:'revision' AND source_item_id='53000000-0000-4000-8000-000000000031';
+SELECT pg_temp.ok((SELECT version=2 FROM sw_assessments WHERE id=:'revision'),'new source acceptance leaves assessment version unchanged before application');
+SELECT pg_temp.fail(format('SELECT sw_apply_ai_draft(%L,''53000000-0000-4000-8000-000000000042'',2,gen_random_uuid())',:'w'),'PT409','AI application rejects newly accepted source outside reserved manifest');
+SELECT pg_temp.ok((SELECT count(*)=0 FROM sw_ai_draft_applications WHERE job_id='53000000-0000-4000-8000-000000000042') AND (SELECT version=2 FROM sw_assessments WHERE id=:'revision'),'stale source set creates no application receipt or assessment change');
+ROLLBACK TO SAVEPOINT newly_accepted_apply;
+SAVEPOINT replaced_apply_source;
+UPDATE sw_analysis_inputs SET review_status=CASE WHEN source_item_id=:'item' THEN 'rejected' ELSE 'accepted' END WHERE assessment_id=:'revision';
+SELECT pg_temp.fail(format('SELECT sw_apply_ai_draft(%L,''53000000-0000-4000-8000-000000000042'',2,gen_random_uuid())',:'w'),'PT409','AI application rejects source replacement with equal cardinality');
+ROLLBACK TO SAVEPOINT replaced_apply_source;
+SAVEPOINT changed_apply_review;
+UPDATE sw_analysis_inputs SET review_note='Additional human review' WHERE assessment_id=:'revision' AND source_item_id=:'item';
+SELECT pg_temp.fail(format('SELECT sw_apply_ai_draft(%L,''53000000-0000-4000-8000-000000000042'',2,gen_random_uuid())',:'w'),'PT409','AI application rejects changed review version with unchanged source IDs');
+ROLLBACK TO SAVEPOINT changed_apply_review;
 SELECT (sw_apply_ai_draft(:'w','53000000-0000-4000-8000-000000000042',2,'53000000-0000-4000-8000-000000000080')).id AS applied \gset
 SELECT pg_temp.ok((sw_apply_ai_draft(:'w','53000000-0000-4000-8000-000000000042',2,'53000000-0000-4000-8000-000000000081')).id=:'applied','AI application retry cannot duplicate draft effects');
 SELECT pg_temp.ok((SELECT cardinality(risk_ids)=1 AND cardinality(action_ids)=1 AND cardinality(question_ids)=1 AND report_id IS NOT NULL FROM sw_ai_draft_applications WHERE id=:'applied'),'AI application records all structured draft identities');

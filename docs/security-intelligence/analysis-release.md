@@ -44,6 +44,13 @@ unused contract; it is not a way to discard customer analyses or originals.
   Requests reserve budget before a single dispatch. Identical input cannot be
   redispatched by inventing another request UUID. Applying a result is atomic
   and idempotent, creates drafts only, and requires unchanged reviewed inputs.
+  Dispatch and application compare the complete accepted source set, including
+  each review version, under the same assessment lock as source-review writes.
+
+Stale-input and version conflicts raise `PT409`, returning HTTP 409 without a
+transaction retry. `40001` is reserved for actual database serialization failures:
+explicitly raising it for a business conflict can cause indefinite PostgREST 14
+retries. See the [official Supabase troubleshooting note](https://supabase.com/docs/guides/troubleshooting/high-cpu-and-infinite-transaction-retries-when-using-custom-error-codes-in-rpc-functions-77326b).
 
 The worker signing key is kept in the private database schema and server
 environment, provisioned out of band. No general service-role bypass is added.
@@ -71,12 +78,14 @@ Private reference reports and their contents are not repository fixtures.
 ## Local database verification
 
 Full-history replay and the existing database harness passed. Focused final
-verification: **58 new contract assertions, 322 foundation assertions**, plus
-three two-session races covering approval versus a child edit, competing
-dispatch and concurrent idempotent document reservation. Rollback/reapply,
+verification: **69 new contract assertions, 322 foundation assertions**, plus
+five two-session analysis races covering both approval/child-edit orders,
+competing dispatches and both source-review/AI-dispatch orders. Rollback/reapply,
 adoption refusal, planted dependency refusal and SQL privilege checks passed.
-The full harness passed before the final locator hardening; the final locator
-change was then checked with all 58 + 322 domain assertions and rollback/reapply.
+The full harness passed before the final locator hardening. The final source-set
+and conflict-code changes were checked with all 69 + 322 domain assertions,
+the five analysis races and rollback/reapply. Restoring each old source-set
+function independently made its new regression fail by unexpected success.
 
 The direct role tests cover foreign/inactive workspaces, viewers/editors,
 approval authority, immutable records, forged signatures/extraction locators,
