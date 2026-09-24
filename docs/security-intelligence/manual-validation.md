@@ -10,7 +10,7 @@ synthetic, in isolated local databases. Production verification was read-only.
 | Real caller-scoped service integration | **74 assertions PASS**, real GoTrue/PostgREST/PostgreSQL 17, no service-role application client. |
 | New Security Work browser journeys | **6/6 PASS**, Chromium desktop, 375 px and 390 px, each in SV and EN; no skips/retries. |
 | Browser evidence gate | **9/9 controls PASS**, including eight deliberately invalid or unsafe evidence packages rejected. All 24 actual screenshots and manifest pass the strict shared leak scan. |
-| Existing source negative controls | **48 suites / 1,423 mutations PASS** at `dc47673`; every file restored byte-for-byte and working tree clean. Final-head CI repeats the controls. |
+| Existing source negative controls | **48 suites / 1,423 mutations PASS** at `dc47673` and `dcfad72`; every file restored byte-for-byte and working tree clean. Final-head CI repeats the controls. |
 | Application / script TypeScript | Both PASS. |
 | Production build | PASS. |
 | Full lint comparison | Exact baseline **942 errors / 78 warnings**; branch **942 / 84**. Zero new errors, six new `react-refresh/only-export-components` warnings in mixed context/UI helper modules. Full lint is not green; unrelated `.claude` worktrees excluded from both comparison scope and claims. |
@@ -22,6 +22,17 @@ also scans authenticated header links and did not yet recognize the new real
 SV/EN assertions that the public homepage content still has no Security Work
 entry. Both homepage and employer landing guards pass locally; no public page
 content or test strictness was removed to resolve the failure.
+
+A subsequent CI run exposed a test-stack startup race: the anonymous RPC
+permission response arrived before PostgREST had loaded the new table routes
+(`PGRST205`). Startup now logs in a synthetic ordinary user and requires exact
+HTTP 200 / `[]` reads of all 16 tables before any test starts. Only a missing
+schema-cache route or the exact local JWT issued-at clock-boundary response can
+wait within the bounded readiness window; unexpected responses fail immediately.
+No failed assertion or product mutation is retried, and no RLS grant changes.
+Temporary readiness credentials are private and removed on success or failure.
+A fresh 312-migration replay passed the new 16-table readiness gate and all
+74 unchanged service assertions; the owned stack was then stopped.
 
 Service assertions cover concurrent/idempotent onboarding, profile persistence,
 version conflicts, read-only viewers, unrelated users, revoked membership,

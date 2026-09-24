@@ -2,6 +2,7 @@
 # A dedicated local GoTrue + PostgREST + PostgreSQL stack. No repository env
 # file or existing project is changed; the state directory belongs to this run.
 set -Eeuo pipefail
+umask 077
 SW_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SW_STATE="${SW_BROWSER_STATE_DIR:?Set SW_BROWSER_STATE_DIR to a new disposable directory}"
 SW_CLI="${SW_SUPABASE_CLI:-supabase}"
@@ -94,17 +95,49 @@ for migration in "$SW_REPO"/supabase/migrations/*.sql; do
 done
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$SW_REPO/scripts/fixtures/security-work-browser-fixture.sql" > "$SW_STATE/fixture.log" 2>&1
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q -c "NOTIFY pgrst, 'reload schema';"
-# A NOTIFY acknowledgement is not proof that PostgREST has reloaded its cache.
-# The known RPC must resolve and deny anon before real user tests may begin.
+# An anonymous RPC permission error does not prove authenticated table routes
+# have reached the final schema cache. Use a real, otherwise unused fixture
+# session and require every Security Work table to answer an empty read.
+# Never print or publish the login response/header file, including on failure.
+trap 'rm -f "$SW_STATE/readiness-session.json" "$SW_STATE/readiness.headers"' EXIT
+printf 'apikey: %s\nContent-Type: application/json\n' "$ANON_KEY" > "$SW_STATE/readiness.headers"
+SW_LOGIN_HTTP="$(curl --silent --show-error --max-time 5 \
+  "$API_URL/auth/v1/token?grant_type=password" --header "@$SW_STATE/readiness.headers" \
+  --data '{"email":"sw-chromium-sv-ordinary@example.test","password":"LocalJourney!2026"}' \
+  --output "$SW_STATE/readiness-session.json" --write-out '%{http_code}')"
+[ "$SW_LOGIN_HTTP" = 200 ] || { echo 'Authenticated readiness fixture login failed'; exit 1; }
+SW_READY_TOKEN="$(jq -er '.access_token | select(type == "string" and length > 0)' "$SW_STATE/readiness-session.json")"
+printf 'apikey: %s\nAuthorization: Bearer %s\n' "$ANON_KEY" "$SW_READY_TOKEN" > "$SW_STATE/readiness.headers"
+unset SW_READY_TOKEN
+SW_TABLES=(sw_workspaces sw_workspace_memberships sw_monitoring_profiles sw_intelligence_requirements
+  sw_sources sw_source_items sw_intelligence_items sw_assessments sw_risks sw_controls sw_actions
+  sw_reports sw_citations sw_ai_runs sw_audit_events sw_record_versions)
 SW_READY=0
-for attempt in $(seq 1 40); do
-  if curl --silent --show-error --max-time 5 "$API_URL/rest/v1/rpc/sw_create_personal_workspace" \
-    -H "apikey: $ANON_KEY" -H "Authorization: Bearer $ANON_KEY" -H 'Content-Type: application/json' \
-    --data '{"_name":"readiness"}' > "$SW_STATE/readiness.json" \
-    && [ "$(jq -r '.code // ""' "$SW_STATE/readiness.json")" = 42501 ]; then SW_READY=1; break; fi
+SW_READY_DEADLINE=$((SECONDS + 40))
+while [ "$SECONDS" -lt "$SW_READY_DEADLINE" ]; do
+  SW_READY=1
+  for SW_TABLE in "${SW_TABLES[@]}"; do
+    [ "$SECONDS" -lt "$SW_READY_DEADLINE" ] || { SW_READY=0; break; }
+    SW_HTTP="$(curl --silent --show-error --max-time 5 \
+      "$API_URL/rest/v1/$SW_TABLE?select=*&limit=0" --header "@$SW_STATE/readiness.headers" \
+      --output "$SW_STATE/readiness.json" --write-out '%{http_code}')"
+    if [ "$SW_HTTP" = 200 ] && jq -e '. == []' "$SW_STATE/readiness.json" >/dev/null; then
+      continue
+    fi
+    if { [ "$SW_HTTP" = 404 ] && jq -e '.code == "PGRST205"' "$SW_STATE/readiness.json" >/dev/null; } \
+      || { [ "$SW_HTTP" = 401 ] && jq -e '.code == "PGRST303" and .message == "JWT issued at future"' "$SW_STATE/readiness.json" >/dev/null; }; then
+      SW_READY=0
+      break
+    fi
+    echo "Authenticated readiness failed for $SW_TABLE (HTTP $SW_HTTP); refusing to retry an unexpected response" >&2
+    exit 1
+  done
+  [ "$SW_READY" = 1 ] && break
   sleep 1
 done
-[ "$SW_READY" = 1 ] || { echo 'PostgREST did not expose the protected Security Work RPC after schema reload'; exit 1; }
+[ "$SW_READY" = 1 ] || { echo 'Authenticated Security Work table readiness timed out after schema reload'; exit 1; }
+rm -f "$SW_STATE/readiness-session.json" "$SW_STATE/readiness.headers"
+echo 'Authenticated readiness passed: all 16 Security Work tables returned HTTP 200 and [].'
 {
   printf 'export E2E_LOCAL_STACK=1\n'
   printf 'export E2E_BASE_URL=%q\n' "http://127.0.0.1:$SW_APP_PORT"
