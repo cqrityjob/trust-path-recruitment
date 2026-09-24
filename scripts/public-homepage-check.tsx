@@ -997,21 +997,25 @@ group("T12 · the public chrome, and the untouched candidate chrome");
     !/<Link[^>]*>\s*\{t\("footer\.legal\.(privacy|terms)"\)\}/.test(footerSrc),
   );
 
-  // ── THE SIGNED-IN CANDIDATE'S FIVE ITEMS ARE UNTOUCHED ────────────
-  //
-  // This PR changes the SIGNED-OUT navigation. A change that quietly
-  // reshaped the workspace nav as well would be out of scope and would
-  // break route highlighting, so the six are pinned here.
+  // The owner's 2026-09-24 decision adds Security Work immediately after
+  // Passport. Keep the signed-in seven separate from the public five.
   ck(
-    // Six since the owner's images 1 and 2 put the CV in the navigation.
-    "the candidate workspace still has exactly six destinations",
-    CANDIDATE_APP_NAV.length === 6,
+    "the candidate workspace has exactly the seven approved destinations",
+    CANDIDATE_APP_NAV.length === 7,
     CANDIDATE_APP_NAV.length,
   );
   ck(
     "in the settled order",
     JSON.stringify(CANDIDATE_APP_NAV.map((i) => i.key)) ===
-      JSON.stringify(["overview", "passport", "cv", "jobs", "career", "assessments"]),
+      JSON.stringify([
+        "overview",
+        "passport",
+        "security-work",
+        "cv",
+        "jobs",
+        "career",
+        "assessments",
+      ]),
     CANDIDATE_APP_NAV.map((i) => i.key),
   );
   // Career Discovery keeps lighting ONE workspace destination for a signed-in

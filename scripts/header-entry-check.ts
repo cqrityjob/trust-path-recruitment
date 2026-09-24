@@ -461,15 +461,26 @@ expect(
 // -----------------------------------------------------------------------
 // 7. Mobile carries the same entrance, not a desktop-only fix.
 // -----------------------------------------------------------------------
-// The compact menu covers everything below `lg`, not below `md`: six
-// Swedish nav items plus a language toggle plus two actions do not fit in
-// 768px, and at the md breakpoint the desktop bar used to switch on and
-// overflow the viewport by ~240px. The slice must find the real block, so
-// a breakpoint change that silently orphans this check fails here.
-const menuMarker = 'lg:hidden", open ? "block" : "hidden"';
+// The public five switch at lg (1024px). The owner's seven signed-in
+// destinations need xl (1280px), consistently across nav, actions, menu
+// button and sheet. Locate the full conditional, not a matching suffix.
+const menuMarker = 'appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden"';
 expect(
   header.includes(menuMarker),
-  "the compact menu must cover every width below lg -- the desktop bar does not fit at 768px",
+  "the compact sheet must use xl for the candidate app and lg for the public header",
+);
+expect(
+  (header.match(/appMode \? "xl:hidden" : "lg:hidden"/g) ?? []).length === 2,
+  "both the menu button and sheet must use the same app/public breakpoints",
+);
+expect(
+  header.includes('appMode ? "xl:flex" : "lg:flex"'),
+  "desktop account actions must use xl for the candidate app and lg for the public header",
+);
+const candidateNav = read("src/components/site/CandidateAppNav.tsx");
+expect(
+  candidateNav.includes("xl:flex") && !/\blg:flex\b/.test(candidateNav),
+  "the seven-destination candidate nav must appear at xl, never at lg",
 );
 const mobileMenu = header.slice(header.indexOf(menuMarker));
 expect(mobileMenu.length > 0, "the mobile menu block must be present in SiteHeader");
