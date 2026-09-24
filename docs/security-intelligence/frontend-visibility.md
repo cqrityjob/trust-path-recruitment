@@ -40,11 +40,24 @@ Canonical public origin recorded in the application:
 Expected entry after deployment:
 `https://trust-path-recruitment.lovable.app/security-work`.
 
-No deployed commit or frontend asset version has been verified in this audit.
-The browser inventory exposed no browser tabs; the native Chrome read stalled
-and was cancelled without a successful page observation. No credentials were
-collected, no production form was submitted, and no deployment was performed.
-A stale deployment must therefore not be presented as an established cause.
+The initial audit could not reach the public origin. A fresh read-only HTTPS
+check on 24 September 2026 after #289 merged now succeeded. The observed HTML
+references `/assets/index-YY6hPNuF.js`; the fetched 468,572-byte bundle has SHA-256
+`133f826cecd87050e70747108ff56a3bb50a8f18fdf368059740df1ec1adfbd8`.
+This is an observed **asset version**, not a mapped Git commit.
+
+Its actual candidate navigation array contains these six keys in order:
+`overview, passport, cv, jobs, career, assessments`. The array has no
+`security-work` entry. Its route manifest includes the earlier Security Work
+workspace but not the new analysis routes from #290. Thus the publicly served
+code still carries the old navigation and does not contain this analysis
+delivery. This is stronger evidence than assuming the published build follows
+main, but it is not a signed-in browser acceptance test.
+
+No production credentials were collected, no customer records read, no form
+submitted, and no deployment performed. The HTML itself is dynamic and its
+digest is not used as a stable release identity. Local browser verification
+and CI exercise #290 independently of the published build.
 
 Before publishing, verify the actual preview/published asset version and the
 seven-entry menu in a real signed-in desktop and mobile session. Record the

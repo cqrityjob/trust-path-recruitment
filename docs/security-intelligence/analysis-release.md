@@ -1,6 +1,10 @@
 # Security Work: analysis contract and dependent application
 
 Baseline: `e54bfe9abade78cbb148940a9b6951e7aba0a399` (fresh main after PR #288).
+PR #289 subsequently merged as `91c788c449d11f265be3049fc4ac87efa00d7eb5`.
+Its application is now [verified read-only](analysis-hosted-verification.md):
+all 313 migrations are present and the complete Security Work catalog matches
+isolated replay. The earlier pending release state below is now satisfied.
 The next migration is `20261211090000_security_work_analysis_contract.sql`.
 It was created with the Supabase CLI and renamed to the next canonical ledger
 slot because the existing ledger runs ahead of the wall clock.
@@ -11,8 +15,9 @@ slot because the existing ledger runs ahead of the wall clock.
 2. Have the official integration apply the migration to owner project
    `wrygicdfxwjnrugduxnt`. Verify its ledger entry, exact definitions, grants,
    RLS, constraints, triggers and the private `sw-documents` bucket read-only.
-3. Record that evidence in `supabase/release-state.json`. Until then the state
-   is **pending**, and the application merge gate must fail.
+3. Record that evidence in `supabase/release-state.json`. This was completed
+   on 24 September 2026 after read-only parity verification; the application
+   schema gate now passes.
 4. Review the prepared dependent application and its browser evidence. Only
    after schema parity is proven may that PR become merge-eligible.
 5. Configure the owner-operated document processor and, separately, approved

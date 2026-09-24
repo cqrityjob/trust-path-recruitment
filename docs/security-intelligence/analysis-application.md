@@ -1,8 +1,9 @@
 # Security Work analysis application
 
-This dependent application follows schema PR #289. The migration remains pending
-on the owner project. Do not merge or deploy this application until official
-schema application and read-only parity verification are recorded.
+This application follows schema PR #289. Its hosted application and complete
+catalog parity are now [verified read-only](analysis-hosted-verification.md).
+The release ledger and schema gate record that evidence. Processor configuration,
+AI approval and live quality validation, and publication remain separate steps.
 
 ## User journey
 
