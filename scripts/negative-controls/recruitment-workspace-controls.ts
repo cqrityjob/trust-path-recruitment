@@ -32,6 +32,8 @@ const ASSESSMENT_PANEL = "src/components/academy/ApplicationAssessmentPanel.tsx"
 const TABLE = "src/components/recruitment/CandidateTable.tsx";
 const BOOKING = "src/components/recruitment/BookingDialog.tsx";
 const HUB = "src/routes/_authenticated.employer.$employerSlug.jobs.$jobId.index.tsx";
+const FORMAT = "src/lib/recruitment/format.ts";
+const MIGRATION = "supabase/migrations/20261212090000_recruitment_candidate_view.sql";
 const G = "recruitment-workspace:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -48,9 +50,9 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "RW-DEFAULT-VIEW-SHOWS-DECIDED",
     defect: "the candidate list opens on everybody, burying the open candidates under settled ones",
-    file: DEFS,
-    find: '  switch (filter ?? "open") {',
-    replace: '  switch (filter ?? "all") {',
+    file: FNS,
+    find: '    _stage: view.stage ?? "open",',
+    replace: '    _stage: view.stage ?? "all",',
     guard: G,
     expect: "the default view is open candidates",
   },
@@ -59,10 +61,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the overview's 'new applications' counts every open candidate while its link opens only the new ones",
     file: FNS,
-    find: "newCount: mine.filter((a) => isNewApplication(a.status)).length,",
-    replace: "newCount: mine.filter((a) => isUnresolved(a.status)).length,",
+    find: "          newCount: Number(c.new_count),",
+    replace: "          newCount: Number(c.unresolved_count),",
     guard: G,
-    expect: "the overview's new count uses isNewApplication",
+    expect: "the same predicate",
   },
   {
     id: "RW-BATCH-MOVE-EMAILS",
@@ -229,28 +231,29 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "RW-PAGE-PAST-END-IS-EMPTY",
     defect: "a stale link to page 9 of a 2-page list opens an empty page instead of the last one",
-    file: DEFS,
-    find: "  const p = Math.min(Math.max(1, page ?? 1), pages);",
-    replace: "  const p = Math.max(1, page ?? 1);",
+    file: MIGRATION,
+    find: "             o.rn > (LEAST(_page_v, GREATEST(1, ceil(o.n::numeric / _size_v)::integer)) - 1) * _size_v",
+    replace: "             o.rn > (_page_v - 1) * _size_v",
     guard: G,
     expect: "a page past the end opens the last page",
   },
   {
-    id: "RW-SELECT-ALL-SELECTS-INVISIBLE",
+    id: "RW-LIST-CONTEXT-SHIPS-IDS",
     defect:
-      "'select all' selects every id in the server's order, so a batch action reaches candidates on other pages",
+      "opening a candidate stores the list's ids in the browser again, so previous/next stop at the page and the ids leave the server",
     file: TABLE,
-    find: "e.target.checked ? new Set(rows.map((r) => r.applicationId)) : new Set(),",
-    replace: "e.target.checked ? new Set(page.orderedIds) : new Set(),",
+    find: "      query: { employerId, jobId, view: compactView(view) },",
+    replace: "      ids: rows.map((r) => r.applicationId),",
     guard: G,
-    expect: "select-all selects the rows on screen",
+    expect: "never its ids",
   },
   {
     id: "RW-ANSWER-NO-MEANS-NOT-YES",
     defect: "a 'no' answer filter matches candidates who never answered the question",
-    file: DEFS,
-    find: "      if (r.answers?.[f.questionId] !== f.value) return false;",
-    replace: "      if (f.value === true && r.answers?.[f.questionId] !== true) return false;",
+    file: MIGRATION,
+    find: "               AND a.answer_bool = (f ->> 'value')::boolean))",
+    replace:
+      "               AND (a.answer_bool = (f ->> 'value')::boolean OR a.answer_bool IS NULL)))",
     guard: G,
     expect: "an unanswered question matches neither",
   },
@@ -263,6 +266,92 @@ const MUTATIONS: readonly Mutation[] = [
       'import { saveInterviewBooking, sendRecruitmentMessages } from "@/lib/recruitment/recruitment.functions";\nvoid sendRecruitmentMessages;',
     guard: G,
     expect: "saving a time sends nothing",
+  },
+  {
+    id: "RW-READ-PAGES-IN-MEMORY",
+    defect: "the server reads thousands of rows and pages them in its own memory again",
+    file: FNS,
+    find: '      ctx.supabase.rpc("rec_candidate_view", viewArgs(data.jobId, view, null)),',
+    replace:
+      '      ctx.supabase.rpc("rec_candidate_view", viewArgs(data.jobId, { ...view, page: 1 }, null)).limit(5000),',
+    guard: G,
+    expect: "pages nothing in memory",
+  },
+  {
+    id: "RW-OVERVIEW-SAMPLES-APPLICATIONS",
+    defect:
+      "the overview counts a sample of the organisation's applications instead of all of them",
+    file: FNS,
+    find: '      ctx.supabase.rpc("rec_job_counts", { _employer_id: data.employerId, _job_id: null }),',
+    replace:
+      '      ctx.supabase.from("job_applications").select("job_id, status").eq("employer_id", data.employerId).limit(5000),',
+    guard: G,
+    expect: "the same database count",
+  },
+  {
+    id: "RW-CHIPS-COUNT-THE-PAGE",
+    defect: "the pipeline chips count the 25 rows on screen and call it the vacancy",
+    file: HUB,
+    find: "          awaitingReview: page.counts.new,",
+    replace: '          awaitingReview: page.rows.filter((r) => r.status === "submitted").length,',
+    guard: G,
+    expect: "never over the page on screen",
+  },
+  {
+    id: "RW-NEIGHBOURS-FROM-THE-BROWSER",
+    defect:
+      "previous/next ignore the server's answer, so the candidate page stops at the page edge",
+    file: CANDIDATE,
+    find: "    ? (neighboursQuery.data ?? null)",
+    replace: "    ? null",
+    guard: G,
+    expect: "not from ids in the browser",
+  },
+  {
+    id: "RW-BOOKING-CLAMPS-MIDNIGHT",
+    defect:
+      "a slot past the end of the day is clamped to the last minute again, so several candidates share 23:59",
+    file: FORMAT,
+    find: "  if (total < 0 || total >= 24 * 60) return null;",
+    replace: "  if (total < 0) return null;",
+    guard: G,
+    expect: "never 23:59",
+  },
+  {
+    id: "RW-BOOKING-SAVES-INVALID-SERIES",
+    defect: "the dialog logs the series problem and saves the bookings anyway",
+    file: BOOKING,
+    find: "    if (problem) return setError(seriesMessage(problem));",
+    replace: "    if (problem) console.warn(seriesMessage(problem));",
+    guard: G,
+    expect: "before the first save",
+  },
+  {
+    id: "RW-OVERLAP-UNCHECKED",
+    defect: "two slots only count as overlapping when the second starts before the first",
+    file: FORMAT,
+    find: "    if (parsed[i].at < parsed[i - 1].at + minutes) {",
+    replace: "    if (parsed[i].at < parsed[i - 1].at) {",
+    guard: G,
+    expect: "typed by hand into another's time is caught",
+  },
+  {
+    id: "RW-DST-GAP-SILENT",
+    defect: "a wall-clock time the clocks skip is booked an hour off instead of refused",
+    file: FORMAT,
+    find: '  if (instants.size === 0) return { ok: false, reason: "nonexistent" };',
+    replace: "  if (instants.size === 0) instants.add(wall - [...offsets][0]);",
+    guard: G,
+    expect: "does not exist in Stockholm",
+  },
+  {
+    id: "RW-DST-REPEAT-SILENT",
+    defect: "a wall-clock time that happens twice is booked on whichever came first",
+    file: FORMAT,
+    find: '  if (instants.size > 1) return { ok: false, reason: "ambiguous" };',
+    replace: "  // the first instant wins",
+    guard: G,
+    expect: "happens twice in Stockholm",
   },
   {
     id: "RW-CASE-LOADS-WHOLE-LIST",

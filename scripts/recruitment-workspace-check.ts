@@ -677,6 +677,10 @@ const sql = read(F.migration);
     "H · no read ships the ids of the whole list to the browser",
   );
   ok(
+    /_stage: view\.stage \?\? "open",/.test(fns),
+    "H · the default view is open candidates -- the server asks for 'open' unless the URL says otherwise",
+  );
+  ok(
     /o\.rn > \(LEAST\(_page_v, GREATEST\(1, ceil\(o\.n::numeric \/ _size_v\)::integer\)\) - 1\) \* _size_v/.test(
       sql,
     ),
