@@ -143,7 +143,11 @@ test.describe("recruitment case", () => {
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
     await page.goto(casePath(JOB, "?step=applications"));
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // The first visit to the case route in a job is a cold one: the dev
+    // server compiles the route on demand, which on a CI runner takes longer
+    // than the default expectation. Everything after this first paint runs on
+    // the ordinary timeout.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 90_000 });
     await expect(page.getByRole("button", { name: /Visa annons/ })).toBeVisible();
     const nav = stepNav(page);
     const items = nav.getByRole("listitem");

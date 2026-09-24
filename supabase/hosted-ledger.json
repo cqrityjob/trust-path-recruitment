@@ -14,7 +14,7 @@
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
   "readAt": "2026-09-24",
-  "readBy": "Read-only Supabase management SQL on explicit production wrygicdfxwjnrugduxnt after PR #289 merged as 91c788c449d11f265be3049fc4ac87efa00d7eb5. All 313 canonical ledger identities reread. All 32 Security Work tables including three private helper tables, 42 functions, columns, indexes, constraints, policies, triggers, grants, method/template seeds and private Storage contract match isolated PostgreSQL 17 replay exactly. Data API rejects anonymous document reads (401/42501) and private schema exposure (406/PGRST106). Evidence: docs/security-intelligence/analysis-hosted-verification.md. No hosted writes.",
+  "readBy": "Read-only Supabase management SQL on explicit production wrygicdfxwjnrugduxnt after PR #292 merged as 31da1d3 (recruitment_candidate_view, 20261212090000). The ledger holds 314 rows; md5(string_agg(version||':'||name ORDER BY version)) of the hosted ledger equals the digest of these 314 entries, so the snapshot is the ledger verbatim. rec_candidate_view and rec_job_counts match the merged file byte for byte (see release-state.json). No hosted writes.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1267,6 +1267,10 @@
     {
       "version": "20261211090000",
       "name": "security_work_analysis_contract"
+    },
+    {
+      "version": "20261212090000",
+      "name": "recruitment_candidate_view"
     }
   ]
 }
