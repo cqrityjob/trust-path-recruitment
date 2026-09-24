@@ -111,7 +111,7 @@ import {
 } from "@/lib/recruitment/definitions";
 import { checkJobReadiness, type JobReadinessInput } from "@/lib/job-intelligence/job-readiness";
 import {
-  projectJobPipeline,
+  projectJobPipelineFromCounts,
   type JobNextActionKind,
   type JobPipelineStage,
   type PipelineRead,
@@ -242,7 +242,7 @@ function JobHub({
   // surface whose job is to summarise the vacancy -- and shared with the
   // assessment workspace's own cache keys, so an employer who has both open
   // pays for one fetch.
-  const openAssessments = useOpenAssessmentApplications(employerId, true);
+  const openAssessments = useOpenAssessmentApplications(employerId, true, jobId);
 
   /** Every mutation on this page refreshes the same caches: this job, the
    *  candidate pages, the list it came from, and the dashboard counters. */
@@ -403,15 +403,21 @@ function JobHub({
       ? "failed"
       : "ready";
 
-  const pipeline = projectJobPipeline({
+  // Counted by the database over the whole vacancy (rec_job_counts): the
+  // chips are about every application, not about the page on screen.
+  const pipeline = projectJobPipelineFromCounts({
     jobStatus: status,
     applicationsRead,
-    applications: (page?.applications ?? []).map((a) => ({
-      id: a.id,
-      status: a.status as ApplicationStatus,
-    })),
+    counts: page
+      ? {
+          total: page.counts.total,
+          awaitingReview: page.counts.new,
+          interview: page.counts.interview,
+          hired: page.counts.hired,
+        }
+      : null,
     assessmentRead: openAssessments.read,
-    applicationsWithOpenAssessment: openAssessments.ids,
+    assessmentOpen: openAssessments.ids.size,
   });
 
   const phase = phaseOf(
@@ -985,6 +991,7 @@ function JobHub({
                 employerId={employerId}
                 employerSlug={employerSlug}
                 employerName={employerName}
+                jobId={jobId}
                 jobTitle={title}
                 page={page}
                 loading={applicationsQuery.isLoading}

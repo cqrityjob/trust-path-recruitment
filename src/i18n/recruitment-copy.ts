@@ -582,6 +582,15 @@ export const recruitmentSv = {
   "rec.assignTest.error.mismatch": "Ansökan tillhör en annan rekrytering än testet",
   "rec.assignTest.error.noAddress": "Kandidaten saknar konto att skicka till",
   "rec.settings.andMore": "… och {n} till",
+  "rec.bookingDialog.error.overflow":
+    "Serien ryms inte inom dagen: {fits} av {n} tider får plats från {start}. Börja tidigare, korta intervjuerna eller dela upp bokningen på flera dagar. Inget har sparats.",
+  "rec.bookingDialog.error.overlap":
+    "{a} och {b} har tider som överlappar varandra. Ändra en av dem. Inget har sparats.",
+  "rec.bookingDialog.error.nonexistent":
+    "Klockan {time} finns inte den {date} i {zone} – sommartiden börjar då och timmen hoppas över. Välj en annan tid. Inget har sparats.",
+  "rec.bookingDialog.error.ambiguous":
+    "Klockan {time} inträffar två gånger den {date} i {zone} – sommartiden slutar då. Välj en tid utanför den timmen. Inget har sparats.",
+  "rec.bookingDialog.slotOverflow": "ryms inte inom dagen",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
@@ -1166,4 +1175,13 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.assignTest.error.mismatch": "The application belongs to another recruitment than the test",
   "rec.assignTest.error.noAddress": "The candidate has no account to send to",
   "rec.settings.andMore": "… and {n} more",
+  "rec.bookingDialog.error.overflow":
+    "The series does not fit within the day: {fits} of {n} slots fit starting at {start}. Start earlier, shorten the interviews or split the booking across days. Nothing has been saved.",
+  "rec.bookingDialog.error.overlap":
+    "{a} and {b} have overlapping times. Change one of them. Nothing has been saved.",
+  "rec.bookingDialog.error.nonexistent":
+    "{time} does not exist on {date} in {zone} – daylight saving time begins then and that hour is skipped. Choose another time. Nothing has been saved.",
+  "rec.bookingDialog.error.ambiguous":
+    "{time} occurs twice on {date} in {zone} – daylight saving time ends then. Choose a time outside that hour. Nothing has been saved.",
+  "rec.bookingDialog.slotOverflow": "does not fit within the day",
 };

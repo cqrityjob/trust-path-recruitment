@@ -57,9 +57,18 @@ const F = {
   apply: "src/components/jobs/ApplyInternalDialog.tsx",
   ivContext: "src/lib/interview-intelligence/context.functions.ts",
   assessmentPanel: "src/components/academy/ApplicationAssessmentPanel.tsx",
+  format: "src/lib/recruitment/format.ts",
+  booking: "src/components/recruitment/BookingDialog.tsx",
+  listContext: "src/lib/recruitment/list-context.ts",
+  migration: "supabase/migrations/20261212090000_recruitment_candidate_view.sql",
+  suite: "supabase/tests/recruitment_candidate_view_test.sql",
+  dbTest: "scripts/db-test.sh",
 };
 
 console.log("recruitment workspace\n");
+
+// The migration the list's vocabulary now lives in; read by several sections.
+const sql = read(F.migration);
 
 /* ================================================================== */
 /* A · One vocabulary                                                   */
@@ -109,69 +118,88 @@ console.log("recruitment workspace\n");
     "A · ready to complete means closed and resolved",
   );
 
-  const row = (
-    id: string,
-    status: string,
-    name: string,
-    applied: string,
-    owner: string | null = null,
-  ) => ({
-    applicationId: id,
-    name,
-    jobTitle: "Väktare",
-    status,
-    appliedAt: applied,
-    responsibleUserId: owner,
-    nextActivityAt: null,
-  });
-  const rows = [
-    row("a", "submitted", "Anna", "2026-09-01T00:00:00Z"),
-    row("b", "reviewing", "Bo", "2026-09-02T00:00:00Z", "u1"),
-    row("c", "rejected", "Cia", "2026-09-03T00:00:00Z"),
-    row("d", "submitted", "Dan", "2026-09-02T00:00:00Z"),
-  ];
+  // The list's filters, sorts and paging live in ONE place, the database
+  // function rec_candidate_view (20261212090000): the page, the counts and
+  // previous/next all read the same ordering, and there is no in-memory copy
+  // of the vocabulary to drift from it. Read here for the words; EXECUTED by
+  // supabase/tests/recruitment_candidate_view_test.sql with 5 200
+  // applications, in scripts/db-test.sh, before and after a rollback cycle.
   ok(
-    D.applyCandidateView(rows, {})
-      .map((r) => r.applicationId)
-      .join() === "b,d,a",
-    "A · the default view is open candidates, newest application first, ties by id",
+    /CREATE OR REPLACE FUNCTION public\.rec_candidate_view\(/.test(sql) &&
+      /CREATE OR REPLACE FUNCTION public\.rec_job_counts\(/.test(sql),
+    "A · the candidate list and its counts are database reads",
   );
   ok(
-    D.applyCandidateView(rows, { stage: "new" }).every((r) => r.status === "submitted"),
-    "A · the 'new' filter is the same predicate",
+    /WHEN 'open' THEN ja\.status IN \('submitted', 'reviewing', 'interview'\)/.test(sql) &&
+      /WHEN 'new' THEN ja\.status = 'submitted'/.test(sql) &&
+      /WHEN 'decided' THEN ja\.status NOT IN \('submitted', 'reviewing', 'interview'\)/.test(sql),
+    "A · the stage filters are the same predicates the workspace uses (open = unresolved, new = submitted)",
   );
-  ok(D.applyCandidateView(rows, { stage: "all" }).length === 4, "A · 'all' hides nobody");
   ok(
-    D.applyCandidateView(rows, { owner: "none" }).every((r) => r.responsibleUserId === null),
+    /count\(\*\) FILTER \(WHERE ja\.status = 'submitted'\)/.test(sql) &&
+      /count\(\*\) FILTER \(WHERE ja\.status IN \('submitted', 'reviewing', 'interview'\)\)/.test(
+        sql,
+      ),
+    "A · and the counts count with the same predicates",
+  );
+  ok(
+    /\(_owner = 'none' AND m\.responsible_user_id IS NULL\)/.test(sql),
     "A · 'no one assigned' filters on the owner",
   );
   ok(
-    D.applyCandidateView(rows, { q: "bo" })
-      .map((r) => r.applicationId)
-      .join() === "b",
-    "A · search matches the name",
+    /p\.display_name ILIKE _like ESCAPE '\\'/.test(sql) &&
+      /replace\(replace\(replace\(btrim\(_q\), '\\', '\\\\'\), '%', '\\%'\), '_', '\\_'\)/.test(
+        sql,
+      ),
+    "A · search matches the name as a plain substring, wildcards escaped",
   );
   ok(
-    D.applyCandidateView(rows, { stage: "all", sort: "name" })
-      .map((r) => r.name)
-      .join() === "Anna,Bo,Cia,Dan",
-    "A · sorting by name is alphabetical",
+    /display_name COLLATE "sv-SE-x-icu" END ASC NULLS LAST/.test(sql) &&
+      /display_name COLLATE "sv-SE-x-icu" END DESC NULLS LAST/.test(sql),
+    "A · sorting by name is Swedish-alphabetical, unnamed last either way",
   );
-  const n = D.neighbours(D.applyCandidateView(rows, {}), "d");
   ok(
-    n.previous?.applicationId === "b" &&
-      n.next?.applicationId === "a" &&
-      n.position === 2 &&
-      n.total === 3,
-    "A · previous/next follow the list's own order",
+    /base\.next_at END ASC NULLS LAST/.test(sql) && /base\.next_at END DESC NULLS LAST/.test(sql),
+    "A · sorting by activity puts the unplanned last either way",
+  );
+  ok(
+    /\n\s+base\.id ASC\) AS rn,/.test(sql),
+    "A · every sort breaks ties on the application id, so previous/next never jumps",
+  );
+  ok(
+    /IF _employer IS NULL OR NOT public\.rec_is_member\(_employer\) THEN\n\s+RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED'/.test(
+      sql,
+    ) &&
+      /IF NOT public\.rec_is_member\(_employer_id\) THEN\n\s+RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED'/.test(
+        sql,
+      ),
+    "A · both reads refuse a non-member with one error, whether the vacancy exists or not",
+  );
+  ok(
+    /REVOKE ALL ON FUNCTION public\.rec_candidate_view\([^)]*\)\n\s+FROM PUBLIC, anon;/.test(sql) &&
+      /REVOKE ALL ON FUNCTION public\.rec_job_counts\(uuid, uuid\) FROM PUBLIC, anon;/.test(sql) &&
+      (sql.match(/\nSECURITY DEFINER\n/g) ?? []).length === 2 &&
+      (sql.match(/\nSTABLE\n/g) ?? []).length === 2,
+    "A · both are SECURITY DEFINER, STABLE, and anon cannot execute them",
+  );
+  const suite = read(F.suite);
+  const dbTest = read(F.dbTest);
+  ok(
+    /generate_series\(1, 5200\)/.test(suite) &&
+      /run_candidate_view_suite "before rollback"/.test(dbTest) &&
+      /run_candidate_view_suite "after reapply"/.test(dbTest) &&
+      /-lt 47 \]/.test(dbTest) &&
+      /the candidate view suite passed WITHOUT its migration/.test(dbTest),
+    "A · the suite runs with 5 200 applications, before and after a rollback cycle, and must fail without the migration",
   );
 
   // The overview counts with the predicate and links to the filter with the
   // same meaning; the list filters `status === "submitted"`.
   const fns = code(F.fns);
   ok(
-    /newCount: mine\.filter\(\(a\) => isNewApplication\(a\.status\)\)\.length/.test(fns),
-    "A · the overview's new count uses isNewApplication",
+    /newCount: Number\(c\.new_count\),/.test(fns) &&
+      /count\(\*\) FILTER \(WHERE ja\.status = 'submitted'\)/.test(sql),
+    "A · the overview's new count is the database's count of 'submitted' -- the same predicate",
   );
   const overview = code(F.overview);
   ok(
@@ -513,9 +541,32 @@ console.log("recruitment workspace\n");
       L.recallListKeyFor("zz") === undefined,
       "G · a list that does not hold this candidate is never recalled",
     );
+    L.saveListContext("k2", {
+      query: { employerId: "e1", jobId: "j1", view: { stage: "new", page: 2 } },
+      href: "/employer/x/jobs/j1?step=applications&stage=new&page=2",
+      scrollY: 0,
+      labelKey: "recruitment",
+      restorePending: false,
+    });
     ok(
-      /const key = listParam \?\? recallListKeyFor\(applicationId\)/.test(cand),
-      "G · the candidate view falls back to the recalled list only when the URL carries none",
+      L.readListContext("k2")?.query?.jobId === "j1" && L.readListContext("k2")?.ids === undefined,
+      "G · a recruitment list stores its DEFINITION, never its ids",
+    );
+    ok(
+      L.recallListKeyFor("any", "j1") === "k2" &&
+        L.recallListKeyFor("any", "j2") === undefined &&
+        L.recallListKeyFor("any") === undefined,
+      "G · a recruitment list is recalled for the vacancy it belongs to, and for no other",
+    );
+    ok(
+      /const key = listParam \?\? recallListKeyFor\(applicationId, listJobId\)/.test(cand),
+      "G · the candidate view falls back to the recalled list only when the URL carries none, and only once the vacancy is known",
+    );
+    ok(
+      /neighboursFn\(\{\n\s+data: \{ employerId, jobId: listQuery!\.jobId, applicationId, view: listQuery!\.view \},/.test(
+        cand,
+      ) && /\? \(neighboursQuery\.data \?\? null\)/.test(cand),
+      "G · previous/next for a recruitment list come from the server's ordering, not from ids in the browser",
     );
   }
 
@@ -607,26 +658,45 @@ console.log("recruitment workspace\n");
     "H · the five steps are the five steps, in order",
   );
 
-  // Paging is pure, stable and clamped.
-  const thirty = Array.from({ length: 30 }, (_, i) => ({ applicationId: `id${i}` }));
-  const p1 = D.pageSlice(thirty, 1, 25);
-  const p2 = D.pageSlice(thirty, 2, 25);
-  ok(
-    p1.rows.length === 25 && p1.from === 1 && p1.to === 25 && p1.pages === 2,
-    "H · page 1 holds 25 of 30",
-  );
-  ok(p2.rows.length === 5 && p2.from === 26 && p2.to === 30, "H · page 2 holds the last 5");
-  ok(
-    new Set([...p1.rows, ...p2.rows].map((r) => r.applicationId)).size === 30,
-    "H · the two pages are the whole list with no row twice",
+  // Paging is the database's: one page per read, clamped into range, and
+  // the numbers around it from the same read.
+  const fns = code(F.fns);
+  const pageFn = fns.slice(
+    fns.indexOf("export const listRecruitmentCandidatesPage"),
+    fns.indexOf("export const getCandidateNeighbours"),
   );
   ok(
-    D.pageSlice(thirty, 9, 25).page === 2,
+    /rpc\("rec_candidate_view", viewArgs\(data\.jobId, view, null\)\)/.test(pageFn) &&
+      /_size: PAGE_SIZE,/.test(fns) &&
+      !/\.limit\(/.test(pageFn) &&
+      !/applyCandidateView|pageSlice/.test(fns),
+    "H · the case page reads ONE page from the database and pages nothing in memory",
+  );
+  ok(
+    !/orderedIds/.test(fns) && !/orderedIds/.test(code(F.table)) && !/orderedIds/.test(code(F.hub)),
+    "H · no read ships the ids of the whole list to the browser",
+  );
+  ok(
+    /o\.rn > \(LEAST\(_page_v, GREATEST\(1, ceil\(o\.n::numeric \/ _size_v\)::integer\)\) - 1\) \* _size_v/.test(
+      sql,
+    ),
     "H · a page past the end opens the last page, not nothing",
   );
   ok(
-    D.pageSlice([], 3, 25).from === 0 && D.pageSlice([], 3, 25).pages === 1,
-    "H · an empty list is page 1 of 1",
+    (fns.match(/rpc\("rec_job_counts"/g) ?? []).length === 2 &&
+      /_job_id: data\.jobId \}\)/.test(pageFn),
+    "H · the case page's counts and the overview's counts are the same database count",
+  );
+  ok(
+    /viewArgs\(data\.jobId, data\.view, data\.applicationId\)/.test(fns) &&
+      /around\.find\(\(r\) => r\.rank === self\.rank - 1\)/.test(fns),
+    "H · previous/next are read around ONE application in the same ordering",
+  );
+  ok(
+    /awaitingReview: page\.counts\.new,/.test(code(F.hub)) &&
+      /assessmentOpen: openAssessments\.ids\.size,/.test(code(F.hub)) &&
+      /useOpenAssessmentApplications\(employerId, true, jobId\)/.test(code(F.hub)),
+    "H · the chips are counted over the whole vacancy, never over the page on screen",
   );
   ok(!("page" in D.firstPage({ q: "a", page: 4 })), "H · a filter change goes back to page 1");
   ok(
@@ -647,50 +717,12 @@ console.log("recruitment workspace\n");
       D.serializeAnswerFilter([]) === undefined,
     "H · and round-trips through the URL",
   );
-  const rows = [
-    {
-      applicationId: "a",
-      name: "A",
-      jobTitle: null,
-      status: "submitted",
-      appliedAt: "2026-09-01T00:00:00Z",
-      responsibleUserId: null,
-      nextActivityAt: null,
-      answers: { [q1]: true },
-    },
-    {
-      applicationId: "b",
-      name: "B",
-      jobTitle: null,
-      status: "submitted",
-      appliedAt: "2026-09-02T00:00:00Z",
-      responsibleUserId: null,
-      nextActivityAt: null,
-      answers: { [q1]: false },
-    },
-    {
-      applicationId: "c",
-      name: "C",
-      jobTitle: null,
-      status: "submitted",
-      appliedAt: "2026-09-03T00:00:00Z",
-      responsibleUserId: null,
-      nextActivityAt: null,
-    },
-  ];
   ok(
-    D.applyCandidateView(rows, { ans: `${q1}:y` })
-      .map((r) => r.applicationId)
-      .join() === "a",
-    "H · an answer filter keeps exactly the candidates who answered so",
+    /AND NOT EXISTS \(\n\s+SELECT 1 FROM jsonb_array_elements\(_answers\) f\n\s+WHERE NOT EXISTS \(/.test(
+      sql,
+    ) && /AND a\.answer_bool = \(f ->> 'value'\)::boolean\)\)/.test(sql),
+    "H · an answer filter keeps exactly the candidates who answered so -- a 'no' filter is not 'anything but yes', an unanswered question matches neither",
   );
-  ok(
-    D.applyCandidateView(rows, { ans: `${q1}:n` })
-      .map((r) => r.applicationId)
-      .join() === "b",
-    "H · and a 'no' filter is not 'anything but yes' -- an unanswered question matches neither",
-  );
-  ok(D.applyCandidateView(rows, {}).length === 3, "H · no answer filter, no narrowing");
 
   // The surfaces read those definitions, and the selection is per page.
   const hub = code(F.hub);
@@ -726,8 +758,9 @@ console.log("recruitment workspace\n");
     "H · a batch reports per candidate and keeps the failed ones selected",
   );
   ok(
-    /ids: page\?\.orderedIds/.test(table),
-    "H · previous/next reads the server's full order, across pages",
+    /query: \{ employerId, jobId, view: compactView\(view\) \},/.test(table) &&
+      !/\bids:/.test(table),
+    "H · opening a candidate remembers the list's definition, never its ids",
   );
   ok(
     /rec\.pager\.showing/.test(table) && /setPage\(page\.page \+ 1\)/.test(table),
@@ -748,6 +781,115 @@ console.log("recruitment workspace\n");
     /consecutiveStarts\(start, duration, candidates\.length\)/.test(booking) &&
       /rec\.bookingDialog\.slots/.test(booking),
     "H · the prefilled slots are back to back, and each candidate's own is shown",
+  );
+
+  // The series is checked as a whole BEFORE the first save, by executing the
+  // arithmetic -- the reproduction is 25 candidates, 45 minutes, from 10:00.
+  const Fm = await import("../src/lib/recruitment/format");
+  const twentyFive = Fm.consecutiveStarts("10:00", 45, 25);
+  ok(
+    twentyFive.length === 25 &&
+      twentyFive[0] === "10:00" &&
+      twentyFive[17] === "22:45" &&
+      twentyFive[18] === "23:30" &&
+      twentyFive[19] === null &&
+      twentyFive[24] === null &&
+      !twentyFive.includes("23:59"),
+    "H · 25 slots of 45 minutes from 10:00: the 20th and later are on the next day and say so -- never 23:59",
+  );
+  const overflow = Fm.checkBookingSeries(
+    twentyFive.map((start, i) => ({ id: `c${i}`, start })),
+    45,
+  );
+  ok(
+    overflow?.kind === "overflow" && overflow.fits === 18 && overflow.total === 25,
+    "H · that series is refused as a whole: 18 of 25 fit, so nothing may be saved",
+  );
+  ok(
+    Fm.checkBookingSeries([{ id: "a", start: "23:30" }], 45)?.kind === "overflow",
+    "H · a single slot that ends after midnight does not fit either",
+  );
+  ok(
+    Fm.checkBookingSeries(
+      [
+        { id: "a", start: "10:00" },
+        { id: "b", start: "10:45" },
+        { id: "c", start: "11:30" },
+      ],
+      45,
+    ) === null,
+    "H · three back-to-back slots are a valid series",
+  );
+  const overlap = Fm.checkBookingSeries(
+    [
+      { id: "a", start: "10:00" },
+      { id: "b", start: "11:30" },
+      { id: "c", start: "10:30" },
+    ],
+    45,
+  );
+  ok(
+    overlap?.kind === "overlap" && overlap.first === "a" && overlap.second === "c",
+    "H · a slot typed by hand into another's time is caught, whichever order they were entered in",
+  );
+  ok(
+    Fm.checkBookingSeries(
+      [
+        { id: "a", start: "10:00" },
+        { id: "b", start: "10:00" },
+      ],
+      45,
+    )?.kind === "overlap",
+    "H · two candidates at the same time is an overlap",
+  );
+  ok(
+    Fm.addMinutes("23:30", 45) === null && Fm.addMinutes("10:00", 45) === "10:45",
+    "H · addMinutes never clamps",
+  );
+  ok(
+    /const problem = checkBookingSeries\(slots, duration\);\n\s+if \(problem\) return setError\(seriesMessage\(problem\)\);/.test(
+      booking,
+    ) &&
+      booking.indexOf("checkBookingSeries(slots, duration)") <
+        booking.indexOf("for (const p of plan)") &&
+      booking.indexOf("resolveZonedTime(date, time, timezone)") <
+        booking.indexOf("for (const p of plan)"),
+    "H · the dialog checks the whole series and every zone-resolved instant before the first save",
+  );
+  ok(
+    /startFor\(c\.applicationId, i\) \?\? ""/.test(booking) &&
+      /rec\.bookingDialog\.slotOverflow/.test(booking),
+    "H · a slot that does not fit is shown empty and named, not as 23:59",
+  );
+
+  // Daylight-saving time in the chosen zone: a wall-clock time that does not
+  // exist, or exists twice, is refused rather than guessed at.
+  const gap = Fm.resolveZonedTime("2026-03-29", "02:30", "Europe/Stockholm");
+  const repeat = Fm.resolveZonedTime("2026-10-25", "02:30", "Europe/Stockholm");
+  const plain = Fm.resolveZonedTime("2026-10-06", "10:00", "Europe/Stockholm");
+  ok(
+    !gap.ok && gap.reason === "nonexistent",
+    "H · 02:30 on the night the clocks go forward does not exist in Stockholm, and is said not to",
+  );
+  ok(
+    !repeat.ok && repeat.reason === "ambiguous",
+    "H · 02:30 on the night the clocks go back happens twice in Stockholm, and is said to",
+  );
+  ok(
+    plain.ok && plain.iso === "2026-10-06T08:00:00.000Z",
+    "H · 10:00 on an ordinary day in Stockholm is 08:00Z",
+  );
+  const dubai = Fm.resolveZonedTime("2026-03-29", "02:30", "Asia/Dubai");
+  ok(dubai.ok && dubai.iso === "2026-03-28T22:30:00.000Z", "H · a zone without DST has no gap");
+  ok(
+    !Fm.resolveZonedTime("2026-13-01", "10:00", "Europe/Stockholm").ok &&
+      !Fm.resolveZonedTime("2026-10-06", "10:00", "Mars/Olympus").ok,
+    "H · a bad date or an unknown zone is invalid, not a guess",
+  );
+  ok(
+    /rec\.bookingDialog\.error\.nonexistent/.test(booking) &&
+      /rec\.bookingDialog\.error\.ambiguous/.test(booking),
+    "H · and each of those has its own sentence in the dialog",
   );
   ok(
     /rec\.bookingDialog\.linkNote/.test(booking),

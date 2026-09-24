@@ -1,10 +1,15 @@
 // Where the recruiter came from, so they can go back to exactly it.
 //
-// A candidate list writes its current ORDER, its own address (path + filters +
-// sorting) and its scroll position under a short key when a row is opened. The
-// candidate view carries only that key in its URL (`?list=`), reads the order
-// back to offer previous/next, and returns to the stored address, where the
-// list restores its scroll position once.
+// A candidate list writes its own DEFINITION -- the vacancy, the filters and
+// the sort (`query`) -- its address (path + filters + sorting) and its scroll
+// position under a short key when a row is opened. The candidate view carries
+// only that key in its URL (`?list=`), asks the server where this candidate
+// sits in that list (previous/next, from the same ordering the page was read
+// from, without the rest of the list), and returns to the stored address,
+// where the list restores its scroll position once.
+//
+// The organisation-wide applications list, which reads its rows in one go,
+// still stores their ids (`ids`); a context carries one or the other.
 //
 // sessionStorage, deliberately: it survives a reload and the tab's own
 // history, and dies with the tab. The key is not a secret and the ids are ids
@@ -16,8 +21,16 @@
 // link or a new tab has no such list, offers no previous/next, and goes back to
 // the recruitment's candidate list, which is always correct.
 
+import type { CandidateView } from "./definitions";
+
+/** One recruitment's list: which vacancy, and the view of it. */
+export type ListQuery = { employerId: string; jobId: string; view: CandidateView };
+
 export type ListContext = {
-  ids: string[];
+  /** The rows' ids, for a list that was read whole (the applications page). */
+  ids?: string[];
+  /** The list's definition, for a paged recruitment list. */
+  query?: ListQuery;
   href: string;
   scrollY: number;
   labelKey: "recruitment" | "applications";
@@ -51,7 +64,14 @@ export function readListContext(key: string | undefined): ListContext | null {
     const raw = window.sessionStorage.getItem(PREFIX + key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ListContext;
-    if (!Array.isArray(parsed.ids) || typeof parsed.href !== "string") return null;
+    if (typeof parsed.href !== "string") return null;
+    const hasIds = Array.isArray(parsed.ids);
+    const hasQuery =
+      typeof parsed.query === "object" &&
+      parsed.query !== null &&
+      typeof parsed.query.jobId === "string" &&
+      typeof parsed.query.employerId === "string";
+    if (!hasIds && !hasQuery) return null;
     // Only same-origin paths, never an absolute URL somebody planted.
     if (!parsed.href.startsWith("/employer/")) return null;
     return parsed;
@@ -61,12 +81,17 @@ export function readListContext(key: string | undefined): ListContext | null {
 }
 
 /** The key of the list this tab last opened a candidate from, when that list
- *  holds `applicationId`; otherwise undefined. */
-export function recallListKeyFor(applicationId: string): string | undefined {
+ *  can hold `applicationId`: a whole-read list that contains it, or a
+ *  recruitment list of the vacancy it belongs to (`jobId`, once known);
+ *  otherwise undefined. */
+export function recallListKeyFor(applicationId: string, jobId?: string | null): string | undefined {
   try {
     const key = window.sessionStorage.getItem(LAST) ?? undefined;
     const ctx = readListContext(key);
-    return ctx && ctx.ids.includes(applicationId) ? key : undefined;
+    if (!ctx) return undefined;
+    if (ctx.ids?.includes(applicationId)) return key;
+    if (ctx.query && jobId && ctx.query.jobId === jobId) return key;
+    return undefined;
   } catch {
     return undefined;
   }

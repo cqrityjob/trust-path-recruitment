@@ -21,14 +21,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
-  applyCandidateView,
+  PAGE_SIZE,
   candidateViewSchema,
-  isNewApplication,
   isOpenInterview,
   isUnresolved,
-  pageSlice,
   parseAnswerFilter,
   phaseOf,
+  type CandidateView,
   type RecruitmentPhase,
 } from "./definitions";
 
@@ -200,11 +199,9 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         .from("recruitment_settings")
         .select("job_id, responsible_user_id, completion_state")
         .eq("employer_id", data.employerId),
-      ctx.supabase
-        .from("job_applications")
-        .select("id, job_id, status, applicant_user_id")
-        .eq("employer_id", data.employerId)
-        .limit(5000),
+      // Counted by the database, every application of every vacancy: the
+      // overview's numbers are the case page's numbers, with no hidden limit.
+      ctx.supabase.rpc("rec_job_counts", { _employer_id: data.employerId, _job_id: null }),
       ctx.supabase
         .from("recruitment_interview_bookings")
         .select(
@@ -220,7 +217,7 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
     for (const [res, what] of [
       [jobsRes, "jobs"],
       [settingsRes, "settings"],
-      [appsRes, "applications"],
+      [appsRes, "counts"],
       [bookingsRes, "bookings"],
     ] as const) {
       if (res.error) {
@@ -236,15 +233,46 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         { responsible: s.responsible_user_id ?? null, completion: s.completion_state },
       ]),
     );
-    const apps = (appsRes.data ?? []) as {
+    const countsByJob = new Map<
+      string,
+      { total: number; newCount: number; unresolved: number; interviewStage: number }
+    >(
+      ((appsRes.data ?? []) as Loose[]).map((c) => [
+        c.job_id as string,
+        {
+          total: Number(c.total),
+          newCount: Number(c.new_count),
+          unresolved: Number(c.unresolved_count),
+          interviewStage: Number(c.interview_count),
+        },
+      ]),
+    );
+    // Only interviews in a live process: an open booking for a candidate who
+    // has since been decided on, or in a completed recruitment, is not
+    // upcoming work (isOpenInterview). The bookings' own applications --
+    // never the whole organisation's -- are read for their status.
+    const bookingApplicationIds = Array.from(
+      new Set(((bookingsRes.data ?? []) as Loose[]).map((b) => b.application_id as string)),
+    );
+    const bookingAppsRes =
+      bookingApplicationIds.length > 0
+        ? await ctx.supabase
+            .from("job_applications")
+            .select("id, status, applicant_user_id")
+            .in("id", bookingApplicationIds)
+        : { data: [], error: null };
+    if (bookingAppsRes.error) {
+      console.error(
+        "[recruitment] overview booking applications read failed",
+        bookingAppsRes.error,
+      );
+      throw new Error("RECRUITMENT_ACTION_FAILED");
+    }
+    const apps = (bookingAppsRes.data ?? []) as {
       id: string;
-      job_id: string;
       status: string;
       applicant_user_id: string;
     }[];
-    // Only interviews in a live process: an open booking for a candidate who
-    // has since been decided on, or in a completed recruitment, is not
-    // upcoming work (isOpenInterview).
     const statusOf = new Map(apps.map((a) => [a.id, a.status]));
     const now = new Date();
     const bookings = ((bookingsRes.data ?? []) as Loose[]).filter((b) =>
@@ -260,7 +288,12 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
 
     const recruitments: RecruitmentSummary[] = (jobsRes.data ?? []).map((j: Loose) => {
       const s = settings.get(j.id);
-      const mine = apps.filter((a) => a.job_id === j.id);
+      const mine = countsByJob.get(j.id) ?? {
+        total: 0,
+        newCount: 0,
+        unresolved: 0,
+        interviewStage: 0,
+      };
       const phase = phaseOf(
         {
           jobStatus: j.status,
@@ -284,10 +317,10 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         updatedAt: j.updated_at,
         responsibleUserId: s?.responsible ?? null,
         responsibleName: s?.responsible ? (teamNames.get(s.responsible) ?? null) : null,
-        total: mine.length,
-        newCount: mine.filter((a) => isNewApplication(a.status)).length,
-        unresolved: mine.filter((a) => isUnresolved(a.status)).length,
-        interviewStage: mine.filter((a) => a.status === "interview").length,
+        total: mine.total,
+        newCount: mine.newCount,
+        unresolved: mine.unresolved,
+        interviewStage: mine.interviewStage,
         nextInterviewAt: nextByJob.get(j.id) ?? null,
       };
     });
@@ -587,34 +620,90 @@ export type CandidateRow = {
   messagesCount?: number;
 };
 
-/** One page of a recruitment's candidates, filtered, ordered and sliced ON
- *  THE SERVER from the same definitions the interface uses
- *  (applyCandidateView / pageSlice), so the count, the chips, the rows and
- *  the candidate page's previous/next all read one ordering. The browser
- *  receives one page and the ordered ids -- never the whole list.
+/** One page of a recruitment's candidates, filtered, ordered and paged BY
+ *  THE DATABASE (rec_candidate_view, 20261212090000): the total, the chips,
+ *  the rows and the candidate page's previous/next all read one ordering,
+ *  and there is no limit on how many applications a vacancy may hold. The
+ *  browser receives one page and the numbers -- never the ids of the rest.
  *
- *  Scoped twice: requireMember() for the organisation, then employer_id AND
- *  job_id on the RLS-scoped read, so another organisation's or another
- *  vacancy's candidates cannot appear whatever the URL says. */
+ *  Scoped twice: requireMember() for the organisation, then the function
+ *  itself derives the vacancy's organisation from the row and refuses a
+ *  non-member with one and the same error whether the vacancy exists or
+ *  not, so another organisation's candidates cannot appear whatever the
+ *  URL says. */
 export type CandidatePage = {
   rows: CandidateRow[];
+  /** The filtered total, and where this page sits in it. */
   total: number;
   page: number;
   pages: number;
   from: number;
   to: number;
-  /** Every id in the filtered ORDER, for previous/next across pages. */
-  orderedIds: string[];
   /** Unfiltered counts for the whole vacancy, so a status chip's number is a
    *  fact about the vacancy and not about the current filter. */
-  counts: { total: number; new: number; review: number; interview: number; decided: number };
-  /** Every application in the vacancy as id + status (nothing else), for the
-   *  pipeline projection, which needs to intersect ids with the assessment
-   *  read. Small rows, never names. */
-  applications: { id: string; status: string }[];
+  counts: {
+    total: number;
+    new: number;
+    review: number;
+    interview: number;
+    hired: number;
+    decided: number;
+  };
   /** The vacancy's yes/no questions, for the answer filters. */
   yesNoQuestions: { id: string; promptSv: string | null; promptEn: string | null }[];
 };
+
+/** Where one application sits in the filtered list it was opened from, and
+ *  its neighbours -- read from the same ordering as the page, without the
+ *  rest of the list. `position` 0 means the application is not in that list
+ *  (a filter no longer matches it, or it was never there). */
+export type CandidateNeighbours = {
+  position: number;
+  total: number;
+  previousId: string | null;
+  nextId: string | null;
+};
+
+/** The arguments of rec_candidate_view for a view, in one place so the page
+ *  and the neighbours read the same ordering. */
+function viewArgs(jobId: string, view: CandidateView, around: string | null) {
+  return {
+    _job_id: jobId,
+    _stage: view.stage ?? "open",
+    _owner: view.owner ?? null,
+    _q: view.q ?? null,
+    _answers: parseAnswerFilter(view.ans).map((f) => ({
+      question_id: f.questionId,
+      value: f.value,
+    })),
+    _sort: view.sort ?? "applied",
+    _dir: view.dir ?? null,
+    _page: view.page ?? 1,
+    _size: PAGE_SIZE,
+    _around: around,
+  };
+}
+
+type ViewRow = {
+  application_id: string;
+  applicant_user_id: string;
+  display_name: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  cv_storage_path: string | null;
+  cv_source: string;
+  responsible_user_id: string | null;
+  first_viewed_at: string | null;
+  meta_version: number | null;
+  next_activity_at: string | null;
+  next_activity_timezone: string | null;
+  next_activity_status: string | null;
+  rank: number;
+  total: number;
+};
+
+const ZERO_COUNTS = { total: 0, new: 0, review: 0, interview: 0, hired: 0, decided: 0 };
 
 export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -632,20 +721,14 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
     await requireMember(ctx, data.employerId);
     const { view } = data;
 
-    // ── Phase 1: the keys ──────────────────────────────────────────────
-    // Narrow rows for every application in this vacancy: what the filters and
-    // the sorts read, and nothing more.
-    const [appsRes, questionsRes] = await Promise.all([
-      ctx.supabase
-        .from("job_applications")
-        .select(
-          "id, job_id, applicant_user_id, status, cv_storage_path, cv_source, created_at, updated_at",
-        )
-        .eq("employer_id", data.employerId)
-        .eq("job_id", data.jobId)
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(5000),
+    // ── Phase 1: the page, the counts and the questions ───────────────
+    // The database filters, orders and pages the WHOLE vacancy and returns
+    // this page's rows, each with its rank and the filtered total. Names
+    // come with the rows: the function reads them under its own definer
+    // rights for exactly the rows the membership rule admits.
+    const [pageRes, countsRes, questionsRes] = await Promise.all([
+      ctx.supabase.rpc("rec_candidate_view", viewArgs(data.jobId, view, null)),
+      ctx.supabase.rpc("rec_job_counts", { _employer_id: data.employerId, _job_id: data.jobId }),
       ctx.supabase
         .from("recruitment_questions")
         .select("id, prompt_sv, prompt_en, answer_kind, position")
@@ -653,124 +736,39 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
         .eq("answer_kind", "yes_no")
         .order("position"),
     ]);
-    if (appsRes.error) throw toCode(appsRes.error, "listRecruitmentCandidatesPage applications");
+    if (pageRes.error) throw toCode(pageRes.error, "listRecruitmentCandidatesPage view");
+    if (countsRes.error) throw toCode(countsRes.error, "listRecruitmentCandidatesPage counts");
     if (questionsRes.error)
       throw toCode(questionsRes.error, "listRecruitmentCandidatesPage questions");
-    const apps = (appsRes.data ?? []) as Loose[];
+    const viewRows = (pageRes.data ?? []) as ViewRow[];
+    const c = ((countsRes.data ?? []) as Loose[])[0];
+    const counts = c
+      ? {
+          total: Number(c.total),
+          new: Number(c.new_count),
+          review: Number(c.review_count),
+          interview: Number(c.interview_count),
+          hired: Number(c.hired_count),
+          decided: Number(c.decided_count),
+        }
+      : ZERO_COUNTS;
     const yesNoQuestions = (questionsRes.data ?? []).map((q: Loose) => ({
       id: q.id as string,
       promptSv: (q.prompt_sv as string | null) ?? null,
       promptEn: (q.prompt_en as string | null) ?? null,
     }));
-    const counts = {
-      total: apps.length,
-      new: apps.filter((a) => a.status === "submitted").length,
-      review: apps.filter((a) => a.status === "reviewing").length,
-      interview: apps.filter((a) => a.status === "interview").length,
-      decided: apps.filter((a) => !isUnresolved(a.status)).length,
-    };
-    const applications = apps.map((a) => ({ id: a.id as string, status: a.status as string }));
-    const empty: CandidatePage = {
-      rows: [],
-      total: 0,
-      page: 1,
-      pages: 1,
-      from: 0,
-      to: 0,
-      orderedIds: [],
-      counts,
-      applications,
-      yesNoQuestions,
-    };
-    if (apps.length === 0) return empty;
-    const ids = apps.map((a) => a.id as string);
-    const chunks: string[][] = [];
-    for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
+    const total = viewRows.length > 0 ? Number(viewRows[0].total) : 0;
+    const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    const from = viewRows.length > 0 ? Number(viewRows[0].rank) : 0;
+    const to = viewRows.length > 0 ? Number(viewRows[viewRows.length - 1].rank) : 0;
+    const page = viewRows.length > 0 ? Math.ceil(from / PAGE_SIZE) : 1;
+    if (viewRows.length === 0) {
+      return { rows: [], total, page, pages, from, to, counts, yesNoQuestions };
+    }
+    const pageIds = viewRows.map((r) => r.application_id);
 
-    const answerFilters = parseAnswerFilter(view.ans);
-    const [metaRows, bookingRows, filterAnswerRows, team, names] = await Promise.all([
-      Promise.all(
-        chunks.map((c) =>
-          ctx.supabase
-            .from("recruitment_application_meta")
-            .select("application_id, responsible_user_id, first_viewed_at, version")
-            .in("application_id", c),
-        ),
-      ),
-      Promise.all(
-        chunks.map((c) =>
-          ctx.supabase
-            .from("recruitment_interview_bookings")
-            .select("application_id, starts_at, timezone, status")
-            .in("application_id", c)
-            .in("status", ["planned", "invited", "confirmed"])
-            .order("starts_at", { ascending: true }),
-        ),
-      ),
-      // Only the questions the filter names: the rest of the answers are
-      // read for the page alone, below.
-      answerFilters.length > 0
-        ? Promise.all(
-            chunks.map((c) =>
-              ctx.supabase
-                .from("job_application_answers")
-                .select("application_id, question_id, answer_bool")
-                .in("application_id", c)
-                .in(
-                  "question_id",
-                  answerFilters.map((f) => f.questionId),
-                ),
-            ),
-          )
-        : Promise.resolve([]),
-      readTeam(ctx, data.employerId),
-      displayNames(apps.map((a) => a.applicant_user_id as string)),
-    ]);
-    for (const res of [...metaRows, ...bookingRows, ...filterAnswerRows]) {
-      if (res.error) throw toCode(res.error, "listRecruitmentCandidatesPage keys");
-    }
-    const meta = new Map<string, Loose>();
-    for (const r of metaRows.flatMap((x) => x.data ?? [])) meta.set(r.application_id, r);
-    const nextBooking = new Map<string, Loose>();
-    const cutoff = Date.now() - 60 * 60 * 1000;
-    for (const b of bookingRows.flatMap((x) => x.data ?? [])) {
-      if (Date.parse(b.starts_at) < cutoff) continue;
-      if (!nextBooking.has(b.application_id)) nextBooking.set(b.application_id, b);
-    }
-    const filterAnswers = new Map<string, Record<string, boolean | null>>();
-    for (const a of filterAnswerRows.flatMap((x) => x.data ?? [])) {
-      const cur = filterAnswers.get(a.application_id) ?? {};
-      cur[a.question_id] = typeof a.answer_bool === "boolean" ? a.answer_bool : null;
-      filterAnswers.set(a.application_id, cur);
-    }
-
-    const keyRows = apps.map((a) => ({
-      applicationId: a.id as string,
-      name: names.get(a.applicant_user_id) ?? null,
-      jobTitle: null,
-      status: a.status as string,
-      appliedAt: a.created_at as string,
-      responsibleUserId: (meta.get(a.id)?.responsible_user_id as string | null) ?? null,
-      nextActivityAt: isUnresolved(a.status)
-        ? ((nextBooking.get(a.id)?.starts_at as string | null) ?? null)
-        : null,
-      answers: filterAnswers.get(a.id) ?? {},
-    }));
-    const ordered = applyCandidateView(keyRows, view);
-    const slice = pageSlice(ordered, view.page);
-    const pageIds = slice.rows.map((r) => r.applicationId);
-    if (pageIds.length === 0) {
-      return {
-        ...empty,
-        total: slice.total,
-        page: slice.page,
-        pages: slice.pages,
-        orderedIds: ordered.map((r) => r.applicationId),
-      };
-    }
-
-    // ── Phase 2: the page ──────────────────────────────────────────────
-    const [answerRows, notesRows, messageRows] = await Promise.all([
+    // ── Phase 2: this page's details ──────────────────────────────────
+    const [answerRows, notesRows, messageRows, team] = await Promise.all([
       ctx.supabase
         .from("job_application_answers")
         .select(
@@ -786,6 +784,7 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
         .select("application_id")
         .in("application_id", pageIds)
         .eq("status", "sent"),
+      readTeam(ctx, data.employerId),
     ]);
     for (const res of [answerRows, notesRows, messageRows]) {
       if (res.error) throw toCode(res.error, "listRecruitmentCandidatesPage page");
@@ -818,174 +817,77 @@ export const listRecruitmentCandidatesPage = createServerFn({ method: "POST" })
     for (const m of (messageRows.data ?? []) as Loose[])
       messages.set(m.application_id, (messages.get(m.application_id) ?? 0) + 1);
     const teamNames = new Map(team.map((m) => [m.userId, m.name]));
-    const byId = new Map(apps.map((a) => [a.id as string, a]));
 
-    const rows: CandidateRow[] = pageIds.map((id) => {
-      const a = byId.get(id) as Loose;
-      const m = meta.get(id);
-      const b = nextBooking.get(id);
-      const ans = answers.get(id);
+    const rows: CandidateRow[] = viewRows.map((r) => {
+      const ans = answers.get(r.application_id);
       return {
-        applicationId: id,
-        jobId: a.job_id,
+        applicationId: r.application_id,
+        jobId: data.jobId,
         jobTitle: null,
         jobTitleSv: null,
         jobTitleEn: null,
-        name: names.get(a.applicant_user_id) ?? null,
-        status: a.status,
-        appliedAt: a.created_at,
-        updatedAt: a.updated_at,
-        firstViewedAt: m?.first_viewed_at ?? null,
-        responsibleUserId: m?.responsible_user_id ?? null,
-        responsibleName: m?.responsible_user_id
-          ? (teamNames.get(m.responsible_user_id) ?? null)
+        name: r.display_name ?? null,
+        status: r.status,
+        appliedAt: r.created_at,
+        updatedAt: r.updated_at,
+        firstViewedAt: r.first_viewed_at ?? null,
+        responsibleUserId: r.responsible_user_id ?? null,
+        responsibleName: r.responsible_user_id
+          ? (teamNames.get(r.responsible_user_id) ?? null)
           : null,
-        metaVersion: (m?.version as number) ?? 1,
-        nextActivityAt: isUnresolved(a.status) ? (b?.starts_at ?? null) : null,
-        nextActivityTimezone: isUnresolved(a.status) ? (b?.timezone ?? null) : null,
-        nextActivityStatus: isUnresolved(a.status) ? (b?.status ?? null) : null,
-        hasCv: Boolean(a.cv_storage_path) || a.cv_source === "cqrityjob_cv",
+        metaVersion: r.meta_version ?? 1,
+        nextActivityAt: r.next_activity_at ?? null,
+        nextActivityTimezone: r.next_activity_timezone ?? null,
+        nextActivityStatus: r.next_activity_status ?? null,
+        hasCv: Boolean(r.cv_storage_path) || r.cv_source === "cqrityjob_cv",
         mandatoryNoCount: ans?.mandatoryNo ?? 0,
         answeredCount: ans?.count ?? 0,
         answers: ans?.byQuestion ?? {},
-        notesCount: notes.get(id) ?? 0,
-        messagesCount: messages.get(id) ?? 0,
+        notesCount: notes.get(r.application_id) ?? 0,
+        messagesCount: messages.get(r.application_id) ?? 0,
       };
     });
 
-    return {
-      rows,
-      total: slice.total,
-      page: slice.page,
-      pages: slice.pages,
-      from: slice.from,
-      to: slice.to,
-      orderedIds: ordered.map((r) => r.applicationId),
-      counts,
-      applications,
-      yesNoQuestions,
-    };
+    return { rows, total, page, pages, from, to, counts, yesNoQuestions };
   });
 
-export const listRecruitmentCandidates = createServerFn({ method: "POST" })
+/** Previous/next for one application in the filtered list it was opened
+ *  from: the database returns the row before, the row itself and the row
+ *  after in the SAME ordering as the page read, so the ids of the whole
+ *  list never leave the server. */
+export const getCandidateNeighbours = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ employerId: z.string().uuid(), jobId: z.string().uuid().optional() }).parse(d),
+    z
+      .object({
+        employerId: z.string().uuid(),
+        jobId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        view: candidateViewSchema.default({}),
+      })
+      .parse(d),
   )
-  .handler(async ({ data, context }): Promise<CandidateRow[]> => {
+  .handler(async ({ data, context }): Promise<CandidateNeighbours> => {
     const ctx = context as Ctx;
     await requireMember(ctx, data.employerId);
-
-    let appsQuery = ctx.supabase
-      .from("job_applications")
-      .select(
-        "id, job_id, applicant_user_id, status, cv_storage_path, cv_source, created_at, updated_at, jobs(title_sv, title_en)",
-      )
-      .eq("employer_id", data.employerId)
-      .order("created_at", { ascending: false })
-      .limit(2000);
-    if (data.jobId) appsQuery = appsQuery.eq("job_id", data.jobId);
-    const appsRes = await appsQuery;
-    if (appsRes.error) throw toCode(appsRes.error, "listRecruitmentCandidates applications");
-    const apps = (appsRes.data ?? []) as Loose[];
-    if (apps.length === 0) return [];
-    const ids = apps.map((a) => a.id as string);
-
-    // Chunked: an `in` list of a few thousand ids does not fit in one URL.
-    const chunks: string[][] = [];
-    for (let i = 0; i < ids.length; i += 200) chunks.push(ids.slice(i, i + 200));
-    const [metaRows, bookingRows, answerRows, team] = await Promise.all([
-      Promise.all(
-        chunks.map((c) =>
-          ctx.supabase
-            .from("recruitment_application_meta")
-            .select("application_id, responsible_user_id, first_viewed_at, version")
-            .in("application_id", c),
-        ),
-      ),
-      Promise.all(
-        chunks.map((c) =>
-          ctx.supabase
-            .from("recruitment_interview_bookings")
-            .select("application_id, starts_at, timezone, status")
-            .in("application_id", c)
-            .in("status", ["planned", "invited", "confirmed"])
-            .order("starts_at", { ascending: true }),
-        ),
-      ),
-      Promise.all(
-        chunks.map((c) =>
-          ctx.supabase
-            .from("job_application_answers")
-            .select(
-              "application_id, question_id, answer_kind, answer_bool, recruitment_questions(requirement_id, recruitment_requirements(kind))",
-            )
-            .in("application_id", c),
-        ),
-      ),
-      readTeam(ctx, data.employerId),
-    ]);
-    for (const res of [...metaRows, ...bookingRows, ...answerRows]) {
-      if (res.error) throw toCode(res.error, "listRecruitmentCandidates enrichment");
-    }
-
-    const meta = new Map<string, Loose>();
-    for (const r of metaRows.flatMap((x) => x.data ?? [])) meta.set(r.application_id, r);
-    const nextBooking = new Map<string, Loose>();
-    const cutoff = Date.now() - 60 * 60 * 1000;
-    for (const b of bookingRows.flatMap((x) => x.data ?? [])) {
-      if (Date.parse(b.starts_at) < cutoff) continue;
-      if (!nextBooking.has(b.application_id)) nextBooking.set(b.application_id, b);
-    }
-    const answers = new Map<string, { count: number; mandatoryNo: number }>();
-    for (const a of answerRows.flatMap((x) => x.data ?? [])) {
-      const cur = answers.get(a.application_id) ?? { count: 0, mandatoryNo: 0 };
-      cur.count += 1;
-      const q = Array.isArray(a.recruitment_questions)
-        ? a.recruitment_questions[0]
-        : a.recruitment_questions;
-      const req = q
-        ? Array.isArray(q.recruitment_requirements)
-          ? q.recruitment_requirements[0]
-          : q.recruitment_requirements
-        : null;
-      if (a.answer_kind === "yes_no" && a.answer_bool === false && req?.kind === "mandatory")
-        cur.mandatoryNo += 1;
-      answers.set(a.application_id, cur);
-    }
-    const teamNames = new Map(team.map((m) => [m.userId, m.name]));
-    const names = await displayNames(apps.map((a) => a.applicant_user_id));
-
-    return apps.map((a) => {
-      const job = Array.isArray(a.jobs) ? a.jobs[0] : a.jobs;
-      const m = meta.get(a.id);
-      const b = nextBooking.get(a.id);
-      const ans = answers.get(a.id);
-      return {
-        applicationId: a.id,
-        jobId: a.job_id,
-        jobTitle: job?.title_sv ?? job?.title_en ?? null,
-        jobTitleSv: job?.title_sv ?? null,
-        jobTitleEn: job?.title_en ?? null,
-        name: names.get(a.applicant_user_id) ?? null,
-        status: a.status,
-        appliedAt: a.created_at,
-        updatedAt: a.updated_at,
-        firstViewedAt: m?.first_viewed_at ?? null,
-        responsibleUserId: m?.responsible_user_id ?? null,
-        responsibleName: m?.responsible_user_id
-          ? (teamNames.get(m.responsible_user_id) ?? null)
-          : null,
-        metaVersion: (m?.version as number) ?? 1,
-        // A leftover booking is not the next activity of a decided candidate.
-        nextActivityAt: isUnresolved(a.status) ? (b?.starts_at ?? null) : null,
-        nextActivityTimezone: isUnresolved(a.status) ? (b?.timezone ?? null) : null,
-        nextActivityStatus: isUnresolved(a.status) ? (b?.status ?? null) : null,
-        hasCv: Boolean(a.cv_storage_path) || a.cv_source === "cqrityjob_cv",
-        mandatoryNoCount: ans?.mandatoryNo ?? 0,
-        answeredCount: ans?.count ?? 0,
-      };
-    });
+    const { data: rows, error } = await ctx.supabase.rpc(
+      "rec_candidate_view",
+      viewArgs(data.jobId, data.view, data.applicationId),
+    );
+    if (error) throw toCode(error, "getCandidateNeighbours");
+    const around = ((rows ?? []) as ViewRow[]).map((r) => ({
+      id: r.application_id,
+      rank: Number(r.rank),
+      total: Number(r.total),
+    }));
+    const self = around.find((r) => r.id === data.applicationId);
+    if (!self) return { position: 0, total: 0, previousId: null, nextId: null };
+    return {
+      position: self.rank,
+      total: self.total,
+      previousId: around.find((r) => r.rank === self.rank - 1)?.id ?? null,
+      nextId: around.find((r) => r.rank === self.rank + 1)?.id ?? null,
+    };
   });
 
 // ═══════════════════════════════════════════════════════════════════════════

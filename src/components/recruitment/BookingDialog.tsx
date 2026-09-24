@@ -10,6 +10,13 @@
 //     their own booking with their own start time, prefilled back to back so
 //     nobody is accidentally booked into the same slot as somebody else. The
 //     dialog says so in words before anything is saved.
+//   * THE WHOLE SERIES IS CHECKED BEFORE THE FIRST SAVE. A series that does
+//     not fit within the chosen day, two slots that overlap (prefilled or
+//     typed by hand), or a wall-clock time that does not exist or exists
+//     twice in the chosen zone on that day (a daylight-saving change) stops
+//     the save with a sentence that says which, and nothing is written. No
+//     time is clamped, shortened or moved to another day on the recruiter's
+//     behalf.
 //   * THE END TIME IS THE DURATION. The database keeps starts_at and
 //     duration_minutes; "slut" is shown as a time because that is how people
 //     read a calendar, and stored as the minutes between the two.
@@ -38,10 +45,13 @@ import { recruitmentErrorKey } from "@/components/recruitment/errors";
 import {
   COMMON_TIMEZONES,
   addMinutes,
+  checkBookingSeries,
   consecutiveStarts,
   localTimezone,
   minutesBetween,
-  zonedToUtcIso,
+  resolveZonedTime,
+  type SeriesProblem,
+  type ZonedTime,
 } from "@/lib/recruitment/format";
 import { saveInterviewBooking } from "@/lib/recruitment/recruitment.functions";
 
@@ -80,8 +90,38 @@ export function BookingDialog({
 
   const duration = minutesBetween(start, end);
   const many = candidates.length > 1;
-  const startFor = (id: string, i: number) =>
+  // A prefilled slot is null when it would start on the next day: shown as
+  // "does not fit", never as 23:59.
+  const startFor = (id: string, i: number): string | null =>
     starts[id] ?? (duration ? consecutiveStarts(start, duration, candidates.length)[i] : start);
+
+  function seriesMessage(p: SeriesProblem): string {
+    const nameOf = (id: string) =>
+      candidates.find((c) => c.applicationId === id)?.name ?? anonymous;
+    switch (p.kind) {
+      case "overflow":
+        return t("rec.bookingDialog.error.overflow")
+          .replace("{fits}", String(p.fits))
+          .replace("{n}", String(p.total))
+          .replace("{start}", start);
+      case "overlap":
+        return t("rec.bookingDialog.error.overlap")
+          .replace("{a}", nameOf(p.first))
+          .replace("{b}", nameOf(p.second));
+      case "invalid":
+        return t("rec.booking.error.when");
+    }
+  }
+
+  function zoneMessage(r: Extract<ZonedTime, { ok: false }>, time: string): string {
+    const key =
+      r.reason === "nonexistent"
+        ? "rec.bookingDialog.error.nonexistent"
+        : r.reason === "ambiguous"
+          ? "rec.bookingDialog.error.ambiguous"
+          : "rec.booking.error.when";
+    return t(key).replace("{time}", time).replace("{date}", date).replace("{zone}", timezone);
+  }
 
   // Slots the recruiter has not typed by hand follow the first slot.
   function retime(nextStart: string, nextEnd: string) {
@@ -97,12 +137,23 @@ export function BookingDialog({
     if (kind === "video" && !/^https:\/\//.test(meetingUrl.trim()))
       return setError(t("rec.booking.error.link"));
     if (kind === "onsite" && !locationText.trim()) return setError(t("rec.booking.error.place"));
-    const plan = candidates.map((c, i) => {
-      const startsAt = zonedToUtcIso(date, many ? startFor(c.applicationId, i) : start, timezone);
-      return { ...c, startsAt };
-    });
-    if (plan.some((p) => !p.startsAt)) return setError(t("rec.booking.error.when"));
-    if (plan.some((p) => Date.parse(p.startsAt!) < Date.now()))
+
+    // The whole series first, then each slot's instant in the chosen zone.
+    // Only when every one of them holds is anything saved.
+    const slots = candidates.map((c, i) => ({
+      id: c.applicationId,
+      start: many ? startFor(c.applicationId, i) : start,
+    }));
+    const problem = checkBookingSeries(slots, duration);
+    if (problem) return setError(seriesMessage(problem));
+    const plan: { applicationId: string; name: string | null; startsAt: string }[] = [];
+    for (const [i, c] of candidates.entries()) {
+      const time = slots[i].start ?? "";
+      const resolved = resolveZonedTime(date, time, timezone);
+      if (!resolved.ok) return setError(zoneMessage(resolved, time));
+      plan.push({ applicationId: c.applicationId, name: c.name, startsAt: resolved.iso });
+    }
+    if (plan.some((p) => Date.parse(p.startsAt) < Date.now()))
       return setError(t("rec.booking.error.past"));
 
     setBusy(true);
@@ -113,7 +164,7 @@ export function BookingDialog({
           data: {
             bookingId: null,
             applicationId: p.applicationId,
-            startsAt: p.startsAt!,
+            startsAt: p.startsAt,
             durationMinutes: duration,
             timezone,
             locationKind: kind,
@@ -214,7 +265,9 @@ export function BookingDialog({
                   value={start}
                   onChange={(e) => {
                     const d = duration ?? 45;
-                    retime(e.target.value, addMinutes(e.target.value, d));
+                    // An end that would fall on the next day is left empty
+                    // rather than clamped; the line below then asks for one.
+                    retime(e.target.value, addMinutes(e.target.value, d) ?? "");
                   }}
                 />
               </label>
@@ -262,10 +315,16 @@ export function BookingDialog({
                       <span className="font-medium">{c.name ?? anonymous}</span>
                       <label className="flex items-center gap-2 text-xs text-muted-foreground">
                         {t("rec.bookingDialog.start")}
+                        {startFor(c.applicationId, i) === null && (
+                          <span className="text-destructive">
+                            {t("rec.bookingDialog.slotOverflow")}
+                          </span>
+                        )}
                         <input
                           type="time"
                           className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
-                          value={startFor(c.applicationId, i)}
+                          value={startFor(c.applicationId, i) ?? ""}
+                          aria-invalid={startFor(c.applicationId, i) === null || undefined}
                           onChange={(e) =>
                             setStarts((prev) => ({ ...prev, [c.applicationId]: e.target.value }))
                           }

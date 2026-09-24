@@ -187,6 +187,46 @@ export function projectJobPipeline(
   return { counts, nextAction: deriveJobNextAction(counts, input.jobStatus) };
 }
 
+/** The vacancy's stage counts as the database counted them (rec_job_counts):
+ *  the whole vacancy, however many applied, without the rows. */
+export interface JobPipelineCounts {
+  readonly total: number;
+  readonly awaitingReview: number;
+  readonly interview: number;
+  readonly hired: number;
+}
+
+/**
+ * The same pipeline, projected from counts the database made rather than
+ * from rows the browser was handed. The case page reads ONE page of
+ * candidates; the numbers on its chips must still be about the whole
+ * vacancy, so they come from a count, not from the page.
+ *
+ * `assessmentOpen` is the number of THIS vacancy's applications with an
+ * assessment still open, from the assessment read scoped to the job.
+ */
+export function projectJobPipelineFromCounts(input: {
+  readonly jobStatus: string;
+  readonly applicationsRead: PipelineRead;
+  readonly counts: JobPipelineCounts | null;
+  readonly assessmentRead: PipelineRead;
+  readonly assessmentOpen: number;
+}): JobPipeline {
+  const r = input.applicationsRead;
+  const c =
+    r === "ready" && input.counts
+      ? input.counts
+      : { total: 0, awaitingReview: 0, interview: 0, hired: 0 };
+  const counts: Record<JobPipelineStage, StageCount> = {
+    total: count(r, c.total),
+    awaitingReview: count(r, c.awaitingReview),
+    assessmentOpen: count(r === "ready" ? input.assessmentRead : r, input.assessmentOpen),
+    interview: count(r, c.interview),
+    hired: count(r, c.hired),
+  };
+  return { counts, nextAction: deriveJobNextAction(counts, input.jobStatus) };
+}
+
 function deriveJobNextAction(
   counts: Record<JobPipelineStage, StageCount>,
   jobStatus: string,

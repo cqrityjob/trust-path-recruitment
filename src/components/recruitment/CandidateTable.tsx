@@ -57,6 +57,7 @@ import { AssignTestDialog } from "@/components/recruitment/AssignTestDialog";
 import {
   CANDIDATE_SORTS,
   STAGE_FILTERS,
+  compactView,
   firstPage,
   parseAnswerFilter,
   serializeAnswerFilter,
@@ -77,6 +78,9 @@ type Props = {
   employerId: string;
   employerSlug: string;
   employerName: string;
+  /** The vacancy this list belongs to: what the candidate page asks the
+   *  server about when it wants previous/next in this list. */
+  jobId: string;
   jobTitle: string;
   /** The page as the server returned it, or null while loading / failed. */
   page: CandidatePage | null;
@@ -112,7 +116,7 @@ type ItemResult = {
 };
 
 export function CandidateTable(props: Props) {
-  const { employerId, employerSlug, page, view, onViewChange, team, canManage } = props;
+  const { employerId, employerSlug, jobId, page, view, onViewChange, team, canManage } = props;
   const { t, lang } = useT();
   const location = useRouterState({ select: (s) => s.location });
   const listHref = location.href;
@@ -169,9 +173,13 @@ export function CandidateTable(props: Props) {
   const anonymous = t("employer.applications.anonymousCandidate");
   const nameOf = (r: CandidateRow) => r.name ?? anonymous;
 
+  // What the candidate page needs to offer previous/next in THIS list: the
+  // list's own definition (vacancy + filters + sort), never its ids. The
+  // server answers "where is this candidate in that list" from the same
+  // ordering the page was read from.
   function remember() {
     saveListContext(listKey, {
-      ids: page?.orderedIds ?? rows.map((r) => r.applicationId),
+      query: { employerId, jobId, view: compactView(view) },
       href: listHref,
       scrollY: window.scrollY,
       labelKey: props.labelKey,
