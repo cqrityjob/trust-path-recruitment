@@ -376,7 +376,30 @@ function EmployerOverview({
 
   const employmentVerificationsOpen = employmentVerificationQuery.data?.open ?? 0;
 
-  const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
+  // ── THE RECRUITMENT OVERVIEW ─────────────────────────────────────────
+  //
+  // One read gives the summary row, the recruitment table and the upcoming
+  // interviews, computed with lib/recruitment/definitions -- the SAME
+  // predicates the destination lists filter with, so "3 new applications"
+  // opens exactly three rows.
+  const overviewQuery = useQuery({
+    queryKey: ["employer", employerId, "recruitment-overview"],
+    queryFn: () => loadOverview({ data: { employerId } }),
+  });
+  const overview = overviewQuery.data ?? null;
+  const recruitmentRows = (overview?.recruitments ?? []).filter((r) =>
+    isActiveRecruitment(r.phase, r.unresolved),
+  );
+  const readyToComplete = (overview?.recruitments ?? []).filter((r) =>
+    isReadyToComplete(r.phase, r.unresolved),
+  );
+  const newApplicationsTotal = (overview?.recruitments ?? []).reduce((n, r) => n + r.newCount, 0);
+  const upcoming = overview?.upcomingInterviews ?? [];
+
+  // Counted by the database over every application (rec_job_counts), not
+  // over the newest 2 000 rows the organisation-wide list reads: the number
+  // here is the number the case pages show.
+  const awaitingReviewCount = newApplicationsTotal;
   const recruitmentAttemptIds = new Set(pipeline.map((r) => r.attemptId));
   const responsesToReview = (reviewBoardQuery.data ?? [])
     .filter((r) => recruitmentAttemptIds.has(r.attemptId))
@@ -385,13 +408,12 @@ function EmployerOverview({
   // Deliberately not "everyone who is not rejected": a candidate still at
   // `submitted` is in the first item above, and counting them twice would make
   // the board describe more work than exists.
-  const nextStepCount = applications.filter(
-    (a) => a.status === "reviewing" || a.status === "interview",
-  ).length;
-  const publishedJobIds = new Set(jobs.filter((j) => j.status === "published").map((j) => j.id));
-  const jobIdsWithApplications = new Set(applications.map((a) => a.jobId));
-  const publishedNoApplications = [...publishedJobIds].filter(
-    (id) => !jobIdsWithApplications.has(id),
+  const nextStepCount = (overview?.recruitments ?? []).reduce(
+    (n, r) => n + (r.unresolved - r.newCount),
+    0,
+  );
+  const publishedNoApplications = (overview?.recruitments ?? []).filter(
+    (r) => r.jobStatus === "published" && r.total === 0,
   ).length;
 
   const orgIncomplete =
@@ -720,26 +742,6 @@ function EmployerOverview({
     month: "long",
     day: "numeric",
   }).format(new Date());
-
-  // ── THE RECRUITMENT OVERVIEW ─────────────────────────────────────────
-  //
-  // One read gives the summary row, the recruitment table and the upcoming
-  // interviews, computed with lib/recruitment/definitions -- the SAME
-  // predicates the destination lists filter with, so "3 new applications"
-  // opens exactly three rows.
-  const overviewQuery = useQuery({
-    queryKey: ["employer", employerId, "recruitment-overview"],
-    queryFn: () => loadOverview({ data: { employerId } }),
-  });
-  const overview = overviewQuery.data ?? null;
-  const recruitmentRows = (overview?.recruitments ?? []).filter((r) =>
-    isActiveRecruitment(r.phase, r.unresolved),
-  );
-  const readyToComplete = (overview?.recruitments ?? []).filter((r) =>
-    isReadyToComplete(r.phase, r.unresolved),
-  );
-  const newApplicationsTotal = (overview?.recruitments ?? []).reduce((n, r) => n + r.newCount, 0);
-  const upcoming = overview?.upcomingInterviews ?? [];
 
   if (readyToComplete.length > 0) {
     actions.push({

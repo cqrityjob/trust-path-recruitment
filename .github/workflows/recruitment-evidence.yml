@@ -1,0 +1,265 @@
+name: Recruitment workspace — routed browser evidence
+
+# ── WHY THIS IS A WORKFLOW OF ITS OWN ───────────────────────────────────
+#
+# e2e/recruitment-workspace.spec.ts walks the employer's recruitment case in
+# a real browser, signed in, against a real Auth + PostgREST + RLS stack:
+# the paged candidate list over 5 050 applications, previous/next across a
+# page edge, a batch that reports per candidate, a 25-candidate booking
+# series that must be refused as a whole, another organisation's owner who
+# must see nothing, a candidate who must never receive an internal note.
+#
+# It cannot live in ci.yml's browser job, which signs in against the HOSTED
+# project through the checked-in .env: this walk is MUTATING -- it seeds
+# people and applications, moves candidates and writes bookings -- so it
+# must never reach the owner project. The stack here is started from
+# scratch on the runner, proven to be loopback, and stopped afterwards.
+#
+# ── A GREEN JOB WHERE THE TESTS SKIPPED IS NOT EVIDENCE ───────────────
+#
+# The spec skips itself unless E2E_LOCAL_STACK=1 and both URLs are
+# loopback. The last step therefore reads the JSON report and refuses
+# unless every desktop test of the spec ran and passed
+# (scripts/recruitment-evidence-verify.ts).
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "e2e/recruitment-workspace.spec.ts"
+      - "scripts/fixtures/recruitment-workspace-fixture.sql"
+      - "scripts/recruitment-evidence-verify.ts"
+      - "supabase/migrations/**"
+      - ".github/workflows/recruitment-evidence.yml"
+  workflow_dispatch:
+
+# The same pinned CLI as e4-evidence.yml, for the same reason: the stack
+# the evidence is replayed on is part of the evidence.
+env:
+  SUPABASE_CLI_VERSION: "2.117.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recruitment-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: Recruitment workspace browser evidence (isolated local stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set up the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Verify the CLI surface
+        run: |
+          set -euo pipefail
+          installed="$(supabase --version)"
+          echo "supabase CLI: ${installed} (pinned ${SUPABASE_CLI_VERSION})"
+          if [ "${installed}" != "${SUPABASE_CLI_VERSION}" ]; then
+            echo "CLI PIN REFUSED: asked for ${SUPABASE_CLI_VERSION}, got ${installed}" >&2
+            exit 1
+          fi
+          supabase --help > /tmp/supabase-help.txt
+          for c in start stop status; do
+            grep -qE "^[[:space:]]+${c}[[:space:]]" /tmp/supabase-help.txt || { echo "CLI SURFACE REFUSED: no 'supabase ${c}'" >&2; exit 1; }
+          done
+
+      # Started with the migration history HELD BACK, as e4-evidence.yml does:
+      # the history is replayed as `postgres` below, after the privilege
+      # baseline is set. Bounded retries across ghcr.io and Supabase's public
+      # mirror, because anonymous image pulls are throttled on busy days.
+      - name: Start the local Supabase stack, history held back
+        run: |
+          set -euo pipefail
+          mv supabase/migrations /tmp/rec-migrations
+          mkdir -p supabase/migrations
+          started=0
+          for attempt in 1 2 3 4; do
+            case "$attempt" in 1|3) registry=ghcr.io ;; *) registry=public.ecr.aws ;; esac
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY="$registry" supabase start; then
+              started=1
+              break
+            fi
+            echo "::warning::supabase start attempt ${attempt} (${registry}) failed"
+            supabase stop --no-backup || true
+            if [ "$attempt" -lt 4 ]; then sleep $((attempt * 30)); fi
+          done
+          if [ "$started" -ne 1 ]; then
+            echo "STACK REFUSED: supabase start failed four times across ghcr.io and public.ecr.aws" >&2
+            exit 1
+          fi
+          rmdir supabase/migrations
+          mv /tmp/rec-migrations supabase/migrations
+          test -d supabase/migrations
+
+      - name: Derive the local configuration
+        id: local
+        run: |
+          set -euo pipefail
+          supabase status -o env > /tmp/supabase-status.env
+          # shellcheck disable=SC1091
+          set -a; . /tmp/supabase-status.env; set +a
+          {
+            echo "SUPABASE_URL=${API_URL}"
+            echo "VITE_SUPABASE_URL=${API_URL}"
+            echo "SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
+            echo "SUPABASE_PROJECT_ID=local-recruitment-evidence"
+            echo "VITE_SUPABASE_PROJECT_ID=local-recruitment-evidence"
+            echo "VITE_EMPLOYER_PORTAL_ENABLED=true"
+            echo "VITE_JOBS_ENABLED=true"
+            echo "VITE_CIG_LIFECYCLE_ENFORCED=true"
+          } > .env.local
+          echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
+          echo "db_url=${DB_URL}" >> "$GITHUB_OUTPUT"
+          # Local-stack keys, written 0600 into the runner's temp dir for the
+          # spec's sign-in helper and never echoed. They belong to a stack
+          # that exists for one job on this runner.
+          install -m 600 /dev/null "$RUNNER_TEMP/rec-local-keys.env"
+          {
+            echo "E2E_SUPABASE_ANON_KEY=${ANON_KEY}"
+            echo "E2E_SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
+          } > "$RUNNER_TEMP/rec-local-keys.env"
+
+      - name: Refuse anything that is not loopback
+        env:
+          API_URL: ${{ steps.local.outputs.api_url }}
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          fail() { echo "ISOLATION REFUSED: $1" >&2; exit 1; }
+          case "$API_URL" in
+            http://127.0.0.1:*|http://localhost:*) : ;;
+            *) fail "the Supabase API URL is not loopback: $API_URL" ;;
+          esac
+          case "$DB_URL" in
+            postgresql://*@127.0.0.1:*|postgresql://*@localhost:*) : ;;
+            *) fail "the database URL is not loopback: $DB_URL" ;;
+          esac
+          if grep -q 'wrygicdfxwjnrugduxnt' .env.local; then fail "the owner project ref reached .env.local"; fi
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY; do
+            if [ -n "${!v:-}" ]; then fail "$v is set; this job must need no hosted credential"; fi
+          done
+          echo "isolation OK — API $API_URL, DB loopback, no hosted credential present"
+
+      # The same privilege baseline as production and as e4-evidence.yml, for
+      # the reason written there: a stock local stack grants every new
+      # function to authenticated and service_role by default, which the
+      # owner project does not.
+      - name: Match the hosted privilege baseline
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
+          ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+            REVOKE EXECUTE ON FUNCTIONS FROM authenticated, service_role;
+          SQL
+
+      - name: Replay the migration history
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          n=0
+          for f in supabase/migrations/*.sql; do
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f" || { echo "FAILED: $f" >&2; exit 1; }
+            n=$((n+1))
+          done
+          echo "replayed ${n} migration(s)"
+
+      - name: Seed the synthetic fixture
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/fixtures/recruitment-workspace-fixture.sql
+          # Run twice: the fixture must be a no-op on a stack that already holds it.
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/fixtures/recruitment-workspace-fixture.sql
+          psql "$DB_URL" -Atc "SELECT job_id, count(*) FROM public.job_applications GROUP BY job_id ORDER BY 2 DESC"
+
+      - name: Install Chromium
+        run: |
+          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
+          bunx playwright install --with-deps chromium
+
+      - name: Start the application against the local stack
+        run: |
+          set -euo pipefail
+          nohup bun run dev -- --port 3118 --strictPort > /tmp/dev-server.log 2>&1 &
+          disown
+          for i in $(seq 1 90); do
+            if curl -sfo /dev/null http://localhost:3118/; then echo "up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the dev server did not come up"; cat /tmp/dev-server.log; exit 1
+
+      # Serial, one worker: the walk moves candidates and writes bookings,
+      # and two workers sharing one database would race each other.
+      - name: Walk the recruitment case
+        env:
+          E2E_LOCAL_STACK: "1"
+          E2E_BASE_URL: http://localhost:3118
+          E2E_SUPABASE_URL: ${{ steps.local.outputs.api_url }}
+          E2E_DATABASE_URL: ${{ steps.local.outputs.db_url }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
+        run: |
+          set -euo pipefail
+          set -a
+          # shellcheck disable=SC1090
+          . "$RUNNER_TEMP/rec-local-keys.env"
+          set +a
+          bunx playwright test e2e/recruitment-workspace.spec.ts \
+            --project=chromium --workers=1 --trace off \
+            --reporter=list,json
+
+      - name: Refuse a report where the walk was skipped
+        if: always()
+        run: bun run scripts/recruitment-evidence-verify.ts
+
+      - name: Destroy the local keys
+        if: always()
+        run: |
+          f="$RUNNER_TEMP/rec-local-keys.env"
+          if [ -f "$f" ]; then shred -u "$f" 2>/dev/null || rm -f "$f"; fi
+
+      # Failure screenshots only: no trace is recorded, so nothing here
+      # carries a request body or a token.
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recruitment-evidence-failure-${{ github.event.pull_request.number || github.run_id }}-${{ github.run_attempt }}
+          path: test-results/**/*.png
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Server log
+        if: failure()
+        run: tail -n 80 /tmp/dev-server.log || true
+
+      - name: Stop the local stack
+        if: always()
+        run: supabase stop --no-backup || true

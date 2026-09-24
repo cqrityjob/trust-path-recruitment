@@ -91,9 +91,12 @@ export function BookingDialog({
   const duration = minutesBetween(start, end);
   const many = candidates.length > 1;
   // A prefilled slot is null when it would start on the next day: shown as
-  // "does not fit", never as 23:59.
+  // "does not fit", never as 23:59. A slot that starts today but would end
+  // tomorrow does not fit either, and is flagged the same way.
   const startFor = (id: string, i: number): string | null =>
     starts[id] ?? (duration ? consecutiveStarts(start, duration, candidates.length)[i] : start);
+  const slotFits = (value: string | null): boolean =>
+    value !== null && addMinutes(value, duration ?? 0) !== null;
 
   function seriesMessage(p: SeriesProblem): string {
     const nameOf = (id: string) =>
@@ -315,7 +318,7 @@ export function BookingDialog({
                       <span className="font-medium">{c.name ?? anonymous}</span>
                       <label className="flex items-center gap-2 text-xs text-muted-foreground">
                         {t("rec.bookingDialog.start")}
-                        {startFor(c.applicationId, i) === null && (
+                        {!slotFits(startFor(c.applicationId, i)) && (
                           <span className="text-destructive">
                             {t("rec.bookingDialog.slotOverflow")}
                           </span>
@@ -324,7 +327,7 @@ export function BookingDialog({
                           type="time"
                           className="h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground"
                           value={startFor(c.applicationId, i) ?? ""}
-                          aria-invalid={startFor(c.applicationId, i) === null || undefined}
+                          aria-invalid={!slotFits(startFor(c.applicationId, i)) || undefined}
                           onChange={(e) =>
                             setStarts((prev) => ({ ...prev, [c.applicationId]: e.target.value }))
                           }

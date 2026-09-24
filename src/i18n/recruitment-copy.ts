@@ -591,6 +591,8 @@ export const recruitmentSv = {
   "rec.bookingDialog.error.ambiguous":
     "Klockan {time} inträffar två gånger den {date} i {zone} – sommartiden slutar då. Välj en tid utanför den timmen. Inget har sparats.",
   "rec.bookingDialog.slotOverflow": "ryms inte inom dagen",
+  "rec.list.capped":
+    "Den här listan visar de {shown} senaste ansökningarna av {total}. Öppna en rekrytering för dess fullständiga, sidindelade lista.",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
@@ -1184,4 +1186,6 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.bookingDialog.error.ambiguous":
     "{time} occurs twice on {date} in {zone} – daylight saving time ends then. Choose a time outside that hour. Nothing has been saved.",
   "rec.bookingDialog.slotOverflow": "does not fit within the day",
+  "rec.list.capped":
+    "This list shows the {shown} most recent applications of {total}. Open a recruitment for its complete, paged list.",
 };

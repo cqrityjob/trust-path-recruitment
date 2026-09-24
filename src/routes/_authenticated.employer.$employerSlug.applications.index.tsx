@@ -278,6 +278,16 @@ function ApplicationsList({
     queryKey: ["employer", employerId, "recruitment-overview"],
     queryFn: () => loadOverview({ data: { employerId } }),
   });
+  // This list reads the newest 2 000 applications of the organisation in one
+  // go (listApplicationsForEmployer). The database's own count says how many
+  // there really are; when the list is shorter, it says so, and points at
+  // the case pages, which page the whole vacancy.
+  const applicationsTotal = (overviewQuery.data?.recruitments ?? []).reduce(
+    (n, r) => n + r.total,
+    0,
+  );
+  const loaded = query.data?.length ?? 0;
+  const capped = query.isSuccess && overviewQuery.isSuccess && loaded < applicationsTotal;
   const canDecideFor = (jobId: string): boolean => {
     if (role === "owner" || role === "admin") return true;
     const o = overviewQuery.data;
@@ -541,6 +551,17 @@ function ApplicationsList({
         <div className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {actionError}
         </div>
+      )}
+
+      {capped && (
+        <p
+          role="status"
+          className="mt-4 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-200"
+        >
+          {t("rec.list.capped")
+            .replace("{shown}", String(loaded))
+            .replace("{total}", String(applicationsTotal))}
+        </p>
       )}
 
       <div className="mt-6">
