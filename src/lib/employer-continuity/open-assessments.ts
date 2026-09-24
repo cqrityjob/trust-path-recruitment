@@ -52,6 +52,9 @@ export function useOpenAssessmentApplications(
   /** Off by default at every call site that does not need it, so a surface
    *  that never shows an assessment number never pays for one. */
   enabled: boolean,
+  /** Scope the mapping to one vacancy's applications, so `ids.size` is that
+   *  vacancy's count of open assessments and nothing about the rest. */
+  jobId?: string,
 ): OpenAssessmentApplications {
   const pipelineFn = useServerFn(getEmployerAssessmentPipeline);
   const mappingFn = useServerFn(listAssignmentApplications);
@@ -63,8 +66,8 @@ export function useOpenAssessmentApplications(
     enabled,
   });
   const mapping = useQuery({
-    queryKey: ["academy", "assignment-applications", employerId],
-    queryFn: () => mappingFn({ data: { employerId } }),
+    queryKey: ["academy", "assignment-applications", employerId, jobId ?? null],
+    queryFn: () => mappingFn({ data: { employerId, jobId } }),
     enabled,
   });
 

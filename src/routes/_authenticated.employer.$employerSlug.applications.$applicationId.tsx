@@ -79,6 +79,7 @@ import { StageBadge } from "@/components/recruitment/RecruitmentStatus";
 import { recruitmentErrorKey } from "@/components/recruitment/errors";
 import {
   getApplicationWorkspace,
+  getCandidateNeighbours,
   markApplicationViewed,
 } from "@/lib/recruitment/recruitment.functions";
 import { isUnresolved } from "@/lib/recruitment/definitions";
@@ -203,13 +204,6 @@ function Candidate360({
   const candidateKey = ["employer", employerId, "application", applicationId, "candidate"];
   const recruitmentKey = ["employer", employerId, "application", applicationId, "recruitment"];
 
-  // The list this was opened from, read once on the client.
-  useEffect(() => {
-    const key = listParam ?? recallListKeyFor(applicationId);
-    setListKey(key);
-    setListCtx(readListContext(key));
-  }, [listParam, applicationId]);
-
   // The recruitment half: answers, responsible person, bookings, messages,
   // internal notes and the stage history. One read, membership-checked.
   const workspaceQuery = useQuery({
@@ -244,6 +238,31 @@ function Candidate360({
   const query = useQuery({
     queryKey: candidateKey,
     queryFn: () => candidateFn({ data: { applicationId } }),
+  });
+
+  // The list this was opened from, read once on the client. Without a key
+  // in the URL, the list this tab last opened is recalled -- but only once
+  // the application's own vacancy is known, so a recruitment list of
+  // another vacancy is never taken for this one.
+  const listJobId = query.data?.jobId ?? rw?.jobId ?? null;
+  useEffect(() => {
+    const key = listParam ?? recallListKeyFor(applicationId, listJobId);
+    setListKey(key);
+    setListCtx(readListContext(key));
+  }, [listParam, applicationId, listJobId]);
+
+  // Where this candidate sits in that list, from the server's own ordering.
+  // Asked only for a paged recruitment list; a whole-read list (the
+  // applications page) answers from the ids it stored.
+  const neighboursFn = useServerFn(getCandidateNeighbours);
+  const listQuery = listCtx?.query ?? null;
+  const neighboursQuery = useQuery({
+    queryKey: ["employer", employerId, "candidates", "neighbours", applicationId, listQuery],
+    queryFn: () =>
+      neighboursFn({
+        data: { employerId, jobId: listQuery!.jobId, applicationId, view: listQuery!.view },
+      }),
+    enabled: listQuery !== null,
   });
 
   // A link to a section (the overview's upcoming interview opens
@@ -445,12 +464,25 @@ function Candidate360({
     </Link>
   );
 
-  const position = listCtx ? listCtx.ids.indexOf(applicationId) : -1;
-  const previousId = position > 0 ? listCtx!.ids[position - 1] : null;
-  const nextId =
-    listCtx && position >= 0 && position < listCtx.ids.length - 1
-      ? listCtx.ids[position + 1]
+  const listNav = listCtx?.query
+    ? (neighboursQuery.data ?? null)
+    : listCtx?.ids
+      ? (() => {
+          const ids = listCtx.ids;
+          const i = ids.indexOf(applicationId);
+          return {
+            position: i + 1,
+            total: ids.length,
+            previousId: i > 0 ? ids[i - 1] : null,
+            nextId: i >= 0 && i < ids.length - 1 ? ids[i + 1] : null,
+          };
+        })()
       : null;
+  // `position` is 0-based here, -1 when this candidate is not in the list.
+  const position = listNav ? listNav.position - 1 : -1;
+  const previousId = position >= 0 ? (listNav?.previousId ?? null) : null;
+  const nextId = position >= 0 ? (listNav?.nextId ?? null) : null;
+  const listTotal = listNav?.total ?? 0;
   const stepCls =
     "inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-2.5 text-sm hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
   const topBar = (
@@ -480,7 +512,7 @@ function Candidate360({
           <span className="text-xs tabular-nums text-muted-foreground">
             {t("rec.candidate.position")
               .replace("{n}", String(position + 1))
-              .replace("{total}", String(listCtx.ids.length))}
+              .replace("{total}", String(listTotal))}
           </span>
           {nextId ? (
             <Link

@@ -376,7 +376,30 @@ function EmployerOverview({
 
   const employmentVerificationsOpen = employmentVerificationQuery.data?.open ?? 0;
 
-  const awaitingReviewCount = applications.filter((a) => a.status === "submitted").length;
+  // ── THE RECRUITMENT OVERVIEW ─────────────────────────────────────────
+  //
+  // One read gives the summary row, the recruitment table and the upcoming
+  // interviews, computed with lib/recruitment/definitions -- the SAME
+  // predicates the destination lists filter with, so "3 new applications"
+  // opens exactly three rows.
+  const overviewQuery = useQuery({
+    queryKey: ["employer", employerId, "recruitment-overview"],
+    queryFn: () => loadOverview({ data: { employerId } }),
+  });
+  const overview = overviewQuery.data ?? null;
+  const recruitmentRows = (overview?.recruitments ?? []).filter((r) =>
+    isActiveRecruitment(r.phase, r.unresolved),
+  );
+  const readyToComplete = (overview?.recruitments ?? []).filter((r) =>
+    isReadyToComplete(r.phase, r.unresolved),
+  );
+  const newApplicationsTotal = (overview?.recruitments ?? []).reduce((n, r) => n + r.newCount, 0);
+  const upcoming = overview?.upcomingInterviews ?? [];
+
+  // Counted by the database over every application (rec_job_counts), not
+  // over the newest 2 000 rows the organisation-wide list reads: the number
+  // here is the number the case pages show.
+  const awaitingReviewCount = newApplicationsTotal;
   const recruitmentAttemptIds = new Set(pipeline.map((r) => r.attemptId));
   const responsesToReview = (reviewBoardQuery.data ?? [])
     .filter((r) => recruitmentAttemptIds.has(r.attemptId))
@@ -385,13 +408,12 @@ function EmployerOverview({
   // Deliberately not "everyone who is not rejected": a candidate still at
   // `submitted` is in the first item above, and counting them twice would make
   // the board describe more work than exists.
-  const nextStepCount = applications.filter(
-    (a) => a.status === "reviewing" || a.status === "interview",
-  ).length;
-  const publishedJobIds = new Set(jobs.filter((j) => j.status === "published").map((j) => j.id));
-  const jobIdsWithApplications = new Set(applications.map((a) => a.jobId));
-  const publishedNoApplications = [...publishedJobIds].filter(
-    (id) => !jobIdsWithApplications.has(id),
+  const nextStepCount = (overview?.recruitments ?? []).reduce(
+    (n, r) => n + (r.unresolved - r.newCount),
+    0,
+  );
+  const publishedNoApplications = (overview?.recruitments ?? []).filter(
+    (r) => r.jobStatus === "published" && r.total === 0,
   ).length;
 
   const orgIncomplete =
@@ -721,26 +743,6 @@ function EmployerOverview({
     day: "numeric",
   }).format(new Date());
 
-  // ── THE RECRUITMENT OVERVIEW ─────────────────────────────────────────
-  //
-  // One read gives the summary row, the recruitment table and the upcoming
-  // interviews, computed with lib/recruitment/definitions -- the SAME
-  // predicates the destination lists filter with, so "3 new applications"
-  // opens exactly three rows.
-  const overviewQuery = useQuery({
-    queryKey: ["employer", employerId, "recruitment-overview"],
-    queryFn: () => loadOverview({ data: { employerId } }),
-  });
-  const overview = overviewQuery.data ?? null;
-  const recruitmentRows = (overview?.recruitments ?? []).filter((r) =>
-    isActiveRecruitment(r.phase, r.unresolved),
-  );
-  const readyToComplete = (overview?.recruitments ?? []).filter((r) =>
-    isReadyToComplete(r.phase, r.unresolved),
-  );
-  const newApplicationsTotal = (overview?.recruitments ?? []).reduce((n, r) => n + r.newCount, 0);
-  const upcoming = overview?.upcomingInterviews ?? [];
-
   if (readyToComplete.length > 0) {
     actions.push({
       key: "ready-to-complete",
@@ -899,7 +901,7 @@ function EmployerOverview({
                       <Link
                         to="/employer/$employerSlug/jobs/$jobId"
                         params={{ employerSlug, jobId: r.jobId }}
-                        search={{ tab: "candidates" as const, stage: "all" as const }}
+                        search={{ step: "applications" as const, stage: "all" as const }}
                         className="hover:text-accent hover:underline"
                       >
                         {r.total}
@@ -910,7 +912,7 @@ function EmployerOverview({
                         <Link
                           to="/employer/$employerSlug/jobs/$jobId"
                           params={{ employerSlug, jobId: r.jobId }}
-                          search={{ tab: "candidates" as const, stage: "new" as const }}
+                          search={{ step: "applications" as const, stage: "new" as const }}
                           className="font-semibold text-accent hover:underline"
                         >
                           {r.newCount}
@@ -946,20 +948,21 @@ function EmployerOverview({
           {actions.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">{t("employer.actions.empty")}</p>
           ) : (
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-background">
               {actions.map((item) => (
                 <li key={item.key}>
                   {/* The whole row is the link. A number that is described as
                     actionable and then needs a second, smaller target to act
-                    on is a number the employer has to aim at. */}
+                    on is a number the employer has to aim at. Rows, not
+                    cards: the list is work to do, and it should read like one. */}
                   <Link
                     {...item.linkProps}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-background p-4 shadow-sm transition-colors hover:border-accent/60 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   >
                     <span className="flex min-w-0 items-center gap-3">
                       <span
                         className={
-                          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md " +
+                          "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md " +
                           (item.tone === "todo"
                             ? "bg-accent/10 text-accent"
                             : "bg-muted text-muted-foreground")
@@ -1005,14 +1008,14 @@ function EmployerOverview({
               {overviewQuery.isLoading ? t("employer.loading") : t("rec.overview.upcomingEmpty")}
             </p>
           ) : (
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 divide-y divide-border rounded-lg border border-border bg-background">
               {upcoming.slice(0, 8).map((u) => (
                 <li key={u.bookingId}>
                   <Link
                     to="/employer/$employerSlug/applications/$applicationId"
                     params={{ employerSlug, applicationId: u.applicationId }}
                     hash="candidate-bookings"
-                    className="block rounded-xl border border-border bg-background p-3 shadow-sm hover:border-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    className="block px-3 py-2 hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                   >
                     <span className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-sm font-medium tabular-nums">
@@ -1020,11 +1023,12 @@ function EmployerOverview({
                       </span>
                       <BookingBadge status={u.status} />
                     </span>
-                    <span className="mt-0.5 block text-sm text-foreground">
+                    <span className="block text-sm text-foreground">
                       {u.candidateName ?? t("employer.applications.anonymousCandidate")}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {titleOf(u.jobTitleSv, u.jobTitleEn)}
+                      <span className="text-xs text-muted-foreground">
+                        {" · "}
+                        {titleOf(u.jobTitleSv, u.jobTitleEn)}
+                      </span>
                     </span>
                   </Link>
                 </li>

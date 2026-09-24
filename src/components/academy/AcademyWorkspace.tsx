@@ -141,13 +141,17 @@ export function RecruitmentPage({
  *  borrows this frame for the access check and nothing else. */
 export function JobsPage({
   employerSlug,
+  wide,
   children,
 }: {
   employerSlug: string;
+  /** The recruitment case page: a ten-column candidate table needs the
+   *  shell's wide reading width, nothing else in Jobs does. */
+  wide?: boolean;
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {
   return (
-    <WorkspaceFrame employerSlug={employerSlug} section="jobs" tabs={[]}>
+    <WorkspaceFrame employerSlug={employerSlug} section="jobs" tabs={[]} wide={wide}>
       {children}
     </WorkspaceFrame>
   );
@@ -173,11 +177,13 @@ function WorkspaceFrame({
   employerSlug,
   section,
   tabs,
+  wide = false,
   children,
 }: {
   employerSlug: string;
   section: EmployerNavSection;
   tabs: Tab[];
+  wide?: boolean;
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {
   const { t } = useT();
@@ -229,6 +235,7 @@ function WorkspaceFrame({
       status={workspace.status}
       activeSection={section}
       hasMultipleWorkspaces={workspace.hasMultipleWorkspaces}
+      wide={wide}
     >
       {tabs.length > 0 && <AcademyTabs employerSlug={workspace.employerSlug} tabs={tabs} />}
       {children(workspace)}
