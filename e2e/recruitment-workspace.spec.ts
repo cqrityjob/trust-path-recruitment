@@ -98,7 +98,10 @@ test.describe("recruitment case", () => {
     await expect(items.nth(0)).toContainText("Kravprofil");
     await expect(items.nth(4)).toContainText("Beslut & avslut");
     await expect(nav.locator("[aria-current=step]")).toContainText("Ansökningar");
-    // Order on the page.
+    // Order on the page -- once the page has its rows; a bounding box read
+    // during the loading state is null, not a position.
+    await expect(page.locator("table")).toBeVisible();
+    await expect(pager(page)).toBeVisible();
     const y = async (loc: ReturnType<Page["locator"]>) => (await loc.boundingBox())!.y;
     const yNav = await y(nav);
     const yFilters = await y(page.getByRole("region", { name: "Filtrera ansökningar" }));
