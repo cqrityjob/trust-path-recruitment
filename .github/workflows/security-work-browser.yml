@@ -1,4 +1,4 @@
-name: Security Work manual browser evidence
+name: Security Work browser evidence
 
 on:
   pull_request:
@@ -25,7 +25,7 @@ concurrency:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       SUPABASE_CLI_VERSION: "2.111.0"
     steps:
@@ -33,11 +33,23 @@ jobs:
         with:
           persist-credentials: false
       - name: Allocate this run's private stack directory
-        run: echo "SW_BROWSER_STATE_DIR=$RUNNER_TEMP/security-work-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+        run: |
+          echo "SW_BROWSER_STATE_DIR=$RUNNER_TEMP/security-work-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - run: bun install --frozen-lockfile
+      - name: Analysis, provider and bounded parser contracts
+        run: |
+          bun run scripts/security-work-analysis-check.ts
+          bun run scripts/security-work-processing-check.ts
+          bun run scripts/security-work-ai-jobs-check.ts
+          bun run scripts/security-work-processor-check.ts
+          bash scripts/security-work-processor-integration-test.sh
       - uses: supabase/setup-cli@v1
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
@@ -69,6 +81,25 @@ jobs:
         with:
           name: security-work-manual-browser
           path: ${{ steps.browser.outputs.evidence_dir }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Real document-to-report SV/EN desktop and mobile journeys
+        id: analysis
+        run: bash scripts/security-work-analysis-browser-run.sh
+      - name: Publish validated analysis screenshots and manifest
+        if: success() && steps.analysis.outputs.evidence_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-work-analysis-browser
+          path: ${{ steps.analysis.outputs.evidence_dir }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish validated synthetic AI review screenshots
+        if: success() && steps.analysis.outputs.ai_evidence_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-work-synthetic-ai-review
+          path: ${{ steps.analysis.outputs.ai_evidence_dir }}
           if-no-files-found: error
           retention-days: 14
       - name: Stop only this workflow's local stack

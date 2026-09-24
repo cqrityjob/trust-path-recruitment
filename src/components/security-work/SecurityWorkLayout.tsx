@@ -2,7 +2,18 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { BookOpen, LayoutDashboard, Menu, Radio, Settings2, ShieldCheck, X } from "lucide-react";
+import {
+  BookOpen,
+  ClipboardList,
+  FileText,
+  ListChecks,
+  LayoutDashboard,
+  Menu,
+  Radio,
+  Settings2,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import { AccountMenu } from "@/components/site/AccountMenu";
 import { LanguageSwitcher } from "@/components/site/LanguageSwitcher";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
@@ -80,7 +91,7 @@ export function SecurityWorkRoot() {
 
 export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
   const { workspace, canEdit } = useSecurityWorkspace();
-  const { t } = useT();
+  const { t, lang } = useT();
   const location = useLocation();
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [location.pathname]);
@@ -98,8 +109,26 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
       path: `/security-work/${workspace.id}/monitoring`,
     },
     {
+      to: "/security-work/$workspaceId/analyses",
+      label: lang === "sv" ? "Analyser" : "Analyses",
+      icon: ClipboardList,
+      path: `/security-work/${workspace.id}/analyses`,
+    },
+    {
+      to: "/security-work/$workspaceId/risks",
+      label: lang === "sv" ? "Risker & åtgärder" : "Risks & actions",
+      icon: ListChecks,
+      path: `/security-work/${workspace.id}/risks`,
+    },
+    {
+      to: "/security-work/$workspaceId/reports",
+      label: lang === "sv" ? "Rapporter" : "Reports",
+      icon: FileText,
+      path: `/security-work/${workspace.id}/reports`,
+    },
+    {
       to: "/security-work/$workspaceId/sources",
-      label: t("sw.nav.sources"),
+      label: lang === "sv" ? "Underlag" : "Evidence",
       icon: BookOpen,
       path: `/security-work/${workspace.id}/sources`,
     },

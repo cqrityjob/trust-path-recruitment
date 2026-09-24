@@ -70,4 +70,28 @@ bun run scripts/security-work-ai-jobs-check.ts
 bun run scripts/security-work-processor-check.ts
 ```
 
-`security-work-processor-check.ts --local-node` additionally exercises a loopback processor on 3150 and a separately configured trusted local TLS proxy on 3151. Test certificates and keys belong in a private temporary directory and are never checked in. This optional local check does not enable production processing or relax the HTTPS requirement.
+Run the complete packaged processor verification without preparing a server or certificate:
+
+```sh
+bash scripts/security-work-processor-integration-test.sh
+```
+
+It requires the locked dependencies, Bun, Node 22.13+ and OpenSSL. The script builds the actual standalone artifact, creates a two-day self-signed certificate and random synthetic bearer secret in a private temporary directory, starts Node HTTP and TLS listeners on automatically assigned loopback ports, and runs **13 actual HTTP/TLS checks**. These cover authorization, MIME/signature checks, malformed and empty PDF, PDF hashes, real application transport, compressed DOCX, the 10 MiB request cap and ZIP amplification. No provider or database is contacted. It terminates its own listeners and removes its temporary artifacts. Set `SW_PROCESSOR_TEST_KEEP=1` to retain its private files and build log for diagnosis; listeners still stop.
+
+The browser harness can use the same foreground bootstrap:
+
+```sh
+processor_fixture_dir="$(mktemp -d "${TMPDIR:-/tmp}/sw-browser-processor.XXXXXX")"
+bun run scripts/security-work-processor-local.ts "$processor_fixture_dir" &
+processor_fixture_pid=$!
+# Wait for "$processor_fixture_dir/ready.json" while also checking the child is alive.
+source "$processor_fixture_dir/app.env"
+# Start the Node/Vite application only after sourcing: Node reads its extra CA at startup.
+# Run browser checks, then terminate and wait for this owned bootstrap PID.
+kill -TERM "$processor_fixture_pid"
+wait "$processor_fixture_pid"
+```
+
+The parent harness must use an exit trap to terminate/wait and remove its generated temporary directory even when a check fails. `ready.json` and `app.env` are written atomically after both listeners start. SIGTERM/SIGINT to the bootstrap stop its Node child. `app.env` is mode 0600 and supplies the exact synthetic HTTPS endpoint, matching origin, bearer token, approval marker, extra CA and HTTP test origin. It does not supply database, AI or receipt-signing keys. The harness configures those independently for its isolated test database. Optional `--http-port=<port>` and `--https-port=<port>` arguments pin fixture ports; their default is zero, which asks the OS for free ports. Existing services are never adopted or stopped.
+
+Certificates and keys remain in temporary storage, never the checkout. HTTPS certificate verification stays enabled; no `NODE_TLS_REJECT_UNAUTHORIZED=0`, HTTP production fallback or production activation is introduced. The older `security-work-processor-check.ts --local-node` helper remains available for a manually prepared HTTP 3150/TLS 3151 fixture.

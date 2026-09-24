@@ -111,7 +111,7 @@ export function SecuritySourceDetailPage({ sourceId }: { sourceId: string }) {
   );
 }
 
-function NewSourceItem({
+export function NewSourceItem({
   source,
   close,
   done,

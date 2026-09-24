@@ -7,6 +7,8 @@ import { EMPTY_ALLOWLIST, scanDirectories } from "./e4-evidence-scan";
 
 const evidence = process.env.SW_BROWSER_EVIDENCE_DIR;
 const reportPath = process.env.SW_BROWSER_REPORT;
+const journey = process.env.SW_BROWSER_JOURNEY ?? "manual";
+if (!["manual", "analysis", "ai"].includes(journey)) throw new Error("Unknown browser journey");
 if (!evidence || !reportPath) throw new Error("Missing private browser evidence paths");
 type Suite = {
   suites?: Suite[];
@@ -58,13 +60,26 @@ for (const file of files) {
   }
 }
 for (const row of cases) {
-  for (const screen of ["monitoring", "sources", "settings", "access-denied"]) {
+  for (const screen of journey === "analysis"
+    ? [
+        "navigation",
+        "evidence",
+        "analysis",
+        "report-review",
+        "report-approved",
+        "overview",
+        "sources",
+      ]
+    : journey === "ai"
+      ? ["ai-review", "ai-applied", "ai-stale", "ai-unknown"]
+      : ["monitoring", "sources", "settings", "access-denied"]) {
     if (!files.includes(`${row.project}-${row.language}-${screen}.png`))
       throw new Error(`Missing ${screen} screenshot`);
   }
 }
 const manifest = {
   schemaVersion: 1,
+  journey,
   commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
   workingTreeDirty: Boolean(
     execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim(),
