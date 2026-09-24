@@ -162,6 +162,30 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 
+# Analysis/document extension rolls back before its foundation dependency.
+echo "==> Running Security Work analysis contract assertions"
+SWA_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_analysis_contract_test.sql 2>&1)" || { echo "$SWA_OUT"; exit 1; }
+SWA_PASSED="$(printf '%s\n' "$SWA_OUT" | grep -c 'NOTICE:  ok ' || true)"
+[ "$SWA_PASSED" -ge 58 ] || { echo "$SWA_OUT"; echo 'FAIL: analysis assertion shortfall'; exit 1; }
+echo "    ok  $SWA_PASSED analysis assertions passed"
+SWA_LOG="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -v sw_analysis_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/rollback/20261211090000_security_work_analysis_contract_rollback.sql >"$SWA_LOG" 2>&1; then
+  cat "$SWA_LOG"; rm -f "$SWA_LOG"; echo 'FAIL: adopted analysis rollback succeeded'; exit 1
+fi
+grep -q 'SW_ANALYSIS_ROLLBACK_DATA_PRESENT' "$SWA_LOG" || { cat "$SWA_LOG"; rm -f "$SWA_LOG"; exit 1; }
+rm -f "$SWA_LOG"
+echo '    ok  analysis rollback preserves adopted work'
+psql_q -d "$TEST_DB" -c 'CREATE VIEW public.sw_analysis_dependency_probe AS SELECT id FROM public.sw_documents;' >/dev/null
+SWA_LOG="$(mktemp)"
+if psql -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -d "$TEST_DB" -f supabase/rollback/20261211090000_security_work_analysis_contract_rollback.sql >"$SWA_LOG" 2>&1; then
+ cat "$SWA_LOG"; rm -f "$SWA_LOG"; echo 'FAIL: dependent analysis rollback succeeded'; exit 1
+fi
+grep -q '2BP01' "$SWA_LOG" || { cat "$SWA_LOG"; rm -f "$SWA_LOG"; exit 1; }
+rm -f "$SWA_LOG"
+psql_q -d "$TEST_DB" -c 'DROP VIEW public.sw_analysis_dependency_probe;' >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20261211090000_security_work_analysis_contract_rollback.sql >/dev/null
+echo '    ok  analysis dependency refusal is atomic; pre-adoption rollback succeeds'
+
 # Security Work is an independent workspace boundary. Execute its real-role
 # suite before and after an actual stand-down, and prove the protections fail
 # under the transaction-local planted defects. No adopted work is discarded.
@@ -222,12 +246,17 @@ for sw_round in before after; do
   fi
 done
 
+psql_q -d "$TEST_DB" -f supabase/migrations/20261211090000_security_work_analysis_contract.sql >/dev/null
+SWA_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWA_OUT"; exit 1; }
+echo '    ok  analysis reapplied; extension and foundation assertions pass together'
+
 # Race fixtures commit to coordinate independent sessions. Give them their own
 # clone so no persistent synthetic workspace can affect later rollback proofs.
 echo "==> Running Security Work two-connection concurrency proofs"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_sw_race;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_race TEMPLATE ${TEST_DB}_pristine;" >/dev/null
 PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-concurrency-test.sh
+PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-analysis-concurrency-test.sh
 psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.

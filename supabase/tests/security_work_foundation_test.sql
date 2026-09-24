@@ -180,7 +180,7 @@ SELECT pg_temp.ok(NOT (SELECT prosecdef FROM pg_proc WHERE oid='public.sw_create
   AND NOT has_schema_privilege('anon','sw_private','USAGE'),
   'SW-PRIV public wrapper is invoker and private schema has no caller DDL');
 SELECT pg_temp.ok(NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace='sw_private'::regnamespace
-  AND p.proname NOT IN ('is_human','can_read','can_edit','can_approve','create_personal_workspace')
+  AND p.proname NOT IN ('is_human','can_read','can_edit','can_approve','create_personal_workspace','hash_text','rsa_calibrated','report_bundle','approve_report','revise','reserve_document','reserve_processing','dispatch_processing','complete_processing','export_report','apply_ai_draft')
   AND has_function_privilege('authenticated',p.oid,'EXECUTE')),
   'SW-PRIV internal trigger helpers have no direct authenticated execution');
 
