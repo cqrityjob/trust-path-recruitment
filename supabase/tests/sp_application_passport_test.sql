@@ -36,6 +36,17 @@ INSERT INTO auth.users (id, email) VALUES
   ('a0000000-0000-4000-8000-000000000006', 'holder2@synthetic.test')
 ON CONFLICT (id) DO NOTHING;
 
+-- Every simulated Auth JWT below names a live session for the same actor.
+-- Reuse the synthetic user UUID as its session UUID only within this rolled-
+-- back fixture. auth.jwt() now reads the claims instead of returning {}, so
+-- the real Passport session guard must be satisfied rather than bypassed.
+INSERT INTO auth.sessions (id, user_id) VALUES
+  ('a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000001'),
+  ('a0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000003'),
+  ('a0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000004'),
+  ('a0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000005'),
+  ('a0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000006');
+
 INSERT INTO public.employers (id, name, slug, status) VALUES
   ('b0000000-0000-4000-8000-000000000001', 'Syntetisk Bevakning AB', 'syntetisk-bevakning', 'active'),
   ('b0000000-0000-4000-8000-000000000002', 'Annan Bevakning AB', 'annan-bevakning', 'active')
@@ -178,7 +189,7 @@ BEGIN
   -- =========================================================================
   PERFORM set_config('request.jwt.claim.sub', _holder::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _holder, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _holder, 'role', 'authenticated', 'session_id', _holder)::text, true);
 
   _res := public.sp_submit_application_with_passport(
     _app1, _job, '070-0000000', NULL, 'p/1/cv.pdf', 'cv.pdf', 1000);
@@ -267,7 +278,7 @@ BEGIN
   -- =========================================================================
   PERFORM set_config('request.jwt.claim.sub', _member::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _member, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _member, 'role', 'authenticated', 'session_id', _member)::text, true);
 
   _payload := public.sp_application_disclosure(_app2);
   IF _payload->>'status' <> 'active' THEN
@@ -353,7 +364,7 @@ BEGIN
   -- =========================================================================
   PERFORM set_config('request.jwt.claim.sub', _other::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _other, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _other, 'role', 'authenticated', 'session_id', _other)::text, true);
   _payload := public.sp_application_disclosure(_app2);
   IF _payload->>'status' <> 'none' THEN
     RAISE EXCEPTION 'AC5: an unrelated employer read the disclosure (%)', _payload;
@@ -362,7 +373,7 @@ BEGIN
 
   PERFORM set_config('request.jwt.claim.sub', _bystander::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _bystander, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _bystander, 'role', 'authenticated', 'session_id', _bystander)::text, true);
   _payload := public.sp_application_disclosure(_app2);
   IF _payload->>'status' <> 'none' THEN
     RAISE EXCEPTION 'AC5: an unrelated user read the disclosure';
@@ -372,7 +383,7 @@ BEGIN
   -- An employer cannot authorise on the holder's behalf.
   PERFORM set_config('request.jwt.claim.sub', _member::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _member, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _member, 'role', 'authenticated', 'session_id', _member)::text, true);
   BEGIN
     PERFORM public.sp_share_passport_with_application(_app1, 'employer_review', 30, NULL, NULL);
     RAISE EXCEPTION 'AC5: an employer created a disclosure for the holder';
@@ -385,7 +396,7 @@ BEGIN
   -- A holder cannot attach their Passport to somebody else's application.
   PERFORM set_config('request.jwt.claim.sub', _holder2::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _holder2, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _holder2, 'role', 'authenticated', 'session_id', _holder2)::text, true);
   BEGIN
     PERFORM public.sp_share_passport_with_application(_app1, 'employer_review', 30, NULL, NULL);
     RAISE EXCEPTION 'AC5: a holder attached a Passport to another holder''s application';
@@ -400,7 +411,7 @@ BEGIN
   -- =========================================================================
   PERFORM set_config('request.jwt.claim.sub', _holder2::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _holder2, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _holder2, 'role', 'authenticated', 'session_id', _holder2)::text, true);
 
   _res := public.sp_submit_application_with_passport(
     'f0000000-0000-4000-8000-000000000009', _job, NULL, NULL,
@@ -425,13 +436,13 @@ BEGIN
   -- =========================================================================
   PERFORM set_config('request.jwt.claim.sub', _holder::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _holder, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _holder, 'role', 'authenticated', 'session_id', _holder)::text, true);
   UPDATE public.sp_disclosures SET revoked_at = now()
    WHERE application_id = _app2 AND revoked_at IS NULL;
 
   PERFORM set_config('request.jwt.claim.sub', _member::text, true);
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', _member, 'role', 'authenticated')::text, true);
+    json_build_object('sub', _member, 'role', 'authenticated', 'session_id', _member)::text, true);
   _payload := public.sp_application_disclosure(_app2);
   IF _payload->>'status' <> 'none' THEN
     RAISE EXCEPTION 'AC7: a revoked disclosure is still readable (%)', _payload;

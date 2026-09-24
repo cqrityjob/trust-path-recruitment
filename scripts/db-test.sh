@@ -161,6 +161,75 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
+
+# Security Work is an independent workspace boundary. Execute its real-role
+# suite before and after an actual stand-down, and prove the protections fail
+# under the transaction-local planted defects. No adopted work is discarded.
+for sw_round in before after; do
+  echo "==> Running Security Work foundation assertions (${sw_round} rollback/reapply)"
+  SW_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SW_OUT"; exit 1; }
+  SW_PASSED="$(printf '%s\n' "$SW_OUT" | grep -c 'NOTICE:  ok  ' || true)"
+  [ "$SW_PASSED" -ge 322 ] || { echo "$SW_OUT"; echo "FAIL: Security Work foundation assertion shortfall: $SW_PASSED (floor 322)"; exit 1; }
+  echo "    ok  $SW_PASSED Security Work foundation assertions passed"
+
+  if [ "$sw_round" = before ]; then
+    echo "==> Proving Security Work planted defects are detected"
+    SW_NC_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_negative_controls.sql 2>&1)" || { echo "$SW_NC_OUT"; exit 1; }
+    SW_NC_PASSED="$(printf '%s\n' "$SW_NC_OUT" | grep -c 'NOTICE:  ok  SW-NC ' || true)"
+    [ "$SW_NC_PASSED" -ge 12 ] || { echo "$SW_NC_OUT"; echo "FAIL: Security Work negative-control shortfall: $SW_NC_PASSED (floor 12)"; exit 1; }
+    echo "    ok  $SW_NC_PASSED Security Work mutations detected by their original assertions"
+
+    echo "==> Proving Security Work rollback preserves adopted work"
+    SW_ADOPTED_OUT="$(mktemp)"
+    if psql -v ON_ERROR_STOP=1 -v sw_keep_fixture=true -d "$TEST_DB" \
+      -f supabase/tests/security_work_foundation_test.sql -c 'RESET ROLE;' \
+      -f supabase/rollback/20261210090000_security_work_foundation_rollback.sql >"$SW_ADOPTED_OUT" 2>&1; then
+      cat "$SW_ADOPTED_OUT"; rm -f "$SW_ADOPTED_OUT"
+      echo "FAIL: Security Work rollback accepted an adopted workspace"; exit 1
+    fi
+    if ! grep -q 'ERROR:  SW_ROLLBACK_DATA_PRESENT:' "$SW_ADOPTED_OUT"; then
+      cat "$SW_ADOPTED_OUT"; rm -f "$SW_ADOPTED_OUT"
+      echo "FAIL: adopted Security Work rollback failed for the wrong reason"; exit 1
+    fi
+    rm -f "$SW_ADOPTED_OUT"
+    echo "    ok  rollback refused adopted work; its synthetic transaction was discarded"
+
+    # A future dependency must block the entire rollback, never be removed by
+    # CASCADE or leave half the foundation standing after a later DROP fails.
+    psql_q -d "$TEST_DB" -c 'CREATE VIEW public.sw_rollback_dependency_probe AS SELECT id FROM public.sw_sources;' >/dev/null
+    SW_DEPENDENCY_OUT="$(mktemp)"
+    if psql -v ON_ERROR_STOP=1 -v VERBOSITY=verbose -d "$TEST_DB" \
+      -f supabase/rollback/20261210090000_security_work_foundation_rollback.sql >"$SW_DEPENDENCY_OUT" 2>&1; then
+      cat "$SW_DEPENDENCY_OUT"; rm -f "$SW_DEPENDENCY_OUT"
+      echo "FAIL: Security Work rollback silently removed a planted dependency"; exit 1
+    fi
+    if ! grep -q '2BP01' "$SW_DEPENDENCY_OUT"; then
+      cat "$SW_DEPENDENCY_OUT"; rm -f "$SW_DEPENDENCY_OUT"
+      echo "FAIL: Security Work dependency refusal failed for the wrong reason"; exit 1
+    fi
+    rm -f "$SW_DEPENDENCY_OUT"
+    SW_PRESERVED="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.sw_rollback_dependency_probe') IS NOT NULL) AND (to_regclass('public.sw_record_versions') IS NOT NULL) AND (to_regprocedure('public.sw_create_personal_workspace(text)') IS NOT NULL)")"
+    [ "$SW_PRESERVED" = t ] || { echo "FAIL: dependency refusal left a partial Security Work rollback"; exit 1; }
+    psql_q -d "$TEST_DB" -c 'DROP VIEW public.sw_rollback_dependency_probe;' >/dev/null
+    echo "    ok  dependency refused the whole rollback; earlier drops were rolled back"
+
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261210090000_security_work_foundation_rollback.sql >/dev/null
+    SW_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_namespace WHERE nspname='sw_private') + (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname LIKE 'sw\_%') + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'sw\_%')")"
+    [ "$SW_LEFT" = 0 ] || { echo "FAIL: Security Work rollback left $SW_LEFT object(s)"; exit 1; }
+    echo "    ok  Security Work stood down: no private schema, public relation or RPC remains"
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261210090000_security_work_foundation.sql >/dev/null
+    echo "    ok  Security Work foundation reapplied"
+  fi
+done
+
+# Race fixtures commit to coordinate independent sessions. Give them their own
+# clone so no persistent synthetic workspace can affect later rollback proofs.
+echo "==> Running Security Work two-connection concurrency proofs"
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_sw_race;" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_sw_race TEMPLATE ${TEST_DB}_pristine;" >/dev/null
+PGDATABASE="${TEST_DB}_sw_race" bash scripts/security-work-concurrency-test.sh
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
+
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
   for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments; do
@@ -8349,6 +8418,8 @@ fi
 echo ""
 echo "===================================================="
 echo " DB suite OK: ${PASSED} domain assertions,"
+echo "              ${SW_PASSED} Security Work assertions in each rollback round,"
+echo "              ${SW_NC_PASSED} Security Work planted-defect controls,"
 echo "              ${CD_PASSED} Career Discovery assertions,"
 echo "              ${CD31_PASSED} Career Discovery v3.1 assertions,"
 echo "              ${CDC_PASSED} v3.1 completion + stability assertions,"
