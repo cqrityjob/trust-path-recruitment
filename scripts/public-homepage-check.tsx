@@ -694,6 +694,7 @@ group("T8 · the connected lifecycle links only canonical routes");
     "/about": "src/routes/about.tsx",
     "/feedback": "src/routes/_authenticated.feedback.tsx",
     // Header-only, signed-in entries the same scan sees.
+    "/security-work": "src/routes/_authenticated.security-work.index.tsx",
     "/my-career": "src/routes/_authenticated.my-career.index.tsx",
     "/my-career/profile": "src/routes/_authenticated.my-career.profile.tsx",
     "/reviews": "src/routes/_authenticated.reviews.tsx",
@@ -714,6 +715,14 @@ group("T8 · the connected lifecycle links only canonical routes");
       .map((m) => m[1] ?? m[2])
       .filter((h) => h && h.startsWith("/") && !h.includes("$")),
   );
+  // Security Work is a separate signed-in account context. Recognizing its
+  // real header destination must not turn it into a new public entry product.
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: Security Work stays outside the public homepage content`,
+      !hrefsOf(mainOfLang[lang]).some((href) => href.startsWith("/security-work")),
+    );
+  }
   for (const href of linked) {
     if (href === "/") continue;
     const file = ROUTES[href];

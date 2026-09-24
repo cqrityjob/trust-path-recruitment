@@ -10,10 +10,18 @@ synthetic, in isolated local databases. Production verification was read-only.
 | Real caller-scoped service integration | **74 assertions PASS**, real GoTrue/PostgREST/PostgreSQL 17, no service-role application client. |
 | New Security Work browser journeys | **6/6 PASS**, Chromium desktop, 375 px and 390 px, each in SV and EN; no skips/retries. |
 | Browser evidence gate | **9/9 controls PASS**, including eight deliberately invalid or unsafe evidence packages rejected. All 24 actual screenshots and manifest pass the strict shared leak scan. |
+| Existing source negative controls | **48 suites / 1,423 mutations PASS** at `dc47673`; every file restored byte-for-byte and working tree clean. Final-head CI repeats the controls. |
 | Application / script TypeScript | Both PASS. |
 | Production build | PASS. |
 | Full lint comparison | Exact baseline **942 errors / 78 warnings**; branch **942 / 84**. Zero new errors, six new `react-refresh/only-export-components` warnings in mixed context/UI helper modules. Full lint is not green; unrelated `.claude` worktrees excluded from both comparison scope and claims. |
 | Release guards | Release parity, empty deploy plan, release frontier and schema-first PASS. |
+
+The initial CI run exposed one stale homepage guard: its destination allowlist
+also scans authenticated header links and did not yet recognize the new real
+`/security-work` route. The guard now checks that route's backing file and adds
+SV/EN assertions that the public homepage content still has no Security Work
+entry. Both homepage and employer landing guards pass locally; no public page
+content or test strictness was removed to resolve the failure.
 
 Service assertions cover concurrent/idempotent onboarding, profile persistence,
 version conflicts, read-only viewers, unrelated users, revoked membership,
