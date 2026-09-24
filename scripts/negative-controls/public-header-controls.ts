@@ -107,6 +107,24 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "footer must still name both products",
   },
+  {
+    id: "PH-NC-APP-MENU-BREAKPOINT",
+    defect: "the seven-item application sheet disappears at 1024px before its desktop nav appears",
+    file: HEADER,
+    find: 'appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden"',
+    replace: 'appMode ? "lg:hidden" : "lg:hidden", open ? "block" : "hidden"',
+    guard: GUARD,
+    expect: "the compact sheet must use xl for the candidate app and lg for the public header",
+  },
+  {
+    id: "PH-NC-APP-NAV-BREAKPOINT",
+    defect: "the seven-item candidate nav appears at 1024px while the compact menu is still active",
+    file: "src/components/site/CandidateAppNav.tsx",
+    find: "gap-4 xl:flex 2xl:gap-6",
+    replace: "gap-4 lg:flex 2xl:gap-6",
+    guard: GUARD,
+    expect: "the seven-destination candidate nav must appear at xl, never at lg",
+  },
 ];
 
 runControls("public-header", MUTATIONS);

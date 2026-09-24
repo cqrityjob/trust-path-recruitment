@@ -1,4 +1,4 @@
-name: Security Work manual browser evidence
+name: Security Work browser evidence
 
 on:
   pull_request:
@@ -8,6 +8,7 @@ on:
       - "e2e/security-work*.spec.ts"
       - "scripts/security-work*"
       - "scripts/fixtures/security-work*"
+      - "deploy/security-work-processor/**"
       - "scripts/e4-evidence-scan.ts"
       - "supabase/migrations/**"
       - "playwright.config.ts"
@@ -25,7 +26,7 @@ concurrency:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       SUPABASE_CLI_VERSION: "2.111.0"
     steps:
@@ -33,11 +34,30 @@ jobs:
         with:
           persist-credentials: false
       - name: Allocate this run's private stack directory
-        run: echo "SW_BROWSER_STATE_DIR=$RUNNER_TEMP/security-work-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+        run: |
+          echo "SW_BROWSER_STATE_DIR=$RUNNER_TEMP/security-work-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >> "$GITHUB_ENV"
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: "1.3.14"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.3"
       - run: bun install --frozen-lockfile
+      - name: Analysis, provider and bounded parser contracts
+        run: |
+          bun run scripts/security-work-analysis-check.ts
+          bun run scripts/security-work-processing-check.ts
+          bun run scripts/security-work-ai-jobs-check.ts
+          bun run scripts/security-work-ai-quality-check.ts
+          bun run scripts/security-work-question-provenance-check.ts
+          bun run scripts/security-work-processor-check.ts
+          bun run scripts/security-work-processor-artifact-check.ts
+          bash scripts/security-work-processor-integration-test.sh
+      - name: Build and exercise the pinned processor container locally
+        run: |
+          bash scripts/security-work-processor-container-build.sh sw-processor:ci
+          bash scripts/security-work-processor-container-test.sh sw-processor:ci
       - uses: supabase/setup-cli@v1
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
@@ -50,6 +70,25 @@ jobs:
           docker --version
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
+      - name: Print and verify synthetic reports in all templates and languages
+        env:
+          SW_REPORT_PDF_DIR: ${{ runner.temp }}/security-work-print
+        run: bun run scripts/security-work-report-print-check.ts
+      - name: Publish verified synthetic print examples
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-work-synthetic-pdf-print
+          path: |
+            ${{ runner.temp }}/security-work-print/rsa-sv.pdf
+            ${{ runner.temp }}/security-work-print/rsa-en.pdf
+            ${{ runner.temp }}/security-work-print/monitoring-sv.pdf
+            ${{ runner.temp }}/security-work-print/monitoring-en.pdf
+            ${{ runner.temp }}/security-work-print/legacy_security-sv.pdf
+            ${{ runner.temp }}/security-work-print/legacy_security-en.pdf
+            ${{ runner.temp }}/security-work-print/manifest.json
+          if-no-files-found: error
+          retention-days: 14
       - name: Verify evidence publication gate with failing controls
         run: bun run scripts/security-work-browser-evidence-check.ts
       - name: Start dedicated local stack and replay migrations
@@ -69,6 +108,25 @@ jobs:
         with:
           name: security-work-manual-browser
           path: ${{ steps.browser.outputs.evidence_dir }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Real document-to-report SV/EN desktop and mobile journeys
+        id: analysis
+        run: bash scripts/security-work-analysis-browser-run.sh
+      - name: Publish validated analysis screenshots and manifest
+        if: success() && steps.analysis.outputs.evidence_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-work-analysis-browser
+          path: ${{ steps.analysis.outputs.evidence_dir }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish validated synthetic AI review screenshots
+        if: success() && steps.analysis.outputs.ai_evidence_dir != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-work-synthetic-ai-review
+          path: ${{ steps.analysis.outputs.ai_evidence_dir }}
           if-no-files-found: error
           retention-days: 14
       - name: Stop only this workflow's local stack

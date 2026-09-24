@@ -1,0 +1,16 @@
+# Allowlisted build context: no .env, attachments, reports, git state or application assets.
+**
+!package.json
+!bun.lock
+!scripts/
+!scripts/security-work-processor*.ts
+!scripts/security-work-processor-runtime.json
+!src/
+!src/lib/
+!src/lib/security-work/
+!src/lib/security-work/processing/
+!src/lib/security-work/processing/**
+!deploy/
+!deploy/security-work-processor/
+!deploy/security-work-processor/Dockerfile
+!deploy/security-work-processor/Dockerfile.dockerignore

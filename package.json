@@ -2,6 +2,10 @@
   "private": true,
   "scripts": {
     "security-work:service-check": "bun run scripts/security-work-service-check.ts",
+    "security-work:analysis-check": "bun run scripts/security-work-analysis-check.ts",
+    "security-work:processing-check": "bun run scripts/security-work-processing-check.ts && bun run scripts/security-work-ai-jobs-check.ts && bun run scripts/security-work-processor-check.ts",
+    "security-work:processor-integration": "bash scripts/security-work-processor-integration-test.sh",
+    "security-work:analysis-browser": "bash scripts/security-work-analysis-browser-run.sh",
     "security-work:browser": "bash scripts/security-work-browser-run.sh",
     "dev": "vite dev",
     "admin-employer-status-guard:check": "bun run scripts/admin-employer-status-guard-check.ts",

@@ -514,7 +514,9 @@ export function SiteHeader() {
               36px -- see `touchTarget`. These two pills render in the PUBLIC
               header for a signed-in visitor, so they are public-page
               controls and the same minimum binds them. */}
-          <div className="hidden shrink-0 items-center gap-2 lg:flex">
+          <div
+            className={cn("hidden shrink-0 items-center gap-2", appMode ? "xl:flex" : "lg:flex")}
+          >
             {roleLinks.map((r) => (
               <Link
                 key={r.to}
@@ -612,7 +614,8 @@ export function SiteHeader() {
             type="button"
             className={cn(
               // 44px touch target, which a p-2 icon button was not.
-              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary lg:hidden",
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary",
+              appMode ? "xl:hidden" : "lg:hidden",
               focusRing,
             )}
             /* Was a hardcoded English "Menu" on a Swedish-first product,
@@ -634,12 +637,15 @@ export function SiteHeader() {
       {/* The sheet scrolls on its own rather than pushing the page: signed in,
           with an organisation and the account block, it is taller than a 320px
           phone in landscape, and the last rows were unreachable. */}
-      {/* The breakpoint stays `lg` and is asserted by header-entry:check --
-          six Swedish nav items plus two actions do not fit at 768px. */}
-      <div id="site-menu" className={cn(MENU_SURFACE + " lg:hidden", open ? "block" : "hidden")}>
+      {/* The public header stays at lg. The seven-destination application
+          header uses xl so its Swedish labels and account controls fit. */}
+      <div
+        id="site-menu"
+        className={cn(MENU_SURFACE, appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden")}
+      >
         <Container className="flex flex-col gap-1 py-4">
           {/* ── Mobile is the same product, not a collapsed website ──────
-              The four destinations come from the SAME array the desktop
+              The seven destinations come from the SAME array the desktop
               bar renders, so the two cannot drift; they come FIRST, before
               anything else in the sheet; and each is a 44px target with
               the same three-signal current-location treatment. */}

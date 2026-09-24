@@ -56,7 +56,26 @@ const MUTATIONS: readonly Mutation[] = [
     find: '    key: "passport",\n    to: "/passport",',
     replace: '    key: "assessments",\n    to: "/academy",',
     guard: GUARD,
-    expect: "the owner's six, in the images' order",
+    expect: "the owner's seven, in the current agreed order",
+  },
+
+  {
+    id: "CNC-NC-SECURITY-WORK-MISSING",
+    defect: "Security Work is removed from the owner's signed-in main navigation",
+    file: NAV,
+    find: '    key: "security-work",\n    to: "/security-work",',
+    replace: '    key: "hidden-security-work",\n    to: "/security-work",',
+    guard: GUARD,
+    expect: "the owner's seven, in the current agreed order",
+  },
+  {
+    id: "CNC-NC-SECURITY-WORK-EMPLOYER-GATE",
+    defect: "the general Security Work entry is replaced with employer onboarding",
+    file: NAV,
+    find: '    key: "security-work",\n    to: "/security-work",',
+    replace: '    key: "security-work",\n    to: "/employer",',
+    guard: GUARD,
+    expect: "each of the seven points at its canonical destination",
   },
 
   // ---- A control with nowhere to go ----------------------------------------

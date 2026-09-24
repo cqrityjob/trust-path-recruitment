@@ -141,17 +141,17 @@ const ROUTE_IDS: string[] = (() => {
 })();
 
 /* ------------------------------------------------------------------ */
-/* 1 · Four destinations, once each, on BOTH viewports                 */
+/* 1 · Seven destinations, once each, on BOTH viewports                 */
 /* ------------------------------------------------------------------ */
 
 group("1 · one canonical link per product, desktop and mobile");
 {
-  // The owner's six, in the order the images underline them:
+  // The owner's seven, under the explicit 2026-09-24 decision:
   //
-  //   Översikt · Security Passport · CV · Jobb · Karriär · Tester & utveckling
+  //   Översikt · Security Passport · Mitt säkerhetsarbete · CV · Jobb · Karriär · Tester & utveckling
   //
-  // Six since images 1 and 2 put the CV in the navigation; it was five, and
-  // candidate-app-nav.ts records that reversal on the `cv` entry.
+  // Seven since the explicit Security Work placement decision superseded
+  // the prior six-item canon.
   //
   // The Passport is SECOND because it is the durable thing this product
   // builds for a person; jobs, career and tests are what happens around it.
@@ -175,7 +175,13 @@ group("1 · one canonical link per product, desktop and mobile");
       sv: "Security Passport",
       en: "Security Passport",
     },
-    // Third, per images 1 and 2. The label is the same word in both
+    {
+      key: "security-work",
+      to: "/security-work",
+      sv: "Mitt säkerhetsarbete",
+      en: "My Security Work",
+    },
+    // Fourth under the explicit 2026-09-24 Security Work decision. The label is the same word in both
     // languages, which is why sv and en match here.
     { key: "cv", to: "/my-career/cv", sv: "CV", en: "CV" },
     { key: "jobs", to: "/jobs", sv: "Jobb", en: "Jobs" },
@@ -187,7 +193,7 @@ group("1 · one canonical link per product, desktop and mobile");
   ];
 
   ck(
-    "the navigation is exactly six items, in the agreed order",
+    "the navigation is exactly seven items, in the agreed order",
     CANDIDATE_APP_NAV.map((i) => i.key).join(",") === EXPECTED.map((e) => e.key).join(","),
   );
 
@@ -195,9 +201,9 @@ group("1 · one canonical link per product, desktop and mobile");
     const html = render(React.createElement(CandidateAppNav, { variant, activeKey: "overview" }));
     const hrefs = Array.from(html.matchAll(/href="([^"]*)"/g)).map((m) => m[1]!);
 
-    ck(`${variant}: exactly six links`, hrefs.length === 6);
+    ck(`${variant}: exactly seven links`, hrefs.length === 7);
     ck(
-      `${variant}: the six destinations, in order`,
+      `${variant}: the seven destinations, in order`,
       hrefs.join(",") === EXPECTED.map((e) => e.to).join(","),
     );
     for (const e of EXPECTED) {
@@ -486,6 +492,7 @@ group("6 · every navigation item resolves");
     "/career-center": "src/routes/career-center.index.tsx",
     "/jobs": "src/routes/jobs.index.tsx",
     "/passport": "src/routes/_authenticated.passport.index.tsx",
+    "/security-work": "src/routes/_authenticated.security-work.index.tsx",
     "/academy": "src/routes/_authenticated.academy.index.tsx",
     // The CV's own index, reached through the layout route of the same name.
     "/my-career/cv": "src/routes/_authenticated.my-career.cv.index.tsx",
@@ -694,7 +701,7 @@ group("7 · one name per product");
 /* 8 · The account menu owns My Profile, the nav does not              */
 /* ------------------------------------------------------------------ */
 
-group("8 · primary navigation stays six items");
+group("8 · primary navigation stays seven items");
 {
   const menu = code(read("src/components/site/AccountMenu.tsx"));
   ck("My Profile is reached from the account menu", menu.includes('to="/my-career/profile"'));
