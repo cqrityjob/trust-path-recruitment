@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "journey": "analysis",
+  "commit": "7a3a4638747ca3acea45c076a4bcfee8237ee91c",
+  "workingTreeDirty": true,
+  "environment": "disposable-local-gotrue-postgrest-postgresql",
+  "supabaseCli": "2.111.0",
+  "cases": [
+    {
+      "project": "chromium",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "chromium",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "project": "mobile-375",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "mobile-375",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "project": "mobile-390",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "mobile-390",
+      "language": "en",
+      "passed": true
+    }
+  ],
+  "captures": [
+    {
+      "file": "chromium-sv-evidence.png",
+      "sha256": "f27e6064bea7ce71bafe98a7f5e6c943d7b119007cc5769cb224e30f47ed5010"
+    },
+    {
+      "file": "chromium-sv-overview.png",
+      "sha256": "30691bcaf46bb91596094b1e6340c897c11ca2b92aa27e99f8e551c7883d1bf5"
+    },
+    {
+      "file": "chromium-sv-report-approved.png",
+      "sha256": "25067b1179fb058fb2ab40100ad5118ab5dcdf4b6f1605e09e86248534592f83"
+    },
+    {
+      "file": "mobile-375-en-overview.png",
+      "sha256": "95ba30622d34314de90e166262a0755d0ff28d1d9fb75e35bac46d2cc1b9e296"
+    },
+    {
+      "file": "mobile-375-sv-sources.png",
+      "sha256": "1267d256bbd2348a58ba519c5854786bf14586cf3e94eb910221136272a59ae5"
+    },
+    {
+      "file": "mobile-390-en-report-review.png",
+      "sha256": "d0c230209ec0888b5fb1c6bebe693cf087bda2d5aff5e1c3289bd1d0d9ea437e"
+    }
+  ],
+  "rawAuthenticatedArtifactsPublished": false,
+  "selectionNote": "Six visually reviewed representative captures selected from a 42-capture, six-journey local run. The source run used uncommitted application changes; this is not a deployed-version claim. Full captures are reproduced by the CI browser job."
+}

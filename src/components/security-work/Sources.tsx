@@ -1,11 +1,13 @@
 import { saveSourceInput } from "@/lib/security-work/inputs";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Plus } from "lucide-react";
 import { saveSecuritySource } from "@/lib/security-work/security-work.functions";
 import type { SaveSourceInput } from "@/lib/security-work/inputs";
 import type { Source } from "@/lib/security-work/types";
+import { WorkspaceDocuments } from "./Evidence";
+import { useWorkText } from "./analysis-ui";
 import { useT } from "@/i18n/context";
 import { useSecurityWorkspace, useWorkMutation } from "./context";
 import {
@@ -24,8 +26,11 @@ import {
 
 export function SecuritySourcesPage() {
   const { t } = useT();
+  const l = useWorkText();
   const { workspace, sources, canEdit } = useSecurityWorkspace();
+  const manualSources = sources.filter((source) => source.source_type !== "document");
   const [adding, setAdding] = useState(false);
+  const manualSection = useRef<HTMLElement>(null);
   const addButton =
     canEdit && !adding ? (
       <WorkButton data-testid="sw-add-source" onClick={() => setAdding(true)}>
@@ -35,39 +40,62 @@ export function SecuritySourcesPage() {
     ) : null;
   return (
     <>
-      <PageHeading title={t("sw.sources.title")} body={t("sw.sources.body")} action={addButton} />
-      {adding && <SecuritySourceForm close={() => setAdding(false)} />}
-      {sources.length === 0 && !adding ? (
-        <EmptyState title={t("sw.sources.empty")} body={t("sw.sources.emptyBody")} />
-      ) : (
-        <ul className="grid gap-4 lg:grid-cols-2">
-          {sources.map((source) => (
-            <li key={source.id} className={`${panelClass} flex min-w-0 flex-col gap-3`}>
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="rounded-full bg-secondary px-2.5 py-1">
-                  {t(source.active ? "sw.active" : "sw.paused")}
-                </span>
-                <span className="px-1 py-1 text-muted-foreground">
-                  {t(
-                    source.source_type === "manual" ? "sw.sources.manual" : "sw.sources.reference",
-                  )}
-                </span>
-              </div>
-              <h2 className="break-words font-display text-lg font-semibold">{source.name}</h2>
-              <p className="break-words text-sm text-muted-foreground">{source.publisher}</p>
-              <WorkButton asChild variant="outline" className="mt-auto self-start">
-                <Link
-                  to="/security-work/$workspaceId/sources/$sourceId"
-                  params={{ workspaceId: workspace.id, sourceId: source.id }}
-                >
-                  {t("sw.sources.open")}
-                  <ArrowRight aria-hidden="true" />
-                </Link>
-              </WorkButton>
-            </li>
-          ))}
-        </ul>
-      )}
+      <PageHeading
+        title={l("Underlag", "Evidence")}
+        body={l(
+          "Privata dokument, manuella observationer och källreferenser samlade för dina analyser.",
+          "Private documents, manual observations and source references for your analyses.",
+        )}
+      />
+      <WorkspaceDocuments
+        onManual={() => {
+          manualSection.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          manualSection.current?.focus();
+        }}
+      />
+      <section ref={manualSection} tabIndex={-1} className="space-y-5 border-t border-border pt-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-xl font-semibold">{t("sw.sources.title")}</h2>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("sw.sources.body")}</p>
+          </div>
+          {addButton}
+        </div>
+        {adding && <SecuritySourceForm close={() => setAdding(false)} />}
+        {manualSources.length === 0 && !adding ? (
+          <EmptyState title={t("sw.sources.empty")} body={t("sw.sources.emptyBody")} />
+        ) : (
+          <ul className="grid gap-4 lg:grid-cols-2">
+            {manualSources.map((source) => (
+              <li key={source.id} className={`${panelClass} flex min-w-0 flex-col gap-3`}>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full bg-secondary px-2.5 py-1">
+                    {t(source.active ? "sw.active" : "sw.paused")}
+                  </span>
+                  <span className="px-1 py-1 text-muted-foreground">
+                    {t(
+                      source.source_type === "manual"
+                        ? "sw.sources.manual"
+                        : "sw.sources.reference",
+                    )}
+                  </span>
+                </div>
+                <h2 className="break-words font-display text-lg font-semibold">{source.name}</h2>
+                <p className="break-words text-sm text-muted-foreground">{source.publisher}</p>
+                <WorkButton asChild variant="outline" className="mt-auto self-start">
+                  <Link
+                    to="/security-work/$workspaceId/sources/$sourceId"
+                    params={{ workspaceId: workspace.id, sourceId: source.id }}
+                  >
+                    {t("sw.sources.open")}
+                    <ArrowRight aria-hidden="true" />
+                  </Link>
+                </WorkButton>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </>
   );
 }
@@ -253,8 +281,10 @@ export function SecuritySourceForm({ source, close }: { source?: Source; close: 
         <WorkButton
           type="button"
           variant="outline"
-          disabled={!canEdit || save.isPending}
-          onClick={close}
+          disabled={save.isPending}
+          onClick={() => {
+            if (!dirty || window.confirm(t("sw.unsaved.leave"))) close();
+          }}
         >
           {t("sw.cancel")}
         </WorkButton>

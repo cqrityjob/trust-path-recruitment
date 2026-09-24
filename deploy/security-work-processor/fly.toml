@@ -1,0 +1,38 @@
+# Template only. Supply --app after owner approval; never commit bearer secrets here.
+primary_region = "fra"
+kill_signal = "SIGTERM"
+kill_timeout = "20s"
+
+# Deploy only with --image <approved registry digest>, using the local allowlisted builder.
+
+[env]
+  NODE_ENV = "production"
+  SW_PROCESSOR_HOST = "0.0.0.0"
+  SW_PROCESSOR_PORT = "8789"
+
+[http_service]
+  internal_port = 8789
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 1
+    hard_limit = 2
+
+  [[http_service.checks]]
+    grace_period = "15s"
+    interval = "30s"
+    method = "GET"
+    timeout = "3s"
+    path = "/healthz"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 2
+  memory = "1gb"
+
+[deploy]
+  strategy = "rolling"

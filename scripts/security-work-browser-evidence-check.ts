@@ -19,7 +19,12 @@ type Report = {
     tests: { projectName: string; status: string; results: { status: string }[] }[];
   }[];
 };
-function check(name: string, mutate: (evidence: string, report: Report) => void, passes: boolean) {
+function check(
+  name: string,
+  mutate: (evidence: string, report: Report) => void,
+  passes: boolean,
+  journey = "manual",
+) {
   const evidence = path.join(directory, name);
   mkdirSync(evidence);
   const report: Report = { specs: [] };
@@ -29,14 +34,31 @@ function check(name: string, mutate: (evidence: string, report: Report) => void,
         title: `[${language}] synthetic gate control`,
         tests: [{ projectName: project, status: "expected", results: [{ status: "passed" }] }],
       });
-      for (const screen of screens)
+      for (const screen of journey === "analysis"
+        ? [
+            "navigation",
+            "evidence",
+            "analysis",
+            "report-review",
+            "report-approved",
+            "overview",
+            "sources",
+          ]
+        : journey === "ai"
+          ? ["ai-review", "ai-applied", "ai-stale", "ai-unknown"]
+          : screens)
         writeFileSync(path.join(evidence, `${project}-${language}-${screen}.png`), png);
     }
   mutate(evidence, report);
   const reportPath = path.join(directory, `${name}.json`);
   writeFileSync(reportPath, JSON.stringify(report));
   const result = spawnSync(process.execPath, ["scripts/security-work-browser-evidence.ts"], {
-    env: { ...process.env, SW_BROWSER_EVIDENCE_DIR: evidence, SW_BROWSER_REPORT: reportPath },
+    env: {
+      ...process.env,
+      SW_BROWSER_EVIDENCE_DIR: evidence,
+      SW_BROWSER_REPORT: reportPath,
+      SW_BROWSER_JOURNEY: journey,
+    },
     encoding: "utf8",
   });
   assert.equal(result.status === 0, passes, `${name}: unexpected publication result`);
@@ -44,6 +66,21 @@ function check(name: string, mutate: (evidence: string, report: Report) => void,
 }
 try {
   check("complete-synthetic-control", () => {}, true);
+  check("complete-analysis-control", () => {}, true, "analysis");
+  check("complete-ai-control", () => {}, true, "ai");
+  check(
+    "missing-ai-review",
+    (evidence) => unlinkSync(path.join(evidence, "mobile-375-sv-ai-review.png")),
+    false,
+    "ai",
+  );
+  check(
+    "missing-approved-report",
+    (evidence) => unlinkSync(path.join(evidence, "chromium-sv-report-approved.png")),
+    false,
+    "analysis",
+  );
+  check("unknown-journey", () => {}, false, "unknown");
   check(
     "missing-screenshot",
     (evidence) => unlinkSync(path.join(evidence, "chromium-sv-monitoring.png")),

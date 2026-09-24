@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "journey": "ai",
+  "commit": "6d7762683fc768f90b05506a2ade1e2ced49ed3a",
+  "workingTreeDirty": true,
+  "environment": "disposable-local-gotrue-postgrest-postgresql",
+  "supabaseCli": "2.111.0",
+  "cases": [
+    {
+      "project": "chromium",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "chromium",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "project": "mobile-375",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "mobile-375",
+      "language": "en",
+      "passed": true
+    },
+    {
+      "project": "mobile-390",
+      "language": "sv",
+      "passed": true
+    },
+    {
+      "project": "mobile-390",
+      "language": "en",
+      "passed": true
+    }
+  ],
+  "captures": [
+    {
+      "file": "chromium-sv-ai-review.png",
+      "sha256": "04752bff0d0beded26dcf36e758c812380132c883c8385744d95813cb94bc6c4"
+    },
+    {
+      "file": "mobile-390-en-ai-unknown.png",
+      "sha256": "d0c28b427a6831fca87e218e7a4f43a368b259315cf01c6df014a04dd6a071b8"
+    }
+  ],
+  "rawAuthenticatedArtifactsPublished": false,
+  "selectionNote": "Selected synthetic AI-review captures from six real local browser/auth/RLS journeys. Provider results are signed test fixtures; no live AI call. Application changes were uncommitted during this run."
+}

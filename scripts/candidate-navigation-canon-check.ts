@@ -16,14 +16,13 @@
 // the canon that replaced it, which is strictly more than the old guard
 // covered.
 //
-//   1. SIX destinations, the owner's six, each exactly once, and no two
+//   1. SEVEN destinations, the owner's seven, each exactly once, and no two
 //      of them resolving to the same place.
 //   2. No retired label returns. "Min karriär" may not be a candidate
 //      navigation label while "Översikt" is the name of that destination.
 //   3. Career Card is not in the navigation and is not a reachable pilot
 //      page — its route must redirect, not render.
-//   4. The CV is not a primary destination. It is contextual, by the
-//      owner's explicit rule.
+//   4. CV has one primary destination and remains contextually reachable.
 //   5. No second candidate section navigation is rendered in the shell.
 //   6. Every primary control has a destination that resolves to a real
 //      route in the generated route tree. A nav item pointing at a path
@@ -78,21 +77,29 @@ const navSrc = read(NAV_SRC);
 const navCode = code(navSrc);
 
 /* ------------------------------------------------------------------ */
-/* 1 · The owner's six, once each, no two the same                     */
+/* 1 · The owner's seven, once each, no two the same                     */
 /* ------------------------------------------------------------------ */
-console.log("\n1 · the six canonical destinations");
+console.log("\n1 · the seven canonical destinations");
 
 const keys = Array.from(navCode.matchAll(/key: "([^"]+)"/g)).map((m) => m[1]!);
 const tos = Array.from(navCode.matchAll(/\n\s*to: "([^"]+)"/g)).map((m) => m[1]!);
 const labelKeys = Array.from(navCode.matchAll(/labelKey: "([^"]+)"/g)).map((m) => m[1]!);
 
-// Six since the owner's images 1 and 2 put the CV in the navigation. It was
-// five, and candidate-app-nav.ts records that reversal on the `cv` entry.
-// The ORDER is the images' order, not this array's convenience.
-const EXPECTED_KEYS = ["overview", "passport", "cv", "jobs", "career", "assessments"];
+// Owner decision 2026-09-24 inserts Security Work directly after Passport.
+// This legitimately supersedes the six-item canon, while preserving uniqueness.
+const EXPECTED_KEYS = [
+  "overview",
+  "passport",
+  "security-work",
+  "cv",
+  "jobs",
+  "career",
+  "assessments",
+];
 const EXPECTED_TOS = [
   "/my-career",
   "/passport",
+  "/security-work",
   "/my-career/cv",
   "/jobs",
   "/career-center",
@@ -101,11 +108,11 @@ const EXPECTED_TOS = [
 
 check(
   keys.join(",") === EXPECTED_KEYS.join(","),
-  `the navigation is exactly the owner's six, in the images' order (got ${keys.join(",") || "nothing"})`,
+  `the navigation is exactly the owner's seven, in the current agreed order (got ${keys.join(",") || "nothing"})`,
 );
 check(
   tos.join(",") === EXPECTED_TOS.join(","),
-  "each of the six points at its canonical destination",
+  "each of the seven points at its canonical destination",
 );
 check(
   new Set(tos).size === tos.length,

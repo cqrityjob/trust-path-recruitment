@@ -29,47 +29,12 @@
 // else. Which link is drawn has never been the boundary and is not the
 // boundary now.
 
-/** The five destinations, in the owner's order.
- *
- *  Översikt · Security Passport · CV · Jobb · Karriär · Tester & utveckling.
- *  These are the five the owner's sketches name, one per underlined
- *  navigation item, and the Passport is second because it is the durable
- *  thing this product builds for a person; jobs, career and tests are what
- *  happens around it.
- *
- *  Six. This was five until the owner's images 1 and 2 put the CV in
- *  the navigation; the reversal is recorded on the `cv` entry below.
- *
- *  ── "ÖVERSIKT", NOT "MIN KARRIÄR" ────────────────────────────────────
- *
- *  This item used to read "Min karriär" while the section strip inside
- *  /my-career simultaneously offered "Översikt" pointing at the SAME URL:
- *  one destination presented as two differently-named places, one above
- *  the other. The owner's review named it, and the fix is one label and
- *  one navigation. The strip that carried that second "Översikt" is
- *  retired; the route shell in routes/_authenticated.my-career.tsx records
- *  why, and candidate-navigation-canon-check.ts fails the build if a second
- *  candidate section navigation comes back.
- *
- *  The ROUTE stays /my-career. The owner's rule is about the label a
- *  candidate reads; renaming the path would break seven shipped child
- *  routes, the account menu, the employer-side candidate views, the e2e
- *  suites and every pilot bookmark, and buy nothing the label does not
- *  already buy.
- *
- *  ── CAREER IS A DESTINATION, NOT A FOOTNOTE ──────────────────────────
- *
- *  Career Discovery, the saved career analysis and the career journey used
- *  to light "Min karriär", because there was nowhere else for them to go.
- *  They are one career product and they light Karriär now.
- *
- *  Career Card, My Profile and Career Analysis are NOT items here: Career
- *  Card is hidden for the pilot, and the rest belong inside a destination.
- *  The CV WAS in this list, on the owner's earlier explicit rule; images 1
- *  and 2 moved it into the navigation and the `cv` entry records why. Premium SaaS is not more navigation. Reviewing is not here
- *  either: it is a separate authorised capability, reached from the account
- *  menu's workspace switch, and giving it equal billing beside the
- *  candidate's own products would say otherwise. */
+/** The owner's seven destinations (2026-09-24):
+ * Overview · Security Passport · My Security Work · CV · Jobs · Career ·
+ * Tests & development. This explicitly replaces the former six-item canon.
+ * Career Card and My Profile remain contextual/account destinations.
+ * Both viewport variants consume this definition; visibility grants no access.
+ */
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export type CandidateNavKey =
@@ -78,6 +43,7 @@ export type CandidateNavKey =
   | "cv"
   | "jobs"
   | "passport"
+  | "security-work"
   | "assessments";
 
 export type CandidateNavItem = {
@@ -141,10 +107,18 @@ export const CANDIDATE_APP_NAV: readonly CandidateNavItem[] = [
     routeIds: ["/_authenticated/passport"],
   },
   {
+    key: "security-work",
+    to: "/security-work",
+    // Owner decision 2026-09-24: a visible professional work tool directly
+    // after Passport, including before the first personal workspace exists.
+    // This navigation grants no workspace membership or employer role.
+    labelKey: "sw.name",
+    routeIds: ["/_authenticated/security-work"],
+  },
+  {
     key: "cv",
     to: "/my-career/cv",
-    // "CV" — the owner's images 1 and 2 both place it third, between the
-    // Passport and Jobb.
+    // CV follows Security Work under the current seven-destination order.
     //
     // ── THIS REVERSES AN EARLIER EXPLICIT RULE, DELIBERATELY ──────────
     //

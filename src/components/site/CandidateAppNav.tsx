@@ -1,7 +1,7 @@
 // The signed-in candidate's primary navigation, rendered.
 //
 // One component for both viewports. The desktop bar and the mobile sheet
-// differ in layout and in nothing else: same four destinations, same
+// differ in layout and in nothing else: same seven destinations, same
 // order, same labels, same current-location treatment, from the same
 // array (CANDIDATE_APP_NAV). The bug this shape rules out is the one the
 // previous header actually had — a control that existed at 1440 and
@@ -50,7 +50,7 @@ export function CandidateAppNav({
     <nav
       aria-label={t("appnav.aria")}
       data-candidate-app-nav={variant}
-      className={cn(mobile ? "flex flex-col gap-1" : "hidden items-center gap-6 lg:flex xl:gap-8")}
+      className={cn(mobile ? "flex flex-col gap-1" : "hidden items-center gap-4 xl:flex 2xl:gap-6")}
     >
       {CANDIDATE_APP_NAV.map((item) => {
         const current = item.key === activeKey;
@@ -97,7 +97,7 @@ export function CandidateAppNav({
               "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               mobile
                 ? "flex min-h-[44px] items-center justify-between gap-2 border-l-2 px-2 py-2 text-sm hover:bg-muted"
-                : "relative inline-flex min-h-[44px] items-center gap-1.5 py-1 text-sm",
+                : "relative inline-flex min-h-[44px] items-center gap-1.5 py-1 text-sm whitespace-nowrap",
               current
                 ? mobile
                   ? "border-accent font-semibold text-foreground"
