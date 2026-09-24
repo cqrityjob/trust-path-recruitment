@@ -49,8 +49,13 @@ const port = (name: string) => {
 const configuration = {
   httpPort: port("http"),
   httpsPort: port("https"),
-  token: randomBytes(32).toString("hex"),
+  upstreamPort: port("upstream-http"),
+  token: port("upstream-http")
+    ? (process.env.SW_PROCESSOR_TEST_AUTH_TOKEN ?? "")
+    : randomBytes(32).toString("hex"),
 };
+if (configuration.token.length < 32)
+  throw new Error("External synthetic processor needs a test-only bearer token.");
 writeFileSync(join(state, "fixture.json"), JSON.stringify(configuration), { mode: 0o600 });
 const childEnv = { PATH: process.env.PATH ?? "" };
 function run(command: string, args: string[], quiet = false) {

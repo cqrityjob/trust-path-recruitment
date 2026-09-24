@@ -14,6 +14,9 @@ import { existsSync, mkdirSync } from "node:fs";
 import {
   analysisOutputSchema,
   REPORT_SECTIONS,
+  SW_AI_TASK_VERSION,
+  SW_AI_PROMPT_VERSION,
+  SW_AI_POLICY_VERSION,
 } from "../src/lib/security-work/processing/contracts";
 
 test.skip(process.env.E2E_LOCAL_STACK !== "1", "Owned disposable Supabase stack required");
@@ -23,6 +26,8 @@ test.use({ actionTimeout: 20_000 });
 const evidence = "Synthetic service dependency is interrupted. Recovery duration is unknown.";
 const proposal = "Synthetic AI proposal: verify an alternative dependency before deciding.";
 const question = "Synthetic AI follow-up: who can verify the recovery duration?";
+const questionWhy =
+  "Recovery duration is needed to judge continuity and choose a proportionate verification action.";
 const conclusion = "Synthetic human conclusion, preserved through AI application.";
 const riskTitle = "Synthetic AI risk: dependency interruption";
 const actionTitle = "Synthetic AI action: inspect the alternative dependency";
@@ -84,7 +89,9 @@ function fixture(locale: "sv" | "en") {
         proposedActions: [narrative("ai_proposal", actionTitle)],
       },
     ],
-    followups: [narrative("ai_proposal", question)],
+    followups: [
+      { ...narrative("ai_proposal", question), citations: [citation], uncertainty: questionWhy },
+    ],
     contradictions: [],
     report: {
       kind: "rsa",
@@ -142,7 +149,7 @@ function fixture(locale: "sv" | "en") {
       VALUES(${literal(item)},:'workspace',:'source','synthetic-ai-review','Synthetic source',${literal(evidence)});
     RESET ROLE;
     INSERT INTO sw_ai_activations(id,workspace_id,environment,provider,model,task_version,prompt_version,policy_version,output_schema_version,data_processing_approval,approved_by,valid_until,max_cost_micros,daily_budget_micros,max_output_tokens,timeout_ms)
-      VALUES(${literal(activation)},:'workspace','internal_qa','synthetic-no-provider','synthetic-fixture-only','sw-analysis-1.0.0','sw-analysis-prompt-1.0.0','sw-analysis-policy-1.0.0','sw-analysis-output-1.0.0','Synthetic fixture only; no provider or external processing',${literal(user)},now()+interval '1 hour',100,1000,8192,1000);
+      VALUES(${literal(activation)},:'workspace','internal_qa','synthetic-no-provider','synthetic-fixture-only',${literal(SW_AI_TASK_VERSION)},${literal(SW_AI_PROMPT_VERSION)},${literal(SW_AI_POLICY_VERSION)},'sw-analysis-output-1.0.0','Synthetic fixture only; no provider or external processing',${literal(user)},now()+interval '1 hour',100,1000,8192,1000);
     SET LOCAL ROLE authenticated;
     ${jobSql}
     COMMIT;
@@ -273,7 +280,8 @@ for (const locale of ["sv", "en"] as const) {
       ai.getByText(l("Källuppgift", "Source fact"), { exact: true }).first(),
     ).toBeVisible();
     await ai
-      .getByText(l("Visa stödjande utdrag", "Show supporting extract"), { exact: true })
+      .locator("summary")
+      .filter({ hasText: l("Visa stödjande utdrag", "Show supporting extract") })
       .first()
       .click();
     await expect(ai.getByText(evidence, { exact: true }).first()).toBeVisible();
@@ -378,6 +386,40 @@ for (const locale of ["sv", "en"] as const) {
     await expect(
       page.getByLabel(l("Kompletteringsfråga", "Follow-up question"), { exact: true }),
     ).toHaveValue(question);
+    const basis = page.getByTestId("sw-question-basis");
+    await expect(basis).toContainText(questionWhy);
+    await expect(basis).toContainText(evidence);
+    const refinedQuestion = "Human refinement: which recovery duration has been verified?";
+    await page
+      .getByLabel(l("Kompletteringsfråga", "Follow-up question"), { exact: true })
+      .fill(refinedQuestion);
+    await expect(basis).toContainText(question);
+    const questionForm = page.locator("form").filter({ has: basis });
+    await questionForm
+      .getByRole("button", { name: l("Spara svar", "Save answer"), exact: true })
+      .click();
+    await expect(questionForm).toContainText(l("Sparat", "Saved"));
+    await page.reload();
+    await page
+      .getByRole("button", { name: `3. ${l("Komplettera", "Follow-ups")}`, exact: true })
+      .click();
+    await expect(
+      page.getByLabel(l("Kompletteringsfråga", "Follow-up question"), { exact: true }),
+    ).toHaveValue(refinedQuestion);
+    await expect(basis).toContainText(question);
+    await expect(basis).toContainText(questionWhy);
+    await expect(basis).toContainText(evidence);
+    const originalJob = await db
+      .from("sw_processing_jobs")
+      .select("output")
+      .eq("id", f.jobs.fresh)
+      .single();
+    expect(originalJob.error).toBeNull();
+    expect(analysisOutputSchema.parse(originalJob.data!.output).followups[0]).toMatchObject({
+      statement: question,
+      uncertainty: questionWhy,
+      citations: [{ segmentId: f.item, sourceItemId: f.item, quote: evidence }],
+    });
     await page.goto(`/security-work/${f.workspace}/reports/${report.id}`);
     await expect(page.getByLabel(l("Inledning", "Introduction"), { exact: true })).toHaveValue(
       report.sections.introduction,

@@ -4,7 +4,36 @@ import { timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import { extractDocument } from "../src/lib/security-work/processing/extract.server";
-import { EXTRACTION_LIMITS, ExtractionError } from "../src/lib/security-work/processing/contracts";
+import {
+  EXTRACTION_LIMITS,
+  ExtractionError,
+  SW_EXTRACTION_VERSION,
+} from "../src/lib/security-work/processing/contracts";
+
+/** A fixed synthetic startup probe also checks packaged PDF.js and native assets. */
+export async function checkProcessorEngine(): Promise<void> {
+  const stream = "BT /F1 12 Tf 72 720 Td (SW readiness) Tj ET";
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+  ];
+  let pdf = "%PDF-1.7\n";
+  const offsets = objects.map((object, index) => {
+    const offset = Buffer.byteLength(pdf);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    return offset;
+  });
+  const xref = Buffer.byteLength(pdf);
+  pdf += `xref\n0 6\n0000000000 65535 f \n${offsets.map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  const result = await extractDocument({
+    bytes: new Uint8Array(Buffer.from(pdf)),
+    mimeType: "application/pdf",
+  });
+  if (result.segments[0]?.text !== "SW readiness") throw new Error("SW_PROCESSOR_ENGINE_NOT_READY");
+}
 
 export function createSecurityWorkProcessor(token: string): Server {
   if (Buffer.byteLength(token, "utf8") < 32) throw new Error("SW_PROCESSOR_AUTH_REQUIRED");
@@ -22,6 +51,10 @@ export function createSecurityWorkProcessor(token: string): Server {
     };
     const deny = (status: number, errorCode: string) =>
       send(status, { status: "failed", errorCode });
+    if (request.method === "GET" && request.url === "/healthz") {
+      send(200, { status: "ok", parserVersion: SW_EXTRACTION_VERSION });
+      return;
+    }
     if (request.method !== "POST" || request.url !== "/v1/extract") {
       deny(404, "unsupported");
       return;
@@ -108,8 +141,24 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   const port = Number(process.env.SW_PROCESSOR_PORT ?? "8789");
   if (!Number.isInteger(port) || port < 1 || port > 65535)
     throw new Error("SW_PROCESSOR_PORT_INVALID");
-  // Local listener only: an owner-configured TLS proxy exposes the fixed endpoint.
-  createSecurityWorkProcessor(token).listen(port, "127.0.0.1", () => {
-    console.log("Security Work document processor ready on its private loopback listener.");
+  const host = process.env.SW_PROCESSOR_HOST ?? "127.0.0.1";
+  if (!["127.0.0.1", "0.0.0.0"].includes(host)) throw new Error("SW_PROCESSOR_HOST_INVALID");
+  const server = createSecurityWorkProcessor(token);
+  await checkProcessorEngine();
+  // 0.0.0.0 is an explicit container setting; the managed proxy owns public TLS.
+  server.listen(port, host, () => {
+    console.log("Security Work document processor ready.");
   });
+  let stopping = false;
+  const stop = () => {
+    if (stopping) return;
+    stopping = true;
+    server.close(() => process.exit(0));
+    setTimeout(() => {
+      server.closeAllConnections();
+      process.exit(0);
+    }, 16_000).unref();
+  };
+  process.once("SIGTERM", stop);
+  process.once("SIGINT", stop);
 }

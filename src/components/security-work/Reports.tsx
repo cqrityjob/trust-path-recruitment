@@ -13,8 +13,11 @@ import {
 import { reportSections } from "@/lib/security-work/analysis-model";
 import {
   downloadReport,
+  citationsForText,
   frozenRiskColour,
   frozenReportSections,
+  reportDate,
+  reportPriority,
   reportBundleSchema,
   reportHtml,
   type ReportBundle,
@@ -110,6 +113,26 @@ export function SecurityReports() {
 function BundleView({ bundle }: { bundle: ReportBundle }) {
   const l = useWorkText();
   const { lang } = useT();
+  const nearby = (body: string, riskId?: string) =>
+    citationsForText(bundle, body, riskId).map((citation) => {
+      const source = bundle.sources.find((row) => row.id === citation.source_item_id);
+      return (
+        <aside
+          key={citation.id}
+          className="mt-3 border-l-2 border-border bg-secondary/30 p-3 text-sm"
+          data-testid="sw-nearby-citation"
+        >
+          <p className="font-medium">{citation.claim}</p>
+          <blockquote className="mt-2 whitespace-pre-wrap break-words">
+            {citation.excerpt}
+          </blockquote>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {source?.original_title} · {source?.publisher} · {citation.locator} ·{" "}
+            {reportDate(source?.published_at, lang)}
+          </p>
+        </aside>
+      );
+    });
   return (
     <article className={`${panelClass} space-y-7`} data-testid="sw-report-content">
       <header>
@@ -125,6 +148,7 @@ function BundleView({ bundle }: { bundle: ReportBundle }) {
           <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed">
             {String(bundle.report.sections[key] ?? bundle.report[key] ?? "")}
           </p>
+          {nearby(String(bundle.report.sections[key] ?? bundle.report[key] ?? ""))}
         </section>
       ))}
       <section>
@@ -146,6 +170,10 @@ function BundleView({ bundle }: { bundle: ReportBundle }) {
             <p className="whitespace-pre-wrap text-sm">{risk.description}</p>
             <p className="whitespace-pre-wrap text-sm">{risk.decision_rationale}</p>
             <p className="whitespace-pre-wrap text-sm text-muted-foreground">{risk.uncertainty}</p>
+            {nearby(
+              [risk.description, risk.decision_rationale, risk.uncertainty].join("\n"),
+              risk.id,
+            )}
           </div>
         ))}
       </section>
@@ -158,8 +186,22 @@ function BundleView({ bundle }: { bundle: ReportBundle }) {
             <h4 className="font-semibold">{action.title}</h4>
             <p className="whitespace-pre-wrap text-sm">{action.description}</p>
             <WorkStatus status={action.status} />
-            <p className="text-sm">{action.due_date ?? l("Datum saknas", "No due date")}</p>
+            <p className="text-sm">
+              {l("Prioritet", "Priority")}: {reportPriority(action.priority, lang)}
+            </p>
+            <p className="break-words text-sm">
+              {l("Ansvarig (konto-ID)", "Owner (account ID)")}:{" "}
+              {action.assignee_user_id ?? l("Ej tilldelad", "Unassigned")}
+            </p>
+            <p className="text-sm">
+              {l("Uppföljningsdatum", "Due date")}: {reportDate(action.due_date, lang)}
+            </p>
             <p className="text-sm">{action.decision_rationale}</p>
+            {action.completion_evidence && (
+              <p className="text-sm">
+                {l("Underlag för slutförande", "Completion evidence")}: {action.completion_evidence}
+              </p>
+            )}
           </div>
         ))}
       </section>
@@ -240,7 +282,7 @@ export function SecurityReportDetail({ reportId }: { reportId: string }) {
   }, [query.data, dirty]);
   useEffect(() => {
     if (query.error?.message === "ACCESS_DENIED") deny();
-  }, [query.error]);
+  }, [query.error, deny]);
   if (query.isPending) return <LoadingState />;
   if ((!query.data && query.isError) || !query.data || query.error?.message === "ACCESS_DENIED")
     return (
@@ -354,43 +396,48 @@ export function SecurityReportDetail({ reportId }: { reportId: string }) {
                 }
               }}
             >
-              <TextField
-                label={l("Rapportens titel", "Report title")}
-                value={title}
-                required
-                maxLength={500}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  changed();
-                }}
-              />
-              {reportSections[type].map(([key, sv, en]) => (
-                <TextAreaField
-                  key={key}
-                  label={lang === "sv" ? sv : en}
-                  value={sections[key] ?? ""}
-                  maxLength={16000}
+              <fieldset className="space-y-5" disabled={op.state === "saving"}>
+                <TextField
+                  label={l("Rapportens titel", "Report title")}
+                  value={title}
+                  required
+                  maxLength={500}
                   onChange={(e) => {
-                    setSections((old) => ({ ...old, [key]: e.target.value }));
+                    setTitle(e.target.value);
                     changed();
                   }}
                 />
-              ))}
-              <TextAreaField
-                label={l("Osäkerhet och kvarstående frågor", "Uncertainty and remaining questions")}
-                value={uncertainty}
-                maxLength={16000}
-                onChange={(e) => {
-                  setUncertainty(e.target.value);
-                  changed();
-                }}
-              />
-              <div className="flex flex-wrap items-center gap-3">
-                <WorkButton type="submit" disabled={!dirty || op.state === "saving"}>
-                  {l("Spara rapportutkast", "Save report draft")}
-                </WorkButton>
-                <SaveStatus state={op.state} />
-              </div>
+                {reportSections[type].map(([key, sv, en]) => (
+                  <TextAreaField
+                    key={key}
+                    label={lang === "sv" ? sv : en}
+                    value={sections[key] ?? ""}
+                    maxLength={16000}
+                    onChange={(e) => {
+                      setSections((old) => ({ ...old, [key]: e.target.value }));
+                      changed();
+                    }}
+                  />
+                ))}
+                <TextAreaField
+                  label={l(
+                    "Osäkerhet och kvarstående frågor",
+                    "Uncertainty and remaining questions",
+                  )}
+                  value={uncertainty}
+                  maxLength={16000}
+                  onChange={(e) => {
+                    setUncertainty(e.target.value);
+                    changed();
+                  }}
+                />
+                <div className="flex flex-wrap items-center gap-3">
+                  <WorkButton type="submit" disabled={!dirty || op.state === "saving"}>
+                    {l("Spara rapportutkast", "Save report draft")}
+                  </WorkButton>
+                  <SaveStatus state={op.state} />
+                </div>
+              </fieldset>
             </form>
           )}
           <section className={panelClass}>

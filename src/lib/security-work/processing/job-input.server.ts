@@ -8,7 +8,12 @@ import {
   validateAnalysisInput,
   type SwAiActivation,
 } from "./ai.server";
-import type { AnalysisInput, AnalysisUserInput, ManifestSegment } from "./contracts";
+import {
+  sourceMetadataSchema,
+  type AnalysisInput,
+  type AnalysisUserInput,
+  type ManifestSegment,
+} from "./contracts";
 
 const uuid = z.string().uuid();
 const sha = (value: string) => createHash("sha256").update(value, "utf8").digest("hex");
@@ -105,6 +110,13 @@ const assessmentSchema = z.object({
 const manifestSchema = z.object({
   assessment: assessmentSchema,
   activation: z.unknown(),
+  method: z
+    .object({
+      id: z.string().min(1).max(100),
+      analysis_type: z.enum(["rsa", "monitoring", "legacy_security"]),
+      definition: z.unknown(),
+    })
+    .optional(),
   sources: z
     .array(
       z.object({
@@ -132,15 +144,59 @@ const manifestSchema = z.object({
     .max(100),
 });
 
-/** Only immutable DB reservation content is eligible for provider dispatch. */
+export function frozenSourceItemIds(value: unknown): string[] {
+  const manifest = manifestSchema.safeParse(value);
+  if (!manifest.success) throw new SwAiError("input_invalid");
+  return [...new Set(manifest.data.sources.map((source) => source.sourceItemId))];
+}
+
+const sourceRowSchema = z.object({
+  id: uuid,
+  workspace_id: uuid,
+  original_title: sourceMetadataSchema.shape.title,
+  publisher: sourceMetadataSchema.shape.publisher,
+  published_at: sourceMetadataSchema.shape.publishedAt,
+  retrieved_at: sourceMetadataSchema.shape.retrievedAt,
+});
+
+/** Reservation content plus allowlisted immutable rows referenced by its exact source IDs. */
 export function analysisInputFromJob(
   value: unknown,
-  expected: { workspaceId: string; assessmentId: string; version: number; activationId: string },
+  expected: {
+    workspaceId: string;
+    assessmentId: string;
+    version: number;
+    activationId: string;
+    asOf?: string;
+  },
   language: "sv" | "en",
+  sourceRows: unknown,
 ): { input: AnalysisInput; activation: SwAiActivation } {
   const checked = manifestSchema.safeParse(value);
   if (!checked.success) throw new SwAiError("input_invalid");
   const manifest = checked.data;
+  const metadataRows = z.array(sourceRowSchema).max(200).safeParse(sourceRows);
+  const sourceIds = frozenSourceItemIds(value);
+  if (
+    !metadataRows.success ||
+    metadataRows.data.length !== sourceIds.length ||
+    new Set(metadataRows.data.map((row) => row.id)).size !== sourceIds.length ||
+    metadataRows.data.some(
+      (row) => row.workspace_id !== expected.workspaceId || !sourceIds.includes(row.id),
+    )
+  )
+    throw new SwAiError("source_metadata_unavailable");
+  const metadata = new Map(
+    metadataRows.data.map((row) => [
+      row.id,
+      {
+        title: row.original_title,
+        publisher: row.publisher,
+        publishedAt: row.published_at,
+        retrievedAt: row.retrieved_at,
+      },
+    ]),
+  );
   const assessment = manifest.assessment;
   if (
     assessment.id !== expected.assessmentId ||
@@ -162,6 +218,7 @@ export function analysisInputFromJob(
         text: part,
         sha256: sha(part),
         locator: `${source.locator.slice(0, 200)}${pieces.length > 1 ? ` · chunk ${index + 1}` : ""}`,
+        metadata: metadata.get(source.sourceItemId)!,
       }),
     );
   }
@@ -239,6 +296,16 @@ export function analysisInputFromJob(
     activation,
     input: validateAnalysisInput({
       language,
+      ...(expected.asOf ? { asOf: expected.asOf } : {}),
+      ...(manifest.method
+        ? {
+            methodSnapshot: {
+              id: manifest.method.id,
+              analysisType: manifest.method.analysis_type,
+              definition: manifest.method.definition,
+            },
+          }
+        : {}),
       purpose: "draft_report",
       manifest: sources,
       userInputs,

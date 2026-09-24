@@ -7,6 +7,7 @@ import {
   type ReportSaveInput,
 } from "./analysis-model";
 import type { Analysis, AnalysisDetail, Portfolio, Report } from "./analysis-types";
+import { originalQuestionBasis } from "./question-provenance";
 
 export class AnalysisFailure extends Error {
   constructor(readonly code: string) {
@@ -122,7 +123,7 @@ export async function readAnalysis(
       .maybeSingle(),
   );
   if (!analysis) throw new AnalysisFailure("ACCESS_DENIED");
-  const [i, q, r, a, p, j, c] = await Promise.all([
+  const [i, q, r, a, p, j, c, applied] = await Promise.all([
     caller.supabase
       .from("sw_analysis_inputs")
       .select("*")
@@ -168,7 +169,14 @@ export async function readAnalysis(
       .eq("workspace_id", workspaceId)
       .eq("assessment_id", id)
       .limit(501),
+    caller.supabase
+      .from("sw_ai_draft_applications")
+      .select("workspace_id,assessment_id,job_id,question_ids")
+      .eq("workspace_id", workspaceId)
+      .eq("assessment_id", id)
+      .limit(101),
   ]);
+  const applications = checked(applied) ?? [];
   const inputs = checked(i) ?? [];
   const sourceItems = inputs.length
     ? (checked(
@@ -192,6 +200,7 @@ export async function readAnalysis(
     reports: checked(p) ?? [],
     jobs: checked(j) ?? [],
     citations: checked(c) ?? [],
+    questionBasis: {},
   };
   if (
     inputs.length > 500 ||
@@ -200,9 +209,18 @@ export async function readAnalysis(
     result.actions.length > 200 ||
     result.reports.length > 100 ||
     result.jobs.length > 100 ||
-    result.citations.length > 500
+    result.citations.length > 500 ||
+    applications.length > 100
   )
     throw new AnalysisFailure("LIST_LIMIT");
+  result.questionBasis = originalQuestionBasis(
+    workspaceId,
+    id,
+    result.questions.map((row) => row.id),
+    result.jobs,
+    applications,
+    sourceItems,
+  );
   await access(caller, workspaceId);
   return result;
 }

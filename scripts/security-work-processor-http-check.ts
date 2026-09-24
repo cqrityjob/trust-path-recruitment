@@ -1,8 +1,9 @@
-// Thirteen real Node HTTP/TLS checks. Endpoints must belong to the synthetic loopback bootstrap.
+// Real Node HTTP/TLS checks. Endpoints must belong to the synthetic loopback bootstrap.
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { request as httpRequest } from "node:http";
 import { deflateRawSync } from "node:zlib";
+import { SW_EXTRACTION_VERSION } from "../src/lib/security-work/processing/contracts";
 import { extractDocument } from "../src/lib/security-work/processing/extract-transport.server";
 
 const httpOrigin = new URL(process.env.SW_PROCESSOR_TEST_HTTP_ORIGIN ?? "");
@@ -140,6 +141,20 @@ await check("HTTP rejects unknown route", async () => {
   const response = await fetch(`${httpOrigin.origin}/not-an-endpoint`);
   await failure(response, 404, "unsupported");
 });
+await check(
+  "HTTP readiness exposes only status and parser version without authorization",
+  async () => {
+    const response = await fetch(`${httpOrigin.origin}/healthz`);
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get("cache-control"), "no-store");
+    assert.deepEqual(await response.json(), { status: "ok", parserVersion: SW_EXTRACTION_VERSION });
+  },
+);
+await check("TLS readiness uses the same minimal health contract", async () => {
+  const response = await fetch(`${httpsOrigin.origin}/healthz`);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { status: "ok", parserVersion: SW_EXTRACTION_VERSION });
+});
 await check("HTTP rejects missing authorization", async () => {
   await failure(await post(httpOrigin, bytes, mime, ""), 401, "processor_unavailable");
 });
@@ -215,7 +230,7 @@ await check("HTTP rejects oversized Content-Length before receiving a body", asy
 await check("TLS rejects compressed DOCX amplification", async () => {
   await failure(await post(httpsOrigin, docx("X".repeat(500_000)), docxMime), 413, "too_large");
 });
-assert.equal(checks, 13);
+assert.equal(checks, 15);
 console.log(
-  "Security Work packaged processor: 13 actual Node/HTTP/TLS checks passed; synthetic loopback data only.",
+  "Security Work packaged processor: 15 actual Node/HTTP/TLS checks passed; synthetic loopback data only.",
 );

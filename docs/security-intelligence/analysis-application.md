@@ -53,9 +53,20 @@ reports and their extracted text are excluded from the repository and test data.
   the separate publication gate.
 - 42 synthetic screenshots pass a publication gate requiring all six journeys
   without retry or skip; authenticated traces and logs remain private.
-- 60 analysis/export checks, including all 25 independently specified matrix cells.
-- Parser/provider and AI orchestration checks, 8 processor transport checks and
-  13 actual packaged Node HTTP/TLS checks. Provider responses are synthetic.
+- 62 analysis/export checks, including all 25 independently specified matrix cells.
+- 38 parser/provider and 24 AI orchestration checks (including exact frozen-source
+  metadata scope and preflight hash checks), 8 processor transport checks and
+  15 actual native Node HTTP/TLS checks, 15 container HTTP/TLS checks, 10
+  reproducibility/configuration checks and the scheduled container health check.
+  Provider responses are synthetic.
+- Six printed synthetic PDFs across all three templates and both languages; all
+  48 pages visually inspected. Actual approved application exports are also printed
+  without authentication or network access.
+- Six synthetic quality scenarios in both languages with a semantic review rubric;
+  39 offline reference/mutation checks, including metadata-only historical dates,
+  are not real-model quality evidence.
+- Twelve persisted question-provenance checks preserve the original AI explanation
+  across human edits and reloads, with workspace-scoped immutable receipts.
 - Full application and scripts TypeScript checks and Cloudflare production build.
 - Database and concurrency evidence is recorded in [analysis release](analysis-release.md).
 
@@ -77,7 +88,7 @@ The verified prior visibility defect was the missing primary-navigation entry.
 The previously deployed frontend commit could not be established; this work does
 not claim that GitHub main is already published. See [visibility audit](frontend-visibility.md).
 
-Review schema first, have the official integration apply it, verify parity, then
-review the dependent application and configure approved processing. Merge and
-publication remain owner actions. Local preview uses `http://127.0.0.1:3127` while
+The merged schema and hosted parity are verified. Review the dependent application
+and the [consolidated owner decisions](analysis-delivery-status.md) before configuring
+approved processing. Merge and publication remain owner actions. Local preview uses `http://127.0.0.1:3127` while
 the disposable browser runner is active; it is not a shared or production preview.

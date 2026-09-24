@@ -13,6 +13,7 @@ import {
   type RiskColour,
 } from "../src/lib/security-work/analysis-model";
 import {
+  citationsForText,
   frozenReportSections,
   frozenRiskColour,
   reportBundleSchema,
@@ -296,8 +297,8 @@ test("snapshot matrix can differ from today's runtime matrix", () => {
   bundle.method.definition.matrix![4][2] = "green";
   assert.equal(riskColour(5, 3), "red");
   assert.equal(frozenRiskColour(bundle, 5, 3), "green");
-  assert.match(reportHtml(bundle, approval), /green · S 5 \/ K 3/);
-  assert.doesNotMatch(reportHtml(bundle, approval), /red · S 5 \/ K 3/);
+  assert.match(reportHtml(bundle, approval), /Green · L 5 \/ C 3/);
+  assert.doesNotMatch(reportHtml(bundle, approval), /Red · L 5 \/ C 3/);
 });
 test("frozen unknown values and missing matrix never use runtime defaults", () => {
   const bundle = fixture();
@@ -307,14 +308,15 @@ test("frozen unknown values and missing matrix never use runtime defaults", () =
   }
   delete bundle.method.definition.matrix;
   assert.equal(frozenRiskColour(bundle, 5, 3), null);
-  assert.match(reportHtml(bundle, approval), /Unknown · S 5 \/ K 3/);
+  assert.match(reportHtml(bundle, approval), /Unknown · L 5 \/ C 3/);
 });
 test("legacy and monitoring reports never acquire the RSA matrix", () => {
   for (const type of ["legacy_security", "monitoring"] as const) {
     const bundle = fixture();
     bundle.assessment.analysis_type = type;
     assert.equal(frozenRiskColour(bundle, 5, 3), null);
-    assert.match(reportHtml(bundle, approval), /Unknown · S 5 \/ K 3/);
+    assert.match(reportHtml(bundle, approval), /Qualitative assessment/);
+    assert.doesNotMatch(reportHtml(bundle, approval), / · L [1-5] \/ C [1-5]/);
   }
 });
 test("frozen template controls section inclusion and ordering", () => {
@@ -387,7 +389,9 @@ test("export labels the approved version, method, hash and historical action sta
   assert.match(html, /Method: rsa-v1/);
   assert.match(html, /Approved review period/);
   assert.match(html, /Actions at approval/);
-  assert.match(html, /open · 2026-10-01/);
+  assert.match(html, /<td>1 Oct 2026<\/td><td>Open<\/td>/);
+  assert.ok(html.includes(ids[7]), "saved owner must be present");
+  assert.match(html, /Not stated/, "missing priority stays unknown");
   assert.match(html, /Current action status may have changed since approval/);
 });
 test("citation export joins the preserved source identity and exact quote", () => {
@@ -402,9 +406,43 @@ test("citation export joins the preserved source identity and exact quote", () =
   assert.match(html, /<blockquote>Exact synthetic quotation\.<\/blockquote>/);
   assert.match(
     html,
-    /Synthetic preserved original · Synthetic publisher · Page 2 · segment 3 · 2026-09-20T10:00:00Z/,
+    /Synthetic preserved original · Synthetic publisher · Page 2 · segment 3<br>Published: <time datetime="2026-09-20T10:00:00Z">20 Sep(?:t)? 2026<\/time>/,
   );
   assert.doesNotMatch(html, /WRONG_SOURCE_ID|WRONG_PUBLISHER|UNQUOTED_SOURCE_TEXT/);
+});
+test("nearby citations require the full saved claim or explicit risk target", () => {
+  const bundle = fixture();
+  const citation = bundle.citations[0];
+  assert.equal(citationsForText(bundle, "Synthetic source-linked").length, 0);
+  assert.equal(citationsForText(bundle, `${citation.claim} follows.`).length, 1);
+  assert.equal(citationsForText(bundle, citation.claim.replaceAll(" ", "\n")).length, 1);
+  citation.risk_id = bundle.risks[0].id;
+  assert.equal(citationsForText(bundle, "Different exact statement", bundle.risks[0].id).length, 1);
+  assert.equal(citationsForText(bundle, "Different exact statement", "other-risk").length, 0);
+  bundle.report.sections.introduction = citation.claim;
+  const html = reportHtml(bundle, approval);
+  assert.ok(html.indexOf("<blockquote>") < html.indexOf("Uncertainty and remaining questions"));
+});
+test("saved action fields localize without inventing owner, date or priority", () => {
+  const bundle = fixture();
+  bundle.report.language = "sv";
+  Object.assign(bundle.actions[0], {
+    priority: "high",
+    status: "completed",
+    completion_evidence: "Sparat slutförandeunderlag",
+    due_date: null,
+    assignee_user_id: null,
+  });
+  const html = reportHtml(bundle, approval);
+  for (const label of [
+    "Hög",
+    "Slutförd",
+    "Ej tilldelad",
+    "Datum saknas",
+    "Sparat slutförandeunderlag",
+  ])
+    assert.ok(html.includes(label));
+  assert.ok(!html.includes(ids[7]), "no owner should be inferred");
 });
 test("missing source dates and risk levels stay visibly unknown", () => {
   const bundle = fixture();
@@ -413,8 +451,8 @@ test("missing source dates and risk levels stay visibly unknown", () => {
   bundle.risks[0].consequence = null;
   const html = reportHtml(bundle, approval);
   assert.match(html, /Publication date unknown/);
-  assert.match(html, /Unknown · S \? \/ K \?/);
-  assert.doesNotMatch(html, /green · S/);
+  assert.match(html, /Unknown · L \? \/ C \?/);
+  assert.doesNotMatch(html, /Green · L/);
 });
 test("export uses the approved language and preserves multiline text", () => {
   const bundle = fixture();
@@ -477,7 +515,7 @@ test("rendering neither mutates nor depends on mutable live business rows", () =
   assert.equal(reportHtml(bundle, approval), first);
   assert.equal(JSON.stringify(bundle), saved);
   assert.doesNotMatch(first, /LIVE_AFTER_APPROVAL/);
-  assert.match(first, /open · 2026-10-01/);
+  assert.match(first, /<td>1 Oct 2026<\/td><td>Open<\/td>/);
 });
 console.log(
   `PASS: ${checks} Security Work analysis and immutable export checks (including all 25 owner-approved matrix cells).`,

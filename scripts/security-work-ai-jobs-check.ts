@@ -2,12 +2,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { requestAiDraft, workAiStatus } from "../src/lib/security-work/processing/ai-jobs.server";
-import { analysisInputFromJob } from "../src/lib/security-work/processing/job-input.server";
+import { analysisInputFromJob as mapFrozenJob } from "../src/lib/security-work/processing/job-input.server";
 import {
   dispatchSwAiOnce,
   validateAnalysisInput,
   validateAnalysisOutput,
   type DispatchResult,
+  analysisInputHash,
 } from "../src/lib/security-work/processing/ai.server";
 import {
   REPORT_SECTIONS,
@@ -50,6 +51,26 @@ const activation = {
   timeout_ms: 5000,
 };
 const source = "Synthetic continuity evidence.";
+const sourceRows = () => [
+  {
+    id: ids[5],
+    workspace_id: ids[0],
+    original_title: "Synthetic continuity record",
+    publisher: "Synthetic publisher",
+    published_at: "2021-03-01T00:00:00+00:00",
+    retrieved_at: "2026-09-24T10:00:00+00:00",
+    private_unselected_field: "DO_NOT_SEND_SOURCE_PRIVATE_METADATA",
+  },
+];
+const analysisInputFromJob = (
+  ...args:
+    | Parameters<typeof mapFrozenJob>
+    | [
+        Parameters<typeof mapFrozenJob>[0],
+        Parameters<typeof mapFrozenJob>[1],
+        Parameters<typeof mapFrozenJob>[2],
+      ]
+) => mapFrozenJob(args[0], args[1], args[2], args.length === 4 ? args[3] : sourceRows());
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const manifest = () => ({
   assessment: {
@@ -125,6 +146,7 @@ function repository() {
       },
     ],
     sw_analysis_questions: manifest().questions,
+    sw_source_items: sourceRows(),
   };
   const calls: string[] = [];
   let completeFails = false;
@@ -292,6 +314,7 @@ await test("worker key preflight rejects short secrets before reservation", asyn
 await test("manifest maps only allowlisted content and preserves explicit assumptions", () => {
   const mapped = analysisInputFromJob(manifest(), { ...request, activationId: ids[3] }, "sv");
   assert(!JSON.stringify(mapped.input).includes("DO_NOT_SEND_INTERNAL_METADATA"));
+  assert(!JSON.stringify(mapped.input).includes("DO_NOT_SEND_SOURCE_PRIVATE_METADATA"));
   assert.equal(mapped.input.calibration, null);
   assert.equal(mapped.input.purpose, "draft_report");
   const assumption = mapped.input.userInputs.find((item) => item.kind === "assumption")!;
@@ -315,6 +338,71 @@ await test("manifest maps only allowlisted content and preserves explicit assump
     /ASSUMPTION_MISLABELLED/,
   );
 });
+await test("metadata is bound to exact frozen IDs, workspace and input hash independently of source text", () => {
+  const mapped = analysisInputFromJob(manifest(), { ...request, activationId: ids[3] }, "sv");
+  assert(!/2021|2026/.test(mapped.input.manifest[0].text));
+  assert.deepEqual(mapped.input.manifest[0].metadata, {
+    title: "Synthetic continuity record",
+    publisher: "Synthetic publisher",
+    publishedAt: "2021-03-01T00:00:00+00:00",
+    retrievedAt: "2026-09-24T10:00:00+00:00",
+  });
+  const changed = sourceRows();
+  changed[0].published_at = "2025-03-01T00:00:00+00:00";
+  assert.notEqual(
+    analysisInputHash(mapped.input),
+    analysisInputHash(
+      analysisInputFromJob(manifest(), { ...request, activationId: ids[3] }, "sv", changed).input,
+    ),
+  );
+  for (const rows of [
+    [],
+    [{ ...sourceRows()[0], id: ids[9] }],
+    [{ ...sourceRows()[0], workspace_id: ids[9] }],
+    [...sourceRows(), ...sourceRows()],
+    [{ ...sourceRows()[0], published_at: "invalid" }],
+  ])
+    assert.throws(
+      () => analysisInputFromJob(manifest(), { ...request, activationId: ids[3] }, "sv", rows),
+      /SOURCE_METADATA_UNAVAILABLE/,
+    );
+});
+await test("caller lookup reads only reserved source IDs and fails before claim if unavailable", async () => {
+  for (const rows of [[], [{ ...sourceRows()[0], workspace_id: ids[9] }]]) {
+    const r = repository();
+    r.tables.sw_source_items = rows;
+    await assert.rejects(
+      requestAiDraft(r.caller, request, { env, dispatch: noDispatch }),
+      /AI_INPUT_INVALID/,
+    );
+    assert(!r.calls.includes("sw_dispatch_processing"));
+  }
+  const r = repository();
+  r.tables.sw_source_items.push({
+    ...sourceRows()[0],
+    id: ids[9],
+    original_title: "UNREFERENCED_SOURCE_MUST_NOT_SEND",
+  });
+  await requestAiDraft(r.caller, request, {
+    env,
+    dispatch: async (input, configuration, options) =>
+      dispatchSwAiOnce(input, configuration, {
+        ...options,
+        fetchImpl: async (_url, init) => {
+          if (init?.method === "GET") return Response.json({ id: env.SW_AI_MODEL });
+          assert(!String(init?.body).includes("UNREFERENCED_SOURCE_MUST_NOT_SEND"));
+          assert(String(init?.body).includes("2021-03-01"));
+          return Response.json({
+            model: env.SW_AI_MODEL,
+            stop_reason: "end_turn",
+            content: [{ type: "text", text: JSON.stringify(output()) }],
+            usage: { input_tokens: 50, output_tokens: 100 },
+          });
+        },
+      }),
+  });
+  assert.equal(r.calls.filter((call) => call === "read:sw_source_items").length, 2);
+});
 await test("questions, user context and generated followups share the 4000 character boundary", () => {
   const value = manifest();
   value.questions[0].question = "Q".repeat(4000);
@@ -327,7 +415,7 @@ await test("questions, user context and generated followups share the 4000 chara
     statement: value.questions[0].question,
     citations: [],
     userInputIds: [],
-    uncertainty: "",
+    uncertainty: "This answer is needed to establish the missing evidence before deciding.",
   };
   assert.equal(
     validateAnalysisOutput({ ...output(), followups: [followup] }, mapped.input).followups[0]
@@ -356,6 +444,34 @@ await test("questions, user context and generated followups share the 4000 chara
     /INPUT_INVALID/,
   );
 });
+await test("frozen method and job date reach the provider without using the current runtime clock", () => {
+  const method = {
+    id: "rsa-v1",
+    analysis_type: "rsa",
+    definition: { version: 1, unknownIsLow: false },
+  };
+  const asOf = "2026-09-24T12:00:00.000Z";
+  const mapped = analysisInputFromJob(
+    { ...manifest(), method },
+    { ...request, activationId: ids[3], asOf },
+    "sv",
+  );
+  assert.equal(mapped.input.asOf, asOf);
+  assert.deepEqual(mapped.input.methodSnapshot, {
+    id: "rsa-v1",
+    analysisType: "rsa",
+    definition: method.definition,
+  });
+  assert.throws(
+    () =>
+      analysisInputFromJob(
+        { ...manifest(), method: { ...method, analysis_type: "monitoring" } },
+        { ...request, activationId: ids[3], asOf },
+        "sv",
+      ),
+    /METHOD_MISMATCH/,
+  );
+});
 await test("generated 4000 character followup survives the next AI run and cached retry", async () => {
   const first = analysisInputFromJob(manifest(), { ...request, activationId: ids[3] }, "sv");
   const generated = validateAnalysisOutput(
@@ -367,7 +483,7 @@ await test("generated 4000 character followup survives the next AI run and cache
           statement: "Q".repeat(4000),
           citations: [],
           userInputIds: [],
-          uncertainty: "",
+          uncertainty: "This answer is needed to establish the missing evidence before deciding.",
         },
       ],
     },
@@ -652,6 +768,45 @@ await test("membership removal during preflight prevents provider POST and denie
     /ACCESS_DENIED/,
   );
   assert.equal(posts, 0);
+});
+await test("missing, foreign or altered immutable metadata during preflight prevents source POST", async () => {
+  for (const mutate of [
+    (r: ReturnType<typeof repository>) => {
+      r.tables.sw_source_items = [];
+    },
+    (r: ReturnType<typeof repository>) => {
+      r.tables.sw_source_items[0].workspace_id = ids[9];
+    },
+    (r: ReturnType<typeof repository>) => {
+      r.tables.sw_source_items[0].published_at = "2025-01-01T00:00:00+00:00";
+    },
+    (r: ReturnType<typeof repository>) => {
+      r.tables.sw_source_items[0].original_title = "Changed after preparation";
+    },
+  ]) {
+    const r = repository();
+    let posts = 0;
+    const result = await requestAiDraft(r.caller, request, {
+      env,
+      dispatch: (input, configuration, options) =>
+        dispatchSwAiOnce(input, configuration, {
+          ...options,
+          fetchImpl: async (_url, init) => {
+            if (init?.method === "GET") {
+              mutate(r);
+              return Response.json({ id: env.SW_AI_MODEL });
+            }
+            posts++;
+            throw new Error("Unexpected source transmission");
+          },
+        }),
+    });
+    assert.equal(result.status, "failed");
+    assert(
+      ["source_metadata_unavailable", "authorization_not_confirmed"].includes(result.error_code!),
+    );
+    assert.equal(posts, 0);
+  }
 });
 console.log(
   `Security Work AI jobs: ${checks} synthetic checks passed; no database or provider calls.`,

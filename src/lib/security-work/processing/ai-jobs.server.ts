@@ -9,8 +9,10 @@ import {
   dispatchSwAiOnce,
   SwAiError,
   type SwAiConfiguration,
+  analysisInputHash,
 } from "./ai.server";
-import { activationFromRow, analysisInputFromJob } from "./job-input.server";
+import { activationFromRow, analysisInputFromJob, frozenSourceItemIds } from "./job-input.server";
+import type { AnalysisInput } from "./contracts";
 
 type Env = Readonly<Record<string, string | undefined>>;
 export type WorkAiStatus = { enabled: boolean; reason: string | null };
@@ -143,11 +145,28 @@ function assertRequestIdentity(
     throw new AnalysisFailure("CONFLICT");
 }
 
+async function loadSourceMetadata(
+  caller: SecurityWorkCaller,
+  workspaceId: string,
+  manifest: unknown,
+  signal?: AbortSignal,
+) {
+  const sourceIds = frozenSourceItemIds(manifest);
+  const query = caller.supabase
+    .from("sw_source_items")
+    .select("id,workspace_id,original_title,publisher,published_at,retrieved_at")
+    .eq("workspace_id", workspaceId)
+    .in("id", sourceIds)
+    .limit(201);
+  return checked(await (signal ? query.abortSignal(signal) : query)) ?? [];
+}
+
 async function recheckBeforeDispatch(
   caller: SecurityWorkCaller,
   data: WorkAiRequest,
   job: ProcessingJob,
   configuration: SwAiConfiguration,
+  preparedInput: AnalysisInput,
   env: Env,
   signal: AbortSignal,
 ): Promise<void> {
@@ -212,6 +231,20 @@ async function recheckBeforeDispatch(
           ),
       )
     )
+      throw new AnalysisFailure("CONFLICT");
+    const sourceRows = await loadSourceMetadata(
+      caller,
+      data.workspaceId,
+      job.input_manifest,
+      signal,
+    );
+    const currentInput = analysisInputFromJob(
+      job.input_manifest,
+      { ...data, activationId: configuration.activation.id, asOf: job.created_at },
+      preparedInput.language,
+      sourceRows,
+    ).input;
+    if (analysisInputHash(currentInput) !== analysisInputHash(preparedInput))
       throw new AnalysisFailure("CONFLICT");
     await requireWorkspace(caller, data.workspaceId, true);
     signal.throwIfAborted();
@@ -283,10 +316,12 @@ export async function requestAiDraft(
     throw new AnalysisFailure("INVALID_INPUT");
   let prepared: ReturnType<typeof analysisInputFromJob>;
   try {
+    const sourceRows = await loadSourceMetadata(caller, data.workspaceId, job.input_manifest);
     prepared = analysisInputFromJob(
       job.input_manifest,
-      { ...data, activationId: configuration.activation.id },
+      { ...data, activationId: configuration.activation.id, asOf: job.created_at },
       workspace.language as "sv" | "en",
+      sourceRows,
     );
   } catch (error) {
     if (error instanceof SwAiError) throw new AnalysisFailure("AI_INPUT_INVALID");
@@ -325,7 +360,7 @@ export async function requestAiDraft(
   if (!fence) throw new AnalysisFailure("SAVE_FAILED");
   const result = await (options.dispatch ?? dispatchSwAiOnce)(prepared.input, configuration, {
     beforeDispatch: (signal) =>
-      recheckBeforeDispatch(caller, data, job, configuration, env, signal),
+      recheckBeforeDispatch(caller, data, job, configuration, prepared.input, env, signal),
   });
   const payload = JSON.stringify(
     result.status === "succeeded"

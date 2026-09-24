@@ -9,6 +9,12 @@ export type AnalysisQuestion = Row<"sw_analysis_questions">;
 export type Document = Row<"sw_documents">;
 export type ProcessingJob = Row<"sw_processing_jobs">;
 export type Approval = Row<"sw_report_approvals">;
+export type AiQuestionBasis = {
+  jobId: string;
+  originalQuestion: string;
+  reason: string;
+  citations: { sourceItemId: string; sourceTitle: string; quote: string }[];
+};
 export type Portfolio = {
   analyses: Analysis[];
   risks: Risk[];
@@ -26,4 +32,5 @@ export type AnalysisDetail = {
   actions: Action[];
   reports: Report[];
   jobs: ProcessingJob[];
+  questionBasis: Record<string, AiQuestionBasis>;
 };

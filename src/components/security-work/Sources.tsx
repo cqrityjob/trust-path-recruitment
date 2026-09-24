@@ -1,5 +1,5 @@
 import { saveSourceInput } from "@/lib/security-work/inputs";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, Plus } from "lucide-react";
@@ -30,6 +30,7 @@ export function SecuritySourcesPage() {
   const { workspace, sources, canEdit } = useSecurityWorkspace();
   const manualSources = sources.filter((source) => source.source_type !== "document");
   const [adding, setAdding] = useState(false);
+  const manualSection = useRef<HTMLElement>(null);
   const addButton =
     canEdit && !adding ? (
       <WorkButton data-testid="sw-add-source" onClick={() => setAdding(true)}>
@@ -46,8 +47,13 @@ export function SecuritySourcesPage() {
           "Private documents, manual observations and source references for your analyses.",
         )}
       />
-      <WorkspaceDocuments />
-      <section className="space-y-5 border-t border-border pt-6">
+      <WorkspaceDocuments
+        onManual={() => {
+          manualSection.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          manualSection.current?.focus();
+        }}
+      />
+      <section ref={manualSection} tabIndex={-1} className="space-y-5 border-t border-border pt-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-xl font-semibold">{t("sw.sources.title")}</h2>

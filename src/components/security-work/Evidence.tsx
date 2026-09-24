@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 import { useQuery } from "@tanstack/react-query";
@@ -53,7 +53,7 @@ function useWorkspaceEvidence() {
   return query;
 }
 
-export function DocumentUpload() {
+export function DocumentUpload({ onManual }: { onManual?: () => void }) {
   const l = useWorkText();
   const { workspace } = useSecurityWorkspace();
   const upload = useServerFn(uploadWorkDocument);
@@ -152,6 +152,16 @@ export function DocumentUpload() {
           {l("Ladda upp och extrahera", "Upload and extract")}
         </WorkButton>
         <SaveStatus state={op.state} />
+        {onManual && (
+          <WorkButton
+            type="button"
+            variant="outline"
+            onClick={onManual}
+            disabled={op.state === "saving"}
+          >
+            {l("Fortsätt med manuellt underlag", "Continue with manual evidence")}
+          </WorkButton>
+        )}
       </div>
     </form>
   );
@@ -248,7 +258,9 @@ export function AnalysisEvidence({
   hidden?: boolean;
 }) {
   const l = useWorkText();
+  const { lang } = useT();
   const { sources } = useSecurityWorkspace();
+  const manualSection = useRef<HTMLElement>(null);
   const query = useWorkspaceEvidence();
   const [sourceId, setSourceId] = useState("");
   const [manual, setManual] = useState(false);
@@ -271,11 +283,22 @@ export function AnalysisEvidence({
     <div hidden={hidden} className="space-y-5">
       {editable && (
         <>
-          <DocumentUpload />
-          <section className={`${panelClass} space-y-4`}>
+          <DocumentUpload
+            onManual={() => {
+              manualSection.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              manualSection.current?.focus();
+            }}
+          />
+          <section ref={manualSection} tabIndex={-1} className={`${panelClass} space-y-4`}>
             <h3 className="text-lg font-semibold">
               {l("Skriv in underlag", "Enter evidence manually")}
             </h3>
+            <p className="text-sm text-muted-foreground">
+              {l(
+                "För en skannad PDF: skapa eller välj en manuell källa med dokumentets titel och utgivare. Skriv av det relevanta utdraget och ange sida i titeln. Kontrollera texten mot originalet innan du accepterar den. Det märks som manuellt underlag, aldrig som automatiskt extraherat.",
+                "For a scanned PDF: create or select a manual source with the document title and publisher. Transcribe the relevant passage and include the page in its title. Check it against the original before accepting it. It remains manual evidence, never labelled as automatically extracted.",
+              )}
+            </p>
             <Field label={l("Källa", "Source")}>
               {(id) => (
                 <select
@@ -372,6 +395,11 @@ export function AnalysisEvidence({
               <h4 className="font-semibold">{fact.original_title}</h4>
               <p className="mt-1 text-xs text-muted-foreground">
                 {fact.publisher} · {segment?.locator ?? l("Manuellt underlag", "Manual evidence")}
+                {" · "}
+                {l("Publicerad", "Published")}:{" "}
+                {fact.published_at
+                  ? formatDate(fact.published_at, lang)
+                  : l("Datum saknas - kontrollera aktualitet", "Date unknown - check currency")}
               </p>
               <details className="mt-3">
                 <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-accent">
@@ -405,7 +433,7 @@ export function AnalysisEvidence({
 
 /** Workspace catalogue reuses the same private read and upload path as an
  * analysis. Reviewing an extract remains an analysis-specific decision. */
-export function WorkspaceDocuments() {
+export function WorkspaceDocuments({ onManual }: { onManual?: () => void }) {
   const l = useWorkText();
   const { lang } = useT();
   const { workspace, canEdit } = useSecurityWorkspace();
@@ -430,7 +458,7 @@ export function WorkspaceDocuments() {
             {l("Ladda upp PDF eller DOCX", "Upload PDF or DOCX")}
           </summary>
           <div className="mt-3">
-            <DocumentUpload />
+            <DocumentUpload onManual={onManual} />
           </div>
         </details>
       )}

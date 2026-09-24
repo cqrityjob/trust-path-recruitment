@@ -10,15 +10,21 @@ test.use({ actionTimeout: 20_000 });
 const out = process.env.SW_ANALYSIS_EVIDENCE_DIR ?? "/private/tmp/sw-analysis-unpublished";
 const evidence =
   "Synthetic access route is blocked during maintenance. Existing backup arrangements are unknown.";
-function pdf() {
-  const stream = `BT /F1 12 Tf 40 700 Td (${evidence}) Tj ET`;
+function pdf(imageOnly = false) {
+  const stream = imageOnly
+    ? "q 200 0 0 100 40 650 cm /Im1 Do Q"
+    : `BT /F1 12 Tf 40 700 Td (${evidence}) Tj ET`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 900 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 900 792] /Resources << /Font << /F1 4 0 R >> ${imageOnly ? "/XObject << /Im1 6 0 R >>" : ""} >> /Contents 5 0 R >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream`,
   ];
+  if (imageOnly)
+    objects.push(
+      "<< /Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length 25 /Filter /ASCIIHexDecode >>\nstream\nFFFFFF000000000000FFFFFF>\nendstream",
+    );
   let value = "%PDF-1.7\n";
   const offsets = [0];
   objects.forEach((object, i) => {
@@ -26,10 +32,10 @@ function pdf() {
     value += `${i + 1} 0 obj\n${object}\nendobj\n`;
   });
   const xref = Buffer.byteLength(value);
-  value += `xref\n0 6\n0000000000 65535 f \n${offsets
+  value += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets
     .slice(1)
     .map((o) => `${String(o).padStart(10, "0")} 00000 n \n`)
-    .join("")}trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+    .join("")}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return Buffer.from(value);
 }
 async function login(page: Page, email: string, path: string) {
@@ -79,7 +85,10 @@ async function shot(page: Page, locale: string, stage: string) {
   });
 }
 for (const locale of ["sv", "en"] as const) {
-  test(`[${locale}] RSA document to immutable report and action follow-up`, async ({ page }) => {
+  test(`[${locale}] RSA document to immutable report and action follow-up`, async ({
+    page,
+    browser,
+  }, testInfo) => {
     for (const value of [
       process.env.E2E_BASE_URL,
       process.env.SW_API_URL,
@@ -141,6 +150,25 @@ for (const locale of ["sv", "en"] as const) {
     await page
       .getByRole("button", { name: `2. ${l("Underlag", "Evidence")}`, exact: true })
       .click();
+    await page
+      .getByRole("button", {
+        name: l("Fortsätt med manuellt underlag", "Continue with manual evidence"),
+      })
+      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: l("Skriv in underlag", "Enter evidence manually"),
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.locator("section").filter({
+        has: page.getByRole("heading", {
+          name: l("Skriv in underlag", "Enter evidence manually"),
+          exact: true,
+        }),
+      }),
+    ).toBeFocused();
     await page.locator('input[type="file"]').setInputFiles({
       name: "synthetic-evidence.pdf",
       mimeType: "application/pdf",
@@ -161,10 +189,74 @@ for (const locale of ["sv", "en"] as const) {
       })
       .click();
     await expect(page.getByText(l("Accepterad", "Accepted"), { exact: true })).toBeVisible();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "synthetic-image-only.pdf",
+      mimeType: "application/pdf",
+      buffer: pdf(true),
+    });
+    await page
+      .getByRole("button", { name: l("Ladda upp och extrahera", "Upload and extract") })
+      .click();
+    await expect(
+      page.getByText(l("Texten kunde inte extraheras.", "Text could not be extracted."), {
+        exact: false,
+      }),
+    ).toBeVisible({ timeout: 45000 });
+    await expect(
+      page.getByText(l("Texten är extraherad.", "Text extracted."), { exact: false }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("button", {
+        name: l("Fortsätt med manuellt underlag", "Continue with manual evidence"),
+      })
+      .click();
+    await page.getByRole("button", { name: l("Ny källa", "New source"), exact: true }).click();
+    await page.getByTestId("sw-source-name").fill("Synthetic manual transcription source");
+    const sourceForm = page.locator("form").filter({ has: page.getByTestId("sw-source-name") });
+    await sourceForm
+      .getByLabel(l("Utgivare eller avsändare", "Publisher or sender"), { exact: true })
+      .fill("Synthetic exercise publisher");
+    await sourceForm.getByRole("button", { name: l("Spara", "Save"), exact: true }).click();
+    await page
+      .getByLabel(l("Källa", "Source"), { exact: true })
+      .selectOption({ label: "Synthetic manual transcription source" });
+    await page
+      .getByRole("button", { name: l("Skriv underlag", "Write evidence"), exact: true })
+      .click();
+    await page.getByTestId("sw-item-title").fill("Synthetic manual note - page 1");
+    await page
+      .getByTestId("sw-item-extract")
+      .fill(
+        "Human transcription: the synthetic original contains no selectable text. No operational fact can be inferred from its image.",
+      );
+    await page.getByTestId("sw-preview-item").click();
+    await page.getByTestId("sw-confirm-item").click();
+    const manualEvidence = page.locator("article").filter({
+      has: page.getByRole("heading", { name: "Synthetic manual note - page 1", exact: true }),
+    });
+    await expect(manualEvidence).toBeVisible();
+    await expect(
+      manualEvidence.getByText(l("Manuellt underlag", "Manual evidence"), {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await manualEvidence
+      .getByRole("button", {
+        name: l("Granskat — använd i analysen", "Reviewed — use in analysis"),
+      })
+      .click();
+    await expect(
+      manualEvidence.getByText(l("Accepterad", "Accepted"), { exact: true }),
+    ).toBeVisible();
     await shot(page, locale, "evidence");
     await page
       .getByRole("button", { name: `3. ${l("Komplettera", "Follow-ups")}`, exact: true })
       .click();
+    await page
+      .getByLabel(l("Kompletteringsfråga", "Follow-up question"), { exact: true })
+      .fill(
+        "Has the backup route been verified after maintenance? This is needed before deciding operational availability.",
+      );
     await page
       .getByLabel(
         l(
@@ -288,6 +380,27 @@ for (const locale of ["sv", "en"] as const) {
     expect(html).toContain(evidence);
     expect(html).toContain("SHA-256");
     expect(html).not.toContain("<script");
+    // Print the exact downloaded immutable export, in a fresh context without auth cookies.
+    const printContext = await browser.newContext();
+    const printPage = await printContext.newPage();
+    let printRequests = 0;
+    await printPage.route("**/*", (route) => {
+      printRequests += 1;
+      return route.abort();
+    });
+    await printPage.setContent(html);
+    await expect(printPage.getByRole("heading", { level: 1 })).toBeVisible();
+    await printPage.emulateMedia({ media: "print" });
+    const printed = await printPage.pdf({
+      path: testInfo.outputPath(`approved-report-${locale}.pdf`),
+      printBackground: true,
+      preferCSSPageSize: true,
+      tagged: true,
+    });
+    expect(printed.subarray(0, 5).toString()).toBe("%PDF-");
+    expect(printed.byteLength).toBeGreaterThan(10000);
+    expect(printRequests).toBe(0);
+    await printContext.close();
     const db = await client(page);
     const frozen = await db.from("sw_reports").update({ title: "tamper" }).eq("id", reportId);
     expect(frozen.error).not.toBeNull();

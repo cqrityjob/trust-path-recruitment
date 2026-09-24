@@ -11,11 +11,14 @@ const config = JSON.parse(readFileSync(join(state, "fixture.json"), "utf8")) as 
   token: string;
   httpPort: number;
   httpsPort: number;
+  upstreamPort?: number;
 };
 const module = (await import(pathToFileURL(join(state, "artifact/server.mjs")).href)) as {
   createSecurityWorkProcessor(token: string): Server;
+  checkProcessorEngine(): Promise<void>;
 };
-const http = module.createSecurityWorkProcessor(config.token);
+if (!config.upstreamPort) await module.checkProcessorEngine();
+const http = config.upstreamPort ? null : module.createSecurityWorkProcessor(config.token);
 const listen = (server: Server, port: number) =>
   new Promise<number>((resolve, reject) => {
     server.once("error", reject);
@@ -24,7 +27,25 @@ const listen = (server: Server, port: number) =>
       resolve((server.address() as AddressInfo).port);
     });
   });
-const httpPort = await listen(http, config.httpPort);
+const httpPort = config.upstreamPort || (await listen(http!, config.httpPort));
+if (config.upstreamPort) {
+  let ready = false;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${httpPort}/healthz`, {
+        signal: AbortSignal.timeout(1000),
+      });
+      if (response.ok) {
+        ready = true;
+        break;
+      }
+    } catch {
+      /* The owned container may still be starting. */
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (!ready) throw new Error("Synthetic upstream did not become ready.");
+}
 const https = createHttpsServer(
   {
     key: readFileSync(join(state, "key.pem")),
@@ -32,7 +53,12 @@ const https = createHttpsServer(
     maxHeaderSize: 8192,
   },
   (request, response) => {
-    if (request.method !== "POST" || request.url !== "/v1/extract") {
+    if (
+      !(
+        (request.method === "POST" && request.url === "/v1/extract") ||
+        (request.method === "GET" && request.url === "/healthz")
+      )
+    ) {
       response.writeHead(404);
       response.end();
       return;
@@ -47,8 +73,8 @@ const https = createHttpsServer(
       {
         hostname: "127.0.0.1",
         port: httpPort,
-        path: "/v1/extract",
-        method: "POST",
+        path: request.url,
+        method: request.method,
         headers,
         timeout: 15_000,
       },
@@ -95,9 +121,9 @@ const stop = () => {
   closing = true;
   rmSync(join(state, "ready.json"), { force: true });
   https.closeAllConnections();
-  http.closeAllConnections();
+  http?.closeAllConnections();
   https.close();
-  http.close();
+  http?.close();
   setTimeout(() => process.exit(0), 2000).unref();
 };
 process.once("SIGTERM", stop);

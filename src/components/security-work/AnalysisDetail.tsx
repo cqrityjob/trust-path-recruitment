@@ -17,7 +17,11 @@ import {
   reportSections,
   type AnalysisSaveInput,
 } from "@/lib/security-work/analysis-model";
-import type { Analysis, AnalysisQuestion } from "@/lib/security-work/analysis-types";
+import type {
+  Analysis,
+  AnalysisQuestion,
+  AiQuestionBasis,
+} from "@/lib/security-work/analysis-types";
 import { securityWorkKeys } from "@/lib/security-work/query-keys";
 import { useSecurityWorkspace } from "./context";
 import {
@@ -65,16 +69,59 @@ function formOf(row: Analysis): AnalysisSaveInput {
     consequence: row.consequence,
   };
 }
+function QuestionBasis({ basis, question }: { basis?: AiQuestionBasis; question: string }) {
+  const l = useWorkText();
+  if (!basis) return null;
+  return (
+    <aside
+      data-testid="sw-question-basis"
+      className="space-y-3 rounded-xl border border-border bg-secondary/25 p-4 text-sm"
+    >
+      <h4 className="font-semibold">
+        {l("AI:s ursprungliga frågemotivering", "AI's original reason for the question")}
+      </h4>
+      <p className="whitespace-pre-wrap">
+        {basis.reason ||
+          l(
+            "Ingen motivering angavs i det sparade utkastet.",
+            "No reason was provided in the saved draft.",
+          )}
+      </p>
+      <p className="text-muted-foreground">
+        {l(
+          "Motivering och citat bevaras från AI-utkastet. De uppdateras inte automatiskt när frågan eller underlaget ändras.",
+          "The reason and citations are preserved from the AI draft. They do not automatically update when the question or evidence changes.",
+        )}
+      </p>
+      {question !== basis.originalQuestion && (
+        <p className="whitespace-pre-wrap">
+          <strong>{l("Ursprunglig fråga: ", "Original question: ")}</strong>
+          {basis.originalQuestion}
+        </p>
+      )}
+      {basis.citations.map((citation, index) => (
+        <details key={`${citation.sourceItemId}:${index}`}>
+          <summary className="min-h-11 cursor-pointer py-3 font-medium">
+            {citation.sourceTitle}
+          </summary>
+          <blockquote className="whitespace-pre-wrap border-l-2 border-border pl-3">
+            {citation.quote}
+          </blockquote>
+        </details>
+      ))}
+    </aside>
+  );
+}
 function QuestionEditor({
   assessmentId,
   question,
-  suggestion,
+  basis,
   position,
   onCreated,
 }: {
   assessmentId: string;
   question?: AnalysisQuestion;
-  suggestion?: string;
+  basis?: AiQuestionBasis;
   position: number;
   onCreated?: () => void;
 }) {
@@ -86,7 +133,7 @@ function QuestionEditor({
   const [baseVersion, setBaseVersion] = useState<number | null>(question?.version ?? null);
   const [dirty, setDirty] = useState(false);
   const clearWarning = useUnsavedWarning(dirty);
-  const [text, setText] = useState(question?.question ?? suggestion ?? "");
+  const [text, setText] = useState(question?.question ?? "");
   const [answer, setAnswer] = useState(question?.answer ?? "");
   const [kind, setKind] = useState(question?.evidence_kind ?? "user_input");
   return (
@@ -121,9 +168,14 @@ function QuestionEditor({
         }
       }}
     >
+      <QuestionBasis basis={basis} question={text} />
       <fieldset className="space-y-4" disabled={!canEdit || op.state === "saving"}>
         <TextField
           label={l("Kompletteringsfråga", "Follow-up question")}
+          hint={l(
+            "Fråga bara efter en kvarstående lucka. Beskriv vilket beslut svaret behövs för och kontrollera först accepterat underlag och tidigare svar.",
+            "Ask only about a remaining gap. Explain which decision needs the answer and first check accepted evidence and existing answers.",
+          )}
           value={text}
           onChange={(e) => setText(e.target.value)}
           required
@@ -137,6 +189,10 @@ function QuestionEditor({
           value={answer}
           onChange={(e) => setAnswer(e.target.value)}
           maxLength={8000}
+          hint={l(
+            "Hänvisa till dokument och sida om svaret finns där. Ett antagande är inte en bekräftad uppgift; okänt får inte tolkas som låg risk.",
+            "Refer to the document and page if it contains the answer. An assumption is not confirmed information; unknown must not be interpreted as low risk.",
+          )}
         />
         <Field label={l("Uppgiftens karaktär", "Nature of information")}>
           {(id) => (
@@ -204,7 +260,7 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
   }, [query.data, dirty]);
   useEffect(() => {
     if (query.error?.message === "ACCESS_DENIED") deny();
-  }, [query.error]);
+  }, [query.error, deny]);
   async function persist() {
     if (!form) return false;
     const result = await op.run(() => save({ data: form }));
@@ -453,8 +509,8 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
           </h2>
           <p className="text-sm text-muted-foreground">
             {l(
-              "Håll egna uppgifter och antaganden åtskilda. Okända uppgifter ska förbli synliga.",
-              "Keep user-provided information separate from assumptions. Unknown information should remain visible.",
+              "Börja med accepterat underlag och tidigare svar. Lägg bara till frågor om sådant som fortfarande saknas för beslutet och ange varför. Håll egna uppgifter och antaganden åtskilda.",
+              "Start with accepted evidence and previous answers. Add questions only about what is still needed for the decision, and explain why. Keep user-provided information separate from assumptions.",
             )}
           </p>
           {detail.questions.map((question) =>
@@ -462,12 +518,17 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
               <QuestionEditor
                 key={question.id}
                 question={question}
+                basis={detail.questionBasis[question.id]}
                 assessmentId={analysisId}
                 position={question.position}
               />
             ) : (
               <article key={question.id} className={panelClass}>
                 <h3 className="font-semibold">{question.question}</h3>
+                <QuestionBasis
+                  basis={detail.questionBasis[question.id]}
+                  question={question.question}
+                />
                 <p className="mt-3 whitespace-pre-wrap">
                   {question.answer || l("Okänt", "Unknown")}
                 </p>
@@ -479,17 +540,6 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
               assessmentId={analysisId}
               position={detail.questions.length}
               onCreated={() => setNewQuestion(false)}
-              suggestion={
-                !form.existing_controls
-                  ? l(
-                      "Vilka skyddsåtgärder finns i dag, och vilket underlag bekräftar dem?",
-                      "Which controls exist today, and what evidence confirms them?",
-                    )
-                  : l(
-                      "Vilka kritiska beroenden och osäkra uppgifter behöver utredas?",
-                      "Which critical dependencies and uncertain facts need investigation?",
-                    )
-              }
             />
           )}
           {editable && !newQuestion && detail.questions.length > 0 && (
@@ -508,6 +558,7 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
             jobs={detail.jobs}
             inputs={detail.inputs}
             questions={detail.questions}
+            sources={detail.sourceItems}
             editable={editable}
             dirty={dirty}
           />

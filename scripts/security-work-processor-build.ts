@@ -8,12 +8,16 @@ import { spawnSync } from "node:child_process";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const require = createRequire(import.meta.url);
+const runtime = JSON.parse(
+  readFileSync(join(root, "scripts/security-work-processor-runtime.json"), "utf8"),
+) as { node: string; bun: string; pdfjs: string };
+const bunVersion = spawnSync("bun", ["--version"], { encoding: "utf8" }).stdout?.trim();
+if (bunVersion !== runtime.bun)
+  throw new Error("Use the exact Bun version in security-work-processor-runtime.json.");
 const output = resolve(process.argv[2] ?? join(root, ".output", "security-work-processor"));
-// Refuse unrelated existing directories. Rebuilding a marked artifact is safe.
-if (existsSync(output) && !existsSync(join(output, "sw-processor-artifact.json")))
-  throw new Error(
-    "Output already exists without a processor artifact marker; choose an empty destination.",
-  );
+// A fresh directory prevents stale packages or local .env files from entering the inventory.
+if (existsSync(output))
+  throw new Error("Output already exists; choose a new artifact destination.");
 if (output === root || !relative(output, root).startsWith(".."))
   throw new Error("Output must not be the repository or its parent.");
 mkdirSync(output, { recursive: true });
@@ -28,6 +32,17 @@ const built = spawnSync(
   { cwd: root, stdio: "inherit" },
 );
 if (built.status !== 0) throw new Error("Processor compilation failed.");
+for (const [source, target] of [
+  ["security-work-processor-verify.ts", "verify.mjs"],
+  ["security-work-processor-config-check.ts", "config-check.mjs"],
+]) {
+  const tool = spawnSync(
+    "bun",
+    ["build", join(root, "scripts", source), "--target=node", `--outfile=${join(output, target)}`],
+    { cwd: root, stdio: "inherit" },
+  );
+  if (tool.status !== 0) throw new Error("Processor tooling compilation failed.");
+}
 const packageRoot = (name: string) => dirname(require.resolve(`${name}/package.json`));
 const readPackage = (name: string) =>
   JSON.parse(readFileSync(join(packageRoot(name), "package.json"), "utf8")) as {
@@ -35,7 +50,7 @@ const readPackage = (name: string) =>
     optionalDependencies?: Record<string, string>;
   };
 const pdf = packageRoot("pdfjs-dist");
-if (readPackage("pdfjs-dist").version !== "6.3.289")
+if (readPackage("pdfjs-dist").version !== runtime.pdfjs)
   throw new Error("Review and retest the pinned PDF engine before updating its artifact.");
 const pdfTarget = join(output, "node_modules/pdfjs-dist");
 mkdirSync(join(pdfTarget, "legacy"), { recursive: true });
@@ -59,7 +74,8 @@ for (const name of packages) {
 }
 writeFileSync(
   join(output, "package.json"),
-  JSON.stringify({ private: true, type: "module", engines: { node: ">=22.13.0" } }, null, 2) + "\n",
+  JSON.stringify({ private: true, type: "module", engines: { node: runtime.node } }, null, 2) +
+    "\n",
 );
 const files: Array<{ path: string; sha256: string }> = [];
 function inventory(directory: string) {
@@ -82,8 +98,22 @@ writeFileSync(
   join(output, "sw-processor-artifact.json"),
   JSON.stringify(
     {
-      format: 1,
-      target: { platform: process.platform, architecture: process.arch },
+      format: 2,
+      runtime: { node: runtime.node, bun: runtime.bun },
+      lockSha256: createHash("sha256")
+        .update(readFileSync(join(root, "bun.lock")))
+        .digest("hex"),
+      target: {
+        platform: process.platform,
+        architecture: process.arch,
+        libc:
+          process.platform === "linux"
+            ? (process.report.getReport() as { header: { glibcVersionRuntime?: string } }).header
+                .glibcVersionRuntime
+              ? "glibc"
+              : "musl"
+            : null,
+      },
       packages: {
         "pdfjs-dist": readPackage("pdfjs-dist").version,
         ...Object.fromEntries(packages.map((name) => [name, readPackage(name).version])),
