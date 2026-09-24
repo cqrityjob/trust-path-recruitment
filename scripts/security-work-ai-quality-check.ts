@@ -237,6 +237,7 @@ await check(
     assert.equal(posts, 1);
     const misleading = referenceOutput(c, "en");
     misleading.uncertainty = "A recent upload proves the control is current.";
+    assert(misleading.report);
     for (const section of misleading.report.sections) section.missingInformation = "";
     // Removing all historical/currentness warnings is detectable by this bounded oracle.
     const stripped = JSON.parse(JSON.stringify(misleading).replaceAll("2021", "recent"));
@@ -260,7 +261,7 @@ await check(
       },
     );
     assert.equal(result.status, "failed");
-    if (result.status !== "succeeded") assert.equal(result.errorCode, "source_instructions");
+    assert.equal(result.errorCode, "source_instructions");
     assert.equal(calls, 0);
   },
 );
