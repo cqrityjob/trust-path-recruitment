@@ -198,7 +198,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 2026-09-24 matched all 16 tables and 11 functions, their grants, policies,
 // constraints and triggers to isolated replay. Data API rejects sw_private.
 // Evidence: docs/security-intelligence/hosted-application.md.
-const expectedPending: string[] = [];
+// PR #289 is the schema-only Security Work analysis contract. Its migration
+// is pending by design; dependent application code remains blocked until
+// hosted application is verified. Remove this name in the same change that
+// records that evidence in release-state.json, never on merge alone.
+const expectedPending: string[] = [
+  "20261211090000_security_work_analysis_contract.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
