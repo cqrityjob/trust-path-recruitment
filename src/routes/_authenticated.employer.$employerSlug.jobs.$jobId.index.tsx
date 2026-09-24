@@ -589,7 +589,7 @@ function JobHub({
                 <span className="tabular-nums">
                   {counts.total} {tp("rec.case.applicationsCount", counts.total)}
                 </span>
-              ) : applicationsQuery.isError ? (
+              ) : applicationsRead === "failed" ? (
                 <span className="text-amber-800 dark:text-amber-200">
                   {t("continuity.report.unavailable")}
                 </span>
