@@ -121,3 +121,27 @@ export const COMMON_TIMEZONES = [
   "Asia/Dubai",
   "UTC",
 ] as const;
+
+// ── Wall-clock arithmetic for the booking dialog ─────────────────────────
+
+/** Minutes between two HH:MM wall-clock times on the same day, or null. */
+export function minutesBetween(start: string, end: string): number | null {
+  const a = /^(\d{2}):(\d{2})$/.exec(start);
+  const b = /^(\d{2}):(\d{2})$/.exec(end);
+  if (!a || !b) return null;
+  const m = +b[1] * 60 + +b[2] - (+a[1] * 60 + +a[2]);
+  return m > 0 ? m : null;
+}
+
+/** HH:MM plus minutes, kept on the same day (clamped at 23:59). */
+export function addMinutes(time: string, minutes: number): string {
+  const m = /^(\d{2}):(\d{2})$/.exec(time);
+  if (!m) return time;
+  const total = Math.min(23 * 60 + 59, +m[1] * 60 + +m[2] + minutes);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Start times for N candidates booked back to back from one first slot. */
+export function consecutiveStarts(first: string, minutes: number, n: number): string[] {
+  return Array.from({ length: n }, (_, i) => addMinutes(first, i * minutes));
+}

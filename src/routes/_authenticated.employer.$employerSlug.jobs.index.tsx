@@ -504,7 +504,7 @@ function JobsList({
                               <Link
                                 to="/employer/$employerSlug/jobs/$jobId"
                                 params={{ employerSlug, jobId: r.id }}
-                                search={{ tab: "candidates" as const, stage: "all" as const }}
+                                search={{ step: "applications" as const, stage: "all" as const }}
                                 className="inline-flex flex-wrap items-baseline gap-x-1.5 text-muted-foreground hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               >
                                 <span className="font-medium tabular-nums text-foreground">

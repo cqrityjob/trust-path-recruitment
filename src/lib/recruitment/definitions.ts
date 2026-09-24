@@ -146,12 +146,40 @@ export type StageFilter = (typeof STAGE_FILTERS)[number];
 export const CANDIDATE_SORTS = ["applied", "name", "stage", "activity"] as const;
 export type CandidateSort = (typeof CANDIDATE_SORTS)[number];
 
+export const PAGE_SIZE = 25;
+
+/** Answers to the vacancy's yes/no questions, as one URL parameter:
+ *  `<questionId>:y,<questionId>:n`. A malformed entry is dropped, never
+ *  guessed at, so a hand-edited URL cannot widen or narrow a filter silently. */
+export type AnswerFilter = { questionId: string; value: boolean };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function parseAnswerFilter(raw: string | undefined): AnswerFilter[] {
+  if (!raw) return [];
+  const out: AnswerFilter[] = [];
+  for (const part of raw.split(",")) {
+    const [id, v] = part.split(":");
+    if (!id || !UUID.test(id) || (v !== "y" && v !== "n")) continue;
+    if (out.some((f) => f.questionId === id)) continue;
+    out.push({ questionId: id, value: v === "y" });
+  }
+  return out;
+}
+
+export function serializeAnswerFilter(filters: readonly AnswerFilter[]): string | undefined {
+  if (filters.length === 0) return undefined;
+  return filters.map((f) => `${f.questionId}:${f.value ? "y" : "n"}`).join(",");
+}
+
 export const candidateViewSchema = z.object({
   q: z.string().trim().max(100).optional().catch(undefined),
   stage: z.enum(STAGE_FILTERS).optional().catch(undefined),
   owner: z.string().max(40).optional().catch(undefined),
+  ans: z.string().max(400).optional().catch(undefined),
   sort: z.enum(CANDIDATE_SORTS).optional().catch(undefined),
   dir: z.enum(["asc", "desc"]).optional().catch(undefined),
+  page: z.coerce.number().int().min(1).max(10000).optional().catch(undefined),
 });
 export type CandidateView = z.infer<typeof candidateViewSchema>;
 
@@ -164,7 +192,43 @@ export type CandidateViewRow = {
   appliedAt: string;
   responsibleUserId: string | null;
   nextActivityAt: string | null;
+  /** The candidate's yes/no answers by question id, when the read carried
+   *  them. Absent means "not loaded", and an answer filter then matches
+   *  nothing rather than everything. */
+  answers?: Readonly<Record<string, boolean | null>>;
 };
+
+/** One page of an ordered list. `page` is clamped into range, so a stale
+ *  link to page 9 of a list that now has 3 pages opens page 3, not nothing. */
+export type PageSlice<T> = {
+  rows: T[];
+  page: number;
+  pages: number;
+  total: number;
+  /** 1-based positions of the first and last row shown, 0/0 when empty. */
+  from: number;
+  to: number;
+};
+
+export function pageSlice<T>(
+  ordered: readonly T[],
+  page: number | undefined,
+  size = PAGE_SIZE,
+): PageSlice<T> {
+  const total = ordered.length;
+  const pages = Math.max(1, Math.ceil(total / size));
+  const p = Math.min(Math.max(1, page ?? 1), pages);
+  const start = (p - 1) * size;
+  const rows = ordered.slice(start, start + size);
+  return {
+    rows,
+    page: p,
+    pages,
+    total,
+    from: total === 0 ? 0 : start + 1,
+    to: total === 0 ? 0 : start + rows.length,
+  };
+}
 
 const STAGE_ORDER: Record<string, number> = {
   submitted: 0,
@@ -200,10 +264,14 @@ export function applyCandidateView<T extends CandidateViewRow>(
 ): T[] {
   const q = (view.q ?? "").toLocaleLowerCase("sv");
   const owner = view.owner;
+  const answers = parseAnswerFilter(view.ans);
   const filtered = rows.filter((r) => {
     if (!matchesStageFilter(view.stage, r.status)) return false;
     if (owner === "none" && r.responsibleUserId !== null) return false;
     if (owner && owner !== "none" && r.responsibleUserId !== owner) return false;
+    for (const f of answers) {
+      if (r.answers?.[f.questionId] !== f.value) return false;
+    }
     if (q) {
       const hay = `${r.name ?? ""} ${r.jobTitle ?? ""}`.toLocaleLowerCase("sv");
       if (!hay.includes(q)) return false;
@@ -253,9 +321,88 @@ export function compactView(view: CandidateView): CandidateView {
   if (view.q) out.q = view.q;
   if (view.stage && view.stage !== "open") out.stage = view.stage;
   if (view.owner) out.owner = view.owner;
+  if (view.ans) out.ans = view.ans;
   if (view.sort && view.sort !== "applied") out.sort = view.sort;
   if (view.dir) out.dir = view.dir;
+  if (view.page && view.page > 1) out.page = view.page;
   return out;
+}
+
+/** The same view with the page dropped: what a filter or sort change should
+ *  navigate to, since page 4 of the old list is nowhere in the new one. */
+export function firstPage(view: CandidateView): CandidateView {
+  const { page: _page, ...rest } = view;
+  return rest;
+}
+
+// ── The recruitment's five steps ─────────────────────────────────────────
+//
+// One case, five steps, always all visible: 1 the requirements profile,
+// 2 the advert, 3 publishing, 4 applications, 5 decision and close. A step
+// is DONE on a criterion the data satisfies, never because it was visited;
+// and it can be revisited at any time -- the steps navigate, they never
+// lock. "Current" is the step the case is at, so somebody opening the case
+// lands where the work is.
+
+export const RECRUITMENT_STEPS = [
+  "requirements",
+  "advert",
+  "publishing",
+  "applications",
+  "closing",
+] as const;
+export type RecruitmentStep = (typeof RECRUITMENT_STEPS)[number];
+export type StepState = "done" | "current" | "todo";
+
+export type StepInput = {
+  /** Structured requirements and questions saved for the vacancy. */
+  requirementsCount: number;
+  questionsCount: number;
+  /** Free-text requirements on the advert itself. */
+  hasRequirementsText: boolean;
+  /** Title and description present, the advert's own readiness. */
+  advertReady: boolean;
+  phase: RecruitmentPhase;
+  total: number;
+  unresolved: number;
+};
+
+export function stepStatesOf(i: StepInput): Record<RecruitmentStep, StepState> {
+  const requirementsDone = i.requirementsCount > 0 || i.questionsCount > 0 || i.hasRequirementsText;
+  const advertDone = i.advertReady;
+  const publishingDone = i.phase !== "draft";
+  const closed = i.phase === "completed" || i.phase === "cancelled";
+  // Applications are "done" once every candidate has an outcome and the
+  // advert no longer takes new ones -- an empty published advert is still
+  // waiting, and so is a closed one with somebody undecided.
+  const applicationsDone = closed || (i.phase === "closed" && i.total > 0 && i.unresolved === 0);
+  const closingDone = closed;
+
+  let current: RecruitmentStep;
+  if (closed) current = "closing";
+  else if (i.phase === "draft") {
+    current = !requirementsDone ? "requirements" : !advertDone ? "advert" : "publishing";
+  } else if (i.phase === "published") current = "applications";
+  else current = i.unresolved > 0 ? "applications" : "closing";
+
+  const done: Record<RecruitmentStep, boolean> = {
+    requirements: requirementsDone,
+    advert: advertDone,
+    publishing: publishingDone,
+    applications: applicationsDone,
+    closing: closingDone,
+  };
+  const out = {} as Record<RecruitmentStep, StepState>;
+  for (const step of RECRUITMENT_STEPS) {
+    out[step] = step === current ? "current" : done[step] ? "done" : "todo";
+  }
+  return out;
+}
+
+export function currentStepOf(i: StepInput): RecruitmentStep {
+  const states = stepStatesOf(i);
+  return (RECRUITMENT_STEPS.find((s) => states[s] === "current") ??
+    "applications") as RecruitmentStep;
 }
 
 // ── Messages and bookings: states as the interface names them ────────────

@@ -1,74 +1,82 @@
-// The Job Recruitment Hub — /employer/$employerSlug/jobs/$jobId.
+// The recruitment case — /employer/$employerSlug/jobs/$jobId.
 //
-// ── WHY THIS PAGE EXISTS ────────────────────────────────────────────────
+// ── ONE CASE, FIVE STEPS ───────────────────────────────────────────────
 //
-// Until now a job advertisement was a row in a table with a "Redigera" button
-// on it, and only while it was a draft. Once published, the single most
-// important object in the whole product -- the thing the employer actually
-// hired for -- had no destination at all. You could not click it. There was
-// nowhere to go.
+// A recruitment IS a job: the vacancy row, its publication state, and every
+// application joined to it. This page renders that join as one case with a
+// persistent five-step process, the way a recruiter thinks about the work:
 //
-// So a recruiter working one vacancy had to hold it together themselves:
-// Mina annonser to see the advertisement, Ansokningar to see who applied to
-// it (unfiltered, every job mixed into one list), and their own memory to know
-// which of those people belonged to this vacancy. The database has always
-// joined applications to a job. The interface simply never did.
+//   1 Kravprofil  →  2 Annons  →  3 Publiceringsläge  →  4 Ansökningar  →
+//   5 Beslut & avslut
 //
-// This page is that join, rendered. One vacancy, its state, and everyone in
-// its pipeline, on one screen.
+// The steps are navigation, not a wizard. Every step is reachable at any
+// time; a step's "done" mark is computed from the data (stepStatesOf), never
+// from having been visited; and what may change on each step is decided by
+// the database and said in words on that step. Team and settings, and the
+// case's activity log, are not steps -- they are views reached from the
+// header, so the sequence stays a sequence.
 //
-// ── THE PIPELINE, AND WHERE ITS NUMBERS COME FROM ───────────────────────
+// The page orders itself the way the work reads, top to bottom: the case's
+// title and facts, the process nav, and then the step -- which on step 4 is
+// filters, the persistent action bar, the candidate table, and the pager.
 //
-// This page used to say that a per-vacancy assessment aggregate could not be
-// answered in one read, and that was true of the read it was looking at:
-// scp_application_assessments is scoped to ONE application, so a per-job total
-// through it means N round trips.
+// ── WHERE THE NUMBERS COME FROM ─────────────────────────────────────────
 //
-// It is answerable through a different pair, and both of them already exist:
-// the governed assessment pipeline carries one row per attempt WITH its
-// assignment, and assessment_assignments maps an assignment to an application.
-// Joined, they give every application in the organisation the state of its
-// assessments -- employer-wide, two requests, on the cache keys the assessment
-// workspace already uses, and no new read model and no migration. See
-// src/lib/employer-continuity/open-assessments.ts.
+// The candidate page arrives from the server already filtered, ordered and
+// sliced (listRecruitmentCandidatesPage), from the same definitions the
+// controls edit, together with unfiltered counts for the vacancy. Every
+// count on this page -- the header's total, the step nav's badge, the stage
+// filter's numbers, the pipeline chips -- reads those, so a number and the
+// rows it opens cannot disagree.
 //
-// What is still deliberately absent is any number that would require the page
-// to read a SCORE: no "3 passed", no average, no quality. The assessment
-// column counts whether a process is open, which is a process fact.
-//
-// ── AND A NUMBER IS NEVER INVENTED ──────────────────────────────────────
-//
-// Every count on this page can be `null`, and `null` draws a dash and names
-// the reason. `applicationsQuery.data ?? []` used to be the whole story, so a
-// failed read rendered as "no applications yet" under a published
-// advertisement -- a confident, wrong sentence about the employer's own
-// vacancy. The projection has no path from a failed read to a zero.
-//
-// No new lifecycle vocabulary. The columns below are job_applications.status
-// as it already is, labelled through APPLICATION_STATUS_LABEL_KEY, in the
-// order the employer transition table already permits. This page introduces
-// no state the rest of the product does not have.
-//
-// Access resolution is the same as every other /employer/$employerSlug/*
-// route: the slug is a lookup key, re-verified through
-// listMyEmployerWorkspaces() by the shared frame on every load.
+// The assessment half of the pipeline (how many candidates have a test
+// open) is read through the pair of existing employer-wide reads in
+// src/lib/employer-continuity/open-assessments.ts, on the cache keys the
+// assessment workspace already uses. Nothing here reads a SCORE: no "3
+// passed", no average, no ranking. A test being open is a fact about the
+// process; how somebody did is a separate, permission-gated page.
 
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Check, CircleDashed, ExternalLink, Users } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  CircleDashed,
+  ExternalLink,
+  Eye,
+  Lock,
+  Users,
+} from "lucide-react";
 import { useT, type PluralKey } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { ConfirmAction, usePendingConfirm } from "@/components/employer/ConfirmAction";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { JobsPage } from "@/components/academy/AcademyWorkspace";
 import { translateJobServerError } from "@/components/employer/EmployerJobForm";
+import { JobAdPreview } from "@/components/employer/job-form/JobAdPreview";
+import { PUBLICATION_MODEL, fromJobRow } from "@/components/employer/job-form/model";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/job-intelligence/date-format";
-import { jobStatusLabel } from "@/lib/job-intelligence/enum-labels";
 import {
   getEmployerJob,
   submitEmployerJob,
+  publishEmployerJob,
   closeEmployerJob,
   deleteEmployerJob,
   restoreEmployerJob,
@@ -80,6 +88,7 @@ import type { ApplicationStatus } from "@/lib/job-intelligence/applications.func
 import { z } from "zod";
 import { CandidateTable } from "@/components/recruitment/CandidateTable";
 import { PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
+import { ProcessStepNav } from "@/components/recruitment/ProcessStepNav";
 import {
   RecruitmentActivity,
   RecruitmentSettings,
@@ -87,15 +96,18 @@ import {
 } from "@/components/recruitment/RecruitmentWorkspaceTabs";
 import {
   getRecruitment,
-  listRecruitmentCandidates,
-  type CandidateRow,
+  listRecruitmentCandidatesPage,
 } from "@/lib/recruitment/recruitment.functions";
 import {
   candidateViewSchema,
   compactView,
-  isUnresolved,
+  currentStepOf,
   phaseOf,
+  stepStatesOf,
+  RECRUITMENT_STEPS,
   type CandidateView,
+  type RecruitmentStep,
+  type StepInput,
 } from "@/lib/recruitment/definitions";
 import { checkJobReadiness, type JobReadinessInput } from "@/lib/job-intelligence/job-readiness";
 import {
@@ -116,17 +128,31 @@ type JobHubRow = JobReadinessInput & {
   slug?: string | null;
   short_id?: string | null;
   published_at?: string | null;
+  deadline_at?: string | null;
   updated_at: string;
+  requirements_sv?: string | null;
+  requirements_en?: string | null;
 };
 
-// The recruitment workspace's own view state: which tab, and the candidate
-// list's search, stage, owner and sort. In the URL, so a reload, a shared link
-// and a return from a candidate all land on the same view.
+// The case's own view state, in the URL: which step (or which of the two
+// header views), and the candidate list's filters, sort and page. A reload,
+// a shared link and a return from a candidate all land on the same view.
+// `tab` is the previous tab vocabulary, still accepted so an older link
+// lands on the equivalent step.
 const HUB_TABS = ["candidates", "vacancy", "activity", "team"] as const;
-type HubTab = (typeof HUB_TABS)[number];
+const CASE_VIEWS = ["team", "activity"] as const;
+type CaseView = (typeof CASE_VIEWS)[number];
 const hubSearchSchema = candidateViewSchema.extend({
+  step: z.enum(RECRUITMENT_STEPS).optional().catch(undefined),
+  view: z.enum(CASE_VIEWS).optional().catch(undefined),
   tab: z.enum(HUB_TABS).optional().catch(undefined),
 });
+const TAB_TO: Record<(typeof HUB_TABS)[number], { step?: RecruitmentStep; view?: CaseView }> = {
+  candidates: { step: "applications" },
+  vacancy: { step: "advert" },
+  activity: { view: "activity" },
+  team: { view: "team" },
+};
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/$jobId/")({
   ssr: false,
@@ -138,7 +164,7 @@ export const Route = createFileRoute("/_authenticated/employer/$employerSlug/job
 function JobHubRoute() {
   const { employerSlug, jobId } = Route.useParams();
   return (
-    <JobsPage employerSlug={employerSlug}>
+    <JobsPage employerSlug={employerSlug} wide>
       {(ws) => (
         <JobHub
           employerId={ws.employerId}
@@ -166,20 +192,23 @@ function JobHub({
   canEdit: boolean;
 }) {
   const search = Route.useSearch();
-  const candidateView: CandidateView = {
+  const candidateView: CandidateView = compactView({
     q: search.q,
     stage: search.stage,
     owner: search.owner,
+    ans: search.ans,
     sort: search.sort,
     dir: search.dir,
-  };
+    page: search.page,
+  });
   const recruitmentFn = useServerFn(getRecruitment);
   const { t, tp, lang } = useT();
   const qc = useQueryClient();
   const navigate = useNavigate();
   const getFn = useServerFn(getEmployerJob);
-  const listApplicationsFn = useServerFn(listRecruitmentCandidates);
+  const pageFn = useServerFn(listRecruitmentCandidatesPage);
   const submitFn = useServerFn(submitEmployerJob);
+  const publishFn = useServerFn(publishEmployerJob);
   const closeFn = useServerFn(closeEmployerJob);
   const deleteFn = useServerFn(deleteEmployerJob);
   const restoreFn = useServerFn(restoreEmployerJob);
@@ -187,6 +216,7 @@ function JobHub({
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [pending, setPending] = usePendingConfirm<"delete" | "close" | "duplicate">();
+  const [previewing, setPreviewing] = useState(false);
   // Set when jobs_delete_draft() refuses. This page cannot see whether a draft
   // has assignments or invitations attached; only the database can, so it
   // stops offering the delete and offers the close instead. See jobs.index.tsx.
@@ -197,13 +227,16 @@ function JobHub({
     queryFn: () => getFn({ data: { employerId, jobId } }),
   });
 
-  // Scoped in the database, not filtered in the browser: listApplicationsForEmployer
-  // already takes a jobId and applies it to the RLS-scoped query, so this page
-  // never holds another vacancy's candidates.
+  // Scoped in the database, not filtered in the browser: the read takes the
+  // jobId and applies it with the employer to the RLS-scoped query, filters
+  // and orders on the server, and returns ONE page. This page never holds
+  // another vacancy's candidates, nor more of this one's than it shows.
   const applicationsQuery = useQuery({
-    queryKey: ["employer", employerId, "candidates", "job", jobId],
-    queryFn: () => listApplicationsFn({ data: { employerId, jobId } }),
+    queryKey: ["employer", employerId, "candidates", "job", jobId, "page", candidateView],
+    queryFn: () => pageFn({ data: { employerId, jobId, view: candidateView } }),
+    placeholderData: (prev) => prev,
   });
+  const page = applicationsQuery.data ?? null;
 
   // The assessment half of the pipeline. Always on here -- this is the one
   // surface whose job is to summarise the vacancy -- and shared with the
@@ -211,14 +244,16 @@ function JobHub({
   // pays for one fetch.
   const openAssessments = useOpenAssessmentApplications(employerId, true);
 
-  /** Every mutation on this page refreshes the same three caches: this job,
-   *  the list it came from, and the dashboard counters that read both. */
+  /** Every mutation on this page refreshes the same caches: this job, the
+   *  candidate pages, the list it came from, and the dashboard counters. */
   function invalidateAll() {
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "job", jobId] });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId, "candidates", "job", jobId] });
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment-overview"] });
     void qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment", jobId] });
+    void qc.invalidateQueries({ queryKey: ["employer", employerId, "applications"] });
   }
 
   const mutationOptions = {
@@ -232,6 +267,10 @@ function JobHub({
 
   const submitMutation = useMutation({
     mutationFn: () => submitFn({ data: { employerId, jobId } }),
+    ...mutationOptions,
+  });
+  const publishMutation = useMutation({
+    mutationFn: () => publishFn({ data: { employerId, jobId } }),
     ...mutationOptions,
   });
   const closeMutation = useMutation({
@@ -269,6 +308,15 @@ function JobHub({
     queryFn: () => recruitmentFn({ data: { employerId, jobId } }),
   });
   const recruitment = recruitmentQuery.data ?? null;
+
+  // Step 5 lists who is still undecided, by name. One page of them, with the
+  // full count, so a long list does not have to be loaded to be counted.
+  const wantsClosing = search.step === "closing";
+  const openQuery = useQuery({
+    queryKey: ["employer", employerId, "candidates", "job", jobId, "page", { stage: "open" }],
+    queryFn: () => pageFn({ data: { employerId, jobId, view: { stage: "open" } } }),
+    enabled: wantsClosing,
+  });
 
   const crumbRow = jobQuery.data as unknown as
     | { title_sv?: string | null; title_en?: string | null }
@@ -308,12 +356,11 @@ function JobHub({
       </ol>
     </nav>
   );
-  const backLink = breadcrumb;
 
   if (jobQuery.isLoading) {
     return (
-      <div className="mx-auto w-full max-w-6xl">
-        {backLink}
+      <div className="w-full">
+        {breadcrumb}
         <p className="mt-6 text-sm text-muted-foreground">{t("employer.loading")}</p>
       </div>
     );
@@ -321,8 +368,8 @@ function JobHub({
 
   if (jobQuery.isError || !jobQuery.data) {
     return (
-      <div className="mx-auto w-full max-w-6xl">
-        {backLink}
+      <div className="w-full">
+        {breadcrumb}
         <h1 className="mt-4 text-2xl font-semibold text-foreground">
           {t("employer.jobHub.notFound")}
         </h1>
@@ -340,13 +387,11 @@ function JobHub({
     job.title_sv ||
     job.title_en ||
     t("employer.jobs.list.untitled");
+  const pick = (sv: string | null | undefined, en: string | null | undefined) =>
+    (lang === "en" ? en || sv : sv || en) ?? "";
 
   const readiness = checkJobReadiness(job);
-  const candidateRows: CandidateRow[] = applicationsQuery.data ?? [];
-  const rows = candidateRows.map((r) => ({
-    id: r.applicationId,
-    status: r.status as ApplicationStatus,
-  }));
+  const counts = page?.counts ?? null;
 
   // How the read WENT, kept apart from what it found. There is no client-side
   // way to tell a policy refusal from any other failure here, and guessing
@@ -361,7 +406,10 @@ function JobHub({
   const pipeline = projectJobPipeline({
     jobStatus: status,
     applicationsRead,
-    applications: rows,
+    applications: (page?.applications ?? []).map((a) => ({
+      id: a.id,
+      status: a.status as ApplicationStatus,
+    })),
     assessmentRead: openAssessments.read,
     applicationsWithOpenAssessment: openAssessments.ids,
   });
@@ -370,23 +418,35 @@ function JobHub({
     {
       jobStatus: status,
       publishedAt: job.published_at ?? null,
-      deadlineAt: (job as { deadline_at?: string | null }).deadline_at ?? null,
-      expiresAt: (job as { expires_at?: string | null }).expires_at ?? null,
+      deadlineAt: job.deadline_at ?? null,
+      expiresAt: job.expires_at ?? null,
       completionState: recruitment?.settings.completionState ?? null,
     },
     new Date(),
   );
-  const unresolved = candidateRows.filter((r) => isUnresolved(r.status));
-  // Candidates is where an active recruitment opens. A draft opens on its
-  // vacancy, because there is nobody to list yet and the work is the advert.
-  const tab: HubTab = search.tab ?? (phase === "draft" ? "vacancy" : "candidates");
+  const total = counts?.total ?? 0;
+  const unresolvedCount = counts ? counts.total - counts.decided : 0;
+  const stepInput: StepInput = {
+    requirementsCount: recruitment?.requirements.length ?? 0,
+    questionsCount: recruitment?.questions.length ?? 0,
+    hasRequirementsText: Boolean(job.requirements_sv?.trim() || job.requirements_en?.trim()),
+    advertReady:
+      Boolean(job.title_sv?.trim() || job.title_en?.trim()) &&
+      Boolean(job.description_sv?.trim() || job.description_en?.trim()),
+    phase,
+    total,
+    unresolved: unresolvedCount,
+  };
+  const stepStates = stepStatesOf(stepInput);
+  const legacy = search.tab ? TAB_TO[search.tab] : {};
+  const view: CaseView | null = search.view ?? legacy.view ?? null;
+  const step: RecruitmentStep = search.step ?? legacy.step ?? currentStepOf(stepInput);
   const responsibleName = recruitment?.settings.responsibleUserId
     ? (recruitment.team.find((m) => m.userId === recruitment.settings.responsibleUserId)?.name ??
       null)
     : null;
 
   const editable = status === "draft" || status === "rejected";
-  const submittable = editable;
   // Same rule as the list, from the same constants the server enforces: a
   // never-published draft with nothing attached can go, and anything else that
   // was ever live is closed instead. See jobs.index.tsx.
@@ -396,107 +456,176 @@ function JobHub({
   const restorable = status === "archived" && phase !== "completed" && phase !== "cancelled";
   const busy =
     submitMutation.isPending ||
+    publishMutation.isPending ||
     closeMutation.isPending ||
     deleteMutation.isPending ||
     restoreMutation.isPending ||
     dupMutation.isPending;
 
-  function setTab(next: HubTab) {
+  function go(next: { step?: RecruitmentStep; view?: CaseView } & CandidateView) {
+    const { step: s, view: v, ...rest } = next;
     void navigate({
       to: "/employer/$employerSlug/jobs/$jobId",
       params: { employerSlug, jobId },
-      search: { ...search, tab: next },
+      search: { ...(s ? { step: s } : {}), ...(v ? { view: v } : {}), ...compactView(rest) },
       replace: true,
     });
   }
   function setView(next: CandidateView) {
-    void navigate({
-      to: "/employer/$employerSlug/jobs/$jobId",
-      params: { employerSlug, jobId },
-      search: { tab: search.tab, ...compactView(next) },
-      replace: true,
-    });
+    go({ step: "applications", ...next });
   }
 
   // The one primary action the header offers, by phase.
+  const btnPrimary =
+    "inline-flex min-h-10 items-center gap-1.5 rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60";
+  const btnSecondary =
+    "inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border px-3 text-sm font-medium text-foreground hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60";
   const primary =
     phase === "draft" && editable && canEdit ? (
       <Link
         to="/employer/$employerSlug/jobs/$jobId/edit"
         params={{ employerSlug, jobId }}
-        className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        className={btnPrimary}
       >
         {t("rec.hub.primary.continueVacancy")}
       </Link>
-    ) : phase === "closed" && unresolved.length === 0 && recruitment?.canManage ? (
-      <button
-        type="button"
-        onClick={() => setTab("team")}
-        className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
+    ) : phase === "closed" && unresolvedCount === 0 && recruitment?.canManage ? (
+      <button type="button" onClick={() => go({ step: "closing" })} className={btnPrimary}>
         {t("rec.hub.primary.complete")}
       </button>
-    ) : (phase === "published" || phase === "closed") &&
-      candidateRows.some((r) => r.status === "submitted") ? (
-      <button
-        type="button"
-        onClick={() => setView({ stage: "new" })}
-        className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
+    ) : (phase === "published" || phase === "closed") && (counts?.new ?? 0) > 0 ? (
+      <button type="button" onClick={() => setView({ stage: "new" })} className={btnPrimary}>
         {t("rec.hub.primary.reviewNew")}
       </button>
     ) : null;
 
-  const TABS: [HubTab, TranslationKey, number | null][] = [
-    [
-      "candidates",
-      "rec.hub.tab.candidates",
-      applicationsQuery.isSuccess ? candidateRows.length : null,
-    ],
-    ["vacancy", "rec.hub.tab.vacancy", null],
-    ["activity", "rec.hub.tab.activity", null],
-    ["team", "rec.hub.tab.team", null],
-  ];
+  const viewLink = (v: CaseView, icon: React.ReactNode, label: TranslationKey) => (
+    <Link
+      to="/employer/$employerSlug/jobs/$jobId"
+      params={{ employerSlug, jobId }}
+      search={{ view: v }}
+      aria-current={view === v ? "page" : undefined}
+      className={`${btnSecondary} ${view === v ? "border-accent text-foreground" : ""}`}
+    >
+      {icon}
+      {t(label)}
+    </Link>
+  );
+
+  const panelHeading = (id: string, label: TranslationKey, lede?: TranslationKey) => (
+    <div>
+      <h2 id={id} className="text-lg font-semibold text-foreground">
+        {t(label)}
+      </h2>
+      {lede && <p className="mt-0.5 max-w-[68ch] text-sm text-muted-foreground">{t(lede)}</p>}
+    </div>
+  );
+  const editLink = (editorStep: "requirements" | "description" | "application") =>
+    editable && canEdit ? (
+      <Link
+        to="/employer/$employerSlug/jobs/$jobId/edit"
+        params={{ employerSlug, jobId }}
+        search={{ step: editorStep }}
+        className={btnSecondary}
+      >
+        {t("employer.jobs.list.edit")}
+      </Link>
+    ) : (
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Lock className="h-3.5 w-3.5" aria-hidden="true" />
+        {t(status === "published" ? "rec.case.lockedPublished" : "rec.case.lockedStatus")}
+      </span>
+    );
 
   return (
-    <div className="mx-auto w-full max-w-6xl">
-      {backLink}
+    <div className="w-full">
+      {breadcrumb}
 
-      {/* ── The recruitment ─────────────────────────────────────────── */}
-      <header className="mt-3 flex flex-wrap items-start justify-between gap-4">
+      {/* ── The case ─────────────────────────────────────────────────── */}
+      <header className="mt-3 flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h1
-            className="text-[1.5rem] font-semibold leading-tight tracking-tight text-foreground sm:text-3xl"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {title}
-          </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
-            <PhaseBadge phase={phase} />
-            <span className="text-muted-foreground">
-              {t("rec.hub.responsible")}:{" "}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <h1
+              className="text-[1.375rem] font-semibold leading-tight tracking-tight text-foreground sm:text-2xl"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {title}
+            </h1>
+            {/* "Visa annons": the advert as a candidate would read it, and the
+                live page when there is one. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className={btnSecondary}>
+                  <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("rec.case.viewAdvert")}
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64">
+                <DropdownMenuItem onSelect={() => setPreviewing(true)}>
+                  {t("rec.case.previewAdvert")}
+                </DropdownMenuItem>
+                {status === "published" && job.slug && (
+                  <DropdownMenuItem asChild>
+                    <Link
+                      to="/jobs/$slug"
+                      params={{ slug: String(job.slug) }}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {t("employer.jobHub.viewPublic")}
+                      <ExternalLink className="ml-1 h-3 w-3" aria-hidden="true" />
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <dl className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <Meta label={t("rec.case.reference")}>{job.short_id ?? "—"}</Meta>
+            <Sep />
+            <Meta label={t("rec.col.applications")}>
+              {counts ? (
+                <span className="tabular-nums">
+                  {counts.total} {tp("rec.case.applicationsCount", counts.total)}
+                </span>
+              ) : applicationsQuery.isError ? (
+                <span className="text-amber-800 dark:text-amber-200">
+                  {t("continuity.report.unavailable")}
+                </span>
+              ) : (
+                "…"
+              )}
+            </Meta>
+            <Sep />
+            <Meta label={t("rec.col.status")}>
+              <PhaseBadge phase={phase} />
+            </Meta>
+            <Sep />
+            <Meta label={t("rec.hub.responsible")}>
               <span className="font-medium text-foreground">
                 {responsibleName ?? t("rec.hub.noResponsible")}
               </span>
-            </span>
-            <span className="text-xs text-muted-foreground">{job.short_id}</span>
-            {/* The live advertisement, as a candidate sees it. Only offered when
-                there genuinely is one to look at. */}
-            {status === "published" && job.slug && (
-              <Link
-                to="/jobs/$slug"
-                params={{ slug: String(job.slug) }}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline"
-              >
-                {t("employer.jobHub.viewPublic")}
-                <ExternalLink className="h-3 w-3" aria-hidden="true" />
-              </Link>
-            )}
-          </div>
+            </Meta>
+            <Sep />
+            <Meta label={t("rec.hub.deadline")}>
+              {job.deadline_at ? formatDate(job.deadline_at, lang) : "—"}
+            </Meta>
+          </dl>
         </div>
-        {primary}
+        <div className="flex flex-wrap items-center gap-2">
+          {viewLink(
+            "team",
+            <Users className="h-3.5 w-3.5" aria-hidden="true" />,
+            "rec.hub.tab.team",
+          )}
+          {viewLink(
+            "activity",
+            <Activity className="h-3.5 w-3.5" aria-hidden="true" />,
+            "rec.hub.tab.activity",
+          )}
+          {primary}
+        </div>
       </header>
 
       {actionError && (
@@ -508,195 +637,189 @@ function JobHub({
         </div>
       )}
 
-      {/* ── Tabs ────────────────────────────────────────────────────── */}
-      <div
-        role="tablist"
-        aria-label={t("rec.hub.tabs")}
-        className="mt-5 flex gap-1 overflow-x-auto border-b border-border"
-      >
-        {TABS.map(([key, label, count]) => (
-          <button
-            key={key}
-            role="tab"
-            type="button"
-            id={`tab-${key}`}
-            aria-selected={tab === key}
-            aria-controls={`panel-${key}`}
-            onClick={() => setTab(key)}
-            className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              tab === key
-                ? "border-accent text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {t(label)}
-            {count !== null && (
-              <span className="ml-1.5 tabular-nums text-muted-foreground">({count})</span>
-            )}
-          </button>
-        ))}
+      {/* ── The process ──────────────────────────────────────────────── */}
+      <div className="mt-4">
+        <ProcessStepNav
+          states={stepStates}
+          active={step}
+          employerSlug={employerSlug}
+          jobId={jobId}
+          counts={counts ? { applications: counts.total } : undefined}
+        />
       </div>
 
-      {tab === "candidates" && (
-        <div
-          role="tabpanel"
-          id="panel-candidates"
-          aria-labelledby="tab-candidates"
-          className="pt-5"
-        >
-          {/* ── The pipeline ───────────────────────────────────────────── */}
-          <section aria-labelledby="job-pipeline">
-            <h2 id="job-pipeline" className="sr-only">
-              {t("employer.jobHub.pipeline.heading")}
-            </h2>
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {PIPELINE_CARDS.map((card) => (
-                <PipelineCard
-                  key={card.stage}
-                  labelKey={card.labelKey}
-                  count={pipeline.counts[card.stage]}
-                  employerSlug={employerSlug}
-                  jobId={jobId}
-                  search={card.search}
-                />
-              ))}
-            </dl>
-
-            {/* ── The one next thing ──────────────────────────────────────
-                One sentence about this vacancy's own work, and never about the
-                people in it: no ranking, no assessment of the field, no advice to
-                close or extend. Where the honest answer is a statement it is a
-                statement, and no button is drawn. */}
-            <div className="mt-3 rounded-[12px] border border-border bg-[color:var(--surface-subtle)] p-3">
-              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <p
-                  className="max-w-[68ch] text-[13px] leading-relaxed text-foreground"
-                  role="status"
-                >
-                  <span className="mr-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    {t("employer.jobHub.next.heading")}
-                  </span>
-                  {(() => {
-                    // A quantity where there is one, a sentence where there is
-                    // not. The three quantified actions are the only ones whose
-                    // number means anything; the rest are statements and reading
-                    // "0 …" for them would be noise.
-                    const plural = JOB_NEXT_PLURAL[pipeline.nextAction.kind];
-                    return plural && pipeline.nextAction.count > 0
-                      ? `${pipeline.nextAction.count} ${tp(plural, pipeline.nextAction.count)}`
-                      : t(JOB_NEXT_BODY[pipeline.nextAction.kind]);
-                  })()}
-                </p>
-                {pipeline.nextAction.stage && (
-                  <Link
-                    to="/employer/$employerSlug/applications"
-                    params={{ employerSlug }}
-                    search={{
-                      job: jobId,
-                      ...(PIPELINE_SEARCH[pipeline.nextAction.stage] ?? {}),
-                    }}
-                    className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-[10px] border border-border px-3 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    {t("employer.jobHub.next.open")}
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                )}
-                {pipeline.nextAction.kind === "unavailable" && (
-                  <button
-                    type="button"
-                    onClick={() => void applicationsQuery.refetch()}
-                    className="inline-flex min-h-10 shrink-0 items-center rounded-[10px] border border-border px-4 text-[13px] font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    {t("continuity.next.retry")}
-                  </button>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* ── The people ─────────────────────────────────────────────── */}
-          <section className="mt-6 pb-4" aria-labelledby="job-candidates">
-            <h2 id="job-candidates" className="text-lg font-semibold text-foreground">
-              {t("employer.jobHub.candidates.heading")}
-            </h2>
-
-            {applicationsQuery.isLoading ? (
-              <p className="mt-4 text-sm text-muted-foreground">{t("employer.loading")}</p>
-            ) : applicationsQuery.isError ? (
-              /* NOT an empty state. "Nobody has applied" and "we could not find
-                 out who applied" are different sentences, and the second one is
-                 the only honest thing to say here. */
-              <div
-                role="alert"
-                className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-900 dark:text-amber-200"
-              >
-                <p>{t("employer.jobHub.candidates.loadFailed")}</p>
-                <button
-                  type="button"
-                  onClick={() => void applicationsQuery.refetch()}
-                  className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {t("continuity.next.retry")}
-                </button>
-              </div>
-            ) : candidateRows.length === 0 ? (
-              <p className="mt-4 rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
-                {status === "published"
-                  ? t("employer.jobHub.candidates.emptyPublished")
-                  : job.application_method && job.application_method !== "internal"
-                    ? t("rec.hub.externalApplications")
-                    : t("employer.jobHub.candidates.emptyUnpublished")}
-              </p>
-            ) : (
-              <div className="mt-3">
-                <CandidateTable
-                  employerId={employerId}
-                  employerSlug={employerSlug}
-                  employerName={employerName}
-                  rows={candidateRows}
-                  view={candidateView}
-                  onViewChange={setView}
-                  showVacancy={false}
-                  team={recruitment?.team ?? []}
-                  canManageJob={() => recruitment?.canManage ?? false}
-                  openAssessmentIds={openAssessments.read === "ready" ? openAssessments.ids : null}
-                  onChanged={() => {
-                    void applicationsQuery.refetch();
-                    invalidateAll();
-                  }}
-                  labelKey="recruitment"
-                />
-              </div>
-            )}
-          </section>
-        </div>
+      {/* ── Header views: team, activity ────────────────────────────── */}
+      {view === "team" && (
+        <section className="pt-5" aria-labelledby="case-team">
+          {panelHeading("case-team", "rec.hub.tab.team", "rec.settings.teamLede")}
+          <div className="mt-4">
+            <RecruitmentSettings
+              employerId={employerId}
+              employerSlug={employerSlug}
+              jobId={jobId}
+              recruitment={recruitment}
+              recruitmentError={recruitmentQuery.isError}
+              phase={phase}
+              unresolved={[]}
+              unresolvedTotal={unresolvedCount}
+              closeable={closeable && canEdit}
+              busy={busy}
+              sections={["responsible", "team"]}
+              onClose={() => {
+                setActionError(null);
+                setPending({ kind: "close", id: jobId });
+              }}
+              onChanged={() => {
+                void recruitmentQuery.refetch();
+                invalidateAll();
+              }}
+            />
+          </div>
+        </section>
+      )}
+      {view === "activity" && (
+        <section className="pt-5" aria-labelledby="case-activity">
+          {panelHeading("case-activity", "rec.hub.tab.activity")}
+          <div className="mt-2">
+            <RecruitmentActivity
+              employerId={employerId}
+              employerSlug={employerSlug}
+              jobId={jobId}
+            />
+          </div>
+        </section>
       )}
 
-      {tab === "vacancy" && (
-        <div role="tabpanel" id="panel-vacancy" aria-labelledby="tab-vacancy" className="pt-5">
-          {/* ── What to do with the advertisement itself ────────────────── */}
+      {/* ── 1 · Kravprofil ──────────────────────────────────────────── */}
+      {!view && step === "requirements" && (
+        <section className="pt-5" aria-labelledby="case-requirements">
+          {panelHeading("case-requirements", "rec.step.requirements", "rec.case.requirementsLede")}
+          <div className="mt-3 flex flex-wrap items-center gap-2">{editLink("requirements")}</div>
+          {recruitmentQuery.isError ? (
+            <p role="alert" className="mt-3 text-sm text-amber-900 dark:text-amber-200">
+              {t("rec.hub.recruitmentUnavailable")}
+            </p>
+          ) : !recruitment ? (
+            <p className="mt-3 text-sm text-muted-foreground">{t("employer.loading")}</p>
+          ) : (
+            <VacancyStructureSummary
+              requirements={recruitment.requirements}
+              questions={recruitment.questions}
+              locked={recruitment.structureLocked}
+              editHref={null}
+            />
+          )}
+          {pick(job.requirements_sv, job.requirements_en) && (
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold text-foreground">
+                {t("rec.case.requirementsText")}
+              </h3>
+              <p className="mt-1 max-w-[72ch] whitespace-pre-wrap text-sm text-foreground">
+                {pick(job.requirements_sv, job.requirements_en)}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── 2 · Annons ──────────────────────────────────────────────── */}
+      {!view && step === "advert" && (
+        <section className="pt-5" aria-labelledby="case-advert">
+          {panelHeading("case-advert", "rec.step.advert", "rec.case.advertLede")}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setPreviewing(true)} className={btnSecondary}>
+              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("rec.case.previewAdvert")}
+            </button>
+            {editLink("description")}
+          </div>
+          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
+            <Fact label={t("employer.jobHub.fact.location")}>
+              {job.location_text || job.city || "—"}
+            </Fact>
+            <Fact label={t("rec.hub.applicationMethod")}>
+              {t(`rec.hub.method.${job.application_method ?? "unavailable"}` as TranslationKey)}
+            </Fact>
+            <Fact label={t("employer.jobs.list.updated")}>{formatDate(job.updated_at, lang)}</Fact>
+          </dl>
+          <h3 className="mt-5 text-sm font-semibold text-foreground">{t("rec.case.advertText")}</h3>
+          {pick(job.description_sv, job.description_en) ? (
+            <p className="mt-1 max-w-[72ch] whitespace-pre-wrap text-sm text-foreground">
+              {pick(job.description_sv, job.description_en)}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">{t("rec.case.advertEmpty")}</p>
+          )}
+        </section>
+      )}
+
+      {/* ── 3 · Publiceringsläge ────────────────────────────────────── */}
+      {!view && step === "publishing" && (
+        <section className="pt-5" aria-labelledby="case-publishing">
+          {panelHeading("case-publishing", "rec.step.publishing", "rec.case.publishingLede")}
+          <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
+            <Fact label={t("rec.col.status")}>
+              <PhaseBadge phase={phase} />
+            </Fact>
+            <Fact label={t("employer.jobHub.fact.published")}>
+              {job.published_at ? formatDate(job.published_at, lang) : "—"}
+            </Fact>
+            <Fact label={t("rec.hub.deadline")}>
+              {job.deadline_at ? formatDate(job.deadline_at, lang) : "—"}
+            </Fact>
+            <Fact label={t("employer.jobs.list.expires")}>
+              {job.expires_at ? formatDate(job.expires_at, lang) : "—"}
+            </Fact>
+          </dl>
+
+          {/* Actions the database will accept for this state, and only those. */}
           {canEdit && (
-            <div className="flex flex-wrap gap-2">
-              {editable && (
-                <Link
-                  to="/employer/$employerSlug/jobs/$jobId/edit"
-                  params={{ employerSlug, jobId }}
-                  className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            <div className="mt-4 flex flex-wrap gap-2">
+              {editable && PUBLICATION_MODEL === "direct" && (
+                <button
+                  type="button"
+                  disabled={busy || !readiness.ready}
+                  onClick={() => publishMutation.mutate()}
+                  className={btnPrimary}
                 >
-                  {t("employer.jobs.list.edit")}
-                </Link>
+                  {t("rec.case.publish")}
+                </button>
               )}
-              {submittable && (
-                // Disabled only while something is genuinely outstanding, and the
-                // checklist below says what. A submit that the server will refuse
-                // is not an action, it is a trap.
+              {editable && PUBLICATION_MODEL !== "direct" && (
                 <button
                   type="button"
                   disabled={busy || !readiness.ready}
                   onClick={() => submitMutation.mutate()}
-                  className="inline-flex min-h-[36px] items-center rounded-md bg-accent px-3 py-1.5 text-sm font-semibold text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
+                  className={btnPrimary}
                 >
                   {t("employer.jobHub.action.submit")}
+                </button>
+              )}
+              {editable && editLink("application")}
+              {phase === "published" && closeable && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setActionError(null);
+                    setPending({ kind: "close", id: jobId });
+                  }}
+                  className={btnSecondary}
+                >
+                  {t("rec.hub.closeApplications")}
+                </button>
+              )}
+              {restorable && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setActionError(null);
+                    restoreMutation.mutate();
+                  }}
+                  className={btnSecondary}
+                >
+                  {t("employer.jobs.list.restore")}
                 </button>
               )}
               <button
@@ -706,23 +829,10 @@ function JobHub({
                   setActionError(null);
                   setPending({ kind: "duplicate", id: jobId });
                 }}
-                className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className={btnSecondary}
               >
                 {t("employer.jobs.list.duplicate")}
               </button>
-              {restorable && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setActionError(null);
-                    restoreMutation.mutate();
-                  }}
-                  className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {t("employer.jobs.list.restore")}
-                </button>
-              )}
               {deletable && (
                 <button
                   type="button"
@@ -731,30 +841,35 @@ function JobHub({
                     setActionError(null);
                     setPending({ kind: "delete", id: jobId });
                   }}
-                  className="inline-flex min-h-[36px] items-center rounded-md border border-border px-3 py-1.5 text-sm font-medium hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className={btnSecondary}
                 >
                   {t("employer.jobs.list.delete")}
                 </button>
               )}
             </div>
           )}
+          {status === "published" && (
+            <p className="mt-3 max-w-[68ch] text-sm text-muted-foreground">
+              {t("rec.case.publishedNote")}
+            </p>
+          )}
 
-          {/* ── Ready to publish? ───────────────────────────────────────── */}
-          {/*  Shown only where it can still change something: once an
-              advertisement is in a moderator's queue or live, a checklist telling
-              the employer what to fill in is describing a decision they no longer
-              own. */}
+          {/* ── Ready to publish? ──────────────────────────────────────
+              Shown only where it can still change something: once an
+              advertisement is in a moderator's queue or live, a checklist
+              telling the employer what to fill in is describing a decision
+              they no longer own. */}
           {editable && (
-            <section className="mt-6" aria-labelledby="job-readiness">
-              <h2 id="job-readiness" className="text-lg font-semibold text-foreground">
+            <div className="mt-6" aria-labelledby="job-readiness">
+              <h3 id="job-readiness" className="text-sm font-semibold text-foreground">
                 {t("employer.jobHub.readiness.heading")}
-              </h2>
+              </h3>
               <p className="mt-1 max-w-[68ch] text-sm text-muted-foreground">
                 {readiness.ready
                   ? t("employer.jobHub.readiness.ready")
                   : t("employer.jobHub.readiness.notReady")}
               </p>
-              <ul className="mt-4 space-y-1.5">
+              <ul className="mt-3 space-y-1.5">
                 {readiness.checks.map((c) => (
                   <li key={c.id} className="flex items-start gap-2 text-sm">
                     {c.ok ? (
@@ -776,88 +891,175 @@ function JobHub({
                   </li>
                 ))}
               </ul>
-            </section>
+            </div>
           )}
+        </section>
+      )}
 
-          {/* ── The facts ──────────────────────────────────────────────── */}
-          <section className="mt-6" aria-labelledby="job-facts">
-            <h2 id="job-facts" className="text-lg font-semibold text-foreground">
-              {t("employer.jobHub.facts.heading")}
+      {/* ── 4 · Ansökningar ─────────────────────────────────────────── */}
+      {!view && step === "applications" && (
+        <div className="pt-4">
+          {/* ── The pipeline, in one line ──────────────────────────────
+              Five counts and the one next thing, compact, above the work.
+              Each count is a link to exactly the rows it counted. */}
+          <section aria-labelledby="job-pipeline">
+            <h2 id="job-pipeline" className="sr-only">
+              {t("employer.jobHub.pipeline.heading")}
             </h2>
-            <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-4">
-              <Fact label={t("employer.jobHub.fact.location")}>
-                {job.location_text || job.city || "—"}
-              </Fact>
-              <Fact label={t("employer.jobHub.fact.published")}>
-                {job.published_at ? formatDate(job.published_at, lang) : "—"}
-              </Fact>
-              <Fact label={t("rec.hub.deadline")}>
-                {(job as { deadline_at?: string | null }).deadline_at
-                  ? formatDate(String((job as { deadline_at?: string | null }).deadline_at), lang)
-                  : "—"}
-              </Fact>
-              <Fact label={t("employer.jobs.list.expires")}>
-                {job.expires_at ? formatDate(job.expires_at, lang) : "—"}
-              </Fact>
-              <Fact label={t("employer.jobs.list.updated")}>
-                {formatDate(job.updated_at, lang)}
-              </Fact>
-              <Fact label={t("rec.hub.applicationMethod")}>
-                {t(`rec.hub.method.${job.application_method ?? "unavailable"}` as TranslationKey)}
-              </Fact>
-            </dl>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <dl className="flex flex-wrap items-center gap-x-1 gap-y-1">
+                {PIPELINE_CARDS.map((card) => (
+                  <PipelineChip
+                    key={card.stage}
+                    labelKey={card.labelKey}
+                    count={pipeline.counts[card.stage]}
+                    employerSlug={employerSlug}
+                    jobId={jobId}
+                    search={card.search}
+                  />
+                ))}
+              </dl>
+              <p className="text-[13px] text-muted-foreground" role="status">
+                <span className="mr-1.5 text-[11px] font-semibold uppercase tracking-[0.1em]">
+                  {t("employer.jobHub.next.heading")}
+                </span>
+                {(() => {
+                  const plural = JOB_NEXT_PLURAL[pipeline.nextAction.kind];
+                  return plural && pipeline.nextAction.count > 0
+                    ? `${pipeline.nextAction.count} ${tp(plural, pipeline.nextAction.count)}`
+                    : t(JOB_NEXT_BODY[pipeline.nextAction.kind]);
+                })()}
+                {pipeline.nextAction.stage && (
+                  <Link
+                    to="/employer/$employerSlug/applications"
+                    params={{ employerSlug }}
+                    search={{
+                      job: jobId,
+                      ...(PIPELINE_SEARCH[pipeline.nextAction.stage] ?? {}),
+                    }}
+                    className="ml-2 inline-flex items-center gap-1 font-medium text-accent hover:underline"
+                  >
+                    {t("employer.jobHub.next.open")}
+                    <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                  </Link>
+                )}
+              </p>
+            </div>
           </section>
 
-          <section className="mt-8" aria-labelledby="job-requirements">
-            <h2 id="job-requirements" className="text-lg font-semibold text-foreground">
-              {t("rec.vacancy.requirementsHeading")}
+          <section className="mt-3 pb-4" aria-labelledby="job-candidates">
+            <h2 id="job-candidates" className="sr-only">
+              {t("employer.jobHub.candidates.heading")}
             </h2>
-            {recruitmentQuery.isError ? (
-              <p role="alert" className="mt-2 text-sm text-amber-900 dark:text-amber-200">
-                {t("rec.hub.recruitmentUnavailable")}
+            {applicationsQuery.isLoading && !page ? (
+              <p className="text-sm text-muted-foreground" role="status">
+                {t("employer.loading")}
               </p>
-            ) : !recruitment ? (
-              <p className="mt-2 text-sm text-muted-foreground">{t("employer.loading")}</p>
+            ) : applicationsQuery.isError ? (
+              /* NOT an empty state. "Nobody has applied" and "we could not find
+                 out who applied" are different sentences, and the second one is
+                 the only honest thing to say here. */
+              <div
+                role="alert"
+                className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-900 dark:text-amber-200"
+              >
+                <p>{t("employer.jobHub.candidates.loadFailed")}</p>
+                <button
+                  type="button"
+                  onClick={() => void applicationsQuery.refetch()}
+                  className="mt-3 inline-flex min-h-11 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("continuity.next.retry")}
+                </button>
+              </div>
+            ) : counts && counts.total === 0 ? (
+              <p className="rounded-lg border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+                {status === "published"
+                  ? t("employer.jobHub.candidates.emptyPublished")
+                  : job.application_method && job.application_method !== "internal"
+                    ? t("rec.hub.externalApplications")
+                    : t("employer.jobHub.candidates.emptyUnpublished")}
+              </p>
             ) : (
-              <VacancyStructureSummary
-                requirements={recruitment.requirements}
-                questions={recruitment.questions}
-                locked={recruitment.structureLocked}
-                editHref={editable ? { employerSlug, jobId } : null}
+              <CandidateTable
+                employerId={employerId}
+                employerSlug={employerSlug}
+                employerName={employerName}
+                jobTitle={title}
+                page={page}
+                loading={applicationsQuery.isLoading}
+                error={applicationsQuery.isError}
+                onRetry={() => void applicationsQuery.refetch()}
+                view={candidateView}
+                onViewChange={setView}
+                team={recruitment?.team ?? []}
+                canManage={recruitment?.canManage ?? false}
+                canAssignTests={canEdit}
+                openAssessmentIds={openAssessments.read === "ready" ? openAssessments.ids : null}
+                onChanged={() => {
+                  void applicationsQuery.refetch();
+                  invalidateAll();
+                }}
+                labelKey="recruitment"
               />
             )}
           </section>
         </div>
       )}
 
-      {tab === "activity" && (
-        <div role="tabpanel" id="panel-activity" aria-labelledby="tab-activity" className="pt-5">
-          <RecruitmentActivity employerId={employerId} employerSlug={employerSlug} jobId={jobId} />
-        </div>
+      {/* ── 5 · Beslut & avslut ─────────────────────────────────────── */}
+      {!view && step === "closing" && (
+        <section className="pt-5" aria-labelledby="case-closing">
+          {panelHeading("case-closing", "rec.step.closing", "rec.case.closingLede")}
+          <div className="mt-4">
+            <RecruitmentSettings
+              employerId={employerId}
+              employerSlug={employerSlug}
+              jobId={jobId}
+              recruitment={recruitment}
+              recruitmentError={recruitmentQuery.isError}
+              phase={phase}
+              unresolved={openQuery.data?.rows ?? []}
+              unresolvedTotal={openQuery.data?.total ?? unresolvedCount}
+              closeable={closeable && canEdit}
+              busy={busy}
+              sections={["close", "complete"]}
+              onClose={() => {
+                setActionError(null);
+                setPending({ kind: "close", id: jobId });
+              }}
+              onChanged={() => {
+                void recruitmentQuery.refetch();
+                invalidateAll();
+              }}
+            />
+          </div>
+          <div className="mt-8">
+            <h3 className="text-sm font-semibold text-foreground">{t("rec.case.history")}</h3>
+            <div className="mt-1">
+              <RecruitmentActivity
+                employerId={employerId}
+                employerSlug={employerSlug}
+                jobId={jobId}
+              />
+            </div>
+          </div>
+        </section>
       )}
 
-      {tab === "team" && (
-        <div role="tabpanel" id="panel-team" aria-labelledby="tab-team" className="pt-5">
-          <RecruitmentSettings
-            employerId={employerId}
-            employerSlug={employerSlug}
-            jobId={jobId}
-            recruitment={recruitment}
-            recruitmentError={recruitmentQuery.isError}
-            phase={phase}
-            unresolved={unresolved}
-            closeable={closeable && canEdit}
-            busy={busy}
-            onClose={() => {
-              setActionError(null);
-              setPending({ kind: "close", id: jobId });
-            }}
-            onChanged={() => {
-              void recruitmentQuery.refetch();
-              invalidateAll();
-            }}
-          />
-        </div>
+      {previewing && (
+        <Dialog open onOpenChange={(o) => !o && setPreviewing(false)}>
+          <DialogContent className="sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>{t("rec.case.previewAdvert")}</DialogTitle>
+              <DialogDescription>{t("rec.case.previewLede")}</DialogDescription>
+            </DialogHeader>
+            <JobAdPreview
+              values={fromJobRow(job as unknown as Parameters<typeof fromJobRow>[0])}
+              employerName={employerName}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
       {pending && (
@@ -903,6 +1105,23 @@ function JobHub({
   );
 }
 
+function Meta({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center gap-1">
+      <dt className="text-muted-foreground">{label}:</dt>
+      <dd className="text-foreground">{children}</dd>
+    </div>
+  );
+}
+
+function Sep() {
+  return (
+    <span aria-hidden="true" className="text-border">
+      ·
+    </span>
+  );
+}
+
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
@@ -913,12 +1132,12 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 }
 
 /* ------------------------------------------------------------------ */
-/* The pipeline's five cards                                           */
+/* The pipeline's five counts                                          */
 /* ------------------------------------------------------------------ */
 
 /** The search parameters that land on exactly the rows a count counted.
  *
- *  Written once and used by both the cards and the next action, so the number
+ *  Written once and used by both the chips and the next action, so the number
  *  and the list it opens can never be filtered differently. `total` carries
  *  only the job: a vacancy's total includes its closed outcomes, and a status
  *  filter would show fewer rows than the number promised. */
@@ -966,13 +1185,13 @@ const JOB_NEXT_PLURAL: Partial<Record<JobNextActionKind, PluralKey>> = {
   prepareInterviews: "employer.jobHub.next.prepareInterviews",
 };
 
-/** One count.
+/** One count, as a chip.
  *
  *  A `null` value draws an em dash and, when the read actually failed, says so
- *  underneath. There is no branch here that renders a zero for an unknown
- *  number, and the whole card stops being a link when there is nothing to open
- *  -- a link promising "0 awaiting review" is a link to an empty list. */
-function PipelineCard({
+ *  beside it. There is no branch here that renders a zero for an unknown
+ *  number, and the chip stops being a link when there is nothing to open --
+ *  a link promising "0 awaiting review" is a link to an empty list. */
+function PipelineChip({
   labelKey,
   count,
   employerSlug,
@@ -988,21 +1207,19 @@ function PipelineCard({
   const { t } = useT();
   const body = (
     <>
-      <dd className="text-2xl font-semibold tabular-nums text-foreground">
+      <dd className="text-sm font-semibold tabular-nums text-foreground">
         {count.value === null ? <span aria-hidden="true">—</span> : count.value}
       </dd>
-      <dt className="mt-1 text-xs leading-snug text-muted-foreground">{t(labelKey)}</dt>
+      <dt className="text-xs text-muted-foreground">{t(labelKey)}</dt>
       {count.read === "failed" && (
-        <p className="mt-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+        <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
           {t("continuity.report.unavailable")}
-        </p>
+        </span>
       )}
     </>
   );
-
   const cls =
-    "rounded-[12px] border border-border bg-card p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
-
+    "inline-flex items-baseline gap-1 rounded-full border border-border bg-card px-2.5 py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
   if (count.value === null || count.value === 0) {
     return <div className={cls}>{body}</div>;
   }
@@ -1011,7 +1228,7 @@ function PipelineCard({
       to="/employer/$employerSlug/applications"
       params={{ employerSlug }}
       search={{ job: jobId, ...search }}
-      className={`${cls} block transition-colors hover:border-accent/60`}
+      className={`${cls} transition-colors hover:border-accent/60`}
     >
       {body}
     </Link>

@@ -267,7 +267,8 @@ console.log("recruitment workspace\n");
   );
   const table = code(F.table);
   ok(
-    /manageAll &&/.test(table) && /canManageJob\(r\.jobId\)/.test(table),
+    /\{canManage && \(/.test(table) &&
+      /canManage=\{recruitment\?\.canManage \?\? false\}/.test(code(F.hub)),
     "C · batch decisions and messages need the right on every selected job",
   );
   const list = code(F.list);
@@ -546,6 +547,211 @@ console.log("recruitment workspace\n");
   ok(
     !ov.includes('title={t("employer.overview.card.jobs.title")}'),
     "G · the overview no longer repeats recruitment as a card below the recruitment table",
+  );
+}
+
+/* ================================================================== */
+/* H · One case, five steps, one page at a time                        */
+/* ================================================================== */
+{
+  // The step a case is at is computed from the data, never from a visit,
+  // and every combination the product can be in lands somewhere sensible.
+  const base = {
+    requirementsCount: 0,
+    questionsCount: 0,
+    hasRequirementsText: false,
+    advertReady: false,
+    total: 0,
+    unresolved: 0,
+  };
+  const at = (i: Partial<D.StepInput> & { phase: D.RecruitmentPhase }) =>
+    D.currentStepOf({ ...base, ...i });
+  ok(at({ phase: "draft" }) === "requirements", "H · an empty draft starts at the requirements");
+  ok(
+    at({ phase: "draft", requirementsCount: 1 }) === "advert",
+    "H · a draft with requirements but no advert text is at the advert",
+  );
+  ok(
+    at({ phase: "draft", hasRequirementsText: true, advertReady: true }) === "publishing",
+    "H · a draft ready to publish is at publishing",
+  );
+  ok(
+    at({ phase: "published", advertReady: true }) === "applications",
+    "H · a live advert is at applications",
+  );
+  const live = D.stepStatesOf({
+    ...base,
+    phase: "published",
+    advertReady: true,
+    requirementsCount: 2,
+  });
+  ok(
+    live.requirements === "done" && live.advert === "done" && live.publishing === "done",
+    "H · and its first three steps are done because the data says so",
+  );
+  ok(
+    at({ phase: "closed", advertReady: true, total: 4, unresolved: 2 }) === "applications",
+    "H · a closed advert with undecided candidates is still at applications",
+  );
+  ok(
+    at({ phase: "closed", advertReady: true, total: 4, unresolved: 0 }) === "closing",
+    "H · a closed advert with every candidate decided is at closing",
+  );
+  const done = D.stepStatesOf({ ...base, phase: "completed", advertReady: true, total: 4 });
+  ok(
+    done.applications === "done" && done.closing === "current",
+    "H · a completed recruitment shows every step done and rests on the close",
+  );
+  ok(
+    D.RECRUITMENT_STEPS.join(",") === "requirements,advert,publishing,applications,closing",
+    "H · the five steps are the five steps, in order",
+  );
+
+  // Paging is pure, stable and clamped.
+  const thirty = Array.from({ length: 30 }, (_, i) => ({ applicationId: `id${i}` }));
+  const p1 = D.pageSlice(thirty, 1, 25);
+  const p2 = D.pageSlice(thirty, 2, 25);
+  ok(
+    p1.rows.length === 25 && p1.from === 1 && p1.to === 25 && p1.pages === 2,
+    "H · page 1 holds 25 of 30",
+  );
+  ok(p2.rows.length === 5 && p2.from === 26 && p2.to === 30, "H · page 2 holds the last 5");
+  ok(
+    new Set([...p1.rows, ...p2.rows].map((r) => r.applicationId)).size === 30,
+    "H · the two pages are the whole list with no row twice",
+  );
+  ok(
+    D.pageSlice(thirty, 9, 25).page === 2,
+    "H · a page past the end opens the last page, not nothing",
+  );
+  ok(
+    D.pageSlice([], 3, 25).from === 0 && D.pageSlice([], 3, 25).pages === 1,
+    "H · an empty list is page 1 of 1",
+  );
+  ok(!("page" in D.firstPage({ q: "a", page: 4 })), "H · a filter change goes back to page 1");
+  ok(
+    D.compactView({ page: 1 }).page === undefined && D.compactView({ page: 2 }).page === 2,
+    "H · page 1 needs no parameter",
+  );
+
+  // Answer filters: strict, deduplicated, and never widened by a bad value.
+  const q1 = "11111111-1111-4111-8111-111111111111";
+  const q2 = "22222222-2222-4222-8222-222222222222";
+  const parsed = D.parseAnswerFilter(`${q1}:y,${q2}:n,not-a-uuid:y,${q1}:n,${q2}:maybe`);
+  ok(
+    parsed.length === 2 && parsed[0].value === true && parsed[1].value === false,
+    "H · an answer filter keeps the first valid entry per question and drops the rest",
+  );
+  ok(
+    D.serializeAnswerFilter(parsed) === `${q1}:y,${q2}:n` &&
+      D.serializeAnswerFilter([]) === undefined,
+    "H · and round-trips through the URL",
+  );
+  const rows = [
+    {
+      applicationId: "a",
+      name: "A",
+      jobTitle: null,
+      status: "submitted",
+      appliedAt: "2026-09-01T00:00:00Z",
+      responsibleUserId: null,
+      nextActivityAt: null,
+      answers: { [q1]: true },
+    },
+    {
+      applicationId: "b",
+      name: "B",
+      jobTitle: null,
+      status: "submitted",
+      appliedAt: "2026-09-02T00:00:00Z",
+      responsibleUserId: null,
+      nextActivityAt: null,
+      answers: { [q1]: false },
+    },
+    {
+      applicationId: "c",
+      name: "C",
+      jobTitle: null,
+      status: "submitted",
+      appliedAt: "2026-09-03T00:00:00Z",
+      responsibleUserId: null,
+      nextActivityAt: null,
+    },
+  ];
+  ok(
+    D.applyCandidateView(rows, { ans: `${q1}:y` })
+      .map((r) => r.applicationId)
+      .join() === "a",
+    "H · an answer filter keeps exactly the candidates who answered so",
+  );
+  ok(
+    D.applyCandidateView(rows, { ans: `${q1}:n` })
+      .map((r) => r.applicationId)
+      .join() === "b",
+    "H · and a 'no' filter is not 'anything but yes' -- an unanswered question matches neither",
+  );
+  ok(D.applyCandidateView(rows, {}).length === 3, "H · no answer filter, no narrowing");
+
+  // The surfaces read those definitions, and the selection is per page.
+  const hub = code(F.hub);
+  ok(
+    /<ProcessStepNav/.test(hub) && /stepStatesOf\(stepInput\)/.test(hub),
+    "H · the case page renders the step nav from the step model",
+  );
+  ok(
+    /listRecruitmentCandidatesPage/.test(hub) &&
+      !/listRecruitmentCandidates\b/.test(hub.replace(/listRecruitmentCandidatesPage/g, "")),
+    "H · the case page reads ONE page from the server, never the whole list",
+  );
+  ok(
+    /step: "applications" as const/.test(code(F.overview)),
+    "H · the overview's counts open the applications step",
+  );
+  const table = code(F.table);
+  ok(/rec\.table\.selectAllPage/.test(table), "H · 'select all' says it is the page");
+  ok(
+    /const pageIds = useMemo\(\(\) => new Set\(rows\.map\(\(r\) => r\.applicationId\)\), \[rows\]\)/.test(
+      table,
+    ) && /\[\.\.\.prev\]\.filter\(\(id\) => pageIds\.has\(id\)\)/.test(table),
+    "H · a selection never outlives the page it was made on",
+  );
+  ok(
+    /e\.target\.checked \? new Set\(rows\.map\(\(r\) => r\.applicationId\)\) : new Set\(\)/.test(
+      table,
+    ),
+    "H · select-all selects the rows on screen, never the ids of other pages",
+  );
+  ok(
+    /itemResults\.map\(\(i\)/.test(table) && /keepFailed\(items\)/.test(table),
+    "H · a batch reports per candidate and keeps the failed ones selected",
+  );
+  ok(
+    /ids: page\?\.orderedIds/.test(table),
+    "H · previous/next reads the server's full order, across pages",
+  );
+  ok(
+    /rec\.pager\.showing/.test(table) && /setPage\(page\.page \+ 1\)/.test(table),
+    "H · the pager shows the hit count and moves a page at a time",
+  );
+
+  // Booking from the list: separate bookings, nothing sent.
+  const booking = code("src/components/recruitment/BookingDialog.tsx");
+  ok(
+    /for \(const p of plan\)/.test(booking) && /bookingId: null,/.test(booking),
+    "H · several selected candidates become several bookings, one call each",
+  );
+  ok(
+    !/rec_claim_message_send|sendRecruitmentMessages|saveMessageDraft/.test(booking),
+    "H · saving a time sends nothing -- the invitation is its own act",
+  );
+  ok(
+    /consecutiveStarts\(start, duration, candidates\.length\)/.test(booking) &&
+      /rec\.bookingDialog\.slots/.test(booking),
+    "H · the prefilled slots are back to back, and each candidate's own is shown",
+  );
+  ok(
+    /rec\.bookingDialog\.linkNote/.test(booking),
+    "H · a pasted meeting link is called a link, not an integration",
   );
 }
 

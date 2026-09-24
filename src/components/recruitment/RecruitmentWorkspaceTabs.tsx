@@ -206,6 +206,8 @@ export function RecruitmentActivity({
 
 // ── Team and settings ───────────────────────────────────────────────────
 
+export type SettingsSection = "responsible" | "team" | "close" | "complete";
+
 export function RecruitmentSettings({
   employerId,
   employerSlug,
@@ -218,6 +220,8 @@ export function RecruitmentSettings({
   busy,
   onClose,
   onChanged,
+  sections,
+  unresolvedTotal,
 }: {
   employerId: string;
   employerSlug: string;
@@ -230,6 +234,11 @@ export function RecruitmentSettings({
   busy: boolean;
   onClose: () => void;
   onChanged: () => void;
+  /** Which of the four sections to render. The case page shows the team on
+   *  its Team view and the closing pair on step 5; nothing else changes. */
+  sections?: readonly SettingsSection[];
+  /** The full count when `unresolved` is one page of a longer list. */
+  unresolvedTotal?: number;
 }) {
   const { t, lang } = useT();
   const responsibleFn = useServerFn(setRecruitmentResponsible);
@@ -254,6 +263,8 @@ export function RecruitmentSettings({
 
   const r = recruitment;
   const isAdmin = r.role === "owner" || r.role === "admin";
+  const show = (section: SettingsSection) => !sections || sections.includes(section);
+  const unresolvedCount = unresolvedTotal ?? unresolved.length;
 
   async function run(fn: () => Promise<unknown>) {
     setSaving(true);
@@ -281,204 +292,223 @@ export function RecruitmentSettings({
         </p>
       )}
 
-      <section className={sectionCls} aria-labelledby="rec-responsible">
-        <h2 id="rec-responsible" className="text-base font-semibold">
-          {t("rec.settings.responsibleHeading")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.responsibleLede")}</p>
-        {r.canManage ? (
-          <select
-            aria-labelledby="rec-responsible"
-            disabled={saving}
-            value={r.settings.responsibleUserId ?? ""}
-            onChange={(e) =>
-              void run(() =>
-                responsibleFn({
-                  data: {
-                    jobId,
-                    userId: e.target.value || null,
-                    expectedVersion: r.settings.version,
-                  },
-                }),
-              )
-            }
-            className="mt-3 h-10 w-full rounded-md border border-border bg-background px-2 text-sm"
-          >
-            <option value="">{t("rec.hub.noResponsible")}</option>
-            {r.team.map((m) => (
-              <option key={m.userId} value={m.userId}>
-                {m.name} · {t(`rec.role.${m.role}` as TranslationKey)}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p className="mt-3 text-sm font-medium">
-            {r.team.find((m) => m.userId === r.settings.responsibleUserId)?.name ??
-              t("rec.hub.noResponsible")}
-          </p>
-        )}
-      </section>
-
-      <section className={sectionCls} aria-labelledby="rec-team">
-        <h2 id="rec-team" className="text-base font-semibold">
-          {t("rec.settings.teamHeading")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.teamLede")}</p>
-        <ul className="mt-3 divide-y divide-border">
-          {r.team.map((m) => {
-            const responsible = m.userId === r.settings.responsibleUserId;
-            const key: TranslationKey =
-              m.role === "owner" || m.role === "admin"
-                ? "rec.settings.can.admin"
-                : responsible
-                  ? "rec.settings.can.responsible"
-                  : "rec.settings.can.member";
-            return (
-              <li key={m.userId} className="flex items-start gap-3 py-2 text-sm">
-                <UserRound
-                  className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <div>
-                  <p className="font-medium">
-                    {m.name}
-                    {m.isSelf && (
-                      <span className="ml-1 text-xs text-muted-foreground">
-                        ({t("rec.team.you")})
-                      </span>
-                    )}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {t(`rec.role.${m.role}` as TranslationKey)}
-                    </span>
-                    {responsible && (
-                      <span className="ml-2 text-xs font-medium text-accent">
-                        {t("rec.hub.responsible")}
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{t(key)}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        {isAdmin && (
-          <Link
-            to="/employer/$employerSlug/settings"
-            params={{ employerSlug }}
-            className="mt-2 inline-flex text-sm font-medium text-accent hover:underline"
-          >
-            {t("rec.settings.manageTeam")}
-          </Link>
-        )}
-      </section>
-
-      <section className={sectionCls} aria-labelledby="rec-close">
-        <h2 id="rec-close" className="text-base font-semibold">
-          {t("rec.settings.closeHeading")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.closeLede")}</p>
-        {phase === "published" && closeable ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-            className="mt-3 inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40 disabled:opacity-60"
-          >
-            {t("rec.hub.closeApplications")}
-          </button>
-        ) : (
-          <p className="mt-3 text-sm">
-            {phase === "published"
-              ? t("rec.settings.closeNotPermitted")
-              : t(`rec.settings.phaseNote.${phase}` as TranslationKey)}
-          </p>
-        )}
-      </section>
-
-      <section className={sectionCls} aria-labelledby="rec-complete">
-        <h2 id="rec-complete" className="text-base font-semibold">
-          {t("rec.settings.completeHeading")}
-        </h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.completeLede")}</p>
-
-        {phase === "completed" || phase === "cancelled" ? (
-          <div className="mt-3 space-y-2 text-sm">
-            <p className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-accent" aria-hidden="true" />
-              {t(
-                phase === "completed" ? "rec.settings.completedOn" : "rec.settings.cancelledOn",
-              ).replace(
-                "{at}",
-                r.settings.completedAt ? formatStamp(r.settings.completedAt, lang) : "",
-              )}
+      {show("responsible") && (
+        <section className={sectionCls} aria-labelledby="rec-responsible">
+          <h2 id="rec-responsible" className="text-base font-semibold">
+            {t("rec.settings.responsibleHeading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.responsibleLede")}</p>
+          {r.canManage ? (
+            <select
+              aria-labelledby="rec-responsible"
+              disabled={saving}
+              value={r.settings.responsibleUserId ?? ""}
+              onChange={(e) =>
+                void run(() =>
+                  responsibleFn({
+                    data: {
+                      jobId,
+                      userId: e.target.value || null,
+                      expectedVersion: r.settings.version,
+                    },
+                  }),
+                )
+              }
+              className="mt-3 h-10 w-full rounded-md border border-border bg-background px-2 text-sm"
+            >
+              <option value="">{t("rec.hub.noResponsible")}</option>
+              {r.team.map((m) => (
+                <option key={m.userId} value={m.userId}>
+                  {m.name} · {t(`rec.role.${m.role}` as TranslationKey)}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p className="mt-3 text-sm font-medium">
+              {r.team.find((m) => m.userId === r.settings.responsibleUserId)?.name ??
+                t("rec.hub.noResponsible")}
             </p>
-            {r.settings.completionNote && (
-              <p className="text-muted-foreground">{r.settings.completionNote}</p>
-            )}
-            {isAdmin && (
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => void run(() => reopenFn({ data: { jobId } }))}
-                className="inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40"
-              >
-                {t("rec.settings.reopen")}
-              </button>
-            )}
-          </div>
-        ) : phase === "published" || phase === "draft" ? (
-          <p className="mt-3 text-sm">{t("rec.settings.closeFirst")}</p>
-        ) : !r.canManage ? (
-          <p className="mt-3 text-sm text-muted-foreground">
-            {t("rec.settings.completeRestricted")}
-          </p>
-        ) : (
-          <div className="mt-3 space-y-3">
-            {unresolved.length > 0 ? (
-              <div>
-                <p className="text-sm font-medium">
-                  {t("rec.settings.unresolved").replace("{n}", String(unresolved.length))}
-                </p>
-                <ul className="mt-2 space-y-1">
-                  {unresolved.map((c) => (
-                    <li key={c.applicationId} className="flex flex-wrap items-center gap-2 text-sm">
-                      <Link
-                        to="/employer/$employerSlug/applications/$applicationId"
-                        params={{ employerSlug, applicationId: c.applicationId }}
-                        className="font-medium hover:text-accent hover:underline"
-                      >
-                        {c.name ?? t("employer.applications.anonymousCandidate")}
-                      </Link>
-                      <StageBadge status={c.status} />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="text-sm">{t("rec.settings.allResolved")}</p>
-            )}
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={saving || unresolved.length > 0}
-                onClick={() => setCompleting("completed")}
-                className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground disabled:opacity-60"
-              >
-                {t("rec.settings.complete")}
-              </button>
-              <button
-                type="button"
-                disabled={saving || unresolved.length > 0}
-                onClick={() => setCompleting("cancelled")}
-                className="inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40 disabled:opacity-60"
-              >
-                {t("rec.settings.cancelRecruitment")}
-              </button>
+          )}
+        </section>
+      )}
+
+      {show("team") && (
+        <section className={sectionCls} aria-labelledby="rec-team">
+          <h2 id="rec-team" className="text-base font-semibold">
+            {t("rec.settings.teamHeading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.teamLede")}</p>
+          <ul className="mt-3 divide-y divide-border">
+            {r.team.map((m) => {
+              const responsible = m.userId === r.settings.responsibleUserId;
+              const key: TranslationKey =
+                m.role === "owner" || m.role === "admin"
+                  ? "rec.settings.can.admin"
+                  : responsible
+                    ? "rec.settings.can.responsible"
+                    : "rec.settings.can.member";
+              return (
+                <li key={m.userId} className="flex items-start gap-3 py-2 text-sm">
+                  <UserRound
+                    className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <div>
+                    <p className="font-medium">
+                      {m.name}
+                      {m.isSelf && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          ({t("rec.team.you")})
+                        </span>
+                      )}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        {t(`rec.role.${m.role}` as TranslationKey)}
+                      </span>
+                      {responsible && (
+                        <span className="ml-2 text-xs font-medium text-accent">
+                          {t("rec.hub.responsible")}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t(key)}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {isAdmin && (
+            <Link
+              to="/employer/$employerSlug/settings"
+              params={{ employerSlug }}
+              className="mt-2 inline-flex text-sm font-medium text-accent hover:underline"
+            >
+              {t("rec.settings.manageTeam")}
+            </Link>
+          )}
+        </section>
+      )}
+
+      {show("close") && (
+        <section className={sectionCls} aria-labelledby="rec-close">
+          <h2 id="rec-close" className="text-base font-semibold">
+            {t("rec.settings.closeHeading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.closeLede")}</p>
+          {phase === "published" && closeable ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onClose}
+              className="mt-3 inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40 disabled:opacity-60"
+            >
+              {t("rec.hub.closeApplications")}
+            </button>
+          ) : (
+            <p className="mt-3 text-sm">
+              {phase === "published"
+                ? t("rec.settings.closeNotPermitted")
+                : t(`rec.settings.phaseNote.${phase}` as TranslationKey)}
+            </p>
+          )}
+        </section>
+      )}
+
+      {show("complete") && (
+        <section className={sectionCls} aria-labelledby="rec-complete">
+          <h2 id="rec-complete" className="text-base font-semibold">
+            {t("rec.settings.completeHeading")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("rec.settings.completeLede")}</p>
+
+          {phase === "completed" || phase === "cancelled" ? (
+            <div className="mt-3 space-y-2 text-sm">
+              <p className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-accent" aria-hidden="true" />
+                {t(
+                  phase === "completed" ? "rec.settings.completedOn" : "rec.settings.cancelledOn",
+                ).replace(
+                  "{at}",
+                  r.settings.completedAt ? formatStamp(r.settings.completedAt, lang) : "",
+                )}
+              </p>
+              {r.settings.completionNote && (
+                <p className="text-muted-foreground">{r.settings.completionNote}</p>
+              )}
+              {isAdmin && (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void run(() => reopenFn({ data: { jobId } }))}
+                  className="inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40"
+                >
+                  {t("rec.settings.reopen")}
+                </button>
+              )}
             </div>
-          </div>
-        )}
-      </section>
+          ) : phase === "published" || phase === "draft" ? (
+            <p className="mt-3 text-sm">{t("rec.settings.closeFirst")}</p>
+          ) : !r.canManage ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t("rec.settings.completeRestricted")}
+            </p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {unresolved.length > 0 ? (
+                <div>
+                  <p className="text-sm font-medium">
+                    {t("rec.settings.unresolved").replace("{n}", String(unresolvedCount))}
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {unresolved.map((c) => (
+                      <li
+                        key={c.applicationId}
+                        className="flex flex-wrap items-center gap-2 text-sm"
+                      >
+                        <Link
+                          to="/employer/$employerSlug/applications/$applicationId"
+                          params={{ employerSlug, applicationId: c.applicationId }}
+                          className="font-medium hover:text-accent hover:underline"
+                        >
+                          {c.name ?? t("employer.applications.anonymousCandidate")}
+                        </Link>
+                        <StageBadge status={c.status} />
+                      </li>
+                    ))}
+                  </ul>
+                  {unresolvedCount > unresolved.length && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("rec.settings.andMore").replace(
+                        "{n}",
+                        String(unresolvedCount - unresolved.length),
+                      )}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm">{t("rec.settings.allResolved")}</p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={saving || unresolvedCount > 0}
+                  onClick={() => setCompleting("completed")}
+                  className="inline-flex min-h-10 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground disabled:opacity-60"
+                >
+                  {t("rec.settings.complete")}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || unresolvedCount > 0}
+                  onClick={() => setCompleting("cancelled")}
+                  className="inline-flex min-h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted/40 disabled:opacity-60"
+                >
+                  {t("rec.settings.cancelRecruitment")}
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       {completing && (
         <ConfirmAction

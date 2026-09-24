@@ -29,6 +29,9 @@ const APPLY = "src/components/jobs/ApplyInternalDialog.tsx";
 const IV_CONTEXT = "src/lib/interview-intelligence/context.functions.ts";
 const IV_DERIVE = "src/lib/interview-intelligence/context.ts";
 const ASSESSMENT_PANEL = "src/components/academy/ApplicationAssessmentPanel.tsx";
+const TABLE = "src/components/recruitment/CandidateTable.tsx";
+const BOOKING = "src/components/recruitment/BookingDialog.tsx";
+const HUB = "src/routes/_authenticated.employer.$employerSlug.jobs.$jobId.index.tsx";
 const G = "recruitment-workspace:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -212,6 +215,64 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "",
     guard: G,
     expect: "a hired candidate's leftover booking is not upcoming",
+  },
+  {
+    id: "RW-STEP-DONE-BY-VISIT",
+    defect:
+      "a live advert is reported as still at 'publishing', so the case never lands on its applications",
+    file: DEFS,
+    find: '  } else if (i.phase === "published") current = "applications";',
+    replace: '  } else if (i.phase === "published") current = "publishing";',
+    guard: G,
+    expect: "a live advert is at applications",
+  },
+  {
+    id: "RW-PAGE-PAST-END-IS-EMPTY",
+    defect: "a stale link to page 9 of a 2-page list opens an empty page instead of the last one",
+    file: DEFS,
+    find: "  const p = Math.min(Math.max(1, page ?? 1), pages);",
+    replace: "  const p = Math.max(1, page ?? 1);",
+    guard: G,
+    expect: "a page past the end opens the last page",
+  },
+  {
+    id: "RW-SELECT-ALL-SELECTS-INVISIBLE",
+    defect:
+      "'select all' selects every id in the server's order, so a batch action reaches candidates on other pages",
+    file: TABLE,
+    find: "e.target.checked ? new Set(rows.map((r) => r.applicationId)) : new Set(),",
+    replace: "e.target.checked ? new Set(page.orderedIds) : new Set(),",
+    guard: G,
+    expect: "select-all selects the rows on screen",
+  },
+  {
+    id: "RW-ANSWER-NO-MEANS-NOT-YES",
+    defect: "a 'no' answer filter matches candidates who never answered the question",
+    file: DEFS,
+    find: "      if (r.answers?.[f.questionId] !== f.value) return false;",
+    replace: "      if (f.value === true && r.answers?.[f.questionId] !== true) return false;",
+    guard: G,
+    expect: "an unanswered question matches neither",
+  },
+  {
+    id: "RW-BOOKING-SENDS",
+    defect: "saving an interview time also sends the candidate a message",
+    file: BOOKING,
+    find: 'import { saveInterviewBooking } from "@/lib/recruitment/recruitment.functions";',
+    replace:
+      'import { saveInterviewBooking, sendRecruitmentMessages } from "@/lib/recruitment/recruitment.functions";\nvoid sendRecruitmentMessages;',
+    guard: G,
+    expect: "saving a time sends nothing",
+  },
+  {
+    id: "RW-CASE-LOADS-WHOLE-LIST",
+    defect: "the case page fetches every candidate and pages in the browser",
+    file: HUB,
+    find: 'import {\n  getRecruitment,\n  listRecruitmentCandidatesPage,\n} from "@/lib/recruitment/recruitment.functions";',
+    replace:
+      'import {\n  getRecruitment,\n  listRecruitmentCandidates,\n  listRecruitmentCandidatesPage,\n} from "@/lib/recruitment/recruitment.functions";\nvoid listRecruitmentCandidates;',
+    guard: G,
+    expect: "reads ONE page from the server",
   },
 ];
 

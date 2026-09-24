@@ -1,19 +1,28 @@
 // The candidate list: the recruitment's main working surface.
 //
-// Readable first. The columns are the ones a recruiter works from -- who, where
-// they are in the process, when they applied, who is handling them, what is
-// planned next -- and assessment or merit information is a quiet marker, never
-// a score column that turns the list into a ranking.
+// Ordered the way a recruiter works, top to bottom: a compact filter row, a
+// PERSISTENT action bar (always there, its actions enabled once rows are
+// selected, showing how many), the table itself, then pagination and the
+// hit count. The table is dense and readable: who, where they are in the
+// process, when they applied, who is handling them, what they answered,
+// what is attached, what is planned next. Assessment and merit information
+// is a marker, never a score column that turns the list into a ranking.
 //
-// Everything a reader can change (search, stage, owner, sort) lives in the URL
-// via `view` / `onViewChange`, so it survives a reload and a trip into a
-// candidate and back. Opening a row stores the current ORDER under a list key,
-// which is what the candidate view's previous/next reads.
+// The page arrives from the server already filtered, ordered and sliced
+// (listRecruitmentCandidatesPage) from the same definitions this file's
+// controls edit; the browser never holds more than one page. Everything a
+// reader can change lives in the URL via `view` / `onViewChange`, so it
+// survives a reload and a trip into a candidate and back. Opening a row
+// stores the server's full ORDER under a list key, which is what the
+// candidate page's previous/next reads across pages.
 //
-// Batch actions report per candidate. A stage move is made from the stage the
-// reader SAW, so a colleague who moved somebody first is reported, not
-// overwritten; and no batch action writes to a candidate -- messages are their
-// own explicit, reviewed act.
+// Selection is per page and never reaches a row that is not on screen:
+// "select all" is "select all on this page", said in those words, and a page
+// change clears it. Batch actions report per candidate. A stage move is made
+// from the stage the reader SAW, so a colleague who moved somebody first is
+// reported, not overwritten; and no batch action writes to a candidate --
+// messages are their own explicit, reviewed act, and a booked time is not
+// sent until the invitation is.
 
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
@@ -21,27 +30,43 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownUp,
   CalendarClock,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
+  FileText,
   MessageSquare,
   Search,
-  UserCog,
+  StickyNote,
   X,
 } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { ConfirmAction } from "@/components/employer/ConfirmAction";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { StageBadge, BookingBadge } from "@/components/recruitment/RecruitmentStatus";
 import { BatchMessageDialog } from "@/components/recruitment/MessageComposer";
+import { BookingDialog } from "@/components/recruitment/BookingDialog";
+import { AssignTestDialog } from "@/components/recruitment/AssignTestDialog";
 import {
-  applyCandidateView,
   CANDIDATE_SORTS,
   STAGE_FILTERS,
+  firstPage,
+  parseAnswerFilter,
+  serializeAnswerFilter,
   type CandidateView,
 } from "@/lib/recruitment/definitions";
 import { consumeScrollRestore, listKeyFor, saveListContext } from "@/lib/recruitment/list-context";
 import {
   setApplicationResponsible,
   setApplicationStages,
+  type CandidatePage,
   type CandidateRow,
   type TeamMember,
 } from "@/lib/recruitment/recruitment.functions";
@@ -52,13 +77,20 @@ type Props = {
   employerId: string;
   employerSlug: string;
   employerName: string;
-  rows: CandidateRow[];
+  jobTitle: string;
+  /** The page as the server returned it, or null while loading / failed. */
+  page: CandidatePage | null;
+  loading: boolean;
+  error: boolean;
+  onRetry: () => void;
   view: CandidateView;
   onViewChange: (next: CandidateView) => void;
-  showVacancy: boolean;
   team: TeamMember[];
-  /** Decisions and messages: owner/admin, or responsible for that job. */
-  canManageJob: (jobId: string) => boolean;
+  /** Decisions, messages, assignment of a handler: owner/admin, or the
+   *  person responsible for this recruitment (rec_can_manage). */
+  canManage: boolean;
+  /** Sending a test: owner or admin (scp_assign_from_application). */
+  canAssignTests: boolean;
   openAssessmentIds?: ReadonlySet<string> | null;
   onChanged: () => void;
   labelKey: "recruitment" | "applications";
@@ -70,10 +102,17 @@ const FROM: Record<BatchStage, string> = {
   interview: "reviewing",
   rejected: "",
 };
+const OPEN = ["submitted", "reviewing", "interview"];
+
+type ItemResult = {
+  applicationId: string;
+  name: string | null;
+  tone: "ok" | "warn";
+  text: string;
+};
 
 export function CandidateTable(props: Props) {
-  const { employerId, employerSlug, rows, view, onViewChange, showVacancy, team, canManageJob } =
-    props;
+  const { employerId, employerSlug, page, view, onViewChange, team, canManage } = props;
   const { t, lang } = useT();
   const location = useRouterState({ select: (s) => s.location });
   const listHref = location.href;
@@ -83,11 +122,15 @@ export function CandidateTable(props: Props) {
   const stagesFn = useServerFn(setApplicationStages);
   const responsibleFn = useServerFn(setApplicationResponsible);
 
+  const rows = useMemo(() => page?.rows ?? [], [page]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
+  const [itemResults, setItemResults] = useState<ItemResult[]>([]);
   const [confirmReject, setConfirmReject] = useState(false);
   const [messaging, setMessaging] = useState(false);
+  const [booking, setBooking] = useState(false);
+  const [assigningTest, setAssigningTest] = useState(false);
   const [assigning, setAssigning] = useState(false);
   const [search, setSearch] = useState(view.q ?? "");
 
@@ -95,7 +138,7 @@ export function CandidateTable(props: Props) {
   useEffect(() => setSearch(view.q ?? ""), [view.q]);
   useEffect(() => {
     const id = window.setTimeout(() => {
-      if ((view.q ?? "") !== search) onViewChange({ ...view, q: search || undefined });
+      if ((view.q ?? "") !== search) onViewChange(firstPage({ ...view, q: search || undefined }));
     }, 250);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -110,34 +153,25 @@ export function CandidateTable(props: Props) {
     if (y !== null) window.requestAnimationFrame(() => window.scrollTo({ top: y }));
   }, [rows.length, listKey]);
 
-  const ordered = useMemo(
-    () =>
-      applyCandidateView(
-        rows.map((r) => ({
-          ...r,
-          jobTitle: lang === "en" ? r.jobTitleEn || r.jobTitleSv : r.jobTitleSv || r.jobTitleEn,
-        })),
-        view,
-      ),
-    [rows, view, lang],
-  );
-  const visibleIds = new Set(ordered.map((r) => r.applicationId));
-  const selectedRows = ordered.filter((r) => selected.has(r.applicationId));
-  const allSelected = ordered.length > 0 && ordered.every((r) => selected.has(r.applicationId));
-  const manageAll = selectedRows.length > 0 && selectedRows.every((r) => canManageJob(r.jobId));
-
-  // Selection never outlives the rows it named.
+  // Selection never outlives the page it was made on.
+  const pageIds = useMemo(() => new Set(rows.map((r) => r.applicationId)), [rows]);
   useEffect(() => {
     setSelected((prev) => {
-      const next = new Set([...prev].filter((id) => visibleIds.has(id)));
+      const next = new Set([...prev].filter((id) => pageIds.has(id)));
       return next.size === prev.size ? prev : next;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ordered.length, view.stage, view.q, view.owner]);
+  }, [pageIds]);
+
+  const selectedRows = rows.filter((r) => selected.has(r.applicationId));
+  const allOnPage = rows.length > 0 && rows.every((r) => selected.has(r.applicationId));
+  const one = selectedRows.length === 1 ? selectedRows[0] : null;
+  const none = selectedRows.length === 0;
+  const anonymous = t("employer.applications.anonymousCandidate");
+  const nameOf = (r: CandidateRow) => r.name ?? anonymous;
 
   function remember() {
     saveListContext(listKey, {
-      ids: ordered.map((r) => r.applicationId),
+      ids: page?.orderedIds ?? rows.map((r) => r.applicationId),
       href: listHref,
       scrollY: window.scrollY,
       labelKey: props.labelKey,
@@ -145,13 +179,26 @@ export function CandidateTable(props: Props) {
     });
   }
 
+  function setPage(p: number) {
+    setSelected(new Set());
+    onViewChange({ ...view, page: p });
+  }
+
+  function keepFailed(items: ItemResult[]) {
+    // Rows that failed stay selected, so the recruiter can retry them.
+    setItemResults(items);
+    setSelected(new Set(items.filter((i) => i.tone === "warn").map((i) => i.applicationId)));
+  }
+
   async function moveSelected(to: BatchStage) {
     const eligible =
       to === "rejected"
-        ? selectedRows.filter((r) => ["submitted", "reviewing", "interview"].includes(r.status))
+        ? selectedRows.filter((r) => OPEN.includes(r.status))
         : selectedRows.filter((r) => r.status === FROM[to]);
+    const skipped = selectedRows.length - eligible.length;
     if (eligible.length === 0) {
       setNotice({ tone: "warn", text: t("rec.batch.noneEligible") });
+      setItemResults([]);
       return;
     }
     setBusy(true);
@@ -167,19 +214,26 @@ export function CandidateTable(props: Props) {
           note: null,
         },
       });
-      const failed = res.results.filter((x) => !x.ok);
-      const skipped = selectedRows.length - eligible.length;
-      const ok = res.results.length - failed.length;
+      const byId = new Map(res.results.map((x) => [x.applicationId, x]));
+      const items: ItemResult[] = selectedRows.map((r) => {
+        const x = byId.get(r.applicationId);
+        const base = { applicationId: r.applicationId, name: r.name };
+        if (!x) return { ...base, tone: "warn", text: t("rec.batch.item.skipped") };
+        return x.ok
+          ? { ...base, tone: "ok", text: t("rec.batch.item.moved") }
+          : {
+              ...base,
+              tone: "warn",
+              text: t(recruitmentErrorKey(x.code ?? "RECRUITMENT_ACTION_FAILED")),
+            };
+      });
+      const ok = res.results.filter((x) => x.ok).length;
+      const failed = res.results.length - ok;
       const parts = [t("rec.batch.moved").replace("{n}", String(ok))];
       if (skipped > 0) parts.push(t("rec.batch.skipped").replace("{n}", String(skipped)));
-      if (failed.length > 0) {
-        const firstCode = failed[0].code ?? "RECRUITMENT_ACTION_FAILED";
-        parts.push(
-          `${t("rec.batch.failed").replace("{n}", String(failed.length))} ${t(recruitmentErrorKey(firstCode))}`,
-        );
-      }
-      setNotice({ tone: failed.length > 0 ? "warn" : "ok", text: parts.join(" ") });
-      setSelected(new Set());
+      if (failed > 0) parts.push(t("rec.batch.failed").replace("{n}", String(failed)));
+      setNotice({ tone: failed > 0 || skipped > 0 ? "warn" : "ok", text: parts.join(" ") });
+      keepFailed(items);
       props.onChanged();
     } catch (e) {
       setNotice({ tone: "warn", text: t(recruitmentErrorKey((e as Error).message)) });
@@ -191,36 +245,74 @@ export function CandidateTable(props: Props) {
   async function assignSelected(userId: string | null) {
     setBusy(true);
     setNotice(null);
-    let failed = 0;
+    const items: ItemResult[] = [];
     for (const r of selectedRows) {
+      const base = { applicationId: r.applicationId, name: r.name };
       try {
         await responsibleFn({
           data: { applicationId: r.applicationId, userId, expectedVersion: r.metaVersion },
         });
-      } catch {
-        failed += 1;
+        items.push({ ...base, tone: "ok", text: t("rec.batch.item.assigned") });
+      } catch (e) {
+        items.push({ ...base, tone: "warn", text: t(recruitmentErrorKey((e as Error).message)) });
       }
     }
     setBusy(false);
     setAssigning(false);
+    const failed = items.filter((i) => i.tone === "warn").length;
     setNotice({
       tone: failed ? "warn" : "ok",
       text: failed
         ? t("rec.batch.assignPartial").replace("{n}", String(failed))
         : t("rec.batch.assigned").replace("{n}", String(selectedRows.length)),
     });
-    setSelected(new Set());
+    keepFailed(items);
     props.onChanged();
   }
 
+  // ── Filters ─────────────────────────────────────────────────────────
+  const answerFilters = parseAnswerFilter(view.ans);
+  const questions = page?.yesNoQuestions ?? [];
+  const activeFilters =
+    (view.q ? 1 : 0) +
+    (view.stage && view.stage !== "open" ? 1 : 0) +
+    (view.owner ? 1 : 0) +
+    answerFilters.length;
+  function setAnswer(questionId: string, v: "" | "y" | "n") {
+    const rest = answerFilters.filter((f) => f.questionId !== questionId);
+    if (v) rest.push({ questionId, value: v === "y" });
+    onViewChange(firstPage({ ...view, ans: serializeAnswerFilter(rest) }));
+  }
+  const questionLabel = (q: { promptSv: string | null; promptEn: string | null }) =>
+    (lang === "en" ? q.promptEn || q.promptSv : q.promptSv || q.promptEn) ?? "";
+  const stageCount = (s: (typeof STAGE_FILTERS)[number]) => {
+    if (!page) return "";
+    const c = page.counts;
+    const n =
+      s === "all"
+        ? c.total
+        : s === "open"
+          ? c.total - c.decided
+          : s === "decided"
+            ? c.decided
+            : s === "new"
+              ? c.new
+              : s === "review"
+                ? c.review
+                : c.interview;
+    return ` (${n})`;
+  };
+
   const selectCls =
-    "h-9 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+    "h-9 max-w-[16rem] rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+  const barBtn =
+    "inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <div>
-      {/* ── Toolbar ─────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-end gap-2">
-        <label className="relative min-w-[12rem] flex-1">
+      {/* ── Filters ─────────────────────────────────────────────────── */}
+      <section aria-label={t("rec.filters.aria")} className="flex flex-wrap items-end gap-2">
+        <label className="relative min-w-[11rem] flex-1 sm:max-w-xs">
           <span className="sr-only">{t("rec.table.search")}</span>
           <Search
             className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
@@ -230,34 +322,35 @@ export function CandidateTable(props: Props) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t(
-              showVacancy ? "rec.table.searchPlaceholderVacancy" : "rec.table.searchPlaceholder",
-            )}
+            placeholder={t("rec.table.searchPlaceholder")}
             className="h-9 w-full rounded-md border border-border bg-background pl-8 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           {t("rec.table.stage")}
           <select
             className={selectCls}
             value={view.stage ?? "open"}
             onChange={(e) =>
-              onViewChange({ ...view, stage: e.target.value as CandidateView["stage"] })
+              onViewChange(firstPage({ ...view, stage: e.target.value as CandidateView["stage"] }))
             }
           >
             {STAGE_FILTERS.map((s) => (
               <option key={s} value={s}>
                 {t(`rec.filter.stage.${s}` as TranslationKey)}
+                {stageCount(s)}
               </option>
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           {t("rec.table.responsible")}
           <select
             className={selectCls}
             value={view.owner ?? ""}
-            onChange={(e) => onViewChange({ ...view, owner: e.target.value || undefined })}
+            onChange={(e) =>
+              onViewChange(firstPage({ ...view, owner: e.target.value || undefined }))
+            }
           >
             <option value="">{t("rec.filter.owner.all")}</option>
             <option value="none">{t("rec.filter.owner.none")}</option>
@@ -268,18 +361,39 @@ export function CandidateTable(props: Props) {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1 text-xs text-muted-foreground">
+        {questions.slice(0, 4).map((q) => {
+          const current = answerFilters.find((f) => f.questionId === q.id);
+          return (
+            <label key={q.id} className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+              <span className="max-w-[16rem] truncate" title={questionLabel(q)}>
+                {questionLabel(q)}
+              </span>
+              <select
+                className={selectCls}
+                value={current ? (current.value ? "y" : "n") : ""}
+                onChange={(e) => setAnswer(q.id, e.target.value as "" | "y" | "n")}
+              >
+                <option value="">{t("rec.filter.answer.any")}</option>
+                <option value="y">{t("rec.filter.answer.yes")}</option>
+                <option value="n">{t("rec.filter.answer.no")}</option>
+              </select>
+            </label>
+          );
+        })}
+        <label className="flex flex-col gap-0.5 text-xs text-muted-foreground">
           {t("rec.table.sort")}
           <span className="flex gap-1">
             <select
               className={selectCls}
               value={view.sort ?? "applied"}
               onChange={(e) =>
-                onViewChange({
-                  ...view,
-                  sort: e.target.value as CandidateView["sort"],
-                  dir: undefined,
-                })
+                onViewChange(
+                  firstPage({
+                    ...view,
+                    sort: e.target.value as CandidateView["sort"],
+                    dir: undefined,
+                  }),
+                )
               }
             >
               {CANDIDATE_SORTS.map((s) => (
@@ -291,14 +405,16 @@ export function CandidateTable(props: Props) {
             <button
               type="button"
               onClick={() =>
-                onViewChange({
-                  ...view,
-                  dir:
-                    (view.dir ?? ((view.sort ?? "applied") === "applied" ? "desc" : "asc")) ===
-                    "asc"
-                      ? "desc"
-                      : "asc",
-                })
+                onViewChange(
+                  firstPage({
+                    ...view,
+                    dir:
+                      (view.dir ?? ((view.sort ?? "applied") === "applied" ? "desc" : "asc")) ===
+                      "asc"
+                        ? "desc"
+                        : "asc",
+                  }),
+                )
               }
               className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label={t("rec.table.toggleDirection")}
@@ -307,72 +423,183 @@ export function CandidateTable(props: Props) {
             </button>
           </span>
         </label>
-      </div>
-
-      <p className="mt-3 text-xs text-muted-foreground" aria-live="polite">
-        {t("rec.table.showing")
-          .replace("{shown}", String(ordered.length))
-          .replace("{total}", String(rows.length))}
-      </p>
-
-      {/* ── Batch bar ──────────────────────────────────────────────── */}
-      {selectedRows.length > 0 && (
-        <div
-          className="sticky top-2 z-10 mt-2 flex flex-wrap items-center gap-2 rounded-lg border border-accent/40 bg-background p-2 shadow-sm"
-          role="region"
-          aria-label={t("rec.batch.region")}
-        >
-          <span className="px-1 text-sm font-medium">
-            {t("rec.batch.selected").replace("{n}", String(selectedRows.length))}
-          </span>
-          <BatchButton disabled={busy} onClick={() => void moveSelected("reviewing")}>
-            {t("rec.batch.toReview")}
-          </BatchButton>
-          <BatchButton disabled={busy} onClick={() => void moveSelected("interview")}>
-            {t("rec.batch.toInterview")}
-          </BatchButton>
-          {manageAll && (
-            <>
-              <BatchButton disabled={busy} onClick={() => setMessaging(true)}>
-                <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-                {t("rec.batch.message")}
-              </BatchButton>
-              <BatchButton disabled={busy} onClick={() => setAssigning(true)}>
-                <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
-                {t("rec.batch.assign")}
-              </BatchButton>
-              <BatchButton disabled={busy} tone="danger" onClick={() => setConfirmReject(true)}>
-                {t("rec.batch.reject")}
-              </BatchButton>
-            </>
-          )}
-          {!manageAll && (
-            <span className="text-xs text-muted-foreground">{t("rec.batch.restrictedHint")}</span>
-          )}
+        {activeFilters > 0 && (
           <button
             type="button"
-            onClick={() => setSelected(new Set())}
-            className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => onViewChange({})}
+            className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("rec.batch.clear")}
+            {t("rec.table.clearFilters")} ({activeFilters})
           </button>
-        </div>
-      )}
+        )}
+      </section>
+
+      {/* ── Action bar: always present ───────────────────────────────── */}
+      <div
+        className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/20 p-2"
+        role="region"
+        aria-label={t("rec.batch.region")}
+      >
+        <span className="px-1 text-sm font-medium tabular-nums" aria-live="polite">
+          {t("rec.batch.selected").replace("{n}", String(selectedRows.length))}
+        </span>
+        {one ? (
+          <Link
+            to="/employer/$employerSlug/applications/$applicationId"
+            params={{ employerSlug, applicationId: one.applicationId }}
+            search={{ list: listKey }}
+            onClick={remember}
+            className={barBtn}
+          >
+            {t("rec.action.open")}
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className={barBtn}
+            disabled
+            title={none ? t("rec.action.hint.select") : t("rec.action.hint.selectOne")}
+          >
+            {t("rec.action.open")}
+          </button>
+        )}
+        {canManage && (
+          <button
+            type="button"
+            className={barBtn}
+            disabled={none || busy}
+            onClick={() => setMessaging(true)}
+            title={none ? t("rec.action.hint.select") : undefined}
+          >
+            <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("rec.batch.message")}
+          </button>
+        )}
+        <button
+          type="button"
+          className={barBtn}
+          disabled={none || busy || selectedRows.some((r) => !OPEN.includes(r.status))}
+          onClick={() => setBooking(true)}
+          title={none ? t("rec.action.hint.select") : t("rec.action.hint.openOnly")}
+        >
+          <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+          {t("rec.action.interview")}
+        </button>
+        {props.canAssignTests && (
+          <button
+            type="button"
+            className={barBtn}
+            disabled={none || busy}
+            onClick={() => setAssigningTest(true)}
+            title={none ? t("rec.action.hint.select") : undefined}
+          >
+            <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("rec.action.assignTest")}
+          </button>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className={barBtn} disabled={none || busy}>
+              {t("rec.action.changeStatus")}
+              <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            <DropdownMenuItem onSelect={() => void moveSelected("reviewing")}>
+              {t("rec.batch.toReview")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => void moveSelected("interview")}>
+              {t("rec.batch.toInterview")}
+            </DropdownMenuItem>
+            {canManage && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => setConfirmReject(true)}
+                >
+                  {t("rec.batch.reject")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className={barBtn} disabled={none || busy}>
+              {t("rec.action.more")}
+              <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-64">
+            {canManage && (
+              <DropdownMenuItem onSelect={() => setAssigning(true)}>
+                {t("rec.batch.assign")}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onSelect={() => setSelected(new Set())}>
+              {t("rec.batch.clear")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {!canManage && (
+          <span className="text-xs text-muted-foreground">{t("rec.batch.restrictedHint")}</span>
+        )}
+      </div>
 
       {notice && (
         <div
           role="status"
           className={`mt-2 rounded-md border px-3 py-2 text-sm ${notice.tone === "ok" ? "border-emerald-500/40 bg-emerald-500/10" : "border-amber-500/40 bg-amber-500/10"}`}
         >
-          {notice.text}
+          <p>{notice.text}</p>
+          {itemResults.length > 0 && (
+            <ul className="mt-1.5 divide-y divide-border/60 text-xs">
+              {itemResults.map((i) => (
+                <li key={i.applicationId} className="flex flex-wrap justify-between gap-2 py-1">
+                  <span className="font-medium">{i.name ?? anonymous}</span>
+                  <span
+                    className={
+                      i.tone === "ok"
+                        ? "text-emerald-800 dark:text-emerald-200"
+                        : "text-amber-900 dark:text-amber-200"
+                    }
+                  >
+                    {i.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
-      {ordered.length === 0 ? (
+      {/* ── The table ─────────────────────────────────────────────────── */}
+      {props.loading && !page ? (
+        <p className="mt-4 text-sm text-muted-foreground" role="status">
+          {t("employer.loading")}
+        </p>
+      ) : props.error ? (
+        /* NOT an empty state. "Nobody has applied" and "we could not find
+           out who applied" are different sentences. */
+        <div
+          role="alert"
+          className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-4 text-sm text-amber-900 dark:text-amber-200"
+        >
+          <p>{t("employer.jobHub.candidates.loadFailed")}</p>
+          <button
+            type="button"
+            onClick={props.onRetry}
+            className="mt-3 inline-flex min-h-10 items-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-muted/60"
+          >
+            {t("continuity.next.retry")}
+          </button>
+        </div>
+      ) : !page || page.total === 0 ? (
         <div className="mt-4 rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-          {rows.length === 0 ? t("rec.table.emptyNone") : t("rec.table.emptyFiltered")}
-          {rows.length > 0 && (
+          {page && page.counts.total > 0 ? t("rec.table.emptyFiltered") : t("rec.table.emptyNone")}
+          {page && page.counts.total > 0 && (
             <div className="mt-3">
               <button
                 type="button"
@@ -386,47 +613,51 @@ export function CandidateTable(props: Props) {
         </div>
       ) : (
         <>
-          {/* Desktop table */}
           <div className="mt-2 hidden overflow-x-auto rounded-lg border border-border md:block">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <table className="w-full min-w-[1040px] text-sm">
+              <thead className="bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                 <tr>
-                  <th className="w-10 px-3 py-2">
+                  <th className="w-9 px-2 py-1.5">
                     <input
                       type="checkbox"
-                      aria-label={t("rec.table.selectAll")}
-                      checked={allSelected}
+                      aria-label={t("rec.table.selectAllPage")}
+                      title={t("rec.table.selectAllPage")}
+                      checked={allOnPage}
                       onChange={(e) =>
                         setSelected(
-                          e.target.checked
-                            ? new Set(ordered.map((r) => r.applicationId))
-                            : new Set(),
+                          e.target.checked ? new Set(rows.map((r) => r.applicationId)) : new Set(),
                         )
                       }
                       className="h-4 w-4 accent-[hsl(var(--accent))]"
                     />
                   </th>
-                  <th className="px-3 py-2">{t("rec.col.candidate")}</th>
-                  {showVacancy && <th className="px-3 py-2">{t("rec.col.vacancy")}</th>}
-                  <th className="px-3 py-2">{t("rec.col.stage")}</th>
-                  <th className="px-3 py-2">{t("rec.col.applied")}</th>
-                  <th className="px-3 py-2">{t("rec.col.responsible")}</th>
-                  <th className="px-3 py-2">{t("rec.col.next")}</th>
+                  <th className="w-10 px-2 py-1.5 tabular-nums">#</th>
+                  <th className="px-2 py-1.5">{t("rec.col.candidate")}</th>
+                  <th className="px-2 py-1.5">{t("rec.col.stage")}</th>
+                  <th className="px-2 py-1.5">{t("rec.col.applied")}</th>
+                  <th className="px-2 py-1.5">{t("rec.col.responsible")}</th>
+                  {questions.slice(0, 3).map((q) => (
+                    <th key={q.id} className="max-w-[9rem] px-2 py-1.5" title={questionLabel(q)}>
+                      <span className="line-clamp-2 normal-case tracking-normal">
+                        {questionLabel(q)}
+                      </span>
+                    </th>
+                  ))}
+                  <th className="px-2 py-1.5">{t("rec.col.attachments")}</th>
+                  <th className="px-2 py-1.5">{t("rec.col.test")}</th>
+                  <th className="px-2 py-1.5">{t("rec.col.next")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {ordered.map((r) => (
+                {rows.map((r, i) => (
                   <tr
                     key={r.applicationId}
                     className={selected.has(r.applicationId) ? "bg-accent/5" : "hover:bg-muted/20"}
                   >
-                    <td className="px-3 py-2 align-top">
+                    <td className="px-2 py-1.5 align-middle">
                       <input
                         type="checkbox"
-                        aria-label={t("rec.table.select").replace(
-                          "{name}",
-                          r.name ?? t("employer.applications.anonymousCandidate"),
-                        )}
+                        aria-label={t("rec.table.select").replace("{name}", nameOf(r))}
                         checked={selected.has(r.applicationId)}
                         onChange={(e) =>
                           setSelected((prev) => {
@@ -436,10 +667,13 @@ export function CandidateTable(props: Props) {
                             return next;
                           })
                         }
-                        className="mt-0.5 h-4 w-4 accent-[hsl(var(--accent))]"
+                        className="h-4 w-4 accent-[hsl(var(--accent))]"
                       />
                     </td>
-                    <td className="px-3 py-2 align-top">
+                    <td className="px-2 py-1.5 align-middle tabular-nums text-muted-foreground">
+                      {page.from + i}
+                    </td>
+                    <td className="px-2 py-1.5 align-middle">
                       <Link
                         to="/employer/$employerSlug/applications/$applicationId"
                         params={{ employerSlug, applicationId: r.applicationId }}
@@ -447,30 +681,51 @@ export function CandidateTable(props: Props) {
                         onClick={remember}
                         className="font-medium text-foreground hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       >
-                        {r.name ?? t("employer.applications.anonymousCandidate")}
+                        {nameOf(r)}
                       </Link>
-                      <CandidateMarkers
-                        row={r}
-                        openAssessment={props.openAssessmentIds?.has(r.applicationId) ?? false}
-                      />
+                      {!r.firstViewedAt && r.status === "submitted" && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-xs font-medium text-sky-800 dark:text-sky-200">
+                          <span
+                            className="h-1.5 w-1.5 rounded-full bg-sky-500"
+                            aria-hidden="true"
+                          />
+                          {t("rec.marker.unopened")}
+                        </span>
+                      )}
+                      {r.mandatoryNoCount > 0 && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {t("rec.marker.mandatoryNo").replace("{n}", String(r.mandatoryNoCount))}
+                        </span>
+                      )}
                     </td>
-                    {showVacancy && (
-                      <td className="px-3 py-2 align-top text-muted-foreground">
-                        {(lang === "en"
-                          ? r.jobTitleEn || r.jobTitleSv
-                          : r.jobTitleSv || r.jobTitleEn) ?? "—"}
-                      </td>
-                    )}
-                    <td className="px-3 py-2 align-top">
+                    <td className="px-2 py-1.5 align-middle">
                       <StageBadge status={r.status} />
                     </td>
-                    <td className="px-3 py-2 align-top tabular-nums text-muted-foreground">
+                    <td className="px-2 py-1.5 align-middle tabular-nums text-muted-foreground">
                       {formatDay(r.appliedAt, lang)}
                     </td>
-                    <td className="px-3 py-2 align-top text-muted-foreground">
+                    <td className="px-2 py-1.5 align-middle text-muted-foreground">
                       {r.responsibleName ?? "—"}
                     </td>
-                    <td className="px-3 py-2 align-top">
+                    {questions.slice(0, 3).map((q) => (
+                      <td key={q.id} className="px-2 py-1.5 align-middle">
+                        <Answer value={r.answers?.[q.id]} />
+                      </td>
+                    ))}
+                    <td className="px-2 py-1.5 align-middle">
+                      <Attachments row={r} />
+                    </td>
+                    <td className="px-2 py-1.5 align-middle text-xs text-muted-foreground">
+                      {props.openAssessmentIds?.has(r.applicationId) ? (
+                        <span className="inline-flex items-center gap-1">
+                          <ClipboardList className="h-3 w-3" aria-hidden="true" />
+                          {t("rec.marker.testOpen")}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5 align-middle">
                       <NextActivity row={r} lang={lang} />
                     </td>
                   </tr>
@@ -481,7 +736,7 @@ export function CandidateTable(props: Props) {
 
           {/* Mobile cards */}
           <ul className="mt-2 space-y-2 md:hidden">
-            {ordered.map((r) => (
+            {rows.map((r) => (
               <li
                 key={r.applicationId}
                 className="rounded-lg border border-border bg-background p-3"
@@ -489,10 +744,7 @@ export function CandidateTable(props: Props) {
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
-                    aria-label={t("rec.table.select").replace(
-                      "{name}",
-                      r.name ?? t("employer.applications.anonymousCandidate"),
-                    )}
+                    aria-label={t("rec.table.select").replace("{name}", nameOf(r))}
                     checked={selected.has(r.applicationId)}
                     onChange={(e) =>
                       setSelected((prev) => {
@@ -512,25 +764,25 @@ export function CandidateTable(props: Props) {
                       onClick={remember}
                       className="font-medium text-foreground hover:text-accent hover:underline"
                     >
-                      {r.name ?? t("employer.applications.anonymousCandidate")}
+                      {nameOf(r)}
                     </Link>
-                    {showVacancy && (
-                      <p className="text-xs text-muted-foreground">
-                        {(lang === "en"
-                          ? r.jobTitleEn || r.jobTitleSv
-                          : r.jobTitleSv || r.jobTitleEn) ?? "—"}
-                      </p>
-                    )}
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
                       <StageBadge status={r.status} />
                       <span className="text-xs text-muted-foreground">
                         {formatDay(r.appliedAt, lang)}
                       </span>
+                      {r.responsibleName && (
+                        <span className="text-xs text-muted-foreground">{r.responsibleName}</span>
+                      )}
                     </div>
-                    <CandidateMarkers
-                      row={r}
-                      openAssessment={props.openAssessmentIds?.has(r.applicationId) ?? false}
-                    />
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                      <Attachments row={r} />
+                      {r.mandatoryNoCount > 0 && (
+                        <span>
+                          {t("rec.marker.mandatoryNo").replace("{n}", String(r.mandatoryNoCount))}
+                        </span>
+                      )}
+                    </div>
                     <div className="mt-1">
                       <NextActivity row={r} lang={lang} />
                     </div>
@@ -539,6 +791,52 @@ export function CandidateTable(props: Props) {
               </li>
             ))}
           </ul>
+
+          {/* ── Pagination ────────────────────────────────────────────── */}
+          <nav
+            aria-label={t("rec.pager.aria")}
+            className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm"
+          >
+            <p className="text-xs text-muted-foreground" aria-live="polite">
+              {t("rec.pager.showing")
+                .replace("{from}", String(page.from))
+                .replace("{to}", String(page.to))
+                .replace("{total}", String(page.total))}
+              {page.counts.total !== page.total && (
+                <>
+                  {" · "}
+                  {t("rec.pager.ofAll").replace("{all}", String(page.counts.total))}
+                </>
+              )}
+            </p>
+            {page.pages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className={barBtn}
+                  disabled={page.page <= 1}
+                  onClick={() => setPage(page.page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+                  {t("rec.pager.previous")}
+                </button>
+                <span className="px-2 text-xs tabular-nums text-muted-foreground">
+                  {t("rec.pager.page")
+                    .replace("{n}", String(page.page))
+                    .replace("{total}", String(page.pages))}
+                </span>
+                <button
+                  type="button"
+                  className={barBtn}
+                  disabled={page.page >= page.pages}
+                  onClick={() => setPage(page.page + 1)}
+                >
+                  {t("rec.pager.next")}
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            )}
+          </nav>
         </>
       )}
 
@@ -566,12 +864,38 @@ export function CandidateTable(props: Props) {
           recipients={selectedRows.map((r) => ({
             applicationId: r.applicationId,
             name: r.name,
-            jobTitle:
-              (lang === "en" ? r.jobTitleEn || r.jobTitleSv : r.jobTitleSv || r.jobTitleEn) ?? "",
+            jobTitle: props.jobTitle,
           }))}
           onClose={(sent) => {
             setMessaging(false);
             if (sent) {
+              setSelected(new Set());
+              props.onChanged();
+            }
+          }}
+        />
+      )}
+
+      {booking && (
+        <BookingDialog
+          candidates={selectedRows.map((r) => ({ applicationId: r.applicationId, name: r.name }))}
+          onClose={(saved) => {
+            setBooking(false);
+            if (saved > 0) {
+              setSelected(new Set());
+              props.onChanged();
+            }
+          }}
+        />
+      )}
+
+      {assigningTest && (
+        <AssignTestDialog
+          employerId={employerId}
+          candidates={selectedRows.map((r) => ({ applicationId: r.applicationId, name: r.name }))}
+          onClose={(assigned) => {
+            setAssigningTest(false);
+            if (assigned > 0) {
               setSelected(new Set());
               props.onChanged();
             }
@@ -592,64 +916,51 @@ export function CandidateTable(props: Props) {
   );
 }
 
-function BatchButton({
-  children,
-  onClick,
-  disabled,
-  tone,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  disabled?: boolean;
-  tone?: "danger";
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`inline-flex min-h-9 items-center gap-1 rounded-md border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60 ${
-        tone === "danger"
-          ? "border-destructive/50 text-destructive hover:bg-destructive/10"
-          : "border-border hover:bg-muted/50"
-      }`}
-    >
-      {children}
-    </button>
-  );
+function Answer({ value }: { value: boolean | null | undefined }) {
+  const { t } = useT();
+  if (value === true)
+    return (
+      <span className="text-sm text-emerald-800 dark:text-emerald-200">
+        {t("rec.filter.answer.yes")}
+      </span>
+    );
+  if (value === false)
+    return (
+      <span className="text-sm text-amber-900 dark:text-amber-200">
+        {t("rec.filter.answer.no")}
+      </span>
+    );
+  return <span className="text-muted-foreground">—</span>;
 }
 
-function CandidateMarkers({ row, openAssessment }: { row: CandidateRow; openAssessment: boolean }) {
+function Attachments({ row }: { row: CandidateRow }) {
   const { t } = useT();
-  const marks: React.ReactNode[] = [];
-  if (!row.firstViewedAt && row.status === "submitted") {
-    marks.push(
-      <span
-        key="u"
-        className="inline-flex items-center gap-1 text-xs font-medium text-sky-800 dark:text-sky-200"
-      >
-        <span className="h-1.5 w-1.5 rounded-full bg-sky-500" aria-hidden="true" />
-        {t("rec.marker.unopened")}
-      </span>,
-    );
-  }
-  if (openAssessment) {
-    marks.push(
-      <span key="a" className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        <ClipboardList className="h-3 w-3" aria-hidden="true" />
-        {t("rec.marker.testOpen")}
-      </span>,
-    );
-  }
-  if (row.mandatoryNoCount > 0) {
-    marks.push(
-      <span key="m" className="text-xs text-muted-foreground">
-        {t("rec.marker.mandatoryNo").replace("{n}", String(row.mandatoryNoCount))}
-      </span>,
-    );
-  }
-  if (marks.length === 0) return null;
-  return <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">{marks}</div>;
+  const nothing = !row.hasCv && !row.notesCount && !row.messagesCount;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+      {row.hasCv && (
+        <span className="inline-flex items-center gap-0.5" title={t("rec.col.cv")}>
+          <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+          CV
+        </span>
+      )}
+      {(row.notesCount ?? 0) > 0 && (
+        <span className="inline-flex items-center gap-0.5" title={t("rec.col.notes")}>
+          <StickyNote className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="sr-only">{t("rec.col.notes")} </span>
+          {row.notesCount}
+        </span>
+      )}
+      {(row.messagesCount ?? 0) > 0 && (
+        <span className="inline-flex items-center gap-0.5" title={t("rec.col.messages")}>
+          <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="sr-only">{t("rec.col.messages")} </span>
+          {row.messagesCount}
+        </span>
+      )}
+      {nothing && <span>—</span>}
+    </span>
+  );
 }
 
 function NextActivity({ row, lang }: { row: CandidateRow; lang: "sv" | "en" }) {
