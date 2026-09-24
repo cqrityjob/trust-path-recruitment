@@ -13,6 +13,21 @@ import {
 } from "../src/lib/security-work/analysis-model";
 import { reportBundleSchema, reportHtml } from "../src/lib/security-work/report-export";
 
+// PDF.js may split a single word into multiple glyph runs on Linux. Spaces
+// between extracted items are not authored content. Preserve every non-space
+// character and still require each complete heading after the previous one.
+const printedCharacters = (value: string) => value.replace(/\s/gu, "");
+function assertPrintedSectionOrder(text: string, headings: readonly string[]) {
+  const characters = printedCharacters(text);
+  let after = 0;
+  for (const heading of headings) {
+    const expected = printedCharacters(heading);
+    const position = characters.indexOf(expected, after);
+    assert.ok(position >= 0, `frozen section missing or out of order: ${heading}`);
+    after = position + expected.length;
+  }
+}
+
 const output = resolve(process.env.SW_REPORT_PDF_DIR ?? "output/pdf/security-work");
 mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({
@@ -222,12 +237,30 @@ try {
         language === "sv" ? /Godkänd: 24 sep\.? 2026/ : /Approved: 24 Sep(?:t)? 2026/,
         "printed approval date uses the approved timestamp",
       );
-      let previous = -1;
-      for (const [, sv, en] of reportSections[type]) {
-        const current = text.indexOf(l(sv, en), previous + 1);
-        assert.ok(current > previous, "frozen sections retain order");
-        previous = current;
+      const headings = reportSections[type].map(([, sv, en]) => l(sv, en));
+      assertPrintedSectionOrder(text, headings);
+      for (const heading of headings) {
+        if (!text.includes(heading))
+          console.log(
+            `INFO ${file}: PDF text fragments split heading "${heading}"; all characters and section order verified`,
+          );
       }
+      // Planted changes to the actual extracted PDF must still fail: missing
+      // content, altered characters and reversed sections are never normalized.
+      const characters = printedCharacters(text);
+      const [first, second] = headings.map(printedCharacters);
+      for (const damaged of [
+        characters.replace(first, "REMOVED_HEADING"),
+        characters.replace(first, first.slice(0, -1) + "X"),
+        characters
+          .replace(first, "SW_HEADING_SWAP")
+          .replace(second, first)
+          .replace("SW_HEADING_SWAP", second),
+      ])
+        assert.throws(
+          () => assertPrintedSectionOrder(damaged, headings),
+          /frozen section missing or out of order/,
+        );
       assert.ok(!text.includes("NEVER_EXPORT_UNQUOTED_SOURCE"));
       assert.ok(!text.includes("HTML report."));
       if (type === "rsa") assert.ok(text.includes(l("Orange · S 3 / K 4", "Orange · L 3 / C 4")));
