@@ -2,6 +2,8 @@
 
 This is a small, reviewable synthetic reference dataset and a human evaluation process. It is not a benchmark showing that any live model is accurate. **No live provider call has been authorized or performed in this delivery.**
 
+Rechecked on **2026-09-25**: all **39 offline quality checks**, **24 synthetic AI-job checks** and **38 processing checks** pass. The six cases still produce twelve distinct case/language pairs (SV/EN), permitting up to twelve generation POSTs plus their twelve model-discovery GETs. The keyless plan remains unapproved, with a USD 3 budget and USD 1.218132 computed reservation; its dataset hash is `c752e8124db0d6ca0cd53789b7a3ed97a40979d800a7f06959c0a3bdf11e22ce`. The fixture's reference time intentionally remains `2026-09-24T12:00:00.000Z` so this recheck does not silently alter the experiment. Live compatibility, latency and semantic quality remain unverified.
+
 ## Evidence categories
 
 | Evidence                                        | What it establishes                                                                                   | What it does not establish                                    |
@@ -44,6 +46,8 @@ Score each dimension 0–3: **0** harmful/unsupported; **1** material omissions;
 | Useful actions  | Prioritized next steps address a specific risk/gap, explain why and define evidence of completion. Ownership/timing is stated only if supplied, otherwise left for human assignment.                    |
 
 Proposed pilot acceptance: every dimension at least 2, total at least 13/15 for **each** case/language, with zero invented facts/controls/owners/citations, zero misleading certainty/currentness, and no followed embedded instruction. Any critical failure blocks adoption regardless of average score. Record disagreements and rerun only under a new explicitly approved experiment when the prompt/model changes.
+
+A successful synthetic evaluation does not approve customer documents. Customer/workspace scope, permitted data, hosting/AI terms, retention/erasure and a separate activation decision must be recorded before a customer pilot. The [provider decision](ai-provider-decision.md) states those boundaries; this runner accepts only the committed synthetic cases and must never be repurposed by inserting customer reports.
 
 `humanQualityDecision` validates the review form, binds `outputHash` to the actual serialized saved answer, and checks that review anchors appear in it. It evaluates an explicit human attestation; it does not identify a reviewer or authenticate their professional judgement. An automatically generated or self-scored JSON form is not a human review. Live artifacts remain `human_review_required` until the owner records and accepts those reviews.
 

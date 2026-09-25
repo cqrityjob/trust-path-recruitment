@@ -23,6 +23,9 @@ name: Recruitment workspace — routed browser evidence
 # (scripts/recruitment-evidence-verify.ts).
 
 on:
+  # Same reviewed checks on the existing branch; no replacement PR required.
+  push:
+    branches: [codex/security-work-analysis-app]
   pull_request:
     branches:
       - main
