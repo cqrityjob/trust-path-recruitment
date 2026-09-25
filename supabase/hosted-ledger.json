@@ -14,7 +14,7 @@
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
   "readAt": "2026-09-25",
-  "readBy": "Read-only Supabase management SQL on explicit production wrygicdfxwjnrugduxnt after PR #292 merged as 31da1d3 (recruitment_candidate_view, 20261212090000). The ledger holds 314 rows; md5(string_agg(version||':'||name ORDER BY version)) of the hosted ledger equals the digest of these 314 entries, so the snapshot is the ledger verbatim. rec_candidate_view and rec_job_counts match the merged file byte for byte (see release-state.json). No hosted writes. Re-read 2026-09-25 after #291: all 314 identities match this snapshot; Security Work catalog hash remains 149edc432f9e952a8241ce9e861af573c0eb78b6839b78972ac15b3c19530fbf (analysis-hosted-verification.md). No hosted writes.",
+  "readBy": "Read-only Supabase management SQL on explicit production wrygicdfxwjnrugduxnt after PR #295 merged as 1f4e620 (recruitment_application_receipts, 20261213090000). The ledger holds 315 rows; md5(string_agg(version||':'||name, ',' ORDER BY version)) is 1c77e1cd5a3899fbfd1546df1dce6621 on production and over these 315 entries (also equal with '' and newline separators), so the snapshot is the ledger verbatim. The twelve receipt functions and the replaced rec_settle_message_send match the merged file byte for byte by md5(prosrc) (see release-state.json). No hosted writes.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1271,6 +1271,10 @@
     {
       "version": "20261212090000",
       "name": "recruitment_candidate_view"
+    },
+    {
+      "version": "20261213090000",
+      "name": "recruitment_application_receipts"
     }
   ]
 }
