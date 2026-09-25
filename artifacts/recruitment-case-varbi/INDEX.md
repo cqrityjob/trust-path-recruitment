@@ -64,6 +64,36 @@ added *Väktare, Norrköping* with 5 050 applications.
 | `29-booking-dst-refused.png` | 02:30 on 25 October 2026 in Europe/Stockholm: "inträffar två gånger … sommartiden slutar då". 02:30 on 29 March is refused as a time that does not exist. Neither is guessed at. |
 | `30-applications-list-capped.png` | The organisation-wide list (the H1 page the overview's count links to) reads the newest rows in one go and now says so: "visar de 1000 senaste ansökningarna av 5088" with a pointer to the paged case pages. |
 
+## Autosvar vid mottagen ansökan (2026-09-25)
+
+The automatic receipt, walked end to end on the same local stack with no
+`RESEND_*` variables -- so every e-mail copy reads "e-post är inte
+konfigurerad", which is the truthful state, while the receipt itself is in
+the candidate's CQrityjob inbox.
+
+| File | What it is evidence of |
+| --- | --- |
+| `31-receipt-settings-on.png` | Team och inställningar → "Kommunikation och autosvar": the switch (På), subject and body with the four placeholders, the live preview with sample data (Kim, Väktare, Uppsala, Nordvakt Säkerhet AB, the link), Spara and Återställ standardtext, the two channels in words, "Sparat. Nya ansökningar får en mottagningsbekräftelse." |
+| `32-receipt-settings-full.png` | The whole Team view with the section, before it was switched on (Av). |
+| `33-receipt-settings-en.png` | The same section in English. |
+| `34-receipt-settings-375.png` | The section at 375 px; `scrollWidth` equals the viewport. |
+| `35-publishing-receipt-summary.png` | Publiceringsläge: "Mottagningsbekräftelse: På · Ändra". |
+| `36-candidate-receipt.png` | The candidate's Mina ansökningar, landed on `?application=<id>`: the card is highlighted, the receipt is labelled "Automatisk mottagningsbekräftelse", and reads "Hej Kim! Tack för din ansökan till tjänsten Väktare, Uppsala hos Nordvakt Säkerhet AB…" with the link to this application. |
+| `37-candidate-receipt-375.png` | The same at 375 px. |
+| `38-employer-receipt-status.png` | The employer's application page: the receipt in the message history, "Automatisk mottagningsbekräftelse · skickad automatiskt", delivery "Levererat i CQrityjob · e-post är inte konfigurerad", and "Skicka e-posten igen" for a person's retry. |
+| `39-case-filter-note-next-step.png` | The case page after the review's picture: "33 ansökningar" without a label, "Nästa steg i rekryteringen", the note that the assessment/interview indicators overlap the stages, and the pager "Visar 1–25 av 31 – filter: Aktiva (ej avgjorda) · Visa alla (33)". |
+
+What the database proved (`supabase/tests/recruitment_application_receipts_test.sql`,
+44 assertions, in `scripts/db-test.sh` before and after a rollback cycle):
+a failed submission leaves no receipt; a replay writes no second one; a
+second receipt is impossible whatever writes it; the text is rendered in
+the candidate's language and kept as sent; a later template change leaves
+old receipts alone; switching on writes nothing retroactively; a member
+who is not responsible, another organisation and anon cannot change the
+setting; the applicant's own request may send the e-mail but only a
+manager may retry; an unsettled claim is `unknown` and is never resent by
+itself; a candidate reads only their own receipt.
+
 ## Beside Varbi
 
 The three reference screenshots were Varbi's applications view for *KBR-utbildning*,
@@ -117,7 +147,10 @@ its "Nytt intervjutillfälle" dialog and its "Intervju" dropdown. Read against
   series saved despite a problem, an overlap unchecked, a DST gap or repeat
   booked silently.
 - `e2e/recruitment-workspace.spec.ts` — the walk above, in a browser,
-  against a local stack: 11 tests, including the 5 050-application vacancy
+  against a local stack: 13 tests, including the receipt end to end (the
+  owner switches it on with a preview, a candidate applies, the receipt is
+  read on both sides at the application the link names, nothing
+  retroactive, a later edit leaves it as sent) and the permission walk, the 5 050-application vacancy
   (total, last page, search for the oldest applicant, a filter over the
   whole list), previous/next across a page edge with the session holding no
   ids, the 25-candidate refusal with a database count that nothing was
@@ -143,5 +176,5 @@ E2E_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:56322/postgres" \
 bunx playwright test e2e/recruitment-workspace.spec.ts --project=chromium --workers=1
 ```
 
-Result on this branch: 11 passed on chromium (31 s); the two phone
+Result on this branch: 13 passed on chromium (45 s); the two phone
 projects skip by design (the table is read as a table).
