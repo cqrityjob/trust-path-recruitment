@@ -151,11 +151,20 @@ export function LoadingState() {
   );
 }
 
-export function WorkError({ code, onRetry }: { code?: string | null; onRetry?: () => void }) {
+export function WorkError({
+  code,
+  onRetry,
+  message: messageOverride,
+}: {
+  code?: string | null;
+  onRetry?: () => void;
+  message?: string;
+}) {
   const { t } = useT();
   if (!code) return null;
   const message =
-    code === "ACCESS_DENIED"
+    messageOverride ??
+    (code === "ACCESS_DENIED"
       ? t("sw.error.accessBody")
       : code === "CONFLICT" || code === "IDEMPOTENCY_CONFLICT"
         ? t("sw.error.conflict")
@@ -169,7 +178,7 @@ export function WorkError({ code, onRetry }: { code?: string | null; onRetry?: (
                 ? t("sw.error.invalid")
                 : code === "SOURCE_INACTIVE"
                   ? t("sw.sources.inactive")
-                  : t("sw.error.save");
+                  : t("sw.error.save"));
   return (
     <div
       role="alert"

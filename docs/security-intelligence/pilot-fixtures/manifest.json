@@ -1,0 +1,16 @@
+{
+  "purpose": "Synthetic published-app acceptance; not model-quality results",
+  "created": "2026-09-25",
+  "files": [
+    {
+      "name": "tilltrade.pdf",
+      "sha256": "f8f9ae228b20aaf1253547835be070cc961786c2bd49141168b74c611ded7622",
+      "bytes": 2262
+    },
+    {
+      "name": "reservvag.docx",
+      "sha256": "1a367dfe4653aa8513ac2e7be8276abf16cca0641cf3e0100b001a60d6e58042",
+      "bytes": 37039
+    }
+  ]
+}
