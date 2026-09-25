@@ -1056,10 +1056,15 @@ const sql = read(F.migration);
     "I · every technical attempt has its own id, and a settle applies to the attempt it names -- a late answer for A never touches B",
   );
   // Unknown is unknown; the provider's window decides what is safe.
+  const claimFn = between(
+    rc,
+    "FUNCTION public.rec_claim_receipt_send(",
+    "REVOKE ALL ON FUNCTION public.rec_claim_receipt_send(",
+  );
   ok(
-    /SET email_status = 'unknown', email_error = 'NO_SETTLE'/.test(rc) &&
+    /SET email_status = 'unknown', email_error = 'NO_SETTLE'/.test(claimFn) &&
       /IF _m\.email_status IN \('unknown', 'failed', 'not_configured'\) AND NOT _retry THEN/.test(
-        rc,
+        claimFn,
       ) &&
       /IF _result NOT IN \('sent', 'failed', 'not_configured', 'unknown'\) THEN/.test(rc),
     "I · an unsettled or unanswered claim is UNKNOWN, recordable as such, and never resent by a plain claim",
@@ -1081,11 +1086,11 @@ const sql = read(F.migration);
   // Recovery: bounded, one sweep at a time, nothing retroactive.
   ok(
     /FUNCTION public\.rec_claim_due_receipts\(/.test(rc) &&
-      /FOR UPDATE SKIP LOCKED/.test(rc) &&
+      /\n\s+FOR UPDATE SKIP LOCKED\n/.test(rc) &&
       /\(m\.email_status = 'not_attempted' AND m\.created_at < now\(\) - interval '1 minute'\)/.test(
         rc,
       ) &&
-      /\(m\.email_status = 'unknown' AND m\.email_attempts < 5/.test(rc) &&
+      /\(m\.email_status = 'unknown' AND m\.email_attempts < 5\n/.test(rc) &&
       /coalesce\(m\.email_error, ''\) <> 'IDEMPOTENCY_PAYLOAD_MISMATCH'/.test(rc) &&
       /\(m\.email_status = 'failed' AND m\.email_error = 'HTTP_429' AND m\.email_attempts < 5/.test(
         rc,
