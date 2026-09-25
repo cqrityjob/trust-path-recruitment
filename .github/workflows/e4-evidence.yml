@@ -21,9 +21,6 @@ name: E4 employer final report — routed browser evidence
 # checks.
 
 on:
-  # Same reviewed checks on the existing branch; no replacement PR required.
-  push:
-    branches: [codex/security-work-analysis-app]
   pull_request:
     branches:
       - main
@@ -33,6 +30,9 @@ on:
       - "scripts/fixtures/**"
       - "supabase/migrations/**"
       - ".github/workflows/e4-evidence.yml"
+  # Same reviewed checks on the existing branch; no replacement PR required.
+  push:
+    branches: [codex/security-work-analysis-app]
   workflow_dispatch:
 
 # ── THE PINNED SUPABASE CLI ─────────────────────────────────────────────
