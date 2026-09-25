@@ -166,6 +166,20 @@ export function CandidateTable(props: Props) {
     });
   }, [pageIds]);
 
+  // A filter narrows the list whenever the view is not "everyone": the
+  // default stage alone (open candidates) is one. The pager then says so,
+  // in the words of the filter, and offers everyone.
+  const stageValue = view.stage ?? "open";
+  const filterActive =
+    stageValue !== "all" || Boolean(view.q) || Boolean(view.owner) || Boolean(view.ans);
+  const activeFilterLabel = [
+    stageValue !== "all" ? t(`rec.filter.stage.${stageValue}` as TranslationKey) : null,
+    view.q ? `"${view.q}"` : null,
+    view.owner ? t("rec.filter.owner") : null,
+    view.ans ? t("rec.filter.answers") : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
   const selectedRows = rows.filter((r) => selected.has(r.applicationId));
   const allOnPage = rows.length > 0 && rows.every((r) => selected.has(r.applicationId));
   const one = selectedRows.length === 1 ? selectedRows[0] : null;
@@ -552,7 +566,17 @@ export function CandidateTable(props: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
         {!canManage && (
-          <span className="text-xs text-muted-foreground">{t("rec.batch.restrictedHint")}</span>
+          <span className="text-xs text-muted-foreground">
+            {t("rec.batch.restrictedHint")}{" "}
+            <Link
+              to="/employer/$employerSlug/jobs/$jobId"
+              params={{ employerSlug, jobId }}
+              search={{ view: "team" }}
+              className="font-medium text-accent hover:underline"
+            >
+              {t("rec.batch.restrictedTeamLink")}
+            </Link>
+          </span>
         )}
       </div>
 
@@ -810,10 +834,22 @@ export function CandidateTable(props: Props) {
                 .replace("{from}", String(page.from))
                 .replace("{to}", String(page.to))
                 .replace("{total}", String(page.total))}
-              {page.counts.total !== page.total && (
+              {filterActive && (
                 <>
-                  {" · "}
-                  {t("rec.pager.ofAll").replace("{all}", String(page.counts.total))}
+                  {" – "}
+                  {t("rec.pager.filter").replace("{filter}", activeFilterLabel)}
+                  {page.counts.total !== page.total && (
+                    <>
+                      {" · "}
+                      <button
+                        type="button"
+                        className="font-medium text-accent hover:underline"
+                        onClick={() => onViewChange(firstPage({ stage: "all" }))}
+                      >
+                        {t("rec.pager.showAll").replace("{all}", String(page.counts.total))}
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </p>

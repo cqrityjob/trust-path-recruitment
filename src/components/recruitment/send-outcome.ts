@@ -5,6 +5,32 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import type { SendOutcome } from "@/lib/recruitment/recruitment.functions";
 import { recruitmentErrorKey } from "@/components/recruitment/errors";
 
+/** What a receipt's e-mail retry did, in the recruiter's words. */
+export function receiptOutcomeText(
+  t: (k: TranslationKey) => string,
+  outcome: string,
+  code: string | null,
+): string {
+  switch (outcome) {
+    case "sent":
+      return t("rec.send.deliveredEmailSent");
+    case "not_configured":
+      return t("rec.send.deliveredEmailNotConfigured");
+    case "failed":
+      return t("rec.send.deliveredEmailFailed");
+    case "already_sent":
+      return t("rec.send.alreadySent");
+    case "in_progress":
+      return t("rec.send.inProgress");
+    case "none":
+      return t("rec.receipt.noneForApplication");
+    case "refused":
+      return t(recruitmentErrorKey(code));
+    default:
+      return t("rec.send.deliveredEmailUnknown");
+  }
+}
+
 export function outcomeText(
   t: (k: TranslationKey) => string,
   o: SendOutcome,

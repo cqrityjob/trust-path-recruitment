@@ -15,11 +15,12 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { ConfirmAction } from "@/components/employer/ConfirmAction";
 import { BookingBadge, DeliveryBadge } from "@/components/recruitment/RecruitmentStatus";
 import { MessageComposer } from "@/components/recruitment/MessageComposer";
-import { outcomeText } from "@/components/recruitment/send-outcome";
+import { outcomeText, receiptOutcomeText } from "@/components/recruitment/send-outcome";
 import { recruitmentErrorKey } from "@/components/recruitment/errors";
 import {
   addRecruitmentComment,
   saveInterviewBooking,
+  retryReceiptEmail,
   sendRecruitmentMessages,
   setApplicationResponsible,
   setInterviewBookingStatus,
@@ -652,6 +653,7 @@ export function CommunicationPanel({
 }) {
   const { t, lang } = useT();
   const sendFn = useServerFn(sendRecruitmentMessages);
+  const retryReceiptFn = useServerFn(retryReceiptEmail);
   const [composing, setComposing] = useState<{
     kind: MessageKind;
     bookingId: string | null;
@@ -677,8 +679,19 @@ export function CommunicationPanel({
     setRetrying(id);
     setRetryNotice(null);
     try {
-      const res = await sendFn({ data: { messageIds: [id] } });
-      setRetryNotice(outcomeText(t, res.outcomes[0]).text);
+      const m = ws.messages.find((x) => x.id === id);
+      if (m?.kind === "receipt") {
+        // The receipt's e-mail goes through its own claim/settle pair; a
+        // person's retry is the only thing that resends a failed, unknown
+        // or never-attempted copy.
+        const r = await retryReceiptFn({
+          data: { employerId, applicationId: ws.applicationId },
+        });
+        setRetryNotice(receiptOutcomeText(t, r.outcome, r.code));
+      } else {
+        const res = await sendFn({ data: { messageIds: [id] } });
+        setRetryNotice(outcomeText(t, res.outcomes[0]).text);
+      }
     } catch {
       setRetryNotice(t("rec.send.uncertain"));
     } finally {
@@ -764,12 +777,16 @@ function MessageList({
         <li key={m.id} className="rounded-md border border-border p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-medium">{m.subject}</p>
-            <DeliveryBadge status={m.status} emailStatus={m.emailStatus} />
+            <DeliveryBadge status={m.status} emailStatus={m.emailStatus} kind={m.kind} />
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {t(`rec.message.kind.${m.kind}` as TranslationKey)} ·{" "}
             {m.sentAt ? formatStamp(m.sentAt, lang) : formatStamp(m.createdAt, lang)}
-            {m.authorName ? ` · ${m.authorName}` : ""}
+            {m.kind === "receipt"
+              ? ` · ${t("rec.receipt.byNobody")}`
+              : m.authorName
+                ? ` · ${m.authorName}`
+                : ""}
           </p>
           <details className="mt-1">
             <summary className="cursor-pointer text-xs text-accent">
@@ -790,7 +807,9 @@ function MessageList({
             {m.status === "sent" &&
               (m.emailStatus === "failed" ||
                 m.emailStatus === "not_configured" ||
-                m.emailStatus === "sending") &&
+                m.emailStatus === "sending" ||
+                m.emailStatus === "unknown" ||
+                (m.kind === "receipt" && m.emailStatus === "not_attempted")) &&
               onRetry && (
                 <button
                   type="button"

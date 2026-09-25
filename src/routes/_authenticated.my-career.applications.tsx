@@ -6,9 +6,10 @@
 // atomically-audited set_application_status() RPC).
 
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -28,6 +29,11 @@ import {
 } from "@/lib/job-intelligence/applications.functions";
 
 export const Route = createFileRoute("/_authenticated/my-career/applications")({
+  // `application` names the card to land on: the link in an automatic
+  // receipt carries it, and it survives a sign-in redirect where a hash
+  // would not.
+  validateSearch: (search) =>
+    z.object({ application: z.string().uuid().optional().catch(undefined) }).parse(search),
   ssr: false,
   head: () => ({
     meta: [
@@ -66,6 +72,11 @@ function MyApplicationsPage() {
     queryFn: () => inboxFn(),
   });
   const inbox = new Map((inboxQuery.data ?? []).map((i) => [i.applicationId, i]));
+  const { application: focusId } = Route.useSearch();
+  const focusRef = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (focusId && focusRef.current) focusRef.current.scrollIntoView({ block: "start" });
+  }, [focusId, query.isSuccess]);
 
   const withdraw = useMutation({
     mutationFn: (applicationId: string) => withdrawFn({ data: { applicationId } }),
@@ -128,7 +139,15 @@ function MyApplicationsPage() {
                   r.jobTitleEn ||
                   "—";
                 return (
-                  <li key={r.id} className="rounded-lg border border-border bg-background p-4">
+                  <li
+                    key={r.id}
+                    id={`application-${r.id}`}
+                    ref={r.id === focusId ? focusRef : undefined}
+                    className={
+                      "rounded-lg border bg-background p-4 " +
+                      (r.id === focusId ? "border-accent ring-2 ring-accent/30" : "border-border")
+                    }
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         {r.jobSlug ? (

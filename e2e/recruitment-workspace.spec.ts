@@ -427,6 +427,160 @@ test.describe("recruitment case", () => {
     if (before !== null) expect(bookingsOf(BIG)).toBe(before);
   });
 
+  test("the automatic receipt: switched on with a preview, written once at the application's commit, read on both sides, never retroactive", async ({
+    page,
+    browser,
+  }) => {
+    // ── The owner switches it on, under Team och inställningar ─────────
+    // From a known state: off, standard text (a fresh CI stack is; a stack
+    // that already holds a run is put back).
+    sql(
+      `UPDATE public.recruitment_settings SET receipt_enabled = false, receipt_subject_sv = NULL, receipt_body_sv = NULL, receipt_subject_en = NULL, receipt_body_en = NULL WHERE job_id = '${JOB}'`,
+    );
+    await signIn(page, "anna.agare@nordvakt.test");
+    await page.goto(casePath(JOB, "?view=team"));
+    const section = page.getByRole("region", { name: "Kommunikation och autosvar" });
+    await expect(section).toBeVisible({ timeout: 90_000 });
+    const preview = section.getByTestId("receipt-preview");
+    await expect(preview).toContainText("Hej Kim!");
+    await expect(preview).toContainText("Väktare, Uppsala");
+    await expect(preview).toContainText("Nordvakt Säkerhet AB");
+    await expect(preview).not.toContainText("{");
+    // An own text, previewed live; then the standard text is one click away.
+    const body = section.getByLabel("Meddelandetext");
+    await body.fill("Hej {namn}! Vi har din ansökan till {tjänst}. {länk}");
+    await expect(preview).toContainText("Hej Kim! Vi har din ansökan till Väktare, Uppsala.");
+    await section.getByRole("button", { name: "Återställ standardtext" }).click();
+    await expect(preview).toContainText("Tack för din ansökan till tjänsten Väktare, Uppsala");
+    await section.getByRole("tab", { name: "Engelska" }).click();
+    await expect(preview).toContainText("Thank you for applying for the position");
+    await section.getByRole("tab", { name: "Svenska" }).click();
+    const toggle = section.getByRole("checkbox", {
+      name: "Automatisk mottagningsbekräftelse vid mottagen ansökan",
+    });
+    const receiptsBefore = sql(
+      `SELECT count(*) FROM public.recruitment_messages WHERE job_id = '${JOB}' AND kind = 'receipt'`,
+    );
+    await expect(toggle).not.toBeChecked();
+    await toggle.check();
+    await section.getByRole("button", { name: "Spara", exact: true }).click();
+    await expect(section.getByRole("status")).toContainText(
+      "Nya ansökningar får en mottagningsbekräftelse",
+    );
+    // Nothing retroactive: the applications that exist have no receipt.
+    if (receiptsBefore !== null) {
+      expect(
+        sql(
+          `SELECT count(*) FROM public.recruitment_messages WHERE job_id = '${JOB}' AND kind = 'receipt'`,
+        ),
+      ).toBe(receiptsBefore);
+    }
+    // The publishing step says so.
+    await page.goto(casePath(JOB, "?step=publishing"));
+    await expect(page.getByTestId("receipt-summary")).toContainText("Mottagningsbekräftelse: På");
+
+    // ── A candidate applies, in a browser of their own ─────────────────
+    // Re-runnable on a stack that already holds a run: one active
+    // application per person and vacancy is the rule, so an earlier run's
+    // is removed first (a fresh CI stack has none).
+    sql(
+      `DELETE FROM public.job_applications WHERE job_id = '${JOB}' AND applicant_user_id = (SELECT id FROM auth.users WHERE email = 'kim.kandidat@test.local')`,
+    );
+    const ctx = await browser.newContext({ locale: "sv-SE" });
+    const kim = await ctx.newPage();
+    await signIn(kim, "kim.kandidat@test.local");
+    await kim.goto("/jobs/nordvakt-vaktare-uppsala-uat4");
+    await kim.getByRole("button", { name: "Ansök via CQrityjob" }).click({ timeout: 60_000 });
+    const dialog = kim.getByRole("dialog");
+    for (const group of await dialog
+      .locator("input[type=radio][name^=apply-q-]")
+      .evaluateAll((els) => [...new Set(els.map((e) => (e as HTMLInputElement).name))])) {
+      await dialog.locator(`input[name="${group}"]`).first().check();
+    }
+    await dialog.locator("#apply-cv").setInputFiles({
+      name: "cv.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(
+        "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n",
+      ),
+    });
+    await dialog.locator("label", { hasText: "Jag samtycker" }).click();
+    await dialog.getByRole("button", { name: "Skicka ansökan" }).click();
+    await expect(dialog).toContainText("Ansökan skickad", { timeout: 60_000 });
+
+    // ── The receipt, on the candidate's side, at the application the link names
+    const appId = sql(
+      `SELECT a.id FROM public.job_applications a JOIN auth.users u ON u.id = a.applicant_user_id WHERE u.email = 'kim.kandidat@test.local' AND a.job_id = '${JOB}' ORDER BY a.created_at DESC LIMIT 1`,
+    );
+    await kim.goto("/my-career/applications");
+    const card = kim.locator("li", { hasText: "Väktare, Uppsala" }).first();
+    await expect(card).toContainText("Automatisk mottagningsbekräftelse");
+    await expect(card).toContainText("Vi har tagit emot din ansökan – Väktare, Uppsala");
+    await card.locator("summary", { hasText: "Vi har tagit emot din ansökan" }).click();
+    await expect(card).toContainText("Hej Kim!");
+    await expect(card).toContainText(`/my-career/applications?application=`);
+    if (appId) {
+      // The link in the receipt lands on this application, and it survives
+      // a fresh sign-in (the address carries a search parameter, not a hash).
+      const fresh = await browser.newContext({ locale: "sv-SE" });
+      const again = await fresh.newPage();
+      await signIn(again, "kim.kandidat@test.local");
+      await again.goto(`/my-career/applications?application=${appId}`);
+      await expect(again.locator(`#application-${appId}`)).toContainText(
+        "Automatisk mottagningsbekräftelse",
+      );
+      await fresh.close();
+      // ONE receipt, e-mail not configured on this stack, one attempt.
+      expect(
+        sql(
+          `SELECT count(*) || ':' || min(email_status) || ':' || min(email_attempts) FROM public.recruitment_messages WHERE application_id = '${appId}' AND kind = 'receipt'`,
+        ),
+      ).toBe("1:not_configured:1");
+    }
+    await ctx.close();
+
+    // ── And on the employer's side, with its delivery status ───────────
+    if (appId) {
+      await page.goto(`/employer/${SLUG}/applications/${appId}`);
+      const item = page.locator("li", { hasText: "Automatisk mottagningsbekräftelse" }).first();
+      await expect(item).toBeVisible({ timeout: 60_000 });
+      await expect(item).toContainText("skickad automatiskt");
+      await expect(item).toContainText("e-post är inte konfigurerad");
+      await expect(item.getByRole("button", { name: "Skicka e-posten igen" })).toBeVisible();
+    }
+
+    // ── A later change of the text leaves the receipt as it was ────────
+    await page.goto(casePath(JOB, "?view=team"));
+    const section2 = page.getByRole("region", { name: "Kommunikation och autosvar" });
+    await expect(section2).toBeVisible({ timeout: 60_000 });
+    await section2.getByLabel("Ämnesrad").fill("Ändrad ämnesrad – {tjänst}");
+    await section2.getByRole("button", { name: "Spara", exact: true }).click();
+    await expect(section2.getByRole("status")).toContainText("Sparat");
+    if (appId) {
+      expect(
+        sql(
+          `SELECT subject FROM public.recruitment_messages WHERE application_id = '${appId}' AND kind = 'receipt'`,
+        ),
+      ).toBe("Vi har tagit emot din ansökan – Väktare, Uppsala");
+    }
+  });
+
+  test("another organisation's owner cannot change the receipt, and a plain member cannot either", async ({
+    page,
+  }) => {
+    await signIn(page, "mats.medlem@nordvakt.test");
+    await page.goto(casePath(JOB, "?view=team"));
+    const section = page.getByRole("region", { name: "Kommunikation och autosvar" });
+    await expect(section).toBeVisible({ timeout: 90_000 });
+    await expect(
+      section.getByRole("checkbox", {
+        name: "Automatisk mottagningsbekräftelse vid mottagen ansökan",
+      }),
+    ).toBeDisabled();
+    await expect(section.getByRole("button", { name: "Spara", exact: true })).toHaveCount(0);
+    await expect(section).toContainText("Ägare, administratör eller ansvarig");
+  });
+
   test("another organisation's owner cannot open the case, and the API says so", async ({
     page,
   }) => {

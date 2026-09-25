@@ -369,6 +369,20 @@ export type QuestionRow = {
   position: number;
 };
 
+/** The automatic receipt, as the recruitment has it: on or off, and its
+ *  own text or null for the standard text in each language. The standard
+ *  text comes from the database (rec_receipt_default) so the preview shows
+ *  exactly what a candidate would get. */
+export type ReceiptSettings = {
+  enabled: boolean;
+  subjectSv: string | null;
+  bodySv: string | null;
+  subjectEn: string | null;
+  bodyEn: string | null;
+  updatedAt: string | null;
+  defaults: { subjectSv: string; bodySv: string; subjectEn: string; bodyEn: string };
+};
+
 export type RecruitmentDetail = {
   jobId: string;
   settings: {
@@ -378,6 +392,7 @@ export type RecruitmentDetail = {
     completionNote: string | null;
     version: number;
   };
+  receipt: ReceiptSettings;
   requirements: RequirementRow[];
   questions: QuestionRow[];
   structureLocked: boolean;
@@ -424,6 +439,76 @@ async function readStructure(ctx: Ctx, jobId: string) {
   return { requirements, questions };
 }
 
+/** The standard receipt text, read from the database so the preview and
+ *  the receipt a candidate gets are one and the same text. */
+async function readReceiptDefaults(ctx: Ctx): Promise<ReceiptSettings["defaults"]> {
+  const call = (language: "sv" | "en", part: "subject" | "body") =>
+    ctx.supabase
+      .rpc("rec_receipt_default", { _language: language, _part: part })
+      .then((r: Loose) => {
+        if (r.error) throw toCode(r.error, "rec_receipt_default");
+        return String(r.data ?? "");
+      });
+  const [subjectSv, bodySv, subjectEn, bodyEn] = await Promise.all([
+    call("sv", "subject"),
+    call("sv", "body"),
+    call("en", "subject"),
+    call("en", "body"),
+  ]);
+  return { subjectSv, bodySv, subjectEn, bodyEn };
+}
+
+/** Switch the automatic receipt on or off and set its text. Who may:
+ *  rec_can_manage -- the same people who may write to candidates; the
+ *  database refuses everyone else, whatever the page showed. Text equal to
+ *  the standard text is stored as "standard". */
+export const setReceiptSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        jobId: z.string().uuid(),
+        enabled: z.boolean(),
+        subjectSv: z.string().max(200).nullable(),
+        bodySv: z.string().max(4000).nullable(),
+        subjectEn: z.string().max(200).nullable(),
+        bodyEn: z.string().max(4000).nullable(),
+        expectedVersion: z.number().int().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ version: number }> => {
+    const ctx = context as Ctx;
+    await requireMember(ctx, data.employerId);
+    const { data: version, error } = await ctx.supabase.rpc("rec_set_receipt_settings", {
+      _job_id: data.jobId,
+      _enabled: data.enabled,
+      _subject_sv: data.subjectSv,
+      _body_sv: data.bodySv,
+      _subject_en: data.subjectEn,
+      _body_en: data.bodyEn,
+      _expected_version: data.expectedVersion,
+    });
+    if (error) throw toCode(error, "setReceiptSettings");
+    return { version: Number(version) };
+  });
+
+/** A person's retry of a receipt's e-mail copy (failed, not configured,
+ *  unknown, or never attempted). The database allows it for the people who
+ *  may write to candidates and for nobody else. */
+export const retryReceiptEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ employerId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    await requireMember(ctx, data.employerId);
+    const { deliverReceiptEmail } = await import("./receipt.server");
+    return deliverReceiptEmail(ctx.supabase, data.applicationId, true);
+  });
+
 export const getRecruitment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -442,10 +527,12 @@ export const getRecruitment = createServerFn({ method: "POST" })
     if (jobErr) throw toCode(jobErr, "getRecruitment job");
     if (!job) throw new Error("RECRUITMENT_NOT_FOUND");
 
-    const [settingsRes, structure, appCount, team] = await Promise.all([
+    const [settingsRes, structure, appCount, team, defaults] = await Promise.all([
       ctx.supabase
         .from("recruitment_settings")
-        .select("responsible_user_id, completion_state, completed_at, completion_note, version")
+        .select(
+          "responsible_user_id, completion_state, completed_at, completion_note, version, receipt_enabled, receipt_subject_sv, receipt_body_sv, receipt_subject_en, receipt_body_en, receipt_updated_at",
+        )
         .eq("job_id", data.jobId)
         .maybeSingle(),
       readStructure(ctx, data.jobId),
@@ -454,6 +541,7 @@ export const getRecruitment = createServerFn({ method: "POST" })
         .select("id", { count: "exact", head: true })
         .eq("job_id", data.jobId),
       readTeam(ctx, data.employerId),
+      readReceiptDefaults(ctx),
     ]);
     if (settingsRes.error || appCount.error)
       throw toCode(settingsRes.error ?? appCount.error, "getRecruitment");
@@ -468,6 +556,15 @@ export const getRecruitment = createServerFn({ method: "POST" })
         completedAt: s?.completed_at ?? null,
         completionNote: s?.completion_note ?? null,
         version: (s?.version as number) ?? 1,
+      },
+      receipt: {
+        enabled: Boolean(s?.receipt_enabled),
+        subjectSv: (s?.receipt_subject_sv as string | null) ?? null,
+        bodySv: (s?.receipt_body_sv as string | null) ?? null,
+        subjectEn: (s?.receipt_subject_en as string | null) ?? null,
+        bodyEn: (s?.receipt_body_en as string | null) ?? null,
+        updatedAt: (s?.receipt_updated_at as string | null) ?? null,
+        defaults,
       },
       ...structure,
       structureLocked: (appCount.count ?? 0) > 0,
@@ -921,7 +1018,7 @@ export type MessageRow = {
   body: string;
   language: "sv" | "en";
   status: "draft" | "sent" | "discarded";
-  emailStatus: "not_attempted" | "sending" | "sent" | "failed" | "not_configured";
+  emailStatus: "not_attempted" | "sending" | "sent" | "failed" | "not_configured" | "unknown";
   emailError: string | null;
   emailAttempts: number;
   bookingId: string | null;

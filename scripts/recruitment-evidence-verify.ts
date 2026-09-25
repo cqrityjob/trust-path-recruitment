@@ -23,7 +23,7 @@ const REPORT = process.env.RECRUITMENT_EVIDENCE_REPORT ?? "test-results/results.
 const SPEC = "recruitment-workspace.spec.ts";
 const PROJECT = "chromium";
 /** The spec holds this many tests; fewer means some never reached the report. */
-const EXPECTED_AT_LEAST = 11;
+const EXPECTED_AT_LEAST = 13;
 
 interface Result {
   status: string;

@@ -61,6 +61,16 @@ const F = {
   booking: "src/components/recruitment/BookingDialog.tsx",
   listContext: "src/lib/recruitment/list-context.ts",
   migration: "supabase/migrations/20261212090000_recruitment_candidate_view.sql",
+  receipts: "supabase/migrations/20261213090000_recruitment_application_receipts.sql",
+  receiptsSuite: "supabase/tests/recruitment_application_receipts_test.sql",
+  receiptSection: "src/components/recruitment/ReceiptSettingsSection.tsx",
+  receiptServer: "src/lib/recruitment/receipt.server.ts",
+  submit: "src/lib/job-intelligence/applications.functions.ts",
+  employerJobs: "src/lib/job-intelligence/employer-jobs.functions.ts",
+  candidateApps: "src/routes/_authenticated.my-career.applications.tsx",
+  candidateInbox: "src/components/recruitment/CandidateApplicationInbox.tsx",
+  workflow: ".github/workflows/recruitment-evidence.yml",
+  verify: "scripts/recruitment-evidence-verify.ts",
   suite: "supabase/tests/recruitment_candidate_view_test.sql",
   dbTest: "scripts/db-test.sh",
 };
@@ -898,6 +908,197 @@ const sql = read(F.migration);
   ok(
     /rec\.bookingDialog\.linkNote/.test(booking),
     "H · a pasted meeting link is called a link, not an integration",
+  );
+}
+
+/* ================================================================== */
+/* I · The automatic receipt                                            */
+/* ================================================================== */
+{
+  const rc = read(F.receipts);
+  const suite = read(F.receiptsSuite);
+  const section = code(F.receiptSection);
+  const server = code(F.receiptServer);
+  const submit = code(F.submit);
+  const jobs = code(F.employerJobs);
+  const panels = code(F.panels);
+  const copy = read("src/i18n/recruitment-copy.ts");
+  const dbTest = read(F.dbTest);
+
+  // Written by the database, once, at the commit of a correct submission.
+  ok(
+    /CREATE CONSTRAINT TRIGGER job_applications_zz_receipt\n\s+AFTER INSERT ON public\.job_applications\n\s+DEFERRABLE INITIALLY DEFERRED/.test(
+      rc,
+    ),
+    "I · the receipt is written by a deferred trigger at the commit of the application, never before",
+  );
+  ok(
+    /CREATE UNIQUE INDEX IF NOT EXISTS recruitment_messages_receipt_once_idx\n\s+ON public\.recruitment_messages \(application_id\) WHERE kind = 'receipt'/.test(
+      rc,
+    ) && /ON CONFLICT \(application_id\) WHERE kind = 'receipt' DO NOTHING/.test(rc),
+    "I · one receipt per application is the index's rule, not the code's",
+  );
+  ok(
+    /IF NEW\.status <> 'submitted' THEN\n\s+RETURN NULL;/.test(rc) &&
+      /IF NOT FOUND OR NOT _s\.receipt_enabled THEN\n\s+RETURN NULL;/.test(rc),
+    "I · nothing is written for an application that is not a new submission, or for a recruitment with the receipt off",
+  );
+  ok(
+    /EXCEPTION WHEN OTHERS THEN\n\s+RAISE WARNING 'REC_RECEIPT_NOT_WRITTEN/.test(rc),
+    "I · a receipt that cannot be written never fails the application",
+  );
+  ok(
+    /'sent', now\(\), NULL, NULL, 'not_attempted', 'receipt:' \|\| NEW\.id::text/.test(rc),
+    "I · the receipt is a SENT message by nobody with the e-mail not yet attempted",
+  );
+  ok(
+    !/CREATE TRIGGER jobs_receipt_default/.test(rc) &&
+      /receipt_enabled\s+boolean NOT NULL DEFAULT false/.test(rc) &&
+      /rpc\("rec_set_receipt_settings", \{\n\s+_job_id: inserted\.id,\n\s+_enabled: true,/.test(
+        jobs,
+      ),
+    "I · the database default is off (existing recruitments keep their behaviour); a NEW recruitment is switched on by the product",
+  );
+  // The standard text: no promised response time, both languages, a link.
+  ok(
+    /rec_receipt_default\(_language text, _part text\)/.test(rc) &&
+      /Hej \{namn\}!/.test(rc) &&
+      /Hi \{name\}!/.test(rc) &&
+      /\{länk\}/.test(rc) &&
+      /\{link\}/.test(rc) &&
+      !/inom \d+ (arbets)?dag/i.test(rc) &&
+      !/within \d+ (working )?days?/i.test(rc),
+    "I · the standard text greets by name, links the application, in both languages, and promises no response time",
+  );
+  // Who may change it: the database's rule, mirrored, never widened.
+  ok(
+    /FUNCTION public\.rec_set_receipt_settings\([\s\S]*?IF NOT public\.rec_can_manage\(_job_id\) THEN\n\s+RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED'/.test(
+      rc,
+    ) &&
+      /canManage=\{r\.canManage\}/.test(
+        code("src/components/recruitment/RecruitmentWorkspaceTabs.tsx"),
+      ),
+    "I · the setting is written by whoever may write to candidates (rec_can_manage), refused for everyone else at the database",
+  );
+  // The e-mail copy: claim/settle, unknown is unknown, retry is a person's.
+  ok(
+    /WHEN _app\.applicant_user_id = auth\.uid\(\) THEN 'applicant'/.test(rc) &&
+      /IF _retry AND _actor <> 'manager' THEN\n\s+RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED'/.test(
+        rc,
+      ),
+    "I · the applicant's own request may send the e-mail; only a manager may retry",
+  );
+  ok(
+    /SET email_status = 'unknown', email_error = 'NO_SETTLE'/.test(rc) &&
+      /IF _m\.email_status IN \('unknown', 'failed', 'not_configured'\) AND NOT _retry THEN/.test(
+        rc,
+      ),
+    "I · an unsettled claim becomes UNKNOWN and is never resent on its own",
+  );
+  ok(
+    /const \{ dispatchApplicationReceipt \} = await import\("@\/lib\/recruitment\/receipt\.server"\);\n\s+await dispatchApplicationReceipt\(ctx\.supabase, result\.id\);/.test(
+      submit,
+    ) &&
+      submit.indexOf("dispatchApplicationReceipt(ctx.supabase") >
+        submit.indexOf("if (insertErr) {"),
+    "I · the e-mail goes after the submission succeeded, from the same request",
+  );
+  ok(
+    /export async function dispatchApplicationReceipt[\s\S]*?try \{[\s\S]*?\} catch \(e\) \{\n\s+console\.error/.test(
+      server,
+    ) &&
+      !/throw/.test(
+        server.slice(server.indexOf("export async function dispatchApplicationReceipt")),
+      ),
+    "I · a mail outage never fails a saved application",
+  );
+  ok(
+    /sendRecruitmentMessageEmail\(/.test(server) && !/api\.resend\.com|RESEND_API_KEY/.test(server),
+    "I · the same e-mail transport as every other recruitment message, no second provider and no key in this file",
+  );
+  // Delivery states, said apart.
+  ok(
+    /case "unknown":\n\s+return "delivered_email_unknown";/.test(code(F.defs)) &&
+      /kind === "receipt" \? "delivered_email_pending" : "delivered_in_app_only"/.test(
+        code(F.defs),
+      ) &&
+      /"rec\.message\.delivery\.emailPending"/.test(copy) &&
+      /"rec\.message\.delivery\.emailUnknown"/.test(copy),
+    "I · in CQrityjob, e-mail waiting, provider accepted, failed, unknown and not configured are six different sentences",
+  );
+  ok(
+    !/rec\.message\.delivery\.emailDelivered|bekräftad leverans|confirmed delivery/i.test(copy),
+    "I · no sentence claims a confirmed delivery: nothing here knows one",
+  );
+  ok(
+    /\(m\.kind === "receipt" && m\.emailStatus === "not_attempted"\)/.test(panels) &&
+      /retryReceiptFn\(\{/.test(panels),
+    "I · a receipt whose e-mail is waiting, failed or unknown can be sent again by a person from the application",
+  );
+  // The section, the preview, the summary, the label, the link.
+  ok(
+    /import \{ renderReceiptTemplate \} from "@\/lib\/recruitment\/receipt-template"/.test(
+      section,
+    ) &&
+      /data-testid="receipt-preview"/.test(section) &&
+      /rec\.receipt\.reset/.test(section) &&
+      /rec\.receipt\.channel\.inApp/.test(section) &&
+      /rec\.receipt\.channel\.email/.test(section) &&
+      /rec\.receipt\.futureOnly/.test(section),
+    "I · the section has a live preview, a reset to the standard text, the two channels in words, and says it is not retroactive",
+  );
+  ok(
+    /data-testid="receipt-summary"/.test(code(F.hub)) &&
+      /sections=\{\["responsible", "team", "communication"\]\}/.test(code(F.hub)),
+    "I · Publiceringsläge states the receipt's state; the section lives under Team och inställningar",
+  );
+  ok(
+    /"rec\.message\.kind\.receipt": "Automatisk mottagningsbekräftelse"/.test(copy) &&
+      /rec\.message\.kind\.receipt/.test(code(F.candidateInbox)),
+    "I · the receipt is labelled as automatic on both sides",
+  );
+  ok(
+    /application: z\.string\(\)\.uuid\(\)\.optional\(\)\.catch\(undefined\)/.test(
+      code(F.candidateApps),
+    ) && /'\/my-career\/applications\?application=' \|\| NEW\.id::text/.test(rc),
+    "I · the link in the receipt names the application in the query string, which survives a sign-in redirect",
+  );
+  // The TypeScript preview renders exactly as the database does.
+  const R = await import("../src/lib/recruitment/receipt-template");
+  ok(
+    R.renderReceiptTemplate("Hej {namn}! {tjänst} hos {företag}: {länk}", {
+      name: "",
+      job: "Väktare",
+      company: "AB",
+      link: "/x",
+    }) === "Hej! Väktare hos AB: /x" &&
+      R.renderReceiptTemplate("Hi {name}, {job} at {company}: {link}", {
+        name: "Kim",
+        job: "Guard",
+        company: "AB",
+        link: "/x",
+      }) === "Hi Kim, Guard at AB: /x",
+    "I · the preview renders the placeholders exactly as rec_render_receipt does, an empty name included",
+  );
+  // Proved by executing, in the database, before and after a rollback.
+  ok(
+    /GROUP R — the receipt/.test(suite) &&
+      /R4 a replayed submission answers "replayed" and writes no second receipt/.test(suite) &&
+      /R9 a later template change leaves the receipts already written exactly as they were/.test(
+        suite,
+      ) &&
+      /R11 switching it on again writes nothing retroactively/.test(suite) &&
+      /E12 a claim that was never settled is reported as unknown, and stays so/.test(suite) &&
+      /run_receipts_suite "before rollback"/.test(dbTest) &&
+      /run_receipts_suite "after reapply"/.test(dbTest) &&
+      /-lt 44 \]/.test(dbTest),
+    "I · the suite proves replay, history, non-retroactivity and the unknown outcome, before and after a rollback cycle",
+  );
+  ok(
+    /the automatic receipt: switched on with a preview/.test(
+      read("e2e/recruitment-workspace.spec.ts"),
+    ) && /const EXPECTED_AT_LEAST = 13;/.test(read(F.verify)),
+    "I · the browser walk covers the receipt and the CI verifier expects it to have run",
   );
 }
 

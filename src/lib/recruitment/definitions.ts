@@ -283,9 +283,19 @@ export type MessageDelivery =
   | "delivered_email_failed"
   | "delivered_email_not_configured"
   | "delivered_in_app_only"
+  /** An automatic receipt whose e-mail copy has not been attempted yet:
+   *  it is in the candidate's inbox, and the e-mail is waiting. */
+  | "delivered_email_pending"
+  /** The e-mail was claimed for sending and the outcome never came back.
+   *  Not "not sent", not "sent": a fact a person has to look at. */
+  | "delivered_email_unknown"
   | "discarded";
 
-export function messageDeliveryOf(status: string, emailStatus: string): MessageDelivery {
+export function messageDeliveryOf(
+  status: string,
+  emailStatus: string,
+  kind?: string,
+): MessageDelivery {
   if (status === "draft") return "draft";
   if (status === "discarded") return "discarded";
   switch (emailStatus) {
@@ -297,6 +307,10 @@ export function messageDeliveryOf(status: string, emailStatus: string): MessageD
       return "delivered_email_failed";
     case "not_configured":
       return "delivered_email_not_configured";
+    case "unknown":
+      return "delivered_email_unknown";
+    case "not_attempted":
+      return kind === "receipt" ? "delivered_email_pending" : "delivered_in_app_only";
     default:
       return "delivered_in_app_only";
   }
