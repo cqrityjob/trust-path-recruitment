@@ -72,7 +72,7 @@ async function signIn(page: Page, email: string) {
   }).then((r) => r.json() as Promise<{ access_token?: string }>);
   if (!session.access_token) throw new Error(`no session for ${email}`);
   const ref = new URL(API).hostname.split(".")[0];
-  await page.goto("/");
+  await open(page, "/");
   await page.evaluate(
     ([key, value]) => {
       localStorage.setItem(key, value);
@@ -115,6 +115,20 @@ const bookingsOf = (jobId: string) =>
   sql(`SELECT count(*) FROM public.recruitment_interview_bookings WHERE job_id = '${jobId}'`);
 
 const casePath = (jobId: string, search = "") => `/employer/${SLUG}/jobs/${jobId}${search}`;
+
+/** A navigation the dev server may abort once: on a cold runner Vite
+ *  discovers dependencies on the first visit of a route and forces a full
+ *  reload, which surfaces as net::ERR_ABORTED. One retry, then the real
+ *  failure if there is one. */
+async function open(page: Page, path: string) {
+  try {
+    await page.goto(path);
+  } catch (e) {
+    if (!/ERR_ABORTED/.test(String(e))) throw e;
+    await page.waitForTimeout(1500);
+    await page.goto(path);
+  }
+}
 const stepNav = (page: Page) => page.getByRole("navigation", { name: "Rekryteringens steg" });
 const actionBar = (page: Page) =>
   page.getByRole("region", { name: "Åtgärder för markerade kandidater" });
@@ -142,7 +156,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(JOB, "?step=applications"));
+    await open(page, casePath(JOB, "?step=applications"));
     // The first visit to the case route in a job is a cold one: the dev
     // server compiles the route on demand, which on a CI runner takes longer
     // than the default expectation. Everything after this first paint runs on
@@ -180,7 +194,7 @@ test.describe("recruitment case", () => {
 
   test("a page is one page: no row twice, none lost, past-the-end clamps", async ({ page }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(JOB, "?step=applications"));
+    await open(page, casePath(JOB, "?step=applications"));
     await expect(pager(page)).toContainText(/Visar 1–25 av (\d+)/);
     const first = await idsOnPage(page);
     expect(first).toHaveLength(25);
@@ -190,7 +204,7 @@ test.describe("recruitment case", () => {
     const second = await idsOnPage(page);
     expect(second.length).toBeGreaterThan(0);
     expect(new Set([...first, ...second]).size).toBe(first.length + second.length);
-    await page.goto(casePath(JOB, "?step=applications&page=99"));
+    await open(page, casePath(JOB, "?step=applications&page=99"));
     await expect(pager(page)).toContainText(/Sida 2 av 2/);
   });
 
@@ -198,20 +212,20 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(BIG, "?step=applications&stage=all"));
+    await open(page, casePath(BIG, "?step=applications&stage=all"));
     // The header count, the chip and the pager all say 5 050 -- a number the
     // old read, capped at 5 000, could never have shown.
     await expect(page.getByText("5050 ansökningar")).toBeVisible();
     await expect(pager(page)).toContainText("Visar 1–25 av 5050");
     await expect(pager(page)).toContainText("Sida 1 av 202");
     await expect(nameLinks(page).first()).toHaveText("Sökande 5050");
-    await page.goto(casePath(BIG, "?step=applications&stage=all&page=202"));
+    await open(page, casePath(BIG, "?step=applications&stage=all&page=202"));
     await expect(pager(page)).toContainText("Visar 5026–5050 av 5050");
     await expect(nameLinks(page)).toHaveCount(25);
     await expect(nameLinks(page).last()).toHaveText("Sökande 0001");
     // The oldest applicant -- the first one the old limit dropped -- is
     // found by search, and opens.
-    await page.goto(casePath(BIG, "?step=applications&stage=all&q=S%C3%B6kande%200001"));
+    await open(page, casePath(BIG, "?step=applications&stage=all&q=S%C3%B6kande%200001"));
     await expect(pager(page)).toContainText("Visar 1–1 av 1");
     await expect(nameLinks(page)).toHaveCount(1);
     await nameLinks(page).first().click();
@@ -219,7 +233,7 @@ test.describe("recruitment case", () => {
     await expect(page.getByText("1 av 1")).toBeVisible();
     // Filters over the whole list, not a sample: the licence question was
     // answered yes by every odd-numbered applicant.
-    await page.goto(casePath(BIG, "?step=applications&stage=all"));
+    await open(page, casePath(BIG, "?step=applications&stage=all"));
     const licence = page.locator("select").filter({ hasText: "Alla svar" }).first();
     await licence.selectOption({ label: "Ja" });
     await expect(pager(page)).toContainText("av 2525");
@@ -231,7 +245,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(BIG, "?step=applications&stage=all&page=201"));
+    await open(page, casePath(BIG, "?step=applications&stage=all&page=201"));
     await expect(pager(page)).toContainText("Visar 5001–5025 av 5050");
     await nameLinks(page).first().click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sökande 0050");
@@ -263,7 +277,7 @@ test.describe("recruitment case", () => {
 
   test("the header count, the stage filter and the rows agree", async ({ page }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(JOB, "?step=applications&stage=new"));
+    await open(page, casePath(JOB, "?step=applications&stage=new"));
     const option = page.locator("select").filter({ hasText: "Nya (" }).first();
     const label = await option.locator("option[value=new]").textContent();
     const n = Number(/\((\d+)\)/.exec(label ?? "")?.[1]);
@@ -276,7 +290,7 @@ test.describe("recruitment case", () => {
 
   test("filters, sort and page survive a trip into a candidate and back", async ({ page }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(JOB, "?step=applications&sort=name&page=2"));
+    await open(page, casePath(JOB, "?step=applications&sort=name&page=2"));
     await expect(pager(page)).toContainText(/Sida 2 av 2/);
     const name = await nameLinks(page).nth(1).innerText();
     await rowCheckboxes(page).nth(1).check();
@@ -296,7 +310,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(JOB, "?step=applications&stage=all"));
+    await open(page, casePath(JOB, "?step=applications&stage=all"));
     await page.getByRole("checkbox", { name: "Markera alla på den här sidan" }).check();
     await expect(actionBar(page)).toContainText("25 markerade");
     await page.getByRole("checkbox", { name: "Markera alla på den här sidan" }).uncheck();
@@ -349,7 +363,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(BIG, "?step=applications&stage=open"));
+    await open(page, casePath(BIG, "?step=applications&stage=open"));
     const before = bookingsOf(BIG);
     await page.getByRole("checkbox", { name: "Markera alla på den här sidan" }).check();
     await expect(actionBar(page)).toContainText("25 markerade");
@@ -406,7 +420,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(BIG, "?step=applications&stage=open"));
+    await open(page, casePath(BIG, "?step=applications&stage=open"));
     const before = bookingsOf(BIG);
     await rowCheckboxes(page).nth(3).check();
     await actionBar(page).getByRole("button", { name: "Intervju" }).click();
@@ -431,6 +445,9 @@ test.describe("recruitment case", () => {
     page,
     browser,
   }) => {
+    // Two people, four pages, a CV upload and a database commit: on a CI
+    // runner this walk needs more than the default 30 s.
+    test.setTimeout(240_000);
     // ── The owner switches it on, under Team och inställningar ─────────
     // From a known state: off, standard text (a fresh CI stack is; a stack
     // that already holds a run is put back).
@@ -438,7 +455,7 @@ test.describe("recruitment case", () => {
       `UPDATE public.recruitment_settings SET receipt_enabled = false, receipt_subject_sv = NULL, receipt_body_sv = NULL, receipt_subject_en = NULL, receipt_body_en = NULL WHERE job_id = '${JOB}'`,
     );
     await signIn(page, "anna.agare@nordvakt.test");
-    await page.goto(casePath(JOB, "?view=team"));
+    await open(page, casePath(JOB, "?view=team"));
     const section = page.getByRole("region", { name: "Kommunikation och autosvar" });
     await expect(section).toBeVisible({ timeout: 90_000 });
     const preview = section.getByTestId("receipt-preview");
@@ -476,7 +493,7 @@ test.describe("recruitment case", () => {
       ).toBe(receiptsBefore);
     }
     // The publishing step says so.
-    await page.goto(casePath(JOB, "?step=publishing"));
+    await open(page, casePath(JOB, "?step=publishing"));
     await expect(page.getByTestId("receipt-summary")).toContainText("Mottagningsbekräftelse: På");
 
     // ── A candidate applies, in a browser of their own ─────────────────
@@ -489,7 +506,7 @@ test.describe("recruitment case", () => {
     const ctx = await browser.newContext({ locale: "sv-SE" });
     const kim = await ctx.newPage();
     await signIn(kim, "kim.kandidat@test.local");
-    await kim.goto("/jobs/nordvakt-vaktare-uppsala-uat4");
+    await open(kim, "/jobs/nordvakt-vaktare-uppsala-uat4");
     await kim.getByRole("button", { name: "Ansök via CQrityjob" }).click({ timeout: 60_000 });
     const dialog = kim.getByRole("dialog");
     for (const group of await dialog
@@ -512,7 +529,7 @@ test.describe("recruitment case", () => {
     const appId = sql(
       `SELECT a.id FROM public.job_applications a JOIN auth.users u ON u.id = a.applicant_user_id WHERE u.email = 'kim.kandidat@test.local' AND a.job_id = '${JOB}' ORDER BY a.created_at DESC LIMIT 1`,
     );
-    await kim.goto("/my-career/applications");
+    await open(kim, "/my-career/applications");
     const card = kim.locator("li", { hasText: "Väktare, Uppsala" }).first();
     await expect(card).toContainText("Automatisk mottagningsbekräftelse");
     await expect(card).toContainText("Vi har tagit emot din ansökan – Väktare, Uppsala");
@@ -525,7 +542,7 @@ test.describe("recruitment case", () => {
       const fresh = await browser.newContext({ locale: "sv-SE" });
       const again = await fresh.newPage();
       await signIn(again, "kim.kandidat@test.local");
-      await again.goto(`/my-career/applications?application=${appId}`);
+      await open(again, `/my-career/applications?application=${appId}`);
       await expect(again.locator(`#application-${appId}`)).toContainText(
         "Automatisk mottagningsbekräftelse",
       );
@@ -541,7 +558,7 @@ test.describe("recruitment case", () => {
 
     // ── And on the employer's side, with its delivery status ───────────
     if (appId) {
-      await page.goto(`/employer/${SLUG}/applications/${appId}`);
+      await open(page, `/employer/${SLUG}/applications/${appId}`);
       const item = page.locator("li", { hasText: "Automatisk mottagningsbekräftelse" }).first();
       await expect(item).toBeVisible({ timeout: 60_000 });
       await expect(item).toContainText("skickad automatiskt");
@@ -550,7 +567,7 @@ test.describe("recruitment case", () => {
     }
 
     // ── A later change of the text leaves the receipt as it was ────────
-    await page.goto(casePath(JOB, "?view=team"));
+    await open(page, casePath(JOB, "?view=team"));
     const section2 = page.getByRole("region", { name: "Kommunikation och autosvar" });
     await expect(section2).toBeVisible({ timeout: 60_000 });
     await section2.getByLabel("Ämnesrad").fill("Ändrad ämnesrad – {tjänst}");
@@ -569,7 +586,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "mats.medlem@nordvakt.test");
-    await page.goto(casePath(JOB, "?view=team"));
+    await open(page, casePath(JOB, "?view=team"));
     const section = page.getByRole("region", { name: "Kommunikation och autosvar" });
     await expect(section).toBeVisible({ timeout: 90_000 });
     await expect(
@@ -585,7 +602,7 @@ test.describe("recruitment case", () => {
     page,
   }) => {
     await signIn(page, "olle.agare@vaktbolaget.test");
-    await page.goto(casePath(JOB, "?step=applications"));
+    await open(page, casePath(JOB, "?step=applications"));
     await expect(page.locator("table")).toHaveCount(0);
     await expect(
       page.getByRole("region", { name: "Åtgärder för markerade kandidater" }),
@@ -605,7 +622,7 @@ test.describe("recruitment case", () => {
       }
     });
     await signIn(page, "kim.kandidat@test.local");
-    await page.goto("/my-career/applications");
+    await open(page, "/my-career/applications");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     const html = await page.content();
     expect(html).not.toMatch(/recruitment_comments|Interna anteckningar/);
