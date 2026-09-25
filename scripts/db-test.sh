@@ -1530,6 +1530,46 @@ run_candidate_view_suite() {
   echo "    ok  ${RCV_PASSED} recruitment candidate view assertions passed"
 }
 run_candidate_view_suite "before rollback"
+
+# ---------------------------------------------------------------------------
+# 5l-bis-3. Automatic receipts for received applications (20261213090000)
+#
+# Proved as the roles that meet it (owner, responsible person, plain member,
+# the other organisation, three candidates, anon). Runs with the migration
+# applied, then stands it down ALONE and must leave no function, trigger,
+# index or column behind, so 5l-ter's own rollback count still sees zero
+# rec_* functions. Reapplied, and run again, after 5l-ter.
+# ---------------------------------------------------------------------------
+run_receipts_suite() {
+  echo "==> Running recruitment application receipts assertions ($1)"
+  set +e
+  RCP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_application_receipts_test.sql 2>&1)"
+  RCP_RC=$?
+  set -e
+  echo "$RCP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  RCP_PASSED="$(echo "$RCP_OUT" | grep -c "ok  " || true)"
+  if [ "$RCP_RC" -ne 0 ]; then
+    echo "FAIL: the recruitment receipts suite exited with code ${RCP_RC} ($1)." >&2
+    echo "$RCP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    exit 1
+  fi
+  if [ "$RCP_PASSED" -lt 80 ]; then
+    echo "FAIL: expected at least 80 recruitment receipts assertions, only ${RCP_PASSED} ran." >&2
+    exit 1
+  fi
+  echo "    ok  ${RCP_PASSED} recruitment receipts assertions passed"
+}
+run_receipts_suite "before rollback"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261213090000_recruitment_application_receipts_rollback.sql >/dev/null
+rcp_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_receipt_default','rec_render_receipt','rec_set_receipt_settings','rec_claim_receipt_send','rec_settle_receipt_send','rec_receipt_actor','rec_create_application_receipt','rec_receipt_window_open','rec_receipt_provider_key','rec_receipt_take_attempt','rec_claim_due_receipts','rec_receipts_needing_attention')) + (SELECT count(*) FROM pg_trigger WHERE tgname='job_applications_zz_receipt') + (SELECT count(*) FROM pg_indexes WHERE indexname IN ('recruitment_messages_receipt_once_idx','recruitment_messages_email_attempt_idx','recruitment_messages_receipt_due_idx')) + (SELECT count(*) FROM information_schema.columns WHERE table_name='recruitment_settings' AND column_name LIKE 'receipt\_%') + (SELECT count(*) FROM information_schema.columns WHERE table_name='recruitment_messages' AND column_name IN ('email_attempt_id','email_provider_id','email_recipient','email_key_generation','email_key_first_used_at','email_settled_at')) + (SELECT CASE WHEN pg_get_functiondef('public.rec_settle_message_send(uuid,text,text)'::regprocedure) LIKE '%''unknown''%' THEN 1 ELSE 0 END)")"
+[ "$rcp_left" = "0" ] || { echo "FAIL: 20261213090000 rollback left $rcp_left receipt object(s) behind"; exit 1; }
+echo "    ok  receipts stood down alone; nothing left behind"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_application_receipts_test.sql >/dev/null 2>&1; then
+  echo "FAIL: the receipts suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the receipts suite refuses to pass without the migration (negative control)"
+
 psql_q -d "$TEST_DB" -f supabase/rollback/20261212090000_recruitment_candidate_view_rollback.sql >/dev/null
 rcv_left="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_candidate_view','rec_job_counts')")"
 [ "$rcv_left" = "0" ] || { echo "FAIL: 20261212090000 rollback left $rcv_left candidate view function(s) behind"; exit 1; }
@@ -1635,6 +1675,182 @@ done
 psql_q -d "$TEST_DB" -f supabase/migrations/20261212090000_recruitment_candidate_view.sql >/dev/null
 echo "    ok  recruitment candidate view migration reapplied"
 run_candidate_view_suite "after reapply"
+# And the receipts, on top of that.
+psql_q -d "$TEST_DB" -f supabase/migrations/20261213090000_recruitment_application_receipts.sql >/dev/null
+echo "    ok  recruitment application receipts migration reapplied"
+run_receipts_suite "after reapply"
+
+# ---------------------------------------------------------------------------
+# 5l-bis-4. The receipt e-mail under a REAL race: two sessions, two processes
+#
+# The suite above runs in one transaction and cannot contend with itself.
+# Here session A claims a receipt's e-mail and sleeps inside its transaction;
+# session B, started a second later, asks for the same receipt. B must WAIT
+# on the row lock (not fail) and then be told the send is in progress: one
+# active attempt, whatever the concurrency. Then the recovery: A takes the
+# due receipt and sleeps; B's recovery must come back at once with nothing
+# (FOR UPDATE SKIP LOCKED), never a second copy of the same receipt.
+# Committed synthetic fixture, removed afterwards.
+# ---------------------------------------------------------------------------
+echo "==> Running recruitment receipt concurrent-claim race"
+RCR_FAILED=0
+RCR_APP="ce000000-4444-3333-0000-000000000001"
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" >/dev/null <<'SQL'
+INSERT INTO auth.users (id, email, email_confirmed_at, raw_user_meta_data) VALUES
+  ('ce000000-4444-0000-0000-00000000000a', 'race-owner@rc.test', now(), '{"display_name":"Race Owner"}'::jsonb),
+  ('ce000000-4444-0000-0000-0000000000ad', 'race-mod@rc.test',   now(), '{"display_name":"Race Mod"}'::jsonb),
+  ('ce000000-4444-0000-0000-000000000c01', 'race-cand@rc.test',  now(), '{"display_name":"Race Kandidat"}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.user_roles (user_id, role) VALUES ('ce000000-4444-0000-0000-0000000000ad', 'admin') ON CONFLICT DO NOTHING;
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('ce000000-4444-1111-0000-00000000000a', 'Race AB', 'race-ab', 'active') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+VALUES ('ce000000-4444-1111-0000-00000000000a', 'ce000000-4444-0000-0000-00000000000a', 'owner', 'active') ON CONFLICT DO NOTHING;
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'ce000000-4444-0000-0000-00000000000a', true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.jobs (id, slug, short_id, employer_id, title_sv, title_en, application_method, status)
+VALUES ('ce000000-4444-2222-0000-000000000001', 'race-job', 'RACE001', 'ce000000-4444-1111-0000-00000000000a', 'Väktare, Race', 'Guard, Race', 'internal', 'draft');
+SELECT public.rec_set_receipt_settings('ce000000-4444-2222-0000-000000000001', true);
+COMMIT;
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'ce000000-4444-0000-0000-0000000000ad', true);
+SET LOCAL ROLE authenticated;
+UPDATE public.jobs SET status = 'published', published_at = now() - interval '1 day', expires_at = now() + interval '30 days'
+ WHERE id = 'ce000000-4444-2222-0000-000000000001';
+COMMIT;
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'ce000000-4444-0000-0000-000000000c01', true);
+SET LOCAL ROLE authenticated;
+SELECT public.rec_submit_application('ce000000-4444-3333-0000-000000000001', 'ce000000-4444-2222-0000-000000000001',
+  NULL, NULL, 'x/cv.pdf', 'cv.pdf', 100, 'upload', NULL, false, '[]'::jsonb);
+COMMIT;
+SQL
+RCR_ROW="$(psql -tAq -d "$TEST_DB" -c "SELECT email_status || '/' || email_attempts FROM public.recruitment_messages WHERE application_id='${RCR_APP}' AND kind='receipt'")"
+if [ "$RCR_ROW" != "not_attempted/0" ]; then
+  echo "FAIL: the race fixture did not get its receipt at the commit (got '${RCR_ROW}')." >&2
+  suite_failed "recruitment receipt race fixture"
+fi
+
+RCR_A="$(mktemp)"; RCR_B="$(mktemp)"
+cat > "$RCR_A" <<SQL
+BEGIN;
+SET LOCAL ROLE service_role;
+SELECT 'OUT=' || outcome || ' ATT=' || coalesce(attempt_id::text, '-') FROM public.rec_claim_receipt_send('${RCR_APP}');
+SELECT pg_sleep(2);
+COMMIT;
+SQL
+cat > "$RCR_B" <<SQL
+SELECT 'T0=' || (extract(epoch from clock_timestamp()) * 1000)::bigint;
+BEGIN;
+SET LOCAL ROLE service_role;
+SELECT 'OUT=' || outcome || ' ATT=' || coalesce(attempt_id::text, '-') FROM public.rec_claim_receipt_send('${RCR_APP}');
+COMMIT;
+SELECT 'T1=' || (extract(epoch from clock_timestamp()) * 1000)::bigint;
+SQL
+psql -tAq -d "$TEST_DB" -f "$RCR_A" > /tmp/rcr_a.out 2>&1 &
+RCR_PID=$!
+sleep 1
+psql -tAq -d "$TEST_DB" -f "$RCR_B" > /tmp/rcr_b.out 2>&1
+wait "$RCR_PID" || true
+RCR_A_OUT="$(grep -oE 'OUT=[a-z_]+' /tmp/rcr_a.out | head -1 | cut -d= -f2)"
+RCR_B_OUT="$(grep -oE 'OUT=[a-z_]+' /tmp/rcr_b.out | head -1 | cut -d= -f2)"
+RCR_A_ATT="$(grep -oE 'ATT=[0-9a-f-]{36}' /tmp/rcr_a.out | head -1 | cut -d= -f2)"
+RCR_T0="$(grep -oE 'T0=[0-9]+' /tmp/rcr_b.out | cut -d= -f2)"
+RCR_T1="$(grep -oE 'T1=[0-9]+' /tmp/rcr_b.out | cut -d= -f2)"
+RCR_B_MS=$(( ${RCR_T1:-0} - ${RCR_T0:-0} ))
+RCR_AFTER="$(psql -tAq -d "$TEST_DB" -c "SELECT email_status || '/' || email_attempts || '/' || coalesce(email_attempt_id::text,'-') FROM public.recruitment_messages WHERE application_id='${RCR_APP}' AND kind='receipt'")"
+if [ "$RCR_A_OUT" != "claimed" ] || [ "$RCR_B_OUT" != "in_progress" ]; then
+  echo "FAIL: two concurrent claims answered '${RCR_A_OUT}' and '${RCR_B_OUT}'; expected exactly one 'claimed' and one 'in_progress'." >&2
+  head -5 /tmp/rcr_a.out /tmp/rcr_b.out >&2
+  RCR_FAILED=1
+else
+  echo "    ok  two concurrent claims: one 'claimed', the other 'in_progress'"
+fi
+if [ "$RCR_B_MS" -lt 800 ]; then
+  echo "FAIL: session B answered after ${RCR_B_MS} ms; it did not wait on the row lock, so this was not a race." >&2
+  RCR_FAILED=1
+else
+  echo "    ok  the second claim WAITED on the first (${RCR_B_MS} ms) rather than failing or guessing"
+fi
+if grep -qiE "ERROR:|FEL:" /tmp/rcr_b.out; then
+  echo "FAIL: the second claim errored instead of waiting." >&2
+  head -5 /tmp/rcr_b.out >&2
+  RCR_FAILED=1
+fi
+if [ "$RCR_AFTER" != "sending/1/${RCR_A_ATT}" ]; then
+  echo "FAIL: after the race the row is '${RCR_AFTER}', expected sending/1/${RCR_A_ATT}: one active attempt, the first one's." >&2
+  RCR_FAILED=1
+else
+  echo "    ok  one active attempt on the row, and it is the first claim's"
+fi
+
+# The recovery, twice at once: A takes the due receipt and sleeps; B must
+# come back with nothing, at once, and never take the same receipt.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "UPDATE public.recruitment_messages SET email_status='not_attempted', email_attempt_id=NULL, email_attempts=0, email_claimed_at=NULL, created_at=now() - interval '5 minutes' WHERE application_id='${RCR_APP}' AND kind='receipt'" >/dev/null
+cat > "$RCR_A" <<SQL
+BEGIN;
+SET LOCAL ROLE service_role;
+SELECT 'N=' || count(*) FROM public.rec_claim_due_receipts(10);
+SELECT pg_sleep(2);
+COMMIT;
+SQL
+cat > "$RCR_B" <<SQL
+SELECT 'T0=' || (extract(epoch from clock_timestamp()) * 1000)::bigint;
+BEGIN;
+SET LOCAL ROLE service_role;
+SELECT 'N=' || count(*) FROM public.rec_claim_due_receipts(10);
+COMMIT;
+SELECT 'T1=' || (extract(epoch from clock_timestamp()) * 1000)::bigint;
+SQL
+psql -tAq -d "$TEST_DB" -f "$RCR_A" > /tmp/rcr_a.out 2>&1 &
+RCR_PID=$!
+sleep 1
+psql -tAq -d "$TEST_DB" -f "$RCR_B" > /tmp/rcr_b.out 2>&1
+wait "$RCR_PID" || true
+RCR_A_N="$(grep -oE 'N=[0-9]+' /tmp/rcr_a.out | head -1 | cut -d= -f2)"
+RCR_B_N="$(grep -oE 'N=[0-9]+' /tmp/rcr_b.out | head -1 | cut -d= -f2)"
+RCR_T0="$(grep -oE 'T0=[0-9]+' /tmp/rcr_b.out | cut -d= -f2)"
+RCR_T1="$(grep -oE 'T1=[0-9]+' /tmp/rcr_b.out | cut -d= -f2)"
+RCR_B_MS=$(( ${RCR_T1:-0} - ${RCR_T0:-0} ))
+RCR_AFTER="$(psql -tAq -d "$TEST_DB" -c "SELECT email_status || '/' || email_attempts FROM public.recruitment_messages WHERE application_id='${RCR_APP}' AND kind='receipt'")"
+if [ "$RCR_A_N" != "1" ] || [ "$RCR_B_N" != "0" ]; then
+  echo "FAIL: two concurrent recoveries took ${RCR_A_N:-?} and ${RCR_B_N:-?} receipts; expected 1 and 0." >&2
+  head -5 /tmp/rcr_a.out /tmp/rcr_b.out >&2
+  RCR_FAILED=1
+else
+  echo "    ok  two concurrent recoveries: the first took the receipt, the second took nothing"
+fi
+if [ "$RCR_B_MS" -ge 1500 ]; then
+  echo "FAIL: the second recovery waited ${RCR_B_MS} ms on the first; SKIP LOCKED should have let it pass at once." >&2
+  RCR_FAILED=1
+else
+  echo "    ok  and the second did not wait for the first (${RCR_B_MS} ms)"
+fi
+if [ "$RCR_AFTER" != "sending/1" ]; then
+  echo "FAIL: after the recovery race the row is '${RCR_AFTER}', expected sending/1." >&2
+  RCR_FAILED=1
+else
+  echo "    ok  exactly one attempt was made"
+fi
+RCR_LATER="$(psql -tAq -d "$TEST_DB" -c "BEGIN; SET LOCAL ROLE service_role; SELECT count(*) FROM public.rec_claim_due_receipts(10); COMMIT;" | grep -E '^[0-9]+$' | head -1)"
+if [ "$RCR_LATER" != "0" ]; then
+  echo "FAIL: a recovery run after the first one committed took ${RCR_LATER} receipt(s) that were already in flight." >&2
+  RCR_FAILED=1
+else
+  echo "    ok  a later recovery leaves the attempt in flight alone"
+fi
+rm -f "$RCR_A" "$RCR_B"
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" >/dev/null <<'SQL'
+DELETE FROM public.recruitment_messages WHERE application_id = 'ce000000-4444-3333-0000-000000000001';
+DELETE FROM public.job_applications WHERE id = 'ce000000-4444-3333-0000-000000000001';
+DELETE FROM public.jobs WHERE id = 'ce000000-4444-2222-0000-000000000001';
+DELETE FROM public.employers WHERE id = 'ce000000-4444-1111-0000-00000000000a';
+DELETE FROM auth.users WHERE id IN ('ce000000-4444-0000-0000-000000000c01', 'ce000000-4444-0000-0000-0000000000ad', 'ce000000-4444-0000-0000-00000000000a');
+SQL
+if [ "$RCR_FAILED" -ne 0 ]; then
+  suite_failed "recruitment receipt concurrent claims"
+fi
 
 # ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model
