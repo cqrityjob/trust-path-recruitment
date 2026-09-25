@@ -10,6 +10,7 @@ export function receiptOutcomeText(
   t: (k: TranslationKey) => string,
   outcome: string,
   code: string | null,
+  windowOpen: boolean | null = null,
 ): string {
   switch (outcome) {
     case "sent":
@@ -26,6 +27,12 @@ export function receiptOutcomeText(
       return t("rec.receipt.noneForApplication");
     case "refused":
       return t(recruitmentErrorKey(code));
+    case "unknown":
+      // Outside the provider's window nothing was sent: the person is told
+      // why, and that a resend needs their explicit acceptance.
+      return windowOpen === false
+        ? t("rec.send.deliveredEmailUnknownClosed")
+        : t("rec.send.deliveredEmailUnknown");
     default:
       return t("rec.send.deliveredEmailUnknown");
   }

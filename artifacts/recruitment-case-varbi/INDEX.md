@@ -84,15 +84,101 @@ the candidate's CQrityjob inbox.
 | `39-case-filter-note-next-step.png` | The case page after the review's picture: "33 ansökningar" without a label, "Nästa steg i rekryteringen", the note that the assessment/interview indicators overlap the stages, and the pager "Visar 1–25 av 31 – filter: Aktiva (ej avgjorda) · Visa alla (33)". |
 
 What the database proved (`supabase/tests/recruitment_application_receipts_test.sql`,
-44 assertions, in `scripts/db-test.sh` before and after a rollback cycle):
+80 assertions, in `scripts/db-test.sh` before and after a rollback cycle):
 a failed submission leaves no receipt; a replay writes no second one; a
 second receipt is impossible whatever writes it; the text is rendered in
 the candidate's language and kept as sent; a later template change leaves
 old receipts alone; switching on writes nothing retroactively; a member
 who is not responsible, another organisation and anon cannot change the
-setting; the applicant's own request may send the e-mail but only a
-manager may retry; an unsettled claim is `unknown` and is never resent by
-itself; a candidate reads only their own receipt.
+setting; a candidate reads only their own receipt -- and everything under
+the next heading.
+
+### The e-mail's truth, after the review (2026-09-25, round 2)
+
+The review found that a candidate or an employer could drive the e-mail's
+claim and settle through the API, that a late answer from one attempt
+could overwrite another, that an unknown outcome had no safe rule, that
+the trigger swallowed its own failure, and that nothing recovered a send
+the server never started. All five are built and proved; the migration
+(20261213090000) was still unapplied hosted and was edited in place.
+
+| File | What it is evidence of |
+| --- | --- |
+| `40-overview-receipts-attention.png` | The employer's recruitment overview: "1 automatiska mottagningsbekräftelser har ett e-postutfall som behöver en persons beslut." -- the receipts the recovery will not touch again (a definite refusal, an unknown outcome outside the provider's window or past the attempt cap), counted by the database for this organisation only. |
+| `41-employer-receipt-unknown-closed.png` | The application page for such a receipt: "Levererat i CQrityjob · e-post: okänt utfall", the sentence that the provider's answer never came and that the day for a safe retry has passed (TIMEOUT · 2 försök), and only "Skicka igen ändå" -- the plain "Skicka e-posten igen" is not offered here. |
+| `42-employer-receipt-resend-confirm.png` | The second step: "Kandidaten kan få bekräftelsen två gånger. Skicka ändå?" with "Ja, skicka igen" and "Avbryt". Nothing is sent before the first is pressed; the server then resends under a NEW idempotency-key generation, to the same address, and records a third attempt. |
+| `43-employer-receipt-unknown-closed-en.png` | The same in English. |
+| `44-receipt-settings-accepted-note.png` | The setting says in words that "accepted by the e-mail provider" is not "reached the inbox" -- no part of CQrityjob knows that. |
+
+The rules, as the database now holds them and the suite executes them:
+
+- **The e-mail's truth is the server's alone.** `rec_claim_receipt_send`,
+  `rec_settle_receipt_send` and `rec_claim_due_receipts` are executable by
+  `service_role` only (suite group S: the applicant, the owner and anon
+  all get `permission denied` on every one of them; the browser walk sends
+  the same forged calls through PostgREST with the candidate's and the
+  employer's own session tokens and is refused). The server names the
+  person it acts for; `rec_receipt_actor` decides what they are to the
+  application: the applicant's own first send, a manager's retry, and only
+  a manager's explicit acceptance of a possible duplicate.
+- **Every attempt has an identity.** A claim mints `email_attempt_id`; a
+  settle names the attempt and applies only if it is still the current one
+  (`stale` otherwise). Group E and U: a random attempt id changes nothing,
+  a late "failed" cannot overwrite an acceptance, the old attempt's late
+  "sent" cannot touch the new attempt.
+- **Unknown is unknown.** A timeout, a network error, a 5xx and both of the
+  provider's 409s are recorded as `unknown` (never "failed", never "sent");
+  the transport is executed in the guard against controlled answers and
+  never a network. The provider (Resend, "Idempotency keys", read
+  2026-09-25) keeps a key for 24 hours and answers a repeat under the same
+  key with the first response instead of sending again, so inside 23 hours
+  the recovery resends an unknown outcome by itself under the same key to
+  the same, fixed recipient; outside them nothing resends without a person
+  reading that the candidate may get it twice, and that resend goes under a
+  new key generation. A key the provider says was used with another
+  payload is left to a person outright.
+- **No silent gap.** The trigger has no exception handler: group G plants a
+  failing INSERT at the table and proves the submission fails with it and
+  no application exists without its receipt; the candidate's retry then
+  saves both together. An own text that renders to nothing falls back to
+  the standard text rather than refusing the application.
+- **Recovery from what exists.** `rec_claim_due_receipts` takes what is due
+  (never started after a minute, aged out after two, unknown inside the
+  window, rate-limited after ten) `FOR UPDATE SKIP LOCKED`, five attempts
+  at most, and generates nothing retroactively (group D; `scripts/db-test.sh`
+  races two psql processes for real: two concurrent claims give one
+  `claimed` and one that WAITED for `in_progress`; two concurrent
+  recoveries give one receipt to the first and nothing, at once, to the
+  second). Three things call it: the employer's overview (a few at a time,
+  not awaited), the endpoint `/api/recruitment/receipts-sweep` (a 404
+  unless `RECRUITMENT_SWEEP_TOKEN` is set server-side and presented), and
+  `.github/workflows/recruitment-receipts-sweep.yml` every quarter of an
+  hour once the two repository secrets exist -- it says NOT CONFIGURED
+  until then.
+- **The button opens exactly this application.** The e-mail's button
+  carries `<site>/my-career/applications?application=<id>` (escaped, on the
+  site's own origin only -- a hostile link or label falls back and is
+  rendered as text); the walk opens it signed out, lands on the sign-in
+  with the application in the query string, signs in with the password and
+  lands on the highlighted card; another candidate opens the same address
+  and sees nothing of it, through the page and through the API.
+
+To activate the e-mail channel and the scheduled recovery (owner steps, no
+new paid service):
+
+1. Lovable server environment: `RESEND_API_KEY` and `RESEND_FROM_EMAIL`
+   (already the transport's variables), `PUBLIC_SITE_URL` (the public
+   origin, for the button), `RECRUITMENT_SWEEP_TOKEN` (a random value of at
+   least 32 characters). Test sends go only to an explicitly approved test
+   recipient: switch the receipt on for ONE test recruitment and apply as
+   that recipient.
+2. Repository secrets: `RECRUITMENT_SWEEP_URL`
+   (`https://<the app>/api/recruitment/receipts-sweep`) and
+   `RECRUITMENT_SWEEP_TOKEN` (the same value). Run the workflow once by hand
+   and read its summary line ("claimed 0 · sent 0 …").
+3. Without step 1 every receipt reads "e-post är inte konfigurerad" on the
+   employer's side and the candidate still has it in CQrityjob; without
+   step 2 the overview's own sweep is the only recovery.
 
 ## Beside Varbi
 
@@ -140,17 +226,21 @@ its "Nytt intervjutillfälle" dialog and its "Intervju" dropdown. Read against
   list's rules, the server for "one page, no limit, no ids", the table for
   "remember the definition, never the ids", and the candidate page for
   "previous/next from the server".
-- `bun run negative-controls:recruitment-workspace` — 34 planted defects,
+- `bun run negative-controls:recruitment-workspace` — 61 planted defects,
   each caught and each file restored byte for byte, among them: the read
   paging in memory again, the overview sampling applications, the chips
   counting the page, previous/next from browser ids, midnight clamped, the
   series saved despite a problem, an overlap unchecked, a DST gap or repeat
   booked silently.
 - `e2e/recruitment-workspace.spec.ts` — the walk above, in a browser,
-  against a local stack: 13 tests, including the receipt end to end (the
+  against a local stack: 15 tests, including the receipt end to end (the
   owner switches it on with a preview, a candidate applies, the receipt is
   read on both sides at the application the link names, nothing
-  retroactive, a later edit leaves it as sent) and the permission walk, the 5 050-application vacancy
+  retroactive, a later edit leaves it as sent), the e-mail's button after a
+  sign-in with the API refusals for a candidate and an employer, the
+  recovery (the sweep endpoint closed without its token, a never-started
+  send taken once, an unknown outcome recovered by the overview inside the
+  window, refused outside it until "Ja, skicka igen"), the permission walk, the 5 050-application vacancy
   (total, last page, search for the oldest applicant, a filter over the
   whole list), previous/next across a page edge with the session holding no
   ids, the 25-candidate refusal with a database count that nothing was
@@ -173,8 +263,15 @@ E2E_SUPABASE_URL=http://127.0.0.1:56321 \
 E2E_SUPABASE_SERVICE_ROLE_KEY=<local service-role key> \
 E2E_SUPABASE_ANON_KEY=<local publishable key> \
 E2E_DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:56322/postgres" \
+E2E_SWEEP_TOKEN=<the RECRUITMENT_SWEEP_TOKEN the dev server was started with> \
 bunx playwright test e2e/recruitment-workspace.spec.ts --project=chromium --workers=1
 ```
 
-Result on this branch: 13 passed on chromium (45 s); the two phone
+The dev server needs the LOCAL stack's `SUPABASE_SERVICE_ROLE_KEY`,
+`PUBLIC_SITE_URL=http://localhost:8093` and a `RECRUITMENT_SWEEP_TOKEN` in
+its env file, and no `RESEND_*` variable: no real e-mail leaves the walk.
+A stack seeded before the fixture carried passwords keeps its old rows
+(`ON CONFLICT DO NOTHING`); re-seed a fresh stack, as CI does.
+
+Result on this branch: 15 passed on chromium (49 s); the two phone
 projects skip by design (the table is read as a table).

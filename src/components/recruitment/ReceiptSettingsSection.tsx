@@ -293,6 +293,7 @@ export function ReceiptSettingsSection({
               {t("rec.receipt.channel.email")}
             </li>
           </ul>
+          <p className="mt-2 text-xs text-muted-foreground">{t("rec.receipt.acceptedNote")}</p>
           <p className="mt-2 text-xs text-muted-foreground">{t("rec.receipt.history")}</p>
         </div>
       </div>

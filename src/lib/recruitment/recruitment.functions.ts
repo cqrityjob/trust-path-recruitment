@@ -34,6 +34,7 @@ import {
 // PostgREST rows and the request-scoped client, as every server function in
 // src/lib/job-intelligence types them: the joined selects here are wider than
 // the generated types describe. One named alias rather than a scattered `any`.
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Loose = any;
 
@@ -177,6 +178,10 @@ export type RecruitmentOverview = {
   team: TeamMember[];
   myUserId: string;
   role: Role;
+  /** Receipts whose e-mail the recovery will not touch again -- a definite
+   *  refusal, an unknown outcome outside the provider's window or past the
+   *  attempt cap. A person's to look at, on the application. */
+  receiptsNeedingAttention: number;
 };
 
 export const getRecruitmentOverview = createServerFn({ method: "POST" })
@@ -186,7 +191,18 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const { role } = await requireMember(ctx, data.employerId);
 
-    const [jobsRes, settingsRes, appsRes, bookingsRes, team] = await Promise.all([
+    // The receipt recovery, opportunistically: whatever this organisation's
+    // receipts are due (never started, aged out, unknown inside the
+    // provider's window) is sent now, by the server, a few at a time -- so
+    // the product recovers by itself even where nothing calls the sweep
+    // endpoint. Not awaited: the page must not wait for a mail provider,
+    // and a sweep that dies half-way leaves a claim that ages out and is
+    // taken again. The scheduled workflow is the reliable path.
+    void import("./receipt.server")
+      .then((m) => m.sweepReceipts({ limit: 3, employerId: data.employerId }))
+      .catch((e) => console.error("[recruitment] opportunistic receipt sweep failed", e));
+
+    const [jobsRes, settingsRes, appsRes, bookingsRes, team, attentionRes] = await Promise.all([
       ctx.supabase
         .from("jobs")
         .select(
@@ -213,12 +229,14 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         .order("starts_at", { ascending: true })
         .limit(50),
       readTeam(ctx, data.employerId),
+      ctx.supabase.rpc("rec_receipts_needing_attention", { _employer_id: data.employerId }),
     ]);
     for (const [res, what] of [
       [jobsRes, "jobs"],
       [settingsRes, "settings"],
       [appsRes, "counts"],
       [bookingsRes, "bookings"],
+      [attentionRes, "receipts"],
     ] as const) {
       if (res.error) {
         console.error(`[recruitment] overview ${what} read failed`, res.error);
@@ -344,7 +362,14 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
       status: b.status,
     }));
 
-    return { recruitments, upcomingInterviews, team, myUserId: ctx.userId, role };
+    return {
+      recruitments,
+      upcomingInterviews,
+      team,
+      myUserId: ctx.userId,
+      role,
+      receiptsNeedingAttention: Number(attentionRes.data ?? 0),
+    };
   });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -495,18 +520,31 @@ export const setReceiptSettings = createServerFn({ method: "POST" })
   });
 
 /** A person's retry of a receipt's e-mail copy (failed, not configured,
- *  unknown, or never attempted). The database allows it for the people who
- *  may write to candidates and for nobody else. */
+ *  unknown, or never attempted). The server acts with its own credentials
+ *  and names the person; the database allows a retry for the people who
+ *  may write to candidates and for nobody else, and a resend after the
+ *  provider's idempotency window only with `acceptDuplicate` -- the
+ *  person's explicit acceptance that the candidate may get it twice. */
 export const retryReceiptEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ employerId: z.string().uuid(), applicationId: z.string().uuid() }).parse(d),
+    z
+      .object({
+        employerId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        acceptDuplicate: z.boolean().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     await requireMember(ctx, data.employerId);
     const { deliverReceiptEmail } = await import("./receipt.server");
-    return deliverReceiptEmail(ctx.supabase, data.applicationId, true);
+    return deliverReceiptEmail(data.applicationId, {
+      actorUserId: ctx.userId,
+      retry: true,
+      acceptDuplicate: data.acceptDuplicate === true,
+    });
   });
 
 export const getRecruitment = createServerFn({ method: "POST" })
@@ -1011,6 +1049,14 @@ export type CommentRow = {
   createdAt: string;
 };
 
+/** The same rule as rec_receipt_window_open: the provider keeps an
+ *  idempotency key for 24 hours; 23 are trusted. */
+export function receiptWindowOpen(firstUsedAt: string | null, now = Date.now()): boolean {
+  if (!firstUsedAt) return true;
+  const t = Date.parse(firstUsedAt);
+  return Number.isNaN(t) ? false : t > now - 23 * 60 * 60 * 1000;
+}
+
 export type MessageRow = {
   id: string;
   kind: string;
@@ -1021,6 +1067,12 @@ export type MessageRow = {
   emailStatus: "not_attempted" | "sending" | "sent" | "failed" | "not_configured" | "unknown";
   emailError: string | null;
   emailAttempts: number;
+  /** The provider's id for an accepted e-mail: "accepted", never "arrived". */
+  emailProviderId: string | null;
+  /** Whether a resend under the same idempotency key is still deduplicated
+   *  by the provider (24 h from the first attempt, an hour kept as margin).
+   *  Outside it a resend may reach the candidate twice. */
+  emailWindowOpen: boolean;
   bookingId: string | null;
   createdAt: string;
   sentAt: string | null;
@@ -1118,7 +1170,7 @@ export const getApplicationWorkspace = createServerFn({ method: "POST" })
       ctx.supabase
         .from("recruitment_messages")
         .select(
-          "id, kind, subject, body, language, status, email_status, email_error, email_attempts, booking_id, created_at, sent_at, created_by",
+          "id, kind, subject, body, language, status, email_status, email_error, email_attempts, email_provider_id, email_key_first_used_at, booking_id, created_at, sent_at, created_by",
         )
         .eq("application_id", app.id)
         .neq("status", "discarded")
@@ -1212,6 +1264,8 @@ export const getApplicationWorkspace = createServerFn({ method: "POST" })
         emailStatus: m.email_status,
         emailError: m.email_error,
         emailAttempts: m.email_attempts,
+        emailProviderId: m.email_provider_id ?? null,
+        emailWindowOpen: receiptWindowOpen(m.email_key_first_used_at ?? null),
         bookingId: m.booking_id,
         createdAt: m.created_at,
         sentAt: m.sent_at,
@@ -1463,8 +1517,10 @@ export type SendOutcome = {
   messageId: string;
   /** What the database did with the message itself. */
   delivery: "delivered" | "already_sent" | "in_progress" | "refused";
-  /** What happened to the e-mail copy -- only ever a provider's answer. */
-  email: "sent" | "failed" | "not_configured" | "not_attempted" | "in_progress";
+  /** What happened to the e-mail copy -- only ever a provider's answer, or
+   *  the honest absence of one ("unknown": a timeout, a network error, a
+   *  5xx; not sent and not unsent). */
+  email: "sent" | "failed" | "not_configured" | "not_attempted" | "in_progress" | "unknown";
   code: string | null;
 };
 
@@ -1496,6 +1552,9 @@ async function sendOne(ctx: Ctx, messageId: string): Promise<SendOutcome> {
   const { sendRecruitmentMessageEmail } =
     await import("@/lib/email/send-recruitment-message-email.server");
   const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
+  // One logical e-mail per message: the provider deduplicates a repeat
+  // under the same key for 24 hours, so a retry after a lost answer cannot
+  // reach the candidate twice inside that window.
   const result = claim.recipient_email
     ? await sendRecruitmentMessageEmail({
         recipientEmail: String(claim.recipient_email),
@@ -1505,13 +1564,15 @@ async function sendOne(ctx: Ctx, messageId: string): Promise<SendOutcome> {
         employerName: String(claim.employer_name ?? ""),
         jobTitle: String(claim.job_title ?? ""),
         siteOrigin: process.env.PUBLIC_SITE_URL || SITE_ORIGIN,
+        idempotencyKey: `msg:${messageId}`,
+        timeoutMs: 15_000,
       })
     : ({ result: "failed", error: "NO_ADDRESS" } as const);
 
   const { error: settleErr } = await ctx.supabase.rpc("rec_settle_message_send", {
     _message_id: messageId,
     _result: result.result,
-    _error: result.result === "failed" ? result.error : null,
+    _error: result.result === "failed" || result.result === "unknown" ? result.error : null,
   });
   if (settleErr) {
     // The provider answered and we could not record it. Say so rather than

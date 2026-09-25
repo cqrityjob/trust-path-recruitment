@@ -675,19 +675,20 @@ export function CommunicationPanel({
     ? (ws.messages.find((m) => m.id === composing.draftId) ?? null)
     : null;
 
-  async function retry(id: string) {
+  async function retry(id: string, acceptDuplicate = false) {
     setRetrying(id);
     setRetryNotice(null);
     try {
       const m = ws.messages.find((x) => x.id === id);
       if (m?.kind === "receipt") {
-        // The receipt's e-mail goes through its own claim/settle pair; a
-        // person's retry is the only thing that resends a failed, unknown
-        // or never-attempted copy.
+        // The receipt's e-mail is driven by the server with its own
+        // credentials; this names the person asking, and the database
+        // decides. A resend after the provider's window goes only with the
+        // person's explicit acceptance that the candidate may get it twice.
         const r = await retryReceiptFn({
-          data: { employerId, applicationId: ws.applicationId },
+          data: { employerId, applicationId: ws.applicationId, acceptDuplicate },
         });
-        setRetryNotice(receiptOutcomeText(t, r.outcome, r.code));
+        setRetryNotice(receiptOutcomeText(t, r.outcome, r.code, r.windowOpen));
       } else {
         const res = await sendFn({ data: { messageIds: [id] } });
         setRetryNotice(outcomeText(t, res.outcomes[0]).text);
@@ -748,7 +749,7 @@ export function CommunicationPanel({
         ws={ws}
         lang={lang}
         retrying={retrying}
-        onRetry={(id) => void retry(id)}
+        onRetry={(id, acceptDuplicate) => void retry(id, acceptDuplicate)}
         onEditDraft={(id, kind, bookingId) => setComposing({ kind, bookingId, draftId: id })}
       />
     </div>
@@ -765,10 +766,13 @@ function MessageList({
   ws: ApplicationWorkspace;
   lang: "sv" | "en";
   retrying: string | null;
-  onRetry: ((id: string) => void) | null;
+  onRetry: ((id: string, acceptDuplicate: boolean) => void) | null;
   onEditDraft: ((id: string, kind: MessageKind, bookingId: string | null) => void) | null;
 }) {
   const { t } = useT();
+  // "Send again anyway" is a two-step decision: the second step says, in
+  // words, that the candidate may receive the receipt twice.
+  const [confirmResend, setConfirmResend] = useState<string | null>(null);
   if (ws.messages.length === 0)
     return <p className="text-sm text-muted-foreground">{t("rec.message.none")}</p>;
   return (
@@ -788,6 +792,17 @@ function MessageList({
                 ? ` · ${m.authorName}`
                 : ""}
           </p>
+          {m.kind === "receipt" && (m.emailStatus === "failed" || m.emailStatus === "unknown") && (
+            <p className="mt-1 text-xs text-muted-foreground" data-testid="receipt-email-detail">
+              {m.emailStatus === "unknown"
+                ? m.emailWindowOpen
+                  ? t("rec.receipt.unknownWindowOpen")
+                  : t("rec.receipt.unknownWindowClosed")
+                : t("rec.receipt.failedDetail")}
+              {m.emailError ? ` (${m.emailError})` : ""} ·{" "}
+              {t("rec.receipt.attempts").replace("{n}", String(m.emailAttempts))}
+            </p>
+          )}
           <details className="mt-1">
             <summary className="cursor-pointer text-xs text-accent">
               {t("rec.message.show")}
@@ -808,19 +823,64 @@ function MessageList({
               (m.emailStatus === "failed" ||
                 m.emailStatus === "not_configured" ||
                 m.emailStatus === "sending" ||
-                m.emailStatus === "unknown" ||
+                (m.emailStatus === "unknown" && (m.kind !== "receipt" || m.emailWindowOpen)) ||
                 (m.kind === "receipt" && m.emailStatus === "not_attempted")) &&
               onRetry && (
                 <button
                   type="button"
                   disabled={retrying === m.id}
-                  onClick={() => onRetry(m.id)}
+                  onClick={() => onRetry(m.id, false)}
                   className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-3 text-sm hover:bg-muted/50 disabled:opacity-60"
                 >
                   <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
                   {t("rec.message.retryEmail")}
                 </button>
               )}
+            {/* A receipt whose outcome is unknown AFTER the provider's window:
+                nothing resends it by itself, and a person resends it only
+                after reading that the candidate may get it twice. */}
+            {m.status === "sent" &&
+              m.kind === "receipt" &&
+              m.emailStatus === "unknown" &&
+              !m.emailWindowOpen &&
+              onRetry &&
+              (confirmResend === m.id ? (
+                <span
+                  role="group"
+                  aria-label={t("rec.receipt.resendConfirm")}
+                  className="inline-flex flex-wrap items-center gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm"
+                >
+                  {t("rec.receipt.resendConfirm")}
+                  <button
+                    type="button"
+                    disabled={retrying === m.id}
+                    onClick={() => {
+                      setConfirmResend(null);
+                      onRetry(m.id, true);
+                    }}
+                    className="min-h-8 rounded-md bg-accent px-3 text-sm font-semibold text-accent-foreground disabled:opacity-60"
+                  >
+                    {t("rec.receipt.resendYes")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmResend(null)}
+                    className="min-h-8 rounded-md border border-border px-3 text-sm"
+                  >
+                    {t("rec.receipt.resendNo")}
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={retrying === m.id}
+                  onClick={() => setConfirmResend(m.id)}
+                  className="inline-flex min-h-9 items-center gap-1 rounded-md border border-amber-500/60 px-3 text-sm hover:bg-amber-500/10 disabled:opacity-60"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("rec.receipt.resendAnyway")}
+                </button>
+              ))}
           </div>
         </li>
       ))}

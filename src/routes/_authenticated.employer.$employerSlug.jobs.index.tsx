@@ -293,6 +293,20 @@ function JobsList({
           {translateJobServerError(actionError, t)}
         </div>
       )}
+      {/* Receipts whose e-mail the recovery will not touch again: a person's
+          to look at, said here, decided on the application. */}
+      {(overviewQuery.data?.receiptsNeedingAttention ?? 0) > 0 && (
+        <p
+          role="status"
+          data-testid="receipts-attention"
+          className="mt-6 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm"
+        >
+          {t("rec.receipt.attention").replace(
+            "{n}",
+            String(overviewQuery.data?.receiptsNeedingAttention ?? 0),
+          )}
+        </p>
+      )}
 
       <div className="mt-6 flex flex-wrap items-end gap-3">
         <label className="relative min-w-[14rem] flex-1 sm:max-w-xs" htmlFor="job-search">

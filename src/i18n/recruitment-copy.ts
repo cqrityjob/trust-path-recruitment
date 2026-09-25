@@ -27,7 +27,7 @@ export const recruitmentSv = {
   "rec.booking.status.cancelled": "Inställd",
   "rec.booking.status.completed": "Genomförd",
   "rec.message.delivery.draft": "Utkast – inte skickat",
-  "rec.message.delivery.emailSent": "Levererat i CQrityjob · e-post accepterad",
+  "rec.message.delivery.emailSent": "Levererat i CQrityjob · e-post accepterad av leverantören",
   "rec.message.delivery.emailSending": "Levererat i CQrityjob · e-post skickas",
   "rec.message.delivery.emailFailed": "Levererat i CQrityjob · e-post misslyckades",
   "rec.message.delivery.emailNotConfigured": "Levererat i CQrityjob · e-post är inte konfigurerad",
@@ -636,6 +636,22 @@ export const recruitmentSv = {
   "rec.receipt.summaryChange": "Ändra",
   "rec.receipt.byNobody": "skickad automatiskt",
   "rec.receipt.noneForApplication": "Den här ansökan har ingen mottagningsbekräftelse.",
+  "rec.receipt.acceptedNote":
+    "”Accepterad av e-postleverantören” betyder att leverantören tagit emot utskicket – inte att det nått kandidatens inkorg. Det vet ingen del av CQrityjob.",
+  "rec.receipt.attention":
+    "{n} automatiska mottagningsbekräftelser har ett e-postutfall som behöver en persons beslut. Öppna ansökan för att se vad som hänt.",
+  "rec.receipt.unknownWindowOpen":
+    "Okänt utfall – svaret från e-postleverantören kom aldrig. Ett nytt försök inom ett dygn är säkert: leverantören skickar inte dubbletter under samma nyckel, och systemet försöker själv.",
+  "rec.receipt.unknownWindowClosed":
+    "Okänt utfall – svaret från e-postleverantören kom aldrig, och dygnet då ett nytt försök var säkert har passerat. Ett nytt utskick kan nå kandidaten två gånger.",
+  "rec.receipt.failedDetail": "E-postleverantören avvisade utskicket.",
+  "rec.receipt.attempts": "{n} försök",
+  "rec.receipt.resendAnyway": "Skicka igen ändå",
+  "rec.receipt.resendConfirm": "Kandidaten kan få bekräftelsen två gånger. Skicka ändå?",
+  "rec.receipt.resendYes": "Ja, skicka igen",
+  "rec.receipt.resendNo": "Avbryt",
+  "rec.send.deliveredEmailUnknownClosed":
+    "E-postens utfall är okänt och tiden för ett säkert nytt försök har passerat. Inget skickades. Vill du skicka igen ändå, bekräfta det uttryckligen.",
   "rec.pager.filter": "filter: {filter}",
   "rec.pager.showAll": "Visa alla ({all})",
   "rec.filter.owner": "ansvarig",
@@ -665,7 +681,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.booking.status.cancelled": "Cancelled",
   "rec.booking.status.completed": "Held",
   "rec.message.delivery.draft": "Draft – not sent",
-  "rec.message.delivery.emailSent": "Delivered in CQrityjob · e-mail accepted",
+  "rec.message.delivery.emailSent": "Delivered in CQrityjob · e-mail accepted by the provider",
   "rec.message.delivery.emailSending": "Delivered in CQrityjob · e-mail sending",
   "rec.message.delivery.emailFailed": "Delivered in CQrityjob · e-mail failed",
   "rec.message.delivery.emailNotConfigured": "Delivered in CQrityjob · e-mail not configured",
@@ -1282,6 +1298,22 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.receipt.summaryChange": "Change",
   "rec.receipt.byNobody": "sent automatically",
   "rec.receipt.noneForApplication": "This application has no receipt.",
+  "rec.receipt.acceptedNote":
+    "“Accepted by the e-mail provider” means the provider took the message – not that it reached the candidate's inbox. No part of CQrityjob knows that.",
+  "rec.receipt.attention":
+    "{n} automatic receipts have an e-mail outcome that needs a person's decision. Open the application to see what happened.",
+  "rec.receipt.unknownWindowOpen":
+    "Outcome unknown – the e-mail provider's answer never came. A new attempt within a day is safe: the provider does not send duplicates under the same key, and the system retries by itself.",
+  "rec.receipt.unknownWindowClosed":
+    "Outcome unknown – the e-mail provider's answer never came, and the day during which a new attempt was safe has passed. Sending again may reach the candidate twice.",
+  "rec.receipt.failedDetail": "The e-mail provider refused the message.",
+  "rec.receipt.attempts": "{n} attempts",
+  "rec.receipt.resendAnyway": "Send again anyway",
+  "rec.receipt.resendConfirm": "The candidate may receive the receipt twice. Send anyway?",
+  "rec.receipt.resendYes": "Yes, send again",
+  "rec.receipt.resendNo": "Cancel",
+  "rec.send.deliveredEmailUnknownClosed":
+    "The e-mail's outcome is unknown and the time for a safe new attempt has passed. Nothing was sent. To send again anyway, confirm it explicitly.",
   "rec.pager.filter": "filtered by {filter}",
   "rec.pager.showAll": "Show all ({all})",
   "rec.filter.owner": "responsible",

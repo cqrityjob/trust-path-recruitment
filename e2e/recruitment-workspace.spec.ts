@@ -57,7 +57,7 @@ test.skip(!SRK || !ANON, "E2E_SUPABASE_SERVICE_ROLE_KEY and E2E_SUPABASE_ANON_KE
 /** A session for a synthetic address, minted through the local Auth admin
  *  API (magic-link OTP) -- never by typing a password -- and planted where
  *  the app's Supabase client reads it. */
-async function signIn(page: Page, email: string) {
+async function signIn(page: Page, email: string): Promise<string> {
   const link = await fetch(`${API}/auth/v1/admin/generate_link`, {
     method: "POST",
     headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
@@ -80,7 +80,45 @@ async function signIn(page: Page, email: string) {
     },
     [`sb-${ref}-auth-token`, JSON.stringify(session)] as const,
   );
+  return session.access_token;
 }
+
+/** A session token without a browser: for the API-level refusals. */
+async function tokenFor(email: string): Promise<string> {
+  const link = await fetch(`${API}/auth/v1/admin/generate_link`, {
+    method: "POST",
+    headers: { apikey: SRK, Authorization: `Bearer ${SRK}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "magiclink", email }),
+  }).then((r) => r.json() as Promise<{ email_otp?: string; properties?: { email_otp?: string } }>);
+  const otp = link.email_otp ?? link.properties?.email_otp;
+  if (!otp) throw new Error(`no otp for ${email}`);
+  const session = await fetch(`${API}/auth/v1/verify`, {
+    method: "POST",
+    headers: { apikey: ANON, "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "magiclink", email, token: otp }),
+  }).then((r) => r.json() as Promise<{ access_token?: string }>);
+  if (!session.access_token) throw new Error(`no session for ${email}`);
+  return session.access_token;
+}
+
+const SWEEP_TOKEN = process.env.E2E_SWEEP_TOKEN ?? "";
+const sweep = (auth: string | null, body: unknown = {}) =>
+  fetch(`${BASE}/api/recruitment/receipts-sweep`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
+    },
+    body: JSON.stringify(body),
+  });
+const kimsUppsalaApplication = () =>
+  sql(
+    `SELECT a.id FROM public.job_applications a JOIN auth.users u ON u.id = a.applicant_user_id WHERE u.email = 'kim.kandidat@test.local' AND a.job_id = '${JOB}' ORDER BY a.created_at DESC LIMIT 1`,
+  );
+const receiptRow = (appId: string) =>
+  sql(
+    `SELECT email_status || '/' || email_attempts || '/' || email_key_generation || '/' || coalesce(email_recipient, '-') || '/' || (email_attempt_id IS NOT NULL)::text FROM public.recruitment_messages WHERE application_id = '${appId}' AND kind = 'receipt'`,
+  );
 
 /** One read-only statement against the local database, when its URL was
  *  handed in -- the "nothing was written" proofs need a count the browser
@@ -547,12 +585,14 @@ test.describe("recruitment case", () => {
         "Automatisk mottagningsbekräftelse",
       );
       await fresh.close();
-      // ONE receipt, e-mail not configured on this stack, one attempt.
+      // ONE receipt, e-mail not configured on this stack, one attempt -- made
+      // by the server with an attempt id of its own, the recipient fixed,
+      // under the logical receipt's idempotency key.
       expect(
         sql(
-          `SELECT count(*) || ':' || min(email_status) || ':' || min(email_attempts) FROM public.recruitment_messages WHERE application_id = '${appId}' AND kind = 'receipt'`,
+          `SELECT count(*) || ':' || min(email_status) || ':' || min(email_attempts) || ':' || min(email_recipient) || ':' || min(idempotency_key) || ':' || bool_and(email_attempt_id IS NOT NULL)::text FROM public.recruitment_messages WHERE application_id = '${appId}' AND kind = 'receipt'`,
         ),
-      ).toBe("1:not_configured:1");
+      ).toBe(`1:not_configured:1:kim.kandidat@test.local:receipt:${appId}:true`);
     }
     await ctx.close();
 
@@ -580,6 +620,174 @@ test.describe("recruitment case", () => {
         ),
       ).toBe("Vi har tagit emot din ansökan – Väktare, Uppsala");
     }
+  });
+
+  test("the receipt's e-mail button opens exactly this application after a sign-in; another candidate cannot read it, and nobody can forge its delivery through the API", async ({
+    browser,
+  }) => {
+    test.setTimeout(120_000);
+    const appId = kimsUppsalaApplication();
+    expect(appId, "the receipt walk must have left Kim's application").toBeTruthy();
+    const before = receiptRow(appId!);
+
+    // ── Signed out: the button's address lands on the sign-in, and the
+    //    application survives it in the query string ─────────────────────
+    const fresh = await browser.newContext({ locale: "sv-SE" });
+    const kim = await fresh.newPage();
+    await open(kim, `/my-career/applications?application=${appId}`);
+    await expect(kim).toHaveURL(/\/login\?/, { timeout: 60_000 });
+    expect(decodeURIComponent(kim.url())).toContain(`application=${appId}`);
+    await kim.getByLabel("E-post").fill("kim.kandidat@test.local");
+    await kim.getByLabel("Lösenord", { exact: true }).fill("LocalJourney!2026");
+    await kim.getByRole("button", { name: "Logga in" }).click();
+    await expect(kim).toHaveURL(new RegExp(`/my-career/applications\\?application=${appId}`), {
+      timeout: 60_000,
+    });
+    await expect(kim.locator(`#application-${appId}`)).toContainText(
+      "Automatisk mottagningsbekräftelse",
+      { timeout: 60_000 },
+    );
+    await fresh.close();
+
+    // ── Another candidate with the same address sees nothing of it ─────
+    const other = await browser.newContext({ locale: "sv-SE" });
+    const k1 = await other.newPage();
+    const k1Token = await signIn(k1, "kandidat01@test.local");
+    await open(k1, `/my-career/applications?application=${appId}`);
+    await expect(k1.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect(k1.locator(`#application-${appId}`)).toHaveCount(0);
+    await expect(k1.locator("body")).not.toContainText("Hej Kim!");
+    await other.close();
+    // Nor through the API: the row is not theirs to read.
+    const read = await fetch(
+      `${API}/rest/v1/recruitment_messages?application_id=eq.${appId}&select=id`,
+      { headers: { apikey: ANON, Authorization: `Bearer ${k1Token}` } },
+    );
+    expect(read.status).toBe(200);
+    expect(await read.json()).toEqual([]);
+
+    // ── Forging the delivery: refused for the candidate and the employer ─
+    for (const email of ["kim.kandidat@test.local", "anna.agare@nordvakt.test"]) {
+      const token = await tokenFor(email);
+      const settle = await fetch(`${API}/rest/v1/rpc/rec_settle_receipt_send`, {
+        method: "POST",
+        headers: {
+          apikey: ANON,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          _attempt_id: "00000000-0000-4000-8000-000000000000",
+          _result: "sent",
+          _provider_id: "forged",
+        }),
+      });
+      expect([401, 403, 404], `${email} settling`).toContain(settle.status);
+      const claim = await fetch(`${API}/rest/v1/rpc/rec_claim_receipt_send`, {
+        method: "POST",
+        headers: {
+          apikey: ANON,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ _application_id: appId, _retry: true }),
+      });
+      expect([401, 403, 404], `${email} claiming`).toContain(claim.status);
+      const due = await fetch(`${API}/rest/v1/rpc/rec_claim_due_receipts`, {
+        method: "POST",
+        headers: {
+          apikey: ANON,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ _limit: 10 }),
+      });
+      expect([401, 403, 404], `${email} sweeping`).toContain(due.status);
+    }
+    expect(receiptRow(appId!)).toBe(before);
+  });
+
+  test("the recovery: a send that never started is sent by the sweep once; an unknown outcome inside the window is recovered by the product itself; outside it nothing resends without a person's explicit acceptance", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    const appId = kimsUppsalaApplication();
+    expect(appId, "the receipt walk must have left Kim's application").toBeTruthy();
+    const messageId = sql(
+      `SELECT id FROM public.recruitment_messages WHERE application_id = '${appId}' AND kind = 'receipt'`,
+    );
+    expect(messageId).toBeTruthy();
+
+    // ── The endpoint does not exist without the token ───────────────────
+    expect((await sweep(null)).status).toBe(404);
+    expect((await sweep("not-the-token-at-all-0000000000")).status).toBe(404);
+
+    // ── A send that never started (the saving request died) ────────────
+    sql(
+      `UPDATE public.recruitment_messages SET email_status = 'not_attempted', email_attempt_id = NULL, email_attempts = 0, email_claimed_at = NULL, email_error = NULL, created_at = now() - interval '5 minutes' WHERE id = '${messageId}'`,
+    );
+    const first = await sweep(SWEEP_TOKEN, { limit: 20 });
+    expect(first.status).toBe(200);
+    const summary = (await first.json()) as Record<string, unknown>;
+    expect(summary.ok).toBe(true);
+    expect(summary.claimed).toBe(1);
+    expect(summary.notConfigured).toBe(1);
+    expect(receiptRow(appId!)).toBe(`not_configured/1/0/kim.kandidat@test.local/true`);
+    // Once: the second sweep finds nothing to do.
+    const second = (await (await sweep(SWEEP_TOKEN)).json()) as Record<string, unknown>;
+    expect(second.claimed).toBe(0);
+
+    // ── Unknown, inside the provider's window: the product recovers it by
+    //    itself when the employer opens their overview ────────────────────
+    sql(
+      `UPDATE public.recruitment_messages SET email_status = 'unknown', email_error = 'TIMEOUT', email_attempts = 1, email_claimed_at = now() - interval '5 minutes', email_key_first_used_at = now() - interval '1 hour' WHERE id = '${messageId}'`,
+    );
+    await signIn(page, "anna.agare@nordvakt.test");
+    await open(page, `/employer/${SLUG}/jobs`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 60_000 });
+    await expect
+      .poll(() => receiptRow(appId!), { timeout: 30_000 })
+      .toBe(`not_configured/2/0/kim.kandidat@test.local/true`);
+    await expect(page.getByTestId("receipts-attention")).toHaveCount(0);
+
+    // ── Unknown, outside the window: nothing resends by itself ─────────
+    sql(
+      `UPDATE public.recruitment_messages SET email_status = 'unknown', email_error = 'TIMEOUT', email_attempts = 2, email_claimed_at = now() - interval '2 hours', email_key_first_used_at = now() - interval '25 hours' WHERE id = '${messageId}'`,
+    );
+    const closed = (await (await sweep(SWEEP_TOKEN)).json()) as Record<string, unknown>;
+    expect(closed.claimed).toBe(0);
+    await open(page, `/employer/${SLUG}/jobs`);
+    await expect(page.getByTestId("receipts-attention")).toContainText("1", { timeout: 60_000 });
+    expect(receiptRow(appId!)).toBe(`unknown/2/0/kim.kandidat@test.local/true`);
+
+    // The application says why, and the only way on is a person's explicit
+    // acceptance that the candidate may get it twice.
+    await open(page, `/employer/${SLUG}/applications/${appId}`);
+    const item = page.locator("li", { hasText: "Automatisk mottagningsbekräftelse" }).first();
+    await expect(item).toBeVisible({ timeout: 60_000 });
+    await expect(item).toContainText("okänt utfall");
+    await expect(item.getByTestId("receipt-email-detail")).toContainText(
+      "kan nå kandidaten två gånger",
+    );
+    await expect(item.getByTestId("receipt-email-detail")).toContainText("2 försök");
+    await expect(item.getByRole("button", { name: "Skicka e-posten igen" })).toHaveCount(0);
+    await item.getByRole("button", { name: "Skicka igen ändå" }).click();
+    await expect(
+      item.getByRole("group", { name: "Kandidaten kan få bekräftelsen två gånger. Skicka ändå?" }),
+    ).toBeVisible();
+    await item.getByRole("button", { name: "Avbryt" }).click();
+    expect(receiptRow(appId!)).toBe(`unknown/2/0/kim.kandidat@test.local/true`);
+    await item.getByRole("button", { name: "Skicka igen ändå" }).click();
+    await item.getByRole("button", { name: "Ja, skicka igen" }).click();
+    await expect
+      .poll(() => receiptRow(appId!), { timeout: 30_000 })
+      .toBe(`not_configured/3/1/kim.kandidat@test.local/true`);
+    // A new key generation, the same recipient, one message still.
+    expect(
+      sql(
+        `SELECT count(*) FROM public.recruitment_messages WHERE application_id = '${appId}' AND kind = 'receipt'`,
+      ),
+    ).toBe("1");
   });
 
   test("another organisation's owner cannot change the receipt, and a plain member cannot either", async ({
