@@ -1530,6 +1530,46 @@ run_candidate_view_suite() {
   echo "    ok  ${RCV_PASSED} recruitment candidate view assertions passed"
 }
 run_candidate_view_suite "before rollback"
+
+# ---------------------------------------------------------------------------
+# 5l-bis-3. Automatic receipts for received applications (20261213090000)
+#
+# Proved as the roles that meet it (owner, responsible person, plain member,
+# the other organisation, three candidates, anon). Runs with the migration
+# applied, then stands it down ALONE and must leave no function, trigger,
+# index or column behind, so 5l-ter's own rollback count still sees zero
+# rec_* functions. Reapplied, and run again, after 5l-ter.
+# ---------------------------------------------------------------------------
+run_receipts_suite() {
+  echo "==> Running recruitment application receipts assertions ($1)"
+  set +e
+  RCP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_application_receipts_test.sql 2>&1)"
+  RCP_RC=$?
+  set -e
+  echo "$RCP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  RCP_PASSED="$(echo "$RCP_OUT" | grep -c "ok  " || true)"
+  if [ "$RCP_RC" -ne 0 ]; then
+    echo "FAIL: the recruitment receipts suite exited with code ${RCP_RC} ($1)." >&2
+    echo "$RCP_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    exit 1
+  fi
+  if [ "$RCP_PASSED" -lt 44 ]; then
+    echo "FAIL: expected at least 44 recruitment receipts assertions, only ${RCP_PASSED} ran." >&2
+    exit 1
+  fi
+  echo "    ok  ${RCP_PASSED} recruitment receipts assertions passed"
+}
+run_receipts_suite "before rollback"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261213090000_recruitment_application_receipts_rollback.sql >/dev/null
+rcp_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_receipt_default','rec_render_receipt','rec_set_receipt_settings','rec_claim_receipt_send','rec_settle_receipt_send','rec_receipt_actor','rec_create_application_receipt')) + (SELECT count(*) FROM pg_trigger WHERE tgname='job_applications_zz_receipt') + (SELECT count(*) FROM pg_indexes WHERE indexname='recruitment_messages_receipt_once_idx') + (SELECT count(*) FROM information_schema.columns WHERE table_name='recruitment_settings' AND column_name LIKE 'receipt\_%')")"
+[ "$rcp_left" = "0" ] || { echo "FAIL: 20261213090000 rollback left $rcp_left receipt object(s) behind"; exit 1; }
+echo "    ok  receipts stood down alone; nothing left behind"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_application_receipts_test.sql >/dev/null 2>&1; then
+  echo "FAIL: the receipts suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the receipts suite refuses to pass without the migration (negative control)"
+
 psql_q -d "$TEST_DB" -f supabase/rollback/20261212090000_recruitment_candidate_view_rollback.sql >/dev/null
 rcv_left="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_candidate_view','rec_job_counts')")"
 [ "$rcv_left" = "0" ] || { echo "FAIL: 20261212090000 rollback left $rcv_left candidate view function(s) behind"; exit 1; }
@@ -1635,6 +1675,10 @@ done
 psql_q -d "$TEST_DB" -f supabase/migrations/20261212090000_recruitment_candidate_view.sql >/dev/null
 echo "    ok  recruitment candidate view migration reapplied"
 run_candidate_view_suite "after reapply"
+# And the receipts, on top of that.
+psql_q -d "$TEST_DB" -f supabase/migrations/20261213090000_recruitment_application_receipts.sql >/dev/null
+echo "    ok  recruitment application receipts migration reapplied"
+run_receipts_suite "after reapply"
 
 # ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model

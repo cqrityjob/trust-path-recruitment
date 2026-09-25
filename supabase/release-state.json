@@ -2044,6 +2044,82 @@
       "rollback": "supabase/rollback/20261212090000_recruitment_candidate_view_rollback.sql",
       "note": "The recruitment candidate list read by the database: rec_job_counts (stage counts of every application of an organisation's vacancies, counted rather than sampled) and rec_candidate_view (ONE page of the filtered, ordered list with rank and filtered total, or the row before/itself/after for previous-next). Replaces the case page's in-memory read that fetched at most 5 000 applications and paged them in the server's memory. Same membership rule as the workspace (rec_is_member), one refusal for a missing and a foreign vacancy, no anon execute, STABLE, no table or row changed. Merged as PR #292 (schema only) and verified applied; the application code that calls these objects is PR #291. Proved by supabase/tests/recruitment_candidate_view_test.sql with 5 200 applications (47 assertions, run before and after a rollback/reapply cycle in scripts/db-test.sh).",
       "verify": "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_candidate_view','rec_job_counts'); -- expect 2 (one overload each). SELECT has_function_privilege('anon','public.rec_candidate_view(uuid,text,text,text,jsonb,text,text,integer,integer,uuid)','EXECUTE'), has_function_privilege('authenticated','public.rec_candidate_view(uuid,text,text,text,jsonb,text,text,integer,integer,uuid)','EXECUTE'); -- expect f,t. Same for public.rec_job_counts(uuid,uuid). SELECT count(*) FROM pg_collation WHERE collname='sv-SE-x-icu'; -- expect 1. Compare md5(prosrc) of both functions with a local replay of the merged file."
+    },
+    {
+      "file": "20261213090000_recruitment_application_receipts.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "column",
+          "table": "recruitment_settings",
+          "object": "receipt_enabled"
+        },
+        {
+          "kind": "column",
+          "table": "recruitment_settings",
+          "object": "receipt_subject_sv"
+        },
+        {
+          "kind": "column",
+          "table": "recruitment_settings",
+          "object": "receipt_body_sv"
+        },
+        {
+          "kind": "column",
+          "table": "recruitment_settings",
+          "object": "receipt_subject_en"
+        },
+        {
+          "kind": "column",
+          "table": "recruitment_settings",
+          "object": "receipt_body_en"
+        },
+        {
+          "kind": "column",
+          "table": "recruitment_settings",
+          "object": "receipt_updated_at"
+        },
+        {
+          "kind": "column",
+          "table": "recruitment_settings",
+          "object": "receipt_updated_by"
+        },
+        {
+          "kind": "index",
+          "object": "recruitment_messages_receipt_once_idx"
+        },
+        {
+          "kind": "function",
+          "object": "rec_receipt_default(text,text)"
+        },
+        {
+          "kind": "function",
+          "object": "rec_render_receipt(text,text,text,text,text)"
+        },
+        {
+          "kind": "function",
+          "object": "rec_set_receipt_settings(uuid,boolean,text,text,text,text,integer)"
+        },
+        {
+          "kind": "function",
+          "object": "rec_receipt_actor(public.job_applications)"
+        },
+        {
+          "kind": "function",
+          "object": "rec_claim_receipt_send(uuid,boolean)"
+        },
+        {
+          "kind": "function",
+          "object": "rec_settle_receipt_send(uuid,text,text)"
+        },
+        {
+          "kind": "function",
+          "object": "rec_create_application_receipt()"
+        }
+      ],
+      "rollback": "supabase/rollback/20261213090000_recruitment_application_receipts_rollback.sql",
+      "note": "Automatic receipts for received applications, per recruitment: a setting on recruitment_settings (on/off, own SV/EN subject and body or the standard text), a deferred constraint trigger that writes ONE receipt message (kind 'receipt', status sent, e-mail not yet attempted) at the COMMIT of a correct submission -- never for a failed, replayed or pre-existing application -- and a claim/settle pair for the e-mail copy usable by the applicant's own request or a manager, where an unsettled claim becomes 'unknown' (new email_status value) and is retried only by a person. Extends recruitment_messages' kind and email_status checks; adds a partial unique index; changes no row. The database default is OFF; the product switches it on when it creates a recruitment. Schema-only release: the application code that calls these objects is the same PR's application half and must not merge until this entry is recorded applied with evidence. Proved by supabase/tests/recruitment_application_receipts_test.sql (44 assertions) before and after a rollback/reapply cycle in scripts/db-test.sh; the rollback refuses once any receipt exists.",
+      "verify": "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_receipt_default','rec_render_receipt','rec_set_receipt_settings','rec_receipt_actor','rec_claim_receipt_send','rec_settle_receipt_send','rec_create_application_receipt'); -- expect 7. SELECT tgdeferrable AND tginitdeferred FROM pg_trigger WHERE tgname='job_applications_zz_receipt'; -- expect t. SELECT has_function_privilege('anon','public.rec_set_receipt_settings(uuid,boolean,text,text,text,text,integer)','EXECUTE'), has_function_privilege('authenticated','public.rec_claim_receipt_send(uuid,boolean)','EXECUTE'), has_function_privilege('authenticated','public.rec_create_application_receipt()','EXECUTE'); -- expect f,t,f. SELECT count(*) FROM information_schema.columns WHERE table_name='recruitment_settings' AND column_name LIKE 'receipt\\\\_%'; -- expect 7. SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname='recruitment_messages_kind_check'; -- contains 'receipt'. Compare md5(prosrc) of the seven functions with a local replay of the merged file; recruitment_messages and recruitment_settings row counts unchanged."
     }
   ], 
   "policyVersion": 2, 
