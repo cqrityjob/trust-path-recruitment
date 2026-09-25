@@ -1159,17 +1159,15 @@ const sql = read(F.migration);
   // The transport, executed against controlled answers. Never a network.
   const T = await import("../src/lib/email/send-recruitment-message-email.server");
   ok(
-    T.classifyProviderResponse(200, null).result === "sent" &&
-      T.classifyProviderResponse(422, "validation_error").result === "failed" &&
-      T.classifyProviderResponse(429, null).result === "failed" &&
-      T.classifyProviderResponse(500, null).result === "unknown" &&
-      T.classifyProviderResponse(502, null).result === "unknown" &&
-      T.classifyProviderResponse(408, null).result === "unknown" &&
-      (T.classifyProviderResponse(409, "concurrent_idempotent_requests") as { error: string })
-        .error === "IDEMPOTENCY_CONFLICT" &&
-      (T.classifyProviderResponse(409, "invalid_idempotent_request") as { error: string }).error ===
-        "IDEMPOTENCY_PAYLOAD_MISMATCH",
-    "I · transport: 2xx is accepted, a 4xx (429 included) is a definite refusal, 5xx/408 are unknown, and both 409s name what the provider already holds under this key",
+    T.classifyProviderResponse(200).result === "sent" &&
+      T.classifyProviderResponse(422).result === "failed" &&
+      T.classifyProviderResponse(429).result === "failed" &&
+      T.classifyProviderResponse(500).result === "unknown" &&
+      T.classifyProviderResponse(502).result === "unknown" &&
+      T.classifyProviderResponse(408).result === "unknown" &&
+      (T.classifyProviderResponse(409) as { error: string }).error === "IDEMPOTENCY_CONFLICT" &&
+      !/res\.(json|text)\(\)/.test(transport),
+    "I · transport: 2xx is accepted, a 4xx (429 included) is a definite refusal, 5xx/408 are unknown, a 409 is the provider already holding this key -- and the provider's body is never read",
   );
   {
     const savedKey = process.env.RESEND_API_KEY;
@@ -1236,7 +1234,7 @@ const sql = read(F.migration);
       const network = await T.sendRecruitmentMessageEmail({ ...base, fetchImpl: failing });
       ok(
         sent.result === "sent" &&
-          sent.providerId === "em_1" &&
+          sent.providerId === null &&
           refused.result === "failed" &&
           refused.error === "HTTP_422" &&
           down.result === "unknown" &&
@@ -1247,7 +1245,7 @@ const sql = read(F.migration);
           timedOut.error === "TIMEOUT" &&
           network.result === "unknown" &&
           network.error === "NETWORK_ERROR",
-        "I · transport, executed: accepted with the provider's id; refused; 5xx, a busy key, an abort and a network error are all UNKNOWN, never 'failed'",
+        "I · transport, executed: accepted, without reading the body; refused; 5xx, a busy key, an abort and a network error are all UNKNOWN, never 'failed'",
       );
       ok(
         calls.length === 4 &&

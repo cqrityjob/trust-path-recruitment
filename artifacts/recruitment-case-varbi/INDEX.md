@@ -126,17 +126,17 @@ The rules, as the database now holds them and the suite executes them:
   (`stale` otherwise). Group E and U: a random attempt id changes nothing,
   a late "failed" cannot overwrite an acceptance, the old attempt's late
   "sent" cannot touch the new attempt.
-- **Unknown is unknown.** A timeout, a network error, a 5xx and both of the
-  provider's 409s are recorded as `unknown` (never "failed", never "sent");
+- **Unknown is unknown.** A timeout, a network error, a 5xx and the
+  provider's 409 are recorded as `unknown` (never "failed", never "sent");
   the transport is executed in the guard against controlled answers and
-  never a network. The provider (Resend, "Idempotency keys", read
+  never a network, and never reads the provider's body (which can carry the
+  address) -- the status is the whole answer. The provider (Resend, "Idempotency keys", read
   2026-09-25) keeps a key for 24 hours and answers a repeat under the same
   key with the first response instead of sending again, so inside 23 hours
   the recovery resends an unknown outcome by itself under the same key to
   the same, fixed recipient; outside them nothing resends without a person
   reading that the candidate may get it twice, and that resend goes under a
-  new key generation. A key the provider says was used with another
-  payload is left to a person outright.
+  new key generation.
 - **No silent gap.** The trigger has no exception handler: group G plants a
   failing INSERT at the table and proves the submission fails with it and
   no application exists without its receipt; the candidate's retry then

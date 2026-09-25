@@ -32,6 +32,12 @@
 // processed is a 409 `concurrent_idempotent_requests`. The call is bounded
 // (`timeoutMs`, 15 s by default): an abort is UNKNOWN, because the request
 // may have been accepted after we stopped listening.
+//
+// The provider's response BODY is never read: it can carry the recipient
+// address, and what this file returns ends up on a row the employer reads
+// (candidate-notification:check holds that rule). So the status is the
+// whole answer -- both 409s are one "the provider already holds this key"
+// and the provider's message id is not kept.
 
 export type RecruitmentMessageEmailParams = {
   recipientEmail: string;
@@ -55,6 +61,7 @@ export type RecruitmentMessageEmailParams = {
 };
 
 export type RecruitmentEmailResult =
+  /** providerId is always null today: the body that carries it is never read. */
   | { result: "sent"; providerId: string | null }
   | { result: "not_configured" }
   | { result: "failed"; error: string }
@@ -102,24 +109,19 @@ export function resolveMessageLink(siteOrigin: string, link: string | undefined)
   return url.toString();
 }
 
-/** What a provider's answer means. Exported for the guard, which runs it
+/** What a provider's status means. Exported for the guard, which runs it
  *  against controlled responses and never a network. */
 export function classifyProviderResponse(
   status: number,
-  errorName: string | null,
 ): { result: "sent" } | { result: "failed"; error: string } | { result: "unknown"; error: string } {
   if (status >= 200 && status < 300) return { result: "sent" };
   if (status === 409) {
     // Both 409s mean an earlier request under this key exists at the
     // provider: one is still being processed, the other went through with
-    // another payload. Neither is "not sent".
-    return {
-      result: "unknown",
-      error:
-        errorName === "invalid_idempotent_request"
-          ? "IDEMPOTENCY_PAYLOAD_MISMATCH"
-          : "IDEMPOTENCY_CONFLICT",
-    };
+    // another payload. Neither is "not sent"; a repeat under the same key
+    // inside the window is safe either way, and after five the recovery
+    // leaves it to a person.
+    return { result: "unknown", error: "IDEMPOTENCY_CONFLICT" };
   }
   if (status === 408 || status === 425 || status >= 500) {
     return { result: "unknown", error: `HTTP_${status}` };
@@ -173,16 +175,7 @@ export async function sendRecruitmentMessageEmail(
       body: JSON.stringify({ from: fromEmail, to: [params.recipientEmail], subject, html }),
       signal: controller.signal,
     });
-    let providerId: string | null = null;
-    let errorName: string | null = null;
-    try {
-      const json = (await res.json()) as { id?: unknown; name?: unknown } | null;
-      providerId = typeof json?.id === "string" ? json.id : null;
-      errorName = typeof json?.name === "string" ? json.name : null;
-    } catch {
-      // A body that is not JSON says nothing more than the status did.
-    }
-    const classified = classifyProviderResponse(res.status, errorName);
+    const classified = classifyProviderResponse(res.status);
     if (classified.result !== "sent") {
       // The status and our own code only: a provider body can carry the
       // recipient address, and the error is stored on a row the employer reads.
@@ -193,7 +186,7 @@ export async function sendRecruitmentMessageEmail(
       );
       return classified;
     }
-    return { result: "sent", providerId };
+    return { result: "sent", providerId: null };
   } catch (err) {
     const aborted =
       controller.signal.aborted || (err instanceof Error && err.name === "AbortError");
