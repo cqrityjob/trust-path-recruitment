@@ -419,7 +419,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "    UPDATE public.recruitment_messages\n       SET email_status = 'unknown', email_error = 'NO_SETTLE', email_settled_at = now(), updated_at = now()\n     WHERE id = _m.id;\n    _m.email_status := 'unknown';\n    _m.email_error := 'NO_SETTLE';",
     replace: "    _m.email_status := 'not_attempted';",
     guard: G,
-    expect: "becomes UNKNOWN and is never resent on its own",
+    expect: "never resent by a plain claim",
   },
   {
     id: "RW-RECEIPT-PROMISES-A-RESPONSE-TIME",
