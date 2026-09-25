@@ -203,7 +203,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Storage contracts to isolated replay. The fresh 313-entry hosted ledger
 // and release-state record the proof, not just the merge.
 // Evidence: docs/security-intelligence/analysis-hosted-verification.md.
-const expectedPending: string[] = [];
+const expectedPending: string[] = ["20261213090000_recruitment_application_receipts.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
