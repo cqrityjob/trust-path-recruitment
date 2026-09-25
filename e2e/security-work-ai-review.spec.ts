@@ -405,12 +405,21 @@ for (const locale of ["sv", "en"] as const) {
     await page
       .getByLabel(l("Kompletteringsfråga", "Follow-up question"), { exact: true })
       .fill(refinedQuestion);
+    const unsavedAiHint = page.getByText(
+      l(
+        "Spara osparade frågor, bedömningar och åtgärder innan du använder AI-stödet.",
+        "Save unsaved questions, assessments and actions before using AI support.",
+      ),
+      { exact: true },
+    );
+    await expect(unsavedAiHint).toBeVisible();
     await expect(basis).toContainText(question);
     const questionForm = page.locator("form").filter({ has: basis });
     await questionForm
       .getByRole("button", { name: l("Spara svar", "Save answer"), exact: true })
       .click();
     await expect(questionForm).toContainText(l("Sparat", "Saved"));
+    await expect(unsavedAiHint).toHaveCount(0);
     await page.reload();
     await page
       .getByRole("button", { name: `3. ${l("Komplettera", "Follow-ups")}`, exact: true })
