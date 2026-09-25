@@ -2024,6 +2024,26 @@
       "rollback": "supabase/rollback/20261211090000_security_work_analysis_contract_rollback.sql",
       "note": "Schema-only Security Work analysis contract: immutable method/template versions, owner-approved explicit RSA matrix, nullable unknown RSA risk proposals, private documents and signed extraction, workspace-scoped processing approval and single-dispatch jobs, exact reviewed report bundles and explicit revision/export receipts. Applied by the official integration after PR #289; read-only hosted parity verified 2026-09-24 against all 313 replayed migrations. No keys, provider activation or manual hosted mutation performed. See analysis-hosted-verification.md.",
       "verify": "See docs/security-intelligence/analysis-release.md. Verify exact function bodies, grants, RLS, private bucket and migration ledger against isolated replay; never infer application from Git merge alone."
+    },
+    {
+      "file": "20261212090000_recruitment_candidate_view.sql",
+      "hostedState": "applied",
+      "hostedVersion": "20261212090000",
+      "hostedName": "recruitment_candidate_view",
+      "evidenceSource": "Read-only verification 2026-09-24 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #292 merged to main as 31da1d3 and the official Supabase GitHub integration applied it. supabase_migrations.schema_migrations holds version 20261212090000 / name recruitment_candidate_view -- the canonical filename's own version and slug -- as the 314th and highest row. The declared verify statements were run read-only and returned: exactly one definition each of rec_candidate_view(_job_id uuid, _stage text, _owner text, _q text, _answers jsonb, _sort text, _dir text, _page integer, _size integer, _around uuid) and rec_job_counts(_employer_id uuid, _job_id uuid); both SECURITY DEFINER, STABLE, search_path pinned to public, pg_temp, owned by postgres; has_function_privilege anon=false, authenticated=true, service_role=false for both; pg_collation holds sv-SE-x-icu (1). md5(prosrc) of rec_candidate_view is ebd060115e89e782b0c6a95b7cb920fe (6954 characters) and of rec_job_counts 66decaa14ed1b3c6ad95b23104cc56ae (799 characters), byte-identical to a local replay of the merged file on the isolated rec-uat stack. job_applications holds 13 rows and recruitment_interview_bookings 0, the pre-apply counts, so the apply created, changed or deleted no row. No hosted writes or migrations were performed.",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "rec_job_counts(uuid,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "rec_candidate_view(uuid,text,text,text,jsonb,text,text,integer,integer,uuid)"
+        }
+      ],
+      "rollback": "supabase/rollback/20261212090000_recruitment_candidate_view_rollback.sql",
+      "note": "The recruitment candidate list read by the database: rec_job_counts (stage counts of every application of an organisation's vacancies, counted rather than sampled) and rec_candidate_view (ONE page of the filtered, ordered list with rank and filtered total, or the row before/itself/after for previous-next). Replaces the case page's in-memory read that fetched at most 5 000 applications and paged them in the server's memory. Same membership rule as the workspace (rec_is_member), one refusal for a missing and a foreign vacancy, no anon execute, STABLE, no table or row changed. Merged as PR #292 (schema only) and verified applied; the application code that calls these objects is PR #291. Proved by supabase/tests/recruitment_candidate_view_test.sql with 5 200 applications (47 assertions, run before and after a rollback/reapply cycle in scripts/db-test.sh).",
+      "verify": "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_candidate_view','rec_job_counts'); -- expect 2 (one overload each). SELECT has_function_privilege('anon','public.rec_candidate_view(uuid,text,text,text,jsonb,text,text,integer,integer,uuid)','EXECUTE'), has_function_privilege('authenticated','public.rec_candidate_view(uuid,text,text,text,jsonb,text,text,integer,integer,uuid)','EXECUTE'); -- expect f,t. Same for public.rec_job_counts(uuid,uuid). SELECT count(*) FROM pg_collation WHERE collname='sv-SE-x-icu'; -- expect 1. Compare md5(prosrc) of both functions with a local replay of the merged file."
     }
   ], 
   "policyVersion": 2, 

@@ -1094,14 +1094,22 @@ export const resolveParticipantIdentity = createServerFn({ method: "POST" })
  */
 export const listAssignmentApplications = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ employerId: z.string().uuid(), jobId: z.string().uuid().optional() }).parse(d),
+  )
   .handler(async ({ data, context }): Promise<Record<string, string>> => {
     const ctx = context as Ctx;
-    const { data: rows, error } = await ctx.supabase
+    // Scoped to one vacancy through the application row it points at, so a
+    // vacancy's count of open assessments is exactly its own.
+    let query = ctx.supabase
       .from("assessment_assignments")
-      .select("id, application_id")
+      .select(
+        data.jobId ? "id, application_id, job_applications!inner(job_id)" : "id, application_id",
+      )
       .eq("employer_id", data.employerId)
       .not("application_id", "is", null);
+    if (data.jobId) query = query.eq("job_applications.job_id", data.jobId);
+    const { data: rows, error } = await query;
     // A missing mapping costs one navigation affordance, never the page. The
     // list must render for an organisation whose policy refuses this read.
     if (error) return {};

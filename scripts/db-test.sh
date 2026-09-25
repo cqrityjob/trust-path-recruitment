@@ -1501,6 +1501,48 @@ for elf_round in before after; do
 done
 
 # ---------------------------------------------------------------------------
+# 5l-bis-2. The candidate list read by the database (20261212090000)
+#
+# Proved with 5 200 applications on one vacancy -- more than the old
+# in-memory read could see -- as the roles that really call it. Runs with
+# the migration applied, then the migration is stood down ALONE and the two
+# functions must be gone (the rollback drops nothing else), so that 5l-ter's
+# own rollback of the EXPAND half below still finds zero rec_* functions.
+# It is reapplied, and the suite run again, right after 5l-ter.
+# ---------------------------------------------------------------------------
+run_candidate_view_suite() {
+  echo "==> Running recruitment candidate view assertions ($1)"
+  set +e
+  RCV_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_candidate_view_test.sql 2>&1)"
+  RCV_RC=$?
+  set -e
+  echo "$RCV_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+  RCV_PASSED="$(echo "$RCV_OUT" | grep -c "ok  " || true)"
+  if [ "$RCV_RC" -ne 0 ]; then
+    echo "FAIL: the recruitment candidate view suite exited with code ${RCV_RC} ($1)." >&2
+    echo "$RCV_OUT" | grep -iE "ASSERTION FAILED|ERROR:|FEL:" | head -10 >&2
+    exit 1
+  fi
+  if [ "$RCV_PASSED" -lt 47 ]; then
+    echo "FAIL: expected at least 47 recruitment candidate view assertions, only ${RCV_PASSED} ran." >&2
+    exit 1
+  fi
+  echo "    ok  ${RCV_PASSED} recruitment candidate view assertions passed"
+}
+run_candidate_view_suite "before rollback"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261212090000_recruitment_candidate_view_rollback.sql >/dev/null
+rcv_left="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_candidate_view','rec_job_counts')")"
+[ "$rcv_left" = "0" ] || { echo "FAIL: 20261212090000 rollback left $rcv_left candidate view function(s) behind"; exit 1; }
+rcv_rest="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'rec\_%'")"
+[ "$rcv_rest" != "0" ] || { echo "FAIL: 20261212090000 rollback took the workspace's own rec_* functions with it"; exit 1; }
+echo "    ok  candidate view stood down alone; the workspace functions are intact"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_candidate_view_test.sql >/dev/null 2>&1; then
+  echo "FAIL: the candidate view suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the suite refuses to pass without the migration (negative control)"
+
+# ---------------------------------------------------------------------------
 # 5l-ter. The recruitment workspace: EXPAND (20261207090000) and CONTRACT
 # (20261208090000, the job_applications backstops)
 #
@@ -1588,6 +1630,11 @@ for rw_round in before after; do
     echo "    ok  recruitment workspace migrations reapplied (EXPAND, then CONTRACT)"
   fi
 done
+
+# The candidate list read, back on top of the reapplied workspace.
+psql_q -d "$TEST_DB" -f supabase/migrations/20261212090000_recruitment_candidate_view.sql >/dev/null
+echo "    ok  recruitment candidate view migration reapplied"
+run_candidate_view_suite "after reapply"
 
 # ---------------------------------------------------------------------------
 # 5m. Employer Assessment Center — the people model

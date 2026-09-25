@@ -104,7 +104,8 @@ expect(
     `otherwise it opens an unfiltered inbox.`,
 );
 expect(
-  hub.includes("listApplicationsForEmployer") && /jobId\s*\}/.test(hub),
+  (hub.includes("listApplicationsForEmployer") || hub.includes("listRecruitmentCandidatesPage")) &&
+    /data: \{ employerId, jobId/.test(hub),
   `${JOB_HUB}: candidates must be scoped by jobId in the server call, not filtered ` +
     `out of an organisation-wide fetch in the browser.`,
 );

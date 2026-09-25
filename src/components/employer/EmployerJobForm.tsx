@@ -130,6 +130,8 @@ type Props = {
   draftStorageKey?: string;
   /** Set by the page after every successful save. */
   lastSavedAt?: string | null;
+  /** The step to open on, when the case page links straight to one. */
+  initialStep?: StepId;
 };
 
 type TitleKey = "title_sv" | "title_en";
@@ -224,6 +226,7 @@ export function EmployerJobForm({
   structureLocked = false,
   draftStorageKey,
   lastSavedAt = null,
+  initialStep = "job",
 }: Props) {
   const { t, lang } = useT();
   const [values, setValues] = useState<EmployerJobFormValues>(initial);
@@ -297,7 +300,7 @@ export function EmployerJobForm({
     setStructure(next);
     setDirty(true);
   }
-  const [step, setStep] = useState<StepId>("job");
+  const [step, setStep] = useState<StepId>(initialStep);
   const [draftErrors, setDraftErrors] = useState<DraftFieldErrors>({});
   /** Blockers are only shown once the employer has actually tried to
    *  publish. Nobody wants an empty new form shouting about six missing

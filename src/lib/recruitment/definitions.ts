@@ -146,105 +146,42 @@ export type StageFilter = (typeof STAGE_FILTERS)[number];
 export const CANDIDATE_SORTS = ["applied", "name", "stage", "activity"] as const;
 export type CandidateSort = (typeof CANDIDATE_SORTS)[number];
 
+export const PAGE_SIZE = 25;
+
+/** Answers to the vacancy's yes/no questions, as one URL parameter:
+ *  `<questionId>:y,<questionId>:n`. A malformed entry is dropped, never
+ *  guessed at, so a hand-edited URL cannot widen or narrow a filter silently. */
+export type AnswerFilter = { questionId: string; value: boolean };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function parseAnswerFilter(raw: string | undefined): AnswerFilter[] {
+  if (!raw) return [];
+  const out: AnswerFilter[] = [];
+  for (const part of raw.split(",")) {
+    const [id, v] = part.split(":");
+    if (!id || !UUID.test(id) || (v !== "y" && v !== "n")) continue;
+    if (out.some((f) => f.questionId === id)) continue;
+    out.push({ questionId: id, value: v === "y" });
+  }
+  return out;
+}
+
+export function serializeAnswerFilter(filters: readonly AnswerFilter[]): string | undefined {
+  if (filters.length === 0) return undefined;
+  return filters.map((f) => `${f.questionId}:${f.value ? "y" : "n"}`).join(",");
+}
+
 export const candidateViewSchema = z.object({
   q: z.string().trim().max(100).optional().catch(undefined),
   stage: z.enum(STAGE_FILTERS).optional().catch(undefined),
   owner: z.string().max(40).optional().catch(undefined),
+  ans: z.string().max(400).optional().catch(undefined),
   sort: z.enum(CANDIDATE_SORTS).optional().catch(undefined),
   dir: z.enum(["asc", "desc"]).optional().catch(undefined),
+  page: z.coerce.number().int().min(1).max(10000).optional().catch(undefined),
 });
 export type CandidateView = z.infer<typeof candidateViewSchema>;
-
-/** The fields of a candidate row the view reads. */
-export type CandidateViewRow = {
-  applicationId: string;
-  name: string | null;
-  jobTitle: string | null;
-  status: string;
-  appliedAt: string;
-  responsibleUserId: string | null;
-  nextActivityAt: string | null;
-};
-
-const STAGE_ORDER: Record<string, number> = {
-  submitted: 0,
-  reviewing: 1,
-  interview: 2,
-  hired: 3,
-  rejected: 4,
-  withdrawn: 5,
-};
-
-export function matchesStageFilter(filter: StageFilter | undefined, status: string): boolean {
-  switch (filter ?? "open") {
-    case "all":
-      return true;
-    case "open":
-      return isUnresolved(status);
-    case "decided":
-      return !isUnresolved(status);
-    case "new":
-      return status === "submitted";
-    case "review":
-      return status === "reviewing";
-    case "interview":
-      return status === "interview";
-  }
-}
-
-/** Filter and order candidate rows exactly as the list shows them. Stable:
- *  ties break on application id so previous/next never jumps. */
-export function applyCandidateView<T extends CandidateViewRow>(
-  rows: readonly T[],
-  view: CandidateView,
-): T[] {
-  const q = (view.q ?? "").toLocaleLowerCase("sv");
-  const owner = view.owner;
-  const filtered = rows.filter((r) => {
-    if (!matchesStageFilter(view.stage, r.status)) return false;
-    if (owner === "none" && r.responsibleUserId !== null) return false;
-    if (owner && owner !== "none" && r.responsibleUserId !== owner) return false;
-    if (q) {
-      const hay = `${r.name ?? ""} ${r.jobTitle ?? ""}`.toLocaleLowerCase("sv");
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
-  const sort = view.sort ?? "applied";
-  const dir = view.dir ?? (sort === "applied" ? "desc" : "asc");
-  const sign = dir === "asc" ? 1 : -1;
-  const cmp = (a: T, b: T): number => {
-    let c = 0;
-    if (sort === "name") c = (a.name ?? "￿").localeCompare(b.name ?? "￿", "sv");
-    else if (sort === "stage") c = (STAGE_ORDER[a.status] ?? 9) - (STAGE_ORDER[b.status] ?? 9);
-    else if (sort === "activity") {
-      // Candidates with no planned activity sort last whichever way round.
-      const av = a.nextActivityAt ? Date.parse(a.nextActivityAt) : null;
-      const bv = b.nextActivityAt ? Date.parse(b.nextActivityAt) : null;
-      if (av === null && bv === null) c = 0;
-      else if (av === null) return 1;
-      else if (bv === null) return -1;
-      else c = av - bv;
-    } else c = Date.parse(a.appliedAt) - Date.parse(b.appliedAt);
-    if (c !== 0) return c * sign;
-    return a.applicationId < b.applicationId ? -1 : a.applicationId > b.applicationId ? 1 : 0;
-  };
-  return [...filtered].sort(cmp);
-}
-
-export function neighbours<T extends { applicationId: string }>(
-  ordered: readonly T[],
-  applicationId: string,
-): { previous: T | null; next: T | null; position: number; total: number } {
-  const i = ordered.findIndex((r) => r.applicationId === applicationId);
-  if (i < 0) return { previous: null, next: null, position: 0, total: ordered.length };
-  return {
-    previous: i > 0 ? ordered[i - 1] : null,
-    next: i < ordered.length - 1 ? ordered[i + 1] : null,
-    position: i + 1,
-    total: ordered.length,
-  };
-}
 
 /** Only the keys that differ from the defaults, so a link carries a short,
  *  readable query string and an unfiltered list has none. */
@@ -253,9 +190,88 @@ export function compactView(view: CandidateView): CandidateView {
   if (view.q) out.q = view.q;
   if (view.stage && view.stage !== "open") out.stage = view.stage;
   if (view.owner) out.owner = view.owner;
+  if (view.ans) out.ans = view.ans;
   if (view.sort && view.sort !== "applied") out.sort = view.sort;
   if (view.dir) out.dir = view.dir;
+  if (view.page && view.page > 1) out.page = view.page;
   return out;
+}
+
+/** The same view with the page dropped: what a filter or sort change should
+ *  navigate to, since page 4 of the old list is nowhere in the new one. */
+export function firstPage(view: CandidateView): CandidateView {
+  const { page: _page, ...rest } = view;
+  return rest;
+}
+
+// ── The recruitment's five steps ─────────────────────────────────────────
+//
+// One case, five steps, always all visible: 1 the requirements profile,
+// 2 the advert, 3 publishing, 4 applications, 5 decision and close. A step
+// is DONE on a criterion the data satisfies, never because it was visited;
+// and it can be revisited at any time -- the steps navigate, they never
+// lock. "Current" is the step the case is at, so somebody opening the case
+// lands where the work is.
+
+export const RECRUITMENT_STEPS = [
+  "requirements",
+  "advert",
+  "publishing",
+  "applications",
+  "closing",
+] as const;
+export type RecruitmentStep = (typeof RECRUITMENT_STEPS)[number];
+export type StepState = "done" | "current" | "todo";
+
+export type StepInput = {
+  /** Structured requirements and questions saved for the vacancy. */
+  requirementsCount: number;
+  questionsCount: number;
+  /** Free-text requirements on the advert itself. */
+  hasRequirementsText: boolean;
+  /** Title and description present, the advert's own readiness. */
+  advertReady: boolean;
+  phase: RecruitmentPhase;
+  total: number;
+  unresolved: number;
+};
+
+export function stepStatesOf(i: StepInput): Record<RecruitmentStep, StepState> {
+  const requirementsDone = i.requirementsCount > 0 || i.questionsCount > 0 || i.hasRequirementsText;
+  const advertDone = i.advertReady;
+  const publishingDone = i.phase !== "draft";
+  const closed = i.phase === "completed" || i.phase === "cancelled";
+  // Applications are "done" once every candidate has an outcome and the
+  // advert no longer takes new ones -- an empty published advert is still
+  // waiting, and so is a closed one with somebody undecided.
+  const applicationsDone = closed || (i.phase === "closed" && i.total > 0 && i.unresolved === 0);
+  const closingDone = closed;
+
+  let current: RecruitmentStep;
+  if (closed) current = "closing";
+  else if (i.phase === "draft") {
+    current = !requirementsDone ? "requirements" : !advertDone ? "advert" : "publishing";
+  } else if (i.phase === "published") current = "applications";
+  else current = i.unresolved > 0 ? "applications" : "closing";
+
+  const done: Record<RecruitmentStep, boolean> = {
+    requirements: requirementsDone,
+    advert: advertDone,
+    publishing: publishingDone,
+    applications: applicationsDone,
+    closing: closingDone,
+  };
+  const out = {} as Record<RecruitmentStep, StepState>;
+  for (const step of RECRUITMENT_STEPS) {
+    out[step] = step === current ? "current" : done[step] ? "done" : "todo";
+  }
+  return out;
+}
+
+export function currentStepOf(i: StepInput): RecruitmentStep {
+  const states = stepStatesOf(i);
+  return (RECRUITMENT_STEPS.find((s) => states[s] === "current") ??
+    "applications") as RecruitmentStep;
 }
 
 // ── Messages and bookings: states as the interface names them ────────────

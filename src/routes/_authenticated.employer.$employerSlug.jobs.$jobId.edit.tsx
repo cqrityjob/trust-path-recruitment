@@ -27,7 +27,8 @@ import {
   type EmployerJobFormValues,
 } from "@/components/employer/EmployerJobForm";
 import { jobStatusLabel } from "@/lib/job-intelligence/enum-labels";
-import { PUBLICATION_MODEL } from "@/components/employer/job-form/model";
+import { PUBLICATION_MODEL, STEP_IDS, type StepId } from "@/components/employer/job-form/model";
+import { z } from "zod";
 import { JobPublishedPanel } from "@/components/employer/job-form/JobPublishedPanel";
 import { getRecruitment, saveVacancyStructure } from "@/lib/recruitment/recruitment.functions";
 import {
@@ -36,14 +37,23 @@ import {
   type VacancyStructureDraft,
 } from "@/lib/recruitment/vacancy-structure";
 
+const editSearchSchema = z.object({
+  step: z
+    .enum(STEP_IDS as [StepId, ...StepId[]])
+    .optional()
+    .catch(undefined),
+});
+
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/jobs/$jobId/edit")({
   ssr: false,
   component: EmployerJobEditPage,
   errorComponent: EmployerErrorState,
+  validateSearch: (search) => editSearchSchema.parse(search),
 });
 
 function EmployerJobEditPage() {
   const { employerSlug, jobId } = Route.useParams();
+  const { step: initialStep } = Route.useSearch();
   const { t, lang } = useT();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -323,6 +333,7 @@ function EmployerJobEditPage() {
             structureLocked={recruitmentQuery.data?.structureLocked ?? false}
             draftStorageKey={`cqj.job-draft.${jobId}`}
             lastSavedAt={lastSavedAt}
+            initialStep={initialStep}
             readOnly={!editable}
             editableStatus={job.status}
             employerName={workspace.employerName}
