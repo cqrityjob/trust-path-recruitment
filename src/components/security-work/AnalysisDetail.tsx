@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -118,12 +118,14 @@ function QuestionEditor({
   basis,
   position,
   onCreated,
+  onDirtyChange,
 }: {
   assessmentId: string;
   question?: AnalysisQuestion;
   basis?: AiQuestionBasis;
   position: number;
   onCreated?: () => void;
+  onDirtyChange: (id: string, dirty: boolean) => void;
 }) {
   const l = useWorkText();
   const { workspace, canEdit } = useSecurityWorkspace();
@@ -136,6 +138,10 @@ function QuestionEditor({
   const [text, setText] = useState(question?.question ?? "");
   const [answer, setAnswer] = useState(question?.answer ?? "");
   const [kind, setKind] = useState(question?.evidence_kind ?? "user_input");
+  useEffect(() => {
+    onDirtyChange(id, dirty);
+    return () => onDirtyChange(id, false);
+  }, [id, dirty, onDirtyChange]);
   return (
     <form
       className={`${panelClass} space-y-4`}
@@ -252,6 +258,16 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
   const allowDiscard = (hasChanges: boolean) =>
     !hasChanges || window.confirm(l("Kasta osparade ändringar?", "Discard unsaved changes?"));
   const [newQuestion, setNewQuestion] = useState(false);
+  const [dirtyQuestionIds, setDirtyQuestionIds] = useState<Set<string>>(() => new Set());
+  const questionDirtyChanged = useCallback((id: string, changed: boolean) => {
+    setDirtyQuestionIds((previous) => {
+      if (previous.has(id) === changed) return previous;
+      const next = new Set(previous);
+      if (changed) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
   const [revisionRequest] = useState(() => crypto.randomUUID());
   const [reportRequest] = useState(() => crypto.randomUUID());
   const clearWarning = useUnsavedWarning(dirty);
@@ -382,6 +398,32 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
           </WorkButton>
         ))}
       </nav>
+      <p className="text-sm text-muted-foreground" data-testid="sw-step-help">
+        {
+          [
+            l(
+              "Beskriv beslutet och avgränsningen. Fortsätt sedan till 2. Underlag.",
+              "Describe the decision and scope. Then continue to 2. Evidence.",
+            ),
+            l(
+              "Ladda upp, läs och acceptera relevanta utdrag. Fortsätt till 3. Komplettera för AI-stöd eller egna frågor.",
+              "Upload, read and accept relevant extracts. Continue to 3. Follow-ups for AI support or your own questions.",
+            ),
+            l(
+              "Låt AI föreslå frågor och ett första rapportutkast. Granska förslaget, för in det och besvara frågorna. Skriv okänt när svar saknas.",
+              "Let AI suggest questions and a first report draft. Review and apply the proposal, then answer the questions. Write unknown when an answer is missing.",
+            ),
+            l(
+              "Granska fakta, antaganden och åtgärder. Efter nya svar kan du begära ett nytt AI-utkast. Fortsätt till 5. Rapport för att redigera och godkänna.",
+              "Review facts, assumptions and actions. After new answers you can request a new AI draft. Continue to 5. Report to edit and approve.",
+            ),
+            l(
+              "Öppna rapportutkastet, kontrollera källstödet och redigera. Godkänn först när du är klar; därefter kan du exportera.",
+              "Open the report draft, check its sources and edit. Approve only when you are ready; then you can export.",
+            ),
+          ][step]
+        }
+      </p>
       <WorkError
         code={op.error}
         onRetry={
@@ -502,6 +544,19 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
           editable={editable}
         />
       }
+      <div hidden={step !== 2 && step !== 3}>
+        <AiDraft
+          analysisType={detail.analysis.analysis_type}
+          assessmentId={analysisId}
+          version={detail.analysis.version}
+          jobs={detail.jobs}
+          inputs={detail.inputs}
+          questions={detail.questions}
+          sources={detail.sourceItems}
+          editable={editable}
+          dirty={dirty || dirtyQuestionIds.size > 0 || riskDirty || actionDirty}
+        />
+      </div>
       {
         <div hidden={step !== 2} className="space-y-5">
           <h2 className="text-xl font-semibold">
@@ -509,8 +564,8 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
           </h2>
           <p className="text-sm text-muted-foreground">
             {l(
-              "Börja med accepterat underlag och tidigare svar. Lägg bara till frågor om sådant som fortfarande saknas för beslutet och ange varför. Håll egna uppgifter och antaganden åtskilda.",
-              "Start with accepted evidence and previous answers. Add questions only about what is still needed for the decision, and explain why. Keep user-provided information separate from assumptions.",
+              "Besvara frågorna som förts in från AI-förslaget eller lägg till en egen. Ange vad som är bekräftat och vad som är ett antagande.",
+              "Answer questions applied from the AI proposal or add your own. Say what is confirmed and what is an assumption.",
             )}
           </p>
           {detail.questions.map((question) =>
@@ -521,6 +576,7 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
                 basis={detail.questionBasis[question.id]}
                 assessmentId={analysisId}
                 position={question.position}
+                onDirtyChange={questionDirtyChanged}
               />
             ) : (
               <article key={question.id} className={panelClass}>
@@ -540,6 +596,7 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
               assessmentId={analysisId}
               position={detail.questions.length}
               onCreated={() => setNewQuestion(false)}
+              onDirtyChange={questionDirtyChanged}
             />
           )}
           {editable && !newQuestion && detail.questions.length > 0 && (
@@ -551,17 +608,6 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
       }
       {
         <div hidden={step !== 3} className="space-y-5">
-          <AiDraft
-            analysisType={detail.analysis.analysis_type}
-            assessmentId={analysisId}
-            version={detail.analysis.version}
-            jobs={detail.jobs}
-            inputs={detail.inputs}
-            questions={detail.questions}
-            sources={detail.sourceItems}
-            editable={editable}
-            dirty={dirty}
-          />
           <section className={`${panelClass} space-y-5`}>
             <h2 className="text-xl font-semibold">
               {l("Bedömning och motivering", "Assessment and rationale")}

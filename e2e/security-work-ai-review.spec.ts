@@ -242,7 +242,14 @@ for (const locale of ["sv", "en"] as const) {
     const assessmentStep = () =>
       page.getByRole("button", { name: `4. ${l("Bedömning", "Assessment")}`, exact: true }).click();
     await login(page, f.email, path(f.analyses.fresh), locale);
-    await assessmentStep();
+    // AI is available at the point where the user needs follow-up questions,
+    // before they have to author an assessment or report themselves.
+    await page
+      .getByRole("button", { name: `3. ${l("Komplettera", "Follow-ups")}`, exact: true })
+      .click();
+    await expect(page.getByTestId("sw-step-help")).toContainText(
+      l("första rapportutkast", "first report draft"),
+    );
     const db = await caller(page);
     const readEffects = async (analysis: string) => {
       const result = await Promise.all(
@@ -303,13 +310,9 @@ for (const locale of ["sv", "en"] as const) {
     await apply.click();
     const request = await sent;
     await expect(
-      page.getByText(
-        l(
-          "Analysen har ändrats sedan detta AI-utkast skapades.",
-          "The analysis has changed since this AI draft was created.",
-        ),
-        { exact: false },
-      ),
+      page.getByText(l("Förslagen har förts in.", "The proposals have been applied."), {
+        exact: false,
+      }),
     ).toBeVisible();
     const effects = await readEffects(f.analyses.fresh);
     expect(effects.map(({ count }) => count)).toEqual([1, 1, 1, 1, 1]);
@@ -334,6 +337,15 @@ for (const locale of ["sv", "en"] as const) {
       evidence_kind: "user_input",
     });
     const report = effects[3].rows![0];
+    await expect(
+      page.getByRole("link", {
+        name: l(
+          "Öppna rapportutkastet från detta förslag",
+          "Open the report draft from this proposal",
+        ),
+        exact: true,
+      }),
+    ).toHaveAttribute("href", `/security-work/${f.workspace}/reports/${report.id}`);
     expect(report).toMatchObject({
       status: "draft",
       approved_by: null,
@@ -393,12 +405,21 @@ for (const locale of ["sv", "en"] as const) {
     await page
       .getByLabel(l("Kompletteringsfråga", "Follow-up question"), { exact: true })
       .fill(refinedQuestion);
+    const unsavedAiHint = page.getByText(
+      l(
+        "Spara osparade frågor, bedömningar och åtgärder innan du använder AI-stödet.",
+        "Save unsaved questions, assessments and actions before using AI support.",
+      ),
+      { exact: true },
+    );
+    await expect(unsavedAiHint).toBeVisible();
     await expect(basis).toContainText(question);
     const questionForm = page.locator("form").filter({ has: basis });
     await questionForm
       .getByRole("button", { name: l("Spara svar", "Save answer"), exact: true })
       .click();
     await expect(questionForm).toContainText(l("Sparat", "Saved"));
+    await expect(unsavedAiHint).toHaveCount(0);
     await page.reload();
     await page
       .getByRole("button", { name: `3. ${l("Komplettera", "Follow-ups")}`, exact: true })

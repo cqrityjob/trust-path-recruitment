@@ -1,5 +1,6 @@
 // Synthetic in-memory repository and provider only. No credentials or network.
 import assert from "node:assert/strict";
+import { checked } from "../src/lib/security-work/analysis-services";
 import { createHash } from "node:crypto";
 import { requestAiDraft, workAiStatus } from "../src/lib/security-work/processing/ai-jobs.server";
 import { analysisInputFromJob as mapFrozenJob } from "../src/lib/security-work/processing/job-input.server";
@@ -808,6 +809,21 @@ await test("missing, foreign or altered immutable metadata during preflight prev
     assert.equal(posts, 0);
   }
 });
+await test("AI budget refusal stays actionable without exposing arbitrary database errors", async () => {
+  assert.throws(
+    () => checked({ data: null, error: { code: "23514", message: "SW_AI_BUDGET_EXCEEDED" } }),
+    /AI_BUDGET_EXCEEDED/,
+  );
+  assert.throws(
+    () => checked({ data: null, error: { code: "23514", message: "private database detail" } }),
+    /^Error: INVALID_INPUT$/,
+  );
+  assert.throws(
+    () => checked({ data: null, error: { code: "42501", message: "SW_AI_BUDGET_EXCEEDED" } }),
+    /^Error: ACCESS_DENIED$/,
+  );
+});
+
 console.log(
   `Security Work AI jobs: ${checks} synthetic checks passed; no database or provider calls.`,
 );
