@@ -2,6 +2,22 @@
 
 Förberett 25 september 2026. **Inget köp, ingen aktivering och ingen extern överföring är godkänd eller utförd.** Detta är ett samlat beslutsunderlag. Driftoperatören ska fylla de namngivna fälten i en privat driftjournal; hemliga värden hör aldrig hemma i chatten, GitHub, dokumenten eller skärmbilderna.
 
+## Till CTO: granska först, aktivera senare
+
+Ägarens instruktion den 25 september är att avvakta med processorhosting, kostnader, externa AI-anrop och publicering tills CTO:n har granskat GitHub. #293 är mergad och har integrerats i #294. **En merge av #294 är en kodleverans, inte ett drift- eller överföringsgodkännande.** Ingen ytterligare funktionsutbyggnad ingår.
+
+Behåll `SW_PROCESSOR_ENABLED=false` och `SW_AI_ENABLED=false` (även frånvarande flaggor blockerar respektive integration), lämna `SW_AI_QUALITY_LIVE` osatt och QA-planens `authorizeNetwork=false`. Provisionera inga nya leverantörsnycklar, externa processorer eller AI-aktiveringar under granskningen. Inställningarna med `true` längre ned är framtida aktiveringssteg, inte nuvarande konfiguration. Kodens spärrar är kontrollerade; värden i den hostade miljön är inte avlästa eller ändrade i denna integrationsleverans.
+
+Kvarstående steg, i ordning och först efter separat uttryckligt beslut:
+
+1. CTO:n granskar #294:s slutcommit och tillhörande CI, [processorernas driftinstruktioner](processor-deployment.md), [aktiveringskontrollerna](processing-activation.md) och [AI-leverantörsbeslutet](ai-provider-decision.md). Dokumentera tekniska invändningar och vilken revision som godtas.
+2. Ägaren godkänner hosting/databehandling och budgetar samt utser operatör, ersättare och felkanal enligt tabellerna nedan. Återkontrollera priser och faktisk modellåtkomst; tidigare kostnadsförslag är inte beställningar.
+3. Efter separat publiceringsbeslut provisionerar operatören den granskade processorimagen och serverinställningarna via privat hemlighetshantering. Verifiera URL/origin, hälsa, versionsidentitet och återställningsväg enligt driftinstruktionerna. AI förblir avstängt.
+4. Efter separat godkännande av de tolv syntetiska QA-genereringarna skapas en giltig versionsbunden plan och separat QA-nyckel. Kör enligt [kvalitetsguiden](ai-quality.md), redovisa alla utfall och låt Mostafa granska dem med [kvalitetsprotokollet](pilot-quality-review.md).
+5. Efter separat beslut om appprovet konfigureras endast de godkända syntetiska arbetsytorna, appnyckeln, giltigheten och budgetarna. Följ [protokollet för den publicerade appen](published-pilot-acceptance.md), dokumentera exakt publicerad version och återkalla aktiveringarna efter provet. Kunddata och allmän aktivering kräver senare egna beslut.
+
+CI använder en isolerad lokal processor och syntetiska AI-resultat utan externa AI-anrop. Gröna tester styrker inte driftsättning, verklig modellkvalitet eller godkänd databehandling.
+
 ## Konton och ansvar
 
 | Du ordnar eller utser                                                                | Operatören gör efter ditt uttryckliga beslut                                                                                                                                                                                                              |

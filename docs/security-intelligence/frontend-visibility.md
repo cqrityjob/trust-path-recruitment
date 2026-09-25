@@ -33,7 +33,23 @@ component, spacing, typography and row composition. Its data is read only from
 the current Security Work workspace. It does not join career, employer or
 Passport relationships to derive authorization.
 
-## Deployed frontend status
+## Fresh public asset check, 25 September 2026
+
+A read-only HTTPS check now serves `/assets/index-DXfpbkpq.js`, SHA-256
+`9f7866de7d03e43ed529ee8b5791db292ab67709969a281c53cf3375e6ae4212`.
+Unlike the dated observation below, its actual shared navigation contains
+`overview, passport, security-work, cv, jobs, career, assessments` in that order.
+Its route definitions include Security Work analysis list/detail routes.
+
+This establishes that a newer public frontend contains the navigation and
+analysis entry points. It does **not** map the asset to a Git commit or verify an
+authenticated customer's session, server settings, processor endpoint or live AI.
+The post-#291 branch additions still need their own release decision. No sign-in,
+customer-record access, upload or deployment was performed for this observation.
+Use the [customer pilot guide](customer-pilot-guide.md) only after its operator
+prerequisites and data-processing decisions have been met.
+
+## Historical deployed frontend check, 24 September 2026
 
 Canonical public origin recorded in the application:
 `https://trust-path-recruitment.lovable.app`.

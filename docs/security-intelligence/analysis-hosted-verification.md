@@ -10,6 +10,32 @@ The explicitly selected project is **CQrityjob Production**,
 17.6.1.166. No production migration, business write or provider activation was
 performed by this verification.
 
+## Revalidation after recruitment integration, 25 September 2026
+
+Latest `origin/main` was `ac7159ef9cc184d969faaf11397a97fe1722e11f`, including
+#291 merge `9503a2d914e538d063298ecde1fb929ee8a3f3f0` and #292's recruitment
+schema. It was merged without conflicts into the existing Security Work branch;
+the immediate result had exactly the same file tree as that main revision.
+Recruitment implementation and merged migration files remain unchanged.
+
+A fresh read-only check of the same production project reports ACTIVE_HEALTHY in
+`eu-central-1`. The **32-table / 42-function Security Work catalog hash below is
+unchanged**, including RLS, effective API-role grants, private Storage and seeds.
+This reuses the documented, previously replay-verified catalog baseline; it does
+not claim a new local catalog replay. The additional recruitment migration does
+not change Security Work objects. Final branch CI separately replays all migrations.
+
+The fresh complete ledger contains **314** identities, ending with
+`20261212090000 / recruitment_candidate_view`; all identities equal the committed
+snapshot. Its canonical JSON SHA-256 is
+`6b07e07ac4bc134ae21b41469ade68cc7156929fea91938b6b4219824ce81031`.
+`20261211090000 / security_work_analysis_contract` remains present. Runtime target,
+auth-provider target, release parity and frontier checks pass against this state.
+No business rows, secrets or documents were read and no production write occurred.
+
+The contract below and the 313-entry ledger hash document the original 24 September
+verification. They are retained as historical evidence, not the current ledger size.
+
 ## Observed contract
 
 - A complete fresh ledger read contains **313** canonical migration identities,
