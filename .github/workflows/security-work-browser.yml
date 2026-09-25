@@ -1,6 +1,9 @@
 name: Security Work browser evidence
 
 on:
+  # Same reviewed checks on the existing branch; no replacement PR required.
+  push:
+    branches: [codex/security-work-analysis-app]
   pull_request:
     branches: [main]
     paths:

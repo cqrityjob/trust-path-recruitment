@@ -10,6 +10,11 @@ test.use({ actionTimeout: 20_000 });
 const out = process.env.SW_ANALYSIS_EVIDENCE_DIR ?? "/private/tmp/sw-analysis-unpublished";
 const evidence =
   "Synthetic access route is blocked during maintenance. Existing backup arrangements are unknown.";
+// This committed OOXML fixture contains one synthetic paragraph split across text runs.
+// The expected text deliberately exercises UTF-8 and the XML-encoded ampersand.
+const docxEvidence =
+  "Synthetic DOCX evidence: reservväg Öst & Västra remains unverified. A human check is required before use.";
+const docxReviewNote = "Synthetic human review: route availability remains unknown.";
 function pdf(imageOnly = false) {
   const stream = imageOnly
     ? "q 200 0 0 100 40 650 cm /Im1 Do Q"
@@ -85,7 +90,7 @@ async function shot(page: Page, locale: string, stage: string) {
   });
 }
 for (const locale of ["sv", "en"] as const) {
-  test(`[${locale}] RSA document to immutable report and action follow-up`, async ({
+  test(`[${locale}] RSA PDF and DOCX to immutable report and action follow-up`, async ({
     page,
     browser,
   }, testInfo) => {
@@ -189,6 +194,48 @@ for (const locale of ["sv", "en"] as const) {
       })
       .click();
     await expect(page.getByText(l("Accepterad", "Accepted"), { exact: true })).toBeVisible();
+    // Exercise the real browser -> private storage -> processor -> source -> human review path.
+    // No extraction row or successful processing response is planted by this test.
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "synthetic-evidence.docx",
+      mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      buffer: readFileSync(
+        new URL("./support/fixtures/security-work-evidence.docx", import.meta.url),
+      ),
+    });
+    await page
+      .getByRole("button", { name: l("Ladda upp och extrahera", "Upload and extract") })
+      .click();
+    const docxArticle = page.locator("article").filter({
+      has: page.getByRole("heading", { name: "synthetic-evidence.docx", exact: true }),
+    });
+    await expect(docxArticle).toBeVisible({ timeout: 45000 });
+    await expect(
+      page.getByText(l("Texten är extraherad.", "Text extracted."), { exact: false }),
+    ).toBeVisible();
+    await expect(docxArticle.getByText(/section 1 · 1/)).toBeVisible();
+    await docxArticle.getByText(l("Läs källtext", "Read source text"), { exact: true }).click();
+    await expect(docxArticle.getByText(docxEvidence, { exact: true })).toBeVisible();
+    await expect(docxArticle.getByText(l("Accepterad", "Accepted"), { exact: true })).toHaveCount(
+      0,
+    );
+    await docxArticle
+      .getByLabel(l("Granskningsanteckning", "Review note"), { exact: true })
+      .fill(docxReviewNote);
+    await docxArticle
+      .getByRole("button", {
+        name: l("Granskat — använd i analysen", "Reviewed — use in analysis"),
+      })
+      .click();
+    await expect(docxArticle.getByText(l("Accepterad", "Accepted"), { exact: true })).toBeVisible();
+    await page.reload();
+    await page
+      .getByRole("button", { name: `2. ${l("Underlag", "Evidence")}`, exact: true })
+      .click();
+    await expect(docxArticle.getByText(l("Accepterad", "Accepted"), { exact: true })).toBeVisible();
+    await expect(
+      docxArticle.getByLabel(l("Granskningsanteckning", "Review note"), { exact: true }),
+    ).toHaveValue(docxReviewNote);
     await page.locator('input[type="file"]').setInputFiles({
       name: "synthetic-image-only.pdf",
       mimeType: "application/pdf",
@@ -434,8 +481,17 @@ for (const locale of ["sv", "en"] as const) {
     await page.getByRole("menuitem", { name: /^logga ut$|^sign out$/i }).click();
     await login(page, address, new URL(reportUrl).pathname);
     await expect(page.getByTestId("sw-report-content")).toBeVisible();
+    await page.goto(analysisUrl);
+    await page
+      .getByRole("button", { name: `2. ${l("Underlag", "Evidence")}`, exact: true })
+      .click();
+    await expect(docxArticle.getByText(l("Accepterad", "Accepted"), { exact: true })).toBeVisible();
+    await docxArticle.getByText(l("Läs källtext", "Read source text"), { exact: true }).click();
+    await expect(docxArticle.getByText(docxEvidence, { exact: true })).toBeVisible();
+    await expect(docxArticle.getByText(/section 1 · 1/)).toBeVisible();
     await page.goto(`/security-work/${workspace}/sources`);
     await expect(page.getByText("synthetic-evidence.pdf", { exact: true })).toBeVisible();
+    await expect(page.getByText("synthetic-evidence.docx", { exact: true })).toBeVisible();
     await shot(page, locale, "sources");
     await page.goto(`/security-work/${workspace}`);
     await expect(
