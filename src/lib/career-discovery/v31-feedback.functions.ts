@@ -64,6 +64,17 @@ export const FUNNEL_EVENT_NAMES = [
   // adding names here.
   "career_center_test_started",
   "career_filter_used",
+  // India entry journey (20261215090000). Event NAME only -- the India helper
+  // (src/lib/india-entry/analytics.ts) never sends a detail, so no name,
+  // certificate number, document content, HAYAT output, share token or
+  // recipient can travel with one. Mirrored in the table CHECK and in
+  // cd_v31_funnel_event_names().
+  "india_landing_viewed",
+  "india_registration_started",
+  "india_registration_completed",
+  "passport_first_credential_saved",
+  "passport_review_requested",
+  "passport_share_link_created",
 ] as const;
 
 export type FunnelEventName = (typeof FUNNEL_EVENT_NAMES)[number];

@@ -26,7 +26,7 @@ import type { CredentialPresentationState } from "./design/credential-symbols";
 
 /** Countries this product can DRAW. A country outside this set still gets its
  *  written label and the generic marker — never a broken image. */
-export const DRAWN_FLAGS = ["SE", "GB", "AE"] as const;
+export const DRAWN_FLAGS = ["SE", "GB", "AE", "IN"] as const;
 export type FlagCode = (typeof DRAWN_FLAGS)[number];
 
 export type ScopeKind =

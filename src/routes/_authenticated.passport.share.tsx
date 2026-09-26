@@ -1,3 +1,4 @@
+import { trackFunnelOnce } from "@/lib/india-entry/analytics";
 import { SecureShareQr } from "@/components/security-passport/SecureShareQr";
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import {
@@ -392,6 +393,9 @@ function PassportShareRoute() {
         },
       });
       if (result.status === "created") {
+        // Anonymous funnel event, name only: never the token, the selection or
+        // the recipient.
+        trackFunnelOnce("passport_share_link_created");
         setOutcome({ kind: "created", token: result.token, expiresAt: result.expiresAt });
       } else {
         setOutcome({

@@ -332,7 +332,11 @@ export function buildRecipientPresentation(
       definitionScope:
         c.scope_code === "global_professional"
           ? "global"
-          : c.scope_code === "national_regulated"
+          : // A national qualification (20261214090000, India's NSQF
+            // qualifications) belongs to one country exactly as a regulated
+            // credential does; it simply authorises nothing. Both wear their
+            // country, never a globe.
+            c.scope_code === "national_regulated" || c.scope_code === "national_qualification"
             ? "national"
             : "unknown",
       scopeLimited: c.scope_limited === true,

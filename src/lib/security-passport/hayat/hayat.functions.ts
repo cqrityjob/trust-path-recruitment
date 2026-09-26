@@ -82,6 +82,11 @@ export interface HayatAssessment {
 
 /** What the credential page shows after reopening. */
 export interface SavedAssessment {
+  /** The HAYAT check reference: identifies ONE recorded check, shown only in
+   *  the holder's own assessment details. It is not a verification number,
+   *  says nothing about the person, and there is no lookup by it anywhere --
+   *  sp_hayat_current_assessment answers only the claim's own holder. */
+  readonly id: string;
   readonly status: HayatStatus;
   readonly reasons: readonly ReasonCode[];
   readonly bindingLevel: BindingLevel;
@@ -182,6 +187,7 @@ export const getSavedAssessment = createServerFn({ method: "GET" })
     const row = error ? null : ((rows as unknown as Record<string, unknown>[] | null)?.[0] ?? null);
     if (!row) return null;
     return {
+      id: String(row.id),
       status: row.status as HayatStatus,
       reasons: (row.reasons as ReasonCode[]) ?? [],
       bindingLevel: row.binding_level as BindingLevel,

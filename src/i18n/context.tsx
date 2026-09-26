@@ -41,6 +41,19 @@ export type PluralKey = PairedBase<TranslationKey, TranslationKey>;
 const I18nContext = createContext<I18nContextValue | null>(null);
 const STORAGE_KEY = "cqrityjob.lang";
 
+/** The language the visitor has EXPLICITLY chosen on this device, or null.
+ *  Read after hydration only. Lets a page with its own default (the
+ *  English-first India page) tell "never chose" apart from "chose Swedish",
+ *  which the provider's `lang` cannot: both read "sv" there. */
+export function readStoredLang(): Lang | null {
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === "sv" || stored === "en" ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
 export function I18nProvider({
   children,
   /** The locale to start in. Swedish by default -- the SSR default is always
@@ -121,8 +134,27 @@ export function useT() {
  *  does not move. The wrapper carries the `lang` attribute so assistive
  *  technology reads the subtree in the right language even though
  *  `document.documentElement.lang` follows the site preference. */
-export function LanguageScope({ lang, children }: { lang: Lang; children: ReactNode }) {
+export function LanguageScope({
+  lang,
+  children,
+  onLangChange,
+}: {
+  lang: Lang;
+  children: ReactNode;
+  /** Told when something inside the scope (the site's language switcher)
+   *  changes the preference, so a page that pins its OWN default language --
+   *  the English-first India page -- can follow an explicit choice. */
+  onLangChange?: (lang: Lang) => void;
+}) {
   const parent = useT();
+  const parentSetLang = parent.setLang;
+  const setLang = useCallback(
+    (next: Lang) => {
+      parentSetLang(next);
+      onLangChange?.(next);
+    },
+    [parentSetLang, onLangChange],
+  );
   const t = useCallback(
     (key: TranslationKey) => dictionaries[lang][key] ?? dictionaries.sv[key] ?? key,
     [lang],
@@ -132,10 +164,7 @@ export function LanguageScope({ lang, children }: { lang: Lang; children: ReactN
       t(`${key}.${count === 1 ? "one" : "other"}` as TranslationKey),
     [t],
   );
-  const value = useMemo(
-    () => ({ lang, setLang: parent.setLang, t, tp }),
-    [lang, parent.setLang, t, tp],
-  );
+  const value = useMemo(() => ({ lang, setLang, t, tp }), [lang, setLang, t, tp]);
   return (
     <I18nContext.Provider value={value}>
       <div lang={lang} className="contents">

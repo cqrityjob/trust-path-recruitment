@@ -842,7 +842,9 @@ async function main() {
     },
   );
 
-  /* ── COMPLETENESS over real GoTrue + PostgREST: all 66 definitions ────── */
+  /* ── COMPLETENESS over real GoTrue + PostgREST: all 70 definitions ────── */
+  // (66 until 20261214090000 added India's four national qualifications,
+  // which every holder reaches with no membership: the Swedish holder saves them.)
   // Fresh holders, so nothing saved above interferes. Every GB, GB-NI and Dubai
   // definition is approved LOCALLY for this run (restored at exit); the market
   // packs stay internal_pilot and Abu Dhabi stays closed.
@@ -879,11 +881,11 @@ async function main() {
   ).split(",");
   const savedCodes = [];
   await check(
-    "Completeness · every in-scope definition saves through the real RPC and reloads (66)",
+    "Completeness · every in-scope definition saves through the real RPC and reloads (70)",
     async () => {
-      ok(expectedCodes.length === 66, "expected set is " + expectedCodes.length);
+      ok(expectedCodes.length === 70, "expected set is " + expectedCodes.length);
       const plans = [
-        [seAll, (d) => d.country === null || d.country === "SE"],
+        [seAll, (d) => d.country === null || d.country === "SE" || d.country === "IN"],
         [gbAll, (d) => d.country === "GB" && d.region === null],
         [niAll, (d) => d.region === "GB-NI"],
         [duAll, (d) => d.region === "AE-DU"],
@@ -933,7 +935,7 @@ async function main() {
         savedCodes.join(",") === expectedCodes.join(","),
         "saved " +
           savedCodes.length +
-          " of 66; missing: " +
+          " of 70; missing: " +
           expectedCodes.filter((c) => !savedCodes.includes(c)).join(" "),
       );
     },

@@ -72,6 +72,8 @@ export function formatJurisdiction(code: string | null, lang: PassportLang): str
       return passportT("jurisdiction.AE-AZ", lang);
     case "GB-NI":
       return passportT("jurisdiction.GB-NI", lang);
+    case "IN":
+      return passportT("jurisdiction.IN", lang);
     default:
       return code;
   }
@@ -273,6 +275,10 @@ const WORK_COUNTRY_SUPPORT_KEY: Readonly<Record<string, PassportCopyKey>> = {
   // which is the UAE-wide reading the market packs exist to refuse.
   "AE-AZ": "workCountry.support.AE-AZ",
   "GB-NI": "workCountry.support.GB-NI",
+  // India has no market pack. Its four national qualifications are recorded
+  // without one because they authorise no work (scope national_qualification,
+  // 20261214090000), and the sentence says exactly that.
+  IN: "workCountry.support.IN",
 };
 
 export function workCountrySupportKey(

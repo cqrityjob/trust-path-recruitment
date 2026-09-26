@@ -1,3 +1,4 @@
+import { trackFunnelOnce } from "@/lib/india-entry/analytics";
 import { CredentialDefinitionContext } from "@/components/security-passport/CredentialDefinitionContext";
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
@@ -651,7 +652,11 @@ function PassportEntryRoute() {
       ) : null}
 
       {claim && isPassportCredential(claim) && (
-        <CredentialDefinitionContext code={claim.credentialCode} metadata={international} />
+        <CredentialDefinitionContext
+          code={claim.credentialCode}
+          claimId={claim.id}
+          metadata={international}
+        />
       )}
 
       {claim && isPassportCredential(claim) && (
@@ -702,6 +707,8 @@ function PassportEntryRoute() {
               employerId,
             },
           });
+          // Anonymous funnel event, name only; never the credential or request.
+          if (requestKind === "cqrityjob_review") trackFunnelOnce("passport_review_requested");
           await refresh();
         }}
         onWithdrawRequest={async (requestId) => {
@@ -838,6 +845,10 @@ function PassportEntryRoute() {
                     // issuer, or a scoped credential could never be corrected.
                     authorisation_scope: claim.authorisationScope ?? "",
                     issuer_name: claim.issuerName ?? "",
+                    // The stated version survives a correction unless changed.
+                    definition_version:
+                      international?.statedVersions?.find((v) => v.claim_id === claim.id)
+                        ?.definition_version ?? "",
                   }}
                 />
               ) : (

@@ -70,7 +70,43 @@ const REASONS: Record<DiagnosticReason, { sv: string; en: string }> = {
     sv: "Källgranskning saknas: inget yrkesområde och ingen registrerad källa.",
     en: "No source review: no professional area and no recorded source.",
   },
+  national_qualification_no_market: {
+    sv: "Nationell yrkeskvalifikation: erbjuds utan marknadspaket eftersom den inte ger någon behörighet. Juridisk granskning av ett marknadspaket krävs inte och har inte gjorts.",
+    en: "National qualification: offered without a market pack because it authorises nothing. No market-pack legal review is required, and none has been made.",
+  },
 };
+
+function AutomaticVerificationText({
+  value,
+  l,
+}: {
+  value: AdminCatalogueRow["automaticVerification"];
+  l: "sv" | "en";
+}) {
+  const copy = (sv: string, en: string) => (l === "sv" ? sv : en);
+  if (!value || value.kind === "none")
+    return (
+      <span data-automatic-verification="none">
+        {copy(
+          "Ingen — en behörig granskare bedömer underlaget",
+          "None — an authorised reviewer assesses the evidence",
+        )}
+      </span>
+    );
+  if (value.kind === "signed_credential")
+    return (
+      <span data-automatic-verification="signed_credential">
+        {copy("Signerat intyg", "Signed credential")}: {value.issuers.join(", ")}
+      </span>
+    );
+  if (value.kind === "link_source")
+    return <span data-automatic-verification="link_source">{value.source}</span>;
+  return (
+    <span data-automatic-verification="source_disabled">
+      {value.source} — {copy("avstängd", "disabled")}: {value.blockedBy}
+    </span>
+  );
+}
 
 function PassportCatalogueRoute() {
   const { lang } = useT();
@@ -92,7 +128,11 @@ function PassportCatalogueRoute() {
     };
   }, [load]);
 
-  const marketOf = (r: AdminCatalogueRow) => r.marketPackCode ?? "INTL";
+  // A national qualification has no market pack: it is grouped by its own
+  // country, never under "International".
+  const marketOf = (r: AdminCatalogueRow) =>
+    r.marketPackCode ??
+    (r.scopeCode === "global_professional" ? "INTL" : (r.jurisdictionCode ?? "INTL"));
   const markets = useMemo(() => [...new Set((rows ?? []).map(marketOf))].sort(), [rows]);
   const shown = (rows ?? []).filter(
     (r) =>
@@ -187,6 +227,9 @@ function PassportCatalogueRoute() {
                       <th className="p-3">
                         {copy("Tillgänglighet och orsak", "Availability and reason")}
                       </th>
+                      <th className="p-3">
+                        {copy("Automatisk verifiering", "Automatic verification")}
+                      </th>
                       <th className="p-3">{copy("Källa", "Source")}</th>
                     </tr>
                   </thead>
@@ -207,10 +250,57 @@ function PassportCatalogueRoute() {
                             {r.holderMustState.includes("issuer_name") &&
                               ` · ${copy("innehavaren anger utfärdare enligt intyget", "holder states the issuer on the certificate")}`}
                           </p>
+                          {(r.versions?.length ?? 0) > 0 && (
+                            <ul className="mt-1 space-y-0.5 text-xs" data-catalogue-versions>
+                              {r.versions?.map((v) => (
+                                <li key={v.key}>
+                                  <span className="font-mono">{v.key}</span> ·{" "}
+                                  {[
+                                    v.qualificationCode,
+                                    v.registerCode,
+                                    v.frameworkLevel != null ? `NSQF ${v.frameworkLevel}` : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ")}{" "}
+                                  ·{" "}
+                                  {v.status === "current"
+                                    ? copy("aktuell", "current")
+                                    : copy(
+                                        "ersatt (inte utgånget)",
+                                        "superseded (not expired)",
+                                      )}{" "}
+                                  ·{" "}
+                                  <a
+                                    className="text-accent underline"
+                                    href={v.sourceUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                  >
+                                    {new URL(v.sourceUrl).hostname}
+                                  </a>
+                                </li>
+                              ))}
+                              <li className="text-muted-foreground">
+                                {copy("Examinerande organ", "Awarding body")}:{" "}
+                                {[...new Set(r.versions?.map((v) => v.awardingBody))].join(", ")}
+                              </li>
+                            </ul>
+                          )}
                         </td>
                         <td className="p-3 text-xs">
                           {marketOf(r)}
                           {r.subJurisdictionCode ? ` / ${r.subJurisdictionCode}` : ""}
+                          <br />
+                          <span className="text-muted-foreground" data-catalogue-territory>
+                            {r.scopeCode === "global_professional"
+                              ? copy("inget land", "no country")
+                              : r.scopeCode === "national_qualification"
+                                ? copy(
+                                    `${r.jurisdictionCode}, hela landet · ingen region · inget marknadspaket`,
+                                    `${r.jurisdictionCode}, whole country · no region · no market pack`,
+                                  )
+                                : `${r.jurisdictionCode ?? "-"}${r.subJurisdictionCode ? ` · ${copy("region krävs", "region required")}` : ""}`}
+                          </span>
                           <br />
                           <span className="text-muted-foreground">
                             {r.legalReviewState ?? "-"} · {r.pilotState ?? "-"}
@@ -246,6 +336,9 @@ function PassportCatalogueRoute() {
                               <li key={reason}>{REASONS[reason][l]}</li>
                             ))}
                           </ul>
+                        </td>
+                        <td className="p-3 text-xs">
+                          <AutomaticVerificationText value={r.automaticVerification} l={l} />
                         </td>
                         <td className="p-3 text-xs">
                           {r.review ? (

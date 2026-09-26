@@ -26,9 +26,31 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { Database } from "@/integrations/supabase/types";
 import {
   diagnoseDefinition,
+  type AutomaticVerification,
   type DefinitionDiagnosis,
   type DiagnosticDefinition,
+  type DiagnosticVersion,
 } from "@/lib/security-passport/catalogue-diagnostics";
+import { PRODUCTION_ISSUER_POLICIES } from "@/lib/security-passport/hayat/verification/issuer-registry";
+import { PRODUCTION_SOURCES } from "@/lib/security-passport/hayat/verification/source-registry";
+
+/** What HAYAT can check automatically, from the PRODUCTION registries in code.
+ *  Adding an issuer or enabling a source is a reviewed code change; nothing an
+ *  administrator can edit in the database changes this answer. */
+function automaticVerificationFor(code: string): AutomaticVerification {
+  const issuers = PRODUCTION_ISSUER_POLICIES.filter((p) => code in p.achievements).map(
+    (p) => p.name,
+  );
+  if (issuers.length > 0) return { kind: "signed_credential", issuers };
+  for (const source of PRODUCTION_SOURCES) {
+    const covers = Object.values(source.issuers).some((i) => code in i.templates);
+    if (!covers) continue;
+    return source.enabled
+      ? { kind: "link_source", source: source.name }
+      : { kind: "source_disabled", source: source.name, blockedBy: source.blockedBy ?? "" };
+  }
+  return { kind: "none" };
+}
 
 type Ctx = { supabase: SupabaseClient<Database>; userId: string };
 
@@ -56,28 +78,44 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
     // only (20261123090000), so they are read through the administrator's OWN
     // session — which is also the narrower of the two routes.
     const own = ctx.supabase as unknown as SupabaseClient;
-    const [types, packs, authorities, definitions, issuers, roles, reviews, metadata, js, subs] =
-      await Promise.all([
-        db
-          .from("sp_credential_types")
-          .select(
-            "code,name_sv,name_en,claim_type,category,scope_code,market_pack_code,jurisdiction_code,sub_jurisdiction_code,is_active,pilot_state,legal_review_state,requires_scope,authority_id,sort_order",
-          )
-          .order("sort_order", { ascending: true }),
-        db.from("sp_market_packs").select("code,is_active,pilot_state,superseded_on"),
-        db.from("sp_authorities").select("id,name_local,is_active"),
-        db.from("sp_certification_definitions").select("credential_code,issuer_id,retired_on"),
-        db.from("sp_certification_issuers").select("id,display_name,is_active"),
-        own
-          .from("sp_credential_organisation_roles")
-          .select("credential_code,role,authority_id,certification_issuer_id,document_specific"),
-        own
-          .from("sp_credential_definition_reviews")
-          .select("credential_code,source_url,checked_on"),
-        db.from("sp_credential_definition_metadata").select("credential_code,deprecated_at"),
-        db.from("sp_jurisdictions").select("code,is_active"),
-        db.from("sp_sub_jurisdictions").select("code,is_active"),
-      ]);
+    const [
+      types,
+      packs,
+      authorities,
+      definitions,
+      issuers,
+      roles,
+      reviews,
+      metadata,
+      js,
+      subs,
+      versions,
+    ] = await Promise.all([
+      db
+        .from("sp_credential_types")
+        .select(
+          "code,name_sv,name_en,claim_type,category,scope_code,market_pack_code,jurisdiction_code,sub_jurisdiction_code,is_active,pilot_state,legal_review_state,requires_scope,authority_id,sort_order",
+        )
+        .order("sort_order", { ascending: true }),
+      db.from("sp_market_packs").select("code,is_active,pilot_state,superseded_on"),
+      db.from("sp_authorities").select("id,name_local,is_active"),
+      db.from("sp_certification_definitions").select("credential_code,issuer_id,retired_on"),
+      db.from("sp_certification_issuers").select("id,display_name,is_active"),
+      own
+        .from("sp_credential_organisation_roles")
+        .select("credential_code,role,authority_id,certification_issuer_id,document_specific"),
+      own.from("sp_credential_definition_reviews").select("credential_code,source_url,checked_on"),
+      db.from("sp_credential_definition_metadata").select("credential_code,deprecated_at"),
+      db.from("sp_jurisdictions").select("code,is_active"),
+      db.from("sp_sub_jurisdictions").select("code,is_active"),
+      // Governed versions (20261214090000). Tolerated absence: no versions.
+      db
+        .from("sp_credential_definition_versions" as never)
+        .select(
+          "credential_code,version_key,official_title,qualification_code,qualification_version,register_code,framework_level,awarding_body,catalogue_status,sort_order,source_url,checked_on",
+        )
+        .order("sort_order" as never, { ascending: true }),
+    ]);
     for (const r of [types, packs, authorities, definitions, issuers, roles, reviews, js, subs])
       if (r.error) throw new Error(`CATALOGUE_DIAGNOSTICS_LOAD_FAILED: ${r.error.message}`);
 
@@ -110,6 +148,23 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
     const activeJurisdiction = new Set(
       ((js.data ?? []) as Row[]).filter((j) => j.is_active).map((j) => j.code as string),
     );
+    const versionsOf = new Map<string, DiagnosticVersion[]>();
+    for (const v of (versions.error ? [] : ((versions.data ?? []) as Row[])) as Row[]) {
+      const list = versionsOf.get(v.credential_code as string) ?? [];
+      list.push({
+        key: v.version_key as string,
+        title: v.official_title as string,
+        qualificationCode: (v.qualification_code as string | null) ?? null,
+        qualificationVersion: (v.qualification_version as string | null) ?? null,
+        registerCode: (v.register_code as string | null) ?? null,
+        frameworkLevel: v.framework_level == null ? null : Number(v.framework_level),
+        awardingBody: v.awarding_body as string,
+        status: v.catalogue_status as "current" | "superseded",
+        sourceUrl: v.source_url as string,
+        checkedOn: v.checked_on as string,
+      });
+      versionsOf.set(v.credential_code as string, list);
+    }
     const activeSub = new Set(
       ((subs.data ?? []) as Row[]).filter((j) => j.is_active).map((j) => j.code as string),
     );
@@ -154,6 +209,8 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
         review: review
           ? { sourceUrl: review.source_url as string, checkedOn: review.checked_on as string }
           : null,
+        versions: versionsOf.get(code) ?? [],
+        automaticVerification: automaticVerificationFor(code),
       };
       return { ...definition, ...diagnoseDefinition(definition) };
     });

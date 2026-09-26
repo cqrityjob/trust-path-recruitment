@@ -2962,6 +2962,51 @@ export type Database = {
         }
         Relationships: []
       }
+      candidate_current_location: {
+        Row: {
+          confirmed_at: string
+          country_code: string
+          locality: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          confirmed_at?: string
+          country_code: string
+          locality?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          confirmed_at?: string
+          country_code?: string
+          locality?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      candidate_job_preferences: {
+        Row: {
+          desired_destinations: string[]
+          relocation_interest: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          desired_destinations?: string[]
+          relocation_interest?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          desired_destinations?: string[]
+          relocation_interest?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       career_milestones: {
         Row: {
           created_at: string
@@ -15773,11 +15818,75 @@ export type Database = {
           },
         ]
       }
+      sp_credential_definition_versions: {
+        Row: {
+          awarding_body: string
+          catalogue_status: string
+          checked_on: string
+          credential_code: string
+          framework_level: number | null
+          note_en: string | null
+          official_title: string
+          qualification_code: string | null
+          qualification_version: string | null
+          register_code: string | null
+          sort_order: number
+          source_url: string
+          version_key: string
+        }
+        Insert: {
+          awarding_body: string
+          catalogue_status: string
+          checked_on: string
+          credential_code: string
+          framework_level?: number | null
+          note_en?: string | null
+          official_title: string
+          qualification_code?: string | null
+          qualification_version?: string | null
+          register_code?: string | null
+          sort_order?: number
+          source_url: string
+          version_key: string
+        }
+        Update: {
+          awarding_body?: string
+          catalogue_status?: string
+          checked_on?: string
+          credential_code?: string
+          framework_level?: number | null
+          note_en?: string | null
+          official_title?: string
+          qualification_code?: string | null
+          qualification_version?: string | null
+          register_code?: string | null
+          sort_order?: number
+          source_url?: string
+          version_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_credential_definition_versions_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_approved_credential_catalogue"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_credential_definition_versions_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       sp_credential_details: {
         Row: {
           claim_id: string
           created_at: string
           credential_class: string
+          definition_version: string | null
           issuing_country_code: string | null
           issuing_jurisdiction_code: string | null
           no_expiry: boolean | null
@@ -15790,6 +15899,7 @@ export type Database = {
           claim_id: string
           created_at?: string
           credential_class: string
+          definition_version?: string | null
           issuing_country_code?: string | null
           issuing_jurisdiction_code?: string | null
           no_expiry?: boolean | null
@@ -15802,6 +15912,7 @@ export type Database = {
           claim_id?: string
           created_at?: string
           credential_class?: string
+          definition_version?: string | null
           issuing_country_code?: string | null
           issuing_jurisdiction_code?: string | null
           no_expiry?: boolean | null
@@ -21064,6 +21175,10 @@ export type Database = {
         Returns: Json
       }
       beskt_wording_is_neutral: { Args: { _wording: string }; Returns: boolean }
+      candidate_destinations_distinct: {
+        Args: { _d: string[] }
+        Returns: boolean
+      }
       cd_assert_session_writable: {
         Args: { _caller: string; _session_id: string }
         Returns: undefined

@@ -121,6 +121,28 @@ export function HayatSavedAssessment({
             {" · "}
             {saved.ruleVersion}
           </p>
+          {/* The check's own details: which check, how it was made, and what a
+              reference is NOT. Holder-only, like the whole card. */}
+          <details className="mt-2 text-xs text-muted-foreground" data-hayat-saved-details>
+            <summary className="inline-flex min-h-11 cursor-pointer items-center font-medium text-foreground">
+              {pt("hayat.saved.details")}
+            </summary>
+            <dl className="mt-1 grid gap-1">
+              <div>
+                <dt className="inline">{pt("hayat.saved.reference")}: </dt>
+                <dd className="inline break-all font-mono" data-hayat-check-reference>
+                  {saved.id}
+                </dd>
+              </div>
+              <div>
+                <dt className="inline">{pt("hayat.saved.method")}: </dt>
+                <dd className="inline">
+                  {pt(`hayat.saved.method.${saved.sourceKind}` as PassportCopyKey)}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-1">{pt("hayat.saved.referenceNote")}</p>
+          </details>
           {outage && (
             <p role="status" className="mt-2 text-foreground" data-hayat-saved-outage>
               {pt("hayat.verify.unavailableCall")}

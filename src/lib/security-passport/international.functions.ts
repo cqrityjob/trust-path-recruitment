@@ -28,7 +28,31 @@ export interface CredentialDefinitionReview {
   validity_sv: string;
   validity_en: string;
 }
+/** A governed VERSION of a definition (20261214090000): a revision of the
+ *  qualification standard, never a holder's expiry. `catalogue_status`
+ *  'superseded' means a newer version of the STANDARD exists — a certificate
+ *  awarded against an earlier version is not thereby invalid. */
+export interface CredentialDefinitionVersion {
+  credential_code: string;
+  version_key: string;
+  official_title: string;
+  qualification_code: string | null;
+  qualification_version: string | null;
+  register_code: string | null;
+  framework_level: number | null;
+  awarding_body: string;
+  catalogue_status: "current" | "superseded";
+  sort_order: number;
+  source_url: string;
+  checked_on: string;
+  note_en: string | null;
+}
 export interface InternationalPassportMetadata {
+  /** Governed versions, where a definition has them (the Indian NSQF
+   *  qualifications). Read tolerantly: absent means "no versions offered". */
+  definitionVersions?: readonly CredentialDefinitionVersion[];
+  /** The version each of the holder's own claims states, by claim id. */
+  statedVersions?: readonly { claim_id: string; definition_version: string | null }[];
   definitionScopes?: readonly {
     code: string;
     scope_code: string | null;
@@ -72,6 +96,8 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       scopes,
       abbreviations,
       issuerAliases,
+      versions,
+      statedVersions,
     ] = await Promise.all([
       db
         .from("sp_approved_credential_catalogue" as never)
@@ -105,6 +131,16 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       // search, never a missing catalogue.
       db.from("sp_certification_definitions").select("credential_code,abbreviation"),
       db.from("sp_certification_issuer_aliases" as never).select("issuer_id,alias"),
+      // Versions and the holder's stated version: catalogue facts and the
+      // holder's own rows (RLS). Tolerant, like the search aids: without them the
+      // form simply offers no version question.
+      db
+        .from("sp_credential_definition_versions" as never)
+        .select(
+          "credential_code,version_key,official_title,qualification_code,qualification_version,register_code,framework_level,awarding_body,catalogue_status,sort_order,source_url,checked_on,note_en",
+        )
+        .order("sort_order", { ascending: true }),
+      db.from("sp_credential_details" as never).select("claim_id,definition_version"),
     ]);
     // Tolerant on purpose: a missing profile row must not break the catalogue,
     // it only means the name on a document is shown and not compared.
@@ -139,6 +175,13 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
       issuerAliases: (issuerAliases.error ? [] : (issuerAliases.data ?? [])) as unknown as {
         issuer_id: string;
         alias: string;
+      }[],
+      definitionVersions: (versions.error
+        ? []
+        : (versions.data ?? [])) as unknown as CredentialDefinitionVersion[],
+      statedVersions: (statedVersions.error ? [] : (statedVersions.data ?? [])) as unknown as {
+        claim_id: string;
+        definition_version: string | null;
       }[],
       organisationRoles: roles.data as unknown as CredentialOrganisationRole[],
       definitionReviews: definitionReviews.data as unknown as CredentialDefinitionReview[],
@@ -189,6 +232,13 @@ const internationalInput = z
     authorisation_scope: z.string().max(200).optional(),
     /** REQUIRED where the issuer is stated on the document, refused where governed. */
     issuer_name: z.string().max(160).optional(),
+    /** The governed version the certificate names. Optional, never inferred;
+     *  the database refuses a version that is not this definition's. */
+    definition_version: z
+      .string()
+      .max(40)
+      .regex(/^([a-z0-9][a-z0-9._-]{0,39})?$/)
+      .optional(),
   })
   .strict();
 export type InternationalCredentialInput = z.infer<typeof internationalInput>;
@@ -199,10 +249,12 @@ export const saveInternationalCredential = createServerFn({ method: "POST" })
     // The two optional keys are sent ONLY when they carry a value. A database
     // that has not yet received 20261126090000 refuses unknown keys, and it also
     // never lists a definition that needs one — so an empty key must not travel.
-    const { authorisation_scope, issuer_name, ...core } = data;
+    const { authorisation_scope, issuer_name, definition_version, ...core } = data;
     const input: Record<string, unknown> = { ...core };
     if (authorisation_scope?.trim()) input.authorisation_scope = authorisation_scope.trim();
     if (issuer_name?.trim()) input.issuer_name = issuer_name.trim();
+    // Same rule for the version (20261214090000): only a stated version travels.
+    if (definition_version?.trim()) input.definition_version = definition_version.trim();
     const result = (await context.supabase.rpc(
       "sp_save_international_credential" as never,
       { _input: input } as never,
@@ -214,6 +266,9 @@ export const saveInternationalCredential = createServerFn({ method: "POST" })
         throw new Error("SP_CREDENTIAL_REQUIRES_SCOPE");
       if (message.includes("SP_CREDENTIAL_REQUIRES_ISSUER"))
         throw new Error("SP_CREDENTIAL_REQUIRES_ISSUER");
+      if (message.includes("SP_ISSUER_IS_A_REGULATOR")) throw new Error("SP_ISSUER_IS_A_REGULATOR");
+      if (message.includes("SP_DEFINITION_VERSION_UNKNOWN"))
+        throw new Error("SP_DEFINITION_VERSION_UNKNOWN");
       throw new Error("Credential could not be saved");
     }
     return { id: result.data };
@@ -235,6 +290,76 @@ export interface ApprovedCredentialDefinition {
   requires_valid_until: boolean;
   allows_no_expiry: boolean;
 }
+
+/** The governed facts about ONE definition, for a reviewer: its versions, its
+ *  regulator and whether its issuer is stated on the certificate, and the
+ *  source it was reviewed against. Catalogue data only -- readable by any
+ *  signed-in user under the tables' own RLS; nothing personal is read here. */
+export interface DefinitionFacts {
+  readonly versions: readonly CredentialDefinitionVersion[];
+  readonly regulator: string | null;
+  readonly issuerStatedOnDocument: boolean;
+  readonly scopeCode: string | null;
+  readonly source: { readonly url: string; readonly checkedOn: string } | null;
+}
+export const getDefinitionFacts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) =>
+    z
+      .object({
+        code: z
+          .string()
+          .min(1)
+          .max(64)
+          .regex(/^[A-Z0-9_]+$/),
+      })
+      .strict()
+      .parse(data),
+  )
+  .handler(async ({ context, data }): Promise<DefinitionFacts> => {
+    const db = context.supabase;
+    const [versions, roles, review, type] = await Promise.all([
+      db
+        .from("sp_credential_definition_versions" as never)
+        .select(
+          "credential_code,version_key,official_title,qualification_code,qualification_version,register_code,framework_level,awarding_body,catalogue_status,sort_order,source_url,checked_on,note_en",
+        )
+        .eq("credential_code" as never, data.code as never)
+        .order("sort_order" as never, { ascending: true }),
+      db
+        .from("sp_credential_organisation_roles" as never)
+        .select("role,authority_id,document_specific")
+        .eq("credential_code" as never, data.code as never),
+      db
+        .from("sp_credential_definition_reviews" as never)
+        .select("source_url,checked_on")
+        .eq("credential_code" as never, data.code as never)
+        .maybeSingle(),
+      db.from("sp_credential_types").select("scope_code").eq("code", data.code).maybeSingle(),
+    ]);
+    const roleRows = (roles.error ? [] : (roles.data ?? [])) as unknown as {
+      role: string;
+      authority_id: string | null;
+      document_specific: boolean;
+    }[];
+    const regulatorId = roleRows.find((r) => r.role === "regulator")?.authority_id ?? null;
+    const regulator = regulatorId
+      ? await db.from("sp_authorities").select("name_local").eq("id", regulatorId).maybeSingle()
+      : null;
+    const reviewRow = (review.error ? null : review.data) as unknown as {
+      source_url: string;
+      checked_on: string;
+    } | null;
+    return {
+      versions: (versions.error
+        ? []
+        : (versions.data ?? [])) as unknown as CredentialDefinitionVersion[],
+      regulator: regulator?.data?.name_local ?? null,
+      issuerStatedOnDocument: roleRows.some((r) => r.role === "issuer" && r.document_specific),
+      scopeCode: type.error ? null : (type.data?.scope_code ?? null),
+      source: reviewRow ? { url: reviewRow.source_url, checkedOn: reviewRow.checked_on } : null,
+    };
+  });
 
 /** Resume an owned governed draft without accepting its old free-text metadata. */
 export const readApprovedCredentialDraft = createServerFn({ method: "GET" })

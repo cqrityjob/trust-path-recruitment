@@ -28,6 +28,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
+import { Route as SecurityPassportIndiaRouteImport } from './routes/security-passport.india'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
@@ -68,6 +69,7 @@ import { Route as ApiRecruitmentReceiptsSweepRouteImport } from './routes/api.re
 import { Route as AuthenticatedSecurityWorkWorkspaceIdRouteImport } from './routes/_authenticated.security-work.$workspaceId'
 import { Route as AuthenticatedSecurityCareerAssessmentSessionRouteImport } from './routes/_authenticated.security-career-assessment.session'
 import { Route as AuthenticatedSecurityCareerAssessmentHistoryRouteImport } from './routes/_authenticated.security-career-assessment.history'
+import { Route as AuthenticatedPassportStartRouteImport } from './routes/_authenticated.passport.start'
 import { Route as AuthenticatedPassportShareRouteImport } from './routes/_authenticated.passport.share'
 import { Route as AuthenticatedPassportPrivacyRouteImport } from './routes/_authenticated.passport.privacy'
 import { Route as AuthenticatedPassportOnboardingRouteImport } from './routes/_authenticated.passport.onboarding'
@@ -294,6 +296,11 @@ const CareerCenterIndexRoute = CareerCenterIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CareerCenterRoute,
 } as any)
+const SecurityPassportIndiaRoute = SecurityPassportIndiaRouteImport.update({
+  id: '/security-passport/india',
+  path: '/security-passport/india',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PTokenRoute = PTokenRouteImport.update({
   id: '/p/$token',
   path: '/p/$token',
@@ -512,6 +519,12 @@ const AuthenticatedSecurityCareerAssessmentHistoryRoute =
     id: '/security-career-assessment/history',
     path: '/security-career-assessment/history',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPassportStartRoute =
+  AuthenticatedPassportStartRouteImport.update({
+    id: '/start',
+    path: '/start',
+    getParentRoute: () => AuthenticatedPassportRoute,
   } as any)
 const AuthenticatedPassportShareRoute =
   AuthenticatedPassportShareRouteImport.update({
@@ -1383,6 +1396,7 @@ export interface FileRoutesByFullPath {
   '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
+  '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1421,6 +1435,7 @@ export interface FileRoutesByFullPath {
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/passport/share': typeof AuthenticatedPassportShareRoute
+  '/passport/start': typeof AuthenticatedPassportStartRoute
   '/security-career-assessment/history': typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
   '/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/security-work/$workspaceId': typeof AuthenticatedSecurityWorkWorkspaceIdRouteWithChildren
@@ -1565,6 +1580,7 @@ export interface FileRoutesByTo {
   '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
+  '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1591,6 +1607,7 @@ export interface FileRoutesByTo {
   '/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/passport/share': typeof AuthenticatedPassportShareRoute
+  '/passport/start': typeof AuthenticatedPassportStartRoute
   '/security-career-assessment/history': typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
   '/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/api/recruitment/receipts-sweep': typeof ApiRecruitmentReceiptsSweepRoute
@@ -1742,6 +1759,7 @@ export interface FileRoutesById {
   '/invite/$token': typeof InviteTokenRoute
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
+  '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1780,6 +1798,7 @@ export interface FileRoutesById {
   '/_authenticated/passport/onboarding': typeof AuthenticatedPassportOnboardingRoute
   '/_authenticated/passport/privacy': typeof AuthenticatedPassportPrivacyRoute
   '/_authenticated/passport/share': typeof AuthenticatedPassportShareRoute
+  '/_authenticated/passport/start': typeof AuthenticatedPassportStartRoute
   '/_authenticated/security-career-assessment/history': typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
   '/_authenticated/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/_authenticated/security-work/$workspaceId': typeof AuthenticatedSecurityWorkWorkspaceIdRouteWithChildren
@@ -1934,6 +1953,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/jobs/$slug'
     | '/p/$token'
+    | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
@@ -1972,6 +1992,7 @@ export interface FileRouteTypes {
     | '/passport/onboarding'
     | '/passport/privacy'
     | '/passport/share'
+    | '/passport/start'
     | '/security-career-assessment/history'
     | '/security-career-assessment/session'
     | '/security-work/$workspaceId'
@@ -2116,6 +2137,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/jobs/$slug'
     | '/p/$token'
+    | '/security-passport/india'
     | '/career-center'
     | '/jobs'
     | '/.mcp/invoke-tool/$tool'
@@ -2142,6 +2164,7 @@ export interface FileRouteTypes {
     | '/passport/onboarding'
     | '/passport/privacy'
     | '/passport/share'
+    | '/passport/start'
     | '/security-career-assessment/history'
     | '/security-career-assessment/session'
     | '/api/recruitment/receipts-sweep'
@@ -2292,6 +2315,7 @@ export interface FileRouteTypes {
     | '/invite/$token'
     | '/jobs/$slug'
     | '/p/$token'
+    | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
@@ -2330,6 +2354,7 @@ export interface FileRouteTypes {
     | '/_authenticated/passport/onboarding'
     | '/_authenticated/passport/privacy'
     | '/_authenticated/passport/share'
+    | '/_authenticated/passport/start'
     | '/_authenticated/security-career-assessment/history'
     | '/_authenticated/security-career-assessment/session'
     | '/_authenticated/security-work/$workspaceId'
@@ -2470,6 +2495,7 @@ export interface RootRouteChildren {
   EmployerRegisterRoute: typeof EmployerRegisterRoute
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
+  SecurityPassportIndiaRoute: typeof SecurityPassportIndiaRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiRecruitmentReceiptsSweepRoute: typeof ApiRecruitmentReceiptsSweepRoute
 }
@@ -2608,6 +2634,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/career-center/'
       preLoaderRoute: typeof CareerCenterIndexRouteImport
       parentRoute: typeof CareerCenterRoute
+    }
+    '/security-passport/india': {
+      id: '/security-passport/india'
+      path: '/security-passport/india'
+      fullPath: '/security-passport/india'
+      preLoaderRoute: typeof SecurityPassportIndiaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/p/$token': {
       id: '/p/$token'
@@ -2888,6 +2921,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/security-career-assessment/history'
       preLoaderRoute: typeof AuthenticatedSecurityCareerAssessmentHistoryRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/passport/start': {
+      id: '/_authenticated/passport/start'
+      path: '/start'
+      fullPath: '/passport/start'
+      preLoaderRoute: typeof AuthenticatedPassportStartRouteImport
+      parentRoute: typeof AuthenticatedPassportRoute
     }
     '/_authenticated/passport/share': {
       id: '/_authenticated/passport/share'
@@ -4321,6 +4361,7 @@ interface AuthenticatedPassportRouteChildren {
   AuthenticatedPassportOnboardingRoute: typeof AuthenticatedPassportOnboardingRoute
   AuthenticatedPassportPrivacyRoute: typeof AuthenticatedPassportPrivacyRoute
   AuthenticatedPassportShareRoute: typeof AuthenticatedPassportShareRoute
+  AuthenticatedPassportStartRoute: typeof AuthenticatedPassportStartRoute
   AuthenticatedPassportIndexRoute: typeof AuthenticatedPassportIndexRoute
   AuthenticatedPassportCredentialsNewRoute: typeof AuthenticatedPassportCredentialsNewRoute
   AuthenticatedPassportEntryKindEntryIdRoute: typeof AuthenticatedPassportEntryKindEntryIdRoute
@@ -4332,6 +4373,7 @@ const AuthenticatedPassportRouteChildren: AuthenticatedPassportRouteChildren = {
   AuthenticatedPassportOnboardingRoute: AuthenticatedPassportOnboardingRoute,
   AuthenticatedPassportPrivacyRoute: AuthenticatedPassportPrivacyRoute,
   AuthenticatedPassportShareRoute: AuthenticatedPassportShareRoute,
+  AuthenticatedPassportStartRoute: AuthenticatedPassportStartRoute,
   AuthenticatedPassportIndexRoute: AuthenticatedPassportIndexRoute,
   AuthenticatedPassportCredentialsNewRoute:
     AuthenticatedPassportCredentialsNewRoute,
@@ -4535,6 +4577,7 @@ const rootRouteChildren: RootRouteChildren = {
   EmployerRegisterRoute: EmployerRegisterRoute,
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
+  SecurityPassportIndiaRoute: SecurityPassportIndiaRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiRecruitmentReceiptsSweepRoute: ApiRecruitmentReceiptsSweepRoute,
 }
