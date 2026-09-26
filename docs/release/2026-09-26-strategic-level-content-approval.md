@@ -2,8 +2,17 @@
 
 **Date:** 2026-09-26. **Status:** the content exists as a governed DRAFT
 (`supabase/migrations/20261216090000_scp_security_manager_recruitment_content.sql`,
-hosted state `pending`) and is **not activated**. Two owner decisions are
-requested, in order: a combined content approval, then activation.
+hosted state `pending`) and is **activated at parity with the operational
+level** by `20261217090000_scp_security_manager_recruitment_activation.sql`
+(hosted state `pending`): designated as standard recruitment content and its
+guide opened for pilot, the same two acts the Väktare content received in
+20260905090000 and 20260925090000. That follows the owner update of
+2026-09-26 that both levels must be usable at launch and that a visible but
+unsendable option does not meet the requirement. It is **not** a content
+approval: every review gate stays outstanding, the test runs and reports as a
+closed test ("pilotversion"), and the product never calls it validated. One
+owner decision is requested: the combined content approval below. The
+activation can be reversed at any time by the documented rollback.
 
 ## What the owner asked for, and what exists
 
@@ -35,7 +44,7 @@ The full proposal, generated from the rows themselves:
 AI-authored against the product's construct rules and the owner's
 specification. No psychometric claim is made.
 
-## What the product shows before activation
+## What the product shows where only the content migration is applied
 
 - "Skicka test" shows both levels. The strategic level names its own test as
   a draft awaiting content approval, lists the five parts that exist as
@@ -48,10 +57,10 @@ specification. No psychometric claim is made.
 
 ## What the product does after activation (proved on the loopback stack)
 
-`e2e/send-test-strategic-journey.spec.ts`, with the content released to one
-synthetic organisation through the model's own restricted-cohort instruments
-(a time-boxed closed-test grant on the test, a synthetic pilot grant on the
-guide), walks: pre-release refusal → send with the level recorded and the
+`e2e/send-test-strategic-journey.spec.ts`, on a stack that replayed both
+migrations and holds no per-organisation grant, walks: the activated state
+(library setup startable, both levels sendable, the strategic card said as a
+closed test and never as validated) → send with the level recorded and the
 strategic version pinned → invitation in the candidate's inbox → sign-in
 continuation → interrupted attempt resumed → all 37 items → single submit →
 human review of the three reflections against the strategic rubrics → release
@@ -80,10 +89,9 @@ migration:
 Changes requested in review are made as a new item version or pack version
 through the same ladder, never by editing a reviewed row.
 
-## Decision 2 (requested after decision 1): activation
+## Activation (performed in this change, at parity with the operational level)
 
-The prepared migration
-`docs/release/prepared/20261217090000_scp_security_manager_recruitment_activation.sql`
+`supabase/migrations/20261217090000_scp_security_manager_recruitment_activation.sql`
 performs both activation acts together and proves them:
 
 1. `standard_for_recruitment = true` on `security-manager-recruitment`, the
@@ -96,12 +104,16 @@ performs both activation acts together and proves them:
 
 They are applied together because a test that can be sent while its guide
 cannot be started would leave every completed strategic test without an
-interview preparation. Release order: move the file into
-`supabase/migrations/` with its rollback, record it in
-`supabase/release-state.json` as pending, apply through the tracked
-mechanism, record applied, re-run `release-parity:gate`. Rollback reverses
-both acts (documented in the file); cases already pinned keep continuity
-read access.
+interview preparation. Release order: the content migration first, then the
+activation, both recorded in `supabase/release-state.json` as pending until
+the official integration applies them and the hosted evidence is recorded.
+`supabase/rollback/20261217090000_..._rollback.sql` reverses both acts
+through the governed `pilot_withdrawn` event and refuses to touch the
+operational designation; cases already pinned keep continuity read access.
+
+If the owner wants the strategic level withheld until decision 1 is taken,
+the activation file is removed from the migration set before merge (or its
+rollback applied afterwards); the content migration stands on its own.
 
 ## What this does not do
 

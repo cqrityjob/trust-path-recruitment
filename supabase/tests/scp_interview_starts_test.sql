@@ -406,8 +406,11 @@ BEGIN
   PERFORM pg_temp.ok(
     (SELECT array_agg(role_profile || ':' || environment) FROM public.scp_iv_start_choices(r.emp_a, r.assign_1))
       = ARRAY['vaktare:general']
+    -- Before any test, every setup whose guide is startable: the fixture's,
+    -- the operational Väktare setup, and -- since 20261217090000 opened the
+    -- Säkerhetschef guide for pilot -- the strategic security_manager setup.
     AND (SELECT array_agg(role_profile || ':' || environment ORDER BY role_profile) FROM public.scp_iv_start_choices(r.emp_a))
-      = ARRAY['fixture_manager:hospital', 'vaktare:general'],
+      = ARRAY['fixture_manager:hospital', 'security_manager:general', 'vaktare:general'],
     'ST4.7 the choices after the Väktare test are only the setups built on it; before any test, every setup with content');
   RESET ROLE; PERFORM pg_temp.nobody();
   PERFORM pg_temp.become(r.owner_b); SET LOCAL ROLE authenticated;

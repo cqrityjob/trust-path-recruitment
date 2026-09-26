@@ -258,7 +258,7 @@ p(
   `| Kandidattest | ${def.name_sv} / ${def.name_en} — version 1, \`${def.content_status}\`/\`${def.validation_status}\` |`,
 );
 p(
-  `| Designerat som standardinnehåll för rekrytering | **${def.standard ? "JA" : "NEJ"}** (kräver ägarbeslut) |`,
+  `| Designerat som standardinnehåll för rekrytering | **${def.standard ? "JA" : "NEJ"}** (${def.standard ? "aktiverat på samma villkor som väktartestet i 20261217090000: sluten test, pilotversion, inte validerat" : "inte aktiverat i den här databasen"}) |`,
 );
 p(
   `| Intervjuguide | ${pack.name_sv} v1 — \`${pack.content_status}\`, \`${pack.validation_label}\`, pilot **${pack.pilot_availability}**, innehållshash i den här databasen \`${pack.content_hash}\` |`,
@@ -268,7 +268,7 @@ p(
 );
 p();
 p(
-  "**Begäran:** ett samlat innehållsgodkännande av (1) kravprofilen, (2) kandidattestet med poängsättning och rubriker, (3) intervjuguiden, (4) rapportavsnittets intervjufrågor, och därefter (5) ett uttryckligt beslut om aktivering: designation av testet som standardinnehåll och öppen pilot för guiden. Exakt aktivering: `docs/release/2026-09-26-strategic-level-content-approval.md`.",
+  "**Begäran:** ett samlat innehållsgodkännande av (1) kravprofilen, (2) kandidattestet med poängsättning och rubriker, (3) intervjuguiden och (4) rapportavsnittets intervjufrågor. Aktiveringen (designation av testet som standardinnehåll och öppen pilot för guiden) är gjord i `20261217090000` på samma villkor som väktarinnehållet, enligt ägaruppdateringen 2026-09-26 att båda nivåerna ska kunna användas vid lansering; den är inte ett innehållsgodkännande, kan återkallas med den dokumenterade återställningen, och testet visas som sluten test/pilotversion tills grindarna är passerade. Beslutsunderlag: `docs/release/2026-09-26-strategic-level-content-approval.md`.",
 );
 p();
 p("Syfte (programförklaring, sv): " + def.purpose_sv);
@@ -402,7 +402,7 @@ p();
 p("## 6. Granskningsstege");
 p();
 p(
-  "Uppgifter: fem grindar per uppgift (security_sme, cognitive_interview, language, accessibility, pilot), alla utestående. Guide: draft → expert_review → legal_review → cognitive_review → published, med granskning per grind i `scp_interview_pack_reviews` bunden till innehållshashen; en granskare får inte vara författaren. Aktivering är två separata, återkallbara ägarbeslut och görs inte av innehållsmigrationen.",
+  "Uppgifter: fem grindar per uppgift (security_sme, cognitive_interview, language, accessibility, pilot), alla utestående. Guide: draft → expert_review → legal_review → cognitive_review → published, med granskning per grind i `scp_interview_pack_reviews` bunden till innehållshashen; en granskare får inte vara författaren. Aktiveringen (20261217090000) är två återkallbara akter skilda från innehållsmigrationen och ersätter ingen grind.",
 );
 p();
 console.log(out.join("\n"));

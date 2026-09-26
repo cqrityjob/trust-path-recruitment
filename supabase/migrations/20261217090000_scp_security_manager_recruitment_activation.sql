@@ -1,17 +1,38 @@
--- PREPARED, NOT APPLIED. Activation of the TRUST strategic level, for the
--- owner's decision after the combined content approval recorded in
--- docs/release/2026-09-26-strategic-level-content-approval.md.
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 20261217090000 · TRUST strategic level (Säkerhetschef): activation at
+-- parity with the operational level
 --
--- Move this file to supabase/migrations/ (keeping the canonical version slot
--- or the next free one), add the rollback below to supabase/rollback/, record
--- it in supabase/release-state.json as pending, and apply it through the
--- tracked release mechanism in the documented order. Until then it is
--- documentation, and nothing in the repository or the hosted project reads it.
+-- Owner update 2026-09-26: both assessment levels must be usable at launch;
+-- a visible but unsendable strategic option does not meet the requirement.
 --
--- Two switches, in one migration, because a test that can be sent while its
--- interview guide cannot be started would leave every completed strategic
--- test with no interview preparation. Both are the same acts 20260905090000
--- and 20260925090000 performed for the operational content.
+-- This migration performs for the strategic content the SAME two acts that
+-- 20260905090000 and 20260925090000 performed for the operational Väktare
+-- content, and nothing more:
+--
+--   1. the assessment `security-manager-recruitment` is designated
+--      standard recruitment content (standard_for_recruitment = true): an
+--      ACTIVE employer may send it without a per-employer grant. It stays
+--      draft/design, every review gate stays outstanding, it runs and reports
+--      as a CLOSED TEST ("Pilotversion") and confers no 'recruitment'
+--      governance mode -- exactly the status the Väktare test has today;
+--   2. the guide `security-manager-se` v1 opens for pilot
+--      (pilot_availability = 'open'): startable by every active employer,
+--      content frozen while open. It stays a draft pilot hypothesis at the
+--      bottom of the review ladder -- exactly the status the Väktare guide
+--      has today.
+--
+-- Both in one migration, because a test that can be sent while its guide
+-- cannot be started would leave every completed strategic test without an
+-- interview preparation.
+--
+-- What this is NOT: a content approval, a review, a validation or a
+-- publication. The combined content approval requested in
+-- docs/release/2026-09-26-strategic-level-content-approval.md is still
+-- requested; the product says "pilotversion / utkast" on every surface that
+-- shows the test, and nothing here changes that wording.
+--
+-- Rollback: supabase/rollback/20261217090000_scp_security_manager_recruitment_activation_rollback.sql
+-- ═══════════════════════════════════════════════════════════════════════════
 
 -- 1. The test becomes standard recruitment content: an ACTIVE employer may
 --    assign it without a per-employer grant. It stays draft/design, runs and
@@ -41,7 +62,7 @@ BEGIN
    WHERE id = _v.id;
   PERFORM public.scp_interview_record_event(
     _v.pack_id, _v.id, 'pilot_opened', _v.content_status, _v.content_status,
-    'Ägarbeslut <datum>: samlat innehållsgodkännande av den strategiska nivån; öppen pilot. Paketet förblir en pilothypotes.',
+    'Ägaruppdatering 2026-09-26: båda testnivåerna ska kunna användas vid lansering. Öppen pilot på samma villkor som Väktare-guiden (20260925090000). Paketet förblir en pilothypotes i utkast; det samlade innehållsgodkännandet är begärt, inte givet.',
     _v.content_hash, '{}'::jsonb);
 END $$;
 
@@ -70,13 +91,3 @@ BEGIN
     RAISE EXCEPTION 'SCP_SM_ACTIVATION: selection_support became published';
   END IF;
 END $$;
-
--- ROLLBACK (supabase/rollback/20261217090000_..._rollback.sql): the two acts
--- reversed. Withdrawing the pilot is the governed 'pilot_withdrawn' event;
--- cases already pinned to the version keep continuity read access.
---
---   UPDATE public.scp_assessment_definitions SET standard_for_recruitment = false
---    WHERE slug = 'security-manager-recruitment';
---   UPDATE public.scp_interview_pack_versions v SET pilot_availability = 'restricted', updated_at = now()
---     FROM public.scp_interview_packs p WHERE p.id = v.pack_id AND p.slug = 'security-manager-se';
---   -- plus scp_interview_record_event(..., 'pilot_withdrawn', ...) with the reason.

@@ -2239,6 +2239,14 @@
       "hostedState": "pending",
       "file": "20261216090000_scp_security_manager_recruitment_content.sql"
     }
+    ,{
+      "introduces": [],
+      "rollback": "supabase/rollback/20261217090000_scp_security_manager_recruitment_activation_rollback.sql",
+      "verify": "SELECT standard_for_recruitment FROM public.scp_assessment_definitions WHERE slug='security-manager-recruitment'; -- expect t. SELECT v.content_status, v.validation_label, v.pilot_availability FROM public.scp_interview_pack_versions v JOIN public.scp_interview_packs p ON p.id=v.pack_id WHERE p.slug='security-manager-se'; -- expect draft, pilot_hypothesis, open. SELECT count(*) FROM public.scp_interview_pack_events e JOIN public.scp_interview_packs p ON p.id=e.pack_id WHERE p.slug='security-manager-se' AND e.event='pilot_opened'; -- expect 1. As the owner of an ACTIVE employer: SELECT assignable, unassignable_reason FROM public.scp_employer_content_library(<employer>) WHERE slug='security-manager-recruitment'; -- expect t, NULL; and the pack appears in scp_iv_startable_pack_versions(<employer>). SELECT count(*) FROM public.scp_review_requirements rr JOIN public.scp_item_versions iv ON iv.id=rr.item_version_id JOIN public.scp_items i ON i.id=iv.item_id WHERE i.slug LIKE 'sm-rj-%' AND rr.status<>'outstanding'; -- expect 0 (nothing reviewed).",
+      "note": "TRUST strategic level activated at PARITY with the operational level, per the owner update of 2026-09-26 that both levels must be usable at launch. Two data acts, no schema: standard_for_recruitment=true on security-manager-recruitment (the act 20260905090000 performed for the Väktare test: an ACTIVE employer may send it without a per-employer grant; it stays draft/design, runs and reports as a CLOSED TEST and confers no 'recruitment' governance mode) and pilot_availability='open' on security-manager-se v1 with a pilot_opened ledger event (the act 20260925090000 performed for the Väktare guide: startable by every active employer, content frozen while open, still a draft pilot hypothesis). Not a review, validation or publication: every review gate on every strategic item stays outstanding and the combined content approval in docs/release/2026-09-26-strategic-level-content-approval.md is still requested; the product says 'sluten test / pilotversion' wherever the test is shown. Proved by the in-migration assertions (designated, open draft pilot, an active employer admitted as closed_test, selection_support still unpublished), by the rollback/re-apply cycle on the loopback database, and by e2e/send-test-strategic-journey.spec.ts on the replayed stack. Rollback reverses both acts through the governed pilot_withdrawn event and refuses to touch the operational designation.",
+      "hostedState": "pending",
+      "file": "20261217090000_scp_security_manager_recruitment_activation.sql"
+    }
   ], 
   "policyVersion": 2, 
   "activeDirectory": "supabase/migrations", 

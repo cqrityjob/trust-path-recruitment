@@ -20,11 +20,12 @@
 //     questions or reports is shared between them;
 //   * a level whose content exists but is not released says so in those
 //     words. The strategic level's content (20261216090000) is a governed
-//     DRAFT awaiting the owner's content approval: the library answers
-//     "not permitted" for it until CQrityjob designates it, and this module
-//     reports that as a draft awaiting release -- never as "coming soon",
-//     never as a validated test, and never by offering the operational test
-//     under the strategic heading.
+//     DRAFT; 20261217090000 designates it at parity with the operational
+//     level, so an active employer sends it as a closed test (a pilot draft,
+//     said so). Where only the content is installed the library answers
+//     "not permitted" and this module reports a draft awaiting release --
+//     never "coming soon", never a validated test, and never the operational
+//     test under the strategic heading.
 
 import { ROLE_PROFILES, TRUST_CONTENT, type RoleGroup, type RoleProfileKey } from "./catalogue";
 
@@ -36,8 +37,8 @@ export interface AssessmentLevel {
   readonly assessmentSlug: string | null;
 }
 
-/** In the order the employer reads them: operational first, because that is
- *  the level released today; strategic second, never hidden. */
+/** In the order the employer reads them: operational first, strategic
+ *  second, never hidden. */
 export const ASSESSMENT_LEVELS: readonly AssessmentLevel[] = ROLE_PROFILES.map((p) => ({
   group: p.group,
   profile: p.key,

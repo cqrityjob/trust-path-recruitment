@@ -7,11 +7,11 @@
 | | Värde |
 |---|---|
 | Kandidattest | Säkerhetschef – Recruitment Assessment / Security Manager – Recruitment Assessment — version 1, `draft`/`design` |
-| Designerat som standardinnehåll för rekrytering | **NEJ** (kräver ägarbeslut) |
-| Intervjuguide | Säkerhetschef v1 — `draft`, `pilot_hypothesis`, pilot **restricted**, innehållshash i den här databasen `7ee072ee2f9647a54924bbd8eb9c03b6` |
+| Designerat som standardinnehåll för rekrytering | **JA** (aktiverat på samma villkor som väktartestet i 20261217090000: sluten test, pilotversion, inte validerat) |
+| Intervjuguide | Säkerhetschef v1 — `draft`, `pilot_hypothesis`, pilot **open**, innehållshash i den här databasen `f9fb2dfebcbe6c62c0911471f6555c32` |
 | Utestående granskningsgrindar på uppgifterna | 185 (37 uppgifter × 5 grindar) |
 
-**Begäran:** ett samlat innehållsgodkännande av (1) kravprofilen, (2) kandidattestet med poängsättning och rubriker, (3) intervjuguiden, (4) rapportavsnittets intervjufrågor, och därefter (5) ett uttryckligt beslut om aktivering: designation av testet som standardinnehåll och öppen pilot för guiden. Exakt aktivering: `docs/release/2026-09-26-strategic-level-content-approval.md`.
+**Begäran:** ett samlat innehållsgodkännande av (1) kravprofilen, (2) kandidattestet med poängsättning och rubriker, (3) intervjuguiden och (4) rapportavsnittets intervjufrågor. Aktiveringen (designation av testet som standardinnehåll och öppen pilot för guiden) är gjord i `20261217090000` på samma villkor som väktarinnehållet, enligt ägaruppdateringen 2026-09-26 att båda nivåerna ska kunna användas vid lansering; den är inte ett innehållsgodkännande, kan återkallas med den dokumenterade återställningen, och testet visas som sluten test/pilotversion tills grindarna är passerade. Beslutsunderlag: `docs/release/2026-09-26-strategic-level-content-approval.md`.
 
 Syfte (programförklaring, sv): Rollspecifik bedömning för rekrytering till strategiska och ledande säkerhetsroller. Ger strukturerat evidens- och intervjuunderlag om riskbaserad prioritering, styrning och mandat, incident- och krisledning, samverkan, regelefterlevnad och självrapporterat ledarbeteende. Resultatet är beslutsstöd inför en strukturerad intervju. Det fattar inget anställningsbeslut, rangordnar inga kandidater och uttalar sig inte om lämplighet. Utkast under granskning -- inte validerat.
 
@@ -880,5 +880,5 @@ Evidensrapporten och intervjuförberedelsen läser kompetensvis; för självskat
 
 ## 6. Granskningsstege
 
-Uppgifter: fem grindar per uppgift (security_sme, cognitive_interview, language, accessibility, pilot), alla utestående. Guide: draft → expert_review → legal_review → cognitive_review → published, med granskning per grind i `scp_interview_pack_reviews` bunden till innehållshashen; en granskare får inte vara författaren. Aktivering är två separata, återkallbara ägarbeslut och görs inte av innehållsmigrationen.
+Uppgifter: fem grindar per uppgift (security_sme, cognitive_interview, language, accessibility, pilot), alla utestående. Guide: draft → expert_review → legal_review → cognitive_review → published, med granskning per grind i `scp_interview_pack_reviews` bunden till innehållshashen; en granskare får inte vara författaren. Aktiveringen (20261217090000) är två återkallbara akter skilda från innehållsmigrationen och ersätter ingen grind.
 

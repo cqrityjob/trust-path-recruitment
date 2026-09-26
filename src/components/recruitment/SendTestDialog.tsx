@@ -21,8 +21,10 @@
 // The employer chooses a level first, and both are shown with who they are
 // for and what they produce. Each level maps to its own test. Whether THIS
 // organisation may send it is read live from the library: the strategic
-// level's content is a governed draft awaiting the owner's content approval,
-// and until CQrityjob releases it the dialog says exactly that -- never
+// level's content is a governed draft (20261216090000) designated at parity
+// with the operational level (20261217090000), so it is sent as a closed
+// test and said to be one; where only the content is installed the dialog
+// says it is a draft awaiting the owner's content approval -- never
 // "coming soon", never a validated test, and never the operational test
 // under a new heading (src/lib/library/levels.ts holds that rule).
 

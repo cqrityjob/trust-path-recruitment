@@ -9,9 +9,9 @@
  *   1. from the applications list, the owner opens "Skicka test" for one
  *      applicant: both levels are shown with audience and purpose; the
  *      operational level names its test; the strategic level names its own
- *      test as a draft awaiting the owner's content approval (or, once
- *      released to this organisation, as sendable) -- and the operational
- *      test is never offered under it;
+ *      test, sendable as a closed test once 20261217090000 is applied (or,
+ *      before that, a draft awaiting the owner's content approval) -- and
+ *      the operational test is never offered under it;
  *   2. the owner sends the operational test: the level (setup) is recorded,
  *      the invitation reaches the candidate's CQrityjob inbox, and the row
  *      shows the test as assigned;
@@ -140,6 +140,12 @@ test.describe("Skicka test — both levels, end to end", () => {
     await expect(strategicCard).toContainText(/Säkerhetschef – Recruitment Assessment/);
     await expect(strategic).not.toContainText(/Väktare – Recruitment Assessment/);
     await expect(strategic).not.toContainText(/kommer snart|coming soon|validerat/i);
+    if ((await strategic.getAttribute("data-state")) === "sendable") {
+      // Activated (20261217090000): sendable as a closed test -- a pilot
+      // draft, said so, never "validated".
+      await expect(strategic).toContainText(/sluten test/i);
+      await expect(page.getByTestId("send-test-strategic-pending")).toHaveCount(0);
+    }
     if ((await strategic.getAttribute("data-state")) === "not_assignable") {
       await expect(strategicCard).toHaveAttribute("data-content-status", "draft");
       const pending = page.getByTestId("send-test-strategic-pending");

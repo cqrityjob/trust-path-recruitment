@@ -1,44 +1,40 @@
 /**
- * "Skicka test" for the STRATEGIC level, end to end -- on the loopback stack
- * with separate signed-in synthetic people, mirroring the operational walk in
- * e2e/send-test-journey.spec.ts step for step, on a different application.
+ * "Skicka test" -- the STRATEGIC level (Säkerhetschef), end to end on the
+ * loopback stack with separate signed-in synthetic people.
  *
- * Owner update (2026-09-26): both assessment levels must be available at
- * launch, and the strategic level must not be a visible-but-disabled choice
- * or the operational test renamed. Since 20261216090000 the strategic level
- * has content of its own -- the Säkerhetschef guide and the Security Manager
- * recruitment test -- authored as a governed DRAFT that CQrityjob has not
- * released. This walk proves both halves of that:
+ * Owner update 2026-09-26: both assessment levels must be usable at launch;
+ * a visible but unsendable strategic option does not meet the requirement,
+ * and neither does the operational test renamed. The content was authored
+ * as a governed draft (20261216090000) and then activated at PARITY with the
+ * operational level (20261217090000: designated as standard recruitment
+ * content, guide opened for pilot) -- still a draft pilot hypothesis with
+ * every review gate outstanding, said as a closed test wherever it appears.
+ * The combined content approval is requested, not given. This walk proves:
  *
- *   1. BEFORE any release: the dialog shows the strategic level as a draft
- *      awaiting content approval, with its own test named and refused, and
- *      nothing can be sent; the library route offers no strategic setup;
- *   2. the content is released to THIS organisation the only way the model
- *      allows short of the owner's approval -- a time-boxed closed-test grant
- *      on the test and a synthetic pilot grant on the guide (the fixture of
- *      this walk, never a production act) -- and the owner sends the
- *      strategic test: the level is recorded, the assignment pins the
- *      strategic version, the invitation reaches the candidate; the
- *      operational level stays independently sendable;
- *   3. the dialog says "already sent" for the strategic level only, and a
- *      repeat of the underlying send lands on the same attempt;
+ *   1. the activated state as the product shows it: the library offers the
+ *      strategic setup with its own guide and test, "Skicka test" offers both
+ *      levels sendable, the strategic card names its own test as a closed
+ *      test (draft) and never as validated, and no per-organisation grant
+ *      exists -- the designation alone admits active employers;
+ *   2. the owner sends the strategic test: the level (setup) is recorded,
+ *      the assignment pins the strategic version and form, the attempt runs
+ *      as closed_test, and one invitation reaches the candidate's inbox;
+ *   3. the same dialog says "already sent" for that level and a repeat of the
+ *      underlying send lands on the same attempt;
  *   4. the candidate, signed out, is sent through the sign-in with the
- *      destination kept and finds the strategic test, named as such;
+ *      destination kept and finds the strategic test -- for the right job,
+ *      from the right employer;
  *   5. the candidate is interrupted, continues, answers all 37 items of the
- *      STRATEGIC form and submits once;
- *   6. a colleague with review permission reads the three written reflections
- *      against the strategic rubrics, the attempt is scored, the owner
- *      releases the material and opens the completion: never a failure;
- *   7. Förbered intervju on that test opens a case whose setup is
- *      TRUST · Security Manager and whose guide is the Säkerhetschef pack;
- *   8. another organisation reads none of it, on screen or over the API.
+ *      strategic form and submits once;
+ *   6. the written reflections are reviewed against the strategic rubrics by
+ *      the reviewer, the owner releases the material and opens the results:
+ *      never a failure, never the operational test;
+ *   7. "Förbered intervju" on that test opens a case with the strategic setup
+ *      and the Säkerhetschef guide;
+ *   8. another organisation and the candidate read none of the recruiter
+ *      material, on screen or over the API.
  *
- *   E2E_LOCAL_STACK=1 E2E_BASE_URL=http://127.0.0.1:3119 \
- *   E2E_SUPABASE_URL=http://127.0.0.1:54331 \
- *   E2E_SUPABASE_ANON_KEY=... JOURNEY_DATABASE_URL=postgresql://postgres:localbeskt@127.0.0.1:5432/beskt_e2e \
- *   bunx playwright test e2e/send-test-strategic-journey.spec.ts --project=chromium
- *
- * Not idempotent by design: run on a reseeded stack (up.sh --reseed).
+ * Evidence: artifacts/bugfix-2026-09-26/strategic/.
  */
 
 import { expect, test, type Page } from "@playwright/test";
@@ -116,11 +112,15 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: `${OUT}/${name}.png`, fullPage: true, scale: "css" });
 }
 
-function released(): boolean {
+function activated(): boolean {
   return (
     sql(
-      `SELECT count(*) FROM scp_test_grants g JOIN scp_assessment_definitions d ON d.id = g.definition_id
-        WHERE g.employer_id = '${EMPLOYER_ID}' AND d.slug = '${TEST_SLUG}' AND g.revoked_at IS NULL`,
+      `SELECT count(*) FROM scp_assessment_definitions d
+         JOIN scp_recruitment_content_links l ON l.assessment_definition_id = d.id
+         JOIN scp_interview_packs p ON p.id = l.interview_pack_id
+         JOIN scp_interview_pack_versions v ON v.pack_id = p.id
+        WHERE d.slug = '${TEST_SLUG}' AND d.standard_for_recruitment AND p.slug = '${GUIDE_SLUG}'
+          AND v.pilot_availability = 'open'`,
     ) !== "0"
   );
 }
@@ -148,85 +148,42 @@ test.beforeEach(() => {
 });
 
 test.describe("Skicka test — the strategic level, end to end", () => {
-  test("1 · before any release: a draft awaiting content approval, its own test named, nothing sendable", async ({
+  test("1 · activated at parity with the operational level: designated, open pilot, no grant, said as a pilot draft", async ({
     page,
   }) => {
-    test.skip(
-      released(),
-      "the fixture grants already exist on this stack; step 1 is the pre-release state",
-    );
-    // The content is installed (the migration replayed) but not released.
-    expect(
-      sql(
-        `SELECT standard_for_recruitment FROM scp_assessment_definitions WHERE slug = '${TEST_SLUG}'`,
-      ),
-    ).toBe("f");
+    // 20261216090000 authored the content as a governed draft; 20261217090000
+    // performed the same two acts for it that the operational content had
+    // (designation + open pilot). Nothing reviewed it: every gate is still
+    // outstanding, and no organisation holds a grant for it.
+    expect(activated(), "the activation migration is applied on this stack").toBe(true);
     expect(
       sql(
         `SELECT v.content_status || '|' || v.validation_label || '|' || v.pilot_availability
            FROM scp_interview_pack_versions v JOIN scp_interview_packs p ON p.id = v.pack_id
           WHERE p.slug = '${GUIDE_SLUG}'`,
       ),
-    ).toBe("draft|pilot_hypothesis|restricted");
-
-    await signIn(page, OWNER, `/employer/${EMPLOYER}/applications`);
-    await page.locator(`[data-testid="send-test"][data-application-id="${APPLICATION}"]`).click();
-    const strategic = page.getByTestId("send-test-level-strategic");
-    await expect(strategic).toHaveAttribute("data-state", "not_assignable", { timeout: 60_000 });
-    await expect(page.getByTestId("send-test-level-operational")).toHaveAttribute(
-      "data-state",
-      "sendable",
-    );
-    const pending = page.getByTestId("send-test-strategic-pending");
-    await expect(pending).toContainText(/utkast under granskning/i);
-    await expect(pending).toContainText(/inte frisläppt för rekrytering/i);
-    await expect(pending).toContainText(/samlat innehållsgodkännande/i);
-    await expect(page.getByTestId("send-test-card-strategic")).toContainText(TEST_NAME);
-    await expect(page.getByTestId("send-test-card-strategic")).toHaveAttribute(
-      "data-content-status",
-      "draft",
-    );
-    await expect(strategic).not.toContainText(/Väktare – Recruitment Assessment/);
-    await expect(strategic).not.toContainText(/kommer snart|coming soon|validerat/i);
-    await strategic.locator('input[type="radio"]').check();
-    await expect(page.getByTestId("send-test-submit")).toBeDisabled();
-    await expect(page.getByTestId("send-test-blocked")).toBeVisible();
-    await shot(page, "1-before-release");
-
-    // The library route offers no strategic setup either: the guide is
-    // restricted, so nothing can be started with it.
-    await page.goto(`${BASE}/employer/${EMPLOYER}/assessments/library`);
-    await page.getByTestId("lib-method-trust-choose").click();
-    await expect(page.getByTestId("lib-group-operational")).toBeVisible({ timeout: 60_000 });
-    await expect(page.getByTestId("lib-group-strategic")).toHaveCount(0);
+    ).toBe("draft|pilot_hypothesis|open");
+    expect(
+      sql(
+        `SELECT count(*) FROM scp_review_requirements rr
+           JOIN scp_item_versions iv ON iv.id = rr.item_version_id
+           JOIN scp_items i ON i.id = iv.item_id
+          WHERE i.slug LIKE 'sm-rj-%' AND rr.status <> 'outstanding'`,
+      ),
+      "no review gate has been passed for the strategic items",
+    ).toBe("0");
+    expect(
+      sql(
+        `SELECT count(*) FROM scp_test_grants g JOIN scp_assessment_definitions d ON d.id = g.definition_id
+          WHERE d.slug = '${TEST_SLUG}'`,
+      ),
+      "no per-organisation grant exists; the designation alone admits active employers",
+    ).toBe("0");
     expect(
       sql(`SELECT count(*) FROM assessment_assignments WHERE application_id = '${APPLICATION}'`),
     ).toBe("0");
-  });
 
-  test("2 · released to this organisation (fixture), the strategic test is sent with its level", async ({
-    page,
-  }) => {
-    if (!released()) {
-      // THE FIXTURE, and the only release this walk performs: a time-boxed
-      // closed-test grant on the test and a synthetic pilot grant on the guide
-      // for this one organisation -- the model's own instruments for a
-      // restricted cohort (20260818162445, 20260921090000). Neither is the
-      // owner's content approval, and neither exists outside this database.
-      sql(
-        `INSERT INTO scp_test_grants (employer_id, purpose, definition_id, reason, expires_at)
-         SELECT '${EMPLOYER_ID}', 'closed_test', d.id, 'loopback walk: strategic level under review', now() + interval '7 days'
-           FROM scp_assessment_definitions d WHERE d.slug = '${TEST_SLUG}'`,
-      );
-      sql(
-        `INSERT INTO scp_interview_pack_pilot_grants
-           (employer_id, pack_version_id, granted_by, rationale, usage_mode, environment, starts_on, expires_on)
-         SELECT '${EMPLOYER_ID}', v.id, '${OWNER_ID}', 'loopback walk: strategic guide under review', 'synthetic_test', 'development', current_date, current_date + 7
-           FROM scp_interview_pack_versions v JOIN scp_interview_packs p ON p.id = v.pack_id WHERE p.slug = '${GUIDE_SLUG}'`,
-      );
-    }
-    // Released, the library offers the strategic setup with ITS OWN guide and
-    // test -- the setup the send will record.
+    // The library offers the strategic setup with ITS OWN guide and test.
     await signIn(page, OWNER, `/employer/${EMPLOYER}/assessments/library`);
     await page.getByTestId("lib-method-trust-choose").click();
     await page.getByTestId("lib-group-strategic").check();
@@ -238,9 +195,32 @@ test.describe("Skicka test — the strategic level, end to end", () => {
     await expect(setup.getByTestId("lib-setup-candidate")).not.toContainText(
       /Väktare – Recruitment Assessment/,
     );
-    await shot(page, "2-library-strategic-setup");
+    await shot(page, "1-library-strategic-setup");
 
+    // "Skicka test": both levels sendable, each with its own test; the
+    // strategic one said as a closed test (pilot draft), never as validated.
     await page.goto(`${BASE}/employer/${EMPLOYER}/applications`);
+    await page.locator(`[data-testid="send-test"][data-application-id="${APPLICATION}"]`).click();
+    const strategic = page.getByTestId("send-test-level-strategic");
+    await expect(strategic).toHaveAttribute("data-state", "sendable", { timeout: 60_000 });
+    await expect(page.getByTestId("send-test-level-operational")).toHaveAttribute(
+      "data-state",
+      "sendable",
+    );
+    await expect(page.getByTestId("send-test-card-strategic")).toContainText(TEST_NAME);
+    await expect(page.getByTestId("send-test-card-strategic")).toHaveAttribute(
+      "data-content-status",
+      "draft",
+    );
+    await expect(strategic).toContainText(/sluten test/i);
+    await expect(strategic).not.toContainText(/Väktare – Recruitment Assessment/);
+    await expect(strategic).not.toContainText(/kommer snart|coming soon|validerat|godkänt/i);
+    await expect(page.getByTestId("send-test-strategic-pending")).toHaveCount(0);
+    await shot(page, "1-both-levels-sendable");
+  });
+
+  test("2 · the strategic test is sent with its level recorded", async ({ page }) => {
+    await signIn(page, OWNER, `/employer/${EMPLOYER}/applications`);
     await page.locator(`[data-testid="send-test"][data-application-id="${APPLICATION}"]`).click();
     const strategic = page.getByTestId("send-test-level-strategic");
     await expect(strategic).toHaveAttribute("data-state", "sendable", { timeout: 60_000 });
