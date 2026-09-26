@@ -407,10 +407,22 @@ BEGIN
     (SELECT array_agg(role_profile || ':' || environment) FROM public.scp_iv_start_choices(r.emp_a, r.assign_1))
       = ARRAY['vaktare:general']
     -- Before any test, every setup whose guide is startable: the fixture's,
-    -- the operational Väktare setup, and -- since 20261217090000 opened the
-    -- Säkerhetschef guide for pilot -- the strategic security_manager setup.
+    -- the operational Väktare setup, and -- where 20261216090000's content
+    -- link exists and 20261217090000 opened the Säkerhetschef guide -- the
+    -- strategic security_manager setup. (scripts/db-test.sh runs this suite
+    -- inside a stand-down/re-apply cycle of 20261201090000 that recreates
+    -- the link table with the operational row only, so the strategic entry
+    -- is expected exactly when its link is present.)
     AND (SELECT array_agg(role_profile || ':' || environment ORDER BY role_profile) FROM public.scp_iv_start_choices(r.emp_a))
-      = ARRAY['fixture_manager:hospital', 'security_manager:general', 'vaktare:general'],
+      = (SELECT array_agg(x ORDER BY x) FROM (
+           SELECT 'fixture_manager:hospital' AS x
+           UNION ALL SELECT 'vaktare:general'
+           UNION ALL SELECT 'security_manager:general'
+            WHERE EXISTS (SELECT 1 FROM public.scp_recruitment_content_links l
+                           JOIN public.scp_interview_packs p ON p.id = l.interview_pack_id
+                           JOIN public.scp_interview_pack_versions v ON v.pack_id = p.id
+                          WHERE l.role_profile = 'security_manager' AND l.environment = 'general'
+                            AND p.slug = 'security-manager-se' AND v.pilot_availability = 'open')) s),
     'ST4.7 the choices after the Väktare test are only the setups built on it; before any test, every setup with content');
   RESET ROLE; PERFORM pg_temp.nobody();
   PERFORM pg_temp.become(r.owner_b); SET LOCAL ROLE authenticated;
