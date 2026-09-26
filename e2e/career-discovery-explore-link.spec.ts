@@ -31,9 +31,15 @@ import type { Answer } from "../src/lib/career-discovery/v31/scoring";
 import { FIRST_WAVE_CATALOG } from "../scripts/fixtures/first-wave-profession-catalog";
 import { getPublishedProfession } from "../src/lib/career-center/publishability";
 import { exploreDestinationFor } from "../src/lib/career-center/profession-links";
-import { exportOf, HANG, mount, ok, takeMountBookkeeping } from "./support/career-home-harness";
+import {
+  BASE,
+  exportOf,
+  HANG,
+  mount,
+  ok,
+  takeMountBookkeeping,
+} from "./support/career-home-harness";
 
-const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const AT = "2026-09-01T09:00:00.000Z";
 const SNAPSHOT_ID = "0f3c2a1e-7b6d-4c5e-9a8b-1234567890ab";
 
