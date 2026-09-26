@@ -402,20 +402,20 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
         {
           [
             l(
-              "Beskriv beslutet och avgränsningen. Fortsätt sedan till 2. Underlag.",
-              "Describe the decision and scope. Then continue to 2. Evidence.",
+              "Kontrollera beslut, avgränsning och period. Dessa behövs för att bedöma rätt fråga. Din sparade verksamhetsprofil kan anpassas här.",
+              "Check the decision, scope and period. These keep the assessment focused on the right question. You can adapt your saved organisation context here.",
             ),
             l(
-              "Ladda upp, läs och acceptera relevanta utdrag. Fortsätt till 3. Komplettera för AI-stöd eller egna frågor.",
-              "Upload, read and accept relevant extracts. Continue to 3. Follow-ups for AI support or your own questions.",
+              "Registrera underlag manuellt eller från dokument. Läs och acceptera relevanta utdrag: bara granskat underlag får stödja analysen.",
+              "Enter evidence manually or from documents. Read and accept relevant extracts: only reviewed evidence can support the analysis.",
             ),
             l(
-              "Låt AI föreslå frågor och ett första rapportutkast. Granska förslaget, för in det och besvara frågorna. Skriv okänt när svar saknas.",
-              "Let AI suggest questions and a first report draft. Review and apply the proposal, then answer the questions. Write unknown when an answer is missing.",
+              "Besvara frågor som påverkar beslutet. Skriv okänt när svar saknas. När AI är tillgängligt kan det föreslå frågor och ett första rapportutkast som du granskar innan det förs in.",
+              "Answer questions that affect the decision. Write unknown when an answer is missing. When available, AI can suggest questions and a first report draft for you to review before applying.",
             ),
             l(
-              "Granska fakta, antaganden och åtgärder. Efter nya svar kan du begära ett nytt AI-utkast. Fortsätt till 5. Rapport för att redigera och godkänna.",
-              "Review facts, assumptions and actions. After new answers you can request a new AI draft. Continue to 5. Report to edit and approve.",
+              "Skilj källuppgifter, egna uppgifter och antaganden. Motivera risknivåer med definierade skalor; lämna okända nivåer tomma. Granska åtgärder och din slutsats.",
+              "Separate source facts, your own information and assumptions. Justify risk ratings with defined scales; leave unknown ratings empty. Review actions and your conclusion.",
             ),
             l(
               "Öppna rapportutkastet, kontrollera källstödet och redigera. Godkänn först när du är klar; därefter kan du exportera.",
@@ -833,6 +833,45 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
           )}
         </section>
       }
+      <div
+        className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4"
+        data-testid="sw-step-next"
+      >
+        <div className="text-xs text-muted-foreground">
+          <p>
+            {l("Sparad analysversion", "Saved analysis version")}: {detail.analysis.version}
+          </p>
+          {(dirty || dirtyQuestionIds.size > 0 || riskDirty || actionDirty) && (
+            <p role="status">
+              {l(
+                "Du har osparade ändringar. Spara i formuläret innan du går vidare.",
+                "You have unsaved changes. Save in the form before continuing.",
+              )}
+            </p>
+          )}
+        </div>
+        {step < 4 ? (
+          <WorkButton
+            type="button"
+            disabled={
+              op.state === "saving" || dirtyQuestionIds.size > 0 || riskDirty || actionDirty
+            }
+            onClick={async () => {
+              if (dirty && !(await persist())) return;
+              setStep(step + 1);
+              window.scrollTo({ top: 0 });
+            }}
+          >
+            {l("Fortsätt till", "Continue to")} {step + 2}. {tabs[step + 1]}
+          </WorkButton>
+        ) : (
+          <WorkButton asChild variant="outline">
+            <Link to="/security-work/$workspaceId/risks" params={{ workspaceId: workspace.id }}>
+              {l("Följ upp åtgärder", "Follow up actions")}
+            </Link>
+          </WorkButton>
+        )}
+      </div>
     </>
   );
 }

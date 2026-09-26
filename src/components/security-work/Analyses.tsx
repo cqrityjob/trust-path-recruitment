@@ -17,6 +17,7 @@ import {
   panelClass,
   selectClass,
   formatDate,
+  useUnsavedWarning,
 } from "./ui";
 import {
   SaveStatus,
@@ -35,14 +36,21 @@ export function SecurityAnalyses() {
   const save = useServerFn(saveWorkAnalysis);
   const operation = useSavedOperation();
   const navigate = useNavigate();
-  const search = useSearch({ strict: false });
+  const search = useSearch({ from: "/_authenticated/security-work/$workspaceId/analyses/" });
   const [creating, setCreating] = useState(Boolean(search.new));
   const [id, setId] = useState(() => crypto.randomUUID());
-  const [type, setType] = useState<AnalysisType>("rsa");
+  const [type, setType] = useState<AnalysisType>(search.method ?? "rsa");
   const [title, setTitle] = useState("");
   const [purpose, setPurpose] = useState("");
   const [scope, setScope] = useState("");
   const [horizon, setHorizon] = useState("");
+  const dirty = Boolean(title || purpose || scope || horizon);
+  const clearWarning = useUnsavedWarning(creating && dirty);
+  const close = () => {
+    if (dirty && !window.confirm(l("Kasta osparade ändringar?", "Discard unsaved changes?")))
+      return;
+    setCreating(false);
+  };
   async function create(event: React.FormEvent) {
     event.preventDefault();
     const row = await operation.run(() =>
@@ -84,6 +92,7 @@ export function SecurityAnalyses() {
       }),
     );
     if (row) {
+      clearWarning();
       setId(crypto.randomUUID());
       await navigate({
         to: "/security-work/$workspaceId/analyses/$analysisId",
@@ -101,18 +110,27 @@ export function SecurityAnalyses() {
         )}
         action={
           canEdit && (
-            <WorkButton onClick={() => setCreating(!creating)}>
+            <WorkButton onClick={() => (creating ? close() : setCreating(true))}>
               <Plus aria-hidden="true" />
               {l("Ny analys", "New analysis")}
             </WorkButton>
           )
         }
       />
-      {creating && (
+      {creating && canEdit && (
         <form onSubmit={create} className={`${panelClass} space-y-5`}>
           <h2 className="font-display text-xl font-semibold">
-            {l("Vad behöver du bedöma?", "What do you need to assess?")}
+            {l(
+              "1. Vad vill du undersöka eller besluta?",
+              "1. What do you want to investigate or decide?",
+            )}
           </h2>
+          <p className="text-sm text-muted-foreground">
+            {l(
+              "Namn, syfte, avgränsning och tidshorisont behövs för att bedömningen ska gälla rätt fråga och period. Nästa steg är att lägga till underlag.",
+              "A title, purpose, scope and time horizon are required to keep the assessment focused on the right question and period. Next, add your evidence.",
+            )}
+          </p>
           <Field label={l("Analystyp", "Analysis type")}>
             {(id) => (
               <select
@@ -174,7 +192,7 @@ export function SecurityAnalyses() {
             <WorkButton type="submit" disabled={operation.state === "saving"}>
               {l("Skapa och fortsätt", "Create and continue")}
             </WorkButton>
-            <WorkButton type="button" variant="outline" onClick={() => setCreating(false)}>
+            <WorkButton type="button" variant="outline" onClick={close}>
               {l("Avbryt", "Cancel")}
             </WorkButton>
             <SaveStatus state={operation.state} />

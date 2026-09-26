@@ -5,6 +5,28 @@ import { requireWorkspace } from "./services";
 import { analysisResult, AnalysisFailure, checked } from "./analysis-services";
 
 const scope = z.object({ workspaceId: z.string().uuid() }).strict();
+// Read-only configuration check; never probes the processor or exposes its URL/key.
+export const getWorkProcessingStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(scope)
+  .handler(({ context, data }) =>
+    analysisResult(async () => {
+      const membership = await requireWorkspace(context, data.workspaceId);
+      const { assertWorkerSigningConfigured } = await import("./processing/attestation.server");
+      const { extractionProcessorConfiguration } =
+        await import("./processing/extract-transport.server");
+      let enabled = false;
+      try {
+        assertWorkerSigningConfigured();
+        extractionProcessorConfiguration();
+        enabled = membership.role === "owner" || membership.role === "editor";
+      } catch {
+        // Missing or disabled configuration is a normal manual-only mode.
+      }
+      await requireWorkspace(context, data.workspaceId);
+      return { enabled };
+    }),
+  );
 export const getWorkEvidence = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(scope)
