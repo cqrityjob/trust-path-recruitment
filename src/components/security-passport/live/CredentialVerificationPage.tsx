@@ -191,7 +191,7 @@ export function CredentialVerificationPage({
               {pt("rec.validUntil")}
             </dt>
             <dd className="mt-0.5 text-sm tabular-nums text-foreground">
-              {formatExpiry(credential.validUntil, lang)}
+              {formatExpiry(credential.validUntil, lang, credential.noExpiry)}
             </dd>
           </div>
           {credential.issuedOn ? (

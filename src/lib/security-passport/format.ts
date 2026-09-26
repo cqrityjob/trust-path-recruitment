@@ -14,13 +14,22 @@ import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
 import { isCQrityjob, isUnsupportedSourceClaim, type ProvenanceSubjectKind } from "./provenance";
 import type { IsoDate } from "./types";
 
-/** An absent EXPIRY genuinely means "no expiry" — a permanent qualification.
- *  An absent ISSUE date means only that it was not recorded. Rendering both
- *  with the same fallback printed "Utfärdat: Ingen giltighetstid" on a claim
- *  with no issue date, which is not merely odd but wrong. */
-export function formatExpiry(date: IsoDate | null, lang: PassportLang): string {
-  if (!date) return passportT("claims.noExpiry", lang);
-  return date;
+/** An absent expiry DATE is not a statement that there is no expiry. Only an
+ *  explicit non-expiring credential -- `no_expiry` on its details, chosen by
+ *  the holder where the definition allows it -- reads "No expiry"; anything
+ *  else without a date says the date was not provided. Printing "No expiry"
+ *  for a date nobody entered presented a missing fact as a permanent one.
+ *  Presentation only: stored validity and trust are untouched.
+ *
+ *  (An absent ISSUE date is formatDate's "not stated": rendering both with
+ *  one fallback once printed "Utfärdat: Ingen giltighetstid".) */
+export function formatExpiry(
+  date: IsoDate | null,
+  lang: PassportLang,
+  noExpiry: boolean | null | undefined = null,
+): string {
+  if (date) return date;
+  return passportT(noExpiry === true ? "claims.noExpiry" : "claims.expiryNotProvided", lang);
 }
 
 export function formatDate(date: IsoDate | null, lang: PassportLang): string {
@@ -72,6 +81,8 @@ export function formatJurisdiction(code: string | null, lang: PassportLang): str
       return passportT("jurisdiction.AE-AZ", lang);
     case "GB-NI":
       return passportT("jurisdiction.GB-NI", lang);
+    case "IN":
+      return passportT("jurisdiction.IN", lang);
     default:
       return code;
   }
@@ -273,6 +284,10 @@ const WORK_COUNTRY_SUPPORT_KEY: Readonly<Record<string, PassportCopyKey>> = {
   // which is the UAE-wide reading the market packs exist to refuse.
   "AE-AZ": "workCountry.support.AE-AZ",
   "GB-NI": "workCountry.support.GB-NI",
+  // India has no market pack. Its four national qualifications are recorded
+  // without one because they authorise no work (scope national_qualification,
+  // 20261214090000), and the sentence says exactly that.
+  IN: "workCountry.support.IN",
 };
 
 export function workCountrySupportKey(

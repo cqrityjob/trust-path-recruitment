@@ -1293,6 +1293,16 @@ jobs:
       - name: Passport HAYAT reading and verification
         run: bun run passport-hayat:check
 
+      # India entry journey: the copy makes no promise (jobs, visas,
+      # sponsorship, verification, readiness, partners, counts), nothing
+      # reachable from the landing page or setup loads the OCR engine, the
+      # vocabularies mirror the 20261214/20261215 migrations, analytics carry an
+      # event name only, the sign-up intent survives safeReturnPath, and the
+      # Dubai/UK checklist cites the official sources. Read-only over committed
+      # code, nothing hosted. Its planted controls run in negative-controls:all.
+      - name: India entry journey
+        run: bun run india-entry:check
+
       # The Passport card's ONE ground (owner addendum, pilot finish): the CSS
       # mirror matches PASSPORT_CARD_SURFACE, no stripes, grid or engraving sits
       # behind any card, and the homepage panel draws the real shield system

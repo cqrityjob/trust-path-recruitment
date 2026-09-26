@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { DestinationNextSteps } from "@/components/india-entry/DestinationNextSteps";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -593,6 +594,11 @@ function MyCareerPage() {
               when there is nothing to link, which is almost always — it is an
               offer, not a section. */}
           <LinkEarlierResult rows={linkableQ.data ?? []} onLinked={onLinked} />
+
+          {/* 5b · Next steps for a destination the holder chose (Dubai, the
+              UK). Renders nothing without a chosen destination and a current
+              credential. A checklist, never a score. */}
+          <DestinationNextSteps />
 
           {/* 6 and 7 · The two things that are neither a status nor a step.
               Folded away in one quiet block at the foot of the page: each

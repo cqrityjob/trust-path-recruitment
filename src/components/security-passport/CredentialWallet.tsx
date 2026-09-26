@@ -40,8 +40,8 @@ import {
 } from "@/lib/security-passport/credential-passport";
 import { CAREER_PROFILE_PROFESSION_EDIT_HREF } from "@/lib/security-passport/profile-basics";
 import {
-  CREDENTIAL_CLASSES,
   credentialClass,
+  credentialClassLabel,
   credentialDate,
 } from "@/lib/security-passport/international";
 import {
@@ -50,6 +50,7 @@ import {
 } from "@/lib/security-passport/trust-presentation";
 import { credentialProductStatus } from "@/lib/security-passport/product-status";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { formatExpiry } from "@/lib/security-passport/format";
 import {
   headlineIsSelfDeclared,
   headlineTitles,
@@ -238,7 +239,7 @@ export function CredentialWallet({
         </span>
         <div className="min-w-0">
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            {CREDENTIAL_CLASSES[credentialClass(c, r.detail)][lang]}
+            {credentialClassLabel(credentialClass(c, r.detail), lang)}
           </p>
           <p className="text-sm font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">
             {r.name}
@@ -274,9 +275,7 @@ export function CredentialWallet({
             <p className="mt-0.5 text-xs text-muted-foreground">
               {c.validUntil
                 ? `${copy("Giltig till", "Valid until")} ${credentialDate(c.validUntil, lang)}`
-                : r.detail?.no_expiry
-                  ? copy("Utan utgångsdatum", "No expiry")
-                  : copy("Slutdatum inte angivet", "Expiry not stated")}
+                : formatExpiry(null, lang, r.detail?.no_expiry)}
             </p>
           </div>
           <p className="inline-flex items-center justify-self-start rounded-full border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-foreground">

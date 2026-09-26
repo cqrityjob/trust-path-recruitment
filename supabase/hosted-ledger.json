@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-25",
-  "readBy": "Read-only Supabase management SQL on explicit production wrygicdfxwjnrugduxnt after PR #295 merged as 1f4e620 (recruitment_application_receipts, 20261213090000). The ledger holds 315 rows; md5(string_agg(version||':'||name, ',' ORDER BY version)) is 1c77e1cd5a3899fbfd1546df1dce6621 on production and over these 315 entries (also equal with '' and newline separators), so the snapshot is the ledger verbatim. The twelve receipt functions and the replaced rec_settle_message_send match the merged file byte for byte by md5(prosrc) (see release-state.json). No hosted writes.",
+  "readAt": "2026-09-26",
+  "readBy": "Read-only Supabase management SQL on explicit production wrygicdfxwjnrugduxnt after PR #297 merged as cb12fcb (sp_india_national_qualifications 20261214090000, candidate_location_and_destinations 20261215090000). The ledger holds 317 rows; md5(string_agg(version||':'||name, ',' ORDER BY version)) is 42e0ff1e56bd462b91aceb01be8873bf on production and over these 317 entries, so the snapshot is the ledger verbatim. The eight functions and the approved-catalogue view the two files define match a local replay of the merged files byte for byte by md5 (see release-state.json). No hosted writes.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1275,6 +1275,14 @@
     {
       "version": "20261213090000",
       "name": "recruitment_application_receipts"
+    },
+    {
+      "version": "20261214090000",
+      "name": "sp_india_national_qualifications"
+    },
+    {
+      "version": "20261215090000",
+      "name": "candidate_location_and_destinations"
     }
   ]
 }

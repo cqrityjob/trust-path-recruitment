@@ -42,6 +42,19 @@ export const GLOBAL_PROFESSIONAL_SCOPE = "global_professional" as const;
 /** The scope code for a credential that belongs to one jurisdiction. */
 export const NATIONAL_REGULATED_SCOPE = "national_regulated" as const;
 
+/** The scope code for a national-framework QUALIFICATION (20261214090000):
+ *  one country's, never global, and never a licence or a permission to work.
+ *  Deliberately not folded into `isNationalCredential`: that predicate means
+ *  "a regulated national credential" to the classifier, and an Indian NSQF
+ *  qualification is not one. */
+export const NATIONAL_QUALIFICATION_SCOPE = "national_qualification" as const;
+
+export function isNationalQualification(
+  definition: ScopedCredentialDefinition | null | undefined,
+): boolean {
+  return definition?.scopeCode === NATIONAL_QUALIFICATION_SCOPE;
+}
+
 /** The scope-bearing part of a credential definition.
  *
  *  Structural on purpose: `CredentialType`, a taxonomy row read by the server

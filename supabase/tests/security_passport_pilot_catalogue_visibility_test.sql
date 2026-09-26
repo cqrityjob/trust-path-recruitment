@@ -443,7 +443,14 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', '', true);
   DELETE FROM public.sp_claims WHERE holder_user_id IN (_gb_user, _ni_user, _du_user, _public);
   DELETE FROM public.user_roles WHERE user_id = _admin;
-  DELETE FROM auth.users WHERE id IN (_gb_user, _ni_user, _du_user, _public, _admin);
+  -- Members first, the revoking admin last. One statement over all five
+  -- deleted them in an unspecified order: when the admin went first, ON
+  -- DELETE SET NULL blanked revoked_by on the Dubai member's revoked row
+  -- while revoked_at stayed set, and sp_pilot_member_revocation_is_attributed
+  -- refused the cleanup (~1 run in 3). Deleting the members first removes
+  -- their entitlement rows by cascade, so nothing is left to un-attribute.
+  DELETE FROM auth.users WHERE id IN (_gb_user, _ni_user, _du_user, _public);
+  DELETE FROM auth.users WHERE id = _admin;
   SELECT count(*) INTO _n FROM public.sp_pilot_members
    WHERE user_id IN (_gb_user, _ni_user, _du_user);
   PERFORM pg_temp.ok(_n = 0, '10.1 the suite left no entitlement behind');

@@ -236,3 +236,17 @@ Use synthetic or your own documents. Sign in as a candidate.
    it appear there.
 10. Browser dev tools → Network: no request to `jsdelivr`/any CDN, and no request carrying
     the document's text other than the existing `uploadEvidence` after save.
+
+## 8. India (hayat-reader/2, 2026-09-26)
+
+For the four Indian NSQF qualifications ([india-market-entry.md](india-market-entry.md)):
+compact day-month-year dates (`03-Apr-2023`, `3/APR/2023`) are read; `04-03-2023` stays
+ambiguous — an Indian certificate is **not** assumed day-first. "Date of issuance", "Name of
+candidate" and "Candidate name" are recognised labels. Printed titles (Mr, Ms, Shri, Smt, Kumari,
+Dr…) are set aside on both sides before a name comparison, and a name in a script HAYAT does not
+read is not compared rather than called different. The selected qualification is recognised by
+its governed titles and qualification-pack code (`MEP/Q7101`). Language data is still Swedish and
+English only; no Hindi reading is claimed. A saved check now shows its **HAYAT check reference**
+(the recorded check's id), method and date in the holder's own details — never in a share, and
+not a lookup key. No Indian source is enabled: every Indian certificate resolves to "cannot be
+verified automatically". Proved by `passport-hayat:check` group 11 (21 checks, 3 planted controls).

@@ -36,4 +36,7 @@ export const HAYAT_LIMITS = {
 } as const;
 
 /** Bumped whenever parsing rules change, so a reading can be attributed. */
-export const HAYAT_READER_VERSION = "hayat-reader/1";
+// /2 (20261214, India entry): compact day-month-year dates ("03-Apr-2023"),
+// "date of issuance", "name of candidate", and printed titles set aside when a
+// name is compared. Ambiguous numeric dates are still never resolved.
+export const HAYAT_READER_VERSION = "hayat-reader/2";

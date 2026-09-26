@@ -71,6 +71,16 @@ const FLAG_ART: Record<FlagCode, ReactNode> = {
       <rect width="4.2" height="10" fill="#FF0000" />
     </>
   ),
+  // India: saffron, white, green, and the navy wheel at the centre.
+  IN: (
+    <>
+      <rect width="16" height="3.34" fill="#FF9933" />
+      <rect y="3.33" width="16" height="3.34" fill="#FFF" />
+      <rect y="6.66" width="16" height="3.34" fill="#138808" />
+      <circle cx="8" cy="5" r="1.25" fill="none" stroke="#000080" strokeWidth="0.35" />
+      <circle cx="8" cy="5" r="0.3" fill="#000080" />
+    </>
+  ),
 };
 
 /** Decorative by contract: the written scope always sits beside it. */

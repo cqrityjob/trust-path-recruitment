@@ -209,23 +209,26 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // byte-identical to the merged source by md5, claim/settle/recovery executable
 // by service_role only, no row changed. It comes off this list in the same
 // change that marks it applied.
-// The India entry schema (20261214090000 national qualifications,
-// 20261215090000 candidate location and destinations) is PENDING: authored and
-// proved locally, not merged and not applied. Each comes off this list in the
-// change that records it applied with hosted evidence.
+// The India entry schema (PR #297: 20261214090000 national qualifications,
+// 20261215090000 candidate location and destinations) merged as cb12fcb and
+// the integration applied it; verified read-only on 2026-09-26 -- canonical
+// versions and slugs as the 316th and 317th ledger rows, all eight function
+// bodies and the catalogue view byte-identical to the merged source by md5,
+// every declared verify statement as expected, no personal row changed. Both
+// come off this list in the same change that marks them applied. Nothing is
+// pending.
 // The strategic-level recruitment content (20261216090000, PR #299) is
 // PENDING: the Säkerhetschef assessment, interview guide, role profile and
-// content links as governed DRAFT rows -- not designated for recruitment,
-// pilot restricted -- authored and proved locally (full replay, rollback and
-// re-apply, loopback journey). It is not merged and not applied. Activation
-// is a separate, prepared migration that waits on the owner's content
-// approval (docs/release/2026-09-26-strategic-level-content-approval.md).
-// It comes off this list in the change that records it applied with hosted
-// evidence.
+// content links as governed DRAFT rows, authored and proved locally (full
+// replay, rollback and re-apply, loopback journey), and its activation
+// (20261217090000: the test designated as standard recruitment content and
+// the guide opened for pilot, at the same governance status as the
+// operational Väktare content -- draft, pilot hypothesis, closed test, not
+// validated). Neither is merged nor applied. Each comes off this list in the
+// change that records it applied with hosted evidence.
 const expectedPending: string[] = [
-  "20261214090000_sp_india_national_qualifications.sql",
-  "20261215090000_candidate_location_and_destinations.sql",
   "20261216090000_scp_security_manager_recruitment_content.sql",
+  "20261217090000_scp_security_manager_recruitment_activation.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

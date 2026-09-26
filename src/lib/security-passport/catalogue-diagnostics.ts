@@ -36,7 +36,10 @@ export type DiagnosticReason =
   | "deprecated"
   | "jurisdiction_inactive"
   /** No source-backed review row: no professional area, no recorded source. */
-  | "source_review_missing";
+  | "source_review_missing"
+  /** Informational: a national qualification, offered without a market pack
+   *  because it authorises nothing (20261214090000). Never a blocker. */
+  | "national_qualification_no_market";
 
 export type CatalogueAvailability =
   /** Offered to every holder. */
@@ -76,7 +79,35 @@ export interface DiagnosticDefinition {
   readonly packIsActive: boolean | null;
   readonly packPilotState: string | null;
   readonly review: { readonly sourceUrl: string; readonly checkedOn: string } | null;
+  /** Governed versions (20261214090000), current first. Empty for most definitions. */
+  readonly versions?: readonly DiagnosticVersion[];
+  /** What HAYAT can check AUTOMATICALLY for this definition today, from the
+   *  production registries in code -- never from a database flag an
+   *  administrator could set. */
+  readonly automaticVerification?: AutomaticVerification;
 }
+
+export interface DiagnosticVersion {
+  readonly key: string;
+  readonly title: string;
+  readonly qualificationCode: string | null;
+  readonly qualificationVersion: string | null;
+  readonly registerCode: string | null;
+  readonly frameworkLevel: number | null;
+  readonly awardingBody: string;
+  readonly status: "current" | "superseded";
+  readonly sourceUrl: string;
+  readonly checkedOn: string;
+}
+
+export type AutomaticVerification =
+  /** No enabled source and no onboarded issuer: a person reviews the evidence. */
+  | { readonly kind: "none" }
+  /** A signed-credential issuer policy covers it (reviewed code change). */
+  | { readonly kind: "signed_credential"; readonly issuers: readonly string[] }
+  /** A link source covers it but is DISABLED, with the reason. */
+  | { readonly kind: "source_disabled"; readonly source: string; readonly blockedBy: string }
+  | { readonly kind: "link_source"; readonly source: string };
 
 export interface DefinitionDiagnosis {
   readonly availability: CatalogueAvailability;
@@ -88,17 +119,30 @@ export interface DefinitionDiagnosis {
 export function diagnoseDefinition(d: DiagnosticDefinition): DefinitionDiagnosis {
   const reasons: DiagnosticReason[] = [];
   const global = d.scopeCode === "global_professional";
+  // A national QUALIFICATION (20261214090000) authorises nothing, so -- like a
+  // global certification -- it needs no market pack. The SAME rule as the
+  // view's national_qualification branch: no pack, no region, an active
+  // country, the issuer stated on the certificate, a governed regulator.
+  const nationalQualification = d.scopeCode === "national_qualification";
 
   const issuerResolved = global
     ? d.governedCertificationIssuer !== null
-    : d.governedAuthority !== null || (d.issuerStatedOnDocument && d.regulator !== null);
+    : nationalQualification
+      ? d.issuerStatedOnDocument && d.regulator !== null
+      : d.governedAuthority !== null || (d.issuerStatedOnDocument && d.regulator !== null);
   if (!issuerResolved) reasons.push("issuer_unresolved");
   if (d.deprecated) reasons.push("deprecated");
   if (!global && !d.jurisdictionActive) reasons.push("jurisdiction_inactive");
   if (!d.review) reasons.push("source_review_missing");
+  if (nationalQualification) reasons.push("national_qualification_no_market");
 
-  const marketOpen = global || d.packIsActive === true;
-  const marketPilot = !global && d.packIsActive !== true && d.packPilotState === "internal_pilot";
+  const marketOpen =
+    global || (nationalQualification && d.marketPackCode === null) || d.packIsActive === true;
+  const marketPilot =
+    !global &&
+    !nationalQualification &&
+    d.packIsActive !== true &&
+    d.packPilotState === "internal_pilot";
   if (!marketOpen && !marketPilot) reasons.push("market_closed");
   if (marketPilot) reasons.push("market_pilot_members_only");
   // The SAME rule as sp_approved_credential_catalogue (20261126090000): the

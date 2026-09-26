@@ -34,6 +34,9 @@ const DAY_MONTH_YEAR =
   /(?<!\d)(\d{1,2})(?:st|nd|rd|th|:[ae])?\.?\s+(?:of\s+)?([a-zåäö]{3,9})\.?,?\s+(\d{4})(?!\d)/;
 const MONTH_DAY_YEAR = /(?<![a-zåäö])([a-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})(?!\d)/;
 const NUMERIC = /(?<!\d)(\d{1,2})([./-])(\d{1,2})\2(\d{4})(?!\d)/;
+// "03-Apr-2023", "3/APR/2023", "03 Apr, 2023" — the compact day-month-year that
+// Indian certificates print. The month is a word, so it is never ambiguous.
+const DAY_MON_YEAR_COMPACT = /(?<!\d)(\d{1,2})([-/])([a-z]{3,9})\.?\2(\d{4})(?!\d)/;
 
 /** Every date in `text`, left to right. Never throws, never guesses. */
 export function readDates(text: string): DateReading[] {
@@ -75,6 +78,16 @@ function firstDate(text: string): { reading: DateReading; end: number } | null {
       hits.push({
         reading: { kind: "exact", iso: value, index: dmy.index },
         end: dmy.index + dmy[0].length,
+      });
+  }
+
+  const compact = DAY_MON_YEAR_COMPACT.exec(text);
+  if (compact && MONTHS[compact[3]]) {
+    const value = iso(Number(compact[4]), MONTHS[compact[3]], Number(compact[1]));
+    if (value)
+      hits.push({
+        reading: { kind: "exact", iso: value, index: compact.index },
+        end: compact.index + compact[0].length,
       });
   }
 

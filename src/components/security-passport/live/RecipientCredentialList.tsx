@@ -192,7 +192,11 @@ export function RecipientCredentialList({
               ) : null}
               <Row
                 label={pt("rec.validUntil")}
-                value={c.validUntil ? formatIsoDay(c.validUntil, lang) : formatExpiry(null, lang)}
+                value={
+                  c.validUntil
+                    ? formatIsoDay(c.validUntil, lang)
+                    : formatExpiry(null, lang, c.noExpiry)
+                }
               />
               {c.jurisdiction ? (
                 <Row

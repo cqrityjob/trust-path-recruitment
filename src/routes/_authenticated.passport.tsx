@@ -59,7 +59,8 @@ function PassportShell() {
   const { pathname, hash } = useLocation();
 
   // Keep initial setup focused; the product navigation returns afterwards.
-  const firstRun = pathname === "/passport/onboarding";
+  // The India setup (/passport/start) is a first run too.
+  const firstRun = pathname === "/passport/onboarding" || pathname === "/passport/start";
 
   return (
     <SiteLayout>

@@ -1,3 +1,4 @@
+import { trackFunnelOnce } from "@/lib/india-entry/analytics";
 import { CredentialDefinitionContext } from "@/components/security-passport/CredentialDefinitionContext";
 import { isPassportCredential } from "@/lib/security-passport/credential-passport";
 import { InternationalCredentialForm } from "@/components/security-passport/InternationalCredentialForm";
@@ -536,7 +537,7 @@ function PassportEntryRoute() {
                   {pt("claims.validUntil")}
                 </dt>
                 <dd className="mt-0.5 text-sm tabular-nums text-foreground">
-                  {formatExpiry(claim.validUntil, lang)}
+                  {formatExpiry(claim.validUntil, lang, internationalDetail?.no_expiry)}
                 </dd>
               </div>
               {/* The holder could TYPE a scope during a correction and then
@@ -651,7 +652,11 @@ function PassportEntryRoute() {
       ) : null}
 
       {claim && isPassportCredential(claim) && (
-        <CredentialDefinitionContext code={claim.credentialCode} metadata={international} />
+        <CredentialDefinitionContext
+          code={claim.credentialCode}
+          claimId={claim.id}
+          metadata={international}
+        />
       )}
 
       {claim && isPassportCredential(claim) && (
@@ -702,6 +707,8 @@ function PassportEntryRoute() {
               employerId,
             },
           });
+          // Anonymous funnel event, name only; never the credential or request.
+          if (requestKind === "cqrityjob_review") trackFunnelOnce("passport_review_requested");
           await refresh();
         }}
         onWithdrawRequest={async (requestId) => {
@@ -838,6 +845,10 @@ function PassportEntryRoute() {
                     // issuer, or a scoped credential could never be corrected.
                     authorisation_scope: claim.authorisationScope ?? "",
                     issuer_name: claim.issuerName ?? "",
+                    // The stated version survives a correction unless changed.
+                    definition_version:
+                      international?.statedVersions?.find((v) => v.claim_id === claim.id)
+                        ?.definition_version ?? "",
                   }}
                 />
               ) : (
@@ -878,7 +889,17 @@ function PassportEntryRoute() {
       ) : null}
 
       {/* ── Every version, oldest preserved ─────────────────────────── */}
-      {isClaim ? <CredentialVersionHistory versions={versions} currentId={entryId} /> : null}
+      {isClaim ? (
+        <CredentialVersionHistory
+          versions={versions.map((v) => ({
+            ...v,
+            noExpiry: international?.details.some(
+              (d) => d.claim_id === v.id && d.no_expiry === true,
+            ),
+          }))}
+          currentId={entryId}
+        />
+      ) : null}
     </div>
   );
 }

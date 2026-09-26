@@ -7,6 +7,13 @@ hosted evidence (`scripts/schema-first-release-check.ts` enforces it).
 
 Base: `main` @ `eefad07`. Nothing here is applied to any hosted database.
 
+**Hosted status (2026-09-26): applied and verified.** PR #297 merged as `cb12fcb`; the official
+Supabase GitHub integration applied both files at their canonical versions (ledger rows 316 and 317).
+Verified read-only, not inferred from the merge: every declared `verify` statement as expected, the
+eight function bodies and the catalogue view byte-identical to a local replay by md5, no personal row
+changed, no new advisor finding. Evidence: `supabase/release-state.json` and
+`supabase/hosted-ledger.json` (317 rows, digest `42e0ff1e56bd462b91aceb01be8873bf`).
+
 ## 20261214090000 — `sp_india_national_qualifications`
 
 | What | Detail |

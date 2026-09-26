@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -11,7 +12,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { I18nProvider } from "../i18n/context";
+import { I18nProvider, useAdoptLangIntent } from "../i18n/context";
 import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
@@ -169,9 +170,19 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
+        <LangIntentFromUrl />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </I18nProvider>
     </QueryClientProvider>
   );
+}
+
+/** A link's `?lang=` (the India page's sign-up link) survives a tap made
+ *  before hydration and a confirmation link opened on another device. See
+ *  useAdoptLangIntent: an explicit, stored choice always wins. */
+function LangIntentFromUrl() {
+  const search = useRouterState({ select: (s) => s.location.searchStr });
+  useAdoptLangIntent(search);
+  return null;
 }

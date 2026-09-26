@@ -92,6 +92,9 @@ export interface RecipientCredential {
   readonly authorisationScope: string | null;
   readonly issuedOn: IsoDate | null;
   readonly validUntil: IsoDate | null;
+  /** Explicitly non-expiring, as recorded. Without it a missing date is
+   *  "not provided", not "no expiry" (formatExpiry). */
+  readonly noExpiry: boolean;
   readonly verifiedAt: string | null;
   readonly verifierOrganisation: string | null;
   readonly verificationMethod: string | null;
@@ -258,6 +261,7 @@ function toDomainClaim(c: RecipientPayloadActive["verified_claims"][number], ind
     issuedOn: c.issued_on,
     validFrom: null,
     validUntil: c.valid_until,
+    noExpiry: c.no_expiry === true,
     // The EFFECTIVE level, so the identity engine reads a legacy unsupported
     // credential as documented and derives no title or eligibility from it.
     // (visibility.ts applies the same projection; this keeps the domain claim
@@ -332,13 +336,18 @@ export function buildRecipientPresentation(
       definitionScope:
         c.scope_code === "global_professional"
           ? "global"
-          : c.scope_code === "national_regulated"
+          : // A national qualification (20261214090000, India's NSQF
+            // qualifications) belongs to one country exactly as a regulated
+            // credential does; it simply authorises nothing. Both wear their
+            // country, never a globe.
+            c.scope_code === "national_regulated" || c.scope_code === "national_qualification"
             ? "national"
             : "unknown",
       scopeLimited: c.scope_limited === true,
       authorisationScope: c.authorisation_scope ?? null,
       issuedOn: c.issued_on,
       validUntil: c.valid_until,
+      noExpiry: c.no_expiry === true,
       verifiedAt: c.verified_at,
       verifierOrganisation: c.verifier_organisation,
       verificationMethod: c.verification_method,
