@@ -118,3 +118,75 @@ default mailer with its team-only restriction. No data changes.
   `e2e/employer-registration-confirmation.spec.ts` runs against real
   `auth.users` rows without any real mail provider. Delivery by a real
   provider is **not** proven by that walk and is not claimed.
+
+## Real delivery: what was tested here, and what only the owner can test
+
+**Tested here (2026-09-26, loopback stack, no real provider):** the whole
+registration walk in two browser contexts against real `auth.users` rows
+(`e2e/employer-registration-confirmation.spec.ts`, 8/8) and the test
+invitation from "Skicka test" into the candidate's CQrityjob inbox
+(`e2e/send-test-journey.spec.ts`, `e2e/send-test-strategic-journey.spec.ts`).
+The invitation row records the e-mail outcome the transport returned:
+`not_configured`, because the stack has no `RESEND_API_KEY`, and the dialog
+says so.
+
+**Not testable from this environment, and not claimed:** delivery to a real
+mailbox. The container's egress policy refuses `api.resend.com`,
+`*.supabase.co` and `api.supabase.com` outright, no Resend key is present,
+and no approved test address was named. A mock, a local inbox or a provider
+answering 200 is not delivery, so none of those is reported as delivery.
+
+### The application's own mail (Resend): production configuration
+
+Set on the application host (Lovable project settings → secrets; never with
+a `VITE_` prefix, redeploy afterwards):
+
+| Variable | Value | Exists today? |
+|---|---|---|
+| `RESEND_API_KEY` | a Resend key with sending permission for the verified domain | unknown from here — `docs/employer/company-registration-chain.md` could not confirm an account or a verified domain |
+| `RESEND_FROM_EMAIL` | the approved sender on that domain, e.g. `noreply@<verified domain>` | same |
+| `PUBLIC_SITE_URL` | the public origin, `https://trust-path-recruitment.lovable.app` until the custom domain is the origin | to confirm |
+
+Until `RESEND_API_KEY` and `RESEND_FROM_EMAIL` exist, every application mail
+is recorded as `not_configured` and the candidate is reached in CQrityjob
+only; nothing fails silently.
+
+### The one real-delivery test (owner, after the variables exist)
+
+The probe sends exactly ONE test invitation, built by the same template and
+sent through the same transport as "Skicka test", to ONE address the owner
+names, and refuses everything else (no default recipient, domain allow-list
+required, approver named):
+
+```
+RESEND_API_KEY=… RESEND_FROM_EMAIL=… PUBLIC_SITE_URL=https://trust-path-recruitment.lovable.app \
+bun run scripts/email/real-delivery-probe.ts \
+  --to <approved test address> --allow-domain <its domain> --approved-by "<owner>"
+```
+
+Record, in this file: the JSON the probe prints (provider result), and —
+separately — whether the message arrived (subject beginning
+`[LEVERANSPROV …]`, time, sender as the mail client shows it). "sent" from
+the provider means accepted, not delivered; only the second line proves
+delivery. Then, once, send a real "Skicka test" to a synthetic candidate
+account whose address is the same approved mailbox, and confirm the
+invitation row on `recruitment_messages` reads `email_status = 'sent'` and
+the mail arrived.
+
+### The confirmation mail (Supabase Auth): the same rule
+
+After the SMTP action above, the verification section of this document is
+the delivery test: a registration from a controlled, non-team mailbox, the
+`mail.send` log entry carrying your own `mail_from`, the link opened on a
+phone, and the desktop continuing with its own sign-in. Nothing else counts.
+
+### The missing approvals, exactly
+
+1. An approved test address (a mailbox the owner controls, not a member of
+   the Supabase organisation) for both probes above.
+2. Confirmation that a Resend account with a verified sending domain exists,
+   and the two secrets set on the application host.
+3. The four Auth settings in the owner-actions list above on
+   `wrygicdfxwjnrugduxnt`.
+
+No production write was made from this repository for any of the three.
