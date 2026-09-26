@@ -4,7 +4,10 @@
 // Owner bug report (2026-09-26): no way to send a test from the recruitment
 // overview. Owner update: both assessment levels available at launch, the
 // strategic one never hidden, never "coming soon", and never the operational
-// test renamed.
+// test renamed. Since 20261216090000 the strategic level has content of its
+// own, authored as a governed draft: the dialog says "draft awaiting content
+// approval" while the library refuses it, offers it once released, and says
+// "not installed" where the library does not carry it at all.
 //
 // Run: bun run send-test-dialog:check
 
@@ -17,7 +20,7 @@ import { I18nProvider } from "../src/i18n/context";
 import { dictionaries } from "../src/i18n/dictionaries";
 import {
   ASSESSMENT_LEVELS,
-  STRATEGIC_MISSING_CONTENT,
+  STRATEGIC_CONTENT_PARTS,
   resolveLevelOffers,
   type OfferableAssessment,
 } from "../src/lib/library/levels";
@@ -58,12 +61,35 @@ const VAKTARE: OfferableAssessment = {
   designedFor: "recruitment_support",
   assignable: true,
   unassignableReason: null,
+  contentStatus: "draft",
+  validationStatus: "design",
   itemCount: 50,
   moduleCount: 5,
   minutesMin: 35,
   minutesMax: 50,
   competenciesSv: [],
   competenciesEn: [],
+};
+/** The strategic test as the library reports it BEFORE the content approval:
+ *  present, a draft, refused as not permitted. */
+const SM_DRAFT: OfferableAssessment = {
+  ...VAKTARE,
+  slug: "security-manager-recruitment",
+  itemId: "44444444-4444-4444-8444-444444444444",
+  nameSv: "Säkerhetschef – Recruitment Assessment",
+  nameEn: "Security Manager – Recruitment Assessment",
+  assignable: false,
+  unassignableReason: "not_permitted",
+  itemCount: 37,
+  moduleCount: 5,
+  minutesMin: 35,
+  minutesMax: 50,
+};
+/** ...and AFTER it (designated, or under a closed-test grant). */
+const SM_RELEASED: OfferableAssessment = {
+  ...SM_DRAFT,
+  assignable: true,
+  unassignableReason: null,
 };
 ck(
   "two levels, operational first, strategic second, neither hidden",
@@ -77,8 +103,11 @@ ck(
     ASSESSMENT_LEVELS[0]!.assessmentSlug === "security-officer-recruitment",
 );
 ck(
-  "the strategic level maps to NO test (the catalogue has none)",
-  ASSESSMENT_LEVELS[1]!.assessmentSlug === null && TRUST_CONTENT.security_manager === null,
+  "the strategic level maps to its OWN test, never the operational one",
+  ASSESSMENT_LEVELS[1]!.assessmentSlug === "security-manager-recruitment" &&
+    TRUST_CONTENT.security_manager?.assessmentSlug === "security-manager-recruitment" &&
+    TRUST_CONTENT.security_manager?.guidePackSlug === "security-manager-se" &&
+    ASSESSMENT_LEVELS[1]!.assessmentSlug !== ASSESSMENT_LEVELS[0]!.assessmentSlug,
 );
 const offers = resolveLevelOffers([VAKTARE], new Set());
 ck(
@@ -86,16 +115,42 @@ ck(
   offers[0]!.state === "sendable" && offers[0]!.assessment?.slug === VAKTARE.slug,
 );
 ck(
-  "strategic: no_content, with the specification's five missing items",
+  "strategic, library without its test: no_content, with the five parts the level consists of",
   offers[1]!.state === "no_content" &&
     offers[1]!.assessment === null &&
-    offers[1]!.missing.length === 5 &&
-    offers[1]!.missing.every((m) => STRATEGIC_MISSING_CONTENT.includes(m)),
+    !offers[1]!.draftAwaitingRelease &&
+    offers[1]!.parts.length === 5 &&
+    offers[1]!.parts.every((m) => STRATEGIC_CONTENT_PARTS.includes(m)),
+);
+const pending = resolveLevelOffers([VAKTARE, SM_DRAFT], new Set());
+ck(
+  "strategic, draft refused as not permitted: not_assignable AND draft awaiting release",
+  pending[1]!.state === "not_assignable" &&
+    pending[1]!.draftAwaitingRelease &&
+    pending[1]!.assessment?.slug === SM_DRAFT.slug &&
+    pending[0]!.state === "sendable",
+);
+ck(
+  "a refusal that is NOT about a draft (retired, no items) is not called awaiting release",
+  !resolveLevelOffers([VAKTARE, { ...SM_DRAFT, unassignableReason: "no_items" }], new Set())[1]!
+    .draftAwaitingRelease &&
+    !resolveLevelOffers([VAKTARE, { ...SM_DRAFT, contentStatus: "published" }], new Set())[1]!
+      .draftAwaitingRelease,
+);
+ck(
+  "strategic, released: sendable with its own test",
+  resolveLevelOffers([VAKTARE, SM_RELEASED], new Set())[1]!.state === "sendable" &&
+    resolveLevelOffers([VAKTARE, SM_RELEASED], new Set())[1]!.assessment?.slug === SM_DRAFT.slug,
 );
 ck(
   "strategic is never the operational test renamed, whatever the library carries",
   resolveLevelOffers([VAKTARE, { ...VAKTARE, slug: "anything-else" }], new Set())[1]!.assessment ===
-    null,
+    null &&
+    resolveLevelOffers([VAKTARE, SM_RELEASED], new Set())[1]!.assessment?.slug !== VAKTARE.slug,
+);
+ck(
+  "strategic already sent on this application: already_sent",
+  resolveLevelOffers([VAKTARE, SM_RELEASED], new Set([SM_DRAFT.slug]))[1]!.state === "already_sent",
 );
 ck(
   "already sent on this application: already_sent, not sendable",
@@ -174,8 +229,9 @@ const APPLICATION = "33333333-3333-4333-8333-333333333333";
 function render(
   lang: "sv" | "en",
   sent: ReadonlyArray<{ assessmentSlug: string; attemptStatus: string }>,
+  library: readonly OfferableAssessment[] = [VAKTARE],
 ) {
-  queries.set(JSON.stringify(["employer", EMPLOYER, "library", "recruitment"]), [VAKTARE]);
+  queries.set(JSON.stringify(["employer", EMPLOYER, "library", "recruitment"]), library);
   queries.set(
     JSON.stringify(["employer", EMPLOYER, "application", APPLICATION, "assessments"]),
     sent,
@@ -223,17 +279,61 @@ for (const lang of ["sv", "en"] as const) {
   );
   const strategic = html.slice(html.indexOf('data-testid="send-test-level-strategic"'));
   ck(
-    `${lang}: the strategic level names exactly the five missing items`,
-    STRATEGIC_MISSING_CONTENT.every((m) => strategic.includes(esc(d[`sendTest.missing.${m}`]))) &&
-      strategic.includes(esc(d["sendTest.level.strategic.noTest"])),
+    `${lang}: not installed: the strategic level says so and names the five parts`,
+    /data-testid="send-test-strategic-missing"/.test(strategic) &&
+      STRATEGIC_CONTENT_PARTS.every((m) => strategic.includes(esc(d[`sendTest.part.${m}`]))) &&
+      strategic.includes(esc(d["sendTest.level.strategic.notInstalled"])),
   );
   ck(
     `${lang}: and never the operational test, and never "coming soon"`,
-    !strategic.includes("Recruitment Assessment") && !/kommer snart|coming soon/i.test(strategic),
+    !strategic.includes("Recruitment Assessment") &&
+      !/kommer snart|coming soon|godkänt|approved test/i.test(strategic),
   );
   ck(
     `${lang}: the strategic level points at the interview support that DOES exist`,
     strategic.includes(esc(d["sendTest.level.strategic.interviewInstead"])),
+  );
+
+  // The draft, present in the library and refused: awaiting content approval.
+  const pendingHtml = render(lang, [], [VAKTARE, SM_DRAFT]);
+  const pendingStrategic = pendingHtml.slice(
+    pendingHtml.indexOf('data-testid="send-test-level-strategic"'),
+  );
+  ck(
+    `${lang}: draft awaiting release: not_assignable, said as awaiting content approval, with its own test named as a draft`,
+    /data-testid="send-test-level-strategic"[^>]*data-state="not_assignable"/.test(pendingHtml) &&
+      /data-testid="send-test-strategic-pending"/.test(pendingStrategic) &&
+      pendingStrategic.includes(esc(d["sendTest.level.strategic.pendingApproval"])) &&
+      /data-testid="send-test-card-strategic"[^>]*data-content-status="draft"/.test(
+        pendingStrategic,
+      ) &&
+      pendingStrategic.includes(esc(lang === "sv" ? SM_DRAFT.nameSv : SM_DRAFT.nameEn)) &&
+      pendingStrategic.includes(esc(d["sendTest.test.closedTest"])) &&
+      STRATEGIC_CONTENT_PARTS.every((m) =>
+        pendingStrategic.includes(esc(d[`sendTest.part.${m}`])),
+      ) &&
+      !pendingStrategic.includes(esc(d["sendTest.level.notAssignable"])) &&
+      !pendingStrategic.includes(esc(VAKTARE.nameSv)) &&
+      !pendingStrategic.includes(esc(VAKTARE.nameEn)) &&
+      !/kommer snart|coming soon|validerat|validated/i.test(pendingStrategic),
+  );
+
+  // Released: sendable, with its own test and the closed-test note.
+  const releasedHtml = render(lang, [], [VAKTARE, SM_RELEASED]);
+  const releasedStrategic = releasedHtml.slice(
+    releasedHtml.indexOf('data-testid="send-test-level-strategic"'),
+  );
+  ck(
+    `${lang}: released: sendable with its own test, still said to be a draft run as a closed test`,
+    /data-testid="send-test-level-strategic"[^>]*data-state="sendable"/.test(releasedHtml) &&
+      releasedStrategic.includes(esc(lang === "sv" ? SM_DRAFT.nameSv : SM_DRAFT.nameEn)) &&
+      releasedStrategic.includes(
+        esc(d["sendTest.test.size"].replace("{items}", "37").replace("{modules}", "5")),
+      ) &&
+      releasedStrategic.includes(esc(d["sendTest.test.closedTest"])) &&
+      !releasedStrategic.includes(esc(VAKTARE.nameSv)) &&
+      !releasedStrategic.includes(esc(VAKTARE.nameEn)) &&
+      !/data-testid="send-test-strategic-(pending|missing)"/.test(releasedStrategic),
   );
   ck(
     `${lang}: the language of the test is a choice, both languages offered`,

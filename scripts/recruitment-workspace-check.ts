@@ -516,7 +516,7 @@ const sql = read(F.migration);
       sendDialog,
     ) &&
       /resolveLevelOffers\(library\.data \?\? \[\], alreadySent\)/.test(sendDialog) &&
-      /if \(alreadySentSlugs\.has\(row\.slug\)\)\s*return \{ level, state: "already_sent"/.test(
+      /if \(alreadySentSlugs\.has\(row\.slug\)\) \{?\s*return \{ level, state: "already_sent"/.test(
         levels,
       ) &&
       /const canSend = chosen\?\.state === "sendable"/.test(sendDialog) &&

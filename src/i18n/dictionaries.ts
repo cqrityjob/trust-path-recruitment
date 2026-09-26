@@ -6584,17 +6584,22 @@ export const dictionaries = {
       "För säkerhetschefer, Security Managers och andra ledande säkerhetsroller.",
     "sendTest.level.strategic.purpose":
       "Ett underlag om riskbaserad prioritering, styrning och mandat, incident- och krisledning, samverkan, regelefterlevnad och ledarskap – inför en strukturerad intervju.",
-    "sendTest.level.strategic.noTest":
-      "Det finns ännu inget godkänt kandidattest för den här nivån. Väktartestet erbjuds inte under den här rubriken – det skulle vara det operativa testet med ny titel. Nivån kan väljas när följande innehåll har tagits fram och granskats:",
-    "sendTest.missing.requirement_profile":
-      "Kravprofil med kompetensområden och observerbara indikatorer för ledningsroller.",
-    "sendTest.missing.interview_guide":
-      "Intervjuguide i samma format som Väktare: fasta frågor, fördjupningsfrågor och nivåbeskrivningar, versionslåst.",
-    "sendTest.missing.candidate_component":
-      "Kandidatmoment (till exempel ett strukturerat arbetsprov), med egen instrumentgranskning.",
-    "sendTest.missing.report_section": "Rapportavsnitt med kompetensvisa bedömningar och belägg.",
-    "sendTest.missing.review":
-      "Expert-, juridik- och kognitiv granskning, därefter publicering eller ett uttryckligt pilotbeslut.",
+    "sendTest.level.strategic.pendingApproval":
+      "Testet för den här nivån finns som utkast under granskning och är inte frisläppt för rekrytering. Er organisation kan inte skicka det förrän innehållet har fått ett samlat innehållsgodkännande och aktiverats. Väktartestet erbjuds inte under den här rubriken – det skulle vara det operativa testet med ny titel. Följande finns som utkast:",
+    "sendTest.level.strategic.notInstalled":
+      "Innehållet för den här nivån finns som granskningsutkast men är inte installerat i den här miljön. Väktartestet erbjuds inte under den här rubriken – det skulle vara det operativa testet med ny titel. Nivån består av:",
+    "sendTest.part.requirement_profile":
+      "Kravprofil för Säkerhetschef med sex kompetensområden och observerbara indikatorer.",
+    "sendTest.part.interview_guide":
+      "Intervjuguide i samma format som Väktare: åtta fasta frågor, fördjupningsfrågor och nivåbeskrivningar, versionslåst.",
+    "sendTest.part.candidate_component":
+      "Kandidattest med scenarier, självskattning och reflektion, med egen instrumentgranskning.",
+    "sendTest.part.report_section":
+      "Rapportavsnitt med kompetensvisa bedömningar, belägg och intervjuunderlag.",
+    "sendTest.part.review":
+      "Expert-, juridik- och kognitiv granskning med alla grindar utestående, därefter publicering eller ett uttryckligt pilotbeslut.",
+    "sendTest.test.closedTest":
+      "Innehållet är ett utkast och körs som sluten test. Resultatet är ett underlag – det fattar inget beslut.",
     "sendTest.level.strategic.interviewInstead":
       "Intervjustödet BESKT kan användas för rollen redan nu, från Tester & bedömningar → Rekryteringsstöd.",
     "sendTest.level.notAssignable": "Testet finns men er organisation kan inte skicka det just nu.",
@@ -14698,18 +14703,22 @@ export const dictionaries = {
       "For heads of security, Security Managers and other leading security roles.",
     "sendTest.level.strategic.purpose":
       "Material on risk-based prioritisation, governance and mandate, incident and crisis leadership, collaboration, compliance and leadership – ahead of a structured interview.",
-    "sendTest.level.strategic.noTest":
-      "There is no approved candidate test for this level yet. The security-officer test is not offered under this heading – that would be the operational test with a new title. The level can be chosen once the following content has been produced and reviewed:",
-    "sendTest.missing.requirement_profile":
-      "A requirement profile with competency areas and observable indicators for leadership roles.",
-    "sendTest.missing.interview_guide":
-      "An interview guide in the same format as the security-officer one: fixed questions, probing questions and level descriptions, version-locked.",
-    "sendTest.missing.candidate_component":
-      "A candidate component (for example a structured work sample), with its own instrument review.",
-    "sendTest.missing.report_section":
-      "A report section with competency-by-competency assessments and evidence.",
-    "sendTest.missing.review":
-      "Expert, legal and cognitive review, then publication or an explicit pilot decision.",
+    "sendTest.level.strategic.pendingApproval":
+      "The test for this level exists as a draft under review and has not been released for recruitment. Your organisation cannot send it until the content has received a combined content approval and been activated. The security-officer test is not offered under this heading – that would be the operational test with a new title. The following exist as drafts:",
+    "sendTest.level.strategic.notInstalled":
+      "The content for this level exists as a review draft but is not installed in this environment. The security-officer test is not offered under this heading – that would be the operational test with a new title. The level consists of:",
+    "sendTest.part.requirement_profile":
+      "A Security Manager requirement profile with six competency areas and observable indicators.",
+    "sendTest.part.interview_guide":
+      "An interview guide in the same format as the security-officer one: eight fixed questions, probing questions and level descriptions, version-locked.",
+    "sendTest.part.candidate_component":
+      "A candidate test with scenarios, self-description and reflection, with its own instrument review.",
+    "sendTest.part.report_section":
+      "A report section with competency-by-competency assessments, evidence and interview preparation.",
+    "sendTest.part.review":
+      "Expert, legal and cognitive review with every gate outstanding, then publication or an explicit pilot decision.",
+    "sendTest.test.closedTest":
+      "The content is a draft and runs as a closed test. The result is material for the interview – it makes no decision.",
     "sendTest.level.strategic.interviewInstead":
       "The BESKT interview support can already be used for the role, from Tests & assessments → Recruitment support.",
     "sendTest.level.notAssignable":

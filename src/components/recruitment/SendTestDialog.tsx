@@ -19,9 +19,11 @@
 // ── BOTH LEVELS, ALWAYS ─────────────────────────────────────────────────
 //
 // The employer chooses a level first, and both are shown with who they are
-// for and what they produce. The operational level has a test. The strategic
-// level has NONE yet, and says so with the content specification's own list
-// of what is missing -- never "coming soon", and never the operational test
+// for and what they produce. Each level maps to its own test. Whether THIS
+// organisation may send it is read live from the library: the strategic
+// level's content is a governed draft awaiting the owner's content approval,
+// and until CQrityjob releases it the dialog says exactly that -- never
+// "coming soon", never a validated test, and never the operational test
 // under a new heading (src/lib/library/levels.ts holds that rule).
 
 import { useEffect, useId, useRef, useState } from "react";
@@ -282,8 +284,12 @@ export function SendTestDialog({
                           <span className="mt-1 block text-[13px] leading-relaxed text-foreground">
                             {t(purposeKey(g))}
                           </span>
-                          {o.state === "sendable" && o.assessment && (
-                            <span className="mt-2 block rounded-md bg-background px-2.5 py-2 text-[13px]">
+                          {(o.state === "sendable" || o.draftAwaitingRelease) && o.assessment && (
+                            <span
+                              className="mt-2 block rounded-md bg-background px-2.5 py-2 text-[13px]"
+                              data-testid={`send-test-card-${g}`}
+                              data-content-status={o.assessment.contentStatus}
+                            >
                               <span className="font-medium text-foreground">
                                 {t("sendTest.test")}:{" "}
                                 {sv ? o.assessment.nameSv : o.assessment.nameEn}
@@ -298,6 +304,11 @@ export function SendTestDialog({
                                       .replace("{max}", String(o.assessment.minutesMax))}`
                                   : ""}
                               </span>
+                              {o.assessment.contentStatus === "draft" && (
+                                <span className="block text-muted-foreground">
+                                  {t("sendTest.test.closedTest")}
+                                </span>
+                              )}
                             </span>
                           )}
                           {o.state === "already_sent" && (
@@ -305,7 +316,28 @@ export function SendTestDialog({
                               {t("sendTest.level.alreadySent")}
                             </span>
                           )}
-                          {o.state === "not_assignable" && (
+                          {o.state === "not_assignable" && !o.draftAwaitingRelease && (
+                            <span className="mt-2 block text-[13px] text-foreground">
+                              {t("sendTest.level.notAssignable")}
+                            </span>
+                          )}
+                          {o.draftAwaitingRelease && g === "strategic" && (
+                            <span
+                              className="mt-2 block text-[13px] text-foreground"
+                              data-testid="send-test-strategic-pending"
+                            >
+                              {t("sendTest.level.strategic.pendingApproval")}
+                              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                                {o.parts.map((m) => (
+                                  <li key={m}>{t(`sendTest.part.${m}` as TranslationKey)}</li>
+                                ))}
+                              </ul>
+                              <span className="mt-1 block">
+                                {t("sendTest.level.strategic.interviewInstead")}
+                              </span>
+                            </span>
+                          )}
+                          {o.draftAwaitingRelease && g !== "strategic" && (
                             <span className="mt-2 block text-[13px] text-foreground">
                               {t("sendTest.level.notAssignable")}
                             </span>
@@ -315,10 +347,10 @@ export function SendTestDialog({
                               className="mt-2 block text-[13px] text-foreground"
                               data-testid="send-test-strategic-missing"
                             >
-                              {t("sendTest.level.strategic.noTest")}
+                              {t("sendTest.level.strategic.notInstalled")}
                               <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-                                {o.missing.map((m) => (
-                                  <li key={m}>{t(`sendTest.missing.${m}` as TranslationKey)}</li>
+                                {o.parts.map((m) => (
+                                  <li key={m}>{t(`sendTest.part.${m}` as TranslationKey)}</li>
                                 ))}
                               </ul>
                               <span className="mt-1 block">

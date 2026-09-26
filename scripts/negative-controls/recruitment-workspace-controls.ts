@@ -186,9 +186,9 @@ const MUTATIONS: readonly Mutation[] = [
     // The decision moved into the level resolver behind the ONE send dialog
     // (owner bug report 2026-09-26); the planted defect is the same.
     file: "src/lib/library/levels.ts",
-    find: '    if (alreadySentSlugs.has(row.slug))\n      return { level, state: "already_sent", assessment: row, missing: [] };',
+    find: '    if (alreadySentSlugs.has(row.slug)) {\n      return { level, state: "already_sent", assessment: row, draftAwaitingRelease: false, parts };',
     replace:
-      '    if (alreadySentSlugs.has(row.slug))\n      return { level, state: "sendable", assessment: row, missing: [] };',
+      '    if (alreadySentSlugs.has(row.slug)) {\n      return { level, state: "sendable", assessment: row, draftAwaitingRelease: false, parts };',
     guard: G,
     expect: "the send button is withheld for an assessment already sent on this application",
   },
