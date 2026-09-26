@@ -1764,6 +1764,8 @@ jobs:
       # ISO; impossible dates are refused with the reason; the value survives
       # the step navigation. Owner bug report 2026-09-26.
       - name: Passport date input browser suite
+        env:
+          E2E_BASE_URL: http://localhost:3100
         run: bun run e2e e2e/passport-date-input.spec.ts --project=chromium --project=mobile-375
 
       - name: Server log

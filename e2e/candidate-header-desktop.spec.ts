@@ -126,6 +126,16 @@ for (const lang of ["sv", "en"] as const) {
       await expect(page.locator("#site-menu")).toBeVisible();
       await page.setViewportSize({ width: 1100, height: 800 });
       await expect(page.locator('[data-candidate-app-nav="desktop"]')).toBeVisible();
+      // The header must have SEEN the growth before the viewport shrinks
+      // again: the media-query change is reported at the next rendering
+      // frame, and two resizes inside one frame are, to the page, no resize
+      // at all. aria-expanded is the header's own record of the sheet state;
+      // the button itself is CSS-hidden past the breakpoint, so it is read
+      // by its control relation rather than by role.
+      await expect(page.locator('[aria-controls="site-menu"]')).toHaveAttribute(
+        "aria-expanded",
+        "false",
+      );
       await page.setViewportSize({ width: 1023, height: 800 });
       await expect(page.locator("#site-menu")).toBeHidden();
       await expect(button).toHaveAttribute("aria-expanded", "false");
