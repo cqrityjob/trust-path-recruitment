@@ -610,3 +610,164 @@ test("India on a phone: landing, keyboard, setup and form stay usable", async ({
   await noHorizontalScroll(page, "credential page");
   await page.screenshot({ path: testInfo.outputPath("m4-credential.png"), fullPage: true });
 });
+
+// ── PRODUCTION DEFECT 2026-09-26 ─────────────────────────────────────────
+// A holder who already had Swedish, British and international credentials
+// added an Indian qualification; /passport then showed "This page didn't
+// load" -- again after a reload. The wallet read CREDENTIAL_CLASSES[
+// "vocational_qualification"].en on a TS mirror that lacked the class.
+// Nothing here is stubbed: the credentials are saved through the holder's own
+// save RPC and the product form, and the Passport is read back from the stack.
+test("India: a Passport with SE, GB and international credentials gains all four Indian qualifications and still loads", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "runs once, on desktop");
+  test.setTimeout(240_000);
+  refuseNonLocal();
+  await page.addInitScript(() => localStorage.setItem("cqrityjob.lang", "en"));
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(String(e)));
+  const admin = createClient(API, env("INDIA_SERVICE_KEY"), { auth: { persistSession: false } });
+  const email = `mixed.${Date.now()}@test.local`;
+  const password = "IndiaJourney!2026";
+  const created = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { display_name: "Kavya Menon" },
+  });
+  expect(created.error).toBeNull();
+  const userId = created.data.user!.id;
+
+  // Signed in through the product; the setup creates the empty Passport.
+  await page.goto(`${BASE}/login?redirect=${encodeURIComponent("/passport/start?market=IN")}`);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(password);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.locator("[data-india-setup]")).toBeVisible({ timeout: 60_000 });
+
+  // The credentials the holder already had, saved as the holder. GB is a
+  // pilot market: an administrator's grant is the fixture, as in production.
+  sql(
+    `insert into public.sp_pilot_members(user_id, market_pack_code, note) values ('${userId}','GB','india passport regression fixture')`,
+  );
+  const holder = createClient(API, env("INDIA_ANON_KEY"), { auth: { persistSession: false } });
+  expect((await holder.auth.signInWithPassword({ email, password })).error).toBeNull();
+  const save = async (input: Record<string, unknown>) => {
+    const r = await holder.rpc(
+      "sp_save_international_credential" as never,
+      {
+        _input: {
+          market_region: "",
+          identifier: "",
+          issued_on: "",
+          valid_until: "",
+          no_expiry: null,
+          ...input,
+        },
+      } as never,
+    );
+    expect(r.error, JSON.stringify(input)).toBeNull();
+    return r.data as unknown as string;
+  };
+  const ids: Record<string, string> = {};
+  ids.OV = await save({
+    definition_code: "OV",
+    market_country: "SE",
+    identifier: "OV-SYNTH-1",
+    issued_on: "2025-02-01",
+    valid_until: "2028-02-01",
+  });
+  ids.UK_SIA_LICENCE_SG = await save({
+    definition_code: "UK_SIA_LICENCE_SG",
+    market_country: "GB",
+    identifier: "1012345678901234",
+    issued_on: "2025-05-01",
+    valid_until: "2028-05-01",
+  });
+  ids.INTL_ASIS_APP = await save({
+    definition_code: "INTL_ASIS_APP",
+    market_country: "",
+    identifier: "APP-SYNTH-1",
+    issued_on: "2024-06-01",
+    valid_until: "2027-06-01",
+  });
+
+  // The Indian qualification, through the product form, with only what it
+  // requires: the issuer as printed. No number, no dates, no version.
+  await page.goto(`${BASE}/passport/credentials/new?country=IN`);
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByLabel("Approved credential").selectOption("IN_MEPSC_Q7101");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page
+    .locator('[data-field="issuer-name"]')
+    .fill("Management & Entrepreneurship and Professional Skills Council");
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await page.getByRole("button", { name: "Save credential", exact: true }).click();
+  await expect(page).toHaveURL(/\/passport\/entry\/claim\//, { timeout: 60_000 });
+
+  // Back to the Passport the way a holder goes: the product navigation.
+  await page.locator('[data-candidate-app-nav="desktop"] a[href="/passport"]').click();
+  const wallet = page.locator("[data-credential-wallet]");
+  const expectPassport = async (titles: readonly string[], label: string) => {
+    await expect(page.locator("[data-passport-workspace]"), label).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("This page didn't load")).toHaveCount(0);
+    await expect(wallet.locator("[data-credential-row]"), label).toHaveCount(3 + titles.length);
+    for (const title of titles) {
+      const row = wallet.locator("[data-credential-row]", { hasText: title });
+      await expect(row, `${title} · ${label}`).toBeVisible();
+      await expect(row).toContainText("Vocational qualification");
+      await expect(row.locator("[data-shield-mark]")).toBeVisible();
+      await expect(row.locator("[data-credential-scope]")).toHaveAttribute(
+        "data-credential-scope",
+        "IN",
+      );
+      await expect(row).toContainText("Expiry date not provided");
+    }
+    // The SE, GB and international credentials are still there beside them.
+    for (const code of ["OV", "UK_SIA_LICENCE_SG", "INTL_ASIS_APP"])
+      await expect(wallet.locator(`a[href="/passport/entry/claim/${ids[code]}"]`)).toBeVisible();
+  };
+  await expect(page).toHaveURL(/\/passport$/);
+  await expectPassport(["Security Guard (MEP/Q7101)"], "after the save");
+  await page.reload();
+  await expectPassport(["Security Guard (MEP/Q7101)"], "after a reload");
+  await page.screenshot({ path: testInfo.outputPath("r1-passport-mixed.png"), fullPage: true });
+
+  // The other three Indian definitions, with every optional field missing.
+  for (const code of ["IN_MEPSC_Q7201", "IN_MEPSC_Q7104", "IN_MEPSC_Q7204"])
+    await save({ definition_code: code, market_country: "IN", issuer_name: "MEPSC" });
+  await page.reload();
+  await expectPassport(
+    [
+      "Security Guard (MEP/Q7101)",
+      "Security Supervisor (MEP/Q7201)",
+      "CCTV Supervisor (MEP/Q7104)",
+      "CCTV Video Footage Auditor (MEP/Q7204)",
+    ],
+    "all four, after a reload",
+  );
+  // Nothing was hidden or changed to make it render.
+  expect(
+    sql(
+      `select string_agg(coalesce(jurisdiction_code,'-')||':'||credential_code||':'||assertion_level||':'||lifecycle_state, ',') from public.sp_claims where holder_user_id='${userId}'`,
+    )
+      .split(",")
+      .sort(),
+  ).toEqual(
+    [
+      "-:INTL_ASIS_APP:self_declared:active",
+      "GB:UK_SIA_LICENCE_SG:self_declared:active",
+      "IN:IN_MEPSC_Q7101:self_declared:active",
+      "IN:IN_MEPSC_Q7104:self_declared:active",
+      "IN:IN_MEPSC_Q7201:self_declared:active",
+      "IN:IN_MEPSC_Q7204:self_declared:active",
+      "SE:OV:self_declared:active",
+    ].sort(),
+  );
+  await page.screenshot({ path: testInfo.outputPath("r2-passport-all-four.png"), fullPage: true });
+  expect(errors).toEqual([]);
+});

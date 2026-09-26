@@ -40,8 +40,8 @@ import {
 } from "@/lib/security-passport/credential-passport";
 import { CAREER_PROFILE_PROFESSION_EDIT_HREF } from "@/lib/security-passport/profile-basics";
 import {
-  CREDENTIAL_CLASSES,
   credentialClass,
+  credentialClassLabel,
   credentialDate,
 } from "@/lib/security-passport/international";
 import {
@@ -239,7 +239,7 @@ export function CredentialWallet({
         </span>
         <div className="min-w-0">
           <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            {CREDENTIAL_CLASSES[credentialClass(c, r.detail)][lang]}
+            {credentialClassLabel(credentialClass(c, r.detail), lang)}
           </p>
           <p className="text-sm font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">
             {r.name}

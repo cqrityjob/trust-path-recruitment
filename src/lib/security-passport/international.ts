@@ -11,8 +11,21 @@ export const CREDENTIAL_CLASSES = {
   },
   occupational_card: { sv: "Yrkeslegitimation", en: "Occupational card" },
   other_professional_credential: { sv: "Annan merit", en: "Other professional credential" },
+  // 20261214090000: a country's NSQF-type qualification (India's MEPSC
+  // qualifications). Mirrors public.sp_credential_classes -- scripts/
+  // india-entry-check.ts refuses a class the database has and this lacks.
+  vocational_qualification: { sv: "Yrkeskvalifikation", en: "Vocational qualification" },
 } as const;
 export type CredentialClass = keyof typeof CREDENTIAL_CLASSES;
+
+/** The reader-facing name of a credential class. A class the database knows
+ *  and this build does not (a migration ahead of the code) is shown as the
+ *  generic class rather than taking the whole Passport down: the credential,
+ *  its trust level and its dates still render. */
+export function credentialClassLabel(value: string, lang: "sv" | "en"): string {
+  const known = CREDENTIAL_CLASSES[value as CredentialClass];
+  return (known ?? CREDENTIAL_CLASSES.other_professional_credential)[lang];
+}
 export interface CredentialDetails {
   claim_id: string;
   credential_class: CredentialClass;
