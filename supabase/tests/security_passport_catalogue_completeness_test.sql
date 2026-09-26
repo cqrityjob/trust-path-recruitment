@@ -10,6 +10,8 @@
 --
 --   14 international certifications     (global, no market, no entitlement)
 --    8 Sweden                           (production)
+--    4 India                            (national qualifications: approved for
+--                                        everyone, no market pack — 20261214090000)
 --   13 Great Britain + 1 Northern Ireland   (internal pilot)
 --   30 Dubai                            (internal pilot)
 --    7 Abu Dhabi                        (CLOSED by owner decision: never listed)
@@ -38,6 +40,7 @@ INSERT INTO expected VALUES
  ('INTL_ISC2_CC','se'),('INTL_ISC2_CGRC','se'),('INTL_ISC2_SSCP','se'),('INTL_ISC2_CISSP','se'),('INTL_ISC2_CCSP','se'),
  ('INTL_ISACA_CISA','se'),('INTL_ISACA_CISM','se'),('INTL_ISACA_CRISC','se'),('INTL_ACFE_CFE','se'),('INTL_ACAMS_CAMS','se'),
  ('VU1','se'),('VU2','se'),('OV_TRAINING','se'),('OV_REFRESHER','se'),('OV_TRANSPORT','se'),('OV','se'),('SV','se'),('SE_PERSONNEL_APPROVAL','se'),
+ ('IN_MEPSC_Q7101','se'),('IN_MEPSC_Q7201','se'),('IN_MEPSC_Q7104','se'),('IN_MEPSC_Q7204','se'),
  ('UK_SIA_LICENCE_SG','gb'),('UK_SIA_LICENCE_DS','gb'),('UK_SIA_LICENCE_CCTV','gb'),('UK_SIA_LICENCE_CP','gb'),('UK_SIA_LICENCE_CVIT','gb'),
  ('UK_SIA_LICENCE_KH','gb'),('UK_SIA_LICENCE_NFL','gb'),
  ('UK_SIA_QUAL_SG','gb'),('UK_SIA_QUAL_DS','gb'),('UK_SIA_QUAL_CCTV','gb'),('UK_SIA_QUAL_CP','gb'),('UK_SIA_QUAL_CVIT','gb'),('UK_SIA_TOP_UP','gb'),
@@ -54,8 +57,8 @@ GRANT SELECT ON expected TO authenticated;
 CREATE TEMP TABLE seen(code text PRIMARY KEY, principal text, claim_id uuid);
 GRANT SELECT,INSERT ON seen TO authenticated;
 
-SELECT pg_temp.ok((SELECT count(*)=66 FROM expected),'the pinned expectation is 66 definitions: 14 international, 8 Sweden, 13 GB, 1 NI, 30 Dubai');
-SELECT pg_temp.ok((SELECT count(*)=73 FROM public.sp_credential_types),'the taxonomy holds 73 definitions: the 66 in scope and 7 Abu Dhabi rows');
+SELECT pg_temp.ok((SELECT count(*)=70 FROM expected),'the pinned expectation is 70 definitions: 14 international, 8 Sweden, 4 India, 13 GB, 1 NI, 30 Dubai');
+SELECT pg_temp.ok((SELECT count(*)=77 FROM public.sp_credential_types),'the taxonomy holds 77 definitions: the 70 in scope and 7 Abu Dhabi rows');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM expected e WHERE NOT EXISTS(SELECT 1 FROM public.sp_credential_types t WHERE t.code=e.code)),
  'every pinned code is a real taxonomy row');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_credential_types t WHERE t.market_pack_code IS DISTINCT FROM 'AE-AZ' AND NOT EXISTS(SELECT 1 FROM expected e WHERE e.code=t.code)),
@@ -65,7 +68,7 @@ SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM expected e WHERE NOT EXISTS(
    SELECT 1 FROM public.sp_credential_organisation_roles r WHERE r.credential_code=e.code AND r.role='issuer')),
  'every definition in scope has an issuer role (governed, or stated on the document)');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM expected e JOIN public.sp_credential_types t ON t.code=e.code
-   WHERE t.scope_code='national_regulated' AND NOT EXISTS(
+   WHERE t.scope_code IN ('national_regulated','national_qualification') AND NOT EXISTS(
    SELECT 1 FROM public.sp_credential_organisation_roles r WHERE r.credential_code=e.code AND r.role='regulator' AND r.authority_id IS NOT NULL)),
  'every national definition in scope has a governed regulator');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_credential_organisation_roles r JOIN public.sp_authorities a ON a.id=r.authority_id
@@ -94,8 +97,8 @@ INSERT INTO public.sp_pilot_members(user_id,market_pack_code,granted_by,note) VA
 -- ── BEFORE any approval: what the product offers today ──────────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
-SELECT pg_temp.ok((SELECT count(*)=22 FROM public.sp_approved_credential_catalogue),
- 'today a Swedish holder is offered 22: all 14 international and all 8 Swedish definitions, VU1, VU2 and SV included');
+SELECT pg_temp.ok((SELECT count(*)=26 FROM public.sp_approved_credential_catalogue),
+ 'today a Swedish holder is offered 26: all 14 international, all 8 Swedish (VU1, VU2 and SV included) and the 4 Indian qualifications');
 SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV')),
  'VU1, VU2 and SV are no longer withheld');
 RESET ROLE;
@@ -117,13 +120,13 @@ SELECT set_config('request.path','/sp_approved_credential_catalogue',true);
 SELECT set_config('request.headers','{"user-agent":"an application deployed before the migration"}',true);
 SELECT pg_temp.ok((SELECT count(*)=19 FROM public.sp_approved_credential_catalogue)
  AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.code IN ('VU1','VU2','SV')),
- 'an OLD application lists the 19 it can save: no scoped and no document-issuer definition is offered to it');
+ 'an OLD application lists the 19 it can save: no scoped and no document-issuer definition — so none of the four Indian qualifications — is offered to it');
 SELECT set_config('request.headers','{"x-passport-catalogue-contract":"2"}',true);
-SELECT pg_temp.ok((SELECT count(*)=22 FROM public.sp_approved_credential_catalogue),
- 'the NEW application declares the contract and is offered all 22');
+SELECT pg_temp.ok((SELECT count(*)=26 FROM public.sp_approved_credential_catalogue),
+ 'the NEW application declares the contract and is offered all 26');
 SELECT set_config('request.path','/rpc/sp_save_international_credential',true);
 SELECT set_config('request.headers','{}',true);
-SELECT pg_temp.ok((SELECT count(*)=22 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*)=26 FROM public.sp_approved_credential_catalogue),
  'the guard narrows the LISTING only: the save RPC and the table guards read the whole catalogue');
 SELECT set_config('request.path','',true);
 SELECT set_config('request.headers','',true);
@@ -164,14 +167,14 @@ BEGIN
   RESET ROLE;
   _n := _n + 1;
  END LOOP;
- PERFORM pg_temp.ok(_n=66,'all 66 definitions in scope are visible to their entitled holder, save through the governed RPC and read back with the right territory, issuer and scope');
+ PERFORM pg_temp.ok(_n=70,'all 70 definitions in scope are visible to their entitled holder, save through the governed RPC and read back with the right territory, issuer and scope');
 END $$;
 RESET ROLE;
 
 SELECT pg_temp.ok((SELECT count(*)=15+1 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.authorisation_scope IS NOT NULL),
  'exactly the 16 scoped definitions carry a scope: SV and the fifteen SIRA cards');
-SELECT pg_temp.ok((SELECT count(*)=23 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.claimed_issuer_name='Fiktiv Utbildning AB'),
- 'exactly the 23 document-issuer definitions carry a holder-stated issuer: VU1, VU2, six UK qualifications and the fifteen Dubai courses and checks');
+SELECT pg_temp.ok((SELECT count(*)=27 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.claimed_issuer_name='Fiktiv Utbildning AB'),
+ 'exactly the 27 document-issuer definitions carry a holder-stated issuer: VU1, VU2, the four Indian qualifications, six UK qualifications and the fifteen Dubai courses and checks');
 SELECT pg_temp.ok((SELECT count(*)=15 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id WHERE c.claimed_issuer_name='Security Industry Regulatory Agency')
  AND NOT EXISTS(SELECT 1 FROM seen s JOIN public.sp_claims c ON c.id=s.claim_id JOIN public.sp_credential_types t ON t.code=s.code
                  WHERE t.market_pack_code='AE-DU' AND t.category<>'appointment' AND c.claimed_issuer_name='Security Industry Regulatory Agency'),
@@ -230,7 +233,7 @@ RESET ROLE;
 INSERT INTO public.sp_share_sessions(disclosure_id,session_hash,expires_at)
  VALUES((:'share'::jsonb->>'disclosure_id')::uuid,encode(digest(repeat('c',64),'sha256'),'hex'),now()+interval '20 minutes');
 SELECT public.sp_get_disclosure_session(repeat('c',64)) AS payload \gset
-SELECT pg_temp.ok(jsonb_array_length(:'payload'::jsonb->'verified_claims')=2,'only the two selected credentials are disclosed out of twenty-two');
+SELECT pg_temp.ok(jsonb_array_length(:'payload'::jsonb->'verified_claims')=2,'only the two selected credentials are disclosed out of twenty-six');
 SELECT pg_temp.ok(EXISTS(SELECT 1 FROM jsonb_array_elements(:'payload'::jsonb->'verified_claims') c
  WHERE c->>'credential_code'='VU1' AND c->>'issuer'='Fiktiv Utbildning AB'),'VU1 discloses the training provider the holder stated, not nothing');
 SELECT pg_temp.ok(EXISTS(SELECT 1 FROM jsonb_array_elements(:'payload'::jsonb->'verified_claims') c

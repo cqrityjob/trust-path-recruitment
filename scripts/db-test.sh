@@ -261,14 +261,27 @@ psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
-    # 20261204090000 (HAYAT assessments) is the newest Passport migration and
-    # stands down FIRST: its triggers sit on sp_claims and sp_evidence, and every
+    # 20261214090000 (India national qualifications) is now the newest Passport
+    # migration and stands down FIRST: it replaces the catalogue view, the claim
+    # rules, the details guard, the save RPC and the reviewer detail, and every
+    # rollback below restores the text IT restored. It must restore them
+    # verbatim, and leave no Indian row, scope, class or version behind.
+    psql_q -d "$TEST_DB" -f "supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql" >/dev/null
+    india_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_credential_types WHERE jurisdiction_code='IN') + (SELECT count(*) FROM public.sp_jurisdictions WHERE code='IN') + (SELECT count(*) FROM public.sp_credential_scopes WHERE code='national_qualification') + (SELECT count(*) FROM public.sp_credential_classes WHERE code='vocational_qualification') + (to_regclass('public.sp_credential_definition_versions') IS NOT NULL)::int + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='sp_credential_details' AND column_name='definition_version') + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('sp_save_international_credential','sp_claims_credential_rules','sp_closed_catalogue_details_guard','sp_verifier_request_detail') AND (prosrc LIKE '%national_qualification%' OR prosrc LIKE '%definition_version%')) + (position('national_qualification' IN pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass)) > 0)::int")"
+    [ "$india_left" = "0" ] || { echo "FAIL: 20261214090000 rollback left $india_left India object(s) or clause(s) behind"; exit 1; }
+    echo "    ok  India national qualifications stood down: no IN row, scope, class, version table, version key or national_qualification clause remains"
+    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_india_national_qualifications_test.sql >/dev/null 2>&1; then
+      echo "FAIL: the India suite passed WITHOUT its migration -- it proves nothing" >&2
+      exit 1
+    fi
+    echo "    ok  and the India suite refuses to pass without the migration (negative control)"
+    # 20261204090000 (HAYAT assessments) stands down next: its triggers sit on sp_claims and sp_evidence, and every
     # rollback below must run against a database that no longer carries them.
     psql_q -d "$TEST_DB" -f "supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql" >/dev/null
     hayat_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.sp_hayat_assessments') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'sp\_hayat\_%') + (SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'sp\_hayat\_%')")"
@@ -327,6 +340,32 @@ for passport_round in before after; do
     hayat_back="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgname LIKE 'sp\_hayat\_%') || '/' || has_function_privilege('service_role','public.sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)','EXECUTE')::int || has_function_privilege('authenticated','public.sp_hayat_record_assessment(uuid,uuid,text,uuid,text,text,text,text,text,text[],jsonb,text,text[],timestamptz,integer)','EXECUTE')::int || has_function_privilege('anon','public.sp_hayat_current_assessment(uuid)','EXECUTE')::int")"
     [ "$hayat_back" = "3/100" ] || { echo "FAIL: 20261204090000 reapply: expected 3 triggers and the writer granted to service_role only, got $hayat_back"; exit 1; }
     echo "    ok  HAYAT assessments reapplied: 3 triggers, writer executable by service_role only, reader closed to anon"
+    psql_q -d "$TEST_DB" -f "supabase/migrations/20261214090000_sp_india_national_qualifications.sql" >/dev/null
+    india_back="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_credential_types WHERE jurisdiction_code='IN' AND scope_code='national_qualification' AND is_active) || '/' || (SELECT count(*) FROM public.sp_market_packs WHERE jurisdiction_code='IN') || '/' || has_table_privilege('anon','public.sp_credential_definition_versions','SELECT')::int")"
+    [ "$india_back" = "4/0/0" ] || { echo "FAIL: 20261214090000 reapply: expected 4 active national qualifications, no IN market pack and no anon read, got $india_back"; exit 1; }
+    echo "    ok  India national qualifications reapplied: 4 approved, no IN market pack, versions closed to anon"
+  fi
+done
+
+# Candidate current location and desired destinations (20261215090000): run,
+# stand down ALONE (no table, helper or funnel name left; the anonymisation
+# function restored), prove the suite cannot pass without it, reapply, run again.
+for loc_round in before after; do
+  loc_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_location_and_destinations_test.sql 2>&1)" || { echo "$loc_output"; exit 1; }
+  loc_count="$(printf '%s\n' "$loc_output" | grep -c 'NOTICE:  ok ' || true)"
+  [ "$loc_count" -ge 21 ] || { echo "candidate location assertion shortfall: $loc_count"; exit 1; }
+  echo "    $loc_count assertions passed: candidate location and destinations ($loc_round rollback/reapply)"
+  if [ "$loc_round" = before ]; then
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261215090000_candidate_location_and_destinations_rollback.sql >/dev/null
+    loc_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (to_regclass('public.candidate_current_location') IS NOT NULL)::int + (to_regclass('public.candidate_job_preferences') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('candidate_destinations_distinct','candidate_preferences_touch')) + (SELECT count(*) FROM unnest(public.cd_v31_funnel_event_names()) n WHERE n LIKE 'india\_%' OR n LIKE 'passport\_%') + (SELECT count(*) FROM pg_proc WHERE proname='admin_anonymise_user' AND prosrc LIKE '%candidate_%')")"
+    [ "$loc_left" = "0" ] || { echo "FAIL: 20261215090000 rollback left $loc_left object(s) behind"; exit 1; }
+    echo "    ok  candidate location and destinations stood down alone; anonymisation and funnel names restored"
+    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_location_and_destinations_test.sql >/dev/null 2>&1; then
+      echo "FAIL: the candidate location suite passed WITHOUT its migration -- it proves nothing" >&2
+      exit 1
+    fi
+    echo "    ok  and the suite refuses to pass without the migration (negative control)"
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261215090000_candidate_location_and_destinations.sql >/dev/null
   fi
 done
 
@@ -6157,9 +6196,13 @@ TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
-# 20261204090000 (HAYAT assessments) before everything: it is the newest unit and
-# its triggers sit on sp_claims and sp_evidence. This database is discarded at
-# the end of the block, so it is not reapplied here.
+# 20261214090000 (India national qualifications) before everything: it is now
+# the newest Passport unit, it replaced the view, the claim rules, the details
+# guard, the save RPC and the reviewer detail, and its metadata rows would read
+# as adoption to 20261118100000's rollback. Then 20261204090000 (HAYAT
+# assessments), whose triggers sit on sp_claims and sp_evidence. This database
+# is discarded at the end of the block, so neither is reapplied here.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql >/dev/null
 # 20261126090000 first: its catalogue view reads sp_credential_organisation_roles.
 for passport_migration in 20261126090000_sp_catalogue_scope_and_document_issuer 20261123090000_sp_credential_organisation_roles 20261121090000_sp_closed_credential_catalogue 20261120090000_sp_credential_selective_sharing_v2 20261119090000_sp_international_credential_wallet 20261118100000_sp_international_passport_foundation; do
@@ -7538,6 +7581,12 @@ fi
 
 # The schema foundation must be independently reversible without touching an
 # existing disclosure, then safely re-applicable for the remaining suites.
+# 20261214090000 (India) stands down before them all: it replaced the view,
+# the claim rules, the details guard, the save RPC and the reviewer detail that
+# the rollbacks below restore, and its rows would read as adoption to the
+# foundation rollback further down. It is not re-applied: none of the remaining
+# suites reads it.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 # 20261126090000's catalogue view reads sp_credential_organisation_roles, so it
 # stands down first or the table below cannot be dropped.
 psql_q -d "$TEST_DB" -f supabase/rollback/20261126090000_sp_catalogue_scope_and_document_issuer_rollback.sql >/dev/null

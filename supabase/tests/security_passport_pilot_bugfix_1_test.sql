@@ -530,6 +530,12 @@ BEGIN
   -- scope AND carry a reviewed certification definition AND be unbound from
   -- every territorial concept. Zero ungoverned credentials, as before — and
   -- three further things that were not checked at all.
+  --
+  -- 20261214090000 added a THIRD governed route, held to the same standard: a
+  -- national qualification (India's NSQF qualifications) belongs to one
+  -- country and to no market pack by design, may carry no sub-jurisdiction,
+  -- authority_id or regulated role, and must name a governed, active regulator
+  -- OF ITS OWN COUNTRY and at least one reviewed version.
   SELECT count(*) INTO _n FROM public.sp_credential_types t
    WHERE t.market_pack_code IS NULL
      AND NOT (
@@ -540,14 +546,32 @@ BEGIN
        AND t.regulated_role_id IS NULL
        AND EXISTS (SELECT 1 FROM public.sp_certification_definitions d
                     WHERE d.credential_code = t.code)
+     )
+     AND NOT (
+       t.scope_code = 'national_qualification'
+       AND t.jurisdiction_code IS NOT NULL
+       AND t.sub_jurisdiction_code IS NULL
+       AND t.authority_id IS NULL
+       AND t.regulated_role_id IS NULL
+       AND NOT (t.contributes_to && ARRAY['local_eligibility','active_title']::text[])
+       AND EXISTS (SELECT 1 FROM public.sp_credential_organisation_roles r
+                     JOIN public.sp_authorities a ON a.id = r.authority_id AND a.is_active
+                    WHERE r.credential_code = t.code AND r.role = 'regulator'
+                      AND a.jurisdiction_code = t.jurisdiction_code)
+       AND EXISTS (SELECT 1 FROM public.sp_credential_definition_versions v
+                    WHERE v.credential_code = t.code AND v.catalogue_status = 'current')
      );
   PERFORM pg_temp.ok(_n = 0,
-    '6.3 no credential was added outside a market pack without the governed international scope');
+    '6.3 no credential was added outside a market pack without a governed international or national-qualification scope');
 
   -- And the pilot release itself still added none: every market-less row is
-  -- one of the fourteen reviewed international certifications.
+  -- one of the fourteen reviewed international certifications, or (since
+  -- 20261214090000) one of the national qualifications 6.3 has just held to
+  -- the stricter shape above.
   SELECT count(*) INTO _n FROM public.sp_credential_types
-   WHERE market_pack_code IS NULL AND scope_code IS DISTINCT FROM 'global_professional';
+   WHERE market_pack_code IS NULL
+     AND scope_code IS DISTINCT FROM 'global_professional'
+     AND scope_code IS DISTINCT FROM 'national_qualification';
   PERFORM pg_temp.ok(_n = 0, '6.3b and none of them is ungoverned');
 
   -- Every new function is a capability, granted to `authenticated` where the

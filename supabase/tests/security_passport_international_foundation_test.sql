@@ -11,7 +11,7 @@ END $$;
 INSERT INTO auth.users(id,email) VALUES
  ('f1800000-0000-4000-8000-000000000001','international-one@fixture.invalid'),
  ('f1800000-0000-4000-8000-000000000002','international-two@fixture.invalid');
-SELECT pg_temp.ok((SELECT count(*)=7 FROM public.sp_credential_classes),'seven international classes');
+SELECT pg_temp.ok((SELECT count(*)=8 FROM public.sp_credential_classes),'eight classes: the seven international and vocational_qualification (20261214090000, India)');
 SELECT pg_temp.ok(NOT public.sp_is_passport_credential('education',NULL),'education excluded');
 SELECT pg_temp.ok(NOT public.sp_is_passport_credential('training',NULL),'generic course excluded');
 SELECT pg_temp.ok(public.sp_is_passport_credential('training','VU1'),'governed training included');
