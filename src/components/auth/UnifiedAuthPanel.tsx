@@ -784,6 +784,7 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
           {info && (
             <p
               role="status"
+              data-testid="auth-existing-info"
               className="mt-4 rounded-md border border-accent/30 bg-accent/5 p-3 text-sm text-foreground"
             >
               {info}
