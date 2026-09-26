@@ -57,7 +57,7 @@ export function SecurityOverview() {
       </div>
       {ongoing.length > 0 && (
         <a
-          href="#sw-continue"
+          href="#sw-continue-heading"
           className="inline-flex min-h-11 items-center gap-2 rounded text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
         >
           {l("Till mitt pågående arbete", "Go to my work in progress")}

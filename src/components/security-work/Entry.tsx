@@ -69,15 +69,20 @@ export function SecurityWorkEntry() {
           {workspaces.length ? l("Välj arbetsyta", "Choose a workspace") : t("sw.name")}
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          {workspaces.length
+          {loadError || navigationError
             ? l(
-                "Öppna det säkerhetsarbete du vill fortsätta med.",
-                "Open the security work you want to continue.",
+                "Arbetsytorna kunde inte öppnas. Försök igen; ditt sparade arbete påverkas inte.",
+                "Your workspaces could not be opened. Please retry; your saved work is unaffected.",
               )
-            : l(
-                "Från underlag till tydliga bedömningar, rapporter och nästa steg. Skapa en arbetsyta för att börja.",
-                "From evidence to clear assessments, reports and next steps. Create a workspace to get started.",
-              )}
+            : workspaces.length
+              ? l(
+                  "Öppna det säkerhetsarbete du vill fortsätta med.",
+                  "Open the security work you want to continue.",
+                )
+              : l(
+                  "Från underlag till tydliga bedömningar, rapporter och nästa steg. Skapa en arbetsyta för att börja.",
+                  "From evidence to clear assessments, reports and next steps. Create a workspace to get started.",
+                )}
         </p>
       </div>
       {query.isPending ? (
@@ -142,6 +147,7 @@ export function SecurityWorkEntry() {
                   });
                 } catch {
                   setError("SAVE_FAILED");
+                  setNavigationError(true);
                 } finally {
                   setBusy(false);
                   busyRef.current = false;

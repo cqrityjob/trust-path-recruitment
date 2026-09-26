@@ -1,6 +1,6 @@
 # Direkt till Mitt säkerhetsarbete
 
-Leverans för granskning, 26 september 2026. Utgår från main `f8957f7e3356c75656e14c0f11e5f6e751285411`. Ingen merge, publicering, kostnadsaktivering eller produktionsändring ingår. [CTO:ns aktiveringssteg](pilot-operations-decision.md) gäller fortfarande.
+Leverans för granskning, 26 september 2026. Utgick från main `f8957f7e3356c75656e14c0f11e5f6e751285411` och integrerade därefter `03ed5830ca360a883f596713f7a12487379c3a4d`, inklusive parallella jobbvyändringar, utan konflikt. Ingen automatisk PR-merge, publicering, kostnadsaktivering eller produktionsändring ingår. [CTO:ns aktiveringssteg](pilot-operations-decision.md) gäller fortfarande.
 
 ## Före och efter
 
@@ -30,6 +30,6 @@ De befintliga 18 SV/EN-resorna på desktop, 375 px och 390 px utökas med noll/e
 
 Riktiga skärmbilder tas från testappen och publiceras först efter hela respektive resans godkända resultat och befintlig läckagekontroll. Slutcommit, körningslänkar och visuellt granskat underlag redovisas i PR:en.
 
-Aktuell main hade redan röd CI: [körning 36271453737](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/36271453737). Den dokumenterade nullable-RPC-typen hade skrivits över i tre fält; denna leverans återställer exakt de tre undantagen som `nullable-rpc-contract:check` kräver, utan körbeteende- eller SQL-ändring. Startsidesjobbet hade dessutom tolv fel efter den parallella startsidesändringen (bland annat gammal H1 och gammal sektions-/livscykelstruktur). Startsidan och dess tester ändras inte här. Det kvarstående felet måste skiljas från Security Works testresultat och redovisas i PR:ens slutstatus.
+Main hade redan röd CI: [körning 36271453737](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/36271453737). Den dokumenterade nullable-RPC-typen hade skrivits över i tre fält. Samma exakta återställning av undantagen som `nullable-rpc-contract:check` kräver kom in i main under arbetet; därför finns ingen typändring i slutdiffen mot main. Startsidesjobbet hade dessutom tolv fel efter den parallella startsidesändringen (bland annat gammal H1 och gammal sektions-/livscykelstruktur). Startsidan och dess tester ändras inte här. Det kvarstående felet måste skiljas från Security Works testresultat och redovisas i PR:ens slutstatus.
 
 Live-AI, extern dokumentbearbetning och provet genom den publicerade appen återstår efter CTO-/ägarbeslut. Ingen kundpilot eller kommersiell lansering följer automatiskt av denna kodleverans.
