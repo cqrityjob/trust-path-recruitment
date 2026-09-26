@@ -8,9 +8,10 @@
  *
  *   1. from the applications list, the owner opens "Skicka test" for one
  *      applicant: both levels are shown with audience and purpose; the
- *      operational level names its test; the strategic level names exactly
- *      what it is missing and cannot be sent -- and the operational test is
- *      never offered under it;
+ *      operational level names its test; the strategic level names its own
+ *      test as a draft awaiting the owner's content approval (or, once
+ *      released to this organisation, as sendable) -- and the operational
+ *      test is never offered under it;
  *   2. the owner sends the operational test: the level (setup) is recorded,
  *      the invitation reaches the candidate's CQrityjob inbox, and the row
  *      shows the test as assigned;
@@ -126,23 +127,33 @@ test.describe("Skicka test — both levels, end to end", () => {
     await expect(operational).toContainText(/Väktare – Recruitment Assessment/);
     await expect(operational).toContainText(/50 uppgifter i 5 delar/);
 
-    // The strategic level: shown, explained, and precise about what is
-    // missing. Never "kommer snart", never the security-officer test.
-    await expect(strategic).toHaveAttribute("data-state", "no_content");
+    // The strategic level: shown, explained, and precise about its own
+    // content (20261216090000). On a freshly seeded stack the content is a
+    // governed draft awaiting the owner's content approval; once the
+    // strategic journey has released it to this organisation it is
+    // sendable. Either way it names its own test -- never "kommer snart",
+    // never the security-officer test under the strategic heading.
     await expect(strategic).toContainText(/Strategiska och ledande roller/);
     await expect(strategic).toContainText(/säkerhetschefer/i);
-    const missing = page.getByTestId("send-test-strategic-missing");
-    await expect(missing).toContainText(/inget godkänt kandidattest/i);
-    await expect(missing).toContainText(/Kravprofil/);
-    await expect(missing).toContainText(/Intervjuguide/);
-    await expect(missing).toContainText(/Kandidatmoment/);
-    await expect(missing).toContainText(/Rapportavsnitt/);
-    await expect(missing).toContainText(/granskning/i);
-    await expect(strategic).not.toContainText(/Recruitment Assessment/);
-    await expect(strategic).not.toContainText(/kommer snart|coming soon/i);
-    await strategic.locator('input[type="radio"]').check();
-    await expect(page.getByTestId("send-test-submit")).toBeDisabled();
-    await expect(page.getByTestId("send-test-blocked")).toBeVisible();
+    await expect(strategic).toHaveAttribute("data-state", /^(not_assignable|sendable)$/);
+    const strategicCard = page.getByTestId("send-test-card-strategic");
+    await expect(strategicCard).toContainText(/Säkerhetschef – Recruitment Assessment/);
+    await expect(strategic).not.toContainText(/Väktare – Recruitment Assessment/);
+    await expect(strategic).not.toContainText(/kommer snart|coming soon|validerat/i);
+    if ((await strategic.getAttribute("data-state")) === "not_assignable") {
+      await expect(strategicCard).toHaveAttribute("data-content-status", "draft");
+      const pending = page.getByTestId("send-test-strategic-pending");
+      await expect(pending).toContainText(/utkast under granskning/i);
+      await expect(pending).toContainText(/samlat innehållsgodkännande/i);
+      await expect(pending).toContainText(/Kravprofil/);
+      await expect(pending).toContainText(/Intervjuguide/);
+      await expect(pending).toContainText(/Kandidattest/);
+      await expect(pending).toContainText(/Rapportavsnitt/);
+      await expect(pending).toContainText(/granskning/i);
+      await strategic.locator('input[type="radio"]').check();
+      await expect(page.getByTestId("send-test-submit")).toBeDisabled();
+      await expect(page.getByTestId("send-test-blocked")).toBeVisible();
+    }
 
     // Nothing was sent by looking.
     expect(
