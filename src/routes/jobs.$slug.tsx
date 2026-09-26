@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { Building2, Mail, Globe } from "lucide-react";
+import { ArrowLeft, Building2, Mail, Globe } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
@@ -56,6 +56,7 @@ export const Route = createFileRoute("/jobs/$slug")({
 function JobDetailPage() {
   const { slug } = Route.useParams();
   const { t, lang } = useT();
+  const navigate = useNavigate();
 
   const ssr = useSuspenseQuery(jobDetailQueryOptions(slug));
   if (!ssr.data) throw notFound();
