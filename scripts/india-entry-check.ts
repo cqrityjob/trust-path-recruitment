@@ -32,6 +32,7 @@ import { FUNNEL_EVENT_NAMES } from "../src/lib/career-discovery/v31-feedback.fun
 import { safeReturnPath } from "../src/lib/auth/safe-redirect";
 import { resolveCredentialScope } from "../src/lib/security-passport/credential-shield";
 import { deriveSetupStep } from "../src/lib/india-entry/setup-state";
+import { credentialMark } from "../src/lib/security-passport/credentials";
 
 const ROOT = join(import.meta.dir, "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
@@ -199,6 +200,13 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
         page.includes(`qp: "${qp}"`) &&
         mIndia.includes(`'${code}'`),
       `3.1 ${code} (${qp}) is on the page and in the migration`,
+    );
+  }
+  for (const code of ["IN_MEPSC_Q7101", "IN_MEPSC_Q7201", "IN_MEPSC_Q7104", "IN_MEPSC_Q7204"]) {
+    const symbol = new RegExp(`'${code}',\\s*'[^']+',\\s*'(Q\\d{4})'`).exec(mIndia)?.[1];
+    ok(
+      symbol !== undefined && credentialMark(code) === symbol,
+      `3.1b ${code}'s shield mark is its governed symbol_label (${symbol})`,
     );
   }
   ok(

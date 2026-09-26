@@ -37,5 +37,9 @@ export function trackFunnelOnce(event: IndiaFunnelEvent): void {
   } catch {
     // Storage unavailable (private mode, blocked site data): record anyway.
   }
-  void trackV31FunnelEvent({ data: { eventName: event } }).catch(() => undefined);
+  try {
+    void trackV31FunnelEvent({ data: { eventName: event } }).catch(() => undefined);
+  } catch {
+    // A tracker that cannot even start is still never the visitor's problem.
+  }
 }

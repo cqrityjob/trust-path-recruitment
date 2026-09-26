@@ -91,9 +91,17 @@ function IndiaEntryPage() {
   const [lang, setLang] = useState<IndiaLang>("en");
   const [signedIn, setSignedIn] = useState(false);
 
-  // Follow an EXPLICIT earlier choice of Swedish; otherwise stay English.
+  // Follow an EXPLICIT earlier choice; otherwise the page is English, and a
+  // visitor who has never chosen a language continues in the one they are
+  // reading -- sign-up, the confirmation e-mail and the setup included. Set
+  // once on arrival rather than on the click, so a tap that lands before the
+  // page is interactive (a slow phone) cannot lose it.
   useEffect(() => {
-    if (readStoredLang() === "sv") setLang("sv");
+    const stored = readStoredLang();
+    if (stored === "sv") setLang("sv");
+    else if (stored === null) site.setLang("en");
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -110,10 +118,11 @@ function IndiaEntryPage() {
   const onLangChange = useCallback((next: "sv" | "en") => setLang(next), []);
 
   const startJourney = () => {
-    trackFunnelOnce("india_registration_started");
     // Carry the page's language into sign-up, the confirmation email and the
     // setup: the visitor is continuing in the language they are reading.
+    // First, so nothing after it can stand in its way.
     if (site.lang !== lang) site.setLang(lang);
+    trackFunnelOnce("india_registration_started");
   };
 
   return (
