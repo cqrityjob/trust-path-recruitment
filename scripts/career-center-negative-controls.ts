@@ -115,8 +115,10 @@ const CONTROLS: readonly Control[] = [
   {
     name: "pathFrom no longer stating where the current role came from",
     file: "src/components/career-center/PathFromSection.tsx",
-    from: `        <p data-path-provenance={origin.provenance} className="mt-2 text-sm text-muted-foreground">`,
-    to: `        <p className="mt-2 text-sm text-muted-foreground">`,
+    // The provenance line moved into the selector card with a saved /
+    // temporary badge (journey work, 2026-09-26); the anchor names it.
+    from: `                data-path-provenance={origin.provenance}\n`,
+    to: `\n`,
     expect: "must state where the current role came from",
   },
   {
