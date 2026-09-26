@@ -2,8 +2,20 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Compass, Info } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
-import { icon, type PersonalDirection as Direction } from "@/lib/career-center";
+import {
+  icon,
+  jobsProfessionSlug,
+  type PersonalDirection as Direction,
+  type PersonalRecommendation,
+} from "@/lib/career-center";
 import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
+import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";
+import {
+  RECOMMENDATION_CONFIDENCE_LABEL,
+  STAGE_LABEL,
+} from "@/lib/career-discovery/v31/profession-explanations";
+import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
+import { ProfessionInfoAction } from "./ProfessionInfoAction";
 
 // "Din riktning" — the Career Center's only personal section.
 //
@@ -34,16 +46,25 @@ import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 export function PersonalDirectionSection({
   direction,
   onRetry,
-  exploreHref,
+  exploreSearch,
+  exploreAnchor,
+  savedProfessionId,
   onProfessionOpen,
   onAssessmentStart,
   facts,
 }: {
   direction: Direction;
   onRetry?: () => void;
-  /** Where "utforska i stället" goes — the explorer anchor on this page. */
-  exploreHref: string;
-  onProfessionOpen?: (slug: string) => void;
+  /** Where "utforska i stället" goes: the hub's current search with the
+   *  catalogue OPEN, plus its anchor. A bare `#anchor` used to scroll to a
+   *  collapsed section and show nothing. */
+  exploreSearch: Record<string, unknown>;
+  exploreAnchor: string;
+  /** The Career Center id of the profession saved in the profile, so the
+   *  recommendation can say when the two coincide. Never used to re-rank. */
+  savedProfessionId?: string | null;
+  /** Fired alongside navigation, with the destination href. */
+  onProfessionOpen?: (href: string) => void;
   /** Fired on the analysis CTA. Fire-and-forget funnel tracking; it must
    *  never delay the click it measures. */
   onAssessmentStart?: () => void;
@@ -102,12 +123,15 @@ export function PersonalDirectionSection({
             {t("cc.me.invite.cta")}
             <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
           </PrimaryLink>
-          <a
-            href={exploreHref}
+          <Link
+            to="/career-center"
+            search={{ ...exploreSearch, all: true } as never}
+            hash={exploreAnchor}
+            data-explore-catalogue
             className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("cc.me.invite.secondary")}
-          </a>
+          </Link>
         </div>
       </Shell>
     );
@@ -154,18 +178,22 @@ export function PersonalDirectionSection({
             {t("cc.me.view")}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </Link>
-          <a
-            href={exploreHref}
-            className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+          <Link
+            to="/career-center"
+            search={{ ...exploreSearch, all: true } as never}
+            hash={exploreAnchor}
+            data-explore-catalogue
+            className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("cc.me.invite.secondary")}
-          </a>
+          </Link>
         </div>
       </Shell>
     );
   }
 
-  const total = direction.items.length;
+  const { primary, alternatives } = direction;
+  const allIndicative = direction.items.every((i) => i.confidence === "indicative");
 
   return (
     <Shell state="ready">
@@ -179,62 +207,41 @@ export function PersonalDirectionSection({
           </time>
         </p>
       )}
+      {allIndicative && (
+        <p
+          role="note"
+          className="mt-4 max-w-[70ch] rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
+        >
+          {t("cc.me.allIndicative")}
+        </p>
+      )}
 
-      <ol className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-3">
-        {direction.items.map((item) => {
-          const Icon = icon(item.profession?.icon);
-          const title = item.profession
-            ? lang === "sv"
-              ? item.profession.titleSv
-              : item.profession.titleEn
-            : lang === "sv"
-              ? item.reportTitleSv
-              : item.reportTitleEn;
-          const reason =
-            item.reason === "ranked_indicative"
-              ? t("cc.me.reason.indicative")
-              : item.rank === 1
-                ? t("cc.me.reason.ranked")
-                : t("cc.me.reason.rankedN").replace("{n}", String(item.rank));
-          return (
-            <li
-              key={`${item.rank}-${item.reportTitleSv}`}
-              data-personal-recommendation
-              data-rank={item.rank}
-              className="flex h-full flex-col rounded-xl border border-border bg-card p-6 shadow-xs"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-accent">
-                  <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-                </span>
-                <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] tabular-nums text-muted-foreground">
-                  {t("cc.me.rank")} {item.rank}/{total}
-                </span>
-              </div>
-              <h3 className="mt-5 text-base font-semibold tracking-tight text-foreground">
-                {title}
-              </h3>
-              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{reason}</p>
-              {item.profession ? (
-                <Link
-                  to="/career-center/$profession"
-                  params={{ profession: item.profession.slug }}
-                  onClick={() => onProfessionOpen?.(item.profession!.slug)}
-                  data-personal-guide={item.profession.slug}
-                  className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  {t("cc.me.cta")}
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                </Link>
-              ) : (
-                <p className="mt-5 text-xs leading-relaxed text-muted-foreground">
-                  {t("cc.me.noGuide")}
-                </p>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      {/* ── THE FIRST-RANKED PROFESSION ─────────────────────────────── */}
+      <PrimaryRecommendation
+        item={primary}
+        isSavedProfession={Boolean(
+          savedProfessionId && primary.profession?.id === savedProfessionId,
+        )}
+        onProfessionOpen={onProfessionOpen}
+      />
+
+      {/* ── ALTERNATIVES, VISIBLY SECONDARY ─────────────────────────── */}
+      {alternatives.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            {t("cc.me.alternatives")}
+          </h3>
+          <ol className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {alternatives.map((item) => (
+              <AlternativeRecommendation
+                key={`${item.rank}-${item.reportTitleSv}`}
+                item={item}
+                onProfessionOpen={onProfessionOpen}
+              />
+            ))}
+          </ol>
+        </div>
+      )}
 
       <p
         data-personal-not-assessed
@@ -251,7 +258,7 @@ export function PersonalDirectionSection({
         </span>
       </p>
 
-      <div className="mt-6">
+      <div className="mt-4">
         <Link
           to={direction.reportHref}
           className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)]"
@@ -261,6 +268,160 @@ export function PersonalDirectionSection({
         </Link>
       </div>
     </Shell>
+  );
+}
+
+function itemTitle(item: PersonalRecommendation, lang: string): string {
+  // The guide's own title when there is a guide — the name the reader will
+  // see on the page they open — else the report's frozen title.
+  if (item.profession) return lang === "sv" ? item.profession.titleSv : item.profession.titleEn;
+  return lang === "sv" ? item.reportTitleSv : item.reportTitleEn;
+}
+
+function PrimaryRecommendation({
+  item,
+  isSavedProfession,
+  onProfessionOpen,
+}: {
+  item: PersonalRecommendation;
+  isSavedProfession: boolean;
+  onProfessionOpen?: (href: string) => void;
+}) {
+  const { t, lang } = useT();
+  const locale = lang === "en" ? "en" : "sv";
+  const Icon = icon(item.profession?.icon);
+  const title = itemTitle(item, lang);
+  const rationale = locale === "sv" ? item.rationaleSv : item.rationaleEn;
+  const traits = item.alignedDimensions
+    .slice(0, 3)
+    .map((d) => DIMENSIONS[d]?.name[locale])
+    .filter((n): n is string => Boolean(n));
+  const jobsSlug =
+    jobsEnabled() && item.profession
+      ? jobsProfessionSlug(item.profession)
+      : jobsEnabled()
+        ? item.cigSlug
+        : null;
+  const fallbackReason =
+    item.reason === "ranked_indicative" ? t("cc.me.reason.indicative") : t("cc.me.reason.ranked");
+
+  return (
+    <article
+      data-personal-recommendation
+      data-personal-primary
+      data-rank={item.rank}
+      aria-labelledby="personal-primary-title"
+      className="mt-8 rounded-2xl border border-accent/40 bg-card p-6 shadow-sm sm:p-8"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-foreground">
+          {t("cc.me.primary.badge")}
+        </span>
+        <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+          {RECOMMENDATION_CONFIDENCE_LABEL[item.confidence][locale]}
+        </span>
+        {item.stage && (
+          <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground">
+            {STAGE_LABEL[item.stage][locale]}
+          </span>
+        )}
+      </div>
+      <div className="mt-5 flex items-start gap-4">
+        <span className="hidden h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary text-accent sm:inline-flex">
+          <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <h3
+            id="personal-primary-title"
+            className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            {title}
+          </h3>
+          <p className="mt-3 max-w-[64ch] text-sm leading-relaxed text-muted-foreground">
+            <span className="font-semibold text-foreground">{t("cc.me.why")} </span>
+            {rationale || fallbackReason}
+          </p>
+          {traits.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
+                {t("cc.me.traits")}
+              </p>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {traits.map((name) => (
+                  <li
+                    key={name}
+                    className="rounded-full border border-border bg-[color:var(--surface-subtle)] px-3 py-1 text-[13px] text-foreground"
+                  >
+                    {name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {isSavedProfession && (
+            <p data-personal-same-as-saved className="mt-4 text-sm text-muted-foreground">
+              {t("cc.me.sameAsSaved")}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <ProfessionInfoAction
+          info={item.info}
+          title={title}
+          variant="button"
+          onOpen={onProfessionOpen}
+        />
+        {jobsSlug && (
+          <Link
+            to="/jobs/profession/$professionSlug"
+            params={{ professionSlug: jobsSlug }}
+            data-personal-jobs={jobsSlug}
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("cc.jobs.for").replace("{role}", title)}
+          </Link>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function AlternativeRecommendation({
+  item,
+  onProfessionOpen,
+}: {
+  item: PersonalRecommendation;
+  onProfessionOpen?: (href: string) => void;
+}) {
+  const { t, lang } = useT();
+  const locale = lang === "en" ? "en" : "sv";
+  const title = itemTitle(item, lang);
+  return (
+    <li
+      data-personal-recommendation
+      data-rank={item.rank}
+      className="flex h-full flex-col rounded-xl border border-border bg-card p-5"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+          #{item.rank}
+        </span>
+        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+          {RECOMMENDATION_CONFIDENCE_LABEL[item.confidence][locale]}
+        </span>
+      </div>
+      <h4 className="mt-3 text-base font-semibold tracking-tight text-foreground">{title}</h4>
+      <p className="mt-1 flex-1 text-sm leading-relaxed text-muted-foreground">
+        {item.reason === "ranked_indicative"
+          ? t("cc.me.reason.indicative")
+          : t("cc.me.reason.rankedN").replace("{n}", String(item.rank))}
+      </p>
+      <div className="mt-3">
+        <ProfessionInfoAction info={item.info} title={title} onOpen={onProfessionOpen} />
+      </div>
+    </li>
   );
 }
 

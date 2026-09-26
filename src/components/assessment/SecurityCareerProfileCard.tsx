@@ -49,6 +49,7 @@ import {
   EMPTY_SECURITY_CAREER_PROFILE_DRAFT,
   type SecurityCareerProfileDraft,
 } from "@/lib/security-career-profile/types";
+import { invalidateCurrentProfessionReads } from "@/lib/career-center/personal-cache";
 
 /**
  * "Open the editor" and "offer a way back to the Passport" are two different
@@ -182,9 +183,10 @@ export function SecurityCareerProfileCard({
       //   career-profile-for-jobs the profile the job matches are scored
       //                           against — and the family the job list keys
       //                           on, so it must not keep the old profession
-      for (const queryKey of [["professional-identity"], ["career-profile-for-jobs"]]) {
-        void queryClient.invalidateQueries({ queryKey });
-      }
+      //   career-center           "Vägar från ditt nuvarande yrke", which
+      //                           defaults to the saved profession
+      // The list lives in personal-cache.ts, shared with every other writer.
+      invalidateCurrentProfessionReads(queryClient);
 
       setStatus("saved");
       setOpen(false);

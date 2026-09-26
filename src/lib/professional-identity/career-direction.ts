@@ -34,7 +34,11 @@
 // out of this module for exactly that reason and is never flattened away.
 
 import type { StoredReportResult } from "@/lib/career-discovery/stored-report.functions";
-import type { RecommendationConfidence } from "@/lib/career-discovery/v31/professions";
+import type {
+  ProfessionStage,
+  RecommendationConfidence,
+} from "@/lib/career-discovery/v31/professions";
+import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
 
 export const CAREER_DIRECTION_VERSION = "career-direction-v1" as const;
 
@@ -55,6 +59,16 @@ export interface RoleSummary {
    *  to the profession guide instead of to a search. */
   readonly cigSlug: string | null;
   readonly confidence: RecommendationConfidence;
+  /** WHY the report named it, in the report's own authored words — the
+   *  frozen `inclusionRationale*` of the match. Null when an old snapshot
+   *  did not store one; never regenerated. */
+  readonly rationaleSv?: string | null;
+  readonly rationaleEn?: string | null;
+  /** The career-stage classification the report froze with the match
+   *  (explore now / possible next step / longer term / pivot). */
+  readonly stage?: ProfessionStage | null;
+  /** The dimensions the report named as aligned, most-aligned first. */
+  readonly alignedDimensions?: readonly DimensionId[];
 }
 
 /** A theme the report named. Pattern names for v3.1, axis names for v3.0. */
@@ -173,6 +187,12 @@ export function deriveCareerDirection(
       titleEn: r.match.titleEn,
       cigSlug: r.match.cigProfessionSlug ?? null,
       confidence: r.confidence,
+      rationaleSv:
+        typeof r.match.inclusionRationaleSv === "string" ? r.match.inclusionRationaleSv : null,
+      rationaleEn:
+        typeof r.match.inclusionRationaleEn === "string" ? r.match.inclusionRationaleEn : null,
+      stage: typeof r.match.stage === "string" ? r.match.stage : null,
+      alignedDimensions: Array.isArray(r.match.alignedDimensions) ? r.match.alignedDimensions : [],
     }))
     .sort((a, b) => a.rank - b.rank);
 

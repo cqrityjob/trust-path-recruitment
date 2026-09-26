@@ -11,7 +11,13 @@
  * tell the two apart by scrolling, because both render as a heading over a
  * list of professions.
  *
- * So these cards name the two and link to them. They render no professions
+ * So these cards name the two and link to them. The second door depends on
+ * whether the reader's own result is in hand: with one, it leads to their
+ * recommendation; without one, the recommendation section is not above
+ * anything worth jumping to, so the door leads to the analysis itself —
+ * "help me choose" — rather than to an invitation further down the page.
+ *
+ * They render no professions
  * of their own and hold no state: duplicating either section's content here
  * would give one fact two places to disagree about itself, and would put
  * roughly two screens of cards above the fold on a phone.
@@ -30,9 +36,12 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 export function CareerEntryCards({
   pathAnchor,
   personalAnchor,
+  personalised = false,
 }: {
   readonly pathAnchor: string;
   readonly personalAnchor: string;
+  /** The reader's own assessment result is in hand. */
+  readonly personalised?: boolean;
 }) {
   return (
     <div className="space-y-4" data-career-entry-cards>
@@ -40,16 +49,29 @@ export function CareerEntryCards({
         icon={<TrendingUp className="h-5 w-5" strokeWidth={1.75} aria-hidden />}
         titleKey="cc.entry.fromProfession.title"
         bodyKey="cc.entry.fromProfession.body"
+        ctaKey="cc.entry.fromProfession.cta"
         hash={pathAnchor}
         cta="career-entry-profession"
       />
-      <EntryCard
-        icon={<BarChart3 className="h-5 w-5" strokeWidth={1.75} aria-hidden />}
-        titleKey="cc.entry.fromAnalysis.title"
-        bodyKey="cc.entry.fromAnalysis.body"
-        hash={personalAnchor}
-        cta="career-entry-analysis"
-      />
+      {personalised ? (
+        <EntryCard
+          icon={<BarChart3 className="h-5 w-5" strokeWidth={1.75} aria-hidden />}
+          titleKey="cc.entry.fromAnalysis.title"
+          bodyKey="cc.entry.fromAnalysis.body"
+          ctaKey="cc.entry.fromAnalysis.cta"
+          hash={personalAnchor}
+          cta="career-entry-analysis"
+        />
+      ) : (
+        <EntryCard
+          icon={<BarChart3 className="h-5 w-5" strokeWidth={1.75} aria-hidden />}
+          titleKey="cc.entry.guidance.title"
+          bodyKey="cc.entry.guidance.body"
+          ctaKey="cc.entry.guidance.cta"
+          to="/security-career-assessment"
+          cta="career-entry-assessment"
+        />
+      )}
     </div>
   );
 }
@@ -58,13 +80,18 @@ function EntryCard({
   icon,
   titleKey,
   bodyKey,
+  ctaKey,
   hash,
+  to = "/career-center",
   cta,
 }: {
   readonly icon: ReactNode;
   readonly titleKey: TranslationKey;
   readonly bodyKey: TranslationKey;
-  readonly hash: string;
+  readonly ctaKey: TranslationKey;
+  /** A section on this page; omitted for a door to another route. */
+  readonly hash?: string;
+  readonly to?: string;
   readonly cta: string;
 }) {
   const { t } = useT();
@@ -78,12 +105,12 @@ function EntryCard({
           {/* Same-page link. The two sections are on this route, so this is
               a jump to them rather than navigation away from the hub. */}
           <Link
-            to="/career-center"
+            to={to}
             hash={hash}
             data-cta={cta}
             className="mt-4 inline-flex items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {t("cc.entry.cta")}
+            {t(ctaKey)}
             <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
           </Link>
         </div>

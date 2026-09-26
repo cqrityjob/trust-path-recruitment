@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
-import { getPublishedProfession } from "@/lib/career-center";
+import { getPublishedProfession, professionInfoDestination } from "@/lib/career-center";
 import { ProfessionTemplate } from "@/components/career-center/ProfessionTemplate";
 
 // One profession guide.
@@ -28,6 +28,33 @@ import { ProfessionTemplate } from "@/components/career-center/ProfessionTemplat
 // deserve.
 
 export const Route = createFileRoute("/career-center/$profession")({
+  // ── A PROFESSION NAMED IN THE OTHER NAMESPACE ─────────────────────────
+  //
+  // `/career-center/vaktare` is a CIG slug in the Career Center's URL space.
+  // It used to reach "this guide is not published yet" for a guide that IS
+  // published (Väktare lives at `security-officer`), and a profession with
+  // no guide at all dead-ended the same way. Resolve through the one bridge
+  // instead: the guide for exactly that profession, else its reviewed
+  // catalogue page. Never a neighbouring profession — an unknown slug still
+  // reaches the unavailable state below.
+  beforeLoad: ({ params }) => {
+    if (getPublishedProfession(params.profession)) return;
+    const dest = professionInfoDestination({ careerCenterSlug: params.profession });
+    if (dest.kind === "career_center" && dest.slug !== params.profession) {
+      throw redirect({
+        to: "/career-center/$profession",
+        params: { profession: dest.slug },
+        replace: true,
+      });
+    }
+    if (dest.kind === "catalogue_profile") {
+      throw redirect({
+        to: "/career-center/yrke/$cigSlug",
+        params: { cigSlug: dest.cigSlug },
+        replace: true,
+      });
+    }
+  },
   head: ({ params }) => {
     const p = getPublishedProfession(params.profession);
     if (!p) {

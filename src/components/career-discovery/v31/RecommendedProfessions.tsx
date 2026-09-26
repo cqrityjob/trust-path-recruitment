@@ -25,19 +25,11 @@
 // It renders no percentage and no score, same as everywhere else (PMR006).
 // It is not a competence judgement and the copy says so.
 
-import { useId, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpRight, ChevronDown } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { translateFor } from "@/i18n/context";
 import { exploreDestinationFor } from "@/lib/career-center/profession-links";
-import {
-  getProfessionDetails,
-  REQUIREMENT_LEVEL_LABEL,
-  type ProfessionDetail,
-  type RequirementLevel,
-} from "@/lib/career-discovery/profession-detail.functions";
+import { rememberReturn } from "@/lib/career-center/return-context";
 import {
   explainMatch,
   RECOMMENDATION_CONFIDENCE_LABEL,
@@ -116,7 +108,7 @@ const CHIP_CLASS =
 
 /** "Utforska nu" — the one action on a recommendation card.
  *
- *  ── WHY THIS IS A LINK (OR A BUTTON) AND NOT A BADGE ──────────────────
+ *  ── WHY THIS IS A LINK AND NOT A BADGE ────────────────────────────────
  *
  *  The chip used to be StageBadge's <span> for the "explore_now" stage. It
  *  read as the card's call to action — accent-coloured, imperative, next to
@@ -126,9 +118,11 @@ const CHIP_CLASS =
  *  the occupation.
  *
  *  Where it goes is decided by exploreDestinationFor (profession-links.ts),
- *  not here: a published Career Center guide when one exists, otherwise the
- *  card's own details panel fed from the Career Intelligence Graph. This
- *  component only renders whichever the resolver returned.
+ *  not here, and it is the SAME rule the Career Center's recommendation and
+ *  My Career use: a published Career Center guide when one exists, otherwise
+ *  the reviewed catalogue page for exactly this CIG profession. (This card
+ *  used to open an in-card panel for the second case while the Career Center
+ *  printed "no guide yet" for the very same recommendation.)
  *
  *  For the "explore_now" stage the chip IS the stage badge, so the card
  *  looks exactly as before with the one difference that it works. For the
@@ -139,16 +133,10 @@ function ExploreChip({
   entry,
   locale,
   title,
-  open,
-  onToggle,
-  panelId,
 }: {
   entry: RankedProfession;
   locale: Locale;
   title: string;
-  open: boolean;
-  onToggle: () => void;
-  panelId: string;
 }) {
   const t = translateFor(locale);
   const destination = exploreDestinationFor(entry.match);
@@ -160,6 +148,17 @@ function ExploreChip({
   // tabbing through three cards hears "Explore now: Polis", not "Explore
   // now" three times.
   const accessibleName = `${label}: ${title}`;
+  // The profession page offers a named way back to this report.
+  const remember = (href: string) => {
+    if (typeof window === "undefined") return;
+    rememberReturn(href, "report", `${window.location.pathname}${window.location.search}`);
+  };
+  const chip = (
+    <span className={CHIP_CLASS}>
+      {label}
+      <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+    </span>
+  );
 
   if (destination.kind === "career_center") {
     return (
@@ -167,147 +166,33 @@ function ExploreChip({
         to="/career-center/$profession"
         params={{ profession: destination.slug }}
         aria-label={accessibleName}
+        onClick={() => remember(destination.href)}
         data-explore-link={entry.match.professionId}
         data-explore-kind="career_center"
         className={CHIP_TARGET_CLASS}
       >
-        <span className={CHIP_CLASS}>
-          {label}
-          <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-        </span>
+        {chip}
       </Link>
     );
   }
-
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={open}
-      aria-controls={panelId}
-      aria-label={accessibleName}
-      data-explore-link={entry.match.professionId}
-      data-explore-kind="inline_details"
-      className={CHIP_TARGET_CLASS}
-    >
-      <span className={CHIP_CLASS}>
-        {label}
-        <ChevronDown
-          className={`h-3 w-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-          aria-hidden="true"
-        />
-      </span>
-    </button>
-  );
-}
-
-function DetailList({
-  items,
-  locale,
-  empty,
-}: {
-  items: readonly { titleSv: string; titleEn: string; level: RequirementLevel }[];
-  locale: Locale;
-  empty: string;
-}) {
-  if (items.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>;
-  return (
-    <ul className="space-y-2">
-      {items.map((item) => (
-        <li
-          key={`${item.titleSv}-${item.level}`}
-          className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background p-3"
-        >
-          <span className="text-sm text-foreground">
-            {locale === "sv" ? item.titleSv : item.titleEn}
-          </span>
-          <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {REQUIREMENT_LEVEL_LABEL[item.level][locale]}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** The last-resort destination: live Career Intelligence Graph content for
- *  an occupation with no published guide, inside the card.
- *
- *  Mounted only while the panel is open. The reads need a QueryClient and a
- *  server-function client, neither of which the static-markup guards
- *  provide, and no read should be made for a panel nobody opened. Nothing
- *  here is synthesised: it is the same `getProfessionDetails` read the
- *  gated tier cards use, or an honest "could not read" line. */
-function InlineProfessionDetails({
-  cigSlug,
-  locale,
-  stageSentence,
-}: {
-  cigSlug: string | null;
-  locale: Locale;
-  stageSentence: string;
-}) {
-  const t = translateFor(locale);
-  const load = useServerFn(getProfessionDetails);
-  const query = useQuery({
-    queryKey: ["v31", "profession-details", [cigSlug]],
-    queryFn: () => load({ data: { slugs: [cigSlug as string] } }),
-    enabled: cigSlug !== null,
-    staleTime: 5 * 60 * 1000,
-  });
-  const detail: ProfessionDetail | undefined = cigSlug ? query.data?.[cigSlug] : undefined;
-  const overview = detail
-    ? locale === "sv"
-      ? (detail.overviewSv ?? detail.summarySv)
-      : (detail.overviewEn ?? detail.summaryEn)
-    : null;
-
-  return (
-    <div className="space-y-5">
-      <p className="text-sm leading-relaxed text-foreground">{stageSentence}</p>
-      {cigSlug !== null && query.isPending && (
-        <p className="text-sm text-muted-foreground" role="status">
-          {t("careerDiscovery.report.v31.professionDetailLoading")}
-        </p>
-      )}
-      {cigSlug !== null && !query.isPending && !detail && (
-        <p className="text-sm text-muted-foreground" role="status">
-          {t("careerDiscovery.report.v31.professionDetailError")}
-        </p>
-      )}
-      {detail && (
-        <>
-          {overview && <p className="text-sm leading-relaxed text-muted-foreground">{overview}</p>}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-              {t("careerDiscovery.report.v31.requirementsTitle")}
-            </h4>
-            <div className="mt-3">
-              <DetailList
-                items={detail.requirements}
-                locale={locale}
-                empty={t("careerDiscovery.report.v31.requirementsEmpty")}
-              />
-            </div>
-          </div>
-          {(detail.education.length > 0 || detail.certifications.length > 0) && (
-            <div>
-              <h4 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                {t("careerDiscovery.report.v31.educationTitle")}
-              </h4>
-              <div className="mt-3">
-                <DetailList
-                  items={[...detail.education, ...detail.certifications]}
-                  locale={locale}
-                  empty={t("careerDiscovery.report.v31.requirementsEmpty")}
-                />
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+  if (destination.kind === "catalogue_profile") {
+    return (
+      <Link
+        to="/career-center/yrke/$cigSlug"
+        params={{ cigSlug: destination.cigSlug }}
+        aria-label={accessibleName}
+        onClick={() => remember(destination.href)}
+        data-explore-link={entry.match.professionId}
+        data-explore-kind="catalogue_profile"
+        className={CHIP_TARGET_CLASS}
+      >
+        {chip}
+      </Link>
+    );
+  }
+  // A catalogue row approved without a profession identity: nothing to open,
+  // and no control that pretends otherwise.
+  return null;
 }
 
 function RecommendationCard({
@@ -326,9 +211,6 @@ function RecommendationCard({
   // strongest characteristics contributing to this recommendation", and a
   // list of six reads as a description of the person rather than a reason.
   const traits = explanation.alignedDimensionNames.slice(0, 3);
-  const destination = exploreDestinationFor(entry.match);
-  const [open, setOpen] = useState(false);
-  const panelId = `${useId()}-explore`;
 
   return (
     <div
@@ -347,14 +229,7 @@ function RecommendationCard({
         {entry.match.stage !== "explore_now" && (
           <StageBadge stage={entry.match.stage} locale={locale} />
         )}
-        <ExploreChip
-          entry={entry}
-          locale={locale}
-          title={title}
-          open={open}
-          onToggle={() => setOpen((o) => !o)}
-          panelId={panelId}
-        />
+        <ExploreChip entry={entry} locale={locale} title={title} />
       </div>
 
       <h3
@@ -396,28 +271,6 @@ function RecommendationCard({
         <p className="mt-3 max-w-[64ch] text-[13px] leading-relaxed text-muted-foreground">
           {explanation.limitationNote}
         </p>
-      )}
-
-      {/* The in-card destination, present only when no published guide
-          exists (see exploreDestinationFor). The region is always in the
-          DOM so aria-controls resolves; its content mounts on open. */}
-      {destination.kind === "inline_details" && (
-        <div
-          id={panelId}
-          role="region"
-          aria-label={title}
-          hidden={!open}
-          data-explore-panel={entry.match.professionId}
-          className="mt-5 border-t border-border pt-5"
-        >
-          {open && (
-            <InlineProfessionDetails
-              cigSlug={destination.cigSlug}
-              locale={locale}
-              stageSentence={explanation.stageSentence}
-            />
-          )}
-        </div>
       )}
     </div>
   );

@@ -59,8 +59,27 @@ export interface ProfessionPathwayEdge {
   readonly transitionKind: string;
 }
 
+/** A citable source the catalogue records for a profession or for one of its
+ *  formal requirements. Only published rows are readable (RLS). */
+export interface ProfessionSource {
+  readonly organisation: string;
+  readonly title: string;
+  readonly url: string | null;
+}
+
 export interface ProfessionDetail {
   readonly slug: string;
+  /** The catalogue's own title for the row — never a translated guess. */
+  readonly titleSv: string;
+  readonly titleEn: string;
+  readonly isRegulated: boolean;
+  /** Where the catalogue says these facts hold, e.g. "SE". */
+  readonly jurisdiction: string | null;
+  /** When the row was last reviewed, ISO date (YYYY-MM-DD), or null. */
+  readonly lastVerified: string | null;
+  readonly disclaimerSv: string | null;
+  readonly disclaimerEn: string | null;
+  readonly sources: readonly ProfessionSource[];
   readonly summarySv: string | null;
   readonly summaryEn: string | null;
   readonly overviewSv: string | null;
@@ -100,6 +119,11 @@ interface CigProfessionRow {
   readonly slug: string;
   readonly title_sv: string;
   readonly title_en: string;
+  readonly is_regulated: boolean | null;
+  readonly jurisdiction: string | null;
+  readonly last_verified: string | null;
+  readonly disclaimer_sv: string | null;
+  readonly disclaimer_en: string | null;
   readonly summary_sv: string | null;
   readonly summary_en: string | null;
   readonly overview_sv: string | null;
@@ -115,12 +139,16 @@ interface CigProfessionRow {
 export const getProfessionDetails = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slugs: z.array(z.string()).min(1).max(20) }).parse(d))
   .handler(async ({ data }): Promise<Record<string, ProfessionDetail>> => {
-    const { data: professions } = await publicClient
+    const { data: professions, error } = await publicClient
       .from("cig_professions")
       .select(
-        "id, slug, title_sv, title_en, summary_sv, summary_en, overview_sv, overview_en, ssyk_code",
+        "id, slug, title_sv, title_en, summary_sv, summary_en, overview_sv, overview_en, ssyk_code, is_regulated, jurisdiction, last_verified, disclaimer_sv, disclaimer_en",
       )
       .in("slug", data.slugs);
+    // A failed read is NOT an absence. Returning `{}` here made "the catalogue
+    // could not be reached" render exactly like "nothing is published", so
+    // no caller could offer a retry. Throwing lets each surface say which.
+    if (error) throw new Error(`CIG profession read failed: ${error.message}`);
 
     const rows = (professions ?? []) as CigProfessionRow[];
     if (rows.length === 0) return {};
@@ -129,11 +157,11 @@ export const getProfessionDetails = createServerFn({ method: "GET" })
     const slugById = new Map(rows.map((r) => [r.id, r.slug] as const));
     const ids = rows.map((r) => r.id);
 
-    const [formalRes, eduRes, certRes, transRes] = await Promise.all([
+    const [formalRes, eduRes, certRes, transRes, sourceRes] = await Promise.all([
       publicClient
         .from("cig_profession_formal_requirements")
         .select(
-          "profession_id, criticality, legal_blocker, jurisdiction, cig_formal_requirements(title_sv, title_en)",
+          "profession_id, criticality, legal_blocker, jurisdiction, cig_formal_requirements(title_sv, title_en), cig_source_references(organisation, title, url)",
         )
         .in("profession_id", ids),
       publicClient
@@ -150,12 +178,24 @@ export const getProfessionDetails = createServerFn({ method: "GET" })
           "transition_kind, from_profession_id, to_profession_id, from:cig_professions!cig_career_transitions_from_profession_id_fkey(slug, title_sv, title_en), to:cig_professions!cig_career_transitions_to_profession_id_fkey(slug, title_sv, title_en)",
         )
         .or(`from_profession_id.in.(${ids.join(",")}),to_profession_id.in.(${ids.join(",")})`),
+      publicClient
+        .from("cig_profession_source_references")
+        .select("profession_id, cig_source_references(organisation, title, url)")
+        .in("profession_id", ids),
     ]);
 
     const result: Record<string, ProfessionDetail> = {};
     for (const p of rows) {
       result[p.slug] = {
         slug: p.slug,
+        titleSv: p.title_sv,
+        titleEn: p.title_en,
+        isRegulated: Boolean(p.is_regulated),
+        jurisdiction: p.jurisdiction ?? null,
+        lastVerified: p.last_verified ? String(p.last_verified).slice(0, 10) : null,
+        disclaimerSv: p.disclaimer_sv ?? null,
+        disclaimerEn: p.disclaimer_en ?? null,
+        sources: [],
         summarySv: p.summary_sv,
         summaryEn: p.summary_en,
         overviewSv: p.overview_sv,
@@ -179,6 +219,14 @@ export const getProfessionDetails = createServerFn({ method: "GET" })
         level: classifyFormal(r.criticality, r.legal_blocker),
         jurisdiction: r.jurisdiction ?? null,
       });
+      addSource(result[slug], r.cig_source_references);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    for (const r of (sourceRes.data ?? []) as any[]) {
+      const slug = slugById.get(r.profession_id);
+      if (!slug || !result[slug]) continue;
+      addSource(result[slug], r.cig_source_references);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -232,6 +280,20 @@ export const getProfessionDetails = createServerFn({ method: "GET" })
 
     return result;
   });
+
+/** Adds a source once per (organisation, title). An embedded row that RLS
+ *  withheld arrives as null and is skipped — never replaced by a guess. */
+function addSource(detail: ProfessionDetail, raw: unknown): void {
+  const src = raw as { organisation?: unknown; title?: unknown; url?: unknown } | null;
+  if (!src || typeof src.organisation !== "string" || typeof src.title !== "string") return;
+  const list = detail.sources as ProfessionSource[];
+  if (list.some((s) => s.organisation === src.organisation && s.title === src.title)) return;
+  list.push({
+    organisation: src.organisation,
+    title: src.title,
+    url: typeof src.url === "string" && /^https?:\/\//.test(src.url) ? src.url : null,
+  });
+}
 
 export const REQUIREMENT_LEVEL_LABEL: Readonly<
   Record<RequirementLevel, { sv: string; en: string }>

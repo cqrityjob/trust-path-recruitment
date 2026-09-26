@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -19,6 +19,7 @@ import { DURATION_CLAIM, DURATION_CLAIM_MINUTES } from "@/lib/career-discovery/v
 import {
   ENTRY_LEVEL_SEARCH,
   NEXT_LEVEL_SEARCH,
+  ORIGIN_NONE,
   PUBLISHED_PROFESSION_COUNT,
   applyExplorerSearch,
   careerOrigin,
@@ -29,7 +30,16 @@ import {
   type ExplorerSearch,
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
-import { useMyCareerDirection, useMyStatedProfession } from "@/hooks/useMyCareerDirection";
+import {
+  useMyCareerDirection,
+  useMyStatedProfession,
+  useSupabaseSession,
+} from "@/hooks/useMyCareerDirection";
+import {
+  currentHrefWithHash,
+  rememberReturn,
+  type ReturnOrigin,
+} from "@/lib/career-center/return-context";
 import { CareerHero } from "@/components/career-center/CareerHero";
 import { CareerRoutes } from "@/components/career-center/CareerRoutes";
 import { PathFromSection } from "@/components/career-center/PathFromSection";
@@ -39,12 +49,20 @@ import { ProfessionExplorer } from "@/components/career-center/ProfessionExplore
 // The Career Center hub, built around the questions a reader actually has,
 // in the order they have them:
 //
-//   1 hero        what is this and where do I start
-//   2 från ditt yrke   I work as X — where can I go from here?   (pathFrom)
-//   3 din riktning     what did my career analysis suggest?      (fit)
-//   4 karriärvägar     what directions exist in this industry?
-//   5 utforska yrken   the full catalogue, behind an explicit click
+//   1 hero        what is this and where do I start (three doors: explore,
+//                 "I know my profession", "help me choose" / "my result")
+//   2 din riktning     what did my career analysis recommend?    (fit)
+//                      — HERE only once a signed-in reader's own
+//                      result can be read; otherwise it is the compact
+//                      offer of the analysis, after the catalogue
+//   3 från ditt yrke   I work as X — what is it, where can I go? (pathFrom)
+//   4 utforska yrken   the full catalogue, one click (or one link) away
+//   5 karriärvägar     what directions exist in this industry?
 //   6 så bygger vi innehållet   why should I believe any of it
+//
+// The catalogue moved above the career routes: "show me the professions"
+// is the question most readers arrive with, and it used to sit below a
+// section of route diagrams.
 //
 // ── TWO PERSONAL SECTIONS, NEVER ONE ───────────────────────────────────
 //
@@ -147,6 +165,7 @@ export const Route = createFileRoute("/career-center/")({
 const EXPLORER_ANCHOR = "utforska-yrken";
 const PERSONAL_ANCHOR = "min-riktning";
 const PATH_ANCHOR = "fran-mitt-yrke";
+const ROUTES_ANCHOR = "karriarvagar";
 const EXPLORER_PANEL_ID = "yrkeskatalog";
 
 function CareerCenterHub() {
@@ -155,37 +174,54 @@ function CareerCenterHub() {
   const navigate = useNavigate({ from: Route.fullPath });
   const track = useCareerCenterTracking();
 
-  const { signedIn, career, refetch } = useMyCareerDirection();
+  // One observed session for both personal reads, keyed on the ACCOUNT, so
+  // switching accounts in this tab can never show the previous account's
+  // result or profession (see personal-cache.ts).
+  const session = useSupabaseSession();
+  const { signedIn, career, refetch } = useMyCareerDirection(session);
   const direction = useMemo(() => personalDirection(career, { signedIn }), [career, signedIn]);
   const personalised = direction.state === "ready";
 
   // `pathFrom`. The URL wins over the profile: an explicit click on this page
-  // is the most recent thing the reader has said about themselves.
-  const stated = useMyStatedProfession(signedIn);
+  // is the most recent thing the reader has said about themselves. `none`
+  // means the reader cleared the selector — NOT "fall back to my profile".
+  const stated = useMyStatedProfession(session);
   const origin = useMemo(
     () =>
       careerOrigin({
         selectedSlug: search.from ?? null,
         profileSlug: stated.slug,
-        profileLabel: stated.label,
+        profileLabel: stated.otherLabel,
+        profileTitleSv: stated.catalogueTitleSv,
+        profileTitleEn: stated.catalogueTitleEn,
       }),
-    [search.from, stated.slug, stated.label],
+    [search.from, stated.slug, stated.otherLabel, stated.catalogueTitleSv, stated.catalogueTitleEn],
   );
 
-  const onSelectOrigin = useCallback(
-    (slug: string | null) => {
+  const writeFrom = useCallback(
+    (value: string | null) => {
       navigate({
         search: (prev) => {
           const next = { ...prev } as Record<string, unknown>;
-          if (slug) next.from = slug;
+          if (value) next.from = value;
           else delete next.from;
           return next as ExplorerSearch;
         },
         replace: true,
+        // The reader is working in this section; do not jump to the top.
+        resetScroll: false,
       });
     },
     [navigate],
   );
+  const onSelectOrigin = useCallback((slug: string) => writeFrom(slug), [writeFrom]);
+  // Clearing with a saved profession must SAY "none", or the saved one comes
+  // straight back; with nothing saved, an absent `from` already means none.
+  const onClearOrigin = useCallback(
+    () => writeFrom(origin.saved ? ORIGIN_NONE : null),
+    [writeFrom, origin.saved],
+  );
+  const onResetOrigin = useCallback(() => writeFrom(null), [writeFrom]);
 
   const onToggleCatalogue = useCallback(() => {
     navigate({
@@ -196,6 +232,7 @@ function CareerCenterHub() {
         return next as ExplorerSearch;
       },
       replace: true,
+      resetScroll: false,
     });
   }, [navigate]);
 
@@ -210,11 +247,59 @@ function CareerCenterHub() {
       // `replace` keeps the back button meaning "leave the Career Center"
       // rather than "undo one chip", which is what a reader expects after
       // clicking through half a dozen filters.
-      navigate({ search: () => next, replace: true });
+      navigate({ search: () => next, replace: true, resetScroll: false });
       track("career_filter_used", { surface: "hub_explorer" });
     },
     [navigate, track],
   );
+
+  // Opening a profession from the hub records where the reader was — the
+  // exact view, filters included — so the profession page can offer a named
+  // way back to it. Tracking is unchanged.
+  const opened = useCallback(
+    (
+      href: string,
+      from: ReturnOrigin,
+      anchor: string,
+      surface: "hub_personal" | "hub_explorer" | "hub_routes",
+    ) => {
+      rememberReturn(href, from, currentHrefWithHash(anchor));
+      track("career_profession_opened", { surface, subject: href.split("/").pop() });
+    },
+    [track],
+  );
+
+  // A direct link to a section (`?all=true#utforska-yrken`) is scrolled by
+  // the browser before the personal sections have rendered. Once they
+  // settle — and they change height when they do — land the reader on the
+  // section again, unless they have already started scrolling themselves.
+  const settled =
+    signedIn === false ||
+    (signedIn === true && direction.state !== "loading" && stated.status !== "loading");
+  useSettledHashScroll(settled);
+
+  const personalSection = (
+    <Section bordered id={PERSONAL_ANCHOR} className="scroll-mt-4 bg-secondary/40 py-12 md:py-16">
+      <PersonalDirectionSection
+        direction={direction}
+        onRetry={refetch}
+        exploreSearch={search as Record<string, unknown>}
+        exploreAnchor={EXPLORER_ANCHOR}
+        savedProfessionId={origin.saved?.profession?.id ?? null}
+        onProfessionOpen={(href) => opened(href, "recommendation", PERSONAL_ANCHOR, "hub_personal")}
+        onAssessmentStart={() =>
+          track("career_center_test_started", { surface: "hub_test_section" })
+        }
+        facts={<TestFacts />}
+      />
+    </Section>
+  );
+  // The reader's own result leads the page once it can be read. Before a
+  // session is observed — including the HTML a crawler keeps — and for a
+  // reader without a result, the section is the compact offer of the
+  // analysis and sits after the catalogue, so nobody scrolls past an
+  // invitation to reach the professions.
+  const personalFirst = signedIn === true && direction.state !== "no_result";
 
   return (
     <>
@@ -262,57 +347,33 @@ function CareerCenterHub() {
         // Sketch 4 puts the two ways INTO a career path here. TrustRail
         // moves to the catalogue section it actually describes -- see the
         // note there -- rather than being dropped.
-        aside={<CareerEntryCards pathAnchor={PATH_ANCHOR} personalAnchor={PERSONAL_ANCHOR} />}
+        aside={
+          <CareerEntryCards
+            pathAnchor={PATH_ANCHOR}
+            personalAnchor={PERSONAL_ANCHOR}
+            personalised={personalised}
+          />
+        }
       />
 
-      {/* ── 2. FRÅN DITT YRKE (pathFrom) ────────────────────────────── */}
-      <Section id={PATH_ANCHOR} className="bg-background py-16 md:py-20">
+      {/* ── 2. DIN RIKTNING (fit) — first, once the reader's result is in hand */}
+      {personalFirst && personalSection}
+
+      {/* ── 3. FRÅN DITT YRKE (pathFrom) ────────────────────────────── */}
+      <Section bordered id={PATH_ANCHOR} className="scroll-mt-4 bg-background py-12 md:py-16">
         <PathFromSection
           origin={origin}
+          profileStatus={stated.status}
           onSelect={onSelectOrigin}
-          onProfessionOpen={(slug) =>
-            track("career_profession_opened", { surface: "hub_personal", subject: slug })
-          }
+          onClear={onClearOrigin}
+          onReset={onResetOrigin}
+          onRetryProfile={stated.refetch}
+          onProfessionOpen={(href) => opened(href, "current_role", PATH_ANCHOR, "hub_personal")}
         />
       </Section>
 
-      {/* ── 3. DIN RIKTNING (fit) ───────────────────────────────────── */}
-      <Section bordered id={PERSONAL_ANCHOR} className="bg-secondary/40 py-16 md:py-20">
-        <PersonalDirectionSection
-          direction={direction}
-          onRetry={refetch}
-          exploreHref={`#${EXPLORER_ANCHOR}`}
-          onProfessionOpen={(slug) =>
-            track("career_profession_opened", { surface: "hub_personal", subject: slug })
-          }
-          onAssessmentStart={() =>
-            track("career_center_test_started", { surface: "hub_test_section" })
-          }
-          facts={<TestFacts />}
-        />
-      </Section>
-
-      {/* ── 4. KARRIÄRVÄGAR ─────────────────────────────────────────── */}
-      <Section bordered className="bg-background py-16 md:py-20">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.routes.title")}
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-            {t("cc.routes.subtitle")}
-          </p>
-        </div>
-        <div className="mt-10">
-          <CareerRoutes
-            onProfessionOpen={(slug) =>
-              track("career_profession_opened", { surface: "hub_routes", subject: slug })
-            }
-          />
-        </div>
-      </Section>
-
-      {/* ── 5. UTFORSKA YRKEN — behind an explicit click ───────────── */}
-      <Section bordered id={EXPLORER_ANCHOR} className="bg-secondary/40 py-16 md:py-20">
+      {/* ── 4. UTFORSKA YRKEN — one click, or one link, away ───────── */}
+      <Section bordered id={EXPLORER_ANCHOR} className="scroll-mt-4 bg-secondary/40 py-12 md:py-16">
         {/* TrustRail used to sit in the hero aside, which sketch 4 gives to
             the two path entry cards. It is not hero content: it counts the
             profession guides and says where they come from, which is a
@@ -396,7 +457,29 @@ function CareerCenterHub() {
             relaxation={relaxation}
             upcoming={upcomingProfessions}
             onProfessionOpen={(slug) =>
-              track("career_profession_opened", { surface: "hub_explorer", subject: slug })
+              opened(`/career-center/${slug}`, "catalogue", EXPLORER_ANCHOR, "hub_explorer")
+            }
+          />
+        </div>
+      </Section>
+
+      {/* ── 2′. DIN RIKTNING — the compact offer, when there is no result */}
+      {!personalFirst && personalSection}
+
+      {/* ── 5. KARRIÄRVÄGAR ─────────────────────────────────────────── */}
+      <Section bordered id={ROUTES_ANCHOR} className="scroll-mt-4 bg-background py-12 md:py-16">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+            {t("cc.routes.title")}
+          </h2>
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.routes.subtitle")}
+          </p>
+        </div>
+        <div className="mt-10">
+          <CareerRoutes
+            onProfessionOpen={(slug) =>
+              opened(`/career-center/${slug}`, "routes", ROUTES_ANCHOR, "hub_routes")
             }
           />
         </div>
@@ -473,6 +556,48 @@ function QuickChoice({
       </Link>
     </li>
   );
+}
+
+/**
+ * Re-land a direct section link once the page has settled.
+ *
+ * The browser scrolls to `#utforska-yrken` while parsing the server HTML —
+ * before the signed-in reader's own sections exist. When they render above
+ * the target they push it down, and the reader lands mid-page on whatever
+ * moved into view. This scrolls to the hash target once, after the personal
+ * reads have settled, and only if the reader has not started scrolling or
+ * navigating themselves (a reader who has moved is never yanked back).
+ */
+function useSettledHashScroll(settled: boolean) {
+  const done = useRef(false);
+  const interacted = useRef(false);
+  useEffect(() => {
+    const mark = () => {
+      interacted.current = true;
+    };
+    const opts = { passive: true, once: true } as const;
+    window.addEventListener("wheel", mark, opts);
+    window.addEventListener("touchmove", mark, opts);
+    window.addEventListener("keydown", mark, { once: true });
+    window.addEventListener("pointerdown", mark, { once: true });
+    return () => {
+      window.removeEventListener("wheel", mark);
+      window.removeEventListener("touchmove", mark);
+      window.removeEventListener("keydown", mark);
+      window.removeEventListener("pointerdown", mark);
+    };
+  }, []);
+  useEffect(() => {
+    if (!settled || done.current) return;
+    done.current = true;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id || interacted.current) return;
+    // After this render has painted, so the target is at its final place.
+    requestAnimationFrame(() => {
+      const el = document.getElementById(id);
+      if (el && !interacted.current) el.scrollIntoView({ block: "start" });
+    });
+  }, [settled]);
 }
 
 /** The three facts about the career analysis, every one of them read from the
