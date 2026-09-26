@@ -125,6 +125,9 @@ export const dictionaries = {
     // fails the build if one does.
     "home.hero.eyebrow": "Säkerhetskarriären samlad på ett ställe",
     "home.cta.start": "Kom igång",
+    "jobs.card.deadline": "Sista ansökningsdag {d}",
+    "jobs.card.open": "Visa annons",
+    "jobs.detail.apply_jump": "Ansök",
     "home.cta.jobs": "Hitta jobb",
     "home.cta.employers": "För arbetsgivare",
     "home.cta.jobsNote": "Lediga jobb kan du läsa utan konto.",
@@ -8724,6 +8727,9 @@ export const dictionaries = {
     // never test, career test, assessment or guidance.
     "home.hero.eyebrow": "Your security career in one place",
     "home.cta.start": "Get started",
+    "jobs.card.deadline": "Apply by {d}",
+    "jobs.card.open": "View job",
+    "jobs.detail.apply_jump": "Apply",
     "home.cta.jobs": "Find jobs",
     "home.cta.employers": "For employers",
     "home.cta.jobsNote": "You can browse open jobs without an account.",

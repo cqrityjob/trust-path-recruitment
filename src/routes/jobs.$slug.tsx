@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { Building2, Mail, Globe } from "lucide-react";
@@ -56,6 +56,7 @@ export const Route = createFileRoute("/jobs/$slug")({
 function JobDetailPage() {
   const { slug } = Route.useParams();
   const { t, lang } = useT();
+  const navigate = useNavigate();
 
   const ssr = useSuspenseQuery(jobDetailQueryOptions(slug));
   if (!ssr.data) throw notFound();
@@ -124,9 +125,26 @@ function JobDetailPage() {
   return (
     <SiteLayout>
       <Section>
-        <Link to="/jobs" className="text-sm text-primary hover:underline">
-          {t("jobs.detail.back")}
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              if (window.history.length > 1) window.history.back();
+              else void navigate({ to: "/jobs" });
+            }}
+            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            {t("jobs.detail.back")}
+          </button>
+          {!expired && (
+            <a
+              href="#apply"
+              className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:hidden"
+            >
+              {t("jobs.detail.apply_jump")}
+            </a>
+          )}
+        </div>
 
         <div className="mt-4">
           <JobAdHeading job={job} employerName={employer?.name ?? null} expired={expired} />
@@ -156,7 +174,7 @@ function JobDetailPage() {
             <RelatedJobs loading={related.isLoading} rows={related.data ?? []} lang={lang} />
           </article>
 
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+          <aside id="apply" className="scroll-mt-24 space-y-4 lg:sticky lg:top-6 lg:self-start">
             <ApplySidebar job={job} expired={expired} />
             {profileState.status === "ready" && (
               <JobRelevancePanel job={job} profile={profileState.data.profile} />

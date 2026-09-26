@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Clock, Building2 } from "lucide-react";
+import { MapPin, Clock, Building2, CalendarDays, ArrowRight } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
@@ -39,18 +39,28 @@ export function JobCard({
   const title = pickTitle(job, lang) || t("jobs.card.untitled");
   const location = locationLabel(job);
   const days = daysSince(job.published_at);
+  const deadlineTime = job.deadline_at ? new Date(job.deadline_at).getTime() : NaN;
+  const deadline = Number.isFinite(deadlineTime)
+    ? new Date(deadlineTime).toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : null;
   const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
 
   return (
     <Link
       to="/jobs/$slug"
       params={{ slug: job.slug }}
-      className="group block rounded-lg border border-border bg-background p-5 transition hover:border-foreground/30 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group flex flex-col rounded-xl border border-border bg-card p-5 transition hover:border-accent/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
       aria-label={title}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-lg font-semibold text-foreground">{title}</h3>
+          <h3 className="line-clamp-2 text-lg [overflow-wrap:anywhere] [hyphens:auto] font-semibold leading-snug text-foreground group-hover:text-accent">
+            {title}
+          </h3>
           {job.employer?.name && (
             <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
               <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
@@ -81,19 +91,36 @@ export function JobCard({
             <span>{employmentTypeLabel(job.employment_type, lang)}</span>
           </span>
         )}
-        {job.workplace_type && (
-          <span>{workplaceTypeLabel(job.workplace_type, lang)}</span>
-        )}
+        {job.workplace_type && <span>{workplaceTypeLabel(job.workplace_type, lang)}</span>}
       </div>
 
-      {area && (
-        <p className="mt-3 text-xs text-muted-foreground">{area.name[lang]}</p>
+      {(area || deadline) && (
+        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+          {area && (
+            <span className="rounded-full bg-secondary px-2.5 py-1 font-medium text-secondary-foreground">
+              {area.name[lang]}
+            </span>
+          )}
+          {deadline && (
+            <span className="inline-flex items-center gap-1 text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("jobs.card.deadline").replace("{d}", deadline)}
+            </span>
+          )}
+        </div>
       )}
       {relevance && relevance.band !== "none" && (
         <div className="mt-3">
           <JobRelevanceBadge band={relevance.band} basis={relevance.basis} />
         </div>
       )}
+      <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent">
+        {t("jobs.card.open")}
+        <ArrowRight
+          className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      </span>
     </Link>
   );
 }
