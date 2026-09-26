@@ -12,6 +12,7 @@ import {
 } from "@/lib/security-passport/evidence.functions";
 import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { formatExpiry } from "@/lib/security-passport/format";
 import { todayIso } from "@/lib/security-passport/dates";
 import {
   acceptValue,
@@ -1119,7 +1120,7 @@ export function InternationalCredentialForm({
                 [copy("Utfärdad", "Issued"), draft.issued_on],
                 [
                   copy("Slutdatum", "Expiry"),
-                  draft.no_expiry ? copy("Utan utgångsdatum", "No expiry") : draft.valid_until,
+                  draft.valid_until || formatExpiry(null, lang, draft.no_expiry),
                 ],
                 [copy("Dokument", "Evidence"), file?.name],
               ].map(([label, value]) => (

@@ -373,8 +373,14 @@ export const getMyPassport = createServerFn({ method: "GET" })
         .select(PROVENANCE_DECISION_COLUMNS)
         .eq("holder_user_id", userId)
         .order("decided_at", { ascending: true }),
+      // Which credentials the holder recorded as NON-EXPIRING. Without it a
+      // missing expiry date would have to read either "no expiry" (a fact
+      // nobody stated) or "not provided" (false for a lifelong one).
+      // Presentation only; RLS limits it to the holder's own claims.
+      db.from("sp_credential_details").select("claim_id").eq("no_expiry", true),
     ]);
-    const [profileRes, periodsRes, claimsRes, eventsRes, rulesRes, reqRes, decRes] = reads;
+    const [profileRes, periodsRes, claimsRes, eventsRes, rulesRes, reqRes, decRes, noExpiryRes] =
+      reads;
 
     // ── EVERY ESSENTIAL READ FAILS LOUDLY ──────────────────────────────
     //
@@ -416,6 +422,11 @@ export const getMyPassport = createServerFn({ method: "GET" })
     // from an empty Passport.
     if (reqRes.error) throw new Error(reqRes.error.message);
     if (decRes.error) throw new Error(decRes.error.message);
+    // Read like the rest: a failure is not "nothing is non-expiring".
+    if (noExpiryRes.error) throw new Error(noExpiryRes.error.message);
+    const noExpiry = new Set(
+      ((noExpiryRes.data ?? []) as { claim_id: string }[]).map((r) => r.claim_id),
+    );
 
     // ── SUBJECT -> WHO DECIDED IT ──────────────────────────────────────
     //
@@ -434,7 +445,7 @@ export const getMyPassport = createServerFn({ method: "GET" })
     // are not part of the current Passport view.
     const claims = ((claimsRes.data ?? []) as ClaimRow[])
       .filter((r) => r.lifecycle_state !== "superseded" && r.lifecycle_state !== "withdrawn")
-      .map((r) => toClaim(r, provenance));
+      .map((r) => ({ ...toClaim(r, provenance), noExpiry: noExpiry.has(r.id) }));
 
     // A Passport with no derivation rules would silently show every holder as
     // having no professional identity at all, which is indistinguishable from

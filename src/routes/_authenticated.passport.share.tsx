@@ -99,7 +99,7 @@ import { buildRecipientPresentation } from "@/lib/security-passport/recipient-pr
 import { RecipientPassportView } from "@/components/security-passport/live/RecipientPassportView";
 import { publicShareUrl, publicShareOrigin } from "@/lib/security-passport/public-origin";
 import { MeritStatusChip } from "@/components/security-passport/MeritStatusChip";
-import { formatIsoDay, formatIsoDayRange } from "@/lib/security-passport/format";
+import { formatExpiry, formatIsoDay, formatIsoDayRange } from "@/lib/security-passport/format";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { PassportLang } from "@/lib/security-passport/i18n";
 
@@ -899,7 +899,12 @@ function PassportShareRoute() {
  *  and it exists so no renderer ever prints an issue date under the word
  *  "employed". A row with neither says "Ej angivet" rather than a dash. */
 function meritDates(
-  merit: { dateKind: "period" | "validity"; from: string | null; to: string | null },
+  merit: {
+    dateKind: "period" | "validity";
+    from: string | null;
+    to: string | null;
+    noExpiry?: boolean;
+  },
   lang: PassportLang,
   pt: (key: PassportCopyKey) => string,
 ): string {
@@ -908,7 +913,7 @@ function meritDates(
   if (merit.dateKind === "period") {
     return merit.from ? formatIsoDayRange(merit.from, merit.to, lang) : pt("common.notStated");
   }
-  return merit.to ? formatIsoDay(merit.to, lang) : pt("claims.noExpiry");
+  return merit.to ? formatIsoDay(merit.to, lang) : formatExpiry(null, lang, merit.noExpiry);
 }
 
 function BackLink({ label }: { label: string }) {

@@ -211,7 +211,7 @@ export function PassportCard({
                                 {lang === "sv" ? c.titleSv : c.titleEn}
                               </p>
                               <p className="truncate text-xs tabular-nums text-muted-foreground">
-                                {c.issuerName} · {formatExpiry(c.validUntil, lang)}
+                                {c.issuerName} · {formatExpiry(c.validUntil, lang, c.noExpiry)}
                               </p>
                             </div>
                             <div className="flex shrink-0 flex-col items-end gap-1">

@@ -14,13 +14,22 @@ import { passportT, type PassportCopyKey, type PassportLang } from "./i18n";
 import { isCQrityjob, isUnsupportedSourceClaim, type ProvenanceSubjectKind } from "./provenance";
 import type { IsoDate } from "./types";
 
-/** An absent EXPIRY genuinely means "no expiry" — a permanent qualification.
- *  An absent ISSUE date means only that it was not recorded. Rendering both
- *  with the same fallback printed "Utfärdat: Ingen giltighetstid" on a claim
- *  with no issue date, which is not merely odd but wrong. */
-export function formatExpiry(date: IsoDate | null, lang: PassportLang): string {
-  if (!date) return passportT("claims.noExpiry", lang);
-  return date;
+/** An absent expiry DATE is not a statement that there is no expiry. Only an
+ *  explicit non-expiring credential -- `no_expiry` on its details, chosen by
+ *  the holder where the definition allows it -- reads "No expiry"; anything
+ *  else without a date says the date was not provided. Printing "No expiry"
+ *  for a date nobody entered presented a missing fact as a permanent one.
+ *  Presentation only: stored validity and trust are untouched.
+ *
+ *  (An absent ISSUE date is formatDate's "not stated": rendering both with
+ *  one fallback once printed "Utfärdat: Ingen giltighetstid".) */
+export function formatExpiry(
+  date: IsoDate | null,
+  lang: PassportLang,
+  noExpiry: boolean | null | undefined = null,
+): string {
+  if (date) return date;
+  return passportT(noExpiry === true ? "claims.noExpiry" : "claims.expiryNotProvided", lang);
 }
 
 export function formatDate(date: IsoDate | null, lang: PassportLang): string {

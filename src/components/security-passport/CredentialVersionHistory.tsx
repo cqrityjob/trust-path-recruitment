@@ -22,6 +22,8 @@ export interface VersionEntry {
   readonly issuerName: string | null;
   readonly issuedOn: string | null;
   readonly validUntil: string | null;
+  /** Recorded as non-expiring; see formatExpiry. */
+  readonly noExpiry?: boolean;
   readonly assertionLevel: string;
   readonly lifecycleState: string;
   /** Who decided this version, and how. Optional so the fixture prototype
@@ -119,7 +121,7 @@ export function CredentialVersionHistory({
                     {pt("claims.validUntil")}
                   </dt>
                   <dd className="text-sm tabular-nums text-foreground">
-                    {formatExpiry(v.validUntil, lang)}
+                    {formatExpiry(v.validUntil, lang, v.noExpiry)}
                   </dd>
                 </div>
                 <div>

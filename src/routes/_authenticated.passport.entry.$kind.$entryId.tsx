@@ -537,7 +537,7 @@ function PassportEntryRoute() {
                   {pt("claims.validUntil")}
                 </dt>
                 <dd className="mt-0.5 text-sm tabular-nums text-foreground">
-                  {formatExpiry(claim.validUntil, lang)}
+                  {formatExpiry(claim.validUntil, lang, internationalDetail?.no_expiry)}
                 </dd>
               </div>
               {/* The holder could TYPE a scope during a correction and then
@@ -889,7 +889,17 @@ function PassportEntryRoute() {
       ) : null}
 
       {/* ── Every version, oldest preserved ─────────────────────────── */}
-      {isClaim ? <CredentialVersionHistory versions={versions} currentId={entryId} /> : null}
+      {isClaim ? (
+        <CredentialVersionHistory
+          versions={versions.map((v) => ({
+            ...v,
+            noExpiry: international?.details.some(
+              (d) => d.claim_id === v.id && d.no_expiry === true,
+            ),
+          }))}
+          currentId={entryId}
+        />
+      ) : null}
     </div>
   );
 }

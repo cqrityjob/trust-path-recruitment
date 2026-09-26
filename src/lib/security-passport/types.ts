@@ -205,6 +205,10 @@ export interface Claim {
   readonly issuedOn: IsoDate | null;
   readonly validFrom: IsoDate | null;
   readonly validUntil: IsoDate | null;
+  /** Recorded as non-expiring (`sp_credential_details.no_expiry`). Only this
+   *  reads "No expiry"; a missing date without it is "not provided".
+   *  Presentation only -- never an input to validity or trust. */
+  readonly noExpiry?: boolean;
   readonly assertionLevel: AssertionLevel;
   readonly lifecycleState: LifecycleState;
   /** The organisation that made the verification DECISION -- never the
