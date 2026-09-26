@@ -23,7 +23,13 @@ import { PUBLIC_MARKET_SCALE } from "@/components/site/passport-market-scale";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { HomePassportPreview } from "@/components/site/HomePassportPreview";
-import { EmployerFlow, HomeAi, HomeFaq, HomeStart, HomeValue } from "@/components/site/HomeSections";
+import {
+  EmployerFlow,
+  HomeAi,
+  HomeFaq,
+  HomeStart,
+  HomeValue,
+} from "@/components/site/HomeSections";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 /** ── THE OWNER-APPROVED PUBLIC ENTRY ARCHITECTURE ──────────────────────
@@ -488,7 +494,6 @@ function QuietLink({
  * Passport without ever running Career Discovery, and may run Career
  * Discovery without ever building a Passport. */
 type LifecycleKey = "discover" | "understand" | "grow" | "trust" | "work" | "continue";
-
 
 /* ── THE THREE TRUST LEVELS ────────────────────────────────────────────
  *

@@ -43,7 +43,11 @@ export function HomeValue() {
       <div className="mt-10 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
         {/* The Passport leads, on its own navy surface. */}
         <article className="rounded-2xl bg-primary p-7 text-primary-foreground md:p-9">
-          <ShieldCheck className="h-7 w-7 text-primary-foreground/80" strokeWidth={1.5} aria-hidden="true" />
+          <ShieldCheck
+            className="h-7 w-7 text-primary-foreground/80"
+            strokeWidth={1.5}
+            aria-hidden="true"
+          />
           <h3 className="mt-5 text-xl font-semibold text-primary-foreground md:text-2xl">
             {t("home.value.passport.title")}
           </h3>
@@ -61,7 +65,9 @@ export function HomeValue() {
         <div className="grid gap-6">
           <article className="rounded-2xl border border-border bg-card p-6">
             <FileText className="h-6 w-6 text-accent" strokeWidth={1.75} aria-hidden="true" />
-            <h3 className="mt-4 text-lg font-semibold text-foreground">{t("home.value.cv.title")}</h3>
+            <h3 className="mt-4 text-lg font-semibold text-foreground">
+              {t("home.value.cv.title")}
+            </h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               {t("home.value.cv.body")}
             </p>
@@ -97,7 +103,11 @@ const AI_ROWS: { label: TranslationKey; body: TranslationKey; icon: typeof Radar
 export function HomeAi() {
   const { t } = useT();
   return (
-    <Section id="security-intelligence" bordered className="scroll-mt-24 bg-secondary py-16 md:py-24">
+    <Section
+      id="security-intelligence"
+      bordered
+      className="scroll-mt-24 bg-secondary py-16 md:py-24"
+    >
       <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
         <div>
           <p className={EYEBROW}>{t("home.ai.eyebrow")}</p>
@@ -156,7 +166,11 @@ export function EmployerFlow() {
           key={key}
           className="flex items-center gap-3 rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 px-4 py-3 sm:flex-col sm:items-start"
         >
-          <Icon className="h-5 w-5 shrink-0 text-primary-foreground/80" strokeWidth={1.75} aria-hidden="true" />
+          <Icon
+            className="h-5 w-5 shrink-0 text-primary-foreground/80"
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
           <span className="text-sm font-medium text-primary-foreground">
             <span className="tabular-nums text-primary-foreground/60">{i + 1}.</span> {t(key)}
           </span>
@@ -190,7 +204,11 @@ export function HomeStart() {
         {t("home.start.title")}
       </h2>
       <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-16">
-        {col("home.start.person", ["home.start.person.1", "home.start.person.2", "home.start.person.3"])}
+        {col("home.start.person", [
+          "home.start.person.1",
+          "home.start.person.2",
+          "home.start.person.3",
+        ])}
         {col("home.start.employer", [
           "home.start.employer.1",
           "home.start.employer.2",
@@ -234,7 +252,10 @@ export function HomeFaq() {
             <details key={q} className="group py-1">
               <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-3 font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
                 {t(q)}
-                <span aria-hidden="true" className="text-xl text-accent transition-transform group-open:rotate-45">
+                <span
+                  aria-hidden="true"
+                  className="text-xl text-accent transition-transform group-open:rotate-45"
+                >
                   +
                 </span>
               </summary>
