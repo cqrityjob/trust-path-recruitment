@@ -583,6 +583,12 @@ group("7 · one name per product");
     [/yrkesprofil/i, "Min profil"],
     [/yrkesidentitet/i, "Min profil"],
     [/Professional Profile/, "My Profile"],
+    // Owner bug report (2026-09-26): the overview cards are "Min profil" and
+    // "Mitt CV"; the rhetorical questions under them were removed.
+    [/Vem är jag nu/i, "Min profil"],
+    [/Vad har jag gjort/i, "Mitt CV"],
+    [/Who am I now/i, "My profile"],
+    [/What have I done/i, "My CV"],
   ];
   for (const [pattern, replacement] of RETIRED) {
     ck(
@@ -603,7 +609,25 @@ group("7 · one name per product");
       !/\bAcademy\b/i.test(dictionaries[lang]["nav.myAssessments"]),
     );
     ck(`${lang}: dictionaries still load`, values.length > 0);
+    // The registration copy said "Ett Säkerhetspass ..." while every other
+    // surface said Security Passport. The product has ONE name, and the
+    // dictionary is where the public and auth copy lives -- so the scan
+    // covers it too, in both languages.
+    ck(
+      `${lang}: no dictionary value translates the product name (Säkerhetspass)`,
+      !/säkerhetspass/i.test(values),
+    );
   }
+  // The two overview cards, by the names the owner chose.
+  const homeCopy = code(read("src/components/professional-identity/home-copy.ts"));
+  ck(
+    'the Profile card is titled "Min profil" / "My profile"',
+    /title:\s*c\("Min profil",\s*"My profile"\)/.test(homeCopy),
+  );
+  ck(
+    'the CV card is titled "Mitt CV" / "My CV"',
+    /title:\s*c\("Mitt CV",\s*"My CV"\)/.test(homeCopy),
+  );
 
   // The concepts stay distinct concepts.
   ck(

@@ -385,14 +385,16 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   ok(src.includes("prefill.data?.jobId ?? jobId"), "2 · the job comes from the application first");
   // The assign path passes the APPLICATION, never an address the recruiter
   // could retype into a second person.
-  const panel = codeOnly(read(COMPONENTS.panel));
+  // The send moved into ONE dialog (owner bug report 2026-09-26): it passes
+  // the application and the level; no address field exists on the surface.
+  const dialog = codeOnly(read("src/components/recruitment/SendTestDialog.tsx"));
   ok(
-    panel.includes("applicationId, assessmentVersionId") ||
-      /assignFn\(\{\s*data:\s*\{\s*employerId,\s*applicationId,\s*assessmentVersionId/.test(panel),
+    /sendFn\(\{\s*data:\s*\{\s*employerId,\s*applicationId,\s*roleGroup/.test(dialog) &&
+      !/recipientEmail|_recipient_email|type="email"/.test(dialog),
     "2 · assessment assignment passes the application, not an address",
   );
   ok(
-    !/email|address/i.test(panel.split("async function assign")[1]?.slice(0, 400) ?? ""),
+    !/email|address/i.test(dialog.split("async function send()")[1]?.slice(0, 700) ?? ""),
     "2 · and holds no address to pass",
   );
 }
@@ -1238,7 +1240,7 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   ok(panel.includes("assessments.isError"), "10 · the assessment panel has a failure branch");
   ok(
     panel.indexOf("assessments.isError") <
-      panel.indexOf("if (rows.length === 0 && options.length === 0) return null"),
+      panel.indexOf("if (rows.length === 0 && options.length === 0 && !canAssign) return null"),
     "10 · which is reached before the silent-null branch",
   );
   const app = codeOnly(read(ROUTES.application));

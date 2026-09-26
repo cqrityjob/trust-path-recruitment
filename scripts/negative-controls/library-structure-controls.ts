@@ -14,7 +14,7 @@ const MUTATIONS: readonly Mutation[] = [
     id: "LS-NC-RENAMED-TEST",
     defect: "the strategic role is offered the Väktare guide and test under a new title",
     file: CAT,
-    find: "  security_manager: null,\n};",
+    find: '  security_manager: {\n    guidePackSlug: "security-manager-se",\n    assessmentSlug: "security-manager-recruitment",\n  },\n};',
     replace:
       '  security_manager: { guidePackSlug: "vaktare-se", assessmentSlug: "security-officer-recruitment" },\n};',
     guard: GUARD,

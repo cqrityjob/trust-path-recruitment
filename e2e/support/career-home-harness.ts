@@ -355,6 +355,9 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
     // header chrome
     countMyAcademyWork: ok({ total: 0, actionable: 0 }),
     countMyReviewQueue: ok(0),
+    // The candidate's recruitment inbox (interview invitations and messages),
+    // read by /my-career/applications since 2026-09-23; empty by default.
+    listMyRecruitmentInbox: ok([]),
     listMyEmployerWorkspaces: ok([]),
     trackV31FunnelEvent: ok({ recorded: false }),
     // My Career's destination next steps (India entry). An existing account

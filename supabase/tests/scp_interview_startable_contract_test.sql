@@ -241,10 +241,12 @@ BEGIN
     'SCP_IV_EMPLOYER_NOT_ACTIVE',
     'SC3.6 and refuses creation');
 
-  -- The active workspace is unaffected: same user, same moment.
+  -- The active workspace is unaffected: same user, same moment. Two open
+  -- pilots exist since 20261217090000 (vaktare-se and security-manager-se),
+  -- and both are offered.
   SELECT count(*) INTO _n FROM public.scp_iv_startable_pack_versions('aaaa0000-0000-4000-8000-00000000000a');
-  PERFORM pg_temp.ok(_n = 1,
-    'SC3.7 while the SAME user''s active workspace still offers exactly one startable pack');
+  PERFORM pg_temp.ok(_n = 2,
+    'SC3.7 while the SAME user''s active workspace still offers exactly the two open pilots');
   RESET ROLE;
 END $$;
 
@@ -297,8 +299,8 @@ BEGIN
   -- ...but their own active workspace works, so this is isolation, not breakage.
   SELECT count(*) INTO _n
     FROM public.scp_iv_startable_pack_versions('aaaa0000-0000-4000-8000-00000000000d');
-  PERFORM pg_temp.ok(_n = 1,
-    'SC4.7 their own active workspace still offers the openly available pilot');
+  PERFORM pg_temp.ok(_n = 2,
+    'SC4.7 their own active workspace still offers the two openly available pilots');
   RESET ROLE;
 
   -- anon reaches none of it.

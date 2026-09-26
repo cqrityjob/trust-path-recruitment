@@ -190,6 +190,61 @@ export const CV = {
     "Your CV appears here once you create it. Whether you save it is your choice.",
   ),
 
+  /* -- getting to the document ---------------------------------------
+     The owner's report: after filling in a long form, the only way to the
+     document was a button at the top of the page, and pressing it moved
+     nobody anywhere. So there is a control at the BOTTOM of every editor,
+     and every preview control takes the reader to the document. */
+  showMyCv: c("Visa mitt CV", "Show my CV"),
+  showMyCvPreparing: c("Tar fram ditt CV…", "Preparing your CV…"),
+  showMyCvHelpCreator: c(
+    "Tar fram förhandsgranskningen om den saknas och tar dig direkt till dokumentet.",
+    "Prepares the preview if there is none yet and takes you straight to the document.",
+  ),
+  showMyCvHelpList: c(
+    "Sparar det du håller på att fylla i och öppnar ditt senaste CV. Har du inget sparat CV ännu öppnas skaparen.",
+    "Saves what you are filling in and opens your latest CV. If you have no saved CV yet, the creator opens.",
+  ),
+  showMyCvHelpEdit: c(
+    "Sparar dina ändringar och visar dokumentet.",
+    "Saves your changes and shows the document.",
+  ),
+  showMyCvSaving: c("Sparar dina uppgifter…", "Saving your information…"),
+  showMyCvOpening: c("Öppnar ditt CV…", "Opening your CV…"),
+  showMyCvWait: c("Vänta — en ändring sparas.", "Please wait — a change is being saved."),
+  showMyCvInvalid: c(
+    "Något i formuläret ovan behöver rättas innan CV:t kan visas. Fälten är markerade.",
+    "Something in the form above needs correcting before the CV can be shown. The fields are marked.",
+  ),
+  showMyCvSaveFailed: c(
+    "Dina uppgifter kunde inte sparas. Ingenting gick förlorat — det du skrev står kvar. Försök igen.",
+    "Your information could not be saved. Nothing was lost — what you wrote is still here. Try again.",
+  ),
+  showMyCvNotReady: c(
+    "Lite mer information behövs innan ett CV kan skapas. Det som saknas står listat under CV-dokument högre upp på sidan.",
+    "A little more information is needed before a CV can be created. What is missing is listed under CV documents further up the page.",
+  ),
+  showMyCvOpenFailed: c(
+    "Ditt CV kunde inte öppnas just nu. Dina uppgifter är sparade. Försök igen.",
+    "Your CV could not be opened right now. Your information is saved. Try again.",
+  ),
+  previewFailedTitle: c(
+    "Förhandsgranskningen kunde inte tas fram",
+    "The preview could not be prepared",
+  ),
+  previewFailedBody: c(
+    "Ingenting gick förlorat — dina val står kvar. Kontrollera anslutningen och försök igen.",
+    "Nothing was lost — your choices are still here. Check your connection and try again.",
+  ),
+  previewNotReadyBody: c(
+    "Förhandsgranskningen togs inte fram, eftersom uppgifterna nedan saknas. Komplettera dem och försök igen.",
+    "The preview was not prepared, because the information below is missing. Add it and try again.",
+  ),
+  builtWithoutAi: c(
+    "Byggt utan AI, direkt av dina uppgifter",
+    "Built without AI, directly from your information",
+  ),
+
   /* -- saving ------------------------------------------------------- */
   save: c("Spara CV", "Save CV"),
   saving: c("Sparar…", "Saving…"),

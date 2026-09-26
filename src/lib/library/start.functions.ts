@@ -246,81 +246,235 @@ export const getCaseStart = createServerFn({ method: "GET" })
     },
   );
 
-/** Sends the setup's candidate test for an application, and records the
- *  setup it was sent with so the interview after it needs no second choice.
- *  The test is the one the setup's content link names -- read from the
- *  database, never from a constant in this file. */
+export type TestInvitationOutcome = {
+  /** What the database did with the message: delivered to the candidate's
+   *  CQrityjob inbox, or not. */
+  readonly delivery: "delivered" | "already_sent" | "in_progress" | "refused" | "failed";
+  /** The e-mail copy, as the provider answered -- "not_configured" is the
+   *  honest state on a deployment without a mail provider. */
+  readonly email:
+    | "sent"
+    | "failed"
+    | "not_configured"
+    | "not_attempted"
+    | "in_progress"
+    | "unknown";
+};
+
+export type SendTestResult = {
+  readonly assignmentId: string;
+  readonly attemptId: string | null;
+  readonly setupRecorded: boolean;
+  /** The invitation, or null when it could not be written at all. The test
+   *  is sent either way: the candidate finds it in their account. */
+  readonly invitation: TestInvitationOutcome | null;
+};
+
+/** Sends the setup's candidate test for an application, records the setup
+ *  it was sent with so the interview after it needs no second choice, and
+ *  tells the candidate -- in the language the employer chose -- through the
+ *  recruitment's own message channel (their CQrityjob inbox, plus e-mail
+ *  when a provider is configured). The test is the one the setup's content
+ *  link names -- read from the database, never from a constant in this file.
+ *
+ *  Idempotent end to end: the assignment reuses an existing attempt
+ *  (20261209090000), the setup refuses only a DIFFERENT setup, and the
+ *  message is keyed on the assignment so a retry cannot write a second one. */
 export const sendTestFromSetup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>
     startSetupShape
-      .extend({ employerId: z.string().uuid(), applicationId: z.string().uuid() })
+      .extend({
+        employerId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        language: z.enum(["sv", "en"]).default("sv"),
+      })
       .parse(d),
   )
-  .handler(
-    async ({
-      context,
-      data,
-    }): Promise<{ readonly assignmentId: string; readonly setupRecorded: boolean }> => {
-      const db = context.supabase as unknown as Db;
-      const profile = await db
-        .from("scp_recruitment_role_profiles" as never)
-        .select("role_group")
-        .eq("role_profile", data.roleProfile)
-        .maybeSingle();
-      if (profile.error) throw new Error(profile.error.message);
-      const link = await db
-        .from("scp_recruitment_content_links" as never)
-        .select("assessment_definition_id")
-        .eq("role_profile", data.roleProfile)
-        .eq("environment", data.environment)
-        .maybeSingle();
-      if (link.error) throw new Error(link.error.message);
-      const definitionId = (link.data as { assessment_definition_id: string | null } | null)
-        ?.assessment_definition_id;
-      if (
-        (profile.data as { role_group: string } | null)?.role_group !== data.roleGroup ||
-        !definitionId
-      ) {
-        throw new Error("SCP_START_NO_TEST: this setup has no candidate test.");
-      }
-      const library = (await rpc(db, "scp_employer_content_library", {
+  .handler(async ({ context, data }): Promise<SendTestResult> => {
+    const db = context.supabase as unknown as Db;
+    const profile = await db
+      .from("scp_recruitment_role_profiles" as never)
+      .select("role_group")
+      .eq("role_profile", data.roleProfile)
+      .maybeSingle();
+    if (profile.error) throw new Error(profile.error.message);
+    const link = await db
+      .from("scp_recruitment_content_links" as never)
+      .select("assessment_definition_id")
+      .eq("role_profile", data.roleProfile)
+      .eq("environment", data.environment)
+      .maybeSingle();
+    if (link.error) throw new Error(link.error.message);
+    const definitionId = (link.data as { assessment_definition_id: string | null } | null)
+      ?.assessment_definition_id;
+    if (
+      (profile.data as { role_group: string } | null)?.role_group !== data.roleGroup ||
+      !definitionId
+    ) {
+      throw new Error("SCP_START_NO_TEST: this setup has no candidate test.");
+    }
+    const library = (await rpc(db, "scp_employer_content_library", {
+      _employer_id: data.employerId,
+    })) as Array<{
+      library_kind: string;
+      parent_id: string;
+      item_id: string;
+      assignable: boolean;
+    }> | null;
+    const version = (library ?? []).find(
+      (r) => r.library_kind === "assessment" && r.parent_id === definitionId && r.assignable,
+    );
+    if (!version) {
+      throw new Error("SCP_START_NO_TEST: the setup's test cannot be sent by this organisation.");
+    }
+    const assigned = (await rpc(db, "scp_assign_from_application", {
+      _employer_id: data.employerId,
+      _application_id: data.applicationId,
+      _assessment_version_id: version.item_id,
+      _deadline: null,
+      _language: data.language,
+    })) as
+      | Array<{ assignment_id: string; attempt_id?: string }>
+      | { assignment_id: string; attempt_id?: string };
+    const row = Array.isArray(assigned) ? assigned[0] : assigned;
+    const assignmentId = row!.assignment_id;
+    const attemptId = row?.attempt_id ? String(row.attempt_id) : null;
+    let setupRecorded = true;
+    try {
+      await rpc(db, "scp_record_assessment_setup", {
         _employer_id: data.employerId,
-      })) as Array<{
-        library_kind: string;
-        parent_id: string;
-        item_id: string;
-        assignable: boolean;
-      }> | null;
-      const version = (library ?? []).find(
-        (r) => r.library_kind === "assessment" && r.parent_id === definitionId && r.assignable,
-      );
-      if (!version) {
-        throw new Error("SCP_START_NO_TEST: the setup's test cannot be sent by this organisation.");
-      }
-      const assigned = (await rpc(db, "scp_assign_from_application", {
-        _employer_id: data.employerId,
-        _application_id: data.applicationId,
-        _assessment_version_id: version.item_id,
-        _deadline: null,
-        _language: "sv",
-      })) as Array<{ assignment_id: string }> | { assignment_id: string };
-      const assignmentId = (Array.isArray(assigned) ? assigned[0] : assigned)!.assignment_id;
-      let setupRecorded = true;
-      try {
-        await rpc(db, "scp_record_assessment_setup", {
-          _employer_id: data.employerId,
-          _assessment_assignment_id: assignmentId,
-          _role_group: data.roleGroup,
-          _role_profile: data.roleProfile,
-          _environment: data.environment,
-        });
-      } catch (e) {
-        // The test is sent. Without its setup the interview after it asks for
-        // an explicit choice instead of guessing -- so say it, do not hide it.
-        console.error("[library] test setup not recorded", e);
-        setupRecorded = false;
-      }
-      return { assignmentId, setupRecorded };
-    },
-  );
+        _assessment_assignment_id: assignmentId,
+        _role_group: data.roleGroup,
+        _role_profile: data.roleProfile,
+        _environment: data.environment,
+      });
+    } catch (e) {
+      // The test is sent. Without its setup the interview after it asks for
+      // an explicit choice instead of guessing -- so say it, do not hide it.
+      console.error("[library] test setup not recorded", e);
+      setupRecorded = false;
+    }
+    const invitation = await inviteCandidate(context, {
+      employerId: data.employerId,
+      applicationId: data.applicationId,
+      assignmentId,
+      language: data.language,
+      assessmentName: (library ?? []).find((r) => r.item_id === version.item_id) as
+        | { name_sv?: string; name_en?: string }
+        | undefined,
+    });
+    return { assignmentId, attemptId, setupRecorded, invitation };
+  });
+
+/** The invitation, through the recruitment's own message channel.
+ *
+ *  Best effort and never the reason a send fails: the assignment already
+ *  exists and the candidate's account already lists it. The message is
+ *  drafted with an idempotency key on the assignment (a retry returns the
+ *  same draft) and delivered by the ONE delivery implementation the rest of
+ *  the recruitment uses, so its delivery state is recorded exactly like any
+ *  other message to the candidate. */
+async function inviteCandidate(
+  context: { supabase: unknown; userId?: string },
+  p: {
+    employerId: string;
+    applicationId: string;
+    assignmentId: string;
+    language: "sv" | "en";
+    assessmentName: { name_sv?: string; name_en?: string } | undefined;
+  },
+): Promise<TestInvitationOutcome | null> {
+  try {
+    const sb = context.supabase as {
+      from: (t: string) => {
+        select: (c: string) => {
+          eq: (
+            col: string,
+            v: string,
+          ) => {
+            maybeSingle: () => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+          };
+        };
+      };
+      rpc: (
+        fn: string,
+        args: Record<string, unknown>,
+      ) => PromiseLike<{
+        data: unknown;
+        error: { message: string } | null;
+      }>;
+    };
+    const [employer, application] = await Promise.all([
+      sb.from("employers").select("name").eq("id", p.employerId).maybeSingle(),
+      sb
+        .from("job_applications")
+        .select("applicant_user_id, job_id")
+        .eq("id", p.applicationId)
+        .maybeSingle(),
+    ]);
+    const employerName = String((employer.data as { name?: string } | null)?.name ?? "").trim();
+    const app = application.data as { applicant_user_id?: string | null; job_id?: string } | null;
+    // The name the candidate set for themselves, read the way the
+    // applications list reads it; a missing name is simply no greeting.
+    let candidateName: string | null = null;
+    if (app?.applicant_user_id) {
+      const profile = await sb
+        .from("profiles")
+        .select("display_name")
+        .eq("id", app.applicant_user_id)
+        .maybeSingle();
+      const dn = (profile.data as { display_name?: string | null } | null)?.display_name;
+      candidateName = dn && dn.trim() ? dn.trim() : null;
+    }
+    let jobTitle = "";
+    if (app?.job_id) {
+      const job = await sb
+        .from("jobs")
+        .select("title_sv, title_en")
+        .eq("id", app.job_id)
+        .maybeSingle();
+      const j = job.data as { title_sv?: string | null; title_en?: string | null } | null;
+      jobTitle = String((p.language === "en" ? j?.title_en : j?.title_sv) || j?.title_sv || "");
+    }
+    const assessmentName = String(
+      (p.language === "en" ? p.assessmentName?.name_en : p.assessmentName?.name_sv) ||
+        p.assessmentName?.name_sv ||
+        "",
+    );
+    if (!employerName || !assessmentName) return null;
+    const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
+    const { testInvitationMessage } = await import("@/lib/recruitment/message-templates");
+    const message = testInvitationMessage({
+      language: p.language,
+      candidateName,
+      employerName,
+      jobTitle: jobTitle || (p.language === "en" ? "the position" : "tjänsten"),
+      assessmentName,
+      academyUrl: `${process.env.PUBLIC_SITE_URL || SITE_ORIGIN}/academy`,
+    });
+    const draft = await sb.rpc("rec_save_message_draft", {
+      _message_id: null,
+      _application_id: p.applicationId,
+      _kind: "information",
+      _subject: message.subject,
+      _body: message.body,
+      _language: p.language,
+      _booking_id: null,
+      _idempotency_key: `test-invitation:${p.assignmentId}`,
+    });
+    if (draft.error || typeof draft.data !== "string") {
+      console.error("[library] test invitation not drafted", draft.error);
+      return null;
+    }
+    const { deliverRecruitmentMessage } = await import("@/lib/recruitment/recruitment.functions");
+    const outcome = await deliverRecruitmentMessage(
+      { supabase: context.supabase, userId: context.userId ?? "" },
+      draft.data,
+    );
+    return { delivery: outcome.delivery, email: outcome.email };
+  } catch (e) {
+    console.error("[library] test invitation failed", e);
+    return { delivery: "failed", email: "not_attempted" };
+  }
+}

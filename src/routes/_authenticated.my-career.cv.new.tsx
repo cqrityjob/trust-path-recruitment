@@ -44,11 +44,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
   Check,
+  Eye,
   Loader2,
   RefreshCcw,
   Save,
@@ -69,6 +70,7 @@ import { L, Lf, type Lang } from "@/components/professional-identity/copy";
 import { CV, CV_MISSING_FIELD, CV_STATUS_NOTE } from "@/components/professional-identity/cv-copy";
 import { useT } from "@/i18n/context";
 import { generateMyCv, prepareMyCv } from "@/lib/professional-identity/cv/cv.functions";
+import { revealElement } from "@/lib/professional-identity/cv/reveal";
 import { createMyCv } from "@/lib/professional-identity/cv/cv-store.functions";
 
 export const Route = createFileRoute("/_authenticated/my-career/cv/new")({
@@ -172,6 +174,29 @@ function CvNewPage() {
     setSeeded(true);
   }, [seeded, preparation.data, accountEmail, preparedLocale]);
 
+  /**
+   * TAKING THE READER TO THE OUTCOME.
+   *
+   * The form is a column on the left and the document a column on the
+   * right; on a phone they stack. Pressing "Preview" at the bottom of the
+   * form produced a document the reader could not see -- below the fold on
+   * a phone, above the scrolled position on a desktop -- and nothing moved
+   * or announced it. "Nothing happened" was the report, and it was fair.
+   *
+   * So every outcome of a generation -- the document, a refusal, a failure
+   * -- renders inside a focusable region, and the tick below is bumped when
+   * a run settles or when the person asks to see the document again. The
+   * effect then scrolls that region into view and gives it focus, after the
+   * render that put it on screen. reveal.ts covers reduced motion.
+   */
+  const revealRef = useRef<HTMLElement | null>(null);
+  const [revealTick, setRevealTick] = useState(0);
+  useEffect(() => {
+    if (revealTick === 0) return;
+    const el = revealRef.current;
+    if (el) revealElement(el);
+  }, [revealTick]);
+
   const generate = useServerFn(generateMyCv);
   const run = useMutation({
     mutationFn: () =>
@@ -191,6 +216,9 @@ function CvNewPage() {
       setPreviewedKey(materialKey);
       setOperationId(crypto.randomUUID());
     },
+    // Success, refusal or failure: whatever is now on screen is shown to
+    // the person, never left where they cannot see it.
+    onSettled: () => setRevealTick((t) => t + 1),
   });
 
   const save = useServerFn(createMyCv);
@@ -230,6 +258,14 @@ function CvNewPage() {
   // after a button somebody was allowed to press.
   const hasHistory = bundle ? selectionHasHistory(bundle, includedIds) : true;
   const rejectedOnSave = (persist.data?.violations.length ?? 0) > 0;
+  /** The preview on screen describes the current selection. */
+  const previewFresh = shown !== null && !previewStale;
+  /** The bottom control: reveal the document if it is current, otherwise
+   *  make it first and reveal it when it lands. */
+  const showMyCv = () => {
+    if (previewFresh) setRevealTick((t) => t + 1);
+    else run.mutate();
+  };
 
   return (
     <>
@@ -473,6 +509,34 @@ function CvNewPage() {
                   ? L(CV.generating, l)
                   : L(previewStale ? CV.regeneratePreview : CV.generate, l)}
               </PrimaryButton>
+
+              {/* ── AT THE END OF THE FORM, A WAY TO THE DOCUMENT ────────
+                  A person who has just filled in the last field is at the
+                  bottom of the page, and the document is somewhere else.
+                  This control takes them there -- making the preview first
+                  if there is none or it is out of date -- so nobody has to
+                  scroll back to the top to find out what pressing a button
+                  did. */}
+              <div className="border-t border-border pt-5">
+                <PrimaryButton
+                  type="button"
+                  variant="ghost"
+                  disabled={run.isPending || !hasHistory}
+                  onClick={showMyCv}
+                  data-cv-show-mine
+                  className="w-full justify-center gap-2"
+                >
+                  {run.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {L(run.isPending ? CV.showMyCvPreparing : CV.showMyCv, l)}
+                </PrimaryButton>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  {L(CV.showMyCvHelpCreator, l)}
+                </p>
+              </div>
             </div>
 
             <div>
@@ -495,10 +559,84 @@ function CvNewPage() {
                 </div>
               )}
 
-              {!shown && !run.isPending && !previewStale && (
+              {!shown && !run.isPending && !previewStale && !run.isError && !outcome && (
                 <p className="no-print max-w-md rounded-lg border border-dashed border-border p-5 text-sm leading-relaxed text-muted-foreground">
                   {L(CV.awaiting, l)}
                 </p>
+              )}
+
+              {/* ── A FAILED RUN IS SAID, WITH A WAY BACK ────────────────
+                  The mutation's error used to go unrendered: the button
+                  went back to its label and the placeholder stayed where it
+                  was, which is indistinguishable from the button doing
+                  nothing. The region takes focus like the document would. */}
+              {run.isError && !run.isPending && (
+                <section
+                  ref={(el) => {
+                    revealRef.current = el;
+                  }}
+                  tabIndex={-1}
+                  role="alert"
+                  aria-labelledby="cv-preview-failed-heading"
+                  data-cv-preview-failed
+                  className="no-print mb-5 max-w-md scroll-mt-24 rounded-lg border border-border border-l-[3px] border-l-destructive bg-card p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <h2
+                    id="cv-preview-failed-heading"
+                    className="text-sm font-semibold text-foreground"
+                  >
+                    {L(CV.previewFailedTitle, l)}
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {L(CV.previewFailedBody, l)}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => run.mutate()}
+                    className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
+                  >
+                    <RefreshCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                    {L(CV.retry, l)}
+                  </button>
+                </section>
+              )}
+
+              {/* ── NOT READY: WHAT IS MISSING, AND WHERE TO FILL IT IN ──
+                  The server refuses before any provider is contacted, and
+                  that refusal used to render as the "awaiting" placeholder.
+                  It is a list of missing things and a link, never silence. */}
+              {outcome && outcome.status === "not_ready" && (
+                <section
+                  ref={(el) => {
+                    revealRef.current = el;
+                  }}
+                  tabIndex={-1}
+                  role="alert"
+                  aria-labelledby="cv-preview-not-ready-heading"
+                  data-cv-preview-not-ready
+                  className="no-print mb-5 max-w-md scroll-mt-24 rounded-lg border border-border bg-card p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <h2
+                    id="cv-preview-not-ready-heading"
+                    className="text-sm font-semibold text-foreground"
+                  >
+                    {L(CV.notReadyTitle, l)}
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    {L(CV.previewNotReadyBody, l)}
+                  </p>
+                  <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                    {outcome.readiness.missingFields.map((field) => (
+                      <li key={field}>{L(CV_MISSING_FIELD[field], l)}</li>
+                    ))}
+                  </ul>
+                  <Link
+                    to="/my-career/cv"
+                    className="mt-4 inline-flex min-h-10 items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-[color:var(--primary-hover)]"
+                  >
+                    {L(CV.completeProfile, l)}
+                  </Link>
+                </section>
               )}
 
               {outcome && outcome.status !== "succeeded" && outcome.status !== "not_ready" && (
@@ -542,11 +680,37 @@ function CvNewPage() {
               )}
 
               {shown && (
-                <>
+                <section
+                  ref={(el) => {
+                    revealRef.current = el;
+                  }}
+                  tabIndex={-1}
+                  aria-labelledby="cv-preview-heading"
+                  data-cv-preview
+                  className="scroll-mt-24 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+                >
                   <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h2 className="text-sm font-semibold text-foreground">{L(CV.review, l)}</h2>
+                      <h2 id="cv-preview-heading" className="text-sm font-semibold text-foreground">
+                        {L(CV.review, l)}
+                      </h2>
                       <p className="text-xs text-muted-foreground">{L(CV.reviewNote, l)}</p>
+                      {/* Said on the document itself, not only in the note
+                          above it: this CV was built without an AI draft.
+                          The standard journey works without one, and the
+                          person is entitled to know which kind they have. */}
+                      {outcome && outcome.status !== "succeeded" && (
+                        <p
+                          className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground"
+                          data-cv-built-without-ai
+                        >
+                          <Check
+                            className="h-3 w-3 text-[color:var(--accent)]"
+                            aria-hidden="true"
+                          />
+                          {L(CV.builtWithoutAi, l)}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       {persist.isError && (
@@ -606,7 +770,7 @@ function CvNewPage() {
                   )}
 
                   <CvDocumentView document={shown} />
-                </>
+                </section>
               )}
             </div>
           </div>

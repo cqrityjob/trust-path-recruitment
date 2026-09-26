@@ -6,8 +6,10 @@
 // lookup key only, re-verified independently via
 // listMyEmployerWorkspaces() on every load.
 //
-// The assessment step on this page is the governed ApplicationAssessmentPanel
-// under each row, and only that.
+// The assessment step on this page is a status chip per row (the same read
+// model as the candidate page) and, since the owner's 2026-09-26 bug report,
+// a "Skicka test" action per row that opens the ONE send dialog
+// (SendTestDialog) with the candidate and the recruitment already known.
 //
 // Each row used to carry its own assessment controls, cross-referenced from
 // assessment_assignments: a "Tilldela bedomning" link into the legacy assign
@@ -76,7 +78,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, FileText, Search } from "lucide-react";
+import { ChevronDown, FileText, Search, Send } from "lucide-react";
+import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
+import { isUnresolved } from "@/lib/recruitment/definitions";
 
 // ── WHY THIS LIST TAKES A FILTER FROM THE URL ──────────────────────────
 //
@@ -196,6 +200,14 @@ function ApplicationsList({
   const setStatusFn = useServerFn(updateApplicationStatusAsEmployer);
   const listJobsFn = useServerFn(listEmployerJobs);
   const [actionError, setActionError] = useState<string | null>(null);
+  // "Skicka test" from the list, with the candidate and the recruitment
+  // already known (owner bug report 2026-09-26: there was no way to send a
+  // test from the recruitment overview at all).
+  const [sendTestFor, setSendTestFor] = useState<{
+    applicationId: string;
+    candidate: string | null;
+    jobTitle: string;
+  } | null>(null);
   const {
     job: jobFilter,
     status: statusFilter,
@@ -516,6 +528,17 @@ function ApplicationsList({
         </label>
       </div>
 
+      {sendTestFor && (
+        <SendTestDialog
+          employerId={employerId}
+          employerSlug={employerSlug}
+          applicationId={sendTestFor.applicationId}
+          candidateName={sendTestFor.candidate}
+          jobTitle={sendTestFor.jobTitle}
+          onClose={() => setSendTestFor(null)}
+        />
+      )}
+
       {/* Terminal outcomes are confirmed by name, and the dialog says what the
           outcome DOES -- an employer who marks somebody hired is also creating
           an employment record, and that should not be a surprise. */}
@@ -680,6 +703,24 @@ function ApplicationsList({
                     >
                       {t("employer.candidate.openAction")}
                     </Link>
+                    {canDecideFor(r.jobId) && isUnresolved(r.status) && (
+                      <button
+                        type="button"
+                        data-testid="send-test"
+                        data-application-id={r.id}
+                        onClick={() =>
+                          setSendTestFor({
+                            applicationId: r.id,
+                            candidate: r.applicantDisplayName,
+                            jobTitle,
+                          })
+                        }
+                        className="inline-flex h-8 items-center gap-1 rounded-md border border-accent/50 px-2.5 text-xs font-medium text-accent hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <Send className="h-3 w-3" aria-hidden="true" />
+                        {t("sendTest.action")}
+                      </button>
+                    )}
                     {nextStatuses.length > 0 && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

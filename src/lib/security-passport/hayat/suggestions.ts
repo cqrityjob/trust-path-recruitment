@@ -14,6 +14,7 @@
 // Pure: no React, no clock, no I/O -- so the rules can be tested as rules.
 
 import type { DocumentReading, FieldReading, SuggestibleField, UncertaintyReason } from "./types";
+import { toIsoDateOrRaw } from "../dates";
 
 export const SUGGESTIBLE_FIELDS: readonly SuggestibleField[] = [
   "identifier",
@@ -53,6 +54,15 @@ export type FieldNotices = Partial<Record<SuggestibleField, FieldNotice>>;
 const current = (draft: SuggestibleDraft, field: SuggestibleField): string =>
   (draft[field] ?? "").trim();
 
+const isDateField = (field: SuggestibleField): boolean =>
+  field === "issued_on" || field === "valid_until";
+
+/** One form for comparison. A date the holder typed as "20200509" and the
+ *  document's "2020-05-09" are the same date, not a conflict; any other field
+ *  is compared without regard to case. */
+const comparable = (field: SuggestibleField, value: string): string =>
+  isDateField(field) ? toIsoDateOrRaw(value) : value.toLocaleLowerCase();
+
 export const isReadByHayat = (
   draft: SuggestibleDraft,
   marks: HayatMarks,
@@ -67,14 +77,15 @@ function noticeFor(
   if (reading.state === "not_found") return { kind: "not_found" };
   if (reading.state === "uncertain") {
     const typed = current(draft, field);
-    if (typed && reading.candidates.includes(typed)) return { kind: "agrees", value: typed };
+    if (typed && reading.candidates.some((c) => comparable(field, c) === comparable(field, typed)))
+      return { kind: "agrees", value: typed };
     return { kind: "choose", candidates: reading.candidates, reason: reading.reason };
   }
   if (field === "valid_until" && draft.no_expiry === true)
     return { kind: "no_expiry_conflict", documentValue: reading.value };
   const typed = current(draft, field);
   if (typed === "") return { kind: "filled", value: reading.value };
-  if (typed.toLocaleLowerCase() === reading.value.toLocaleLowerCase())
+  if (comparable(field, typed) === comparable(field, reading.value))
     return { kind: "agrees", value: typed };
   return { kind: "conflict", documentValue: reading.value };
 }

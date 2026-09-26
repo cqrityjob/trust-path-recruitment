@@ -1524,6 +1524,17 @@ export type SendOutcome = {
   code: string | null;
 };
 
+/** Deliver ONE recruitment message: claim it, send the e-mail copy when the
+ *  provider is configured, settle the outcome. Exported so that a test
+ *  invitation sent from the recruitment (start.functions.ts) goes through
+ *  exactly this path and nothing else -- one delivery implementation. */
+export async function deliverRecruitmentMessage(
+  ctx: { supabase: unknown; userId: string },
+  messageId: string,
+): Promise<SendOutcome> {
+  return sendOne(ctx as Ctx, messageId);
+}
+
 async function sendOne(ctx: Ctx, messageId: string): Promise<SendOutcome> {
   const { data: rows, error } = await ctx.supabase.rpc("rec_claim_message_send", {
     _message_id: messageId,

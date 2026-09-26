@@ -36,12 +36,19 @@
 // is told what is missing instead of being handed a button that leads to a
 // refusal one screen later.
 
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowRight, FileText, Loader2, Plus, RefreshCcw, Sparkles } from "lucide-react";
+import { useRef, useState } from "react";
+import { ArrowRight, Eye, FileText, Loader2, Plus, RefreshCcw, Sparkles } from "lucide-react";
 import { EmploymentHistoryEditor } from "@/components/professional-identity/EmploymentHistoryEditor";
 import { GeneralProfileClaims } from "@/components/professional-identity/GeneralProfileClaims";
+import type {
+  CvContentEditorHandle,
+  CvContentEditorState,
+  CvContentFlushResult,
+} from "@/components/professional-identity/cv-content-editor";
+import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { ScrollToHashOnceReady } from "@/components/security-passport/ScrollToHashOnceReady";
 import { sectionLinkTarget } from "@/lib/professional-identity/profile-destinations";
 import type { CompletenessSection } from "@/lib/professional-identity/completeness";
@@ -111,9 +118,20 @@ const CONTENT_NAV: readonly { section: CompletenessSection; label: keyof typeof 
 const QUIET_LINK =
   "inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+/** Why "Show my CV" stopped short of navigating. Each one is a sentence on
+ *  screen with something the person can do about it; none is silent. */
+class ShowMyCvRefusal extends Error {
+  constructor(readonly reason: Exclude<CvContentFlushResult, "saved"> | "not_ready") {
+    super(reason);
+  }
+}
+
+const IDLE_EDITOR: CvContentEditorState = { open: false, busy: false };
+
 function CvListPage() {
   const { lang } = useT();
   const l = lang as Lang;
+  const navigate = useNavigate();
 
   const prepare = useServerFn(prepareMyCv);
   const preparation = useQuery({
@@ -141,6 +159,60 @@ function CvListPage() {
 
   const readiness = preparation.data?.readiness;
   const cvs = list.data ?? [];
+
+  /* ── "SHOW MY CV", AT THE BOTTOM OF THE EDITORS ────────────────────────
+     A person who has just typed an employment into the form at the foot of
+     this page is as far from "Open" as the page allows. This control saves
+     whatever is still open in the editors -- leaving with it unsaved would
+     lose it -- checks the CV can be built, and then opens the most recently
+     saved CV, or the creator when there is none. Every way it can stop is a
+     sentence under the button. */
+  const employmentEditor = useRef<CvContentEditorHandle | null>(null);
+  const claimsEditor = useRef<CvContentEditorHandle | null>(null);
+  const [employmentState, setEmploymentState] = useState<CvContentEditorState>(IDLE_EDITOR);
+  const [claimsState, setClaimsState] = useState<CvContentEditorState>(IDLE_EDITOR);
+  const editorBusy = employmentState.busy || claimsState.busy;
+  const [showPhase, setShowPhase] = useState<"saving" | "opening">("saving");
+
+  const showMyCv = useMutation({
+    mutationFn: async () => {
+      setShowPhase("saving");
+      for (const editor of [employmentEditor, claimsEditor]) {
+        const result = (await editor.current?.flush()) ?? "saved";
+        if (result !== "saved") throw new ShowMyCvRefusal(result);
+      }
+      setShowPhase("opening");
+      // Readiness and the list are read AFTER the save, from the server:
+      // the employment just written is what may have made the CV possible.
+      const prepared = await queryClient.fetchQuery({
+        queryKey: ["cv", "prepare"],
+        queryFn: () => prepare(),
+        staleTime: 0,
+      });
+      if (prepared.readiness.state !== "ready") throw new ShowMyCvRefusal("not_ready");
+      const saved = await queryClient.fetchQuery({
+        queryKey: ["cv", "list"],
+        queryFn: () => load(),
+        staleTime: 0,
+      });
+      const latest = [...saved].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+      return latest ? latest.cvId : null;
+    },
+    onSuccess: (cvId) => {
+      void (cvId
+        ? navigate({ to: "/my-career/cv/$cvId", params: { cvId } })
+        : navigate({ to: "/my-career/cv/new" }));
+    },
+  });
+  const showMyCvError = showMyCv.error
+    ? showMyCv.error instanceof ShowMyCvRefusal
+      ? showMyCv.error.reason === "invalid"
+        ? CV.showMyCvInvalid
+        : showMyCv.error.reason === "failed"
+          ? CV.showMyCvSaveFailed
+          : CV.showMyCvNotReady
+      : CV.showMyCvOpenFailed
+    : null;
 
   return (
     <>
@@ -368,8 +440,59 @@ function CvListPage() {
             <EmploymentHistoryEditor
               className="rounded-xl border border-border bg-card p-5"
               onChanged={contentChanged}
+              handleRef={employmentEditor}
+              onStateChange={setEmploymentState}
             />
-            <GeneralProfileClaims onChanged={contentChanged} />
+            <GeneralProfileClaims
+              onChanged={contentChanged}
+              handleRef={claimsEditor}
+              onStateChange={setClaimsState}
+            />
+          </div>
+
+          <div
+            className="mt-6 max-w-3xl rounded-xl border border-border bg-card p-5"
+            data-cv-show-mine-panel
+          >
+            <div className="flex flex-wrap items-center gap-3">
+              <PrimaryButton
+                type="button"
+                disabled={showMyCv.isPending || editorBusy}
+                onClick={() => showMyCv.mutate()}
+                data-cv-show-mine
+                className="gap-2"
+              >
+                {showMyCv.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                )}
+                {L(
+                  showMyCv.isPending
+                    ? showPhase === "saving"
+                      ? CV.showMyCvSaving
+                      : CV.showMyCvOpening
+                    : CV.showMyCv,
+                  l,
+                )}
+              </PrimaryButton>
+              {/* Disabled WITH a reason: one of the editors is writing, and
+                  a second write on top of it is what this control exists to
+                  avoid. */}
+              {editorBusy && !showMyCv.isPending && (
+                <span role="status" className="text-sm text-muted-foreground">
+                  {L(CV.showMyCvWait, l)}
+                </span>
+              )}
+            </div>
+            <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              {L(CV.showMyCvHelpList, l)}
+            </p>
+            {showMyCvError && (
+              <p role="alert" className="mt-3 text-sm text-destructive" data-cv-show-mine-error>
+                {L(showMyCvError, l)}
+              </p>
+            )}
           </div>
 
           <p className="mt-8 flex max-w-3xl flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">

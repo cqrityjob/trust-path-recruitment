@@ -313,6 +313,14 @@
     border-color: var(--color-border);
   }
 
+  /* The site header is sticky and 64px tall. Without scroll padding a field
+     the browser scrolls into view -- a focused input, an error summary, an
+     anchor -- lands at the top edge of the viewport, underneath it. 5rem
+     clears the header on every page that carries it. */
+  html {
+    scroll-padding-top: 5rem;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);

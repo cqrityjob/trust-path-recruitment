@@ -17,6 +17,7 @@
 // one place rather than as a trail the recruiter has to remember.
 
 import { PrepareInterviewButton } from "@/components/library/PrepareInterviewButton";
+import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -25,7 +26,6 @@ import { ClipboardCheck, FileText, Send, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
-  assignFromApplication,
   getEmployerReviewBoard,
   getMyReviewCapability,
   listApplicationAssessments,
@@ -51,29 +51,25 @@ const STAGE_LABEL: Record<ReturnType<typeof assessmentStageOf>, TranslationKey> 
   brief_released: "journey.stage.report_available",
 };
 
+/** The stage in words -- with two states the projection has no verb for:
+ *  an attempt the employer abandoned ("Avbruten") and an invitation whose
+ *  deadline passed unanswered ("Utgången"). Neither is a failed assessment;
+ *  both are said as what they are. */
 function stageOf(a: ApplicationAssessment): TranslationKey {
+  if (a.attemptStatus === "abandoned") return "journey.stage.cancelled";
+  if (a.deadline && !a.submittedAt && Date.parse(a.deadline) < Date.now()) {
+    return "journey.stage.expired";
+  }
   return STAGE_LABEL[assessmentStageOf(a)];
 }
-
-// The refusals this panel can actually produce, each said as the thing the
-// employer has to do next. The panel used to catch the code and then show one
-// generic "could not be sent", which leaves a recruiter guessing whether the
-// candidate, the assessment or the product is at fault.
-const ASSIGN_ERROR: Record<string, TranslationKey> = {
-  SCP_APPLICANT_HAS_NO_ADDRESS: "journey.assignNoAddress",
-  SCP_RECIPIENT_HAS_NO_ACCOUNT: "journey.assignNoAccount",
-  SCP_APPLICATION_NOT_FOUND: "journey.assignNoApplication",
-  SCP_APPLICATION_NOT_YOURS: "journey.assignNoApplication",
-  SCP_NOT_AUTHORISED_TO_ASSIGN: "journey.assignNotAuthorised",
-  SCP_NOT_VALID_FOR_RECRUITMENT: "journey.assignNotForRecruitment",
-  SCP_NO_GOVERNANCE_BASIS: "journey.assignNoBasis",
-};
 
 export function ApplicationAssessmentPanel({
   employerId,
   employerSlug,
   applicationId,
   canAssign,
+  candidateName = null,
+  jobTitle = null,
   prepareInterview = false,
   sourceAssignmentId = null,
 }: {
@@ -81,6 +77,10 @@ export function ApplicationAssessmentPanel({
   employerSlug: string;
   applicationId: string;
   canAssign: boolean;
+  /** For the send dialog's recipient line. Never used to address anything:
+   *  the database resolves the candidate from the application. */
+  candidateName?: string | null;
+  jobTitle?: string | null;
   /** Inside an interview case: the test the case was started from, marked
    *  so the interviewer sees which test the interview follows. */
   sourceAssignmentId?: string | null;
@@ -93,10 +93,12 @@ export function ApplicationAssessmentPanel({
   const qc = useQueryClient();
   const listFn = useServerFn(listApplicationAssessments);
   const libraryFn = useServerFn(listContentLibrary);
-  const assignFn = useServerFn(assignFromApplication);
 
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState<string | null>(null);
+  // "Skicka test" opens the ONE send dialog (levels, language, recipient
+  // review) instead of a button per assessment. The dialog sends through
+  // sendTestFromSetup, so a test sent from here records its level exactly
+  // like one sent from the library.
+  const [sending, setSending] = useState(false);
 
   const assessments = useQuery({
     queryKey: ["employer", employerId, "application", applicationId, "assessments"],
@@ -142,32 +144,8 @@ export function ApplicationAssessmentPanel({
       ),
   });
 
-  async function assign(assessmentVersionId: string) {
-    setBusy(true);
-    setFailed(null);
-    try {
-      // No address is passed, and none is held by this surface: the database
-      // resolves the candidate from the application itself.
-      await assignFn({ data: { employerId, applicationId, assessmentVersionId } });
-      await qc.invalidateQueries({
-        queryKey: ["employer", employerId, "application", applicationId, "assessments"],
-      });
-    } catch (e) {
-      setFailed((e as { code?: string }).code ?? "assign_failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const rows = assessments.data ?? [];
   const options = library.data ?? [];
-  // An assessment already sent on THIS application is not offered again: the
-  // database also reuses the existing attempt on retries. Only an abandoned
-  // attempt frees the test for a new assignment.
-  const alreadySent = new Set(
-    rows.filter((a) => a.attemptStatus !== "abandoned").map((a) => a.assessmentSlug),
-  );
-  const sendable = options.filter((o) => !alreadySent.has(o.slug));
 
   // ── A READ THAT FAILED IS NOT AN ABSENCE ────────────────────────────
   //
@@ -201,7 +179,10 @@ export function ApplicationAssessmentPanel({
     );
   }
 
-  if (rows.length === 0 && options.length === 0) return null;
+  // Absence is silence only when there is nothing to offer AND nobody who
+  // could send: a recruiter who may send always gets the control, and the
+  // dialog says what each level can and cannot do.
+  if (rows.length === 0 && options.length === 0 && !canAssign) return null;
 
   return (
     <PanelFrame>
@@ -261,28 +242,35 @@ export function ApplicationAssessmentPanel({
         <p className="mt-2 text-[13px] text-muted-foreground">{t("journey.noAssessmentYet")}</p>
       )}
 
-      {canAssign && sendable.length > 0 && (
+      {canAssign && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
-          {sendable.map((o) => (
-            <button
-              key={o.itemId}
-              type="button"
-              disabled={busy}
-              onClick={() => void assign(o.itemId)}
-              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-[8px] border border-accent/50 px-3 text-[13px] font-medium text-accent hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-60"
-            >
-              <Send className="h-3.5 w-3.5" aria-hidden="true" />
-              {busy ? t("journey.sending") : t("journey.sendAssessment")}
-              <span className="text-muted-foreground">· {sv ? o.nameSv : o.nameEn}</span>
-            </button>
-          ))}
+          <button
+            type="button"
+            onClick={() => setSending(true)}
+            data-testid="send-test"
+            className="inline-flex min-h-[44px] items-center gap-1.5 rounded-[8px] border border-accent/50 px-3 text-[13px] font-medium text-accent hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Send className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("sendTest.action")}
+          </button>
         </div>
       )}
-
-      {failed && (
-        <p role="alert" className="mt-2 text-[13px] text-foreground">
-          {t(ASSIGN_ERROR[failed] ?? "journey.assignFailed")}
-        </p>
+      {sending && (
+        <SendTestDialog
+          employerId={employerId}
+          employerSlug={employerSlug}
+          applicationId={applicationId}
+          candidateName={candidateName}
+          jobTitle={jobTitle}
+          onClose={(sent) => {
+            setSending(false);
+            if (sent) {
+              void qc.invalidateQueries({
+                queryKey: ["employer", employerId, "application", applicationId, "assessments"],
+              });
+            }
+          }}
+        />
       )}
 
       {/* One per completed test: the interview follows THAT test, its
@@ -502,6 +490,8 @@ export function ApplicationAssessmentChip({
 /** Which stage is "furthest", for picking the row's lead attempt. Same order
  *  as stageOf reads them, written once so the two cannot drift. */
 const STAGE_RANK: Record<TranslationKey, number> = {
+  "journey.stage.cancelled": -2,
+  "journey.stage.expired": -1,
   "journey.stage.invited": 0,
   "journey.stage.started": 1,
   "journey.stage.under_review": 2,

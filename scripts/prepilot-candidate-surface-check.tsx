@@ -24,9 +24,40 @@
 // dictionaries directly, and the sv/en parity of the whole key set is held by
 // passport-fixture-check.
 
+import { mock } from "bun:test";
+import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
-import { RecommendedProfessions } from "../src/components/career-discovery/v31/RecommendedProfessions";
+
+// RecommendedProfessions now renders a real <Link> for "Utforska nu"
+// (career-discovery-explore-link:check owns that behaviour). TanStack's
+// Link throws outside a RouterProvider, so under renderToStaticMarkup it is
+// replaced with a plain anchor carrying the resolved href — the same
+// substitute career-profession-bridge-check uses. Everything else the
+// module exports is kept as is (the server-function client imports hooks
+// from it).
+const actualRouter = await import("@tanstack/react-router");
+await mock.module("@tanstack/react-router", () => ({
+  ...actualRouter,
+  Link: ({
+    to,
+    params,
+    children,
+    ...rest
+  }: Record<string, unknown> & { children?: React.ReactNode }) => {
+    let href = String(to ?? "");
+    if (params && typeof params === "object") {
+      for (const [k, v] of Object.entries(params as Record<string, unknown>)) {
+        href = href.replace(`$${k}`, String(v));
+      }
+    }
+    return React.createElement("a", { href, ...rest }, children);
+  },
+  createFileRoute: () => () => ({}),
+}));
+
+const { RecommendedProfessions } =
+  await import("../src/components/career-discovery/v31/RecommendedProfessions");
 import { dictionaries } from "../src/i18n/dictionaries";
 import { matchProfessions } from "../src/lib/career-discovery/v31/professions";
 import type { Confidence, DimensionResult } from "../src/lib/career-discovery/v31/scoring";
@@ -87,7 +118,12 @@ group("1 · The recommendation reaches the screen");
 // engine now always produces a top 3 — this asserts the report actually
 // RENDERS it, for the balanced profile that used to get nothing.
 
-for (const personaId of ["broad-profile", "broad-profile-senior", "sparse", "operational-guarding"]) {
+for (const personaId of [
+  "broad-profile",
+  "broad-profile-senior",
+  "sparse",
+  "operational-guarding",
+]) {
   const ranked = rankedFor(personaId);
   const html = render(<RecommendedProfessions ranked={ranked} locale="sv" />);
 
@@ -96,10 +132,7 @@ for (const personaId of ["broad-profile", "broad-profile-senior", "sparse", "ope
     `1.2 ${personaId}: the section is titled as a recommendation`,
     html.includes(sv["careerDiscovery.report.v31.rec.title"]),
   );
-  ck(
-    `1.3 ${personaId}: rank 1 names a profession`,
-    html.includes(ranked[0].match.titleSv),
-  );
+  ck(`1.3 ${personaId}: rank 1 names a profession`, html.includes(ranked[0].match.titleSv));
   ck(
     `1.4 ${personaId}: rank 1 is marked as the strongest recommendation`,
     html.includes(sv["careerDiscovery.report.v31.rec.rank1"]),
@@ -116,10 +149,7 @@ for (const personaId of ["broad-profile", "broad-profile-senior", "sparse", "ope
     `1.7 ${personaId}: the "not a competence measure" boundary is on the page`,
     html.includes(sv["careerDiscovery.report.v31.rec.boundary"]),
   );
-  ck(
-    `1.8 ${personaId}: no percentage or score reaches the candidate`,
-    !/\d+\s?%/.test(html),
-  );
+  ck(`1.8 ${personaId}: no percentage or score reaches the candidate`, !/\d+\s?%/.test(html));
 }
 
 // =========================================================================
@@ -133,12 +163,11 @@ group("2 · Confidence is never overclaimed on screen");
     "2.1 an all-indicative recommendation carries the clarifier",
     html.includes(sv["careerDiscovery.report.v31.rec.indicativeNote"]),
   );
-  ck(
-    "2.2 and never borrows the fit vocabulary",
-    !html.includes("Stark matchning"),
-  );
+  ck("2.2 and never borrows the fit vocabulary", !html.includes("Stark matchning"));
 
-  const strong = render(<RecommendedProfessions ranked={rankedFor("operational-guarding")} locale="sv" />);
+  const strong = render(
+    <RecommendedProfessions ranked={rankedFor("operational-guarding")} locale="sv" />,
+  );
   ck(
     "2.3 a gated recommendation does NOT carry the clarifier",
     !strong.includes(sv["careerDiscovery.report.v31.rec.indicativeNote"]),
@@ -152,7 +181,10 @@ group("3 · Empty stays empty");
 // No approved catalogue is a real state and a different one from "nothing
 // cleared". It must render nothing rather than an invented direction.
 
-ck("3.1 an empty ranking renders nothing", render(<RecommendedProfessions ranked={[]} locale="sv" />) === "");
+ck(
+  "3.1 an empty ranking renders nothing",
+  render(<RecommendedProfessions ranked={[]} locale="sv" />) === "",
+);
 
 // =========================================================================
 group("4 · Mobile — the changed surfaces fit a 375px phone");

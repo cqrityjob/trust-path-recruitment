@@ -62,13 +62,11 @@ function Shell({
   surface,
   icon,
   title,
-  question,
   children,
 }: {
   surface: "profile" | "cv";
   icon: React.ReactNode;
   title: string;
-  question: string;
   children: React.ReactNode;
 }) {
   return (
@@ -87,7 +85,6 @@ function Shell({
         </span>
         {title}
       </h2>
-      <p className="mt-0.5 text-sm text-muted-foreground">{question}</p>
       {children}
     </section>
   );
@@ -144,7 +141,6 @@ export function OverviewProfileCard({
       surface="profile"
       icon={<UserRound className="h-5 w-5" />}
       title={L(SURFACES.profile.title, l)}
-      question={L(SURFACES.profile.question, l)}
     >
       {profile.state === "loading" ? (
         <Skeleton label={L(SURFACES.loading, l)} />
@@ -241,12 +237,7 @@ export function OverviewCvCard({
   const role = identity ? latestRole(identity) : null;
 
   return (
-    <Shell
-      surface="cv"
-      icon={<FileText className="h-5 w-5" />}
-      title={L(SURFACES.cv.title, l)}
-      question={L(SURFACES.cv.question, l)}
-    >
+    <Shell surface="cv" icon={<FileText className="h-5 w-5" />} title={L(SURFACES.cv.title, l)}>
       {identityState === "loading" ? (
         <Skeleton label={L(SURFACES.loading, l)} />
       ) : identityState === "unavailable" || !identity ? (

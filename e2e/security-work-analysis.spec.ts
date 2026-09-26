@@ -116,7 +116,7 @@ for (const locale of ["sv", "en"] as const) {
     await switcher.click();
     await expect(switcher).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator("html")).toHaveAttribute("lang", new RegExp(`^${locale}`));
-    if (page.viewportSize()!.width < 1280)
+    if (page.viewportSize()!.width < 1024)
       await page.getByRole("button", { name: /Öppna meny|Open menu/i }).click();
     const navigation = page.locator("[data-candidate-app-nav]").filter({ visible: true });
     await expect(navigation.locator("a")).toHaveCount(7);

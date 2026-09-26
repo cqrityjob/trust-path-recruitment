@@ -823,6 +823,12 @@ group("T12 · basic details, never a percentage; the name rule");
   );
   ck("and never a percentage", !/%/.test(html.slice(0, html.indexOf("data-next-best-action"))));
   ck(
+    'the Profile card is titled "Min profil", with no question line under it',
+    /<h2[^>]*id="overview-profile-heading"[^>]*>(?:(?!<\/h2>).)*Min profil<\/h2>/.test(html) &&
+      !html.includes("Vem är jag nu") &&
+      !html.includes("Vad har jag gjort"),
+  );
+  ck(
     "the Profile card is role, country and the way to edit them",
     html.includes("Väktare med inriktning mot larm och teknik") &&
       html.includes(">Sverige<") &&

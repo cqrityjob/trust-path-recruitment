@@ -41,12 +41,15 @@ BEGIN
     (SELECT standard_for_recruitment FROM public.scp_assessment_definitions WHERE id = _def),
     'it is designated as standard recruitment content');
 
-  -- Exactly one designation. A second one appearing is a decision somebody
-  -- should have to make on purpose.
+  -- Exactly the designated set, by name. A designation appearing is a
+  -- decision somebody has to make on purpose: the owner update of 2026-09-26
+  -- (both levels usable at launch) added the strategic test in
+  -- 20261217090000, at the same closed-test status as the operational one.
   PERFORM pg_temp.ok(
-    (SELECT count(*) FROM public.scp_assessment_definitions
-      WHERE standard_for_recruitment) = 1,
-    'exactly one assessment carries the designation');
+    (SELECT string_agg(slug, ',' ORDER BY slug) FROM public.scp_assessment_definitions
+      WHERE standard_for_recruitment)
+      = 'security-manager-recruitment,security-officer-recruitment',
+    'exactly the two named assessments carry the designation');
 
   SELECT content_status, validation_status INTO _cs, _vs
     FROM public.scp_assessment_versions WHERE definition_id = _def

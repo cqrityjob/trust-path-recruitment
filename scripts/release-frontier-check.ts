@@ -217,7 +217,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // every declared verify statement as expected, no personal row changed. Both
 // come off this list in the same change that marks them applied. Nothing is
 // pending.
-const expectedPending: string[] = [];
+// The strategic-level recruitment content (20261216090000, PR #299) is
+// PENDING: the Säkerhetschef assessment, interview guide, role profile and
+// content links as governed DRAFT rows, authored and proved locally (full
+// replay, rollback and re-apply, loopback journey), and its activation
+// (20261217090000: the test designated as standard recruitment content and
+// the guide opened for pilot, at the same governance status as the
+// operational Väktare content -- draft, pilot hypothesis, closed test, not
+// validated). Neither is merged nor applied. Each comes off this list in the
+// change that records it applied with hosted evidence.
+const expectedPending: string[] = [
+  "20261216090000_scp_security_manager_recruitment_content.sql",
+  "20261217090000_scp_security_manager_recruitment_activation.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

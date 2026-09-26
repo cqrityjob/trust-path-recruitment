@@ -120,9 +120,12 @@ BEGIN
   -- PLATFORM knowledge only. Running a real interview adds case-scoped edges
   -- carrying an employer_id, so counting the whole table would make this
   -- assertion drift with test data rather than with the knowledge base.
+  -- 271 declared by 20260921090000, plus the 154 "restricts" edges the
+  -- Säkerhetschef pack's fourteen prohibitions gained in 20261216090000
+  -- (14 areas x 11 AI tasks), for the same fail-closed reason.
   SELECT count(*) INTO _total FROM public.scp_intel_edges WHERE employer_id IS NULL;
-  PERFORM pg_temp.ok(_total = 271,
-    format('I2.0 the knowledge graph holds its 271 declared edges (found %s)', _total));
+  PERFORM pg_temp.ok(_total = 425,
+    format('I2.0 the knowledge graph holds its 425 declared edges (found %s)', _total));
 
   -- Every prohibition binds every AI task. An unwired prohibition is not a
   -- neutral gap: read from the engine's side it is permission.

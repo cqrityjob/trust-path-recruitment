@@ -461,26 +461,29 @@ expect(
 // -----------------------------------------------------------------------
 // 7. Mobile carries the same entrance, not a desktop-only fix.
 // -----------------------------------------------------------------------
-// The public five switch at lg (1024px). The owner's seven signed-in
-// destinations need xl (1280px), consistently across nav, actions, menu
-// button and sheet. Locate the full conditional, not a matching suffix.
-const menuMarker = 'appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden"';
+// Both chromes switch to the compact sheet at lg (1024px). The signed-in
+// header used xl (1280px) until the owner's 2026-09-26 bug report: a Windows
+// PC at 125% display scaling has a 1093-1229px CSS viewport, and between
+// 1024 and 1279 the seven-destination header showed nothing but a hamburger.
+// e2e/candidate-header-desktop.spec.ts measures the fit; this pins the
+// breakpoint. Locate the full class list, not a matching suffix.
+const menuMarker = 'MENU_SURFACE, "lg:hidden", open ? "block" : "hidden"';
 expect(
   header.includes(menuMarker),
-  "the compact sheet must use xl for the candidate app and lg for the public header",
+  "the compact sheet must switch off at lg for BOTH the candidate app and the public header",
 );
 expect(
-  (header.match(/appMode \? "xl:hidden" : "lg:hidden"/g) ?? []).length === 2,
-  "both the menu button and sheet must use the same app/public breakpoints",
+  !/appMode \? "xl:hidden"/.test(header) && !/appMode \? "xl:flex"/.test(header),
+  "the signed-in header must not hide its desktop navigation until xl (no desktop nav at 1024-1279px)",
 );
 expect(
-  header.includes('appMode ? "xl:flex" : "lg:flex"'),
-  "desktop account actions must use xl for the candidate app and lg for the public header",
+  header.includes('"hidden shrink-0 items-center gap-2 lg:flex"'),
+  "desktop account actions must appear at lg for both chromes",
 );
 const candidateNav = read("src/components/site/CandidateAppNav.tsx");
 expect(
-  candidateNav.includes("xl:flex") && !/\blg:flex\b/.test(candidateNav),
-  "the seven-destination candidate nav must appear at xl, never at lg",
+  /\blg:flex\b/.test(candidateNav) && !/\bxl:flex\b/.test(candidateNav),
+  "the seven-destination candidate nav must appear at lg (1024px), never wait for xl",
 );
 const mobileMenu = header.slice(header.indexOf(menuMarker));
 expect(mobileMenu.length > 0, "the mobile menu block must be present in SiteHeader");

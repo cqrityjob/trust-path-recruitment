@@ -80,6 +80,10 @@ pw.shots.mjs
 # fixture commands and the Playwright command, and re-running it against the
 # same tree reproduces them. A directory is re-included before its contents,
 # because git cannot un-ignore a file inside an excluded directory.
+# artifacts/bugfix-2026-09-26/: the owner's 2026-09-26 bug-report walk --
+# before/after screens of the header, the send-test dialog, the candidate's
+# test and inbox, the registration panel. Synthetic local accounts only.
+!/artifacts/bugfix-2026-09-26/
 !/artifacts/employer-continuity-e1/
 
 # The E4 final-report captures, for the same reason and under the same rules:

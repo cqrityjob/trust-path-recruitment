@@ -41,11 +41,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
   Check,
+  Eye,
   Loader2,
   Lock,
   Pencil,
@@ -82,6 +83,7 @@ import {
   saveMyCv,
 } from "@/lib/professional-identity/cv/cv-store.functions";
 import { generateMyCv } from "@/lib/professional-identity/cv/cv.functions";
+import { revealElement } from "@/lib/professional-identity/cv/reveal";
 
 export const Route = createFileRoute("/_authenticated/my-career/cv/$cvId")({
   ssr: false,
@@ -137,6 +139,23 @@ function CvDetailPage() {
   /** Whether the person has asked to see the update confirmed. Nothing is
    *  written until they press again; cancelling puts it back. */
   const [confirmRefresh, setConfirmRefresh] = useState(false);
+
+  /* -- "Show my CV" from the editor ----------------------------------- */
+  //
+  // The editor is a long form and the document renders only once it is
+  // closed. A person who has rewritten three bullet points is at the bottom
+  // of that form; this saves what they wrote, closes the editor and takes
+  // them to the document -- scrolled into view and focused, see reveal.ts.
+  /** Set when the save in flight was asked for by "Show my CV", so its
+   *  success closes the editor and reveals the document. */
+  const [showAfterSave, setShowAfterSave] = useState(false);
+  const documentRef = useRef<HTMLElement | null>(null);
+  const [revealTick, setRevealTick] = useState(0);
+  useEffect(() => {
+    if (revealTick === 0) return;
+    const el = documentRef.current;
+    if (el) revealElement(el);
+  }, [revealTick]);
 
   // Seed the form from the saved row once it arrives, and again whenever the
   // server's copy changes underneath us (an update-from-profile, say).
@@ -256,12 +275,31 @@ function CvDetailPage() {
       setSaveState("saved");
       await queryClient.invalidateQueries({ queryKey: ["cv", "detail", cvId] });
       await queryClient.invalidateQueries({ queryKey: ["cv", "list"] });
+      if (showAfterSave) {
+        setShowAfterSave(false);
+        setEditing(false);
+        setRevealTick((t) => t + 1);
+      }
     },
     onError: (error) => {
       setSaveState("failed");
+      // The save did not happen, so neither does the reveal: the editor
+      // stays open with every word still in it, and the status line says
+      // what went wrong.
+      setShowAfterSave(false);
       noteRefusal(error);
     },
   });
+
+  const showMyCv = () => {
+    if (dirty) {
+      setShowAfterSave(true);
+      saveEdits.mutate();
+    } else {
+      setEditing(false);
+      setRevealTick((t) => t + 1);
+    }
+  };
 
   /** Put one fact back on this CV. The allowlist gains an id and everything
    *  else about the document is left alone. */
@@ -435,6 +473,7 @@ function CvDetailPage() {
             <div className="no-print mt-4 flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
                 <h1
+                  id="cv-saved-title"
                   className="truncate text-3xl font-semibold tracking-tight text-foreground md:text-4xl"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
@@ -858,6 +897,32 @@ function CvDetailPage() {
                 {saveState === "failed" && (
                   <p className="mt-2 text-sm text-muted-foreground">{L(CV.saveFailedHelp, l)}</p>
                 )}
+
+                {/* At the END of the form: save, close and show the
+                    document. Disabled on the same terms as Save, because it
+                    performs the same write first. */}
+                <div className="mt-5 border-t border-border pt-5">
+                  <PrimaryButton
+                    type="button"
+                    variant="ghost"
+                    disabled={
+                      saveEdits.isPending || !selectionHasHistory(cv.data.bundle, includedIds)
+                    }
+                    onClick={showMyCv}
+                    data-cv-show-mine
+                    className="gap-2"
+                  >
+                    {saveEdits.isPending && showAfterSave ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {L(saveEdits.isPending && showAfterSave ? CV.saving : CV.showMyCv, l)}
+                  </PrimaryButton>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    {L(CV.showMyCvHelpEdit, l)}
+                  </p>
+                </div>
               </section>
             )}
 
@@ -998,10 +1063,18 @@ function CvDetailPage() {
 
             {/* -- the saved document ---------------------------------- */}
             {!editing && (
-              <div className="mt-6">
+              <section
+                ref={(el) => {
+                  documentRef.current = el;
+                }}
+                tabIndex={-1}
+                aria-labelledby="cv-saved-title"
+                data-cv-saved-document
+                className="mt-6 scroll-mt-24 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+              >
                 <p className="no-print mb-3 text-xs text-muted-foreground">{L(CV.reviewNote, l)}</p>
                 <CvDocumentView document={cv.data.document} />
-              </div>
+              </section>
             )}
           </>
         )}

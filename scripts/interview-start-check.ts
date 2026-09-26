@@ -33,7 +33,8 @@
  * Run: bun run interview-start:check
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { ENVIRONMENTS_WITH_CONTENT, TRUST_CONTENT } from "../src/lib/library/catalogue";
 
 const read = (p: string) => readFileSync(p, "utf8");
@@ -100,8 +101,15 @@ check(
 );
 
 // ---- one truth, two readers ---------------------------------------------------------
+// Every content link ever seeded, wherever it was seeded: the operational
+// setup in 20261202090000, the strategic one in 20261216090000, and any later.
+const allMigrations = readdirSync("supabase/migrations")
+  .filter((f) => f.endsWith(".sql"))
+  .sort()
+  .map((f) => read(join("supabase/migrations", f)))
+  .join("\n");
 const seeded = [
-  ...mig.matchAll(
+  ...allMigrations.matchAll(
     /SELECT '(\w+)', '(\w+)', p\.id,\s*\(SELECT d\.id FROM public\.scp_assessment_definitions d WHERE d\.slug = '([\w-]+)'\)\s*FROM public\.scp_interview_packs p\s*WHERE p\.slug = '([\w-]+)'/g,
   ),
 ].map((m) => ({ profile: m[1], env: m[2], test: m[3], guide: m[4] }));
