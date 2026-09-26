@@ -157,7 +157,9 @@ test("India: landing → confirmed account → setup → credential → review �
   // ── 4. The setup: an EMPTY Passport exists, no CV/document/review ─────
   await expect(page.locator("[data-india-setup]")).toHaveAttribute("data-setup-step", "name");
   const userId = sql(`select id from auth.users where email='${email}'`);
-  expect(sql(`select count(*) from public.sp_passport_profiles where holder_user_id='${userId}'`)).toBe("1");
+  expect(
+    sql(`select count(*) from public.sp_passport_profiles where holder_user_id='${userId}'`),
+  ).toBe("1");
   expect(sql(`select count(*) from public.sp_claims where holder_user_id='${userId}'`)).toBe("0");
   expect(sql(`select count(*) from public.cv_documents where owner_user_id='${userId}'`)).toBe("0");
   await expect(page.getByLabel("Display name")).toHaveValue("Priya Ramaswamy Iyer");
@@ -189,7 +191,9 @@ test("India: landing → confirmed account → setup → credential → review �
     ),
   ).toBe("-/-");
   expect(
-    sql(`select country_code||'|'||locality from public.candidate_current_location where user_id='${userId}'`),
+    sql(
+      `select country_code||'|'||locality from public.candidate_current_location where user_id='${userId}'`,
+    ),
   ).toBe("IN|पुणे");
   expect(
     sql(
@@ -221,9 +225,9 @@ test("India: landing → confirmed account → setup → credential → review �
   await expect(page.locator('[data-field="identifier"]')).toHaveValue("MEPSC/SG/2023/004417", {
     timeout: 60_000,
   });
-  await page.locator('[data-field="issuer-name"]').fill(
-    "Management & Entrepreneurship and Professional Skills Council",
-  );
+  await page
+    .locator('[data-field="issuer-name"]')
+    .fill("Management & Entrepreneurship and Professional Skills Council");
   await page.locator('[data-field="definition-version"]').selectOption("qp-6.0");
   await expect(page.locator("main")).toContainText("cannot be verified automatically", {
     ignoreCase: true,
@@ -294,7 +298,9 @@ test("India: landing → confirmed account → setup → credential → review �
     email_confirm: true,
   });
   expect(created.error).toBeNull();
-  sql(`insert into public.user_roles(user_id, role) values ('${created.data.user!.id}','passport_verifier')`);
+  sql(
+    `insert into public.user_roles(user_id, role) values ('${created.data.user!.id}','passport_verifier')`,
+  );
   const reviewerContext = await browser.newContext();
   // The reviewer works in English on this device (a stored preference, as
   // the language switcher would leave it).
@@ -347,7 +353,9 @@ test("India: landing → confirmed account → setup → credential → review �
   await reviewer.getByRole("button", { name: "Yes, record the decision" }).click();
   await expect(reviewer.locator("main")).toContainText("The decision has been recorded.");
   await reviewerContext.close();
-  expect(sql(`select assertion_level from public.sp_claims where id='${claimId}'`)).toBe("verified");
+  expect(sql(`select assertion_level from public.sp_claims where id='${claimId}'`)).toBe(
+    "verified",
+  );
 
   // ── 8. Selective share, QR, recipient, revocation ────────────────────
   // A second credential that is NOT selected must not appear anywhere.
@@ -410,12 +418,17 @@ test("India: landing → confirmed account → setup → credential → review �
   const disclosureId = sql(
     `select id from public.sp_disclosures where holder_user_id='${userId}' and revoked_at is null order by created_at desc limit 1`,
   );
-  const holderClient = createClient(API, env("INDIA_ANON_KEY"), { auth: { persistSession: false } });
+  const holderClient = createClient(API, env("INDIA_ANON_KEY"), {
+    auth: { persistSession: false },
+  });
   const holderSession = await holderClient.auth.signInWithPassword({ email, password });
   expect(holderSession.error).toBeNull();
-  const revoked = await holderClient.rpc("sp_revoke_disclosure" as never, {
-    _id: disclosureId,
-  } as never);
+  const revoked = await holderClient.rpc(
+    "sp_revoke_disclosure" as never,
+    {
+      _id: disclosureId,
+    } as never,
+  );
   expect(revoked.error).toBeNull();
   await recipient.reload();
   await expect(recipient.locator("main")).not.toContainText("Security Guard (MEP/Q7101)", {
@@ -425,26 +438,41 @@ test("India: landing → confirmed account → setup → credential → review �
 
   // ── 9. Another candidate reads and changes nothing ──────────────────
   const otherEmail = `other.${stamp}@test.local`;
-  const other = await admin.auth.admin.createUser({ email: otherEmail, password, email_confirm: true });
+  const other = await admin.auth.admin.createUser({
+    email: otherEmail,
+    password,
+    email_confirm: true,
+  });
   expect(other.error).toBeNull();
   const otherClient = createClient(API, env("INDIA_ANON_KEY"), { auth: { persistSession: false } });
-  expect((await otherClient.auth.signInWithPassword({ email: otherEmail, password })).error).toBeNull();
+  expect(
+    (await otherClient.auth.signInWithPassword({ email: otherEmail, password })).error,
+  ).toBeNull();
   for (const table of ["sp_claims", "sp_credential_details", "sp_evidence"] as const) {
     const col = table === "sp_claims" ? "id" : "claim_id";
-    const r = await otherClient.from(table as never).select("*").eq(col as never, claimId as never);
+    const r = await otherClient
+      .from(table as never)
+      .select("*")
+      .eq(col as never, claimId as never);
     expect(r.data ?? [], `another candidate reads no ${table}`).toHaveLength(0);
   }
   for (const table of ["candidate_current_location", "candidate_job_preferences"] as const) {
-    const r = await otherClient.from(table as never).select("*").eq("user_id" as never, userId as never);
+    const r = await otherClient
+      .from(table as never)
+      .select("*")
+      .eq("user_id" as never, userId as never);
     expect(r.data ?? [], `another candidate reads no ${table}`).toHaveLength(0);
   }
   await otherClient.from("sp_claims").update({ credential_reference: "HIJACK" }).eq("id", claimId);
   expect(sql(`select credential_reference from public.sp_claims where id='${claimId}'`)).toBe(
     "MEPSC/SG/2023/004417",
   );
-  const assess = await otherClient.rpc("sp_hayat_current_assessment" as never, {
-    _claim_id: claimId,
-  } as never);
+  const assess = await otherClient.rpc(
+    "sp_hayat_current_assessment" as never,
+    {
+      _claim_id: claimId,
+    } as never,
+  );
   expect((assess.data as unknown[] | null) ?? []).toHaveLength(0);
   // A browser cannot write an assessment or promote a credential either.
   const forged = await holderClient.rpc("sp_hayat_record_assessment" as never, {} as never);
@@ -459,7 +487,9 @@ test("India: landing → confirmed account → setup → credential → review �
   expect(anonRead.error, "an anonymous caller reads no catalogue version").not.toBeNull();
 });
 
-test("India on a phone: landing, keyboard, setup and form stay usable", async ({ page }, testInfo) => {
+test("India on a phone: landing, keyboard, setup and form stay usable", async ({
+  page,
+}, testInfo) => {
   test.skip(testInfo.project.name === "chromium", "phone viewports only");
   test.setTimeout(240_000);
   refuseNonLocal();
@@ -481,12 +511,14 @@ test("India on a phone: landing, keyboard, setup and form stay usable", async ({
   const email = `mobile.${Date.now()}.${testInfo.project.name}@test.local`;
   const password = "IndiaJourney!2026";
   expect(
-    (await admin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { display_name: "Arjun Rao" },
-    })).error,
+    (
+      await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { display_name: "Arjun Rao" },
+      })
+    ).error,
   ).toBeNull();
   await page.goto(`${BASE}/login?redirect=${encodeURIComponent("/passport/start?market=IN")}`);
   await page.getByLabel("Email").fill(email);
@@ -529,8 +561,14 @@ test("India on a phone: landing, keyboard, setup and form stay usable", async ({
   await expect(page.locator("[data-hayat-failure]")).toHaveAttribute("data-hayat-failure", /.+/);
   await expect(page.locator('[data-field="identifier"]')).toHaveValue("CCTV-SUP-SYNTH-1");
   await expect(page.locator('[data-field="issuer-name"]')).toHaveValue("MEPSC");
-  await page.screenshot({ path: testInfo.outputPath("m3-form-reading-failed.png"), fullPage: true });
-  await page.getByRole("button", { name: /remove file|ta bort fil/i }).click().catch(() => undefined);
+  await page.screenshot({
+    path: testInfo.outputPath("m3-form-reading-failed.png"),
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", { name: /remove file|ta bort fil/i })
+    .click()
+    .catch(() => undefined);
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Save credential", exact: true }).click();
   await expect(page).toHaveURL(/\/passport\/entry\/claim\//, { timeout: 60_000 });
