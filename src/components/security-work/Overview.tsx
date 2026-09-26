@@ -177,7 +177,7 @@ export function SecurityOverview() {
               <Group
                 id="sw-continue"
                 title={l("Fortsätt där du slutade", "Continue where you left off")}
-                className="min-w-0 lg:col-span-7"
+                className="min-w-0 lg:col-span-7 [&_h2]:scroll-mt-24"
                 data-testid="sw-overview-continue"
               >
                 {ongoing.length === 0 ? (

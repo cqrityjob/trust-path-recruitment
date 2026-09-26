@@ -32,4 +32,6 @@ Riktiga skärmbilder tas från testappen och publiceras först efter hela respek
 
 Main hade redan röd CI: [körning 36271453737](https://github.com/cqrityjob/trust-path-recruitment/actions/runs/36271453737). Den dokumenterade nullable-RPC-typen hade skrivits över i tre fält. Samma exakta återställning av undantagen som `nullable-rpc-contract:check` kräver kom in i main under arbetet; därför finns ingen typändring i slutdiffen mot main. Startsidesjobbet hade dessutom tolv fel efter den parallella startsidesändringen (bland annat gammal H1 och gammal sektions-/livscykelstruktur). Startsidan och dess tester ändras inte här. Det kvarstående felet måste skiljas från Security Works testresultat och redovisas i PR:ens slutstatus.
 
+Efter typåterställningen når CI även startsidans statiska kontraktskontroll, som också fallerar på de gamla kraven på sektioner och texter. Dessa startsidesfel gör att den samlade CI-statusen inte kan anges som grön även när Security Works egna resor passerar.
+
 Live-AI, extern dokumentbearbetning och provet genom den publicerade appen återstår efter CTO-/ägarbeslut. Ingen kundpilot eller kommersiell lansering följer automatiskt av denna kodleverans.

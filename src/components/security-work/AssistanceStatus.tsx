@@ -58,10 +58,15 @@ export function AssistanceStatus() {
         </span>
       </p>
       <p className="text-xs leading-relaxed text-muted-foreground">
-        {l(
-          "Du kan alltid arbeta med manuellt registrerade utdrag och egna bedömningar. När AI är tillgängligt kan det föreslå kunskapsluckor, frågor, källbelagda utkast och åtgärder. Du väljer vad som förs in och godkänner rapporten separat.",
-          "You can work with manually entered extracts and your own assessments. When available, AI can suggest gaps, questions, sourced drafts and actions. You choose what to apply and approve the report separately.",
-        )}
+        {canEdit
+          ? l(
+              "Du kan alltid arbeta med manuellt registrerade utdrag och egna bedömningar. När AI är tillgängligt kan det föreslå kunskapsluckor, frågor, källbelagda utkast och åtgärder. Du väljer vad som förs in och godkänner rapporten separat.",
+              "You can work with manually entered extracts and your own assessments. When available, AI can suggest gaps, questions, sourced drafts and actions. You choose what to apply and approve the report separately.",
+            )
+          : l(
+              "Du har läsbehörighet. Du kan granska sparat arbete; en ägare eller redaktör kan lägga till underlag och begära AI-stöd när det är tillgängligt.",
+              "You have read-only access. You can review saved work; an owner or editor can add evidence and request AI assistance when available.",
+            )}
       </p>
       {(ai.isError || processing.isError) && (
         <WorkError
