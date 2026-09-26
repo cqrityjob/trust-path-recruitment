@@ -33,6 +33,10 @@ import { safeReturnPath } from "../src/lib/auth/safe-redirect";
 import { resolveCredentialScope } from "../src/lib/security-passport/credential-shield";
 import { deriveSetupStep } from "../src/lib/india-entry/setup-state";
 import { credentialMark } from "../src/lib/security-passport/credentials";
+import { langIntentFrom } from "../src/i18n/context";
+import { formatExpiry } from "../src/lib/security-passport/format";
+import { buildRecipientPresentation } from "../src/lib/security-passport/recipient-presentation";
+import type { RecipientPayloadActive } from "../src/lib/security-passport/packages";
 
 const ROOT = join(import.meta.dir, "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
@@ -277,6 +281,44 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
     read(LANDING).includes(`const INDIA_SETUP_REDIRECT = "${intent}";`),
     "5.2 the landing page sends exactly that intent",
   );
+  // The language rides the URL: a click before hydration runs no handler.
+  for (const lang of ["en", "sv"] as const) {
+    const carried = `${intent}&lang=${lang}`;
+    ok(
+      safeReturnPath(carried, "/fallback") === carried,
+      `5.4 the ${lang} intent survives safeReturnPath unchanged`,
+    );
+    ok(
+      langIntentFrom(`?redirect=${encodeURIComponent(carried)}&lang=${lang}`) === lang &&
+        langIntentFrom(new URL(carried, "https://x.invalid").search) === lang,
+      `5.5 the sign-up URL and the setup it returns to both carry ${lang}`,
+    );
+  }
+  ok(
+    langIntentFrom("?lang=de") === null && langIntentFrom("") === null,
+    "5.6 only sv and en are adopted from a URL",
+  );
+  ok(
+    /return \{ redirect: `\$\{INDIA_SETUP_REDIRECT\}&lang=\$\{lang\}`, lang \} as const;/.test(
+      read(LANDING),
+    ) && (read(LANDING).match(/search=\{indiaIntent\(lang\) as never\}/g) ?? []).length === 2,
+    "5.7 both signed-out links carry the page language, into sign-up and into the setup",
+  );
+  {
+    const provider = read("src/i18n/context.tsx");
+    const hook =
+      /export function useAdoptLangIntent\(search: string\) \{[\s\S]*?if \(readStoredLang\(\)\) return;\s*const intent = langIntentFrom\(search\);\s*if \(intent\) setLang\(intent\);\s*\}, \[search, setLang\]\);/.test(
+        provider,
+      );
+    ok(hook, "5.8 a carried language is adopted only when none is stored, on every navigation");
+    ok(
+      /<LangIntentFromUrl \/>/.test(read("src/routes/__root.tsx")) &&
+        /useRouterState\(\{ select: \(s\) => s\.location\.searchStr \}\);\s*useAdoptLangIntent\(search\);/.test(
+          read("src/routes/__root.tsx"),
+        ),
+      "5.9 the root follows the URL's language across navigations",
+    );
+  }
   for (const hostile of [
     "//evil.example/passport/start",
     "https://evil.example/",
@@ -381,6 +423,128 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
   ok(
     INDIA_ENTRY_SOURCES.skilledWorkerOccupations.startsWith("https://www.gov.uk/"),
     "7.7 and links GOV.UK",
+  );
+}
+
+// ── 8. Expiry: a missing date is not "no expiry" ─────────────────────────
+// An Indian qualification is saved without an expiry date (none is required
+// and none is derived), so this wording is what every India holder and
+// recipient reads. Only an EXPLICIT non-expiring credential says "No expiry".
+{
+  ok(
+    formatExpiry(null, "en") === "Expiry date not provided" &&
+      formatExpiry(null, "sv") === "Slutdatum inte angivet",
+    "8.1 an absent expiry date reads as not provided, in both languages",
+  );
+  ok(
+    formatExpiry(null, "en", null) === "Expiry date not provided" &&
+      formatExpiry(null, "en", false) === "Expiry date not provided",
+    "8.2 an unset or false flag is not an explicit non-expiring state",
+  );
+  ok(
+    formatExpiry(null, "en", true) === "No expiry" &&
+      formatExpiry(null, "sv", true) === "Ingen giltighetstid",
+    "8.3 an explicitly non-expiring credential still reads No expiry",
+  );
+  ok(
+    formatExpiry("2030-01-01", "en", true) === "2030-01-01" &&
+      formatExpiry("2030-01-01", "en") === "2030-01-01",
+    "8.4 a date is always the date",
+  );
+  const claim = (key: string, noExpiry: boolean | undefined) => ({
+    key,
+    type: "certificate",
+    title: "Security Guard (MEP/Q7101)",
+    credential_code: "IN_MEPSC_Q7101",
+    issuer: null,
+    jurisdiction: "IN",
+    sub_jurisdiction: null,
+    scope_limited: false,
+    authorisation_scope: null,
+    issued_on: "2023-04-03",
+    valid_until: null,
+    ...(noExpiry === undefined ? {} : { no_expiry: noExpiry }),
+    assertion: "document_provided",
+    lifecycle: "active",
+    verified_at: null,
+    verifier_organisation: null,
+    verification_method: null,
+    scope_code: "national_qualification",
+  });
+  const payload = {
+    status: "active",
+    package: "public_card",
+    purpose: null,
+    expires_at: null,
+    last_updated: "2026-09-26T09:00:00Z",
+    holder: "Priya Ramaswamy Iyer",
+    privacy_mode: "full_name",
+    profession_slug: null,
+    jurisdiction: null,
+    verified_claims: [claim("c1", true), claim("c2", undefined), claim("c3", false)],
+    verified_experience: [],
+    verified_experience_days: 0,
+  } as unknown as RecipientPayloadActive;
+  const [explicit, absent, unset] = buildRecipientPresentation(payload, "2026-09-26").credentials;
+  ok(
+    explicit?.noExpiry === true && absent?.noExpiry === false && unset?.noExpiry === false,
+    "8.5 the recipient presentation carries only an explicit no_expiry",
+  );
+  ok(
+    explicit?.validUntil === null &&
+      absent?.validUntil === null &&
+      explicit?.lifecycle === "active",
+    "8.6 and changes no stored validity",
+  );
+  // Every surface that prints an expiry passes the explicit flag.
+  const calls: [string, RegExp][] = [
+    [
+      "src/components/security-passport/live/RecipientCredentialList.tsx",
+      /formatExpiry\(null, lang, c\.noExpiry\)/,
+    ],
+    [
+      "src/components/security-passport/live/CredentialVerificationPage.tsx",
+      /formatExpiry\(credential\.validUntil, lang, credential\.noExpiry\)/,
+    ],
+    [
+      "src/components/security-passport/ClaimRow.tsx",
+      /formatExpiry\(claim\.validUntil, lang, claim\.noExpiry\)/,
+    ],
+    [
+      "src/components/security-passport/CredentialVersionHistory.tsx",
+      /formatExpiry\(v\.validUntil, lang, v\.noExpiry\)/,
+    ],
+    [
+      "src/components/security-passport/CredentialWallet.tsx",
+      /formatExpiry\(null, lang, r\.detail\?\.no_expiry\)/,
+    ],
+    [
+      "src/routes/_authenticated.passport.entry.$kind.$entryId.tsx",
+      /formatExpiry\(claim\.validUntil, lang, internationalDetail\?\.no_expiry\)/,
+    ],
+    ["src/routes/_authenticated.passport.share.tsx", /formatExpiry\(null, lang, merit\.noExpiry\)/],
+  ];
+  for (const [file, pattern] of calls)
+    ok(pattern.test(read(file)), `8.7 ${file} passes the explicit flag`);
+  const everywhere = [
+    ...calls.map(([f]) => f),
+    "src/components/security-passport/PassportCard.tsx",
+    "src/components/security-passport/InternationalCredentialForm.tsx",
+  ]
+    .map(read)
+    .join("\n");
+  ok(
+    !/pt\("claims\.noExpiry"\)|passportT\("claims\.noExpiry"/.test(everywhere),
+    "8.8 no surface prints No expiry for itself",
+  );
+  ok(
+    /\.from\("sp_credential_details"\)\.select\("claim_id"\)\.eq\("no_expiry", true\)/.test(
+      read("src/lib/security-passport/passport.functions.ts"),
+    ) &&
+      /if \(noExpiryRes\.error\) throw/.test(
+        read("src/lib/security-passport/passport.functions.ts"),
+      ),
+    "8.9 the holder's Passport reads the explicit state, and a failed read is not 'none'",
   );
 }
 

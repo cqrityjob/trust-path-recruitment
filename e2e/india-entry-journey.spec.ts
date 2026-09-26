@@ -131,9 +131,28 @@ test("India: landing → confirmed account → setup → credential → review �
     "no OCR asset is fetched on the landing page",
   ).toHaveLength(0);
 
-  // ── 2. Sign-up, carrying the intent ──────────────────────────────────
-  await page.getByRole("link", { name: "Create my Security Passport" }).first().click();
-  await expect(page).toHaveURL(/\/signup\?redirect=%2Fpassport%2Fstart%3Fmarket%3DIN/);
+  // ── 2. Sign-up, carrying the intent, from a tap BEFORE hydration ─────
+  // A first-time visitor on a slow phone: nothing chosen on this device and
+  // the app's scripts still in flight when the link is tapped, so no click
+  // handler runs. The language has to ride the link itself.
+  await page.evaluate(() => localStorage.removeItem("cqrityjob.lang"));
+  let heldScripts = 0;
+  let scriptsReleased = false;
+  await page.route("**/*", (route) => {
+    if (scriptsReleased || route.request().resourceType() !== "script") return route.fallback();
+    heldScripts += 1; // never answered: this document is navigated away from
+  });
+  await page.goto(`${BASE}/security-passport/india`, { waitUntil: "commit" });
+  const cta = page.getByRole("link", { name: "Create my Security Passport" }).first();
+  await expect(cta).toBeVisible();
+  expect(heldScripts, "the tap lands before the app has hydrated").toBeGreaterThan(0);
+  expect(await page.evaluate(() => localStorage.getItem("cqrityjob.lang"))).toBeNull();
+  scriptsReleased = true;
+  await cta.click();
+  await expect(page).toHaveURL(
+    /\/signup\?redirect=%2Fpassport%2Fstart%3Fmarket%3DIN%26lang%3Den&lang=en$/,
+  );
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
   expect(
     requests.filter((r) => /hayat-ocr|tesseract|pdf\.worker|traineddata/.test(r.url)),
     "no OCR asset is fetched during registration",
@@ -145,14 +164,19 @@ test("India: landing → confirmed account → setup → credential → review �
   await page.getByRole("button", { name: "Create account" }).click();
   const redirectTo = new URL((await signup).url()).searchParams.get("redirect_to") ?? "";
   expect(redirectTo, "the confirmation link returns to the India setup").toBe(
-    `${BASE}/login?redirect=${encodeURIComponent("/passport/start?market=IN")}`,
+    `${BASE}/login?redirect=${encodeURIComponent("/passport/start?market=IN&lang=en")}`,
   );
   await expect(page.getByTestId("auth-awaiting-confirmation")).toBeVisible();
 
   // ── 3. The real confirmation e-mail ──────────────────────────────────
+  // Opened with no language chosen -- as on another device -- so the
+  // English setup below comes from the link alone.
   const link = await confirmationLink(email);
+  await page.evaluate(() => localStorage.removeItem("cqrityjob.lang"));
   await page.goto(link);
   await expect(page).toHaveURL(/\/passport\/start\?market=IN/, { timeout: 60_000 });
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  expect(await page.evaluate(() => localStorage.getItem("cqrityjob.lang"))).toBe("en");
 
   // ── 4. The setup: an EMPTY Passport exists, no CV/document/review ─────
   await expect(page.locator("[data-india-setup]")).toHaveAttribute("data-setup-step", "name");
@@ -265,6 +289,15 @@ test("India: landing → confirmed account → setup → credential → review �
   expect(
     sql(`select definition_version from public.sp_credential_details where claim_id='${claimId}'`),
   ).toBe("qp-6.0");
+  // No expiry date was entered and the credential was not marked
+  // non-expiring: that is a missing date, never "No expiry".
+  expect(
+    sql(
+      `select coalesce(c.valid_until::text,'-')||'|'||coalesce(d.no_expiry::text,'-') from public.sp_claims c join public.sp_credential_details d on d.claim_id=c.id where c.id='${claimId}'`,
+    ),
+  ).toBe("-|-");
+  await expect(page.locator("main")).toContainText("Expiry date not provided");
+  await expect(page.locator("main")).not.toContainText("No expiry");
   expect(
     sql(`select count(*) from public.sp_hayat_assessments where claim_id='${claimId}'`),
     "no check was made, so no assessment and no reference exists",
@@ -413,6 +446,8 @@ test("India: landing → confirmed account → setup → credential → review �
   await expect(view).not.toContainText("qp-6.0");
   await expect(view).not.toContainText("synthetic-mepsc-certificate");
   await expect(view).not.toContainText("Page with the qualification pack code missing");
+  await expect(view).toContainText("Expiry date not provided");
+  await expect(view).not.toContainText("No expiry");
   await recipient.screenshot({ path: testInfo.outputPath("09-recipient.png"), fullPage: true });
 
   const disclosureId = sql(

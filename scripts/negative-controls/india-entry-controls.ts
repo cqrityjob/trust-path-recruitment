@@ -5,7 +5,9 @@
  * cannot keep, the OCR engine loaded on arrival, a destination the database
  * would refuse, analytics carrying more than a name, a version that belongs to
  * another definition, an Indian qualification drawn with a globe, a wrong
- * official source, and a nationality question in the setup.
+ * official source, a nationality question in the setup, a sign-up link that
+ * drops the page language, a URL language overriding an explicit choice, and
+ * a missing expiry date printed as "No expiry" (or an explicit one dropped).
  *
  * Run: bun run negative-controls:india-entry
  */
@@ -97,6 +99,43 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "        locality,\n        nationality: data.countryCode,\n      } as never,",
     guard: GUARD,
     expect: "6.1 the setup has no nationality, immigration or right-to-work field",
+  },
+  {
+    id: "INDIA-NC-LANG-LOST-BEFORE-HYDRATION",
+    defect:
+      "the sign-up link stops carrying the page language, so a tap before hydration signs up in Swedish",
+    file: "src/routes/security-passport.india.tsx",
+    find: "  return { redirect: `${INDIA_SETUP_REDIRECT}&lang=${lang}`, lang } as const;",
+    replace: "  return { redirect: INDIA_SETUP_REDIRECT, lang } as const;",
+    guard: GUARD,
+    expect: "5.7 both signed-out links carry the page language, into sign-up and into the setup",
+  },
+  {
+    id: "INDIA-NC-URL-LANG-OVERRIDES-CHOICE",
+    defect: "a language in the URL overrides a visitor's explicit, stored choice",
+    file: "src/i18n/context.tsx",
+    find: "    if (readStoredLang()) return;\n    const intent = langIntentFrom(search);",
+    replace: "    const intent = langIntentFrom(search);",
+    guard: GUARD,
+    expect: "5.8 a carried language is adopted only when none is stored, on every navigation",
+  },
+  {
+    id: "INDIA-NC-MISSING-EXPIRY-AS-NO-EXPIRY",
+    defect: "an expiry date nobody entered is printed as 'No expiry' again",
+    file: "src/lib/security-passport/format.ts",
+    find: '  return passportT(noExpiry === true ? "claims.noExpiry" : "claims.expiryNotProvided", lang);',
+    replace: '  return passportT("claims.noExpiry", lang);',
+    guard: GUARD,
+    expect: "8.1 an absent expiry date reads as not provided, in both languages",
+  },
+  {
+    id: "INDIA-NC-EXPLICIT-NO-EXPIRY-DROPPED",
+    defect: "the recipient presentation stops carrying an explicit no_expiry",
+    file: "src/lib/security-passport/recipient-presentation.ts",
+    find: "      validUntil: c.valid_until,\n      noExpiry: c.no_expiry === true,",
+    replace: "      validUntil: c.valid_until,\n      noExpiry: false,",
+    guard: GUARD,
+    expect: "8.5 the recipient presentation carries only an explicit no_expiry",
   },
 ];
 

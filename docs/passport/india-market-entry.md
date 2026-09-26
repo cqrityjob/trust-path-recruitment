@@ -12,7 +12,7 @@ UK pilot definitions, creates an Indian market pack, or claims a legal review.
 | Surface | Route | What it does |
 |---|---|---|
 | Landing page | `/security-passport/india` | English first (Swedish kept, all copy in `src/lib/india-entry/copy.ts`). Collect → add Indian and international credentials → HAYAT helps read → choose what to share. Truthful Dubai section linking SIRA. Fictional, labelled example. Generic "share this page" (native share / copy link). No OCR loaded. |
-| Sign-up | `/signup?redirect=/passport/start?market=IN` | The existing auth flow and providers; the intent survives an immediate session, the e-mailed confirmation link and Google (safeReturnPath). |
+| Sign-up | `/signup?redirect=/passport/start?market=IN%26lang=en&lang=en` | The existing auth flow and providers; the intent survives an immediate session, the e-mailed confirmation link and Google (safeReturnPath). The page language rides the URL, so a tap before hydration still signs up in English; it is adopted only when no language was chosen on the device (an explicit Swedish choice wins), and a confirmation link opened elsewhere returns to an English setup. |
 | Setup | `/passport/start` | Creates an empty Passport on arrival. Four resumable steps derived from saved rows: name + current occupation → where you live (India preselected, editable) → optional desired destinations + relocation interest → first credential or later. |
 | Catalogue | `/passport/credentials/new?country=IN` | The four Indian definitions, version select with awarding body, HAYAT reading, private upload. |
 | Next steps | setup step 4 and `/my-career` | Dubai (and UK when chosen): recorded / usually still needed / to confirm externally. SIRA and GOV.UK sources. No score. |
@@ -87,7 +87,7 @@ version, what it is, the regulator and the source.
 5. Choose a synthetic certificate PDF → number and dates suggested and marked "Read by HAYAT";
    Verification box: cannot be verified automatically. Type the issuer as printed, choose version
    6.0 → Continue → **Save credential**.
-6. The credential page shows India, the version, "No automatic check has been made". Reload.
+6. The credential page shows India, the version, "Expiry date not provided", "No automatic check has been made". Reload.
 7. `/passport/start` → **Next steps for Dubai**: your credential under "Recorded", SIRA link, no score.
 8. **Request verification** → as a `passport_verifier`, `/passport-review` → Open request → the
    catalogue definition panel shows version, NCVET, issuer rule → **Request clarification** with a
@@ -110,6 +110,7 @@ version, what it is, the regulator and the source.
 ## 7. Known limits
 
 - The root document is `<html lang="sv">`; the India page sets `lang="en"` on its own subtree.
-- An absent expiry renders as "No expiry" product-wide (`formatExpiry`) — pre-existing, tracked
-  separately; it is not specific to India.
+- Expiry wording (product-wide, `formatExpiry`): a missing date reads "Expiry date not provided" /
+  "Slutdatum inte angivet"; only a credential recorded as non-expiring (`no_expiry`) reads "No expiry".
+  Presentation only — stored validity and trust are unchanged.
 - HAYAT has no Hindi language data; QR codes on Skill India certificates are not read.
