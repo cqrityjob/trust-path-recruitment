@@ -57,7 +57,14 @@ import { trackFunnelOnce } from "@/lib/india-entry/analytics";
  */
 
 const INDIA_SETUP_REDIRECT = "/passport/start?market=IN";
-const INDIA_SIGNUP_INTENT = { redirect: INDIA_SETUP_REDIRECT } as const;
+/** The sign-up intent, WITH the language the visitor is reading -- in the
+ *  sign-up URL and in the setup it returns to (an e-mailed confirmation link
+ *  may be opened on another device). A click before hydration runs no
+ *  handler, so the URL is what carries it; I18nProvider adopts it only when
+ *  nothing was chosen on this device, so an explicit Swedish choice wins. */
+function indiaIntent(lang: IndiaLang) {
+  return { redirect: `${INDIA_SETUP_REDIRECT}&lang=${lang}`, lang } as const;
+}
 const PAGE_PATH = "/security-passport/india";
 const CANONICAL = `https://trust-path-recruitment.lovable.app${PAGE_PATH}`;
 
@@ -157,7 +164,7 @@ function IndiaPageBody({
   ) : (
     <PrimaryLink
       to="/signup"
-      search={INDIA_SIGNUP_INTENT}
+      search={indiaIntent(lang) as never}
       onClick={onStart}
       className="w-full sm:w-auto"
     >
@@ -341,7 +348,7 @@ function IndiaPageBody({
           {!signedIn && (
             <Link
               to="/login"
-              search={{ redirect: INDIA_SETUP_REDIRECT } as never}
+              search={indiaIntent(lang) as never}
               className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline"
             >
               {t("landing.signin")}

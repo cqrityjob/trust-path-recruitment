@@ -54,6 +54,16 @@ export function readStoredLang(): Lang | null {
   }
 }
 
+/** A language carried in the URL (`?lang=en`) by a link that knows which
+ *  language its reader was reading -- the India page's sign-up link. It is
+ *  the ONLY way that intent survives a click made before the page hydrated,
+ *  when no handler has run and nothing was stored. Adopted only while the
+ *  visitor has no stored preference: an explicit choice always wins. */
+export function langIntentFrom(search: string): Lang | null {
+  const value = new URLSearchParams(search).get("lang");
+  return value === "sv" || value === "en" ? value : null;
+}
+
 export function I18nProvider({
   children,
   /** The locale to start in. Swedish by default -- the SSR default is always
@@ -69,12 +79,8 @@ export function I18nProvider({
   const [lang, setLangState] = useState<Lang>(initialLang);
 
   useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY) as Lang | null;
-      if (stored === "sv" || stored === "en") setLangState(stored);
-    } catch {
-      /* ignore */
-    }
+    const stored = readStoredLang();
+    if (stored) setLangState(stored);
   }, []);
 
   useEffect(() => {
@@ -108,6 +114,20 @@ export function I18nProvider({
 
   const value = useMemo(() => ({ lang, setLang, t, tp }), [lang, setLang, t, tp]);
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
+}
+
+/** Adopt a language carried in the URL, on arrival AND on every navigation
+ *  after it -- an e-mailed confirmation link lands on /login first and only
+ *  then moves to the page that carries the language. Only while nothing is
+ *  stored: an explicit choice always wins. Adopting stores it, so the rest of
+ *  the visit (sign-up, confirmation, setup) stays in that language. */
+export function useAdoptLangIntent(search: string) {
+  const { setLang } = useT();
+  useEffect(() => {
+    if (readStoredLang()) return;
+    const intent = langIntentFrom(search);
+    if (intent) setLang(intent);
+  }, [search, setLang]);
 }
 
 export function useT() {
