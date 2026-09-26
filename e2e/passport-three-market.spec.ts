@@ -216,6 +216,10 @@ interface Scenario {
   readonly markets?: MarketRow[];
   readonly marketsFail?: boolean;
   readonly claims?: ReturnType<typeof claim>[];
+  /** sp_credential_details rows and extra catalogue definitions, shaped as
+   *  getInternationalPassportMetadata returns them. */
+  readonly details?: readonly Record<string, unknown>[];
+  readonly definitions?: readonly Record<string, unknown>[];
   readonly work?: { jurisdictionCode: string; subJurisdictionCode: string | null };
   /** The admin pilot-access rows, kept as mutable state so a grant or a
    *  revoke changes what the next read returns. */
@@ -473,8 +477,9 @@ async function mount(
               requires_valid_until: true,
               allows_no_expiry: false,
             },
+            ...(scenario.definitions ?? []),
           ],
-          details: [],
+          details: scenario.details ?? [],
           verificationEvents: [],
           jurisdictions: ["SE", "GB", "AE"].map((code) => ({
             code,
@@ -1450,6 +1455,145 @@ test.describe("three markets — the real routes", () => {
       expect(unmatched).toEqual([]);
       expect(pageErrors).toEqual([]);
       await shoot(page, `${lang}-overview-three-markets`, info.project.name);
+    });
+  }
+
+  // ── PRODUCTION DEFECT 2026-09-26 ─────────────────────────────────────
+  // An Indian qualification saved with class vocational_qualification
+  // (20261214090000) took the whole Passport down: the wallet looked the class
+  // up in a TS mirror that lacked it and read `.en` of undefined, so /passport
+  // showed "This page didn't load" -- and again after a reload. Shaped exactly
+  // as the database returns it: all four definitions, no dates, no reference,
+  // one stated version and three without, next to SE, GB and international
+  // credentials the holder already had.
+  const INDIA = [
+    ["IN_MEPSC_Q7101", "Security Guard (MEP/Q7101)", "qp-6.0"],
+    ["IN_MEPSC_Q7201", "Security Supervisor (MEP/Q7201)", null],
+    ["IN_MEPSC_Q7104", "CCTV Supervisor (MEP/Q7104)", null],
+    ["IN_MEPSC_Q7204", "CCTV Video Footage Auditor (MEP/Q7204)", null],
+  ] as const;
+  const INDIA_CLAIMS = [
+    claim({
+      id: "c-se-ov",
+      credentialCode: "OV",
+      titleSv: "Ordningsvaktsförordnande",
+      titleEn: "Public Order Guard Appointment",
+    }),
+    claim({
+      id: "c-gb-sg",
+      credentialCode: "UK_SIA_LICENCE_SG",
+      titleSv: "SIA Licence — Security Guarding",
+      titleEn: "SIA Licence — Security Guarding",
+      jurisdictionCode: "GB",
+      validUntil: "2029-05-01",
+    }),
+    claim({
+      id: "c-intl-app",
+      claimType: "certification",
+      credentialCode: "INTL_ASIS_APP",
+      titleSv: "ASIS Associate Protection Professional (APP)",
+      titleEn: "ASIS Associate Protection Professional (APP)",
+      issuerName: "ASIS International",
+      jurisdictionCode: null,
+      validUntil: "2029-01-01",
+    }),
+    ...INDIA.map(([code, title], i) =>
+      claim({
+        id: `c-in-${i}`,
+        claimType: "certification",
+        credentialCode: code,
+        titleSv: title,
+        titleEn: title,
+        // The holder states the issuer as printed -- or, here, not at all.
+        issuerName: i === 0 ? "Management & Entrepreneurship and Professional Skills Council" : "—",
+        jurisdictionCode: "IN",
+        issuedOn: null,
+        validFrom: null,
+        validUntil: null,
+      }),
+    ),
+  ];
+  const INDIA_DETAILS = [
+    ...INDIA.map(([, , version], i) => ({
+      claim_id: `c-in-${i}`,
+      credential_class: "vocational_qualification",
+      original_language: "en",
+      issuing_country_code: "IN",
+      issuing_jurisdiction_code: "IN",
+      validity_jurisdiction_code: "IN",
+      no_expiry: null,
+      definition_version: version,
+    })),
+    {
+      claim_id: "c-intl-app",
+      credential_class: "certification",
+      original_language: "en",
+      issuing_country_code: null,
+      issuing_jurisdiction_code: null,
+      validity_jurisdiction_code: null,
+      no_expiry: null,
+      definition_version: null,
+    },
+  ];
+  const INDIA_DEFINITIONS = INDIA.map(([code, title]) => ({
+    code,
+    name_sv: title,
+    name_en: title,
+    credential_class: "vocational_qualification",
+    scope_code: "national_qualification",
+    country: "IN",
+    region: null,
+    issuer_id: null,
+    issuer_name: null,
+    requires_valid_until: false,
+    allows_no_expiry: false,
+  }));
+  for (const lang of ["en", "sv"] as const) {
+    test(`${lang} · REGRESSION: all four Indian qualifications render on the Passport beside SE, GB and international, and after a reload`, async ({
+      page,
+    }) => {
+      await mount(
+        page,
+        {
+          claims: INDIA_CLAIMS,
+          details: INDIA_DETAILS,
+          definitions: INDIA_DEFINITIONS,
+          markets: markets({ work: "SE", pilot: [] }),
+        },
+        lang,
+        "/passport",
+      );
+      for (const pass of ["first load", "after reload"]) {
+        await expect(page.locator("[data-passport-workspace]"), pass).toBeVisible({
+          timeout: 30_000,
+        });
+        await expect(page.getByText("This page didn't load")).toHaveCount(0);
+        const wallet = page.locator("[data-credential-wallet]");
+        await expect(wallet.locator("[data-credential-row]"), pass).toHaveCount(7);
+        for (const id of ["c-se-ov", "c-gb-sg", "c-intl-app"])
+          await expect(wallet.locator(`a[href="/passport/entry/claim/${id}"]`)).toBeVisible();
+        for (const [i, [, title]] of INDIA.entries()) {
+          const row = wallet.locator("[data-credential-row]", {
+            has: page.locator(`a[href="/passport/entry/claim/c-in-${i}"]`),
+          });
+          await expect(row, `${title} (${pass})`).toBeVisible();
+          await expect(row).toContainText(title);
+          await expect(row).toContainText(
+            lang === "sv" ? "Yrkeskvalifikation" : "Vocational qualification",
+          );
+          await expect(row.locator("[data-shield-mark]")).toBeVisible();
+          await expect(row.locator("[data-credential-scope]")).toHaveAttribute(
+            "data-credential-scope",
+            "IN",
+          );
+          await expect(row).toContainText(
+            lang === "sv" ? "Slutdatum inte angivet" : "Expiry date not provided",
+          );
+        }
+        expect(unmatched).toEqual([]);
+        expect(pageErrors).toEqual([]);
+        if (pass === "first load") await page.reload({ waitUntil: "domcontentloaded" });
+      }
     });
   }
 

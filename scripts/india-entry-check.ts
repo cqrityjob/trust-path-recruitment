@@ -23,7 +23,7 @@
  *
  * Run: bun run india-entry:check
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { indiaCopy, INDIA_ENTRY_SOURCES } from "../src/lib/india-entry/copy";
 import { DESTINATIONS, RELOCATION_INTEREST } from "../src/lib/india-entry/destinations";
@@ -37,6 +37,10 @@ import { langIntentFrom } from "../src/i18n/context";
 import { formatExpiry } from "../src/lib/security-passport/format";
 import { buildRecipientPresentation } from "../src/lib/security-passport/recipient-presentation";
 import type { RecipientPayloadActive } from "../src/lib/security-passport/packages";
+import {
+  CREDENTIAL_CLASSES,
+  credentialClassLabel,
+} from "../src/lib/security-passport/international";
 
 const ROOT = join(import.meta.dir, "..");
 const read = (rel: string) => readFileSync(join(ROOT, rel), "utf8");
@@ -545,6 +549,51 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
         read("src/lib/security-passport/passport.functions.ts"),
       ),
     "8.9 the holder's Passport reads the explicit state, and a failed read is not 'none'",
+  );
+}
+
+// ── 9. The credential-class vocabulary: every class the database has ─────
+// PRODUCTION 2026-09-26: 20261214090000 added vocational_qualification, the
+// TS mirror did not, and the wallet read `.en` of undefined -- /passport
+// showed "This page didn't load" for every holder of an Indian qualification.
+{
+  const dbClasses = new Set<string>();
+  for (const f of readdirSync(join(ROOT, "supabase/migrations")).filter((n) =>
+    n.endsWith(".sql"),
+  )) {
+    const text = read(`supabase/migrations/${f}`);
+    for (const m of text.matchAll(/INSERT INTO public\.sp_credential_classes\b[^;]*;/g))
+      for (const v of m[0].matchAll(/\(\s*'([a-z_]+)'\s*,\s*'[^']+'\s*,\s*'[^']+'\s*\)/g))
+        dbClasses.add(v[1]);
+  }
+  ok(
+    dbClasses.has("vocational_qualification") && dbClasses.size >= 8,
+    "9.1 the migrations' classes were read",
+  );
+  const missing = [...dbClasses].filter((c) => !(c in CREDENTIAL_CLASSES));
+  ok(
+    missing.length === 0,
+    `9.2 every database credential class has a label (missing: ${missing.join(", ") || "none"})`,
+  );
+  ok(
+    Object.values(CREDENTIAL_CLASSES).every((c) => c.sv.trim() && c.en.trim()),
+    "9.3 in both languages",
+  );
+  ok(
+    credentialClassLabel("vocational_qualification", "en") === "Vocational qualification" &&
+      credentialClassLabel("vocational_qualification", "sv") === "Yrkeskvalifikation",
+    "9.4 an Indian qualification's class reads as the database names it",
+  );
+  ok(
+    credentialClassLabel("a_class_from_a_future_migration", "en") ===
+      CREDENTIAL_CLASSES.other_professional_credential.en,
+    "9.5 a class this build does not know still renders, as the generic class",
+  );
+  const wallet = read("src/components/security-passport/CredentialWallet.tsx");
+  ok(
+    !/CREDENTIAL_CLASSES\[/.test(wallet) &&
+      /credentialClassLabel\(credentialClass\(c, r\.detail\), lang\)/.test(wallet),
+    "9.6 the wallet never indexes the class table directly",
   );
 }
 

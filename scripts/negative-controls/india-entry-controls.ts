@@ -137,6 +137,25 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "8.5 the recipient presentation carries only an explicit no_expiry",
   },
+  {
+    id: "INDIA-NC-CLASS-MIRROR-DRIFT",
+    defect:
+      "the TS class table loses vocational_qualification again -- the 2026-09-26 production crash on /passport",
+    file: "src/lib/security-passport/international.ts",
+    find: '  vocational_qualification: { sv: "Yrkeskvalifikation", en: "Vocational qualification" },\n',
+    replace: "",
+    guard: GUARD,
+    expect: "9.2 every database credential class has a label (missing: vocational_qualification)",
+  },
+  {
+    id: "INDIA-NC-WALLET-INDEXES-CLASS-TABLE",
+    defect: "the wallet indexes the class table directly, so an unknown class blanks the Passport",
+    file: "src/components/security-passport/CredentialWallet.tsx",
+    find: "{credentialClassLabel(credentialClass(c, r.detail), lang)}",
+    replace: "{CREDENTIAL_CLASSES[credentialClass(c, r.detail)][lang]}",
+    guard: GUARD,
+    expect: "9.6 the wallet never indexes the class table directly",
+  },
 ];
 
 runControls("india-entry", MUTATIONS);
