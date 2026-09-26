@@ -99,7 +99,7 @@
     "e2e:sharing": "playwright test e2e/passport-sharing.spec.ts --project=chromium --project=mobile-375",
     "e2e:homepage": "playwright test e2e/public-homepage.spec.ts --project=chromium",
     "e2e:employers": "playwright test e2e/employer-landing.spec.ts --project=chromium",
-    "e2e:public-entry": "playwright test e2e/public-homepage.spec.ts e2e/employer-landing.spec.ts e2e/landing-entry-experience.spec.ts e2e/client-hydration.spec.ts --project=chromium",
+    "e2e:public-entry": "playwright test e2e/public-homepage.spec.ts e2e/employer-landing.spec.ts e2e/landing-entry-experience.spec.ts e2e/client-hydration.spec.ts e2e/india-landing.spec.ts --project=chromium",
     "e2e:landing-panel": "playwright test e2e/landing-entry-experience.spec.ts --project=chromium",
     "e2e:career-center": "playwright test e2e/career-center-pilot.spec.ts --project=chromium --project=mobile-375",
     "e2e:responsive": "playwright test e2e/passport-responsive-a11y.spec.ts --project=chromium --project=mobile-375 --project=mobile-390",
