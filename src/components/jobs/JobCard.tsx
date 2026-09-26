@@ -91,9 +91,7 @@ export function JobCard({
             <span>{employmentTypeLabel(job.employment_type, lang)}</span>
           </span>
         )}
-        {job.workplace_type && (
-          <span>{workplaceTypeLabel(job.workplace_type, lang)}</span>
-        )}
+        {job.workplace_type && <span>{workplaceTypeLabel(job.workplace_type, lang)}</span>}
       </div>
 
       {(area || deadline) && (
