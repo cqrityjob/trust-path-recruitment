@@ -1,3 +1,5 @@
+import { getDefinitionFacts } from "@/lib/security-passport/international.functions";
+import { ReviewDefinitionFacts } from "@/components/security-passport/live/ReviewDefinitionFacts";
 // Security Passport -- the review workspace, reachable WITHOUT being an admin.
 //
 // This route exists because of a least-privilege defect, not because the
@@ -175,6 +177,11 @@ export function PassportReviewWorkspace() {
   const loadQueue = useServerFn(listVerifierQueue);
   const loadDetail = useServerFn(getVerifierRequestDetail);
   const decide = useServerFn(decideVerification);
+  const definitionFacts = useServerFn(getDefinitionFacts);
+  const loadDefinitionFacts = useCallback(
+    (code: string) => definitionFacts({ data: { code } }),
+    [definitionFacts],
+  );
   const viewEvidence = useServerFn(getEvidenceViewUrl);
 
   const [isVerifier, setIsVerifier] = useState<boolean | null>(null);
@@ -525,11 +532,20 @@ export function PassportReviewWorkspace() {
                   ) : null}
 
                   {detail?.claim ? (
-                    <ReviewClaimFacts
-                      holderName={detail.holderName}
-                      claim={detail.claim}
-                      headingId={`sp-claim-${item.id}`}
-                    />
+                    <>
+                      <ReviewClaimFacts
+                        holderName={detail.holderName}
+                        claim={detail.claim}
+                        headingId={`sp-claim-${item.id}`}
+                      />
+                      {detail.claim.credentialCode ? (
+                        <ReviewDefinitionFacts
+                          code={detail.claim.credentialCode}
+                          statedVersion={detail.claim.definitionVersion}
+                          onLoad={loadDefinitionFacts}
+                        />
+                      ) : null}
+                    </>
                   ) : null}
                   {detail?.period ? (
                     <ReviewPeriodFacts

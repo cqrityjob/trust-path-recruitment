@@ -657,6 +657,7 @@ const sv = {
   "claims.issuedOn": "Utfärdat",
   "claims.validUntil": "Giltigt till",
   "claims.noExpiry": "Ingen giltighetstid",
+  "claims.expiryNotProvided": "Slutdatum inte angivet",
   "claims.limitation": "Begränsning",
   "claims.version": "Version",
   "claims.history": "Historik",
@@ -819,6 +820,10 @@ const sv = {
   "jurisdiction.option.AE-DU": "Dubai, Förenade Arabemiraten",
   "jurisdiction.AE-AZ": "Abu Dhabi",
   "jurisdiction.GB-NI": "Nordirland",
+  "jurisdiction.IN": "Indien",
+  "jurisdiction.option.IN": "Indien",
+  "workCountry.support.IN":
+    "Indiska nationella yrkeskvalifikationer (NSQF) som Passport stöder kan registreras här. De är utbildningsbevis, inte licenser eller arbetstillstånd.",
   "scope.global": "Global",
   "scope.GB": "Storbritannien",
   "scope.notStated": "Område ej angivet",
@@ -2384,6 +2389,15 @@ const sv = {
   "hayat.saved.rechecking": "Kontrollerar …",
   "hayat.saved.notStatus":
     "Den här kontrollen ändrar inte meritens status i Passport och visas inte i delningar.",
+  "hayat.saved.details": "Om kontrollen",
+  "hayat.saved.reference": "HAYAT-kontrollreferens",
+  "hayat.saved.method": "Metod",
+  "hayat.saved.method.signed_credential":
+    "Signerat intyg i dokumentet, kontrollerat mot utfärdarens nyckel",
+  "hayat.saved.method.hosted_open_badge":
+    "Utfärdarens publicerade märke, hämtat från länken du angav",
+  "hayat.saved.referenceNote":
+    "Referensen pekar ut den här enda kontrollen, för din egen del och för support. Den är inget verifieringsnummer, säger inget om dig och kan inte slås upp av någon annan.",
 } as const;
 
 export type PassportCopyKey = keyof typeof sv;
@@ -2938,6 +2952,7 @@ const en: Record<PassportCopyKey, string> = {
   "claims.issuedOn": "Issued",
   "claims.validUntil": "Valid until",
   "claims.noExpiry": "No expiry",
+  "claims.expiryNotProvided": "Expiry date not provided",
   "claims.limitation": "Limitation",
   "claims.version": "Version",
   "claims.history": "History",
@@ -3059,6 +3074,10 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.option.AE-DU": "Dubai, United Arab Emirates",
   "jurisdiction.AE-AZ": "Abu Dhabi",
   "jurisdiction.GB-NI": "Northern Ireland",
+  "jurisdiction.IN": "India",
+  "jurisdiction.option.IN": "India",
+  "workCountry.support.IN":
+    "Indian national qualifications (NSQF) supported by the Passport can be recorded here. They are qualifications, not licences or permission to work.",
   "scope.global": "Global",
   "scope.GB": "Great Britain",
   "scope.notStated": "Area not stated",
@@ -4438,6 +4457,15 @@ const en: Record<PassportCopyKey, string> = {
   "hayat.saved.rechecking": "Checking …",
   "hayat.saved.notStatus":
     "This check does not change the credential's status in Passport and is not shown in shares.",
+  "hayat.saved.details": "About this check",
+  "hayat.saved.reference": "HAYAT check reference",
+  "hayat.saved.method": "Method",
+  "hayat.saved.method.signed_credential":
+    "Signed credential inside the document, checked against the issuer's key",
+  "hayat.saved.method.hosted_open_badge":
+    "The issuer's published badge, fetched from the link you gave",
+  "hayat.saved.referenceNote":
+    "The reference identifies this one check, for your own records and for support. It is not a verification number, says nothing about you, and nobody else can look it up.",
 };
 
 export const passportCopy: Readonly<Record<PassportLang, Record<PassportCopyKey, string>>> = {

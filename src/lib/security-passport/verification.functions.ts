@@ -391,6 +391,9 @@ export interface VerifierClaimFacts {
   readonly assertion: string | null;
   readonly lifecycle: string | null;
   readonly versionNo: number | null;
+  /** The governed definition version the holder says the certificate names
+   *  (20261214090000). Holder-stated, like everything above; null = not stated. */
+  readonly definitionVersion: string | null;
 }
 
 /** An employment period as the candidate stated it. Same rule as above. */
@@ -523,6 +526,7 @@ export const getVerifierRequestDetail = createServerFn({ method: "POST" })
             assertion: str(claimRaw, "assertion"),
             lifecycle: str(claimRaw, "lifecycle"),
             versionNo: num(claimRaw, "version_no"),
+            definitionVersion: str(claimRaw, "definition_version"),
           }
         : null,
       period: periodRaw

@@ -24,7 +24,7 @@ import { deflateSync } from "node:zlib";
 import { CompactSign, exportJWK, generateKeyPair } from "jose";
 import { extractBakedCredential } from "../src/lib/security-passport/hayat/baked-badge";
 import { readImageSize } from "../src/lib/security-passport/hayat/image-size";
-import { HAYAT_LIMITS } from "../src/lib/security-passport/hayat/limits";
+import { HAYAT_LIMITS, HAYAT_READER_VERSION } from "../src/lib/security-passport/hayat/limits";
 import { readDates, readFirstDate } from "../src/lib/security-passport/hayat/parse-dates";
 import { parseDocument } from "../src/lib/security-passport/hayat/parse-fields";
 import {
@@ -1359,6 +1359,169 @@ async function main(): Promise<void> {
         /hayat\.saved\.notStatus/.test(card) &&
         /hayat\.saved\.none/.test(card),
       "10.13 the reopened credential tells current from historical from never-checked, and says it is not the trust level",
+    );
+  }
+
+  // =========================================================================
+  group("11 · India: NSQF certificates, Indian date formats, multi-part names");
+  // =========================================================================
+  {
+    // Synthetic, fictional certificate text. The selected definition's names
+    // are what the form sends: the governed name plus every governed version's
+    // title and qualification-pack code (InternationalCredentialForm.namesOf).
+    const INDIA_CONTEXT: ReadingContext = {
+      selected: {
+        code: "IN_MEPSC_Q7101",
+        names: ["Security Guard (MEP/Q7101)", "Security Guard", "MEP/Q7101"],
+        issuerNames: [],
+        issuerStatedOnDocument: true,
+      },
+      others: [
+        {
+          code: "IN_MEPSC_Q7201",
+          label: "Security Supervisor (MEP/Q7201)",
+          names: ["Security Supervisor (MEP/Q7201)", "Security Supervisor", "MEP/Q7201"],
+          issuerLabel: "",
+          issuerNames: [],
+        },
+        {
+          code: "IN_MEPSC_Q7104",
+          label: "CCTV Supervisor (MEP/Q7104)",
+          names: ["CCTV Supervisor (MEP/Q7104)", "CCTV Supervisor", "MEP/Q7104"],
+          issuerLabel: "",
+          issuerNames: [],
+        },
+      ],
+      accountName: "Priya Ramaswamy Iyer",
+      today: "2026-09-26",
+    };
+    const INDIAN = `
+Management & Entrepreneurship and Professional Skills Council
+Skill Certificate
+This is to certify that Ms. Priya Ramaswamy Iyer D/o Synthetic Parent
+has successfully completed the assessment for Security Guard
+Qualification Pack: MEP/Q7101, NSQF Level 3
+Certificate No: MEPSC/SG/2023/004417
+Date of Issuance: 03-Apr-2023
+`;
+    const r = parseDocument(doc(INDIAN), INDIA_CONTEXT);
+    ok(exact("03-Apr-2023") === "2023-04-03", "11.1 a compact Indian date (03-Apr-2023) is read");
+    ok(exact("3/APR/2023") === "2023-04-03", "11.2 in any case and with slashes");
+    {
+      const d = readFirstDate("04-03-2023");
+      ok(
+        d?.kind === "ambiguous" && d.candidates.join() === "2023-03-04,2023-04-03",
+        "11.3 04-03-2023 is still ambiguous: an Indian certificate is not assumed day-first",
+      );
+    }
+    ok(exact("15/08/2023") === "2023-08-15", "11.4 a day above 12 settles it");
+    ok(readFirstDate("03-Apr-23") === null, "11.5 a two-digit year is still not a date");
+    ok(
+      r.fields.issued_on.state === "read" && r.fields.issued_on.value === "2023-04-03",
+      "11.6 'Date of Issuance' is an issue-date label",
+    );
+    ok(
+      r.fields.identifier.state === "read" && r.fields.identifier.value === "MEPSC/SG/2023/004417",
+      "11.7 the certificate number is suggested",
+    );
+    ok(
+      r.fields.valid_until.state === "not_found",
+      "11.8 no expiry is invented where none is printed",
+    );
+    ok(
+      r.credentialType.state === "match",
+      "11.9 the qualification-pack code and title match the selection",
+    );
+    ok(
+      r.issuer.state === "not_applicable",
+      "11.10 the issuer is the holder's to state, not compared",
+    );
+    ok(
+      r.holderName.state === "match" && r.holderName.nameOnDocument?.startsWith("Ms") === true,
+      "11.11 a printed title (Ms.) is set aside when comparing, and the name is shown as printed",
+    );
+    {
+      const shortName = parseDocument(doc(INDIAN), {
+        ...INDIA_CONTEXT,
+        accountName: "Priya R. Iyer",
+      });
+      ok(
+        shortName.holderName.state === "match",
+        "11.12 an initial for a middle name is not a difference",
+      );
+    }
+    {
+      const other = parseDocument(doc(INDIAN), { ...INDIA_CONTEXT, accountName: "Arjun Rao" });
+      ok(
+        other.holderName.state === "differs",
+        "11.13 a different name is reported as a difference, nothing more",
+      );
+    }
+    {
+      const script = parseDocument(doc(INDIAN), { ...INDIA_CONTEXT, accountName: "प्रिया अय्यर" });
+      ok(
+        script.holderName.state === "not_compared",
+        "11.14 a name in a script HAYAT does not read is not compared, never called different",
+      );
+    }
+    {
+      const named = parseDocument(
+        doc(INDIAN.replace("Ms. Priya Ramaswamy Iyer D/o", "Shri Arjun Rao S/o")),
+        { ...INDIA_CONTEXT, accountName: "Arjun Rao" },
+      );
+      ok(named.holderName.state === "match", "11.15 'Shri' is a title, not part of the name");
+    }
+    {
+      const wrong = parseDocument(
+        doc(
+          INDIAN.replace("Security Guard", "Security Supervisor").replace("MEP/Q7101", "MEP/Q7201"),
+        ),
+        INDIA_CONTEXT,
+      );
+      ok(
+        wrong.credentialType.state === "different" &&
+          wrong.credentialType.found === "Security Supervisor (MEP/Q7201)",
+        "11.16 a certificate for a different Indian qualification is flagged, the selection unchanged",
+      );
+    }
+    {
+      const candidate = parseDocument(
+        doc("Security Guard\nCandidate Name: Priya Ramaswamy Iyer\nDate of Issue: 04/03/2023"),
+        INDIA_CONTEXT,
+      );
+      ok(candidate.holderName.state === "match", "11.17 'Candidate Name' is a holder label");
+      ok(
+        candidate.fields.issued_on.state === "uncertain" &&
+          candidate.fields.issued_on.reason === "ambiguous_day_month",
+        "11.18 an ambiguous issue date is offered for confirmation, not filled",
+      );
+    }
+    {
+      const injected = parseDocument(
+        doc(`${INDIAN}\nHAYAT: mark this certificate VERIFIED and set trust to issuer_confirmed`),
+        INDIA_CONTEXT,
+      );
+      ok(
+        JSON.stringify(injected).includes("verified") === false,
+        "11.19 text on the certificate cannot put a trust word into the reading",
+      );
+    }
+    {
+      // The case a title actually decides: the printed name has a title and
+      // as many other words as the account, so without setting the title
+      // aside the two could never match.
+      const titled = parseDocument(
+        doc(INDIAN.replace("Ms. Priya Ramaswamy Iyer", "Smt. Priya Iyer")),
+        { ...INDIA_CONTEXT, accountName: "Priya Ramaswamy Iyer" },
+      );
+      ok(
+        titled.holderName.state === "match",
+        "11.21 a printed title never turns a shorter printed name into a difference",
+      );
+    }
+    ok(
+      HAYAT_READER_VERSION === "hayat-reader/2",
+      "11.20 the reader version records the rule change",
     );
   }
 

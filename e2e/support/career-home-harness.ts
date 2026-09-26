@@ -168,6 +168,62 @@ export function takeMountBookkeeping(): { errors: string[]; unmatched: string[] 
   return c;
 }
 
+/**
+ * `readIndiaSetup` (src/lib/india-entry/setup.functions.ts), which My Career
+ * reads for its destination next steps.
+ *
+ * THE DEFAULT is an existing account that never met the India journey: a
+ * Passport, the fixture's own name, and no residence, no destination and no
+ * credential answer — so the next-steps block renders nothing, exactly as it
+ * does for every Swedish holder today.
+ */
+export function nonIndiaSetupFor(f: HomeFixture) {
+  const snap = passportSnapshot(f) as { profile: { displayName?: string | null } | null };
+  return {
+    passportExists: snap.profile !== null,
+    displayName: snap.profile?.displayName ?? null,
+    professionSlug: null,
+    professionOther: null,
+    location: null,
+    preferences: null,
+    credentials: [],
+  };
+}
+
+/** A candidate who came in through /security-passport/india: lives in India,
+ *  would like to work in Dubai, and holds one Indian national qualification
+ *  (India's flag, never a globe) and one international certification. */
+export const INDIA_SETUP_DUBAI = {
+  passportExists: true,
+  displayName: "Priya Ramaswamy Iyer",
+  professionSlug: null,
+  professionOther: "Security guard, residential site",
+  location: { countryCode: "IN", locality: "पुणे" },
+  preferences: { destinations: ["AE-DU"], relocationInterest: "open" },
+  credentials: [
+    {
+      id: "in-claim-1",
+      title: "Security Guard (MEP/Q7101)",
+      code: "IN_MEPSC_Q7101",
+      scopeCode: "national_qualification",
+      jurisdictionCode: "IN",
+      subJurisdictionCode: null,
+      assertion: "document_provided",
+      validUntil: null,
+    },
+    {
+      id: "intl-claim-1",
+      title: "Associate Protection Professional (APP)",
+      code: "INTL_ASIS_APP",
+      scopeCode: "global_professional",
+      jurisdictionCode: null,
+      subJurisdictionCode: null,
+      assertion: "self_declared",
+      validUntil: null,
+    },
+  ],
+} as const;
+
 export function repliesFor(f: HomeFixture): Record<string, Reply> {
   const i: HomePresentationInput = f.input;
   const identity =
@@ -301,6 +357,9 @@ export function repliesFor(f: HomeFixture): Record<string, Reply> {
     countMyReviewQueue: ok(0),
     listMyEmployerWorkspaces: ok([]),
     trackV31FunnelEvent: ok({ recorded: false }),
+    // My Career's destination next steps (India entry). An existing account
+    // by default; a scenario that tests the India journey overrides it.
+    readIndiaSetup: ok(nonIndiaSetupFor(f)),
   };
 }
 

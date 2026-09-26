@@ -229,6 +229,11 @@ export interface RecipientClaim {
   readonly authorisation_scope?: string | null;
   readonly issued_on: string | null;
   readonly valid_until: string | null;
+  /** True only when the holder recorded the credential as non-expiring
+   *  (`sp_credential_details.no_expiry`). A null `valid_until` without it
+   *  means the date was not provided -- never "no expiry". Absent from
+   *  payloads that do not emit it, which read exactly as not explicit. */
+  readonly no_expiry?: boolean | null;
   readonly assertion: string;
   readonly lifecycle: string;
   readonly verified_at: string | null;

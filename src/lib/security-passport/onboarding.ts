@@ -195,6 +195,10 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
           // authored and awaiting review.
           { value: "AE-AZ", labelKey: "jurisdiction.option.AE-AZ" },
           { value: "AE", labelKey: "jurisdiction.option.AE" },
+          // India: where somebody works is a fact about them, and India is now
+          // a country in `sp_jurisdictions`. Choosing it opens no market — India
+          // has no market pack — and records nothing about a credential.
+          { value: "IN", labelKey: "jurisdiction.option.IN" },
         ],
       },
     ],

@@ -18,6 +18,7 @@ const SIGNED = "src/lib/security-passport/hayat/verification/signed-credential.t
 const FETCH = "src/lib/security-passport/hayat/verification/safe-fetch.ts";
 const BOUNDARY = "src/lib/security-passport/hayat/hayat.functions.ts";
 const WRITER = "src/lib/security-passport/hayat/hayat-assessment.server.ts";
+const FIELDS = "src/lib/security-passport/hayat/parse-fields.ts";
 const GUARD = "passport-hayat:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -112,6 +113,37 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "      holderUserId: data.claimId,",
     guard: GUARD,
     expect: "10.5 the holder passed to the writer",
+  },
+  // ── India (20261214090000) ─────────────────────────────────────────────
+  {
+    id: "HAYAT-NC-INDIA-AMBIGUOUS-GUESSED-DAY-FIRST",
+    defect:
+      "an Indian dashed date is resolved day-first because 'Indian certificates are day-first' -- a guess",
+    file: DATES,
+    find: '  if (separator === ".") return dayFirst ? { kind: "exact", iso: dayFirst, index } : null;',
+    replace:
+      '  if (separator === "." || separator === "-") return dayFirst ? { kind: "exact", iso: dayFirst, index } : null;',
+    guard: GUARD,
+    expect: "11.3 04-03-2023 is still ambiguous",
+  },
+  {
+    id: "HAYAT-NC-INDIA-TITLE-READ-AS-NAME",
+    defect:
+      "a printed title (Ms., Shri) counts as part of the name and a true match reads as a difference",
+    file: FIELDS,
+    find: "        .filter((t) => t.length > 1 && !HONORIFICS.has(t)),",
+    replace: "        .filter((t) => t.length > 1),",
+    guard: GUARD,
+    expect: "11.21 a printed title never turns a shorter printed name into a difference",
+  },
+  {
+    id: "HAYAT-NC-INDIA-COMPACT-DATE-DROPPED",
+    defect: "03-Apr-2023 is not read, so every Indian issue date must be typed by hand",
+    file: DATES,
+    find: "  if (compact && MONTHS[compact[3]]) {",
+    replace: "  if (compact && MONTHS[compact[3]] && false) {",
+    guard: GUARD,
+    expect: "11.1 a compact Indian date",
   },
 ];
 

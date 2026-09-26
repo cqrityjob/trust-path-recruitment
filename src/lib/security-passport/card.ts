@@ -87,6 +87,8 @@ export interface CardCredential {
   /** True when the stored state was overtaken by the calendar. */
   readonly lapsed: boolean;
   readonly validUntil: IsoDate | null;
+  /** Recorded as non-expiring; see formatExpiry. */
+  readonly noExpiry?: boolean;
 }
 
 export interface PassportCardModel {
@@ -204,6 +206,7 @@ function toCardCredential(claim: Claim, evaluationOn: IsoDate): CardCredential {
     lifecycleState: validity.effectiveState,
     lapsed: validity.hasExpired,
     validUntil: claim.validUntil,
+    noExpiry: claim.noExpiry === true,
   };
 }
 

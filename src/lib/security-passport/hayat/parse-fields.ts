@@ -44,7 +44,7 @@ const LABELS: readonly { kind: LabelKind; pattern: RegExp }[] = [
   {
     kind: "issued_on",
     pattern:
-      /\b(?:date\s+of\s+issue|issue\s+date|date\s+issued|issued\s+on|issued(?!\s+(?:by|to)\b)|date\s+awarded|awarded\s+on|certified\s+on|certification\s+date|date\s+of\s+certification|utf[aä]rdandedatum|datum\s+f[oö]r\s+utf[aä]rdande|utf[aä]rda[dt]\s+den|utf[aä]rda[dt](?!\s+(?:av|till|f[oö]r)\b)|utst[aä]ll[dt](?:\s+den)?)(?![a-zåäö])/i,
+      /\b(?:date\s+of\s+issue|issue\s+date|date\s+issued|issued\s+on|issued(?!\s+(?:by|to)\b)|date\s+of\s+issuance|issuance\s+date|date\s+awarded|awarded\s+on|certified\s+on|certification\s+date|date\s+of\s+certification|utf[aä]rdandedatum|datum\s+f[oö]r\s+utf[aä]rdande|utf[aä]rda[dt]\s+den|utf[aä]rda[dt](?!\s+(?:av|till|f[oö]r)\b)|utst[aä]ll[dt](?:\s+den)?)(?![a-zåäö])/i,
   },
   {
     kind: "identifier",
@@ -54,7 +54,7 @@ const LABELS: readonly { kind: LabelKind; pattern: RegExp }[] = [
   {
     kind: "holder",
     pattern:
-      /\b(?:awarded\s+to|presented\s+to|this\s+is\s+to\s+certify\s+that|this\s+certifies\s+that|certifies\s+that|name\s+of\s+holder|full\s+name\s*:|holder\s*:|name\s*:|innehavare\s*:?|namn\s*:|tilldelas|h[aä]rmed\s+intygas\s+att|intygas\s+att)/i,
+      /\b(?:awarded\s+to|presented\s+to|this\s+is\s+to\s+certify\s+that|this\s+certifies\s+that|certifies\s+that|name\s+of\s+holder|name\s+of\s+(?:the\s+)?candidate|candidate(?:'s|\u2019s)?\s+name|full\s+name\s*:|holder\s*:|name\s*:|innehavare\s*:?|namn\s*:|tilldelas|h[aä]rmed\s+intygas\s+att|intygas\s+att)/i,
   },
 ];
 
@@ -265,13 +265,33 @@ function compare(
   return foreign ? { state: "different", found: foreign.label } : { state: "not_found" };
 }
 
+/** Titles printed before a name ("Mr.", "Shri", "Smt."). A title is not part
+ *  of a name, so it is set aside on BOTH sides before comparing — otherwise a
+ *  certificate that says "Shri Arjun Rao" would read as a different name from
+ *  an account called "Arjun Rao". The name as printed is still shown as is. */
+const HONORIFICS = new Set([
+  "mr",
+  "mrs",
+  "ms",
+  "miss",
+  "mx",
+  "dr",
+  "shri",
+  "shree",
+  "sri",
+  "smt",
+  "kumari",
+  "kum",
+  "km",
+]);
+
 function compareHolder(found: string | null, accountName: string | null): HolderNameComparison {
   if (!found) return { state: "not_found", nameOnDocument: null };
   const tokens = (v: string) =>
     new Set(
       foldForSearch(v)
         .split(" ")
-        .filter((t) => t.length > 1),
+        .filter((t) => t.length > 1 && !HONORIFICS.has(t)),
     );
   const account = accountName ? tokens(accountName) : new Set<string>();
   if (account.size < 2) return { state: "not_compared", nameOnDocument: found };

@@ -33,7 +33,7 @@
 //
 // The copy half imports the dictionaries directly, which are pure data.
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
 const errors: string[] = [];
@@ -906,10 +906,19 @@ expect(
 // the database with no visible symptom.
 // The CHECK is dropped and recreated in full by each additive migration, so
 // the NEWEST one carries the whole allowlist. Reading an older file would pass
-// while the live constraint rejected everything added since. That file is
-// 20261004090000 again: this pilot's own migration was removed, because the
-// event it allowed had no reachable caller (see 16g).
-const migration = read("supabase/migrations/20261004090000_cd_v31_funnel_events_career_center.sql");
+// while the live constraint rejected everything added since. So the file is
+// FOUND, not named: the newest migration that recreates the constraint
+// (20261215090000 since the India entry journey; 20261004090000 before it).
+const funnelCheckMigration = readdirSync(path.join(root, "supabase/migrations"))
+  .filter((f) => f.endsWith(".sql"))
+  .sort()
+  .filter((f) =>
+    readFileSync(path.join(root, "supabase/migrations", f), "utf8").includes(
+      "ADD CONSTRAINT cd_v31_funnel_events_event_name_check",
+    ),
+  )
+  .pop();
+const migration = read(`supabase/migrations/${funnelCheckMigration}`);
 for (const name of FUNNEL_EVENT_NAMES) {
   expect(
     migration.includes(`'${name}'::text`),

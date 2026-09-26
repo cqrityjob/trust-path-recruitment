@@ -12,6 +12,7 @@ import {
 } from "@/lib/security-passport/evidence.functions";
 import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { formatExpiry } from "@/lib/security-passport/format";
 import { todayIso } from "@/lib/security-passport/dates";
 import {
   acceptValue,
@@ -38,6 +39,7 @@ import {
   type HayatAssessmentState,
 } from "./hayat/HayatPanel";
 import { useHayatReading } from "./hayat/use-hayat-reading";
+import { trackFunnelOnce } from "@/lib/india-entry/analytics";
 import {
   buildCatalogueIndex,
   changeFilter,
@@ -71,6 +73,7 @@ const ROLE_LABELS: Record<OrganisationRoleKind, { sv: string; en: string }> = {
 export function InternationalCredentialForm({
   initial,
   preselectCode,
+  preselectCountry,
   metadata,
   onSave,
   onUpload,
@@ -82,6 +85,10 @@ export function InternationalCredentialForm({
 }: {
   initial?: InternationalCredentialInput;
   preselectCode?: string;
+  /** Open on national credentials of this country (the India setup hands over
+   *  "IN"). A starting filter only: the holder can change it, and territory is
+   *  always taken from the selected definition, never from this. */
+  preselectCountry?: string;
   metadata: InternationalPassportMetadata | null;
   onSave: (data: InternationalCredentialInput) => Promise<{ id: string }>;
   onUpload: (
@@ -118,10 +125,11 @@ export function InternationalCredentialForm({
   const definitions = metadata?.definitions;
   const preselected = definitions?.find((d) => d.code === preselectCode);
   const [step, setStep] = useState(initial || preselected ? 4 : 1);
+  const startCountry = initial?.market_country || preselected?.country || preselectCountry || "";
   const [filters, setFilters] = useState<CatalogueFilterState>({
     ...EMPTY_FILTERS,
-    scope: initial?.market_country || preselected?.country ? "national" : "international",
-    country: initial?.market_country ?? preselected?.country ?? "",
+    scope: startCountry ? "national" : "international",
+    country: startCountry,
     // Every OPTIONAL filter starts at "all": the catalogue is never narrowed to a
     // first organisation, area or type the holder did not choose.
   });
@@ -143,6 +151,7 @@ export function InternationalCredentialForm({
     no_expiry: null,
     authorisation_scope: "",
     issuer_name: "",
+    definition_version: "",
   };
   const [draft, setDraft] = useState<InternationalCredentialInput>(
     initial ?? { ...blank, definition_code: preselected?.code ?? "" },
@@ -255,9 +264,20 @@ export function InternationalCredentialForm({
     const namesOf = (d: IndexedDefinition) => {
       const row = definitions?.find((r) => r.code === d.code);
       const abbreviation = metadata?.abbreviations?.find((a) => a.credential_code === d.code);
-      return [row?.name_sv, row?.name_en, abbreviation?.abbreviation].filter(
-        (n): n is string => typeof n === "string" && n.trim().length > 0,
-      );
+      // A versioned qualification is also recognised by the titles and the
+      // qualification-pack code its governed versions carry ("Unarmed Security
+      // Guard", "MEP/Q7101"): a certificate names the version it was awarded
+      // against, not the catalogue's current label.
+      const versionNames = (metadata?.definitionVersions ?? [])
+        .filter((v) => v.credential_code === d.code)
+        .flatMap((v) => [v.official_title, v.qualification_code ?? ""]);
+      return [
+        ...new Set(
+          [row?.name_sv, row?.name_en, abbreviation?.abbreviation, ...versionNames].filter(
+            (n): n is string => typeof n === "string" && n.trim().length > 0,
+          ),
+        ),
+      ];
     };
     // Approved variations are used to MATCH; only the governed name is ever shown.
     const issuersOf = (d: IndexedDefinition) => d.issuerMatchTerms;
@@ -354,6 +374,25 @@ export function InternationalCredentialForm({
     isReadByHayat(draft, marks, field) ? <HayatBadge /> : null;
   const inputClass =
     "mt-2 block min-h-12 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+  // Governed versions of the selected definition (the Indian NSQF
+  // qualifications). Empty for every definition that has none.
+  const selectedVersions = (metadata?.definitionVersions ?? []).filter(
+    (v) => v.credential_code === draft.definition_code,
+  );
+  const versionLabel = (v: (typeof selectedVersions)[number]) =>
+    [
+      v.official_title,
+      [v.qualification_code, v.qualification_version ? `v${v.qualification_version}` : null]
+        .filter(Boolean)
+        .join(" "),
+      v.framework_level != null ? `NSQF ${copy("nivå", "level")} ${v.framework_level}` : null,
+      v.catalogue_status === "current"
+        ? copy("aktuell version av standarden", "current version of the standard")
+        : copy("tidigare version av standarden", "earlier version of the standard"),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  const awardingBodies = [...new Set(selectedVersions.map((v) => v.awarding_body))];
   const steps = [
     copy("Omfattning", "Scope"),
     copy("Plats och kategori", "Location & category"),
@@ -387,8 +426,17 @@ export function InternationalCredentialForm({
             market_region: selected.region ?? "",
             authorisation_scope: selected.requiresScope ? draft.authorisation_scope : "",
             issuer_name: selected.issuerStatedOnDocument ? draft.issuer_name : "",
+            // Only a version of THIS definition, and only when one was chosen.
+            definition_version: selectedVersions.some(
+              (v) => v.version_key === draft.definition_version,
+            )
+              ? draft.definition_version
+              : "",
           })
         ).id;
+      // Anonymous funnel event, name only: the holder's first credential.
+      if (!initial && (metadata?.details?.length ?? 0) === 0)
+        trackFunnelOnce("passport_first_credential_saved");
       if (file) {
         const contentBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
@@ -415,17 +463,28 @@ export function InternationalCredentialForm({
         to: "/passport/entry/$kind/$entryId",
         params: { kind: "claim", entryId: savedId.current },
       });
-    } catch {
+    } catch (cause) {
+      const code = cause instanceof Error ? cause.message : "";
       setError(
         savedId.current
           ? copy(
               "Meriten är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna meriten.",
               "The credential is saved, but the document could not be attached. Retry or open the credential.",
             )
-          : copy(
-              "Kunde inte spara. Kontrollera uppgifterna och försök igen.",
-              "Could not save. Check your details and try again.",
-            ),
+          : code === "SP_ISSUER_IS_A_REGULATOR"
+            ? copy(
+                "Tillsynsmyndigheten kan inte anges som utfärdare. Ange organisationen som står som utfärdare på intyget.",
+                "The regulator cannot be named as the issuer. Enter the organisation printed as the issuer on your certificate.",
+              )
+            : code === "SP_DEFINITION_VERSION_UNKNOWN"
+              ? copy(
+                  "Den valda versionen hör inte till den här meriten. Välj en version eller ”Vet inte”.",
+                  "The chosen version does not belong to this credential. Choose a version or “Not sure”.",
+                )
+              : copy(
+                  "Kunde inte spara. Kontrollera uppgifterna och försök igen. Det du har skrivit finns kvar.",
+                  "Could not save. Check your details and try again. What you entered is still here.",
+                ),
       );
     } finally {
       saving.current = false;
@@ -751,7 +810,26 @@ export function InternationalCredentialForm({
                   <dd className="break-words">{r.name}</dd>
                 </div>
               ))}
+              {awardingBodies.length > 0 && (
+                <div className="min-w-0" data-credential-awarding-body>
+                  <dt className="text-xs text-muted-foreground">
+                    {copy(
+                      "Examinerande organ (enligt standarden)",
+                      "Awarding body (per the standard)",
+                    )}
+                  </dt>
+                  <dd className="break-words">{awardingBodies.join(", ")}</dd>
+                </div>
+              )}
             </dl>
+            {selected.scope_code === "national_qualification" && (
+              <p className="mt-2 text-xs text-muted-foreground" data-national-qualification-note>
+                {copy(
+                  "En nationell yrkeskvalifikation. Den är inte en licens och ger ingen rätt att arbeta, i det här landet eller någon annanstans.",
+                  "A national qualification. It is not a licence and gives no right to work, in this country or anywhere else.",
+                )}
+              </p>
+            )}
             {selectedRow?.official_url && (
               <a
                 className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline"
@@ -790,6 +868,30 @@ export function InternationalCredentialForm({
                   notice={notices.issuer_name}
                   onAccept={accept}
                 />
+              </label>
+            )}
+            {selectedVersions.length > 0 && (
+              <label className="sm:col-span-2">
+                {copy("Version enligt intyget (valfritt)", "Version on the certificate (optional)")}
+                <select
+                  data-field="definition-version"
+                  className={inputClass}
+                  value={draft.definition_version ?? ""}
+                  onChange={(e) => setDraft({ ...draft, definition_version: e.target.value })}
+                >
+                  <option value="">{copy("Vet inte / står inte", "Not sure / not stated")}</option>
+                  {selectedVersions.map((v) => (
+                    <option key={v.version_key} value={v.version_key}>
+                      {versionLabel(v)}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {copy(
+                    "Versionen gäller standarden. En tidigare version gör inte ditt intyg ogiltigt, och standardens granskningsdatum är inte ditt intygs slutdatum.",
+                    "The version is about the standard. An earlier version does not make your certificate invalid, and the standard’s review date is not your certificate’s expiry.",
+                  )}
+                </span>
               </label>
             )}
             {selected.requiresScope && (
@@ -1001,11 +1103,24 @@ export function InternationalCredentialForm({
                 ...(selected.requiresScope
                   ? [[copy("Omfattning", "Scope"), draft.authorisation_scope]]
                   : []),
+                ...(selectedVersions.length > 0
+                  ? [
+                      [
+                        copy("Version", "Version"),
+                        (() => {
+                          const v = selectedVersions.find(
+                            (x) => x.version_key === draft.definition_version,
+                          );
+                          return v ? versionLabel(v) : "";
+                        })(),
+                      ],
+                    ]
+                  : []),
                 [copy("Certifikats- eller licensnummer", "Identifier"), draft.identifier],
                 [copy("Utfärdad", "Issued"), draft.issued_on],
                 [
                   copy("Slutdatum", "Expiry"),
-                  draft.no_expiry ? copy("Utan utgångsdatum", "No expiry") : draft.valid_until,
+                  draft.valid_until || formatExpiry(null, lang, draft.no_expiry),
                 ],
                 [copy("Dokument", "Evidence"), file?.name],
               ].map(([label, value]) => (

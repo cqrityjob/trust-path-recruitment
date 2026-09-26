@@ -199,6 +199,15 @@ const CREDENTIAL_MARKS: Readonly<Record<string, string>> = {
   INTL_ISACA_CRISC: "CRISC",
   INTL_ACFE_CFE: "CFE",
   INTL_ACAMS_CAMS: "CAMS",
+
+  // India's national qualifications (20261214090000). No acronym is
+  // published for them; the qualification-pack number IS the printed,
+  // governed identifier (sp_credential_types.symbol_label), so that is the
+  // mark -- never initials composed from the title.
+  IN_MEPSC_Q7101: "Q7101",
+  IN_MEPSC_Q7201: "Q7201",
+  IN_MEPSC_Q7104: "Q7104",
+  IN_MEPSC_Q7204: "Q7204",
 };
 
 export function credentialMark(code: string | null | undefined): string | null {

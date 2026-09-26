@@ -126,7 +126,10 @@ export function ClaimRow({
           />
         ) : null}
         <Field label={pt("claims.issuedOn")} value={formatDate(claim.issuedOn, lang)} />
-        <Field label={pt("claims.validUntil")} value={formatExpiry(claim.validUntil, lang)} />
+        <Field
+          label={pt("claims.validUntil")}
+          value={formatExpiry(claim.validUntil, lang, claim.noExpiry)}
+        />
         {/* ── ISSUER AND VERIFIER, SIDE BY SIDE AND NEVER MERGED ────────
             "Issuer" above is what the candidate typed. This is who made the
             verification DECISION, read from the decision record, and its

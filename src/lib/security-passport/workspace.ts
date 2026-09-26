@@ -160,6 +160,8 @@ export interface WorkspaceMerit {
   readonly dateKind: MeritDateKind;
   readonly from: IsoDate | null;
   readonly to: IsoDate | null;
+  /** A credential recorded as non-expiring; see formatExpiry. */
+  readonly noExpiry?: boolean;
   /**
    * The trust standing, from the shared labeller — or `unknown`.
    *
@@ -362,6 +364,7 @@ function meritOfClaim(claim: Claim, review: ReviewState, now: Date): WorkspaceMe
     dateKind: "validity",
     from: claim.issuedOn,
     to: claim.validUntil,
+    noExpiry: claim.noExpiry === true,
     label: statusOf(rawLabel, review),
     rawLabel,
     lifecycleState: claim.lifecycleState,
