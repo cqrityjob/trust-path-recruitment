@@ -124,9 +124,84 @@ export const dictionaries = {
     // No sentence below may blur that, and scripts/public-homepage-check.tsx
     // fails the build if one does.
     "home.hero.eyebrow": "Säkerhetskarriären samlad på ett ställe",
-    "home.hero.title": "Bygg din framtid inom säkerhet",
+    "home.cta.start": "Kom igång",
+    "home.cta.jobs": "Hitta jobb",
+    "home.cta.employers": "För arbetsgivare",
+    "home.cta.jobsNote": "Lediga jobb kan du läsa utan konto.",
+    "home.value.eyebrow": "För dig i säkerhetsbranschen",
+    "home.value.title": "Det här får du gjort",
+    "home.value.passport.title": "Visa dina meriter och välj vem som ser dem",
+    "home.value.passport.body":
+      "Samla certifieringar, behörigheter och utbildningar i Security Passport. Varje merit visar sin källa och status, och du bestämmer vad som delas och med vem.",
+    "home.value.passport.link": "Skapa ditt Security Passport",
+    "home.value.cv.title": "Bygg profil och CV, och sök jobb",
+    "home.value.cv.body":
+      "Fyll i din profil en gång och använd den i ditt CV och dina ansökningar. Sök säkerhetsjobb efter roll, plats och anställningsform.",
+    "home.value.cv.link": "Se lediga jobb",
+    "home.value.career.title": "Utforska karriär och utveckling",
+    "home.value.career.body":
+      "Career Discovery visar vilka säkerhetsroller som ligger nära din inriktning. Karriärcentret beskriver yrken, vägar in och utbildningar.",
+    "home.value.career.link": "Utforska karriärcentret",
+    "home.ai.eyebrow": "AI-stöd i ditt säkerhetsarbete",
+    "home.ai.title": "CQrityjob Security Intelligence",
+    "home.ai.body":
+      "En privat arbetsyta för omvärldsbevakning och säkerhetsanalys. Verktyget hjälper dig att strukturera underlag – du står för bedömningen.",
+    "home.ai.task.label": "Uppgift",
+    "home.ai.task.body":
+      "Bevaka det som påverkar din verksamhet och sammanställ analyser och rapporter.",
+    "home.ai.input.label": "Ditt underlag",
+    "home.ai.input.body":
+      "En bevakningsprofil, dina bevakningsfrågor och de källor du själv registrerar.",
+    "home.ai.output.label": "Det du får",
+    "home.ai.output.body":
+      "Sorterade underlag, riskbedömningar, analyser och rapportutkast med hänvisning till källorna. AI-utkast finns där funktionen är aktiverad för arbetsytan.",
+    "home.ai.review.label": "Din granskning",
+    "home.ai.review.body":
+      "Du bedömer relevansen och ansvarar för slutsatserna. Källor och utkast kan innehålla fel.",
+    "home.ai.note":
+      "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
+    "home.ai.cta": "Öppna Security Intelligence",
+    "home.employers.flow.jobs": "Publicera jobb",
+    "home.employers.flow.applications": "Hantera ansökningar",
+    "home.employers.flow.tests": "Skicka rekryteringstester",
+    "home.employers.flow.interview": "Förbered intervjun",
+    "home.employers.flow.decision": "Ni fattar beslutet",
+    "home.employers.flow.label": "Så hänger rekryteringen ihop",
+    "home.start.eyebrow": "Så kommer du igång",
+    "home.start.title": "Tre steg, oavsett var du börjar",
+    "home.start.person": "För dig som person",
+    "home.start.person.1": "Skapa ett konto med din e-postadress.",
+    "home.start.person.2": "Fyll i din profil och lägg till din första merit i Security Passport.",
+    "home.start.person.3": "Sök jobb, bygg ditt CV eller starta Career Discovery.",
+    "home.start.employer": "För arbetsgivare",
+    "home.start.employer.1": "Registrera företaget med namn och land.",
+    "home.start.employer.2": "Vi granskar kontot innan arbetsytan aktiveras.",
+    "home.start.employer.3": "Publicera ditt första jobb och ta emot ansökningar.",
+    "home.faq.eyebrow": "Erbjudande och vanliga frågor",
+    "home.faq.title": "Bra att veta innan du börjar",
+    "home.faq.offer.person":
+      "För individer: konto, profil, CV, Security Passport, jobbsök, Career Discovery och Security Intelligence.",
+    "home.faq.offer.employer":
+      "För arbetsgivare: jobbannonser, ansökningar, rekryteringstester, intervjuförberedelse och medarbetarutveckling. Priser och paket är inte publicerade ännu – kontakta oss.",
+    "home.faq.contact": "Kontakta oss",
+    "home.faq.q1": "Vem är CQrityjob till för?",
+    "home.faq.a1":
+      "Personer som arbetar inom eller vill till säkerhetsbranschen, och organisationer som rekryterar och utvecklar säkerhetspersonal.",
+    "home.faq.q2": "Hur fungerar delning av Security Passport?",
+    "home.faq.a2":
+      "Ditt Security Passport är privat som standard. Du väljer vilka meriter som delas och med vem, och du kan återkalla en delning. En ansökan delar inte ditt Passport automatiskt.",
+    "home.faq.q3": "Är mina meriter verifierade?",
+    "home.faq.a3":
+      "En uppladdad handling är inte automatiskt verifierad. Varje merit visar sin faktiska status, till exempel egen uppgift, granskad handling eller verifierad mot källan. En internationell certifiering innebär inte automatiskt lokal yrkesbehörighet.",
+    "home.faq.q4": "Behöver jag ett konto för att söka jobb?",
+    "home.faq.a4":
+      "Nej. Du kan söka och läsa annonser utan konto. När du ansöker loggar du in eller skapar ett konto och kommer sedan tillbaka till annonsen.",
+    "home.faq.q5": "Beslutar AI vem som anställs?",
+    "home.faq.a5":
+      "Nej. AI kan hjälpa till att strukturera underlag, men människor fattar och dokumenterar varje beslut. Plattformen rangordnar inte kandidater.",
+    "home.hero.title": "Din karriär och ditt säkerhetsarbete. På samma plats.",
     "home.hero.subtitle":
-      "Samla dina meriter i ett Security Passport eller upptäck vilka säkerhetsroller som passar din riktning. Fortsätt sedan med karriärvägar, CV, jobb och utveckling i samma plattform.",
+      "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
     "home.account.returning": "Har du redan ett konto?",
     "home.passportPreview.private": "Privat som standard",
     "home.passportPreview.record": "Din professionella dokumentation",
@@ -1946,7 +2021,8 @@ export const dictionaries = {
     "employer.nav.reports": "Rapporter",
     "employer.nav.library": "Bibliotek",
     "reports.readFailed": "Ärendena kunde inte läsas just nu. Försök igen.",
-    "reports.lede": "Rapporterna i organisationens egna ärenden. Du ser de ärenden du har behörighet till; TRUST-rapporten och BESKT-underlaget är två skilda rapporter.",
+    "reports.lede":
+      "Rapporterna i organisationens egna ärenden. Du ser de ärenden du har behörighet till; TRUST-rapporten och BESKT-underlaget är två skilda rapporter.",
     "reports.state.review": "Granskas",
     "reports.state.ready": "Redo att fastställa",
     "reports.title": "Rapporter",
@@ -2121,8 +2197,7 @@ export const dictionaries = {
     "employer.jobHub.next.prepareInterviews.other": "kandidater i intervjusteget.",
     "employer.jobHub.next.awaitAssessments.one": "kandidat med en bedömning som pågår.",
     "employer.jobHub.next.awaitAssessments.other": "kandidater med en bedömning som pågår.",
-    "employer.jobHub.next.noApplicationsYet":
-      "Annonsen är publicerad och ingen har ansökt ännu.",
+    "employer.jobHub.next.noApplicationsYet": "Annonsen är publicerad och ingen har ansökt ännu.",
     "employer.jobHub.next.notPublished":
       "Annonsen är inte publicerad, så den kan inte ta emot ansökningar ännu.",
     "employer.jobHub.next.nothingOutstanding":
@@ -4099,28 +4174,38 @@ export const dictionaries = {
       "Testet är skickat, men upplägget kunde inte sparas. Vid intervjun får ni välja det uttryckligen.",
     "lib.start.sendTest.needsApplication": "Välj en ansökan för att skicka testet.",
     "lib.method.trust.none": "Inget TRUST-innehåll är tillgängligt för er just nu.",
-    "lib.method.beskt.none": "Inget BESKT-innehåll är publicerat eller öppnat för arbetsgivare ännu. Ingen åtgärd krävs av er.",
+    "lib.method.beskt.none":
+      "Inget BESKT-innehåll är publicerat eller öppnat för arbetsgivare ännu. Ingen åtgärd krävs av er.",
     "lib.test.measures": "Vad testet undersöker",
     "lib.test.notMeasures": "Vad testet inte mäter",
     "lib.test.size": "{modules} testdelar, {items} uppgifter. Kandidaten ser inte facit.",
-    "beskt.error.openFrozen": "Versionen är tillgänglig för arbetsgivare och kan inte ändras. Dra tillbaka tillgängligheten först.",
-    "beskt.error.notOpenable": "Bara en version som är utkast eller under granskning kan göras tillgänglig; en publicerad version är redan det.",
-    "beskt.error.notOpenableIncomplete": "Versionen är inte komplett för sitt ändamål och kan inte göras tillgänglig.",
+    "beskt.error.openFrozen":
+      "Versionen är tillgänglig för arbetsgivare och kan inte ändras. Dra tillbaka tillgängligheten först.",
+    "beskt.error.notOpenable":
+      "Bara en version som är utkast eller under granskning kan göras tillgänglig; en publicerad version är redan det.",
+    "beskt.error.notOpenableIncomplete":
+      "Versionen är inte komplett för sitt ändamål och kan inte göras tillgänglig.",
     "beskt.availability.reason": "Motivering (sparas i händelseloggen)",
     "beskt.availability.heading": "Tillgänglighet i arbetsgivarnas erbjudande",
     "beskt.availability.notReviewTitle": "Det här är inte en granskning",
     "beskt.availability.state.restricted": "Inte tillgänglig för arbetsgivare.",
     "beskt.availability.withdraw": "Dra tillbaka tillgängligheten",
-    "beskt.availability.lede": "Ett beslut för hela versionen: som öppen pilotversion blir den direkt tillgänglig för alla aktiva arbetsgivare, utan ansökan, aktivering eller installation per organisation.",
-    "beskt.availability.notReviewBody": "Versionen förblir ogranskad och märkt som pilothypotes. Inga granskningsgrindar godkänns, och innehållet låses så länge versionen är tillgänglig.",
-    "beskt.availability.state.open": "Tillgänglig för alla aktiva arbetsgivare som ogranskad pilotversion.",
+    "beskt.availability.lede":
+      "Ett beslut för hela versionen: som öppen pilotversion blir den direkt tillgänglig för alla aktiva arbetsgivare, utan ansökan, aktivering eller installation per organisation.",
+    "beskt.availability.notReviewBody":
+      "Versionen förblir ogranskad och märkt som pilothypotes. Inga granskningsgrindar godkänns, och innehållet låses så länge versionen är tillgänglig.",
+    "beskt.availability.state.open":
+      "Tillgänglig för alla aktiva arbetsgivare som ogranskad pilotversion.",
     "beskt.availability.state.published": "Publicerad: tillgänglig för alla aktiva arbetsgivare.",
     "beskt.availability.open": "Gör tillgänglig för alla arbetsgivare",
-    "lib.setup.trust.report": "Intervjurapport: kompetensvisa bedömningar med belägg, osäkerheter och kompletteringsbehov.",
-    "lib.method.beskt.body": "Förberedande frågeunderlag och strukturerat metodstöd för säkerhetskänsligt arbete.",
+    "lib.setup.trust.report":
+      "Intervjurapport: kompetensvisa bedömningar med belägg, osäkerheter och kompletteringsbehov.",
+    "lib.method.beskt.body":
+      "Förberedande frågeunderlag och strukturerat metodstöd för säkerhetskänsligt arbete.",
     "lib.setup.role": "Roll",
     "lib.role.available": "Innehåll finns",
-    "lib.setupRecordFailed": "Ärendet skapades, men upplägget kunde inte sparas på ärendet. Metod, roll och miljö visas därför inte där.",
+    "lib.setupRecordFailed":
+      "Ärendet skapades, men upplägget kunde inte sparas på ärendet. Metod, roll och miljö visas därför inte där.",
     "lib.case.setupNone": "Startat utanför biblioteket",
     "lib.env.general": "Generell säkerhetsverksamhet",
     "lib.env.hospital": "Sjukhus",
@@ -4134,25 +4219,31 @@ export const dictionaries = {
     "lib.start.trust": "Starta ärende",
     "lib.setup.timeUnsetAll": "Inte fastställd.",
     "lib.method.trust.title": "TRUST",
-    "lib.setup.beskt.interview": "Strukturerat samtal område för område (T, gemensam bas, B, E, S, K, situationer) med FAKTA-dokumentation.",
+    "lib.setup.beskt.interview":
+      "Strukturerat samtal område för område (T, gemensam bas, B, E, S, K, situationer) med FAKTA-dokumentation.",
     "lib.group.operational": "Operativa roller",
     "lib.group.heading": "Vilken typ av roll rekryterar du till?",
-    "lib.blocker.no_role_content": "Det finns inget innehåll för den här rollen i den valda metoden ännu.",
+    "lib.blocker.no_role_content":
+      "Det finns inget innehåll för den här rollen i den valda metoden ännu.",
     "lib.setup.method": "Metod",
     "lib.setup.environment": "Arbetsmiljö",
     "lib.status.content_validated": "Granskad och publicerad",
     "lib.status.internal_test": "Intern testversion enligt organisationens aktivering",
-    "lib.setup.beskt.candidate": "Förberedande frågeunderlag som kandidaten fyller i före intervjun, med information om syfte, mottagare och rättelse.",
+    "lib.setup.beskt.candidate":
+      "Förberedande frågeunderlag som kandidaten fyller i före intervjun, med information om syfte, mottagare och rättelse.",
     "lib.setup.report": "Rapporten",
     "lib.role.vaktare": "Väktare",
-    "lib.method.separate": "TRUST och BESKT är två metoder med var sin rapport. De delar ingen poäng eller riskmodell, och BESKT är inget säkerhetsbetyg.",
-    "lib.method.beskt.aim": "Rollrelaterade omständigheter, exponering, förklaringar och fortsatt mänsklig prövning.",
+    "lib.method.separate":
+      "TRUST och BESKT är två metoder med var sin rapport. De delar ingen poäng eller riskmodell, och BESKT är inget säkerhetsbetyg.",
+    "lib.method.beskt.aim":
+      "Rollrelaterade omständigheter, exponering, förklaringar och fortsatt mänsklig prövning.",
     "lib.env.heading": "Arbetsmiljö",
     "lib.method.chosen": "Metod",
     "lib.env.generalNote": "Generellt upplägg – inga miljöspecifika scenarier ingår.",
     "lib.case.setup": "Upplägg",
     "lib.group.strategic": "Strategiska och ledande roller",
-    "lib.role.trust.missing": "Inget TRUST-innehåll för rollen ännu. En innehållsspecifikation finns för granskning; väktartestet erbjuds inte under den här rubriken.",
+    "lib.role.trust.missing":
+      "Inget TRUST-innehåll för rollen ännu. En innehållsspecifikation finns för granskning; väktartestet erbjuds inte under den här rubriken.",
     "lib.start.standalone": "Fristående ärende – ange kandidat i nästa steg",
     "lib.group.operational.hint": "Till exempel väktare och annan operativ säkerhetspersonal.",
     "lib.setup.included": "Ingår",
@@ -4162,32 +4253,43 @@ export const dictionaries = {
     "lib.setup.candidate": "Kandidatens moment",
     "lib.method.beskt.title": "BESKT",
     "lib.setup.minutes": "Kandidattest {min}–{max} min.",
-    "lib.setup.trust.candidate": "{name}: kandidaten gör testet på egen hand. Tilldelas i ärendets steg Tester & underlag.",
-    "lib.blocker.guide_unavailable": "Intervjuguiden för rollen är inte tillgänglig för organisationen just nu.",
+    "lib.setup.trust.candidate":
+      "{name}: kandidaten gör testet på egen hand. Tilldelas i ärendets steg Tester & underlag.",
+    "lib.blocker.guide_unavailable":
+      "Intervjuguiden för rollen är inte tillgänglig för organisationen just nu.",
     "lib.setup.optional": "valfritt",
-    "lib.role.beskt.generic": "BESKT:s gemensamma metod. Befattningens exponering och mandat anges när uppdraget startas; inga rollspecifika frågor ingår ännu.",
+    "lib.role.beskt.generic":
+      "BESKT:s gemensamma metod. Befattningens exponering och mandat anges när uppdraget startas; inga rollspecifika frågor ingår ännu.",
     "lib.change": "Ändra",
-    "lib.blocker.beskt_unavailable": "Ingen BESKT-version är publicerad eller öppnad för arbetsgivare ännu. Innehållet väntar på CQrityjobs innehållsbeslut – ingen åtgärd krävs av er.",
+    "lib.blocker.beskt_unavailable":
+      "Ingen BESKT-version är publicerad eller öppnad för arbetsgivare ännu. Innehållet väntar på CQrityjobs innehållsbeslut – ingen åtgärd krävs av er.",
     "lib.step.method": "Metod",
     "lib.title": "Rekryteringsstöd",
     "lib.method.heading": "Välj metod",
     "lib.role.heading": "Rollprofil",
-    "lib.env.none": "Inga särskilda scenarier för den här miljön finns ännu, så den kan inte väljas.",
+    "lib.env.none":
+      "Inga särskilda scenarier för den här miljön finns ännu, så den kan inte väljas.",
     "lib.group.strategic.hint": "Till exempel Security Manager och säkerhetschef.",
     "lib.method.beskt.choose": "Välj BESKT",
-    "lib.method.trust.body": "Tester och strukturerade intervjuer för rekrytering till säkerhetsjobb.",
-    "lib.lede": "Välj rätt upplägg för tester och intervju. Vi hjälper dig vidare till rätt kandidatmoment, intervju och rapport.",
+    "lib.method.trust.body":
+      "Tester och strukturerade intervjuer för rekrytering till säkerhetsjobb.",
+    "lib.lede":
+      "Välj rätt upplägg för tester och intervju. Vi hjälper dig vidare till rätt kandidatmoment, intervju och rapport.",
     "lib.setup.timeUnset": "Inte fastställd för intervjun.",
     "lib.status.published": "Publicerad",
-    "lib.setup.beskt.report": "BESKT-underlag: observationer med källor, kandidatens förklaringar, det ansvariga ställningstagandet och åtgärder.",
+    "lib.setup.beskt.report":
+      "BESKT-underlag: observationer med källor, kandidatens förklaringar, det ansvariga ställningstagandet och åtgärder.",
     "lib.start.beskt": "Starta BESKT",
-    "lib.setup.trust.candidateNone": "Inget kandidattest ingår. Ärendet kan fortsätta direkt till intervjun.",
-    "lib.blocker.environment_without_content": "Den valda arbetsmiljön har inget eget innehåll ännu.",
+    "lib.setup.trust.candidateNone":
+      "Inget kandidattest ingår. Ärendet kan fortsätta direkt till intervjun.",
+    "lib.blocker.environment_without_content":
+      "Den valda arbetsmiljön har inget eget innehåll ännu.",
     "lib.step.setup": "Upplägg",
     "lib.status.pilot_hypothesis": "Pilotversion – ogranskad hypotes",
     "lib.setup.interview": "Intervjun",
     "lib.status.open_pilot": "Pilotversion – ogranskad, öppen för alla arbetsgivare",
-    "lib.setup.trust.interview": "Strukturerad intervju med intervjuguiden {name}: samma frågor i samma ordning, med fördjupningsfrågor och nivåbeskrivningar.",
+    "lib.setup.trust.interview":
+      "Strukturerad intervju med intervjuguiden {name}: samma frågor i samma ordning, med fördjupningsfrågor och nivåbeskrivningar.",
     "lib.blocker.content_unreadable": "Innehållet kunde inte läsas just nu. Försök igen.",
     "lib.setup.status": "Innehållets status",
     "lib.env.noScope": "Arbetsmiljön väljer inte metod och ger ingen tillgång till fler uppgifter.",
@@ -7325,8 +7427,10 @@ export const dictionaries = {
     "iiu.ts.state.done": "Genomfört",
     "iiu.ts.next.interview": "Gå till intervjun",
     "iiu.ts.notGate": "Inget i det här steget hindrar intervjun.",
-    "iiu.ts.trust.body": "Testet kandidaten gör på egen hand. Status och resultat visas här när reglerna tillåter det.",
-    "iiu.ts.trust.standalone": "Ärendet är inte kopplat till en ansökan, så inget test är tilldelat här. Ett test skickas via kandidatens ansökan. Intervjun kan genomföras utan test.",
+    "iiu.ts.trust.body":
+      "Testet kandidaten gör på egen hand. Status och resultat visas här när reglerna tillåter det.",
+    "iiu.ts.trust.standalone":
+      "Ärendet är inte kopplat till en ansökan, så inget test är tilldelat här. Ett test skickas via kandidatens ansökan. Intervjun kan genomföras utan test.",
     "iiu.ts.beskt.title": "BESKT-förberedelse",
     "iiu.ts.beskt.none": "Ingen BESKT-förberedelse är kopplad till ärendet ännu.",
     "iiu.ts.beskt.body": "Kandidatens förberedande frågeunderlag, kopplat till det här ärendet.",
@@ -7820,7 +7924,8 @@ export const dictionaries = {
     "iiu.pp.type": "Typ",
     "iiu.pp.label": "Etikett",
     "iiu.pp.content": "Innehåll",
-    "iiu.pp.contenthint": "Klistra in texten som den är. Den används som underlag när samtalet planeras.",
+    "iiu.pp.contenthint":
+      "Klistra in texten som den är. Den används som underlag när samtalet planeras.",
     "iiu.pp.legalbasis": "Rättslig grund",
     "iiu.pp.saving": "Sparar …",
     "iiu.pp.add": "Lägg till",
@@ -7841,10 +7946,13 @@ export const dictionaries = {
     "iiu.pp.approved.body": "Planen är den aktiva. Intervjun kan startas.",
     "iiu.pp.s3.title": "3. Genomför intervjun",
     "iiu.pp.manual.title": "Planera samtalet",
-    "iiu.pp.manual.default.opening": "Hälsa välkommen, presentera er och berätta om syftet, hur länge samtalet tar och att ni antecknar. Förklara att alla kandidater får samma frågor.",
-    "iiu.pp.manual.default.timeplan": "Inledning 5 min · Guidens frågor 40 min · Kandidatens frågor och avslutning 10 min",
+    "iiu.pp.manual.default.opening":
+      "Hälsa välkommen, presentera er och berätta om syftet, hur länge samtalet tar och att ni antecknar. Förklara att alla kandidater får samma frågor.",
+    "iiu.pp.manual.default.timeplan":
+      "Inledning 5 min · Guidens frågor 40 min · Kandidatens frågor och avslutning 10 min",
     "iiu.pp.guide.show": "Visa intervjuguide ({n} frågor)",
-    "iiu.pp.manual.default.closing": "Fråga om kandidaten har frågor, berätta om nästa steg och när besked kommer, och tacka för samtalet.",
+    "iiu.pp.manual.default.closing":
+      "Fråga om kandidaten har frågor, berätta om nästa steg och när besked kommer, och tacka för samtalet.",
     "iiu.pp.manual.body":
       "Skriv en kort plan för genomförandet. Frågorna och fördjupningsfrågorna kommer oförändrade från intervjuguiden.",
     "iiu.pp.manual.timeplan": "Tidsplan",
@@ -8615,9 +8723,85 @@ export const dictionaries = {
     // and it names the second product "Career Discovery" every time --
     // never test, career test, assessment or guidance.
     "home.hero.eyebrow": "Your security career in one place",
-    "home.hero.title": "Build your future in security",
+    "home.cta.start": "Get started",
+    "home.cta.jobs": "Find jobs",
+    "home.cta.employers": "For employers",
+    "home.cta.jobsNote": "You can browse open jobs without an account.",
+    "home.value.eyebrow": "For people in security",
+    "home.value.title": "What you can get done",
+    "home.value.passport.title": "Show your credentials and choose who sees them",
+    "home.value.passport.body":
+      "Keep certifications, licences and training in Security Passport. Every credential shows its source and status, and you decide what is shared and with whom.",
+    "home.value.passport.link": "Create your Security Passport",
+    "home.value.cv.title": "Build your profile and CV, and find jobs",
+    "home.value.cv.body":
+      "Fill in your profile once and reuse it in your CV and applications. Search security jobs by role, location and employment type.",
+    "home.value.cv.link": "See open jobs",
+    "home.value.career.title": "Explore your career and development",
+    "home.value.career.body":
+      "Career Discovery shows which security roles sit close to your direction. The Career Center describes professions, ways in and training.",
+    "home.value.career.link": "Explore the Career Center",
+    "home.ai.eyebrow": "AI support for your security work",
+    "home.ai.title": "CQrityjob Security Intelligence",
+    "home.ai.body":
+      "A private workspace for horizon scanning and security analysis. It helps you structure material – the judgement stays yours.",
+    "home.ai.task.label": "Task",
+    "home.ai.task.body":
+      "Monitor what affects your organisation and put together analyses and reports.",
+    "home.ai.input.label": "What you provide",
+    "home.ai.input.body":
+      "A monitoring profile, your monitoring questions and the sources you register yourself.",
+    "home.ai.output.label": "What you get",
+    "home.ai.output.body":
+      "Triaged material, risk ratings, analyses and report drafts that cite their sources. AI drafts are available where the feature is enabled for the workspace.",
+    "home.ai.review.label": "Your review",
+    "home.ai.review.body":
+      "You judge relevance and own the conclusions. Sources and drafts can contain errors.",
+    "home.ai.note":
+      "Do not add classified or secret information. The workspace is not shared with your CV, Security Passport or employers.",
+    "home.ai.cta": "Open Security Intelligence",
+    "home.employers.flow.jobs": "Publish jobs",
+    "home.employers.flow.applications": "Manage applications",
+    "home.employers.flow.tests": "Send recruitment tests",
+    "home.employers.flow.interview": "Prepare the interview",
+    "home.employers.flow.decision": "You make the decision",
+    "home.employers.flow.label": "How the recruitment connects",
+    "home.start.eyebrow": "How to get started",
+    "home.start.title": "Three steps, wherever you start",
+    "home.start.person": "For individuals",
+    "home.start.person.1": "Create an account with your email address.",
+    "home.start.person.2":
+      "Fill in your profile and add your first credential to Security Passport.",
+    "home.start.person.3": "Search jobs, build your CV or start Career Discovery.",
+    "home.start.employer": "For employers",
+    "home.start.employer.1": "Register your company with its name and country.",
+    "home.start.employer.2": "We review the account before the workspace is activated.",
+    "home.start.employer.3": "Publish your first job and receive applications.",
+    "home.faq.eyebrow": "Offer and common questions",
+    "home.faq.title": "Good to know before you start",
+    "home.faq.offer.person":
+      "For individuals: account, profile, CV, Security Passport, job search, Career Discovery and Security Intelligence.",
+    "home.faq.offer.employer":
+      "For employers: job ads, applications, recruitment tests, interview preparation and employee development. Prices and packages are not published yet – contact us.",
+    "home.faq.contact": "Contact us",
+    "home.faq.q1": "Who is CQrityjob for?",
+    "home.faq.a1":
+      "People who work in, or want to join, the security industry, and organisations that recruit and develop security staff.",
+    "home.faq.q2": "How does sharing a Security Passport work?",
+    "home.faq.a2":
+      "Your Security Passport is private by default. You choose which credentials are shared and with whom, and you can revoke a share. Applying for a job does not share your Passport automatically.",
+    "home.faq.q3": "Are my credentials verified?",
+    "home.faq.a3":
+      "An uploaded document is not automatically verified. Every credential shows its actual status, such as self-reported, document reviewed or source verified. An international certification does not automatically mean a local licence to practise.",
+    "home.faq.q4": "Do I need an account to search jobs?",
+    "home.faq.a4":
+      "No. You can search and read job ads without an account. When you apply, you sign in or create an account and come back to the ad.",
+    "home.faq.q5": "Does AI decide who gets hired?",
+    "home.faq.a5":
+      "No. AI can help structure material, but people make and document every decision. The platform does not rank candidates.",
+    "home.hero.title": "Your career and your security work. In one place.",
     "home.hero.subtitle":
-      "Bring your credentials together in a Security Passport or discover which security roles fit your direction. Then continue with career paths, CV, jobs and development in the same platform.",
+      "Find security jobs, keep your certifications and licences in Security Passport, and get AI support in your daily security work. You always decide what is shared.",
     "home.account.returning": "Already have an account?",
     "home.passportPreview.private": "Private by default",
     "home.passportPreview.record": "Your professional record",
@@ -10204,7 +10388,8 @@ export const dictionaries = {
     "employer.nav.reports": "Reports",
     "employer.nav.library": "Library",
     "reports.readFailed": "The cases could not be read just now. Try again.",
-    "reports.lede": "The reports in the organisation's own cases. You see the cases you have access to; the TRUST report and the BESKT basis are two separate reports.",
+    "reports.lede":
+      "The reports in the organisation's own cases. You see the cases you have access to; the TRUST report and the BESKT basis are two separate reports.",
     "reports.state.review": "Under review",
     "reports.state.ready": "Ready to finalise",
     "reports.title": "Reports",
@@ -12254,28 +12439,38 @@ export const dictionaries = {
       "The test is sent, but the setup could not be saved. At the interview you will choose it explicitly.",
     "lib.start.sendTest.needsApplication": "Choose an application to send the test.",
     "lib.method.trust.none": "No TRUST content is available to you right now.",
-    "lib.method.beskt.none": "No BESKT content is published or opened to employers yet. Nothing is required of you.",
+    "lib.method.beskt.none":
+      "No BESKT content is published or opened to employers yet. Nothing is required of you.",
     "lib.test.measures": "What the test examines",
     "lib.test.notMeasures": "What the test does not measure",
     "lib.test.size": "{modules} parts, {items} tasks. The candidate never sees the answer key.",
-    "beskt.error.openFrozen": "The version is available to employers and cannot be changed. Withdraw its availability first.",
-    "beskt.error.notOpenable": "Only a draft or in-review version can be made available; a published one already is.",
-    "beskt.error.notOpenableIncomplete": "The version is not complete for its purpose and cannot be made available.",
+    "beskt.error.openFrozen":
+      "The version is available to employers and cannot be changed. Withdraw its availability first.",
+    "beskt.error.notOpenable":
+      "Only a draft or in-review version can be made available; a published one already is.",
+    "beskt.error.notOpenableIncomplete":
+      "The version is not complete for its purpose and cannot be made available.",
     "beskt.availability.reason": "Reason (kept in the event log)",
     "beskt.availability.heading": "Availability in the employer offer",
     "beskt.availability.notReviewTitle": "This is not a review",
     "beskt.availability.state.restricted": "Not available to employers.",
     "beskt.availability.withdraw": "Withdraw availability",
-    "beskt.availability.lede": "One decision for the whole version: as an open pilot version it is available directly to every active employer, with no request, activation or installation per organisation.",
-    "beskt.availability.notReviewBody": "The version stays unreviewed and labelled a pilot hypothesis. No review gate is approved, and the content is locked while the version is available.",
-    "beskt.availability.state.open": "Available to every active employer as an unreviewed pilot version.",
+    "beskt.availability.lede":
+      "One decision for the whole version: as an open pilot version it is available directly to every active employer, with no request, activation or installation per organisation.",
+    "beskt.availability.notReviewBody":
+      "The version stays unreviewed and labelled a pilot hypothesis. No review gate is approved, and the content is locked while the version is available.",
+    "beskt.availability.state.open":
+      "Available to every active employer as an unreviewed pilot version.",
     "beskt.availability.state.published": "Published: available to every active employer.",
     "beskt.availability.open": "Make available to every employer",
-    "lib.setup.trust.report": "Interview report: assessments per competence with evidence, uncertainties and what to follow up.",
-    "lib.method.beskt.body": "Preparatory questions and structured method support for security-sensitive work.",
+    "lib.setup.trust.report":
+      "Interview report: assessments per competence with evidence, uncertainties and what to follow up.",
+    "lib.method.beskt.body":
+      "Preparatory questions and structured method support for security-sensitive work.",
     "lib.setup.role": "Role",
     "lib.role.available": "Content available",
-    "lib.setupRecordFailed": "The case was created, but its setup could not be saved on it. Method, role and environment are therefore not shown there.",
+    "lib.setupRecordFailed":
+      "The case was created, but its setup could not be saved on it. Method, role and environment are therefore not shown there.",
     "lib.case.setupNone": "Started outside the library",
     "lib.env.general": "General security operations",
     "lib.env.hospital": "Hospital",
@@ -12289,7 +12484,8 @@ export const dictionaries = {
     "lib.start.trust": "Start case",
     "lib.setup.timeUnsetAll": "Not established.",
     "lib.method.trust.title": "TRUST",
-    "lib.setup.beskt.interview": "A structured conversation area by area (T, common base, B, E, S, K, situations) with FAKTA documentation.",
+    "lib.setup.beskt.interview":
+      "A structured conversation area by area (T, common base, B, E, S, K, situations) with FAKTA documentation.",
     "lib.group.operational": "Operational roles",
     "lib.group.heading": "What kind of role are you recruiting for?",
     "lib.blocker.no_role_content": "There is no content for this role in the chosen method yet.",
@@ -12297,19 +12493,24 @@ export const dictionaries = {
     "lib.setup.environment": "Work environment",
     "lib.status.content_validated": "Reviewed and published",
     "lib.status.internal_test": "Internal test version under the organisation's activation",
-    "lib.setup.beskt.candidate": "A preparatory questionnaire the candidate completes before the interview, with information on purpose, recipients and correction.",
+    "lib.setup.beskt.candidate":
+      "A preparatory questionnaire the candidate completes before the interview, with information on purpose, recipients and correction.",
     "lib.setup.report": "The report",
     "lib.role.vaktare": "Security officer",
-    "lib.method.separate": "TRUST and BESKT are two methods with a report each. They share no score or risk model, and BESKT is not a security rating.",
-    "lib.method.beskt.aim": "Role-related circumstances, exposure, explanations and continued human assessment.",
+    "lib.method.separate":
+      "TRUST and BESKT are two methods with a report each. They share no score or risk model, and BESKT is not a security rating.",
+    "lib.method.beskt.aim":
+      "Role-related circumstances, exposure, explanations and continued human assessment.",
     "lib.env.heading": "Work environment",
     "lib.method.chosen": "Method",
     "lib.env.generalNote": "General setup – no environment-specific scenarios are included.",
     "lib.case.setup": "Setup",
     "lib.group.strategic": "Strategic and leading roles",
-    "lib.role.trust.missing": "No TRUST content for this role yet. A content specification is out for review; the security-officer test is not offered under this heading.",
+    "lib.role.trust.missing":
+      "No TRUST content for this role yet. A content specification is out for review; the security-officer test is not offered under this heading.",
     "lib.start.standalone": "Standalone case – name the candidate in the next step",
-    "lib.group.operational.hint": "For example security officers and other operational security staff.",
+    "lib.group.operational.hint":
+      "For example security officers and other operational security staff.",
     "lib.setup.included": "Included",
     "lib.method.trust.aim": "Job-related competence, experience and judgement.",
     "lib.setup.time": "Time",
@@ -12317,12 +12518,16 @@ export const dictionaries = {
     "lib.setup.candidate": "Candidate tasks",
     "lib.method.beskt.title": "BESKT",
     "lib.setup.minutes": "Candidate test {min}–{max} min.",
-    "lib.setup.trust.candidate": "{name}: the candidate takes the test on their own. Assigned in the case's Tests & material step.",
-    "lib.blocker.guide_unavailable": "The interview guide for the role is not available to the organisation right now.",
+    "lib.setup.trust.candidate":
+      "{name}: the candidate takes the test on their own. Assigned in the case's Tests & material step.",
+    "lib.blocker.guide_unavailable":
+      "The interview guide for the role is not available to the organisation right now.",
     "lib.setup.optional": "optional",
-    "lib.role.beskt.generic": "BESKT's common method. The position's exposure and mandate are set when the assignment starts; no role-specific questions are included yet.",
+    "lib.role.beskt.generic":
+      "BESKT's common method. The position's exposure and mandate are set when the assignment starts; no role-specific questions are included yet.",
     "lib.change": "Change",
-    "lib.blocker.beskt_unavailable": "No BESKT version is published or opened to employers yet. The content awaits CQrityjob's content decision – nothing is required of you.",
+    "lib.blocker.beskt_unavailable":
+      "No BESKT version is published or opened to employers yet. The content awaits CQrityjob's content decision – nothing is required of you.",
     "lib.step.method": "Method",
     "lib.title": "Recruitment support",
     "lib.method.heading": "Choose the method",
@@ -12331,21 +12536,27 @@ export const dictionaries = {
     "lib.group.strategic.hint": "For example Security Manager and head of security.",
     "lib.method.beskt.choose": "Choose BESKT",
     "lib.method.trust.body": "Tests and structured interviews for recruiting to security jobs.",
-    "lib.lede": "Choose the right setup for tests and interview. We take you on to the right candidate tasks, interview and report.",
+    "lib.lede":
+      "Choose the right setup for tests and interview. We take you on to the right candidate tasks, interview and report.",
     "lib.setup.timeUnset": "Not established for the interview.",
     "lib.status.published": "Published",
-    "lib.setup.beskt.report": "BESKT basis: observations with sources, the candidate's explanations, the responsible stance and actions.",
+    "lib.setup.beskt.report":
+      "BESKT basis: observations with sources, the candidate's explanations, the responsible stance and actions.",
     "lib.start.beskt": "Start BESKT",
-    "lib.setup.trust.candidateNone": "No candidate test is included. The case can go straight on to the interview.",
-    "lib.blocker.environment_without_content": "The chosen work environment has no content of its own yet.",
+    "lib.setup.trust.candidateNone":
+      "No candidate test is included. The case can go straight on to the interview.",
+    "lib.blocker.environment_without_content":
+      "The chosen work environment has no content of its own yet.",
     "lib.step.setup": "Setup",
     "lib.status.pilot_hypothesis": "Pilot version – unreviewed hypothesis",
     "lib.setup.interview": "The interview",
     "lib.status.open_pilot": "Pilot version – unreviewed, open to every employer",
-    "lib.setup.trust.interview": "Structured interview with the {name} guide: the same questions in the same order, with probes and level descriptions.",
+    "lib.setup.trust.interview":
+      "Structured interview with the {name} guide: the same questions in the same order, with probes and level descriptions.",
     "lib.blocker.content_unreadable": "The content could not be read just now. Try again.",
     "lib.setup.status": "Content status",
-    "lib.env.noScope": "The environment does not choose the method and gives access to no further data.",
+    "lib.env.noScope":
+      "The environment does not choose the method and gives access to no further data.",
     "lib.env.data_centre": "Data centre",
     "lib.role.security_manager": "Security Manager / head of security",
     "lib.steps.aria": "Library steps",
@@ -15441,8 +15652,10 @@ export const dictionaries = {
     "iiu.ts.state.done": "Completed",
     "iiu.ts.next.interview": "Go to the interview",
     "iiu.ts.notGate": "Nothing in this step holds up the interview.",
-    "iiu.ts.trust.body": "The test the candidate takes on their own. Status and results show here when the rules allow.",
-    "iiu.ts.trust.standalone": "The case is not linked to an application, so no test is assigned here. A test is sent through the candidate's application. The interview can take place without a test.",
+    "iiu.ts.trust.body":
+      "The test the candidate takes on their own. Status and results show here when the rules allow.",
+    "iiu.ts.trust.standalone":
+      "The case is not linked to an application, so no test is assigned here. A test is sent through the candidate's application. The interview can take place without a test.",
     "iiu.ts.beskt.title": "BESKT preparation",
     "iiu.ts.beskt.none": "No BESKT preparation is linked to the case yet.",
     "iiu.ts.beskt.body": "The candidate's preparatory questionnaire, linked to this case.",
@@ -15941,7 +16154,8 @@ export const dictionaries = {
     "iiu.pp.type": "Type",
     "iiu.pp.label": "Label",
     "iiu.pp.content": "Content",
-    "iiu.pp.contenthint": "Paste the text as it is. It is used as material when the conversation is planned.",
+    "iiu.pp.contenthint":
+      "Paste the text as it is. It is used as material when the conversation is planned.",
     "iiu.pp.legalbasis": "Legal basis",
     "iiu.pp.saving": "Saving …",
     "iiu.pp.add": "Add",
@@ -15962,10 +16176,13 @@ export const dictionaries = {
     "iiu.pp.approved.body": "This plan is now active. The interview can be started.",
     "iiu.pp.s3.title": "3. Conduct the interview",
     "iiu.pp.manual.title": "Plan the conversation",
-    "iiu.pp.manual.default.opening": "Welcome the candidate, introduce yourselves and explain the purpose, how long it takes and that you take notes. Explain that every candidate gets the same questions.",
-    "iiu.pp.manual.default.timeplan": "Opening 5 min · The guide's questions 40 min · Candidate's questions and close 10 min",
+    "iiu.pp.manual.default.opening":
+      "Welcome the candidate, introduce yourselves and explain the purpose, how long it takes and that you take notes. Explain that every candidate gets the same questions.",
+    "iiu.pp.manual.default.timeplan":
+      "Opening 5 min · The guide's questions 40 min · Candidate's questions and close 10 min",
     "iiu.pp.guide.show": "Show the interview guide ({n} questions)",
-    "iiu.pp.manual.default.closing": "Ask whether the candidate has questions, explain the next steps and when they will hear back, and thank them.",
+    "iiu.pp.manual.default.closing":
+      "Ask whether the candidate has questions, explain the next steps and when they will hear back, and thank them.",
     "iiu.pp.manual.body":
       "Write a short plan for how you will conduct it. The questions and follow-up questions come unchanged from the interview guide.",
     "iiu.pp.manual.timeplan": "Time plan",

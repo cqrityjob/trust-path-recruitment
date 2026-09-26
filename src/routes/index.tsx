@@ -23,6 +23,13 @@ import { PUBLIC_MARKET_SCALE } from "@/components/site/passport-market-scale";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { HomePassportPreview } from "@/components/site/HomePassportPreview";
+import {
+  EmployerFlow,
+  HomeAi,
+  HomeFaq,
+  HomeStart,
+  HomeValue,
+} from "@/components/site/HomeSections";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 /** ── THE OWNER-APPROVED PUBLIC ENTRY ARCHITECTURE ──────────────────────
@@ -242,6 +249,23 @@ function Index() {
                 <p className="mt-5 max-w-[58ch] text-base leading-relaxed text-muted-foreground md:text-[1.0625rem]">
                   {t("home.hero.subtitle")}
                 </p>
+                <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <PrimaryLink to="/signup" search={MY_CAREER_INTENT} className="w-full sm:w-auto">
+                    {t("home.cta.start")}
+                  </PrimaryLink>
+                  <PrimaryLink to="/jobs" variant="ghost" className="w-full sm:w-auto">
+                    <Briefcase className="h-4 w-4" aria-hidden="true" />
+                    {t("home.cta.jobs")}
+                  </PrimaryLink>
+                  <Link
+                    to="/employers"
+                    className="inline-flex min-h-11 items-center justify-center gap-1.5 px-2 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    {t("home.cta.employers")}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">{t("home.cta.jobsNote")}</p>
               </div>
 
               {/* Career Discovery remains a clear independent path while the
@@ -311,6 +335,8 @@ function Index() {
         </div>
       </section>
 
+      <HomeValue />
+
       {/* ── 2 · THE EMPLOYER STRIP ──────────────────────────────────────
           Visually separate from the two individual cards — its own navy
           band, below them — because an employer is a different reader, not
@@ -364,51 +390,13 @@ function Index() {
             </PrimaryLink>
           </div>
         </div>
-      </Section>
-
-      {/* ── 3 · ONE CONNECTED LIFECYCLE ─────────────────────────────────
-          An EXPLANATION of how the parts connect, not six competing product
-          cards: an ordered list of six short stages, each with at most one
-          quiet link to a canonical route that already exists. No solid
-          action lives in here, which is what keeps it an explanation. */}
-      <Section id="lifecycle" className="scroll-mt-24 py-16 md:py-24">
-        <div className="max-w-2xl">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {t("home.lifecycle.eyebrow")}
-          </p>
-          <h2
-            className="mt-3 text-[1.6rem] font-semibold leading-[1.15] tracking-tight text-foreground md:text-[2.1rem]"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
-            {t("home.lifecycle.title")}
-          </h2>
+        <div className="relative">
+          <EmployerFlow />
         </div>
-        <ol className="mt-10 grid grid-cols-1 gap-x-8 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
-          {LIFECYCLE.map(({ key, icon: Icon, titleKey, bodyKey }, i) => (
-            <li key={key} className="flex gap-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary text-accent">
-                <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <h3 className="text-base font-semibold tracking-tight text-foreground">
-                  {/* The number carries the sequence visually; the ordered
-                      list already carries it for a screen reader. */}
-                  <span className="tabular-nums text-muted-foreground">{i + 1}.</span> {t(titleKey)}
-                </h3>
-                <p className="mt-1.5 max-w-[38ch] text-sm leading-relaxed text-muted-foreground">
-                  {t(bodyKey)}
-                </p>
-                <div className="mt-2 flex flex-wrap items-center gap-x-5">
-                  {LIFECYCLE_LINKS[key].map((link) => (
-                    <QuietLink key={link.labelKey} {...link} />
-                  ))}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ol>
       </Section>
 
+      <HomeAi />
+      <HomeStart />
       {/* ── 4 · SECURITY PASSPORT: THREE MARKETS, AND WHAT IT IS NOT ────
           The markets are read from PUBLIC_MARKET_SCALE, which carries the
           governed market-pack codes and no credential, no entitlement and
@@ -462,6 +450,7 @@ function Index() {
           </div>
         </div>
       </Section>
+      <HomeFaq />
     </SiteLayout>
   );
 }
@@ -505,76 +494,6 @@ function QuietLink({
  * Passport without ever running Career Discovery, and may run Career
  * Discovery without ever building a Passport. */
 type LifecycleKey = "discover" | "understand" | "grow" | "trust" | "work" | "continue";
-
-const LIFECYCLE = [
-  {
-    key: "discover",
-    icon: Compass,
-    titleKey: "home.lifecycle.discover.title",
-    bodyKey: "home.lifecycle.discover.body",
-  },
-  {
-    key: "understand",
-    icon: Lightbulb,
-    titleKey: "home.lifecycle.understand.title",
-    bodyKey: "home.lifecycle.understand.body",
-  },
-  {
-    key: "grow",
-    icon: TrendingUp,
-    titleKey: "home.lifecycle.grow.title",
-    bodyKey: "home.lifecycle.grow.body",
-  },
-  {
-    key: "trust",
-    icon: ShieldCheck,
-    titleKey: "home.lifecycle.trust.title",
-    bodyKey: "home.lifecycle.trust.body",
-  },
-  {
-    key: "work",
-    icon: Briefcase,
-    titleKey: "home.lifecycle.work.title",
-    bodyKey: "home.lifecycle.work.body",
-  },
-  {
-    key: "continue",
-    icon: GraduationCap,
-    titleKey: "home.lifecycle.continue.title",
-    bodyKey: "home.lifecycle.continue.body",
-  },
-] as const satisfies readonly {
-  key: LifecycleKey;
-  icon: typeof Compass;
-  titleKey: TranslationKey;
-  bodyKey: TranslationKey;
-}[];
-
-/** Where each stage goes. EVERY destination is an existing canonical route:
- *  the four `/signup` entries carry a validated `?redirect=` rather than
- *  naming an authenticated route a signed-out reader cannot open, and
- *  "Trust" points at this page's own Passport section because the Passport
- *  has no public page and a nav item that lands on a login wall is a dead
- *  end wearing a product name. */
-const LIFECYCLE_LINKS: Record<
-  LifecycleKey,
-  readonly {
-    to: string;
-    search?: Record<string, string>;
-    hash?: string;
-    labelKey: TranslationKey;
-  }[]
-> = {
-  discover: [
-    { to: CAREER_DISCOVERY, labelKey: "nav.careerDiscovery" },
-    { to: "/career-center", labelKey: "nav.career_center" },
-  ],
-  understand: [{ to: CAREER_DISCOVERY, labelKey: "home.lifecycle.understand.link" }],
-  grow: [{ to: "/signup", search: MY_CAREER_INTENT, labelKey: "home.lifecycle.grow.link" }],
-  trust: [{ to: "/", hash: "passport", labelKey: "nav.passportPublic" }],
-  work: [{ to: "/jobs", labelKey: "nav.jobs" }],
-  continue: [{ to: "/signup", search: ACADEMY_INTENT, labelKey: "home.lifecycle.continue.link" }],
-};
 
 /* ── THE THREE TRUST LEVELS ────────────────────────────────────────────
  *
