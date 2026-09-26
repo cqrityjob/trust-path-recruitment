@@ -84,6 +84,7 @@ ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone text;
 ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone_change text DEFAULT '';
 ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS phone_change_token text DEFAULT '';
 ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS reauthentication_token text DEFAULT '';
+ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS confirmation_sent_at timestamptz;
 
 -- ---------------------------------------------------------------------------
 -- 3 · The role PostgREST connects as.

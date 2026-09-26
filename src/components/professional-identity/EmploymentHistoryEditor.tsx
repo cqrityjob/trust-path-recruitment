@@ -40,7 +40,7 @@
 // obeyed on the Passport: a locked or verified period offers no edit and
 // no remove.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MutableRefObject } from "react";
 import { Link } from "@tanstack/react-router";
 import { Briefcase } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
@@ -64,6 +64,11 @@ import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { AssertionLevel } from "@/lib/security-passport/types";
 import { formatPeriodRange } from "@/lib/security-passport/format";
 import { useT } from "@/i18n/context";
+import type {
+  CvContentEditorHandle,
+  CvContentEditorState,
+  CvContentFlushResult,
+} from "./cv-content-editor";
 
 const CONTROL =
   "inline-flex min-h-11 items-center rounded-md border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
@@ -71,12 +76,20 @@ const CONTROL =
 export function EmploymentHistoryEditor({
   className = "",
   onChanged,
+  handleRef,
+  onStateChange,
 }: {
   className?: string;
   /** Called after a write has been read back. The editor owns no cache, so
    *  the page that mounts it says which of ITS reads the write made stale --
    *  the CV's readiness, the identity summary. */
   onChanged?: () => void;
+  /** Lent to the mounting page so its "Show my CV" control can save an
+   *  open form before it navigates away. See cv-content-editor.ts. */
+  handleRef?: MutableRefObject<CvContentEditorHandle | null>;
+  /** Whether a form is open and whether a write is in flight, so the page
+   *  can hold its own controls still while this one is writing. */
+  onStateChange?: (state: CvContentEditorState) => void;
 }) {
   const { pt } = usePassportCopy();
   const { lang } = useT();
@@ -127,10 +140,10 @@ export function EmploymentHistoryEditor({
       .catch(() => {});
   }, [refresh, loadProfile]);
 
-  async function commit(next: ExperienceDraft) {
+  async function commit(next: ExperienceDraft): Promise<CvContentFlushResult> {
     const errs = validateExperience(next);
     setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) return "invalid";
     setBusy(true);
     setNotice(null);
     setError(null);
@@ -154,13 +167,30 @@ export function EmploymentHistoryEditor({
         setNotice(pt("entry.saved"));
         onChanged?.();
       }
+      return "saved";
     } catch (err) {
       console.error("[profile] employment save failed", err);
       setError(pt("common.error"));
+      return "failed";
     } finally {
       setBusy(false);
     }
   }
+
+  // The page above reads this editor's state and, when asked to show the
+  // CV, saves the open form through it. Assigned on every render so the
+  // handle always closes over the current draft, never one from a render
+  // ago.
+  if (handleRef) {
+    handleRef.current = {
+      flush: () => (draft ? commit(draft) : Promise.resolve("saved")),
+    };
+  }
+  const open = draft !== null;
+  useEffect(() => {
+    onStateChange?.({ open, busy });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, busy]);
 
   async function drop(id: string) {
     setBusy(true);

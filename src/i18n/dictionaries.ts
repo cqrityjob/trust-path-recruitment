@@ -683,6 +683,50 @@ export const dictionaries = {
     // through the inbox.
     "auth.confirm.destinationKept":
       "Du kommer tillbaka dit du var på väg när du har verifierat adressen.",
+    // ── Fortsätt på den här enheten (ägarrapport 2026-09-26) ──────────
+    // Länken öppnas ofta i mobilen medan registreringen gjordes på datorn.
+    // Kontot aktiveras där länken öppnas; datorn får ingen inloggning
+    // överförd till sig. Den kontrollerar i stället, med personens egna
+    // uppgifter, om adressen är bekräftad -- och säger annars klart att en
+    // inloggning krävs.
+    "auth.confirm.otherDevice":
+      "Öppnar du länken på en annan enhet, till exempel din mobil? Då aktiveras kontot där. För att fortsätta på den här datorn trycker du på knappen nedan – vi kontrollerar då att adressen är bekräftad och loggar in dig här. Ingen inloggning flyttas mellan enheter.",
+    "auth.confirm.autoChecking":
+      "Så länge den här sidan är öppen kontrollerar vi automatiskt om adressen har bekräftats.",
+    "auth.confirm.continue": "Jag har bekräftat – fortsätt",
+    "auth.confirm.checking": "Kontrollerar…",
+    "auth.confirm.notYet":
+      "Adressen är inte bekräftad ännu. Öppna länken i mejlet och tryck sedan på knappen igen.",
+    "auth.confirm.restored":
+      "Du registrerade dig nyligen med adressen nedan. När du har öppnat länken i mejlet loggar du in här för att fortsätta – lösenordet du valde sparas aldrig i webbläsaren.",
+    "auth.confirm.signInToContinue": "Logga in för att fortsätta",
+    "auth.confirm.resendIn": "Skicka igen om {0} s",
+    "auth.confirm.linkExpired":
+      "Bekräftelselänken har gått ut eller har redan använts. Skicka en ny länk nedan – eller logga in om adressen redan är bekräftad.",
+    "auth.login.pendingNotice":
+      "Väntar du på bekräftelsemejlet till {0}? Öppna länken i mejlet och logga sedan in här. Inget mejl? Skicka länken igen.",
+    // ── Adressen har redan ett konto ──────────────────────────────────
+    // Supabase svarar då utan fel och utan att skicka något mejl, så panelen
+    // fick inte säga "kontrollera din e-post" om ett mejl som aldrig gick.
+    "auth.existing.heading": "Det finns redan ett konto",
+    "auth.existing.body":
+      "Adressen {0} har redan ett konto. Logga in för att fortsätta, eller återställ lösenordet om du har glömt det. Inget nytt mejl har skickats.",
+    "auth.existing.signIn": "Logga in",
+    "auth.existing.reset": "Skicka återställningslänk",
+    "auth.existing.back": "Använd en annan adress",
+    "auth.error.rateLimited": "För många försök på kort tid. Vänta en stund och försök igen.",
+    "auth.error.rateLimitedSeconds":
+      "För många försök på kort tid. Vänta {0} sekunder och försök igen.",
+    "auth.error.existingAccount":
+      "Adressen har redan ett konto. Logga in i stället, eller återställ lösenordet.",
+    "auth.error.emailNotConfirmed":
+      "E-postadressen är inte bekräftad ännu. Öppna länken i mejlet först.",
+    "auth.error.invalidCredentials": "Fel e-postadress eller lösenord.",
+    "auth.error.weakPassword": "Lösenordet är för svagt. Välj ett längre lösenord.",
+    "auth.error.linkExpired": "Länken har gått ut eller har redan använts.",
+    "auth.error.network":
+      "Vi fick inte kontakt med inloggningstjänsten. Kontrollera uppkopplingen och försök igen.",
+    "auth.error.unknown": "Det gick inte just nu. Försök igen om en stund.",
     "auth.companyName": "Företagsnamn",
     "auth.companyCountry": "Land",
     "employer.pending.heading": "Företagskonto granskas",
@@ -802,7 +846,7 @@ export const dictionaries = {
       "Vi behöver bara det nödvändigaste nu. Resten fyller du i när du behöver det.",
     "auth.unified.benefit.identity": "En yrkesprofil som du fyller i en gång och återanvänder.",
     "auth.unified.benefit.passport":
-      "Ett Säkerhetspass som skiljer på vad du uppger och vad som faktiskt är verifierat.",
+      "Ett Security Passport som skiljer på vad du uppger och vad som faktiskt är verifierat.",
     "auth.unified.benefit.jobs": "Jobb, ansökningar och bedömningar under samma konto.",
     "auth.unified.benefit.context":
       "Är du också rekryterare byter du till din organisation — utan en andra inloggning.",
@@ -1023,6 +1067,8 @@ export const dictionaries = {
       "Ett delbart kort med din starkaste riktning och dina Career DNA-drag — klart på under en minut.",
     "careerDiscovery.report.v31.methodologyToggle": "Visa metodik och versioner",
     "careerDiscovery.report.v31.professionDetailLoading": "Hämtar mer information…",
+    "careerDiscovery.report.v31.professionDetailError":
+      "Vi kunde inte hämta mer information om yrket just nu.",
     "careerDiscovery.report.v31.requirementsTitle": "Vad som krävs",
     "careerDiscovery.report.v31.requirementsEmpty": "Inga specifika krav registrerade ännu.",
     "careerDiscovery.report.v31.educationTitle": "Utbildning och certifieringar",
@@ -1993,6 +2039,9 @@ export const dictionaries = {
     "employer.workforce.form.cancel": "Avbryt",
 
     "employer.overview.heading": "Översikt",
+    // Första sidan skall välkomna arbetsgivaren (ägarbeslut 2026-09-26).
+    "employer.overview.welcome": "Välkommen, {0}",
+    "employer.overview.welcomeAnon": "Välkommen",
     "employer.overview.subheading":
       "Hantera rekrytering, medarbetare, tester och kompetensutveckling på ett ställe.",
 
@@ -6511,6 +6560,81 @@ export const dictionaries = {
     "journey.closedTest": "Pilotversion",
     "journey.closedTestNotForSelection": "Pilotversion – endast för utvärdering",
     "journey.stage.invited": "Tilldelad",
+    "journey.stage.cancelled": "Avbruten",
+    "journey.stage.expired": "Utgången",
+    // ── Skicka test (ägarrapport 2026-09-26) ─────────────────────────
+    // Ett sätt att skicka testet, nåbart från ansökningslistan, rekryteringens
+    // kandidatlista och kandidatsidan. Båda nivåerna visas alltid; den som
+    // saknar godkänt innehåll säger exakt vad som saknas.
+    "sendTest.action": "Skicka test",
+    "sendTest.title": "Skicka test",
+    "sendTest.lede":
+      "Testet skickas till kandidatens konto på CQrityjob. Adressen hämtas från ansökan – ni anger aldrig någon e-postadress.",
+    "sendTest.recipient": "Mottagare",
+    "sendTest.recipientAnonymous": "Kandidaten i ansökan",
+    "sendTest.forJob": "Ansökan till",
+    "sendTest.level": "Vilken nivå gäller rekryteringen?",
+    "sendTest.level.operational": "Operativa roller",
+    "sendTest.level.operational.audience":
+      "För väktare, ordningsvakter, skyddsvakter och annan operativ säkerhetspersonal.",
+    "sendTest.level.operational.purpose":
+      "Ett kandidattest om säkerhetsbedömning, observation, rapportering och arbetsbeteende. Resultatet är ett underlag inför intervjun – det fattar inget beslut och rangordnar inga kandidater.",
+    "sendTest.level.strategic": "Strategiska och ledande roller",
+    "sendTest.level.strategic.audience":
+      "För säkerhetschefer, Security Managers och andra ledande säkerhetsroller.",
+    "sendTest.level.strategic.purpose":
+      "Ett underlag om riskbaserad prioritering, styrning och mandat, incident- och krisledning, samverkan, regelefterlevnad och ledarskap – inför en strukturerad intervju.",
+    "sendTest.level.strategic.pendingApproval":
+      "Testet för den här nivån finns som utkast under granskning och är inte frisläppt för rekrytering. Er organisation kan inte skicka det förrän innehållet har fått ett samlat innehållsgodkännande och aktiverats. Väktartestet erbjuds inte under den här rubriken – det skulle vara det operativa testet med ny titel. Följande finns som utkast:",
+    "sendTest.level.strategic.notInstalled":
+      "Innehållet för den här nivån finns som granskningsutkast men är inte installerat i den här miljön. Väktartestet erbjuds inte under den här rubriken – det skulle vara det operativa testet med ny titel. Nivån består av:",
+    "sendTest.part.requirement_profile":
+      "Kravprofil för Säkerhetschef med sex kompetensområden och observerbara indikatorer.",
+    "sendTest.part.interview_guide":
+      "Intervjuguide i samma format som Väktare: åtta fasta frågor, fördjupningsfrågor och nivåbeskrivningar, versionslåst.",
+    "sendTest.part.candidate_component":
+      "Kandidattest med scenarier, självskattning och reflektion, med egen instrumentgranskning.",
+    "sendTest.part.report_section":
+      "Rapportavsnitt med kompetensvisa bedömningar, belägg och intervjuunderlag.",
+    "sendTest.part.review":
+      "Expert-, juridik- och kognitiv granskning med alla grindar utestående, därefter publicering eller ett uttryckligt pilotbeslut.",
+    "sendTest.test.closedTest":
+      "Innehållet är ett utkast och körs som sluten test. Resultatet är ett underlag – det fattar inget beslut.",
+    "sendTest.level.strategic.interviewInstead":
+      "Intervjustödet BESKT kan användas för rollen redan nu, från Tester & bedömningar → Rekryteringsstöd.",
+    "sendTest.level.notAssignable": "Testet finns men er organisation kan inte skicka det just nu.",
+    "sendTest.level.alreadySent":
+      "Redan skickat till den här kandidaten. Ett nytt försök skapar inget nytt test.",
+    "sendTest.test": "Test",
+    "sendTest.test.size": "{items} uppgifter i {modules} delar",
+    "sendTest.test.minutes": "cirka {min}–{max} minuter",
+    "sendTest.language": "Testets språk",
+    "sendTest.language.sv": "Svenska",
+    "sendTest.language.en": "Engelska",
+    "sendTest.send": "Skicka test",
+    "sendTest.sending": "Skickar…",
+    "sendTest.cannotSend": "Välj en nivå som har ett test att skicka.",
+    "sendTest.sent.title": "Testet är skickat",
+    "sendTest.sent.body":
+      "Kandidaten ser testet i sitt konto under Tester & utveckling och kan börja direkt. Ni följer läget här och i Tester & bedömningar.",
+    "sendTest.sent.setup":
+      "Upplägget (nivå och rollprofil) är sparat, så intervjuförberedelsen efter testet behöver inget nytt val.",
+    "sendTest.sent.noSetup":
+      "Testet är skickat, men upplägget kunde inte sparas – intervjuförberedelsen kommer att fråga efter nivå.",
+    "sendTest.sent.inApp": "Meddelande levererat i CQrityjob.",
+    "sendTest.sent.email.sent": "E-post accepterad av leverantören.",
+    "sendTest.sent.email.not_configured":
+      "E-post är inte konfigurerad – kandidaten nås i CQrityjob.",
+    "sendTest.sent.email.failed": "E-posten kunde inte skickas – kandidaten nås i CQrityjob.",
+    "sendTest.sent.email.in_progress": "E-post skickas.",
+    "sendTest.sent.noMessage":
+      "Inget meddelande kunde skrivas – testet finns ändå i kandidatens konto.",
+    "sendTest.sent.openCandidate": "Öppna kandidaten",
+    "sendTest.sent.openOverview": "Tester & bedömningar",
+    "sendTest.error.noTest": "Det finns inget test att skicka för den valda nivån.",
+    "sendTest.error.unavailable": "Testbiblioteket kunde inte läsas just nu. Försök igen.",
+    "sendTest.close": "Stäng",
+    "sendTest.cancel": "Avbryt",
     "journey.stage.started": "Pågår",
     "journey.stage.under_review": "Väntar på granskning",
     "journey.stage.ready_to_release": "Underlag klart",
@@ -8939,6 +9063,41 @@ export const dictionaries = {
     "auth.confirm.changeEmail": "Change email address",
     "auth.confirm.destinationKept":
       "You'll return to where you were heading once the address is verified.",
+    "auth.confirm.otherDevice":
+      "Opening the link on another device, such as your phone? The account is activated there. To continue on this computer, press the button below – we check that the address is confirmed and sign you in here. No sign-in is ever moved between devices.",
+    "auth.confirm.autoChecking":
+      "While this page stays open we check automatically whether the address has been confirmed.",
+    "auth.confirm.continue": "I have confirmed – continue",
+    "auth.confirm.checking": "Checking…",
+    "auth.confirm.notYet":
+      "The address is not confirmed yet. Open the link in the email, then press the button again.",
+    "auth.confirm.restored":
+      "You recently registered with the address below. Once you have opened the link in the email, sign in here to continue – the password you chose is never stored in the browser.",
+    "auth.confirm.signInToContinue": "Sign in to continue",
+    "auth.confirm.resendIn": "Send again in {0} s",
+    "auth.confirm.linkExpired":
+      "The confirmation link has expired or has already been used. Send a new link below – or sign in if the address is already confirmed.",
+    "auth.login.pendingNotice":
+      "Waiting for the confirmation email to {0}? Open the link in the email, then sign in here. No email? Send the link again.",
+    "auth.existing.heading": "There is already an account",
+    "auth.existing.body":
+      "The address {0} already has an account. Sign in to continue, or reset the password if you have forgotten it. No new email has been sent.",
+    "auth.existing.signIn": "Sign in",
+    "auth.existing.reset": "Send a reset link",
+    "auth.existing.back": "Use a different address",
+    "auth.error.rateLimited": "Too many attempts in a short time. Wait a moment and try again.",
+    "auth.error.rateLimitedSeconds":
+      "Too many attempts in a short time. Wait {0} seconds and try again.",
+    "auth.error.existingAccount":
+      "That address already has an account. Sign in instead, or reset the password.",
+    "auth.error.emailNotConfirmed":
+      "The email address is not confirmed yet. Open the link in the email first.",
+    "auth.error.invalidCredentials": "Wrong email address or password.",
+    "auth.error.weakPassword": "The password is too weak. Choose a longer password.",
+    "auth.error.linkExpired": "The link has expired or has already been used.",
+    "auth.error.network":
+      "We could not reach the sign-in service. Check your connection and try again.",
+    "auth.error.unknown": "That did not work just now. Please try again in a moment.",
     "auth.companyName": "Company name",
     "auth.companyCountry": "Country",
     "employer.pending.heading": "Company account under review",
@@ -9246,6 +9405,8 @@ export const dictionaries = {
       "A shareable card with your strongest direction and your Career DNA traits — ready in under a minute.",
     "careerDiscovery.report.v31.methodologyToggle": "Show methodology and versions",
     "careerDiscovery.report.v31.professionDetailLoading": "Loading more detail…",
+    "careerDiscovery.report.v31.professionDetailError":
+      "We could not load more detail about this profession right now.",
     "careerDiscovery.report.v31.requirementsTitle": "What it takes",
     "careerDiscovery.report.v31.requirementsEmpty": "No specific requirements recorded yet.",
     "careerDiscovery.report.v31.educationTitle": "Education and certifications",
@@ -10129,6 +10290,8 @@ export const dictionaries = {
     "employer.workforce.form.cancel": "Cancel",
 
     "employer.overview.heading": "Overview",
+    "employer.overview.welcome": "Welcome, {0}",
+    "employer.overview.welcomeAnon": "Welcome",
     "employer.overview.subheading":
       "Manage recruitment, employees, tests and competence development in one place.",
 
@@ -14520,6 +14683,79 @@ export const dictionaries = {
     "journey.closedTest": "Pilot version",
     "journey.closedTestNotForSelection": "Pilot version – for evaluation only",
     "journey.stage.invited": "Assigned",
+    "journey.stage.cancelled": "Cancelled",
+    "journey.stage.expired": "Expired",
+    "sendTest.action": "Send test",
+    "sendTest.title": "Send test",
+    "sendTest.lede":
+      "The test is sent to the candidate's CQrityjob account. The address is taken from the application – you never enter an email address.",
+    "sendTest.recipient": "Recipient",
+    "sendTest.recipientAnonymous": "The candidate on the application",
+    "sendTest.forJob": "Application for",
+    "sendTest.level": "Which level does the recruitment concern?",
+    "sendTest.level.operational": "Operational roles",
+    "sendTest.level.operational.audience":
+      "For security officers, public-order guards, protective security officers and other operational security staff.",
+    "sendTest.level.operational.purpose":
+      "A candidate test on security judgement, observation, reporting and work behaviour. The result is material for the interview – it makes no decision and ranks no candidates.",
+    "sendTest.level.strategic": "Strategic and leading roles",
+    "sendTest.level.strategic.audience":
+      "For heads of security, Security Managers and other leading security roles.",
+    "sendTest.level.strategic.purpose":
+      "Material on risk-based prioritisation, governance and mandate, incident and crisis leadership, collaboration, compliance and leadership – ahead of a structured interview.",
+    "sendTest.level.strategic.pendingApproval":
+      "The test for this level exists as a draft under review and has not been released for recruitment. Your organisation cannot send it until the content has received a combined content approval and been activated. The security-officer test is not offered under this heading – that would be the operational test with a new title. The following exist as drafts:",
+    "sendTest.level.strategic.notInstalled":
+      "The content for this level exists as a review draft but is not installed in this environment. The security-officer test is not offered under this heading – that would be the operational test with a new title. The level consists of:",
+    "sendTest.part.requirement_profile":
+      "A Security Manager requirement profile with six competency areas and observable indicators.",
+    "sendTest.part.interview_guide":
+      "An interview guide in the same format as the security-officer one: eight fixed questions, probing questions and level descriptions, version-locked.",
+    "sendTest.part.candidate_component":
+      "A candidate test with scenarios, self-description and reflection, with its own instrument review.",
+    "sendTest.part.report_section":
+      "A report section with competency-by-competency assessments, evidence and interview preparation.",
+    "sendTest.part.review":
+      "Expert, legal and cognitive review with every gate outstanding, then publication or an explicit pilot decision.",
+    "sendTest.test.closedTest":
+      "The content is a draft and runs as a closed test. The result is material for the interview – it makes no decision.",
+    "sendTest.level.strategic.interviewInstead":
+      "The BESKT interview support can already be used for the role, from Tests & assessments → Recruitment support.",
+    "sendTest.level.notAssignable":
+      "The test exists but your organisation cannot send it right now.",
+    "sendTest.level.alreadySent":
+      "Already sent to this candidate. Sending again creates no second test.",
+    "sendTest.test": "Test",
+    "sendTest.test.size": "{items} items in {modules} parts",
+    "sendTest.test.minutes": "about {min}–{max} minutes",
+    "sendTest.language": "Language of the test",
+    "sendTest.language.sv": "Swedish",
+    "sendTest.language.en": "English",
+    "sendTest.send": "Send test",
+    "sendTest.sending": "Sending…",
+    "sendTest.cannotSend": "Choose a level that has a test to send.",
+    "sendTest.sent.title": "The test has been sent",
+    "sendTest.sent.body":
+      "The candidate sees the test in their account under Tests & development and can start right away. You follow it here and in Tests & assessments.",
+    "sendTest.sent.setup":
+      "The setup (level and role profile) is recorded, so the interview preparation after the test needs no second choice.",
+    "sendTest.sent.noSetup":
+      "The test has been sent, but the setup could not be recorded – the interview preparation will ask for the level.",
+    "sendTest.sent.inApp": "Message delivered in CQrityjob.",
+    "sendTest.sent.email.sent": "Email accepted by the provider.",
+    "sendTest.sent.email.not_configured":
+      "Email is not configured – the candidate is reached in CQrityjob.",
+    "sendTest.sent.email.failed":
+      "The email could not be sent – the candidate is reached in CQrityjob.",
+    "sendTest.sent.email.in_progress": "Email is being sent.",
+    "sendTest.sent.noMessage":
+      "No message could be written – the test is in the candidate's account regardless.",
+    "sendTest.sent.openCandidate": "Open the candidate",
+    "sendTest.sent.openOverview": "Tests & assessments",
+    "sendTest.error.noTest": "There is no test to send for the chosen level.",
+    "sendTest.error.unavailable": "The test library could not be read right now. Try again.",
+    "sendTest.close": "Close",
+    "sendTest.cancel": "Cancel",
     "journey.stage.started": "In progress",
     "journey.stage.under_review": "Waiting for review",
     "journey.stage.ready_to_release": "Brief ready",

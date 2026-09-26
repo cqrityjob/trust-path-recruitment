@@ -5,8 +5,14 @@
  * application code, the checked-in Supabase client and the real routes run
  * against it unmodified:
  *
- *   /auth/v1/*   handled here  -- password sign-in, token refresh, /user, logout
+ *   /auth/v1/*   handled here  -- password sign-in, token refresh, /user, logout,
+ *                                 and (2026-09-26) sign-up, confirmation, resend
  *   /rest/v1/*   proxied       -- to a real PostgREST, which enforces the real RLS
+ *   /__local/inbox  the CONTROLLED TEST INBOX: every confirmation email the
+ *                   gateway "sent", readable by address, loopback only. Set
+ *                   LOCAL_MAILER_AUTOCONFIRM=0 to require confirmation the way
+ *                   the hosted project does; the default autoconfirms, which
+ *                   is what every earlier walk on this stack assumed.
  *
  * WHAT IS REAL AND WHAT IS NOT
  *
@@ -48,6 +54,12 @@ const POSTGREST = process.env.POSTGREST_URL ?? "http://127.0.0.1:3000";
 const SECRET = process.env.LOCAL_JWT_SECRET;
 const DB_URL = process.env.LOCAL_DB_URL;
 const ACCESS_TTL = 3600;
+const AUTOCONFIRM = (process.env.LOCAL_MAILER_AUTOCONFIRM ?? "1") !== "0";
+/** GoTrue's default minimum interval between two emails to one address. */
+const EMAIL_INTERVAL_MS = 60_000;
+/** The controlled inbox: what a real mailer would have delivered. */
+const inbox = [];
+const lastMailAt = new Map();
 
 if (!SECRET || SECRET.length < 32) {
   console.error("GATEWAY REFUSED: LOCAL_JWT_SECRET must be at least 32 characters.");
@@ -144,15 +156,19 @@ async function queryJson(sql, params) {
 const USER_JSON =
   "json_build_object('id', u.id, 'email', u.email, 'user_metadata', coalesce(u.raw_user_meta_data, '{}'::jsonb))";
 
-/** Verify an email and password against auth.users, in the database, with bcrypt. */
+const USER_JSON_WITH_CONFIRMATION =
+  "json_build_object('id', u.id, 'email', u.email, 'user_metadata', coalesce(u.raw_user_meta_data, '{}'::jsonb), 'confirmed', u.email_confirmed_at IS NOT NULL)";
+
+/** Verify an email and password against auth.users, in the database, with
+ *  bcrypt. Returns the user WITH its confirmation state, so the caller can
+ *  answer `email_not_confirmed` exactly as GoTrue does. */
 async function authenticate(email, password) {
   const sql = (cryptFn) => `
-    SELECT ${USER_JSON}
+    SELECT ${USER_JSON_WITH_CONFIRMATION}
       FROM auth.users u
      WHERE u.email = :'email'
        AND u.encrypted_password IS NOT NULL
        AND u.encrypted_password = ${cryptFn}(:'password', u.encrypted_password)
-       AND u.email_confirmed_at IS NOT NULL
        AND (u.banned_until IS NULL OR u.banned_until < now())`;
   try {
     return await queryJson(sql("extensions.crypt"), { email, password });
@@ -161,6 +177,72 @@ async function authenticate(email, password) {
     // Supabase one. Try the other rather than assume which.
     return await queryJson(sql("public.crypt"), { email, password });
   }
+}
+
+/** Sign-up: a real auth.users row plus its email identity, exactly the shape
+ *  the fixtures write, confirmed at once (autoconfirm) or not (a confirmation
+ *  token, and a message in the controlled inbox). */
+async function signUp(email, password, meta, redirectTo) {
+  const existing = await queryJson(
+    `SELECT ${USER_JSON_WITH_CONFIRMATION} FROM auth.users u WHERE u.email = :'email'`,
+    { email },
+  );
+  if (existing) return { existing };
+  const token = randomUUID().replace(/-/g, "");
+  const sql = (schema) => `
+    WITH ins AS (
+      INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password,
+                              raw_user_meta_data, raw_app_meta_data, email_confirmed_at,
+                              confirmation_token, confirmation_sent_at, created_at, updated_at)
+      VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+              :'email', ${schema}.crypt(:'password', ${schema}.gen_salt('bf')), :'meta'::jsonb,
+              '{"provider":"email","providers":["email"]}'::jsonb,
+              CASE WHEN :'autoconfirm' = '1' THEN now() END,
+              CASE WHEN :'autoconfirm' = '1' THEN '' ELSE :'token' END,
+              CASE WHEN :'autoconfirm' = '1' THEN NULL ELSE now() END, now(), now())
+      RETURNING *),
+    ident AS (
+      INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+      SELECT id::text, id, jsonb_build_object('sub', id::text, 'email', email, 'email_verified', false), 'email', NULL, now(), now()
+        FROM ins RETURNING user_id)
+    SELECT json_build_object('id', u.id, 'email', u.email, 'user_metadata', coalesce(u.raw_user_meta_data, '{}'::jsonb), 'confirmed', u.email_confirmed_at IS NOT NULL)
+      FROM ins u`;
+  const params = {
+    email,
+    password,
+    meta: JSON.stringify(meta ?? {}),
+    autoconfirm: AUTOCONFIRM ? "1" : "0",
+    token,
+  };
+  let user;
+  try {
+    user = await queryJson(sql("extensions"), params);
+  } catch {
+    user = await queryJson(sql("public"), params);
+  }
+  if (!AUTOCONFIRM) deliverConfirmation(email, token, redirectTo);
+  return { user };
+}
+
+function deliverConfirmation(email, token, redirectTo) {
+  const link = `http://127.0.0.1:${PORT}/auth/v1/verify?token=${token}&type=signup&redirect_to=${encodeURIComponent(redirectTo ?? "")}`;
+  inbox.push({
+    to: email,
+    type: "signup",
+    link,
+    redirectTo: redirectTo ?? null,
+    at: new Date().toISOString(),
+  });
+  lastMailAt.set(email, Date.now());
+  console.log(`[inbox] confirmation for ${email}: ${link}`);
+}
+
+/** GoTrue refuses a second email to one address inside the interval. */
+function emailRateLimited(email) {
+  const last = lastMailAt.get(email);
+  if (!last) return 0;
+  const wait = EMAIL_INTERVAL_MS - (Date.now() - last);
+  return wait > 0 ? Math.ceil(wait / 1000) : 0;
 }
 
 async function userById(id) {
@@ -256,7 +338,7 @@ async function handle(req, res) {
         version: "local-gateway",
         external: { email: true },
         disable_signup: false,
-        mailer_autoconfirm: true,
+        mailer_autoconfirm: AUTOCONFIRM,
       });
     }
 
@@ -272,6 +354,14 @@ async function handle(req, res) {
             error_description: "Invalid login credentials",
             code: "invalid_credentials",
             msg: "Invalid login credentials",
+          });
+        }
+        if (!user.confirmed) {
+          return send(res, 400, {
+            error: "invalid_grant",
+            error_description: "Email not confirmed",
+            code: "email_not_confirmed",
+            msg: "Email not confirmed",
           });
         }
         return send(res, 200, sessionBody(user));
@@ -290,6 +380,137 @@ async function handle(req, res) {
       }
 
       return send(res, 400, { error: "unsupported_grant_type", error_description: String(grant) });
+    }
+
+    if (route === "signup" && req.method === "POST") {
+      const body = JSON.parse((await readBody(req)).toString("utf8") || "{}");
+      const email = String(body.email ?? "")
+        .trim()
+        .toLowerCase();
+      const password = String(body.password ?? "");
+      const redirectTo =
+        url.searchParams.get("redirect_to") ?? body.gotrue_meta_security?.redirect_to ?? null;
+      if (!email.includes("@") || password.length < 6) {
+        return send(res, 422, {
+          code: 422,
+          error_code: "validation_failed",
+          msg: "Signup requires a valid email and password",
+        });
+      }
+      // GoTrue rate-limits SENDS. A taken address sends nothing, so it is
+      // answered (obfuscated) before the interval is consulted.
+      const taken = await queryJson(
+        `SELECT ${USER_JSON_WITH_CONFIRMATION} FROM auth.users u WHERE u.email = :'email'`,
+        { email },
+      );
+      const wait = taken ? 0 : emailRateLimited(email);
+      if (!AUTOCONFIRM && wait > 0) {
+        return send(res, 429, {
+          code: 429,
+          error_code: "over_email_send_rate_limit",
+          msg: `For security purposes, you can only request this after ${wait} seconds.`,
+        });
+      }
+      const out = await signUp(email, password, body.data ?? {}, redirectTo);
+      if (out.existing) {
+        if (AUTOCONFIRM) {
+          return send(res, 422, {
+            code: 422,
+            error_code: "user_already_exists",
+            msg: "User already registered",
+          });
+        }
+        // GoTrue's answer for a taken address with confirmations on: 200, a
+        // user-shaped object with NO identities, and no email sent.
+        const fake = userBody({ id: randomUUID(), email, user_metadata: body.data ?? {} });
+        return send(res, 200, {
+          ...fake,
+          email_confirmed_at: null,
+          confirmed_at: null,
+          identities: [],
+        });
+      }
+      const u = out.user;
+      const shaped = {
+        ...userBody(u),
+        email_confirmed_at: AUTOCONFIRM ? new Date().toISOString() : null,
+        confirmed_at: AUTOCONFIRM ? new Date().toISOString() : null,
+        confirmation_sent_at: AUTOCONFIRM ? undefined : new Date().toISOString(),
+        identities: [
+          {
+            identity_id: randomUUID(),
+            id: u.id,
+            user_id: u.id,
+            provider: "email",
+            identity_data: { email, sub: u.id, email_verified: AUTOCONFIRM },
+          },
+        ],
+      };
+      if (AUTOCONFIRM) return send(res, 200, { ...sessionBody(u), user: shaped });
+      return send(res, 200, shaped);
+    }
+
+    if (route === "verify" && req.method === "GET") {
+      const token = url.searchParams.get("token") ?? "";
+      const redirectTo = url.searchParams.get("redirect_to") || "http://127.0.0.1:3119/login";
+      const user = token
+        ? await queryJson(
+            `UPDATE auth.users u SET email_confirmed_at = coalesce(email_confirmed_at, now()), confirmation_token = '', updated_at = now()
+              WHERE u.confirmation_token = :'token' AND u.confirmation_token <> ''
+              RETURNING ${USER_JSON}`,
+            { token },
+          )
+        : null;
+      if (!user) {
+        const fragment =
+          "error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired";
+        res.writeHead(303, { ...CORS, location: `${redirectTo}#${fragment}` });
+        return res.end();
+      }
+      await query(
+        `UPDATE auth.identities SET identity_data = identity_data || '{"email_verified":true}'::jsonb WHERE user_id = :'id'::uuid`,
+        { id: user.id },
+      );
+      // The implicit flow: the session travels in the fragment, which
+      // supabase-js reads with detectSessionInUrl. Same as the hosted project.
+      const session = sessionBody(user);
+      const fragment = new URLSearchParams({
+        access_token: session.access_token,
+        expires_in: String(session.expires_in),
+        expires_at: String(session.expires_at),
+        refresh_token: session.refresh_token,
+        token_type: "bearer",
+        type: "signup",
+      }).toString();
+      res.writeHead(303, { ...CORS, location: `${redirectTo}#${fragment}` });
+      return res.end();
+    }
+
+    if (route === "resend" && req.method === "POST") {
+      const body = JSON.parse((await readBody(req)).toString("utf8") || "{}");
+      const email = String(body.email ?? "")
+        .trim()
+        .toLowerCase();
+      const redirectTo =
+        url.searchParams.get("redirect_to") ?? body.gotrue_meta_security?.redirect_to ?? null;
+      const wait = emailRateLimited(email);
+      if (wait > 0) {
+        return send(res, 429, {
+          code: 429,
+          error_code: "over_email_send_rate_limit",
+          msg: `For security purposes, you can only request this after ${wait} seconds.`,
+        });
+      }
+      const token = randomUUID().replace(/-/g, "");
+      const user = await queryJson(
+        `UPDATE auth.users u SET confirmation_token = :'token', confirmation_sent_at = now()
+          WHERE u.email = :'email' AND u.email_confirmed_at IS NULL RETURNING ${USER_JSON}`,
+        { email, token },
+      );
+      // GoTrue answers 200 whether or not there was anything to send: the
+      // address's state is never disclosed to an unauthenticated caller.
+      if (user) deliverConfirmation(email, token, redirectTo);
+      return send(res, 200, {});
     }
 
     if (route === "user" && (req.method === "GET" || req.method === "PUT")) {
@@ -313,6 +534,16 @@ async function handle(req, res) {
       code: 404,
       msg: `the local gateway implements no ${req.method} /auth/v1/${route}`,
     });
+  }
+
+  // -- the controlled test inbox, loopback only -----------------------------
+  if (url.pathname === "/__local/inbox" && req.method === "GET") {
+    const to = (url.searchParams.get("to") ?? "").trim().toLowerCase();
+    return send(
+      res,
+      200,
+      inbox.filter((m) => !to || m.to === to),
+    );
   }
 
   // -- everything else is PostgREST's ------------------------------------

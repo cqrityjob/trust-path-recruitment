@@ -949,6 +949,8 @@ function Candidate360({
           // has been decided on or has withdrawn, and not in a completed
           // recruitment. What was already sent stays visible either way.
           canAssign={canAssign && !completed && status !== null && isUnresolved(status)}
+          candidateName={c.displayName}
+          jobTitle={jobTitle}
           prepareInterview
         />
       </section>

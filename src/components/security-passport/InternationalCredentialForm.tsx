@@ -12,8 +12,8 @@ import {
 } from "@/lib/security-passport/evidence.functions";
 import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { isStrictlyAfter, toIsoDateOrRaw, todayIso } from "@/lib/security-passport/dates";
 import { formatExpiry } from "@/lib/security-passport/format";
-import { todayIso } from "@/lib/security-passport/dates";
 import {
   acceptValue,
   applyReading,
@@ -400,8 +400,33 @@ export function InternationalCredentialForm({
     copy("Dina uppgifter", "Your details"),
     copy("Granska och spara", "Review & save"),
   ];
+  /** The dates in one form -- the ISO form the database stores -- whatever
+   *  way the holder typed them. The input settles a complete value itself;
+   *  this covers the rest (an unpadded "2020-5-9" submitted with Enter
+   *  before the field lost focus). */
+  const settleDates = (d: InternationalCredentialInput): InternationalCredentialInput => ({
+    ...d,
+    issued_on: toIsoDateOrRaw(d.issued_on),
+    valid_until: toIsoDateOrRaw(d.valid_until),
+  });
   async function save() {
     if (!selected || saving.current) return;
+    // The database refuses valid_until <= issued_on (SP_INVALID_DATES). Said
+    // here, in the holder's words, instead of as a generic save failure.
+    if (
+      draft.issued_on &&
+      draft.valid_until &&
+      draft.no_expiry !== true &&
+      !isStrictlyAfter(draft.valid_until, draft.issued_on)
+    ) {
+      setError(
+        copy(
+          `Giltig till måste vara efter utfärdandedatumet (${draft.issued_on}).`,
+          `Valid until must be after the issue date (${draft.issued_on}).`,
+        ),
+      );
+      return;
+    }
     if (selected.requiresScope && !draft.authorisation_scope?.trim()) {
       setError(copy("Ange vad behörigheten omfattar.", "State what the authorisation covers."));
       return;
@@ -465,26 +490,32 @@ export function InternationalCredentialForm({
       });
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : "";
+      const invalidDates = !savedId.current && code === "SP_INVALID_DATES";
       setError(
-        savedId.current
+        invalidDates
           ? copy(
-              "Meriten är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna meriten.",
-              "The credential is saved, but the document could not be attached. Retry or open the credential.",
+              "Giltig till måste vara efter utfärdandedatumet. Kontrollera datumen och försök igen.",
+              "Valid until must be after the issue date. Check the dates and try again.",
             )
-          : code === "SP_ISSUER_IS_A_REGULATOR"
+          : savedId.current
             ? copy(
-                "Tillsynsmyndigheten kan inte anges som utfärdare. Ange organisationen som står som utfärdare på intyget.",
-                "The regulator cannot be named as the issuer. Enter the organisation printed as the issuer on your certificate.",
+                "Meriten är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna meriten.",
+                "The credential is saved, but the document could not be attached. Retry or open the credential.",
               )
-            : code === "SP_DEFINITION_VERSION_UNKNOWN"
+            : code === "SP_ISSUER_IS_A_REGULATOR"
               ? copy(
-                  "Den valda versionen hör inte till den här meriten. Välj en version eller ”Vet inte”.",
-                  "The chosen version does not belong to this credential. Choose a version or “Not sure”.",
+                  "Tillsynsmyndigheten kan inte anges som utfärdare. Ange organisationen som står som utfärdare på intyget.",
+                  "The regulator cannot be named as the issuer. Enter the organisation printed as the issuer on your certificate.",
                 )
-              : copy(
-                  "Kunde inte spara. Kontrollera uppgifterna och försök igen. Det du har skrivit finns kvar.",
-                  "Could not save. Check your details and try again. What you entered is still here.",
-                ),
+              : code === "SP_DEFINITION_VERSION_UNKNOWN"
+                ? copy(
+                    "Den valda versionen hör inte till den här meriten. Välj en version eller ”Vet inte”.",
+                    "The chosen version does not belong to this credential. Choose a version or “Not sure”.",
+                  )
+                : copy(
+                    "Kunde inte spara. Kontrollera uppgifterna och försök igen. Det du har skrivit finns kvar.",
+                    "Could not save. Check your details and try again. What you entered is still here.",
+                  ),
       );
     } finally {
       saving.current = false;
@@ -540,6 +571,7 @@ export function InternationalCredentialForm({
         className="space-y-6 p-5 sm:p-7"
         onSubmit={(e) => {
           e.preventDefault();
+          if (step === 4) setDraft(settleDates(draft));
           if (step < 5) setStep(step + 1);
           else void save();
         }}

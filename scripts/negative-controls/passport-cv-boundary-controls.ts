@@ -74,7 +74,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the editors leave the Passport but are never mounted on the CV page, so the fields become uneditable anywhere -- the failure a relabel cannot have and a move can",
     file: CV_PAGE,
-    find: "            <GeneralProfileClaims onChanged={contentChanged} />",
+    find: "            <GeneralProfileClaims\n              onChanged={contentChanged}\n              handleRef={claimsEditor}\n              onStateChange={setClaimsState}\n            />",
     replace: "",
     guard: GUARD,
     expect: "the CV page mounts the general CV editors",

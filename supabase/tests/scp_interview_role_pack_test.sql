@@ -426,9 +426,16 @@ DECLARE _n integer;
 BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', '11110000-0000-0000-0000-0000000000e1', true);
-  SELECT count(*) INTO _n FROM public.scp_interview_core_questions;
+  -- Scoped to the Väktare pack: the table also carries the Säkerhetschef
+  -- pack's questions since 20261216090000, and this assertion is about the
+  -- editor's read access, not the size of the catalogue.
+  SELECT count(*) INTO _n
+    FROM public.scp_interview_core_questions q
+    JOIN public.scp_interview_pack_versions v ON v.id = q.pack_version_id
+    JOIN public.scp_interview_packs p ON p.id = v.pack_id
+   WHERE p.slug = 'vaktare-se';
   RESET ROLE;
-  PERFORM pg_temp.ok(_n = 8, 'I4.4 a content editor CAN read the eight questions');
+  PERFORM pg_temp.ok(_n = 8, 'I4.4 a content editor CAN read the eight Väktare questions');
 END $$;
 
 DO $$

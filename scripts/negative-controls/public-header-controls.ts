@@ -109,21 +109,23 @@ const MUTATIONS: readonly Mutation[] = [
   },
   {
     id: "PH-NC-APP-MENU-BREAKPOINT",
-    defect: "the seven-item application sheet disappears at 1024px before its desktop nav appears",
+    defect:
+      "the signed-in sheet stays active until xl again, so a Windows PC at 125% scaling (1093-1229px) has no desktop navigation",
     file: HEADER,
-    find: 'appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden"',
-    replace: 'appMode ? "lg:hidden" : "lg:hidden", open ? "block" : "hidden"',
+    find: 'MENU_SURFACE, "lg:hidden", open ? "block" : "hidden"',
+    replace: 'MENU_SURFACE, appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden"',
     guard: GUARD,
-    expect: "the compact sheet must use xl for the candidate app and lg for the public header",
+    expect:
+      "the compact sheet must switch off at lg for BOTH the candidate app and the public header",
   },
   {
     id: "PH-NC-APP-NAV-BREAKPOINT",
-    defect: "the seven-item candidate nav appears at 1024px while the compact menu is still active",
+    defect: "the seven-item candidate nav waits for xl while the compact menu switched off at lg",
     file: "src/components/site/CandidateAppNav.tsx",
-    find: "gap-4 xl:flex 2xl:gap-6",
-    replace: "gap-4 lg:flex 2xl:gap-6",
+    find: "gap-2.5 lg:flex xl:gap-4 2xl:gap-6",
+    replace: "gap-2.5 xl:flex xl:gap-4 2xl:gap-6",
     guard: GUARD,
-    expect: "the seven-destination candidate nav must appear at xl, never at lg",
+    expect: "the seven-destination candidate nav must appear at lg (1024px), never wait for xl",
   },
 ];
 

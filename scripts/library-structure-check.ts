@@ -52,8 +52,34 @@ const LIVE: LiveContent = {
       contentStatus: "draft",
       validationLabel: "pilot_hypothesis",
     },
+    {
+      packVersionId: "g2",
+      packSlug: "security-manager-se",
+      name: "Säkerhetschef",
+      nameEn: "Security Manager",
+      versionNumber: 1,
+      contentStatus: "draft",
+      validationLabel: "pilot_hypothesis",
+    },
   ],
   assessments: [
+    {
+      slug: "security-manager-recruitment",
+      nameSv: "Säkerhetschef – Recruitment Assessment",
+      nameEn: "Security Manager – Recruitment Assessment",
+      assignable: true,
+      minutesMin: 35,
+      minutesMax: 50,
+      itemCount: 37,
+      moduleCount: 5,
+      contentStatus: "draft",
+      validationStatus: "design",
+      versionNumber: 1,
+      competenciesSv: [],
+      competenciesEn: [],
+      doesNotMeasureSv: [],
+      doesNotMeasureEn: [],
+    },
     {
       slug: "security-officer-recruitment",
       nameSv: "Väktare – Recruitment Assessment",
@@ -85,12 +111,28 @@ check(
 );
 const strat = resolveSetup("trust", "strategic", "security_manager", "general", LIVE);
 check(
-  TRUST_CONTENT.security_manager === null &&
-    !strat.startable &&
-    strat.blockers.includes("no_role_content") &&
-    strat.guide === null &&
-    strat.assessment === null,
-  "LS-NO-RENAMED-TEST: a strategic TRUST setup is not the Väktare content under a new title",
+  TRUST_CONTENT.security_manager !== null &&
+    TRUST_CONTENT.security_manager.guidePackSlug !== TRUST_CONTENT.vaktare?.guidePackSlug &&
+    TRUST_CONTENT.security_manager.assessmentSlug !== TRUST_CONTENT.vaktare?.assessmentSlug &&
+    strat.startable &&
+    strat.guide?.packSlug === "security-manager-se" &&
+    strat.assessment?.slug === "security-manager-recruitment" &&
+    strat.guide?.packSlug !== op.guide?.packSlug &&
+    strat.assessment?.slug !== op.assessment?.slug,
+  "LS-NO-RENAMED-TEST: a strategic TRUST setup resolves to content OF ITS OWN, never the Väktare guide or test under a new title",
+);
+// The strategic content is read live: where the library does not carry the
+// guide (the hosted project before the content approval opens it), the setup
+// is not startable and says which part is missing -- nothing is assumed.
+const stratWithoutGuide = resolveSetup("trust", "strategic", "security_manager", "general", {
+  ...LIVE,
+  guides: LIVE.guides!.filter((g) => g.packSlug !== "security-manager-se"),
+});
+check(
+  !stratWithoutGuide.startable &&
+    stratWithoutGuide.blockers.includes("guide_unavailable") &&
+    stratWithoutGuide.guide === null,
+  "LS-STRATEGIC-LIVE: without its guide in the offer the strategic setup is not startable, and no other guide stands in",
 );
 check(
   ENVIRONMENTS.every(

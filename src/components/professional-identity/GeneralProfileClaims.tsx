@@ -2,7 +2,7 @@
 // languages and skills. Credential-coded rows retain the governed Passport editor.
 // All writes use the established single source; evidence links remain valid.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MutableRefObject } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { GraduationCap, Languages, Plus, Wrench } from "lucide-react";
@@ -35,6 +35,11 @@ import {
 import { AssertionChip } from "@/components/security-passport/AssertionChip";
 import { LifecycleChip } from "@/components/security-passport/LifecycleChip";
 import type { AssertionLevel, LifecycleState } from "@/lib/security-passport/types";
+import type {
+  CvContentEditorHandle,
+  CvContentEditorState,
+  CvContentFlushResult,
+} from "./cv-content-editor";
 
 /** The claim kinds this surface owns. Education only: a security course is
  *  `training` and a security certificate is `certification`, and both stay
@@ -88,11 +93,18 @@ function SectionShell({
 export function GeneralProfileClaims({
   className = "",
   onChanged,
+  handleRef,
+  onStateChange,
 }: {
   className?: string;
   /** Called after a write has been read back, so the mounting page can
    *  refresh the reads it owns. */
   onChanged?: () => void;
+  /** Lent to the mounting page so its "Show my CV" control can save the
+   *  open forms before it navigates away. See cv-content-editor.ts. */
+  handleRef?: MutableRefObject<CvContentEditorHandle | null>;
+  /** Whether a form is open and whether a write is in flight. */
+  onStateChange?: (state: CvContentEditorState) => void;
 }) {
   const { pt } = usePassportCopy();
   const navigate = useNavigate();
@@ -145,10 +157,10 @@ export function GeneralProfileClaims({
       .catch(() => {});
   }, [refresh, loadSkillTypes, loadJurisdictions]);
 
-  async function commitClaim(draft: ClaimDraft) {
+  async function commitClaim(draft: ClaimDraft): Promise<CvContentFlushResult> {
     const errs = validateClaim(draft);
     setClaimErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) return "invalid";
     setBusy(true);
     setNotice(null);
     setError(null);
@@ -169,19 +181,24 @@ export function GeneralProfileClaims({
         setNotice(pt("entry.saved"));
         onChanged?.();
       }
+      return "saved";
     } catch (err) {
       console.error("[profile] claim save failed", err);
       setError(pt("common.error"));
+      return "failed";
     } finally {
       setBusy(false);
     }
   }
 
-  async function commitSkill(claimType: "language" | "practical_skill", draft: SkillDraft) {
+  async function commitSkill(
+    claimType: "language" | "practical_skill",
+    draft: SkillDraft,
+  ): Promise<CvContentFlushResult> {
     const type = skillTypes.find((t) => t.code === draft.skillCode);
     const errs = validateSkill(draft, type, jurisdictions);
     setSkillErrors((prev) => ({ ...prev, [claimType]: errs }));
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).length > 0) return "invalid";
     setBusy(true);
     setNotice(null);
     setError(null);
@@ -202,13 +219,42 @@ export function GeneralProfileClaims({
         setNotice(pt("entry.saved"));
         onChanged?.();
       }
+      return "saved";
     } catch (err) {
       console.error("[profile] skill save failed", err);
       setError(pt("common.error"));
+      return "failed";
     } finally {
       setBusy(false);
     }
   }
+
+  // Lent to the page above: save every open form, in order, and stop at the
+  // first one that cannot be. Assigned on every render so it closes over the
+  // current drafts.
+  if (handleRef) {
+    handleRef.current = {
+      flush: async () => {
+        if (editing) {
+          const r = await commitClaim(editing);
+          if (r !== "saved") return r;
+        }
+        for (const kind of ["language", "practical_skill"] as const) {
+          const d = skillDrafts[kind];
+          if (!d) continue;
+          const r = await commitSkill(kind, d);
+          if (r !== "saved") return r;
+        }
+        return "saved";
+      },
+    };
+  }
+  const open =
+    editing !== null || skillDrafts.language !== null || skillDrafts.practical_skill !== null;
+  useEffect(() => {
+    onStateChange?.({ open, busy });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, busy]);
 
   async function remove(id: string) {
     if (!window.confirm(pt("entry.removeConfirm"))) return;

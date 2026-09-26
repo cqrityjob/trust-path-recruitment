@@ -48,10 +48,18 @@ export const TRUST_CONTENT: Record<
   { readonly guidePackSlug: string; readonly assessmentSlug: string | null } | null
 > = {
   vaktare: { guidePackSlug: "vaktare-se", assessmentSlug: "security-officer-recruitment" },
-  // No leadership guide and no leadership test exist. The Väktare material
-  // is NOT offered under this heading: that would be the operational test
-  // with a new title, which the product structure forbids.
-  security_manager: null,
+  // The strategic level has content OF ITS OWN (20261216090000): the
+  // Säkerhetschef guide and the Security Manager recruitment test, authored
+  // as governed drafts. The Väktare material is NOT offered under this
+  // heading: that would be the operational test with a new title, which the
+  // product structure forbids. Whether an organisation may START anything
+  // with these slugs is read live: until the content is approved and
+  // released, the library answers not_permitted and the startable list
+  // omits the guide, and this module says so rather than pretending.
+  security_manager: {
+    guidePackSlug: "security-manager-se",
+    assessmentSlug: "security-manager-recruitment",
+  },
 };
 
 /** BESKT is one method whose questions are motivated by the ROLE'S exposure,

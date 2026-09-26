@@ -151,8 +151,10 @@ test.describe("Bibliotek — method → role → environment → setup → the f
     );
     await shot(page, "1-trust-operational");
 
-    // Only what can be started is offered: TRUST has no strategic content, so
-    // no strategic role is shown under it -- and no switched-off environments.
+    // Only what can be started is offered: the strategic TRUST content is a
+    // draft the platform has not released (no open pilot, no grant on this
+    // stack), so no strategic role is shown under it -- and no switched-off
+    // environments.
     await expect(page.getByTestId("lib-group-strategic")).toHaveCount(0);
     await expect(page.getByTestId("lib-env-hospital")).toHaveCount(0);
     await expect(page.getByTestId("lib-env-data_centre")).toHaveCount(0);

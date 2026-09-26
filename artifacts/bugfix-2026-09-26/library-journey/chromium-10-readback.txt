@@ -1,0 +1,4 @@
+start=assessment_assignment:8fc347d8-c37e-4846-ba0a-95cda11cd3da
+candidate=b5000000-0000-4000-8000-0000000000c5
+setup=trust:vaktare:general
+reports=1 version=1

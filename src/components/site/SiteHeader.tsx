@@ -75,6 +75,32 @@ export function SiteHeader() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+  // ── THE SHEET CLOSES BY ITSELF ───────────────────────────────────────
+  //
+  // Its links call setOpen(false), and nothing else did. So the sheet stayed
+  // open across a back/forward navigation, across a resize past the desktop
+  // breakpoint (it was only CSS-hidden, and reappeared the moment the window
+  // shrank again), and Escape did nothing. Each of those is a person looking
+  // at a full-width menu they did not ask for.
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = (e: MediaQueryListEvent) => {
+      if (e.matches) setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    mql.addEventListener("change", onChange);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      mql.removeEventListener("change", onChange);
+    };
+  }, [open]);
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   // Read off the SAME session this component already subscribes to — no extra
   // request. The account menu has to be able to say who it would sign out.
@@ -514,9 +540,7 @@ export function SiteHeader() {
               36px -- see `touchTarget`. These two pills render in the PUBLIC
               header for a signed-in visitor, so they are public-page
               controls and the same minimum binds them. */}
-          <div
-            className={cn("hidden shrink-0 items-center gap-2", appMode ? "xl:flex" : "lg:flex")}
-          >
+          <div className={cn("hidden shrink-0 items-center gap-2 lg:flex")}>
             {roleLinks.map((r) => (
               <Link
                 key={r.to}
@@ -615,7 +639,7 @@ export function SiteHeader() {
             className={cn(
               // 44px touch target, which a p-2 icon button was not.
               "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary",
-              appMode ? "xl:hidden" : "lg:hidden",
+              "lg:hidden",
               focusRing,
             )}
             /* Was a hardcoded English "Menu" on a Swedish-first product,
@@ -637,12 +661,11 @@ export function SiteHeader() {
       {/* The sheet scrolls on its own rather than pushing the page: signed in,
           with an organisation and the account block, it is taller than a 320px
           phone in landscape, and the last rows were unreachable. */}
-      {/* The public header stays at lg. The seven-destination application
-          header uses xl so its Swedish labels and account controls fit. */}
-      <div
-        id="site-menu"
-        className={cn(MENU_SURFACE, appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden")}
-      >
+      {/* Both chromes switch to the compact sheet at the SAME breakpoint,
+          lg (1024px). It used to be xl for the signed-in header, which on a
+          Windows PC at 125% scaling meant no desktop navigation at all --
+          see CandidateAppNav for the measurement. */}
+      <div id="site-menu" className={cn(MENU_SURFACE, "lg:hidden", open ? "block" : "hidden")}>
         <Container className="flex flex-col gap-1 py-4">
           {/* ── Mobile is the same product, not a collapsed website ──────
               The seven destinations come from the SAME array the desktop

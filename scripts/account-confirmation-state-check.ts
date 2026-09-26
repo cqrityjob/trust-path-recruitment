@@ -65,7 +65,9 @@ check(
   "ACS-STATE: the form carries an explicit confirmation state",
 );
 check(
-  /setAwaitingConfirmation\(\{ email: email\.trim\(\), returnTo \}\)/.test(form),
+  /setAwaitingConfirmation\(\{\s*email: email\.trim\(\),\s*returnTo,\s*forOrganisation,\s*canSignInHere: true,?\s*\}\)/.test(
+    form,
+  ),
   "ACS-STATE: sign-up without a session sets it, carrying the address AND the return path",
 );
 check(
@@ -141,7 +143,8 @@ check(
   "ACS-ACTIONS: resend asks for a signup link specifically",
 );
 check(
-  /email: awaitingConfirmation\.email/.test(form),
+  /onResendFor\(awaitingConfirmation\.email, awaitingConfirmation\.returnTo\)/.test(form) &&
+    /email: toAddress,/.test(form),
   "ACS-ACTIONS: addressed to the STORED address, never the form field -- which is off screen",
 );
 check(
@@ -193,6 +196,95 @@ for (const key of [
 
 /* ---------------------------------------------------------------- */
 console.log("");
+/* ---------------------------------------------------------------- */
+console.log("\n5 · the state survives a reload, and the link may be opened elsewhere");
+// Owner bug report 2026-09-26: "Om jag verifierar min mail på min mobil måste
+// den synka med datorn, det gör den inte nu." Registration on the laptop,
+// link opened on the phone: the laptop must find out, safely, and offer the
+// right next step -- never a session copied between devices.
+check(
+  /rememberPendingConfirmation\(\s*\{ email: email\.trim\(\), returnTo, forOrganisation \},/.test(
+    form,
+  ),
+  "ACS-PERSIST: the pending registration is remembered in this browser when the inbox panel is shown",
+);
+check(
+  /readPendingConfirmation\(DEFAULT_DESTINATION\)/.test(form) && /canSignInHere: false,/.test(form),
+  "ACS-PERSIST: and restored on mount WITHOUT a password -- the password is never stored",
+);
+check(
+  /clearPendingConfirmation\(\)/.test(form) &&
+    /function onChangeEmail\(\) \{\s*clearPendingConfirmation\(\);/.test(form),
+  "ACS-PERSIST: changing the address forgets the pending registration",
+);
+check(
+  /async function tryContinue\(silent: boolean\)/.test(form) &&
+    /supabase\.auth\.signInWithPassword\(\{\s*email: waiting\.email,\s*password: pwd,?\s*\}\)/.test(form),
+  "ACS-DEVICE: 'I have confirmed -- continue' is a REAL sign-in on this device with the person's own credentials",
+);
+check(
+  /c\.kind === "email_not_confirmed"/.test(form) && /auth\.confirm\.notYet/.test(form),
+  "ACS-DEVICE: an address that is not confirmed yet is said in words, not as a raw provider error",
+);
+check(
+  !/auth\.users|admin\.getUserById|getUserByEmail/.test(form),
+  "ACS-DEVICE: the panel never reads account state without credentials",
+);
+check(
+  /auth\.confirm\.otherDevice/.test(form) &&
+    /auth\.confirm\.restored/.test(form) &&
+    /auth\.confirm\.signInToContinue/.test(form),
+  "ACS-DEVICE: the cross-device case is explained, and after a reload the next step is the sign-in form",
+);
+check(
+  /consumeAuthErrorFragment\(\)/.test(form) && /auth\.confirm\.linkExpired/.test(form),
+  "ACS-LINK: a link opened late or twice is reported from the URL fragment",
+);
+for (const key of [
+  "auth.confirm.otherDevice",
+  "auth.confirm.continue",
+  "auth.confirm.notYet",
+  "auth.confirm.restored",
+  "auth.confirm.signInToContinue",
+  "auth.confirm.linkExpired",
+  "auth.existing.heading",
+  "auth.existing.body",
+  "auth.error.rateLimited",
+  "auth.error.emailNotConfirmed",
+  "auth.error.existingAccount",
+]) {
+  check(
+    (dict.match(new RegExp(`"${key.replace(/\./g, "\\.")}":`, "g")) ?? []).length === 2,
+    `ACS-COPY: ${key} exists in both languages`,
+  );
+}
+
+/* ---------------------------------------------------------------- */
+console.log("\n6 · an address that already has an account is not told to read an email");
+check(
+  /data\.user\.identities\.length === 0/.test(form) &&
+    /setExistingAccount\(email\.trim\(\)\)/.test(form),
+  "ACS-EXISTING: a confirmation-required signUp that returns no identities is the existing-account state",
+);
+check(
+  /classifyAuthError\(error\)\.kind === "existing_account"/.test(form),
+  "ACS-EXISTING: and so is the provider's user_already_exists refusal",
+);
+check(
+  /existingAccount \? \(/.test(form) &&
+    form.indexOf("existingAccount ? (") < form.indexOf("awaitingConfirmation ? ("),
+  "ACS-EXISTING: the existing-account branch is decided before the inbox panel, so the two never both render",
+);
+check(
+  /reportErrors\(\[describe\(err\)\]\)/.test(form) &&
+    !/reportErrors\(\[err instanceof Error \? err\.message/.test(form),
+  "ACS-ERRORS: provider refusals are translated (rate limit, wrong password, unconfirmed) rather than printed raw",
+);
+check(
+  /resendCooldown > 0/.test(form) && /RESEND_COOLDOWN_SECONDS = 60/.test(form),
+  "ACS-ERRORS: the resend counts down the provider's interval instead of running into its rate limit",
+);
+
 if (failures.length > 0) {
   console.error(`account-confirmation-state-check FAILED (${failures.length} of ${assertions}):`);
   for (const f of failures) console.error(`  - ${f}`);

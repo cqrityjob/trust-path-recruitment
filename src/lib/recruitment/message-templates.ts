@@ -213,3 +213,56 @@ export function bookingIcs(input: {
     "END:VCALENDAR",
   ].join("\r\n");
 }
+
+/** The message a candidate receives when a recruitment test is sent to them:
+ *  what it is, who asked, for which job, and where to find it. It names no
+ *  score, no content and no deadline it does not know. */
+export function testInvitationMessage(input: {
+  language: "sv" | "en";
+  candidateName: string | null;
+  employerName: string;
+  jobTitle: string;
+  assessmentName: string;
+  academyUrl: string;
+}): { subject: string; body: string } {
+  const greet =
+    input.language === "sv"
+      ? input.candidateName
+        ? `Hej ${input.candidateName},`
+        : "Hej,"
+      : input.candidateName
+        ? `Hi ${input.candidateName},`
+        : "Hi,";
+  if (input.language === "sv") {
+    return {
+      subject: `Test att göra: ${input.assessmentName}`,
+      body: [
+        greet,
+        "",
+        `${input.employerName} har skickat ett test till dig som en del av rekryteringen till ${input.jobTitle}: ${input.assessmentName}.`,
+        "",
+        `Du hittar testet under Tester & utveckling när du är inloggad på CQrityjob: ${input.academyUrl}`,
+        "",
+        "Du kan pausa och fortsätta senare. Resultatet är ett underlag inför en intervju – det fattar inget beslut om dig.",
+        "",
+        `Vänliga hälsningar`,
+        input.employerName,
+      ].join("\n"),
+    };
+  }
+  return {
+    subject: `A test to complete: ${input.assessmentName}`,
+    body: [
+      greet,
+      "",
+      `${input.employerName} has sent you a test as part of the recruitment for ${input.jobTitle}: ${input.assessmentName}.`,
+      "",
+      `You will find it under Tests & development when signed in to CQrityjob: ${input.academyUrl}`,
+      "",
+      "You can pause and continue later. The result is material for an interview – it makes no decision about you.",
+      "",
+      "Kind regards",
+      input.employerName,
+    ].join("\n"),
+  };
+}
