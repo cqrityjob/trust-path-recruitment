@@ -1,6 +1,6 @@
 # Security Passport — India entry journey
 
-Status (2026-09-26): **implemented and tested locally; not merged, not applied, not deployed.**
+Status (2026-09-26): **schema merged (#297) and applied hosted, verified read-only; the app (#298) is not merged or published.**
 Schema: `20261214090000_sp_india_national_qualifications`, `20261215090000_candidate_location_and_destinations`
 (release note: [../release/2026-09-26-india-entry-schema.md](../release/2026-09-26-india-entry-schema.md)).
 

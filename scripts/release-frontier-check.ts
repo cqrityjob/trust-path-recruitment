@@ -209,14 +209,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // byte-identical to the merged source by md5, claim/settle/recovery executable
 // by service_role only, no row changed. It comes off this list in the same
 // change that marks it applied.
-// The India entry schema (20261214090000 national qualifications,
-// 20261215090000 candidate location and destinations) is PENDING: authored and
-// proved locally, not merged and not applied. Each comes off this list in the
-// change that records it applied with hosted evidence.
-const expectedPending: string[] = [
-  "20261214090000_sp_india_national_qualifications.sql",
-  "20261215090000_candidate_location_and_destinations.sql",
-];
+// The India entry schema (PR #297: 20261214090000 national qualifications,
+// 20261215090000 candidate location and destinations) merged as cb12fcb and
+// the integration applied it; verified read-only on 2026-09-26 -- canonical
+// versions and slugs as the 316th and 317th ledger rows, all eight function
+// bodies and the catalogue view byte-identical to the merged source by md5,
+// every declared verify statement as expected, no personal row changed. Both
+// come off this list in the same change that marks them applied. Nothing is
+// pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
