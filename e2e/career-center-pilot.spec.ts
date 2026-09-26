@@ -229,7 +229,13 @@ test.describe("the three concepts", () => {
 
     const path = page.locator("[data-path-from]");
     await expect(path).toHaveAttribute("data-path-state", "ready");
-    await expect(path).toContainText("Vägar från Väktare");
+    await expect(path).toContainText("Möjliga nästa steg från Väktare");
+    // The selected profession is shown, and "Läs om" opens exactly it.
+    await expect(path.locator('[data-path-selected="security-officer"]')).toBeVisible();
+    await expect(path.locator('[data-profession-info="security-officer"]')).toHaveAttribute(
+      "href",
+      "/career-center/security-officer",
+    );
     await expect(path.locator("[data-path-provenance]")).toHaveAttribute(
       "data-path-provenance",
       "selected",
@@ -262,7 +268,9 @@ test.describe("the three concepts", () => {
     await select.selectOption("security-coordinator");
 
     await expect(page).toHaveURL(/from=security-coordinator/);
-    await expect(page.locator("[data-path-from]")).toContainText("Vägar från Säkerhetssamordnare");
+    await expect(page.locator("[data-path-from]")).toContainText(
+      "Möjliga nästa steg från Säkerhetssamordnare",
+    );
     // And the resulting view is a link somebody else can open.
     await page.goto(page.url());
     await expect(page.locator("[data-path-from]")).toHaveAttribute("data-path-state", "ready");
@@ -315,7 +323,7 @@ test.describe("the three concepts", () => {
 
     // The report's CIG slug resolves to the Career Center guide, not to a
     // URL that does not exist.
-    await expect(fit.locator('[data-personal-guide="security-officer"]')).toBeVisible();
+    await expect(fit.locator('[data-profession-info="security-officer"]')).toBeVisible();
     await expect(fit.locator('a[href="/career-center/vaktare"]')).toHaveCount(0);
   });
 
@@ -338,7 +346,9 @@ test.describe("the three concepts", () => {
     await page.reload({ waitUntil: "networkidle" });
 
     const path = page.locator("[data-path-from]");
-    await expect(path).toContainText("Vägar från Säkerhetssamordnare", { timeout: 15_000 });
+    await expect(path).toContainText("Möjliga nästa steg från Säkerhetssamordnare", {
+      timeout: 15_000,
+    });
     await expect(path.locator("[data-path-provenance]")).toHaveAttribute(
       "data-path-provenance",
       "selected",

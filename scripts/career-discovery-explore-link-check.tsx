@@ -13,18 +13,23 @@
 //
 //  1. The resolver (exploreDestinationFor) gives EVERY approved first-wave
 //     profession a destination, deterministically, and that destination is
-//     either a PUBLISHED Career Center guide or the card's own details
-//     panel — never an unpublished guide's "not published yet" state and
-//     never the /jobs/profession page (gated behind VITE_JOBS_ENABLED and
-//     carrying no occupation information; see profession-links.ts).
+//     either a PUBLISHED Career Center guide or the reviewed catalogue page
+//     for EXACTLY that CIG profession (/career-center/yrke/$cigSlug) —
+//     never an unpublished guide's "not published yet" state, never a
+//     neighbouring profession and never the /jobs/profession page (gated
+//     behind VITE_JOBS_ENABLED and carrying no occupation information; see
+//     profession-links.ts). Until 2026-09-26 the second case was an in-card
+//     panel here while the Career Center printed "no guide yet" for the same
+//     recommendation; both now use this one rule.
 //  2. Rendered: for all fourteen professions, in Swedish and English, as
 //     the primary card and as an alternative card, the explore control is a
 //     real anchor or a real button — focusable, 44px tall, named for the
 //     occupation — and the old inert <span>Utforska nu</span> is gone.
 //  3. An anchor's href points at a guide that clears the publishability
-//     rule, and the route file that serves it exists.
-//  4. A button controls a panel that exists in the markup, and is used ONLY
-//     when no guide is published (the last resort is not taken early).
+//     rule, or at the catalogue page for the profession's own CIG slug, and
+//     the route file that serves it exists.
+//  4. The catalogue page is used ONLY when no guide is published (the
+//     fallback is not taken early).
 //  5. Polis specifically — the card in the owner's screenshot — has a
 //     working destination.
 //
@@ -152,6 +157,10 @@ function exploreControl(html: string, professionId: string) {
 }
 
 const ROUTE_FILE = path.resolve(import.meta.dir, "../src/routes/career-center.$profession.tsx");
+const CATALOGUE_ROUTE_FILE = path.resolve(
+  import.meta.dir,
+  "../src/routes/career-center.yrke.$cigSlug.tsx",
+);
 
 // =========================================================================
 group("0 · Fixture premise");
@@ -165,6 +174,11 @@ ck(
   APPROVED.some((p) => p.professionId === "SP005"),
 );
 ck("0.3 the Career Center guide route exists on disk", existsSync(ROUTE_FILE), ROUTE_FILE);
+ck(
+  "0.4 the catalogue profession route exists on disk",
+  existsSync(CATALOGUE_ROUTE_FILE),
+  CATALOGUE_ROUTE_FILE,
+);
 
 // =========================================================================
 group("1 · One deterministic destination per approved profession");
@@ -186,18 +200,24 @@ for (const p of APPROVED) {
     );
     table.push(`${p.professionId}  ${p.titleSv.padEnd(26)} -> guide   /career-center/${dest.slug}`);
   } else {
-    // The last resort is taken only when no published guide exists for the
-    // profession's CIG slug — the same rule every other link out of the
-    // report follows.
+    // The catalogue page is used only when no published guide exists for
+    // the profession's CIG slug — the same rule every other link follows —
+    // and it is the page for THIS profession's own slug, never a neighbour.
     ck(
-      `1.4 ${p.professionId}: the in-card panel is used only because no guide is published`,
+      `1.4 ${p.professionId}: the catalogue page is used only because no guide is published`,
       careerCenterProfessionSlug(p.cigProfessionSlug) === null,
     );
     ck(
-      `1.5 ${p.professionId}: the panel has a CIG slug to read live content for`,
-      dest.cigSlug === p.cigProfessionSlug && dest.cigSlug !== null,
+      `1.5 ${p.professionId}: the catalogue page is for the profession's own CIG slug`,
+      dest.kind === "catalogue_profile" &&
+        dest.cigSlug === p.cigProfessionSlug &&
+        dest.href === `/career-center/yrke/${p.cigProfessionSlug}`,
     );
-    table.push(`${p.professionId}  ${p.titleSv.padEnd(26)} -> panel   CIG:${dest.cigSlug}`);
+    table.push(
+      `${p.professionId}  ${p.titleSv.padEnd(26)} -> catalogue /career-center/yrke/${
+        dest.kind === "catalogue_profile" ? dest.cigSlug : "?"
+      }`,
+    );
   }
 }
 console.log("\n  Destination table:\n  " + table.join("\n  "));
@@ -215,10 +235,17 @@ ck(
 // never be linked into the "not published yet" state.
 for (const cig of ["polis", "soc-analytiker", "sakerhetsutredare"]) {
   const d = exploreDestinationFor({ cigProfessionSlug: cig });
-  ck(`1.7 ${cig}: an unpublished guide is never the destination`, d.kind === "inline_details");
+  ck(
+    `1.7 ${cig}: an unpublished guide is never the destination`,
+    d.kind === "catalogue_profile" && d.cigSlug === cig,
+  );
 }
 ck(
-  "1.8 a published guide wins over the panel (vaktare -> security-officer)",
+  "1.9 no approved profession is left without a destination",
+  APPROVED.every((p) => exploreDestinationFor(p).kind !== "none"),
+);
+ck(
+  "1.8 a published guide wins over the catalogue page (vaktare -> security-officer)",
   (() => {
     const d = exploreDestinationFor({ cigProfessionSlug: "vaktare" });
     return d.kind === "career_center" && d.slug === "security-officer";
@@ -295,19 +322,15 @@ for (const locale of LOCALES) {
             `2.7 ${label}: the href's guide is published`,
             Boolean(c.href && getPublishedProfession(c.href.replace("/career-center/", ""))),
           );
-        } else {
+        } else if (dest.kind === "catalogue_profile") {
           ck(
-            `2.8 ${label}: a real button controlling a panel`,
-            c.tag === "button" &&
-              c.type === "button" &&
-              c.ariaExpanded === "false" &&
-              Boolean(c.ariaControls),
+            `2.8 ${label}: anchor to the profession's own catalogue page`,
+            c.tag === "a" && c.href === dest.href && c.kind === "catalogue_profile",
+            `tag=${c.tag} href=${c.href}`,
           );
           ck(
-            `2.9 ${label}: the controlled panel exists in the card`,
-            Boolean(c.ariaControls) &&
-              html.includes(`id="${c.ariaControls}"`) &&
-              html.includes(`data-explore-panel="${p.professionId}"`),
+            `2.9 ${label}: no in-card panel remains — one destination per profession`,
+            !html.includes("data-explore-panel="),
           );
         }
         // The stage badge stays for the non-explore stages: the chip is an
@@ -350,7 +373,10 @@ group("4 · Polis — the card in the owner's screenshot");
 {
   const polis = APPROVED.find((p) => p.professionId === "SP005")!;
   const dest = exploreDestinationFor(polis);
-  ck("4.1 Polis has a destination", dest.kind === "inline_details" && dest.cigSlug === "polis");
+  ck(
+    "4.1 Polis has a destination",
+    dest.kind === "catalogue_profile" && dest.cigSlug === "polis",
+  );
   ck(
     "4.2 Polis is not linked to its unpublished placeholder guide",
     getPublishedProfession("police-officer") === undefined && dest.kind !== "career_center",
@@ -359,8 +385,8 @@ group("4 · Polis — the card in the owner's screenshot");
     const html = render([rankedEntry(polis, 1, "explore_now")], locale);
     const c = exploreControl(html, "SP005");
     ck(
-      `4.3 [${locale}] Polis "${STAGE_LABEL.explore_now[locale]}" is a real button`,
-      c?.tag === "button" && c.ariaExpanded === "false",
+      `4.3 [${locale}] Polis "${STAGE_LABEL.explore_now[locale]}" is a real link to its own page`,
+      c?.tag === "a" && c.href === "/career-center/yrke/polis",
     );
     ck(
       `4.4 [${locale}] named for the occupation`,
@@ -374,11 +400,11 @@ group("5 · Both locales carry the strings the control renders");
 // =========================================================================
 for (const key of [
   "careerDiscovery.report.v31.exploreCareer",
-  "careerDiscovery.report.v31.professionDetailLoading",
-  "careerDiscovery.report.v31.professionDetailError",
-  "careerDiscovery.report.v31.requirementsTitle",
-  "careerDiscovery.report.v31.requirementsEmpty",
-  "careerDiscovery.report.v31.educationTitle",
+  // The catalogue page's own states.
+  "cc.info.read",
+  "cc.cat.error.title",
+  "cc.cat.missing.title",
+  "cc.cat.formal.empty",
 ]) {
   ck(
     `5.1 ${key} in sv and en`,

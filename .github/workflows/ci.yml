@@ -1143,6 +1143,15 @@ jobs:
       - name: Security Career Center check
         run: bun run career-center:check
 
+      # The journey, rendered: every recommendable profession has a "Läs om"
+      # with its own identity (guide, else its own catalogue page — never a
+      # neighbour and never a dead end), the current-profession selector
+      # separates saved / temporary / cleared, personal reads are keyed on
+      # the ACCOUNT and invalidated by every writer, ?all=1 opens the
+      # catalogue, and every new control is 44px, focusable and bilingual.
+      - name: Career Center journey check
+        run: bun run career-center-journey:check
+
       # A guard that passes proves nothing on its own. This reintroduces
       # eleven real defects one at a time — the repealed Act, the age-18
       # regression, ISO modelled as a personal certificate, a placeholder
@@ -1888,10 +1897,20 @@ jobs:
         run: bun run candidate-header-desktop:e2e
 
       # "Utforska nu" on the Career Discovery recommendation is a real link
-      # to the occupation's page (or a real in-card panel where no guide is
-      # published), and the result survives the trip there and back.
+      # to the occupation's page (its guide, or its reviewed catalogue page
+      # where no guide is published), and the result survives the trip there
+      # and back.
       - name: Career Discovery explore-link browser suite
         run: bun run e2e e2e/career-discovery-explore-link.spec.ts --project=chromium --project=mobile-375
+
+      # The Career Center journey clicked through: catalogue deep link lands
+      # on the catalogue, every card reaches its own guide and the way back
+      # keeps the filters, the current-profession selector's saved /
+      # temporary / cleared / reset states, the recommended profession ahead
+      # of (and different from) the current one, a recommendation without a
+      # guide opening its own catalogue page, English, a failed read.
+      - name: Career Center journey browser suite
+        run: bun run e2e e2e/career-center-journey.spec.ts --project=chromium --project=mobile-375
 
       - name: Server log
         if: failure()

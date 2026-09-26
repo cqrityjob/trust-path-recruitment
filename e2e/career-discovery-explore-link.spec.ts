@@ -97,6 +97,16 @@ const TOP_GUIDE =
 const POLIS_DETAIL = {
   polis: {
     slug: "polis",
+    titleSv: "Polis",
+    titleEn: "Police Officer",
+    isRegulated: true,
+    jurisdiction: "SE",
+    lastVerified: "2026-09-01",
+    disclaimerSv: null,
+    disclaimerEn: null,
+    sources: [
+      { organisation: "Polismyndigheten", title: "Bli polis", url: "https://polisen.se/blipolis/" },
+    ],
     summarySv: "Polisen upprätthåller allmän ordning och säkerhet.",
     summaryEn: "The police maintain public order and safety.",
     overviewSv:
@@ -256,29 +266,37 @@ async function exploreTopAndComeBack(page: Page, resultPath: RegExp) {
 
 /** Polis has no published guide: its chip is a real button opening live
  *  CIG content in the card. */
-async function openPolisPanel(page: Page) {
+/** Polis has no published guide: "Utforska nu" opens the reviewed
+ *  catalogue page for EXACTLY Polis (/career-center/yrke/polis) — the same
+ *  destination the Career Center uses — and that page offers a named way
+ *  back to the report. */
+async function openPolisPage(page: Page, back: RegExp) {
   const chip = page.locator('[data-recommendation-card="SP005"] [data-explore-link="SP005"]');
   await expect(chip).toBeVisible();
-  await expect(chip).toHaveAttribute("aria-expanded", "false");
+  await expect(chip).toHaveAttribute("href", "/career-center/yrke/polis");
   await expect(chip).toHaveAttribute("aria-label", /Polis/);
   await expect(chip).toHaveText(/Utforska nu/);
   await expectTarget44(page, '[data-recommendation-card="SP005"] [data-explore-link="SP005"]');
 
-  const panel = page.locator('[data-explore-panel="SP005"]');
-  await expect(panel).toBeHidden();
-  await chip.click();
-  await expect(chip).toHaveAttribute("aria-expanded", "true");
-  await expect(panel).toBeVisible();
-  await expect(panel).toContainText(POLIS_DETAIL.polis.overviewSv, { timeout: 30_000 });
-  await expect(panel).toContainText("Vad som krävs");
-  await expect(panel).toContainText(POLIS_DETAIL.polis.requirements[0].titleSv);
-  await expect(panel).toContainText(POLIS_DETAIL.polis.education[0].titleSv);
-
-  // Keyboard: the chip is focusable and Enter toggles it closed again.
+  // Keyboard: the chip is focusable and Enter follows it.
   await chip.focus();
   await page.keyboard.press("Enter");
-  await expect(chip).toHaveAttribute("aria-expanded", "false");
-  await expect(panel).toBeHidden();
+  await expect(page).toHaveURL(/\/career-center\/yrke\/polis$/);
+  const profile = page.locator('[data-catalogue-profession="polis"]');
+  await expect(profile.getByRole("heading", { level: 1, name: "Polis" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(profile).toContainText(POLIS_DETAIL.polis.overviewSv);
+  await expect(profile).toContainText(POLIS_DETAIL.polis.requirements[0].titleSv);
+  await expect(profile).toContainText(POLIS_DETAIL.polis.education[0].titleSv);
+  await expect(profile).toContainText("Bli polis");
+  await expectNoHorizontalOverflow(page);
+
+  const backLink = page.locator('[data-profession-back="report"]');
+  await expect(backLink).toBeVisible();
+  await backLink.click();
+  await expect(page).toHaveURL(back);
+  await expect(page.getByTestId("cd-pattern-name")).toBeVisible({ timeout: 30_000 });
 }
 
 /* ------------------------------------------------------------------ */
@@ -293,7 +311,7 @@ test.describe("Career Discovery — 'Utforska nu' on the recommendation", () => 
     expect(TOP_DESTINATION?.kind).toBe("career_center");
     expect(TOP_GUIDE, "the top recommendation has a published guide").toBeDefined();
     expect(POLIS, "Polis is on the page").toBeDefined();
-    expect(exploreDestinationFor(POLIS!).kind).toBe("inline_details");
+    expect(exploreDestinationFor(POLIS!).kind).toBe("catalogue_profile");
   });
 
   test.afterEach(() => {
@@ -327,8 +345,7 @@ test.describe("Career Discovery — 'Utforska nu' on the recommendation", () => 
       "the report was built once and served from cache after Back",
     ).toBe(1);
 
-    await openPolisPanel(page);
-    await expectNoHorizontalOverflow(page);
+    await openPolisPage(page, /\/security-career-assessment\/?$/);
     expect(calls.unmatched, "every server function the flow needed was stubbed").toEqual([]);
   });
 
@@ -358,7 +375,6 @@ test.describe("Career Discovery — 'Utforska nu' on the recommendation", () => 
       page,
       new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`),
     );
-    await openPolisPanel(page);
-    await expectNoHorizontalOverflow(page);
+    await openPolisPage(page, new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`));
   });
 });

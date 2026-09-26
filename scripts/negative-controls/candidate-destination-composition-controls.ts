@@ -126,8 +126,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the Career hero stops naming the two ways in, so a reader who has done neither cannot tell the two sections apart by scrolling",
     file: CAREER,
-    find: "        aside={<CareerEntryCards pathAnchor={PATH_ANCHOR} personalAnchor={PERSONAL_ANCHOR} />}",
-    replace: "        aside={<TrustRail />}",
+    // The aside became multi-line when the cards learned whether the reader's
+    // own result is in hand; the anchor names the real layout.
+    find: "          <CareerEntryCards\n            pathAnchor={PATH_ANCHOR}\n            personalAnchor={PERSONAL_ANCHOR}\n            personalised={personalised}\n          />",
+    replace: "          <TrustRail />",
     guard: GUARD,
     expect: "the Career hero carries the two entry cards",
   },
@@ -136,8 +138,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the personal section loses its id, so the entry card scrolls nowhere and lands the reader at the top of the hub",
     file: CAREER,
-    find: "      <Section bordered id={PERSONAL_ANCHOR}",
-    replace: "      <Section bordered",
+    // The personal section is built once and placed by state (first when
+    // the reader's result is in hand, after the catalogue otherwise).
+    find: "    <Section bordered id={PERSONAL_ANCHOR}",
+    replace: "    <Section bordered",
     guard: GUARD,
     expect: "PERSONAL_ANCHOR is a real id on the Career page",
   },
