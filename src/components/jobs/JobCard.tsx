@@ -58,7 +58,7 @@ export function JobCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="line-clamp-2 text-lg font-semibold leading-snug text-foreground group-hover:text-accent">
+          <h3 className="line-clamp-2 text-lg [overflow-wrap:anywhere] [hyphens:auto] font-semibold leading-snug text-foreground group-hover:text-accent">
             {title}
           </h3>
           {job.employer?.name && (

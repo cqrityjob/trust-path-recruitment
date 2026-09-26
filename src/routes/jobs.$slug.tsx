@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { ArrowLeft, Building2, Mail, Globe } from "lucide-react";
+import { Building2, Mail, Globe } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
@@ -134,7 +134,6 @@ function JobDetailPage() {
             }}
             className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             {t("jobs.detail.back")}
           </button>
           {!expired && (
