@@ -12,7 +12,7 @@ import {
 } from "@/lib/security-passport/evidence.functions";
 import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { todayIso } from "@/lib/security-passport/dates";
+import { isStrictlyAfter, toIsoDateOrRaw, todayIso } from "@/lib/security-passport/dates";
 import {
   acceptValue,
   applyReading,
@@ -361,8 +361,33 @@ export function InternationalCredentialForm({
     copy("Dina uppgifter", "Your details"),
     copy("Granska och spara", "Review & save"),
   ];
+  /** The dates in one form -- the ISO form the database stores -- whatever
+   *  way the holder typed them. The input settles a complete value itself;
+   *  this covers the rest (an unpadded "2020-5-9" submitted with Enter
+   *  before the field lost focus). */
+  const settleDates = (d: InternationalCredentialInput): InternationalCredentialInput => ({
+    ...d,
+    issued_on: toIsoDateOrRaw(d.issued_on),
+    valid_until: toIsoDateOrRaw(d.valid_until),
+  });
   async function save() {
     if (!selected || saving.current) return;
+    // The database refuses valid_until <= issued_on (SP_INVALID_DATES). Said
+    // here, in the holder's words, instead of as a generic save failure.
+    if (
+      draft.issued_on &&
+      draft.valid_until &&
+      draft.no_expiry !== true &&
+      !isStrictlyAfter(draft.valid_until, draft.issued_on)
+    ) {
+      setError(
+        copy(
+          `Giltig till måste vara efter utfärdandedatumet (${draft.issued_on}).`,
+          `Valid until must be after the issue date (${draft.issued_on}).`,
+        ),
+      );
+      return;
+    }
     if (selected.requiresScope && !draft.authorisation_scope?.trim()) {
       setError(copy("Ange vad behörigheten omfattar.", "State what the authorisation covers."));
       return;
@@ -415,17 +440,24 @@ export function InternationalCredentialForm({
         to: "/passport/entry/$kind/$entryId",
         params: { kind: "claim", entryId: savedId.current },
       });
-    } catch {
+    } catch (caught) {
+      const invalidDates =
+        !savedId.current && caught instanceof Error && caught.message === "SP_INVALID_DATES";
       setError(
-        savedId.current
+        invalidDates
           ? copy(
-              "Meriten är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna meriten.",
-              "The credential is saved, but the document could not be attached. Retry or open the credential.",
+              "Giltig till måste vara efter utfärdandedatumet. Kontrollera datumen och försök igen.",
+              "Valid until must be after the issue date. Check the dates and try again.",
             )
-          : copy(
-              "Kunde inte spara. Kontrollera uppgifterna och försök igen.",
-              "Could not save. Check your details and try again.",
-            ),
+          : savedId.current
+            ? copy(
+                "Meriten är sparat, men dokumentet kunde inte bifogas. Försök igen eller öppna meriten.",
+                "The credential is saved, but the document could not be attached. Retry or open the credential.",
+              )
+            : copy(
+                "Kunde inte spara. Kontrollera uppgifterna och försök igen.",
+                "Could not save. Check your details and try again.",
+              ),
       );
     } finally {
       saving.current = false;
@@ -481,6 +513,7 @@ export function InternationalCredentialForm({
         className="space-y-6 p-5 sm:p-7"
         onSubmit={(e) => {
           e.preventDefault();
+          if (step === 4) setDraft(settleDates(draft));
           if (step < 5) setStep(step + 1);
           else void save();
         }}

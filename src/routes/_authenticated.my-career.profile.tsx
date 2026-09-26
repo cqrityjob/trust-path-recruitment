@@ -106,8 +106,7 @@ const COPY = {
   ),
   ownedCv: c("Tillhör ditt CV", "Belongs to your CV"),
   ownedPassport: c("Tillhör Security Passport", "Belongs to the Security Passport"),
-  cvTitle: c("CV", "CV"),
-  cvQuestion: c("Vad har jag gjort?", "What have I done?"),
+  cvTitle: c("Mitt CV", "My CV"),
   cvBody: c(
     "Anställningar, utbildning, språk och färdigheter – och de CV-dokument som byggs av dem.",
     "Employment, education, languages and skills – and the CV documents built from them.",
@@ -356,9 +355,6 @@ function ProfilePage() {
                 <h3 className="mt-2 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
                   <FileText className="h-4 w-4 text-accent" aria-hidden="true" />
                   {L(COPY.cvTitle, l)}
-                  <span className="font-normal text-muted-foreground">
-                    — {L(COPY.cvQuestion, l)}
-                  </span>
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {L(COPY.cvBody, l)}

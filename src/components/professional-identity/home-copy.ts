@@ -61,8 +61,10 @@ export const HEADER = {
 export const SURFACES = {
   loading: c("Hämtar dina uppgifter…", "Loading your details…"),
   profile: {
-    title: c("Profil", "Profile"),
-    question: c("Vem är jag nu?", "Who am I now?"),
+    /** Owner decision (bug report 2026-09): the cards are named "Min profil"
+     *  and "Mitt CV", and the rhetorical questions ("Vem är jag nu?", "Vad har
+     *  jag gjort?") are gone -- the title says what the card is. */
+    title: c("Min profil", "My profile"),
     edit: c("Redigera profil", "Edit Profile"),
     addName: c("Lägg till ditt namn", "Add your name"),
     addTitle: c("Lägg till nuvarande yrkestitel", "Add current professional title"),
@@ -80,8 +82,7 @@ export const SURFACES = {
     ),
   },
   cv: {
-    title: c("CV", "CV"),
-    question: c("Vad har jag gjort?", "What have I done?"),
+    title: c("Mitt CV", "My CV"),
     edit: c("Redigera CV", "Edit CV"),
     empty: c(
       "Inga anställningar, utbildningar, språk eller färdigheter tillagda ännu.",

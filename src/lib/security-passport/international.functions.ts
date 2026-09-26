@@ -208,12 +208,14 @@ export const saveInternationalCredential = createServerFn({ method: "POST" })
       { _input: input } as never,
     )) as unknown as { data: unknown; error: { message?: string } | null };
     if (result.error || typeof result.data !== "string") {
-      // Only the two holder-fixable refusals are named; everything else stays generic.
+      // Only the holder-fixable refusals are named; everything else stays generic.
       const message = result.error?.message ?? "";
       if (message.includes("SP_CREDENTIAL_REQUIRES_SCOPE"))
         throw new Error("SP_CREDENTIAL_REQUIRES_SCOPE");
       if (message.includes("SP_CREDENTIAL_REQUIRES_ISSUER"))
         throw new Error("SP_CREDENTIAL_REQUIRES_ISSUER");
+      // valid_until <= issued_on: the holder can fix it, so the name travels.
+      if (message.includes("SP_INVALID_DATES")) throw new Error("SP_INVALID_DATES");
       throw new Error("Credential could not be saved");
     }
     return { id: result.data };

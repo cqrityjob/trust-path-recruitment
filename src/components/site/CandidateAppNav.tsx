@@ -50,7 +50,24 @@ export function CandidateAppNav({
     <nav
       aria-label={t("appnav.aria")}
       data-candidate-app-nav={variant}
-      className={cn(mobile ? "flex flex-col gap-1" : "hidden items-center gap-4 xl:flex 2xl:gap-6")}
+      // ── WHY lg AND NOT xl (owner bug report 2026-09-26) ─────────────
+      //
+      // The desktop bar used to appear at xl (1280px). A Windows PC at the
+      // display scaling Windows ships with -- 125% on a 1366/1440/1536-wide
+      // laptop, 150% on a 1920 monitor -- has a CSS viewport of 1093, 1152,
+      // 1229 or 1280px. Below 1280 the signed-in header showed nothing but a
+      // hamburger, and opening it covered the page with a full-width sheet:
+      // "the top menu is missing and everything ends up on the left", on an
+      // ordinary PC. The bar now appears at lg (1024px), the same breakpoint
+      // as the public header, with tighter spacing until xl so the seven
+      // Swedish labels and the account control fit at 1024px. Measured, not
+      // guessed: e2e/candidate-header-desktop.spec.ts asserts no horizontal
+      // overflow and every destination visible at 1024, 1093, 1152, 1280.
+      className={cn(
+        mobile
+          ? "flex flex-col gap-1"
+          : "hidden min-w-0 items-center gap-2.5 lg:flex xl:gap-4 2xl:gap-6",
+      )}
     >
       {CANDIDATE_APP_NAV.map((item) => {
         const current = item.key === activeKey;
@@ -97,11 +114,11 @@ export function CandidateAppNav({
               "rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               mobile
                 ? "flex min-h-[44px] items-center justify-between gap-2 border-l-2 px-2 py-2 text-sm hover:bg-muted"
-                : "relative inline-flex min-h-[44px] items-center gap-1.5 py-1 text-sm whitespace-nowrap",
+                : "relative inline-flex min-h-[44px] items-center gap-1.5 px-0.5 py-1 text-[13px] whitespace-nowrap xl:text-sm",
               current
                 ? mobile
                   ? "border-accent font-semibold text-foreground"
-                  : "font-semibold text-foreground after:absolute after:-bottom-[22px] after:left-0 after:h-[2px] after:w-full after:bg-accent"
+                  : "font-semibold text-foreground after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:rounded-full after:bg-accent"
                 : mobile
                   ? "border-transparent font-medium text-muted-foreground hover:text-foreground"
                   : "font-medium text-muted-foreground hover:text-foreground",

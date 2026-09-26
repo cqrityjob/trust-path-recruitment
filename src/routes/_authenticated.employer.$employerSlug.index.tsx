@@ -24,7 +24,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { getEmployerReviewBoard } from "@/lib/security-competency/academy-employer.functions";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertTriangle,
   ArrowRight,
@@ -235,6 +236,31 @@ function EmployerOverview({
   hasMultipleWorkspaces: boolean;
 }) {
   const { t, tp, lang } = useT();
+
+  // ── WHO IS BEING WELCOMED ───────────────────────────────────────────
+  //
+  // The owner's first-page rule (2026-09-26): the employer's home greets the
+  // PERSON, the way the candidate's does ("Din karriär, Emma"), and the
+  // organisation is stated right under it. The name is the one the person
+  // set for themselves -- `display_name` or `name` in the session metadata,
+  // first name only -- and never an email local part. No name, no guess:
+  // the heading is then the plain "Välkommen", with the organisation below.
+  const [preferredName, setPreferredName] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void supabase.auth.getUser().then(({ data }) => {
+      if (!alive || !data.user) return;
+      const meta = (data.user.user_metadata ?? {}) as Record<string, unknown>;
+      const nm =
+        (typeof meta.display_name === "string" && meta.display_name.trim()) ||
+        (typeof meta.name === "string" && meta.name.trim()) ||
+        null;
+      setPreferredName(nm ? (nm.split(/\s+/)[0] ?? null) : null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const loadStats = useServerFn(getEmployerDashboardStats);
   const loadOrg = useServerFn(getEmployerOrganisation);
@@ -778,10 +804,21 @@ function EmployerOverview({
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             {currentPeriod}
           </p>
-          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            {employerName}
+          <h1
+            className="mt-1 truncate text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
+            data-employer-welcome={preferredName ? "named" : "anonymous"}
+          >
+            {preferredName
+              ? t("employer.overview.welcome").replace("{0}", preferredName)
+              : t("employer.overview.welcomeAnon")}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("employer.overview.heading")}</p>
+          {/* The organisation context stays visible under the greeting: the
+              person is welcomed, the workspace is named. */}
+          <p className="mt-1 text-sm text-muted-foreground" data-employer-context>
+            <span className="font-medium text-foreground">{employerName}</span>
+            {" \u00b7 "}
+            {t("employer.overview.heading")}
+          </p>
         </div>
         {status === "active" && (
           <Link

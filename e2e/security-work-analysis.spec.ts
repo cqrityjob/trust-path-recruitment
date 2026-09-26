@@ -107,7 +107,7 @@ for (const locale of ["sv", "en"] as const) {
     await page.getByRole("button", { name: locale, exact: true }).first().click();
     const desktopNav = page.locator('[data-candidate-app-nav="desktop"]');
     await expect(desktopNav).toBeAttached();
-    if (page.viewportSize()!.width < 1280)
+    if (page.viewportSize()!.width < 1024)
       await page.getByRole("button", { name: /Öppna meny|Open menu/i }).click();
     const navigation = page.locator("[data-candidate-app-nav]").filter({ visible: true });
     await expect(navigation.locator("a")).toHaveCount(7);

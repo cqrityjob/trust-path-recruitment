@@ -142,3 +142,73 @@ export function careerCenterProfessionSlug(slug: string | null | undefined): str
 export function jobsProfessionSlug(p: Pick<Profession, "id">): string | null {
   return toCigSlug(p.id) ?? null;
 }
+
+// ── WHERE "UTFORSKA NU" ON A RECOMMENDATION GOES ───────────────────────
+//
+// The Career Discovery recommendation names an occupation and carries a
+// chip reading "Utforska nu". The chip was a <span>: it looked like the
+// product's one call to action on its most important result and did
+// nothing when pressed (owner report, September 2026). Every recommended
+// occupation needs a destination that shows real information about it, so
+// this is the one place that decides where the chip goes, per occupation.
+//
+// The options, in order of preference, and why two of them are ruled out:
+//
+//   1. A PUBLISHED Career Center guide, `/career-center/$profession`.
+//      Reviewed, sourced, bilingual, indexed. Resolved through the same
+//      bridge and publishability predicate as every other link in this
+//      module, so an unpublished placeholder (Polis, SOC-analytiker,
+//      Säkerhetsutredare) is never linked into the "not published yet"
+//      state.
+//
+//   2. `/jobs/profession/$professionSlug` is NOT an acceptable destination
+//      and is deliberately not returned here. It sits under the `/jobs`
+//      layout, which renders a "coming soon" page whenever
+//      VITE_JOBS_ENABLED is anything but "true" (.env.example ships it
+//      false), and even when enabled it renders "Jobb som {yrke}" over a
+//      job list — no description, no requirements, nothing from the
+//      Career Intelligence Graph. A candidate pressing "explore" and
+//      landing on an empty job list has been told nobody is hiring, not
+//      what the occupation is.
+//
+//   3. Otherwise, the recommendation card opens its own details panel,
+//      fed live from the Career Intelligence Graph by cigProfessionSlug
+//      (the same `getProfessionDetails` read the gated tier cards use):
+//      overview, formal requirements, education and certifications. This
+//      is the last resort and is only reached when no guide is published —
+//      nothing is invented; it renders reviewed CIG content or says it
+//      could not be read.
+//
+// Pure and deterministic: one input, one destination, no I/O, so a guard
+// can walk the whole approved catalogue and prove every occupation has one.
+
+export type ProfessionExploreDestination =
+  | {
+      readonly kind: "career_center";
+      /** The Career Center slug — the `$profession` param, never a CIG slug. */
+      readonly slug: string;
+      readonly href: string;
+    }
+  | {
+      readonly kind: "inline_details";
+      /** The CIG slug the panel reads live content for; null when the
+       *  catalogue row was approved without a CIG link (not currently
+       *  possible in authoring, kept total for the type). */
+      readonly cigSlug: string | null;
+    };
+
+/**
+ * Where "Utforska nu" on a recommended occupation leads.
+ *
+ * Takes the recommendation's CIG slug (`ProfessionMatch.cigProfessionSlug`),
+ * which is the one identifier a Career Discovery catalogue row carries that
+ * this module's bridge can resolve. Never returns a Career Center URL for a
+ * guide that is not published.
+ */
+export function exploreDestinationFor(ref: {
+  readonly cigProfessionSlug: string | null;
+}): ProfessionExploreDestination {
+  const slug = careerCenterProfessionSlug(ref.cigProfessionSlug);
+  if (slug) return { kind: "career_center", slug, href: `/career-center/${slug}` };
+  return { kind: "inline_details", cigSlug: ref.cigProfessionSlug };
+}

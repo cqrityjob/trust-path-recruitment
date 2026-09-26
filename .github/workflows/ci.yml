@@ -659,6 +659,16 @@ jobs:
       - name: Recruitment assessment UX check
         run: bun run recruitment-assessment-ux:check
 
+      # "Skicka test" (owner bug report 2026-09-26). One dialog, mounted from
+      # the applications list, the recruitment's candidate table and the
+      # candidate page; BOTH levels always shown with audience and purpose;
+      # the strategic level names the content it is missing and is never the
+      # operational test renamed; the send records the level and invites the
+      # candidate through the recruitment's own message channel. Rendered in
+      # both languages and asserted against the markup.
+      - name: Send-test dialog and levels check
+        run: bun run send-test-dialog:check
+
       # The CLIENT half of the assessment loop. The database half is proven by
       # supabase/tests/employer_vaktare_journey_test.sql — incomplete submit,
       # double submit, resume, the release gate and cross-tenant refusal are all
@@ -1653,6 +1663,15 @@ jobs:
       - name: Signed-in CV browser suite
         run: bun run e2e:cv
 
+      # Getting to the document. The owner's report was that "Preview" moved
+      # nobody to the CV and that there was no way to it at the bottom of the
+      # form. Only a browser can show that the region is IN the viewport and
+      # HOLDS focus after the press, on a desktop and on a 375px phone, and
+      # that a failed generation is a sentence with a retry rather than
+      # silence. Same server, same stubbed boundary.
+      - name: CV preview reveal browser suite
+        run: bun run e2e:cv-reveal
+
       # The profile workspace's section overview, in the same browser and
       # against the same dev server. The deterministic guard proves the
       # markup asks for a link; only this can show that following a row puts
@@ -1740,6 +1759,12 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e e2e/passport-hayat-reading.spec.ts --project=chromium
+
+      # Both date forms (2020-05-09 and 20200509) are accepted and stored as
+      # ISO; impossible dates are refused with the reason; the value survives
+      # the step navigation. Owner bug report 2026-09-26.
+      - name: Passport date input browser suite
+        run: bun run e2e e2e/passport-date-input.spec.ts --project=chromium --project=mobile-375
 
       - name: Server log
         if: failure()
@@ -1841,6 +1866,20 @@ jobs:
 
       - name: Public entry browser suites
         run: bun run e2e:public-entry
+
+      # The signed-in header on a PC (owner bug report 2026-09-26): the seven
+      # destinations in the bar at every width a Windows PC at 125%/150%
+      # display scaling produces, no overflow, and a compact sheet that
+      # closes on its own. Measured against the routed app on the stubbed
+      # backend, in both languages.
+      - name: Signed-in header desktop widths
+        run: bun run candidate-header-desktop:e2e
+
+      # "Utforska nu" on the Career Discovery recommendation is a real link
+      # to the occupation's page (or a real in-card panel where no guide is
+      # published), and the result survives the trip there and back.
+      - name: Career Discovery explore-link browser suite
+        run: bun run e2e e2e/career-discovery-explore-link.spec.ts --project=chromium --project=mobile-375
 
       - name: Server log
         if: failure()

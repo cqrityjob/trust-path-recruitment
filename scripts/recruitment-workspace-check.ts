@@ -506,14 +506,21 @@ const sql = read(F.migration);
   );
 
   // An assessment already sent on this application is not offered again.
-  const panel = code(F.assessmentPanel);
+  // The decision lives in the level resolver (src/lib/library/levels.ts),
+  // which the ONE send dialog feeds with the attempts already on the
+  // application; its submit is disabled unless the chosen level is sendable.
+  const sendDialog = code("src/components/recruitment/SendTestDialog.tsx");
+  const levels = code("src/lib/library/levels.ts");
   ok(
     /alreadySent = new Set\([\s\S]{0,160}attemptStatus !== "abandoned"[\s\S]{0,80}assessmentSlug/.test(
-      panel,
+      sendDialog,
     ) &&
-      /const sendable = options\.filter\(\(o\) => !alreadySent\.has\(o\.slug\)\)/.test(panel) &&
-      /sendable\.map\(\(o\)/.test(panel) &&
-      !/options\.map\(\(o\)/.test(panel),
+      /resolveLevelOffers\(library\.data \?\? \[\], alreadySent\)/.test(sendDialog) &&
+      /if \(alreadySentSlugs\.has\(row\.slug\)\)\s*return \{ level, state: "already_sent"/.test(
+        levels,
+      ) &&
+      /const canSend = chosen\?\.state === "sendable"/.test(sendDialog) &&
+      /disabled=\{!canSend\}/.test(sendDialog),
     "G · the send button is withheld for an assessment already sent on this application",
   );
 

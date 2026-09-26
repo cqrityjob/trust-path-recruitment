@@ -183,9 +183,12 @@ const MUTATIONS: readonly Mutation[] = [
     id: "RW-ASSESSMENT-SENT-TWICE",
     defect:
       "the send button stays after the test was sent, so a second click sends the candidate the same test again",
-    file: ASSESSMENT_PANEL,
-    find: "const sendable = options.filter((o) => !alreadySent.has(o.slug));",
-    replace: "const sendable = options;",
+    // The decision moved into the level resolver behind the ONE send dialog
+    // (owner bug report 2026-09-26); the planted defect is the same.
+    file: "src/lib/library/levels.ts",
+    find: '    if (alreadySentSlugs.has(row.slug))\n      return { level, state: "already_sent", assessment: row, missing: [] };',
+    replace:
+      '    if (alreadySentSlugs.has(row.slug))\n      return { level, state: "sendable", assessment: row, missing: [] };',
     guard: G,
     expect: "the send button is withheld for an assessment already sent on this application",
   },

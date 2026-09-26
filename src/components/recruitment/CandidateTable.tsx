@@ -54,6 +54,7 @@ import { StageBadge, BookingBadge } from "@/components/recruitment/RecruitmentSt
 import { BatchMessageDialog } from "@/components/recruitment/MessageComposer";
 import { BookingDialog } from "@/components/recruitment/BookingDialog";
 import { AssignTestDialog } from "@/components/recruitment/AssignTestDialog";
+import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 import {
   CANDIDATE_SORTS,
   STAGE_FILTERS,
@@ -135,6 +136,8 @@ export function CandidateTable(props: Props) {
   const [messaging, setMessaging] = useState(false);
   const [booking, setBooking] = useState(false);
   const [assigningTest, setAssigningTest] = useState(false);
+  // One candidate, one "Skicka test", from the row -- no selection needed.
+  const [sendTestFor, setSendTestFor] = useState<CandidateRow | null>(null);
   const [assigning, setAssigning] = useState(false);
   const [search, setSearch] = useState(view.q ?? "");
 
@@ -753,6 +756,17 @@ export function CandidateTable(props: Props) {
                           <ClipboardList className="h-3 w-3" aria-hidden="true" />
                           {t("rec.marker.testOpen")}
                         </span>
+                      ) : props.canAssignTests && OPEN.includes(r.status) ? (
+                        <button
+                          type="button"
+                          data-testid="send-test"
+                          data-application-id={r.applicationId}
+                          onClick={() => setSendTestFor(r)}
+                          className="inline-flex min-h-8 items-center gap-1 rounded-md border border-accent/50 px-2 text-xs font-medium text-accent hover:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          <ClipboardList className="h-3 w-3" aria-hidden="true" />
+                          {t("sendTest.action")}
+                        </button>
                       ) : (
                         "—"
                       )}
@@ -929,6 +943,20 @@ export function CandidateTable(props: Props) {
               setSelected(new Set());
               props.onChanged();
             }
+          }}
+        />
+      )}
+
+      {sendTestFor && (
+        <SendTestDialog
+          employerId={employerId}
+          employerSlug={employerSlug}
+          applicationId={sendTestFor.applicationId}
+          candidateName={sendTestFor.name}
+          jobTitle={props.jobTitle}
+          onClose={(sent) => {
+            setSendTestFor(null);
+            if (sent) props.onChanged();
           }}
         />
       )}
