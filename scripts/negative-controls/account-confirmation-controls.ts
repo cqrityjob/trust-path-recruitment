@@ -99,8 +99,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the panel stops saying the destination survived, so somebody mid-Career-Discovery has no reason to believe their result is still waiting",
     file: FORM,
-    find: '            {t("auth.confirm.destinationKept")}',
-    replace: "            {null}",
+    find: '{t("auth.confirm.destinationKept")}</p>',
+    replace: "{null}</p>",
     guard: GUARD,
     expect: "ACS-SHOWS",
   },
@@ -141,9 +141,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the pending registration is no longer remembered in the browser, so a reload -- or coming back to the laptop after opening the link on a phone -- shows the empty form again",
     file: FORM,
-    find: "        rememberPendingConfirmation(\n          { email: email.trim(), returnTo, forOrganisation },\n          DEFAULT_DESTINATION,\n        );\n        setAwaitingConfirmation({ email: email.trim(), returnTo, forOrganisation, canSignInHere: true });",
+    find: "        rememberPendingConfirmation(\n          { email: email.trim(), returnTo, forOrganisation },\n          DEFAULT_DESTINATION,\n        );\n        setAwaitingConfirmation({\n          email: email.trim(),\n          returnTo,\n          forOrganisation,\n          canSignInHere: true,\n        });",
     replace:
-      "        setAwaitingConfirmation({ email: email.trim(), returnTo, forOrganisation, canSignInHere: true });",
+      "        setAwaitingConfirmation({\n          email: email.trim(),\n          returnTo,\n          forOrganisation,\n          canSignInHere: true,\n        });",
     guard: GUARD,
     expect: "ACS-PERSIST",
   },
