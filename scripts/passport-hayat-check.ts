@@ -1506,6 +1506,19 @@ Date of Issuance: 03-Apr-2023
         "11.19 text on the certificate cannot put a trust word into the reading",
       );
     }
+    {
+      // The case a title actually decides: the printed name has a title and
+      // as many other words as the account, so without setting the title
+      // aside the two could never match.
+      const titled = parseDocument(
+        doc(INDIAN.replace("Ms. Priya Ramaswamy Iyer", "Smt. Priya Iyer")),
+        { ...INDIA_CONTEXT, accountName: "Priya Ramaswamy Iyer" },
+      );
+      ok(
+        titled.holderName.state === "match",
+        "11.21 a printed title never turns a shorter printed name into a difference",
+      );
+    }
     ok(
       HAYAT_READER_VERSION === "hayat-reader/2",
       "11.20 the reader version records the rule change",

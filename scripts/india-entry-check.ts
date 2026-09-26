@@ -161,9 +161,11 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
     if (seen.has(file)) return;
     seen.add(file);
     const src = readFileSync(file, "utf8");
-    // Static and dynamic imports alike; a dynamic import is still a download.
+    // Static, side-effect-only and dynamic imports alike: a bare
+    // `import "x";` still loads x, and a dynamic import is still a download.
     const specs = [
       ...src.matchAll(/(?:import|export)\s[^;]*?from\s+["']([^"']+)["']/g),
+      ...src.matchAll(/(?:^|[;\n])\s*import\s+["']([^"']+)["']/g),
       ...src.matchAll(/import\(\s*["']([^"']+)["']\s*\)/g),
     ].map((m) => m[1]);
     for (const spec of specs) {

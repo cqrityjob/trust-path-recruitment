@@ -134,7 +134,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "        .filter((t) => t.length > 1 && !HONORIFICS.has(t)),",
     replace: "        .filter((t) => t.length > 1),",
     guard: GUARD,
-    expect: "11.15 'Shri' is a title",
+    expect: "11.21 a printed title never turns a shorter printed name into a difference",
   },
   {
     id: "HAYAT-NC-INDIA-COMPACT-DATE-DROPPED",
