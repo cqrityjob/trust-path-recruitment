@@ -32,7 +32,13 @@
 import { mkdirSync } from "node:fs";
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { fixtureById } from "../src/lib/professional-identity/fixtures/career-home-fixtures";
-import { mount, ok, passportSnapshot, takeMountBookkeeping } from "./support/career-home-harness";
+import {
+  INDIA_SETUP_DUBAI,
+  mount,
+  ok,
+  passportSnapshot,
+  takeMountBookkeeping,
+} from "./support/career-home-harness";
 import { CAREER_PROFILE_PROFESSION_EDIT_HREF } from "../src/lib/security-passport/profile-basics";
 
 const SHOTS = process.env.SURFACE_SHOTS ?? "";
@@ -282,6 +288,41 @@ test.describe("My Career names the three surfaces", () => {
     await page.locator("[data-edit-cv]").click();
     await page.waitForURL("**/my-career/cv");
     await expect(page.locator("[data-cv-content]")).toBeVisible();
+  });
+
+  test("destination next steps: an existing account sees none, an India account that chose Dubai sees them", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    // An existing (Swedish) account: the harness default — no destination.
+    const existing = backend();
+    await mount(page, "hub_active", { lang: "en", overrides: existing.overrides });
+    await expect(page.locator('[data-overview-surface="profile"]')).toBeVisible();
+    await expect(page.locator("[data-career-destination-next-steps]")).toHaveCount(0);
+    expect(takeMountBookkeeping()?.unmatched ?? []).toEqual([]);
+
+    // An India account that chose Dubai and holds an Indian qualification.
+    const india = backend();
+    await mount(page, "hub_active", {
+      lang: "en",
+      overrides: { ...india.overrides, readIndiaSetup: ok(INDIA_SETUP_DUBAI) },
+    });
+    const steps = page.locator("[data-career-destination-next-steps]");
+    await expect(steps).toBeVisible();
+    const recorded = steps.locator('[data-checklist-group="recorded"]');
+    await expect(recorded).toContainText("Security Guard (MEP/Q7101)");
+    await expect(recorded).toContainText("India");
+    await expect(recorded).toContainText("Global");
+    await expect(steps.locator('[data-checklist-group="needed"]')).toContainText(
+      "SIRA Security Cadre Card",
+    );
+    await expect(steps).toContainText("does not replace SIRA training or a SIRA card");
+    await expect(steps).not.toContainText(/\d+\s*%|readiness|Dubai[- ]ready/i);
+    await expect(steps.getByRole("link", { name: /SIRA Security Cadre Card/ })).toHaveAttribute(
+      "href",
+      "https://www.sira.gov.ae/en/services/security-cadre-card",
+    );
+    expect(await overflow(page)).toBeLessThanOrEqual(1);
   });
 
   test("a missing Profile fact is a link to the field, not a status word", async ({ page }) => {
