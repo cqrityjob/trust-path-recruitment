@@ -61,6 +61,21 @@ const F = {
   booking: "src/components/recruitment/BookingDialog.tsx",
   listContext: "src/lib/recruitment/list-context.ts",
   migration: "supabase/migrations/20261212090000_recruitment_candidate_view.sql",
+  receipts: "supabase/migrations/20261213090000_recruitment_application_receipts.sql",
+  receiptsSuite: "supabase/tests/recruitment_application_receipts_test.sql",
+  receiptSection: "src/components/recruitment/ReceiptSettingsSection.tsx",
+  receiptServer: "src/lib/recruitment/receipt.server.ts",
+  transport: "src/lib/email/send-recruitment-message-email.server.ts",
+  sweepRoute: "src/routes/api.recruitment.receipts-sweep.ts",
+  sweepWorkflow: ".github/workflows/recruitment-receipts-sweep.yml",
+  evidenceWorkflow: ".github/workflows/recruitment-evidence.yml",
+  jobsIndex: "src/routes/_authenticated.employer.$employerSlug.jobs.index.tsx",
+  submit: "src/lib/job-intelligence/applications.functions.ts",
+  employerJobs: "src/lib/job-intelligence/employer-jobs.functions.ts",
+  candidateApps: "src/routes/_authenticated.my-career.applications.tsx",
+  candidateInbox: "src/components/recruitment/CandidateApplicationInbox.tsx",
+  workflow: ".github/workflows/recruitment-evidence.yml",
+  verify: "scripts/recruitment-evidence-verify.ts",
   suite: "supabase/tests/recruitment_candidate_view_test.sql",
   dbTest: "scripts/db-test.sh",
 };
@@ -898,6 +913,510 @@ const sql = read(F.migration);
   ok(
     /rec\.bookingDialog\.linkNote/.test(booking),
     "H · a pasted meeting link is called a link, not an integration",
+  );
+}
+
+/* ================================================================== */
+/* I · The automatic receipt                                            */
+/* ================================================================== */
+{
+  const rc = read(F.receipts);
+  const suite = read(F.receiptsSuite);
+  const section = code(F.receiptSection);
+  const server = code(F.receiptServer);
+  const transport = code(F.transport);
+  const sweepRoute = code(F.sweepRoute);
+  const submit = code(F.submit);
+  const jobs = code(F.employerJobs);
+  const panels = code(F.panels);
+  const fns = code(F.fns);
+  const copy = read("src/i18n/recruitment-copy.ts");
+  const dbTest = read(F.dbTest);
+  const between = (text: string, from: string, to: string) => {
+    const i = text.indexOf(from);
+    const j = i < 0 ? -1 : text.indexOf(to, i);
+    return i < 0 || j < 0 ? "" : text.slice(i, j);
+  };
+
+  // Written by the database, once, in the application's own transaction.
+  ok(
+    /CREATE CONSTRAINT TRIGGER job_applications_zz_receipt\n\s+AFTER INSERT ON public\.job_applications\n\s+DEFERRABLE INITIALLY DEFERRED/.test(
+      rc,
+    ),
+    "I · the receipt is written by a deferred trigger at the commit of the application, never before",
+  );
+  ok(
+    /CREATE UNIQUE INDEX IF NOT EXISTS recruitment_messages_receipt_once_idx\n\s+ON public\.recruitment_messages \(application_id\) WHERE kind = 'receipt'/.test(
+      rc,
+    ) && /ON CONFLICT \(application_id\) WHERE kind = 'receipt' DO NOTHING/.test(rc),
+    "I · one receipt per application is the index's rule, not the code's",
+  );
+  ok(
+    /IF NEW\.status <> 'submitted' THEN\n\s+RETURN NULL;/.test(rc) &&
+      /IF NOT FOUND OR NOT _s\.receipt_enabled THEN\n\s+RETURN NULL;/.test(rc),
+    "I · nothing is written for an application that is not a new submission, or for a recruitment with the receipt off",
+  );
+  const triggerFn = between(
+    rc,
+    "FUNCTION public.rec_create_application_receipt()",
+    "REVOKE ALL ON FUNCTION public.rec_create_application_receipt()",
+  );
+  ok(
+    triggerFn.length > 0 &&
+      !/EXCEPTION WHEN/.test(triggerFn) &&
+      /position\('EXCEPTION' in pg_get_functiondef\('public\.rec_create_application_receipt\(\)'::regprocedure\)\) > 0/.test(
+        rc,
+      ) &&
+      /G1 a receipt that cannot be written fails the application''s own transaction/.test(suite),
+    "I · a receipt that cannot be written fails the application's own transaction: no silent gap, proved at apply time and in the suite",
+  );
+  ok(
+    /'sent', now\(\), NULL, NULL, 'not_attempted', 'receipt:' \|\| NEW\.id::text/.test(rc),
+    "I · the receipt is a SENT message by nobody with the e-mail not yet attempted, under the logical e-mail's key",
+  );
+  ok(
+    !/CREATE TRIGGER jobs_receipt_default/.test(rc) &&
+      /receipt_enabled\s+boolean NOT NULL DEFAULT false/.test(rc) &&
+      /rpc\("rec_set_receipt_settings", \{\n\s+_job_id: inserted\.id,\n\s+_enabled: true,/.test(
+        jobs,
+      ),
+    "I · the database default is off (existing recruitments keep their behaviour); a NEW recruitment is switched on by the product",
+  );
+  // The standard text: no promised response time, both languages, a link.
+  ok(
+    /rec_receipt_default\(_language text, _part text\)/.test(rc) &&
+      /Hej \{namn\}!/.test(rc) &&
+      /Hi \{name\}!/.test(rc) &&
+      /\{länk\}/.test(rc) &&
+      /\{link\}/.test(rc) &&
+      !/inom \d+ (arbets)?dag/i.test(rc) &&
+      !/within \d+ (working )?days?/i.test(rc),
+    "I · the standard text greets by name, links the application, in both languages, and promises no response time",
+  );
+  // Who may change it: the database's rule, mirrored, never widened.
+  ok(
+    /FUNCTION public\.rec_set_receipt_settings\([\s\S]*?IF NOT public\.rec_can_manage\(_job_id\) THEN\n\s+RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED'/.test(
+      rc,
+    ) &&
+      /canManage=\{r\.canManage\}/.test(
+        code("src/components/recruitment/RecruitmentWorkspaceTabs.tsx"),
+      ),
+    "I · the setting is written by whoever may write to candidates (rec_can_manage), refused for everyone else at the database",
+  );
+
+  // The e-mail truth: trusted server code only.
+  const serviceOnly = [
+    "public.rec_claim_receipt_send(uuid, uuid, boolean, boolean)",
+    "public.rec_settle_receipt_send(uuid, text, text, text)",
+    "public.rec_claim_due_receipts(integer, uuid)",
+  ];
+  ok(
+    serviceOnly.every(
+      (f) =>
+        rc.includes(`REVOKE ALL ON FUNCTION ${f} FROM PUBLIC, anon, authenticated;`) &&
+        rc.includes(`GRANT EXECUTE ON FUNCTION ${f} TO service_role;`) &&
+        !new RegExp(
+          `GRANT EXECUTE ON FUNCTION ${f.replace(/[()]/g, "\\$&")} TO [^;]*authenticated`,
+        ).test(rc),
+    ) &&
+      /OR has_function_privilege\('authenticated', _f, 'EXECUTE'\) THEN\n\s+RAISE EXCEPTION 'REC_RECEIPT_PROOF: a signed-in person could drive the e-mail truth/.test(
+        rc,
+      ) &&
+      /S2 the applicant cannot attest "sent"/.test(suite) &&
+      /S5 an employer cannot attest "sent"/.test(suite),
+    "I · claim, settle and recovery are executable by service_role alone: no candidate or employer can attest 'sent' through the API",
+  );
+  ok(
+    /import \{ supabaseAdmin \} from "@\/integrations\/supabase\/client\.server"/.test(server) &&
+      /\(supabaseAdmin as Loose\)\.rpc\("rec_claim_receipt_send", \{\n\s+_application_id: applicationId,\n\s+_actor: opts\.actorUserId \?\? null,/.test(
+        server,
+      ) &&
+      /actorUserId: ctx\.userId,\n\s+retry: true,\n\s+acceptDuplicate: data\.acceptDuplicate === true,/.test(
+        fns,
+      ),
+    "I · the server drives the e-mail with its own credentials and names the person it acts for; the database checks that person",
+  );
+  ok(
+    /WHEN _app\.applicant_user_id = _user THEN 'applicant'/.test(rc) &&
+      /IF \(_retry OR _accept_duplicate\) AND _who <> 'manager' THEN\n\s+RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED'/.test(
+        rc,
+      ) &&
+      /ELSIF _accept_duplicate THEN\n[\s\S]*?RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED'/.test(rc),
+    "I · only a manager may retry, and accepting a possible duplicate is a person's decision, never the system's",
+  );
+  // Every attempt has an identity; an answer counts for its own attempt only.
+  ok(
+    /email_attempt_id = gen_random_uuid\(\),/.test(rc) &&
+      /FUNCTION public\.rec_settle_receipt_send\(\n\s+_attempt_id uuid,/.test(rc) &&
+      /WHERE m\.email_attempt_id = _attempt_id AND m\.kind = 'receipt' FOR UPDATE;\n\s+IF NOT FOUND THEN\n\s+RETURN 'stale';/.test(
+        rc,
+      ) &&
+      /_attempt_id: claim\.attempt_id,/.test(server) &&
+      /U7 the old attempt''s late answer cannot touch the new attempt/.test(suite),
+    "I · every technical attempt has its own id, and a settle applies to the attempt it names -- a late answer for A never touches B",
+  );
+  // Unknown is unknown; the provider's window decides what is safe.
+  const claimFn = between(
+    rc,
+    "FUNCTION public.rec_claim_receipt_send(",
+    "REVOKE ALL ON FUNCTION public.rec_claim_receipt_send(",
+  );
+  ok(
+    /SET email_status = 'unknown', email_error = 'NO_SETTLE'/.test(claimFn) &&
+      /IF _m\.email_status IN \('unknown', 'failed', 'not_configured'\) AND NOT _retry THEN/.test(
+        claimFn,
+      ) &&
+      /IF _result NOT IN \('sent', 'failed', 'not_configured', 'unknown'\) THEN/.test(rc),
+    "I · an unsettled or unanswered claim is UNKNOWN, recordable as such, and never resent by a plain claim",
+  );
+  ok(
+    /_first_used_at > now\(\) - interval '23 hours'/.test(rc) &&
+      /IF _m\.email_status = 'unknown' AND NOT public\.rec_receipt_window_open\(_m\.email_key_first_used_at\) THEN\n\s+IF NOT _accept_duplicate THEN/.test(
+        rc,
+      ) &&
+      /SET email_key_generation = email_key_generation \+ 1,/.test(rc) &&
+      /THEN ':r' \|\| _m\.email_key_generation::text ELSE '' END/.test(rc) &&
+      /email_recipient = coalesce\(email_recipient,/.test(rc) &&
+      /U9 after the provider''s window the recovery never resends by itself/.test(suite) &&
+      /U12 a manager who accepts the possible duplicate resends under a NEW key generation, to the same address/.test(
+        suite,
+      ),
+    "I · inside the provider's 24-hour window a resend goes under the same key to the same address; after it only a person's acceptance of a possible duplicate resends, under a new key generation",
+  );
+  // Recovery: bounded, one sweep at a time, nothing retroactive.
+  ok(
+    /FUNCTION public\.rec_claim_due_receipts\(/.test(rc) &&
+      /\n\s+FOR UPDATE SKIP LOCKED\n/.test(rc) &&
+      /\(m\.email_status = 'not_attempted' AND m\.created_at < now\(\) - interval '1 minute'\)/.test(
+        rc,
+      ) &&
+      /\(m\.email_status = 'unknown' AND m\.email_attempts < 5\n/.test(rc) &&
+      /coalesce\(m\.email_error, ''\) <> 'IDEMPOTENCY_PAYLOAD_MISMATCH'/.test(rc) &&
+      /\(m\.email_status = 'failed' AND m\.email_error = 'HTTP_429' AND m\.email_attempts < 5/.test(
+        rc,
+      ) &&
+      /D3 a second recovery right after finds nothing: the claim is in flight/.test(suite) &&
+      /D8 after five attempts the recovery stops, even inside the window/.test(suite) &&
+      /D14 through all of that the recovery generated nothing/.test(suite) &&
+      /5l-bis-4\. The receipt e-mail under a REAL race/.test(dbTest) &&
+      /two concurrent recoveries: the first took the receipt, the second took nothing/.test(dbTest),
+    "I · the recovery takes what is due under SKIP LOCKED, bounded to five attempts, retries only a rate limit among the refusals, generates nothing, and is raced for real in db-test.sh",
+  );
+  ok(
+    /export async function sweepReceipts\(/.test(server) &&
+      /rpc\("rec_claim_due_receipts", \{\n\s+_limit: opts\.limit \?\? 20,\n\s+_employer_id: opts\.employerId \?\? null,/.test(
+        server,
+      ) &&
+      /m\.sweepReceipts\(\{ limit: 3, employerId: data\.employerId \}\)/.test(fns) &&
+      /rpc\("rec_receipts_needing_attention", \{ _employer_id: data\.employerId \}\)/.test(fns) &&
+      /data-testid="receipts-attention"/.test(code(F.jobsIndex)),
+    "I · the product recovers by itself from the employer's overview, and says how many receipts need a person",
+  );
+  ok(
+    /const expected = process\.env\.RECRUITMENT_SWEEP_TOKEN;\n\s+if \(!expected \|\| expected\.length < 16\) return false;/.test(
+      sweepRoute,
+    ) &&
+      /if \(!authorised\(request\)\) return notFound\(\);/.test(sweepRoute) &&
+      !/VITE_/.test(sweepRoute) &&
+      /schedule:/.test(read(F.sweepWorkflow)) &&
+      /secrets\.RECRUITMENT_SWEEP_TOKEN/.test(read(F.sweepWorkflow)) &&
+      /NOT CONFIGURED/.test(read(F.sweepWorkflow)) &&
+      /"receipts:sweep": "bun run scripts\/receipts-sweep\.ts"/.test(read("package.json")),
+    "I · the sweep endpoint is closed unless a server-side token opens it, and a scheduled workflow knocks on it with a repository secret, saying so when not configured",
+  );
+  // The submission: the e-mail after the commit, never failing the application.
+  ok(
+    /const \{ dispatchApplicationReceipt \} = await import\("@\/lib\/recruitment\/receipt\.server"\);\n\s+await dispatchApplicationReceipt\(result\.id\);/.test(
+      submit,
+    ) &&
+      submit.indexOf("dispatchApplicationReceipt(result.id)") >
+        submit.indexOf("if (insertErr) {") &&
+      !/dispatchApplicationReceipt\(ctx\.supabase/.test(submit),
+    "I · the e-mail goes after the submission succeeded, from the same request, with the server's credentials rather than the candidate's session",
+  );
+  ok(
+    /export async function dispatchApplicationReceipt[\s\S]*?try \{[\s\S]*?\} catch \(e\) \{\n\s+console\.error/.test(
+      server,
+    ) &&
+      !/throw/.test(
+        server.slice(
+          server.indexOf("export async function dispatchApplicationReceipt"),
+          server.indexOf("export type ReceiptSweepSummary"),
+        ),
+      ),
+    "I · a mail outage never fails a saved application",
+  );
+  ok(
+    /sendRecruitmentMessageEmail\(\{/.test(server) &&
+      !/api\.resend\.com|RESEND_API_KEY/.test(server) &&
+      /idempotencyKey: claim\.provider_key \?\? undefined,/.test(server) &&
+      /timeoutMs: 15_000,/.test(server) &&
+      /link: receiptLink\(origin, claim\.application_id\),/.test(server) &&
+      /idempotencyKey: `msg:\$\{messageId\}`,/.test(fns),
+    "I · the same e-mail transport as every other recruitment message, no second provider and no key in this file; the receipt sends under the logical e-mail's idempotency key, bounded, with a button to exactly this application -- and a person's message sends under a key of its own",
+  );
+
+  // The transport, executed against controlled answers. Never a network.
+  const T = await import("../src/lib/email/send-recruitment-message-email.server");
+  ok(
+    T.classifyProviderResponse(200).result === "sent" &&
+      T.classifyProviderResponse(422).result === "failed" &&
+      T.classifyProviderResponse(429).result === "failed" &&
+      T.classifyProviderResponse(500).result === "unknown" &&
+      T.classifyProviderResponse(502).result === "unknown" &&
+      T.classifyProviderResponse(408).result === "unknown" &&
+      (T.classifyProviderResponse(409) as { error: string }).error === "IDEMPOTENCY_CONFLICT" &&
+      !/res\.(json|text)\(\)/.test(transport),
+    "I · transport: 2xx is accepted, a 4xx (429 included) is a definite refusal, 5xx/408 are unknown, a 409 is the provider already holding this key -- and the provider's body is never read",
+  );
+  {
+    const savedKey = process.env.RESEND_API_KEY;
+    const savedFrom = process.env.RESEND_FROM_EMAIL;
+    process.env.RESEND_API_KEY = "guard-only-not-a-key";
+    process.env.RESEND_FROM_EMAIL = "guard@example.invalid";
+    const calls: { url: string; headers: Record<string, string>; body: string }[] = [];
+    const answering =
+      (status: number, body: unknown): typeof fetch =>
+      async (url, init) => {
+        calls.push({
+          url: String(url),
+          headers: Object.fromEntries(new Headers(init?.headers).entries()),
+          body: String(init?.body ?? ""),
+        });
+        return new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json" },
+        });
+      };
+    const hanging: typeof fetch = (_url, init) =>
+      new Promise((_, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
+        );
+      });
+    const failing: typeof fetch = async () => {
+      throw new TypeError("fetch failed");
+    };
+    const base = {
+      recipientEmail: "guard@example.invalid",
+      language: "sv" as const,
+      subject: "Vi har tagit emot din ansökan – Väktare",
+      body: "Hej Kim!\n\nLänk: /my-career/applications?application=abc",
+      employerName: "Nordvakt",
+      jobTitle: "Väktare",
+      siteOrigin: "https://cqrityjob.example",
+      link: "https://cqrityjob.example/my-career/applications?application=abc",
+      cta: "Öppna din ansökan",
+      idempotencyKey: "receipt:abc",
+    };
+    try {
+      const sent = await T.sendRecruitmentMessageEmail({
+        ...base,
+        fetchImpl: answering(200, { id: "em_1" }),
+      });
+      const refused = await T.sendRecruitmentMessageEmail({
+        ...base,
+        fetchImpl: answering(422, { name: "validation_error" }),
+      });
+      const down = await T.sendRecruitmentMessageEmail({
+        ...base,
+        fetchImpl: answering(500, { name: "internal" }),
+      });
+      const busy = await T.sendRecruitmentMessageEmail({
+        ...base,
+        fetchImpl: answering(409, { name: "concurrent_idempotent_requests" }),
+      });
+      const timedOut = await T.sendRecruitmentMessageEmail({
+        ...base,
+        fetchImpl: hanging,
+        timeoutMs: 30,
+      });
+      const network = await T.sendRecruitmentMessageEmail({ ...base, fetchImpl: failing });
+      ok(
+        sent.result === "sent" &&
+          sent.providerId === null &&
+          refused.result === "failed" &&
+          refused.error === "HTTP_422" &&
+          down.result === "unknown" &&
+          down.error === "HTTP_500" &&
+          busy.result === "unknown" &&
+          busy.error === "IDEMPOTENCY_CONFLICT" &&
+          timedOut.result === "unknown" &&
+          timedOut.error === "TIMEOUT" &&
+          network.result === "unknown" &&
+          network.error === "NETWORK_ERROR",
+        "I · transport, executed: accepted, without reading the body; refused; 5xx, a busy key, an abort and a network error are all UNKNOWN, never 'failed'",
+      );
+      ok(
+        calls.length === 4 &&
+          calls.every((c) => c.url === "https://api.resend.com/emails") &&
+          calls.every((c) => c.headers["idempotency-key"] === "receipt:abc") &&
+          calls.every((c) => JSON.parse(c.body).to[0] === "guard@example.invalid"),
+        "I · transport, executed: every call carries the Idempotency-Key of the logical e-mail and goes to the one provider",
+      );
+      delete process.env.RESEND_API_KEY;
+      const inert = await T.sendRecruitmentMessageEmail({ ...base, fetchImpl: failing });
+      ok(
+        inert.result === "not_configured" && calls.length === 4,
+        "I · transport, executed: without a mail key nothing is called and the answer is not_configured",
+      );
+    } finally {
+      if (savedKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = savedKey;
+      if (savedFrom === undefined) delete process.env.RESEND_FROM_EMAIL;
+      else process.env.RESEND_FROM_EMAIL = savedFrom;
+    }
+    const receipt = T.renderRecruitmentMessageEmail(base);
+    const ordinary = T.renderRecruitmentMessageEmail({ ...base, link: undefined, cta: undefined });
+    const hostile = T.renderRecruitmentMessageEmail({
+      ...base,
+      link: "https://evil.example/phish?application=abc",
+      cta: '"><script>alert(1)</script>',
+    });
+    ok(
+      receipt.html.includes(
+        'href="https://cqrityjob.example/my-career/applications?application=abc"',
+      ) &&
+        receipt.html.includes(">Öppna din ansökan</a>") &&
+        ordinary.html.includes('href="https://cqrityjob.example/my-career/applications"') &&
+        ordinary.html.includes(">Läs och svara i CQrityjob</a>") &&
+        hostile.html.includes('href="https://cqrityjob.example/my-career/applications"') &&
+        !hostile.html.includes("<script") &&
+        hostile.html.includes("&lt;script&gt;"),
+      "I · the e-mail's button opens exactly the application (escaped, on the site's own origin only); a person's message keeps its own button; a hostile link or label cannot get through",
+    );
+  }
+
+  // Delivery states, said apart; no sentence claims an arrival.
+  ok(
+    /case "unknown":\n\s+return "delivered_email_unknown";/.test(code(F.defs)) &&
+      /kind === "receipt" \? "delivered_email_pending" : "delivered_in_app_only"/.test(
+        code(F.defs),
+      ) &&
+      /"rec\.message\.delivery\.emailPending"/.test(copy) &&
+      /"rec\.message\.delivery\.emailUnknown"/.test(copy) &&
+      /"rec\.message\.delivery\.emailSent": "Levererat i CQrityjob · e-post accepterad av leverantören"/.test(
+        copy,
+      ),
+    "I · in CQrityjob, e-mail waiting, accepted by the provider, failed, unknown and not configured are six different sentences",
+  );
+  ok(
+    !/rec\.message\.delivery\.emailDelivered|bekräftad leverans|confirmed delivery|nått inkorgen\.|reached the inbox\./i.test(
+      copy.replace(
+        /inte att det nått kandidatens inkorg|not that it reached the candidate's inbox/g,
+        "",
+      ),
+    ) &&
+      /"rec\.receipt\.acceptedNote"/.test(copy) &&
+      /rec\.receipt\.acceptedNote/.test(section),
+    "I · no sentence claims a confirmed delivery, and the setting says in words that 'accepted' is not 'arrived'",
+  );
+  ok(
+    /\(m\.kind === "receipt" && m\.emailStatus === "not_attempted"\)/.test(panels) &&
+      /\(m\.emailStatus === "unknown" && \(m\.kind !== "receipt" \|\| m\.emailWindowOpen\)\)/.test(
+        panels,
+      ) &&
+      /retryReceiptFn\(\{\n\s+data: \{ employerId, applicationId: ws\.applicationId, acceptDuplicate \},/.test(
+        panels,
+      ) &&
+      /confirmResend === m\.id \?/.test(panels) &&
+      /rec\.receipt\.resendConfirm/.test(panels) &&
+      /onRetry\(m\.id, true\)/.test(panels) &&
+      /rec\.receipt\.unknownWindowClosed/.test(panels) &&
+      /"rec\.receipt\.resendConfirm": "Kandidaten kan få bekräftelsen två gånger\. Skicka ändå\?"/.test(
+        copy,
+      ),
+    "I · a receipt whose e-mail is waiting, failed or unknown-inside-the-window can be sent again by a person; outside the window only after an explicit acceptance that the candidate may get it twice",
+  );
+  // The section, the preview, the summary, the label, the link.
+  ok(
+    /import \{ renderReceiptTemplate \} from "@\/lib\/recruitment\/receipt-template"/.test(
+      section,
+    ) &&
+      /data-testid="receipt-preview"/.test(section) &&
+      /rec\.receipt\.reset/.test(section) &&
+      /rec\.receipt\.channel\.inApp/.test(section) &&
+      /rec\.receipt\.channel\.email/.test(section) &&
+      /rec\.receipt\.futureOnly/.test(section),
+    "I · the section has a live preview, a reset to the standard text, the two channels in words, and says it is not retroactive",
+  );
+  ok(
+    /data-testid="receipt-summary"/.test(code(F.hub)) &&
+      /sections=\{\["responsible", "team", "communication"\]\}/.test(code(F.hub)),
+    "I · Publiceringsläge states the receipt's state; the section lives under Team och inställningar",
+  );
+  ok(
+    /"rec\.message\.kind\.receipt": "Automatisk mottagningsbekräftelse"/.test(copy) &&
+      /rec\.message\.kind\.receipt/.test(code(F.candidateInbox)),
+    "I · the receipt is labelled as automatic on both sides",
+  );
+  ok(
+    /application: z\.string\(\)\.uuid\(\)\.optional\(\)\.catch\(undefined\)/.test(
+      code(F.candidateApps),
+    ) &&
+      /'\/my-career\/applications\?application=' \|\| NEW\.id::text/.test(rc) &&
+      /export function receiptLink\(siteOrigin: string, applicationId: string\): string \{\n\s+return `\$\{siteOrigin\.replace\(\/\\\/\$\/, ""\)\}\/my-career\/applications\?application=\$\{encodeURIComponent\(applicationId\)\}`;/.test(
+        server,
+      ),
+    "I · the link in the receipt names the application in the query string, which survives a sign-in redirect; the e-mail's button carries the same address, absolute",
+  );
+  // The TypeScript preview renders exactly as the database does.
+  const R = await import("../src/lib/recruitment/receipt-template");
+  ok(
+    R.renderReceiptTemplate("Hej {namn}! {tjänst} hos {företag}: {länk}", {
+      name: "",
+      job: "Väktare",
+      company: "AB",
+      link: "/x",
+    }) === "Hej! Väktare hos AB: /x" &&
+      R.renderReceiptTemplate("Hi {name}, {job} at {company}: {link}", {
+        name: "Kim",
+        job: "Guard",
+        company: "AB",
+        link: "/x",
+      }) === "Hi Kim, Guard at AB: /x",
+    "I · the preview renders the placeholders exactly as rec_render_receipt does, an empty name included",
+  );
+  const W = await import("../src/lib/recruitment/recruitment.functions");
+  const hour = 60 * 60 * 1000;
+  ok(
+    W.receiptWindowOpen(null) &&
+      W.receiptWindowOpen(new Date(Date.now() - 22 * hour).toISOString()) &&
+      !W.receiptWindowOpen(new Date(Date.now() - 24 * hour).toISOString()) &&
+      !W.receiptWindowOpen("not a date"),
+    "I · the page's idea of the provider's window is the database's: 23 trusted hours from the first attempt",
+  );
+  // Proved by executing, in the database, before and after a rollback.
+  ok(
+    /GROUP S — server only/.test(suite) &&
+      /GROUP R — the receipt/.test(suite) &&
+      /R4 a replayed submission answers "replayed" and writes no second receipt/.test(suite) &&
+      /R9 a later template change leaves the receipts already written exactly as they were/.test(
+        suite,
+      ) &&
+      /R11 switching it on again writes nothing retroactively/.test(suite) &&
+      /E3 an answer for an attempt that is not the current one is stale and changes nothing/.test(
+        suite,
+      ) &&
+      /run_receipts_suite "before rollback"/.test(dbTest) &&
+      /run_receipts_suite "after reapply"/.test(dbTest) &&
+      /-lt 80 \]/.test(dbTest),
+    "I · the suite proves replay, history, non-retroactivity, attempt identity and the unknown outcome, before and after a rollback cycle",
+  );
+  const e2e = read("e2e/recruitment-workspace.spec.ts");
+  ok(
+    /the automatic receipt: switched on with a preview/.test(e2e) &&
+      /the receipt's e-mail button opens exactly this application after a sign-in; another candidate cannot read it, and nobody can forge its delivery through the API/.test(
+        e2e,
+      ) &&
+      /the recovery: a send that never started is sent by the sweep once/.test(e2e) &&
+      /rpc\/rec_settle_receipt_send/.test(e2e) &&
+      /getByRole\("button", \{ name: "Ja, skicka igen" \}\)/.test(e2e) &&
+      /const EXPECTED_AT_LEAST = 15;/.test(read(F.verify)) &&
+      /SUPABASE_SERVICE_ROLE_KEY=\$\{SERVICE_ROLE_KEY\}/.test(read(F.evidenceWorkflow)) &&
+      /RECRUITMENT_SWEEP_TOKEN=\$\{SWEEP_TOKEN\}/.test(read(F.evidenceWorkflow)) &&
+      /if grep -q 'RESEND_API_KEY' \.env\.local; then fail/.test(read(F.evidenceWorkflow)),
+    "I · the browser walk covers the receipt, its button after a sign-in, the API refusals and the recovery; the CI stack has the server's own key, no mail key, and the verifier expects every test to have run",
   );
 }
 

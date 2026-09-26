@@ -10,7 +10,7 @@
 export const recruitmentSv = {
   "rec.phase.draft": "Utkast",
   "rec.phase.published": "Publicerad",
-  "rec.phase.closed": "Ansökan stängd",
+  "rec.phase.closed": "Tar inte emot nya ansökningar",
   "rec.phase.completed": "Avslutad",
   "rec.phase.cancelled": "Avbruten",
   "rec.stage.new": "Ny",
@@ -27,7 +27,7 @@ export const recruitmentSv = {
   "rec.booking.status.cancelled": "Inställd",
   "rec.booking.status.completed": "Genomförd",
   "rec.message.delivery.draft": "Utkast – inte skickat",
-  "rec.message.delivery.emailSent": "Levererat i CQrityjob · e-post accepterad",
+  "rec.message.delivery.emailSent": "Levererat i CQrityjob · e-post accepterad av leverantören",
   "rec.message.delivery.emailSending": "Levererat i CQrityjob · e-post skickas",
   "rec.message.delivery.emailFailed": "Levererat i CQrityjob · e-post misslyckades",
   "rec.message.delivery.emailNotConfigured": "Levererat i CQrityjob · e-post är inte konfigurerad",
@@ -280,7 +280,7 @@ export const recruitmentSv = {
   "rec.list.phase.active": "Pågående",
   "rec.list.phase.draft": "Utkast",
   "rec.list.phase.published": "Publicerade",
-  "rec.list.phase.closed": "Ansökan stängd",
+  "rec.list.phase.closed": "Tar inte emot nya ansökningar",
   "rec.list.phase.completed": "Avslutade",
   "rec.list.phase.all": "Alla",
   "rec.list.readyToComplete": "Redo att avslutas",
@@ -593,12 +593,78 @@ export const recruitmentSv = {
   "rec.bookingDialog.slotOverflow": "ryms inte inom dagen",
   "rec.list.capped":
     "Den här listan visar de {shown} senaste ansökningarna av {total}. Öppna en rekrytering för dess fullständiga, sidindelade lista.",
+  "rec.message.kind.receipt": "Automatisk mottagningsbekräftelse",
+  "rec.message.delivery.emailPending": "Levererat i CQrityjob · e-post väntar på utskick",
+  "rec.message.delivery.emailUnknown": "Levererat i CQrityjob · e-post: okänt utfall",
+  "rec.receipt.heading": "Kommunikation och autosvar",
+  "rec.receipt.lede":
+    "Ett automatiskt mottagningsbesked till kandidaten när en ansökan har sparats korrekt. Det är en fast text – inget AI-svar och inget beslut om kandidaten.",
+  "rec.receipt.toggle": "Automatisk mottagningsbekräftelse vid mottagen ansökan",
+  "rec.receipt.on": "På",
+  "rec.receipt.off": "Av",
+  "rec.receipt.futureOnly":
+    "Gäller ansökningar som kommer in efter att inställningen sparats. Inget skickas till ansökningar som redan finns.",
+  "rec.receipt.restricted":
+    "Ägare, administratör eller ansvarig för rekryteringen ändrar inställningen.",
+  "rec.receipt.language": "Språk",
+  "rec.receipt.lang.sv": "Svenska",
+  "rec.receipt.lang.en": "Engelska",
+  "rec.receipt.isStandard": "Standardtext",
+  "rec.receipt.isCustom": "Egen text",
+  "rec.receipt.subject": "Ämnesrad",
+  "rec.receipt.body": "Meddelandetext",
+  "rec.receipt.variables": "Variabler:",
+  "rec.receipt.var.name": "kandidatens förnamn",
+  "rec.receipt.var.job": "tjänsten",
+  "rec.receipt.var.company": "företaget",
+  "rec.receipt.var.link": "länk till ansökan",
+  "rec.receipt.noPromise":
+    "Standardtexten lovar ingen svarstid. Vill ni lova en, skriv den själva.",
+  "rec.receipt.save": "Spara",
+  "rec.receipt.reset": "Återställ standardtext",
+  "rec.receipt.savedOn": "Sparat. Nya ansökningar får en mottagningsbekräftelse.",
+  "rec.receipt.savedOff": "Sparat. Ingen mottagningsbekräftelse skickas.",
+  "rec.receipt.previewHeading": "Förhandsgranskning",
+  "rec.receipt.previewLede": "Med exempeldata: kandidaten Kim, den här tjänsten och ert företag.",
+  "rec.receipt.channelsHeading": "Kanaler",
+  "rec.receipt.channel.inApp": "Kandidatens inkorg i CQrityjob, under Mina ansökningar – alltid.",
+  "rec.receipt.channel.email":
+    "E-post – när e-post är konfigurerad för plattformen. Annars visas bekräftelsen som ”e-post är inte konfigurerad” hos er, och kandidaten ser den ändå i CQrityjob.",
+  "rec.receipt.history":
+    "Den text som faktiskt skickats sparas på ansökan. Senare ändringar här ändrar inte gamla bekräftelser.",
+  "rec.receipt.summaryLabel": "Mottagningsbekräftelse",
+  "rec.receipt.summaryChange": "Ändra",
+  "rec.receipt.byNobody": "skickad automatiskt",
+  "rec.receipt.noneForApplication": "Den här ansökan har ingen mottagningsbekräftelse.",
+  "rec.receipt.acceptedNote":
+    "”Accepterad av e-postleverantören” betyder att leverantören tagit emot utskicket – inte att det nått kandidatens inkorg. Det vet ingen del av CQrityjob.",
+  "rec.receipt.attention":
+    "{n} automatiska mottagningsbekräftelser har ett e-postutfall som behöver en persons beslut. Öppna ansökan för att se vad som hänt.",
+  "rec.receipt.unknownWindowOpen":
+    "Okänt utfall – svaret från e-postleverantören kom aldrig. Ett nytt försök inom ett dygn är säkert: leverantören skickar inte dubbletter under samma nyckel, och systemet försöker själv.",
+  "rec.receipt.unknownWindowClosed":
+    "Okänt utfall – svaret från e-postleverantören kom aldrig, och dygnet då ett nytt försök var säkert har passerat. Ett nytt utskick kan nå kandidaten två gånger.",
+  "rec.receipt.failedDetail": "E-postleverantören avvisade utskicket.",
+  "rec.receipt.attempts": "{n} försök",
+  "rec.receipt.resendAnyway": "Skicka igen ändå",
+  "rec.receipt.resendConfirm": "Kandidaten kan få bekräftelsen två gånger. Skicka ändå?",
+  "rec.receipt.resendYes": "Ja, skicka igen",
+  "rec.receipt.resendNo": "Avbryt",
+  "rec.send.deliveredEmailUnknownClosed":
+    "E-postens utfall är okänt och tiden för ett säkert nytt försök har passerat. Inget skickades. Vill du skicka igen ändå, bekräfta det uttryckligen.",
+  "rec.pager.filter": "filter: {filter}",
+  "rec.pager.showAll": "Visa alla ({all})",
+  "rec.filter.owner": "ansvarig",
+  "rec.filter.answers": "urvalssvar",
+  "rec.pipeline.overlapNote":
+    "Test- och intervjuindikatorerna överlappar stegen: en kandidat kan räknas på flera ställen.",
+  "rec.batch.restrictedTeamLink": "Se team och ansvarig",
 } as const;
 
 export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.phase.draft": "Draft",
   "rec.phase.published": "Published",
-  "rec.phase.closed": "Applications closed",
+  "rec.phase.closed": "Not accepting new applications",
   "rec.phase.completed": "Completed",
   "rec.phase.cancelled": "Cancelled",
   "rec.stage.new": "New",
@@ -615,7 +681,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.booking.status.cancelled": "Cancelled",
   "rec.booking.status.completed": "Held",
   "rec.message.delivery.draft": "Draft – not sent",
-  "rec.message.delivery.emailSent": "Delivered in CQrityjob · e-mail accepted",
+  "rec.message.delivery.emailSent": "Delivered in CQrityjob · e-mail accepted by the provider",
   "rec.message.delivery.emailSending": "Delivered in CQrityjob · e-mail sending",
   "rec.message.delivery.emailFailed": "Delivered in CQrityjob · e-mail failed",
   "rec.message.delivery.emailNotConfigured": "Delivered in CQrityjob · e-mail not configured",
@@ -871,7 +937,7 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.list.phase.active": "Active",
   "rec.list.phase.draft": "Drafts",
   "rec.list.phase.published": "Published",
-  "rec.list.phase.closed": "Applications closed",
+  "rec.list.phase.closed": "Not accepting new applications",
   "rec.list.phase.completed": "Completed",
   "rec.list.phase.all": "All",
   "rec.list.readyToComplete": "Ready to complete",
@@ -1188,4 +1254,71 @@ export const recruitmentEn: { [K in keyof typeof recruitmentSv]: string } = {
   "rec.bookingDialog.slotOverflow": "does not fit within the day",
   "rec.list.capped":
     "This list shows the {shown} most recent applications of {total}. Open a recruitment for its complete, paged list.",
+  "rec.message.kind.receipt": "Automatic receipt",
+  "rec.message.delivery.emailPending": "Delivered in CQrityjob · e-mail waiting to be sent",
+  "rec.message.delivery.emailUnknown": "Delivered in CQrityjob · e-mail: outcome unknown",
+  "rec.receipt.heading": "Communication and auto-replies",
+  "rec.receipt.lede":
+    "An automatic acknowledgement to the candidate once an application has been saved correctly. It is a fixed text – not an AI reply and not a decision about the candidate.",
+  "rec.receipt.toggle": "Automatic receipt when an application is received",
+  "rec.receipt.on": "On",
+  "rec.receipt.off": "Off",
+  "rec.receipt.futureOnly":
+    "Applies to applications that arrive after the setting is saved. Nothing is sent to applications that already exist.",
+  "rec.receipt.restricted":
+    "The owner, an administrator or the person responsible for the recruitment changes this setting.",
+  "rec.receipt.language": "Language",
+  "rec.receipt.lang.sv": "Swedish",
+  "rec.receipt.lang.en": "English",
+  "rec.receipt.isStandard": "Standard text",
+  "rec.receipt.isCustom": "Own text",
+  "rec.receipt.subject": "Subject",
+  "rec.receipt.body": "Message",
+  "rec.receipt.variables": "Variables:",
+  "rec.receipt.var.name": "the candidate's first name",
+  "rec.receipt.var.job": "the position",
+  "rec.receipt.var.company": "the company",
+  "rec.receipt.var.link": "link to the application",
+  "rec.receipt.noPromise":
+    "The standard text promises no response time. If you want to promise one, write it yourself.",
+  "rec.receipt.save": "Save",
+  "rec.receipt.reset": "Restore the standard text",
+  "rec.receipt.savedOn": "Saved. New applications get a receipt.",
+  "rec.receipt.savedOff": "Saved. No receipt is sent.",
+  "rec.receipt.previewHeading": "Preview",
+  "rec.receipt.previewLede": "With sample data: the candidate Kim, this position and your company.",
+  "rec.receipt.channelsHeading": "Channels",
+  "rec.receipt.channel.inApp":
+    "The candidate's inbox in CQrityjob, under My applications – always.",
+  "rec.receipt.channel.email":
+    "E-mail – when e-mail is configured for the platform. Otherwise the receipt shows as “e-mail is not configured” on your side, and the candidate still sees it in CQrityjob.",
+  "rec.receipt.history":
+    "The text actually sent is kept on the application. Later changes here do not change old receipts.",
+  "rec.receipt.summaryLabel": "Receipt",
+  "rec.receipt.summaryChange": "Change",
+  "rec.receipt.byNobody": "sent automatically",
+  "rec.receipt.noneForApplication": "This application has no receipt.",
+  "rec.receipt.acceptedNote":
+    "“Accepted by the e-mail provider” means the provider took the message – not that it reached the candidate's inbox. No part of CQrityjob knows that.",
+  "rec.receipt.attention":
+    "{n} automatic receipts have an e-mail outcome that needs a person's decision. Open the application to see what happened.",
+  "rec.receipt.unknownWindowOpen":
+    "Outcome unknown – the e-mail provider's answer never came. A new attempt within a day is safe: the provider does not send duplicates under the same key, and the system retries by itself.",
+  "rec.receipt.unknownWindowClosed":
+    "Outcome unknown – the e-mail provider's answer never came, and the day during which a new attempt was safe has passed. Sending again may reach the candidate twice.",
+  "rec.receipt.failedDetail": "The e-mail provider refused the message.",
+  "rec.receipt.attempts": "{n} attempts",
+  "rec.receipt.resendAnyway": "Send again anyway",
+  "rec.receipt.resendConfirm": "The candidate may receive the receipt twice. Send anyway?",
+  "rec.receipt.resendYes": "Yes, send again",
+  "rec.receipt.resendNo": "Cancel",
+  "rec.send.deliveredEmailUnknownClosed":
+    "The e-mail's outcome is unknown and the time for a safe new attempt has passed. Nothing was sent. To send again anyway, confirm it explicitly.",
+  "rec.pager.filter": "filtered by {filter}",
+  "rec.pager.showAll": "Show all ({all})",
+  "rec.filter.owner": "responsible",
+  "rec.filter.answers": "selection answers",
+  "rec.pipeline.overlapNote":
+    "The assessment and interview indicators overlap the stages: one candidate can be counted in more than one place.",
+  "rec.batch.restrictedTeamLink": "See the team and the responsible person",
 };

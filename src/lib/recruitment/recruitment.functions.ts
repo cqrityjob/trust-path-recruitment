@@ -34,6 +34,7 @@ import {
 // PostgREST rows and the request-scoped client, as every server function in
 // src/lib/job-intelligence types them: the joined selects here are wider than
 // the generated types describe. One named alias rather than a scattered `any`.
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Loose = any;
 
@@ -177,6 +178,10 @@ export type RecruitmentOverview = {
   team: TeamMember[];
   myUserId: string;
   role: Role;
+  /** Receipts whose e-mail the recovery will not touch again -- a definite
+   *  refusal, an unknown outcome outside the provider's window or past the
+   *  attempt cap. A person's to look at, on the application. */
+  receiptsNeedingAttention: number;
 };
 
 export const getRecruitmentOverview = createServerFn({ method: "POST" })
@@ -186,7 +191,18 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
     const ctx = context as Ctx;
     const { role } = await requireMember(ctx, data.employerId);
 
-    const [jobsRes, settingsRes, appsRes, bookingsRes, team] = await Promise.all([
+    // The receipt recovery, opportunistically: whatever this organisation's
+    // receipts are due (never started, aged out, unknown inside the
+    // provider's window) is sent now, by the server, a few at a time -- so
+    // the product recovers by itself even where nothing calls the sweep
+    // endpoint. Not awaited: the page must not wait for a mail provider,
+    // and a sweep that dies half-way leaves a claim that ages out and is
+    // taken again. The scheduled workflow is the reliable path.
+    void import("./receipt.server")
+      .then((m) => m.sweepReceipts({ limit: 3, employerId: data.employerId }))
+      .catch((e) => console.error("[recruitment] opportunistic receipt sweep failed", e));
+
+    const [jobsRes, settingsRes, appsRes, bookingsRes, team, attentionRes] = await Promise.all([
       ctx.supabase
         .from("jobs")
         .select(
@@ -213,12 +229,14 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
         .order("starts_at", { ascending: true })
         .limit(50),
       readTeam(ctx, data.employerId),
+      ctx.supabase.rpc("rec_receipts_needing_attention", { _employer_id: data.employerId }),
     ]);
     for (const [res, what] of [
       [jobsRes, "jobs"],
       [settingsRes, "settings"],
       [appsRes, "counts"],
       [bookingsRes, "bookings"],
+      [attentionRes, "receipts"],
     ] as const) {
       if (res.error) {
         console.error(`[recruitment] overview ${what} read failed`, res.error);
@@ -344,7 +362,14 @@ export const getRecruitmentOverview = createServerFn({ method: "POST" })
       status: b.status,
     }));
 
-    return { recruitments, upcomingInterviews, team, myUserId: ctx.userId, role };
+    return {
+      recruitments,
+      upcomingInterviews,
+      team,
+      myUserId: ctx.userId,
+      role,
+      receiptsNeedingAttention: Number(attentionRes.data ?? 0),
+    };
   });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -369,6 +394,20 @@ export type QuestionRow = {
   position: number;
 };
 
+/** The automatic receipt, as the recruitment has it: on or off, and its
+ *  own text or null for the standard text in each language. The standard
+ *  text comes from the database (rec_receipt_default) so the preview shows
+ *  exactly what a candidate would get. */
+export type ReceiptSettings = {
+  enabled: boolean;
+  subjectSv: string | null;
+  bodySv: string | null;
+  subjectEn: string | null;
+  bodyEn: string | null;
+  updatedAt: string | null;
+  defaults: { subjectSv: string; bodySv: string; subjectEn: string; bodyEn: string };
+};
+
 export type RecruitmentDetail = {
   jobId: string;
   settings: {
@@ -378,6 +417,7 @@ export type RecruitmentDetail = {
     completionNote: string | null;
     version: number;
   };
+  receipt: ReceiptSettings;
   requirements: RequirementRow[];
   questions: QuestionRow[];
   structureLocked: boolean;
@@ -424,6 +464,89 @@ async function readStructure(ctx: Ctx, jobId: string) {
   return { requirements, questions };
 }
 
+/** The standard receipt text, read from the database so the preview and
+ *  the receipt a candidate gets are one and the same text. */
+async function readReceiptDefaults(ctx: Ctx): Promise<ReceiptSettings["defaults"]> {
+  const call = (language: "sv" | "en", part: "subject" | "body") =>
+    ctx.supabase
+      .rpc("rec_receipt_default", { _language: language, _part: part })
+      .then((r: Loose) => {
+        if (r.error) throw toCode(r.error, "rec_receipt_default");
+        return String(r.data ?? "");
+      });
+  const [subjectSv, bodySv, subjectEn, bodyEn] = await Promise.all([
+    call("sv", "subject"),
+    call("sv", "body"),
+    call("en", "subject"),
+    call("en", "body"),
+  ]);
+  return { subjectSv, bodySv, subjectEn, bodyEn };
+}
+
+/** Switch the automatic receipt on or off and set its text. Who may:
+ *  rec_can_manage -- the same people who may write to candidates; the
+ *  database refuses everyone else, whatever the page showed. Text equal to
+ *  the standard text is stored as "standard". */
+export const setReceiptSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        jobId: z.string().uuid(),
+        enabled: z.boolean(),
+        subjectSv: z.string().max(200).nullable(),
+        bodySv: z.string().max(4000).nullable(),
+        subjectEn: z.string().max(200).nullable(),
+        bodyEn: z.string().max(4000).nullable(),
+        expectedVersion: z.number().int().nullable(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ version: number }> => {
+    const ctx = context as Ctx;
+    await requireMember(ctx, data.employerId);
+    const { data: version, error } = await ctx.supabase.rpc("rec_set_receipt_settings", {
+      _job_id: data.jobId,
+      _enabled: data.enabled,
+      _subject_sv: data.subjectSv,
+      _body_sv: data.bodySv,
+      _subject_en: data.subjectEn,
+      _body_en: data.bodyEn,
+      _expected_version: data.expectedVersion,
+    });
+    if (error) throw toCode(error, "setReceiptSettings");
+    return { version: Number(version) };
+  });
+
+/** A person's retry of a receipt's e-mail copy (failed, not configured,
+ *  unknown, or never attempted). The server acts with its own credentials
+ *  and names the person; the database allows a retry for the people who
+ *  may write to candidates and for nobody else, and a resend after the
+ *  provider's idempotency window only with `acceptDuplicate` -- the
+ *  person's explicit acceptance that the candidate may get it twice. */
+export const retryReceiptEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        employerId: z.string().uuid(),
+        applicationId: z.string().uuid(),
+        acceptDuplicate: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = context as Ctx;
+    await requireMember(ctx, data.employerId);
+    const { deliverReceiptEmail } = await import("./receipt.server");
+    return deliverReceiptEmail(data.applicationId, {
+      actorUserId: ctx.userId,
+      retry: true,
+      acceptDuplicate: data.acceptDuplicate === true,
+    });
+  });
+
 export const getRecruitment = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -442,10 +565,12 @@ export const getRecruitment = createServerFn({ method: "POST" })
     if (jobErr) throw toCode(jobErr, "getRecruitment job");
     if (!job) throw new Error("RECRUITMENT_NOT_FOUND");
 
-    const [settingsRes, structure, appCount, team] = await Promise.all([
+    const [settingsRes, structure, appCount, team, defaults] = await Promise.all([
       ctx.supabase
         .from("recruitment_settings")
-        .select("responsible_user_id, completion_state, completed_at, completion_note, version")
+        .select(
+          "responsible_user_id, completion_state, completed_at, completion_note, version, receipt_enabled, receipt_subject_sv, receipt_body_sv, receipt_subject_en, receipt_body_en, receipt_updated_at",
+        )
         .eq("job_id", data.jobId)
         .maybeSingle(),
       readStructure(ctx, data.jobId),
@@ -454,6 +579,7 @@ export const getRecruitment = createServerFn({ method: "POST" })
         .select("id", { count: "exact", head: true })
         .eq("job_id", data.jobId),
       readTeam(ctx, data.employerId),
+      readReceiptDefaults(ctx),
     ]);
     if (settingsRes.error || appCount.error)
       throw toCode(settingsRes.error ?? appCount.error, "getRecruitment");
@@ -468,6 +594,15 @@ export const getRecruitment = createServerFn({ method: "POST" })
         completedAt: s?.completed_at ?? null,
         completionNote: s?.completion_note ?? null,
         version: (s?.version as number) ?? 1,
+      },
+      receipt: {
+        enabled: Boolean(s?.receipt_enabled),
+        subjectSv: (s?.receipt_subject_sv as string | null) ?? null,
+        bodySv: (s?.receipt_body_sv as string | null) ?? null,
+        subjectEn: (s?.receipt_subject_en as string | null) ?? null,
+        bodyEn: (s?.receipt_body_en as string | null) ?? null,
+        updatedAt: (s?.receipt_updated_at as string | null) ?? null,
+        defaults,
       },
       ...structure,
       structureLocked: (appCount.count ?? 0) > 0,
@@ -914,6 +1049,14 @@ export type CommentRow = {
   createdAt: string;
 };
 
+/** The same rule as rec_receipt_window_open: the provider keeps an
+ *  idempotency key for 24 hours; 23 are trusted. */
+export function receiptWindowOpen(firstUsedAt: string | null, now = Date.now()): boolean {
+  if (!firstUsedAt) return true;
+  const t = Date.parse(firstUsedAt);
+  return Number.isNaN(t) ? false : t > now - 23 * 60 * 60 * 1000;
+}
+
 export type MessageRow = {
   id: string;
   kind: string;
@@ -921,9 +1064,15 @@ export type MessageRow = {
   body: string;
   language: "sv" | "en";
   status: "draft" | "sent" | "discarded";
-  emailStatus: "not_attempted" | "sending" | "sent" | "failed" | "not_configured";
+  emailStatus: "not_attempted" | "sending" | "sent" | "failed" | "not_configured" | "unknown";
   emailError: string | null;
   emailAttempts: number;
+  /** The provider's id for an accepted e-mail: "accepted", never "arrived". */
+  emailProviderId: string | null;
+  /** Whether a resend under the same idempotency key is still deduplicated
+   *  by the provider (24 h from the first attempt, an hour kept as margin).
+   *  Outside it a resend may reach the candidate twice. */
+  emailWindowOpen: boolean;
   bookingId: string | null;
   createdAt: string;
   sentAt: string | null;
@@ -1021,7 +1170,7 @@ export const getApplicationWorkspace = createServerFn({ method: "POST" })
       ctx.supabase
         .from("recruitment_messages")
         .select(
-          "id, kind, subject, body, language, status, email_status, email_error, email_attempts, booking_id, created_at, sent_at, created_by",
+          "id, kind, subject, body, language, status, email_status, email_error, email_attempts, email_provider_id, email_key_first_used_at, booking_id, created_at, sent_at, created_by",
         )
         .eq("application_id", app.id)
         .neq("status", "discarded")
@@ -1115,6 +1264,8 @@ export const getApplicationWorkspace = createServerFn({ method: "POST" })
         emailStatus: m.email_status,
         emailError: m.email_error,
         emailAttempts: m.email_attempts,
+        emailProviderId: m.email_provider_id ?? null,
+        emailWindowOpen: receiptWindowOpen(m.email_key_first_used_at ?? null),
         bookingId: m.booking_id,
         createdAt: m.created_at,
         sentAt: m.sent_at,
@@ -1366,8 +1517,10 @@ export type SendOutcome = {
   messageId: string;
   /** What the database did with the message itself. */
   delivery: "delivered" | "already_sent" | "in_progress" | "refused";
-  /** What happened to the e-mail copy -- only ever a provider's answer. */
-  email: "sent" | "failed" | "not_configured" | "not_attempted" | "in_progress";
+  /** What happened to the e-mail copy -- only ever a provider's answer, or
+   *  the honest absence of one ("unknown": a timeout, a network error, a
+   *  5xx; not sent and not unsent). */
+  email: "sent" | "failed" | "not_configured" | "not_attempted" | "in_progress" | "unknown";
   code: string | null;
 };
 
@@ -1399,6 +1552,9 @@ async function sendOne(ctx: Ctx, messageId: string): Promise<SendOutcome> {
   const { sendRecruitmentMessageEmail } =
     await import("@/lib/email/send-recruitment-message-email.server");
   const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
+  // One logical e-mail per message: the provider deduplicates a repeat
+  // under the same key for 24 hours, so a retry after a lost answer cannot
+  // reach the candidate twice inside that window.
   const result = claim.recipient_email
     ? await sendRecruitmentMessageEmail({
         recipientEmail: String(claim.recipient_email),
@@ -1408,13 +1564,15 @@ async function sendOne(ctx: Ctx, messageId: string): Promise<SendOutcome> {
         employerName: String(claim.employer_name ?? ""),
         jobTitle: String(claim.job_title ?? ""),
         siteOrigin: process.env.PUBLIC_SITE_URL || SITE_ORIGIN,
+        idempotencyKey: `msg:${messageId}`,
+        timeoutMs: 15_000,
       })
     : ({ result: "failed", error: "NO_ADDRESS" } as const);
 
   const { error: settleErr } = await ctx.supabase.rpc("rec_settle_message_send", {
     _message_id: messageId,
     _result: result.result,
-    _error: result.result === "failed" ? result.error : null,
+    _error: result.result === "failed" || result.result === "unknown" ? result.error : null,
   });
   if (settleErr) {
     // The provider answered and we could not record it. Say so rather than

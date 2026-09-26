@@ -133,9 +133,17 @@ export function BookingBadge({ status }: { status: string }) {
 
 /** What happened to a message, said in two parts: it is in the candidate's
  *  CQrityjob inbox, and separately what the e-mail provider answered. */
-export function DeliveryBadge({ status, emailStatus }: { status: string; emailStatus: string }) {
+export function DeliveryBadge({
+  status,
+  emailStatus,
+  kind,
+}: {
+  status: string;
+  emailStatus: string;
+  kind?: string;
+}) {
   const { t } = useT();
-  const d = messageDeliveryOf(status, emailStatus);
+  const d = messageDeliveryOf(status, emailStatus, kind);
   switch (d) {
     case "draft":
       return (
@@ -171,6 +179,18 @@ export function DeliveryBadge({ status, emailStatus }: { status: string; emailSt
       return (
         <Pill icon={Inbox} tone="info">
           {t("rec.message.delivery.inApp")}
+        </Pill>
+      );
+    case "delivered_email_pending":
+      return (
+        <Pill icon={Mail} tone="info">
+          {t("rec.message.delivery.emailPending")}
+        </Pill>
+      );
+    case "delivered_email_unknown":
+      return (
+        <Pill icon={MailWarning} tone="warning">
+          {t("rec.message.delivery.emailUnknown")}
         </Pill>
       );
     default:

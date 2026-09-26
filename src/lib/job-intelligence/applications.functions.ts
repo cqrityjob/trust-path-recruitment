@@ -391,7 +391,20 @@ export const submitJobApplication = createServerFn({ method: "POST" })
         cv_source: ApplicationCvSource;
         passport_requested: boolean;
         passport_shared: boolean;
+        replayed?: boolean;
       };
+
+      // The automatic receipt, if this recruitment sends one, is already in
+      // the candidate's inbox: the database wrote it in the transaction
+      // above. Its e-mail copy goes now, after the commit, driven by the
+      // server with its own credentials (the candidate's session cannot
+      // claim or settle it), and can neither fail the application nor ask
+      // the candidate to apply again -- whatever the mail provider does is
+      // left on the receipt for the employer and the recovery. A replayed
+      // submission has nothing new to send; the claim answers already_sent /
+      // in_progress by itself.
+      const { dispatchApplicationReceipt } = await import("@/lib/recruitment/receipt.server");
+      await dispatchApplicationReceipt(result.id);
 
       return {
         id: result.id,

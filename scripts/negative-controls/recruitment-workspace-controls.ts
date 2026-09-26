@@ -34,6 +34,13 @@ const BOOKING = "src/components/recruitment/BookingDialog.tsx";
 const HUB = "src/routes/_authenticated.employer.$employerSlug.jobs.$jobId.index.tsx";
 const FORMAT = "src/lib/recruitment/format.ts";
 const MIGRATION = "supabase/migrations/20261212090000_recruitment_candidate_view.sql";
+const RECEIPTS = "supabase/migrations/20261213090000_recruitment_application_receipts.sql";
+const RECEIPT_SERVER = "src/lib/recruitment/receipt.server.ts";
+const TRANSPORT = "src/lib/email/send-recruitment-message-email.server.ts";
+const SWEEP_ROUTE = "src/routes/api.recruitment.receipts-sweep.ts";
+const SUBMIT = "src/lib/job-intelligence/applications.functions.ts";
+const EMPLOYER_JOBS = "src/lib/job-intelligence/employer-jobs.functions.ts";
+const PANELS_FILE = "src/components/recruitment/ApplicationPanels.tsx";
 const G = "recruitment-workspace:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -352,6 +359,274 @@ const MUTATIONS: readonly Mutation[] = [
     replace: "  // the first instant wins",
     guard: G,
     expect: "happens twice in Stockholm",
+  },
+  {
+    id: "RW-RECEIPT-BEFORE-COMMIT",
+    defect:
+      "the receipt is written when the application row is inserted, before its answers exist and before the commit that may still be refused",
+    file: RECEIPTS,
+    find: "CREATE CONSTRAINT TRIGGER job_applications_zz_receipt\n  AFTER INSERT ON public.job_applications\n  DEFERRABLE INITIALLY DEFERRED\n",
+    replace:
+      "CREATE TRIGGER job_applications_zz_receipt\n  AFTER INSERT ON public.job_applications\n",
+    guard: G,
+    expect: "at the commit of the application",
+  },
+  {
+    id: "RW-RECEIPT-TWICE",
+    defect:
+      "a second receipt for the same application is only prevented by the code path that happens to run",
+    file: RECEIPTS,
+    find: "  ON CONFLICT (application_id) WHERE kind = 'receipt' DO NOTHING;",
+    replace: "  ;",
+    guard: G,
+    expect: "the index's rule",
+  },
+  {
+    id: "RW-RECEIPT-SWALLOWED",
+    defect:
+      "a receipt that cannot be written is logged and swallowed, so the application commits without it and nobody can see the gap",
+    file: RECEIPTS,
+    find: "  INSERT INTO public.recruitment_messages (\n    application_id, job_id, employer_id, kind, subject, body, language,\n    status, sent_at, sent_by, created_by, email_status, idempotency_key)\n  VALUES (NEW.id, NEW.job_id, NEW.employer_id, 'receipt',\n          left(_subject, 200), left(_body, 8000), _lang,\n          'sent', now(), NULL, NULL, 'not_attempted', 'receipt:' || NEW.id::text)\n  ON CONFLICT (application_id) WHERE kind = 'receipt' DO NOTHING;\n  RETURN NULL;",
+    replace:
+      "  BEGIN\n  INSERT INTO public.recruitment_messages (\n    application_id, job_id, employer_id, kind, subject, body, language,\n    status, sent_at, sent_by, created_by, email_status, idempotency_key)\n  VALUES (NEW.id, NEW.job_id, NEW.employer_id, 'receipt',\n          left(_subject, 200), left(_body, 8000), _lang,\n          'sent', now(), NULL, NULL, 'not_attempted', 'receipt:' || NEW.id::text)\n  ON CONFLICT (application_id) WHERE kind = 'receipt' DO NOTHING;\n  EXCEPTION WHEN OTHERS THEN RAISE WARNING 'REC_RECEIPT_NOT_WRITTEN';\n  END;\n  RETURN NULL;",
+    guard: G,
+    expect: "no silent gap",
+  },
+  {
+    id: "RW-RECEIPT-RETROACTIVE-DEFAULT",
+    defect:
+      "the database default flips every existing recruitment on, so recruitments nobody touched start sending",
+    file: RECEIPTS,
+    find: "  ADD COLUMN IF NOT EXISTS receipt_enabled    boolean NOT NULL DEFAULT false,",
+    replace: "  ADD COLUMN IF NOT EXISTS receipt_enabled    boolean NOT NULL DEFAULT true,",
+    guard: G,
+    expect: "existing recruitments keep their behaviour",
+  },
+  {
+    id: "RW-RECEIPT-ANYONE-MAY-RETRY",
+    defect:
+      "the applicant can force a retry, so a candidate can make the employer's mail provider resend at will",
+    file: RECEIPTS,
+    find: "    IF (_retry OR _accept_duplicate) AND _who <> 'manager' THEN\n      RAISE EXCEPTION 'RECRUITMENT_NOT_PERMITTED' USING ERRCODE = 'insufficient_privilege';\n    END IF;",
+    replace: "",
+    guard: G,
+    expect: "only a manager may retry",
+  },
+  {
+    id: "RW-RECEIPT-UNKNOWN-IS-NOT-SENT",
+    defect: "a claim that was never settled is treated as nothing sent and resent on its own",
+    file: RECEIPTS,
+    find: "    UPDATE public.recruitment_messages\n       SET email_status = 'unknown', email_error = 'NO_SETTLE', email_settled_at = now(), updated_at = now()\n     WHERE id = _m.id;\n    _m.email_status := 'unknown';\n    _m.email_error := 'NO_SETTLE';",
+    replace: "    _m.email_status := 'not_attempted';",
+    guard: G,
+    expect: "never resent by a plain claim",
+  },
+  {
+    id: "RW-RECEIPT-PROMISES-A-RESPONSE-TIME",
+    defect: "the standard text promises an answer within a number of days the employer never chose",
+    file: RECEIPTS,
+    find: "Vi har tagit emot din ansökan.\\n\\nDu kan följa den",
+    replace:
+      "Vi har tagit emot din ansökan och återkommer inom 5 arbetsdagar.\\n\\nDu kan följa den",
+    guard: G,
+    expect: "promises no response time",
+  },
+  {
+    id: "RW-RECEIPT-MAIL-OUTAGE-FAILS-THE-APPLICATION",
+    defect:
+      "a mail outage during the receipt throws out of the submission, so a saved application is reported as failed",
+    file: RECEIPT_SERVER,
+    find: '  } catch (e) {\n    console.error("[recruitment] receipt e-mail dispatch failed", e);\n  }',
+    replace:
+      '  } catch (e) {\n    console.error("[recruitment] receipt e-mail dispatch failed", e);\n    throw e;\n  }',
+    guard: G,
+    expect: "never fails a saved application",
+  },
+  {
+    id: "RW-RECEIPT-SECOND-PROVIDER",
+    defect: "the receipt grows a mail transport of its own, with the key read in this file",
+    file: RECEIPT_SERVER,
+    find: '    const { sendRecruitmentMessageEmail } =\n      await import("@/lib/email/send-recruitment-message-email.server");',
+    replace:
+      '    const key = process.env.RESEND_API_KEY;\n    const { sendRecruitmentMessageEmail } =\n      await import("@/lib/email/send-recruitment-message-email.server");\n    void key;',
+    guard: G,
+    expect: "no second provider and no key in this file",
+  },
+  {
+    id: "RW-RECEIPT-NEW-JOB-STARTS-OFF",
+    defect:
+      "a new recruitment starts with the receipt off, so nothing is visible before publication unless somebody remembers",
+    file: EMPLOYER_JOBS,
+    find: '      _job_id: inserted.id,\n      _enabled: true,\n    });\n    if (receiptErr) console.error("[employer-jobs] receipt default not set", receiptErr);',
+    replace:
+      '      _job_id: inserted.id,\n      _enabled: false,\n    });\n    if (receiptErr) console.error("[employer-jobs] receipt default not set", receiptErr);',
+    guard: G,
+    expect: "switched on by the product",
+  },
+  {
+    id: "RW-RECEIPT-PENDING-READS-AS-DELIVERED",
+    defect:
+      "a receipt whose e-mail is still waiting is shown as delivered in the app only, as if no e-mail were coming",
+    file: DEFS,
+    find: '      return kind === "receipt" ? "delivered_email_pending" : "delivered_in_app_only";',
+    replace: '      return "delivered_in_app_only";',
+    guard: G,
+    expect: "six different sentences",
+  },
+  {
+    id: "RW-RECEIPT-CLAIMS-DELIVERY",
+    defect: "a sentence claims the e-mail was delivered, which nothing in this product knows",
+    file: COPY,
+    find: '  "rec.message.delivery.emailSent": "Levererat i CQrityjob · e-post accepterad av leverantören",',
+    replace: '  "rec.message.delivery.emailSent": "Levererat i CQrityjob · bekräftad leverans",',
+    guard: G,
+    expect: "no sentence claims a confirmed delivery",
+  },
+  {
+    id: "RW-RECEIPT-NO-RETRY-FROM-THE-APPLICATION",
+    defect: "a receipt whose e-mail never went cannot be sent again by anyone",
+    file: PANELS_FILE,
+    find: '                (m.kind === "receipt" && m.emailStatus === "not_attempted")) &&',
+    replace: "                false) &&",
+    guard: G,
+    expect: "can be sent again by a person",
+  },
+  {
+    id: "RW-RECEIPT-EMAIL-BEFORE-COMMIT",
+    defect: "the receipt e-mail is dispatched before the submission's own outcome is known",
+    file: SUBMIT,
+    find: '      const { dispatchApplicationReceipt } = await import("@/lib/recruitment/receipt.server");\n      await dispatchApplicationReceipt(result.id);\n',
+    replace: "",
+    guard: G,
+    expect: "after the submission succeeded",
+  },
+  {
+    id: "RW-RECEIPT-CLIENT-MAY-SETTLE",
+    defect:
+      "a signed-in person can call the settle through the API and attest that the provider accepted an e-mail",
+    file: RECEIPTS,
+    find: "GRANT EXECUTE ON FUNCTION public.rec_settle_receipt_send(uuid, text, text, text) TO service_role;",
+    replace:
+      "GRANT EXECUTE ON FUNCTION public.rec_settle_receipt_send(uuid, text, text, text) TO service_role, authenticated;",
+    guard: G,
+    expect: "service_role alone",
+  },
+  {
+    id: "RW-RECEIPT-SETTLE-IGNORES-ATTEMPT",
+    defect:
+      "a settle applies to whatever attempt is current, so a late answer from an old attempt overwrites the new one",
+    file: RECEIPTS,
+    find: "   WHERE m.email_attempt_id = _attempt_id AND m.kind = 'receipt' FOR UPDATE;\n  IF NOT FOUND THEN\n    RETURN 'stale';",
+    replace:
+      "   WHERE m.email_attempt_id IS NOT NULL AND m.kind = 'receipt' FOR UPDATE;\n  IF NOT FOUND THEN\n    RETURN 'stale';",
+    guard: G,
+    expect: "the attempt it names",
+  },
+  {
+    id: "RW-RECEIPT-RESEND-AFTER-WINDOW",
+    defect:
+      "an unknown outcome is resent after the provider's idempotency window as if the window were still open, so the candidate can get the receipt twice with nobody deciding it",
+    file: RECEIPTS,
+    find: "  IF _m.email_status = 'unknown' AND NOT public.rec_receipt_window_open(_m.email_key_first_used_at) THEN\n    IF NOT _accept_duplicate THEN",
+    replace: "  IF false THEN\n    IF NOT _accept_duplicate THEN",
+    guard: G,
+    expect: "possible duplicate",
+  },
+  {
+    id: "RW-RECEIPT-SWEEP-WAITS",
+    defect:
+      "two recoveries queue on the same rows instead of skipping them, so a second worker takes the receipt the first is sending",
+    file: RECEIPTS,
+    find: "     FOR UPDATE SKIP LOCKED",
+    replace: "     FOR UPDATE",
+    guard: G,
+    expect: "SKIP LOCKED",
+  },
+  {
+    id: "RW-RECEIPT-SWEEP-UNBOUNDED",
+    defect: "the recovery retries an unknown outcome forever",
+    file: RECEIPTS,
+    find: "         OR (m.email_status = 'unknown' AND m.email_attempts < 5\n",
+    replace: "         OR (m.email_status = 'unknown' AND m.email_attempts < 500000\n",
+    guard: G,
+    expect: "bounded",
+  },
+  {
+    id: "RW-RECEIPT-NO-IDEMPOTENCY-KEY",
+    defect:
+      "the receipt is sent without the logical e-mail's idempotency key, so a retry after a lost answer is a second e-mail",
+    file: RECEIPT_SERVER,
+    find: "            idempotencyKey: claim.provider_key ?? undefined,\n",
+    replace: "",
+    guard: G,
+    expect: "idempotency key",
+  },
+  {
+    id: "RW-RECEIPT-TIMEOUT-IS-FAILURE",
+    defect:
+      "an aborted call is recorded as a definite failure, although the provider may have accepted the e-mail after we stopped listening",
+    file: TRANSPORT,
+    find: '    return { result: "unknown", error: aborted ? "TIMEOUT" : "NETWORK_ERROR" };',
+    replace: '    return { result: "failed", error: aborted ? "TIMEOUT" : "NETWORK_ERROR" };',
+    guard: G,
+    expect: "UNKNOWN, never 'failed'",
+  },
+  {
+    id: "RW-RECEIPT-5XX-IS-FAILURE",
+    defect: "a 5xx from the provider is recorded as a definite refusal",
+    file: TRANSPORT,
+    find: '  if (status === 408 || status === 425 || status >= 500) {\n    return { result: "unknown", error: `HTTP_${status}` };\n  }\n',
+    replace: "",
+    guard: G,
+    expect: "5xx/408 are unknown",
+  },
+  {
+    id: "RW-RECEIPT-BUTTON-OPENS-INBOX",
+    defect: "the receipt's e-mail button opens the inbox instead of the application it is about",
+    file: RECEIPT_SERVER,
+    find: "            link: receiptLink(origin, claim.application_id),\n",
+    replace: "",
+    guard: G,
+    expect: "exactly this application",
+  },
+  {
+    id: "RW-RECEIPT-LINK-OFF-ORIGIN",
+    defect:
+      "the e-mail's button accepts a link on any origin, so a message could point a candidate off the site",
+    file: TRANSPORT,
+    find: "  if (url.origin !== new URL(fallback).origin) return fallback;\n",
+    replace: "",
+    guard: G,
+    expect: "hostile link",
+  },
+  {
+    id: "RW-RECEIPT-RESEND-WITHOUT-CONFIRM",
+    defect:
+      "the plain 'send again' button resends an unknown outcome after the provider's window, with no word about a possible duplicate",
+    file: PANELS_FILE,
+    find: '                (m.emailStatus === "unknown" && (m.kind !== "receipt" || m.emailWindowOpen)) ||',
+    replace: '                m.emailStatus === "unknown" ||',
+    guard: G,
+    expect: "explicit acceptance",
+  },
+  {
+    id: "RW-RECEIPT-SWEEP-OPEN",
+    defect: "the recovery endpoint answers anyone when no token is configured",
+    file: SWEEP_ROUTE,
+    find: "  if (!expected || expected.length < 16) return false;",
+    replace: "  if (!expected) return true;",
+    guard: G,
+    expect: "closed unless",
+  },
+  {
+    id: "RW-RECEIPT-CANDIDATE-SESSION-DRIVES-EMAIL",
+    defect:
+      "the submission drives the receipt's e-mail with the candidate's own session instead of the server's credentials",
+    file: SUBMIT,
+    find: "      await dispatchApplicationReceipt(result.id);\n",
+    replace: "      await dispatchApplicationReceipt(ctx.supabase, result.id);\n",
+    guard: G,
+    expect: "server's credentials",
   },
   {
     id: "RW-CASE-LOADS-WHOLE-LIST",

@@ -141,6 +141,11 @@ export function CandidateApplicationInbox({
           <summary className="flex cursor-pointer flex-wrap items-center gap-2 text-sm">
             <Mail className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             <span className="font-medium">{m.subject}</span>
+            {m.kind === "receipt" && (
+              <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                {t("rec.message.kind.receipt")}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground">{formatStamp(m.sentAt, lang)}</span>
           </summary>
           <pre className="mt-2 whitespace-pre-wrap font-[inherit] text-sm">{m.body}</pre>

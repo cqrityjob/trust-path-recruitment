@@ -590,7 +590,7 @@ function JobHub({
           <dl className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
             <Meta label={t("rec.case.reference")}>{job.short_id ?? "—"}</Meta>
             <Sep />
-            <Meta label={t("rec.col.applications")}>
+            <Plain>
               {counts ? (
                 <span className="tabular-nums">
                   {counts.total} {tp("rec.case.applicationsCount", counts.total)}
@@ -602,7 +602,7 @@ function JobHub({
               ) : (
                 "…"
               )}
-            </Meta>
+            </Plain>
             <Sep />
             <Meta label={t("rec.col.status")}>
               <PhaseBadge phase={phase} />
@@ -670,7 +670,9 @@ function JobHub({
               unresolvedTotal={unresolvedCount}
               closeable={closeable && canEdit}
               busy={busy}
-              sections={["responsible", "team"]}
+              jobTitle={title}
+              employerName={employerName}
+              sections={["responsible", "team", "communication"]}
               onClose={() => {
                 setActionError(null);
                 setPending({ kind: "close", id: jobId });
@@ -860,6 +862,27 @@ function JobHub({
             </p>
           )}
 
+          {/* What a new applicant will get, stated before publication and
+              after: the receipt is a setting of the recruitment, and its
+              state belongs next to the advertisement's own. */}
+          {recruitment && (
+            <p className="mt-3 text-sm" data-testid="receipt-summary">
+              <span className="text-muted-foreground">{t("rec.receipt.summaryLabel")}: </span>
+              <span className="font-medium">
+                {recruitment.receipt.enabled ? t("rec.receipt.on") : t("rec.receipt.off")}
+              </span>
+              {" · "}
+              <Link
+                to="/employer/$employerSlug/jobs/$jobId"
+                params={{ employerSlug, jobId }}
+                search={{ view: "team" }}
+                className="font-medium text-accent hover:underline"
+              >
+                {t("rec.receipt.summaryChange")}
+              </Link>
+            </p>
+          )}
+
           {/* ── Ready to publish? ──────────────────────────────────────
               Shown only where it can still change something: once an
               advertisement is in a moderator's queue or live, a checklist
@@ -925,6 +948,11 @@ function JobHub({
                   />
                 ))}
               </dl>
+              {(pipeline.counts.assessmentOpen.value ?? 0) > 0 && (
+                <p className="basis-full text-xs text-muted-foreground">
+                  {t("rec.pipeline.overlapNote")}
+                </p>
+              )}
               <p className="text-[13px] text-muted-foreground" role="status">
                 <span className="mr-1.5 text-[11px] font-semibold uppercase tracking-[0.1em]">
                   {t("employer.jobHub.next.heading")}
@@ -1108,6 +1136,16 @@ function JobHub({
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** A fact that needs no label: "32 ansökningar" says what it is. */
+function Plain({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center gap-1">
+      <dt className="sr-only">{"\u200b"}</dt>
+      <dd className="text-foreground">{children}</dd>
     </div>
   );
 }

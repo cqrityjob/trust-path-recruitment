@@ -124,16 +124,27 @@ jobs:
           supabase status -o env > /tmp/supabase-status.env
           # shellcheck disable=SC1091
           set -a; . /tmp/supabase-status.env; set +a
+          # The LOCAL stack's service-role key goes to the app server too: the
+          # CV upload and the receipt's claim/settle run with the server's own
+          # credentials (never the browser's), exactly as in production. It is
+          # the key of a stack that exists for one job on this runner; the
+          # isolation step below still refuses any hosted credential.
+          # RECRUITMENT_SWEEP_TOKEN opens the recovery endpoint for the walk;
+          # a random value minted here, shared with the spec, never echoed.
+          SWEEP_TOKEN="$(openssl rand -hex 24)"
           {
             echo "SUPABASE_URL=${API_URL}"
             echo "VITE_SUPABASE_URL=${API_URL}"
             echo "SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
             echo "VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
             echo "SUPABASE_PROJECT_ID=local-recruitment-evidence"
             echo "VITE_SUPABASE_PROJECT_ID=local-recruitment-evidence"
             echo "VITE_EMPLOYER_PORTAL_ENABLED=true"
             echo "VITE_JOBS_ENABLED=true"
             echo "VITE_CIG_LIFECYCLE_ENFORCED=true"
+            echo "PUBLIC_SITE_URL=http://localhost:3118"
+            echo "RECRUITMENT_SWEEP_TOKEN=${SWEEP_TOKEN}"
           } > .env.local
           echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
           echo "db_url=${DB_URL}" >> "$GITHUB_OUTPUT"
@@ -144,6 +155,7 @@ jobs:
           {
             echo "E2E_SUPABASE_ANON_KEY=${ANON_KEY}"
             echo "E2E_SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
+            echo "E2E_SWEEP_TOKEN=${SWEEP_TOKEN}"
           } > "$RUNNER_TEMP/rec-local-keys.env"
 
       - name: Refuse anything that is not loopback
@@ -162,6 +174,10 @@ jobs:
             *) fail "the database URL is not loopback: $DB_URL" ;;
           esac
           if grep -q 'wrygicdfxwjnrugduxnt' .env.local; then fail "the owner project ref reached .env.local"; fi
+          # The service-role key in .env.local must be the LOCAL stack's own.
+          set -a; . /tmp/supabase-status.env; set +a
+          if ! grep -qx "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}" .env.local; then fail "the service-role key in .env.local is not the local stack's"; fi
+          if grep -q 'RESEND_API_KEY' .env.local; then fail "a mail key reached .env.local; this walk sends no real e-mail"; fi
           for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY; do
             if [ -n "${!v:-}" ]; then fail "$v is set; this job must need no hosted credential"; fi
           done

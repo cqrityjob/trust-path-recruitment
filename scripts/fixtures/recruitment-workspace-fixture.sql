@@ -33,6 +33,16 @@ END $$;
 
 BEGIN;
 
+-- ── Storage ─────────────────────────────────────────────────────────────
+-- The private CV bucket exists on the owner project (created outside the
+-- migrations, which only carry its policies). A fresh local stack has no
+-- buckets at all, and an application with an uploaded CV is refused with
+-- "Bucket not found" before the row is ever written. Same shape as hosted:
+-- private, no size or type limit of its own (the server checks both).
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('job-application-cvs', 'job-application-cvs', false)
+ON CONFLICT (id) DO NOTHING;
+
 -- ── People ──────────────────────────────────────────────────────────────
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,

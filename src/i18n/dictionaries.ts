@@ -2062,7 +2062,7 @@ export const dictionaries = {
     "employer.jobHub.pipeline.assessmentOpen": "Bedömning pågår eller väntar på utfall",
     "employer.jobHub.pipeline.interview": "I intervju",
     "employer.jobHub.pipeline.hired": "Anställda",
-    "employer.jobHub.next.heading": "Nästa steg för annonsen",
+    "employer.jobHub.next.heading": "Nästa steg i rekryteringen",
     "employer.jobHub.next.open": "Öppna dem",
     "employer.jobHub.next.unavailable":
       "Ansökningarna kunde inte hämtas, så inget nästa steg föreslås. Försök igen.",
@@ -10194,7 +10194,7 @@ export const dictionaries = {
     "employer.jobHub.pipeline.assessmentOpen": "Assessment under way or awaiting outcome",
     "employer.jobHub.pipeline.interview": "At interview",
     "employer.jobHub.pipeline.hired": "Hired",
-    "employer.jobHub.next.heading": "Next step for this advertisement",
+    "employer.jobHub.next.heading": "Next step in the recruitment",
     "employer.jobHub.next.open": "Open them",
     "employer.jobHub.next.unavailable":
       "The applications could not be loaded, so no next step is proposed. Try again.",

@@ -368,6 +368,19 @@ export const saveEmployerJobDraft = createServerFn({ method: "POST" })
       before: null,
       after: { ...rowBase, status: "draft", slug },
     });
+
+    // A NEW recruitment starts with the automatic receipt switched on, with
+    // the standard text, so it is visible under Team och inställningar and
+    // in Publiceringsläge before the advertisement goes live. The database's
+    // own default is off -- what every recruitment that existed before this
+    // keeps -- and rec_set_receipt_settings applies the same permission rule
+    // as writing to candidates. Best-effort: a refusal here leaves a draft
+    // with the receipt off, which the page then says.
+    const { error: receiptErr } = await ctx.supabase.rpc("rec_set_receipt_settings", {
+      _job_id: inserted.id,
+      _enabled: true,
+    });
+    if (receiptErr) console.error("[employer-jobs] receipt default not set", receiptErr);
     return { id: inserted.id as string };
   });
 
@@ -810,6 +823,30 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       before: { source_job_id: data.jobId, source_slug: src.slug },
       after: { new_job_id: inserted.id, new_slug: inserted.slug },
     });
+
+    // The receipt setting comes with it too: the copy sends what the source
+    // sent, with the source's text. Best-effort, like the frame below.
+    try {
+      const { data: srcSettings } = await ctx.supabase
+        .from("recruitment_settings")
+        .select(
+          "receipt_enabled, receipt_subject_sv, receipt_body_sv, receipt_subject_en, receipt_body_en",
+        )
+        .eq("job_id", data.jobId)
+        .maybeSingle();
+      const rs = (srcSettings ?? null) as Record<string, unknown> | null;
+      const { error: receiptErr } = await ctx.supabase.rpc("rec_set_receipt_settings", {
+        _job_id: inserted.id,
+        _enabled: rs ? Boolean(rs.receipt_enabled) : true,
+        _subject_sv: (rs?.receipt_subject_sv as string | null) ?? null,
+        _body_sv: (rs?.receipt_body_sv as string | null) ?? null,
+        _subject_en: (rs?.receipt_subject_en as string | null) ?? null,
+        _body_en: (rs?.receipt_body_en as string | null) ?? null,
+      });
+      if (receiptErr) console.error("[employer-jobs] receipt settings not copied", receiptErr);
+    } catch (e) {
+      console.error("[employer-jobs] receipt settings not copied", e);
+    }
 
     // The vacancy's requirements and application questions come with it
     // (20261207090000), so a recruitment the organisation runs again starts

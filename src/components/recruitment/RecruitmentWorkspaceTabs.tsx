@@ -19,6 +19,7 @@ import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { ConfirmAction } from "@/components/employer/ConfirmAction";
 import { StageBadge } from "@/components/recruitment/RecruitmentStatus";
+import { ReceiptSettingsSection } from "@/components/recruitment/ReceiptSettingsSection";
 import { recruitmentErrorKey } from "@/components/recruitment/errors";
 import {
   completeRecruitment,
@@ -206,7 +207,7 @@ export function RecruitmentActivity({
 
 // ── Team and settings ───────────────────────────────────────────────────
 
-export type SettingsSection = "responsible" | "team" | "close" | "complete";
+export type SettingsSection = "responsible" | "team" | "communication" | "close" | "complete";
 
 export function RecruitmentSettings({
   employerId,
@@ -222,10 +223,15 @@ export function RecruitmentSettings({
   onChanged,
   sections,
   unresolvedTotal,
+  jobTitle = "",
+  employerName = "",
 }: {
   employerId: string;
   employerSlug: string;
   jobId: string;
+  /** For the receipt preview's sample data. */
+  jobTitle?: string;
+  employerName?: string;
   recruitment: RecruitmentDetail | null;
   recruitmentError: boolean;
   phase: RecruitmentPhase;
@@ -386,6 +392,19 @@ export function RecruitmentSettings({
             </Link>
           )}
         </section>
+      )}
+
+      {show("communication") && (
+        <ReceiptSettingsSection
+          employerId={employerId}
+          jobId={jobId}
+          jobTitle={jobTitle}
+          employerName={employerName}
+          receipt={r.receipt}
+          version={r.settings.version}
+          canManage={r.canManage}
+          onChanged={onChanged}
+        />
       )}
 
       {show("close") && (
