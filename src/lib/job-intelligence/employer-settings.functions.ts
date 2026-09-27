@@ -31,6 +31,7 @@ export type EmployerOrganisation = {
   slug: string;
   name: string;
   website: string | null;
+  logoUrl: string | null;
   country: string | null;
   registrationNumber: string | null;
   descriptionSv: string | null;
@@ -46,7 +47,7 @@ export const getEmployerOrganisation = createServerFn({ method: "POST" })
     const { data: row, error } = await ctx.supabase
       .from("employers")
       .select(
-        "id, slug, name, website, country, registration_number, description_sv, description_en, status",
+        "id, slug, name, website, logo_url, country, registration_number, description_sv, description_en, status",
       )
       .eq("id", data.employerId)
       .maybeSingle();
@@ -57,6 +58,7 @@ export const getEmployerOrganisation = createServerFn({ method: "POST" })
       slug: row.slug as string,
       name: row.name as string,
       website: row.website as string | null,
+      logoUrl: row.logo_url as string | null,
       country: row.country as string | null,
       registrationNumber: row.registration_number as string | null,
       descriptionSv: row.description_sv as string | null,

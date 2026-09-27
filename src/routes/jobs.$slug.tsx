@@ -1,41 +1,21 @@
+import { requestJobListRestore } from "@/lib/job-intelligence/job-list-position";
 import { createFileRoute, Link, notFound, useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { Building2, Mail, Globe } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
-import {
-  getPublicJobBySlug,
-  listRelatedPublicJobs,
-  isJobExpired,
-  type PublicJobDetail,
-  type PublicEmployer,
-} from "@/lib/job-intelligence/public-queries";
+import { getPublicJobBySlug, type PublicJobDetail } from "@/lib/job-intelligence/public-queries";
 import {
   getPublicJobBySlugSSR,
   type PublicJobSsrDetail,
 } from "@/lib/job-intelligence/public-queries.functions";
-import { buildJobPostingJsonLd, buildJobHeadMeta } from "@/lib/job-intelligence/seo";
-import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
-import { getProfession } from "@/lib/career-center/professions";
+import { buildJobHeadMeta } from "@/lib/job-intelligence/seo";
+import { pickLocalized } from "@/components/jobs/JobAdContent";
+import { JobDetailContent } from "@/components/jobs/JobDetailContent";
 import {
-  JobAdHeading,
-  JobAdSections,
-  pickLocalized,
-  formatJobDate as formatDate,
-} from "@/components/jobs/JobAdContent";
-import { getPublicVacancyStructure } from "@/lib/job-intelligence/public-queries";
-import { Button } from "@/components/ui/button";
-import { ExternalApplyDialog } from "@/components/jobs/ExternalApplyDialog";
-import { ApplyInternalDialog } from "@/components/jobs/ApplyInternalDialog";
-import { JobCard } from "@/components/jobs/JobCard";
-import { JobRelevancePanel } from "@/components/jobs/JobRelevancePanel";
-import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
-import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
-import {
-  jobAdReturnPath,
   jobSearchFromFrom,
+  jobSearchToFrom,
   validateJobAdSearch,
 } from "@/lib/job-intelligence/job-search";
 
@@ -73,25 +53,8 @@ function JobDetailPage() {
   // The SSR fetch is a superset of it; cast is safe.
   const q = useQuery({
     queryKey: ["public-job", slug],
-    queryFn: async () => {
-      const job = await getPublicJobBySlug(slug);
-      if (!job) throw notFound();
-      return job;
-    },
+    queryFn: () => getPublicJobBySlug(slug),
     initialData: ssr.data as unknown as PublicJobDetail,
-  });
-
-  const profileState = useCareerProfileForJobs();
-
-  const related = useQuery({
-    queryKey: ["public-job-related", q.data?.id, q.data?.profession_slug, q.data?.family_id],
-    enabled: !!q.data,
-    queryFn: () =>
-      listRelatedPublicJobs({
-        excludeId: q.data!.id,
-        professionSlug: q.data!.profession_slug,
-        familyId: q.data!.family_id,
-      }),
   });
 
   // Client-side dynamic <title>: head() is static because this route
@@ -121,308 +84,15 @@ function JobDetailPage() {
   if (q.isError) return <ErrorState />;
   if (!q.data) return <NotFoundState />;
 
-  const job = q.data;
-  const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
-  const profession = job.profession_slug ? getProfession(job.profession_slug) : undefined;
-  const expired = isJobExpired(job);
-  const employer = job.employer ?? null;
-  const employerDesc = employer
-    ? pickLocalized(employer.description_sv, employer.description_en, lang)
-    : "";
-
   return (
     <SiteLayout>
-      <Section>
-        <div className="flex items-center justify-between gap-3">
+      <Section className="bg-muted/25 py-5 md:py-8" containerClassName="max-w-[960px]">
+        <div className="mb-3">
           <BackToResults />
-          {!expired && (
-            <a
-              href="#apply"
-              className="inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring lg:hidden"
-            >
-              {t("jobs.detail.apply_jump")}
-            </a>
-          )}
         </div>
-
-        <div className="mt-4">
-          <JobAdHeading job={job} employerName={employer?.name ?? null} expired={expired} />
-        </div>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <article className="min-w-0 space-y-8">
-            <JobAdSections job={job} />
-
-            <VacancyRequirements jobId={job.id} />
-
-            {employer && (employer.name || employerDesc || employer.website) && (
-              <EmployerCard employer={employer} description={employerDesc} />
-            )}
-
-            {(area || profession) && (
-              <CareerContext
-                familyId={area?.id ?? null}
-                familyName={area ? area.name[lang] : null}
-                professionSlug={profession?.slug ?? null}
-                professionName={
-                  profession ? (lang === "sv" ? profession.titleSv : profession.titleEn) : null
-                }
-              />
-            )}
-
-            <RelatedJobs
-              loading={related.isLoading}
-              rows={related.data ?? []}
-              lang={lang}
-              from={from}
-            />
-          </article>
-
-          <aside id="apply" className="scroll-mt-24 space-y-4 lg:sticky lg:top-6 lg:self-start">
-            <ApplySidebar job={job} expired={expired} returnTo={jobAdReturnPath(slug, from)} />
-            {profileState.status === "ready" && (
-              <JobRelevancePanel job={job} profile={profileState.data.profile} />
-            )}
-            {(profileState.status === "anonymous" || profileState.status === "no_profile") && (
-              <AssessmentInvite variant="sidebar" />
-            )}
-          </aside>
-        </div>
+        <JobDetailContent job={q.data} from={from} />
       </Section>
     </SiteLayout>
-  );
-}
-
-function ApplySidebar({
-  job,
-  expired,
-  returnTo,
-}: {
-  job: PublicJobDetail;
-  expired: boolean;
-  /** Where signing in to apply comes back to: this ad, with its search. */
-  returnTo: string;
-}) {
-  const { t, lang } = useT();
-
-  const applyBlock = () => {
-    if (expired) {
-      return (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3">
-          <p className="text-sm font-semibold text-destructive">{t("jobs.detail.expired.title")}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t("jobs.detail.expired.body")}</p>
-        </div>
-      );
-    }
-    if (job.application_method === "internal") {
-      return (
-        <ApplyInternalDialog
-          jobId={job.id}
-          employerName={job.employer?.name ?? null}
-          label={t("jobs.detail.apply_internal")}
-          returnTo={returnTo}
-        />
-      );
-    }
-    if (job.application_method === "external" && job.application_url) {
-      return (
-        <ExternalApplyDialog
-          url={job.application_url}
-          employerName={job.employer?.name ?? null}
-          label={t("jobs.detail.apply_external")}
-        />
-      );
-    }
-    if (job.application_method === "email" && job.application_email) {
-      return (
-        <Button asChild className="w-full">
-          <a href={`mailto:${job.application_email}`}>
-            {t("jobs.detail.apply_email")}
-            <Mail className="ml-2 h-4 w-4" aria-hidden="true" />
-          </a>
-        </Button>
-      );
-    }
-    return <p className="text-sm text-muted-foreground">{t("jobs.detail.apply_unavailable")}</p>;
-  };
-
-  return (
-    <div className="space-y-4 rounded-lg border border-border bg-background p-5">
-      {applyBlock()}
-
-      {job.deadline_at && (
-        <div className="border-t border-border pt-3 text-sm">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            {t("jobs.detail.deadline")}
-          </p>
-          <p className="mt-1 font-medium">{formatDate(job.deadline_at, lang)}</p>
-        </div>
-      )}
-
-      {job.published_at && (
-        <div className="text-sm">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            {t("jobs.detail.published")}
-          </p>
-          <p className="mt-1 font-medium">{formatDate(job.published_at, lang)}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function EmployerCard({
-  employer,
-  description,
-}: {
-  employer: PublicEmployer;
-  description: string;
-}) {
-  const { t } = useT();
-  let host = "";
-  if (employer.website) {
-    try {
-      host = new URL(employer.website).host;
-    } catch {
-      host = employer.website;
-    }
-  }
-  return (
-    <section className="rounded-lg border border-border bg-background p-5">
-      <h2 className="text-xl font-semibold">{t("jobs.detail.employer.title")}</h2>
-      <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4 sm:flex sm:flex-wrap sm:justify-between">
-        <div className="flex min-w-0 items-start gap-3">
-          {employer.logo_url ? (
-            <img
-              src={employer.logo_url}
-              alt=""
-              className="h-12 w-12 shrink-0 rounded-md border border-border bg-white object-contain"
-              loading="lazy"
-            />
-          ) : (
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-border bg-muted">
-              <Building2 className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold">{employer.name}</p>
-            {employer.country && (
-              <p className="mt-0.5 text-xs text-muted-foreground">{employer.country}</p>
-            )}
-          </div>
-        </div>
-      </div>
-      {description && (
-        <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-foreground">
-          {description}
-        </p>
-      )}
-      {employer.website && (
-        <a
-          href={employer.website}
-          target="_blank"
-          rel="noopener noreferrer nofollow"
-          className="mt-4 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-        >
-          <Globe className="h-4 w-4" aria-hidden="true" />
-          {host || t("jobs.detail.employer.website")}
-        </a>
-      )}
-    </section>
-  );
-}
-
-function CareerContext({
-  familyId,
-  familyName,
-  professionSlug,
-  professionName,
-}: {
-  familyId: string | null;
-  familyName: string | null;
-  professionSlug: string | null;
-  professionName: string | null;
-}) {
-  const { t } = useT();
-  return (
-    <section className="rounded-lg border border-border bg-background p-5">
-      <h2 className="text-xl font-semibold">{t("jobs.detail.career.title")}</h2>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-        {familyId && familyName && (
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("jobs.detail.career.family")}
-            </dt>
-            <dd className="mt-1">
-              <Link
-                to="/jobs/family/$familyId"
-                params={{ familyId }}
-                className="font-medium text-primary hover:underline"
-              >
-                {familyName}
-              </Link>
-            </dd>
-          </div>
-        )}
-        {professionSlug && professionName && (
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-muted-foreground">
-              {t("jobs.detail.career.profession")}
-            </dt>
-            <dd className="mt-1">
-              <Link
-                to="/jobs/profession/$professionSlug"
-                params={{ professionSlug }}
-                className="font-medium text-primary hover:underline"
-              >
-                {professionName}
-              </Link>
-            </dd>
-          </div>
-        )}
-      </dl>
-      {professionSlug && (
-        <div className="mt-4 border-t border-border pt-4">
-          <Link
-            to="/career-center/$profession"
-            params={{ profession: professionSlug }}
-            className="text-sm text-primary hover:underline"
-          >
-            {t("jobs.detail.career.explore")}
-          </Link>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function RelatedJobs({
-  loading,
-  rows,
-  lang,
-  from,
-}: {
-  loading: boolean;
-  rows: Array<import("@/lib/job-intelligence/public-queries").PublicJobCard>;
-  lang: "sv" | "en";
-  /** Handed on, so a hop to a related ad keeps the way back to the results. */
-  from: string | undefined;
-}) {
-  const { t } = useT();
-  if (!loading && rows.length === 0) return null;
-  return (
-    <section>
-      <h2 className="text-xl font-semibold">{t("jobs.detail.related.title")}</h2>
-      {loading ? (
-        <p className="mt-3 text-sm text-muted-foreground">{t("jobs.results.loading")}</p>
-      ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          {rows.map((r) => (
-            <JobCard key={r.id} job={r} lang={lang} from={from} />
-          ))}
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -442,6 +112,8 @@ function BackToResults() {
     <Link
       to="/jobs"
       search={search}
+      onClick={() => requestJobListRestore(jobSearchToFrom(search))}
+      resetScroll={false}
       data-job-back={toResults ? "results" : "all"}
       className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
@@ -475,48 +147,5 @@ function ErrorState() {
         <p className="mt-2 text-sm text-muted-foreground">{t("jobs.results.error.body")}</p>
       </Section>
     </SiteLayout>
-  );
-}
-
-/** The vacancy's own requirements, mandatory and desirable, as the employer
- *  listed them. Read through the public RLS: shown for a live advertisement,
- *  and a failed read hides the section rather than claiming there are none. */
-function VacancyRequirements({ jobId }: { jobId: string }) {
-  const { t, lang } = useT();
-  const q = useQuery({
-    queryKey: ["public", "vacancy-structure", jobId],
-    queryFn: () => getPublicVacancyStructure(jobId),
-  });
-  const reqs = q.data?.requirements ?? [];
-  if (reqs.length === 0) return null;
-  const label = (r: { label_sv: string | null; label_en: string | null }) =>
-    (lang === "en" ? r.label_en || r.label_sv : r.label_sv || r.label_en) ?? "";
-  const groups: [
-    "mandatory" | "desirable",
-    "rec.requirement.mandatoryPlural" | "rec.requirement.desirablePlural",
-  ][] = [
-    ["mandatory", "rec.requirement.mandatoryPlural"],
-    ["desirable", "rec.requirement.desirablePlural"],
-  ];
-  return (
-    <section className="rounded-lg border border-border bg-background p-5">
-      <h2 className="text-xl font-semibold">{t("rec.vacancy.requirementsHeading")}</h2>
-      <div className="mt-4 grid gap-5 sm:grid-cols-2">
-        {groups.map(([kind, key]) => {
-          const rows = reqs.filter((r) => r.kind === kind);
-          if (rows.length === 0) return null;
-          return (
-            <div key={kind}>
-              <h3 className="text-sm font-semibold">{t(key)}</h3>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
-                {rows.map((r) => (
-                  <li key={r.id}>{label(r)}</li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
-    </section>
   );
 }

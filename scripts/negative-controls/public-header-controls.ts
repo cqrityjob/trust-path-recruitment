@@ -115,7 +115,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the signed-in sheet stays active until xl again, so a Windows PC at 125% scaling (1093-1229px) has no desktop navigation",
     file: HEADER,
-    find: 'MENU_SURFACE, "lg:hidden", open ? "block" : "hidden"',
+    find: 'MENU_SURFACE, !compactJobs && "lg:hidden", open ? "block" : "hidden"',
     replace: 'MENU_SURFACE, appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden"',
     guard: GUARD,
     expect:

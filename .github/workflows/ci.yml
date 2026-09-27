@@ -1445,7 +1445,10 @@ jobs:
       # -> splitReturnPath -> navigate), through the router's own search
       # serialisation. A hostile `from` can choose filters and nothing else.
       - name: Job ad back-navigation check
-        run: bun run job-back-navigation:check
+        run: |
+          bun run job-back-navigation:check
+          bun run scripts/job-application-continuity-check.ts
+          bun run scripts/job-vacancy-requirements-check.tsx
 
       # /employers is where an employer decides whether CQrityjob is for
       # them, and it is the ONE public page that names BESKT -- a governed
@@ -1919,6 +1922,19 @@ jobs:
       # guide opening its own catalogue page, English, a failed read.
       - name: Career Center journey browser suite
         run: bun run e2e e2e/career-center-journey.spec.ts --project=chromium --project=mobile-375
+
+      - name: Jobs product experience — bilingual responsive and navigation checks
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e e2e/jobs-product-experience.spec.ts --project=chromium
+
+      - name: Upload jobs responsive evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jobs-product-experience
+          path: test-results/
+          if-no-files-found: warn
 
       - name: Server log
         if: failure()

@@ -15,6 +15,8 @@ export type PublicJobCard = {
   slug: string;
   title_sv: string | null;
   title_en: string | null;
+  description_sv?: string | null;
+  description_en?: string | null;
   location_text: string | null;
   country: string | null;
   city: string | null;
@@ -61,11 +63,11 @@ export type PublicJobDetail = PublicJobCard & {
 };
 
 const CARD_COLUMNS =
-  "id, slug, title_sv, title_en, location_text, country, city, region, workplace_type, employment_type, experience_level, family_id, profession_slug, application_method, application_url, application_email, published_at, deadline_at, employer_id";
+  "id, slug, title_sv, title_en, description_sv, description_en, location_text, country, city, region, workplace_type, employment_type, experience_level, family_id, profession_slug, application_method, application_url, application_email, published_at, deadline_at, employer_id";
 
 const DETAIL_COLUMNS =
   CARD_COLUMNS +
-  ", description_sv, description_en, responsibilities, requirements, requirements_sv, requirements_en, benefits, language_requirements, regulated, security_vetting_mentioned, driving_licence_required, sector, employer_type";
+  ", responsibilities, requirements, requirements_sv, requirements_en, benefits, language_requirements, regulated, security_vetting_mentioned, driving_licence_required, sector, employer_type";
 
 export type JobsQueryArgs = {
   q?: string;
@@ -77,6 +79,9 @@ export type JobsQueryArgs = {
   experienceLevel?: string;
   country?: string;
   limit?: number;
+  offset?: number;
+  sort?: "newest" | "deadline";
+  employerId?: string;
 };
 
 async function attachEmployers<T extends { employer_id: string }>(
@@ -86,9 +91,7 @@ async function attachEmployers<T extends { employer_id: string }>(
   if (ids.length === 0) return rows.map((r) => ({ ...r, employer: null }));
   const { data, error } = await supabase
     .from("employers")
-    .select(
-      "id, name, slug, logo_url, website, country, description_sv, description_en",
-    )
+    .select("id, name, slug, logo_url, website, country, description_sv, description_en")
     .in("id", ids);
   if (error) throw error;
   const byId: Record<string, PublicEmployer> = {};
@@ -96,18 +99,25 @@ async function attachEmployers<T extends { employer_id: string }>(
   return rows.map((r) => ({ ...r, employer: byId[r.employer_id] ?? null }));
 }
 
-export async function listPublicJobs(
-  args: JobsQueryArgs = {},
-): Promise<PublicJobCard[]> {
+export async function listPublicJobs(args: JobsQueryArgs = {}): Promise<PublicJobCard[]> {
+  const now = new Date().toISOString();
   let query = supabase
     .from("jobs")
     .select(CARD_COLUMNS)
     // RLS on jobs already enforces job_is_active; these filters make the
     // client contract explicit and cut network cost.
     .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .limit(args.limit ?? 60);
+    .lte("published_at", now)
+    .or(`deadline_at.is.null,deadline_at.gt.${now}`)
+    .or(`expires_at.is.null,expires_at.gt.${now}`)
+    .order(args.sort === "deadline" ? "deadline_at" : "published_at", {
+      ascending: args.sort === "deadline",
+      nullsFirst: false,
+    })
+    .order("id", { ascending: true })
+    .range(args.offset ?? 0, (args.offset ?? 0) + (args.limit ?? 60) - 1);
 
+  if (args.employerId) query = query.eq("employer_id", args.employerId);
   if (args.familyId) query = query.eq("family_id", args.familyId);
   if (args.professionSlug) query = query.eq("profession_slug", args.professionSlug);
   if (args.employmentType) query = query.eq("employment_type", args.employmentType);
@@ -117,27 +127,23 @@ export async function listPublicJobs(
 
   const q = args.q?.trim();
   if (q) {
-    const like = `%${q.replace(/[%_]/g, "")}%`;
+    const like = JSON.stringify(`%${q.replace(/[%_]/g, "")}%`);
     query = query.or(
       `title_sv.ilike.${like},title_en.ilike.${like},description_sv.ilike.${like},description_en.ilike.${like}`,
     );
   }
   const loc = args.location?.trim();
   if (loc) {
-    const like = `%${loc.replace(/[%_]/g, "")}%`;
-    query = query.or(
-      `location_text.ilike.${like},city.ilike.${like},region.ilike.${like}`,
-    );
+    const like = JSON.stringify(`%${loc.replace(/[%_]/g, "")}%`);
+    query = query.or(`location_text.ilike.${like},city.ilike.${like},region.ilike.${like}`);
   }
 
   const { data, error } = await query;
   if (error) throw error;
-  return attachEmployers(data ?? []) as any;
+  return attachEmployers((data ?? []) as unknown as PublicJobCard[]);
 }
 
-export async function getPublicJobBySlug(
-  slug: string,
-): Promise<PublicJobDetail | null> {
+export async function getPublicJobBySlug(slug: string): Promise<PublicJobDetail | null> {
   const { data, error } = await supabase
     .from("jobs")
     .select(DETAIL_COLUMNS)
@@ -146,7 +152,7 @@ export async function getPublicJobBySlug(
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  const [withEmployer] = await attachEmployers([data as any]);
+  const [withEmployer] = await attachEmployers([data as unknown as PublicJobDetail]);
   return withEmployer as unknown as PublicJobDetail;
 }
 
@@ -162,19 +168,19 @@ export async function listRelatedPublicJobs(args: {
   const seen = new Set<string>([args.excludeId]);
   const out: PublicJobCard[] = [];
 
-  const runQuery = async (
-    key: "profession_slug" | "family_id",
-    value: string,
-  ) => {
+  const runQuery = async (key: "profession_slug" | "family_id", value: string) => {
     const { data, error } = await supabase
       .from("jobs")
       .select(CARD_COLUMNS)
       .eq("status", "published")
+      .lte("published_at", new Date().toISOString())
+      .or(`deadline_at.is.null,deadline_at.gt.${new Date().toISOString()}`)
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .eq(key, value)
       .order("published_at", { ascending: false })
       .limit(limit + 1);
     if (error) throw error;
-    return (data ?? []) as any[];
+    return (data ?? []) as unknown as PublicJobCard[];
   };
 
   if (args.professionSlug) {
@@ -192,7 +198,7 @@ export async function listRelatedPublicJobs(args: {
     }
   }
 
-  return (await attachEmployers(out)) as any;
+  return attachEmployers(out);
 }
 
 /** Best-effort check that a public job is still open for applications. */

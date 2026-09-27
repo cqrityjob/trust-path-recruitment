@@ -1242,7 +1242,12 @@ export function EmployerJobForm({
       )}
 
       {previewOpen ? (
-        <JobAdPreview values={values} employerName={employerName} />
+        <JobAdPreview
+          values={values}
+          employerName={employerName}
+          employerId={employerId}
+          requirements={structure.requirements}
+        />
       ) : (
         <div className="space-y-4">
           <ReviewSection

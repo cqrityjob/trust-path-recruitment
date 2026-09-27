@@ -1,24 +1,11 @@
-// The job advertisement as a candidate sees it — extracted verbatim from
-// src/routes/jobs.$slug.tsx so there is exactly ONE implementation of
-// "what a job ad looks like".
-//
-// Why this exists: the employer create/edit flow gained a
-// "Förhandsgranska annons" step. Rendering a second, employer-only copy
-// of the ad would guarantee drift — the preview would slowly stop
-// matching the published page. Instead both the public route and the
-// employer preview render these two components. The public route keeps
-// its own page chrome (SiteLayout, Section, employer card, career
-// context, related jobs, apply sidebar, relevance panel); only the ad
-// body itself is shared.
-//
-// Purely presentational. No queries, no auth, no route coupling — it
-// takes a plain object, which is what lets an unsaved draft render
-// through the same code path as a published row.
+// Shared, query-free advertisement typography and content. The desktop
+// reader, direct job route and employer draft preview render these same
+// components; employer prose and legacy requirement formats stay intact.
 
 import type { ReactNode } from "react";
+import { EmployerLogo } from "./EmployerPresentation";
 import {
   MapPin,
-  Building2,
   Calendar,
   Briefcase,
   Home as HomeIcon,
@@ -168,7 +155,7 @@ export function BulletList({ items }: { items: string[] }) {
 
 export function Chip({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border px-2.5 py-0.5">
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2.5 py-1.5 text-secondary-foreground">
       {icon && <span aria-hidden="true">{icon}</span>}
       {children}
     </span>
@@ -179,43 +166,47 @@ export function Chip({ children, icon }: { children: ReactNode; icon?: ReactNode
 export function JobAdHeading({
   job,
   employerName,
+  employerLogoUrl,
   expired,
   headingLevel = "h1",
 }: {
   job: JobAdContentJob;
   employerName?: string | null;
+  employerLogoUrl?: string | null;
   expired?: boolean;
   /** The preview renders inside a page that already owns the <h1>. */
   headingLevel?: "h1" | "h2";
 }) {
   const { t, lang } = useT();
   const title = pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
-  const location = [job.location_text, job.city, job.region, job.country]
-    .filter(Boolean)
-    .join(", ");
+  const location = Array.from(
+    new Set([job.location_text || job.city || job.region, job.country].filter(Boolean)),
+  ).join(", ");
   const Heading = headingLevel;
 
   return (
     <header>
+      {employerName && (
+        <div className="mb-5 flex min-w-0 items-center gap-3">
+          <EmployerLogo name={employerName} logoUrl={employerLogoUrl} />
+          <p className="min-w-0 wrap-break-word text-sm font-medium text-muted-foreground">
+            {employerName}
+          </p>
+        </div>
+      )}
       {expired && (
         <span className="inline-flex items-center rounded-full bg-destructive/10 px-3 py-0.5 text-xs font-medium text-destructive">
           {t("jobs.detail.expired.badge")}
         </span>
       )}
       <Heading
-        className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl"
+        className="mt-2 wrap-break-word text-2xl font-semibold leading-tight tracking-tight sm:text-3xl"
         style={{ fontFamily: "var(--font-display)" }}
       >
         {title}
       </Heading>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-muted-foreground">
-        {employerName && (
-          <span className="inline-flex items-center gap-1.5">
-            <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="truncate">{employerName}</span>
-          </span>
-        )}
         {location && (
           <span className="inline-flex items-center gap-1.5">
             <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -298,9 +289,9 @@ export function JobAdSections({ job }: { job: JobAdContentJob }) {
   return (
     <>
       <section>
-        <h2 className="text-xl font-semibold">{summaryLabel}</h2>
+        <h2 className="text-lg font-semibold">{summaryLabel}</h2>
         {descriptionClean ? (
-          <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">
+          <p className="mt-3 whitespace-pre-line wrap-break-word text-[15px] leading-7 text-foreground">
             {descriptionClean}
           </p>
         ) : (
@@ -312,15 +303,15 @@ export function JobAdSections({ job }: { job: JobAdContentJob }) {
 
       {responsibilities.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold">{t("jobs.detail.responsibilities")}</h2>
+          <h2 className="text-lg font-semibold">{t("jobs.detail.responsibilities")}</h2>
           <BulletList items={responsibilities} />
         </section>
       )}
 
       {requirementsClean && (
         <section>
-          <h2 className="text-xl font-semibold">{lookingForLabel}</h2>
-          <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">
+          <h2 className="text-lg font-semibold">{lookingForLabel}</h2>
+          <p className="mt-3 whitespace-pre-line wrap-break-word text-[15px] leading-7 text-foreground">
             {requirementsClean}
           </p>
         </section>
@@ -332,7 +323,7 @@ export function JobAdSections({ job }: { job: JobAdContentJob }) {
         reqs.employer.length > 0 ||
         reqs.legacy.length > 0) && (
         <section>
-          <h2 className="text-xl font-semibold">{t("jobs.detail.requirements")}</h2>
+          <h2 className="text-lg font-semibold">{t("jobs.detail.requirements")}</h2>
           {reqs.legacy.length > 0 ? (
             <BulletList items={reqs.legacy} />
           ) : (
@@ -376,7 +367,7 @@ export function JobAdSections({ job }: { job: JobAdContentJob }) {
 
       {benefits.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold">{t("jobs.detail.benefits")}</h2>
+          <h2 className="text-lg font-semibold">{t("jobs.detail.benefits")}</h2>
           <BulletList items={benefits} />
         </section>
       )}

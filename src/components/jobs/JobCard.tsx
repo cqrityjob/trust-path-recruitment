@@ -1,135 +1,126 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Clock, Building2, CalendarDays, ArrowRight } from "lucide-react";
+import { MapPin, ArrowUpRight } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
-import { getCareerAreaLabel } from "@/lib/job-intelligence/career-area-labels";
 import { employmentTypeLabel, workplaceTypeLabel } from "@/lib/job-intelligence/enum-labels";
-import { JobRelevanceBadge } from "./JobRelevanceBadge";
 import type { RelevanceForJob } from "@/lib/job-intelligence/personal-relevance";
-
-function pickTitle(job: PublicJobCard, lang: "sv" | "en"): string {
-  const primary = lang === "sv" ? job.title_sv : job.title_en;
-  const fallback = lang === "sv" ? job.title_en : job.title_sv;
-  return primary || fallback || "";
-}
-
-function locationLabel(job: PublicJobCard): string {
-  if (job.location_text) return job.location_text;
-  const parts = [job.city, job.region, job.country].filter(Boolean);
-  return parts.join(", ");
-}
-
-function daysSince(iso: string | null): number | null {
-  if (!iso) return null;
-  const d = new Date(iso).getTime();
-  if (!Number.isFinite(d)) return null;
-  return Math.max(0, Math.floor((Date.now() - d) / 86_400_000));
-}
+import { JobRelevanceBadge } from "./JobRelevanceBadge";
+import { EmployerLogo } from "./EmployerPresentation";
+import { pickLocalized, formatJobDate, cleanAdText } from "./JobAdContent";
+import { rememberJobListPosition } from "@/lib/job-intelligence/job-list-position";
+import { cn } from "@/lib/utils";
 
 export function JobCard({
   job,
   lang,
-  relevance,
   from,
+  selected,
+  onSelect,
+  relevance,
 }: {
   job: PublicJobCard;
   lang: "sv" | "en";
   relevance?: RelevanceForJob;
-  /** The /jobs search this card was listed under (job-search.ts). The ad
-   *  rebuilds "Tillbaka till sökresultatet" from it; without it, /jobs. */
   from?: string;
+  selected?: boolean;
+  onSelect?: () => void;
 }) {
   const { t } = useT();
-  const title = pickTitle(job, lang) || t("jobs.card.untitled");
-  const location = locationLabel(job);
-  const days = daysSince(job.published_at);
-  const deadlineTime = job.deadline_at ? new Date(job.deadline_at).getTime() : NaN;
-  const deadline = Number.isFinite(deadlineTime)
-    ? new Date(deadlineTime).toLocaleDateString(lang === "sv" ? "sv-SE" : "en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
+  const sv = lang === "sv";
+  const title = pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
+  const location = job.location_text || [job.city, job.region].filter(Boolean).join(", ");
+  const country = job.country
+    ? new Intl.DisplayNames([sv ? "sv" : "en"], { type: "region" }).of(
+        /^[a-z]{2}$/i.test(job.country) ? job.country.toUpperCase() : "ZZ",
+      )
     : null;
-  const area = job.family_id ? getCareerAreaLabel(job.family_id) : undefined;
-
+  const summary = cleanAdText(
+    pickLocalized(job.description_sv ?? null, job.description_en ?? null, lang),
+    t("jobs.detail.summary"),
+  );
+  const date = formatJobDate(job.deadline_at || job.published_at, lang);
   return (
     <Link
       to="/jobs/$slug"
       params={{ slug: job.slug }}
       search={from ? { from } : {}}
-      className="group flex flex-col rounded-xl border border-border bg-card p-5 transition hover:border-accent/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
+      id={`job-card-${job.slug}`}
       aria-label={title}
+      aria-current={selected ? "true" : undefined}
+      preload={false}
+      onClick={(event) => {
+        if (
+          onSelect &&
+          !event.ctrlKey &&
+          !event.metaKey &&
+          !event.shiftKey &&
+          !event.altKey &&
+          event.button === 0
+        ) {
+          event.preventDefault();
+          onSelect();
+        } else if (!onSelect && window.location.pathname.replace(/\/$/, "") === "/jobs")
+          rememberJobListPosition(from);
+      }}
+      className={cn(
+        "group block min-w-0 rounded-xl border bg-card p-5 text-left transition-colors hover:border-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        selected
+          ? "border-accent bg-accent/5 shadow-[inset_3px_0_0_var(--accent)]"
+          : "border-border",
+      )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          {/* overflow-wrap:break-word (not `anywhere`) so a long Swedish
-              compound hyphenates at a proper syllable boundary — the
-              document carries `lang` — instead of splitting mid-word
-              without a hyphen ("Säkerhetsc hef"). */}
-          <h3 className="line-clamp-2 hyphens-auto wrap-break-word text-lg font-semibold leading-snug text-foreground group-hover:text-accent">
+      <div className="flex items-start gap-3">
+        <EmployerLogo
+          name={job.employer?.name}
+          logoUrl={job.employer?.logo_url}
+          className="h-11 w-11 shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <h3 className="break-words text-lg font-semibold leading-snug tracking-tight text-foreground group-hover:text-accent">
             {title}
           </h3>
           {job.employer?.name && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
-              <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">{job.employer.name}</span>
-            </p>
+            <p className="mt-1 break-words text-sm text-muted-foreground">{job.employer.name}</p>
           )}
         </div>
-        {days !== null && (
-          <span
-            className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-            aria-label={t("jobs.card.posted_days_ago").replace("{n}", String(days))}
-          >
-            {days === 0 ? t("jobs.card.today") : `${days}d`}
-          </span>
-        )}
+        <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-        {location && (
-          <span className="inline-flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>{location}</span>
-          </span>
-        )}
-        {job.employment_type && (
-          <span className="inline-flex items-center gap-1">
-            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>{employmentTypeLabel(job.employment_type, lang)}</span>
-          </span>
-        )}
-        {job.workplace_type && <span>{workplaceTypeLabel(job.workplace_type, lang)}</span>}
-      </div>
-
-      {(area || deadline) && (
-        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-          {area && (
-            <span className="rounded-full bg-secondary px-2.5 py-1 font-medium text-secondary-foreground">
-              {area.name[lang]}
-            </span>
-          )}
-          {deadline && (
-            <span className="inline-flex items-center gap-1 text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("jobs.card.deadline").replace("{d}", deadline)}
-            </span>
-          )}
-        </div>
+      {(location || country) && (
+        <p className="mt-4 flex items-start gap-1.5 text-sm text-muted-foreground">
+          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{[location, country].filter(Boolean).join(", ")}</span>
+        </p>
+      )}
+      <p className="mt-1 text-sm text-muted-foreground">
+        {[
+          job.employment_type ? employmentTypeLabel(job.employment_type, lang) : null,
+          job.workplace_type ? workplaceTypeLabel(job.workplace_type, lang) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
+      {summary && (
+        <p className="mt-3 line-clamp-2 break-words text-sm leading-relaxed text-muted-foreground">
+          {summary}
+        </p>
+      )}
+      {date && (
+        <p className="mt-4 border-t border-border/70 pt-3 text-xs leading-relaxed text-muted-foreground">
+          {job.deadline_at
+            ? sv
+              ? "Sista ansökningsdag"
+              : "Apply by"
+            : sv
+              ? "Publicerad"
+              : "Published"}{" "}
+          <time dateTime={job.deadline_at || job.published_at || undefined}>{date}</time>
+        </p>
       )}
       {relevance && relevance.band !== "none" && (
         <div className="mt-3">
           <JobRelevanceBadge band={relevance.band} basis={relevance.basis} />
         </div>
       )}
-      <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-accent">
-        {t("jobs.card.open")}
-        <ArrowRight
-          className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
-          aria-hidden="true"
-        />
-      </span>
     </Link>
   );
 }

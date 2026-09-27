@@ -7,6 +7,14 @@
 // showing a made-up publication date in a preview would be a small lie
 // about a real date the candidate will later see.
 
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getEmployerOrganisation } from "@/lib/job-intelligence/employer-settings.functions";
+import {
+  VacancyRequirementsContent,
+  type VacancyRequirementPresentation,
+} from "@/components/jobs/VacancyRequirementsContent";
+import { EmployerPresentation } from "@/components/jobs/EmployerPresentation";
 import { useT } from "@/i18n/context";
 import { JobAdHeading, JobAdSections, type JobAdContentJob } from "@/components/jobs/JobAdContent";
 import { fromDateInput, type EmployerJobFormValues } from "./model";
@@ -40,12 +48,35 @@ export function toPreviewJob(v: EmployerJobFormValues): JobAdContentJob {
 export function JobAdPreview({
   values,
   employerName,
+  employerId,
+  requirements = [],
 }: {
   values: EmployerJobFormValues;
   employerName?: string | null;
+  employerId?: string;
+  requirements?: readonly VacancyRequirementPresentation[];
 }) {
   const { t } = useT();
   const job = toPreviewJob(values);
+  const getOrganisation = useServerFn(getEmployerOrganisation);
+  const organisation = useQuery({
+    queryKey: ["employer", employerId, "settings"],
+    queryFn: () => getOrganisation({ data: { employerId: employerId! } }),
+    enabled: !!employerId,
+  });
+  const company = organisation.data;
+  const employer = company
+    ? {
+        id: company.id,
+        slug: company.slug,
+        name: company.name,
+        logo_url: company.logoUrl,
+        website: company.website,
+        country: company.country,
+        description_sv: company.descriptionSv,
+        description_en: company.descriptionEn,
+      }
+    : null;
 
   const applyLabel =
     values.application_method === "internal"
@@ -57,23 +88,32 @@ export function JobAdPreview({
           : t("employer.jobs.form.preview.applyMissing");
 
   return (
-    <div className="rounded-lg border border-border bg-background">
+    <div className="rounded-2xl border border-border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/40 px-4 py-2.5">
         <p className="text-xs font-medium text-muted-foreground">
           {t("employer.jobs.form.preview.banner")}
         </p>
       </div>
-      <div className="px-4 py-6 sm:px-6">
-        <JobAdHeading job={job} employerName={employerName} headingLevel="h2" />
-        <div className="mt-8 space-y-8">
-          <JobAdSections job={job} />
-        </div>
-        <div className="mt-8 rounded-lg border border-border p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            {t("employer.jobs.form.preview.applyHeading")}
-          </p>
-          <p className="mt-1 text-sm font-medium text-foreground">{applyLabel}</p>
-        </div>
+      <div className="p-5 sm:p-8">
+        <JobAdHeading
+          job={job}
+          employerName={employer?.name ?? employerName}
+          employerLogoUrl={employer?.logo_url}
+          headingLevel="h2"
+        />
+      </div>
+      <div className="border-y border-border px-5 py-4 sm:px-8">
+        <p className="text-xs text-muted-foreground">
+          {t("employer.jobs.form.preview.applyHeading")}
+        </p>
+        <span className="mt-2 inline-flex min-h-11 items-center rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground">
+          {applyLabel}
+        </span>
+      </div>
+      <div className="space-y-8 p-5 sm:p-8">
+        <JobAdSections job={job} />
+        <VacancyRequirementsContent requirements={requirements} />
+        {employer && <EmployerPresentation employer={employer} />}
       </div>
     </div>
   );

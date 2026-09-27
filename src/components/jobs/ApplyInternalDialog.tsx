@@ -32,7 +32,8 @@
 // selected is a decision they make, not one made for them.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Loader2 } from "lucide-react";
+import { CheckCircle2, FileText, Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -51,14 +52,18 @@ import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { submitJobApplication } from "@/lib/job-intelligence/applications.functions";
+import {
+  listMyApplications,
+  submitJobApplication,
+} from "@/lib/job-intelligence/applications.functions";
+import { jobApplyReturnPath } from "@/lib/job-intelligence/job-search";
 import { getApplicationPassportOffer } from "@/lib/security-passport/passport.functions";
 import { listMyApplicationCvOptions } from "@/lib/professional-identity/cv/cv-store.functions";
 import type { ApplicationCvOption } from "@/lib/professional-identity/cv/cv-store.functions";
 import type { CvApplicationBlock } from "@/lib/professional-identity/cv/application-source";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 import { ShieldCheck } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   getPublicVacancyStructure,
   type PublicQuestion,
@@ -155,7 +160,12 @@ export function ApplyInternalDialog({
   returnTo: string;
 }) {
   const { t, lang } = useT();
+  const search = useSearch({ strict: false });
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [submittedApplicationId, setSubmittedApplicationId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [coverNote, setCoverNote] = useState("");
@@ -205,14 +215,48 @@ export function ApplyInternalDialog({
   const [restored, setRestored] = useState(false);
   const offerFn = useServerFn(getApplicationPassportOffer);
   const cvOptionsFn = useServerFn(listMyApplicationCvOptions);
+  const listApplicationsFn = useServerFn(listMyApplications);
+  const applications = useQuery({
+    queryKey: ["job-apply", "applications", authUserId],
+    queryFn: () => listApplicationsFn(),
+    enabled: Boolean(authUserId),
+    retry: false,
+  });
+  const existingApplication = applications.data?.find(
+    (application) => application.jobId === jobId && application.status !== "withdrawn",
+  );
+  const appliedId = submittedApplicationId ?? existingApplication?.id;
+  const applyIntentConsumed = useRef(false);
+
+  useEffect(() => {
+    if (!signedIn || applications.isPending || applyIntentConsumed.current) return;
+    if (!("apply" in search) || search.apply !== "1") return;
+    applyIntentConsumed.current = true;
+    if (!appliedId) setOpen(true);
+    // Remove only the action; the ad's search context stays intact. Refreshing
+    // after dismissing the form should not start a new application attempt.
+    void navigate({
+      to: ".",
+      search: ((previous: Record<string, unknown>) => {
+        const { apply: _apply, ...rest } = previous;
+        return rest;
+      }) as never,
+      replace: true,
+      resetScroll: false,
+    });
+  }, [signedIn, applications.isPending, appliedId, search, navigate]);
 
   useEffect(() => {
     let alive = true;
     supabase.auth.getSession().then(({ data }) => {
-      if (alive) setSignedIn(!!data.session);
+      if (alive) {
+        setSignedIn(!!data.session);
+        setAuthUserId(data.session?.user.id ?? null);
+      }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_ev, session) => {
       setSignedIn(!!session);
+      setAuthUserId(session?.user.id ?? null);
     });
     return () => {
       alive = false;
@@ -456,7 +500,9 @@ export function ApplyInternalDialog({
       });
       setPassportShared(res.passportShared);
       setSubmittedSource(res.cvSource);
+      setSubmittedApplicationId(res.id);
       setSuccess(true);
+      void queryClient.invalidateQueries({ queryKey: ["my-career", "applications"] });
       try {
         window.sessionStorage.removeItem(draftKey);
       } catch {
@@ -477,7 +523,7 @@ export function ApplyInternalDialog({
     return (
       <div className="space-y-2">
         <Button asChild className="w-full">
-          <a href={`/login?redirect=${encodeURIComponent(returnTo)}`}>
+          <a href={`/login?redirect=${encodeURIComponent(jobApplyReturnPath(returnTo))}`}>
             {t("jobs.apply.signInToApply")}
           </a>
         </Button>
@@ -485,7 +531,7 @@ export function ApplyInternalDialog({
             (MVP text specification §10): the signup keeps the same
             validated return path the sign-in carries. */}
         <a
-          href={`/signup?redirect=${encodeURIComponent(returnTo)}`}
+          href={`/signup?redirect=${encodeURIComponent(jobApplyReturnPath(returnTo))}`}
           className="flex min-h-11 items-center justify-center text-center text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           {t("jobs.apply.createAccountToApply")}
@@ -493,6 +539,22 @@ export function ApplyInternalDialog({
         <p className="text-center text-xs text-muted-foreground">
           {t("jobs.apply.signInToApplyHint")}
         </p>
+      </div>
+    );
+  }
+
+  if (appliedId && !open) {
+    return (
+      <div className="space-y-3" role="status">
+        <p className="flex items-start gap-2 text-sm font-medium">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+          {t("jobs.apply.error.duplicate")}
+        </p>
+        <Button asChild className="w-full">
+          <Link to="/my-career/applications" search={{ application: appliedId }}>
+            {t("jobs.apply.success.next")}
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -506,7 +568,12 @@ export function ApplyInternalDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button className="w-full">{label}</Button>
+        <Button className="w-full" disabled={applications.isPending}>
+          {applications.isPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+          ) : null}
+          {label}
+        </Button>
       </DialogTrigger>
       {/* The base DialogContent scrolls as ONE box. This form is the longest
           surface in the product -- phone, note, CV, the Passport panel and
@@ -519,6 +586,7 @@ export function ApplyInternalDialog({
         {success ? (
           <div className="flex min-h-0 flex-col">
             <DialogHeader className="shrink-0">
+              <CheckCircle2 className="mb-2 h-9 w-9 text-accent" aria-hidden="true" />
               <DialogTitle>{t("jobs.apply.success.title")}</DialogTitle>
               <DialogDescription>{t("jobs.apply.success.body")}</DialogDescription>
             </DialogHeader>
@@ -527,6 +595,7 @@ export function ApplyInternalDialog({
             <p className="mt-2 text-sm">
               <Link
                 to="/my-career/applications"
+                search={{ application: submittedApplicationId ?? undefined }}
                 className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {t("jobs.apply.success.next")}
@@ -983,9 +1052,17 @@ export function ApplyInternalDialog({
               <p className="text-sm text-muted-foreground">{t("jobs.apply.reviewBeforeSend")}</p>
 
               {submitError && (
-                <p role="alert" className="text-sm text-destructive">
-                  {submitError}
-                </p>
+                <div role="alert" className="text-sm">
+                  <p className="text-destructive">{submitError}</p>
+                  {submitError === t("jobs.apply.error.duplicate") && (
+                    <Link
+                      to="/my-career/applications"
+                      className="mt-2 inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      {t("jobs.apply.success.next")}
+                    </Link>
+                  )}
+                </div>
               )}
             </div>
 
