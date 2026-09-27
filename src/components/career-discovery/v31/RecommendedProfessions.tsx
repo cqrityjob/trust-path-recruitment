@@ -32,6 +32,8 @@ import { exploreDestinationFor } from "@/lib/career-center/profession-links";
 import { rememberReturn } from "@/lib/career-center/return-context";
 import {
   explainMatch,
+  professionStageLabel,
+  readProfessionStage,
   readRecommendationConfidence,
   recommendationConfidenceLabel,
   STAGE_LABEL,
@@ -89,11 +91,15 @@ function StageBadge({ stage, locale }: { stage: ProfessionStage; locale: Locale 
         : stage === "career_pivot"
           ? "border-dashed border-border bg-muted/20 text-muted-foreground"
           : "border-border bg-muted/30 text-muted-foreground";
+  // A saved report's stage is checked, never trusted: an unknown one prints
+  // the neutral "unavailable" wording in the plain tone, never another
+  // stage's word (see isProfessionStage).
   return (
     <span
+      data-stage={readProfessionStage(stage) ?? "unavailable"}
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${tone}`}
     >
-      {STAGE_LABEL[stage][locale]}
+      {professionStageLabel(stage, locale)}
     </span>
   );
 }

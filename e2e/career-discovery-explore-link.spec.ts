@@ -456,6 +456,84 @@ test.describe("Career Discovery — 'Utforska nu' on the recommendation", () => 
     });
   }
 
+  // The same for a saved report's stage, on the recommendation AND the tier
+  // cards below it: "future", a missing stage and null must not take the
+  // report view down, and an unknown stage is never shown as "explore now".
+  for (const [lang, heading, neutral, exploreNow] of [
+    ["sv", /Din rekommenderade yrkesinriktning/, "Tidsperspektiv saknas", "Utforska nu"],
+    ["en", /Your recommended career direction/, "Timing unavailable", "Explore now"],
+  ] as const) {
+    test(`[${lang}] saved report with unknown stages keeps its ranking and tier cards`, async ({
+      page,
+    }) => {
+      const oddStage = (i: number) =>
+        i === 0 ? { stage: "future" } : i === 1 ? {} : { stage: null };
+      const withStage = <T extends { stage?: unknown }>(m: T, i: number) => {
+        const { stage: _s, ...rest } = m;
+        return { ...rest, ...oddStage(i) };
+      };
+      const professions = snapshot.professions!;
+      // Tier cards exist only on the "available" variant of the output.
+      if (!professions.available) throw new Error("the fixture has no tier cards");
+      const odd = {
+        ...snapshot,
+        locale: lang,
+        professions: {
+          ...professions,
+          ranked: ranked.map((r, i) => ({ ...r, match: withStage(r.match, i) })),
+          matches: professions.matches.map((m, i) => withStage(m, i)),
+          strongestDirections: professions.strongestDirections.map((m, i) => withStage(m, i)),
+        },
+      };
+      await mount(page, "new_user", {
+        lang,
+        path: `/security-career-assessment/report/${SNAPSHOT_ID}`,
+        ready: '[data-testid="cd-pattern-name"]',
+        overrides: {
+          getStoredDiscoveryReport: ok({
+            status: "v3.1",
+            snapshotId: SNAPSHOT_ID,
+            sessionId: "sess-1",
+            generatedAt: AT,
+            versions: {
+              definition: "3.1.0",
+              content: "3.1.0",
+              scoring: "3.1.0",
+              taxonomy: "3.1.0",
+            },
+            snapshot: odd,
+          }),
+          getMyCareerJourney: HANG,
+          getProfessionDetails: ok(POLIS_DETAIL),
+        },
+      });
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+      const cards = page.locator("[data-recommendation-card]");
+      expect(
+        await cards.evaluateAll((els) =>
+          els.map((el) => el.getAttribute("data-recommendation-card")),
+        ),
+      ).toEqual(ranked.map((r) => r.match.professionId));
+      for (const card of await cards.all()) {
+        await expect(card.locator("[data-stage]")).toHaveAttribute("data-stage", "unavailable");
+        await expect(card.locator("[data-stage]")).toHaveText(neutral);
+        // An unknown stage is never presented as something to start now.
+        await expect(card).not.toContainText(exploreNow);
+      }
+      // Rank 1 is still the recommendation, and still opens its profession.
+      await expect(cards.first()).toContainText(lang === "sv" ? TOP!.titleSv : TOP!.titleEn);
+      await expect(cards.first().locator("[data-explore-link]")).toHaveAttribute(
+        "href",
+        TOP_DESTINATION!.kind === "career_center" ? TOP_DESTINATION!.href : "",
+      );
+      // The staged tier cards below render too, each with the neutral stage.
+      await expect(page.locator('[data-stage="unavailable"]')).toHaveCount(
+        ranked.length + professions.strongestDirections.length,
+      );
+      await expectNoHorizontalOverflow(page);
+    });
+  }
+
   test("saved report: the link works and Back keeps the report", async ({ page }) => {
     await mount(page, "new_user", {
       path: `/security-career-assessment/report/${SNAPSHOT_ID}`,

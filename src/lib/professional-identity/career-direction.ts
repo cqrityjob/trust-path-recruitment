@@ -45,7 +45,10 @@ import type {
   ProfessionStage,
   RecommendationConfidence,
 } from "@/lib/career-discovery/v31/professions";
-import { readRecommendationConfidence } from "@/lib/career-discovery/v31/profession-explanations";
+import {
+  readProfessionStage,
+  readRecommendationConfidence,
+} from "@/lib/career-discovery/v31/profession-explanations";
 import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
 
 export const CAREER_DIRECTION_VERSION = "career-direction-v1" as const;
@@ -77,7 +80,10 @@ export interface RoleSummary {
   readonly rationaleSv?: string | null;
   readonly rationaleEn?: string | null;
   /** The career-stage classification the report froze with the match
-   *  (explore now / possible next step / longer term / pivot). */
+   *  (explore now / possible next step / longer term / pivot), or `null`
+   *  when the saved entry holds none this build knows — missing, `null` or
+   *  an unknown value such as "future". Surfaces print a neutral
+   *  "unavailable" for `null`; it is never replaced by a real stage. */
   readonly stage?: ProfessionStage | null;
   /** The dimensions the report named as aligned, most-aligned first. */
   readonly alignedDimensions?: readonly DimensionId[];
@@ -205,7 +211,9 @@ export function deriveCareerDirection(
         typeof r.match.inclusionRationaleSv === "string" ? r.match.inclusionRationaleSv : null,
       rationaleEn:
         typeof r.match.inclusionRationaleEn === "string" ? r.match.inclusionRationaleEn : null,
-      stage: typeof r.match.stage === "string" ? r.match.stage : null,
+      // Checked like the confidence: an unknown stage becomes "unavailable"
+      // and the role keeps its rank — it is never read as another stage.
+      stage: readProfessionStage(r.match.stage),
       alignedDimensions: Array.isArray(r.match.alignedDimensions) ? r.match.alignedDimensions : [],
     }))
     .sort((a, b) => a.rank - b.rank);

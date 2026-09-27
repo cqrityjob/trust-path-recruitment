@@ -44,7 +44,8 @@ import { rememberReturn } from "@/lib/career-center/return-context";
 import {
   explainMatch,
   FIT_LABEL,
-  STAGE_LABEL,
+  professionStageLabel,
+  readProfessionStage,
   TIER_HEADING,
 } from "@/lib/career-discovery/v31/profession-explanations";
 import type { ProfessionMatch } from "@/lib/career-discovery/v31/professions";
@@ -71,11 +72,14 @@ function StageBadge({ match, locale }: { match: ProfessionMatch; locale: Locale 
         : match.stage === "career_pivot"
           ? "border-dashed border-border bg-muted/20 text-muted-foreground"
           : "border-border bg-muted/30 text-muted-foreground";
+  // Checked, never trusted: a saved report's unknown stage prints the neutral
+  // "unavailable" wording, never another stage's word.
   return (
     <span
+      data-stage={readProfessionStage(match.stage) ?? "unavailable"}
       className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${tone}`}
     >
-      {STAGE_LABEL[match.stage][locale]}
+      {professionStageLabel(match.stage, locale)}
     </span>
   );
 }

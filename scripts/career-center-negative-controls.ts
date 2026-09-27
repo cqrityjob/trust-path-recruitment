@@ -21,8 +21,9 @@
  * halfway cannot leave a mutation behind and report success.
  *
  * Most controls are guarded by `career-center:check`. The saved-report
- * confidence controls are guarded by `career-report-confidence:check`, which
- * renders the views that used to crash; each control names its own guard.
+ * confidence and stage controls are guarded by `career-report-confidence:check`
+ * and `career-report-stage:check`, which render the views that used to crash;
+ * each control names its own guard.
  *
  * Run: bun run career-center:negative-controls
  */
@@ -56,6 +57,7 @@ interface Control extends Edit {
 
 const CAREER_CENTER_CHECK = "scripts/career-center-check.ts";
 const CONFIDENCE_CHECK = "scripts/career-report-confidence-check.tsx";
+const STAGE_CHECK = "scripts/career-report-stage-check.tsx";
 
 const CONTROLS: readonly Control[] = [
   {
@@ -281,11 +283,11 @@ import type { RecommendationConfidence } from "@/lib/career-discovery/v31/profes
     also: [
       {
         file: "src/components/career-discovery/v31/RecommendedProfessions.tsx",
-        from: `  explainMatch,
-  readRecommendationConfidence,`,
-        to: `  explainMatch,
-  RECOMMENDATION_CONFIDENCE_LABEL,
-  readRecommendationConfidence,`,
+        from: `  readRecommendationConfidence,
+  recommendationConfidenceLabel,`,
+        to: `  RECOMMENDATION_CONFIDENCE_LABEL,
+  readRecommendationConfidence,
+  recommendationConfidenceLabel,`,
       },
     ],
     guard: CONFIDENCE_CHECK,
@@ -299,15 +301,131 @@ import type { RecommendationConfidence } from "@/lib/career-discovery/v31/profes
     also: [
       {
         file: "src/lib/career-discovery/v31/career-card.ts",
-        from: `import { recommendationConfidenceLabel, STAGE_LABEL } from "./profession-explanations";`,
+        from: `import { professionStageLabel, recommendationConfidenceLabel } from "./profession-explanations";`,
         to: `import {
+  professionStageLabel,
   RECOMMENDATION_CONFIDENCE_LABEL,
+  recommendationConfidenceLabel,
+} from "./profession-explanations";`,
+      },
+    ],
+    guard: CONFIDENCE_CHECK,
+    expect: "the Career Card builds without crashing",
+  },
+
+  // ── A saved report's stage (career-report-stage:check) ─────────────────
+  //
+  // The same defect on the stage: an unknown `match.stage` ("future", null,
+  // nothing) took down the hub, the report view and its tier cards. Each
+  // control removes one guard — or swaps in a tempting wrong fix — and the
+  // check that renders the views must fail, for that reason.
+  {
+    name: "a saved report's unknown stage passed straight through the read",
+    file: "src/lib/professional-identity/career-direction.ts",
+    from: `      stage: readProfessionStage(r.match.stage),`,
+    to: `      stage: typeof r.match.stage === "string" ? r.match.stage : null,`,
+    guard: STAGE_CHECK,
+    expect: "deriveCareerDirection carries an unknown stage as unavailable",
+  },
+  {
+    name: "an entry with an unknown stage dropped, promoting an alternative",
+    file: "src/lib/professional-identity/career-direction.ts",
+    from: `    .filter((r) => r && r.match && typeof r.match.titleSv === "string")`,
+    to: `    .filter(
+      (r) =>
+        r &&
+        r.match &&
+        typeof r.match.titleSv === "string" &&
+        readProfessionStage(r.match.stage) !== null,
+    )`,
+    guard: STAGE_CHECK,
+    expect: "the first-ranked profession stays first",
+  },
+  {
+    name: 'an unknown stage read as a real one ("explore now")',
+    file: "src/lib/career-discovery/v31/profession-explanations.ts",
+    from: `  return isProfessionStage(value) ? value : null;`,
+    to: `  return isProfessionStage(value) ? value : "explore_now";`,
+    guard: STAGE_CHECK,
+    expect: "is read as unavailable, never as a known stage",
+  },
+  {
+    name: "the shared check accepting any string as a stage",
+    file: "src/lib/career-discovery/v31/profession-explanations.ts",
+    from: `  return typeof value === "string" && Object.prototype.hasOwnProperty.call(STAGE_LABEL, value);`,
+    to: `  return typeof value === "string";`,
+    guard: STAGE_CHECK,
+    expect: '"future" is not a known stage',
+  },
+  {
+    name: "the stage sentence indexed with a saved value again",
+    file: "src/lib/career-discovery/v31/profession-explanations.ts",
+    from: `    stageSentence: isProfessionStage(match.stage)
+      ? STAGE_SENTENCE[match.stage][locale]
+      : STAGE_UNAVAILABLE_SENTENCE[locale],`,
+    to: `    stageSentence: STAGE_SENTENCE[match.stage][locale],`,
+    guard: STAGE_CHECK,
+    expect: "explainMatch explains",
+  },
+  {
+    name: "the Career Center indexing the stage labels with a saved value again",
+    file: "src/components/career-center/PersonalDirection.tsx",
+    from: `          {professionStageLabel(item.stage, locale)}`,
+    to: `          {(STAGE_LABEL as Record<string, Record<string, string>>)[item.stage as string][locale]}`,
+    also: [
+      {
+        file: "src/components/career-center/PersonalDirection.tsx",
+        from: `import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";`,
+        to: `import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";
+import { STAGE_LABEL } from "@/lib/career-discovery/v31/profession-explanations";`,
+      },
+    ],
+    guard: STAGE_CHECK,
+    expect: "the Career Center renders a raw saved stage without crashing",
+  },
+  {
+    name: "the report view indexing the stage labels with a saved value again",
+    file: "src/components/career-discovery/v31/RecommendedProfessions.tsx",
+    from: `      {professionStageLabel(stage, locale)}`,
+    to: `      {STAGE_LABEL[stage][locale]}`,
+    guard: STAGE_CHECK,
+    expect: "the report view renders without crashing",
+  },
+  {
+    name: "the tier cards indexing the stage labels with a saved value again",
+    file: "src/components/career-discovery/v31/ProfessionRecommendations.tsx",
+    from: `      {professionStageLabel(match.stage, locale)}`,
+    to: `      {STAGE_LABEL[match.stage][locale]}`,
+    also: [
+      {
+        file: "src/components/career-discovery/v31/ProfessionRecommendations.tsx",
+        from: `  readProfessionStage,
+  TIER_HEADING,`,
+        to: `  readProfessionStage,
+  STAGE_LABEL,
+  TIER_HEADING,`,
+      },
+    ],
+    guard: STAGE_CHECK,
+    expect: "the staged tier cards render without crashing",
+  },
+  {
+    name: "the Career Card indexing the stage labels with a saved value again",
+    file: "src/lib/career-discovery/v31/career-card.ts",
+    from: `    stageLabel: professionStageLabel(r.match.stage, locale),`,
+    to: `    stageLabel: STAGE_LABEL[r.match.stage][locale],`,
+    also: [
+      {
+        file: "src/lib/career-discovery/v31/career-card.ts",
+        from: `import { professionStageLabel, recommendationConfidenceLabel } from "./profession-explanations";`,
+        to: `import {
+  professionStageLabel,
   recommendationConfidenceLabel,
   STAGE_LABEL,
 } from "./profession-explanations";`,
       },
     ],
-    guard: CONFIDENCE_CHECK,
+    guard: STAGE_CHECK,
     expect: "the Career Card builds without crashing",
   },
 ];

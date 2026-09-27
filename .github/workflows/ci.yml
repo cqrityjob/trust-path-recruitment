@@ -1161,6 +1161,14 @@ jobs:
       - name: Saved-report confidence check
         run: bun run career-report-confidence:check
 
+      # The same for a saved report's stage: an unknown stage ("future"),
+      # null or a missing one must not take down the hub, the report view,
+      # its staged tier cards or the Career Card. Requires the neutral
+      # "unavailable" wording for exactly those entries — never another
+      # stage's word — and the known stages unchanged.
+      - name: Saved-report stage check
+        run: bun run career-report-stage:check
+
       # A guard that passes proves nothing on its own. This reintroduces
       # real defects one at a time — the repealed Act, the age-18
       # regression, ISO modelled as a personal certificate, a placeholder

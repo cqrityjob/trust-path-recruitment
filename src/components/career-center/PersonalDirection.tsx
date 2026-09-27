@@ -12,9 +12,10 @@ import {
 import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";
 import {
+  professionStageLabel,
+  readProfessionStage,
   readRecommendationConfidence,
   recommendationConfidenceLabel,
-  STAGE_LABEL,
 } from "@/lib/career-discovery/v31/profession-explanations";
 import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 import { ProfessionInfoAction } from "./ProfessionInfoAction";
@@ -341,11 +342,15 @@ function PrimaryRecommendation({
         >
           {recommendationConfidenceLabel(item.confidence, locale)}
         </span>
-        {item.stage && (
-          <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground">
-            {STAGE_LABEL[item.stage][locale]}
-          </span>
-        )}
+        {/* The stage says WHEN — whether this is something to start now or
+            years away. A saved report without a stage this build knows says
+            so rather than saying nothing, which would read as "now". */}
+        <span
+          data-stage={readProfessionStage(item.stage) ?? "unavailable"}
+          className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground"
+        >
+          {professionStageLabel(item.stage, locale)}
+        </span>
       </div>
       <div className="mt-5 flex items-start gap-4">
         <span className="hidden h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-secondary text-accent sm:inline-flex">
