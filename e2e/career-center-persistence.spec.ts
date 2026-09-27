@@ -47,9 +47,17 @@ const PEOPLE: Record<string, { a: string; b: string }> = {
   chromium: { a: "cc-walk-a-desktop@local.test", b: "cc-walk-b-desktop@local.test" },
   "mobile-375": { a: "cc-walk-a-mobile@local.test", b: "cc-walk-b-mobile@local.test" },
 };
-/** What A saves in the walk, and what B has saved in the fixture. */
-const A_SAVES = { slug: "vaktare", sv: "Väktare", en: "Security Officer (Väktare)" };
-const B_SAVED = "ordningsvakt";
+/** What A saves in the walk, and what B has saved in the fixture. The
+ *  profile stores the CIG slug and shows the catalogue title; the Career
+ *  Center resolves it to its own profession (slug-map.ts: CIG "vaktare" is
+ *  the Career Center's "security-officer") and shows that profession's
+ *  title. Both halves are asserted as a reader sees them. */
+const A_SAVES = {
+  cig: "vaktare",
+  profile: { sv: "Väktare", en: "Security Officer (Väktare)" },
+  careerCenter: { slug: "security-officer", sv: "Väktare", en: "Security Officer" },
+};
+const B_SAVED = { careerCenter: { slug: "ordningsvakt", sv: "Ordningsvakt" } };
 
 const EVIDENCE = path.resolve("test-results/career-center-persistence");
 
@@ -154,14 +162,17 @@ function pathFrom(page: Page) {
   return page.locator("[data-path-from]");
 }
 
-async function expectSavedProfession(page: Page, slug: string) {
+/** The Career Center shows `slug` as the SAVED profession, under `title`. */
+async function expectSavedProfession(page: Page, slug: string, title: string) {
   const section = pathFrom(page);
   await expect(section).toHaveAttribute("data-path-state", "ready", { timeout: 30_000 });
   await expect(section.locator("[data-path-provenance]")).toHaveAttribute(
     "data-path-provenance",
     "profile",
   );
-  await expect(section.locator("[data-path-select]")).toHaveValue(slug);
+  const select = section.locator("[data-path-select]");
+  await expect(select).toHaveValue(slug);
+  await expect(select.locator("option:checked")).toHaveText(title);
 }
 
 async function expectNothingSaved(page: Page) {
@@ -190,22 +201,24 @@ test.describe("saved profession → Career Center → reload → sign-out → an
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible({ timeout: 15_000 });
     await dialog.getByRole("button", { name: "Arbetar inom säkerhetsbranschen" }).click();
-    await dialog.locator("select").first().selectOption(A_SAVES.slug);
+    await dialog.locator("select").first().selectOption(A_SAVES.cig);
     await dialog.getByRole("button", { name: /^spara$/i }).click();
     await expect(dialog).toBeHidden({ timeout: 30_000 });
     // The profile says so.
-    await expect(page.locator("#career-profile")).toContainText(A_SAVES.sv, { timeout: 30_000 });
+    await expect(page.locator("#career-profile")).toContainText(A_SAVES.profile.sv, {
+      timeout: 30_000,
+    });
     await evidence(page, "a-profile-saved");
 
     // Back to the Career Center without a reload: it had read "nothing
     // saved" before, and must now show what was saved.
     await goToCareerCenter(page);
-    await expectSavedProfession(page, A_SAVES.slug);
+    await expectSavedProfession(page, A_SAVES.careerCenter.slug, A_SAVES.careerCenter.sv);
     await evidence(page, "a-career-center-updated");
 
     // A reload reads it from the database, not from the page.
     await page.reload();
-    await expectSavedProfession(page, A_SAVES.slug);
+    await expectSavedProfession(page, A_SAVES.careerCenter.slug, A_SAVES.careerCenter.sv);
 
     // Signed out, the Career Center keeps nothing of A.
     await signOut(page);
@@ -216,8 +229,10 @@ test.describe("saved profession → Career Center → reload → sign-out → an
     // B signs in, in the same tab, and sees B's own profession.
     await signInFromHeader(page, b);
     await goToCareerCenter(page);
-    await expectSavedProfession(page, B_SAVED);
-    await expect(pathFrom(page).locator("[data-path-select]")).not.toHaveValue(A_SAVES.slug);
+    await expectSavedProfession(page, B_SAVED.careerCenter.slug, B_SAVED.careerCenter.sv);
+    await expect(pathFrom(page).locator("[data-path-select]")).not.toHaveValue(
+      A_SAVES.careerCenter.slug,
+    );
     await evidence(page, "b-career-center");
   });
 
@@ -229,11 +244,13 @@ test.describe("saved profession → Career Center → reload → sign-out → an
     await fillSignIn(page, a);
     await page.waitForURL((url) => url.pathname === "/career-center", { timeout: 30_000 });
     await expect(page.locator("html")).toHaveAttribute("lang", "en", { timeout: 15_000 });
-    await expectSavedProfession(page, A_SAVES.slug);
+    await expectSavedProfession(page, A_SAVES.careerCenter.slug, A_SAVES.careerCenter.en);
 
     // And the profile, read afresh, says the same.
     await goToProfile(page);
-    await expect(page.locator("#career-profile")).toContainText(A_SAVES.en, { timeout: 30_000 });
+    await expect(page.locator("#career-profile")).toContainText(A_SAVES.profile.en, {
+      timeout: 30_000,
+    });
     await evidence(page, "a-new-sign-in-en");
   });
 });
