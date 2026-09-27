@@ -175,6 +175,27 @@ ck(
     .state === "no_content",
 );
 
+ck(
+  "a newer blocked draft cannot displace an older permitted version",
+  resolveLevelOffers(
+    [
+      { ...VAKTARE, itemId: "new-draft", versionNumber: 2, assignable: false },
+      { ...VAKTARE, versionNumber: 1 },
+    ],
+    new Set(),
+  )[0]!.assessment?.itemId === VAKTARE.itemId,
+);
+ck(
+  "the highest permitted version is chosen irrespective of library order",
+  resolveLevelOffers(
+    [
+      { ...VAKTARE, versionNumber: 1 },
+      { ...VAKTARE, itemId: "new-permitted", versionNumber: 2 },
+    ],
+    new Set(),
+  )[0]!.assessment?.itemId === "new-permitted",
+);
+
 /* ── 2 · the rendered dialog, both languages ───────────────────────── */
 console.log("\n2 · the rendered dialog");
 const actualRouter = await import("@tanstack/react-router");
@@ -211,7 +232,10 @@ await mock.module("@/lib/security-competency/academy-employer.functions", () => 
   listContentLibrary: async () => [],
   listApplicationAssessments: async () => [],
 }));
-await mock.module("@/lib/library/start.functions", () => ({ sendTestFromSetup: async () => null }));
+await mock.module("@/lib/library/start.functions", () => ({
+  sendTestFromSetup: async () => null,
+  getTestAssignmentAccess: async () => true,
+}));
 await mock.module("@/components/ui/dialog", () => ({
   Dialog: ({ children }: { children: unknown }) => <div>{children as never}</div>,
   DialogContent: ({ children, ...rest }: { children: unknown } & Record<string, unknown>) => (
@@ -231,6 +255,7 @@ function render(
   sent: ReadonlyArray<{ assessmentSlug: string; attemptStatus: string }>,
   library: readonly OfferableAssessment[] = [VAKTARE],
 ) {
+  queries.set(JSON.stringify(["employer", EMPLOYER, "test-assignment-access"]), true);
   queries.set(JSON.stringify(["employer", EMPLOYER, "library", "recruitment"]), library);
   queries.set(
     JSON.stringify(["employer", EMPLOYER, "application", APPLICATION, "assessments"]),
@@ -366,15 +391,17 @@ const candidatePage = code(
   read("src/routes/_authenticated.employer.$employerSlug.applications.$applicationId.tsx"),
 );
 ck(
-  "the applications list offers it per row, gated on who may decide and an unresolved status",
+  "the applications list offers it per row, for an unresolved status, with assignment access checked in the shared dialog",
   /<SendTestDialog/.test(list) &&
-    /canDecideFor\(r\.jobId\) && isUnresolved\(r\.status\)/.test(list) &&
+    /isUnresolved\(r\.status\)/.test(list) &&
+    !/canDecideFor\(r\.jobId\) && isUnresolved/.test(list) &&
     /data-testid="send-test"/.test(list),
 );
 ck(
   "the recruitment's candidate table offers it in the Test column, per row, without a selection",
   /<SendTestDialog/.test(table) &&
-    /props\.canAssignTests && OPEN\.includes\(r\.status\)/.test(table) &&
+    /OPEN\.includes\(r\.status\)/.test(table) &&
+    !/props\.canAssignTests && OPEN/.test(table) &&
     /data-testid="send-test"/.test(table),
 );
 ck(

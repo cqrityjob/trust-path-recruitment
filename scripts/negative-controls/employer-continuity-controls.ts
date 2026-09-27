@@ -1,5 +1,5 @@
 /**
- * E1 employer-continuity negative controls — thirty-three mutations.
+ * E1 employer-continuity negative controls — thirty-four mutations.
  *
  * ── WHY THESE EXIST ────────────────────────────────────────────────────
  *
@@ -40,6 +40,15 @@ const E1 = "employer-process-continuity:check";
 
 const MUTATIONS: readonly Mutation[] = [
   /* ---- The link itself ------------------------------------------- */
+  {
+    id: "E1-BATCH-WRONG-APPLICATION",
+    defect: "a batch send uses the outer application's id instead of each selected recipient's application",
+    file: "src/components/recruitment/SendTestDialog.tsx",
+    find: "applicationId: recipient.applicationId,",
+    replace: "applicationId,",
+    guard: E1,
+    expect: "2 · assessment assignment passes the application, not an address",
+  },
   {
     id: "E1-ASSESSMENT-WRONG-APPLICATION",
     defect:

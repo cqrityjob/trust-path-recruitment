@@ -242,7 +242,7 @@ export function ApplicationAssessmentPanel({
         <p className="mt-2 text-[13px] text-muted-foreground">{t("journey.noAssessmentYet")}</p>
       )}
 
-      {canAssign && (
+      {
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -254,7 +254,7 @@ export function ApplicationAssessmentPanel({
             {t("sendTest.action")}
           </button>
         </div>
-      )}
+      }
       {sending && (
         <SendTestDialog
           employerId={employerId}

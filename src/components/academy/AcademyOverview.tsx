@@ -1,3 +1,4 @@
+import { SendTestEntry } from "@/components/recruitment/TestBank";
 // Tester & bedömningar — the recruitment assessment overview.
 //
 // ── WHAT THIS PAGE IS FOR ─────────────────────────────────────────────
@@ -81,6 +82,8 @@ export function AcademyOverview({
   return (
     <>
       <AcademyHeading title={t("academy.overview.title")} lede={t("academy.overview.lede")} />
+
+      <SendTestEntry employerId={employerId} employerSlug={employerSlug} />
 
       {/* Four tiles, in journey order, answering exactly the four questions the
           recruiter has: what is running, what needs a person, what is waiting

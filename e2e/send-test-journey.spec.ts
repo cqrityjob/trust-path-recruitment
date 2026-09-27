@@ -166,7 +166,7 @@ test.describe("Skicka test — both levels, end to end", () => {
       sql(`SELECT count(*) FROM assessment_assignments WHERE application_id = '${APPLICATION}'`),
     ).toBe("0");
     await page.screenshot({
-      path: "artifacts/bugfix-2026-09-26/send-test-1-levels.png",
+      path: "artifacts/assessment-dispatch/journey/send-test-1-levels.png",
       fullPage: true,
     });
   });
@@ -186,6 +186,8 @@ test.describe("Skicka test — both levels, end to end", () => {
     await expect(submit).toBeEnabled();
     // Two clicks in quick succession: the second lands on a disabled button.
     await submit.click();
+    await expect(page.getByTestId("send-test-confirmation")).toBeVisible();
+    await submit.click();
     await submit.click({ force: true, noWaitAfter: true }).catch(() => undefined);
     await expect(page.getByTestId("send-test-sent")).toBeVisible({ timeout: 60_000 });
     await expect(page.getByTestId("send-test-setup")).toHaveAttribute("data-recorded", "true");
@@ -194,7 +196,7 @@ test.describe("Skicka test — both levels, end to end", () => {
       /delivered|already_sent/,
     );
     await page.screenshot({
-      path: "artifacts/bugfix-2026-09-26/send-test-2-sent.png",
+      path: "artifacts/assessment-dispatch/journey/send-test-2-sent.png",
       fullPage: true,
     });
 
@@ -231,7 +233,7 @@ test.describe("Skicka test — both levels, end to end", () => {
     await expect(operational).toHaveAttribute("data-state", "already_sent", { timeout: 60_000 });
     await expect(operational).toContainText(/Redan skickat/);
     await expect(page.getByTestId("send-test-submit")).toBeDisabled();
-    await page.screenshot({ path: "artifacts/bugfix-2026-09-26/send-test-3-already-sent.png" });
+    await page.screenshot({ path: "artifacts/assessment-dispatch/journey/send-test-3-already-sent.png" });
 
     // The underlying send, repeated over the real API with the owner's own
     // token: the database answers with the SAME attempt.
@@ -288,7 +290,7 @@ test.describe("Skicka test — both levels, end to end", () => {
     await expect(page.locator("main")).toContainText(/Väktare \(syntetisk annons\)/);
     void card;
     await page.screenshot({
-      path: "artifacts/bugfix-2026-09-26/send-test-4-candidate-academy.png",
+      path: "artifacts/assessment-dispatch/journey/send-test-4-candidate-academy.png",
       fullPage: true,
     });
 
@@ -301,7 +303,7 @@ test.describe("Skicka test — both levels, end to end", () => {
       },
     );
     await page.screenshot({
-      path: "artifacts/bugfix-2026-09-26/send-test-4-candidate-inbox.png",
+      path: "artifacts/assessment-dispatch/journey/send-test-4-candidate-inbox.png",
       fullPage: true,
     });
     await ctx.close();
@@ -375,7 +377,7 @@ test.describe("Skicka test — both levels, end to end", () => {
     await page.reload();
     await expect(page.getByRole("button", { name: /^Lämna in$|^Nästa$/ })).toHaveCount(0);
     await page.screenshot({
-      path: "artifacts/bugfix-2026-09-26/send-test-5-submitted.png",
+      path: "artifacts/assessment-dispatch/journey/send-test-5-submitted.png",
       fullPage: true,
     });
     expect(
@@ -397,7 +399,7 @@ test.describe("Skicka test — both levels, end to end", () => {
       timeout: 60_000,
     });
     await page.screenshot({
-      path: "artifacts/bugfix-2026-09-26/send-test-6-employer-completion.png",
+      path: "artifacts/assessment-dispatch/journey/send-test-6-employer-completion.png",
       fullPage: true,
     });
     await page.getByTestId(`prepare-interview-${state.assignmentId}`).click();
@@ -409,7 +411,7 @@ test.describe("Skicka test — both levels, end to end", () => {
       { timeout: 60_000 },
     );
     await page.screenshot({
-      path: "artifacts/bugfix-2026-09-26/send-test-6-interview-prepare.png",
+      path: "artifacts/assessment-dispatch/journey/send-test-6-interview-prepare.png",
       fullPage: true,
     });
   });
