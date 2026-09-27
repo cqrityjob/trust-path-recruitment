@@ -95,3 +95,10 @@ PASS audit complete; only local database cqrity_security_access changed
 PASS HTTP total 209 assertions
 
 Final 45-catalogue/privilege suite (with nonempty fixtures): PostgreSQL 16.14 PASS; PostgreSQL 17.11 PASS.
+
+Review follow-up (same migration and test code, 2026-09-27):
+- deploy-plan:check PASS after recording the new migration as pending.
+  Three pending migrations; deploy-plan:gate remains a release blocker.
+- release-parity:check PASS (320 canonical, 3 pending, 0 unverified).
+- schema-first-release:check PASS.
+- migrations:check and sql-security:check PASS.

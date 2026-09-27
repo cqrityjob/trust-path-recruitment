@@ -154,6 +154,33 @@ misslyckade skanning har återställts.
   inställning där). Granskningen omfattar public samt storage-policyer och de privata
   hjälpschemans behörigheter. Bekräfta även Data API-listan i dashboarden före release.
 
+## Separata kvarstående kontroller
+
+### OPEN-API: exponerade Data API-scheman
+
+Den effektiva listan kunde inte hämtas. Avsaknad av `pgrst.db_schemas` är inte
+bevis för att bara public exponeras. Läs projektets Data API-inställningar i
+dashboarden, dokumentera den exakta listan, och inventera grants/RLS/vyer/RPC:er
+för varje ytterligare schema. Reproducera åtkomst i isolerad miljö. Denna punkt
+kan inte stängas av att public-testsviten passerar.
+
+### OPEN-IGNORED: det ignorerade Lovable-fyndet
+
+Fynd-ID, full text, berörda objekt och ignoreringens motivering saknas fortfarande.
+En inloggad projektägare behöver exportera dessa detaljer. Bedöm fyndet mot
+metadata och lägg till isolerat reproduktionstest vid behov. Det är inte
+identifierat som scoring-lineage-vyn och är inte avskrivet.
+
+### OPEN-SCAN: Lovables ofullständiga skanning
+
+Exakt fel och senaste skanningstid behöver hämtas och skanningen köras om.
+Supabases slutförda advisor ersätter inte denna kontroll.
+
+Katalogernas aktörs-ID, fria noteringar och opublicerade versioner behöver också
+ett uttryckligt åtkomstbeslut; se [fältinventeringen](catalogue-review.md#aktörs-id-fria-noteringar-och-opublicerat-innehåll).
+[Kontrollen före branchpush](integration-review.md) dokumenterar integrationernas
+observerade kopplingar och kontrollens begränsningar.
+
 ## Testbevis
 
 [Sammanfattad råutdata](test-results.txt). [Kommandon för upprepning](reproduce.md).

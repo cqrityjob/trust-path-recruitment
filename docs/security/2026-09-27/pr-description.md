@@ -7,3 +7,13 @@ Validation: full 320-migration replay and database regression suite passed on Po
 Release remains blocked on owner approval. Lovable's ignored finding and failed scan details are inaccessible and remain explicitly unresolved; the known safe scoring-lineage definer view is not assumed to be the ignored finding. Confirm Data API exposed schemas and rerun metadata/advisors and Lovable scan before release. Leaked-password protection is disabled; the exact `password_hibp_enabled=true` payload is prepared, but the current Free organisation requires an approved Pro upgrade (from USD 25/month) and separate Auth verification. No merge, deployment, plan upgrade or production migration is authorized by this PR.
 
 See `docs/security/2026-09-27/README.md`, the per-table review, captured metadata, test results and reproduction instructions.
+
+Catalogue access requires a precise review: anon can read `graph_versions.created_by/notes` and `assessment_versions.notes/retired_reason`. All authenticated users can read bundle approver/publisher IDs, the AI-config updater ID and the other free notes listed in `catalogue-review.md`. The status-bearing catalogues do not enforce publication status on SELECT. Existing broad catalogue reads are preserved, but these identity/note/draft fields are NOT blanket false positives: their intended audience still needs an explicit content/access decision.
+
+Separately open before release:
+
+- **OPEN-API:** obtain the actual Data API exposed-schema list and audit any additional schemas. Empty `pgrst.db_schemas` metadata does not establish that list.
+- **OPEN-IGNORED:** obtain the ignored Lovable finding's ID, text, affected objects and reason; investigate independently of the known lineage view.
+- **OPEN-SCAN:** obtain the Lovable scan error/time and complete a new scan.
+
+Pre-push integration review is in `integration-review.md`: the live Supabase production branch maps to `main`, Lovable's latest commit equals main, and PR workflows test isolated stacks. No integration or safeguard was changed. The migration is recorded **pending** in release-state.json; two existing pending content migrations remain untouched. No production apply is authorized.
