@@ -1,3 +1,4 @@
+import { TestBank } from "@/components/recruitment/TestBank";
 // Bibliotek — Tester & intervjuer.
 //
 // METHOD → ROLE → WORK ENVIRONMENT → SETUP → START (TRUST/BESKT product
@@ -29,15 +30,19 @@ function LibraryRoute() {
   const search = Route.useSearch();
   return (
     <AcademyPage employerSlug={employerSlug}>
-      {(ws) => (
-        <RecruitmentLibrary
-          employerId={ws.employerId}
-          employerSlug={employerSlug}
-          canAssign={ws.role !== "member"}
-          canManage={ws.role === "owner" || ws.role === "admin"}
-          search={search}
-        />
-      )}
+      {(ws) =>
+        !search.method ? (
+          <TestBank employerId={ws.employerId} employerSlug={employerSlug} />
+        ) : (
+          <RecruitmentLibrary
+            employerId={ws.employerId}
+            employerSlug={employerSlug}
+            canAssign={ws.role !== "member"}
+            canManage={ws.role === "owner" || ws.role === "admin"}
+            search={search}
+          />
+        )
+      }
     </AcademyPage>
   );
 }

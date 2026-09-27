@@ -34,7 +34,7 @@
  *   8. another organisation and the candidate read none of the recruiter
  *      material, on screen or over the API.
  *
- * Evidence: artifacts/bugfix-2026-09-26/strategic/.
+ * Evidence: artifacts/assessment-dispatch/journey/strategic/.
  */
 
 import { expect, test, type Page } from "@playwright/test";
@@ -64,7 +64,7 @@ test.skip(
 );
 test.describe.configure({ mode: "serial", timeout: 600_000 });
 
-const OUT = "artifacts/bugfix-2026-09-26/strategic";
+const OUT = "artifacts/assessment-dispatch/journey/strategic";
 mkdirSync(OUT, { recursive: true });
 const PASSWORD = "LocalJourney!2026";
 const OWNER = "beskt-recruiter@local.test";
@@ -185,7 +185,8 @@ test.describe("Skicka test — the strategic level, end to end", () => {
 
     // The library offers the strategic setup with ITS OWN guide and test.
     await signIn(page, OWNER, `/employer/${EMPLOYER}/assessments/library`);
-    await page.getByTestId("lib-method-trust-choose").click();
+    await expect(page.getByTestId("test-bank")).toBeVisible();
+    await page.getByRole("link", { name: "Förbered intervju", exact: true }).click();
     await page.getByTestId("lib-group-strategic").check();
     await page.getByTestId("lib-env-general").check();
     const setup = page.getByTestId("lib-setup");
@@ -236,6 +237,8 @@ test.describe("Skicka test — the strategic level, end to end", () => {
     await strategic.locator('input[type="radio"]').check();
     const submit = page.getByTestId("send-test-submit");
     await expect(submit).toBeEnabled();
+    await submit.click();
+    await expect(page.getByTestId("send-test-confirmation")).toBeVisible();
     await submit.click();
     await submit.click({ force: true, noWaitAfter: true }).catch(() => undefined);
     await expect(page.getByTestId("send-test-sent")).toBeVisible({ timeout: 60_000 });

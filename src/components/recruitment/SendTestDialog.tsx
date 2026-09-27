@@ -47,7 +47,11 @@ import {
   listApplicationAssessments,
   listContentLibrary,
 } from "@/lib/security-competency/academy-employer.functions";
-import { sendTestFromSetup, type SendTestResult } from "@/lib/library/start.functions";
+import {
+  getTestAssignmentAccess,
+  sendTestFromSetup,
+  type SendTestResult,
+} from "@/lib/library/start.functions";
 import { resolveLevelOffers, type LevelOffer } from "@/lib/library/levels";
 import type { RoleGroup } from "@/lib/library/catalogue";
 
@@ -63,6 +67,14 @@ const SEND_ERROR: Record<string, TranslationKey> = {
   SCP_START_NO_TEST: "sendTest.error.noTest",
 };
 
+function retryNotification(result: SendTestResult) {
+  return (
+    !result.invitation ||
+    ["failed", "refused", "in_progress"].includes(result.invitation.delivery) ||
+    ["failed", "unknown", "in_progress"].includes(result.invitation.email)
+  );
+}
+
 function errorKey(message: string): TranslationKey {
   for (const [code, key] of Object.entries(SEND_ERROR)) {
     if (message.includes(code)) return key;
@@ -77,7 +89,13 @@ export function SendTestDialog({
   candidateName,
   jobTitle,
   onClose,
+  candidates,
+  initialGroup = "operational",
+  initialVersionId,
 }: {
+  candidates?: { applicationId: string; name: string | null; jobTitle?: string | null }[];
+  initialGroup?: RoleGroup;
+  initialVersionId?: string;
   employerId: string;
   employerSlug: string;
   applicationId: string;
@@ -94,6 +112,17 @@ export function SendTestDialog({
   const libraryFn = useServerFn(listContentLibrary);
   const sentFn = useServerFn(listApplicationAssessments);
   const sendFn = useServerFn(sendTestFromSetup);
+  const accessFn = useServerFn(getTestAssignmentAccess);
+  const access = useQuery({
+    queryKey: ["employer", employerId, "test-assignment-access"],
+    queryFn: () => accessFn({ data: { employerId } }),
+  });
+  const recipients = candidates ?? [{ applicationId, name: candidateName, jobTitle }];
+  const [outcomes, setOutcomes] = useState<
+    Record<string, { result?: SendTestResult; error?: TranslationKey }>
+  >({});
+  const [confirming, setConfirming] = useState(false);
+  const [deadline, setDeadline] = useState("");
 
   const library = useQuery({
     queryKey: ["employer", employerId, "library", "recruitment"],
@@ -104,7 +133,8 @@ export function SendTestDialog({
     queryFn: () => sentFn({ data: { applicationId } }),
   });
 
-  const [group, setGroup] = useState<RoleGroup>("operational");
+  const [versionChoice, setVersionChoice] = useState(initialVersionId ?? "");
+  const [group, setGroup] = useState<RoleGroup>(initialGroup);
   const [language, setLanguage] = useState<"sv" | "en">(sv ? "sv" : "en");
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState<TranslationKey | null>(null);
@@ -115,11 +145,50 @@ export function SendTestDialog({
   const inFlight = useRef(false);
 
   const alreadySent = new Set(
-    (sent.data ?? []).filter((a) => a.attemptStatus !== "abandoned").map((a) => a.assessmentSlug),
+    (candidates ? [] : (sent.data ?? []))
+      .filter((a) => a.attemptStatus !== "abandoned")
+      .map((a) => a.assessmentSlug),
   );
   const offers: readonly LevelOffer[] = resolveLevelOffers(library.data ?? [], alreadySent);
-  const chosen = offers.find((o) => o.level.group === group) ?? null;
-  const canSend = chosen?.state === "sendable" && !busy && !result;
+  const [reviewOffer, setReviewOffer] = useState<LevelOffer | null>(null);
+  const extraTests = (library.data ?? []).filter(
+    (r) =>
+      r.libraryKind === "assessment" &&
+      r.designedFor === "recruitment_support" &&
+      !offers.some((o) => o.level.assessmentSlug === r.slug),
+  );
+  const extra = extraTests.find((r) => r.itemId === versionChoice);
+  const chosen: LevelOffer | null =
+    reviewOffer ??
+    (extra
+      ? {
+          level: { group: "operational", profile: "vaktare", assessmentSlug: extra.slug },
+          assessment: extra,
+          state: alreadySent.has(extra.slug)
+            ? "already_sent"
+            : extra.assignable
+              ? "sendable"
+              : "not_assignable",
+          draftAwaitingRelease: false,
+          parts: [],
+        }
+      : (offers.find((o) => o.level.group === group) ?? null));
+  const availableLanguages =
+    (library.data ?? []).find((a) => a.itemId === chosen?.assessment?.itemId)?.languages ?? [];
+  const languageAllowed = availableLanguages.some((l) => l.startsWith(language));
+  useEffect(() => {
+    if (availableLanguages.length && !languageAllowed && !confirming) {
+      const first = availableLanguages.find((l) => l.startsWith("sv") || l.startsWith("en"));
+      if (first) setLanguage(first.startsWith("sv") ? "sv" : "en");
+    }
+  }, [availableLanguages.join(","), languageAllowed, confirming]);
+  const canSend =
+    chosen?.state === "sendable" &&
+    access.data === true &&
+    recipients.length > 0 &&
+    languageAllowed &&
+    !busy &&
+    !result;
 
   // The heading names the person; a screen reader lands on the level choice.
   const firstRadio = useRef<HTMLInputElement | null>(null);
@@ -128,35 +197,66 @@ export function SendTestDialog({
   }, [library.isSuccess]);
 
   async function send() {
-    if (!chosen || chosen.state !== "sendable" || inFlight.current) return;
+    if (!chosen || chosen.state !== "sendable" || !access.data || inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
     setFailed(null);
+    let anySent = false;
     try {
-      const r = await sendFn({
-        data: {
-          employerId,
-          applicationId,
-          roleGroup: chosen.level.group,
-          roleProfile: chosen.level.profile,
-          environment: "general",
-          language,
-        },
-      });
-      setResult(r);
-      await qc.invalidateQueries({
-        queryKey: ["employer", employerId, "application", applicationId, "assessments"],
-      });
-      void qc.invalidateQueries({ queryKey: ["academy", "participants", employerId] });
-      void qc.invalidateQueries({ queryKey: ["employer", employerId, "candidates"] });
-    } catch (e) {
-      const err = e as { code?: string; message?: string };
-      setFailed(errorKey(`${err.code ?? ""} ${err.message ?? ""}`));
+      for (const recipient of recipients) {
+        const previous = outcomes[recipient.applicationId]?.result;
+        if (previous && !retryNotification(previous)) continue;
+        try {
+          const r = await sendFn({
+            data: {
+              employerId,
+              applicationId: recipient.applicationId,
+              ...(versionChoice
+                ? {}
+                : {
+                    roleGroup: chosen.level.group,
+                    roleProfile: chosen.level.profile,
+                    environment: "general" as const,
+                  }),
+              language,
+              assessmentVersionId: chosen.assessment!.itemId,
+              deadline: deadline ? new Date(`${deadline}T23:59:59`).toISOString() : null,
+            },
+          });
+          anySent = true;
+          setOutcomes((prev) => ({ ...prev, [recipient.applicationId]: { result: r } }));
+          if (!candidates) setResult(r);
+          await qc.invalidateQueries({
+            queryKey: [
+              "employer",
+              employerId,
+              "application",
+              recipient.applicationId,
+              "assessments",
+            ],
+          });
+        } catch (e) {
+          const err = e as { code?: string; message?: string };
+          const key = errorKey(`${err.code ?? ""} ${err.message ?? ""}`);
+          setOutcomes((prev) => ({ ...prev, [recipient.applicationId]: { error: key } }));
+          if (!candidates) setFailed(key);
+        }
+      }
     } finally {
+      if (anySent) {
+        void qc.invalidateQueries({ queryKey: ["employer", employerId] });
+        void qc.invalidateQueries({ queryKey: ["academy"] });
+      }
       setBusy(false);
       inFlight.current = false;
     }
   }
+
+  const hasSent = Boolean(result) || Object.values(outcomes).some((o) => o.result);
+  const hasOutcomes = candidates && Object.keys(outcomes).length > 0;
+  const close = () => {
+    if (!inFlight.current) onClose(hasSent);
+  };
 
   const levelLabel = (g: RoleGroup): TranslationKey =>
     g === "operational" ? "sendTest.level.operational" : "sendTest.level.strategic";
@@ -168,7 +268,7 @@ export function SendTestDialog({
     g === "operational" ? "sendTest.level.operational.purpose" : "sendTest.level.strategic.purpose";
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose(Boolean(result))}>
+    <Dialog open onOpenChange={(o) => !o && close()}>
       <DialogContent
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl"
         data-testid="send-test-dialog"
@@ -183,7 +283,7 @@ export function SendTestDialog({
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-md border border-border bg-[color:var(--surface-subtle)] px-3 py-2 text-sm">
           <dt className="text-muted-foreground">{t("sendTest.recipient")}</dt>
           <dd className="font-medium text-foreground" data-testid="send-test-recipient">
-            {candidateName ?? t("sendTest.recipientAnonymous")}
+            {recipients.map((r) => r.name ?? t("sendTest.recipientAnonymous")).join(", ")}
           </dd>
           {jobTitle && (
             <>
@@ -193,33 +293,77 @@ export function SendTestDialog({
           )}
         </dl>
 
-        {result ? (
+        {hasOutcomes ? (
+          <div aria-live="polite">
+            <ul className="space-y-3">
+              {recipients.map((r) => (
+                <li key={r.applicationId} className="rounded border p-3">
+                  <strong>{r.name ?? t("sendTest.recipientAnonymous")}</strong>
+                  <p>{r.jobTitle ?? jobTitle}</p>
+                  {outcomes[r.applicationId]?.result ? (
+                    <>
+                      <p>{t("sendTest.sent.title")}</p>
+                      <DeliveryStatus result={outcomes[r.applicationId].result!} />
+                    </>
+                  ) : (
+                    <p role={outcomes[r.applicationId]?.error ? "alert" : "status"}>
+                      {outcomes[r.applicationId]?.error
+                        ? t(outcomes[r.applicationId].error!)
+                        : t("sendTest.sending")}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {Object.values(outcomes).some(
+              (o) => o.error || (o.result && retryNotification(o.result)),
+            ) && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void send()}
+                className="mt-4 rounded border p-3"
+              >
+                {sv
+                  ? "Försök igen för misslyckade utskick eller aviseringar"
+                  : "Retry failed assignments or notifications"}
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={close}
+              className="mt-4 rounded border p-3"
+            >
+              {t("sendTest.close")}
+            </button>
+          </div>
+        ) : result ? (
           <div data-testid="send-test-sent" className="mt-2">
             <p role="status" className="text-sm font-semibold text-foreground">
               {t("sendTest.sent.title")}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{t("sendTest.sent.body")}</p>
             <ul className="mt-3 space-y-1 text-[13px] text-muted-foreground">
-              <li data-testid="send-test-setup" data-recorded={String(result.setupRecorded)}>
-                {t(result.setupRecorded ? "sendTest.sent.setup" : "sendTest.sent.noSetup")}
-              </li>
-              <li
-                data-testid="send-test-invitation"
-                data-delivery={result.invitation?.delivery ?? "none"}
-              >
-                {result.invitation
-                  ? `${result.invitation.delivery === "refused" || result.invitation.delivery === "failed" ? "" : t("sendTest.sent.inApp") + " "}${t(
-                      `sendTest.sent.email.${
-                        result.invitation.email === "sent" ||
-                        result.invitation.email === "not_configured" ||
-                        result.invitation.email === "in_progress"
-                          ? result.invitation.email
-                          : "failed"
-                      }` as TranslationKey,
-                    )}`
-                  : t("sendTest.sent.noMessage")}
+              {!versionChoice && (
+                <li data-testid="send-test-setup" data-recorded={String(result.setupRecorded)}>
+                  {t(result.setupRecorded ? "sendTest.sent.setup" : "sendTest.sent.noSetup")}
+                </li>
+              )}
+              <li>
+                <DeliveryStatus result={result} />
               </li>
             </ul>
+            {retryNotification(result) && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void send()}
+                className="mt-4 rounded border p-3"
+              >
+                {sv ? "Försök skicka aviseringen igen" : "Retry notification"}
+              </button>
+            )}
             <DialogFooter className="mt-5 gap-2">
               <Link
                 to="/employer/$employerSlug/applications/$applicationId"
@@ -230,32 +374,44 @@ export function SendTestDialog({
               </Link>
               <button
                 type="button"
-                onClick={() => onClose(true)}
+                disabled={busy}
+                onClick={close}
                 className="min-h-10 rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground"
               >
                 {t("sendTest.close")}
               </button>
             </DialogFooter>
           </div>
-        ) : library.isLoading || sent.isLoading ? (
+        ) : library.isLoading || sent.isLoading || access.isPending ? (
           <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
-        ) : library.isError ? (
+        ) : library.isError || sent.isError || access.isError ? (
           <p role="alert" className="text-sm text-foreground">
             {t("sendTest.error.unavailable")}
+          </p>
+        ) : !access.data ? (
+          <p role="alert" className="rounded border p-4 text-sm">
+            {sv
+              ? "Skicka test kräver aktiv ägar- eller administratörsbehörighet i denna organisation. Kontrollera vald organisation eller be organisationens ägare om rätt åtkomst. Att vara rekryteringsansvarig ger inte denna behörighet."
+              : "Sending tests requires active owner or administrator access in this organisation. Check the selected organisation or ask its owner for access. Recruitment responsibility does not grant this permission."}
           </p>
         ) : (
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void send();
+              if (confirming) void send();
+              else {
+                setReviewOffer(chosen);
+                setConfirming(true);
+              }
             }}
           >
-            <fieldset className="mt-2">
+            <div hidden={confirming}>
+            <fieldset disabled={confirming || busy} className="mt-2">
               <legend className="text-sm font-medium text-foreground">{t("sendTest.level")}</legend>
               <div className="mt-2 space-y-2">
                 {offers.map((o, i) => {
                   const g = o.level.group;
-                  const active = g === group;
+                  const active = !versionChoice && g === group;
                   return (
                     <label
                       key={g}
@@ -273,7 +429,10 @@ export function SendTestDialog({
                           name={`${ids}-level`}
                           value={g}
                           checked={active}
-                          onChange={() => setGroup(g)}
+                          onChange={() => {
+                            setGroup(g);
+                            setVersionChoice("");
+                          }}
                           className="mt-1 h-4 w-4"
                         />
                         <span className="min-w-0 flex-1">
@@ -373,7 +532,24 @@ export function SendTestDialog({
               </div>
             </fieldset>
 
-            <fieldset className="mt-4">
+            {extraTests.length > 0 && (
+              <fieldset disabled={confirming || busy} className="mt-4">
+                <legend>{sv ? "Övriga rekryteringstester" : "Other recruitment tests"}</legend>
+                {extraTests.map((a) => (
+                  <label key={a.itemId} className="my-2 flex gap-2 rounded border p-3">
+                    <input
+                      type="radio"
+                      name={`${ids}-level`}
+                      checked={versionChoice === a.itemId}
+                      onChange={() => setVersionChoice(a.itemId)}
+                    />
+                    {sv ? a.nameSv : a.nameEn} · v{a.versionNumber} · {a.contentStatus}
+                  </label>
+                ))}
+              </fieldset>
+            )}
+
+            <fieldset disabled={confirming || busy} className="mt-4">
               <legend className="text-sm font-medium text-foreground">
                 {t("sendTest.language")}
               </legend>
@@ -383,6 +559,7 @@ export function SendTestDialog({
                     <input
                       type="radio"
                       name={`${ids}-language`}
+                      disabled={!availableLanguages.some((v) => v.startsWith(l))}
                       value={l}
                       checked={language === l}
                       onChange={() => setLanguage(l)}
@@ -393,6 +570,53 @@ export function SendTestDialog({
                 ))}
               </div>
             </fieldset>
+
+            <label className="mt-4 block text-sm">
+              {sv ? "Sista svarsdag (valfritt)" : "Response deadline (optional)"}
+              <input
+                type="date"
+                value={deadline}
+                min={new Date().toLocaleDateString("en-CA")}
+                disabled={confirming || busy}
+                onChange={(e) => setDeadline(e.target.value)}
+                className="ml-3 rounded border p-2"
+              />
+            </label>
+            </div>
+            {confirming && (
+              <div className="mt-4 rounded border p-3" data-testid="send-test-confirmation">
+                <p className="font-semibold">{sv ? "Bekräfta utskick" : "Confirm assignment"}</p>
+                <p>
+                  {sv ? chosen?.assessment?.nameSv : chosen?.assessment?.nameEn} ·{" "}
+                  {language.toUpperCase()}
+                </p>
+                <p>
+                  {deadline
+                    ? `${sv ? "Sista svarsdag" : "Response deadline"}: ${deadline}`
+                    : sv
+                      ? "Ingen egen sista svarsdag vald; testets standardtid gäller."
+                      : "No custom deadline; the test default applies."}
+                </p>
+                <ul>
+                  {recipients.map((r) => (
+                    <li key={r.applicationId}>
+                      {r.name ?? t("sendTest.recipientAnonymous")} · {r.jobTitle ?? jobTitle}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className="mt-2 underline"
+                  onClick={() => {
+                    setConfirming(false);
+                    setReviewOffer(null);
+                  }}
+                >
+                  {sv ? "Ändra" : "Edit"}
+                </button>
+              </div>
+            )}
 
             {failed && (
               <p
@@ -413,7 +637,7 @@ export function SendTestDialog({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => onClose(false)}
+                onClick={close}
                 className="min-h-10 rounded-md px-3 text-sm text-muted-foreground hover:text-foreground"
               >
                 {t("sendTest.cancel")}
@@ -429,12 +653,37 @@ export function SendTestDialog({
                 ) : (
                   <Send className="h-4 w-4" aria-hidden="true" />
                 )}
-                {busy ? t("sendTest.sending") : t("sendTest.send")}
+                {busy
+                  ? t("sendTest.sending")
+                  : confirming
+                    ? t("sendTest.send")
+                    : sv
+                      ? "Granska utskick"
+                      : "Review assignment"}
               </button>
             </DialogFooter>
           </form>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function DeliveryStatus({ result }: { result: SendTestResult }) {
+  const { t, lang } = useT();
+  const delivered =
+    result.invitation?.delivery === "delivered" || result.invitation?.delivery === "already_sent";
+  const email = result.invitation?.email;
+  return (
+    <div data-testid="send-test-invitation" data-delivery={result.invitation?.delivery ?? "none"}>
+      <p>{delivered ? t("sendTest.sent.inApp") : t("sendTest.sent.noMessage")}</p>
+      <p>
+        {email === "sent" || email === "not_configured" || email === "in_progress"
+          ? t(`sendTest.sent.email.${email}` as TranslationKey)
+          : lang === "en"
+            ? "Email delivery has not been confirmed."
+            : "E-postleverans har inte bekräftats."}
+      </p>
+    </div>
   );
 }

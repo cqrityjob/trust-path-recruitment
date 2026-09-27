@@ -1,3 +1,4 @@
+import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 // Candidate 360 — one application, one person, one page.
 //
 // ── WHY THIS PAGE EXISTS ────────────────────────────────────────────────
@@ -177,6 +178,7 @@ function Candidate360({
   canAssign: boolean;
 }) {
   const { t, tp, lang } = useT();
+  const [sendingTest, setSendingTest] = useState(false);
   const qc = useQueryClient();
   const candidateFn = useServerFn(getApplicationCandidate);
   const signCvFn = useServerFn(getApplicationCvSignedUrl);
@@ -712,6 +714,29 @@ function Candidate360({
             </Link>
           )}
         </div>
+        {!completed && status !== null && isUnresolved(status) && (
+          <button
+            type="button"
+            data-testid="send-test-top"
+            onClick={() => setSendingTest(true)}
+            className="mt-4 min-h-11 rounded-md bg-accent px-4 text-sm font-semibold text-accent-foreground"
+          >
+            {t("sendTest.action")}
+          </button>
+        )}
+        {sendingTest && (
+          <SendTestDialog
+            employerId={employerId}
+            employerSlug={employerSlug}
+            applicationId={applicationId}
+            candidateName={name}
+            jobTitle={jobTitle}
+            onClose={(sent) => {
+              setSendingTest(false);
+              if (sent) refreshRecruitment();
+            }}
+          />
+        )}
         {/* Stage, responsible person and whether it has been opened: three
             different facts, each said once. */}
         {rw && (

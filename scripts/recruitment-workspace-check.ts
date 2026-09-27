@@ -519,7 +519,7 @@ const sql = read(F.migration);
       /if \(alreadySentSlugs\.has\(row\.slug\)\) \{?\s*return \{ level, state: "already_sent"/.test(
         levels,
       ) &&
-      /const canSend = chosen\?\.state === "sendable"/.test(sendDialog) &&
+      /const canSend =\s*chosen\?\.state === "sendable"/.test(sendDialog) &&
       /disabled=\{!canSend\}/.test(sendDialog),
     "G · the send button is withheld for an assessment already sent on this application",
   );
