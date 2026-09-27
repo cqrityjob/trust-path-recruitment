@@ -399,8 +399,7 @@ group("6 · a read that did not answer says so, with a way out");
   );
   ck(
     "tests failure offers the canonical area",
-    html.includes("Dina tester kunde inte hämtas") &&
-      html.includes("Öppna Tester &amp; utveckling"),
+    html.includes("Dina tester kunde inte hämtas") && html.includes("Öppna Tester och utveckling"),
   );
   ck(
     "every failed section has a retry control",

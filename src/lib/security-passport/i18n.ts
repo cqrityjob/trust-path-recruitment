@@ -868,7 +868,7 @@ const sv = {
   "basics.compactTitlePlaceholder": "Lägg till nuvarande yrkestitel",
   "basics.compactSave": "Spara",
   "basics.compactCancel": "Avbryt",
-  "basics.savedNotice": "Dina grunduppgifter är sparade.",
+  "basics.savedNotice": "Dina profiluppgifter har sparats.",
   // Named after what they change, not after where the control happens to sit.
   "basics.editWorkCountry": "Ändra arbetsland",
   "basics.workCountryUnset": "Arbetsland inte angivet.",
@@ -3112,7 +3112,7 @@ const en: Record<PassportCopyKey, string> = {
   "basics.compactTitlePlaceholder": "Add current professional title",
   "basics.compactSave": "Save",
   "basics.compactCancel": "Cancel",
-  "basics.savedNotice": "Your profile basics have been saved.",
+  "basics.savedNotice": "Your profile details have been saved.",
   "basics.editWorkCountry": "Change work country",
   "basics.workCountryUnset": "Work country not stated.",
   "basics.browseMarketLabel": "Show authorisations for",

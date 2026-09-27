@@ -788,7 +788,7 @@ group("T10 · the reviewer count is not candidate navigation");
       Array.from(html.matchAll(/href="([^"]+)"/g), (match) => match[1]).join(",") ===
         "/my-career,/passport,/security-work,/my-career/cv,/jobs,/career-center,/academy",
     );
-    ck(`${variant}: "Tester & utveckling" label`, html.includes("Tester &amp; utveckling"));
+    ck(`${variant}: "Tester och utveckling" label`, html.includes("Tester och utveckling"));
   }
   ck(
     "no reviewer destination in the nav array",
@@ -1048,9 +1048,11 @@ group("T15 · sv/en parity");
       typeof dictionaries.sv[key] === "string" && typeof dictionaries.en[key] === "string",
     );
   }
+  // MVP text specification §3 (2026-09-27): spelled out, in both languages.
   ck(
-    '"Tester & utveckling" is the candidate label',
-    dictionaries.sv["nav.testsAndDevelopment"] === "Tester & utveckling",
+    '"Tester och utveckling" is the candidate label',
+    dictionaries.sv["nav.testsAndDevelopment"] === "Tester och utveckling" &&
+      dictionaries.en["nav.testsAndDevelopment"] === "Assessments and development",
   );
   for (const kind of Object.keys(ACTION_CLASSIFICATION) as (keyof typeof ACTION_CLASSIFICATION)[]) {
     const w = actionCopy.wordsFor(kind, null);

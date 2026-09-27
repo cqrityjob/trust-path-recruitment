@@ -148,7 +148,7 @@ group("1 · one canonical link per product, desktop and mobile");
 {
   // The owner's seven, under the explicit 2026-09-24 decision:
   //
-  //   Översikt · Security Passport · Mitt säkerhetsarbete · CV · Jobb · Karriär · Tester & utveckling
+  //   Översikt · Security Passport · Mitt säkerhetsarbete · CV · Jobb · Karriär · Tester och utveckling
   //
   // Seven since the explicit Security Work placement decision superseded
   // the prior six-item canon.
@@ -186,10 +186,17 @@ group("1 · one canonical link per product, desktop and mobile");
     { key: "cv", to: "/my-career/cv", sv: "CV", en: "CV" },
     { key: "jobs", to: "/jobs", sv: "Jobb", en: "Jobs" },
     { key: "career", to: "/career-center", sv: "Karriär", en: "Career" },
-    // "Tester & utveckling": the area holds recruitment tests, their
+    // "Tester och utveckling": the area holds recruitment tests, their
     // released results AND employer-assigned training. "Tester och resultat"
-    // named half of it; the two are separated INSIDE the page.
-    { key: "assessments", to: "/academy", sv: "Tester & utveckling", en: "Tests & development" },
+    // named half of it; the two are separated INSIDE the page. Spelled out
+    // with "och" / "and" since the MVP text specification (§3, 2026-09-27),
+    // which also names the English side "Assessments and development".
+    {
+      key: "assessments",
+      to: "/academy",
+      sv: "Tester och utveckling",
+      en: "Assessments and development",
+    },
   ];
 
   ck(

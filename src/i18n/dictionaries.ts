@@ -79,10 +79,11 @@ export const dictionaries = {
     // what drifts apart later.
     "nav.securityPassport": "Security Passport",
     "nav.career": "Karriär",
-    // "Tester & utveckling": the area holds recruitment tests, their released
+    // "Tester och utveckling": the area holds recruitment tests, their released
     // results AND employer-assigned training. "Tester och resultat" named
-    // half of it. The two are separated INSIDE the page, never mixed.
-    "nav.testsAndDevelopment": "Tester & utveckling",
+    // half of it. The two are separated INSIDE the page, never mixed. Spelled
+    // out with "och" since the MVP text specification (§3, 2026-09-27).
+    "nav.testsAndDevelopment": "Tester och utveckling",
     "nav.reviews": "Granskningar",
     "appnav.aria": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
@@ -105,6 +106,8 @@ export const dictionaries = {
     "meta.home.description":
       "Samla dina meriter i Security Passport, hitta rätt yrkesväg och jobb och arbeta med säkerhetsanalys, risker och beredskapsunderlag i CQrityjob.",
     "meta.about.title": "Om CQrityjob – säkerhetsarbete, meriter och karriär",
+    "meta.careerCenter.title": "Yrken och karriärvägar inom säkerhet – CQrityjob",
+    "meta.careerDiscovery.title": "Career Discovery – din karriäranalys – CQrityjob",
 
     // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
     //
@@ -1080,8 +1083,6 @@ export const dictionaries = {
     "lang.switch": "Språk",
 
     "sca.meta.title": "Karriärbedömning inom säkerhet — CQrityjob",
-    "sca.meta.desc":
-      "Upptäck vilka karriärer inom säkerhet som kan passa dig. Kostnadsfri, cirka 12–15 minuter, inget konto krävs.",
     "sca.badge": "Karriärvägledning",
     "sca.landing.title": "Upptäck vilka karriärer inom säkerhet som kan passa dig.",
     // ---- Security Career Discovery v3 (internal test) ----
@@ -1154,7 +1155,7 @@ export const dictionaries = {
     // ── The always-present occupational recommendation ──────────────────
     "careerDiscovery.report.v31.rec.title": "Din rekommenderade yrkesinriktning",
     "careerDiscovery.report.v31.rec.lede":
-      "Utifrån dina svar ligger de här yrkena närmast, i ordning. Din Security Career DNA nedan är underlaget som ger den här ordningen.",
+      "Förslagen utgår från dina svar. De beskriver möjliga riktningar att undersöka, inte ett besked om din kompetens eller behörighet.",
     "careerDiscovery.report.v31.rec.rank1": "Starkaste rekommendation",
     "careerDiscovery.report.v31.rec.traitsLabel": "Det här i din Career DNA bidrar mest",
     "careerDiscovery.report.v31.rec.alternativesTitle": "Näst starkaste alternativ",
@@ -1188,10 +1189,10 @@ export const dictionaries = {
     "careerDiscovery.report.v31.educationTitle": "Utbildning och certifieringar",
     "careerDiscovery.report.v31.pathwayTitle": "Möjlig väg",
     "careerDiscovery.report.v31.currentJobsInDirection": "Aktuella jobb inom den här riktningen",
-    "careerDiscovery.report.v31.currentJobsShort": "Aktuella jobb",
-    "careerDiscovery.report.v31.exploreCareer": "Utforska yrket",
+    "careerDiscovery.report.v31.currentJobsShort": "Se relevanta jobb",
+    "careerDiscovery.report.v31.exploreCareer": "Läs om yrket",
     "careerDiscovery.report.v31.howDoIGetThere": "Hur kommer jag dit?",
-    "careerDiscovery.report.v31.whyThisAppeared": "Varför den här dök upp",
+    "careerDiscovery.report.v31.whyThisAppeared": "Därför föreslås yrket",
     "careerDiscovery.report.v31.closeDetail": "Stäng",
     "careerDiscovery.report.v31.moveForward.title": "Vad kan hjälpa dig vidare?",
     "careerDiscovery.report.v31.moveForward.intro":
@@ -1302,7 +1303,7 @@ export const dictionaries = {
     "careerDiscovery.report.development.title": "Utvecklingsområden",
     "careerDiscovery.report.nextSteps.title": "Möjliga nästa steg",
     "careerDiscovery.report.method.title": "Så här togs resultatet fram",
-    "careerDiscovery.report.header.product": "Security Career Discovery",
+    "careerDiscovery.report.header.product": "Din karriäranalys",
     "careerDiscovery.report.header.internalTest":
       "Intern testversion. Innehållet är framtaget men ännu inte granskat av sakkunniga. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov, inte ett besked om anställningsbarhet och inte en psykologisk bedömning. Resultatet speglar de svar du gav vid det här tillfället.",
     "careerDiscovery.report.actions.myCareer": "Till Min karriär",
@@ -1344,17 +1345,17 @@ export const dictionaries = {
       "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
-    "cd.public.loading": "Förbereder vägledningen…",
-    "cd.public.unavailableTitle": "Vägledningen är inte öppen ännu",
+    "cd.public.loading": "Förbereder karriäranalysen…",
+    "cd.public.unavailableTitle": "Karriäranalysen är inte öppen just nu",
     "cd.public.unavailableBody":
-      "Den uppdaterade versionen av Din karriär inom säkerhet genomgår just nu granskning innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
+      "Den uppdaterade karriäranalysen granskas innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
-    "cd.public.introTitle": "Din karriär inom säkerhet",
+    "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
-      "28 frågor om hur du föredrar att arbeta: två om din situation, 22 som bygger ditt Security Career DNA och fyra som utgår från var du befinner dig. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
+      "Svara på frågor om hur du vill arbeta och vad som motiverar dig. Du får en karriäranalys med förklarade yrkesförslag att utforska vidare.",
     "cd.public.introNoAccount":
       "Du behöver inget konto för att börja. Dina svar sparas bara i den här fliken, och du loggar in först när du vill spara resultatet.",
-    "cd.public.start": "Börja vägledningen",
+    "cd.public.start": "Starta karriäranalysen",
     "cd.public.progress": "Fråga",
     "cd.public.stageContext": "Din situation",
     "cd.public.stageCareerDna": "Security Career DNA",
@@ -1374,10 +1375,10 @@ export const dictionaries = {
     // the one thing they could not.
     "cd.public.doneBody":
       "Skapa ett kandidatkonto för att spara resultatet och fortsätta bygga din karriärprofil. Dina svar ligger kvar medan du gör det.",
-    "cd.public.createAccountToSave": "Skapa konto och spara resultatet",
+    "cd.public.createAccountToSave": "Skapa konto och spara min karriäranalys",
     "cd.public.haveAccount": "Har du redan ett konto? Logga in",
     "cd.public.signInToSave": "Spara din karriärresa",
-    "cd.public.saveNow": "Spara i din karriärresa",
+    "cd.public.saveNow": "Spara min karriäranalys",
     "cd.public.answersKept":
       "Resultatet sparas i den här webbläsaren tills du hämtar det till ditt konto — även om bekräftelsemejlet öppnas i en ny flik.",
     // The canonical result is built server-side for signed-out visitors too,
@@ -1388,7 +1389,7 @@ export const dictionaries = {
       "Vi kunde inte hämta ditt resultat just nu. Dina svar finns kvar — försök igen.",
     "cd.public.retryResult": "Försök igen",
     "cd.public.downloadResult": "Ladda ner resultat",
-    "cd.public.shareResult": "Dela resultat",
+    "cd.public.shareResult": "Dela din karriärinriktning",
     "cd.public.shareTitle": "Min Security Career DNA",
     "cd.public.shareText":
       "Jag gjorde precis CQrityjobs karriärvägledning inom säkerhet och fick reda på min Security Career DNA. Utforska själv:",
@@ -1406,11 +1407,11 @@ export const dictionaries = {
     // copy; this is only the sentence around it.
     "cd.public.factTimeBody":
       "Du kan pausa och fortsätta i samma flik. Det finns ingen tidsgräns per fråga.",
-    "cd.public.introEyebrow": "Karriärvägledning",
+    "cd.public.introEyebrow": "Career Discovery",
     "cd.public.introFactsTitle": "Innan du börjar",
-    "cd.public.factQuestions": "28 frågor",
+    "cd.public.factQuestions": "{n} frågor",
     "cd.public.factStages":
-      "2 om din situation · 22 som bygger ditt Security Career DNA · 4 om din inriktning",
+      "{context} om din situation · {core} som bygger ditt Security Career DNA · {adaptive} om din inriktning",
     "cd.public.factNoJudgement": "Inga rätta eller felaktiga svar",
     "cd.public.factNoJudgementBody":
       "Det är ingen bedömning av din kompetens eller anställningsbarhet.",
@@ -1569,8 +1570,6 @@ export const dictionaries = {
     "sca.landing.lead":
       "En strukturerad karriärbedömning som hjälper dig utforska roller inom säkerhet — baserad på dina intressen, styrkor och sätt att arbeta.",
     "sca.landing.point.time": "Cirka 12–15 minuter",
-    "sca.landing.point.free": "Kostnadsfri",
-    "sca.landing.point.noaccount": "Inget konto krävs",
     "sca.landing.point.guidance": "Personlig karriärvägledning",
     "sca.landing.cta.start": "Starta bedömningen",
     "sca.landing.cta.how": "Så fungerar det",
@@ -1585,7 +1584,6 @@ export const dictionaries = {
     "sca.intro.body":
       "Bedömningen utvärderar intressen, styrkor och föredragna sätt att arbeta. Den avgör inte om någon är lämplig för reglerade yrken.",
     "sca.intro.stat.time": "Tid",
-    "sca.intro.stat.time.value": "≈ 5 min",
     "sca.intro.stat.questions": "Antal frågor",
     "sca.intro.stat.privacy": "Data",
     "sca.intro.stat.privacy.value": "Sparas inte",
@@ -3295,7 +3293,7 @@ export const dictionaries = {
     "sca.next.jobs.body": "Se jobbmöjligheter inom säkerhetsbranschen.",
     "sca.next.guide.title": "Lär dig om yrket",
     "sca.next.guide.body": "Fördjupa dig i din främsta karriärmatchning.",
-    "sca.next.profile.title": "Skapa en gratis profil",
+    "sca.next.profile.title": "Skapa en profil",
     "sca.next.profile.body": "Spara resultat, följ utveckling och möt arbetsgivare.",
     "sca.next.retake": "Gör om bedömningen",
     "sca.hero.title": "Din möjliga väg inom säkerhet",
@@ -3414,15 +3412,14 @@ export const dictionaries = {
     // these strings — that is why several keys read as a bare noun.
 
     // § 1 — Hero
-    "cc.hero.eyebrow": "Yrkesguider · Karriärvägar · Karriärtest",
+    "cc.hero.eyebrow": "Karriärcenter",
     "cc.hero.title": "Utforska yrken och hitta din nästa karriärväg",
     "cc.hero.name": "Karriärcenter",
     "cc.hero.lead":
-      "Här får du veta vad yrkena inom säkerhetsbranschen faktiskt innebär, vad som krävs för att komma in i dem och vilket steg som är rimligt för dig härnäst.",
-    "cc.hero.cta.test": "Starta karriärtestet — ca 5 min, inget konto",
+      "Läs om säkerhetsyrken, deras krav och möjliga nästa steg. Utgå från ditt nuvarande yrke, din sparade karriäranalys eller hela yrkeskatalogen.",
     "cc.hero.cta.explore": "Utforska alla yrken",
     "cc.hero.cta.personal": "Utgå från mitt resultat",
-    "cc.hero.trust": "Kostnadsfritt. Ingen bedömning av din kompetens eller anställningsbarhet.",
+    "cc.hero.trust": "Ingen bedömning av din kompetens eller anställningsbarhet.",
     "cc.hero.fact.guides": "färdiga yrkesguider",
     "cc.hero.fact.sources.title": "Källhänvisade och granskade",
     "cc.hero.fact.sources.body": "Varje guide anger sina källor och datumet den senast granskades.",
@@ -3447,7 +3444,7 @@ export const dictionaries = {
     "cc.where.org.cta": "Se hur ni kan bedöma säkerhetskompetens",
 
     // § 3 — Karriärtestet
-    "cc.test.eyebrow": "Karriärtest",
+    "cc.test.eyebrow": "Karriäranalys",
     "cc.test.title": "Vet du inte var du passar in? Börja här.",
     "cc.test.body":
       "Frågorna handlar om hur du föredrar att arbeta. Du får en karriärprofil och tydliga yrkesförslag att läsa vidare om. Inga rätta eller felaktiga svar — det är ingen bedömning av din kompetens eller anställningsbarhet.",
@@ -3455,7 +3452,7 @@ export const dictionaries = {
     "cc.test.fact.time": "Cirka 12–15 minuter",
     "cc.test.fact.account": "Inget konto krävs",
     "cc.test.fact.noright": "Inga rätta eller felaktiga svar",
-    "cc.test.cta": "Starta karriärtestet",
+    "cc.test.cta": "Starta karriäranalysen",
 
     // § 4 — Utforska yrken
     "cc.explore.title": "Utforska yrken",
@@ -3523,7 +3520,7 @@ export const dictionaries = {
     "cc.trust.regulatory.body":
       "Där ett yrke är reglerat länkar vi till lagtexten eller myndigheten, inte till vår egen sammanfattning.",
     "cc.trust.closing":
-      "Innehållet är vägledning och utbildningsmaterial. Formella krav kan förändras och ska alltid kontrolleras mot aktuell myndighets- eller arbetsgivarinformation.",
+      "Yrkesinformationen är vägledning. Krav kan ändras och ska kontrolleras mot aktuell myndighets- och arbetsgivarinformation.",
 
     // ── Yrkesguide ──────────────────────────────────────────────────────
     "cc.p.fact.family": "Yrkesfamilj",
@@ -3567,7 +3564,7 @@ export const dictionaries = {
     "cc.p.reviewed": "Senast granskad",
     "cc.p.jurisdiction": "Gäller för",
     "cc.p.disclaimer":
-      "Innehållet är vägledning och utbildningsmaterial. Formella krav kan förändras och ska alltid kontrolleras mot aktuell myndighets- eller arbetsgivarinformation.",
+      "Yrkesinformationen är vägledning. Krav kan ändras och ska kontrolleras mot aktuell myndighets- och arbetsgivarinformation.",
     "cc.p.unavailable.title": "Den här yrkesguiden är inte publicerad ännu.",
     "cc.p.unavailable.body":
       "Vi publicerar en guide först när den har källhänvisat innehåll, angiven jurisdiktion och ett granskningsdatum. Tills dess visar vi ingenting hellre än något ofärdigt.",
@@ -3618,7 +3615,7 @@ export const dictionaries = {
     "cc.entry.fromProfession.title": "Jag vet vilket yrke jag har",
     "cc.entry.fromProfession.body":
       "Läs om ditt yrke och se vilka nästa steg som finns registrerade därifrån.",
-    "cc.entry.fromAnalysis.title": "Ditt rekommenderade yrke",
+    "cc.entry.fromAnalysis.title": "Ditt främsta yrkesförslag",
     "cc.entry.fromAnalysis.body": "Se yrket som din karriäranalys rankade högst, och varför.",
     "cc.entry.cta": "Utforska vägar",
     "cc.path.eyebrow": "Från ditt yrke",
@@ -3626,12 +3623,12 @@ export const dictionaries = {
     "cc.path.titleFor": "Vägar från {role}",
     "cc.path.subtitle":
       "Välj yrket du arbetar i för att läsa om det och se vilka nästa steg som finns registrerade därifrån. Stegen utgår från yrket du arbetar i, inte från karriäranalysen.",
-    "cc.path.source.profile": "Utgår från yrket i din profil",
-    "cc.path.source.selected": "Utgår från yrket du valde här",
+    "cc.path.source.profile": "Yrke från din profil",
+    "cc.path.source.selected": "Yrke du valt att utforska",
     "cc.path.select.label": "Vilket yrke arbetar du i i dag?",
     "cc.path.select.none": "Välj yrke",
     "cc.path.select.help":
-      "Valet ändrar inte din profil. Det sparas bara i sidans adress, så du kan dela länken eller byta yrke när du vill.",
+      "Valet här används för att utforska yrket och möjliga nästa steg. Det ändrar inte yrket i din profil.",
     "cc.path.select.change": "Byt yrke",
     "cc.path.none": "Vi har inga registrerade riktningar från det yrket ännu.",
     "cc.path.notEligibility":
@@ -3652,7 +3649,7 @@ export const dictionaries = {
     "cc.back.profession": "Tillbaka till föregående yrke",
     "cc.info.read": "Läs om {role}",
     "cc.info.none": "Det finns ingen publicerad information om det här yrket ännu.",
-    "cc.jobs.for": "Se lediga jobb som {role}",
+    "cc.jobs.for": "Se jobb som {role}",
     "cc.jobs.closed":
       "Jobbsökningen på CQrityjob är inte öppen ännu. Yrkesinformationen ovan gäller oavsett.",
     "cc.nav.onPage": "På den här sidan",
@@ -3674,17 +3671,17 @@ export const dictionaries = {
     "cc.cat.missing.body":
       "Yrket finns inte bland de granskade uppgifterna i vår yrkeskatalog. Vi visar hellre ingenting än information om ett annat yrke.",
     "cc.cat.notice":
-      "Det här är en sammanfattning från CQrityjobs granskade yrkeskatalog. En fullständig yrkesguide för yrket är inte publicerad ännu.",
-    "cc.cat.about.empty": "Katalogen har ingen längre beskrivning av yrket ännu.",
+      "Det här är en sammanfattning från yrkeskatalogen. En fullständig yrkesguide är inte publicerad ännu.",
+    "cc.cat.about.empty": "En längre beskrivning av yrket saknas ännu.",
     "cc.cat.formal.empty":
-      "Inga formella krav är registrerade i katalogen för det här yrket. Det betyder inte att arbetsgivare saknar krav — kontrollera alltid annonsen och aktuell myndighetsinformation.",
+      "Inga formella krav är registrerade här. Kontrollera alltid aktuella krav hos ansvarig myndighet och i jobbannonsen.",
     "cc.cat.formal.boundary":
       "Kraven beskriver yrket, inte dig. CQrityjob prövar inte om du uppfyller dem — det gör regelverket och arbetsgivaren.",
     "cc.cat.education.empty":
       "Katalogen har inga registrerade utbildningar eller certifieringar för det här yrket ännu.",
     "cc.cat.next.subtitle": "Kopplingar mellan yrken som är registrerade i yrkeskatalogen.",
     "cc.cat.next.empty":
-      "Det finns inga dokumenterade karriärsteg från det här yrket i katalogen ännu. Det betyder inte att möjligheterna saknas — bara att vi inte har granskat några.",
+      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
     "cc.cat.kind.promotion": "Befordran",
     "cc.cat.kind.specialisation": "Specialisering",
     "cc.cat.kind.pivot": "Byte av inriktning",
@@ -3696,13 +3693,12 @@ export const dictionaries = {
     "cc.entry.fromProfession.cta": "Välj ditt yrke",
     "cc.entry.fromAnalysis.cta": "Se din rekommendation",
     "cc.entry.guidance.title": "Hjälp mig välja yrke",
-    "cc.entry.guidance.body":
-      "Gör den kostnadsfria karriäranalysen och få ett rekommenderat yrke att läsa vidare om.",
+    "cc.entry.guidance.body": "Gör karriäranalysen och få yrkesförslag att utforska vidare.",
     "cc.entry.guidance.cta": "Gör karriäranalysen",
-    "cc.me.primary.badge": "Högst rankat i din analys",
+    "cc.me.primary.badge": "Ditt främsta yrkesförslag",
     "cc.me.why": "Därför:",
     "cc.me.traits": "Det som pekade hit",
-    "cc.me.alternatives": "Andra yrken i din analys",
+    "cc.me.alternatives": "Andra yrken att utforska",
     "cc.me.sameAsSaved": "Det här är också yrket du har sparat i din profil.",
     "cc.me.allIndicative":
       "Inget yrke stack ut tydligt i din analys. Ordningen visar vilka yrken som låg närmast dina svar — se dem som riktningar att undersöka.",
@@ -3729,7 +3725,7 @@ export const dictionaries = {
     "cc.path.next.cta": "Se möjliga nästa steg",
     "cc.path.next.title": "Möjliga nästa steg från {role}",
     "cc.path.next.empty":
-      "Det finns inga dokumenterade karriärsteg från {role} i vår katalog ännu. Det betyder inte att möjligheterna saknas — bara att vi inte har granskat några än.",
+      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
     "cc.path.next.empty.explore": "Utforska yrkeskatalogen",
     "cc.path.more.count": "Se alla {n} nästa steg i yrkesguiden",
     "cc.explore.showAll": "Visa alla yrken",
@@ -3757,7 +3753,7 @@ export const dictionaries = {
     "cc.me.eyebrow": "Din riktning",
     "cc.me.title": "Utifrån din karriäranalys",
     "cc.me.subtitle":
-      "Yrkena nedan kommer från din egen karriäranalys. De är vägledning om riktning — inte ett besked om att du är lämplig eller behörig.",
+      "Baserat på din sparade karriäranalys. Läs om yrket, varför det föreslås och vilka krav som gäller.",
     "cc.me.completed": "Analys genomförd",
     "cc.me.rank": "Rekommendation",
     "cc.me.reason.ranked": "Din karriäranalys rankade det här yrket högst av de yrken den prövade.",
@@ -3776,18 +3772,19 @@ export const dictionaries = {
     "cc.me.invite.title": "Vet du inte var du passar in?",
     "cc.me.invite.body":
       "Karriäranalysen ger dig yrkesförslag att läsa vidare om. Den bedömer inte din kompetens och ger varken godkänt eller underkänt.",
+    "cc.me.none.body":
+      "Du har ingen sparad karriäranalys ännu. Utforska yrken direkt eller gör analysen för att få yrkesförslag utifrån dina svar.",
     "cc.me.invite.signedout":
       "Har du gjort analysen tidigare? Logga in så visas ditt resultat här.",
     "cc.me.invite.cta": "Gör karriäranalysen",
     "cc.me.invite.secondary": "Utforska alla yrken i stället",
-    "cc.me.unreadable.title": "Vi kan inte läsa din senaste analys just nu",
+    "cc.me.unreadable.title": "Din karriäranalys kunde inte hämtas just nu",
     "cc.me.unreadable.body":
-      "Resultatet finns kvar — det är läsningen som inte gick igenom. Försök igen, eller öppna din analyshistorik.",
+      "Försök igen. Resultatet finns kvar — det är hämtningen som inte gick igenom. Du kan också öppna din analyshistorik.",
     "cc.me.unreadable.retry": "Försök igen",
     "cc.me.unreadable.history": "Se mina analyser",
-    "cc.me.noroles.title": "Din analys pekar ut riktningar, inte enskilda yrken",
-    "cc.me.noroles.body":
-      "Den version du gjorde namnger karriärområden i stället för yrken. Öppna resultatet för att se dem, eller utforska yrkena här.",
+    "cc.me.noroles.title": "Din sparade analys visar yrkesområden",
+    "cc.me.noroles.body": "Utforska yrken inom området för att läsa vidare.",
 
     // ── Yrkeskort (§3C) ─────────────────────────────────────────────────
     "cc.card.cta": "Se yrket",
@@ -3825,7 +3822,8 @@ export const dictionaries = {
     "cc.p.next.title": "Möjliga nästa karriärsteg",
     "cc.p.next.subtitle":
       "Stegen bygger på registrerade kopplingar mellan yrkena. De är exempel på vad som är möjligt — inte en ordning du måste följa.",
-    "cc.p.next.none": "Inga nästa steg är registrerade för det här yrket ännu.",
+    "cc.p.next.none":
+      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
     "cc.p.prev.title": "Vanliga vägar hit",
     "cc.p.regulatory.boundary": "Avgränsning",
     "cc.p.education.title": "Utbildning och behörighet",
@@ -6846,7 +6844,7 @@ export const dictionaries = {
     "sendTest.cannotSend": "Välj en nivå som har ett test att skicka.",
     "sendTest.sent.title": "Testet är skickat",
     "sendTest.sent.body":
-      "Kandidaten ser testet i sitt konto under Tester & utveckling och kan börja direkt. Ni följer läget här och i Tester & bedömningar.",
+      "Kandidaten ser testet i sitt konto under Tester och utveckling och kan börja direkt. Ni följer läget här och i Tester & bedömningar.",
     "sendTest.sent.setup":
       "Upplägget (nivå och rollprofil) är sparat, så intervjuförberedelsen efter testet behöver inget nytt val.",
     "sendTest.sent.noSetup":
@@ -8823,7 +8821,7 @@ export const dictionaries = {
     "nav.professionsAndPaths": "Professions and career paths",
     "nav.securityPassport": "Security Passport",
     "nav.career": "Career",
-    "nav.testsAndDevelopment": "Tests & development",
+    "nav.testsAndDevelopment": "Assessments and development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
     "nav.menu.open": "Open menu",
@@ -8837,6 +8835,8 @@ export const dictionaries = {
     "meta.home.description":
       "Bring credentials together in Security Passport, explore career paths and jobs, and work with security analysis, risks and preparedness evidence in CQrityjob.",
     "meta.about.title": "About CQrityjob – security work, credentials and careers",
+    "meta.careerCenter.title": "Security professions and career paths – CQrityjob",
+    "meta.careerDiscovery.title": "Career Discovery – your career analysis – CQrityjob",
 
     "cta.passport": "Create my Security Passport",
     "cta.assessment": "Start the Career Analysis",
@@ -9616,8 +9616,6 @@ export const dictionaries = {
     "lang.switch": "Language",
 
     "sca.meta.title": "Security Career Assessment — CQrityjob",
-    "sca.meta.desc":
-      "Discover which security careers may suit you. Free, about 12–15 minutes, no account required.",
     "sca.badge": "Career guidance",
     "sca.landing.title": "Discover which security careers may suit you.",
     // ---- Security Career Discovery v3 (internal test) ----
@@ -9685,7 +9683,7 @@ export const dictionaries = {
       "Profession matching is not part of this version of the report. It is added once the profession profiles are calibrated and reviewed.",
     "careerDiscovery.report.v31.rec.title": "Your recommended career direction",
     "careerDiscovery.report.v31.rec.lede":
-      "Based on your answers these professions are the closest, in order. Your Security Career DNA below is the evidence that produced that order.",
+      "The suggestions are based on your answers. They describe possible directions to explore, not a determination of your competence or eligibility.",
     "careerDiscovery.report.v31.rec.rank1": "Strongest recommendation",
     "careerDiscovery.report.v31.rec.traitsLabel": "What in your Career DNA contributes most",
     "careerDiscovery.report.v31.rec.alternativesTitle": "Next strongest alternatives",
@@ -9719,10 +9717,10 @@ export const dictionaries = {
     "careerDiscovery.report.v31.educationTitle": "Education and certifications",
     "careerDiscovery.report.v31.pathwayTitle": "Possible path",
     "careerDiscovery.report.v31.currentJobsInDirection": "Current jobs in this career direction",
-    "careerDiscovery.report.v31.currentJobsShort": "Current jobs",
-    "careerDiscovery.report.v31.exploreCareer": "Explore career",
+    "careerDiscovery.report.v31.currentJobsShort": "See relevant jobs",
+    "careerDiscovery.report.v31.exploreCareer": "Read about the profession",
     "careerDiscovery.report.v31.howDoIGetThere": "How do I get there?",
-    "careerDiscovery.report.v31.whyThisAppeared": "Why this appeared",
+    "careerDiscovery.report.v31.whyThisAppeared": "Why this role is suggested",
     "careerDiscovery.report.v31.closeDetail": "Close",
     "careerDiscovery.report.v31.moveForward.title": "What could help you move forward?",
     "careerDiscovery.report.v31.moveForward.intro":
@@ -9826,7 +9824,7 @@ export const dictionaries = {
     "careerDiscovery.report.development.title": "Development areas",
     "careerDiscovery.report.nextSteps.title": "Possible next steps",
     "careerDiscovery.report.method.title": "How this result was produced",
-    "careerDiscovery.report.header.product": "Security Career Discovery",
+    "careerDiscovery.report.header.product": "Your career analysis",
     "careerDiscovery.report.header.internalTest":
       "Internal test version. The content is authored but not yet reviewed by specialists. This is guidance to support a conversation and your own decisions — not a test, not a judgement about employability, and not a psychological assessment. The result reflects the answers you gave on this occasion.",
     "careerDiscovery.report.actions.myCareer": "Go to My Career",
@@ -9864,17 +9862,17 @@ export const dictionaries = {
       "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "This report was saved in an earlier format. Open the full report to see its contents.",
-    "cd.public.loading": "Preparing the assessment…",
-    "cd.public.unavailableTitle": "The assessment isn't open yet",
+    "cd.public.loading": "Preparing the career analysis…",
+    "cd.public.unavailableTitle": "The career analysis is not open right now",
     "cd.public.unavailableBody":
-      "The updated version of Security Career Discovery is going through review before it opens to everyone. We'll open it as soon as that review is complete.",
+      "The updated career analysis is being reviewed before it opens to everyone. We will open it as soon as that review is complete.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
-    "cd.public.introTitle": "Security Career Discovery",
+    "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
-      "28 questions about how you prefer to work: two about where you are now, 22 that build your Security Career DNA, and four that follow from where you are. There are no right or wrong answers, and this is not a judgement of your competence or employability.",
+      "Answer questions about how you prefer to work and what motivates you. Get a career analysis with explained role suggestions to explore further.",
     "cd.public.introNoAccount":
       "You don't need an account to start. Your answers stay in this tab, and you only sign in when you want to save the result.",
-    "cd.public.start": "Start the assessment",
+    "cd.public.start": "Start the career analysis",
     "cd.public.progress": "Question",
     "cd.public.stageContext": "Where you are",
     "cd.public.stageCareerDna": "Security Career DNA",
@@ -9888,10 +9886,10 @@ export const dictionaries = {
     "cd.public.doneTitle": "You've answered every question",
     "cd.public.doneBody":
       "Create a candidate account to save your result and continue building your career profile. Your answers stay put while you do.",
-    "cd.public.createAccountToSave": "Create account and save my result",
+    "cd.public.createAccountToSave": "Create an account and save my career analysis",
     "cd.public.haveAccount": "Already have an account? Log in",
     "cd.public.signInToSave": "Save your Career Journey",
-    "cd.public.saveNow": "Save to your Career Journey",
+    "cd.public.saveNow": "Save my career analysis",
     "cd.public.answersKept":
       "Your result is kept in this browser until you claim it to your account — including when the confirmation email opens in a new tab.",
     "cd.public.buildingResult": "Putting your result together…",
@@ -9899,7 +9897,7 @@ export const dictionaries = {
       "We couldn't load your result just now. Your answers are safe — please try again.",
     "cd.public.retryResult": "Try again",
     "cd.public.downloadResult": "Download result",
-    "cd.public.shareResult": "Share result",
+    "cd.public.shareResult": "Share your career direction",
     "cd.public.shareTitle": "My Security Career DNA",
     "cd.public.shareText":
       "I just took CQrityjob's security career assessment and found out my Security Career DNA. Try it yourself:",
@@ -9910,16 +9908,16 @@ export const dictionaries = {
     "cd.public.failedBody":
       "Something went wrong while saving. Your answers are still here — please try again.",
     "cd.public.retry": "Try again",
-    "cd.public.shellEyebrow": "Security Career Discovery",
+    "cd.public.shellEyebrow": "Your security career",
     "cd.public.exit": "Exit assessment",
     "cd.public.of": "of",
     "cd.public.factTimeBody":
       "You can pause and continue in the same tab. There is no time limit on any question.",
-    "cd.public.introEyebrow": "Career guidance",
+    "cd.public.introEyebrow": "Career Discovery",
     "cd.public.introFactsTitle": "Before you begin",
-    "cd.public.factQuestions": "28 questions",
+    "cd.public.factQuestions": "{n} questions",
     "cd.public.factStages":
-      "2 about where you are · 22 that build your Security Career DNA · 4 about your direction",
+      "{context} about where you are · {core} that build your Security Career DNA · {adaptive} about your direction",
     "cd.public.factNoJudgement": "No right or wrong answers",
     "cd.public.factNoJudgementBody": "This is not a judgement of your competence or employability.",
     "cd.public.factNoAccountShort": "No account needed to begin",
@@ -10051,8 +10049,6 @@ export const dictionaries = {
     "sca.landing.lead":
       "A structured career assessment that helps you explore security roles — based on your interests, strengths and preferred ways of working.",
     "sca.landing.point.time": "About 12–15 minutes",
-    "sca.landing.point.free": "Free to take",
-    "sca.landing.point.noaccount": "No registration required",
     "sca.landing.point.guidance": "Personalized career guidance",
     "sca.landing.cta.start": "Start assessment",
     "sca.landing.cta.how": "How it works",
@@ -10067,7 +10063,6 @@ export const dictionaries = {
     "sca.intro.body":
       "The assessment evaluates interests, strengths and preferred ways of working. It does not determine whether someone is suitable for regulated professions.",
     "sca.intro.stat.time": "Time",
-    "sca.intro.stat.time.value": "≈ 5 min",
     "sca.intro.stat.questions": "Questions",
     "sca.intro.stat.privacy": "Data",
     "sca.intro.stat.privacy.value": "Not stored",
@@ -11684,7 +11679,7 @@ export const dictionaries = {
     "sca.results.section.model_note": "About this model",
     "sca.results.regulated": "Regulated role — eligibility varies",
     "sca.next.title": "Continue your journey",
-    "sca.next.profile.title": "Create a free profile",
+    "sca.next.profile.title": "Create a profile",
     "sca.next.profile.body": "Save results, track progress and meet employers.",
     "sca.next.retake": "Retake the assessment",
     "sca.next.explore.title": "Explore careers",
@@ -11800,15 +11795,14 @@ export const dictionaries = {
     // for why no number is written into any of these strings.
 
     // § 1 — Hero
-    "cc.hero.eyebrow": "Profession guides · Career routes · Career test",
+    "cc.hero.eyebrow": "Career Center",
     "cc.hero.title": "Explore professions and find your next career step",
     "cc.hero.name": "Career Center",
     "cc.hero.lead":
-      "Find out what the professions in the security industry actually involve, what it takes to get into them, and which step makes sense for you next.",
-    "cc.hero.cta.test": "Start the career test — about 5 min, no account",
+      "Explore security professions, their requirements and possible next steps. Start with your current profession, your saved career analysis or the full profession catalogue.",
     "cc.hero.cta.explore": "Explore all professions",
     "cc.hero.cta.personal": "Start from my result",
-    "cc.hero.trust": "Free. Not an assessment of your competence or your employability.",
+    "cc.hero.trust": "Not an assessment of your competence or your employability.",
     "cc.hero.fact.guides": "completed profession guides",
     "cc.hero.fact.sources.title": "Sourced and reviewed",
     "cc.hero.fact.sources.body":
@@ -11835,7 +11829,7 @@ export const dictionaries = {
     "cc.where.org.cta": "See how you can assess security competence",
 
     // § 3 — The career test
-    "cc.test.eyebrow": "Career test",
+    "cc.test.eyebrow": "Career analysis",
     "cc.test.title": "Not sure where you fit? Start here.",
     "cc.test.body":
       "The questions are about how you prefer to work. You get a career profile and concrete professions to read more about. There are no right or wrong answers — this is not an assessment of your competence or your employability.",
@@ -11843,7 +11837,7 @@ export const dictionaries = {
     "cc.test.fact.time": "About 12–15 minutes",
     "cc.test.fact.account": "No account required",
     "cc.test.fact.noright": "No right or wrong answers",
-    "cc.test.cta": "Start the career test",
+    "cc.test.cta": "Start the career analysis",
 
     // § 4 — Explore professions
     "cc.explore.title": "Explore professions",
@@ -11911,7 +11905,7 @@ export const dictionaries = {
     "cc.trust.regulatory.body":
       "Where a profession is regulated we link to the legislation or the authority, not to our own summary.",
     "cc.trust.closing":
-      "This content is guidance and educational material. Formal requirements can change and should always be checked against current information from the relevant authority or employer.",
+      "Profession information is guidance. Requirements can change and should be checked against current authority and employer information.",
 
     // ── Profession guide ────────────────────────────────────────────────
     "cc.p.fact.family": "Profession family",
@@ -11955,7 +11949,7 @@ export const dictionaries = {
     "cc.p.reviewed": "Last reviewed",
     "cc.p.jurisdiction": "Applies to",
     "cc.p.disclaimer":
-      "This content is guidance and educational material. Formal requirements can change and should always be checked against current information from the relevant authority or employer.",
+      "Profession information is guidance. Requirements can change and should be checked against current authority and employer information.",
     "cc.p.unavailable.title": "This profession guide is not published yet.",
     "cc.p.unavailable.body":
       "We publish a guide only once it has sourced content, a stated jurisdiction and a review date. Until then we would rather show nothing than something unfinished.",
@@ -12004,7 +11998,7 @@ export const dictionaries = {
     "cc.entry.fromProfession.title": "I know my profession",
     "cc.entry.fromProfession.body":
       "Read about your profession and see which next steps are recorded from it.",
-    "cc.entry.fromAnalysis.title": "Your recommended profession",
+    "cc.entry.fromAnalysis.title": "Your leading role suggestion",
     "cc.entry.fromAnalysis.body":
       "See the profession your career analysis ranked highest, and why.",
     "cc.entry.cta": "Explore paths",
@@ -12013,12 +12007,12 @@ export const dictionaries = {
     "cc.path.titleFor": "Paths from {role}",
     "cc.path.subtitle":
       "Choose the role you work in to read about it and see which next steps are recorded from there. The steps start from the role you work in, not from the career analysis.",
-    "cc.path.source.profile": "Based on the profession in your profile",
-    "cc.path.source.selected": "Based on the role you selected here",
-    "cc.path.select.label": "Which profession do you work in today?",
+    "cc.path.source.profile": "Profession from your profile",
+    "cc.path.source.selected": "Profession you selected to explore",
+    "cc.path.select.label": "What is your current profession?",
     "cc.path.select.none": "Choose a profession",
     "cc.path.select.help":
-      "The choice does not change your profile. It is only kept in the page address, so you can share the link or change the role whenever you like.",
+      "This selection is used to explore the profession and possible next steps. It does not change the profession in your profile.",
     "cc.path.select.change": "Change role",
     "cc.path.none": "We have no recorded directions out of that profession yet.",
     "cc.path.notEligibility":
@@ -12039,7 +12033,7 @@ export const dictionaries = {
     "cc.back.profession": "Back to the previous profession",
     "cc.info.read": "Read about {role}",
     "cc.info.none": "There is no published information about this profession yet.",
-    "cc.jobs.for": "See open jobs as {role}",
+    "cc.jobs.for": "See jobs for {role}",
     "cc.jobs.closed":
       "The CQrityjob job board is not open yet. The profession information above applies regardless.",
     "cc.nav.onPage": "On this page",
@@ -12061,17 +12055,17 @@ export const dictionaries = {
     "cc.cat.missing.body":
       "The profession is not among the reviewed entries in our catalogue. We would rather show nothing than information about a different profession.",
     "cc.cat.notice":
-      "This is a summary from CQrityjob's reviewed profession catalogue. A full profession guide has not been published for it yet.",
-    "cc.cat.about.empty": "The catalogue has no longer description of this profession yet.",
+      "This is a summary from the profession catalogue. A full profession guide has not been published yet.",
+    "cc.cat.about.empty": "A detailed description of this profession is not yet available.",
     "cc.cat.formal.empty":
-      "No formal requirements are recorded in the catalogue for this profession. That does not mean employers have none — always check the advert and current information from the authorities.",
+      "No formal requirements are recorded here. Always check current requirements with the relevant authority and in the job advert.",
     "cc.cat.formal.boundary":
       "The requirements describe the profession, not you. CQrityjob does not test whether you meet them — regulation and the employer do.",
     "cc.cat.education.empty":
       "The catalogue has no recorded education or certifications for this profession yet.",
     "cc.cat.next.subtitle": "Links between professions recorded in the profession catalogue.",
     "cc.cat.next.empty":
-      "No career steps from this profession are documented in the catalogue yet. That does not mean there are no opportunities — only that we have not reviewed any.",
+      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
     "cc.cat.kind.promotion": "Promotion",
     "cc.cat.kind.specialisation": "Specialisation",
     "cc.cat.kind.pivot": "Change of direction",
@@ -12084,12 +12078,12 @@ export const dictionaries = {
     "cc.entry.fromAnalysis.cta": "See your recommendation",
     "cc.entry.guidance.title": "Help me choose a profession",
     "cc.entry.guidance.body":
-      "Take the free career analysis and get a recommended profession to read more about.",
+      "Take the career analysis and get role suggestions to explore further.",
     "cc.entry.guidance.cta": "Take the career analysis",
-    "cc.me.primary.badge": "Ranked highest in your analysis",
+    "cc.me.primary.badge": "Your leading role suggestion",
     "cc.me.why": "Why:",
     "cc.me.traits": "What pointed here",
-    "cc.me.alternatives": "Other professions in your analysis",
+    "cc.me.alternatives": "Other professions to explore",
     "cc.me.sameAsSaved": "This is also the profession saved in your profile.",
     "cc.me.allIndicative":
       "No profession stood out clearly in your analysis. The order shows which professions were closest to your answers — treat them as directions to explore.",
@@ -12116,7 +12110,7 @@ export const dictionaries = {
     "cc.path.next.cta": "See possible next steps",
     "cc.path.next.title": "Possible next steps from {role}",
     "cc.path.next.empty":
-      "No career steps from {role} are documented in our catalogue yet. That does not mean there are no opportunities — only that we have not reviewed any yet.",
+      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
     "cc.path.next.empty.explore": "Explore the profession catalogue",
     "cc.path.more.count": "See all {n} next steps in the profession guide",
     "cc.explore.showAll": "Show all professions",
@@ -12140,7 +12134,7 @@ export const dictionaries = {
     "cc.me.eyebrow": "Your direction",
     "cc.me.title": "Based on your career analysis",
     "cc.me.subtitle":
-      "The professions below come from your own career analysis. They are guidance on direction — not a decision that you are suitable or eligible.",
+      "Based on your saved career analysis. Read about the role, why it is suggested and which requirements apply.",
     "cc.me.completed": "Analysis completed",
     "cc.me.rank": "Recommendation",
     "cc.me.reason.ranked":
@@ -12160,17 +12154,18 @@ export const dictionaries = {
     "cc.me.invite.title": "Not sure where you fit?",
     "cc.me.invite.body":
       "The career analysis gives you occupations to read more about. It does not assess your competence and produces no pass or fail.",
+    "cc.me.none.body":
+      "You do not have a saved career analysis yet. Explore professions directly or take the analysis to get role suggestions based on your answers.",
     "cc.me.invite.signedout": "Taken it before? Sign in and your result appears here.",
     "cc.me.invite.cta": "Take the career analysis",
     "cc.me.invite.secondary": "Explore all professions instead",
-    "cc.me.unreadable.title": "We cannot read your latest analysis right now",
+    "cc.me.unreadable.title": "Your career analysis could not be loaded right now",
     "cc.me.unreadable.body":
-      "The result is still there — it is the read that did not go through. Try again, or open your analysis history.",
+      "Try again. The result is still there — it is the loading that did not go through. You can also open your analysis history.",
     "cc.me.unreadable.retry": "Try again",
     "cc.me.unreadable.history": "See my analyses",
-    "cc.me.noroles.title": "Your analysis names directions rather than individual professions",
-    "cc.me.noroles.body":
-      "The version you took names career areas instead of occupations. Open the result to see them, or explore the professions here.",
+    "cc.me.noroles.title": "Your saved analysis shows career areas",
+    "cc.me.noroles.body": "Explore professions within the area to find out more.",
 
     // ── Profession card (§3C) ───────────────────────────────────────────
     "cc.card.cta": "See the profession",
@@ -12208,7 +12203,8 @@ export const dictionaries = {
     "cc.p.next.title": "Possible next career steps",
     "cc.p.next.subtitle":
       "The steps come from recorded links between the professions. They are examples of what is possible — not an order you have to follow.",
-    "cc.p.next.none": "No next steps are recorded for this profession yet.",
+    "cc.p.next.none":
+      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
     "cc.p.prev.title": "Common routes in",
     "cc.p.regulatory.boundary": "Scope",
     "cc.p.education.title": "Education and authorisation",
@@ -15160,7 +15156,7 @@ export const dictionaries = {
     "sendTest.cannotSend": "Choose a level that has a test to send.",
     "sendTest.sent.title": "The test has been sent",
     "sendTest.sent.body":
-      "The candidate sees the test in their account under Tests & development and can start right away. You follow it here and in Tests & assessments.",
+      "The candidate sees the test in their account under Assessments and development and can start right away. You follow it here and in Tests & assessments.",
     "sendTest.sent.setup":
       "The setup (level and role profile) is recorded, so the interview preparation after the test needs no second choice.",
     "sendTest.sent.noSetup":

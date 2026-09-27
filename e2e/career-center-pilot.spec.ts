@@ -308,11 +308,11 @@ test.describe("the three concepts", () => {
       "data-path-provenance",
       "profile",
     );
-    await expect(path).toContainText("Utgår från yrket i din profil");
+    await expect(path).toContainText("Yrke från din profil");
     await expect(path).toContainText("inte från karriäranalysen");
 
     // fit says its own basis, and neither is headed "recommended for you".
-    await expect(fit).toContainText("kommer från din egen karriäranalys");
+    await expect(fit).toContainText("Baserat på din sparade karriäranalys");
     await expect(page.getByText(/Rekommenderat för dig/i)).toHaveCount(0);
 
     // Neither claims eligibility.
@@ -646,7 +646,7 @@ test.describe("personal-data read states", () => {
 
     const fit = page.locator("[data-personal-direction]");
     await expect(fit).toHaveAttribute("data-personal-state", "unreadable", { timeout: 15_000 });
-    await expect(fit).toContainText("Vi kan inte läsa din senaste analys just nu");
+    await expect(fit).toContainText("Din karriäranalys kunde inte hämtas just nu");
     await expect(fit.getByRole("button", { name: "Försök igen" })).toBeVisible();
     await expect(fit).not.toContainText("Du har ingen");
     await expect(fit).not.toContainText("Vet du inte var du passar in?");
@@ -699,6 +699,8 @@ test.describe("personal-data read states", () => {
     await expect(fit).toHaveAttribute("data-personal-state", "no_result", { timeout: 15_000 });
     await expect(fit.locator("[data-personal-recommendation]")).toHaveCount(0);
     await expect(fit).toContainText("Vet du inte var du passar in?");
+    // MVP text specification §6: said in so many words, to this reader only.
+    await expect(fit).toContainText("Du har ingen sparad karriäranalys ännu.");
   });
 });
 

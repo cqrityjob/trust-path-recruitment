@@ -11,11 +11,11 @@ import {
 } from "lucide-react";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
-import { useT } from "@/i18n/context";
+import { useLocalizedHead, useT } from "@/i18n/context";
 import { CareerEntryCards } from "@/components/career-center/CareerEntryCards";
-import type { TranslationKey } from "@/i18n/dictionaries";
+import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
 import { MVP_QUESTION_COUNT } from "@/lib/career-discovery/v31/personal-layer";
-import { DURATION_CLAIM, DURATION_CLAIM_MINUTES } from "@/lib/career-discovery/v31/duration";
+import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import {
   ENTRY_LEVEL_SEARCH,
   NEXT_LEVEL_SEARCH,
@@ -124,6 +124,9 @@ import { ProfessionExplorer } from "@/components/career-center/ProfessionExplore
 // from the instrument's own `MVP_QUESTION_COUNT` and the duration from
 // `DURATION_CLAIM`, so none can drift from what a visitor would find.
 
+/** The server renders the Swedish head; see useLocalizedHead below. */
+const SV = dictionaries.sv;
+
 export const Route = createFileRoute("/career-center/")({
   head: ({ match }) => {
     // The site language lives in the client (localStorage, defaulting to sv),
@@ -132,23 +135,18 @@ export const Route = createFileRoute("/career-center/")({
     // English half of the page is fully translated; only the <head> is
     // single-language. Language-prefixed URLs and hreflang would fix that
     // properly and are a routing-wide change, deliberately not made here.
+    //
+    // MVP text specification §14: the title and description are the Career
+    // Center's own dictionary pair (the description IS the page's ingress),
+    // with no price claim. useLocalizedHead() swaps in the English pair once
+    // the client knows the reader's language.
     void match;
     return {
       meta: [
-        { title: "Karriärcenter — yrken, krav och karriärvägar | CQrityjob" },
-        {
-          name: "description",
-          content: `Källhänvisade yrkesguider för säkerhetsbranschen: vad rollerna innebär, vilka formella krav som gäller och vilka vägar som finns vidare. Kostnadsfri karriäranalys på cirka ${DURATION_CLAIM_MINUTES.low}–${DURATION_CLAIM_MINUTES.high} minuter.`,
-        },
-        {
-          property: "og:title",
-          content: "Utforska yrken och hitta din nästa karriärväg",
-        },
-        {
-          property: "og:description",
-          content:
-            "Yrkesguider, karriärvägar och en kostnadsfri karriäranalys för säkerhetsbranschen.",
-        },
+        { title: SV["meta.careerCenter.title"] },
+        { name: "description", content: SV["cc.hero.lead"] },
+        { property: "og:title", content: SV["meta.careerCenter.title"] },
+        { property: "og:description", content: SV["cc.hero.lead"] },
         { property: "og:type", content: "website" },
         { property: "og:url", content: "https://trust-path-recruitment.lovable.app/career-center" },
         { name: "twitter:card", content: "summary_large_image" },
@@ -170,6 +168,7 @@ const EXPLORER_PANEL_ID = "yrkeskatalog";
 
 function CareerCenterHub() {
   const { t, lang } = useT();
+  useLocalizedHead("meta.careerCenter.title", "cc.hero.lead");
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const track = useCareerCenterTracking();
@@ -290,7 +289,7 @@ function CareerCenterHub() {
         onAssessmentStart={() =>
           track("career_center_test_started", { surface: "hub_test_section" })
         }
-        facts={<TestFacts />}
+        facts={<TestFacts signedOut={direction.state === "anonymous"} />}
       />
     </Section>
   );
@@ -600,10 +599,15 @@ function useSettledHashScroll(settled: boolean) {
   }, [settled]);
 }
 
-/** The three facts about the career analysis, every one of them read from the
- *  instrument rather than typed into copy. Rendered only where the analysis is
- *  actually being offered — inside section 2's invitation states. */
-function TestFacts() {
+/** The facts about the career analysis, the numbers read from the instrument
+ *  rather than typed into copy. Rendered only where the analysis is actually
+ *  being offered — inside section 2's invitation states.
+ *
+ *  "Inget konto krävs" is said only to a reader who is signed out. Somebody
+ *  signed in already has an account, and their run follows a different
+ *  access mode (the tester gate), so the sentence would be a promise about
+ *  somebody else's door (MVP text specification §7). */
+function TestFacts({ signedOut }: { signedOut: boolean }) {
   const { t, lang } = useT();
   return (
     <ul className="mt-6 flex flex-wrap gap-2">
@@ -611,7 +615,7 @@ function TestFacts() {
         <span className="tabular-nums">{MVP_QUESTION_COUNT}</span> {t("cc.test.fact.questions")}
       </TestFact>
       <TestFact>{DURATION_CLAIM[lang === "en" ? "en" : "sv"]}</TestFact>
-      <TestFact>{t("cc.test.fact.account")}</TestFact>
+      {signedOut && <TestFact>{t("cc.test.fact.account")}</TestFact>}
       <TestFact>{t("cc.test.fact.noright")}</TestFact>
     </ul>
   );

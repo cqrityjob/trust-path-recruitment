@@ -808,11 +808,13 @@ for (const lang of ["sv", "en"] as const) {
 // 12. Profession guide section order
 // =======================================================================
 
-// Career steps come BEFORE education. The order is the reader's question
-// order: "where could I go from here" has to be answered before "what would I
-// have to study", or the education section is a list of courses with no
-// destination attached. Related jobs and the Passport boundary follow, then
-// the analysis, then related professions, then the sources.
+// The MVP text specification (2026-09-27) fixes one order for every
+// profession page: Om yrket → Arbetsuppgifter → Kompetenser → Krav →
+// Utbildning → Möjliga nästa steg → Lediga jobb → Källor. Education therefore
+// comes BEFORE the career steps again (the pilot pass had put it after), and
+// the catalogue summary already reads in that order. Related jobs and the
+// Passport boundary follow, then the analysis, then related professions, then
+// the sources.
 const GUIDE_SECTIONS = [
   "cc.p.about",
   "cc.p.day",
@@ -820,8 +822,8 @@ const GUIDE_SECTIONS = [
   "cc.p.competencies",
   "cc.p.formal",
   "cc.p.entry",
-  "cc.p.next.title",
   "cc.p.education.title",
+  "cc.p.next.title",
   "cc.p.act.title",
   "cc.p.test.title",
   "cc.p.related",

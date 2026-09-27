@@ -85,9 +85,13 @@ const COPY = {
   // "what have I done" and the Security Passport "what can I document and
   // share" -- and saying so here is what stops a person looking for their
   // employment history on the page that holds their name.
+  //
+  // MVP text specification §7: the ingress also says that the current
+  // profession is changed HERE — the Career Center's selector explores a
+  // profession without touching the profile.
   profilePurpose: c(
-    "Vem du är just nu: ditt namn, din yrkestitel, var du arbetar och din nuvarande situation. Uppgifterna visas i ditt CV och i ditt Security Passport.",
-    "Who you are now: your name, your professional title, where you work and your current situation. It is shown on your CV and in your Security Passport.",
+    "Håll dina person- och yrkesuppgifter aktuella. Här ändrar du också ditt nuvarande yrke.",
+    "Keep your personal and professional details up to date. You can also update your current profession here.",
   ),
 
   noHeadline: c(

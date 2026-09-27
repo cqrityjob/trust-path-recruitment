@@ -45,7 +45,9 @@ test.describe(
     async function completeAssessment(page: Page) {
       // The intro paints only after getV31Availability resolves; a cold dev
       // server takes noticeably longer than the default expect timeout.
-      const start = page.getByRole("button", { name: /Börja vägledningen|Start the assessment/ });
+      const start = page.getByRole("button", {
+        name: /Starta karriäranalysen|Start the career analysis/,
+      });
       await expect(start).toBeVisible({ timeout: 60_000 });
       await start.click();
       for (let i = 0; i < 40; i += 1) {
@@ -184,7 +186,7 @@ test.describe(
 
       // 1-4 · signed out, twenty-eight questions, a result.
       await page.goto("/security-career-assessment");
-      await expect(page.getByRole("button", { name: /Börja vägledningen/ })).toBeVisible({
+      await expect(page.getByRole("button", { name: /Starta karriäranalysen/ })).toBeVisible({
         timeout: 60_000,
       });
       await expect(page.getByText(/Du behöver inget konto för att börja/)).toBeVisible();
@@ -199,8 +201,8 @@ test.describe(
       const anonymousPattern = await page.getByTestId("cd-pattern-name").innerText();
       expect(anonymousPattern.trim().length).toBeGreaterThan(0);
 
-      // 5 · "Create account and save my result".
-      await page.getByRole("button", { name: /Skapa konto och spara resultatet/ }).click();
+      // 5 · "Create an account and save my career analysis".
+      await page.getByRole("button", { name: /Skapa konto och spara min karriäranalys/ }).click();
       await page.waitForURL(/\/signup\?/);
       const { token, raw } = await stagedClaim(page);
       const claimUrl = `/security-career-assessment?claim=${encodeURIComponent(token)}`;
@@ -274,7 +276,7 @@ test.describe(
 
       await vPage.goto("/security-career-assessment");
       await completeAssessment(vPage);
-      await vPage.getByRole("button", { name: /Skapa konto och spara resultatet/ }).click();
+      await vPage.getByRole("button", { name: /Skapa konto och spara min karriäranalys/ }).click();
       await vPage.waitForURL(/\/signup\?/);
       const staged = await stagedClaim(vPage);
       const claimUrl = `/security-career-assessment?claim=${encodeURIComponent(staged.token)}`;
@@ -324,7 +326,7 @@ test.describe(
         // copy the run actually renders rather than on the switcher's shape.
         await page.evaluate(() => window.localStorage.setItem("cqrityjob.lang", "en"));
         await page.reload();
-        await expect(page.getByRole("button", { name: /Start the assessment/ })).toBeVisible({
+        await expect(page.getByRole("button", { name: /Start the career analysis/ })).toBeVisible({
           timeout: 60_000,
         });
         await expect(
@@ -337,7 +339,9 @@ test.describe(
         });
 
         // The primary action is reachable and not clipped at 375.
-        const cta = page.getByRole("button", { name: /Create account and save my result/i });
+        const cta = page.getByRole("button", {
+          name: /Create an account and save my career analysis/i,
+        });
         await expect(cta).toBeVisible();
         const box = await cta.boundingBox();
         expect(box, "the save CTA has a box").not.toBeNull();
