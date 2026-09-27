@@ -1,0 +1,97 @@
+PostgreSQL 17.11, local loopback only; no production data.
+Full replay: 320 migrations, exit 0.
+ DB suite OK: 162 domain assertions,
+              322 Security Work assertions in each rollback round,
+              12 Security Work planted-defect controls,
+              62 Career Discovery assertions,
+              64 Career Discovery v3.1 assertions,
+              58 v3.1 completion + stability assertions,
+              28 public v3.1 flow assertions,
+              84 v3.1 personal layer assertions,
+              52 Competency Graph assertions,
+              39 Academy assertions,
+              62 Phase 1F content assertions,
+              19 Phase 2 identity assertions,
+              106 Phase 2 journey assertions,
+              105 Vaktare journey assertions,
+              34 purpose-governance assertions,
+              57 report audience assertions,
+              24 report evidence-scope assertions,
+              60 recruitment brief + interview guide assertions,
+              80 recruitment journey assertions,
+              70 lifecycle bridge assertions,
+              47 pilot security-gate assertions,
+              70 employer response-reviewer assertions,
+              36 person identity spine assertions,
+              36 workforce lifecycle E2E assertions,
+              45 content library + maturity-isolation assertions,
+              45 training delivery journey assertions,
+              18 employer people model assertions,
+              73 Role Interview Pack governance assertions,
+              85 Interview Intelligence runtime assertions,
+              99 Interview Intelligence integrity assertions,
+              75 CQrity TRUST method assertions,
+              51 rollback assertions,
+              43 application-disclosure assertions,
+              303 skill/language taxonomy assertions,
+              14 job archive assertions,
+              145 admin lifecycle assertions,
+              27 admin assignment cancellation assertions,
+              29 job lifecycle + notification assertions,
+              19 standard recruitment availability assertions,
+              60 option-order integrity assertions,
+              44 three-market foundation assertions,
+              24 Swedish truth model assertions,
+              23 UK market pack assertions,
+              17 UK title rule assertions,
+              26 Dubai market pack assertions,
+              48 internal-pilot entitlement assertions,
+              162 global certification assertions,
+              15 global certification rollback data-safety assertions,
+              24 legacy scope correction assertions,
+              12 scope disclosure boundary assertions,
+              7 rollback data-safety assertions
+              52 pilot bug fix #1 assertions,
+              55 trust boundary assertions,
+              42 trust-source containment assertions,
+              73 employer employment verification assertions,
+              8 concurrent-decision assertions,
+              117 first-merit assertions,
+              11 concurrent first-merit assertions,
+              14 two-operation first-merit race assertions,
+              4 rollback correction assertions,
+              31 E2 issuer participant-preview assertions,
+              121 employer final-report basis assertions,
+              442 BESKT governed-content assertions,
+              65 BESKT content-authoring assertions,
+              4 BESKT one-open-version race assertions,
+              8 BESKT child-write versus publication race assertions,
+              4 BESKT rollback planted-dependency assertions,
+              249 BESKT candidate-preparation assertions,
+              47 BESKT interview-case bridge assertions,
+              93 BESKT interview-conduct assertions,
+              71 BESKT prompts-and-report assertions
+====================================================
+
+Production ACL overlay:
+PASS PostgreSQL 16 or newer
+PASS 573 live policies equal migration replay, including storage
+PASS 510 production definer bodies equal replay except full-line comments
+PASS 41 production column ACLs match replay
+PASS production baseline reproduces 146 tables with client TRUNCATE
+REPRODUCED pre-fix SQL TRUNCATE as anon (rolled back, synthetic database)
+REPRODUCED pre-fix SQL TRUNCATE as authenticated (rolled back, synthetic database)
+PASS all SELECT/INSERT/UPDATE/DELETE grants preserved for all three roles
+PASS all 45 nonempty catalogues, four principals, denied mutations and destructive privileges
+PASS negative control detects an inherited PUBLIC TRUNCATE grant
+PASS production ACL overlay: security_hardening_test
+PASS production ACL overlay: scp_interview_tenant_isolation_test
+PASS production ACL overlay: scp_interview_method_library_tenant_read_test
+PASS production ACL overlay: security_passport_global_certification_test
+PASS production ACL overlay: security_passport_note_privacy_test
+PASS production ACL overlay: candidate_location_and_destinations_test
+PASS audit complete; only local database cqrity_security_access changed
+
+PASS HTTP total 209 assertions
+
+Final 45-catalogue/privilege suite (with nonempty fixtures): PostgreSQL 16.14 PASS; PostgreSQL 17.11 PASS.
