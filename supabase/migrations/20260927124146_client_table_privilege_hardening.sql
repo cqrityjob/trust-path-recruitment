@@ -1,0 +1,5 @@
+-- Hosted identity marker only: applied once via Supabase connector on 2026-09-27.
+-- Canonical SQL: 20261218090000_client_table_privilege_hardening.sql.
+-- Original ledger row preserved; canonical alias has NULL statements.
+-- Do not add executable SQL here or move canonical SQL earlier in replay order.
+-- Evidence: docs/security/2026-09-27/reconciliation/README.md.

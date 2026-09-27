@@ -222,3 +222,6 @@ observerade kopplingar och kontrollens begränsningar.
 Rollback ska normalt inte återinföra administrativa klienträttigheter. Vid ett
 belagt regressionsbehov: använd före-snapshotens specifika grants för den berörda
 relationen efter nytt godkännande; använd aldrig generell `GRANT ALL`.
+
+
+Uppföljning 2026-09-27: historiska statusuppgifter ovan ersätts av [verifierad migrationsavstämning](reconciliation/README.md). Säkerhetsfixen är applicerad och historikalias korrigerad.

@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-26",
-  "readBy": "Read-only Supabase management SQL on explicit production wrygicdfxwjnrugduxnt after PR #297 merged as cb12fcb (sp_india_national_qualifications 20261214090000, candidate_location_and_destinations 20261215090000). The ledger holds 317 rows; md5(string_agg(version||':'||name, ',' ORDER BY version)) is 42e0ff1e56bd462b91aceb01be8873bf on production and over these 317 entries, so the snapshot is the ledger verbatim. The eight functions and the approved-catalogue view the two files define match a local replay of the merged files byte for byte by md5 (see release-state.json). No hosted writes.",
+  "readAt": "2026-09-27T13:30:00Z",
+  "readBy": "Direct production read after owner-approved history-only reconciliation: 321 rows. Original 320 rows preserved, MD5 7b6bca527143c518199d6991669674d0. Canonical 20261218090000 is a NULL-statements alias of 20260927124146. See docs/security/2026-09-27/reconciliation/README.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1001,6 +1001,10 @@
       "name": "scp_interview_ai_gate_and_provenance"
     },
     {
+      "version": "20260927124146",
+      "name": "client_table_privilege_hardening"
+    },
+    {
       "version": "20260928090000",
       "name": "scp_trust_stage_english_copy"
     },
@@ -1283,6 +1287,18 @@
     {
       "version": "20261215090000",
       "name": "candidate_location_and_destinations"
+    },
+    {
+      "version": "20261216090000",
+      "name": "scp_security_manager_recruitment_content"
+    },
+    {
+      "version": "20261217090000",
+      "name": "scp_security_manager_recruitment_activation"
+    },
+    {
+      "version": "20261218090000",
+      "name": "client_table_privilege_hardening"
     }
   ]
 }

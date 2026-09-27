@@ -42,3 +42,6 @@ CI fångade även den explicita expectedPending-listan i release-frontier-check.
 Samma enda migration registreras där enligt befintlig arbetsgång. Jämförelsen
 kräver fortfarande exakt överensstämmelse; deploy-plan:gate avvisar fortfarande
 release med väntande migrationer. Inga kontroller stängs av eller hoppas över.
+
+
+Uppföljning 2026-09-27: historiska statusuppgifter ovan ersätts av [verifierad migrationsavstämning](reconciliation/README.md). Säkerhetsfixen är applicerad och historikalias korrigerad.

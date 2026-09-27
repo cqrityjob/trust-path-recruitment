@@ -438,6 +438,13 @@
   "approvedDuplicateVersions": [],
   "hostedLedgerOverrides": [
     {
+      "file": "20261218090000_client_table_privilege_hardening.sql",
+      "hostedVersion": "20260927124146",
+      "hostedName": "client_table_privilege_hardening",
+      "reason": "Applied once through Supabase connector. Original body equals canonical SHA256 480dcaf8b536efde69ce879de52f9c7a7ddb8161eadbd3390992a8c130b0fd4e. Owner-approved canonical ledger alias added 2026-09-27 with NULL statements; original row preserved. Generated local identity is comment-only; canonical SQL remains at its replay position. See docs/security/2026-09-27/reconciliation/README.md.",
+      "verifyBeforeMerge": "SELECT version,name FROM supabase_migrations.schema_migrations WHERE version IN ('20260927124146','20261218090000');"
+    },
+    {
       "file": "20260818090000_sp_phase10_self_review_and_decision_events.sql",
       "hostedVersion": "20260818090000",
       "reason": "Hosted production records Passport Phase 10 at 20260818090000. Canonical replay identity and hosted ledger identity agree. A Phase 0C rename to 20260818090001 was WRONG and has been backed out: 20260818090001 does not exist in production.",
