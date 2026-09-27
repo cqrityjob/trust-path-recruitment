@@ -8,6 +8,7 @@ import { getSecurityWorkspace } from "@/lib/security-work/security-work.function
 import type { Result, SWErrorCode, WorkspaceSnapshot } from "@/lib/security-work/types";
 import { useT } from "@/i18n/context";
 import { LoadingState, WorkButton, WorkError } from "./ui";
+import { rememberWorkspace } from "@/lib/security-work/workspace-preference";
 
 type Identity = { id: string; name: string; email: string };
 const IdentityContext = createContext<Identity | null>(null);
@@ -121,6 +122,10 @@ export function SecurityWorkspaceProvider({
   const code =
     query.error instanceof WorkFailure ? query.error.code : query.isError ? "SAVE_FAILED" : null;
   useEffect(() => {
+    if (!denied && !query.isFetching && query.isFetchedAfterMount && !code && query.data)
+      rememberWorkspace(user.id, query.data.workspace.id);
+  }, [denied, query.isFetching, query.isFetchedAfterMount, code, query.data, user.id]);
+  useEffect(() => {
     if (code === "ACCESS_DENIED") {
       setDenied(true);
       void queryClient.cancelQueries({
@@ -143,7 +148,9 @@ export function SecurityWorkspaceProvider({
           onRetry={denied ? undefined : () => void query.refetch()}
         />
         <WorkButton asChild variant="outline">
-          <Link to="/security-work">{t("sw.switch")}</Link>
+          <Link to="/security-work" search={{ choose: true }}>
+            {t("sw.switch")}
+          </Link>
         </WorkButton>
       </div>
     );

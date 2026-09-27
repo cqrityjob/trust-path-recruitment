@@ -137,10 +137,18 @@ for (const locale of ["sv", "en"] as const) {
     await navigation.locator('a[href="/security-work"]').click();
     await page.getByTestId("sw-workspace-name").fill(`Synthetic RSA ${locale}`);
     await page.getByTestId("sw-create-workspace").click();
-    await page.waitForURL(/\/security-work\/[a-f0-9-]+\/settings/);
+    await page.waitForURL(/\/security-work\/[a-f0-9-]+\/?$/);
     const workspace = /\/security-work\/([a-f0-9-]+)/.exec(page.url())![1];
-    await page.goto(`/security-work/${workspace}/analyses?new=true`);
+    await page.getByTestId("sw-service-rsa").getByRole("link").click();
+    await expect(page.getByLabel(l("Analystyp", "Analysis type"), { exact: true })).toHaveValue(
+      "rsa",
+    );
     await page.getByLabel(l("Namn", "Title"), { exact: true }).fill("Synthetic maintenance RSA");
+    page.once("dialog", (dialog) => dialog.dismiss());
+    await page.getByRole("button", { name: l("Avbryt", "Cancel"), exact: true }).click();
+    await expect(page.getByLabel(l("Namn", "Title"), { exact: true })).toHaveValue(
+      "Synthetic maintenance RSA",
+    );
     await page
       .getByLabel(
         l(
@@ -155,6 +163,29 @@ for (const locale of ["sv", "en"] as const) {
     await page
       .getByLabel(l("Tidshorisont", "Time horizon"), { exact: true })
       .fill("Synthetic maintenance period, 1–5 October.");
+    const failedSave = async (route: import("@playwright/test").Route) => {
+      const token = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(route.request().url())?.[1];
+      let name = "";
+      try {
+        name = JSON.parse(Buffer.from(token ?? "", "base64url").toString()).export ?? "";
+      } catch {
+        /* unrelated */
+      }
+      if (name.startsWith("saveWorkAnalysis")) return route.abort("failed");
+      return route.fallback();
+    };
+    await page.route("**/_serverFn/**", failedSave);
+    await page
+      .getByRole("button", { name: l("Skapa och fortsätt", "Create and continue") })
+      .click();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.getByLabel(l("Namn", "Title"), { exact: true })).toHaveValue(
+      "Synthetic maintenance RSA",
+    );
+    await expect(page.getByLabel(l("Tidshorisont", "Time horizon"), { exact: true })).toHaveValue(
+      "Synthetic maintenance period, 1–5 October.",
+    );
+    await page.unroute("**/_serverFn/**", failedSave);
     await page
       .getByRole("button", { name: l("Skapa och fortsätt", "Create and continue") })
       .click();

@@ -191,16 +191,68 @@ for (const locale of ["sv", "en"] as const) {
     const reference = `https://127.0.0.1:${(canary.address() as AddressInfo).port}/reference`;
     try {
       await test.step("Create a personal workspace through the real sign-in and onboarding", async () => {
+        const entryResponse = page.waitForResponse(async (response) => {
+          if (
+            response.request().method() !== "POST" ||
+            new URL(response.url()).origin !== new URL(process.env.E2E_BASE_URL!).origin
+          )
+            return false;
+          return (await response.text().catch(() => "")).includes('"workspaces"');
+        });
         await login(page, ownerEmail, "/security-work");
         await language(page, locale);
+        await expect(page.getByTestId("sw-create-workspace")).toBeVisible();
+        await shot(page, locale, "entry-empty");
+        // A failed fresh list must never display the create form or use cached access.
+        const entryUrl = (await entryResponse).url();
+        await page.route(entryUrl, (route) => route.abort("failed"));
+        await page.reload();
+        await expect(page.getByRole("alert")).toBeVisible();
+        await expect(page.getByTestId("sw-create-workspace")).toHaveCount(0);
+        await page.unroute(entryUrl);
+        await page.getByRole("button", { name: /Försök igen|Try again/i }).click();
         await page
           .getByTestId("sw-workspace-name")
           .fill(`Synthetic workspace ${project} ${locale}`);
+        const creation = writeRequest(page, `Synthetic workspace ${project} ${locale}`);
         await page.getByTestId("sw-create-workspace").click();
-        await page.waitForURL(/\/security-work\/[a-f0-9-]+\/settings/);
+        await page.waitForURL(/\/security-work\/[a-f0-9-]+\/?$/);
+        const original = await creation;
+        // Concurrent request replays exercise the existing server-side idempotency.
+        const retries = await Promise.all(
+          [1, 2].map(() =>
+            page.request.post(original.url(), {
+              headers: replayHeaders(original),
+              data: original.postData()!,
+            }),
+          ),
+        );
+        for (const retry of retries)
+          expect(await retry.text()).toContain(new URL(page.url()).pathname.split("/")[2]);
       });
-      const workspace = /\/security-work\/([a-f0-9-]+)\//.exec(page.url())![1];
+      const workspace = /\/security-work\/([a-f0-9-]+)/.exec(page.url())![1];
       const owner = await caller(page);
+      await expect
+        .poll(async () => (await owner.client.from("sw_workspaces").select("id")).data?.length)
+        .toBe(1);
+      await expect(page.getByTestId("sw-services")).toBeVisible();
+      await expect(page.getByTestId("sw-assistance-status")).toContainText(
+        locale === "sv" ? "inte tillgängligt" : "unavailable",
+      );
+      await shot(page, locale, "service-overview");
+      for (const method of ["monitoring", "rsa"] as const) {
+        await page.getByTestId(`sw-service-${method}`).getByRole("link").click();
+        await expect(
+          page.getByLabel(locale === "sv" ? "Analystyp" : "Analysis type", { exact: true }),
+        ).toHaveValue(method);
+        await page.goto(`/security-work/${workspace}`);
+      }
+      // The entry redirect replaces itself. Back returns to the actual prior page.
+      await page.goto(`/security-work/${workspace}/settings`);
+      await page.goto("/security-work");
+      await page.waitForURL(new RegExp(`/security-work/${workspace}/?$`));
+      await page.goBack();
+      await page.waitForURL(new RegExp(`/security-work/${workspace}/settings$`));
       let profileRequest: Request;
       await test.step("Profile and requirements persist across reload", async () => {
         await page.getByTestId("sw-profile-sector").fill("Synthetic public safety");
@@ -495,8 +547,36 @@ for (const locale of ["sv", "en"] as const) {
         await language(outsider.page, locale);
         await outsider.page.getByTestId("sw-workspace-name").fill("Synthetic workspace B");
         await outsider.page.getByTestId("sw-create-workspace").click();
-        await outsider.page.waitForURL(/\/settings$/);
+        await outsider.page.waitForURL(/\/security-work\/[a-f0-9-]+\/?$/);
         const other = await caller(outsider.page);
+        const otherWorkspace = new URL(outsider.page.url()).pathname.split("/")[2];
+        await test.step("Multiple workspaces, explicit switching and revoked remembered access", async () => {
+          membership(other.id, otherWorkspace, owner.id, "editor");
+          await page.goto("/security-work");
+          await page.waitForURL(new RegExp(`/security-work/${workspace}/?$`));
+          await page.getByTestId("sw-workspace-identity").getByRole("link").click();
+          await expect(page.getByTestId("sw-entry")).toBeVisible();
+          await page.locator(`a[href='/security-work/${otherWorkspace}']`).click();
+          await expect(page.getByTestId("sw-workspace-identity")).toContainText(
+            "Synthetic workspace B",
+          );
+          await page.goto("/security-work");
+          await page.waitForURL(new RegExp(`/security-work/${otherWorkspace}/?$`));
+          await page.evaluate((id) => localStorage.removeItem(`sw:last-workspace:${id}`), owner.id);
+          await page.goto("/security-work");
+          await expect(page.getByTestId("sw-entry")).toBeVisible();
+          await expect(page.locator(`a[href='/security-work/${workspace}']`)).toBeVisible();
+          await expect(page.locator(`a[href='/security-work/${otherWorkspace}']`)).toBeVisible();
+          await shot(page, locale, "entry-choice");
+          await page.locator(`a[href='/security-work/${otherWorkspace}']`).click();
+          await expect(page.getByTestId("sw-workspace-identity")).toBeVisible();
+          membership(other.id, otherWorkspace, owner.id, "editor", false);
+          await page.goto("/security-work");
+          await page.waitForURL(new RegExp(`/security-work/${workspace}/?$`));
+          await page.goto(`/security-work/${otherWorkspace}`);
+          await expect(page.getByTestId("sw-access-denied")).toBeVisible();
+          await page.goto(`/security-work/${workspace}`);
+        });
         const deniedEndpoint = await outsider.page.request.post(profileRequest!.url(), {
           headers: { ...replayHeaders(profileRequest!), authorization: `Bearer ${other.token}` },
           data: profileRequest!.postData()!,

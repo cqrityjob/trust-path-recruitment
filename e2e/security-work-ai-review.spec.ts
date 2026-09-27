@@ -304,6 +304,49 @@ for (const locale of ["sv", "en"] as const) {
     });
     await expect(apply).toBeDisabled();
     expect((await readEffects(f.analyses.fresh)).every((entry) => entry.count === 0)).toBe(true);
+    // Controlled UI availability only; never request a provider generation.
+    const availability = async (route: import("@playwright/test").Route) => {
+      const token = /\/_serverFn\/([A-Za-z0-9_-]+)/.exec(route.request().url())?.[1];
+      let name = "";
+      try {
+        name = JSON.parse(Buffer.from(token ?? "", "base64url").toString()).export ?? "";
+      } catch {
+        /* unrelated route */
+      }
+      if (name.startsWith("getWorkAiStatus"))
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            result: { ok: true, data: { enabled: true, reason: null } },
+            error: null,
+            context: {},
+          }),
+        });
+      if (name.startsWith("requestWorkAiDraft"))
+        throw new Error("Availability UI must not dispatch an AI job");
+      return route.fallback();
+    };
+    await page.route("**/_serverFn/**", availability);
+    await page.reload();
+    await assessmentStep();
+    await expect(
+      page.getByRole("button", {
+        name: l("Skapa AI-utkast från granskat underlag", "Create AI draft from reviewed evidence"),
+        exact: true,
+      }),
+    ).toBeEnabled();
+    await page.unroute("**/_serverFn/**", availability);
+    await page.reload();
+    await page
+      .getByRole("button", { name: `3. ${l("Komplettera", "Follow-ups")}`, exact: true })
+      .click();
+    await expect(
+      page.getByText(
+        l("AI är inte aktiverat för arbetsytan.", "AI is not activated for this workspace."),
+        { exact: false },
+      ),
+    ).toBeVisible();
     await shot(page, locale, "ai-review");
     await ai.getByRole("checkbox").check();
     const sent = applyRequest(page, f.jobs.fresh);
