@@ -36,7 +36,7 @@
 
 import { DIMENSIONS, type DimensionId } from "./dimensions";
 import type { RankedProfession } from "./professions";
-import { RECOMMENDATION_CONFIDENCE_LABEL, STAGE_LABEL } from "./profession-explanations";
+import { recommendationConfidenceLabel, STAGE_LABEL } from "./profession-explanations";
 import type { Locale } from "./version";
 
 /** Short, card-sized labels for the dimensions that can appear as a
@@ -184,7 +184,9 @@ export function buildCareerCardData(input: BuildCareerCardInput): CareerCardData
     rank: r.rank,
     professionId: r.match.professionId,
     title: locale === "sv" ? r.match.titleSv : r.match.titleEn,
-    confidenceLabel: RECOMMENDATION_CONFIDENCE_LABEL[r.confidence][locale],
+    // Checked, never trusted: a saved snapshot's unknown confidence word
+    // prints the neutral "unavailable" label and keeps the entry's rank.
+    confidenceLabel: recommendationConfidenceLabel(r.confidence, locale),
     stageLabel: STAGE_LABEL[r.match.stage][locale],
   }));
 

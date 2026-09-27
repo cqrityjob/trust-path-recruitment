@@ -72,7 +72,7 @@ import {
   resolveProfessionRef,
   type ProfessionInfoDestination,
 } from "./profession-links";
-import { onwardTransitions, type ProfessionTransition } from "./transitions";
+import { onwardTransitions, relatedGuides, type ProfessionTransition } from "./transitions";
 
 /**
  * Eligibility is never assessed, computed, inferred or implied — not from the
@@ -92,10 +92,6 @@ export type OriginProvenance = "profile" | "selected";
 /** The `from` value that means "the reader cleared the selector". */
 export const ORIGIN_NONE = "none" as const;
 
-/** How many directions the hub shows before sending the reader to the guide.
- *  Three, matching the fit section, so neither looks like the fuller answer. */
-export const MAX_PATH_DIRECTIONS = 3;
-
 /** The role saved in the reader's profile, as far as the page can name it.
  *  Present whenever the profile states one — in every origin state — so the
  *  surface can always offer "back to my saved profession". */
@@ -110,6 +106,28 @@ export interface SavedRole {
   readonly labelSv: string | null;
   readonly labelEn: string | null;
   readonly info: ProfessionInfoDestination;
+}
+
+/** One onward move out of a profession that has no published guide, exactly
+ *  as the reviewed catalogue records it (the `to` edges of the profession's
+ *  `ProfessionDetail.pathway`). */
+export interface CatalogueNextStep {
+  readonly cigSlug: string;
+  readonly titleSv: string;
+  readonly titleEn: string;
+  /** The catalogue's own kind: promotion, specialisation, pivot, lateral. */
+  readonly kind: string;
+  /** Where that profession is described — its guide, else its own
+   *  catalogue page — through the one destination rule. */
+  readonly info: ProfessionInfoDestination;
+}
+
+/** The shape the catalogue read hands over; a subset of ProfessionPathwayEdge. */
+export interface CatalogueEdgeInput {
+  readonly otherSlug: string;
+  readonly otherTitleSv: string;
+  readonly otherTitleEn: string;
+  readonly transitionKind: string;
 }
 
 export type CareerOrigin =
@@ -128,17 +146,25 @@ export type CareerOrigin =
       /** The reviewed catalogue page for exactly this role, or `none` for
        *  free text. */
       readonly info: ProfessionInfoDestination;
+      /** The catalogue's recorded onward moves for this role, once read.
+       *  `null` while unknown (not read yet, or free text); `[]` when the
+       *  catalogue records none — a different statement. */
+      readonly next: readonly CatalogueNextStep[] | null;
       readonly saved: SavedRole | null;
     }
   | {
       readonly state: "ready";
       readonly profession: Profession;
       readonly provenance: OriginProvenance;
-      /** At most MAX_PATH_DIRECTIONS, ordered by `transitions.ts`. */
+      /** EVERY recorded onward move, ordered by `transitions.ts`. The hub
+       *  used to show three and send the reader to the guide for the rest —
+       *  one more hop between a reader and the answer, for a list that is at
+       *  most four long. */
       readonly directions: readonly ProfessionTransition[];
-      /** How many were recorded in total, so "see all" can be honest about
-       *  whether there is more to see. */
-      readonly totalDirections: number;
+      /** The published guides this guide lists as related, for when no
+       *  onward move is recorded. A property of the guide, not a transition:
+       *  the surface must say so and never present them as next steps. */
+      readonly related: readonly Profession[];
       /** The guide for exactly this profession. */
       readonly info: ProfessionInfoDestination;
       readonly saved: SavedRole | null;
@@ -203,6 +229,8 @@ export function careerOrigin(input: {
   /** The catalogue's own title for a profile slug without a guide. */
   readonly profileTitleSv?: string | null;
   readonly profileTitleEn?: string | null;
+  /** The catalogue's recorded onward moves for that slug, once read. */
+  readonly profileCatalogueNext?: readonly CatalogueEdgeInput[] | null;
   readonly now?: Date;
 }): CareerOrigin {
   const now = input.now ?? new Date();
@@ -229,8 +257,33 @@ export function careerOrigin(input: {
     labelSv: saved.labelSv,
     labelEn: saved.labelEn,
     info: saved.info,
+    // Only a role the catalogue describes has catalogue moves; free text
+    // has nothing to read them from.
+    next:
+      saved.info.kind === "catalogue_profile" && input.profileCatalogueNext
+        ? catalogueNextSteps(input.profileCatalogueNext)
+        : null,
     saved,
   };
+}
+
+/** The catalogue's onward edges, each resolved to where it is described.
+ *  Never re-ranked, never supplemented: the catalogue's own list, once. */
+function catalogueNextSteps(edges: readonly CatalogueEdgeInput[]): CatalogueNextStep[] {
+  const seen = new Set<string>();
+  const out: CatalogueNextStep[] = [];
+  for (const e of edges) {
+    if (!isWellFormedCigSlug(e.otherSlug) || seen.has(e.otherSlug)) continue;
+    seen.add(e.otherSlug);
+    out.push({
+      cigSlug: e.otherSlug,
+      titleSv: e.otherTitleSv,
+      titleEn: e.otherTitleEn,
+      kind: e.transitionKind,
+      info: professionInfoDestination({ cigSlug: e.otherSlug }),
+    });
+  }
+  return out;
 }
 
 function ready(
@@ -239,13 +292,13 @@ function ready(
   saved: SavedRole | null,
   now: Date,
 ): CareerOrigin {
-  const all = onwardTransitions(profession, now);
+  const directions = onwardTransitions(profession, now);
   return {
     state: "ready",
     profession,
     provenance,
-    directions: all.slice(0, MAX_PATH_DIRECTIONS),
-    totalDirections: all.length,
+    directions,
+    related: relatedGuides(profession, directions),
     info: {
       kind: "career_center",
       slug: profession.slug,

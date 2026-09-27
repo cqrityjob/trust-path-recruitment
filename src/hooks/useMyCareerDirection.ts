@@ -33,7 +33,10 @@ import {
   isRenderableDiscovery,
 } from "@/lib/career-discovery/active-report.functions";
 import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
-import { getProfessionDetails } from "@/lib/career-discovery/profession-detail.functions";
+import {
+  getProfessionDetails,
+  type ProfessionPathwayEdge,
+} from "@/lib/career-discovery/profession-detail.functions";
 import { getMySecurityCareerProfile } from "@/lib/security-career-profile/profile.functions";
 import {
   deriveCareerDirection,
@@ -129,6 +132,10 @@ export interface StatedProfession {
   /** The catalogue's title for `slug`, when it has no published guide. */
   readonly catalogueTitleSv: string | null;
   readonly catalogueTitleEn: string | null;
+  /** The catalogue's recorded onward moves for `slug`, from the same read,
+   *  so the Career Center can show them where the reader chose the role
+   *  instead of sending them to another page for them. `null` until read. */
+  readonly catalogueNext: readonly ProfessionPathwayEdge[] | null;
   readonly refetch: () => void;
 }
 
@@ -161,7 +168,13 @@ export function useMyStatedProfession(session: SupabaseSessionState): StatedProf
   const refetch = () => {
     void q.refetch();
   };
-  const empty = { slug: null, otherLabel: null, catalogueTitleSv: null, catalogueTitleEn: null };
+  const empty = {
+    slug: null,
+    otherLabel: null,
+    catalogueTitleSv: null,
+    catalogueTitleEn: null,
+    catalogueNext: null,
+  };
   if (session.signedIn === false) return { status: "anonymous", ...empty, refetch };
   if (session.signedIn === null || !userId || q.isPending) {
     return { status: "loading", ...empty, refetch };
@@ -173,6 +186,7 @@ export function useMyStatedProfession(session: SupabaseSessionState): StatedProf
     otherLabel: q.data?.currentProfessionOther?.trim() || null,
     catalogueTitleSv: detail?.titleSv ?? null,
     catalogueTitleEn: detail?.titleEn ?? null,
+    catalogueNext: detail ? detail.pathway.filter((e) => e.direction === "to") : null,
     refetch,
   };
 }

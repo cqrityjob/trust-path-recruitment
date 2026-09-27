@@ -60,7 +60,8 @@ const code = (source: string) =>
 const hub = read("src/routes/career-center.index.tsx");
 const professionRoute = read("src/routes/career-center.$profession.tsx");
 const startRoute = read("src/routes/career-center.start.tsx");
-const explorer = read("src/components/career-center/ProfessionExplorer.tsx");
+const hubSearchSource = read("src/lib/career-center/hub-search.ts");
+const nextCard = read("src/components/career-center/NextProfessionCard.tsx");
 const hero = read("src/components/career-center/CareerHero.tsx");
 const card = read("src/components/career-center/ProfessionCard.tsx");
 const competencyCard = read("src/components/career-center/CompetencyCard.tsx");
@@ -75,21 +76,8 @@ const {
   PUBLISHED_PROFESSION_COUNT,
   getPublishedProfession,
 } = await import("../src/lib/career-center/publishability");
-const {
-  parseExplorerSearch,
-  applyExplorerSearch,
-  nearestNonEmpty,
-  clearAllFilters,
-  hasActiveFilters,
-  withoutFilter,
-  toggleLevel,
-  selectedLevels,
-  levelParam,
-  availableFamilies,
-  availableLevels,
-  ENTRY_LEVEL_SEARCH,
-  NEXT_LEVEL_SEARCH,
-} = await import("../src/lib/career-center/explorer-state");
+const { parseHubSearch, hasLegacyCatalogueParams, LEGACY_CATALOGUE_KEYS, hubProfessions } =
+  await import("../src/lib/career-center/hub-search");
 const { metaGroups, filterableFamilyIds } = await import("../src/lib/career-center/meta-groups");
 const { careerRoutes, validateRoutes } = await import("../src/lib/career-center/career-routes");
 const { fitSignals } = await import("../src/lib/career-center/profession-fit");
@@ -103,7 +91,7 @@ const { MVP_QUESTION_COUNT } = await import("../src/lib/career-discovery/v31/per
 //
 // Five sections, in this order. The order is the product argument: a visitor
 // is told what this is, then shown where THEY stand (or told honestly that we
-// cannot know), then handed the catalogue, then the routes through it, and
+// cannot know), then every profession, then general routes through them, and
 // finally the basis on which any of it is claimed.
 //
 // The pilot pass replaced two sections with one. "Var står du i dag?" asked
@@ -111,9 +99,12 @@ const { MVP_QUESTION_COUNT } = await import("../src/lib/career-discovery/v31/per
 // career-test band asked a visitor who might already have a result to take it
 // again. Section 2 now answers the question with the reader's OWN analysis
 // when there is one, and offers the analysis when there is not — which is the
-// only place on the page where offering it is a true statement. The two
-// surviving pre-filtered destinations moved into the explorer as quick
-// choices; they are asserted separately below.
+// only place on the page where offering it is a true statement.
+//
+// The simplification pass (2026-09-27) took the search box, the family and
+// level filters, "Fler filter" and the pre-filtered quick choices out of the
+// list section: every "explore the others" link led into 29 controls over
+// eleven guides. The list is shown, as cards, and is asserted in section 8.
 
 const HUB_SECTION_HEADINGS = [
   "cc.hero.title",
@@ -122,12 +113,10 @@ const HUB_SECTION_HEADINGS = [
   // visitor, and it needs no assessment. It and `fit` are separate sections
   // with separate headings and are never combined — see 16d.
   "cc.path.title",
-  // The catalogue comes before the career routes (journey completion,
-  // 2026-09-26): "show me the professions" is what a reader who clicked
-  // "Utforska yrken" asked for, and it used to sit below a section of route
-  // diagrams. It still opens on an explicit click or link — eleven guides
-  // plus a filter bar rendered unconditionally is what made this page
-  // 11,700px tall on a phone.
+  // The list of every profession comes before the career routes (journey
+  // completion, 2026-09-26): "show me the professions" is what a reader who
+  // clicked "Se alla yrken" asked for. Since 2026-09-27 it is simply shown —
+  // eleven compact cards, no filter bar — rather than opened on a click.
   "cc.explore.title",
   "cc.routes.title",
   "cc.trust.title",
@@ -173,7 +162,7 @@ for (const key of HUB_SECTION_HEADINGS) {
   );
   expect(
     later > explore && later < routes,
-    "without a result, the analysis offer must follow the catalogue, not precede it",
+    "without a result, the analysis offer must follow the list of professions, not precede it",
   );
   expect(
     hub.includes("<PersonalDirectionSection") &&
@@ -201,6 +190,20 @@ const RETIRED_KEYS = [
   "cc.profession.education.placeholder",
   "cc.profession.certifications.placeholder",
   "cc.profession.related_jobs.placeholder",
+  // The catalogue's search box, filters, disclosure and pre-filtered quick
+  // choices (removed 2026-09-27). A key coming back is the control coming
+  // back — and with it the block a reader was sent into instead of an answer.
+  "cc.explore.search.label",
+  "cc.explore.filter.family",
+  "cc.explore.filter.level",
+  "cc.explore.filter.more",
+  "cc.explore.clear_all",
+  "cc.explore.relax.family",
+  "cc.explore.showAll",
+  "cc.explore.hideAll",
+  "cc.explore.quick.title",
+  "cc.explore.quick.entry",
+  "cc.path.more.count", // "Se alla N nästa steg i yrkesguiden" — a hop to the rest
 ] as const;
 
 for (const key of RETIRED_KEYS) {
@@ -304,7 +307,7 @@ expect(
 );
 expect(
   hubOrderText.indexOf('t("cc.me.title")') < hubOrderText.indexOf('t("cc.explore.title")'),
-  "the personal section must come before the profession explorer",
+  "the personal section must come before the list of professions",
 );
 // The invitation is rendered only where there is no result to show. A
 // recommendation list under a personal heading, built from anything other
@@ -418,15 +421,18 @@ for (const p of upcomingProfessions) {
     `"${p.slug}" is unfinished but resolves through getPublishedProfession`,
   );
 }
-expect(
-  explorer.includes("upcoming.map") || explorer.includes("upcoming\n"),
-  "the explorer must render the upcoming list",
-);
-expect(
-  !explorer.includes("<ProfessionCard") ||
-    explorer.indexOf("upcoming.map") > explorer.indexOf("results.map"),
-  "the upcoming list must not be rendered as cards",
-);
+expect(hub.includes("upcomingProfessions.map"), "the hub must render the upcoming list");
+{
+  const upcomingBlock = hub.slice(hub.indexOf("upcomingProfessions.length > 0"));
+  const upcomingEnd = upcomingBlock.indexOf("</Section>");
+  const upcoming = upcomingBlock.slice(0, upcomingEnd);
+  expect(
+    upcoming.includes('.join(" · ")') &&
+      !upcoming.includes("<ProfessionCard") &&
+      !upcoming.includes("<Link"),
+    "the upcoming list must be text — never a card, never a link",
+  );
+}
 expect(
   !/\btag\b\s*[?:]/.test(code(card)) && !code(card).includes("{tag"),
   'ProfessionCard must not carry a "tag" prop — it existed only to badge unfinished guides as "Under utveckling"',
@@ -507,144 +513,127 @@ expect(
 );
 
 // =======================================================================
-// 8. Explorer: URL round-trip, chips, clear-all, zero-result recovery
+// 8. Every profession is shown; old catalogue links narrow nothing
 // =======================================================================
+//
+// The reported journey: a reader chose their profession, followed "Utforska
+// yrkeskatalogen" from a profession with no recorded next step, and landed in
+// a search box and 29 filter chips — to start looking again. The list now has
+// no controls at all. What is pinned here is the property that matters: every
+// published profession is on the page, and no URL can hide one.
 
-// Round-trip: what the parser accepts, it reproduces unchanged.
-const ROUND_TRIP_CASES: Record<string, unknown>[] = [
-  { level: "entry" },
-  { level: "mid,senior" },
-  { family: availableFamilies[0] },
-  { q: "väktare", level: "entry" },
-  { regulated: "regulated", more: "true" },
-  { sector: "private", orientation: "operational", country: "SE" },
-];
-for (const raw of ROUND_TRIP_CASES) {
-  const parsed = parseExplorerSearch(raw);
-  const reparsed = parseExplorerSearch(parsed as Record<string, unknown>);
+// The list: every published guide, once, in an order a reader can see the
+// reason for — the level one can start at first, then the title.
+const LEVEL_RANK: Record<string, number> = { entry: 0, mid: 1, senior: 2, executive: 3 };
+for (const lang of ["sv", "en"] as const) {
+  const listed = hubProfessions(lang);
   expect(
-    JSON.stringify(parsed) === JSON.stringify(reparsed),
-    `explorer search does not round-trip for ${JSON.stringify(raw)}: ${JSON.stringify(parsed)} → ${JSON.stringify(reparsed)}`,
+    listed.length === PUBLISHED_PROFESSION_COUNT &&
+      new Set(listed.map((p) => p.id)).size === PUBLISHED_PROFESSION_COUNT,
+    `${lang}: the hub must list every published guide exactly once`,
   );
-}
-
-// Junk degrades to a wider view, never to a chip labelled with the junk.
-const junk = parseExplorerSearch({ family: "nonsense", level: "wizard", sector: "42", q: "  " });
-expect(
-  Object.keys(junk).length === 0,
-  `an entirely invalid search must yield no filters, got ${JSON.stringify(junk)}`,
-);
-
-// Level is a list, and the entry paths mean what they say.
-expect(
-  selectedLevels(parseExplorerSearch(ENTRY_LEVEL_SEARCH as Record<string, unknown>)).join(",") ===
-    "entry",
-  '"see roles you can start in" must filter to entry level',
-);
-const nextLevels = selectedLevels(
-  parseExplorerSearch(NEXT_LEVEL_SEARCH as Record<string, unknown>),
-);
-expect(
-  nextLevels.includes("mid") && nextLevels.includes("senior"),
-  '"see roles at the next level" must include both mid and senior — a single-level filter under-delivers the promise',
-);
-// The three entry paths must actually land in different places.
-const entryResults = applyExplorerSearch(ENTRY_LEVEL_SEARCH, "sv");
-const nextResults = applyExplorerSearch(NEXT_LEVEL_SEARCH, "sv");
-expect(entryResults.length > 0, "the entry-level path must return results");
-expect(nextResults.length > 0, "the next-level path must return results");
-expect(
-  entryResults.every((p) => !nextResults.includes(p)),
-  "the first two entry paths must lead to genuinely different result sets",
-);
-expect(
-  hub.includes('to="/employers"'),
-  "the organisation entry path must lead to the employer product, not to the explorer",
-);
-
-// "Rensa alla" clears every filter but keeps the disclosure open.
-const busy = parseExplorerSearch({
-  q: "väktare",
-  level: "entry",
-  family: availableFamilies[0],
-  regulated: "regulated",
-});
-expect(hasActiveFilters(busy), "the busy fixture must have active filters");
-const cleared = clearAllFilters(busy);
-expect(!hasActiveFilters(cleared), '"Rensa alla" must clear every filter');
-expect(
-  cleared.more === true,
-  '"Rensa alla" must leave the advanced disclosure open — collapsing it removes the control the reader was just using',
-);
-expect(
-  applyExplorerSearch(cleared, "sv").length === PUBLISHED_PROFESSION_COUNT,
-  '"Rensa alla" must return the whole published catalogue',
-);
-
-// Removing one chip leaves the rest alone.
-const minusFamily = withoutFilter(busy, "family");
-expect(minusFamily.family === undefined, "removing the family chip must drop the family filter");
-expect(
-  minusFamily.q === busy.q && minusFamily.level === busy.level,
-  "removing one chip must not disturb the others",
-);
-
-// Toggling a level off returns to "all levels" rather than to an empty list.
-const oneLevel = parseExplorerSearch({ level: "entry" });
-expect(
-  toggleLevel(oneLevel, "entry").level === undefined,
-  "toggling the last selected level off must clear the level filter",
-);
-expect(
-  levelParam(["entry", "mid", "senior", "executive"]) === undefined,
-  "selecting every level must produce the same clean URL as selecting none",
-);
-
-// Zero results always offer a way out, and the way out actually works.
-const impossible = parseExplorerSearch({ level: "entry", family: "security_technology" });
-expect(
-  applyExplorerSearch(impossible, "sv").length === 0,
-  "the zero-result fixture must actually return nothing",
-);
-const recovery = nearestNonEmpty(impossible, "sv");
-expect(recovery !== null, "a zero-result view must offer a recovery, never a dead end");
-if (recovery) {
-  expect(recovery.count > 0, "the offered recovery must return results");
-  expect(
-    applyExplorerSearch(recovery.search, "sv").length === recovery.count,
-    "the recovery's stated count must match what its search returns",
-  );
-  const label = `cc.explore.relax.${recovery.dropped}`;
-  for (const lang of ["sv", "en"] as const) {
+  for (let i = 1; i < listed.length; i++) {
+    const a = listed[i - 1];
+    const b = listed[i];
+    const byLevel = LEVEL_RANK[a.level] - LEVEL_RANK[b.level];
+    const title = (p: (typeof listed)[number]) => (lang === "sv" ? p.titleSv : p.titleEn);
     expect(
-      label in dictionaries[lang],
-      `${lang} has no label for relaxing "${recovery.dropped}" — the recovery button would render a raw key`,
+      byLevel < 0 || (byLevel === 0 && title(a).localeCompare(title(b), lang) <= 0),
+      `${lang}: "${a.slug}" is listed before "${b.slug}" out of level-then-title order`,
     );
   }
 }
-// Every relaxable key has a label in both languages, not just the one this
-// fixture happens to hit.
-for (const key of ["family", "level", "regulated", "sector", "orientation", "country", "q"]) {
-  for (const lang of ["sv", "en"] as const) {
-    expect(
-      `cc.explore.relax.${key}` in dictionaries[lang],
-      `${lang} is missing "cc.explore.relax.${key}"`,
-    );
-  }
+expect(
+  hub.includes("hubProfessions(") && /<ul\s+id="yrkeskatalog"/.test(hub),
+  "the hub must render the list from hubProfessions, as a list",
+);
+{
+  // The list is SHOWN: nothing on the hub gates it behind a toggle, a search
+  // box or a filter chip.
+  const listSection = hub.slice(
+    hub.indexOf("── 4. ALLA YRKEN"),
+    hub.indexOf("── 2′. DIN RIKTNING"),
+  );
+  expect(listSection.length > 0, "the hub's list section must be readable");
+  expect(listSection.includes("<ProfessionCard"), "every profession must render as a card");
+  expect(
+    !/<input|aria-pressed|data-catalogue-toggle|hidden=\{!/.test(code(hub)),
+    "the hub must render no search box, no filter chip and no catalogue toggle — the list is shown",
+  );
 }
 
-// Controls only offer values that can change the result.
-for (const family of availableFamilies) {
+// Old links: `?all=1`, `?level=entry`, `?family=…`, `?q=…` still open the
+// hub, and every one of those parameters is dropped. A filter a reader can
+// neither see nor remove would hide professions for no visible reason.
+{
+  const SAMPLE: Record<string, unknown> = {
+    q: "väktare",
+    family: "protective_operations",
+    level: "entry",
+    regulated: "regulated",
+    sector: "private",
+    orientation: "operational",
+    country: "SE",
+    more: "true",
+    all: 1,
+  };
+  for (const key of Object.keys(SAMPLE)) {
+    expect(
+      (LEGACY_CATALOGUE_KEYS as readonly string[]).includes(key),
+      `an old catalogue link parameter "${key}" is not recognised as one`,
+    );
+    expect(
+      hasLegacyCatalogueParams({ [key]: SAMPLE[key] }),
+      `an old catalogue link carrying "${key}" must be recognised, so the hub can clean it`,
+    );
+    expect(
+      Object.keys(parseHubSearch({ [key]: SAMPLE[key] })).length === 0,
+      `the old catalogue parameter "${key}" must narrow nothing`,
+    );
+  }
   expect(
-    publishedProfessions.some((p) => p.family === family),
-    `the family filter offers "${family}", which no published guide carries`,
+    JSON.stringify(parseHubSearch({ ...SAMPLE, from: "security-officer" })) ===
+      JSON.stringify({ from: "security-officer" }),
+    "an old catalogue link must keep the reader's current profession and nothing else",
   );
+  expect(!hasLegacyCatalogueParams({ from: "security-officer" }), "`from` is not a filter");
+  expect(
+    Object.keys(parseHubSearch({ from: "nonsense" })).length === 0,
+    "a stale or hand-edited `from` must degrade to nothing selected",
+  );
+  expect(parseHubSearch({ from: "none" }).from === "none", "`from=none` (cleared) must survive");
+  expect(
+    parseHubSearch({ from: "  ordningsvakt " }).from === "ordningsvakt",
+    "`from` must be trimmed",
+  );
+  expect(
+    /LEGACY_CATALOGUE_KEYS/.test(hub) && /replace: true/.test(hub) && /hash: true/.test(hub),
+    "the hub must take old catalogue parameters out of the address, in place, keeping the section",
+  );
+  expect(hubSearchSource.includes("isSelectableOrigin"), "`from` must be validated");
 }
-for (const level of availableLevels) {
-  expect(
-    publishedProfessions.some((p) => p.level === level),
-    `the level filter offers "${level}", which no published guide carries`,
-  );
+
+// No link anywhere in the Career Center, or from the report into it, may ask
+// for a filtered or "opened" catalogue again.
+{
+  const dirs = ["src/components/career-center", "src/components/career-discovery/v31"];
+  const files = [
+    ...dirs.flatMap((d) =>
+      readdirSync(path.join(root, d))
+        .filter((f) => f.endsWith(".tsx"))
+        .map((f) => `${d}/${f}`),
+    ),
+    "src/routes/career-center.index.tsx",
+    "src/routes/career-center.$profession.tsx",
+    "src/routes/career-center.yrke.$cigSlug.tsx",
+  ];
+  for (const file of files) {
+    const source = code(read(file));
+    expect(
+      !/search=\{\{[^}]*\ball\b/.test(source) && !/[?&]all=/.test(source),
+      `${file} links to a filtered catalogue — every "see the others" link lands on the list`,
+    );
+  }
 }
 
 // =======================================================================
@@ -668,10 +657,15 @@ for (const id of grouped) {
     `meta-group references "${id}", which is not a filterable profession family`,
   );
 }
-// One visible taxonomy. "Kategori" stays an internal field.
+// The classifications stay — on the data and printed on every card — but
+// no longer as controls. Family and level are information a reader scans by.
 expect(
-  !explorer.includes("categories") && !explorer.includes("cc.search.category"),
-  "the explorer must expose one taxonomy — profession family — and not also category",
+  !code(hub).includes("metaGroups") && !code(hub).includes("categories"),
+  "the hub must not turn a taxonomy back into a filter control",
+);
+expect(
+  /family=\{/.test(hub) && /level=\{/.test(hub),
+  "each profession card must still state its level and profession family",
 );
 
 // =======================================================================
@@ -808,23 +802,27 @@ for (const lang of ["sv", "en"] as const) {
 // 12. Profession guide section order
 // =======================================================================
 
-// The MVP text specification (2026-09-27) fixes one order for every
-// profession page: Om yrket → Arbetsuppgifter → Kompetenser → Krav →
-// Utbildning → Möjliga nästa steg → Lediga jobb → Källor. Education therefore
-// comes BEFORE the career steps again (the pilot pass had put it after), and
-// the catalogue summary already reads in that order. Related jobs and the
-// Passport boundary follow, then the analysis, then related professions, then
-// the sources.
+// A profession page answers four questions, in the order a reader asks
+// them: what the work involves, what it takes to get in (requirements, then
+// education), which professions can come next, where the jobs are. Then the
+// fördjupning — who the role suits, the competency profile, the Passport
+// boundary, the analysis, related professions — and last the sources.
+//
+// (The MVP text specification of 2026-09-27 had the competency profile
+// between the tasks and the requirements; the simplification pass the same
+// day moved it, with the fit signals, into the fördjupning. The catalogue
+// summary already read tasks → requirements → education → next → jobs.)
 const GUIDE_SECTIONS = [
   "cc.p.about",
   "cc.p.day",
-  "cc.p.fit",
-  "cc.p.competencies",
   "cc.p.formal",
   "cc.p.entry",
   "cc.p.education.title",
   "cc.p.next.title",
   "cc.p.act.title",
+  "cc.p.more.title",
+  "cc.p.fit",
+  "cc.p.competencies",
   "cc.p.test.title",
   "cc.p.related",
   "cc.p.sources",
@@ -863,31 +861,36 @@ expect(
 // 13. Accessibility contract
 // =======================================================================
 
-expect(explorer.includes('aria-live="polite"'), "the result count must be announced");
+// A next-profession card has ONE action, named after the profession ("Läs
+// om Ordningsvakt"), and it is a real link to that profession's page. Its
+// ::after is stretched over the card so a tap anywhere opens it; the detail
+// disclosure is a sibling lifted above it, never nested inside it.
+{
+  const card = code(nextCard);
+  expect(
+    card.includes('to="/career-center/$profession"') &&
+      card.includes("params={{ profession: subject.slug }}"),
+    "a next-profession card must open that profession's own page",
+  );
+  expect(
+    card.includes('t("cc.info.read").replace("{role}", title)'),
+    'a next-profession card\'s action must say where it goes: "Läs om {yrke}"',
+  );
+  expect(
+    card.includes("after:absolute after:inset-0"),
+    "the whole next-profession card must open the profession, not only its label",
+  );
+  const linkClose = card.indexOf("</Link>");
+  const detailAt = card.indexOf("<TransitionDetail");
+  expect(
+    linkClose !== -1 && detailAt > linkClose && card.includes("relative z-10"),
+    "the step detail must sit above the stretched link and outside it — never nested in a link",
+  );
+}
+// Every card in the list is a link whose visible label names the profession.
 expect(
-  explorer.includes("aria-atomic"),
-  "the result count must be announced as a whole, not word by word",
-);
-expect(
-  explorer.includes("htmlFor={searchInputId}"),
-  "the search field must have an associated label",
-);
-expect(explorer.includes('role="search"'), "the search field must sit in a search landmark");
-expect(
-  explorer.includes("aria-pressed={selected}"),
-  "filter chips must expose their selected state, not signal it with colour alone",
-);
-expect(
-  explorer.includes("aria-expanded={showAdvanced}") && explorer.includes("aria-controls="),
-  'the "Fler filter" disclosure must expose its expanded state and the panel it controls',
-);
-expect(
-  explorer.includes("<button") && !explorer.includes("<div onClick"),
-  "every filter control must be a real button, reachable by keyboard",
-);
-expect(
-  explorer.includes('t("cc.explore.remove_filter")'),
-  "the removable chips must carry an accessible name for their remove action",
+  card.includes('t("cc.info.read").replace("{role}", title)'),
+  'a profession card must end in the same words every other surface uses: "Läs om {yrke}"',
 );
 
 // =======================================================================
@@ -964,9 +967,10 @@ for (const name of allowedInMigration) {
     `the migration allows "${name}", which FUNNEL_EVENT_NAMES does not declare`,
   );
 }
+expect(hub.includes("career_center_test_started"), "the hub must record the test-start event");
 expect(
-  hub.includes("career_center_test_started") && hub.includes("career_filter_used"),
-  "the hub must record the test-start and filter-use events",
+  !hub.includes("career_filter_used") && !("career_filter_used" in CAREER_CENTER_EVENT_WIRE_NAME),
+  "no filter is left to measure — the Career Center must not fire or declare a filter event",
 );
 expect(
   hub.includes("career_profession_opened"),
@@ -1556,7 +1560,7 @@ expect(
 // question with a different input. Collapsing the two under one heading makes
 // both untrustworthy, because a reader cannot tell which basis a card has.
 
-const { careerOrigin, ELIGIBILITY_IS_NEVER_ASSESSED, MAX_PATH_DIRECTIONS, selectableOrigins } =
+const { careerOrigin, ELIGIBILITY_IS_NEVER_ASSESSED, selectableOrigins } =
   await import("../src/lib/career-center/career-origin");
 
 expect(
@@ -1580,9 +1584,77 @@ expect(
     fromProfile.state === "ready" && fromProfile.eligibilityAssessed === false,
     "pathFrom must never claim eligibility",
   );
+  // Every recorded onward move, on the spot. It used to show three and send
+  // the reader to the guide for the rest: one more hop between a reader and
+  // an answer at most four long.
   expect(
-    fromProfile.state === "ready" && fromProfile.directions.length <= MAX_PATH_DIRECTIONS,
-    "pathFrom must cap what it shows and link on for the rest",
+    fromProfile.state === "ready" &&
+      fromProfile.directions.length === onwardTransitions(fromProfile.profession).length &&
+      fromProfile.directions.length === 4,
+    "pathFrom must show every recorded onward move — Väktare records four",
+  );
+  // A profession with no recorded move is not a dead end: the guide's own
+  // related professions are offered, and none of them is presented as a
+  // transition.
+  const noMove = careerOrigin({ selectedSlug: "security-manager" });
+  expect(
+    noMove.state === "ready" && noMove.directions.length === 0 && noMove.related.length > 0,
+    "a profession with no recorded next step must still offer the professions its guide relates it to",
+  );
+  if (noMove.state === "ready") {
+    for (const r of noMove.related) {
+      expect(
+        Boolean(getPublishedProfession(r.id)) && r.id !== noMove.profession.id,
+        `related profession "${r.id}" must be a published guide other than the chosen one`,
+      );
+      expect(
+        describeTransition(noMove.profession.id, r.id) === undefined,
+        `related profession "${r.id}" must not be one a recorded move already reaches`,
+      );
+    }
+  }
+  expect(
+    pathFrom.includes('t("cc.path.related.body")') && pathFrom.includes('t("cc.path.next.empty")'),
+    "the empty next-step state must say none is recorded, and label related professions as related",
+  );
+  for (const lang of ["sv", "en"] as const) {
+    const body = (dictionaries[lang] as Record<string, string>)["cc.path.related.body"];
+    expect(
+      /inte dokumenterade karriärsteg|not documented career steps/i.test(body),
+      `${lang}: related professions must be said NOT to be documented career steps`,
+    );
+  }
+  // A saved profession the catalogue describes but no guide does: the
+  // catalogue's own recorded moves, each resolved to where it is described.
+  const catalogueOnly = careerOrigin({
+    profileSlug: "polis",
+    profileCatalogueNext: [
+      {
+        otherSlug: "sakerhetschef",
+        otherTitleSv: "Säkerhetschef",
+        otherTitleEn: "Security Manager",
+        transitionKind: "promotion",
+      },
+      {
+        otherSlug: "sakerhetsutredare",
+        otherTitleSv: "Säkerhetsutredare",
+        otherTitleEn: "Security Investigator",
+        transitionKind: "specialisation",
+      },
+    ],
+  });
+  expect(
+    catalogueOnly.state === "unsupported" &&
+      catalogueOnly.next?.map((n) => (n.info.kind === "none" ? "" : n.info.href)).join() ===
+        "/career-center/security-manager,/career-center/yrke/sakerhetsutredare",
+    "a catalogue-only profession's recorded moves must open their guide, else their catalogue page",
+  );
+  expect(
+    (() => {
+      const freeText = careerOrigin({ profileLabel: "Brandman" });
+      return freeText.state === "unsupported" && freeText.next === null;
+    })(),
+    "a free-text profession has no catalogue moves to show — `next` must say unknown, not none",
   );
 
   const overridden = careerOrigin({ profileSlug: "vaktare", selectedSlug: "security-coordinator" });

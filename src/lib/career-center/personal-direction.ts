@@ -87,8 +87,11 @@ export interface PersonalRecommendation {
    *  array position so nothing can re-sort it into a different claim. */
   readonly rank: number;
   readonly reason: RecommendationReason;
-  /** The report's own confidence word for this entry, never flattened. */
-  readonly confidence: RecommendationConfidence;
+  /** The report's own confidence word for this entry, never flattened —
+   *  or `null` when the saved report holds none this build knows (checked
+   *  in deriveCareerDirection). The surface prints a neutral "unavailable"
+   *  for `null` and keeps the entry exactly where the report put it. */
+  readonly confidence: RecommendationConfidence | null;
   /** The published guide, when the catalogue has one. */
   readonly profession: Profession | null;
   /** The CIG slug the report froze — the profession's identity in the

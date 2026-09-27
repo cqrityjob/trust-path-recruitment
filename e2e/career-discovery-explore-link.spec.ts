@@ -301,6 +301,38 @@ async function openPolisPage(page: Page, back: RegExp) {
   await expect(page.getByTestId("cd-pattern-name")).toBeVisible({ timeout: 30_000 });
 }
 
+/** The staged recommendations further down the report: "Läs om yrket" OPENS
+ *  the profession — through the same destination rule as the chip — rather
+ *  than unfolding an in-card summary under a label that promised the
+ *  profession. Its own page offers the named way back to the report. */
+async function tierCardOpensTheProfession(page: Page, back: RegExp) {
+  const links = page.locator("[data-tier-explore-link]");
+  await expect(links.first()).toBeVisible();
+  for (const link of await links.all()) {
+    const id = await link.getAttribute("data-tier-explore-link");
+    const entry = FIRST_WAVE_CATALOG.find((p) => p.professionId === id);
+    expect(entry, `${id} is an approved profession`).toBeDefined();
+    const dest = exploreDestinationFor(entry!);
+    expect(dest.kind, `${id} has a destination`).not.toBe("none");
+    await expect(link).toHaveAttribute("href", dest.kind === "none" ? "" : dest.href);
+    await expect(link).toHaveText(/Läs om yrket/);
+    await expect(link).toHaveAttribute("aria-label", new RegExp(entry!.titleSv));
+  }
+  const first = links.first();
+  const href = (await first.getAttribute("href"))!;
+  await expectTarget44(
+    page,
+    `[data-tier-explore-link="${await first.getAttribute("data-tier-explore-link")}"]`,
+  );
+  await first.click();
+  await expect(page).toHaveURL(new RegExp(`${href}$`));
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Den här yrkesguiden är inte publicerad ännu/)).toHaveCount(0);
+  await page.locator('[data-profession-back="report"]').click();
+  await expect(page).toHaveURL(back);
+  await expect(page.getByTestId("cd-pattern-name")).toBeVisible({ timeout: 30_000 });
+}
+
 /* ------------------------------------------------------------------ */
 /* Tests                                                               */
 /* ------------------------------------------------------------------ */
@@ -351,6 +383,79 @@ test.describe("Career Discovery — 'Utforska nu' on the recommendation", () => 
     expect(calls.unmatched, "every server function the flow needed was stubbed").toEqual([]);
   });
 
+  // A saved snapshot is data: an unknown confidence word ("high"), a missing
+  // one and null must not take the report view down. The ranking, the
+  // recommendation and every card stay; only the strength word reads as
+  // unavailable.
+  for (const [lang, heading, neutral] of [
+    ["sv", /Din rekommenderade yrkesinriktning/, "Bedömningsstyrka saknas"],
+    ["en", /Your recommended career direction/, "Assessment confidence unavailable"],
+  ] as const) {
+    test(`[${lang}] saved report with unknown confidence words keeps its ranking`, async ({
+      page,
+    }) => {
+      // The recommendation reads in the language the report was frozen in,
+      // so the English case is a report frozen in English.
+      const odd = {
+        ...snapshot,
+        locale: lang,
+        professions: {
+          ...snapshot.professions!,
+          ranked: ranked.map(({ confidence: _c, ...entry }, i) =>
+            i === 0
+              ? { ...entry, confidence: "high" }
+              : i === 1
+                ? entry
+                : { ...entry, confidence: null },
+          ),
+        },
+      };
+      await mount(page, "new_user", {
+        lang,
+        path: `/security-career-assessment/report/${SNAPSHOT_ID}`,
+        ready: '[data-testid="cd-pattern-name"]',
+        overrides: {
+          getStoredDiscoveryReport: ok({
+            status: "v3.1",
+            snapshotId: SNAPSHOT_ID,
+            sessionId: "sess-1",
+            generatedAt: AT,
+            versions: {
+              definition: "3.1.0",
+              content: "3.1.0",
+              scoring: "3.1.0",
+              taxonomy: "3.1.0",
+            },
+            snapshot: odd,
+          }),
+          getMyCareerJourney: HANG,
+          getProfessionDetails: ok(POLIS_DETAIL),
+        },
+      });
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+      const cards = page.locator("[data-recommendation-card]");
+      expect(
+        await cards.evaluateAll((els) =>
+          els.map((el) => el.getAttribute("data-recommendation-card")),
+        ),
+      ).toEqual(ranked.map((r) => r.match.professionId));
+      for (const card of await cards.all()) {
+        await expect(card.locator("[data-confidence]")).toHaveAttribute(
+          "data-confidence",
+          "unavailable",
+        );
+        await expect(card.locator("[data-confidence]")).toHaveText(neutral);
+      }
+      // Rank 1 is still the recommendation, and still opens its profession.
+      await expect(cards.first()).toContainText(lang === "sv" ? TOP!.titleSv : TOP!.titleEn);
+      await expect(cards.first().locator("[data-explore-link]")).toHaveAttribute(
+        "href",
+        TOP_DESTINATION!.kind === "career_center" ? TOP_DESTINATION!.href : "",
+      );
+      await expectNoHorizontalOverflow(page);
+    });
+  }
+
   test("saved report: the link works and Back keeps the report", async ({ page }) => {
     await mount(page, "new_user", {
       path: `/security-career-assessment/report/${SNAPSHOT_ID}`,
@@ -378,5 +483,9 @@ test.describe("Career Discovery — 'Utforska nu' on the recommendation", () => 
       new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`),
     );
     await openPolisPage(page, new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`));
+    await tierCardOpensTheProfession(
+      page,
+      new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`),
+    );
   });
 });

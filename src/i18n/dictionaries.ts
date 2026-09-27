@@ -3363,7 +3363,7 @@ export const dictionaries = {
     "cc.hero.name": "Karriärcenter",
     "cc.hero.lead":
       "Läs om säkerhetsyrken, deras krav och möjliga nästa steg. Utgå från ditt nuvarande yrke, din sparade karriäranalys eller hela yrkeskatalogen.",
-    "cc.hero.cta.explore": "Utforska alla yrken",
+    "cc.hero.cta.explore": "Se alla yrken",
     "cc.hero.cta.personal": "Utgå från mitt resultat",
     "cc.hero.trust": "Ingen bedömning av din kompetens eller anställningsbarhet.",
     "cc.hero.fact.guides": "färdiga yrkesguider",
@@ -3401,35 +3401,9 @@ export const dictionaries = {
     "cc.test.cta": "Starta karriäranalysen",
 
     // § 4 — Utforska yrken
-    "cc.explore.title": "Utforska yrken",
+    "cc.explore.title": "Alla yrken",
     "cc.explore.subtitle":
-      "Yrkesguider inom säkerhetsbranschen — sök eller hitta en väg som passar dig.",
-    "cc.explore.search.label": "Sök bland yrkesguiderna",
-    "cc.explore.search.placeholder": "Sök på yrkestitel eller vad rollen gör",
-    "cc.explore.filter.family": "Område / Yrkesfamilj",
-    "cc.explore.filter.level": "Nivå",
-    "cc.explore.filter.all": "Alla",
-    "cc.explore.filter.more": "Fler filter",
-    "cc.explore.filter.less": "Dölj fler filter",
-    "cc.explore.filter.regulated": "Reglering",
-    "cc.explore.filter.sector": "Sektor",
-    "cc.explore.filter.orientation": "Inriktning",
-    "cc.explore.filter.country": "Land",
-    "cc.explore.count.one": "yrke",
-    "cc.explore.count.other": "yrken",
-    "cc.explore.active_filters": "Aktiva filter",
-    "cc.explore.remove_filter": "Ta bort filtret",
-    "cc.explore.clear_all": "Rensa alla",
-    "cc.explore.clear_filters": "Rensa filter",
-    "cc.explore.empty.title": "Inga yrken matchar just den kombinationen.",
-    "cc.explore.empty.body": "Den närmaste sökningen som ger träffar är den här:",
-    "cc.explore.relax.family": "Visa alla yrkesfamiljer",
-    "cc.explore.relax.level": "Visa alla nivåer",
-    "cc.explore.relax.regulated": "Visa både reglerade och ej reglerade yrken",
-    "cc.explore.relax.sector": "Visa alla sektorer",
-    "cc.explore.relax.orientation": "Visa alla inriktningar",
-    "cc.explore.relax.country": "Visa alla länder",
-    "cc.explore.relax.q": "Ta bort sökordet",
+      "Välj ett yrke för att läsa om arbetsuppgifter, krav och utbildning, möjliga nästa yrken och lediga jobb.",
     "cc.explore.upcoming.title": "Kommer",
     "cc.explore.upcoming.body":
       "Yrken vi arbetar med. De får en egen guide när innehållet är källhänvisat och granskat.",
@@ -3437,7 +3411,7 @@ export const dictionaries = {
     // § 5 — Karriärvägar
     "cc.routes.title": "Karriärvägar",
     "cc.routes.subtitle":
-      "Tre riktningar genom branschen, byggda av de yrkesguider som finns publicerade. Varje steg går att läsa.",
+      "Allmänna exempel på riktningar genom branschen, byggda av registrerade kopplingar mellan de publicerade yrkesguiderna. De utgår inte från ditt yrke eller din karriäranalys.",
     "cc.routes.disclaimer":
       "Karriärvägar är exempel på möjliga riktningar — inte en ordning du ska följa och inte en befordringstrappa. Utvecklingen ser olika ut för olika personer.",
     "cc.routes.stage": "Steg",
@@ -3478,7 +3452,7 @@ export const dictionaries = {
     "cc.p.not_regulated": "Ej reglerat",
     "cc.p.regulatory.title": "Reglering",
     "cc.p.about": "Om yrket",
-    "cc.p.day": "En dag i rollen",
+    "cc.p.day": "Arbetsuppgifter",
     "cc.p.day.environments": "Typiska arbetsmiljöer",
     "cc.p.fit": "Passar dig som…",
     "cc.p.notfit": "Passar mindre bra om…",
@@ -3514,7 +3488,7 @@ export const dictionaries = {
     "cc.p.unavailable.title": "Den här yrkesguiden är inte publicerad ännu.",
     "cc.p.unavailable.body":
       "Vi publicerar en guide först när den har källhänvisat innehåll, angiven jurisdiktion och ett granskningsdatum. Tills dess visar vi ingenting hellre än något ofärdigt.",
-    "cc.p.unavailable.cta": "Utforska publicerade yrkesguider",
+    "cc.p.unavailable.cta": "Se alla yrken",
 
     // Används även av kandidatens resultatvy (assessment/result) — den enda
     // cc.*-nyckeln som konsumeras utanför Karriärcentret.
@@ -3538,7 +3512,7 @@ export const dictionaries = {
     // ── Progressiv visning: referensmaterial ────────────────────────────
     "cc.routes.showMore": "Visa fler karriärvägar",
     "cc.trust.show": "Visa hur vi bygger innehållet",
-    "cc.p.prev.show": "Visa vanliga vägar hit",
+    "cc.p.prev.show": "Visa möjliga vägar hit",
     "cc.p.related.show": "Visa relaterade yrken",
 
     // ── Karriärvägar som grenar, inte en stege ──────────────────────────
@@ -3554,6 +3528,17 @@ export const dictionaries = {
     "cc.step.what": "Vad som gäller",
     "cc.step.sources": "Källor för övergången",
     "cc.step.jurisdiction": "Gäller i",
+    "cc.next.underReview": "Under granskning",
+    "cc.next.underReview.note":
+      "”Under granskning” betyder att kopplingen mellan yrkena är registrerad, men att vi ännu inte har granskat någon källa för själva övergången.",
+    "cc.next.levelLine": "{level} – {relation}.",
+    "cc.next.rel.same": "samma nivå som {from}",
+    "cc.next.rel.up1": "en nivå över {from}",
+    "cc.next.rel.upN": "{n} nivåer över {from}",
+    "cc.next.rel.down1": "en nivå under {from}",
+    "cc.next.rel.downN": "{n} nivåer under {from}",
+    "cc.next.regulated": "Eget reglerat yrke med egna krav.",
+    "cc.next.leadership": "Kräver mer ledarskap.",
 
     // ── Vägar från ditt nuvarande yrke (pathFrom) ───────────────────────
     // Sketch 4's two hero entry cards. They NAME the two routes into a
@@ -3579,20 +3564,20 @@ export const dictionaries = {
     "cc.path.none": "Vi har inga registrerade riktningar från det yrket ännu.",
     "cc.path.notEligibility":
       "Det här är riktningar, inte ett besked om att du är behörig. CQrityjob prövar inte om du uppfyller kraven för ett yrke — det gör regelverket och arbetsgivaren.",
-    "cc.path.more": "Alla nästa steg i yrkesguiden",
     "cc.path.empty.title": "Välj ditt nuvarande yrke",
     "cc.path.empty.body":
-      "Väljer du yrket du arbetar i visar vi vilka riktningar som finns registrerade därifrån, och vad var och en kräver.",
+      "Välj yrket du arbetar i så visar vi vad det innebär, vilka yrken som kan vara möjliga nästa steg och vad de kräver.",
 
     // ── Utforska: progressiv visning ────────────────────────────────────
     "cc.back.nav": "Tillbaka",
-    "cc.back.catalogue": "Tillbaka till yrkeskatalogen",
+    "cc.back.catalogue": "Tillbaka till alla yrken",
     "cc.back.recommendation": "Tillbaka till din rekommendation",
     "cc.back.currentRole": "Tillbaka till ditt nuvarande yrke",
     "cc.back.routes": "Tillbaka till karriärvägarna",
     "cc.back.report": "Tillbaka till din rapport",
     "cc.back.myCareer": "Tillbaka till Min karriär",
     "cc.back.profession": "Tillbaka till föregående yrke",
+    "cc.back.professionNamed": "Tillbaka till {role}",
     "cc.info.read": "Läs om {role}",
     "cc.info.none": "Det finns ingen publicerad information om det här yrket ännu.",
     "cc.jobs.for": "Se jobb som {role}",
@@ -3602,11 +3587,12 @@ export const dictionaries = {
     "cc.nav.about": "Om yrket",
     "cc.nav.competencies": "Kompetenser",
     "cc.nav.requirements": "Krav",
-    "cc.nav.next": "Nästa steg",
+    "cc.nav.next": "Nästa yrken",
     "cc.nav.education": "Utbildning",
     "cc.nav.jobs": "Jobb",
     "cc.nav.sources": "Källor",
-    "cc.p.hero.next": "Se möjliga nästa steg",
+    "cc.nav.more": "Mer om yrket",
+    "cc.p.hero.next": "Se möjliga nästa yrken",
     "cc.cat.eyebrow": "Yrkesinformation från yrkeskatalogen",
     "cc.cat.loading": "Hämtar yrkesinformationen…",
     "cc.cat.error.title": "Vi kunde inte hämta yrkesinformationen",
@@ -3627,7 +3613,7 @@ export const dictionaries = {
       "Katalogen har inga registrerade utbildningar eller certifieringar för det här yrket ännu.",
     "cc.cat.next.subtitle": "Kopplingar mellan yrken som är registrerade i yrkeskatalogen.",
     "cc.cat.next.empty":
-      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
+      "Vi har ännu inte dokumenterat något nästa yrke från {role}. Informationen om yrket ovan gäller ändå, och du kan gå vidare till andra yrken härifrån.",
     "cc.cat.kind.promotion": "Befordran",
     "cc.cat.kind.specialisation": "Specialisering",
     "cc.cat.kind.pivot": "Byte av inriktning",
@@ -3668,16 +3654,13 @@ export const dictionaries = {
     "cc.path.unsupported.freeText":
       "Yrket finns inte i vår yrkeskatalog ännu, så vi kan inte visa information eller karriärsteg för just det. Karriäranalysen eller katalogen kan hjälpa dig vidare.",
     "cc.path.unsupported.unnamed": "Ditt sparade yrke",
-    "cc.path.next.cta": "Se möjliga nästa steg",
-    "cc.path.next.title": "Möjliga nästa steg från {role}",
+    "cc.path.next.title": "Möjliga nästa yrken från {role}",
     "cc.path.next.empty":
-      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
-    "cc.path.next.empty.explore": "Utforska yrkeskatalogen",
-    "cc.path.more.count": "Se alla {n} nästa steg i yrkesguiden",
-    "cc.explore.showAll": "Visa alla yrken",
-    "cc.explore.hideAll": "Dölj yrkeslistan",
-    "cc.explore.showAll.help":
-      "Hela katalogen med sökning och filter. Din nuvarande vy ligger kvar i adressen, så länken går att dela.",
+      "Vi har ännu inte dokumenterat något nästa yrke från {role}. Du kan fortfarande läsa om yrket och gå vidare till andra yrken härifrån.",
+    "cc.path.next.empty.explore": "Se alla yrken",
+    "cc.path.related.title": "Relaterade yrken",
+    "cc.path.related.body":
+      "Yrken som yrkesguiden för {role} anger som närliggande. De är inte dokumenterade karriärsteg.",
 
     // ── Yrkessida: progressiv visning ───────────────────────────────────
     "cc.p.competencies.show": "Visa kompetenskraven",
@@ -3723,7 +3706,7 @@ export const dictionaries = {
     "cc.me.invite.signedout":
       "Har du gjort analysen tidigare? Logga in så visas ditt resultat här.",
     "cc.me.invite.cta": "Gör karriäranalysen",
-    "cc.me.invite.secondary": "Utforska alla yrken i stället",
+    "cc.me.invite.secondary": "Se alla yrken i stället",
     "cc.me.unreadable.title": "Din karriäranalys kunde inte hämtas just nu",
     "cc.me.unreadable.body":
       "Försök igen. Resultatet finns kvar — det är hämtningen som inte gick igenom. Du kan också öppna din analyshistorik.",
@@ -3733,7 +3716,6 @@ export const dictionaries = {
     "cc.me.noroles.body": "Utforska yrken inom området för att läsa vidare.",
 
     // ── Yrkeskort (§3C) ─────────────────────────────────────────────────
-    "cc.card.cta": "Se yrket",
     "cc.card.formal": "Formellt krav",
     "cc.card.formal.none": "Inga formella krav registrerade",
 
@@ -3758,19 +3740,18 @@ export const dictionaries = {
     "cc.step.via.body": "Registrerade roller som ligger mellan de här två:",
     "cc.step.next": "Nästa steg",
     "cc.step.next.guide": "Se hela yrkesguiden",
-    "cc.step.next.jobs": "Se lediga jobb",
     "cc.step.likelihood.common": "Vanlig övergång",
     "cc.step.likelihood.possible": "Möjlig övergång",
     "cc.step.evidence.implicit":
       "Kopplingen mellan yrkena är registrerad. Någon granskad beskrivning av själva övergången finns ännu inte.",
 
     // ── Yrkessidans nya avsnitt (§4) ────────────────────────────────────
-    "cc.p.next.title": "Möjliga nästa karriärsteg",
+    "cc.p.next.title": "Möjliga nästa yrken",
     "cc.p.next.subtitle":
       "Stegen bygger på registrerade kopplingar mellan yrkena. De är exempel på vad som är möjligt — inte en ordning du måste följa.",
     "cc.p.next.none":
-      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
-    "cc.p.prev.title": "Vanliga vägar hit",
+      "Vi har ännu inte dokumenterat något nästa yrke från {role}. Informationen om yrket ovan gäller ändå, och du kan gå vidare till andra yrken härifrån.",
+    "cc.p.prev.title": "Möjliga vägar hit",
     "cc.p.regulatory.boundary": "Avgränsning",
     "cc.p.education.title": "Utbildning och behörighet",
     "cc.p.education.subtitle":
@@ -3807,7 +3788,10 @@ export const dictionaries = {
     "cc.p.jobs.alt.related": "Se relaterade yrken",
 
     // ── Ditt nästa steg (§5) ────────────────────────────────────────────
-    "cc.p.act.title": "Ditt nästa steg",
+    "cc.p.act.title": "Relevanta jobb",
+    "cc.p.more.title": "Mer om yrket",
+    "cc.p.more.subtitle":
+      "Fördjupning: vem rollen passar, vilka kompetenser som efterfrågas, ditt Passport, karriäranalysen och relaterade yrken.",
     "cc.p.act.passport.title": "Lägg till relevant merit i ditt Passport",
     "cc.p.act.passport.body":
       "Ditt Security Passport samlar dina meriter. Om en merit inte visas där betyder det att den inte är registrerad — inte att du saknar den. CQrityjob kontrollerar inte om du uppfyller kraven för ett yrke.",
@@ -3816,10 +3800,6 @@ export const dictionaries = {
     "cc.p.act.test.title": "Osäker på om rollen passar dig?",
 
     // ── Utforska: snabbval ──────────────────────────────────────────────
-    "cc.explore.quick.title": "Snabbval",
-    "cc.explore.quick.entry": "Roller du kan börja i utan tidigare erfarenhet",
-    "cc.explore.quick.next": "Roller på nästa nivå",
-    "cc.explore.quick.org": "Jag representerar en organisation",
     // ── Security Competence Academy — participant delivery ──────────────
     "academy.eyebrow": "Kompetensutveckling",
     "academy.intro.title": "Bedömning av yrkeskompetens",
@@ -11694,7 +11674,7 @@ export const dictionaries = {
     "cc.hero.name": "Career Center",
     "cc.hero.lead":
       "Explore security professions, their requirements and possible next steps. Start with your current profession, your saved career analysis or the full profession catalogue.",
-    "cc.hero.cta.explore": "Explore all professions",
+    "cc.hero.cta.explore": "See all professions",
     "cc.hero.cta.personal": "Start from my result",
     "cc.hero.trust": "Not an assessment of your competence or your employability.",
     "cc.hero.fact.guides": "completed profession guides",
@@ -11734,35 +11714,9 @@ export const dictionaries = {
     "cc.test.cta": "Start the career analysis",
 
     // § 4 — Explore professions
-    "cc.explore.title": "Explore professions",
+    "cc.explore.title": "All professions",
     "cc.explore.subtitle":
-      "Profession guides across the security industry — search, or find a direction that suits you.",
-    "cc.explore.search.label": "Search the profession guides",
-    "cc.explore.search.placeholder": "Search by job title or by what the role does",
-    "cc.explore.filter.family": "Area / Profession family",
-    "cc.explore.filter.level": "Level",
-    "cc.explore.filter.all": "All",
-    "cc.explore.filter.more": "More filters",
-    "cc.explore.filter.less": "Hide extra filters",
-    "cc.explore.filter.regulated": "Regulation",
-    "cc.explore.filter.sector": "Sector",
-    "cc.explore.filter.orientation": "Orientation",
-    "cc.explore.filter.country": "Country",
-    "cc.explore.count.one": "profession",
-    "cc.explore.count.other": "professions",
-    "cc.explore.active_filters": "Active filters",
-    "cc.explore.remove_filter": "Remove filter",
-    "cc.explore.clear_all": "Clear all",
-    "cc.explore.clear_filters": "Clear filters",
-    "cc.explore.empty.title": "No professions match that particular combination.",
-    "cc.explore.empty.body": "The closest search that does return results is this one:",
-    "cc.explore.relax.family": "Show all profession families",
-    "cc.explore.relax.level": "Show all levels",
-    "cc.explore.relax.regulated": "Show both regulated and unregulated professions",
-    "cc.explore.relax.sector": "Show all sectors",
-    "cc.explore.relax.orientation": "Show all orientations",
-    "cc.explore.relax.country": "Show all countries",
-    "cc.explore.relax.q": "Drop the search term",
+      "Choose a profession to read about its tasks, requirements and training, possible next professions and jobs.",
     "cc.explore.upcoming.title": "Coming",
     "cc.explore.upcoming.body":
       "Professions we are working on. Each gets its own guide once the content is sourced and reviewed.",
@@ -11770,7 +11724,7 @@ export const dictionaries = {
     // § 5 — Career routes
     "cc.routes.title": "Career routes",
     "cc.routes.subtitle":
-      "Three directions through the industry, assembled from the guides that are published. Every step is readable.",
+      "General examples of directions through the industry, built from recorded links between the published profession guides. They are not based on your profession or your career analysis.",
     "cc.routes.disclaimer":
       "Career routes are examples of possible directions — not an order to follow and not a promotion ladder. Progression looks different for different people.",
     "cc.routes.stage": "Stage",
@@ -11811,7 +11765,7 @@ export const dictionaries = {
     "cc.p.not_regulated": "Not regulated",
     "cc.p.regulatory.title": "Regulation",
     "cc.p.about": "About the profession",
-    "cc.p.day": "A day in the role",
+    "cc.p.day": "Tasks and responsibilities",
     "cc.p.day.environments": "Typical work environments",
     "cc.p.fit": "Suits you if…",
     "cc.p.notfit": "Suits you less well if…",
@@ -11847,7 +11801,7 @@ export const dictionaries = {
     "cc.p.unavailable.title": "This profession guide is not published yet.",
     "cc.p.unavailable.body":
       "We publish a guide only once it has sourced content, a stated jurisdiction and a review date. Until then we would rather show nothing than something unfinished.",
-    "cc.p.unavailable.cta": "Explore the published profession guides",
+    "cc.p.unavailable.cta": "See all professions",
 
     // Also consumed by the candidate result view (assessment/result) — the
     // only cc.* key read outside the Career Center.
@@ -11871,7 +11825,7 @@ export const dictionaries = {
     // ── Progressive disclosure: reference material ──────────────────────
     "cc.routes.showMore": "Show more career routes",
     "cc.trust.show": "Show how we build the content",
-    "cc.p.prev.show": "Show common routes in",
+    "cc.p.prev.show": "Show possible routes into this profession",
     "cc.p.related.show": "Show related professions",
 
     // ── Career routes as branches, not a ladder ─────────────────────────
@@ -11887,6 +11841,17 @@ export const dictionaries = {
     "cc.step.what": "What applies",
     "cc.step.sources": "Sources for this transition",
     "cc.step.jurisdiction": "Applies in",
+    "cc.next.underReview": "Under review",
+    "cc.next.underReview.note":
+      "“Under review” means the link between the two professions is recorded, but we have not yet reviewed a source for the move itself.",
+    "cc.next.levelLine": "{level} – {relation}.",
+    "cc.next.rel.same": "the same level as {from}",
+    "cc.next.rel.up1": "one level above {from}",
+    "cc.next.rel.upN": "{n} levels above {from}",
+    "cc.next.rel.down1": "one level below {from}",
+    "cc.next.rel.downN": "{n} levels below {from}",
+    "cc.next.regulated": "A separately regulated profession with its own requirements.",
+    "cc.next.leadership": "Requires more leadership.",
 
     // ── Paths from your current role (pathFrom) ─────────────────────────
     "cc.entry.fromProfession.title": "I know my profession",
@@ -11911,20 +11876,20 @@ export const dictionaries = {
     "cc.path.none": "We have no recorded directions out of that profession yet.",
     "cc.path.notEligibility":
       "These are directions, not a decision that you are eligible. CQrityjob does not test whether you meet the requirements for a profession — regulation and the employer do.",
-    "cc.path.more": "All next steps in the profession guide",
     "cc.path.empty.title": "Choose your current profession",
     "cc.path.empty.body":
-      "Pick the role you work in and we will show which directions are recorded from there, and what each one requires.",
+      "Choose the profession you work in and we will show what it involves, which professions could be possible next steps and what they require.",
 
     // ── Explore: progressive disclosure ─────────────────────────────────
     "cc.back.nav": "Back",
-    "cc.back.catalogue": "Back to the profession catalogue",
+    "cc.back.catalogue": "Back to all professions",
     "cc.back.recommendation": "Back to your recommendation",
     "cc.back.currentRole": "Back to your current profession",
     "cc.back.routes": "Back to the career routes",
     "cc.back.report": "Back to your report",
     "cc.back.myCareer": "Back to My Career",
     "cc.back.profession": "Back to the previous profession",
+    "cc.back.professionNamed": "Back to {role}",
     "cc.info.read": "Read about {role}",
     "cc.info.none": "There is no published information about this profession yet.",
     "cc.jobs.for": "See jobs for {role}",
@@ -11934,11 +11899,12 @@ export const dictionaries = {
     "cc.nav.about": "About",
     "cc.nav.competencies": "Competencies",
     "cc.nav.requirements": "Requirements",
-    "cc.nav.next": "Next steps",
+    "cc.nav.next": "Next professions",
     "cc.nav.education": "Education",
     "cc.nav.jobs": "Jobs",
     "cc.nav.sources": "Sources",
-    "cc.p.hero.next": "See possible next steps",
+    "cc.nav.more": "More about the role",
+    "cc.p.hero.next": "See possible next professions",
     "cc.cat.eyebrow": "Profession information from the catalogue",
     "cc.cat.loading": "Loading the profession information…",
     "cc.cat.error.title": "We could not load the profession information",
@@ -11959,7 +11925,7 @@ export const dictionaries = {
       "The catalogue has no recorded education or certifications for this profession yet.",
     "cc.cat.next.subtitle": "Links between professions recorded in the profession catalogue.",
     "cc.cat.next.empty":
-      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
+      "We have not yet documented a next profession from {role}. The information about the profession above still applies, and you can go on to other professions from here.",
     "cc.cat.kind.promotion": "Promotion",
     "cc.cat.kind.specialisation": "Specialisation",
     "cc.cat.kind.pivot": "Change of direction",
@@ -12001,16 +11967,13 @@ export const dictionaries = {
     "cc.path.unsupported.freeText":
       "This profession is not in our catalogue yet, so we cannot show information or career steps for it. The career analysis or the catalogue can help you further.",
     "cc.path.unsupported.unnamed": "Your saved profession",
-    "cc.path.next.cta": "See possible next steps",
-    "cc.path.next.title": "Possible next steps from {role}",
+    "cc.path.next.title": "Possible next professions from {role}",
     "cc.path.next.empty":
-      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
-    "cc.path.next.empty.explore": "Explore the profession catalogue",
-    "cc.path.more.count": "See all {n} next steps in the profession guide",
-    "cc.explore.showAll": "Show all professions",
-    "cc.explore.hideAll": "Hide the profession list",
-    "cc.explore.showAll.help":
-      "The full catalogue with search and filters. Your current view stays in the address, so the link can be shared.",
+      "We have not yet documented a next profession from {role}. You can still read about the profession and go on to other professions from here.",
+    "cc.path.next.empty.explore": "See all professions",
+    "cc.path.related.title": "Related professions",
+    "cc.path.related.body":
+      "Professions the {role} guide lists as related. They are not documented career steps.",
 
     // ── Profession guide: progressive disclosure ────────────────────────
     "cc.p.competencies.show": "Show the competency demands",
@@ -12052,7 +12015,7 @@ export const dictionaries = {
       "You do not have a saved career analysis yet. Explore professions directly or take the analysis to get role suggestions based on your answers.",
     "cc.me.invite.signedout": "Taken it before? Sign in and your result appears here.",
     "cc.me.invite.cta": "Take the career analysis",
-    "cc.me.invite.secondary": "Explore all professions instead",
+    "cc.me.invite.secondary": "See all professions instead",
     "cc.me.unreadable.title": "Your career analysis could not be loaded right now",
     "cc.me.unreadable.body":
       "Try again. The result is still there — it is the loading that did not go through. You can also open your analysis history.",
@@ -12062,7 +12025,6 @@ export const dictionaries = {
     "cc.me.noroles.body": "Explore professions within the area to find out more.",
 
     // ── Profession card (§3C) ───────────────────────────────────────────
-    "cc.card.cta": "See the profession",
     "cc.card.formal": "Formal requirement",
     "cc.card.formal.none": "No formal requirements recorded",
 
@@ -12087,19 +12049,18 @@ export const dictionaries = {
     "cc.step.via.body": "Recorded roles that sit between these two:",
     "cc.step.next": "Next step",
     "cc.step.next.guide": "See the full profession guide",
-    "cc.step.next.jobs": "See open jobs",
     "cc.step.likelihood.common": "Common transition",
     "cc.step.likelihood.possible": "Possible transition",
     "cc.step.evidence.implicit":
       "The link between the professions is recorded. A reviewed description of the transition itself does not exist yet.",
 
     // ── New profession-guide sections (§4) ──────────────────────────────
-    "cc.p.next.title": "Possible next career steps",
+    "cc.p.next.title": "Possible next professions",
     "cc.p.next.subtitle":
       "The steps come from recorded links between the professions. They are examples of what is possible — not an order you have to follow.",
     "cc.p.next.none":
-      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
-    "cc.p.prev.title": "Common routes in",
+      "We have not yet documented a next profession from {role}. The information about the profession above still applies, and you can go on to other professions from here.",
+    "cc.p.prev.title": "Possible routes into this profession",
     "cc.p.regulatory.boundary": "Scope",
     "cc.p.education.title": "Education and authorisation",
     "cc.p.education.subtitle":
@@ -12136,7 +12097,10 @@ export const dictionaries = {
     "cc.p.jobs.alt.related": "See related professions",
 
     // ── Your next step (§5) ─────────────────────────────────────────────
-    "cc.p.act.title": "Your next step",
+    "cc.p.act.title": "Relevant jobs",
+    "cc.p.more.title": "More about the profession",
+    "cc.p.more.subtitle":
+      "In more depth: who the role suits, the competencies it asks for, your Passport, the career analysis and related professions.",
     "cc.p.act.passport.title": "Add a relevant merit to your Passport",
     "cc.p.act.passport.body":
       "Your Security Passport holds your merits. If a merit is not shown there it means it is not registered — not that you lack it. CQrityjob does not check whether you meet the requirements for a profession.",
@@ -12145,10 +12109,6 @@ export const dictionaries = {
     "cc.p.act.test.title": "Not sure whether this role suits you?",
 
     // ── Explore: quick choices ──────────────────────────────────────────
-    "cc.explore.quick.title": "Quick choices",
-    "cc.explore.quick.entry": "Roles you can start in with no prior experience",
-    "cc.explore.quick.next": "Roles at the next level",
-    "cc.explore.quick.org": "I represent an organisation",
     // ── Security Competence Academy — participant delivery ──────────────
     "academy.eyebrow": "Competence development",
     "academy.intro.title": "Professional competence assessment",

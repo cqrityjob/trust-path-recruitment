@@ -77,7 +77,7 @@ import type {
   SourceRef,
 } from "./types";
 import { careerPaths } from "./career-paths";
-import { publishedProfessions, getPublishedProfession } from "./publishability";
+import { publishedProfessions, getPublishedProfession, publishedOnly } from "./publishability";
 
 /**
  * Every recorded transition between two professions, from either direction
@@ -211,6 +211,15 @@ export interface ProfessionTransition {
    *  graph will happily produce a "middle" role, and offering a detour around
    *  a step somebody can already take is noise. */
   readonly via: readonly Profession[];
+  /** How many rungs the destination sits above (positive) or below
+   *  (negative) the origin on the entry → mid → senior → executive scale.
+   *  Read from the two guides' own `level`, so it may be stated at either
+   *  evidence level: it compares two roles, it says nothing about the move. */
+  readonly levelDelta: number;
+  /** Whether the destination asks for leadership at a higher level than the
+   *  origin does. Read from the two guides' competency profiles, like
+   *  `raised`, and for the same reason available at either evidence level. */
+  readonly leadershipRaised: boolean;
 }
 
 const LEVEL_ORDER: readonly ExperienceLevel[] = ["entry", "mid", "senior", "executive"];
@@ -309,6 +318,8 @@ function describe(from: Profession, to: Profession, now: Date): ProfessionTransi
     sources: reviewed ? credibleSources(edge?.sources) : [],
     countries: reviewed ? (edge?.countries ?? []) : [],
     via: kind === "long_term" ? intermediateSteps(from, to) : [],
+    levelDelta: levelDistance(from.level, to.level),
+    leadershipRaised: requiredLevel(to, "leadership") > requiredLevel(from, "leadership"),
   };
 }
 
@@ -356,7 +367,29 @@ export function onwardTransitions(
     .sort(order);
 }
 
-/** Recorded moves INTO a profession — "vanliga vägar hit". */
+/**
+ * The published guides a guide lists as RELATED — its own `related` field —
+ * minus itself and minus anything an onward move already reaches.
+ *
+ * This is what a profession with no recorded onward move can still offer: a
+ * named, clickable profession instead of a dead end. It is a property of the
+ * guide ("these roles are close to this one"), not a transition, and the
+ * surface has to say that rather than list them as next steps.
+ */
+export function relatedGuides(
+  p: Profession,
+  onward: readonly ProfessionTransition[] = [],
+): Profession[] {
+  const reached = new Set(onward.map((t) => t.to.id));
+  const seen = new Set<string>();
+  return publishedOnly(p.related ?? []).filter((r) => {
+    if (r.id === p.id || reached.has(r.id) || seen.has(r.id)) return false;
+    seen.add(r.id);
+    return true;
+  });
+}
+
+/** Recorded moves INTO a profession — "möjliga vägar hit". */
 export function inboundTransitions(to: Profession, now: Date = new Date()): ProfessionTransition[] {
   const ids = new Set(to.previousRoles ?? []);
   for (const p of publishedProfessions) {

@@ -14,9 +14,11 @@
 // undifferentiated trigger, which meant the three actions a candidate
 // actually wants ("Explore career", "How do I get there?", "Current jobs")
 // could not be shown until after they had already guessed to click. It is
-// now a card with its own disclosure button set — same content, same data,
-// same order, no nested-interactive markup. Keyboard and screen-reader
-// behaviour is preserved explicitly via aria-expanded/aria-controls.
+// now a card with its own actions — same content, same data, same order, no
+// nested-interactive markup. "Läs om yrket" opens the profession's own page
+// (its guide, else its catalogue page), like every other recommendation
+// link; "Hur kommer jag dit?" unfolds this card's detail, with
+// aria-expanded/aria-controls.
 //
 // Nothing about matching, ranking, staging or wording changed: this file
 // still only renders what matchProfessions and explainMatch produced.
@@ -35,7 +37,10 @@ import {
   ExternalLink,
   Route as RouteIcon,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { translateFor } from "@/i18n/context";
+import { exploreDestinationFor } from "@/lib/career-center/profession-links";
+import { rememberReturn } from "@/lib/career-center/return-context";
 import {
   explainMatch,
   FIT_LABEL,
@@ -219,8 +224,10 @@ function ProfessionDetailBody({
   );
 }
 
+// 44px tall, the target size the report's other controls keep ("Utforska nu"
+// above), now that the first of these opens a page rather than a panel.
 const ACTION_CLASS =
-  "inline-flex h-10 items-center gap-1.5 rounded-[10px] border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+  "inline-flex min-h-11 items-center gap-1.5 rounded-[10px] border border-border bg-background px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 function ProfessionCard({
   match,
@@ -268,22 +275,27 @@ function ProfessionCard({
   const panelId = useId();
   const requirementsAnchorId = `${panelId}-requirements`;
 
-  function reveal(intent: "explore" | "requirements") {
-    setOpen(true);
+  const destination = exploreDestinationFor(match);
+
+  function markExplored() {
     if (!exploredFiredRef.current) {
       exploredFiredRef.current = true;
       onEvent?.("profession_explored", { professionId: match.professionId });
     }
-    if (intent === "requirements") {
-      // Runs after the panel has been painted; harmless no-op if the anchor
-      // is not there yet (detail still loading).
-      requestAnimationFrame(() => {
-        document.getElementById(requirementsAnchorId)?.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
+  }
+
+  /** "Hur kommer jag dit?" — unfold this card's detail at its requirements. */
+  function reveal() {
+    setOpen(true);
+    markExplored();
+    // Runs after the panel has been painted; harmless no-op if the anchor
+    // is not there yet (detail still loading).
+    requestAnimationFrame(() => {
+      document.getElementById(requirementsAnchorId)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       });
-    }
+    });
   }
 
   return (
@@ -344,30 +356,57 @@ function ProfessionCard({
         )}
 
         <div className="mt-5 flex flex-wrap gap-2">
+          {/* "Läs om yrket" OPENS the profession — its guide, else its own
+              catalogue page, through the same rule as every other surface.
+              It used to unfold this card's panel instead: a label promising
+              the profession, delivering an in-card summary of it. */}
+          {destination.kind !== "none" && (
+            <Link
+              to={
+                destination.kind === "career_center"
+                  ? "/career-center/$profession"
+                  : "/career-center/yrke/$cigSlug"
+              }
+              params={
+                (destination.kind === "career_center"
+                  ? { profession: destination.slug }
+                  : { cigSlug: destination.cigSlug }) as never
+              }
+              onClick={() => {
+                markExplored();
+                if (typeof window !== "undefined") {
+                  rememberReturn(
+                    destination.href,
+                    "report",
+                    `${window.location.pathname}${window.location.search}`,
+                  );
+                }
+              }}
+              data-tier-explore-link={match.professionId}
+              data-explore-kind={destination.kind}
+              aria-label={`${t("careerDiscovery.report.v31.exploreCareer")}: ${title}`}
+              className={ACTION_CLASS}
+            >
+              <Compass className="h-4 w-4 text-accent" aria-hidden="true" />
+              {t("careerDiscovery.report.v31.exploreCareer")}
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          )}
           <button
             type="button"
-            onClick={() => (open ? setOpen(false) : reveal("explore"))}
+            onClick={() => (open ? setOpen(false) : reveal())}
             aria-expanded={open}
             aria-controls={panelId}
             className={ACTION_CLASS}
           >
-            <Compass className="h-4 w-4 text-accent" aria-hidden="true" />
+            <RouteIcon className="h-4 w-4 text-accent" aria-hidden="true" />
             {open
               ? t("careerDiscovery.report.v31.closeDetail")
-              : t("careerDiscovery.report.v31.exploreCareer")}
+              : t("careerDiscovery.report.v31.howDoIGetThere")}
             <ChevronDown
               className={`h-3.5 w-3.5 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
-          </button>
-          <button
-            type="button"
-            onClick={() => reveal("requirements")}
-            aria-controls={panelId}
-            className={ACTION_CLASS}
-          >
-            <RouteIcon className="h-4 w-4 text-accent" aria-hidden="true" />
-            {t("careerDiscovery.report.v31.howDoIGetThere")}
           </button>
           <a
             href={jobsHref}

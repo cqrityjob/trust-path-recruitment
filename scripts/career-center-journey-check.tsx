@@ -21,6 +21,17 @@
 //      the Väktare guide is published at `security-officer`.
 //  D7  Guides linked to /jobs even while the job board rendered "coming soon".
 //
+// And for the simplification pass (2026-09-27):
+//
+//  D8  Choosing a profession showed at most three next steps, each linked
+//      only through its heading, then "Se alla N nästa steg i yrkesguiden" —
+//      another hop. A profession with no recorded step, the analysis offer
+//      and an unknown saved role all sent the reader into the catalogue's
+//      search box and 29 filter chips. Now every recorded next profession is
+//      a card that says "Läs om {yrke}" and opens it; with none recorded, the
+//      guide's related professions and the list of every profession are
+//      offered instead — labelled as what they are.
+//
 // ── WHAT THIS RENDERS ──────────────────────────────────────────────────
 //
 // The REAL components, server-rendered in Swedish and English, with
@@ -166,11 +177,7 @@ for (const p of APPROVED) {
   );
   for (const lang of LANGS) {
     const html = render(
-      <PersonalDirectionSection
-        direction={direction}
-        exploreSearch={{}}
-        exploreAnchor="utforska-yrken"
-      />,
+      <PersonalDirectionSection direction={direction} listAnchor="utforska-yrken" />,
       lang,
     );
     const expected =
@@ -268,8 +275,8 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
   );
   ck(
     "3.5 `from=none` survives the URL validator; junk does not",
-    cc.parseExplorerSearch({ from: "none" }).from === "none" &&
-      cc.parseExplorerSearch({ from: "nonsense" }).from === undefined,
+    cc.parseHubSearch({ from: "none" }).from === "none" &&
+      cc.parseHubSearch({ from: "nonsense" }).from === undefined,
   );
   const larm = cc.careerOrigin({
     profileSlug: "larmoperator",
@@ -303,6 +310,7 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
         onSelect={noop}
         onClear={noop}
         onReset={noop}
+        listAnchor="utforska-yrken"
       />,
       lang,
     );
@@ -311,11 +319,28 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
       readyHtml.includes('data-path-selected="security-officer"') &&
         attrs(readyHtml, "data-profession-info").includes("security-officer"),
     );
+    // D8: every recorded next profession is ON THE PAGE, each an action
+    // that names it and opens it — no scroll-only "Se möjliga nästa steg"
+    // button, no "Se alla N nästa steg i yrkesguiden" hop.
     ck(
-      `3.10 [${lang}] "Se möjliga nästa steg" is its own labelled action and section`,
-      readyHtml.includes("data-path-next-link") &&
+      `3.10 [${lang}] every next profession from Väktare is its own "Läs om {yrke}" link`,
+      saved.state === "ready" &&
+        saved.directions.length === 4 &&
         readyHtml.includes('id="nasta-steg-fran-yrke"') &&
-        readyHtml.includes(t["cc.path.next.cta"]),
+        saved.directions.every((tr) => {
+          const title = lang === "sv" ? tr.to.titleSv : tr.to.titleEn;
+          const link = new RegExp(
+            `<a href="/career-center/${tr.to.slug}"[^>]*data-next-profession-link="${tr.to.slug}"[^>]*>${escapeRe(
+              escapeHtml(t["cc.info.read"].replace("{role}", title)),
+            )}`,
+          );
+          return link.test(readyHtml);
+        }),
+    );
+    ck(
+      `3.10b [${lang}] …with nothing that only scrolls or hops to the guide for the rest`,
+      !readyHtml.includes("data-path-next-link") &&
+        !readyHtml.includes('href="/career-center/security-officer#karriarsteg"'),
     );
     ck(
       `3.11 [${lang}] the question is the heading and the control is labelled`,
@@ -328,6 +353,7 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
         onSelect={noop}
         onClear={noop}
         onReset={noop}
+        listAnchor="utforska-yrken"
       />,
       lang,
     );
@@ -344,6 +370,7 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
         onSelect={noop}
         onClear={noop}
         onReset={noop}
+        listAnchor="utforska-yrken"
       />,
       lang,
     );
@@ -361,6 +388,7 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
         onSelect={noop}
         onClear={noop}
         onReset={noop}
+        listAnchor="utforska-yrken"
       />,
       lang,
     );
@@ -370,6 +398,43 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
         larmHtml.includes('href="/career-center/yrke/larmoperator"') &&
         !larmHtml.includes(">larmoperator<"),
     );
+    // D8, signed in: a saved profession the catalogue describes shows the
+    // catalogue's own recorded moves where the reader chose it.
+    const polisHtml = render(
+      <PathFromSection
+        origin={cc.careerOrigin({
+          profileSlug: "polis",
+          profileTitleSv: "Polis",
+          profileTitleEn: "Police Officer",
+          profileCatalogueNext: [
+            {
+              otherSlug: "sakerhetschef",
+              otherTitleSv: "Säkerhetschef",
+              otherTitleEn: "Head of Security",
+              transitionKind: "promotion",
+            },
+            {
+              otherSlug: "sakerhetsutredare",
+              otherTitleSv: "Säkerhetsutredare",
+              otherTitleEn: "Security Investigator",
+              transitionKind: "specialisation",
+            },
+          ],
+        })}
+        profileStatus="ready"
+        onSelect={noop}
+        onClear={noop}
+        onReset={noop}
+        listAnchor="utforska-yrken"
+      />,
+      lang,
+    );
+    ck(
+      `3.14b [${lang}] a catalogue role's recorded moves are shown on the spot, each opening its own page`,
+      polisHtml.includes("data-path-catalogue-next") &&
+        polisHtml.includes('href="/career-center/security-manager"') &&
+        polisHtml.includes('href="/career-center/yrke/sakerhetsutredare"'),
+    );
     const freeHtml = render(
       <PathFromSection
         origin={free}
@@ -377,6 +442,7 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
         onSelect={noop}
         onClear={noop}
         onReset={noop}
+        listAnchor="utforska-yrken"
       />,
       lang,
     );
@@ -393,6 +459,7 @@ group("3 · Current profession: saved, temporary, cleared, reset (D2, D3)");
         onSelect={noop}
         onClear={noop}
         onReset={noop}
+        listAnchor="utforska-yrken"
       />,
       lang,
     );
@@ -413,6 +480,7 @@ for (const p of cc.selectableOrigins()) {
       onSelect={noop}
       onClear={noop}
       onReset={noop}
+      listAnchor="utforska-yrken"
     />,
     "sv",
   );
@@ -421,14 +489,32 @@ for (const p of cc.selectableOrigins()) {
     html.includes(`data-profession-info="${p.slug}"`) &&
       html.includes(`href="/career-center/${p.slug}"`),
   );
-  if (o.state === "ready" && o.totalDirections === 0) {
+  if (o.state === "ready" && o.directions.length === 0) {
     ck(
       `3.18 ${p.slug}: no documented steps is said honestly, with a way on`,
       html.includes('data-path-next="empty"') &&
         !html.includes(dict.sv["cc.path.none"]) &&
-        html.includes("utforska-yrken"),
+        html.includes('href="#utforska-yrken"'),
+    );
+    ck(
+      `3.18b ${p.slug}: the guide's related professions are offered — as related, never as steps`,
+      o.related.length > 0 &&
+        o.related.every((r) => html.includes(`href="/career-center/${r.slug}"`)) &&
+        html.includes(escapeHtml(dict.sv["cc.path.related.body"].replace("{role}", p.titleSv))) &&
+        !html.includes("data-next-profession-link"),
     );
   }
+  if (o.state === "ready") {
+    ck(
+      `3.19 ${p.slug}: every recorded next profession is on the page, none behind a hop`,
+      o.directions.every((tr) => html.includes(`data-next-profession-link="${tr.to.slug}"`)) &&
+        (html.match(/data-next-profession-link=/g) ?? []).length === o.directions.length,
+    );
+  }
+  ck(
+    `3.20 ${p.slug}: no way on leads to a filtered catalogue`,
+    !/[?&]all=|[?&](level|family|q)=/.test(html),
+  );
 }
 
 // =========================================================================
@@ -468,8 +554,7 @@ group("4 · Recommended ≠ current: both shown, both correct, never merged");
     const html = render(
       <PersonalDirectionSection
         direction={direction}
-        exploreSearch={{}}
-        exploreAnchor="utforska-yrken"
+        listAnchor="utforska-yrken"
         savedProfessionId="security-officer"
       />,
       lang,
@@ -523,19 +608,14 @@ group("5 · Older reports, failures and anonymous readers keep their own states"
   for (const [label, d, expected] of cases) {
     ck(`5.1 ${label} → ${expected}`, d.state === expected, d.state);
     const html = render(
-      <PersonalDirectionSection
-        direction={d}
-        exploreSearch={{ q: "x" }}
-        exploreAnchor="utforska-yrken"
-        onRetry={noop}
-      />,
+      <PersonalDirectionSection direction={d} listAnchor="utforska-yrken" onRetry={noop} />,
       "sv",
     );
     ck(`5.2 ${label}: no invented recommendation`, !html.includes("data-personal-recommendation"));
     if (expected === "anonymous" || expected === "no_result" || expected === "no_roles_named") {
       ck(
-        `5.3 ${label}: "Utforska alla yrken" OPENS the catalogue (D5)`,
-        html.includes('href="/career-center?q=x&amp;all=true#utforska-yrken"'),
+        `5.3 ${label}: "Se alla yrken i stället" lands on the list, on this page (D5, D8)`,
+        html.includes('href="#utforska-yrken"') && !html.includes("all=true"),
       );
     }
   }
@@ -545,10 +625,7 @@ group("5 · Older reports, failures and anonymous readers keep their own states"
   const anonymous = cc.personalDirection(undefined, { signedIn: false });
   const noResult = cc.personalDirection({ state: "none" }, { signedIn: true });
   const invite = (d: typeof anonymous, lang: Lang) =>
-    render(
-      <PersonalDirectionSection direction={d} exploreSearch={{}} exploreAnchor="utforska-yrken" />,
-      lang,
-    );
+    render(<PersonalDirectionSection direction={d} listAnchor="utforska-yrken" />, lang);
   for (const lang of LANGS) {
     const none = invite(noResult, lang);
     const anon = invite(anonymous, lang);
@@ -650,18 +727,22 @@ group("6 · Account-scoped reads and write invalidation (D4)");
 }
 
 // =========================================================================
-group("7 · Catalogue deep link and return context (D5)");
+group("7 · Old catalogue links and return context (D5, D8)");
 // =========================================================================
+// The catalogue no longer opens or narrows: its links still land on the hub
+// (and on the list, by their hash), and every one of their parameters is
+// recognised — so the hub can take it out of the address — and ignored.
 for (const raw of [true, "true", "1", 1]) {
   ck(
-    `7.1 ?all=${JSON.stringify(raw)} opens the catalogue`,
-    cc.parseExplorerSearch({ all: raw }).all === true,
+    `7.1 ?all=${JSON.stringify(raw)} is recognised as an old link and narrows nothing`,
+    cc.hasLegacyCatalogueParams({ all: raw }) &&
+      Object.keys(cc.parseHubSearch({ all: raw })).length === 0,
   );
 }
 ck(
-  "7.2 a narrowing filter forces it open",
-  cc.parseExplorerSearch({ family: "guarding" }).all === true ||
-    cc.parseExplorerSearch({ level: "entry" }).all === true,
+  "7.2 an old narrowing filter narrows nothing, and the current profession survives it",
+  Object.keys(cc.parseHubSearch({ family: "guarding", level: "entry", q: "väktare" })).length ===
+    0 && cc.parseHubSearch({ level: "entry", from: "ordningsvakt" }).from === "ordningsvakt",
 );
 {
   const store = new Map<string, string>();
@@ -679,7 +760,7 @@ ck(
   );
   const back = readReturn("/career-center/ordningsvakt");
   ck(
-    "7.3 the way back restores the filtered catalogue view",
+    "7.3 the way back restores exactly the view it was written for",
     back?.origin === "catalogue" &&
       back.href === "/career-center?all=true&level=entry#utforska-yrken",
   );
@@ -689,6 +770,41 @@ ck(
   );
   rememberReturn("/career-center/x", "catalogue", "//evil.example/");
   ck("7.5 a non-local href is never stored", readReturn("/career-center/x") === null);
+  // D8: one entry per page, so a chain unwinds the way it was walked — hub →
+  // Väktare → Ordningsvakt → back → back — and a move between professions
+  // names the one the way back leads to.
+  rememberReturn(
+    "/career-center/security-officer",
+    "current_role",
+    "/career-center?from=security-officer#fran-mitt-yrke",
+  );
+  rememberReturn(
+    "/career-center/ordningsvakt",
+    "profession",
+    "/career-center/security-officer#karriarsteg",
+    { sv: "Väktare", en: "Security Officer" },
+  );
+  const fromGuide = readReturn("/career-center/ordningsvakt");
+  const toHub = readReturn("/career-center/security-officer");
+  ck(
+    "7.6 each page keeps its own way back, so the chain unwinds",
+    fromGuide?.origin === "profession" &&
+      fromGuide.title?.sv === "Väktare" &&
+      toHub?.origin === "current_role" &&
+      toHub.href === "/career-center?from=security-officer#fran-mitt-yrke",
+  );
+  store.set(
+    "cqrityjob.career-center.return",
+    JSON.stringify({
+      target: "/career-center/skyddsvakt",
+      origin: "catalogue",
+      href: "/career-center",
+    }),
+  );
+  ck(
+    "7.7 a context stored by the previous version is still read",
+    readReturn("/career-center/skyddsvakt")?.href === "/career-center",
+  );
   delete (globalThis as unknown as { window?: unknown }).window;
 }
 
@@ -758,6 +874,19 @@ group("8 · The catalogue page: content, failure, not published — never anothe
       html.includes(t["cc.cat.notice"].slice(0, 30)),
     );
 
+    const noSteps = new QueryClient();
+    noSteps.setQueryData(["career-center", "catalogue-profession", "polis"], {
+      ...detail,
+      pathway: [],
+    });
+    const nHtml = render(<CatalogueProfessionView cigSlug="polis" />, lang, noSteps);
+    ck(
+      `8.9 [${lang}] no recorded next step: said, with the way to every profession`,
+      nHtml.includes('data-catalogue-next="empty"') &&
+        nHtml.includes('href="/career-center#utforska-yrken"') &&
+        !nHtml.includes("all=true"),
+    );
+
     const missing = new QueryClient();
     missing.setQueryData(["career-center", "catalogue-profession", "okand"], null);
     const mHtml = render(<CatalogueProfessionView cigSlug="okand" />, lang, missing);
@@ -820,6 +949,12 @@ for (const lang of LANGS) {
     "src/components/career-center/ProfessionBackLink.tsx",
     "src/components/career-center/ProfessionSectionNav.tsx",
     "src/components/career-center/CareerEntryCards.tsx",
+    "src/components/career-center/NextProfessionCard.tsx",
+    "src/components/career-center/connection-text.ts",
+    "src/components/career-center/ProfessionCard.tsx",
+    "src/components/career-center/NextStepPanel.tsx",
+    "src/components/career-center/ProfessionTemplate.tsx",
+    "src/routes/career-center.index.tsx",
   ]) {
     for (const m of readFileSync(path.resolve(import.meta.dir, "..", f), "utf8").matchAll(
       /"(cc\.[a-zA-Z0-9.]+)"/g,
@@ -833,8 +968,15 @@ for (const lang of LANGS) {
     missing.length === 0,
     missing.join(", "),
   );
+  // A pure template — placeholders and punctuation, no words — is the same in
+  // every language by construction ("{level} – {relation}.").
+  const pureTemplate = (text: string) => text.replace(/\{[a-z]+\}/g, "").trim().length <= 3;
   const untranslated = [...used].filter(
-    (k) => dict.sv[k] && dict.sv[k] === dict.en[k] && !/^[A-Z]{2,}$/.test(dict.sv[k]),
+    (k) =>
+      dict.sv[k] &&
+      dict.sv[k] === dict.en[k] &&
+      !/^[A-Z]{2,}$/.test(dict.sv[k]) &&
+      !pureTemplate(dict.sv[k]),
   );
   ck("9.5 …and the English is not the Swedish", untranslated.length === 0, untranslated.join(", "));
   // A sentence that tells the reader they ARE qualified — as opposed to the
@@ -867,6 +1009,7 @@ group("10 · Keyboard and target size on every new control");
         onSelect={noop}
         onClear={noop}
         onReset={noop}
+        listAnchor="utforska-yrken"
       />,
       "sv",
     ) +
@@ -876,8 +1019,7 @@ group("10 · Keyboard and target size on every new control");
           deriveCareerDirection(storedReport([["polis", "Polis", "Police", "moderate"]])),
           { signedIn: true },
         )}
-        exploreSearch={{}}
-        exploreAnchor="utforska-yrken"
+        listAnchor="utforska-yrken"
       />,
       "sv",
     );
@@ -902,6 +1044,86 @@ group("10 · Keyboard and target size on every new control");
   );
 }
 
+// =========================================================================
+group("11 · A profession page reads in the order a reader asks, and never dead-ends (D8)");
+// =========================================================================
+{
+  const { ProfessionTemplate } = await import("../src/components/career-center/ProfessionTemplate");
+  // The four answers, then the fördjupning, then the sources.
+  const ORDER = [
+    "om-yrket",
+    "krav",
+    "utbildning",
+    "karriarsteg",
+    "nasta-steg",
+    "mer-om-yrket",
+    "kallor",
+  ];
+  for (const lang of LANGS) {
+    const t = dict[lang];
+    const guard = cc.getPublishedProfession("security-officer")!;
+    const html = render(<ProfessionTemplate profession={guard} />, lang);
+    const at = ORDER.map((id) => html.indexOf(`id="${id}"`));
+    ck(
+      `11.1 [${lang}] Väktare: tasks → requirements → education → next professions → jobs → more → sources`,
+      at.every((i) => i !== -1) && at.every((i, n) => n === 0 || i > at[n - 1]),
+      at.join(","),
+    );
+    ck(
+      `11.2 [${lang}] the tasks come first, under their own heading`,
+      html.indexOf(escapeHtml(t["cc.p.day"])) > -1 &&
+        html.indexOf(escapeHtml(t["cc.p.day"])) < html.indexOf('id="krav"'),
+    );
+    const onward = cc.onwardTransitions(guard);
+    ck(
+      `11.3 [${lang}] every next profession is a "Läs om {yrke}" link to its own guide`,
+      onward.length === 4 &&
+        onward.every((tr) => {
+          const title = lang === "sv" ? tr.to.titleSv : tr.to.titleEn;
+          return new RegExp(
+            `<a href="/career-center/${tr.to.slug}"[^>]*>${escapeRe(
+              escapeHtml(t["cc.info.read"].replace("{role}", title)),
+            )}`,
+          ).test(html);
+        }),
+    );
+    ck(
+      `11.4 [${lang}] the competency profile is fördjupning, after the jobs`,
+      html.indexOf('id="kompetenser"') > html.indexOf('id="nasta-steg"') &&
+        html.indexOf('id="kompetenser"') > html.indexOf('id="mer-om-yrket"'),
+    );
+
+    // No recorded next step: said, then the guide's related professions and
+    // the list of every profession. The page still goes on to the jobs.
+    const chief = cc.getPublishedProfession("security-manager")!;
+    const cHtml = render(<ProfessionTemplate profession={chief} />, lang);
+    const related = cc.relatedGuides(chief, cc.onwardTransitions(chief));
+    ck(
+      `11.5 [${lang}] Säkerhetschef: no recorded step is said, with its related professions`,
+      cHtml.includes('data-guide-next="empty"') &&
+        related.length > 0 &&
+        related.every((r) => cHtml.includes(`href="/career-center/${r.slug}"`)) &&
+        cHtml.includes(
+          escapeHtml(
+            t["cc.path.related.body"].replace(
+              "{role}",
+              lang === "sv" ? chief.titleSv : chief.titleEn,
+            ),
+          ),
+        ),
+    );
+    ck(
+      `11.6 [${lang}] …the way to every profession, never a filtered catalogue`,
+      cHtml.includes('href="/career-center#utforska-yrken"') && !/[?&]all=/.test(cHtml),
+    );
+    ck(
+      `11.7 [${lang}] …and the jobs still follow`,
+      cHtml.indexOf('id="nasta-steg"') > cHtml.indexOf('id="karriarsteg"') &&
+        cHtml.includes("data-related-jobs"),
+    );
+  }
+}
+
 console.log("");
 if (fails.length > 0) {
   console.error(`career-center-journey:check FAILED (${fails.length}):`);
@@ -911,6 +1133,20 @@ if (fails.length > 0) {
 console.log("career-center-journey:check OK");
 
 // ── fixtures ─────────────────────────────────────────────────────────────
+
+/** Text as renderToStaticMarkup escapes it. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
+function escapeRe(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function storedReport(
   roles: readonly [

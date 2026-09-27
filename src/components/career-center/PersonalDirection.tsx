@@ -12,7 +12,8 @@ import {
 import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";
 import {
-  RECOMMENDATION_CONFIDENCE_LABEL,
+  readRecommendationConfidence,
+  recommendationConfidenceLabel,
   STAGE_LABEL,
 } from "@/lib/career-discovery/v31/profession-explanations";
 import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
@@ -47,8 +48,7 @@ import { ProfessionInfoAction } from "./ProfessionInfoAction";
 export function PersonalDirectionSection({
   direction,
   onRetry,
-  exploreSearch,
-  exploreAnchor,
+  listAnchor,
   savedProfessionId,
   onProfessionOpen,
   onAssessmentStart,
@@ -56,11 +56,10 @@ export function PersonalDirectionSection({
 }: {
   direction: Direction;
   onRetry?: () => void;
-  /** Where "utforska i stället" goes: the hub's current search with the
-   *  catalogue OPEN, plus its anchor. A bare `#anchor` used to scroll to a
-   *  collapsed section and show nothing. */
-  exploreSearch: Record<string, unknown>;
-  exploreAnchor: string;
+  /** The id of the hub's list of every profession — where "Se alla yrken i
+   *  stället" goes. A jump on the same page, so nothing the reader chose
+   *  above (their current profession) is lost on the way. */
+  listAnchor: string;
   /** The Career Center id of the profession saved in the profile, so the
    *  recommendation can say when the two coincide. Never used to re-rank. */
   savedProfessionId?: string | null;
@@ -146,15 +145,13 @@ export function PersonalDirectionSection({
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </PrimaryLink>
           )}
-          <Link
-            to="/career-center"
-            search={{ ...exploreSearch, all: true } as never}
-            hash={exploreAnchor}
+          <a
+            href={`#${listAnchor}`}
             data-explore-catalogue
             className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("cc.me.invite.secondary")}
-          </Link>
+          </a>
         </div>
       </Shell>
     );
@@ -201,15 +198,13 @@ export function PersonalDirectionSection({
             {t("cc.me.view")}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </Link>
-          <Link
-            to="/career-center"
-            search={{ ...exploreSearch, all: true } as never}
-            hash={exploreAnchor}
+          <a
+            href={`#${listAnchor}`}
             data-explore-catalogue
             className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("cc.me.invite.secondary")}
-          </Link>
+          </a>
         </div>
       </Shell>
     );
@@ -340,8 +335,11 @@ function PrimaryRecommendation({
         <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-foreground">
           {t("cc.me.primary.badge")}
         </span>
-        <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-          {RECOMMENDATION_CONFIDENCE_LABEL[item.confidence][locale]}
+        <span
+          data-confidence={readRecommendationConfidence(item.confidence) ?? "unavailable"}
+          className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+        >
+          {recommendationConfidenceLabel(item.confidence, locale)}
         </span>
         {item.stage && (
           <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground">
@@ -431,8 +429,11 @@ function AlternativeRecommendation({
         <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
           #{item.rank}
         </span>
-        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-          {RECOMMENDATION_CONFIDENCE_LABEL[item.confidence][locale]}
+        <span
+          data-confidence={readRecommendationConfidence(item.confidence) ?? "unavailable"}
+          className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+        >
+          {recommendationConfidenceLabel(item.confidence, locale)}
         </span>
       </div>
       <h4 className="mt-3 text-base font-semibold tracking-tight text-foreground">{title}</h4>
