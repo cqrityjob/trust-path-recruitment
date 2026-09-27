@@ -30,7 +30,8 @@ name: Passport public pilot — real-backend evidence
 #     Delivery by a real mail provider is not proven here and is not claimed.
 #   * The application is served on https, behind scripts/local-tls-front.mjs.
 #     The share function hands a recipient only to an https origin.
-#   * The share function runs with PUBLIC_SITE_URL set to that origin.
+#   * The share function runs with PUBLIC_SITE_URL set to that origin, from a
+#     supabase/functions/.env written on the runner.
 #
 # All three are set on the runner at run time. supabase/config.toml in the
 # repository is not changed.
@@ -137,6 +138,15 @@ jobs:
           email_sent = 60
           TOML
           tail -n 12 supabase/config.toml
+
+      # The share function's setting, loaded by the stack's own edge runtime:
+      # supabase/functions/.env is read on `supabase start`. On this runner
+      # only; the file is never committed.
+      - name: Give the share function the https application origin
+        run: |
+          set -euo pipefail
+          test ! -e supabase/functions/.env || { echo "ENV REFUSED: supabase/functions/.env already exists" >&2; exit 1; }
+          echo "PUBLIC_SITE_URL=https://127.0.0.1:${APP_TLS_PORT}" > supabase/functions/.env
 
       # Started with the migration history HELD BACK, as the other evidence
       # workflows do: the history is replayed as `postgres` below, after the
@@ -264,21 +274,26 @@ jobs:
           psql "$DB_URL" -Atc "SELECT code || ':' || pilot_state || ':' || is_active FROM public.sp_market_packs ORDER BY code"
           psql "$DB_URL" -Atc "SELECT count(*) || ' pilot grant(s)' FROM public.sp_pilot_members"
 
-      # The share gateway, with the https application origin it hands to.
-      - name: Serve the share function
+      # The share gateway answers, and hands only to the https application
+      # origin: its entry page's Content-Security-Policy names it as the one
+      # place a form may post to. Otherwise it would fall back to production.
+      - name: Check the share function
         env:
           API_URL: ${{ steps.local.outputs.api_url }}
         run: |
           set -euo pipefail
-          echo "PUBLIC_SITE_URL=https://127.0.0.1:${APP_TLS_PORT}" > /tmp/functions.env
-          nohup supabase functions serve --env-file /tmp/functions.env > /tmp/functions.log 2>&1 &
-          disown
-          for i in $(seq 1 120); do
+          for i in $(seq 1 90); do
             code="$(curl -s -o /dev/null -w '%{http_code}' "${API_URL}/functions/v1/passport-share" || true)"
-            if [ "$code" = "200" ]; then echo "share function up after ${i}s"; exit 0; fi
+            if [ "$code" = "200" ]; then break; fi
+            if [ "$i" -eq 90 ]; then echo "the share function did not answer (last HTTP ${code})" >&2; exit 1; fi
             sleep 1
           done
-          echo "the share function did not come up"; tail -n 60 /tmp/functions.log; exit 1
+          csp="$(curl -s -D - -o /dev/null "${API_URL}/functions/v1/passport-share" | tr -d '\r' | grep -i '^content-security-policy:')"
+          echo "$csp"
+          case "$csp" in
+            *"form-action https://127.0.0.1:${APP_TLS_PORT}"*) echo "the share function hands to https://127.0.0.1:${APP_TLS_PORT}" ;;
+            *) echo "SHARE FUNCTION REFUSED: it does not hand to the local https origin" >&2; exit 1 ;;
+          esac
 
       - name: Install Chromium
         run: |
@@ -340,8 +355,8 @@ jobs:
         if: failure()
         run: |
           tail -n 80 /tmp/dev-server.log || true
-          tail -n 40 /tmp/functions.log || true
           tail -n 20 /tmp/tls-front.log || true
+          docker ps --format '{{.Names}}' | grep -i edge_runtime | head -1 | xargs -r docker logs --tail 40 || true
 
       - name: Stop the local stack
         if: always()
