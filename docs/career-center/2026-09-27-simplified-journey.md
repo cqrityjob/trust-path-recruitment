@@ -188,19 +188,20 @@ packages; auth read the same `sb-*-auth-token` key the e2e suites plant.
   Card — the check loosened to any string, an unknown stage read as
   `explore_now`, and an entry dropped),
   `career-discovery-explore-link:check`, and `negative-controls:all`.
-- Every `bun run …` check in `ci.yml` before the build: same result on this
-  branch as on `main`.
+- Every `bun run …` check in `ci.yml` before the build passes: 154 steps, in a
+  clean checkout so that the negative controls can run.
 - Playwright, `chromium` and `mobile-375`: `e2e/career-center-journey.spec.ts`
-  (22/22), `e2e/career-discovery-explore-link.spec.ts` (8/8),
+  (26/26), `e2e/career-discovery-explore-link.spec.ts` (12/12),
   `e2e/career-center-pilot.spec.ts` (54/54). The new saved-report tests (hub
-  and report view, Swedish and English) render the error page without the
-  guard. Four of the pilot tests fail on
-  `main` too (it is not in CI): a fixture confidence `"high"` that the v3.1
-  contract does not have, an outdated English heading, the 375 px hub at
-  7,070 px against a 7,000 px budget, and a 19 px inline sign-in link. The
-  fixture and heading are corrected, the sign-in link is now a 44 px target,
-  and the budget is 11,000 px because the list of professions is now shown
-  (the rejected flat hub was ~11,700 px; the explorer opened, ~12,000 px).
+  and report view, Swedish and English; unknown confidence words and unknown
+  stages) render the error page without the guard. Before this work, four of
+  the pilot tests failed on `main` too (it is not in CI): a fixture confidence
+  `"high"` that the v3.1 contract does not have, an outdated English heading,
+  the 375 px hub at 7,070 px against a 7,000 px budget, and a 19 px inline
+  sign-in link. The fixture and heading were corrected, the sign-in link is now
+  a 44 px target, and the budget is 11,000 px because the list of professions
+  is now shown (the rejected flat hub was ~11,700 px; the explorer opened,
+  ~12,000 px).
 - `e2e/career-center-persistence.spec.ts` needs a real local stack; its
   selectors are unchanged and its own workflow runs it on this pull request.
 
