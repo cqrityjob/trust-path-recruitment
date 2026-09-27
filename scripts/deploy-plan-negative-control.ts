@@ -209,6 +209,23 @@ console.log("deploy-plan negative controls\n");
   );
 }
 
+// Security connector aliases require both identities in the actual deploy inputs.
+{
+  const dir = keep(fixture());
+  rmSync(path.join(dir, "supabase/migrations/20260927124146_client_table_privilege_hardening.sql"));
+  const r = runCheck(dir);
+  ck("5 missing generated security marker blocks deploy", r.code !== 0 && r.out.includes("20260927124146"));
+}
+{
+  const dir = keep(fixture());
+  const ledgerPath = path.join(dir, "supabase/hosted-ledger.json");
+  const ledger = JSON.parse(readFileSync(ledgerPath, "utf8"));
+  ledger.versions = ledger.versions.filter((v: { version: string }) => v.version !== "20261218090000");
+  writeFileSync(ledgerPath, JSON.stringify(ledger));
+  const r = runCheck(dir);
+  ck("6 documentary alias alone would replay security SQL and fails", r.code !== 0 && r.out.includes("20261218090000_client_table_privilege_hardening.sql"));
+}
+
 for (const dir of built) rmSync(dir, { recursive: true, force: true });
 
 console.log("");

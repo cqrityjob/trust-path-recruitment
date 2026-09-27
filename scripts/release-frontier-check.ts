@@ -217,23 +217,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // every declared verify statement as expected, no personal row changed. Both
 // come off this list in the same change that marks them applied. Nothing is
 // pending.
-// The strategic-level recruitment content (20261216090000, PR #299) is
-// PENDING: the Säkerhetschef assessment, interview guide, role profile and
-// content links as governed DRAFT rows, authored and proved locally (full
-// replay, rollback and re-apply, loopback journey), and its activation
-// (20261217090000: the test designated as standard recruitment content and
-// the guide opened for pilot, at the same governance status as the
-// operational Väktare content -- draft, pilot hypothesis, closed test, not
-// validated). Neither is merged nor applied. Each comes off this list in the
-// change that records it applied with hosted evidence.
-// Security audit (PR #304): client administrative privileges remain PENDING.
-// This exact entry records review scope, not deployment authorization. Remove
-// only with hosted metadata evidence; deploy-plan:gate must still reject it.
-const expectedPending: string[] = [
-  "20261216090000_scp_security_manager_recruitment_content.sql",
-  "20261217090000_scp_security_manager_recruitment_activation.sql",
-  "20261218090000_client_table_privilege_hardening.sql",
-];
+// 2026-09-27: all three verified applied; security canonical alias reconciled.
+// Evidence: docs/security/2026-09-27/reconciliation/README.md.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
@@ -261,6 +247,7 @@ const retiredCanonicalIdentities = [
   "20261029090000_scp_trust_evidence_report_r3a_contract.sql",
 ];
 const hostedLedgerMarkers = [
+  "20260927124146_client_table_privilege_hardening.sql",
   "20260904190901_scp_trust_evidence_report_r1_provenance.sql",
   "20260907064303_f8efc1c3-def4-4147-9db1-45a68b1f6a69.sql",
   "20260907064513_19c76abb-f1fd-40e5-aa50-b008b7de38bf.sql",
