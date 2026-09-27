@@ -6225,12 +6225,15 @@ TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
-# 20261214090000 (India national qualifications) before everything: it is now
-# the newest Passport unit, it replaced the view, the claim rules, the details
-# guard, the save RPC and the reviewer detail, and its metadata rows would read
-# as adoption to 20261118100000's rollback. Then 20261204090000 (HAYAT
-# assessments), whose triggers sit on sp_claims and sp_evidence. This database
-# is discarded at the end of the block, so neither is reapplied here.
+# Newest Passport unit first: 20261220090000 (public-pilot availability)
+# restores the view, the claim rules and the review queue it replaced. Then
+# 20261214090000 (India national qualifications): it replaced the view, the
+# claim rules, the details guard, the save RPC and the reviewer detail, and its
+# metadata rows would read as adoption to 20261118100000's rollback. Then
+# 20261204090000 (HAYAT assessments), whose triggers sit on sp_claims and
+# sp_evidence. This database is discarded at the end of the block, so none is
+# reapplied here.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql >/dev/null
 # 20261126090000 first: its catalogue view reads sp_credential_organisation_roles.
@@ -7613,11 +7616,15 @@ fi
 
 # The schema foundation must be independently reversible without touching an
 # existing disclosure, then safely re-applicable for the remaining suites.
-# 20261214090000 (India) stands down before them all: it replaced the view,
-# the claim rules, the details guard, the save RPC and the reviewer detail that
-# the rollbacks below restore, and its rows would read as adoption to the
-# foundation rollback further down. It is not re-applied: none of the remaining
-# suites reads it.
+# Newest Passport unit first. 20261220090000 (public-pilot availability)
+# replaced the review queue, which reads sub_jurisdiction_code, and no older
+# rollback restores it; left in place it would read a column the market-pack
+# rollbacks further down drop. Then 20261214090000 (India): it replaced the
+# view, the claim rules, the details guard, the save RPC and the reviewer detail
+# that the rollbacks below restore, and its rows would read as adoption to the
+# foundation rollback further down. Neither is re-applied: none of the
+# remaining suites reads them.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 # 20261126090000's catalogue view reads sp_credential_organisation_roles, so it
 # stands down first or the table below cannot be dropped.
