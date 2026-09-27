@@ -28,7 +28,7 @@
 - [x] Jobs mobile: collapse extra filters behind an accessible "Filter" button with active-filter count; keep search and result count visible; preserve URL filters
 - [x] Homepage hero buttons: fix icon/text spacing
 - [x] Preserve company-name spelling; no auto-capitalisation; use canonical display labels
-- [x] Verify #303 back-navigation/login-return still preserves search filters (only fix if a defect reproduces)
+- [ ] Login return to the ad with search context — UNVERIFIED (no test account in this environment); logged-out back-navigation verified in browser
 - [x] Verify SV/EN desktop+mobile; report authenticated flows as unverified without a test account
 
 ## Frozen boundaries
