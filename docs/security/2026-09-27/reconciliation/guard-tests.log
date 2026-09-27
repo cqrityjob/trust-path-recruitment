@@ -1,0 +1,45 @@
+$ bun run scripts/deploy-plan-negative-control.ts
+deploy-plan negative controls
+
+  ok   1 the repository as it stands passes
+  ok   1b and the printed plan is exactly the 0 reviewed pending migration(s)
+  ok   2 an unreviewed local-only migration FAILS the check
+  ok   2b and the failure names the file rather than a count
+  ok   2c and says where the reviewed answer is supposed to live
+  ok   3 a pending entry the ledger already has FAILS the check
+  ok   3b and the failure names it as stale
+  ok   3c and names the file
+  ok   4 the gate passes because nothing is pending
+  ok   5 missing generated security marker blocks deploy
+  ok   6 documentary alias alone would replay security SQL and fails
+
+deploy-plan-negative:check OK (the derived baseline still refuses an unreviewed migration and a stale pending entry, and the gate is still stricter than the check)
+$ bun run scripts/deploy-plan-check.ts --gate
+deploy plan — what `supabase db push` would do next
+
+  ledger snapshot : wrygicdfxwjnrugduxnt, read 2026-09-27T13:30:00Z (0d old)
+  source          : Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt
+  local files     : 321
+  ledger rows     : 321
+  reviewed plan   : empty (release-state.json records nothing pending)
+
+  WOULD APPLY — nothing.
+
+  Plan is empty. A deploy would apply nothing and refuse nothing.
+$ bun run scripts/release-parity-check.ts --release
+release-parity-check: 321 canonical migrations
+  evidence baseline:  20260925090000 (Official Supabase GitHub integration on owner project wrygicdfxwjnrugduxnt)
+  at the frontier:    77
+  not yet applied:    0
+  unverified:         0
+
+OK: every migration is classified and no code depends on an unapplied one.
+$ bun run scripts/migration-safety-check.ts
+migration-safety-check: 321 active migrations
+  parked:       45
+  never-replay: 1
+  approved dup: 0
+  applied via Lovable (non-re-executable): 87
+OK: migration set matches policy.
+$ bun run scripts/release-frontier-check.ts
+release-frontier-check: production frontier reconciled; no active migration is pending

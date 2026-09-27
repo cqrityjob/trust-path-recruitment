@@ -1,0 +1,21 @@
+DELETE 1
+BEGIN
+SET
+LOCK TABLE
+DO
+COMMIT
+BEGIN
+SET
+LOCK TABLE
+psql:docs/security/2026-09-27/reconciliation/history-repair.sql:26: ERROR:  History changed since saved production snapshot; stop and re-review
+CONTEXT:  PL/pgSQL function inline_code_block line 7 at RAISE
+ preserved_rows |         original_digest          
+----------------+----------------------------------
+            320 | 7b6bca527143c518199d6991669674d0
+(1 row)
+
+    version     |               name               | statements 
+----------------+----------------------------------+------------
+ 20261218090000 | client_table_privilege_hardening | 
+(1 row)
+
