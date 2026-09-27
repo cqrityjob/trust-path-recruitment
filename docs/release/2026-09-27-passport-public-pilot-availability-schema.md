@@ -31,24 +31,32 @@ data moves and no application code depends on it yet.
   rule.
 - **Error text.** `SP_MARKET_PACK_NOT_ACTIVE` now says a market is not open for
   new registration, instead of naming the legal review as the reason.
+- **The review queue names the territory.** `sp_verifier_queue` returned the
+  country only, so the list a reviewer chooses from read "United Arab Emirates"
+  for a Dubai licence and "United Kingdom" for a Northern Irish one. It now also
+  returns `sub_jurisdiction`, as the review detail and the dispute queue already
+  do. One key is added. Nothing else in the body changes, and the grants and the
+  authority check are the same. An application that doesn't read the key is
+  unaffected.
 - **Nothing moves.** No market pack, definition, claim or grant changes.
   `sp_pilot_members` stays as history.
 
 ## Verified (isolated local replay only)
 
 - `scripts/db-test.sh`: strict replay of 323 migrations and every suite.
-- The new suite, 41 assertions: an ordinary holder with no grant saves UK and
+- The new suite, 43 assertions: an ordinary holder with no grant saves UK and
   Dubai credentials in a public-pilot fixture; Abu Dhabi stays closed; blocked
   registration cannot be reached through reactivation, draft activation, a
   change of credential or jurisdiction, an in-place edit or a correction;
   evidence, review requests, withdrawal and decisions by a reviewer without a
-  grant still work after a withdrawal and after a revocation; each write layer
+  grant still work after a withdrawal and after a revocation; the review queue
+  names a Dubai claim `AE-DU` and a Northern Irish one `GB-NI`; each write layer
   refuses on its own.
 - Mutation checks: gating every write again (the old G3) fails at 3.3; an
   INSERT-only credential gate fails at 5.2; a view without the new branch fails
-  at 2.4.
+  at 2.4; a queue without the new key fails at 4.3a.
 - The rollback refuses while any market is `public_pilot`, restores every body
-  byte-identical (md5) to its state before this file, and the forward file
+  byte-identical (md5) to its state before this file, the review queue included, and the forward file
   re-applies on top of it. The suite fails without the migration.
 
 ## Production status: pending
