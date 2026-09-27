@@ -97,7 +97,9 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
           "code,name_sv,name_en,claim_type,category,scope_code,market_pack_code,jurisdiction_code,sub_jurisdiction_code,is_active,pilot_state,legal_review_state,requires_scope,authority_id,sort_order",
         )
         .order("sort_order", { ascending: true }),
-      db.from("sp_market_packs").select("code,is_active,pilot_state,superseded_on"),
+      db
+        .from("sp_market_packs")
+        .select("code,is_active,pilot_state,legal_review_state,superseded_on"),
       db.from("sp_authorities").select("id,name_local,is_active"),
       db.from("sp_certification_definitions").select("credential_code,issuer_id,retired_on"),
       db.from("sp_certification_issuers").select("id,display_name,is_active"),
@@ -206,6 +208,7 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
             (!t.sub_jurisdiction_code || activeSub.has(t.sub_jurisdiction_code as string))),
         packIsActive: pack ? pack.is_active === true && !pack.superseded_on : null,
         packPilotState: pack ? ((pack.pilot_state as string | null) ?? null) : null,
+        packLegalReviewState: pack ? ((pack.legal_review_state as string | null) ?? null) : null,
         review: review
           ? { sourceUrl: review.source_url as string, checkedOn: review.checked_on as string }
           : null,

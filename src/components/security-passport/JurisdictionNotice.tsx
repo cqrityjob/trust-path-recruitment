@@ -22,14 +22,17 @@
 //
 // ── WHY THE SUPPORT LINE IS COPY AND NOT A QUERY ───────────────────────
 //
-// The authority on market availability is `sp_market_packs.is_active`, and it
-// stays the authority: the credential form builds its selector from the active
-// packs, and the database refuses a claim in a closed market whatever any
-// screen says. This panel only has to TELL the holder, and a per-country
-// sentence does that without adding a request to a page that already makes
-// several. `passport-persona-journey-check` asserts the two agree — that
-// exactly one market is open, and that the sentence for every closed one says
-// so.
+// The authority on market availability is the database — `sp_market_access()`
+// and the claim rules that consult it — and it stays the authority: the
+// database refuses a claim in a closed market whatever any screen says. This
+// panel only has to TELL the holder, and a per-country sentence does that
+// without adding a request to a page that already makes several.
+// `passport-persona-journey-check` asserts the two agree for a closed market.
+//
+// A pilot OPEN to this holder is the exception, because the per-country line
+// says "not yet supported" and would contradict the catalogue on the same
+// page. Where the page has already read the market's state it passes it, and
+// the line follows the state instead.
 
 import { Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -44,11 +47,17 @@ import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 export function JurisdictionNotice({
   workCountry,
   subJurisdiction,
+  marketState,
   className,
 }: {
   /** The holder's CONFIRMED work country. NULL when they have not stated one. */
   workCountry: string | null;
   subJurisdiction: string | null;
+  /** The governed state of that market for this holder, when the surface has
+   *  read it. A pilot that is open to them is described as open; without it
+   *  the per-country sentence applies, as on every surface that has not read
+   *  the market. */
+  marketState?: string | null;
   className?: string;
 }) {
   const { pt, lang } = usePassportCopy();
@@ -59,7 +68,7 @@ export function JurisdictionNotice({
   // Sverige" over a holder who had never mentioned Sweden.
   if (!workCountry) return null;
 
-  const supportKey = workCountrySupportKey(workCountry, subJurisdiction);
+  const supportKey = workCountrySupportKey(workCountry, subJurisdiction, marketState);
 
   return (
     <section className={cn("rounded-lg border border-border bg-secondary/40 p-4", className)}>

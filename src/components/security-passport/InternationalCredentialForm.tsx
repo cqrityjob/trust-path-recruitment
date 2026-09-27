@@ -12,8 +12,10 @@ import {
 } from "@/lib/security-passport/evidence.functions";
 import { CREDENTIAL_CLASSES, type CredentialClass } from "@/lib/security-passport/international";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import { PublicPilotStatus } from "./PublicPilotStatus";
+import { NOT_OPEN_FOR_REGISTRATION } from "@/lib/security-passport/market-access";
 import { isStrictlyAfter, toIsoDateOrRaw, todayIso } from "@/lib/security-passport/dates";
-import { formatExpiry } from "@/lib/security-passport/format";
+import { credentialTerritoryLabel, formatExpiry } from "@/lib/security-passport/format";
 import {
   acceptValue,
   applyReading,
@@ -217,6 +219,13 @@ export function InternationalCredentialForm({
   const answer = filterCatalogue(index, filters, localisedHaystack);
   const visible = answer.results;
   const selected = index.find((d) => d.code === draft.definition_code);
+  // Whether the selected definition is offered as a PUBLIC PILOT: open to every
+  // signed-in holder, not approved (`is_active` false), its market's legal
+  // review pending. The catalogue view already decided it may be selected;
+  // this only decides what the holder is told beside it.
+  const selectedFacts = metadata?.definitionScopes?.find((f) => f.code === draft.definition_code);
+  const selectedIsPublicPilot =
+    selectedFacts?.pilot_state === "public_pilot" && selectedFacts.is_active !== true;
   // The catalogue row itself, for the governed fields the filter index does not carry.
   const selectedRow = definitions?.find((d) => d.code === draft.definition_code);
   const rolesOf = (d: IndexedDefinition) => {
@@ -512,10 +521,15 @@ export function InternationalCredentialForm({
                     "Den valda versionen hör inte till den här meriten. Välj en version eller ”Vet inte”.",
                     "The chosen version does not belong to this credential. Choose a version or “Not sure”.",
                   )
-                : copy(
-                    "Kunde inte spara. Kontrollera uppgifterna och försök igen. Det du har skrivit finns kvar.",
-                    "Could not save. Check your details and try again. What you entered is still here.",
-                  ),
+                : code === NOT_OPEN_FOR_REGISTRATION
+                  ? copy(
+                      "Den här meriten är inte öppen för ny registrering just nu, så den kunde inte sparas. Det du redan har registrerat påverkas inte.",
+                      "This credential is not open for new registration right now, so it could not be saved. What you have already registered is not affected.",
+                    )
+                  : copy(
+                      "Kunde inte spara. Kontrollera uppgifterna och försök igen. Det du har skrivit finns kvar.",
+                      "Could not save. Check your details and try again. What you entered is still here.",
+                    ),
       );
     } finally {
       saving.current = false;
@@ -833,7 +847,11 @@ export function InternationalCredentialForm({
             <p className="mt-1 text-sm" data-credential-territory>
               {selected.scope_code === "global_professional"
                 ? copy("Internationell · inget land", "International · no country")
-                : `${copy("Gäller i", "Valid in")}: ${locationName(selected.region ?? selected.country)}`}
+                : `${copy("Gäller i", "Valid in")}: ${
+                    selected.region === "AE-DU"
+                      ? credentialTerritoryLabel(selected.country, selected.region, lang)
+                      : locationName(selected.region ?? selected.country)
+                  }`}
             </p>
             <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2" data-credential-roles>
               {rolesOf(selected).map((r) => (
@@ -862,6 +880,7 @@ export function InternationalCredentialForm({
                 )}
               </p>
             )}
+            {selectedIsPublicPilot && <PublicPilotStatus className="mt-3" />}
             {selectedRow?.official_url && (
               <a
                 className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline"

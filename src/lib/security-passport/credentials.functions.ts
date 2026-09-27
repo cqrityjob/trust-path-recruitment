@@ -33,6 +33,7 @@ import { isCalendarDate } from "./dates";
 import {
   isMissingPilotLayer,
   isMissingPilotStateColumn,
+  isRegistrableAccess,
   marketAvailabilityOf,
   resolveMarketAccess,
   type MarketAccess,
@@ -49,7 +50,8 @@ import {
   type ProvenanceDecisionRow,
   type ProvenanceRequestRow,
 } from "./provenance";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database, Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 import {
   CREDENTIAL_CODE_MAX_LENGTH,
   clearIncompatible,
@@ -77,7 +79,9 @@ import {
  *  the database will accept: an unreviewed market is absent because the pack
  *  is inactive, and a new market appears the day its pack is switched on. */
 export interface SelectableMarket {
-  readonly marketPackCode: string;
+  /** Null for a country whose registrable definitions are national
+   *  qualifications, which need no market pack (India, 20261214090000). */
+  readonly marketPackCode: string | null;
   readonly jurisdictionCode: string;
   /** Present only where the regulator is sub-national — an emirate. Recorded
    *  on the claim so a Dubai credential is never stored as UAE-wide. */
@@ -88,30 +92,107 @@ export interface SelectableMarket {
 
 /** Every market a holder may currently record a credential in.
  *
- *  Deliberately filtered on `is_active`, which by the
- *  sp_market_pack_active_needs_review constraint cannot be true while the
- *  pack's regulatory content is unreviewed. So an unreviewed market is not
- *  merely discouraged in the UI — it is not offered, and would be refused by
- *  the claim trigger if it were. */
+ *  ── DECIDED IN THE DATABASE, PER HOLDER ────────────────────────────────
+ *
+ *  This was a filter on `is_active`. That was the whole answer while an active
+ *  pack was the only kind anybody could register in, and it stopped being the
+ *  answer when a market could open WITHOUT being legally cleared: an internal
+ *  pilot for its named members, and a public pilot (20261220090000) for every
+ *  signed-in holder. Neither is active, and
+ *  sp_market_pack_active_needs_review still keeps an unreviewed pack from
+ *  becoming active. So the list asks `sp_market_access()` — the one decision
+ *  the claim rules consult before accepting a write — for each current pack
+ *  and keeps the ones this holder may register in. An unreviewed market that
+ *  is not open to this holder is still absent, and still refused by the claim
+ *  rules if anything tried.
+ *
+ *  Without the pilot layer, `resolveMarketAccess` answers from `is_active`
+ *  alone, which is exactly the old list.
+ *
+ *  ── AND A COUNTRY WITHOUT A PACK ───────────────────────────────────────
+ *
+ *  India's national qualifications need no market pack, because they
+ *  authorise no work. A country is listed when the approved catalogue — the
+ *  view the save path itself checks — offers this holder at least one of
+ *  them. */
 export const listSelectableMarkets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly SelectableMarket[]> => {
-    const { data, error } = await context.supabase
+    const { supabase, userId } = context;
+    const { data, error } = await supabase
       .from("sp_market_packs")
-      .select("code, jurisdiction_code, sub_jurisdiction_code, name_sv, name_en")
-      .eq("is_active", true)
+      .select("code, jurisdiction_code, sub_jurisdiction_code, name_sv, name_en, is_active")
       .is("superseded_on", null)
       .order("code", { ascending: true });
     if (error) throw new Error(error.message);
 
-    return (data ?? []).map((r) => ({
-      marketPackCode: r.code,
-      jurisdictionCode: r.jurisdiction_code,
-      subJurisdictionCode: r.sub_jurisdiction_code,
-      nameSv: r.name_sv,
-      nameEn: r.name_en,
-    }));
+    const packs = await Promise.all(
+      (data ?? []).map(async (r): Promise<SelectableMarket | null> => {
+        const { data: rpcAccess, error: accessError } = await supabase.rpc("sp_market_access", {
+          _user_id: userId,
+          _market_pack_code: r.code,
+        });
+        if (accessError && !isMissingPilotLayer(accessError)) throw new Error(accessError.message);
+        const access = resolveMarketAccess({
+          packIsActive: r.is_active,
+          rpcAccess,
+          pilotLayerMissing: Boolean(accessError),
+        });
+        if (!isRegistrableAccess(access)) return null;
+        return {
+          marketPackCode: r.code,
+          jurisdictionCode: r.jurisdiction_code,
+          subJurisdictionCode: r.sub_jurisdiction_code,
+          nameSv: r.name_sv,
+          nameEn: r.name_en,
+        };
+      }),
+    );
+
+    const qualificationCountries = await nationalQualificationCountries(supabase);
+    let countries: readonly SelectableMarket[] = [];
+    if (qualificationCountries.size > 0) {
+      const { data: names, error: namesError } = await supabase
+        .from("sp_jurisdictions")
+        .select("code, name_sv, name_en")
+        .in("code", [...qualificationCountries]);
+      if (namesError) throw new Error(namesError.message);
+      countries = (names ?? []).map((j) => ({
+        marketPackCode: null,
+        jurisdictionCode: j.code,
+        subJurisdictionCode: null,
+        nameSv: j.name_sv,
+        nameEn: j.name_en,
+      }));
+    }
+
+    return [...packs.filter((m): m is SelectableMarket => m !== null), ...countries].sort((a, b) =>
+      (a.subJurisdictionCode ?? a.jurisdictionCode).localeCompare(
+        b.subJurisdictionCode ?? b.jurisdictionCode,
+      ),
+    );
   });
+
+/** The countries whose national qualifications the approved catalogue offers
+ *  this caller — read from the view, with the same contract header as every
+ *  other catalogue read, so a country is listed only when the save path would
+ *  accept at least one of its qualifications. */
+async function nationalQualificationCountries(
+  supabase: SupabaseClient<Database>,
+): Promise<ReadonlySet<string>> {
+  const { data, error } = await supabase
+    .from("sp_approved_credential_catalogue" as never)
+    .select("country")
+    .eq("scope_code", "national_qualification")
+    .is("region", null)
+    .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);
+  if (error) throw new Error("Credential catalogue unavailable");
+  return new Set(
+    ((data ?? []) as unknown as { country: string | null }[])
+      .map((r) => r.country)
+      .filter((c): c is string => typeof c === "string" && c.length > 0),
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /* Reading the taxonomy                                                 */
@@ -175,17 +256,27 @@ function toCredentialType(r: TaxonomyRow): CredentialType {
   };
 }
 
-/** The supported credentials, straight from the database.
+/** The credential taxonomy this holder can read, straight from the database.
  *
  *  Not a constant in the bundle: the taxonomy is data, and a fifth credential
- *  must appear in the form without a deploy. */
+ *  must appear in the form without a deploy.
+ *
+ *  NOT a selection list, and not filtered on `is_active`. Its reader is the
+ *  correction form, which must resolve the taxonomy row of a credential the
+ *  holder already has — including a pilot or public-pilot definition, which
+ *  is never active. Filtered on `is_active`, a Dubai credential lost its row
+ *  (fifteen of Dubai's thirty definitions require a scope), the form stopped
+ *  asking for the scope, and the correction was refused for a field the
+ *  holder was never shown. Row-level security decides what comes back
+ *  (sp_credential_types_read: an approved definition, one open to this
+ *  holder, or one they hold). What a holder may newly SELECT is still
+ *  `getRegulatedCredentialAvailability` and the approved catalogue. */
 export const listCredentialTypes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<readonly CredentialType[]> => {
     const { data, error } = await context.supabase
       .from("sp_credential_types")
       .select(TAXONOMY_COLUMNS)
-      .eq("is_active", true)
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
 
@@ -239,6 +330,18 @@ export type RegulatedMarketState =
    *  rather than one boolean, because a caller that cannot tell them apart
    *  will eventually present an unreviewed market as a live one. */
   | "open_pilot"
+  /** The pack is NOT reviewed and NOT active, and it is open to every
+   *  signed-in holder as a public pilot (20261220090000) — no individual
+   *  grant. Its credentials are below and they are registrable. Three facts
+   *  the surface MUST state separately: it is a public pilot, the market's
+   *  legal review is still pending, and registering a credential is not a
+   *  permission to work. */
+  | "open_public_pilot"
+  /** No market pack covers this country, and the approved catalogue offers
+   *  its NATIONAL QUALIFICATIONS to every holder (India, 20261214090000). A
+   *  qualification authorises no work, which is why it needs no pack; the
+   *  surface says that it is a qualification and not a licence. */
+  | "open_qualifications"
   /** A pack exists for this market and its regulatory content has not been
    *  reviewed. Not "you are not eligible" — the rules are not ready. */
   | "pending_review"
@@ -252,7 +355,7 @@ export interface RegulatedCredentialAvailability {
   readonly jurisdictionCode: string | null;
   readonly subJurisdictionCode: string | null;
   readonly marketPackCode: string | null;
-  /** Non-empty only when `state` is "open" or "open_pilot". */
+  /** Non-empty only in a state `isOfferableMarketState` accepts. */
   readonly types: readonly CredentialType[];
 }
 
@@ -326,11 +429,46 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     const { data: pack, error: packError } = await packQuery.maybeSingle();
     if (packError) throw new Error(packError.message);
 
-    // No pack at all. Two different situations reach here and both are
-    // honestly "not supported yet": a country nobody has authored rules for,
-    // and a country whose rules are authored per region — the UAE — where the
-    // holder has named the country but not an emirate.
-    if (!pack) return { state: "unsupported", ...none };
+    // No pack at all. Three different situations reach here:
+    //
+    //   * a country whose registrable definitions are national qualifications
+    //     and need no pack — India. Reported as unsupported until this was
+    //     fixed (G5), while the credential wizard offered the same four
+    //     qualifications correctly, so the page and the wizard disagreed;
+    //   * a country nobody has authored rules for;
+    //   * a country whose rules are authored per region — the UAE — where the
+    //     holder has named the country but not an emirate.
+    //
+    // Only the first is open, and only when the approved catalogue says so:
+    // the same view, with the same contract, that the save path checks. A
+    // qualification never has a region, so a named sub-jurisdiction cannot
+    // reach it.
+    if (!pack) {
+      if (subJurisdictionCode) return { state: "unsupported", ...none };
+      const qualifications = await supabase
+        .from("sp_approved_credential_catalogue" as never)
+        .select("code")
+        .eq("scope_code", "national_qualification")
+        .eq("country", jurisdictionCode)
+        .is("region", null)
+        .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);
+      if (qualifications.error) throw new Error("Credential catalogue unavailable");
+      const codes = (qualifications.data as unknown as { code: string }[]).map((r) => r.code);
+      if (codes.length === 0) return { state: "unsupported", ...none };
+      const { data, error } = await supabase
+        .from("sp_credential_types")
+        .select(TAXONOMY_COLUMNS)
+        .in("code", codes)
+        .order("sort_order", { ascending: true });
+      if (error) throw new Error(error.message);
+      return {
+        state: "open_qualifications",
+        jurisdictionCode,
+        subJurisdictionCode,
+        marketPackCode: null,
+        types: (data ?? []).map(toCredentialType),
+      };
+    }
 
     // ── WHO MAY REACH THIS MARKET, DECIDED IN THE DATABASE ───────────
     //
@@ -370,13 +508,16 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
       pilotLayerMissing: Boolean(accessError),
     });
 
-    if (access !== "production" && access !== "pilot") {
+    if (!isRegistrableAccess(access)) {
       return { state: "pending_review", ...none, marketPackCode: pack.code };
     }
 
     // A pilot market publishes nothing: its credentials are reachable through
     // `pilot_state`, and `is_active` stays false so they do not become public
     // the day the pack is approved without somebody deciding that separately.
+    // A public pilot reads its public-pilot definitions and any approved one
+    // — the two routes the catalogue view admits for it; a definition held
+    // back from the public pilot is in neither.
     const typeQuery = supabase
       .from("sp_credential_types")
       .select(TAXONOMY_COLUMNS)
@@ -386,7 +527,9 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     const { data, error } =
       access === "production"
         ? await typeQuery.eq("is_active", true)
-        : await typeQuery.eq("pilot_state", "internal_pilot");
+        : access === "pilot"
+          ? await typeQuery.eq("pilot_state", "internal_pilot")
+          : await typeQuery.or("is_active.eq.true,pilot_state.eq.public_pilot");
     if (error) throw new Error(error.message);
 
     // The final catalogue decision applies to every selectable surface,
@@ -402,7 +545,8 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
       (approved.data as unknown as { code: string }[]).map((r) => r.code),
     );
     return {
-      state: access === "production" ? "open" : "open_pilot",
+      state:
+        access === "production" ? "open" : access === "pilot" ? "open_pilot" : "open_public_pilot",
       jurisdictionCode,
       subJurisdictionCode,
       marketPackCode: pack.code,
@@ -570,6 +714,8 @@ export const PASSPORT_OVERVIEW_MARKETS = ["SE", "GB", "GB-NI", "AE-DU"] as const
  *  `internal_pilot` is a pack whose `pilot_state` is exactly that: not
  *  public, reachable only through a per-holder pilot entitlement that
  *  `holderAccess` reports, and presented as "Internal pilot · under review".
+ *  `public_pilot` is a pack whose `pilot_state` is exactly that: open to every
+ *  signed-in holder with no grant, and still not legally cleared.
  *  `closed` is everything else — a closed pack, an unknown state, or a
  *  database that has no pilot_state column — and is presented as not
  *  available, never as a pilot. The mapping is `marketAvailabilityOf`.
@@ -589,7 +735,8 @@ export interface PassportMarketOverviewRow {
   readonly availability: MarketAvailability;
   /** What THIS holder may do here, from `sp_market_access()`. A public
    *  reader of an internal-pilot market gets "closed" and sees the market
-   *  as under review; an entitled member gets "pilot" and can use it. */
+   *  as under review; an entitled member gets "pilot" and can use it; every
+   *  signed-in holder of a public-pilot market gets "public_pilot". */
   readonly holderAccess: MarketAccess;
   readonly isCurrentWorkMarket: boolean;
 }

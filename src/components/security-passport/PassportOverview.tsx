@@ -35,10 +35,16 @@ import {
   type CatalogueOption,
 } from "@/lib/security-passport/market-catalogue";
 import { ExperienceTimeline } from "./ExperienceTimeline";
-import { formatWorkLocation, titleWithJurisdictionOnce } from "@/lib/security-passport/format";
+import {
+  formatWorkLocation,
+  titleWithJurisdictionOnce,
+  workCountrySupportKey,
+} from "@/lib/security-passport/format";
 import { EligibilityLine } from "./EligibilityLine";
 import { ExperienceTotalsPanel } from "./ExperienceTotals";
 import { JurisdictionNotice } from "./JurisdictionNotice";
+import type { MarketSectionState } from "./MarketCredentialSection";
+import { PublicPilotStatus } from "./PublicPilotStatus";
 import { RecognitionPanel } from "./RecognitionBadges";
 
 const CLAIM_GROUPS: readonly ClaimType[] = [
@@ -105,7 +111,7 @@ export function PassportOverview({
    *  same defect the entry page carried: a Dubai holder was offered Swedish
    *  regulated credentials from the Passport's front page. */
   marketCredentials?: {
-    readonly state: "no_work_country" | "open" | "open_pilot" | "pending_review" | "unsupported";
+    readonly state: MarketSectionState;
     readonly options: readonly CatalogueOption[];
   };
   onResumeDraft?: (claimId: string) => void;
@@ -295,27 +301,42 @@ export function PassportOverview({
               would still have been told to add a Swedish appointment. The
               sentence is governed with them. */}
           <SectionHeading>
-            {marketCredentials?.state === "open" || marketCredentials?.state === "open_pilot"
-              ? `${pt("market.section.credentialsFor")} ${formatWorkLocation(
-                  holder.jurisdictionCode,
-                  holder.subJurisdictionCode,
-                  lang,
-                )}`
+            {isOfferableMarketState(marketCredentials?.state)
+              ? `${pt(
+                  marketCredentials?.state === "open_qualifications"
+                    ? "market.section.qualificationsFor"
+                    : "market.section.credentialsFor",
+                )} ${formatWorkLocation(holder.jurisdictionCode, holder.subJurisdictionCode, lang)}`
               : pt("cred.overview.title")}
           </SectionHeading>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            {marketCredentials === undefined
-              ? pt("cred.market.stillPossible")
-              : marketCredentials.state === "open"
-                ? pt("cred.overview.body")
-                : marketCredentials.state === "open_pilot"
-                  ? pt("market.pilot.status")
-                  : marketCredentials.state === "pending_review"
-                    ? pt("market.pending.body")
-                    : marketCredentials.state === "unsupported"
-                      ? pt("market.unsupported.body")
-                      : pt("cred.market.noWorkCountry")}
-          </p>
+          {/* A public pilot states its three facts separately, with the SAME
+              component the entry page draws, so the front page cannot merge
+              them into one line that reads as approval. */}
+          {marketCredentials?.state === "open_public_pilot" ? (
+            <PublicPilotStatus className="mt-2" />
+          ) : (
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              {marketCredentials === undefined
+                ? pt("cred.market.stillPossible")
+                : marketCredentials.state === "open"
+                  ? pt("cred.overview.body")
+                  : marketCredentials.state === "open_pilot"
+                    ? pt("market.pilot.status")
+                    : marketCredentials.state === "open_qualifications"
+                      ? pt(
+                          workCountrySupportKey(
+                            holder.jurisdictionCode,
+                            holder.subJurisdictionCode,
+                            marketCredentials.state,
+                          ),
+                        )
+                      : marketCredentials.state === "pending_review"
+                        ? pt("market.pending.body")
+                        : marketCredentials.state === "unsupported"
+                          ? pt("market.unsupported.body")
+                          : pt("cred.market.noWorkCountry")}
+            </p>
+          )}
           <div className="mt-3 space-y-3">
             {/* The governed catalogue, or none. A regulated credential is only
                 ever offered for a market this holder may register in — open
@@ -430,6 +451,7 @@ export function PassportOverview({
           <JurisdictionNotice
             workCountry={holder.jurisdictionCode}
             subJurisdiction={holder.subJurisdictionCode}
+            marketState={marketCredentials?.state}
           />
         </>
       ) : null}

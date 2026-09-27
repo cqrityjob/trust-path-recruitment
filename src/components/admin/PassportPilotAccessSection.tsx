@@ -37,6 +37,8 @@ export interface PilotAccessRowView {
   readonly nameSv: string;
   readonly nameEn: string;
   readonly inPilot: boolean;
+  /** Optional so a caller that predates the public pilot renders as before. */
+  readonly publicPilot?: boolean;
   readonly entitlement: {
     readonly active: boolean;
     readonly grantedAt: string;
@@ -134,7 +136,14 @@ export function PassportPilotAccessSection({
                       {t("admin.users.pilot.note.label")}: {row.entitlement.note}
                     </p>
                   ) : null}
-                  {!row.inPilot ? (
+                  {/* A public pilot needs no grant, and saying only "not in
+                      internal pilot" would read as though this person were
+                      shut out of a market every signed-in holder can use. */}
+                  {row.publicPilot ? (
+                    <p className="mt-0.5 text-xs text-muted-foreground" data-pilot-public="true">
+                      {t("admin.users.pilot.publicPilot")}
+                    </p>
+                  ) : !row.inPilot ? (
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {t("admin.users.pilot.notInPilot")}
                     </p>

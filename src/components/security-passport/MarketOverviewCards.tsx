@@ -16,9 +16,12 @@
 //   Dubai, UAE          Internal pilot · under review
 //
 // "Internal pilot" is printed only when the database's pilot_state says
-// exactly that. A pack that is neither public nor in internal pilot — closed,
-// an unknown state, a database without the column — reads "Not available",
-// because "under review" is a governed claim and the column is its evidence.
+// exactly that, and "Public pilot" likewise. A pack that is neither public nor
+// in a pilot — closed, an unknown state, a database without the column — reads
+// "Not available", because "under review" and "open to everyone" are governed
+// claims and the column is their evidence. A public-pilot card also says, in
+// separate sentences, that the market's legal review is pending and that
+// registering is not a permission to work.
 //
 // They describe nothing about the holder. A card that reads "Available"
 // does not mean this person holds anything there; a card that reads "under
@@ -39,6 +42,7 @@ import { ArrowRight, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatWorkLocation } from "@/lib/security-passport/format";
+import { isRegistrableAccess } from "@/lib/security-passport/market-access";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 
 /** One market, as `listPassportMarketOverview` describes it. Structural so a
@@ -47,8 +51,8 @@ export interface MarketOverviewRow {
   readonly marketPackCode: string;
   readonly jurisdictionCode: string;
   readonly subJurisdictionCode: string | null;
-  readonly availability: "available" | "internal_pilot" | "closed";
-  readonly holderAccess: "production" | "pilot" | "closed";
+  readonly availability: "available" | "internal_pilot" | "public_pilot" | "closed";
+  readonly holderAccess: "production" | "pilot" | "public_pilot" | "closed";
   readonly isCurrentWorkMarket: boolean;
 }
 
@@ -73,7 +77,9 @@ function StatusChip({ availability }: { availability: MarketOverviewRow["availab
       ? "markets.status.available"
       : availability === "internal_pilot"
         ? "markets.status.pilot"
-        : "markets.status.closed";
+        : availability === "public_pilot"
+          ? "markets.status.publicPilot"
+          : "markets.status.closed";
   return (
     <span
       data-market-availability={availability}
@@ -89,6 +95,23 @@ function StatusChip({ availability }: { availability: MarketOverviewRow["availab
   );
 }
 
+/** A public pilot's two caveats, as two sentences: the market's legal review
+ *  is pending, and registering is not a permission to work. The status chip
+ *  above says who may register; the three are never one line. */
+function PublicPilotNotes() {
+  const { pt } = usePassportCopy();
+  return (
+    <div data-market-public-pilot-note className="mt-2 space-y-1">
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {pt("markets.publicPilot.legalReview")}
+      </p>
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        {pt("markets.publicPilot.notPermission")}
+      </p>
+    </div>
+  );
+}
+
 function MarketCard({
   row,
   submarket,
@@ -99,11 +122,10 @@ function MarketCard({
 }) {
   const { pt, lang } = usePassportCopy();
   const name = formatWorkLocation(row.jurisdictionCode, row.subJurisdictionCode, lang);
-  const usable = row.holderAccess === "production" || row.holderAccess === "pilot";
+  const usable = isRegistrableAccess(row.holderAccess);
   const holderIsPilot = row.holderAccess === "pilot";
-  const submarketUsable =
-    submarket !== undefined &&
-    (submarket.holderAccess === "production" || submarket.holderAccess === "pilot");
+  const holderIsPublicPilot = row.holderAccess === "public_pilot";
+  const submarketUsable = submarket !== undefined && isRegistrableAccess(submarket.holderAccess);
 
   // Which market, if any, this card's action adds credentials to. Northern
   // Ireland is chosen as a work market in its own right, so a holder whose
@@ -138,9 +160,11 @@ function MarketCard({
           : null}
         {holderIsPilot
           ? pt("markets.holder.pilotMember")
-          : row.availability !== "available"
-            ? pt("markets.holder.pilotClosed")
-            : null}
+          : holderIsPublicPilot
+            ? pt("markets.holder.publicPilot")
+            : row.availability !== "available"
+              ? pt("markets.holder.pilotClosed")
+              : null}
       </p>
 
       {/* The pilot warning stays on an entitled card. A usable pilot market
@@ -150,6 +174,7 @@ function MarketCard({
           {pt("markets.pilot.note")}
         </p>
       ) : null}
+      {holderIsPublicPilot ? <PublicPilotNotes /> : null}
 
       {submarket ? (
         <div
@@ -163,11 +188,20 @@ function MarketCard({
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             {pt("markets.ni.note")}
           </p>
-          {submarket.isCurrentWorkMarket || submarket.holderAccess === "pilot" ? (
+          {submarket.isCurrentWorkMarket ||
+          submarket.holderAccess === "pilot" ||
+          submarket.holderAccess === "public_pilot" ? (
             <p className="mt-1 text-xs font-medium text-foreground">
               {submarket.isCurrentWorkMarket ? pt("markets.holder.current") : null}
-              {submarket.isCurrentWorkMarket && submarket.holderAccess === "pilot" ? " · " : null}
-              {submarket.holderAccess === "pilot" ? pt("markets.holder.pilotMember") : null}
+              {submarket.isCurrentWorkMarket &&
+              (submarket.holderAccess === "pilot" || submarket.holderAccess === "public_pilot")
+                ? " · "
+                : null}
+              {submarket.holderAccess === "pilot"
+                ? pt("markets.holder.pilotMember")
+                : submarket.holderAccess === "public_pilot"
+                  ? pt("markets.holder.publicPilot")
+                  : null}
             </p>
           ) : null}
           {submarket.holderAccess === "pilot" ? (
@@ -178,6 +212,7 @@ function MarketCard({
               {pt("markets.pilot.note")}
             </p>
           ) : null}
+          {submarket.holderAccess === "public_pilot" ? <PublicPilotNotes /> : null}
         </div>
       ) : null}
 

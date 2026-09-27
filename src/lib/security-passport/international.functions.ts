@@ -6,6 +6,7 @@ import type {
   CredentialJurisdiction,
   CredentialVerificationEvent,
 } from "./international";
+import { NOT_OPEN_FOR_REGISTRATION, isAvailabilityRefusal } from "./market-access";
 import {
   PASSPORT_CATALOGUE_CONTRACT,
   PASSPORT_CATALOGUE_CONTRACT_HEADER,
@@ -59,6 +60,11 @@ export interface InternationalPassportMetadata {
     /** The definition demands a holder-written authorisation scope (SV, SIRA cards). */
     requires_scope?: boolean | null;
     symbol_label?: string | null;
+    /** Approved for everyone. False for every pilot definition. */
+    is_active?: boolean | null;
+    /** 'public_pilot' marks a definition open to every signed-in holder while
+     *  its market's legal review is pending (20261220090000). */
+    pilot_state?: string | null;
   }[];
   /** `sp_certification_definitions.abbreviation` — search only ("CPP", "CISSP"). */
   abbreviations?: readonly { credential_code: string; abbreviation: string | null }[];
@@ -125,7 +131,13 @@ export const getInternationalPassportMetadata = createServerFn({ method: "GET" }
         .order("decided_at", { ascending: true }),
       db.from("sp_credential_organisation_roles" as never).select("*"),
       db.from("sp_credential_definition_reviews" as never).select("*"),
-      db.from("sp_credential_types").select("code,scope_code,requires_scope,symbol_label"),
+      // `pilot_state` and `is_active` tell the wizard which definitions are in
+      // a PUBLIC PILOT, so it can say so beside the selected one. Both columns
+      // are applied on the owner project (20260915090000); what is selectable
+      // is still decided by the catalogue view above, never by these.
+      db
+        .from("sp_credential_types")
+        .select("code,scope_code,requires_scope,symbol_label,is_active,pilot_state"),
       // Search aids only. A failure here must not take the whole wizard down, so
       // these two are read tolerantly below: no abbreviation means a weaker
       // search, never a missing catalogue.
@@ -271,6 +283,11 @@ export const saveInternationalCredential = createServerFn({ method: "POST" })
       if (message.includes("SP_ISSUER_IS_A_REGULATOR")) throw new Error("SP_ISSUER_IS_A_REGULATOR");
       if (message.includes("SP_DEFINITION_VERSION_UNKNOWN"))
         throw new Error("SP_DEFINITION_VERSION_UNKNOWN");
+      // Not holder-fixable, and named anyway: the definition or its market is
+      // not open for new registration to this holder any more — withdrawn, or
+      // a grant revoked, between listing and saving. "Check your details"
+      // would send them looking for a mistake they did not make.
+      if (isAvailabilityRefusal(message)) throw new Error(NOT_OPEN_FOR_REGISTRATION);
       throw new Error("Credential could not be saved");
     }
     return { id: result.data };

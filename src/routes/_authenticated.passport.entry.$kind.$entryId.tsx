@@ -55,6 +55,7 @@ import { validityOf } from "@/lib/security-passport/validity";
 import { formatExpiry, formatPeriodRange } from "@/lib/security-passport/format";
 import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
 import { correctClaim } from "@/lib/security-passport/passport.functions";
+import { NOT_OPEN_FOR_REGISTRATION } from "@/lib/security-passport/market-access";
 import {
   getCredentialPrivateFields,
   listClaimVersions,
@@ -474,7 +475,11 @@ function PassportEntryRoute() {
       });
     } catch (err) {
       console.error("[passport] correction failed", err);
-      setCorrectionError(pt("common.error"));
+      setCorrectionError(
+        err instanceof Error && err.message === NOT_OPEN_FOR_REGISTRATION
+          ? pt("claim.correct.notOpen")
+          : pt("common.error"),
+      );
     } finally {
       setCorrectionBusy(false);
     }

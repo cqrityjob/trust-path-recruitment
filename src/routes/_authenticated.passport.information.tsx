@@ -785,9 +785,31 @@ function PassportInformationRoute() {
                     );
                   }}
                 >
+                  {/* The holder's OWN market is always an option. The list is
+                      the markets this holder may register in; a work market
+                      that is not open to them was missing from it, and the
+                      select then displayed the first option — "Sverige" —
+                      above a section about Dubai. Browsing your own market is
+                      not a registration, so it needs no permission. */}
+                  {workCountry.jurisdictionCode &&
+                  !selectableMarkets.some(
+                    (m) =>
+                      m.jurisdictionCode === workCountry.jurisdictionCode &&
+                      (m.subJurisdictionCode ?? null) === (workCountry.subJurisdictionCode ?? null),
+                  ) ? (
+                    <option
+                      value={`${workCountry.jurisdictionCode}|${workCountry.subJurisdictionCode ?? ""}`}
+                    >
+                      {formatWorkLocation(
+                        workCountry.jurisdictionCode,
+                        workCountry.subJurisdictionCode,
+                        lang,
+                      )}
+                    </option>
+                  ) : null}
                   {selectableMarkets.map((m) => (
                     <option
-                      key={m.marketPackCode}
+                      key={`${m.jurisdictionCode}|${m.subJurisdictionCode ?? ""}`}
                       value={`${m.jurisdictionCode}|${m.subJurisdictionCode ?? ""}`}
                     >
                       {lang === "sv" ? m.nameSv : m.nameEn}

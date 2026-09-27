@@ -539,6 +539,51 @@ console.log("\nwhy a definition is, or is not, selectable (the administrator's d
       "market_closed",
     "D an approved definition in a closed market stays closed: approval does not open a market",
   );
+
+  // ROUTE B (20261220090000): public_pilot definition + public_pilot pack =
+  // every signed-in holder. Still NOT approved and NOT legally reviewed.
+  const publicPilot = { ...base, pilotState: "public_pilot", packPilotState: "public_pilot" };
+  const pub = diagnoseDefinition(publicPilot);
+  check(
+    pub.availability === "selectable_public_pilot" &&
+      pub.reasons.includes("market_public_pilot") &&
+      pub.reasons.includes("public_pilot_not_approved") &&
+      !pub.reasons.includes("definition_not_approved") &&
+      !pub.reasons.includes("market_pilot_members_only") &&
+      !pub.reasons.includes("market_closed"),
+    "D a public-pilot definition in a public-pilot market is selectable by every signed-in holder, and named as NOT approved",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, pilotState: "internal_pilot" }).availability ===
+      "awaiting_definition_approval" &&
+      diagnoseDefinition({ ...publicPilot, pilotState: "closed" }).availability ===
+        "awaiting_definition_approval",
+    "D a definition not opened for the public pilot is held back in a public-pilot market",
+  );
+  check(
+    diagnoseDefinition({ ...base, pilotState: "public_pilot" }).availability ===
+      "awaiting_definition_approval",
+    "D a public-pilot definition in an INTERNAL-pilot market is held back (the view needs both)",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, isActive: true }).availability ===
+      "selectable_public_pilot",
+    "D an approved definition in a public-pilot market is offered to everyone, as a public pilot",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, packPilotState: "closed" }).availability ===
+      "market_closed",
+    "D closing the market again closes its public-pilot definitions",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, deprecated: true }).availability === "blocked",
+    "D a public pilot does not unblock a structural gap",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, legalReviewState: "pending" }).availability ===
+      diagnoseDefinition({ ...publicPilot, legalReviewState: "approved" }).availability,
+    "D availability never reads the legal review: the two stay separate columns",
+  );
   check(
     diagnoseDefinition({
       ...base,

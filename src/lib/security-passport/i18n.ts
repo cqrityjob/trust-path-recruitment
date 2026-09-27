@@ -782,8 +782,15 @@ const sv = {
   // they are. A market that cannot be entered must say so rather than appear
   // as a one-option list with no explanation. No launch date is promised
   // because none is known.
+  //
+  // And true in BOTH pilot states. "Being prepared and cannot be selected yet"
+  // stopped being true for a pilot member, and would stop being true for
+  // everyone the day a public pilot opens (20261220090000) — a sentence that
+  // a data change can falsify cannot be static copy. "In pilot" holds for an
+  // internal and a public pilot alike, and each market then states which one
+  // it is from the governed read.
   "jurisdiction.marketAvailability":
-    "Sverige är tillgängligt i dag. Andra marknader, däribland Storbritannien och Dubai, är under förberedelse och kan ännu inte väljas. Du kan inte registrera en behörighet för ett land som inte är öppnat.",
+    "Behörigheter från Sverige och indiska nationella yrkeskvalifikationer kan registreras av alla. Storbritannien och Dubai är i pilot, och varje marknad visar vem som kan registrera där. Du kan inte registrera en behörighet för ett land som inte är öppnat.",
   // Shown where the person states WHERE THEY WORK, which is a different
   // question from which regulated credentials the product supports. Says both
   // in one breath so a UK or UAE holder can answer truthfully and still knows,
@@ -824,8 +831,20 @@ const sv = {
   "jurisdiction.option.IN": "Indien",
   "workCountry.support.IN":
     "Indiska nationella yrkeskvalifikationer (NSQF) som Passport stöder kan registreras här. De är utbildningsbevis, inte licenser eller arbetstillstånd.",
+  // For a market that is OPEN to this holder right now, the sentence follows
+  // the governed state rather than the country: the per-country lines above
+  // say "not yet supported", which stops being true the day a pilot opens.
+  "workCountry.support.publicPilot":
+    "Marknaden är i öppen pilot: alla registrerade användare kan registrera dess behörigheter här. Den juridiska granskningen av reglerna pågår fortfarande.",
+  "workCountry.support.internalPilot":
+    "Du har pilotåtkomst och kan registrera marknadens behörigheter här. Marknaden är ännu inte öppen för alla, och reglerna granskas fortfarande.",
   "scope.global": "Global",
   "scope.GB": "Storbritannien",
+  // Owner, 2026-09-27: "Always label Dubai-scoped credentials 'Dubai, UAE'."
+  // The emirate, because SIRA licenses Dubai and not the country; the country,
+  // because a reader outside the Gulf may not place Dubai. The same words in
+  // both languages, and short enough for a shield on the compact card.
+  "scope.AE-DU": "Dubai, UAE",
   "scope.notStated": "Område ej angivet",
   "shield.more": "fler aktuella meriter",
   "shield.none": "Inga aktuella meriter ännu",
@@ -890,7 +909,7 @@ const sv = {
     "Vi har inte bekräftat var du arbetar. Ange ditt land så att ditt Passport visar rätt sammanhang. Det påverkar inte vilka behörigheter du kan registrera.",
   "jurisdiction.confirmAction": "Ange var jag arbetar",
   "jurisdiction.workCountryAvailability":
-    "Ange det land där du arbetar. Reglerade behörigheter kan i dag endast registreras för Sverige — Storbritannien och Dubai är under förberedelse. Du kan ange ditt land nu även om dess behörigheter ännu inte stöds.",
+    "Ange det land där du arbetar. Behörigheter från Sverige och indiska nationella yrkeskvalifikationer kan registreras av alla. Storbritannien och Dubai är i pilot, och varje marknad visar vem som kan registrera där. Du kan ange ditt land nu även om dess behörigheter ännu inte stöds.",
   "jurisdiction.title": "Land och behörighet",
   "jurisdiction.crossBorderTitle": "Gäller i Sverige",
   "jurisdiction.crossBorderBody":
@@ -1120,6 +1139,8 @@ const sv = {
   "ver.historyTitle": "Vad som har hänt",
   "ver.historyEmpty": "Inget har hänt med den här uppgiften ännu.",
   "claim.back": "Tillbaka till Passport",
+  "claim.correct.notOpen":
+    "Den här behörigheten är inte öppen för ny registrering just nu, så den kan inte rättas med en ny version. Den finns kvar i ditt Passport som den är, och du kan fortfarande återkalla den.",
   "claim.notFound": "Uppgiften finns inte, eller tillhör inte dig.",
   "claim.trustState": "Underlag och status",
   // ── Archive, and why it is not dispute (pilot fix #1) ────────────────
@@ -1837,6 +1858,18 @@ const sv = {
     "Reglerna för din arbetsmarknad kunde inte hämtas. Inget du har registrerat påverkas.",
   "market.read.retry": "Försök igen",
   "market.section.credentialsFor": "Behörigheter och utbildningar för",
+  "market.section.qualificationsFor": "Kvalifikationer för",
+  // A PUBLIC PILOT (20261220090000) is three facts, and they stay three
+  // sentences: who can register (everyone signed in, no grant), that the
+  // market's legal review is still pending, and that registering is not a
+  // permission to work. Folding them into one line is how "pilot" would come
+  // to read as "approved".
+  "market.publicPilot.status":
+    "Öppen pilot — alla registrerade användare kan registrera behörigheter i den här marknaden.",
+  "market.publicPilot.legalReview":
+    "Den juridiska granskningen av marknadens regler pågår fortfarande. Att marknaden är öppen är inte ett godkännande av den.",
+  "market.publicPilot.notPermission":
+    "Att registrera en behörighet ger dig inte rätt att arbeta. Det följer av behörigheten själv och av myndigheterna i landet.",
   // ── The internal pilot status line ──────────────────────────────────
   //
   // Restrained on purpose. This is a market STATUS, not a warning: it sits
@@ -1904,6 +1937,11 @@ const sv = {
   "markets.status.available": "Tillgänglig",
   "markets.status.pilot": "Intern pilot · under granskning",
   "markets.status.closed": "Inte tillgänglig",
+  "markets.status.publicPilot": "Öppen pilot",
+  "markets.holder.publicPilot": "Alla registrerade användare kan registrera här.",
+  "markets.publicPilot.legalReview": "Den juridiska granskningen av marknadens regler pågår.",
+  "markets.publicPilot.notPermission":
+    "Att registrera en behörighet är inte ett besked om att du får arbeta där.",
   "markets.holder.current": "Din arbetsmarknad",
   "markets.holder.pilotMember": "Du har pilotåtkomst till den här marknaden.",
   "markets.holder.pilotClosed": "Reglerade val kan inte väljas här ännu.",
@@ -3055,7 +3093,7 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.AE": "United Arab Emirates",
   "jurisdiction.AE-DU": "Dubai",
   "jurisdiction.marketAvailability":
-    "Sweden is available today. Other markets, including the United Kingdom and Dubai, are being prepared and cannot be selected yet. You cannot record an authorisation for a country that is not open.",
+    "Credentials from Sweden and Indian national qualifications can be recorded by everyone. The United Kingdom and Dubai are in pilot, and each market shows who can register there. You cannot record an authorisation for a country that is not open.",
   "workCountry.regulated": "Regulated credentials",
   "workCountry.support.SE":
     "Swedish regulated credential types supported by the Passport can be registered here.",
@@ -3078,8 +3116,13 @@ const en: Record<PassportCopyKey, string> = {
   "jurisdiction.option.IN": "India",
   "workCountry.support.IN":
     "Indian national qualifications (NSQF) supported by the Passport can be recorded here. They are qualifications, not licences or permission to work.",
+  "workCountry.support.publicPilot":
+    "This market is in public pilot: every registered user can record its credentials here. The legal review of its rules is still pending.",
+  "workCountry.support.internalPilot":
+    "You have pilot access and can record this market's credentials here. The market is not open to everyone yet, and its rules are still under review.",
   "scope.global": "Global",
   "scope.GB": "Great Britain",
+  "scope.AE-DU": "Dubai, UAE",
   "scope.notStated": "Area not stated",
   "shield.more": "more current credentials",
   "shield.none": "No current credentials yet",
@@ -3133,7 +3176,7 @@ const en: Record<PassportCopyKey, string> = {
     "We have not confirmed where you work. Tell us your country so your Passport shows the right context. It does not change which authorisations you can record.",
   "jurisdiction.confirmAction": "Tell us where I work",
   "jurisdiction.workCountryAvailability":
-    "Tell us the country where you work. Regulated authorisations can currently only be recorded for Sweden — the United Kingdom and Dubai are being prepared. You can state your country now even if its authorisations are not supported yet.",
+    "Tell us the country where you work. Credentials from Sweden and Indian national qualifications can be recorded by everyone. The United Kingdom and Dubai are in pilot, and each market shows who can register there. You can state your country now even if its authorisations are not supported yet.",
   "jurisdiction.title": "Country and eligibility",
   "jurisdiction.crossBorderTitle": "Applies in Sweden",
   "jurisdiction.crossBorderBody":
@@ -3331,6 +3374,8 @@ const en: Record<PassportCopyKey, string> = {
   "ver.historyTitle": "What has happened",
   "ver.historyEmpty": "Nothing has happened to this entry yet.",
   "claim.back": "Back to Passport",
+  "claim.correct.notOpen":
+    "This credential is not open for new registration right now, so it cannot be corrected with a new version. It stays in your Passport as it is, and you can still withdraw it.",
   "claim.notFound": "That entry does not exist, or does not belong to you.",
   "claim.trustState": "Backing and status",
   "claim.archive.title": "Remove from my active Passport",
@@ -3946,6 +3991,13 @@ const en: Record<PassportCopyKey, string> = {
     "The rules for your work market could not be loaded. Nothing you have recorded is affected.",
   "market.read.retry": "Try again",
   "market.section.credentialsFor": "Credentials and training for",
+  "market.section.qualificationsFor": "Qualifications for",
+  "market.publicPilot.status":
+    "Public pilot — every registered user can record credentials in this market.",
+  "market.publicPilot.legalReview":
+    "The legal review of this market's rules is still pending. The market being open is not an approval of it.",
+  "market.publicPilot.notPermission":
+    "Registering a credential does not give you permission to work. That follows from the credential itself and from the authorities in that country.",
   "market.pilot.status": "Internal pilot market — regulatory content is under review",
   "market.pilot.body":
     "You are taking part in an internal pilot for this market. What you register is saved in your Security Passport with its own jurisdiction. The market is not yet open to everyone and its content has not been legally approved.",
@@ -3992,6 +4044,11 @@ const en: Record<PassportCopyKey, string> = {
   "markets.status.available": "Available",
   "markets.status.pilot": "Internal pilot · under review",
   "markets.status.closed": "Not available",
+  "markets.status.publicPilot": "Public pilot",
+  "markets.holder.publicPilot": "Every registered user can register here.",
+  "markets.publicPilot.legalReview": "The legal review of this market's rules is pending.",
+  "markets.publicPilot.notPermission":
+    "Registering a credential is not a statement that you may work there.",
   "markets.holder.current": "Your work market",
   "markets.holder.pilotMember": "You have pilot access to this market.",
   "markets.holder.pilotClosed": "Regulated choices cannot be selected here yet.",

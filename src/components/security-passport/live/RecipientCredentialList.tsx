@@ -23,10 +23,9 @@ import { LifecycleChip, LifecycleNote } from "../LifecycleChip";
 import { CredentialScopeLine } from "./CredentialScopeLine";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
+  credentialTerritoryLabel,
   formatExpiry,
   formatIsoDay,
-  formatJurisdiction,
-  formatWorkLocation,
 } from "@/lib/security-passport/format";
 import { methodLabelKey } from "@/lib/security-passport/trust-presentation";
 import type { RecipientCredential } from "@/lib/security-passport/recipient-presentation";
@@ -154,12 +153,13 @@ export function RecipientCredentialList({
             <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
               <Row label={pt("rec.issuer")} value={c.issuer ?? pt("common.notStated")} />
               {/* The credential's OWN market, on every credential. Rendered
-                  through formatWorkLocation so an emirate prints as "Dubai,
-                  Förenade Arabemiraten" and is never flattened to the UAE. */}
+                  through credentialTerritoryLabel so a Dubai credential prints
+                  as "Dubai, UAE" — the label it carries everywhere — and is
+                  never flattened to the UAE. */}
               {c.jurisdiction ? (
                 <Row
                   label={pt("rec.credentialMarket")}
-                  value={formatWorkLocation(c.jurisdiction, c.subJurisdiction, lang)}
+                  value={credentialTerritoryLabel(c.jurisdiction, c.subJurisdiction, lang)}
                 />
               ) : null}
               {/* WHO / HOW / WHEN, and only when there is an answer.
@@ -198,10 +198,13 @@ export function RecipientCredentialList({
                     : formatExpiry(null, lang, c.noExpiry)
                 }
               />
+              {/* Through the same credential label as "Valid in" above: the
+                  country code alone printed a Dubai licence as "United Arab
+                  Emirates" two rows below the line that said Dubai. */}
               {c.jurisdiction ? (
                 <Row
                   label={pt("rec.jurisdiction")}
-                  value={formatJurisdiction(c.jurisdiction, lang)}
+                  value={credentialTerritoryLabel(c.jurisdiction, c.subJurisdiction, lang)}
                 />
               ) : null}
             </dl>

@@ -440,7 +440,8 @@ for (const lang of ["sv", "en"] as const) {
         [OV, "SE", T("Sverige", "Sweden")],
         [SIA, "GB", T("Storbritannien", "Great Britain")],
         [SIA_NI, "GB", T("Nordirland", "Northern Ireland")],
-        [SIRA, "AE", "Dubai"],
+        // Owner, 2026-09-27: every Dubai-scoped credential reads "Dubai, UAE".
+        [SIRA, "AE", "Dubai, UAE"],
       ] as const) {
         await expect(scopeOf(c)).toHaveText(label);
         await expect(scopeOf(c).locator(`[data-flag="${flag}"]`)).toHaveCount(1);

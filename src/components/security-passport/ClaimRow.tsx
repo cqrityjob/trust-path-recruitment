@@ -14,9 +14,9 @@
 import { cn } from "@/lib/utils";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import {
+  credentialTerritoryLabel,
   formatDate,
   formatExpiry,
-  formatJurisdiction,
   verifierAttributionKey,
 } from "@/lib/security-passport/format";
 import {
@@ -122,7 +122,11 @@ export function ClaimRow({
         {claim.jurisdictionCode ? (
           <Field
             label={pt("claims.jurisdiction")}
-            value={formatJurisdiction(claim.jurisdictionCode, lang)}
+            value={credentialTerritoryLabel(
+              claim.jurisdictionCode,
+              claim.subJurisdictionCode,
+              lang,
+            )}
           />
         ) : null}
         <Field label={pt("claims.issuedOn")} value={formatDate(claim.issuedOn, lang)} />

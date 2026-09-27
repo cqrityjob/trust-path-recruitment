@@ -53,7 +53,14 @@ const SHOT_DIR = process.env.PASSPORT_SHOTS ?? "";
 /* ------------------------------------------------------------------ */
 
 type Availability = {
-  state: "no_work_country" | "open" | "open_pilot" | "pending_review" | "unsupported";
+  state:
+    | "no_work_country"
+    | "open"
+    | "open_pilot"
+    | "open_public_pilot"
+    | "open_qualifications"
+    | "pending_review"
+    | "unsupported";
   jurisdictionCode: string | null;
   subJurisdictionCode: string | null;
   marketPackCode: string | null;
@@ -220,6 +227,9 @@ interface Scenario {
    *  getInternationalPassportMetadata returns them. */
   readonly details?: readonly Record<string, unknown>[];
   readonly definitions?: readonly Record<string, unknown>[];
+  /** sp_credential_types facts the wizard reads beside the catalogue: scope
+   *  requirement, symbol, and whether a definition is in a public pilot. */
+  readonly definitionScopes?: readonly Record<string, unknown>[];
   readonly work?: { jurisdictionCode: string; subJurisdictionCode: string | null };
   /** The admin pilot-access rows, kept as mutable state so a grant or a
    *  revoke changes what the next read returns. */
@@ -480,6 +490,7 @@ async function mount(
             ...(scenario.definitions ?? []),
           ],
           details: scenario.details ?? [],
+          definitionScopes: scenario.definitionScopes ?? [],
           verificationEvents: [],
           jurisdictions: ["SE", "GB", "AE"].map((code) => ({
             code,
@@ -1660,6 +1671,242 @@ test.describe("three markets — the real routes", () => {
       await expect(gb.locator('[data-pilot-action="grant"]')).toBeVisible();
       expect(unmatched).toEqual([]);
       expect(pageErrors).toEqual([]);
+    });
+  }
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   The public pilot (20261220090000) and India (G5)
+   ══════════════════════════════════════════════════════════════════════
+
+   What the database answers once a market is in PUBLIC PILOT, and what it
+   answers for India, drawn by the real routes. The availability answer is
+   stubbed here; the database half is proven by
+   supabase/tests/security_passport_public_pilot_availability_test.sql.
+
+   Review screenshots at 390 and 1440, Swedish and English, when
+   PASSPORT_SHOTS is set.                                                   */
+
+const PUBLIC_PILOT = {
+  du: { ...AVAIL.duPilot, state: "open_public_pilot" },
+  gb: { ...AVAIL.gbPilot, state: "open_public_pilot" },
+} satisfies Record<string, Availability>;
+
+const INDIA_TYPES = [
+  ["IN_MEPSC_Q7101", "Security Guard (MEP/Q7101)", "Q7101"],
+  ["IN_MEPSC_Q7201", "Security Supervisor (MEP/Q7201)", "Q7201"],
+  ["IN_MEPSC_Q7104", "CCTV Supervisor (MEP/Q7104)", "Q7104"],
+  ["IN_MEPSC_Q7204", "CCTV Video Footage Auditor (MEP/Q7204)", "Q7204"],
+].map(([code, name, symbol]) => ({
+  code,
+  category: "qualification",
+  claimType: "certification",
+  nameSv: name,
+  nameEn: name,
+  symbolLabel: symbol,
+  requiresValidUntil: false,
+  requiresIssuer: true,
+  requiresScope: false,
+  narrowResultOnly: false,
+  titleIsHolderWritten: false,
+  jurisdictionCode: "IN",
+  subJurisdictionCode: null,
+  scopeCode: "national_qualification",
+}));
+
+const INDIA_OPEN: Availability = {
+  state: "open_qualifications",
+  jurisdictionCode: "IN",
+  subJurisdictionCode: null,
+  marketPackCode: null,
+  types: INDIA_TYPES,
+};
+
+const WIDTHS = [390, 1440] as const;
+
+async function atWidths(page: Page, name: string, projectName: string, check: () => Promise<void>) {
+  for (const width of WIDTHS) {
+    await page.setViewportSize({ width, height: 900 });
+    await check();
+    expect(await horizontalOverflow(page), `no sideways scroll at ${width}px`).toBeLessThanOrEqual(
+      1,
+    );
+    await shoot(page, `${name}-${width}`, projectName);
+  }
+}
+
+test.describe("public pilot and India — the real routes", () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  for (const lang of ["sv", "en"] as const) {
+    test(`${lang} · PUBLIC PILOT: an ordinary Dubai holder gets the thirty choices and three separate statements`, async ({
+      page,
+    }, info) => {
+      await mount(
+        page,
+        {
+          availability: PUBLIC_PILOT.du,
+          work: { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" },
+        },
+        lang,
+        "/passport/information",
+      );
+      const section = page.locator('[data-testid="market-credential-section"]');
+      await expect(section).toHaveAttribute("data-market-state", "open_public_pilot", {
+        timeout: 30_000,
+      });
+      await atWidths(
+        page,
+        `${lang}-information-dubai-public-pilot`,
+        info.project.name,
+        async () => {
+          await expect(section.locator("[data-credential-code]")).toHaveCount(30);
+          const status = section.locator('[data-testid="market-public-pilot-status"]');
+          await expect(status).toBeVisible();
+          // Three facts, three paragraphs -- never one merged line.
+          await expect(status.locator("[data-public-pilot-statement]")).toHaveCount(3);
+          await expect(
+            status.locator('[data-public-pilot-statement="availability"]'),
+          ).toContainText(lang === "sv" ? "Öppen pilot" : "Public pilot");
+          await expect(
+            status.locator('[data-public-pilot-statement="legal-review"]'),
+          ).toContainText(lang === "sv" ? "pågår" : "pending");
+          await expect(
+            status.locator('[data-public-pilot-statement="not-permission"]'),
+          ).toContainText(lang === "sv" ? "rätt att arbeta" : "permission to work");
+          // Not the internal pilot: no grant is involved.
+          await expect(section.locator('[data-testid="market-pilot-status"]')).toHaveCount(0);
+          await expect(section.locator("h2")).toContainText("Dubai");
+        },
+      );
+      expect(unmatched).toEqual([]);
+      expect(pageErrors).toEqual([]);
+    });
+
+    test(`${lang} · PUBLIC PILOT: Great Britain offers its thirteen to an ordinary holder`, async ({
+      page,
+    }) => {
+      await mount(
+        page,
+        {
+          availability: PUBLIC_PILOT.gb,
+          work: { jurisdictionCode: "GB", subJurisdictionCode: null },
+        },
+        lang,
+        "/passport/information",
+      );
+      const section = page.locator('[data-testid="market-credential-section"]');
+      await expect(section).toHaveAttribute("data-market-state", "open_public_pilot", {
+        timeout: 30_000,
+      });
+      await expect(section.locator("[data-credential-code]")).toHaveCount(13);
+      await expect(section.locator('[data-testid="market-public-pilot-status"]')).toBeVisible();
+      await expect(section.locator('[data-credential-code="UK_SIA_LICENCE_VI"]')).toHaveCount(0);
+      expect(unmatched).toEqual([]);
+    });
+
+    test(`${lang} · G5: an Indian holder is offered the four qualifications, never "not supported"`, async ({
+      page,
+    }, info) => {
+      await mount(
+        page,
+        { availability: INDIA_OPEN, work: { jurisdictionCode: "IN", subJurisdictionCode: null } },
+        lang,
+        "/passport/information",
+      );
+      const section = page.locator('[data-testid="market-credential-section"]');
+      await expect(section).toHaveAttribute("data-market-state", "open_qualifications", {
+        timeout: 30_000,
+      });
+      await atWidths(page, `${lang}-information-india`, info.project.name, async () => {
+        await expect(section.locator("[data-credential-code]")).toHaveCount(4);
+        await expect(section.locator("h2")).toContainText(
+          lang === "sv" ? "Kvalifikationer för Indien" : "Qualifications for India",
+        );
+        await expect(section.locator('[data-testid="market-qualifications-status"]')).toContainText(
+          lang === "sv" ? "inte licenser" : "not licences",
+        );
+        await expect(section.locator('[data-testid="market-closed-notice"]')).toHaveCount(0);
+        await expect(section).not.toContainText(
+          lang === "sv" ? "stöds inte ännu" : "not supported yet",
+        );
+      });
+      expect(unmatched).toEqual([]);
+      expect(pageErrors).toEqual([]);
+    });
+
+    test(`${lang} · the picker: a public-pilot Dubai definition says "Dubai, UAE" and the three statements`, async ({
+      page,
+    }, info) => {
+      const guard = FIXTURE_AE_DU_CATALOGUE.find((t) => t.code === "AE_DU_SIRA_CARD_GUARD")!;
+      await mount(
+        page,
+        {
+          availability: PUBLIC_PILOT.du,
+          work: { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" },
+          definitions: [
+            {
+              code: guard.code,
+              name_sv: guard.nameSv,
+              name_en: guard.nameEn,
+              credential_class: "regulated_authorisation",
+              scope_code: "national_regulated",
+              country: "AE",
+              region: "AE-DU",
+              issuer_id: "sira",
+              issuer_name: "Security Industry Regulatory Agency (SIRA)",
+              requires_valid_until: true,
+              allows_no_expiry: false,
+            },
+          ],
+          definitionScopes: [
+            {
+              code: guard.code,
+              scope_code: "national_regulated",
+              requires_scope: true,
+              symbol_label: guard.symbolLabel,
+              is_active: false,
+              pilot_state: "public_pilot",
+            },
+          ],
+        },
+        lang,
+        `/passport/credentials/new?code=${guard.code}`,
+      );
+      const status = page.locator('[data-testid="market-public-pilot-status"]');
+      await expect(status).toBeVisible({ timeout: 30_000 });
+      await atWidths(page, `${lang}-picker-dubai-public-pilot`, info.project.name, async () => {
+        await expect(status.locator("[data-public-pilot-statement]")).toHaveCount(3);
+        await expect(page.getByText(/(Gäller i|Valid in): Dubai, UAE/)).toBeVisible();
+      });
+      expect(savedPayloads).toEqual([]);
+      expect(pageErrors).toEqual([]);
+    });
+
+    test(`${lang} · the browsing filter keeps the holder's own market, even one not open to them`, async ({
+      page,
+    }) => {
+      await mount(
+        page,
+        {
+          availability: {
+            ...AVAIL.gbPending,
+            jurisdictionCode: "AE",
+            subJurisdictionCode: "AE-DU",
+            marketPackCode: "AE-DU",
+          },
+          work: { jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" },
+          // The list the holder may register in: Sweden only.
+          markets: markets({ work: "AE-DU", pilot: [] }).filter((m) => m.marketPackCode === "SE"),
+        },
+        lang,
+        "/passport/information",
+      );
+      const filter = page.locator("[data-market-filter]");
+      await expect(filter).toBeVisible({ timeout: 30_000 });
+      // The select shows Dubai -- not the first option, Sweden.
+      await expect(filter).toHaveValue("AE|AE-DU");
+      await expect(filter.locator("option:checked")).toContainText("Dubai");
     });
   }
 });

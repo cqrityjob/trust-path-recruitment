@@ -219,7 +219,13 @@ group("GROUP 2 — jurisdiction is human-readable, and never widened");
 
   const du = claimFacts(SIRA);
   ck("2.3 a Dubai credential names Dubai", du.includes(sv("jurisdiction.AE-DU")));
-  ck("2.4 and still names the country", du.includes(sv("jurisdiction.AE")));
+  // The owner's label for every Dubai-scoped credential (2026-09-27): the
+  // emirate AND the country, as "Dubai, UAE" -- never the country alone.
+  ck(
+    "2.4 and still names the country, as the Dubai credential label",
+    du.includes(sv("scope.AE-DU")) && sv("scope.AE-DU") === "Dubai, UAE",
+  );
+  ck("2.4 never the country alone", !du.includes(`>${sv("jurisdiction.AE")}<`));
   ck("2.5 no raw AE-DU reaches the reviewer", !du.includes(">AE-DU<") && !du.includes("AE-DU<"));
   ck("2.6 a scoped authorisation shows its limit", du.includes("Fiktiv Fastighet LLC"));
 }
