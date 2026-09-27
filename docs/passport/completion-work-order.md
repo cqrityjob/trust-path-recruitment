@@ -29,6 +29,7 @@ Naming is fixed: the product is **Security Passport**; the holder's card is **th
 | Occupation line | Engine-derived title only | The Profile occupation, marked self-described, as shipped today (§1) |
 | Card, badges, trust display | A locked 2:3 redesign | Proposals only. The current compact navy card, shields and flags stay (§1, §6) |
 | Recipient card | No self-declared content; no source-confirmed state | Current selective sharing stays, including labelled self-reported credentials and existing source-confirmed states (§1) |
+| Share link | Application domain, never a backend endpoint | The application domain stays the requested outcome; the gateway stays until equivalent security is demonstrated (§1, PR 5) |
 | PR 1 | "No schema", yet it held a database-function fix and a rollback fix | PR 1 has no migration; database work has its own PRs, with dependencies named (§3) |
 | Release | A separate hosted catch-up plan | None needed; merging a migration to `main` releases it to production (§0.2) |
 
@@ -43,7 +44,7 @@ Naming is fixed: the product is **Security Passport**; the holder's card is **th
 | D1 | A1 gate query | **Closed.** A1 is fixed on `main`; production has no active unscoped skyddsvakt claim | — |
 | D2 | Named owner of the legal-review gate for UK, India and Dubai, and the list of UK and Dubai definitions that open. India's four definitions are already open to every signed-in user; D2 names who owns that statement and does not reopen it | **Open** | PR 4 |
 | D3 | Production release gate. Merging to `main` applies migrations to production (§0.2), so approving the merge of PR 2 or PR 4 approves its release. The 2026-09-27 reconciliation note asked for the integration's "Deploy to production" to stay off pending review. It was on at 17:14Z. Confirm the intended setting and the gate | **Open** | Merging PR 2 and PR 4 |
-| D4 | Withdrawal and catalogue approval stay reviewed migrations, as `docs/passport/closed-catalogue-governance.md` defines. In-app withdrawal with an audit trail would add a PR 5 | **Open**; this plan assumes the current governance | PR 5, only if changed |
+| D4 | Withdrawal and catalogue approval stay reviewed migrations, as `docs/passport/closed-catalogue-governance.md` defines. In-app withdrawal with an audit trail would add a separate PR | **Open**; this plan assumes the current governance | That PR, only if chosen |
 | O1 | Custom SMTP for Auth on `wrygicdfxwjnrugduxnt`. The default mailer refuses addresses outside the project team (`docs/release/2026-09-26-auth-confirmation-email-owner-actions.md`) | **Open**; not visible to read-only tools | Announcing the public pilot |
 
 ### 0.2 Production — identified and measured 2026-09-27, read-only
@@ -98,7 +99,7 @@ New defects:
 
 | ID | Defect | Evidence | Needs |
 |---|---|---|---|
-| G3 | The market gate runs on every UPDATE and tests the acting user's pilot membership. A reviewer without a grant cannot record a decision on a GB, GB-NI or AE-DU claim. After a withdrawal or revocation, the holder cannot archive an existing claim or add evidence to it. Inferred from code; no suite decides a UK or Dubai claim | `sp_claims_credential_rules`, `20261214090000:489-498`, with no `TG_OP` condition | Database function change: PR 2 |
+| G3 | The market gate runs on every UPDATE and tests the acting user's pilot membership. A reviewer without a grant cannot record a decision on a GB, GB-NI or AE-DU claim. After a withdrawal or revocation, the holder cannot archive an existing claim or add evidence to it. Inferred from code; no suite decides a UK or Dubai claim | `sp_claims_credential_rules`, `20261214090000:489-498`, with no `TG_OP` condition | An explicit operation and transition policy, enforced in the database: PR 2 |
 | G4 | Pack availability is tied to legal approval. `sp_market_pack_active_needs_review` allows `is_active` only with legal review `approved` or `grandfathered`, and `SP_MARKET_PACK_NOT_ACTIVE` names legal review as the reason. Per-member grants are the only way around it | `20260907090000:158-159`, `20261214090000:493-496` | A separate availability state: PR 2. The constraint stays |
 | G5 | `/passport/information` reports India as unsupported because India has no market pack. The credential picker offers India's definitions correctly | `getRegulatedCredentialAvailability` in `src/lib/security-passport/credentials.functions.ts` | Application change: PR 3 |
 
@@ -136,7 +137,7 @@ What else is already on `main`:
 
 - **Review:** a queue, clarification with a required message, and one final decision. The holder answers a clarification with evidence.
 - **Sharing:** selected credentials, 7/30/90-day links, preview, revocation, and a QR code of the generated link.
-- **Share link:** it deliberately goes through the backend gateway (`…/functions/v1/passport-share#token`) and hands off to `/p/handoff`, which keeps the bearer token out of hosting logs (`20261104090000`).
+- **Share link (current implementation):** the link goes through the backend gateway (`…/functions/v1/passport-share#token`) and hands off to `/p/handoff`, which keeps the bearer token out of hosting logs (`20261104090000`). An application-domain link is the owner's requested outcome (§1, PR 5).
 
 ---
 
@@ -153,9 +154,12 @@ What else is already on `main`:
    - Self-reported credentials, and the Profile title if the holder includes it, stay on the recipient card with their honest labels.
    - Existing source-confirmed states and their treatment stay.
    - Nothing is silently removed from the recipient card or downgraded on it.
-   - The share link keeps its gateway design.
 4. **A3 scope.** The exact scope appears in application-scoped disclosures and private employer packages. It never appears in `public_card`, a public title, a social card or an exported image. The public view may say that an authorisation is limited, not what it is limited to.
 5. **A5 label.** `Väktarutbildning (VU1 + VU2)` / `Security Guard Training (VU1 + VU2)`, with no tier change.
+6. **Share link.** The owner has asked for a user-facing share link on the application domain. That is the requested outcome (PR 5).
+   - The backend gateway (`…/functions/v1/passport-share#token`, handing off to `/p/handoff`) is the current implementation, not an owner decision.
+   - Its token and privacy protections stay. The application-domain link ships only once it demonstrates equivalent security.
+   - Never remove or bypass the gateway merely for appearance.
 
 ## §2 — The six concepts that must never collapse into each other
 
@@ -186,6 +190,9 @@ One phase per PR. Each PR merges before any PR that depends on it begins. A PR t
 | **2** | Availability model | Database: one additive migration and its rollback artifact. No market opens | PR 1 | D3 (merge) |
 | **3** | Public pilot in the application | Application. No migration | PR 2 merged and applied | — |
 | **4** | Open UK and Dubai | Database data: one additive migration and its rollback artifact | PR 2, PR 3 | D2, D3 |
+| **5** | Application-domain share link | Application, and the share function if needed | — | — |
+
+PR 1–4 are the minimum path to the objective. PR 5 is the owner's requested sharing outcome and has no dependency on PR 1–4.
 
 Announce the public pilot only after PR 4 is verified on production and O1 is done.
 
@@ -207,14 +214,19 @@ Acceptance: CI is green on the pushed SHA, and the new test fails when the RPC's
 
 - **New state.** Add a **public-pilot** availability state for market packs and definitions, independent of `is_active` and `legal_review_state`. A new value of the existing `pilot_state` columns is one way to do it. `sp_market_pack_active_needs_review` and every review state stay unchanged.
 - **Every layer.** Admit that state for any signed-in user in each layer listed in §0.4. Saving still requires a Passport, as today. A gate present in one layer and missing in another is a defect.
-- **G3.** Apply the market and credential gates only to INSERT, and to UPDATEs that change the credential or its jurisdiction. Review decisions, archive and evidence on existing claims keep working after a withdrawal or revocation.
+- **G3: an explicit operation and transition policy.** Replace the blanket UPDATE gate with a written policy, enforced in the database. For each operation below, it states who may perform it when the definition is available, when it has been withdrawn, and when the pilot membership it relied on has been revoked:
+  - new registration;
+  - a change of credential or jurisdiction;
+  - draft activation and reactivation, where those transitions exist;
+  - review decisions, evidence, corrections and archiving of existing claims.
+- **Other checks.** Every other validation and authorisation check stays exactly as it is: scope, dates, issuer, governed metadata, ownership and trust fields.
 - **Error text.** `SP_MARKET_PACK_NOT_ACTIVE` stops presenting legal review as the reason a market is unavailable.
 - **Grants.** Keep `sp_pilot_members`, its rows and its RPCs as history. Nothing new depends on a grant.
 - **No data moves.** No pack, definition or claim changes state.
 - **New tests:**
   - A fixture pack in the new state is registrable by an ordinary user with no grant.
-  - A reviewer without a grant decides a GB and an AE-DU claim.
-  - After withdrawal, an existing claim stays readable, archivable and reviewable, and the definition cannot be newly registered.
+  - Blocked registration cannot be bypassed through UPDATE: where the policy refuses new registration, no change of credential or jurisdiction, draft activation or reactivation achieves it.
+  - After a withdrawal or a membership revocation, authorised maintenance and review of existing claims stay possible: review decisions, evidence, corrections as the policy allows, and archiving. A reviewer without a grant decides a GB and an AE-DU claim.
   - AE-AZ stays closed.
 - **Existing tests.** Tests that encode G3's current behaviour are updated here. Member-only tests for current data stay green, because no data moves.
 
@@ -224,6 +236,7 @@ Acceptance: strict replay and every SQL suite pass, and the rollback artifact is
 
 - **New state.** Handle it in `getRegulatedCredentialAvailability`, `listSelectableMarkets`, `market-access.ts`, `market-catalogue.ts` and the picker's empty state. Where the state is absent, fail closed.
 - **G5.** Report India as supported on `/passport/information`.
+- **Rendering.** Every surface follows §4's availability and visibility rules. A public-pilot credential renders on `/passport`, in the share preview and on the recipient view even though `is_active` stays false.
 - **Copy (Swedish and English):**
   - Public pilot, legal review pending and "not permission to work" stay three separate statements.
   - Availability refusals get their own message instead of the generic save error.
@@ -247,6 +260,20 @@ Acceptance: CI is green. Screenshots of the picker and `/passport/information` a
 
 Acceptance: §5 passes on an isolated real backend. After merge, a read-only check on production confirms the pack and definition states, and that review states and claims are unchanged.
 
+### PR 5 — application-domain share link (requested outcome)
+
+The owner has asked for a user-facing share link on the application domain. The gateway link stays the working link until this PR demonstrates equivalent security.
+
+- The link the holder copies, and its QR code, use the application domain.
+- Equivalent security means at least:
+  - the bearer token never appears in a request path, a query string, a `Referer` header, or a hosting or analytics log;
+  - expiry, revocation and logged-out viewing behave exactly as they do today;
+  - the recipient sees the same authorised selection and nothing more.
+- The gateway may stay behind the new link. Never remove or bypass it merely for appearance.
+- If the share function changes, deploying it is a hosted change that needs separate approval (§7).
+
+Acceptance: the equivalence proof and case F in §5 pass on an isolated real backend, both for the new link and for gateway links issued before it.
+
 ### Release order
 
 1. PR 1 merges. Nothing reaches the database.
@@ -255,7 +282,7 @@ Acceptance: §5 passes on an isolated real backend. After merge, a read-only che
 4. O1 is done any time before the announcement.
 5. After D2, PR 4 merges and the integration applies it. Verify read-only; the owner then runs the smoke test (§8).
 
-The application never depends on schema that production lacks: PR 3 fails closed without PR 2, and PR 4 changes data only.
+The application never depends on schema that production lacks: PR 3 fails closed without PR 2, and PR 4 changes data only. PR 5 can merge at any point once its proof passes.
 
 ---
 
@@ -267,10 +294,12 @@ The application never depends on schema that production lacks: PR 3 fails closed
   - Disabling or weakening a guard.
   - Giving every new user pilot membership.
   - Any path that lets a holder raise their own trust level.
-- **Withdrawal:**
-  - A withdrawn or unsupported definition stays unavailable for new registration.
-  - Existing claims stay readable under their original ownership and sharing rules, keep their trust, and can still be archived and reviewed (G3).
-  - Withdrawal never destroys or downgrades a claim.
+- **Availability and visibility** are separate questions:
+  - New-registration availability comes from the canonical availability policy: the database decision that every layer in §0.4 consults and that PR 2 extends. No surface decides it from `is_active` alone.
+  - Existing claims stay visible to their holder under the ownership rules.
+  - What a recipient sees follows the holder's explicit disclosure selection and its permissions.
+  - A withdrawn or unsupported definition stays unavailable for new registration. Withdrawal never silently hides an existing claim, changes its trust or destroys it. Maintenance and review of existing claims follow PR 2's operation policy.
+  - Public-pilot credentials render even though `is_active` stays false for their market and definitions.
 - **Market boundaries:**
   - Sweden: every currently supported and substantiated Swedish definition.
   - India: national qualifications stay distinct from occupational licences, and never carry an eligibility or a title.
@@ -292,7 +321,6 @@ The application never depends on schema that production lacks: PR 3 fails closed
   - Credential or licence reference numbers.
   - The exact authorisation scope.
   - Document links, filenames or thumbnails.
-  - Anything from an inactive market.
   - Internal HAYAT references.
   - Interactive controls beyond the `+N` link.
   - The social-card forbidden-key list is extended when a field is added, and never shortened.
@@ -316,14 +344,14 @@ Use synthetic accounts on an isolated real backend: the local stack that CI uses
 
 | # | Case |
 |---|---|
-| A | A fresh ordinary account **with no pilot grant** browses and saves supported credentials from Sweden, India, the UK (GB and GB-NI) and Dubai |
+| A | A fresh ordinary account **with no pilot grant** browses and saves supported credentials from Sweden, India, the UK (GB and GB-NI) and Dubai. The UK and Dubai credentials render on `/passport`, in the share preview and on the recipient view while `is_active` stays false |
 | B | An existing mixed-market account adds each Indian qualification, returns to `/passport` and reloads without error |
 | C | Dubai's required fields are enforced; AE-AZ and the other emirates stay closed |
 | D | International credentials survive a work-country change unchanged |
 | E | Review: request → clarification → evidence → decision, including a reviewer without a grant deciding a GB and an AE-DU claim |
 | F | Selective sharing → QR → logged-out recipient → expired link → revoked link; selected self-reported credentials appear with their label |
 | G | Another user can neither read nor modify the holder's private data |
-| H | A withdrawn definition cannot be newly registered; existing claims stay readable, archivable and reviewable |
+| H | A withdrawn definition cannot be newly registered, including through UPDATE. Its existing claims stay visible to their holder with unchanged trust, and authorised maintenance and review stay possible. The same holds after a membership revocation |
 | I | A verified, scopeless legacy SV claim is corrected with a scope; without a scope, the correction is refused |
 | J | The current card renders an empty account, VU1+VU2 only, a current ordningsvaktsförordnande, an expired credential, all four markets together, and more credentials than shield slots (`+N`) |
 
@@ -349,7 +377,6 @@ These are the owner's call; none of them blocks the objective.
 - **Admin:** in-app withdrawal with `audit_logs` entries (D4). A re-issued pilot grant also overwrites the earlier revocation, so that history is lost.
 - **A3, exact scope:** on a holder's direct link to an employer. Selected shares send `authorisation_scope` as NULL by design (`20261126090000:285`).
 - **A3, `scope_limited`:** taking it from `requires_scope` instead of a stored scope. Production has no active scopeless claim that it would affect.
-- **Share links:** on the application domain (revision 2 §7.3). This conflicts with the gateway design that §1 keeps.
 - **G2 hardening:** follow correction chains after the explicit opt-in, and test the refusal against a corrected chain.
 - **Recipient card name:** apply the holder card's name rules; today it wraps without a line clamp.
 - **Social-card guard:** it protects a development-only card; `/p/<token>` uses a static image.
