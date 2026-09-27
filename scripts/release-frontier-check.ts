@@ -222,7 +222,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Assessment authoring (#309) is now verified applied on the owner project:
 // canonical ledger row, four matching function bodies, column and both triggers.
 // Evidence: docs/release/2026-09-27-assessment-authoring-hosted-verification.md.
-const expectedPending: string[] = [];
+// PR 2 of the Passport completion work order: public-pilot availability and
+// the operation policy. Pending BY DESIGN until it merges and the official
+// integration applies it; its name comes off this list in the change that
+// records its hosted evidence.
+const expectedPending: string[] = ["20261220090000_sp_public_pilot_availability.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
