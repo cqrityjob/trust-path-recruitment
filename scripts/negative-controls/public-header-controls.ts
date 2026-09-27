@@ -1,16 +1,16 @@
 /**
- * Negative controls for the public header's five destinations.
+ * Negative controls for the public header's six destinations.
  *
- * The owner replaced a six-item public bar that named Security Passport
- * and Career Discovery with five audience/topic entries. Removing items
- * from a navigation is easy to get quietly wrong in two opposite
- * directions, so both are planted here: a product name creeping back into
- * the chrome, and the removal leaking into the CONTENT so that a product
- * becomes unreachable.
- *
- * Also planted: the order the owner specified, the umbrella pointing at a
- * duplicate page instead of the canonical landing page, and the single-
- * array shape that keeps desktop and mobile identical.
+ * The MVP text specification (2026-09-27) makes security work, Security
+ * Passport and career/jobs three equal core parts, each reachable from the
+ * chrome, from ONE definition (src/components/site/public-nav.ts) that the
+ * desktop bar, the compact menu and the footer all render. Navigation is
+ * easy to get quietly wrong in several directions, so each is planted here:
+ * Career Discovery creeping back into the bar as a seventh entry, the
+ * specified order changing, a signed-in reader's product entry pointing at a
+ * homepage section they are always redirected away from, a second nav list,
+ * the footer drifting to its own list, and a section the nav points at being
+ * deleted from the content.
  *
  * Each mutation changes exactly one thing, the guard must fail with the
  * named diagnostic, and every file is restored byte-for-byte (proved by
@@ -21,76 +21,79 @@
 import { runControls, type Mutation } from "./runner";
 
 const HEADER = "src/components/site/SiteHeader.tsx";
+const NAV = "src/components/site/public-nav.ts";
 const HOME = "src/routes/index.tsx";
+const SECTIONS = "src/components/site/HomeSections.tsx";
 const FOOTER = "src/components/site/SiteFooter.tsx";
 const GUARD = "header-entry:check";
 
 const MUTATIONS: readonly Mutation[] = [
-  // ---- A product name creeps back into the chrome -------------------------
-  {
-    id: "PH-NC-PASSPORT-RETURNS",
-    defect:
-      "Security Passport comes back as a public-header nav item, which is the exact arrangement the owner removed",
-    file: HEADER,
-    find: '    { to: "/", hash: undefined, label: t("nav.forYou") },',
-    replace: '    { to: "/", hash: "passport", label: t("nav.passportPublic") },',
-    guard: GUARD,
-    expect: "must not be public-header nav items",
-  },
+  // ---- Career Discovery creeps back into the chrome -----------------------
   {
     id: "PH-NC-DISCOVERY-RETURNS",
-    defect: "Career Discovery comes back as a sixth public-header nav item",
-    file: HEADER,
-    find: '    { to: "/jobs", hash: undefined, label: t("nav.jobs") },',
+    defect:
+      "Career Discovery comes back as a seventh public nav entry, competing with the three core parts",
+    file: NAV,
+    find: '    { key: "jobs", to: "/jobs", hash: undefined, labelKey: "nav.jobs" },',
     replace:
-      '    { to: "/security-career-assessment", hash: undefined, label: t("nav.careerDiscovery") },\n    { to: "/jobs", hash: undefined, label: t("nav.jobs") },',
+      '    { key: "jobs", to: "/security-career-assessment" as "/jobs", hash: undefined, labelKey: "nav.jobs" },',
     guard: GUARD,
-    expect: "must not be public-header nav items",
+    expect: "Career Discovery must not be a public nav item",
   },
 
-  // ---- The owner's order ---------------------------------------------------
+  // ---- The specified order ------------------------------------------------
   {
     id: "PH-NC-ORDER-CHANGED",
-    defect:
-      "Karriärvägar is promoted above Jobb, so the bar no longer reads in the order the owner specified",
-    file: HEADER,
-    find: '    { to: "/jobs", hash: undefined, label: t("nav.jobs") },\n    { to: "/employers", hash: undefined, label: t("nav.employers") },\n    { to: "/career-center", hash: undefined, label: t("nav.career_center") },',
+    defect: "Jobb is promoted above Karriär, so the bar no longer reads in the specified order",
+    file: NAV,
+    find: '    { key: "career", to: "/career-center", hash: undefined, labelKey: "nav.career" },\n    { key: "jobs", to: "/jobs", hash: undefined, labelKey: "nav.jobs" },',
     replace:
-      '    { to: "/career-center", hash: undefined, label: t("nav.career_center") },\n    { to: "/jobs", hash: undefined, label: t("nav.jobs") },\n    { to: "/employers", hash: undefined, label: t("nav.employers") },',
+      '    { key: "jobs", to: "/jobs", hash: undefined, labelKey: "nav.jobs" },\n    { key: "career", to: "/career-center", hash: undefined, labelKey: "nav.career" },',
     guard: GUARD,
     expect: "in that order",
   },
 
-  // ---- The umbrella stops being the canonical page -------------------------
+  // ---- A signed-in reader is sent to a section they never see -------------
   {
-    id: "PH-NC-FORYOU-DUPLICATE-PAGE",
+    id: "PH-NC-SIGNED-IN-SECTION-TRAP",
     defect:
-      '"För dig" points at a second candidate page instead of the canonical public landing page, which is the duplication this decision exists to remove',
-    file: HEADER,
-    find: '    { to: "/", hash: undefined, label: t("nav.forYou") },',
-    replace: '    { to: "/careers", hash: undefined, label: t("nav.forYou") },',
+      "a signed-in reader's Passport entry points at the homepage section, which redirects them to their overview instead of the Passport",
+    file: NAV,
+    find: '      ? { key: "passport", to: "/passport", hash: undefined, labelKey: "nav.passportPublic" }',
+    replace:
+      '      ? { key: "passport", to: "/", hash: "passport", labelKey: "nav.passportPublic" }',
     guard: GUARD,
-    expect: "in that order",
+    expect: "must open the product itself",
   },
 
-  // ---- One array, two viewports -------------------------------------------
+  // ---- One definition, two viewports and the footer -----------------------
   {
     id: "PH-NC-SECOND-NAV-ARRAY",
     defect:
       "a second nav definition appears, which is how the desktop bar and the compact menu drift into different information architectures",
     file: HEADER,
-    find: '    { to: "/about", hash: undefined, label: t("nav.about") },\n  ] as const;',
+    find: "  const nav = publicNav(signedIn === true).map((item) => ({ ...item, label: t(item.labelKey) }));",
     replace:
-      '    { to: "/about", hash: undefined, label: t("nav.about") },\n  ] as const;\n  const nav = [\n    { to: "/about", hash: undefined, label: t("nav.about") },\n  ] as const;',
+      '  const nav = publicNav(signedIn === true).map((item) => ({ ...item, label: t(item.labelKey) }));\n  const nav2 = [{ key: "about", to: "/about", hash: undefined, label: t("nav.about") }];\n  const nav = nav2;',
     guard: GUARD,
     expect: "exactly one public nav definition",
   },
+  {
+    id: "PH-NC-FOOTER-OWN-LIST",
+    defect:
+      "the footer stops rendering the shared definition and keeps a hand-written list of its own",
+    file: FOOTER,
+    find: "    ...publicNav(signedIn === true).map((item) => ({",
+    replace: "    ...publicNav(false).map((item) => ({",
+    guard: GUARD,
+    expect: "the footer must render the same six from publicNav()",
+  },
 
-  // ---- The removal leaks from the chrome into the content -----------------
+  // ---- A destination the nav points at leaks out of the content -----------
   {
     id: "PH-NC-PASSPORT-SECTION-DELETED",
     defect:
-      "the homepage's Passport section is deleted along with the nav item, so removing a product from the chrome silently removes it from the product",
+      "the homepage's Passport section is deleted, so the nav's Security Passport entry points at nothing",
     file: HOME,
     find: 'id="passport"',
     replace: 'id="passport-removed"',
@@ -98,14 +101,14 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "must keep its Security Passport section",
   },
   {
-    id: "PH-NC-FOOTER-LOSES-PRODUCTS",
+    id: "PH-NC-SECURITY-SECTION-DELETED",
     defect:
-      "the footer stops naming the two products, so they are reachable from neither the chrome nor the site furniture",
-    file: FOOTER,
-    find: 't("nav.careerDiscovery")',
-    replace: 't("nav.about")',
+      "the homepage's security work section is deleted, so the nav's Säkerhetsarbete entry points at nothing",
+    file: SECTIONS,
+    find: 'id="security-intelligence"',
+    replace: 'id="security-intelligence-removed"',
     guard: GUARD,
-    expect: "footer must still name both products",
+    expect: "must keep its security work section",
   },
   {
     id: "PH-NC-APP-MENU-BREAKPOINT",

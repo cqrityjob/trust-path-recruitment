@@ -904,16 +904,19 @@ for (const lang of ["sv", "en"] as const) {
         expect(image).not.toContain("repeating-linear-gradient");
         await expect(panel.locator('[class*="passport-grid"]')).toHaveCount(0);
 
-        // The owner's sentence, to the letter.
-        await expect(panel).toContainText(
+        // The Passport section's sentence, to the letter (MVP text
+        // specification §5.4). The illustrative card sits in that section and
+        // holds no heading or action of its own.
+        await expect(page.locator("#passport")).toContainText(
           T(
-            "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",
-            "Bring together your certifications, licences and professional authorisations — internationally and by country. Add supporting evidence and choose what you share.",
+            "Security Passport samlar dina certifieringar, licenser och yrkesbehörigheter. Lägg till underlag och välj vilka meriter du vill dela. Ett uppladdat dokument innebär inte i sig att uppgiften har verifierats.",
+            "Security Passport brings together your certifications, licences and professional authorisations. Add supporting documents and choose which credentials to share. Uploading a document does not by itself verify the information.",
           ),
         );
         expect(await panel.innerText()).not.toMatch(
           /Samla erfarenhet|experience, education|Dokumenterad källa|Documented source|Tillitstillstånd|Trust state/i,
         );
+        await expect(panel.locator("a, button")).toHaveCount(0);
 
         // A labelled, fictional example drawn with the REAL shield system.
         const example = panel.locator("[data-home-passport-example]");
@@ -922,7 +925,10 @@ for (const lang of ["sv", "en"] as const) {
         );
         await expect(example).toHaveAttribute(
           "aria-label",
-          T(/Exempel — Påhittad person/, /Example — Fictional person/),
+          T(
+            "Exempel – påhittad person och påhittade meriter.",
+            "Example – fictional person and fictional credentials.",
+          ),
         );
         await expect(example).toContainText(T("Exempel Exempelsson", "Example Holder"));
         await expect(example.locator("[data-credential-shield]")).toHaveCount(3);

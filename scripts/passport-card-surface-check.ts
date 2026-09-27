@@ -12,9 +12,12 @@
 // it, so `src/styles.css` MIRRORS it; this guard is what stops the mirror
 // drifting, and what stops a pattern coming back on any surface.
 //
-// It also guards the homepage panel, which used to be a separate imitation of
-// the Passport with decorative trust facts and copy that advertised the
-// Passport as the editor for employment history.
+// It also guards the homepage's illustrative Passport card, which used to be a
+// separate imitation of the Passport with decorative trust facts and copy that
+// advertised the Passport as the editor for employment history. Since the MVP
+// text specification (2026-09-27) it sits in the homepage's Passport section
+// as an example only: the section, not the card, carries the heading and the
+// action, and the card holds no control at all.
 //
 // Run: bun run passport-card-surface:check
 
@@ -140,19 +143,21 @@ check(
   "no example shield is verified, and there is no tick, star or logo",
 );
 check(
-  // The label must be the VISIBLE content of the labelled span — the key also
-  // appears in the figure's aria-label, so a loose "key exists" test is dead.
+  // The label must be the VISIBLE content of the labelled span, and the
+  // caption both a visible <figcaption> and the figure's accessible name —
+  // a loose "key exists" test would pass with either missing.
   /data-home-passport-example-label[^>]*>\s*\{t\("home\.passportPreview\.exampleLabel"\)\}\s*<\/span>/.test(
     home,
   ) &&
-    /aria-label=\{`\$\{t\("home\.passportPreview\.exampleLabel"\)\} — \$\{t\("home\.passportPreview\.exampleCaption"\)\}`\}/.test(
+    /aria-label=\{t\("home\.passportPreview\.exampleCaption"\)\}/.test(home) &&
+    /<figcaption[^>]*data-home-passport-example-caption[^>]*>\s*\{t\("home\.passportPreview\.exampleCaption"\)\}\s*<\/figcaption>/.test(
       home,
     ),
-  "the card is visibly labelled an example, and its accessible name says it is fictional",
+  "the card is visibly labelled an example, and its caption and accessible name say it is fictional",
 );
 check(
-  home.indexOf("{action}") > 0 && home.indexOf("{action}") < home.indexOf("<figure"),
-  "the registration action sits with the proposition, OUTSIDE and above the illustrative card",
+  !/\{action\}/.test(home) && !/<(Link|PrimaryLink|a|button)\b/.test(home) && !/\bhref=/.test(home),
+  "the illustrative card holds no control — nobody can read an action as one ON a fictional record",
 );
 check(
   !/home\.passportPreview\.(issuer|source|jurisdiction|marketScope|trustState|sharing)\b/.test(
@@ -163,28 +168,39 @@ check(
   'the decorative "Documented source" / "Trust state" facts are replaced by the status explanation',
 );
 
+// The Passport's own sentences on the homepage, the core card's and the
+// section's: certifications, licences and authorisations -- and nothing else.
+// Employment history is the CV's; personal details and current profession
+// are the Profile's.
 const COPY = {
   sv: {
-    body: "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",
+    card: "Samla dina certifieringar, licenser och yrkesbehörigheter med underlag och tydlig status. Du väljer vilka uppgifter du delar.",
+    section:
+      "Security Passport samlar dina certifieringar, licenser och yrkesbehörigheter. Lägg till underlag och välj vilka meriter du vill dela. Ett uppladdat dokument innebär inte i sig att uppgiften har verifierats.",
     label: "Exempel",
   },
   en: {
-    body: "Bring together your certifications, licences and professional authorisations — internationally and by country. Add supporting evidence and choose what you share.",
+    card: "Bring together your certifications, licences and professional authorisations with supporting documents and a clear status. You choose which information to share.",
+    section:
+      "Security Passport brings together your certifications, licences and professional authorisations. Add supporting documents and choose which credentials to share. Uploading a document does not by itself verify the information.",
     label: "Example",
   },
 } as const;
 for (const lang of ["sv", "en"] as const) {
   const d = dictionaries[lang] as Record<string, string>;
   check(
-    d["home.entry.passport.body"] === COPY[lang].body,
-    `${lang} · the Passport sentence is the owner's, to the letter`,
+    d["home.core.passport.body"] === COPY[lang].card &&
+      d["home.passport.body"] === COPY[lang].section,
+    `${lang} · the Passport sentences are the specification's, to the letter`,
   );
-  check(
-    !/erfarenhet|utbildning|anställning|experience|education|employment|work history/i.test(
-      d["home.entry.passport.body"],
-    ),
-    `${lang} · and it does not advertise the Passport as the editor for CV or Profile content`,
-  );
+  for (const key of ["home.core.passport.body", "home.passport.body"]) {
+    check(
+      !/erfarenhet|utbildning|anställning|experience|education|employment|work history/i.test(
+        d[key],
+      ),
+      `${lang} · "${key}" does not advertise the Passport as the editor for CV or Profile content`,
+    );
+  }
   check(
     d["home.passportPreview.exampleLabel"] === COPY[lang].label &&
       /(påhittad|fictional)/i.test(d["home.passportPreview.exampleCaption"]),
@@ -206,6 +222,16 @@ check(
     /PASSPORT_INTENT[^;]*redirect: "\/passport"/s.test(route),
   "the action enters registration and carries the Passport destination through it",
 );
+{
+  // The section's action sits in the section, outside the example card.
+  const passportSection = route.slice(route.indexOf('<Section id="passport"'));
+  const action = passportSection.indexOf("search={PASSPORT_INTENT}");
+  const example = passportSection.indexOf("<HomePassportPreview />");
+  check(
+    action !== -1 && example !== -1 && action < example,
+    "the Passport section's own action is rendered outside the illustrative card",
+  );
+}
 
 /* ------------------------------------------------------------------ */
 console.log("");

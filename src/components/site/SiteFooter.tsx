@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
-import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { useT } from "@/i18n/context";
+import { useSignedIn } from "@/hooks/useSignedIn";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { publicNav } from "./public-nav";
 
 /** ── THE SITE FOOTER (compacted 2026-09-06) ──────────────────────────────
  *
@@ -13,32 +14,32 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
  *  every page on the site.
  *
  *  What is here now is ONE row of links, and every one of them goes
- *  somewhere that works:
+ *  somewhere that works: the header's six, from the same definition
+ *  (public-nav.ts), plus beta feedback.
  *
- *    Security Passport · Career Discovery · Karriärvägar · Jobb ·
+ *    Säkerhetsarbete · Security Passport · Karriär · Jobb ·
  *    För arbetsgivare · Om oss · Betafeedback
  *
- *  "Security Passport" is the homepage's own Passport section, not a page
- *  of its own: every Passport route is authenticated, and a footer link
- *  that lands a signed-out reader on a login form is a dead end wearing a
- *  product name.
+ *  "Säkerhetsarbete" and "Security Passport" are the homepage's own
+ *  sections for a signed-out reader, not pages of their own: every Passport
+ *  and security-work route is authenticated, and a footer link that lands a
+ *  signed-out reader on a login form is a dead end wearing a product name.
+ *  A signed-in reader goes straight to the product instead.
  *
- *  ── CAREER DISCOVERY IS HERE FOR THE SAME REASON IT IS IN THE HEADER ─
- *
- *  The two individual products are PEERS (2026-09-13). A footer that named
- *  one of them and not the other would restate, at the bottom of every
- *  page, the single-product position the site has left behind. Career
- *  Discovery needs no section trick: it has a canonical public route and
- *  this links straight to it.
+ *  Career Discovery is no longer a footer entry of its own (MVP text
+ *  specification §4): it is reached from the career card and the career
+ *  section on the homepage and from the Career Center, and it does not
+ *  compete with the three core parts in the site's navigation.
  *
  *  ── WHAT IS DELIBERATELY NOT A LINK ──────────────────────────────────
  *
- *  "Integritetspolicy" and "Villkor" have no pages yet. They are printed
- *  as plain text, in the muted colour, with no hover and no cursor change,
- *  because a link that does nothing when you click it is worse on a legal
- *  line than an absence -- somebody looking for the privacy policy learns
- *  something true from "not published yet" and nothing at all from a dead
- *  anchor. They become links the day the routes exist, and not before.
+ *  The privacy policy and the terms of use have no approved pages yet. The
+ *  footer says exactly that, as plain text in the muted colour, with no
+ *  hover and no cursor change, because a link that does nothing when you
+ *  click it is worse on a legal line than an absence -- somebody looking for
+ *  the privacy policy learns something true from "not published yet" and
+ *  nothing at all from a dead anchor or a bare document name. They become
+ *  links the day approved documents and their routes exist, and not before.
  *
  *  ── WHAT IS DELIBERATELY GONE ────────────────────────────────────────
  *
@@ -47,21 +48,20 @@ import { LanguageSwitcher } from "./LanguageSwitcher";
  *  invite anybody into it from the bottom of every page until it does. */
 export function SiteFooter() {
   const { t } = useT();
+  const signedIn = useSignedIn();
   const year = new Date().getFullYear();
 
+  // The same six destinations as the header, in the same order, plus beta
+  // feedback. `hash` rather than "#" in `to` -- the router does not parse
+  // one out of the path.
   const links = [
-    // The same six destinations as the header, in the same order, plus beta
-    // feedback. Same first entry for the same reason: the Passport has no
-    // public page of its own, so the product's own name points at the
-    // section of the homepage that explains it. `hash` rather than "#" in
-    // `to` -- the router does not parse one out of the path.
-    { to: "/", hash: "passport", label: t("nav.passportPublic") },
-    { to: CANONICAL_ASSESSMENT_PATH, hash: undefined, label: t("nav.careerDiscovery") },
-    { to: "/career-center", hash: undefined, label: t("nav.career_center") },
-    { to: "/jobs", hash: undefined, label: t("nav.jobs") },
-    { to: "/employers", hash: undefined, label: t("nav.employers") },
-    { to: "/about", hash: undefined, label: t("nav.about") },
-    { to: "/feedback", hash: undefined, label: t("footer.betaFeedback") },
+    ...publicNav(signedIn === true).map((item) => ({
+      key: item.key,
+      to: item.to,
+      hash: item.hash,
+      label: t(item.labelKey),
+    })),
+    { key: "feedback", to: "/feedback", hash: undefined, label: t("footer.betaFeedback") },
   ] as const;
 
   return (
@@ -91,11 +91,11 @@ export function SiteFooter() {
           <nav aria-label={t("footer.company")}>
             <ul className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm">
               {links.map((l) => (
-                <li key={l.to}>
+                <li key={l.key}>
                   <Link
                     to={l.to}
                     hash={l.hash}
-                    activeOptions={{ exact: l.to === "/" }}
+                    activeOptions={{ exact: l.to === "/", includeHash: l.hash !== undefined }}
                     // 44 x 44, BOTH dimensions. The height was already here;
                     // the width was not, and "Jobb" is a 33px word -- a
                     // 33 x 44 target that the suite used to exempt by
@@ -117,11 +117,10 @@ export function SiteFooter() {
             © {year} {t("brand.name")}. {t("footer.rights")} · {t("footer.built")}
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            {/* Not anchors, and styled so they do not look like anchors. See
-                the header comment: these two get the tag the day they get
-                the route. */}
-            <span>{t("footer.legal.privacy")}</span>
-            <span>{t("footer.legal.terms")}</span>
+            {/* Not anchors, and not two document names either: one plain
+                statement that the documents are not published yet. See the
+                header comment: they get links the day they get routes. */}
+            <span>{t("footer.legal.notice")}</span>
             <LanguageSwitcher />
           </div>
         </div>

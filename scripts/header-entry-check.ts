@@ -85,6 +85,23 @@
 // ungated entry beside the account menu's truthful, membership-scoped list
 // would be the 2026-08-30 defect wearing new words.
 //
+// ── WHAT CHANGED (2026-09-27, the MVP text specification) ──────────────
+//
+// The information entry is now labelled "För arbetsgivare" / "For
+// employers", and the employer door "Företagsinloggning" / "Employer
+// sign-in". The public bar is six entries from ONE definition
+// (src/components/site/public-nav.ts) that the desktop bar, the compact menu
+// and the footer all render:
+//
+//   Säkerhetsarbete · Security Passport · Karriär · Jobb · För arbetsgivare
+//   · Om oss
+//
+// The three core parts are equal and each is reachable from the chrome, so
+// the 2026-09-14 rule that kept product names out of the bar is replaced
+// (section 3b) rather than relaxed: the list is still exact, still ordered,
+// still label-checked and still one array. Career Discovery stays out of the
+// bar and keeps its direct actions in the content.
+//
 // Plain TS script matching this repository's scripts/*-check.ts convention.
 // The header is a React component with router/query/supabase imports and
 // cannot be rendered outside the app runtime, so its half is a structural
@@ -109,7 +126,7 @@ const { dictionaries } = await import("../src/i18n/dictionaries");
 // 1. The three labels exist in both languages, with the agreed copy.
 // -----------------------------------------------------------------------
 const copy = {
-  "nav.employers": { sv: "Arbetsgivare", en: "Employers" },
+  "nav.employers": { sv: "För arbetsgivare", en: "For employers" },
   "nav.signin": { sv: "Logga in", en: "Sign in" },
   "nav.createAccount": { sv: "Skapa konto", en: "Create account" },
 } as const;
@@ -139,84 +156,141 @@ for (const lang of ["sv", "en"] as const) {
 expect(!header.includes("nav.employerSignin"), 'SiteHeader must not use "nav.employerSignin"');
 
 // -----------------------------------------------------------------------
-// 3. "Arbetsgivare" (nav.employers) stays information-only.
-//    It may appear exactly once in the header: the primary-nav entry
-//    pointing at the marketing page. Any second use is an action wearing
-//    the information page's name, which is the original regression.
+// 3. "För arbetsgivare" (nav.employers) stays information-only.
+//    It appears exactly once in the public navigation definition: the entry
+//    pointing at the marketing page. The header itself may not wear it on
+//    any control -- a second use is an action wearing the information
+//    page's name, which is the original regression.
 // -----------------------------------------------------------------------
-const employersLabelUses = header.split('t("nav.employers")').length - 1;
+const publicNavSrc = read("src/components/site/public-nav.ts");
+const footerSrc = read("src/components/site/SiteFooter.tsx");
+const employersLabelUses = publicNavSrc.split('"nav.employers"').length - 1;
 expect(
   employersLabelUses === 1,
-  `"nav.employers" must be used exactly once in SiteHeader -- the primary-nav information entry (found ${employersLabelUses})`,
+  `"nav.employers" must be used exactly once in public-nav.ts -- the primary-nav information entry (found ${employersLabelUses})`,
 );
-// The nav entries carry an optional `hash` (the "Security Passport" item
-// points at the homepage's own section), so the match is on the pair that
-// matters rather than on the whole literal.
-const employersNavEntry = /\{ to: "\/employers",[^}]*label: t\("nav\.employers"\) \}/;
+const employersNavEntry =
+  /\{ key: "employers", to: "\/employers", hash: undefined, labelKey: "nav\.employers" \}/;
 expect(
-  employersNavEntry.test(header),
+  employersNavEntry.test(publicNavSrc),
   '"nav.employers" must be the primary-nav entry pointing at /employers (the employer information page)',
 );
-
-const employersActionButton = header.includes('to="/employers"') && !employersNavEntry.test(header);
 expect(
-  !employersActionButton,
+  !header.includes('t("nav.employers")'),
+  "SiteHeader must not label any control with nav.employers -- the information page's name belongs to the one nav entry",
+);
+expect(
+  !header.includes('to="/employers"'),
   "No header action button may point at /employers -- that route is the information page and belongs to the primary nav only",
 );
 
 // -----------------------------------------------------------------------
-// 3b. The approved FIVE public destinations, in order, from ONE array,
-//     rendered at BOTH viewports (owner, 2026-09-14).
+// 3b. The specified SIX public destinations, in order, from ONE definition,
+//     rendered at BOTH viewports and in the footer (MVP text specification
+//     §4, 2026-09-27).
 //
-//     För dig · Jobb · Arbetsgivare · Karriärvägar · Om oss
+//     Säkerhetsarbete · Security Passport · Karriär · Jobb ·
+//     För arbetsgivare · Om oss
 //
-//     This REPLACES the six-destination expectation rather than relaxing
-//     it: the list is still exact, still ordered, still label-checked and
-//     still required to come from one array rendered at both viewports.
-//     Security Passport and Career Discovery are asserted ABSENT below,
-//     which the old shape could not express.
+//     This REPLACES the owner's 2026-09-14 five rather than relaxing it: the
+//     list is still exact, still ordered, still label-checked and still
+//     required to come from one definition rendered at both viewports. The
+//     two product entries lead to their homepage sections for a signed-out
+//     visitor and to the product for a signed-in one, whom the homepage
+//     would otherwise bounce to their overview.
 //
-//     One array is the load-bearing half. A link that exists at 1440 and
-//     not at 375 is the specific bug this shape makes impossible, and this
-//     header has had it before: an account entry existed in the desktop
-//     dropdown and nowhere on mobile until it was patched in by hand.
+//     One definition is the load-bearing half. A link that exists at 1440
+//     and not at 375 is the specific bug this shape makes impossible, and
+//     this header has had it before.
 // -----------------------------------------------------------------------
 {
-  const navBlock = header.slice(header.indexOf("const nav = ["));
-  const nav = navBlock.slice(0, navBlock.indexOf("] as const;"));
-  const entries = [...nav.matchAll(/to:\s*(?:"([^"]+)"|(CANONICAL_ASSESSMENT_PATH))/g)].map(
-    (m) => m[1] ?? "CANONICAL_ASSESSMENT_PATH",
-  );
-  const EXPECTED = ["/", "/jobs", "/employers", "/career-center", "/about"];
+  const { publicNav } = await import("../src/components/site/public-nav");
+  const shape = (signedIn: boolean) =>
+    publicNav(signedIn).map((i) => `${i.to}${i.hash ? `#${i.hash}` : ""}`);
+  const EXPECTED_OUT = [
+    "/#security-intelligence",
+    "/#passport",
+    "/career-center",
+    "/jobs",
+    "/employers",
+    "/about",
+  ];
+  const EXPECTED_IN = [
+    "/security-work",
+    "/passport",
+    "/career-center",
+    "/jobs",
+    "/employers",
+    "/about",
+  ];
   expect(
-    JSON.stringify(entries) === JSON.stringify(EXPECTED),
-    `the public nav must be exactly ${EXPECTED.join(" · ")} in that order (found ${entries.join(" · ")})`,
+    JSON.stringify(shape(false)) === JSON.stringify(EXPECTED_OUT),
+    `the public nav must be exactly ${EXPECTED_OUT.join(" · ")} in that order for a signed-out visitor (found ${shape(false).join(" · ")})`,
   );
-  const labels = [...nav.matchAll(/label: t\("([^"]+)"\)/g)].map((m) => m[1]);
   expect(
-    JSON.stringify(labels) ===
-      JSON.stringify(["nav.forYou", "nav.jobs", "nav.employers", "nav.career_center", "nav.about"]),
-    `the five nav labels must be the approved keys, in order (found ${labels.join(" · ")})`,
+    JSON.stringify(shape(true)) === JSON.stringify(EXPECTED_IN),
+    `a signed-in reader's product entries must open the product itself, in the same order: ${EXPECTED_IN.join(" · ")} (found ${shape(true).join(" · ")})`,
   );
-  // Both viewports render from THIS array and from no second list.
+  const EXPECTED_LABELS = [
+    "nav.securityWorkPublic",
+    "nav.passportPublic",
+    "nav.career",
+    "nav.jobs",
+    "nav.employers",
+    "nav.about",
+  ];
+  for (const signedIn of [false, true]) {
+    const labels = publicNav(signedIn).map((i) => i.labelKey);
+    expect(
+      JSON.stringify(labels) === JSON.stringify(EXPECTED_LABELS),
+      `the six nav labels must be the specified keys, in order (found ${labels.join(" · ")})`,
+    );
+  }
+  const labelCopy = {
+    "nav.securityWorkPublic": { sv: "Säkerhetsarbete", en: "Security work" },
+    "nav.passportPublic": { sv: "Security Passport", en: "Security Passport" },
+    "nav.career": { sv: "Karriär", en: "Career" },
+    "nav.jobs": { sv: "Jobb", en: "Jobs" },
+    "nav.about": { sv: "Om oss", en: "About" },
+  } as const;
+  for (const [key, expected] of Object.entries(labelCopy)) {
+    for (const lang of ["sv", "en"] as const) {
+      const actual = (dictionaries[lang] as Record<string, string>)[key];
+      expect(
+        actual === expected[lang],
+        `${lang} "${key}" must read "${expected[lang]}" (found ${actual === undefined ? "no entry" : `"${actual}"`})`,
+      );
+    }
+  }
+  // Both viewports render from THIS definition and from no second list.
+  expect(
+    header.includes("const nav = publicNav(signedIn === true)"),
+    "SiteHeader must build its public nav from publicNav() -- the one definition",
+  );
   const renders = header.split("{nav.map(").length - 1;
   expect(
     renders === 2,
     `the desktop bar and the compact menu must each render from \`nav\` (found ${renders} nav.map call sites)`,
   );
   expect(
-    (header.match(/const nav = \[/g) ?? []).length === 1,
-    "there must be exactly one public nav definition -- a second array is how the two viewports drift apart",
+    (header.match(/const nav = /g) ?? []).length === 1,
+    "there must be exactly one public nav definition in the header -- a second array is how the two viewports drift apart",
+  );
+  expect(
+    footerSrc.includes("publicNav(signedIn === true)"),
+    "the footer must render the same six from publicNav() -- a hand-written footer list is how the two drift apart",
   );
 
-  // ── THE TWO PRODUCTS ARE OUT OF THE BAR, AND STILL ON THE SITE ──────
+  // ── CAREER DISCOVERY STAYS OUT OF THE BAR ─────────────────────────────
   //
-  // The owner removed them from the HEADER. Removing them from the site
-  // would be a different and much worse change, so both halves are
-  // asserted: absent from the chrome, present in the content.
+  // It keeps a direct action in the homepage's career card and career
+  // section and on the Career Center, and does not compete with the three
+  // core parts as a seventh entry.
   expect(
-    !nav.includes("nav.passportPublic") && !nav.includes("nav.careerDiscovery"),
-    "Security Passport and Career Discovery must not be public-header nav items",
+    !publicNavSrc.includes("nav.careerDiscovery") &&
+      !publicNavSrc.includes("/security-career-assessment") &&
+      !publicNavSrc.includes("CANONICAL_ASSESSMENT_PATH"),
+    "Career Discovery must not be a public nav item",
   );
   expect(
     !header.includes("CANONICAL_ASSESSMENT_PATH"),
@@ -224,22 +298,23 @@ expect(
   );
 }
 
-// 3c. Both products remain reachable away from the header.
+// 3c. The three core parts and the career analysis remain reachable from
+//     the content, not only from the chrome.
 // -----------------------------------------------------------------------
 {
   const home = read("src/routes/index.tsx");
-  const footer = read("src/components/site/SiteFooter.tsx");
+  const sections = read("src/components/site/HomeSections.tsx");
   expect(
     home.includes('id="passport"'),
-    "the homepage must keep its Security Passport section -- it is how the product is reached now",
+    "the homepage must keep its Security Passport section -- the nav's Passport entry points at it",
   );
   expect(
-    home.includes("CANONICAL_ASSESSMENT_PATH") || home.includes("CAREER_DISCOVERY"),
-    "the homepage must keep a Career Discovery entrance",
+    sections.includes('id="security-intelligence"'),
+    "the homepage must keep its security work section -- the nav's Säkerhetsarbete entry points at it",
   );
   expect(
-    footer.includes('t("nav.passportPublic")') && footer.includes('t("nav.careerDiscovery")'),
-    "the footer must still name both products -- the decision was about the header only",
+    sections.includes("CANONICAL_ASSESSMENT_PATH") && sections.includes("CAREER_DISCOVERY"),
+    "the homepage must keep a direct Career Discovery action",
   );
 }
 
@@ -534,7 +609,7 @@ expect(
 //        from the account menu, by name, and only the ones the database
 //        returned. A second, ungated entry beside that truthful one would
 //        be section 8's defect wearing new words.
-//      * NOT "Arbetsgivare". That word is the information page in the
+//      * NOT "För arbetsgivare". That label is the information page in the
 //        primary nav (section 3) and nothing else. This entry has its own.
 // -----------------------------------------------------------------------
 const EMPLOYER_INTENT = '{ redirect: "/employer" } as never';
@@ -542,7 +617,7 @@ const EMPLOYER_GATE = "signedIn !== true && employerPortalEnabled() && (";
 
 // ── 9a. Both languages name it, and name it something of its own ──────
 const employerCopy = {
-  "nav.employerLogin": { sv: "Företagsinloggning", en: "Employer login" },
+  "nav.employerLogin": { sv: "Företagsinloggning", en: "Employer sign-in" },
   // /employers' own three actions. "employers.cta.createAccount" was
   // retired on 2026-09-13 in favour of "employers.cta.register", which is
   // the owner-approved label and the same words the homepage's employer

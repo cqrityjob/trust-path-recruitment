@@ -1,5 +1,4 @@
-import { ArrowRight, Lock } from "lucide-react";
-import type { ReactNode } from "react";
+import { Lock } from "lucide-react";
 import { useT } from "@/i18n/context";
 import {
   CredentialConstellation,
@@ -8,18 +7,20 @@ import {
 import { resolveCredentialScope } from "@/lib/security-passport/credential-shield";
 
 /**
- * The homepage's Passport entrance: the proposition, its action, and ONE
- * illustrative card.
+ * The homepage's illustrative Security Passport: ONE example card, in the
+ * Passport section it explains.
+ *
+ * ── MOVED OUT OF THE HERO (MVP text specification, 2026-09-27) ─────────
+ *
+ * This panel used to be the hero's dark product anchor and carried the
+ * Passport's own heading and registration action. With three equal core
+ * parts, a large Passport visual in the hero would make the other two
+ * subordinate, so the example now lives in the Passport section, and the
+ * section — not this card — carries the heading and the action.
  *
  * ── NOT AN IMITATION ───────────────────────────────────────────────────
  *
- * This panel used to be its own drawing of a Passport — its own striped
- * ground, its own grid, a row of decorative facts ("Documented source",
- * "Trust state: Documented") that described nobody and read as if they
- * described somebody. The authenticated Passport then changed and this did
- * not, which is what a separate imitation always does.
- *
- * It now wears the SAME ground (`passport-signature`, mirrored from
+ * It wears the SAME ground (`passport-signature`, mirrored from
  * PASSPORT_CARD_SURFACE) and draws its credentials with the SAME
  * `CredentialConstellation`, scope resolver, flags and globe the holder's own
  * card uses. There is nothing here to keep in step by hand.
@@ -33,18 +34,18 @@ import { resolveCredentialScope } from "@/lib/security-passport/credential-shiel
  * No name, number, issuer logo, tick or rating that could be mistaken for a
  * real holder's.
  *
- * ── THE ACTION IS OUTSIDE THE CARD ─────────────────────────────────────
+ * ── NO ACTION IN HERE ──────────────────────────────────────────────────
  *
- * The registration action belongs to the proposition, not to the example: it
- * sits under the sentence it acts on, above the illustrative card, so nobody
- * reads "create your Passport" as a control ON a fictional person's record.
+ * Nobody may read "create your Passport" as a control ON a fictional
+ * person's record, so the card holds no control at all; the section's own
+ * action sits outside it.
  *
  * ── NO <header> AND NO <footer> IN HERE ────────────────────────────────
  *
  * The public-entry suite asserts ONE site header and ONE site footer and
  * drives the mobile menu through `header`. The bands are plain containers.
  */
-export function HomePassportPreview({ action }: { action?: ReactNode }) {
+export function HomePassportPreview() {
   const { t, lang } = useT();
   const l = lang === "sv" ? "sv" : "en";
 
@@ -85,7 +86,6 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
       aria-label={t("home.markets.eyebrow")}
       className="passport-signature passport-card-frame relative isolate overflow-hidden rounded-xl bg-primary p-5 text-primary-foreground sm:p-7"
       data-home-passport-preview
-      data-home-entry="passport"
     >
       <div
         className="flex items-start justify-between gap-4 border-b border-primary-foreground/15 pb-5"
@@ -103,33 +103,14 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         </span>
       </div>
 
-      <div className="pt-6">
-        <h2 className="max-w-[24ch] text-2xl font-semibold leading-tight !text-primary-foreground sm:text-[1.75rem]">
-          {t("home.entry.passport.title")}
-        </h2>
-        <p className="mt-2.5 max-w-[46ch] text-sm leading-relaxed text-primary-foreground/75">
-          {t("home.entry.passport.body")}
-        </p>
-        {action ? (
-          <div className="mt-5 flex min-h-11 items-center justify-between gap-4">
-            {action}
-            <ArrowRight
-              className="h-4 w-4 shrink-0 text-primary-foreground/70"
-              aria-hidden="true"
-            />
-          </div>
-        ) : null}
-      </div>
-
       {/* ── The illustrative card ─────────────────────────────────────── */}
-      {/* The visible label "Exempel / Example" and the name "Example Holder" say
-          what this is; the accessible name adds the full sentence. The page
-          has a 340-word budget (public-homepage-check), so the card carries
-          no third line of prose. */}
+      {/* The visible label "Exempel / Example" and the caption under the card
+          say what this is: a fictional person with fictional credentials.
+          The caption is also the figure's accessible name. */}
       <figure
-        className="mt-7"
+        className="mt-6"
         data-home-passport-example
-        aria-label={`${t("home.passportPreview.exampleLabel")} — ${t("home.passportPreview.exampleCaption")}`}
+        aria-label={t("home.passportPreview.exampleCaption")}
       >
         <div className="rounded-lg border border-primary-foreground/15 bg-primary-foreground/[0.04] p-4 [container-type:inline-size] sm:p-5">
           <div className="flex items-center justify-end gap-3">
@@ -161,6 +142,12 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
             className="mt-5 border-t border-primary-foreground/15 pt-4"
           />
         </div>
+        <figcaption
+          data-home-passport-example-caption
+          className="mt-3 text-xs leading-relaxed text-primary-foreground/80"
+        >
+          {t("home.passportPreview.exampleCaption")}
+        </figcaption>
       </figure>
 
       {/* Each credential carries its OWN review status; the panel states none.

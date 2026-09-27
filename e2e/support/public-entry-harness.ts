@@ -20,7 +20,7 @@
 // Run through `bun run e2e:public-entry`, which CI's `public-entry-browser`
 // job executes against a real dev server.
 
-import { expect, type Page } from "@playwright/test";
+import { expect, type Page, type Route } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -166,6 +166,42 @@ export async function installBoundary(page: Page, table: ServerFnTable = {}): Pr
   return refusals;
 }
 
+/**
+ * Answer ONE server function and let every other request continue.
+ *
+ * For suites that install no boundary but visit a page that makes one read
+ * on arrival: the homepage asks whether the career analysis is open
+ * (`getV31Availability`), and that read must never reach a live backend
+ * through the dev server. Registered before any boundary a test installs
+ * later, so a boundary still wins: Playwright consults the most recently
+ * registered handler first.
+ */
+export async function stubServerFn(
+  page: Page,
+  name: string,
+  result: unknown,
+): Promise<() => Promise<void>> {
+  const handler = async (route: Route) => {
+    if (exportOf(route.request().url()) !== name) return route.fallback();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ result, error: null, context: {} }),
+    });
+  };
+  await page.route("**/_serverFn/**", handler);
+  /** Withdraw the answer, for a stub that must not outlive one load. */
+  return () => page.unroute("**/_serverFn/**", handler);
+}
+
+/** The career analysis's availability, as `getV31Availability` answers it. */
+export const ANALYSIS_OPEN = { available: true, lifecycleStatus: "active", outstandingGates: 0 };
+export const ANALYSIS_CLOSED = {
+  available: false,
+  lifecycleStatus: "retired",
+  outstandingGates: 0,
+};
+
 export function assertNoRefusals(refusals: Refusals): void {
   expect(
     refusals.production,
@@ -192,11 +228,17 @@ export async function observeSupabaseStorageKey(page: Page): Promise<string> {
       return original.call(this, key);
     };
   });
+  // The homepage asks one public, read-only question on arrival — is the
+  // career analysis open? This observation is about the session key, not the
+  // analysis, so the answer is given here and withdrawn afterwards: a suite's
+  // own boundary still decides what every later load may ask.
+  const release = await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
   const key = await page.evaluate(
     () => (window as unknown as { __sbKeys: string[] }).__sbKeys[0] ?? null,
   );
+  await release();
   expect(key, "the homepage never read a Supabase session key").not.toBeNull();
   return key as string;
 }
