@@ -110,6 +110,8 @@ export const dictionaries = {
     "meta.careerDiscovery.title": "Career Discovery – din karriäranalys – CQrityjob",
     "meta.jobs.title": "Lediga jobb inom säkerhet – CQrityjob",
     "meta.employers.title": "Rekrytera och utveckla säkerhetspersonal – CQrityjob",
+    "meta.assessment.title": "Karriäranalys, tester och utveckling – CQrityjob",
+    "meta.contact.title": "Kontakta oss – CQrityjob",
 
     // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
     //
@@ -123,7 +125,6 @@ export const dictionaries = {
     "cta.careers": "Utforska karriärvägar",
     "cta.contact": "Kontakta oss",
     "cta.talk": "Prata med oss",
-    "cta.notify": "Meddela mig vid lansering",
     "cta.learn_more": "Läs mer",
     "cta.all_careers": "Se alla karriärer",
 
@@ -640,75 +641,6 @@ export const dictionaries = {
     "employers.cta.how": "Se hur plattformen fungerar",
     "employers.cta.login": "Logga in till företagsportalen",
 
-    "assessment.eyebrow": "TVÅ SEPARERADE LÖSNINGAR",
-    "assessment.title": "Tester för karriär och säkerhetskompetens",
-    "assessment.lead":
-      "CQrityjob erbjuder kostnadsfri karriärvägledning för individer och rollbaserade kompetenstest för organisationer som vill bedöma kandidater eller utveckla befintlig säkerhetspersonal.",
-
-    "assessment.individuals.eyebrow": "FÖR INDIVIDER",
-    "assessment.individuals.title": "Hitta din väg inom säkerhet",
-    "assessment.individuals.body":
-      "Utforska vilka säkerhetsyrken som kan passa dina intressen, jämför karriärvägar och få konkreta förslag på nästa steg. Testet ger vägledning och avgör inte om du är behörig eller professionellt lämplig för ett visst yrke.",
-    "assessment.individuals.point.time": "Cirka fem minuter",
-    "assessment.individuals.point.free": "Kostnadsfritt",
-    "assessment.individuals.point.account": "Inget konto krävs",
-    "assessment.individuals.point.guidance": "Personlig karriärvägledning",
-    "assessment.individuals.point.links": "Länkar till yrkesguider och nästa steg",
-    "assessment.individuals.cta": "Gör säkerhetskarriärtestet",
-
-    "assessment.orgs.eyebrow": "FÖR ORGANISATIONER",
-    "assessment.orgs.title": "Bedöm och utveckla säkerhetspersonal",
-    "assessment.orgs.body":
-      "Rollbaserade kompetenstest för organisationer som vill få bättre beslutsunderlag vid rekrytering, kontrollera kunskap hos befintlig personal, identifiera kompetensgap och planera utvecklingsinsatser.",
-    "assessment.orgs.usecaseA.title": "Kandidatbedömning vid rekrytering",
-    "assessment.orgs.usecaseA.body":
-      "Bjud in kandidater till rollspecifika tester och få ett strukturerat beslutsunderlag inför intervju, referenstagning och fortsatt urval.",
-    "assessment.orgs.usecaseB.title": "Kompetenstest av befintlig personal",
-    "assessment.orgs.usecaseB.body":
-      "Testa egen eller upphandlad säkerhetspersonal mot definierade rollkrav, identifiera kunskaps- och kompetensgap och följ utveckling över tid.",
-    "assessment.orgs.customers.title": "Exempel på organisationer",
-    "assessment.orgs.customers.1": "Bevaknings- och säkerhetsföretag",
-    "assessment.orgs.customers.2": "Myndigheter",
-    "assessment.orgs.customers.3": "Datacenter",
-    "assessment.orgs.customers.4": "Kritisk infrastruktur",
-    "assessment.orgs.customers.5": "Företagens säkerhetsavdelningar",
-    "assessment.orgs.customers.6": "Organisationer som upphandlar säkerhetstjänster",
-    "assessment.orgs.cta": "Utforska lösningen för organisationer",
-    "assessment.orgs.status": "Under utveckling — förhandstitt på kommande produkt.",
-
-    "assessment.compare.title": "Skillnaden mellan vägledning och kompetenstest",
-    "assessment.compare.guidance.title": "Karriärvägledning",
-    "assessment.compare.guidance.1": "Utformad för individer",
-    "assessment.compare.guidance.2": "Utforskar intressen och möjliga karriärvägar",
-    "assessment.compare.guidance.3": "Inget anställningsbeslut",
-    "assessment.compare.guidance.4": "Ingen bedömning av behörighet",
-    "assessment.compare.guidance.5": "Kostnadsfri ingångsprodukt",
-    "assessment.compare.pro.title": "Professionellt kompetenstest",
-    "assessment.compare.pro.1": "Beställs av en organisation",
-    "assessment.compare.pro.2": "Kopplad till en definierad roll och ett tydligt syfte",
-    "assessment.compare.pro.3":
-      "Kan innehålla kunskap, situationsbedömning och praktiska scenarier",
-    "assessment.compare.pro.4": "Ger strukturerat beslutsstöd för människor",
-    "assessment.compare.pro.5": "Kan användas för kandidater eller befintlig personal",
-    "assessment.compare.pro.6":
-      "Godkänner, avvisar eller rangordnar aldrig personer för anställning automatiskt",
-
-    "assessment.workflow.title": "Så tänker vi kring arbetsflödet för organisationer",
-    "assessment.workflow.subtitle":
-      "Förhandsvisning av kommande produkt — inte aktiv funktionalitet.",
-    "assessment.workflow.step1": "Välj roll eller kompetensområde",
-    "assessment.workflow.step2": "Bjud in kandidater eller anställda",
-    "assessment.workflow.step3": "Genomför rollspecifikt test",
-    "assessment.workflow.step4": "Granska resultat per delområde",
-    "assessment.workflow.step5": "Identifiera kompetensgap",
-    "assessment.workflow.step6": "Planera intervju, utbildning eller uppföljning",
-
-    "assessment.responsible.title": "Ansvarsfull användning",
-    "assessment.responsible.body":
-      "CQrityjobs professionella kompetenstest stödjer mänskliga beslut. Organisationen ansvarar för slutliga beslut om rekrytering, behörighet, anställning, utbildning och personal.",
-    "assessment.status":
-      "Karriärtestet är tillgängligt idag. Lösningen för organisationer är under utveckling.",
-
     // ── ABOUT (MVP text specification §12.1) ─────────────────────────
     //
     // Replaces the older product description, which presented CQrityjob as
@@ -730,17 +662,24 @@ export const dictionaries = {
     "about.vision.title": "Visionen",
     "about.vision.body":
       "Vår ambition är att CQrityjob ska vara en naturlig plats att återvända till genom hela yrkeslivet inom säkerhet – för att arbeta, utvecklas och hitta nästa möjlighet.",
+    "assessment.title": "Karriäranalys, rekryteringstester och kompetensutveckling",
+    "assessment.lead":
+      "Välj stöd utifrån vad du vill göra: utforska din karriär, få underlag i en rekrytering eller utveckla medarbetarnas kunskaper.",
+    "assessment.person.title": "Karriäranalys",
+    "assessment.person.body":
+      "Utforska din karriär med Career Discovery. Du får vägledning utifrån dina svar.",
+    "assessment.recruitment.title": "Rekryteringstester",
+    "assessment.recruitment.body":
+      "Använd rollrelevanta rekryteringstester som en del av arbetsgivarens samlade underlag.",
+    "assessment.development.title": "Kompetensutveckling",
+    "assessment.development.body":
+      "Planera och följ upp kompetensutveckling för befintliga medarbetare.",
+    "assessment.responsible":
+      "Ett resultat ska tolkas utifrån sitt syfte och sammanhang. Beslut fattas av människor.",
 
     "contact.title": "Kontakta oss",
     "contact.lead":
-      "Vi arbetar med utvalda partners under uppbyggnaden. Hör av dig så återkopplar vi.",
-    "contact.preview_notice":
-      "Detta formulär är en förhandsvisning och skickar för närvarande inga meddelanden.",
-    "contact.form.name": "Namn",
-    "contact.form.email": "E-post",
-    "contact.form.company": "Organisation",
-    "contact.form.message": "Meddelande",
-    "contact.form.submit": "Skicka",
+      "Kontaktformuläret är inte öppet för meddelanden ännu. Inget skickas från den här sidan.",
 
     "profession.police.title": "Polis",
     "profession.police.desc":
@@ -771,9 +710,6 @@ export const dictionaries = {
       "Planering och ledning av kris- och incidenthantering på organisationsnivå.",
 
     "status.coming_soon": "Kommer snart",
-    "status.in_development": "Under utveckling",
-    "status.preview": "Förhandsvisning",
-    "status.available": "Tillgänglig nu",
 
     "auth.signin.title": "Logga in",
     "auth.signup.title": "Skapa konto",
@@ -855,7 +791,8 @@ export const dictionaries = {
     "auth.companyCountry": "Land",
     "employer.pending.heading": "Företagskonto granskas",
     "employer.pending.thanks": "Tack för din registrering.",
-    "employer.pending.body": "Vi granskar nu företagets uppgifter innan kontot aktiveras.",
+    "employer.pending.body":
+      "Organisationens registrering granskas. Här ser du när statusen ändras.",
     "employer.pending.access":
       "Du får tillgång till arbetsgivarytan när registreringen har godkänts.",
     // ── VERIFIERAD ADRESS, MOTTAGEN ANSÖKAN, GODKÄNT FÖRETAG ──────────
@@ -899,8 +836,6 @@ export const dictionaries = {
     "account.context.underReview": "Granskas",
     "account.context.unavailable": "Inte tillgänglig",
     "employer.pending.checking": "Kontrollerar din registrering …",
-    "auth.intro":
-      "Ditt konto sparar dina karriärtestresultat säkert. Kontot är valfritt — testet fungerar utan inloggning.",
     "auth.google": "Fortsätt med Google",
     "auth.or": "eller",
     // Shown only when the return path is an organisation invitation. Says
@@ -962,9 +897,10 @@ export const dictionaries = {
     // The proposition names the IDENTITY, not the six systems behind it:
     // a visitor should not have to learn the product's internal
     // boundaries to know what an account is for.
-    "auth.unified.proposition": "Din säkerhetskarriär. En yrkesidentitet.",
+    "auth.unified.proposition": "Skapa ditt CQrityjob-konto",
+    "auth.unified.propositionSignIn": "Logga in på CQrityjob",
     "auth.unified.lede":
-      "Din yrkesidentitet, din karriärutveckling och dina verifierade kvalifikationer på ett ställe — med ett enda konto.",
+      "Använd ditt konto för din karriär, ditt Security Passport och ditt säkerhetsarbete. Tillgången till varje arbetsyta följer dess behörigheter.",
     "auth.unified.signin.intro": "Logga in för att fortsätta.",
     "auth.unified.signup.intro":
       "Vi behöver bara det nödvändigaste nu. Resten fyller du i när du behöver det.",
@@ -1402,7 +1338,7 @@ export const dictionaries = {
     "cd.public.shareResult": "Dela din karriärinriktning",
     "cd.public.shareTitle": "Min Security Career DNA",
     "cd.public.shareText":
-      "Jag gjorde precis CQrityjobs karriärvägledning inom säkerhet och fick reda på min Security Career DNA. Utforska själv:",
+      "Jag gjorde precis CQrityjobs karriäranalys och fick reda på min Security Career DNA. Utforska själv:",
     "cd.public.shareShared": "Delat",
     "cd.public.shareCopied": "Kopierat till urklipp",
     "cd.public.saving": "Sparar din rapport…",
@@ -3567,7 +3503,7 @@ export const dictionaries = {
     "cc.p.path.next": "Vanliga steg härifrån",
     "cc.p.test.title": "Osäker på om den här rollen passar dig?",
     "cc.p.test.body":
-      "Karriärtestet tar ungefär 12–15 minuter och ger dig en karriärprofil med yrkesförslag att läsa vidare om. Det bedömer inte din kompetens eller anställningsbarhet.",
+      "Karriäranalysen ger dig förklarade yrkesförslag att utforska vidare, utifrån dina svar. Den bedömer inte din kompetens eller anställningsbarhet.",
     "cc.p.related": "Relaterade yrken",
     "cc.p.faq": "Vanliga frågor",
     "cc.p.sources": "Källor",
@@ -8849,13 +8785,14 @@ export const dictionaries = {
     "meta.careerDiscovery.title": "Career Discovery – your career analysis – CQrityjob",
     "meta.jobs.title": "Security jobs – CQrityjob",
     "meta.employers.title": "Recruit and develop security professionals – CQrityjob",
+    "meta.assessment.title": "Career analysis, assessments and development – CQrityjob",
+    "meta.contact.title": "Contact us – CQrityjob",
 
     "cta.passport": "Create my Security Passport",
     "cta.assessment": "Start the Career Analysis",
     "cta.careers": "Explore career paths",
     "cta.contact": "Contact us",
     "cta.talk": "Talk to our team",
-    "cta.notify": "Notify me at launch",
     "cta.learn_more": "Learn more",
     "cta.all_careers": "See all careers",
 
@@ -9245,74 +9182,6 @@ export const dictionaries = {
     "employers.cta.how": "See how the platform works",
     "employers.cta.login": "Log in to the employer portal",
 
-    "assessment.eyebrow": "TWO SEPARATE SOLUTIONS",
-    "assessment.title": "Career and Security Competence Assessments",
-    "assessment.lead":
-      "CQrityjob offers free career guidance for individuals and role-based competence assessments for organizations that want to evaluate candidates or develop existing security personnel.",
-
-    "assessment.individuals.eyebrow": "FOR INDIVIDUALS",
-    "assessment.individuals.title": "Find your path in security",
-    "assessment.individuals.body":
-      "Explore which security professions may fit your interests, compare career paths and get concrete suggestions for next steps. The test provides guidance and does not determine whether you are eligible or professionally suitable for a specific role.",
-    "assessment.individuals.point.time": "About five minutes",
-    "assessment.individuals.point.free": "Free",
-    "assessment.individuals.point.account": "No account required",
-    "assessment.individuals.point.guidance": "Personalized career guidance",
-    "assessment.individuals.point.links": "Links to profession guides and next steps",
-    "assessment.individuals.cta": "Take the career test",
-
-    "assessment.orgs.eyebrow": "FOR ORGANIZATIONS",
-    "assessment.orgs.title": "Assess and develop security personnel",
-    "assessment.orgs.body":
-      "Role-based competence assessments for organizations that want stronger decision support during recruitment, verify knowledge among existing personnel, identify competence gaps and plan development activities.",
-    "assessment.orgs.usecaseA.title": "Candidate assessment during recruitment",
-    "assessment.orgs.usecaseA.body":
-      "Invite candidates to role-specific tests and receive structured decision support ahead of interviews, references and further selection.",
-    "assessment.orgs.usecaseB.title": "Competence testing of existing personnel",
-    "assessment.orgs.usecaseB.body":
-      "Test in-house or contracted security personnel against defined role requirements, identify knowledge and competence gaps and track development over time.",
-    "assessment.orgs.customers.title": "Example organizations",
-    "assessment.orgs.customers.1": "Security and guarding companies",
-    "assessment.orgs.customers.2": "Government agencies",
-    "assessment.orgs.customers.3": "Data centers",
-    "assessment.orgs.customers.4": "Critical infrastructure",
-    "assessment.orgs.customers.5": "Corporate security departments",
-    "assessment.orgs.customers.6": "Organizations purchasing security services",
-    "assessment.orgs.cta": "Explore the solution for organizations",
-    "assessment.orgs.status": "In development — preview of an upcoming product.",
-
-    "assessment.compare.title": "The difference between guidance and competence testing",
-    "assessment.compare.guidance.title": "Career guidance",
-    "assessment.compare.guidance.1": "Designed for individuals",
-    "assessment.compare.guidance.2": "Explores interests and possible career paths",
-    "assessment.compare.guidance.3": "No employment decision",
-    "assessment.compare.guidance.4": "No eligibility determination",
-    "assessment.compare.guidance.5": "Free entry product",
-    "assessment.compare.pro.title": "Professional competence assessment",
-    "assessment.compare.pro.1": "Commissioned by an organization",
-    "assessment.compare.pro.2": "Linked to a defined role and purpose",
-    "assessment.compare.pro.3":
-      "May include knowledge, situational judgement and practical scenarios",
-    "assessment.compare.pro.4": "Provides structured human decision support",
-    "assessment.compare.pro.5": "Can be used for candidates or existing personnel",
-    "assessment.compare.pro.6":
-      "Never automatically approves, rejects or ranks people for employment",
-
-    "assessment.workflow.title": "How we think about the organizational workflow",
-    "assessment.workflow.subtitle": "Preview of an upcoming product — not active functionality.",
-    "assessment.workflow.step1": "Select role or competence area",
-    "assessment.workflow.step2": "Invite candidates or employees",
-    "assessment.workflow.step3": "Complete role-specific test",
-    "assessment.workflow.step4": "Review section-level results",
-    "assessment.workflow.step5": "Identify competence gaps",
-    "assessment.workflow.step6": "Plan interview, training or follow-up",
-
-    "assessment.responsible.title": "Responsible use",
-    "assessment.responsible.body":
-      "CQrityjob's professional assessments support human decisions. The organization remains responsible for final recruitment, authorization, employment, training and personnel decisions.",
-    "assessment.status":
-      "The career test is available today. The organization solution is under development.",
-
     "about.title": "For your professional life in security.",
     "about.pillars.title": "Three connected areas",
     "about.mission.title": "The mission",
@@ -9324,17 +9193,24 @@ export const dictionaries = {
     "about.vision.title": "The vision",
     "about.vision.body":
       "Our ambition is for CQrityjob to be a natural place to return to throughout a professional life in security: to work, develop and find the next opportunity.",
+    "assessment.title": "Career analysis, recruitment assessments and learning",
+    "assessment.lead":
+      "Choose support for your purpose: explore your career, inform a recruitment process or develop employees' knowledge.",
+    "assessment.person.title": "Career analysis",
+    "assessment.person.body":
+      "Explore your career with Career Discovery. Receive guidance based on your answers.",
+    "assessment.recruitment.title": "Recruitment assessments",
+    "assessment.recruitment.body":
+      "Use role-relevant recruitment assessments as part of the employer's overall evidence.",
+    "assessment.development.title": "Learning and development",
+    "assessment.development.body":
+      "Plan and follow up learning and development for existing employees.",
+    "assessment.responsible":
+      "A result should be interpreted according to its purpose and context. People make the decisions.",
 
     "contact.title": "Contact us",
     "contact.lead":
-      "We work with a select set of partners during the build. Reach out and we will get back to you.",
-    "contact.preview_notice":
-      "This form is a preview and does not currently send or store messages.",
-    "contact.form.name": "Name",
-    "contact.form.email": "Email",
-    "contact.form.company": "Organisation",
-    "contact.form.message": "Message",
-    "contact.form.submit": "Send",
+      "The contact form is not accepting messages yet. Nothing is sent from this page.",
 
     "profession.police.title": "Police Officer",
     "profession.police.desc":
@@ -9365,9 +9241,6 @@ export const dictionaries = {
       "Planning and leading incident, crisis and business continuity response.",
 
     "status.coming_soon": "Coming soon",
-    "status.in_development": "In development",
-    "status.preview": "Preview",
-    "status.available": "Available now",
 
     "auth.signin.title": "Sign in",
     "auth.signup.title": "Create account",
@@ -9431,7 +9304,7 @@ export const dictionaries = {
     "employer.pending.heading": "Company account under review",
     "employer.pending.thanks": "Thank you for registering.",
     "employer.pending.body":
-      "We are reviewing your organisation before activating employer access.",
+      "Your organisation's registration is being reviewed. Status changes will appear here.",
     "employer.pending.access":
       "You will receive access to the employer workspace once the registration has been approved.",
     "employer.pending.nextSteps.heading": "What happens next",
@@ -9466,8 +9339,6 @@ export const dictionaries = {
     "account.context.underReview": "Under review",
     "account.context.unavailable": "Unavailable",
     "employer.pending.checking": "Checking your registration …",
-    "auth.intro":
-      "An account keeps your Security Career Assessment results safe. It's optional — the assessment works without signing in.",
     "auth.google": "Continue with Google",
     "auth.or": "or",
     "auth.invite.organisationContext":
@@ -9513,9 +9384,10 @@ export const dictionaries = {
     "auth.redirecting": "Redirecting…",
 
     // The unified front door (2026-08-30). See the Swedish block above.
-    "auth.unified.proposition": "Your security career. One professional identity.",
+    "auth.unified.proposition": "Create your CQrityjob account",
+    "auth.unified.propositionSignIn": "Sign in to CQrityjob",
     "auth.unified.lede":
-      "Your professional identity, your career development and your verified credentials in one place — with a single account.",
+      "Use your account for your career, Security Passport and security work. Access to each workspace follows its permissions.",
     "auth.unified.signin.intro": "Sign in to continue.",
     "auth.unified.signup.intro":
       "We only need the essentials now. Everything else you fill in when you need it.",
@@ -9920,7 +9792,7 @@ export const dictionaries = {
     "cd.public.shareResult": "Share your career direction",
     "cd.public.shareTitle": "My Security Career DNA",
     "cd.public.shareText":
-      "I just took CQrityjob's security career assessment and found out my Security Career DNA. Try it yourself:",
+      "I just took CQrityjob's career analysis and found out my Security Career DNA. Try it yourself:",
     "cd.public.shareShared": "Shared",
     "cd.public.shareCopied": "Copied to clipboard",
     "cd.public.saving": "Saving your report…",
@@ -11964,7 +11836,7 @@ export const dictionaries = {
     "cc.p.path.next": "Common steps from here",
     "cc.p.test.title": "Not sure whether this role suits you?",
     "cc.p.test.body":
-      "The career test takes approximately 12–15 minutes and gives you a career profile with professions to read more about. It does not assess your competence or your employability.",
+      "The career analysis gives you explained role suggestions to explore further, based on your answers. It does not assess your competence or your employability.",
     "cc.p.related": "Related professions",
     "cc.p.faq": "Common questions",
     "cc.p.sources": "Sources",

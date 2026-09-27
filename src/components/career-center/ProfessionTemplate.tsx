@@ -11,6 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
+import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   L,
@@ -543,7 +544,8 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
               {t("cc.p.test.title")}
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {t("cc.p.test.body")}
+              {/* The duration is the instrument's own, never typed into copy. */}
+              {t("cc.p.test.body")} {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
             </p>
           </div>
           <div className="md:justify-self-end">

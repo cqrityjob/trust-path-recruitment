@@ -56,8 +56,11 @@ function ComingSoonPage() {
           </h2>
           <p className="mt-4 max-w-2xl text-muted-foreground">{t("jobs.coming_soon.body")}</p>
           <div className="mt-8">
-            <PrimaryLink to="/contact">
-              {t("cta.notify")}
+            {/* No "notify me at launch": nothing records such a request, and
+                the contact page does not accept messages (MVP text
+                specification §12.4). The Career Center is open meanwhile. */}
+            <PrimaryLink to="/career-center">
+              {t("home.core.career.cta")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </PrimaryLink>
           </div>

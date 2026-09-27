@@ -404,7 +404,9 @@ test.describe("the employer journey", () => {
     // workspace query resolves, and a one-shot read catches that instead.
     await expect(page.getByText("Tack för din registrering.")).toBeVisible({ timeout: 20_000 });
     const text = await page.evaluate(() => document.body.innerText);
-    expect(text).toContain("Vi granskar nu företagets uppgifter innan kontot aktiveras.");
+    expect(text).toContain(
+      "Organisationens registrering granskas. Här ser du när statusen ändras.",
+    );
     // The receipt: what CQrityjob holds about them.
     expect(text).toContain("Pending Security AB");
     // And a way to re-check without leaving.
