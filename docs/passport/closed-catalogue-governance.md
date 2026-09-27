@@ -48,7 +48,7 @@ Rollback removes only the new schema/command guard, restores the exact previous 
 
 ## Availability requiring review
 
-The clean local catalogue has 73 definitions, 14 certification definitions and five certification issuers. Since `20261126090000_sp_catalogue_scope_and_document_issuer` the approved projection returns **22** entries to a Swedish holder: 14 international and all eight Swedish definitions. The full reconciliation, code by code, is [catalogue-coverage-matrix.md](catalogue-coverage-matrix.md), and a platform administrator sees the same diagnosis at `/admin/passport-catalogue`.
+The clean local catalogue has 77 definitions, 14 certification definitions and five certification issuers. Since `20261126090000_sp_catalogue_scope_and_document_issuer` the approved projection returned **22** entries to a Swedish holder: 14 international and all eight Swedish definitions. Since `20261214090000_sp_india_national_qualifications` it returns **26** to every holder without a pilot grant, adding India's four national qualifications. The full reconciliation, code by code, is [catalogue-coverage-matrix.md](catalogue-coverage-matrix.md), and a platform administrator sees the same diagnosis at `/admin/passport-catalogue`.
 
 ### How VU1, VU2 and SV were resolved (owner decision, 2026-09-18)
 

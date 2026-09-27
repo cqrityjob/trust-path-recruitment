@@ -27,6 +27,12 @@
   "include": [
     "scripts/security-work-*.ts",
     "scripts/passport-*.ts",
+    // The .tsx Passport guards and the trust-surface guard, on the same terms.
+    // The glob above matched only .ts, so sixteen guards that RENDER the
+    // Passport, recipient and trust components with typed fixtures were
+    // outside the net -- the exact gap this file was written to close.
+    "scripts/passport-*.tsx",
+    "scripts/trust-surface-check.tsx",
     // The security guard is added on its own terms rather than by widening the
     // net: it is new, it carries no pre-existing type debt, and a guard that
     // silently stops enforcing is exactly the failure this file was written about.

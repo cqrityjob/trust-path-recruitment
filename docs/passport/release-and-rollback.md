@@ -146,13 +146,17 @@ the suites' error-matching becomes hard to read.
 
 ## Which checks gate a release
 
-Owner decision, 2026-08-24. Recorded here so it is not re-litigated on every
-migration.
+Owner decision, 2026-08-24, updated for the 2026-08-29 runtime cutover.
+Recorded here so it is not re-litigated on every migration.
 
-**The canonical hosted backend is `zrahptwsnjcdyzfywbeh`**, via the Lovable
-Cloud project. `mlvzmiutmyyqeuvjglco` is not the production backend for this
-workstream and is not a release dependency. Do not migrate to it, test against
-it or propose moving to it as part of ordinary feature work.
+**The canonical hosted backend is `wrygicdfxwjnrugduxnt`** ("CQrityjob
+Production", owner-controlled Supabase, eu-central-1). The published
+application authenticates and reads against it, and its migration ledger
+matches `supabase/migrations/` on `main` (verified read-only 2026-09-27; see
+`completion-work-order.md` §0.2). `zrahptwsnjcdyzfywbeh`, the former Lovable
+Cloud backend, is retired. `mlvzmiutmyyqeuvjglco` is not the production backend
+and is not a release dependency: do not migrate to it, test against it or
+propose moving to it as part of ordinary feature work.
 
 **Two repository-controlled CI jobs are the blocking gates on `main`:**
 
@@ -190,24 +194,31 @@ remote-version/local-file mismatch only.
 **Not done by this work.** Every PR is labelled
 **CODE COMPLETE — HOSTED VERIFICATION PENDING**.
 
-Two Supabase projects exist and confusing them costs real time:
+Several Supabase project refs appear in this repository's history, and
+confusing them costs real time:
 
-- `zrahptwsnjcdyzfywbeh` — the **live** application backend, owned by Lovable
-  Cloud, not by the repository owner. It does not appear in
-  `supabase projects list`.
-- `mlvzmiutmyyqeuvjglco` — the only project in the owner's account. Connected
-  to the repo, but **not** the live backend.
+- `wrygicdfxwjnrugduxnt` — the **live** backend, for both the application and
+  the schema, since the 2026-08-29 cutover (`supabase/deployment-targets.json`).
+- `zrahptwsnjcdyzfywbeh` — the former Lovable Cloud backend. Retired on
+  2026-08-29; never a target again.
+- `mlvzmiutmyyqeuvjglco` — permanently excluded. It is **not** the live
+  backend, and measurements taken on it describe nothing about production.
 
 "Hosted" alone is ambiguous. Always name the ref.
+
+**A merge that carries a migration is a production release.** The Supabase
+GitHub integration clones `main` and applies new migrations to
+`wrygicdfxwjnrugduxnt` without a further step: on 2026-09-27 its run log shows
+`Applying migration… 20261219090000_assessment_draft_authoring.sql` at
+17:14:55Z, just after that PR merged. Approving such a merge is approving the
+release; verify read-only afterwards.
 
 ### Capture the logical pre-state first
 
 **There is no verified backup for this project, and nothing below is one.**
-`zrahptwsnjcdyzfywbeh` is Lovable Cloud-managed: it does not appear in
-`supabase projects list`, so normal Supabase management backup and
-point-in-time-recovery access is **not available and has not been verified**
-from here. Do not describe the capture below as a backup, and do not plan a
-recovery that assumes one exists.
+Whether a backup or point-in-time recovery is available for
+`wrygicdfxwjnrugduxnt` **has not been verified** from here. Do not describe the
+capture below as a backup, and do not plan a recovery that assumes one exists.
 
 **The rollback files are the release safety mechanism.** Recovery is forward:
 run the paired rollback, not a restore.

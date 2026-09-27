@@ -6594,10 +6594,13 @@ else
   echo "    ok  ${SPLSC_PASSED} legacy scope correction assertions passed"
   # This suite exists because one production row was frozen: readable,
   # withdrawable, uncorrectable. A short run means the correction attempts did
-  # not happen, which reads exactly like a fixed defect.
-  if [ "$SPLSC_PASSED" -lt 14 ]; then
-    echo "FAIL: expected at least 14 legacy scope assertions, only ${SPLSC_PASSED} ran." >&2
-    suite_failed "Security Passport legacy scope correction (assertion shortfall: floor 14)"
+  # not happen, which reads exactly like a fixed defect. The floor is the full
+  # count (24 + group 8's 10): group 8 is the only proof that a VERIFIED
+  # scopeless record can be corrected through the governed save, and a
+  # shortfall there would otherwise hide under the older groups' passes.
+  if [ "$SPLSC_PASSED" -lt 34 ]; then
+    echo "FAIL: expected at least 34 legacy scope assertions, only ${SPLSC_PASSED} ran." >&2
+    suite_failed "Security Passport legacy scope correction (assertion shortfall: floor 34)"
   fi
 fi
 

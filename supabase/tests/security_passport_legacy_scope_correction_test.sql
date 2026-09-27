@@ -92,3 +92,76 @@ BEGIN
  PERFORM pg_temp.ok((SELECT assertion_level='verified' AND verified_by_user_id=_v FROM public.sp_claims WHERE id=_legacy),'7.2 withdrawal preserves verification history');
  -- Leave fixtures for the complete runner's rollback data-preservation checks.
 END $$;
+
+-- ── 8. The VERIFIED legacy record gains its scope through the governed save ──
+-- Completion work order revision 3, PR 1 (A1). Everything above proves the
+-- verified, scopeless record cannot be re-authored in place. This is the other
+-- half: through the real save path the holder CAN correct it by stating the
+-- scope, the correction is a new self-declared version that carries no
+-- verification over, and the same save without a scope is refused.
+--
+-- It runs in its own transaction and rolls back, so the fixtures the complete
+-- runner's rollback checks rely on are exactly what the block above leaves.
+BEGIN;
+DO $$
+DECLARE
+ _h uuid:='00000000-0000-0000-0000-00000000a104';
+ _v uuid:='00000000-0000-0000-0000-00000000a199';
+ _legacy uuid:='a1000000-0000-4000-8000-00000000d008';
+ _d public.sp_approved_credential_catalogue%ROWTYPE;
+ _before jsonb; _base jsonb; _new uuid;
+BEGIN
+ INSERT INTO auth.users(id) VALUES(_h),(_v) ON CONFLICT DO NOTHING;
+ INSERT INTO public.sp_passport_profiles(holder_user_id,jurisdiction_code,sub_jurisdiction_code,work_location_confirmed_at)
+ VALUES(_h,'SE',NULL,now());
+ -- The same owner-only pre-catalogue fixture as above: a record verified
+ -- before SV required its scope.
+ ALTER TABLE public.sp_claims DISABLE TRIGGER sp_00_closed_catalogue;
+ UPDATE public.sp_credential_types SET requires_scope=false WHERE code='SV';
+ INSERT INTO public.sp_claims(id,holder_user_id,claim_type,title,credential_code,jurisdiction_code,claimed_issuer_name,valid_until,assertion_level,verified_by_user_id,verified_at)
+ VALUES(_legacy,_h,'licence','Skyddsvaktsförordnande','SV','SE','Länsstyrelsen',current_date+300,'verified',_v,now());
+ UPDATE public.sp_credential_types SET requires_scope=true WHERE code='SV';
+ ALTER TABLE public.sp_claims ENABLE TRIGGER sp_00_closed_catalogue;
+ SELECT * INTO _d FROM public.sp_approved_credential_catalogue WHERE code='SV';
+ SELECT to_jsonb(c) INTO _before FROM public.sp_claims c WHERE id=_legacy;
+ PERFORM pg_temp.ok((_before->>'assertion_level')='verified' AND (_before->>'authorisation_scope') IS NULL
+   AND (SELECT requires_scope FROM public.sp_credential_types WHERE code='SV'),
+   '8.1 fixture: a verified SV record with no scope, on a definition that now requires one');
+ -- The input the Passport entry form sends for an edit (international.functions.ts).
+ _base:=jsonb_build_object('claim_id',_legacy,'version',1,'definition_code','SV',
+   'market_country',_d.country,'market_region',coalesce(_d.region,''),'identifier','',
+   'issued_on',(current_date-400)::text,'valid_until',(current_date+300)::text,'no_expiry',false);
+ SET LOCAL ROLE authenticated;
+ PERFORM set_config('request.jwt.claim.sub',_h::text,true);
+ PERFORM pg_temp.denied(format('SELECT public.sp_save_international_credential(%L::jsonb)',_base),
+   'SP_CREDENTIAL_REQUIRES_SCOPE','8.2 the governed save refuses to correct it without a scope');
+ PERFORM pg_temp.denied(format('SELECT public.sp_save_international_credential(%L::jsonb)',
+   _base||jsonb_build_object('authorisation_scope','   ')),
+   'SP_CREDENTIAL_REQUIRES_SCOPE','8.3 a blank scope is no scope');
+ RESET ROLE;
+ PERFORM pg_temp.ok((SELECT to_jsonb(c) FROM public.sp_claims c WHERE id=_legacy)=_before
+   AND NOT EXISTS(SELECT 1 FROM public.sp_claims WHERE supersedes_id=_legacy),
+   '8.4 the refused saves changed nothing and created no successor');
+ SET LOCAL ROLE authenticated;
+ PERFORM set_config('request.jwt.claim.sub',_h::text,true);
+ _new:=public.sp_save_international_credential(_base||jsonb_build_object('authorisation_scope','Skyddsobjekt: Hamnen'));
+ RESET ROLE;
+ PERFORM pg_temp.ok(_new IS NOT NULL AND _new<>_legacy,'8.5 with a scope, the same save corrects the verified record');
+ PERFORM pg_temp.ok((SELECT supersedes_id=_legacy AND version_no=2 AND lifecycle_state='active'
+     AND authorisation_scope='Skyddsobjekt: Hamnen' FROM public.sp_claims WHERE id=_new),
+   '8.6 the correction is the next version, active, carrying the stated scope');
+ PERFORM pg_temp.ok((SELECT assertion_level='self_declared' AND verified_by_user_id IS NULL AND verified_at IS NULL
+     FROM public.sp_claims WHERE id=_new),
+   '8.7 the new version is self-declared: no verification carries over to a scope nobody reviewed');
+ PERFORM pg_temp.ok((SELECT credential_code='SV' AND jurisdiction_code='SE' AND sub_jurisdiction_code IS NULL
+     AND claimed_issuer_name=_d.issuer_name AND title=_d.name_en FROM public.sp_claims WHERE id=_new),
+   '8.8 the governed identity is kept: code, country, governed issuer and title');
+ PERFORM pg_temp.ok((SELECT lifecycle_state='superseded' AND assertion_level='verified' AND verified_by_user_id=_v
+     AND authorisation_scope IS NULL
+     AND (to_jsonb(c)-'lifecycle_state'-'updated_at')=(_before-'lifecycle_state'-'updated_at')
+     FROM public.sp_claims c WHERE id=_legacy),
+   '8.9 the verified predecessor is superseded, not rewritten: its history and missing scope stay as they were');
+ PERFORM pg_temp.ok(EXISTS(SELECT 1 FROM public.sp_credential_details WHERE claim_id=_new),
+   '8.10 the new version has its credential details');
+END $$;
+ROLLBACK;

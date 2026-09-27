@@ -552,9 +552,31 @@ assert(
 );
 
 const workCountries = (jurisdictionStep?.fields[0]?.options ?? []).map((o) => o.value);
+
+// The countries `sp_jurisdictions` holds, read from the migrations that seed
+// it rather than kept by hand. A hand-kept ["SE", "GB", "AE"] is how this
+// check came to reject India's work country while India was live.
+const SEEDED_JURISDICTIONS = new Set(
+  readdirSync(join(ROOT, "supabase/migrations"))
+    .filter((f) => f.endsWith(".sql"))
+    .flatMap((f) =>
+      [
+        ...readFileSync(join(ROOT, "supabase/migrations", f), "utf8").matchAll(
+          /INSERT INTO public\.sp_jurisdictions\s*\([^)]*\)\s*VALUES([^;]*);/gi,
+        ),
+      ].flatMap((m) => [...m[1].matchAll(/\(\s*'([A-Z]{2})'/g)].map((c) => c[1])),
+    ),
+);
+// A parser that silently matched nothing would make every membership test
+// below fail for the wrong reason -- or, edited carelessly, pass for none.
+assert(
+  ["SE", "GB", "AE", "IN"].every((c) => SEEDED_JURISDICTIONS.has(c)),
+  `the migrations seed every market country into sp_jurisdictions (${[...SEEDED_JURISDICTIONS].join(", ")})`,
+);
+
 // Every market the product names must be answerable, or a holder in it has no
 // way to be described except by somebody else's country.
-for (const code of ["SE", "GB", "AE"]) {
+for (const code of ["SE", "GB", "AE", "IN"]) {
   assert(workCountries.includes(code), `a holder working in ${code} can say so`);
 }
 // Dubai is its own answer. SIRA licenses the emirate and not the country, so a
@@ -572,7 +594,7 @@ assert(
 for (const answer of workCountries) {
   const split = splitWorkCountry(answer);
   assert(
-    split.jurisdictionCode !== null && ["SE", "GB", "AE"].includes(split.jurisdictionCode),
+    split.jurisdictionCode !== null && SEEDED_JURISDICTIONS.has(split.jurisdictionCode),
     `${answer} splits into a country sp_jurisdictions holds (${split.jurisdictionCode})`,
   );
   assert(

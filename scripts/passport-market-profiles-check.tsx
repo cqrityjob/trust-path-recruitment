@@ -126,12 +126,13 @@ const AE_AZ_GUARD = claim({
   subJurisdictionCode: "AE-AZ",
   validUntil: "2028-11-30",
 });
-/** No jurisdiction: a language. Portable, belongs to no market. */
+/** No jurisdiction: an international certification. Portable, belongs to no
+ *  market. (Languages were the example until they moved to the CV.) */
 const PORTABLE = claim({
-  id: "t-lang",
-  claimType: "language",
-  titleSv: "Svenska",
-  titleEn: "Swedish",
+  id: "t-intl-cert",
+  claimType: "certification",
+  titleSv: "Certified Protection Professional (CPP)",
+  titleEn: "Certified Protection Professional (CPP)",
   jurisdictionCode: null,
 });
 
