@@ -216,6 +216,9 @@ SELECT public.sp_submit_for_verification(:'du_claim'::uuid,NULL,'cqrityjob_revie
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe220000-0000-4000-8000-000000000003',true);
+SELECT pg_temp.ok((SELECT e->>'jurisdiction'='AE' AND e->>'sub_jurisdiction'='AE-DU'
+    FROM jsonb_array_elements(public.sp_verifier_queue()) e WHERE e->>'id'=:'req_du'),
+ '4.3a the review queue names the Dubai claim''s territory, not only its country');
 SELECT public.sp_verifier_decide(:'req_du'::uuid,'approved','document_review','Card checked against the document','',NULL,NULL);
 RESET ROLE;
 SELECT pg_temp.ok((SELECT assertion_level='verified' FROM public.sp_claims WHERE id=:'du_claim'),
@@ -252,6 +255,9 @@ SELECT pg_temp.refused(format('UPDATE public.sp_claims SET lifecycle_state=''act
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe220000-0000-4000-8000-000000000003',true);
+SELECT pg_temp.ok((SELECT e->>'jurisdiction'='GB' AND e->>'sub_jurisdiction'='GB-NI'
+    FROM jsonb_array_elements(public.sp_verifier_queue()) e WHERE e->>'id'=:'req_ni'),
+ '4.6a and a Northern Irish licence as Northern Ireland, not as Great Britain');
 SELECT public.sp_verifier_decide(:'req_ni'::uuid,'approved','document_review','Licence checked against the document','',NULL,NULL);
 RESET ROLE;
 SELECT pg_temp.ok((SELECT assertion_level='verified' FROM public.sp_claims WHERE id=:'ni_claim'),

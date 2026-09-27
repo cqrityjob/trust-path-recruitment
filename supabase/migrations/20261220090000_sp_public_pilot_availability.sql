@@ -63,7 +63,16 @@
 -- SP_MARKET_PACK_NOT_ACTIVE now says a market is not open for new
 -- registration, instead of naming the legal review as the reason.
 --
--- No new object: two CHECK constraints are widened, one policy and three
+-- ── 4. THE REVIEW QUEUE NAMES THE TERRITORY ─────────────────────────────
+--
+-- sp_verifier_queue named the COUNTRY only, so the list a reviewer chooses
+-- from read "United Arab Emirates" for a Dubai licence and "United Kingdom"
+-- for a Northern Irish one. The review detail and the dispute queue already
+-- carry `sub_jurisdiction`; the queue now returns it too. One key is added;
+-- the authority check, every other key and the grants are unchanged, and an
+-- application that does not read the key is unaffected.
+--
+-- No new object: two CHECK constraints are widened, one policy and four
 -- bodies are replaced. The application's generated types are unaffected.
 -- Rollback: supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql
 -- =============================================================================
@@ -619,7 +628,59 @@ BEGIN
   RETURN NEW;
 END $fn$;
 
--- ── 6. Proof ─────────────────────────────────────────────────────────────
+-- ── 6. The review queue: the credential's territory ────────────────────
+-- The body of 20260818090000, with one key added: 'sub_jurisdiction'.
+CREATE OR REPLACE FUNCTION public.sp_verifier_queue(_status text DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE _out jsonb;
+BEGIN
+  IF NOT public.sp_is_verifier(auth.uid()) THEN
+    RAISE EXCEPTION 'SP_NOT_VERIFIER' USING ERRCODE='insufficient_privilege';
+  END IF;
+
+  SELECT coalesce(jsonb_agg(x ORDER BY x->>'submitted_at'), '[]'::jsonb) INTO _out
+  FROM (
+    SELECT jsonb_build_object(
+      'id', r.id,
+      'status', r.status,
+      'submitted_at', r.submitted_at,
+      'subject_type', CASE WHEN r.claim_id IS NOT NULL THEN 'claim' ELSE 'experience' END,
+      'holder_name', coalesce(p.display_name, ''),
+      -- Whether the caller is the holder. Computed here, from auth.uid(), so
+      -- the browser cannot assert it and the answer always matches the guard
+      -- inside `sp_verifier_decide`.
+      'is_self', (r.holder_user_id = auth.uid()),
+      'title', coalesce(c.title, e.role_title),
+      'claim_type', c.claim_type,
+      'issuer', c.claimed_issuer_name,
+      'employer', e.employer_name,
+      'jurisdiction', coalesce(c.jurisdiction_code, e.jurisdiction_code),
+      -- A Dubai licence is not a UAE-wide one, and a Northern Irish licence
+      -- is not a British one: the region is part of what is being reviewed.
+      'sub_jurisdiction', c.sub_jurisdiction_code,
+      'assertion', coalesce(c.assertion_level, e.assertion_level),
+      'lifecycle', coalesce(c.lifecycle_state, e.lifecycle_state),
+      'evidence_count', (SELECT count(*) FROM public.sp_evidence ev
+                          WHERE ev.lifecycle_state = 'active'
+                            AND ((r.claim_id IS NOT NULL AND ev.claim_id = r.claim_id)
+                              OR (r.period_id IS NOT NULL AND ev.period_id = r.period_id)))
+    ) AS x
+    FROM public.sp_verification_requests r
+    LEFT JOIN public.sp_claims c              ON c.id = r.claim_id
+    LEFT JOIN public.sp_experience_periods e  ON e.id = r.period_id
+    LEFT JOIN public.sp_passport_profiles p   ON p.holder_user_id = r.holder_user_id
+   WHERE r.request_kind = 'cqrityjob_review'
+     AND (_status IS NULL OR r.status = _status)
+     AND (_status IS NOT NULL OR r.status IN ('pending','clarification_requested'))
+  ) s;
+
+  RETURN _out;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.sp_verifier_queue(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sp_verifier_queue(text) TO authenticated;
+
+-- ── 7. Proof ─────────────────────────────────────────────────────────────
 DO $$
 DECLARE _moved integer; _src text;
 BEGIN
@@ -639,6 +700,11 @@ BEGIN
    WHERE oid = 'public.sp_claims_credential_rules()'::regprocedure;
   IF position('_asserts' IN _src) = 0 OR position('not available yet (legal review' IN _src) > 0 THEN
     RAISE EXCEPTION 'SP_PUBLIC_PILOT_AVAILABILITY_PROOF: the claim rules do not carry the operation policy';
+  END IF;
+  SELECT prosrc INTO _src FROM pg_proc
+   WHERE oid = 'public.sp_verifier_queue(text)'::regprocedure;
+  IF position('''sub_jurisdiction''' IN _src) = 0 OR position('SP_NOT_VERIFIER' IN _src) = 0 THEN
+    RAISE EXCEPTION 'SP_PUBLIC_PILOT_AVAILABILITY_PROOF: the review queue does not name the territory, or lost its authority check';
   END IF;
   RAISE NOTICE 'SP_PUBLIC_PILOT_AVAILABILITY_PROOF ok';
 END $$;
