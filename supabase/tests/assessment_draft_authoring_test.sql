@@ -13,7 +13,7 @@ SELECT pg_temp.must_fail(format('SELECT public.scp_author_assessment_draft(%L,''
  (SELECT version_id FROM rjv),(SELECT ids FROM source_items)), 'SCP_AUTHOR_REQUIRED','AD1 employer owner cannot author content');
 SET LOCAL request.jwt.claim.sub = 'ea000000-0000-0000-0000-0000000000ad';
 CREATE TEMP TABLE new_draft AS SELECT public.scp_author_assessment_draft(
- (SELECT version_id FROM rjv),'Synthetic revised composition',(SELECT ids[1:5] FROM source_items)) id;
+ (SELECT version_id FROM rjv),'Synthetic revised composition',(SELECT ARRAY[ids[5],ids[4],ids[3],ids[2],ids[1]] FROM source_items)) id;
 CREATE TEMP TABLE new_test AS SELECT public.scp_author_assessment_draft(
  (SELECT version_id FROM rjv),'Synthetic new definition',(SELECT ids[1:5] FROM source_items),
  'synthetic-authoring-proof','Syntetiskt test','Synthetic test') id;
