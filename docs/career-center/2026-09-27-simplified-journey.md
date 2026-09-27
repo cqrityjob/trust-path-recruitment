@@ -83,9 +83,34 @@ owner's approved fix). On the staged cards, "Läs om yrket" now opens the
 profession through the same destination rule; "Hur kommer jag dit?" unfolds the
 card; all three actions are 44 px.
 
+## A saved report's confidence word
+
+A saved v3.1 snapshot is JSON read back from the database. A ranked profession
+whose `confidence` was not `strong`, `moderate` or `indicative` — `"high"`,
+`null`, or no value — crashed the Career Center hub and the report view ("This
+page didn't load"): every surface indexed `RECOMMENDATION_CONFIDENCE_LABEL`
+with it and read `[locale]` off `undefined`. It surfaced through the pilot
+spec, whose fixture used `"high"`.
+
+- One check, `isRecommendationConfidence`, accepts exactly the label map's own
+  keys. `deriveCareerDirection` reads an unknown value as `null` and keeps the
+  entry; the Career Center's personal section, the report's recommendation and
+  the Career Card print through `recommendationConfidenceLabel`, so a raw saved
+  value cannot crash them either.
+- An unknown value prints "Bedömningsstyrka saknas" / "Assessment confidence
+  unavailable". The profession, its rank and its rationale are the report's;
+  rank 1 stays the recommendation. An unknown value is never read as a real
+  word, and the entry is never dropped.
+- `strong`, `moderate` and `indicative` print exactly what they printed before.
+- Saved reports, matching, ranking and the production of new results are
+  unchanged.
+
+Screenshots: `screenshots/simplified-2026-09-27/after-1280-11-*` (the hub, sv
+and en) and `after-1280-12-*` (the saved report view).
+
 ## What did not change
 
-Matching, ranking, confidence and stage; the report's rationale texts; Supabase
+Matching, ranking, how confidence is computed, and stage; the report's rationale texts; Supabase
 (no migration, no RPC, no policy); permissions; deploy settings; profile sync,
 account-keyed personal reads, saved results; the difference between a temporary
 choice (`?from=`, never written to the profile) and the saved profession.
@@ -102,15 +127,22 @@ unchanged source with the same Vite plugins and local test doubles for those
 packages; auth read the same `sb-*-auth-token` key the e2e suites plant.
 
 - `career-center:check`, `career-center-journey:check` (281 assertions),
-  `career-center:negative-controls` (16 reintroduced defects, all detected — five
-  new: a way on into a filtered catalogue, a search box in the list, an old
-  filter narrowing the list, the three-card cap with a hop, a next-profession
-  card without a destination), `career-discovery-explore-link:check`.
+  `career-report-confidence:check` (324 assertions: `"high"`, a missing value
+  and `null` beside the three valid words, four read paths, Swedish and
+  English), `career-center:negative-controls` (23 reintroduced defects, all
+  detected — twelve new: a way on into a filtered catalogue, a search box in the
+  list, an old filter narrowing the list, the three-card cap with a hop, a
+  next-profession card without a destination; and for the confidence word, the
+  guard removed from each of the four read paths, the check loosened to any
+  string, an unknown value read as `indicative`, and an entry dropped),
+  `career-discovery-explore-link:check`, and `negative-controls:all`.
 - Every `bun run …` check in `ci.yml` before the build: same result on this
   branch as on `main`.
 - Playwright, `chromium` and `mobile-375`: `e2e/career-center-journey.spec.ts`
-  (18/18), `e2e/career-discovery-explore-link.spec.ts` (4/4),
-  `e2e/career-center-pilot.spec.ts` (54/54). Four of the pilot tests fail on
+  (22/22), `e2e/career-discovery-explore-link.spec.ts` (8/8),
+  `e2e/career-center-pilot.spec.ts` (54/54). The new saved-report tests (hub
+  and report view, Swedish and English) render the error page without the
+  guard. Four of the pilot tests fail on
   `main` too (it is not in CI): a fixture confidence `"high"` that the v3.1
   contract does not have, an outdated English heading, the 375 px hub at
   7,070 px against a 7,000 px budget, and a 19 px inline sign-in link. The
