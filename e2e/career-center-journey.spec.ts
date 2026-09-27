@@ -515,6 +515,61 @@ test.describe("signed in with a completed assessment", () => {
     });
   }
 
+  // The same for a saved report's stage. An unknown stage ("future"), a
+  // missing one and null used to take the hub down; the recommendation stays
+  // and only WHEN reads as unavailable — never as "explore now".
+  for (const [lang, primaryTitle, neutral] of [
+    ["sv", "Säkerhetssamordnare", "Tidsperspektiv saknas"],
+    ["en", "Security Coordinator", "Timing unavailable"],
+  ] as const) {
+    test(`[${lang}] a saved report with unknown stages keeps its recommendation`, async ({
+      page,
+    }) => {
+      const [first, second] = STORED.snapshot.professions.ranked;
+      const odd = {
+        ...STORED,
+        snapshot: {
+          ...STORED.snapshot,
+          professions: {
+            ranked: [
+              { ...first, match: { ...first.match, stage: "future" } },
+              second,
+              {
+                rank: 3,
+                confidence: "indicative",
+                match: {
+                  titleSv: "Väktare",
+                  titleEn: "Security Officer",
+                  cigProfessionSlug: "vaktare",
+                  stage: null,
+                },
+              },
+            ],
+          },
+        },
+      };
+      await setLang(page, lang);
+      await signIn(page);
+      await stubServerFns(page, { ...SIGNED_IN, getStoredDiscoveryReport: ok(odd) });
+      await page.goto(HUB, { waitUntil: "networkidle" });
+      const fit = page.locator("[data-personal-direction]");
+      await expect(fit).toHaveAttribute("data-personal-state", "ready", { timeout: 15_000 });
+
+      const primary = fit.locator("[data-personal-primary]");
+      await expect(primary).toHaveAttribute("data-rank", "1");
+      await expect(primary.locator("h3")).toHaveText(primaryTitle);
+      await expect(primary.locator("[data-stage]")).toHaveAttribute("data-stage", "unavailable");
+      await expect(primary.locator("[data-stage]")).toHaveText(neutral);
+      const ranks = await fit
+        .locator("[data-personal-recommendation]")
+        .evaluateAll((els) => els.map((el) => el.getAttribute("data-rank")));
+      expect(ranks).toEqual(["1", "2", "3"]);
+      await expect(page.locator("[data-path-from]")).toBeVisible();
+      await expect(page.locator("#yrkeskatalog")).toBeVisible();
+      await noHorizontalScroll(page);
+    });
+  }
+
   test("English, and a failed read is its own state", async ({ page }) => {
     await setLang(page, "en");
     await signIn(page);

@@ -108,9 +108,56 @@ spec, whose fixture used `"high"`.
 Screenshots: `screenshots/simplified-2026-09-27/after-1280-11-*` (the hub, sv
 and en) and `after-1280-12-*` (the saved report view).
 
+## A saved report's stage
+
+The same defect, one field over. A saved profession whose `match.stage` was not
+`explore_now`, `possible_next_step`, `longer_term` or `career_pivot` also took
+the page down ("This page didn't load"):
+
+- the hub, for an unknown word such as `"future"`: `deriveCareerDirection`
+  passed any string through and the personal section indexed `STAGE_LABEL` with
+  it (`null` or no stage hid the badge instead);
+- the report view and its staged tier cards, for `"future"`, `null` or no stage:
+  the badges indexed `STAGE_LABEL`, and `explainMatch` indexed `STAGE_SENTENCE`;
+- the Career Card builder, the same way (the card is not in the pilot; the admin
+  preview still renders it).
+
+What changed:
+
+- One check, `isProfessionStage`, accepts exactly `STAGE_LABEL`'s own keys.
+  `deriveCareerDirection` reads an unknown stage as `null` and keeps the role
+  and its rank; the personal section, the report's recommendation, the tier
+  cards, `explainMatch` and the Career Card print through `professionStageLabel`
+  or the neutral sentence, so a raw saved value cannot crash them either.
+- An unknown stage prints "Tidsperspektiv saknas" / "Timing unavailable"; an
+  opened tier card says "Rapporten anger inte när det här yrket är realistiskt
+  utifrån var du är i dag." / "The report does not say when this profession is
+  realistic from where you are today." An unknown stage is never read as a
+  known one — least of all "Utforska nu", which would present a distant
+  profession as something to start today — and the entry is never dropped:
+  rank 1 stays the recommendation.
+- The four known stages print exactly what they printed before.
+- **One visible change on the hub**: a saved recommendation with `null` or no
+  stage used to show no stage badge; it now shows "Tidsperspektiv saknas", as
+  the report view does for the same entry.
+- Saved reports, matching, ranking, how stage is computed and the production of
+  new results are unchanged.
+
+Verified by `career-report-stage:check` (402 assertions: `"future"`, a missing
+stage and `null` beside the four valid stages, at rank 1 and at every rank;
+the check, `deriveCareerDirection`, the hub, the report view, the tier cards and
+the Career Card; Swedish and English), nine new negative controls (below), and
+the saved-report e2e tests for the hub and the report view, which render the
+error page without the guard.
+
+Screenshots: `after-1280-13-*` (the hub, sv and en), `after-1280-14-*` (the
+report's recommendation) and `after-1280-15-*` (an opened tier card; it says
+"Hämtar mer information…" because the harness answered the profession-details
+request for Polis only).
+
 ## What did not change
 
-Matching, ranking, how confidence is computed, and stage; the report's rationale texts; Supabase
+Matching, ranking, how confidence and stage are computed; the report's rationale texts; Supabase
 (no migration, no RPC, no policy); permissions; deploy settings; profile sync,
 account-keyed personal reads, saved results; the difference between a temporary
 choice (`?from=`, never written to the profile) and the saved profession.
@@ -129,26 +176,32 @@ packages; auth read the same `sb-*-auth-token` key the e2e suites plant.
 - `career-center:check`, `career-center-journey:check` (281 assertions),
   `career-report-confidence:check` (324 assertions: `"high"`, a missing value
   and `null` beside the three valid words, four read paths, Swedish and
-  English), `career-center:negative-controls` (23 reintroduced defects, all
-  detected — twelve new: a way on into a filtered catalogue, a search box in the
-  list, an old filter narrowing the list, the three-card cap with a hop, a
-  next-profession card without a destination; and for the confidence word, the
+  English), `career-report-stage:check` (402 assertions, see _A saved report's
+  stage_), `career-center:negative-controls` (32 reintroduced defects, all
+  detected — twenty-one new: a way on into a filtered catalogue, a search box in
+  the list, an old filter narrowing the list, the three-card cap with a hop, a
+  next-profession card without a destination; for the confidence word, the
   guard removed from each of the four read paths, the check loosened to any
-  string, an unknown value read as `indicative`, and an entry dropped),
+  string, an unknown value read as `indicative`, and an entry dropped; for the
+  stage, the guard removed from each of its six read paths — the derivation,
+  the stage sentence, the hub, the report's badge, the tier cards and the Career
+  Card — the check loosened to any string, an unknown stage read as
+  `explore_now`, and an entry dropped),
   `career-discovery-explore-link:check`, and `negative-controls:all`.
-- Every `bun run …` check in `ci.yml` before the build: same result on this
-  branch as on `main`.
+- Every `bun run …` check in `ci.yml` before the build passes: 154 steps, in a
+  clean checkout so that the negative controls can run.
 - Playwright, `chromium` and `mobile-375`: `e2e/career-center-journey.spec.ts`
-  (22/22), `e2e/career-discovery-explore-link.spec.ts` (8/8),
+  (26/26), `e2e/career-discovery-explore-link.spec.ts` (12/12),
   `e2e/career-center-pilot.spec.ts` (54/54). The new saved-report tests (hub
-  and report view, Swedish and English) render the error page without the
-  guard. Four of the pilot tests fail on
-  `main` too (it is not in CI): a fixture confidence `"high"` that the v3.1
-  contract does not have, an outdated English heading, the 375 px hub at
-  7,070 px against a 7,000 px budget, and a 19 px inline sign-in link. The
-  fixture and heading are corrected, the sign-in link is now a 44 px target,
-  and the budget is 11,000 px because the list of professions is now shown
-  (the rejected flat hub was ~11,700 px; the explorer opened, ~12,000 px).
+  and report view, Swedish and English; unknown confidence words and unknown
+  stages) render the error page without the guard. Before this work, four of
+  the pilot tests failed on `main` too (it is not in CI): a fixture confidence
+  `"high"` that the v3.1 contract does not have, an outdated English heading,
+  the 375 px hub at 7,070 px against a 7,000 px budget, and a 19 px inline
+  sign-in link. The fixture and heading were corrected, the sign-in link is now
+  a 44 px target, and the budget is 11,000 px because the list of professions
+  is now shown (the rejected flat hub was ~11,700 px; the explorer opened,
+  ~12,000 px).
 - `e2e/career-center-persistence.spec.ts` needs a real local stack; its
   selectors are unchanged and its own workflow runs it on this pull request.
 

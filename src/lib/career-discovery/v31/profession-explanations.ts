@@ -75,7 +75,11 @@ export interface ProfessionExplanation {
 export function explainMatch(match: ProfessionMatch, locale: Locale): ProfessionExplanation {
   return {
     rationale: locale === "sv" ? match.inclusionRationaleSv : match.inclusionRationaleEn,
-    stageSentence: STAGE_SENTENCE[match.stage][locale],
+    // A saved snapshot's stage is checked like its confidence: an unknown
+    // one gets the neutral sentence, never another stage's.
+    stageSentence: isProfessionStage(match.stage)
+      ? STAGE_SENTENCE[match.stage][locale]
+      : STAGE_UNAVAILABLE_SENTENCE[locale],
     alignedDimensionNames: match.alignedDimensions.map(
       (d: DimensionId) => DIMENSIONS[d].name[locale],
     ),
@@ -93,6 +97,55 @@ export const STAGE_LABEL: Readonly<Record<ProfessionStage, Record<Locale, string
   longer_term: { sv: "Långsiktig riktning", en: "Longer-term direction" },
   career_pivot: { sv: "Alternativ riktning", en: "Alternative direction" },
 };
+
+// ── A SAVED STAGE IS DATA, TOO ─────────────────────────────────────────
+//
+// The same defect as the confidence word below, on the stage: a saved
+// snapshot's `match.stage` is whatever the stored JSON says, and indexing
+// STAGE_LABEL or STAGE_SENTENCE with a value they do not know — "future",
+// `null`, nothing — threw during render and took down the Career Center hub,
+// the report view and its staged tier cards.
+//
+// So every read of a SAVED stage goes through the check below, which accepts
+// exactly the keys of STAGE_LABEL. An unknown stage is never mapped onto a
+// known one: "explore now" would present a distant profession as something
+// to start today, which is precisely what the stage badge exists to prevent.
+// The entry itself is kept — profession, rank and rationale are the report's;
+// only WHEN is unknown, and the surface says so.
+
+/** Shown in place of the stage word when a saved report's entry has none
+ *  this build knows. Neutral: it says the timing is unknown, not that the
+ *  profession is near or far. */
+export const STAGE_UNAVAILABLE_LABEL: Readonly<Record<Locale, string>> = {
+  sv: "Tidsperspektiv saknas",
+  en: "Timing unavailable",
+};
+
+/** The stage sentence for an entry whose stage is unknown. */
+export const STAGE_UNAVAILABLE_SENTENCE: Readonly<Record<Locale, string>> = {
+  sv: "Rapporten anger inte när det här yrket är realistiskt utifrån var du är i dag.",
+  en: "The report does not say when this profession is realistic from where you are today.",
+};
+
+/** Whether `value` is one of the stages this build renders — an OWN key of
+ *  STAGE_LABEL, so `"toString"` and friends are not. The one check every
+ *  read of a saved report's stage uses. */
+export function isProfessionStage(value: unknown): value is ProfessionStage {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(STAGE_LABEL, value);
+}
+
+/** A saved report's stage as this build can state it: the report's own
+ *  stage when it is a known one, otherwise `null` ("unavailable"). */
+export function readProfessionStage(value: unknown): ProfessionStage | null {
+  return isProfessionStage(value) ? value : null;
+}
+
+/** The words to print for a stage: the approved label for a known value,
+ *  exactly as before, and the neutral "unavailable" wording for anything
+ *  else. Total — it cannot throw, whatever the saved report holds. */
+export function professionStageLabel(value: unknown, locale: Locale): string {
+  return isProfessionStage(value) ? STAGE_LABEL[value][locale] : STAGE_UNAVAILABLE_LABEL[locale];
+}
 
 export const FIT_LABEL: Readonly<Record<"strong" | "moderate", Record<Locale, string>>> = {
   strong: { sv: "Stark matchning", en: "Strong match" },
