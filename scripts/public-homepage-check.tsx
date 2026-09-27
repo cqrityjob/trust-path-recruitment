@@ -63,17 +63,22 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// ── WHAT IS MOCKED, AND WHY IT IS ONLY THESE TWO THINGS ────────────────
+// ── WHAT IS MOCKED, AND WHY IT IS ONLY THESE THREE THINGS ──────────────
 //
 // The router, because a RouterProvider renders empty under
 // renderToStaticMarkup: `createFileRoute` is made to return its own options
 // object, so `Route.component` is the REAL component this guard renders, and
 // `Link` becomes an anchor whose href carries `to`, `search` and `hash` —
 // which is what lets the destination assertions read the rendered markup
-// rather than the source text. `useRouter` and `isRedirect` exist only so
-// `useServerFn` can be constructed; no server function runs in a static
-// render (the career analysis status query is disabled until the session is
-// known, which it never is here), so the page renders its default state.
+// rather than the source text.
+//
+// The career analysis status (useCareerAnalysisOpen), the one server read the
+// homepage makes. It is a switch here, so the render never loads TanStack
+// Start's server-function client — which needs the real router this mock
+// replaces — and so BOTH answers can be rendered: `undefined` (not answered
+// yet, the page's default) and `false` (definitely not open). What the hook
+// asks is asserted from its source in T6, and e2e/public-homepage.spec.ts
+// answers it through the real server-function boundary in a browser.
 //
 // And SiteLayout, because SiteHeader pulls in TanStack Start's server-function
 // machinery and three React Query subscriptions. Standing all of that up would
@@ -111,8 +116,11 @@ await mock.module("@tanstack/react-router", () => ({
   useNavigate: () => () => {},
   useLocation: () => ({ pathname: "/", search: "", hash: "" }),
   useMatches: () => [],
-  useRouter: () => ({}),
-  isRedirect: () => false,
+}));
+
+let analysisOpen: boolean | undefined = undefined;
+await mock.module("@/components/career-discovery/use-career-analysis-open", () => ({
+  useCareerAnalysisOpen: () => analysisOpen,
 }));
 
 await mock.module("@/components/site/SiteLayout", () => ({
@@ -777,6 +785,22 @@ group("T6 · the career analysis: canonical, no signup wall, guidance, access st
     "and the career card drops its analysis link rather than advertise a closed door",
     /analysisOpen !== false && \([\s\S]{0,200}CAREER_DISCOVERY/.test(sectionsCode),
   );
+  // Rendered, not only read: a definite "not open" answer.
+  analysisOpen = false;
+  for (const lang of LANGS) {
+    const closedMain = mainOf(render(lang));
+    const closedCareer = sectionOf(closedMain, "career");
+    ck(
+      `${lang}: a closed analysis renders the specified sentence in the career section`,
+      (await copyText(closedCareer)).includes(d(lang)["home.career.closed"]),
+    );
+    ck(
+      `${lang}: and no link anywhere on the page opens the closed analysis`,
+      !hrefsOf(closedMain).some((h) => h.startsWith(CANONICAL_ASSESSMENT_PATH)),
+      hrefsOf(closedMain).filter((h) => h.startsWith(CANONICAL_ASSESSMENT_PATH)),
+    );
+  }
+  analysisOpen = undefined;
 }
 
 /* T7 ---------------------------------------------------------------- */
