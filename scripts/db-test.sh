@@ -156,6 +156,9 @@ for f in supabase/migrations/*.sql; do
 done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
+echo "==> Running complete client catalogue and privilege audit"
+psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.

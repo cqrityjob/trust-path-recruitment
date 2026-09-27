@@ -2246,6 +2246,14 @@
       "note": "TRUST strategic level activated at PARITY with the operational level, per the owner update of 2026-09-26 that both levels must be usable at launch. Two data acts, no schema: standard_for_recruitment=true on security-manager-recruitment (the act 20260905090000 performed for the Väktare test: an ACTIVE employer may send it without a per-employer grant; it stays draft/design, runs and reports as a CLOSED TEST and confers no 'recruitment' governance mode) and pilot_availability='open' on security-manager-se v1 with a pilot_opened ledger event (the act 20260925090000 performed for the Väktare guide: startable by every active employer, content frozen while open, still a draft pilot hypothesis). Not a review, validation or publication: every review gate on every strategic item stays outstanding and the combined content approval in docs/release/2026-09-26-strategic-level-content-approval.md is still requested; the product says 'sluten test / pilotversion' wherever the test is shown. Proved by the in-migration assertions (designated, open draft pilot, an active employer admitted as closed_test, selection_support still unpublished), by the rollback/re-apply cycle on the loopback database, and by e2e/send-test-strategic-journey.spec.ts on the replayed stack. Rollback reverses both acts through the governed pilot_withdrawn event and refuses to touch the operational designation.",
       "hostedState": "pending",
       "file": "20261217090000_scp_security_manager_recruitment_activation.sql"
+    },
+    {
+      "file": "20261218090000_client_table_privilege_hardening.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "note": "Security audit of wrygicdfxwjnrugduxnt on 2026-09-27 found 146 public tables with client TRUNCATE privileges. Revoke TRUNCATE/REFERENCES/TRIGGER and PG17 MAINTAIN from PUBLIC/anon/authenticated, including postgres defaults. Preserve DML, column ACLs and RLS. Metadata-only production review; isolated PG16/17, production ACL overlay and 209 local PostgREST assertions pass. This pending entry is review bookkeeping, NOT authorization to deploy or merge. See docs/security/2026-09-27/README.md.",
+      "verify": "Metadata only: run docs/security/2026-09-27/production-readonly.sql and compare effective public-table TRUNCATE/REFERENCES/TRIGGER/MAINTAIN for anon/authenticated (expect none), postgres defaults (expect no administrative client grants), and DML/column ACLs/RLS (expect unchanged). Re-run advisors. Never run destructive probes in production.",
+      "rollback": "docs/security/2026-09-27/README.md#före-publicering — no automatic privilege restoration; a justified relation-specific restoration from the captured ACL requires separate approval."
     }
   ], 
   "policyVersion": 2, 
