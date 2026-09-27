@@ -237,6 +237,10 @@ test.describe("public catalogue", () => {
   test("every published card reaches its own guide, and the way back keeps the filters", async ({
     page,
   }) => {
+    // Every published guide is opened from a fresh catalogue -- eleven or
+    // more full page loads before the filter round trip -- which is longer
+    // than Playwright's 30-second default on a CI runner.
+    test.setTimeout(120_000);
     await stubServerFns(page, BASE_REPLIES);
     await page.goto(`${HUB}?all=true#utforska-yrken`, { waitUntil: "networkidle" });
     const hrefs = await page
