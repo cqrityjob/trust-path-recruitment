@@ -57,11 +57,14 @@ const TITLE = {
   },
 } as const;
 /** The /jobs search form's own name, and the ad's "similar jobs" heading. */
-const SEARCH_LABEL = { sv: "Hitta jobb inom säkerhet", en: "Find security jobs" } as const;
+const SEARCH_LABEL = { sv: "Hitta jobb inom säkerhet", en: "Find jobs in security" } as const;
 const RELATED_HEADING = "Liknande jobb";
+// One label for the ad's way back, with or without a search behind it (MVP
+// text specification §10). WHERE it goes still differs, and is asserted by
+// the destinations below, not by the words.
 const BACK = {
-  sv: { results: "← Tillbaka till sökresultatet", all: "← Alla jobb" },
-  en: { results: "← Back to search results", all: "← All jobs" },
+  sv: { results: "← Tillbaka till jobben", all: "← Tillbaka till jobben" },
+  en: { results: "← Back to jobs", all: "← Back to jobs" },
 } as const;
 
 const EVIDENCE = path.resolve("test-results/job-back-navigation");
@@ -247,7 +250,7 @@ test.describe("job ad -> back to the search it came from", () => {
     );
     expect(carriedBy(page.url()), "signing in lost the search").toEqual(FILTERS);
     // Signed in: the ad now offers the application itself.
-    await expect(page.getByRole("button", { name: "Ansök via CQrityjob" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "Ansök om jobbet" })).toBeVisible({
       timeout: 30_000,
     });
     await evidence(page, "signed-in-on-ad-sv");

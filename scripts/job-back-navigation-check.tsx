@@ -344,14 +344,15 @@ console.log("\nJ6 · the wiring, and the words");
 
   const sv = dictionaries.sv as Record<string, string>;
   const en = dictionaries.en as Record<string, string>;
-  ck(
-    "sv: back to the results",
-    sv["jobs.detail.backToResults"] === "← Tillbaka till sökresultatet",
-  );
-  ck("en: back to the results", en["jobs.detail.backToResults"] === "← Back to search results");
+  // MVP text specification §10: the ad's way back reads "Tillbaka till
+  // jobben" whether or not a search is behind it. Which list it opens is the
+  // behaviour asserted above; the words say where it goes in both cases.
+  ck("sv: back to the jobs", sv["jobs.detail.backToResults"] === "← Tillbaka till jobben");
+  ck("en: back to the jobs", en["jobs.detail.backToResults"] === "← Back to jobs");
   ck(
     "and with no search the link says where it goes",
-    sv["jobs.detail.back"] === "← Alla jobb" && en["jobs.detail.back"] === "← All jobs",
+    sv["jobs.detail.back"] === "← Tillbaka till jobben" &&
+      en["jobs.detail.back"] === "← Back to jobs",
   );
 }
 

@@ -116,7 +116,7 @@ test.describe("H3.4A candidate-to-employer application flow", () => {
     await page.waitForURL(/\/my-career/);
 
     await page.goto(`/jobs/${JOB_SLUG}`);
-    await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
+    await page.getByRole("button", { name: "Apply for this job" }).click();
     const jobTitle = await page.getByRole("heading", { level: 1, includeHidden: true }).innerText();
 
     await page.getByLabel("Phone number", { exact: false }).fill("+46701234567");
@@ -361,7 +361,7 @@ test.describe("Applying with a CQrityjob CV", () => {
     await page.waitForURL(/\/my-career/);
 
     await page.goto(`/jobs/${JOB_SLUG_CV}`);
-    await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
+    await page.getByRole("button", { name: "Apply for this job" }).click();
 
     const useMyCv = page.getByRole("radio", { name: "Use my CQrityjob CV" });
     await expect(useMyCv).toBeVisible({ timeout: 15_000 });
@@ -417,7 +417,7 @@ test.describe("Applying with a CQrityjob CV", () => {
     await forceEnglish(page);
     await signIn(page, "/candidate/login", CANDIDATE_EMAIL!, CANDIDATE_PASSWORD!);
     await page.goto(`/jobs/${process.env.E2E_JOB_SLUG_CV_PHONE ?? JOB_SLUG_CV}`);
-    await page.getByRole("button", { name: "Apply via CQrityjob" }).click();
+    await page.getByRole("button", { name: "Apply for this job" }).click();
 
     await expect(page.getByRole("radio", { name: "Use my CQrityjob CV" })).toBeVisible({
       timeout: 15_000,

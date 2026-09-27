@@ -3,7 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { SlidersHorizontal } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
-import { useT } from "@/i18n/context";
+import { useLocalizedHead, useT } from "@/i18n/context";
+import { dictionaries } from "@/i18n/dictionaries";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobResults } from "@/components/jobs/JobResults";
 import { Input } from "@/components/ui/input";
@@ -34,22 +35,19 @@ import {
   type JobSearch,
 } from "@/lib/job-intelligence/job-search";
 
+/** MVP text specification §14: the jobs page's own title, and its ingress
+ *  as the description, with no claim about how employers are vetted. The
+ *  Swedish pair is the head; useLocalizedHead() swaps in the English. */
+const SV = dictionaries.sv;
+
 export const Route = createFileRoute("/jobs/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Security Jobs — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "Search active security jobs from vetted employers. Filter by career area, employment type, workplace, experience level and location.",
-      },
-      { property: "og:title", content: "Security Jobs — CQrityjob" },
-      {
-        property: "og:description",
-        content:
-          "Active security roles from serious employers — searchable by career area, location and experience.",
-      },
+      { title: SV["meta.jobs.title"] },
+      { name: "description", content: SV["jobs.discover.lead"] },
+      { property: "og:title", content: SV["meta.jobs.title"] },
+      { property: "og:description", content: SV["jobs.discover.lead"] },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://trust-path-recruitment.lovable.app/jobs" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -68,6 +66,7 @@ const EXPERIENCE_LEVELS = EXPERIENCE_LEVEL_VALUES;
 
 function JobsDiscoveryPage() {
   const { t, lang } = useT();
+  useLocalizedHead("meta.jobs.title", "jobs.discover.lead");
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
 
@@ -159,6 +158,11 @@ function JobsDiscoveryPage() {
           <p className="mt-3 text-base leading-relaxed text-muted-foreground md:text-lg">
             {t("jobs.discover.lead")}
           </p>
+          {/* Said only once the page KNOWS the reader is signed out: before
+              the session is observed the state is "loading", not anonymous. */}
+          {profileState.status === "anonymous" && (
+            <p className="mt-2 text-sm text-muted-foreground">{t("jobs.discover.publicNote")}</p>
+          )}
         </header>
 
         {/* ── SKETCH 3'S TWO COLUMNS ──────────────────────────────────
@@ -203,8 +207,11 @@ function JobsDiscoveryPage() {
                   <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                   {t("jobs.filter.toggle")}
                   {activeSelectCount > 0 && (
-                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-foreground">
-                      {activeSelectCount}
+                    <span className="inline-flex h-5 items-center justify-center rounded-full bg-accent px-2 text-xs font-semibold text-accent-foreground">
+                      {(activeSelectCount === 1
+                        ? t("jobs.filter.active_one")
+                        : t("jobs.filter.active_other")
+                      ).replace("{n}", String(activeSelectCount))}
                     </span>
                   )}
                 </button>
