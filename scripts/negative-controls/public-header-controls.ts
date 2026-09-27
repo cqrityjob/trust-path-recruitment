@@ -118,8 +118,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: 'MENU_SURFACE, !compactJobs && "lg:hidden", open ? "block" : "hidden"',
     replace: 'MENU_SURFACE, appMode ? "xl:hidden" : "lg:hidden", open ? "block" : "hidden"',
     guard: GUARD,
-    expect:
-      "the compact sheet must switch off at lg for BOTH the candidate app and the public header",
+    expect: "the compact sheet must switch off at lg except for the scoped public jobs header",
   },
   {
     id: "PH-NC-APP-NAV-BREAKPOINT",

@@ -1,0 +1,10 @@
+{
+  "applicationId": "e1aa69e4-1b63-4ea4-a190-8182b0f254b3",
+  "slug": "jobbnav-sakerhetschef-stockholm",
+  "authentication": "real local GoTrue",
+  "storage": "real local private bucket",
+  "submission": "real server function and database",
+  "confirmation": "passed",
+  "savedApplication": "passed",
+  "duplicateState": "passed"
+}

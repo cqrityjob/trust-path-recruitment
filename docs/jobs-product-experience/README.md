@@ -45,15 +45,16 @@ bun run scripts/job-application-continuity-check.ts
 bun run scripts/job-vacancy-requirements-check.tsx
 ```
 
-The browser suite intercepts the backend and refuses writes. It proves UI interactions and outgoing database-query parameters, not Postgres authorization, persistence or email delivery. Real local-stack evidence is recorded separately when complete.
+The browser suite intercepts the backend and refuses writes. It proves UI interactions and outgoing database-query parameters, not Postgres authorization, persistence or email delivery. Real Auth, database, Storage, receipt and employer-preview evidence is recorded in [the local integration report](live-integration/README.md).
 
 ## Verification
 
-- Production build and TypeScript check passed during implementation; repeated for the final code before handoff.
-- The new browser suite covers search/filter/sort/history, permalink/mobile return, keyboard focus, bilingual responsive layouts, empty/error/closed/removed states, employer links and broken logos.
+- Production build, application TypeScript, scripts TypeScript and scoped ESLint passed (only the pre-existing Fast Refresh export warnings).
+- **19/19 new browser scenarios passed**, covering search/filter/sort/history, permalink/mobile return, keyboard focus, bilingual responsive layouts, stale pagination, empty/error/closed/removed states, employer links and broken logos.
 - Existing content, employer form/lifecycle, navigation, header, CV-source/privacy, application-dialog scrolling and notification checks passed.
-- Homepage and candidate-header browser regressions and isolated database/auth/application checks are run in addition to the synthetic browser suite. Final results are recorded in the PR and verification report.
-- CI runs the new browser suite in the existing public-entry browser job and runs the application-continuity and shared-requirements checks alongside the existing job-navigation check. The existing real local-stack job-navigation workflow is retained and adapted to the split reader.
+- **88/88 existing homepage and candidate-header browser regressions passed.**
+- **12/12 real local browser checks passed:** 10 navigation/authentication checks, one full application submission and one employer-preview comparison. Database read-back verified the private PDF, saved application and automatic in-app receipt. See [the integration report](live-integration/README.md).
+- CI runs the new browser suite in the existing public-entry browser job and runs the application-continuity and shared-requirements checks alongside the existing job-navigation check. The existing real local-stack job-navigation workflow is retained, adapted to the split reader and extended with a no-skips application/preview proof and SQL persistence checks.
 
 ## Practical limits
 

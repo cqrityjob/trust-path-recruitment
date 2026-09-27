@@ -30,6 +30,9 @@ on:
     paths:
       - "src/**"
       - "e2e/job-back-navigation.spec.ts"
+      - "e2e/jobs-application-local.spec.ts"
+      - "scripts/jobs-application-evidence-verify.ts"
+      - "scripts/fixtures/jobs-application-proof-*.sql"
       - "scripts/fixtures/job-back-navigation-fixture.sql"
       - "scripts/job-back-navigation-evidence-verify.ts"
       - "supabase/migrations/**"
@@ -198,6 +201,7 @@ jobs:
         run: |
           set -euo pipefail
           psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/fixtures/job-back-navigation-fixture.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/fixtures/jobs-application-proof-fixture.sql
           # Run twice: the fixture must be a no-op on a stack that already holds it.
           psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/fixtures/job-back-navigation-fixture.sql
           psql "$DB_URL" -Atc "SELECT slug, status, public.job_is_active(status, published_at, deadline_at, expires_at) FROM public.jobs WHERE slug LIKE 'jobbnav-%' ORDER BY slug"
@@ -234,6 +238,27 @@ jobs:
       - name: Refuse a report where the walk was skipped
         if: always()
         run: bun run scripts/job-back-navigation-evidence-verify.ts
+
+      - name: Submit a real local application and compare employer preview
+        env:
+          E2E_LOCAL_STACK: "1"
+          E2E_BASE_URL: http://localhost:3119
+          E2E_SUPABASE_URL: ${{ steps.local.outputs.api_url }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/jobs-application-results.json
+        run: |
+          set -euo pipefail
+          bunx playwright test e2e/jobs-application-local.spec.ts \
+            --project=chromium --workers=1 --trace off --output=/tmp/jobs-application-browser \
+            --reporter=list,json
+
+      - name: Refuse skipped application proof and verify persisted receipt
+        if: always()
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          bun run scripts/jobs-application-evidence-verify.ts
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/jobs-application-proof-verify.sql
 
       # The walk's own screenshots, pass or fail: synthetic data only, and no
       # trace is recorded, so nothing here carries a request body or a token.

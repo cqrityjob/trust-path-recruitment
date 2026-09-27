@@ -172,7 +172,7 @@ check(
 check(keys.includes("cv"), "the CV navigation key exists");
 
 // The contextual paths the CV had before it was promoted. A nav item does
-// not replace them: the Overview and the Jobs side column are where
+// not replace them: the Overview and the Jobs application flow are where
 // somebody meets the CV in the middle of doing something else.
 //
 // On the Overview the CV was one of four status tiles. It is a surface of
@@ -185,8 +185,17 @@ check(
   /<Link to="\/my-career\/cv" data-edit-cv/.test(cvCard) && /<OverviewCvCard/.test(overviewRoute),
   "the Overview still reaches the CV",
 );
-const jobsColumn = code(read("src/components/jobs/JobsSideColumn.tsx"));
-check(/to="\/my-career\/cv"/.test(jobsColumn), "and the Jobs side column still does too");
+const jobsRoute = code(read("src/routes/jobs.index.tsx"));
+const jobDetail = code(read("src/components/jobs/JobDetailContent.tsx"));
+const jobApplyPanel = code(read("src/components/jobs/JobApplicationPanel.tsx"));
+const jobApplyDialog = code(read("src/components/jobs/ApplyInternalDialog.tsx"));
+check(
+  /<JobDetailContent[\s>]/.test(jobsRoute) &&
+    /<JobApplicationPanel[\s>]/.test(jobDetail) &&
+    /<ApplyInternalDialog[\s>]/.test(jobApplyPanel) &&
+    /to="\/my-career\/cv"/.test(jobApplyDialog),
+  "and the mounted Jobs application flow still reaches the CV",
+);
 
 // A destination promoted into the navigation must stop presenting itself as
 // subordinate to a sibling. The CV index opened with a back arrow to

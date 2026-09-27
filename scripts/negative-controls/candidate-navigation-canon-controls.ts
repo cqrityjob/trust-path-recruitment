@@ -27,6 +27,16 @@ const NEXT_ACTION = "src/lib/professional-identity/next-best-action.ts";
 const GUARD = "candidate-navigation-canon:check";
 
 const MUTATIONS: readonly Mutation[] = [
+  {
+    id: "CNC-NC-JOBS-CV-UNMOUNTED",
+    defect:
+      "Jobs keeps a CV link in an unused component while removing its mounted application entry point",
+    file: "src/components/jobs/JobApplicationPanel.tsx",
+    find: "<ApplyInternalDialog",
+    replace: "<IgnoredApplyInternalDialog",
+    guard: GUARD,
+    expect: "the mounted Jobs application flow still reaches the CV",
+  },
   // ---- The duplicate that started all of this ------------------------------
   {
     id: "CNC-NC-MIN-KARRIAR-RETURNS",
