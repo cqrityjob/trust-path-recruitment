@@ -542,10 +542,21 @@ expect(
 // 1024 and 1279 the seven-destination header showed nothing but a hamburger.
 // e2e/candidate-header-desktop.spec.ts measures the fit; this pins the
 // breakpoint. Locate the full class list, not a matching suffix.
-const menuMarker = 'MENU_SURFACE, "lg:hidden", open ? "block" : "hidden"';
+const menuMarker = 'MENU_SURFACE, !compactJobs && "lg:hidden", open ? "block" : "hidden"';
 expect(
   header.includes(menuMarker),
-  "the compact sheet must switch off at lg for BOTH the candidate app and the public header",
+  "the compact sheet must switch off at lg except for the scoped public jobs header",
+);
+expect(
+  /const compactJobs = !appMode && matches\.some\(\(match\) => match\.routeId === "\/jobs"\)/.test(
+    header,
+  ),
+  "the compact header exception must apply only to public jobs routes, never the signed-in candidate navigation",
+);
+expect(
+  header.includes("{compactJobs && <LanguageSwitcher />}") &&
+    header.includes('!appMode && !compactJobs && "lg:block"'),
+  "jobs must move the language control into the main row when hiding the utility strip",
 );
 expect(
   !/appMode \? "xl:hidden"/.test(header) && !/appMode \? "xl:flex"/.test(header),

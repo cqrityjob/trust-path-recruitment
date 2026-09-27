@@ -277,7 +277,7 @@ group("2 · the workspace carries no marketing navigation");
   );
   ck(
     "the utility bar (the second Kontakt) is gated on !appMode",
-    /!appMode && "lg:block"/.test(header),
+    /!appMode && !compactJobs && "lg:block"/.test(header),
   );
   ck(
     'no second "Min karriär" control beside the nav item',

@@ -95,7 +95,7 @@ function SettingsForm({
   status: EmployerStatus;
   hasMultipleWorkspaces: boolean;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const qc = useQueryClient();
   const getFn = useServerFn(getEmployerOrganisation);
   const updateFn = useServerFn(updateEmployerOrganisation);
@@ -180,6 +180,13 @@ function SettingsForm({
           <h2 className="text-xl font-semibold text-foreground">
             {t("employer.settings.section.company")}
           </h2>
+          {!descriptionSv.trim() && !descriptionEn.trim() && (
+            <p className="rounded-lg bg-secondary p-3 text-sm leading-relaxed text-muted-foreground">
+              {lang === "sv"
+                ? "Lägg till en kort företagspresentation. Den visas tillsammans med era jobbannonser och hjälper kandidaten att förstå vilka ni är."
+                : "Add a short company introduction. It appears with your job advertisements and helps candidates understand your organisation."}
+            </p>
+          )}
           <label className="block text-sm">
             <span className="text-foreground">{t("employer.settings.field.name")}</span>
             <input

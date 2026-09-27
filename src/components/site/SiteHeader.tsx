@@ -289,6 +289,10 @@ export function SiteHeader() {
     matches.map((m) => m.routeId as string),
   );
   const appMode = signedIn === true && inCandidateApp;
+  // Job readers need their results above the fold. Keep the existing
+  // candidate chrome, and compact only the public jobs header to one row.
+  // The menu remains available on wide screens for the employer entrance.
+  const compactJobs = !appMode && matches.some((match) => match.routeId === "/jobs");
 
   /** Which context the CURRENT ROUTE is in.
    *
@@ -387,7 +391,12 @@ export function SiteHeader() {
           row now carries only the brand, the navigation and the account
           controls. Mobile keeps its own toggle inside the menu sheet, since
           this bar is desktop-only. */}
-      <div className={cn("hidden bg-primary text-primary-foreground/85", !appMode && "lg:block")}>
+      <div
+        className={cn(
+          "hidden bg-primary text-primary-foreground/85",
+          !appMode && !compactJobs && "lg:block",
+        )}
+      >
         <Container className="flex min-h-[44px] min-w-[44px] items-center justify-between gap-4 py-1 text-[11px] font-medium tracking-wide">
           <span className="inline-flex min-w-0 items-center gap-2">
             <ShieldCheck
@@ -454,7 +463,12 @@ export function SiteHeader() {
             : "border-border shadow-[0_1px_0_0_var(--color-border)]",
         )}
       >
-        <Container className="flex h-16 items-center justify-between gap-4 xl:gap-8">
+        <Container
+          className={cn(
+            "flex h-16 items-center justify-between gap-4 xl:gap-8",
+            compactJobs && "max-w-[1360px] gap-3 xl:gap-3",
+          )}
+        >
           {/* The brand mark goes to the public homepage, always, signed in
               or not.
 
@@ -493,7 +507,10 @@ export function SiteHeader() {
                or the utility bar changed, and it was the only thing in the
                header that could not survive a spacing edit. */
             <nav
-              className="hidden min-w-0 items-center gap-1 lg:flex xl:gap-2"
+              className={cn(
+                "hidden min-w-0 items-center gap-1 xl:gap-2",
+                compactJobs ? "min-[1440px]:flex" : "lg:flex",
+              )}
               aria-label="Primary"
             >
               {nav.map((item) => (
@@ -524,7 +541,10 @@ export function SiteHeader() {
               36px -- see `touchTarget`. These two pills render in the PUBLIC
               header for a signed-in visitor, so they are public-page
               controls and the same minimum binds them. */}
-          <div className={cn("hidden shrink-0 items-center gap-2 lg:flex")}>
+          <div
+            className={cn("hidden shrink-0 items-center gap-2 lg:flex", compactJobs && "ml-auto")}
+          >
+            {compactJobs && <LanguageSwitcher />}
             {roleLinks.map((r) => (
               <Link
                 key={r.to}
@@ -623,7 +643,7 @@ export function SiteHeader() {
             className={cn(
               // 44px touch target, which a p-2 icon button was not.
               "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary",
-              "lg:hidden",
+              !compactJobs && "lg:hidden",
               focusRing,
             )}
             /* Was a hardcoded English "Menu" on a Swedish-first product,
@@ -649,7 +669,10 @@ export function SiteHeader() {
           lg (1024px). It used to be xl for the signed-in header, which on a
           Windows PC at 125% scaling meant no desktop navigation at all --
           see CandidateAppNav for the measurement. */}
-      <div id="site-menu" className={cn(MENU_SURFACE, "lg:hidden", open ? "block" : "hidden")}>
+      <div
+        id="site-menu"
+        className={cn(MENU_SURFACE, !compactJobs && "lg:hidden", open ? "block" : "hidden")}
+      >
         <Container className="flex flex-col gap-1 py-4">
           {/* ── Mobile is the same product, not a collapsed website ──────
               The seven destinations come from the SAME array the desktop

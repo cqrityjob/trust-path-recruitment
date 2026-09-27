@@ -56,6 +56,7 @@ await mock.module("@tanstack/react-router", () => ({
 const {
   JOB_SEARCH_KEYS,
   jobAdReturnPath,
+  jobApplyReturnPath,
   jobSearchFromFrom,
   jobSearchToFrom,
   validateJobAdSearch,
@@ -221,7 +222,7 @@ console.log("\nJ2 · card -> ad -> back, through the router's own serialisation"
 console.log("\nJ3 · signing in to apply comes back to the ad, WITH its search");
 {
   const from = jobSearchToFrom(SEARCH)!;
-  const returnTo = jobAdReturnPath(SLUG, from);
+  const returnTo = jobApplyReturnPath(jobAdReturnPath(SLUG, from));
   ck(
     "the return path is the ad with its search",
     returnTo.startsWith(`/jobs/${SLUG}?from=`),
@@ -239,6 +240,7 @@ console.log("\nJ3 · signing in to apply comes back to the ad, WITH its search")
   const landed = `${to}${defaultStringifySearch(search)}`;
   const ad = validateJobAdSearch(arrive(landed));
   ck("the ad after sign-in has the same `from`", ad.from === from, { landed, ad });
+  ck("the requested application action survives sign-in", ad.apply === "1", ad);
   ck("so the way back is still the same search", same(jobSearchFromFrom(ad.from), SEARCH));
   ck(
     "an ad opened without a search returns to the bare ad",
@@ -254,7 +256,7 @@ console.log("\nJ4 · a related-ad hop keeps the way back");
   const hop = `/jobs/another-ad${defaultStringifySearch({ from })}`;
   const ad = validateJobAdSearch(arrive(hop));
   ck("the related ad receives the same `from`", ad.from === from, ad);
-  const route = code("src/routes/jobs.$slug.tsx");
+  const route = code("src/components/jobs/JobDetailContent.tsx");
   ck(
     "and the ad hands its `from` to every related card",
     /<RelatedJobs[\s\S]{0,200}from=\{from\}/.test(route) &&
@@ -327,13 +329,16 @@ console.log("\nJ6 · the wiring, and the words");
   );
   ck(
     "the apply sidebar hands the dialog the ad's return path",
-    /returnTo=\{jobAdReturnPath\(slug, from\)\}/.test(route) && /returnTo=\{returnTo\}/.test(route),
+    /returnTo=\{jobAdReturnPath\(job.slug, from\)\}/.test(
+      code("src/components/jobs/JobDetailContent.tsx"),
+    ) && /returnTo=\{returnTo\}/.test(code("src/components/jobs/JobApplicationPanel.tsx")),
   );
   const dialog = code("src/components/jobs/ApplyInternalDialog.tsx");
   ck(
     "the sign-in link carries that path, not window.location.pathname",
-    dialog.includes("href={`/login?redirect=${encodeURIComponent(returnTo)}`}") &&
-      !/window\.location\.pathname/.test(dialog),
+    dialog.includes(
+      "href={`/login?redirect=${encodeURIComponent(jobApplyReturnPath(returnTo))}`}",
+    ) && !/window\.location\.pathname/.test(dialog),
   );
   const index = code("src/routes/jobs.index.tsx");
   ck("/jobs hands its search to the results", /from=\{jobSearchToFrom\(search\)\}/.test(index));

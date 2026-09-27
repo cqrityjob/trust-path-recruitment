@@ -1,0 +1,3 @@
+{"applications" : 1, "cv_source" : "upload", "cv_stored" : true, "status" : "submitted"}
+{"kind" : "receipt", "in_app_status" : "sent", "email_status" : "not_configured", "application_id" : "e1aa69e4-1b63-4ea4-a190-8182b0f254b3", "subject" : "Vi har tagit emot din ansökan – Säkerhetschef, Stockholm"}
+{"cv_objects" : 1}

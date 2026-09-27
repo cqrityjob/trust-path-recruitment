@@ -11,12 +11,12 @@
 // So this guard asserts reachability, and the three rules that make the
 // composition honest rather than merely present:
 //
-//   1. Jobs reaches its applications and the CV, as a summary — not as a
-//      second applications page with its own controls.
+//   1. Jobs reaches applications directly and the CV through its mounted
+//      application flow, without becoming a second applications manager.
 //   2. One status vocabulary, shared, so the summary and the full page
 //      cannot call the same status different things.
-//   3. /jobs is public: the personal column renders only for a reader the
-//      client has actually observed a session for.
+//   3. /jobs is public: personal reads wait for an observed session; an
+//      unresolved or anonymous visitor sees no personal application form.
 //   4. Career names its two ways in, and links to sections that exist.
 //   5. Tests & Development POINTS at Career Discovery and does not host it.
 //   6. Nothing fabricates the competence mapping, which has no model.
@@ -30,11 +30,12 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
 const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
 /** Strip comments, so a rule is never satisfied by prose describing it. */
-const code = (s: string): string =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+const code = (s: string): string => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const JOBS = "src/routes/jobs.index.tsx";
-const JOBS_COLUMN = "src/components/jobs/JobsSideColumn.tsx";
+const JOB_DETAIL = "src/components/jobs/JobDetailContent.tsx";
+const APPLY_PANEL = "src/components/jobs/JobApplicationPanel.tsx";
+const APPLY_DIALOG = "src/components/jobs/ApplyInternalDialog.tsx";
 const APPLICATIONS = "src/routes/_authenticated.my-career.applications.tsx";
 const STATUS_LABELS = "src/lib/job-intelligence/application-status-labels.ts";
 const CAREER = "src/routes/career-center.index.tsx";
@@ -51,89 +52,125 @@ function check(ok: boolean, diagnostic: string): void {
 }
 
 const jobs = code(read(JOBS));
-const column = code(read(JOBS_COLUMN));
+const detail = code(read(JOB_DETAIL));
+const panel = code(read(APPLY_PANEL));
+const apply = code(read(APPLY_DIALOG));
+const publicReaders = [jobs, detail, panel];
+const mountedJobSources = [...publicReaders, apply];
 
 /* ------------------------------------------------------------------ */
-console.log("\n1 · sketch 3 — Jobs reaches the surfaces it claims");
+console.log("\n1 · Jobs reaches applications and the CV through mounted surfaces");
 
-check(/<JobsSideColumn/.test(jobs), "the Jobs page mounts the supporting column");
 check(
-  /to="\/my-career\/applications"/.test(column),
-  "the column links to the applications page the navigation assigns to Jobs",
+  /to="\/my-career\/applications"/.test(jobs),
+  "the Jobs page links directly to the applications page",
 );
-check(/to="\/my-career\/cv"/.test(column), "and to the CV, which Jobs owns contextually");
+check(/<JobDetailContent[\s>]/.test(jobs), "the Jobs page mounts the job detail reader");
+check(/<JobApplicationPanel[\s>]/.test(detail), "the job reader mounts the application panel");
 check(
-  /listMyApplications/.test(column),
-  "it reads the candidate's own applications through the existing server function",
+  /<ApplyInternalDialog[\s>]/.test(panel),
+  "the application panel mounts the internal application flow",
+);
+for (const action of ["finish", "create"]) {
+  check(
+    new RegExp(
+      `<Link\\s+to="/my-career/cv"[^>]*>\\s*\\{t\\("jobs\\.apply\\.cv\\.${action}"\\)\\}`,
+    ).test(apply),
+    `the mounted application flow links to the CV to ${action} it`,
+  );
+}
+check(
+  /useServerFn\(listMyApplications\)/.test(apply) &&
+    /queryFn: \(\) => listApplicationsFn\(\)/.test(apply),
+  "the application flow reads existing applications through the existing server function",
 );
 check(
-  !/createServerFn/.test(column),
-  "and defines no server function of its own — no second read path",
+  mountedJobSources.every((source) => !/createServerFn/.test(source)),
+  "the mounted Jobs surfaces define no server function of their own — no second read path",
 );
 
 /* ------------------------------------------------------------------ */
-console.log("\n2 · a summary, not a second applications page");
-
-// The controls that ACT on an application belong with the full row that
-// explains what it is doing. A withdraw button beside a search field is
-// the defect this asserts against.
+console.log("\n2 · Jobs is not a second applications manager");
 for (const control of ["withdrawMyApplication", "action.downloadCv", "action.withdraw"]) {
   check(
-    !new RegExp(control.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).test(column),
-    `the summary carries no ${control} control — those act, and belong on the full page`,
+    mountedJobSources.every((source) => !source.includes(control)),
+    `the mounted Jobs surfaces carry no ${control} control — these belong on the full applications page`,
   );
 }
 
 /* ------------------------------------------------------------------ */
 console.log("\n3 · one status vocabulary");
-
 const labels = code(read(STATUS_LABELS));
 const applications = code(read(APPLICATIONS));
+check(/APPLICATION_STATUS_LABEL_KEY/.test(labels), "the shared status map exists");
 check(
-  /APPLICATION_STATUS_LABEL_KEY/.test(labels),
-  "the shared status map exists",
+  /APPLICATION_STATUS_LABEL_KEY/.test(applications),
+  "the applications page reads its status labels from the shared map",
 );
-for (const [file, name] of [
-  [applications, "the applications page"],
-  [column, "the Jobs summary"],
-] as const) {
-  check(
-    /APPLICATION_STATUS_LABEL_KEY/.test(file),
-    `${name} reads its status labels from the shared map`,
-  );
-}
-// A second literal copy is what the extraction removed. Counting the
-// definition rather than the identifier: the map must be authored once.
-const definitions = [labels, applications, column].filter((f) =>
-  /candidate\.applications\.status\.submitted/.test(f),
+// The reader currently offers an application/receipt action, not a status
+// summary. If it gains status labels, their vocabulary must remain shared.
+const definitions = [labels, applications, ...mountedJobSources].filter((source) =>
+  /candidate\.applications\.status\.submitted/.test(source),
 ).length;
-check(
-  definitions === 1,
-  `the status keys are authored in exactly one file (found ${definitions})`,
-);
+check(definitions === 1, `the status keys are authored in exactly one file (found ${definitions})`);
 
 /* ------------------------------------------------------------------ */
-console.log("\n4 · /jobs is public, and the personal column knows it");
-
+console.log("\n4 · public readers do not request personal data before observed auth");
 check(
-  /signedIn=\{signedIn\}/.test(jobs),
-  "the column is told whether the reader is signed in",
-);
-check(
-  /if \(!signedIn\) return null/.test(column),
-  "and renders nothing at all when they are not — never an empty 'your applications'",
-);
-// `loading` is the state BEFORE a session has been observed. Treating it
-// as signed in fires an authenticated read on every anonymous page view.
-check(
-  /const signedIn =\s*\n?\s*profileState\.status === "no_profile" \|\| profileState\.status === "ready"/.test(
-    jobs,
+  publicReaders.every(
+    (source) =>
+      !/listMyApplications|listMyApplicationCvOptions|getApplicationPassportOffer|useCareerProfileForJobs/.test(
+        source,
+      ),
   ),
-  "signed-in is resolved from the observed states, not from 'not anonymous'",
+  "public search, detail and apply wrapper perform no direct personal reads",
 );
 check(
-  !/status !== "anonymous"/.test(jobs),
-  "so a loading page never counts as signed in",
+  /useState<string \| null>\(null\)/.test(apply) &&
+    /const \[authUserId, setAuthUserId\] = useState<string \| null>\(null\)/.test(apply),
+  "the application reader starts with no observed user identity",
+);
+check(
+  /setAuthUserId\(data\.session\?\.user\.id \?\? null\)/.test(apply) &&
+    /setAuthUserId\(session\?\.user\.id \?\? null\)/.test(apply),
+  "the user identity comes from the observed session and tracks sign-out",
+);
+check(
+  /queryKey: \["job-apply", "applications", authUserId\]/.test(apply),
+  "personal application cache keys are scoped to the observed user",
+);
+check(
+  /enabled: Boolean\(authUserId\)/.test(apply),
+  "the personal application query is enabled only for an observed user identity",
+);
+check(
+  /const \[signedIn, setSignedIn\] = useState<boolean \| null>\(null\)/.test(apply),
+  "sign-in starts unresolved rather than assuming a user",
+);
+const loadingGate = apply.indexOf("if (signedIn === null) {");
+const anonymousGate = apply.indexOf("if (!signedIn) {");
+const dialog = apply.indexOf("<Dialog\n");
+check(
+  loadingGate >= 0 &&
+    anonymousGate > loadingGate &&
+    dialog > anonymousGate &&
+    /if \(signedIn === null\) \{\s*return /.test(apply),
+  "unresolved auth returns before the anonymous branch and the personal dialog",
+);
+check(
+  /if \(!signedIn\) \{\s*return \([\s\S]*?jobs\.apply\.signInToApply/.test(apply),
+  "anonymous visitors return the sign-in action instead of the personal dialog",
+);
+check(
+  /if \(!signedIn \|\| applications\.isPending \|\| applyIntentConsumed\.current\) return/.test(
+    apply,
+  ),
+  "return-to-apply intent cannot open the personal dialog before observed sign-in",
+);
+check(
+  /if \(!open \|\| offer !== null\) return/.test(apply) &&
+    /if \(!open \|\| cvOptions\.status !== "loading"\) return/.test(apply),
+  "Passport and CV choices are read only when the authenticated application dialog opens",
 );
 
 /* ------------------------------------------------------------------ */
@@ -148,10 +185,7 @@ check(
 );
 // Both anchors must be REAL ids on this page, or the card scrolls nowhere.
 for (const anchor of ["PATH_ANCHOR", "PERSONAL_ANCHOR"]) {
-  check(
-    new RegExp(`id=\\{${anchor}\\}`).test(career),
-    `${anchor} is a real id on the Career page`,
-  );
+  check(new RegExp(`id=\\{${anchor}\\}`).test(career), `${anchor} is a real id on the Career page`);
 }
 // Doors, not sections: duplicating either section's content here would
 // give one fact two places to disagree about itself.
@@ -223,10 +257,7 @@ check(
   !/nav\.my_career/.test(preparation),
   "the preparation back-link names the page it returns to, not the workspace",
 );
-check(
-  /nav\.overview/.test(preparation),
-  "and it names it Översikt",
-);
+check(/nav\.overview/.test(preparation), "and it names it Översikt");
 
 /* ------------------------------------------------------------------ */
 console.log("");

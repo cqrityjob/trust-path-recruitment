@@ -17,7 +17,7 @@
 import { runControls, type Mutation } from "./runner";
 
 const JOBS = "src/routes/jobs.index.tsx";
-const COLUMN = "src/components/jobs/JobsSideColumn.tsx";
+const APPLY = "src/components/jobs/ApplyInternalDialog.tsx";
 const CAREER = "src/routes/career-center.index.tsx";
 const CARDS = "src/components/career-center/CareerEntryCards.tsx";
 const ACADEMY = "src/routes/_authenticated.academy.index.tsx";
@@ -25,99 +25,138 @@ const PREPARATION = "src/components/beskt/CandidatePreparation.tsx";
 const GUARD = "candidate-destination-composition:check";
 
 const MUTATIONS: readonly Mutation[] = [
-  /* ── THE ORIGINAL DEFECT ───────────────────────────────────────────── */
   {
     id: "CDC-NC-JOBS-UNREACHABLE",
     defect:
-      "THE ORIGINAL DEFECT: the Jobs page stops mounting the supporting column, so it lights 'Jobb' for applications it offers no way to reach",
+      "Jobs stops mounting the real job reader, so its contextual application and CV entry points become unreachable",
     file: JOBS,
-    find: "          <JobsSideColumn signedIn={signedIn} />",
-    replace: "",
+    find: "<JobDetailContent",
+    replace: "<IgnoredJobDetailContent",
     guard: GUARD,
-    expect: "the Jobs page mounts the supporting column",
+    expect: "the Jobs page mounts the job detail reader",
   },
   {
     id: "CDC-NC-APPLICATIONS-LINK-DROPPED",
-    defect:
-      "the column renders but no longer links to the applications page, so the panel is a dead end rather than a door",
-    file: COLUMN,
-    find: '          to="/my-career/applications"',
-    replace: '          to="/jobs"',
+    defect: "Jobs loses its direct applications destination",
+    file: JOBS,
+    find: 'to="/my-career/applications"',
+    replace: 'to="/jobs"',
     guard: GUARD,
-    expect: "links to the applications page",
+    expect: "the Jobs page links directly to the applications page",
   },
   {
     id: "CDC-NC-CV-LINK-DROPPED",
-    defect:
-      "the CV entry point leaves Jobs, where the route audit puts it, and is reachable only from Överskt again",
-    file: COLUMN,
-    find: '      to="/my-career/cv"',
-    replace: '      to="/my-career"',
+    defect: "An applicant with an unfinished CV loses the contextual edit route",
+    file: APPLY,
+    find: '<Link\n                      to="/my-career/cv"\n                      className="mt-1 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"\n                    >\n                      {t("jobs.apply.cv.finish")}',
+    replace:
+      '<Link\n                      to="/my-career"\n                      className="mt-1 inline-flex min-h-[44px] items-center text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"\n                    >\n                      {t("jobs.apply.cv.finish")}',
     guard: GUARD,
-    expect: "and to the CV",
+    expect: "the mounted application flow links to the CV to finish it",
   },
-
-  /* ── A SUMMARY THAT GROWS INTO A SECOND PAGE ───────────────────────── */
   {
     id: "CDC-NC-SUMMARY-GAINS-WITHDRAW",
     defect:
-      "the summary gains a withdraw control, so an action that needs the full row's context sits beside a search field",
-    file: COLUMN,
-    find: "import { APPLICATION_STATUS_LABEL_KEY }",
-    replace:
-      "import { withdrawMyApplication } from \"@/lib/job-intelligence/applications.functions\";\nimport { APPLICATION_STATUS_LABEL_KEY }",
+      "The public job application flow gains management controls that belong on the full applications page",
+    file: APPLY,
+    find: "  const applications = useQuery({",
+    replace: "  const withdraw = withdrawMyApplication;\n  const applications = useQuery({",
     guard: GUARD,
-    expect: "carries no withdrawMyApplication control",
+    expect: "carry no withdrawMyApplication control",
   },
   {
     id: "CDC-NC-SECOND-READ-PATH",
     defect:
-      "the column defines a server function of its own instead of reusing listMyApplications — a second read of the same rows",
-    file: COLUMN,
-    find: "const SUMMARY_LIMIT = 3;",
+      "The application flow creates a second server read instead of reusing the existing function",
+    file: APPLY,
+    find: "  const applications = useQuery({",
     replace:
-      "const loadSummary = createServerFn({ method: \"GET\" }).handler(async () => []);\n\nconst SUMMARY_LIMIT = 3;",
+      '  const load = createServerFn({ method: "GET" }).handler(async () => []);\n  const applications = useQuery({',
     guard: GUARD,
-    expect: "defines no server function of its own",
+    expect: "define no server function of their own",
   },
-
-  /* ── ONE STATUS VOCABULARY ─────────────────────────────────────────── */
   {
     id: "CDC-NC-STATUS-VOCABULARY-FORKS",
-    defect:
-      "the Jobs summary authors its own copy of the status keys, so the two surfaces can drift on what `interview` is called",
-    file: COLUMN,
-    find: "const SUMMARY_LIMIT = 3;",
+    defect: "The mounted application flow authors a competing application status vocabulary",
+    file: APPLY,
+    find: "  const applications = useQuery({",
     replace:
-      "const LOCAL_STATUS = { submitted: \"candidate.applications.status.submitted\" } as const;\n\nconst SUMMARY_LIMIT = 3;",
+      '  const LOCAL_STATUS = { submitted: "candidate.applications.status.submitted" };\n  const applications = useQuery({',
     guard: GUARD,
     expect: "authored in exactly one file",
   },
-
-  /* ── /jobs IS PUBLIC ───────────────────────────────────────────────── */
   {
     id: "CDC-NC-ANONYMOUS-SEES-EMPTY-PANEL",
     defect:
-      "the column stops gating on sign-in, so an anonymous visitor is shown an empty 'your applications' panel that reads as 'you have none'",
-    file: COLUMN,
-    find: "  if (!signedIn) return null;",
-    replace: "",
+      "Anonymous visitors can reach the personal application dialog instead of the sign-in action",
+    file: APPLY,
+    find: "  if (!signedIn) {",
+    replace: "  if (false) {",
     guard: GUARD,
-    expect: "renders nothing at all when they are not",
+    expect: "anonymous visitors return the sign-in action",
   },
   {
     id: "CDC-NC-LOADING-COUNTS-AS-SIGNED-IN",
-    defect:
-      "signed-in becomes 'not anonymous', so the loading state fires an authenticated read on every anonymous page view and flashes a panel that then vanishes",
-    file: JOBS,
-    // One line: the statement was reflowed in jobs.index.tsx after this control
-    // was written, and a two-line literal then matched nothing. The guard's
-    // own regex accepts either layout; this anchor has to name the real one.
-    find:
-      '  const signedIn = profileState.status === "no_profile" || profileState.status === "ready";',
-    replace: '  const signedIn = profileState.status !== "anonymous";',
+    defect: "Unresolved auth enables a personal applications request because null is not false",
+    file: APPLY,
+    find: "    enabled: Boolean(authUserId),",
+    replace: "    enabled: signedIn !== false,",
     guard: GUARD,
-    expect: "resolved from the observed states",
+    expect: "query is enabled only for an observed user identity",
+  },
+  {
+    id: "CDC-NC-PUBLIC-READER-PERSONAL-READ",
+    defect: "Public discovery bypasses the application auth boundary to read personal data",
+    file: JOBS,
+    find: "function JobsDiscoveryPage() {",
+    replace: "function JobsDiscoveryPage() {\n  void listMyApplications();",
+    guard: GUARD,
+    expect: "perform no direct personal reads",
+  },
+  {
+    id: "CDC-NC-APPLICATIONS-CACHE-UNSCOPED",
+    defect: "Signing into another account can reuse the previous account application cache",
+    file: APPLY,
+    find: '    queryKey: ["job-apply", "applications", authUserId],',
+    replace: '    queryKey: ["job-apply", "applications"],',
+    guard: GUARD,
+    expect: "cache keys are scoped to the observed user",
+  },
+  {
+    id: "CDC-NC-UNRESOLVED-AUTH-FORM",
+    defect: "The loading session loses its own pre-dialog return",
+    file: APPLY,
+    find: "  if (signedIn === null) {",
+    replace: "  if (false) {",
+    guard: GUARD,
+    expect: "unresolved auth returns before the anonymous branch",
+  },
+  {
+    id: "CDC-NC-APPLY-INTENT-BYPASSES-AUTH",
+    defect: "URL apply intent can open the application dialog before sign-in is observed",
+    file: APPLY,
+    find: "    if (!signedIn || applications.isPending || applyIntentConsumed.current) return;",
+    replace: "    if (applications.isPending || applyIntentConsumed.current) return;",
+    guard: GUARD,
+    expect: "intent cannot open the personal dialog before observed sign-in",
+  },
+  {
+    id: "CDC-NC-CV-READ-BEFORE-DIALOG",
+    defect: "CV choices are requested before the authenticated application dialog opens",
+    file: APPLY,
+    find: '    if (!open || cvOptions.status !== "loading") return;',
+    replace: '    if (cvOptions.status !== "loading") return;',
+    guard: GUARD,
+    expect: "choices are read only when the authenticated application dialog opens",
+  },
+  {
+    id: "CDC-NC-PASSPORT-READ-BEFORE-DIALOG",
+    defect: "Passport choices are requested before the authenticated application dialog opens",
+    file: APPLY,
+    find: "    if (!open || offer !== null) return;",
+    replace: "    if (offer !== null) return;",
+    guard: GUARD,
+    expect: "choices are read only when the authenticated application dialog opens",
   },
 
   /* ── SKETCH 4 · DOORS, NOT DUPLICATES ──────────────────────────────── */
@@ -161,7 +200,7 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "TrustRail is deleted rather than moved when the cards take the hero aside, silently dropping the sourcing statement for the profession guides",
     file: CAREER,
-    find: "          <div className=\"md:col-span-5\">\n            <TrustRail />\n          </div>\n",
+    find: '          <div className="md:col-span-5">\n            <TrustRail />\n          </div>\n',
     replace: "",
     guard: GUARD,
     expect: "TrustRail still renders",
@@ -193,9 +232,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "Tests & Development starts hosting the report view, so Career Discovery exists twice instead of being one product reached through Karriär",
     file: ACADEMY,
-    find: "      <section className=\"mt-10\">\n        <SectionHeading\n          icon={Compass}",
+    find: '      <section className="mt-10">\n        <SectionHeading\n          icon={Compass}',
     replace:
-      "      <V31ReportView />\n      <section className=\"mt-10\">\n        <SectionHeading\n          icon={Compass}",
+      '      <V31ReportView />\n      <section className="mt-10">\n        <SectionHeading\n          icon={Compass}',
     guard: GUARD,
     expect: "renders no <V31ReportView>",
   },
@@ -207,7 +246,7 @@ const MUTATIONS: readonly Mutation[] = [
       "the competence mapping is faked with a hard-coded completion figure — a false statement to the candidate about their own record, for a model that does not exist",
     file: ACADEMY,
     find: '        {t(recruitmentOnly ? "academy.home.titleRecruitment" : "academy.home.title")}',
-    replace: '        Min kompetenskartläggning — 68 % klar',
+    replace: "        Min kompetenskartläggning — 68 % klar",
     guard: GUARD,
     expect: "does not render a competence mapping it has no data for",
   },

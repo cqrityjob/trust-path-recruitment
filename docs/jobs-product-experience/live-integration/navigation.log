@@ -1,0 +1,19 @@
+
+Running 10 tests using 1 worker
+
+(node:5023) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › e2e/job-back-navigation.spec.ts:190:3 › job ad -> back to the search it came from › a filtered search survives the ad and the way back (2.2s)
+  ✓   2 [chromium] › e2e/job-back-navigation.spec.ts:214:3 › job ad -> back to the search it came from › a related ad keeps the way back to the same search (2.1s)
+  ✓   3 [chromium] › e2e/job-back-navigation.spec.ts:232:3 › job ad -> back to the search it came from › a direct entry goes back to all jobs, and a reload keeps the search (2.9s)
+  ✓   4 [chromium] › e2e/job-back-navigation.spec.ts:249:3 › job ad -> back to the search it came from › signing in to apply comes back to the ad, with its search (3.9s)
+  ✓   5 [chromium] › e2e/job-back-navigation.spec.ts:291:3 › job ad -> back to the search it came from › in English the link says where it goes (3.1s)
+(node:5393) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [mobile-375] › e2e/job-back-navigation.spec.ts:190:3 › job ad -> back to the search it came from › a filtered search survives the ad and the way back (2.1s)
+  ✓   7 [mobile-375] › e2e/job-back-navigation.spec.ts:214:3 › job ad -> back to the search it came from › a related ad keeps the way back to the same search (2.0s)
+  ✓   8 [mobile-375] › e2e/job-back-navigation.spec.ts:232:3 › job ad -> back to the search it came from › a direct entry goes back to all jobs, and a reload keeps the search (2.7s)
+  ✓   9 [mobile-375] › e2e/job-back-navigation.spec.ts:249:3 › job ad -> back to the search it came from › signing in to apply comes back to the ad, with its search (4.0s)
+  ✓  10 [mobile-375] › e2e/job-back-navigation.spec.ts:291:3 › job ad -> back to the search it came from › in English the link says where it goes (2.2s)
+
+  10 passed (28.6s)

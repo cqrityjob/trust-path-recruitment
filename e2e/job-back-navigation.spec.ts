@@ -104,16 +104,41 @@ async function openSearch(page: Page, lang: "sv" | "en" = "sv") {
   await page.goto(`${BASE}${SEARCH}`);
   // The stored language has taken: <html lang> is what a screen reader reads.
   await expect(page.locator("html")).toHaveAttribute("lang", lang, { timeout: 15_000 });
-  await expect(page.getByRole("link", { name: TITLE[lang].ad, exact: true })).toBeVisible({
+  await expect(
+    page
+      .locator('[aria-label="Jobblista"], [aria-label="Job list"]')
+      .getByRole("link", { name: TITLE[lang].ad, exact: true }),
+  ).toBeVisible({
     timeout: 30_000,
   });
   // The search is the search: the ad outside it is not listed.
-  await expect(page.getByRole("link", { name: TITLE[lang].outside, exact: true })).toHaveCount(0);
+  await expect(
+    page
+      .locator('[aria-label="Jobblista"], [aria-label="Job list"]')
+      .getByRole("link", { name: TITLE[lang].outside, exact: true }),
+  ).toHaveCount(0);
 }
 
 /** The ad's own page is on screen. The router keeps the page it came from
  *  mounted until the next one is ready, and that page may list the same
  *  titles -- so a URL alone does not say which page an element belongs to. */
+/** Desktop first opens the split reader; its permalink opens the same ad route
+ * that mobile reaches immediately. Both paths must carry the search. */
+async function openAdFromList(page: Page, lang: "sv" | "en" = "sv") {
+  await page
+    .locator('[aria-label="Jobblista"], [aria-label="Job list"]')
+    .getByRole("link", { name: TITLE[lang].ad, exact: true })
+    .click();
+  if ((page.viewportSize()?.width ?? 0) >= 1024) {
+    await page
+      .getByRole("link", {
+        name: lang === "sv" ? "Öppna annonsen på egen sida" : "Open job on its own page",
+      })
+      .click();
+  }
+  await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
+}
+
 async function onAd(page: Page, title: string) {
   await expect(page.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible({
     timeout: 30_000,
@@ -138,10 +163,18 @@ async function expectFilteredList(page: Page, lang: "sv" | "en" = "sv") {
   });
   await expect(page.locator("[data-job-back]")).toHaveCount(0);
   // And the page is showing it, not just carrying it.
-  await expect(page.getByRole("link", { name: TITLE[lang].ad, exact: true })).toBeVisible({
+  await expect(
+    page
+      .locator('[aria-label="Jobblista"], [aria-label="Job list"]')
+      .getByRole("link", { name: TITLE[lang].ad, exact: true }),
+  ).toBeVisible({
     timeout: 30_000,
   });
-  await expect(page.getByRole("link", { name: TITLE[lang].outside, exact: true })).toHaveCount(0);
+  await expect(
+    page
+      .locator('[aria-label="Jobblista"], [aria-label="Job list"]')
+      .getByRole("link", { name: TITLE[lang].outside, exact: true }),
+  ).toHaveCount(0);
 }
 
 async function backLink(page: Page, kind: "results" | "all") {
@@ -153,15 +186,15 @@ async function backLink(page: Page, kind: "results" | "all") {
 }
 
 test.describe("job ad -> back to the search it came from", () => {
+  test.setTimeout(60_000);
   test("a filtered search survives the ad and the way back", async ({ page }) => {
     await inLanguage(page, "sv");
     await openSearch(page);
     await expect(
-      page.getByRole("textbox", { name: "Yrke, kompetens eller nyckelord" }),
+      page.getByRole("textbox", { name: "Roll, kompetens eller nyckelord" }),
     ).toHaveValue(FILTERS.q);
 
-    await page.getByRole("link", { name: TITLE.sv.ad, exact: true }).click();
-    await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
+    await openAdFromList(page);
     expect(carriedBy(page.url()), "the card dropped the search").toEqual(FILTERS);
     await onAd(page, TITLE.sv.ad);
 
@@ -172,19 +205,16 @@ test.describe("job ad -> back to the search it came from", () => {
 
     await expectFilteredList(page);
     await expect(
-      page.getByRole("textbox", { name: "Yrke, kompetens eller nyckelord" }),
+      page.getByRole("textbox", { name: "Roll, kompetens eller nyckelord" }),
     ).toHaveValue(FILTERS.q);
-    await expect(page.getByRole("textbox", { name: "Ort, region eller land" })).toHaveValue(
-      FILTERS.location,
-    );
+    await expect(page.getByRole("textbox", { name: "Plats" })).toHaveValue(FILTERS.location);
     await evidence(page, "back-on-search-sv");
   });
 
   test("a related ad keeps the way back to the same search", async ({ page }) => {
     await inLanguage(page, "sv");
     await openSearch(page);
-    await page.getByRole("link", { name: TITLE.sv.ad, exact: true }).click();
-    await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
+    await openAdFromList(page);
     await onAd(page, TITLE.sv.ad);
 
     const related = relatedCard(page, TITLE.sv.related);
@@ -207,8 +237,7 @@ test.describe("job ad -> back to the search it came from", () => {
     expect(await all.getAttribute("href")).toBe("/jobs");
 
     await openSearch(page);
-    await page.getByRole("link", { name: TITLE.sv.ad, exact: true }).click();
-    await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
+    await openAdFromList(page);
     const before = await (await backLink(page, "results")).getAttribute("href");
 
     await page.reload();
@@ -220,8 +249,7 @@ test.describe("job ad -> back to the search it came from", () => {
   test("signing in to apply comes back to the ad, with its search", async ({ page }) => {
     await inLanguage(page, "sv");
     await openSearch(page);
-    await page.getByRole("link", { name: TITLE.sv.ad, exact: true }).click();
-    await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
+    await openAdFromList(page);
     const adUrl = new URL(page.url());
 
     const signIn = page.getByRole("link", { name: "Logga in för att ansöka" });
@@ -249,11 +277,12 @@ test.describe("job ad -> back to the search it came from", () => {
       `/jobs/${AD}`,
     );
     expect(carriedBy(page.url()), "signing in lost the search").toEqual(FILTERS);
-    // Signed in: the ad now offers the application itself.
-    await expect(page.getByRole("button", { name: "Ansök om jobbet" })).toBeVisible({
-      timeout: 30_000,
-    });
+    // The intended action resumes automatically, with no second apply click.
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator("#apply-cv")).toBeAttached();
     await evidence(page, "signed-in-on-ad-sv");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
 
     await (await backLink(page, "results")).click();
     await expectFilteredList(page);
@@ -262,8 +291,7 @@ test.describe("job ad -> back to the search it came from", () => {
   test("in English the link says where it goes", async ({ page }) => {
     await inLanguage(page, "en");
     await openSearch(page, "en");
-    await page.getByRole("link", { name: TITLE.en.ad, exact: true }).click();
-    await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
+    await openAdFromList(page, "en");
     await expect(await backLink(page, "results")).toHaveText(BACK.en.results);
     await evidence(page, "ad-with-search-en");
     await (await backLink(page, "results")).click();
