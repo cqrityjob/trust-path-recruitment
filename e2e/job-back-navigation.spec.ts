@@ -56,6 +56,9 @@ const TITLE = {
     outside: "Head of security, Stockholm",
   },
 } as const;
+/** The /jobs search form's own name, and the ad's "similar jobs" heading. */
+const SEARCH_LABEL = { sv: "Hitta jobb inom säkerhet", en: "Find security jobs" } as const;
+const RELATED_HEADING = "Liknande jobb";
 const BACK = {
   sv: { results: "← Tillbaka till sökresultatet", all: "← Alla jobb" },
   en: { results: "← Back to search results", all: "← All jobs" },
@@ -105,9 +108,32 @@ async function openSearch(page: Page, lang: "sv" | "en" = "sv") {
   await expect(page.getByRole("link", { name: TITLE[lang].outside, exact: true })).toHaveCount(0);
 }
 
+/** The ad's own page is on screen. The router keeps the page it came from
+ *  mounted until the next one is ready, and that page may list the same
+ *  titles -- so a URL alone does not say which page an element belongs to. */
+async function onAd(page: Page, title: string) {
+  await expect(page.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+/** A card under the ad's "Liknande jobb", and nowhere else. */
+function relatedCard(page: Page, title: string) {
+  return page
+    .getByRole("heading", { level: 2, name: RELATED_HEADING, exact: true })
+    .locator("xpath=..")
+    .getByRole("link", { name: title, exact: true });
+}
+
 async function expectFilteredList(page: Page, lang: "sv" | "en" = "sv") {
   await page.waitForURL((url) => url.pathname === "/jobs", { timeout: 15_000 });
   expect(filtersOf(page.url()), "the way back lost a filter").toEqual(FILTERS);
+  // The list itself is on screen, and nothing of the ad is left: the cards
+  // below are the search's results, not the ad's related cards.
+  await expect(page.getByRole("search", { name: SEARCH_LABEL[lang] })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator("[data-job-back]")).toHaveCount(0);
   // And the page is showing it, not just carrying it.
   await expect(page.getByRole("link", { name: TITLE[lang].ad, exact: true })).toBeVisible({
     timeout: 30_000,
@@ -134,11 +160,7 @@ test.describe("job ad -> back to the search it came from", () => {
     await page.getByRole("link", { name: TITLE.sv.ad, exact: true }).click();
     await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
     expect(carriedBy(page.url()), "the card dropped the search").toEqual(FILTERS);
-    await expect(
-      page.getByRole("heading", { level: 1, name: TITLE.sv.ad, exact: true }),
-    ).toBeVisible({
-      timeout: 30_000,
-    });
+    await onAd(page, TITLE.sv.ad);
 
     const back = await backLink(page, "results");
     await expect(back).toHaveText(BACK.sv.results);
@@ -160,17 +182,15 @@ test.describe("job ad -> back to the search it came from", () => {
     await openSearch(page);
     await page.getByRole("link", { name: TITLE.sv.ad, exact: true }).click();
     await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
+    await onAd(page, TITLE.sv.ad);
 
-    const related = page.getByRole("link", { name: TITLE.sv.related, exact: true });
-    await related.scrollIntoViewIfNeeded();
+    const related = relatedCard(page, TITLE.sv.related);
+    await expect(related).toBeVisible({ timeout: 30_000 });
     await related.click();
     await page.waitForURL(`**/jobs/${RELATED}?from=**`, { timeout: 15_000 });
     expect(carriedBy(page.url()), "the related card dropped the search").toEqual(FILTERS);
-    await expect(
-      page.getByRole("heading", { level: 1, name: TITLE.sv.related, exact: true }),
-    ).toBeVisible({
-      timeout: 30_000,
-    });
+    await onAd(page, TITLE.sv.related);
+    await evidence(page, "related-ad-sv");
 
     await (await backLink(page, "results")).click();
     await expectFilteredList(page);
