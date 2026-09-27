@@ -11,10 +11,21 @@
 // the new one from ever shipping. So the assertions below are rewritten
 // rather than extended.
 //
-//   T1  main carries exactly four sections, in the settled order
+// ── AND THE MVP LAYOUT (2026-09-27) ────────────────────────────────────
+//
+// The owner-approved MVP homepage replaced the four-section page (hero,
+// employers, a six-stage lifecycle, passport) with seven sections: hero,
+// value, employers, security-intelligence, get-started, passport and faq.
+// The assertions that described the four-section page are replaced here,
+// the lifecycle ones with them. Nothing that guards a data boundary, the
+// disclaimer, access, ranking, the human decision or the 340-word ceiling
+// was relaxed; T16 is new and pins the safety sentences the MVP sections
+// carry.
+//
+//   T1  main carries exactly seven sections, in the approved MVP order
 //   T2  TWO PEER individual entry products render, in both languages, and
 //       the superseded single-product page is gone from the markup
-//   T3  exactly one h1, the settled h2 set, and a sane heading hierarchy
+//   T3  exactly one h1, the eight h2 in order, and h3 only on the value cards
 //   T4  the two entrances are PEERS — same card shape, same solid action,
 //       and Career Discovery is not a quiet text link
 //   T5  both primary destinations are canonical and safe, and the Passport
@@ -23,7 +34,8 @@
 //       and this page adds no signup wall
 //   T7  the employer strip: /employer intent, no role by metadata, and the
 //       release flag still fails closed
-//   T8  the connected lifecycle links only existing canonical routes
+//   T8  every link on the page is an existing canonical route, and every
+//       sign-up landing survives safeReturnPath
 //   T9  the Passport market scale agrees with the governed overview, and
 //       the owner-approved disclaimer is rendered verbatim
 //   T10 the trust levels respect PR #189 — three levels, named and
@@ -35,7 +47,10 @@
 //   T13 sv and en carry the same keys, structure and destinations
 //   T14 NO FORBIDDEN CLAIM was introduced — the data boundaries, as
 //       strings a reader could actually meet
-//   T15 the English page is English
+//   T15 the English page is English, and the page stays under 340 words
+//   T16 the MVP sections keep their safety sentences: the employer's own
+//       decision, what never goes into Security Intelligence and who owns
+//       its judgement, and people -- not AI -- deciding who is hired
 //
 // The height, overflow, focus-ring, target-size, viewport and click-through
 // halves of the brief are properties of a LAYOUT and cannot be read out of
@@ -135,6 +150,13 @@ const code = (src: string) =>
     .replace(/^\s*\/\/.*$/gm, "");
 
 const routeCode = code(read("src/routes/index.tsx"));
+// The MVP sections and the Passport preview render inside the route, so a
+// key the route "no longer asks for" must not simply have moved into them.
+const pageCode = [
+  routeCode,
+  code(read("src/components/site/HomeSections.tsx")),
+  code(read("src/components/site/HomePassportPreview.tsx")),
+].join("\n");
 const headerCode = code(read("src/components/site/SiteHeader.tsx"));
 const footerSrc = read("src/components/site/SiteFooter.tsx");
 const footerCode = code(footerSrc);
@@ -235,24 +257,36 @@ const d = (lang: Lang) => dictionaries[lang] as Record<string, string>;
 console.log("public-homepage-check");
 
 /* T1 ---------------------------------------------------------------- */
-group("T1 · main carries exactly four sections, in the settled order");
+group("T1 · main carries exactly seven sections, in the approved MVP order");
 {
-  const ORDER = ["hero", "employers", "lifecycle", "passport"];
+  const ORDER = [
+    "hero",
+    "value",
+    "employers",
+    "security-intelligence",
+    "get-started",
+    "passport",
+    "faq",
+  ];
   const ids = [...svMain.matchAll(/<section[^>]*\bid="([a-z-]+)"/g)].map((m) => m[1]);
-  ck(`the four ids are ${ORDER.join(", ")}`, JSON.stringify(ids) === JSON.stringify(ORDER), ids);
+  ck(`the seven ids are ${ORDER.join(", ")}`, JSON.stringify(ids) === JSON.stringify(ORDER), ids);
   ck(
-    "no fifth top-level section",
-    (svMain.match(/<section\b/g) ?? []).length === 4,
+    "no eighth top-level section",
+    (svMain.match(/<section\b/g) ?? []).length === ORDER.length,
     (svMain.match(/<section\b/g) ?? []).length,
   );
   ck("one main landmark", html.sv.split("<main").length - 1 === 1);
   // The route renders its sections INTO SiteLayout's `<main>` and adds no
   // wrapper of its own — so a section added outside the layout, where the
   // counts above cannot see it, fails here.
-  ck("the route's whole body is the four sections", /^\s*<section id="hero"/.test(svMain));
+  ck("the route's whole body is the seven sections", /^\s*<section id="hero"/.test(svMain));
   // The employer strip is BELOW the two individual cards and outside the
   // hero, which is what "visually separate" means structurally.
-  ck("the employer strip is its own section, after the hero", ids.indexOf("employers") === 1, ids);
+  ck(
+    "the employer strip is its own section, after the hero",
+    ids.indexOf("hero") === 0 && ids.indexOf("employers") > 0,
+    ids,
+  );
 }
 
 /* T2 ---------------------------------------------------------------- */
@@ -291,8 +325,9 @@ group("T2 · two PEER individual entry products render, in both languages");
         "Utforska din arbetsinriktning och få förklarade förslag på roller och karriärvägar inom säkerhet.",
       "cta.passport": "Skapa mitt Security Passport",
       "cta.discovery": "Starta Career Discovery",
-      "home.hero.eyebrow": "Säkerhetskarriären samlad på ett ställe",
-      "home.hero.title": "Bygg din framtid inom säkerhet",
+      // The MVP hero (2026-09-26). The eyebrow above it said the same thing
+      // twice and is retired below.
+      "home.hero.title": "Din karriär och ditt säkerhetsarbete. På samma plats.",
     },
     en: {
       "home.entry.passport.title": "Build your Security Passport",
@@ -303,8 +338,7 @@ group("T2 · two PEER individual entry products render, in both languages");
         "Explore your work orientation and receive explained suggestions for security roles and career paths.",
       "cta.passport": "Create my Security Passport",
       "cta.discovery": "Start Career Discovery",
-      "home.hero.eyebrow": "Your security career in one place",
-      "home.hero.title": "Build your future in security",
+      "home.hero.title": "Your career and your security work. In one place.",
     },
   };
   for (const lang of LANGS) {
@@ -363,40 +397,71 @@ group("T2 · two PEER individual entry products render, in both languages");
     "home.employers.cta",
     "home.employers.subtitle",
     "cta.howItWorks",
+    // Retired with the MVP alignment (2026-09-27): an eyebrow that repeated
+    // the h1, a value-card label that said the superseded "Skapa ditt
+    // Security Passport", and a "markets today" band that listed two pilot
+    // markets as if they were open.
+    "home.hero.eyebrow",
+    "home.value.passport.link",
+    "home.passportPreview.markets",
   ];
   for (const lang of LANGS) {
     for (const key of RETIRED) {
       ck(`${lang}: the retired key "${key}" is deleted`, !(key in dictionaries[lang]));
     }
   }
-  ck("nothing still asks for one of them", !RETIRED.some((k) => routeCode.includes(`"${k}"`)));
+  ck(
+    "nothing on the page still asks for one of them",
+    !RETIRED.some((k) => pageCode.includes(`"${k}"`)),
+    RETIRED.filter((k) => pageCode.includes(`"${k}"`)),
+  );
 }
 
 /* T3 ---------------------------------------------------------------- */
-group("T3 · one h1, the settled h2 set, and a sane hierarchy");
+group("T3 · one h1, the eight h2 in order, and h3 only on the value cards");
 {
+  const BELOW_HERO = [
+    "value",
+    "employers",
+    "security-intelligence",
+    "get-started",
+    "passport",
+    "faq",
+  ] as const;
   for (const lang of LANGS) {
     const m = mainOfLang[lang];
     ck(`${lang}: exactly one h1`, headings(m, "h1").length === 1, headings(m, "h1"));
-    // Five: the two peer entry cards, the employer strip, the lifecycle and
-    // the Passport section. The two CARDS carry h2 deliberately — a heading
-    // level is a weight, and a peer that sat one level lower would be a
-    // sub-product of whatever came before it.
-    ck(`${lang}: exactly five h2`, headings(m, "h2").length === 5, headings(m, "h2"));
+    // Eight: the two peer entry cards, then one per section below the hero.
+    // The two CARDS carry h2 deliberately — a heading level is a weight, and
+    // a peer that sat one level lower would be a sub-product of whatever
+    // came before it.
+    ck(`${lang}: exactly eight h2`, headings(m, "h2").length === 8, headings(m, "h2"));
     ck(
-      `${lang}: h3 is the six lifecycle stages and nothing else`,
-      headings(m, "h3").length === 6,
+      `${lang}: the hero carries exactly the two entrance h2`,
+      headings(sectionOf(m, "hero"), "h2").length === 2,
+      headings(sectionOf(m, "hero"), "h2"),
+    );
+    for (const id of BELOW_HERO) {
+      ck(
+        `${lang}: #${id} is headed by exactly one h2`,
+        headings(sectionOf(m, id), "h2").length === 1,
+        headings(sectionOf(m, id), "h2"),
+      );
+    }
+    ck(
+      `${lang}: h3 is the three value cards and nothing else`,
+      headings(m, "h3").length === 3 && headings(sectionOf(m, "value"), "h3").length === 3,
       headings(m, "h3"),
     );
   }
   ck(
     "sv h1",
-    headings(svMain, "h1")[0] === "Bygg din framtid inom säkerhet",
+    headings(svMain, "h1")[0] === "Din karriär och ditt säkerhetsarbete. På samma plats.",
     headings(svMain, "h1")[0],
   );
   ck(
     "en h1 says the same thing",
-    headings(enMain, "h1")[0] === "Build your future in security",
+    headings(enMain, "h1")[0] === "Your career and your security work. In one place.",
     headings(enMain, "h1")[0],
   );
   // Both entrance headings are present. Source order follows the responsive
@@ -410,17 +475,27 @@ group("T3 · one h1, the settled h2 set, and a sane hierarchy");
       h2.slice(0, 2),
     );
   }
-  // The hero's subtitle is the approved framing sentence, verbatim.
+  // The hero's subtitle is the MVP framing sentence -- jobs, the Passport,
+  // AI support and the person's control over sharing -- condensed on
+  // 2026-09-27 to fit the 340-word ceiling, and pinned verbatim.
   ck(
     "sv subtitle",
     d("sv")["home.hero.subtitle"] ===
-      "Samla dina meriter i ett Security Passport eller upptäck vilka säkerhetsroller som passar din riktning. Fortsätt sedan med karriärvägar, CV, jobb och utveckling i samma plattform.",
+      "Jobb, Security Passport och AI-stöd. Du bestämmer vad som delas.",
+    d("sv")["home.hero.subtitle"],
   );
   ck(
     "en subtitle",
     d("en")["home.hero.subtitle"] ===
-      "Bring your credentials together in a Security Passport or discover which security roles fit your direction. Then continue with career paths, CV, jobs and development in the same platform.",
+      "Jobs, Security Passport and AI support. You decide what is shared.",
+    d("en")["home.hero.subtitle"],
   );
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: and it is rendered in the hero`,
+      (await copyText(sectionOf(mainOfLang[lang], "hero"))).includes(d(lang)["home.hero.subtitle"]),
+    );
+  }
 }
 
 /* T4 ---------------------------------------------------------------- */
@@ -658,31 +733,23 @@ group("T7 · the employer strip, and the flag that still fails closed");
 }
 
 /* T8 ---------------------------------------------------------------- */
-group("T8 · the connected lifecycle links only canonical routes");
+group("T8 · every link on the page is an existing canonical route");
 {
-  const lifecycle = sectionOf(svMain, "lifecycle");
-  const STAGES = ["Upptäck", "Förstå", "Utvecklas", "Visa", "Arbeta", "Fortsätt"];
-  const EN_STAGES = ["Discover", "Understand", "Grow", "Trust", "Work", "Continue"];
-  ck(
-    "sv: the six stages, in order",
-    JSON.stringify(headings(lifecycle, "h3").map((h) => h.replace(/^\d+\.\s*/, ""))) ===
-      JSON.stringify(STAGES),
-    headings(lifecycle, "h3"),
-  );
-  ck(
-    "en: the six stages, in order",
-    JSON.stringify(
-      headings(sectionOf(enMain, "lifecycle"), "h3").map((h) => h.replace(/^\d+\.\s*/, "")),
-    ) === JSON.stringify(EN_STAGES),
-    headings(sectionOf(enMain, "lifecycle"), "h3"),
-  );
-  // An EXPLANATION, not six competing product cards: no solid action lives
-  // inside this section.
-  ck(
-    "no solid call to action inside the lifecycle",
-    anchorsOf(lifecycle).filter(isSolid).length === 0,
-  );
-  ck("it is an ordered list", lifecycle.includes("<ol"));
+  // The four-section page's six-stage lifecycle is gone with the MVP layout,
+  // and so are the assertions that read its stages. What they guarded is
+  // kept wherever it still applies: the sections below the hero explain and
+  // link, and add no solid call to action of their own -- the page's solid
+  // actions are the hero's and the employer registration -- and every
+  // sequence on the page is an ordered list.
+  for (const id of ["value", "security-intelligence", "get-started", "passport", "faq"]) {
+    ck(
+      `no solid call to action inside #${id}`,
+      anchorsOf(sectionOf(svMain, id)).filter(isSolid).length === 0,
+      anchorsOf(sectionOf(svMain, id)).filter(isSolid),
+    );
+  }
+  ck("the three steps are an ordered list", sectionOf(svMain, "get-started").includes("<ol"));
+  ck("the employer flow is an ordered list", sectionOf(svMain, "employers").includes("<ol"));
   // Every destination is an existing canonical route.
   const ROUTES: Record<string, string> = {
     "/signup": "src/routes/signup.tsx",
@@ -692,6 +759,10 @@ group("T8 · the connected lifecycle links only canonical routes");
     "/employers": "src/routes/employers.tsx",
     "/jobs": "src/routes/jobs.index.tsx",
     "/about": "src/routes/about.tsx",
+    // The FAQ's contact link, kept by owner decision. The form there sends
+    // nothing yet, which is why the footer still does not promote it (T12)
+    // and why the page must keep saying so (below).
+    "/contact": "src/routes/contact.tsx",
     "/feedback": "src/routes/_authenticated.feedback.tsx",
     // Header-only, signed-in entries the same scan sees.
     "/security-work": "src/routes/_authenticated.security-work.index.tsx",
@@ -708,7 +779,9 @@ group("T8 · the connected lifecycle links only canonical routes");
     "/passport": "src/routes/_authenticated.passport.index.tsx",
     "/employer": "src/routes/_authenticated.employer.index.tsx",
     "/my-career": "src/routes/_authenticated.my-career.index.tsx",
-    "/academy": "src/routes/_authenticated.academy.index.tsx",
+    // Security Intelligence's action: a signed-in account context, reached
+    // only through the one door (and never linked directly, below).
+    "/security-work": "src/routes/_authenticated.security-work.index.tsx",
   };
   const linked = new Set(
     [...`${svMain}${headerCode}${footerCode}`.matchAll(/href="([^"#?]+)|to="([^"]+)"/g)]
@@ -751,12 +824,22 @@ group("T8 · the connected lifecycle links only canonical routes");
       landing,
     );
   }
-  // "Trust" points at this page's own Passport section, because the
-  // Passport has no public page and a link onto a login wall is a dead end
-  // wearing a product name.
+  // /contact is linked from the FAQ while its form is a preview that sends
+  // nothing. That is only honest for as long as the contact page says so
+  // where the visitor types.
+  const contactCode = code(read("src/routes/contact.tsx"));
+  const contactSendsNothing = /onSubmit=\{\(e\) => \{\s*e\.preventDefault\(\);\s*\}\}/.test(
+    contactCode,
+  );
   ck(
-    "the lifecycle's Trust stage points at the on-page section",
-    lifecycle.includes('href="/#passport"'),
+    "while the contact form sends nothing, the contact page says so on the form",
+    !contactSendsNothing || contactCode.includes('{t("contact.preview_notice")}'),
+  );
+  ck(
+    "and says it in both languages",
+    /skickar .*inga meddelanden/.test(d("sv")["contact.preview_notice"]) &&
+      /does not currently send/.test(d("en")["contact.preview_notice"]),
+    `${d("sv")["contact.preview_notice"]} | ${d("en")["contact.preview_notice"]}`,
   );
   ck(
     "the homepage still never links a signed-out visitor straight into a Passport route",
@@ -1045,8 +1128,24 @@ group("T13 · sv and en say the same thing, with the same structure");
     pageKeys("sv").filter((k) => !pageKeys("en").includes(k)),
   );
   // Product names are the same in both. Nothing else may be — an untouched
-  // English string is an untranslated one.
-  const SAME_IN_BOTH = new Set<string>(["home.markets.eyebrow"]);
+  // English string is an untranslated one. Each exception is PROVEN to be a
+  // product name rather than trusted to be one: it must equal, in both
+  // languages, the name the product itself carries elsewhere. A sentence
+  // cannot hide in this list, because no product is named with a sentence.
+  const PRODUCT_NAMES: Record<string, string> = {
+    "home.markets.eyebrow": "nav.securityPassport",
+    "home.ai.title": "sw.product",
+  };
+  const SAME_IN_BOTH = new Set<string>(Object.keys(PRODUCT_NAMES));
+  for (const [key, nameKey] of Object.entries(PRODUCT_NAMES)) {
+    for (const lang of LANGS) {
+      ck(
+        `${lang} "${key}" is the product name "${nameKey}"`,
+        typeof d(lang)[nameKey] === "string" && d(lang)[key] === d(lang)[nameKey],
+        `${d(lang)[key]} vs ${d(lang)[nameKey]}`,
+      );
+    }
+  }
   for (const key of pageKeys("sv")) {
     for (const lang of LANGS) {
       const v = d(lang)[key];
@@ -1176,6 +1275,16 @@ group("T14 · no forbidden claim was introduced");
         /kompetensverifiering|competence verification/i,
       ],
     },
+    {
+      // The FAQ says pricing is not published. A price or a "free" promise
+      // anywhere else on the page would contradict it.
+      rule: "no price and no free promise — pricing is not published",
+      patterns: [
+        /\bgratis\b|\bkostnadsfri/i,
+        /\bfree( of charge)?\b/i,
+        /\d\s*(kr|sek|eur|usd|gbp|aed)\b|[€$£]\s*\d/i,
+      ],
+    },
   ];
   for (const lang of LANGS) {
     for (const { rule, patterns } of FORBIDDEN) {
@@ -1246,7 +1355,8 @@ group("T15 · the English page is English, decoration included");
     .filter((v) => !v.startsWith("CQrityjob —"));
   ck("no Swedish string literal remains in the route", literals.length === 0, literals.join(" · "));
   // 4. The page's word count, so a rebuild cannot quietly become a brochure.
-  //    A CEILING rather than a snapshot of today.
+  //    A CEILING rather than a snapshot of today. The seven-section MVP was
+  //    condensed to fit it (2026-09-27); the ceiling itself was not raised.
   //
   for (const lang of LANGS) {
     ck(
@@ -1259,6 +1369,88 @@ group("T15 · the English page is English, decoration included");
       wc(d(lang)["home.hero.subtitle"]) <= 40,
       wc(d(lang)["home.hero.subtitle"]),
     );
+  }
+}
+
+/* T16 --------------------------------------------------------------- */
+group("T16 · the MVP sections keep their safety sentences");
+{
+  // Condensing the MVP sections to the word ceiling removed repetition. It
+  // may never remove one of these, so each is pinned where it renders.
+
+  // ── THE EMPLOYER DECIDES ──────────────────────────────────────────
+  for (const lang of LANGS) {
+    const steps = [
+      ...sectionOf(mainOfLang[lang], "employers").matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/g),
+    ].map((m) => fullText(m[1]));
+    ck(`${lang}: the employer flow has five steps`, steps.length === 5, steps);
+    ck(
+      `${lang}: and the last one is the employer's own decision`,
+      steps.at(-1) === d(lang)["home.employers.flow.decision"],
+      steps.at(-1),
+    );
+  }
+  ck(
+    "the decision is the employer's, in both languages",
+    d("sv")["home.employers.flow.decision"] === "Ni fattar beslutet" &&
+      d("en")["home.employers.flow.decision"] === "You make the decision",
+  );
+
+  // ── SECURITY INTELLIGENCE: WHAT NEVER GOES IN, AND WHO JUDGES ─────
+  const NOTE: Record<Lang, string> = {
+    sv: "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
+    en: "Do not add classified or secret information. The workspace is not shared with your CV, Security Passport or employers.",
+  };
+  const JUDGEMENT: Record<Lang, string> = {
+    sv: "du står för bedömningen",
+    en: "the judgement stays yours",
+  };
+  const ONLY_WHERE_ENABLED: Record<Lang, string> = {
+    sv: "AI-utkast där funktionen är aktiverad",
+    en: "AI drafts where enabled",
+  };
+  for (const lang of LANGS) {
+    const si = sectionOf(mainOfLang[lang], "security-intelligence");
+    const siCopy = await copyText(si);
+    ck(
+      `${lang}: the classified-information warning and the sharing boundary, verbatim`,
+      d(lang)["home.ai.note"] === NOTE[lang] && siCopy.includes(NOTE[lang]),
+      d(lang)["home.ai.note"],
+    );
+    ck(`${lang}: the person owns the judgement`, siCopy.includes(JUDGEMENT[lang]));
+    ck(
+      `${lang}: AI drafts are promised only where the feature is enabled`,
+      siCopy.includes(ONLY_WHERE_ENABLED[lang]),
+    );
+    ck(
+      `${lang}: its one action goes through the one door, to /security-work`,
+      JSON.stringify(hrefsOf(si)) === JSON.stringify(["/signup?redirect=%2Fsecurity-work"]),
+      hrefsOf(si),
+    );
+  }
+
+  // ── PEOPLE, NOT AI, DECIDE WHO IS HIRED ───────────────────────────
+  const DECIDES: Record<Lang, string> = {
+    sv: "Människor fattar och dokumenterar varje beslut.",
+    en: "People make and document every decision.",
+  };
+  // "Does not rank candidates", said without the ranking vocabulary T14
+  // bans from this page even in the negative.
+  const NO_ORDER: Record<Lang, string> = {
+    sv: "Plattformen sorterar inte kandidater från bäst till sämst.",
+    en: "The platform does not sort candidates best to worst.",
+  };
+  for (const lang of LANGS) {
+    const faq = sectionOf(mainOfLang[lang], "faq");
+    const faqCopy = await copyText(faq);
+    ck(
+      `${lang}: the FAQ asks whether AI decides who is hired`,
+      faqCopy.includes(d(lang)["home.faq.ai.question"]),
+    );
+    ck(`${lang}: people make and document every decision`, faqCopy.includes(DECIDES[lang]));
+    ck(`${lang}: the platform puts no candidates in order`, faqCopy.includes(NO_ORDER[lang]));
+    ck(`${lang}: that answer is open, not behind a click`, /<details[^>]*\sopen=/.test(faq));
+    ck(`${lang}: the pricing status is stated`, faqCopy.includes(d(lang)["home.faq.pricing"]));
   }
 }
 
