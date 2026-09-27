@@ -5,7 +5,13 @@ import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { jobsProfessionSlug, type Profession } from "@/lib/career-center";
 import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 
-// "Relaterade lediga jobb" and "Ditt nästa steg".
+// "Relevanta jobb" and the Passport boundary — two panels, placed apart.
+//
+// The guide reads in the order a reader asks: what the work is, what it
+// requires, where it can lead, where the jobs are — and only then the
+// fördjupning. The jobs panel is the fourth answer; the Passport panel is
+// fördjupning, so the two are separate components the guide places where
+// each belongs.
 //
 // ── WHY THE JOBS LINK CAN BE ABSENT ────────────────────────────────────
 //
@@ -18,7 +24,7 @@ import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 //
 // For those four, a jobs link would query a slug no job can carry and always
 // render "no openings" — which a reader reads as "nobody is hiring in this
-// field", not as "we cannot ask that question yet". So the section says which
+// field", not as "we cannot ask that question yet". So the panel says which
 // of the two it is, and offers two live routes onward rather than a dead end.
 //
 // ── WHY THE PASSPORT IS LINKED AND NOT READ ────────────────────────────
@@ -35,14 +41,14 @@ import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 // same statement as "missing", and CQrityjob does not check eligibility at
 // all. That sentence is on the page for every reader, signed in or not.
 
-export function ProfessionNextSteps({
+export function ProfessionJobs({
   profession,
-  signedIn,
+  relatedHref,
 }: {
   profession: Profession;
-  /** Only used to send the reader to the right Passport entry point. Nothing
-   *  on this page changes what it CLAIMS based on who is reading. */
-  signedIn: boolean | null;
+  /** Where this page lists related professions, if it does — the second way
+   *  on when no job search can be run for the profession. */
+  relatedHref: string | null;
 }) {
   const { t, lang } = useT();
   const jobsSlug = jobsProfessionSlug(profession);
@@ -53,90 +59,101 @@ export function ProfessionNextSteps({
   const title = lang === "sv" ? profession.titleSv : profession.titleEn;
 
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      {/* ── RELATED OPEN JOBS ─────────────────────────────────────────── */}
-      <section
-        data-related-jobs
-        data-jobs-available={jobsSlug ? "true" : "false"}
-        data-jobs-open={jobsOpen ? "true" : "false"}
-        className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-xs md:p-8"
-      >
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-accent">
-          <Briefcase className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-        </span>
-        <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
+    <section
+      data-related-jobs
+      data-jobs-available={jobsSlug ? "true" : "false"}
+      data-jobs-open={jobsOpen ? "true" : "false"}
+      className="flex max-w-3xl flex-col rounded-xl border border-border bg-card p-6 shadow-xs sm:flex-row sm:items-start sm:gap-5 md:p-8"
+    >
+      <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-secondary text-accent">
+        <Briefcase className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+      </span>
+      <div className="mt-4 sm:mt-0">
+        <h3 className="text-lg font-semibold tracking-tight text-foreground">
           {jobsSlug ? t("cc.p.jobs.title") : t("cc.p.jobs.unavailable.title")}
         </h3>
-        <p className="mt-2 flex-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+        <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
           {!jobsOpen
             ? t("cc.jobs.closed")
             : jobsSlug
               ? t("cc.p.jobs.body")
               : t("cc.p.jobs.unavailable.body")}
         </p>
-        <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
           {!jobsOpen ? null : jobsSlug ? (
             <Link
               to="/jobs/profession/$professionSlug"
               params={{ professionSlug: jobsSlug }}
               data-jobs-link={jobsSlug}
-              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-5 text-sm font-semibold tracking-tight text-primary-foreground shadow-sm transition-all duration-200 ease-out hover:bg-[color:var(--primary-hover)] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               {t("cc.jobs.for").replace("{role}", title)}
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </Link>
           ) : (
             <>
               <Link
                 to="/jobs"
-                className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)]"
+                className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {t("cc.p.jobs.alt.all")}
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
-              <a
-                href="#relaterade-yrken"
-                className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                {t("cc.p.jobs.alt.related")}
-              </a>
+              {relatedHref && (
+                <a
+                  href={relatedHref}
+                  className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {t("cc.p.jobs.alt.related")}
+                </a>
+              )}
             </>
           )}
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* ── PASSPORT ──────────────────────────────────────────────────── */}
-      <section
-        data-passport-boundary
-        className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-xs md:p-8"
-      >
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-accent">
-          <IdCard className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-        </span>
-        <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
-          {t("cc.p.act.passport.title")}
-        </h3>
-        <p className="mt-2 flex-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
-          {t("cc.p.act.passport.body")}
-        </p>
-        {/* A signed-out reader goes to signup carrying the intent, which is
-            the mechanism SiteHeader already uses: "?redirect=/passport"
-            survives account creation, so the Passport is where they land
-            rather than a generic home. */}
-        <div className="mt-6">
-          {signedIn === true ? (
-            <PrimaryLink to="/passport/credentials/new" variant="ghost">
-              {t("cc.p.act.passport.cta")}
-              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-            </PrimaryLink>
-          ) : (
-            <PrimaryLink to="/signup" search={{ redirect: "/passport" }} variant="ghost">
-              {t("cc.p.act.passport.ctaSignedOut")}
-              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-            </PrimaryLink>
-          )}
-        </div>
-      </section>
-    </div>
+export function PassportBoundary({
+  signedIn,
+}: {
+  /** Only used to send the reader to the right Passport entry point. Nothing
+   *  on this page changes what it CLAIMS based on who is reading. */
+  signedIn: boolean | null;
+}) {
+  const { t } = useT();
+  return (
+    <section
+      data-passport-boundary
+      className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-xs md:p-8"
+    >
+      <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-accent">
+        <IdCard className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+      </span>
+      <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
+        {t("cc.p.act.passport.title")}
+      </h3>
+      <p className="mt-2 max-w-[60ch] flex-1 text-sm leading-relaxed text-muted-foreground">
+        {t("cc.p.act.passport.body")}
+      </p>
+      {/* A signed-out reader goes to signup carrying the intent, which is
+          the mechanism SiteHeader already uses: "?redirect=/passport"
+          survives account creation, so the Passport is where they land
+          rather than a generic home. */}
+      <div className="mt-6">
+        {signedIn === true ? (
+          <PrimaryLink to="/passport/credentials/new" variant="ghost">
+            {t("cc.p.act.passport.cta")}
+            <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+          </PrimaryLink>
+        ) : (
+          <PrimaryLink to="/signup" search={{ redirect: "/passport" }} variant="ghost">
+            {t("cc.p.act.passport.ctaSignedOut")}
+            <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+          </PrimaryLink>
+        )}
+      </div>
+    </section>
   );
 }

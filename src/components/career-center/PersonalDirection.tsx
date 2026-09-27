@@ -47,8 +47,7 @@ import { ProfessionInfoAction } from "./ProfessionInfoAction";
 export function PersonalDirectionSection({
   direction,
   onRetry,
-  exploreSearch,
-  exploreAnchor,
+  listAnchor,
   savedProfessionId,
   onProfessionOpen,
   onAssessmentStart,
@@ -56,11 +55,10 @@ export function PersonalDirectionSection({
 }: {
   direction: Direction;
   onRetry?: () => void;
-  /** Where "utforska i stället" goes: the hub's current search with the
-   *  catalogue OPEN, plus its anchor. A bare `#anchor` used to scroll to a
-   *  collapsed section and show nothing. */
-  exploreSearch: Record<string, unknown>;
-  exploreAnchor: string;
+  /** The id of the hub's list of every profession — where "Se alla yrken i
+   *  stället" goes. A jump on the same page, so nothing the reader chose
+   *  above (their current profession) is lost on the way. */
+  listAnchor: string;
   /** The Career Center id of the profession saved in the profile, so the
    *  recommendation can say when the two coincide. Never used to re-rank. */
   savedProfessionId?: string | null;
@@ -146,15 +144,13 @@ export function PersonalDirectionSection({
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </PrimaryLink>
           )}
-          <Link
-            to="/career-center"
-            search={{ ...exploreSearch, all: true } as never}
-            hash={exploreAnchor}
+          <a
+            href={`#${listAnchor}`}
             data-explore-catalogue
             className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("cc.me.invite.secondary")}
-          </Link>
+          </a>
         </div>
       </Shell>
     );
@@ -201,15 +197,13 @@ export function PersonalDirectionSection({
             {t("cc.me.view")}
             <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </Link>
-          <Link
-            to="/career-center"
-            search={{ ...exploreSearch, all: true } as never}
-            hash={exploreAnchor}
+          <a
+            href={`#${listAnchor}`}
             data-explore-catalogue
             className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             {t("cc.me.invite.secondary")}
-          </Link>
+          </a>
         </div>
       </Shell>
     );

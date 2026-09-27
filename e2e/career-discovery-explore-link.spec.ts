@@ -301,6 +301,38 @@ async function openPolisPage(page: Page, back: RegExp) {
   await expect(page.getByTestId("cd-pattern-name")).toBeVisible({ timeout: 30_000 });
 }
 
+/** The staged recommendations further down the report: "Läs om yrket" OPENS
+ *  the profession — through the same destination rule as the chip — rather
+ *  than unfolding an in-card summary under a label that promised the
+ *  profession. Its own page offers the named way back to the report. */
+async function tierCardOpensTheProfession(page: Page, back: RegExp) {
+  const links = page.locator("[data-tier-explore-link]");
+  await expect(links.first()).toBeVisible();
+  for (const link of await links.all()) {
+    const id = await link.getAttribute("data-tier-explore-link");
+    const entry = FIRST_WAVE_CATALOG.find((p) => p.professionId === id);
+    expect(entry, `${id} is an approved profession`).toBeDefined();
+    const dest = exploreDestinationFor(entry!);
+    expect(dest.kind, `${id} has a destination`).not.toBe("none");
+    await expect(link).toHaveAttribute("href", dest.kind === "none" ? "" : dest.href);
+    await expect(link).toHaveText(/Läs om yrket/);
+    await expect(link).toHaveAttribute("aria-label", new RegExp(entry!.titleSv));
+  }
+  const first = links.first();
+  const href = (await first.getAttribute("href"))!;
+  await expectTarget44(
+    page,
+    `[data-tier-explore-link="${await first.getAttribute("data-tier-explore-link")}"]`,
+  );
+  await first.click();
+  await expect(page).toHaveURL(new RegExp(`${href}$`));
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/Den här yrkesguiden är inte publicerad ännu/)).toHaveCount(0);
+  await page.locator('[data-profession-back="report"]').click();
+  await expect(page).toHaveURL(back);
+  await expect(page.getByTestId("cd-pattern-name")).toBeVisible({ timeout: 30_000 });
+}
+
 /* ------------------------------------------------------------------ */
 /* Tests                                                               */
 /* ------------------------------------------------------------------ */
@@ -378,5 +410,9 @@ test.describe("Career Discovery — 'Utforska nu' on the recommendation", () => 
       new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`),
     );
     await openPolisPage(page, new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`));
+    await tierCardOpensTheProfession(
+      page,
+      new RegExp(`/security-career-assessment/report/${SNAPSHOT_ID}`),
+    );
   });
 });

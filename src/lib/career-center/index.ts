@@ -14,7 +14,7 @@ export * from "./career-paths";
 export * from "./selectors";
 export * from "./publishability";
 export * from "./meta-groups";
-export * from "./explorer-state";
+export * from "./hub-search";
 export * from "./career-routes";
 export * from "./transitions";
 export * from "./profession-fit";

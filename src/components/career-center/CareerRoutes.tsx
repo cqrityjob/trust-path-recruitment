@@ -18,6 +18,7 @@ import {
   type CareerRouteBranch,
   type TransitionKind,
 } from "@/lib/career-center";
+import { connectionText } from "./connection-text";
 
 // "Karriärvägar" — one origin, several independent directions.
 //
@@ -49,9 +50,17 @@ import {
 //
 // So a branch renders as a SUMMARY: the kind, the destination, one sentence,
 // and whether the move is described or still under review. Every one of those
-// values comes from the same `ProfessionTransition` the detailed card reads,
-// so the two surfaces still cannot describe the same move differently — they
-// differ in how much they say, not in what they say.
+// values comes from the same `ProfessionTransition` the detailed card reads —
+// the sentence is literally the same function (`connectionText`) — so the
+// two surfaces cannot describe the same move differently: they differ in how
+// much they say, not in what they say.
+//
+// ── GENERAL, AND SAID TO BE ────────────────────────────────────────────
+//
+// These routes are examples for everybody. They start from a profession
+// nobody on this page has to hold and ignore the reader's analysis; the
+// section's subtitle says so, so a reader never mistakes them for the
+// "Vilket yrke arbetar du i i dag?" answer or for their own result.
 
 export function CareerRoutes({ onProfessionOpen }: { onProfessionOpen?: (slug: string) => void }) {
   const { t } = useT();
@@ -85,6 +94,11 @@ export function CareerRoutes({ onProfessionOpen }: { onProfessionOpen?: (slug: s
           </details>
         )}
       </div>
+      {careerRoutes.some((r) => r.branches.some((b) => b.evidenceLevel === "under_review")) && (
+        <p className="mt-6 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+          {t("cc.next.underReview.note")}
+        </p>
+      )}
       <p className="mt-10 flex items-start gap-2.5 text-sm text-muted-foreground">
         <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={1.75} aria-hidden />
         {t("cc.routes.disclaimer")}
@@ -209,7 +223,7 @@ function BranchSummary({
             className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
           >
             <FileSearch className="h-3 w-3" strokeWidth={1.75} aria-hidden />
-            {t("cc.step.under_review")}
+            {t("cc.next.underReview")}
           </span>
         )}
       </div>
@@ -225,10 +239,10 @@ function BranchSummary({
           <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-accent" aria-hidden />
         </Link>
       </h4>
+      {/* The same derived sentence the next-profession cards use: how the
+          destination compares with the origin, read from the two guides. */}
       <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-        {underReview
-          ? t("cc.step.under_review.help")
-          : t(`cc.step.${transition.kind}.help` as TranslationKey)}
+        {connectionText(transition, t, lang === "en" ? "en" : "sv")}
       </p>
     </div>
   );

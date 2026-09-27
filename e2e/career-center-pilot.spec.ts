@@ -131,7 +131,7 @@ const V31_SNAPSHOT = {
       ranked: [
         {
           rank: 1,
-          confidence: "high",
+          confidence: "strong",
           match: { titleSv: "Väktare", titleEn: "Security Officer", cigProfessionSlug: "vaktare" },
         },
         {
@@ -145,7 +145,7 @@ const V31_SNAPSHOT = {
         },
         {
           rank: 3,
-          confidence: "high",
+          confidence: "moderate",
           match: { titleSv: "Polis", titleEn: "Police Officer", cigProfessionSlug: "polis" },
         },
       ],
@@ -229,7 +229,7 @@ test.describe("the three concepts", () => {
 
     const path = page.locator("[data-path-from]");
     await expect(path).toHaveAttribute("data-path-state", "ready");
-    await expect(path).toContainText("Möjliga nästa steg från Väktare");
+    await expect(path).toContainText("Möjliga nästa yrken från Väktare");
     // The selected profession is shown, and "Läs om" opens exactly it.
     await expect(path.locator('[data-path-selected="security-officer"]')).toBeVisible();
     await expect(path.locator('[data-profession-info="security-officer"]')).toHaveAttribute(
@@ -241,10 +241,18 @@ test.describe("the three concepts", () => {
       "selected",
     );
 
-    // The three directions the review asked for, as independent cards.
+    // The three directions the review asked for, as independent cards —
+    // each naming its profession and opening it in one click.
     for (const slug of ["ordningsvakt", "skyddsvakt", "security-coordinator"]) {
-      await expect(path.locator(`[data-transition][data-transition-to="${slug}"]`)).toBeVisible();
+      const card = path.locator(`[data-transition][data-transition-to="${slug}"]`);
+      await expect(card).toBeVisible();
+      await expect(card.locator(`[data-next-profession-link="${slug}"]`)).toHaveAttribute(
+        "href",
+        `/career-center/${slug}`,
+      );
     }
+    // All of them, on the page: no "see the rest in the guide" hop.
+    await expect(path.locator("[data-path-next] [data-transition]")).toHaveCount(4);
 
     // Never an eligibility claim.
     await expect(path.locator("[data-path-not-eligibility]")).toContainText(
@@ -269,7 +277,7 @@ test.describe("the three concepts", () => {
 
     await expect(page).toHaveURL(/from=security-coordinator/);
     await expect(page.locator("[data-path-from]")).toContainText(
-      "Möjliga nästa steg från Säkerhetssamordnare",
+      "Möjliga nästa yrken från Säkerhetssamordnare",
     );
     // And the resulting view is a link somebody else can open.
     await page.goto(page.url());
@@ -346,7 +354,7 @@ test.describe("the three concepts", () => {
     await page.reload({ waitUntil: "networkidle" });
 
     const path = page.locator("[data-path-from]");
-    await expect(path).toContainText("Möjliga nästa steg från Säkerhetssamordnare", {
+    await expect(path).toContainText("Möjliga nästa yrken från Säkerhetssamordnare", {
       timeout: 15_000,
     });
     await expect(path.locator("[data-path-provenance]")).toHaveAttribute(
@@ -430,7 +438,11 @@ test.describe("routes and evidence", () => {
       .locator('[data-transition][data-transition-to="security-coordinator"]')
       .first();
     await expect(unsourced).toHaveAttribute("data-transition-evidence", "under_review");
-    await expect(unsourced.locator("[data-transition-under-review]")).toContainText(
+    await expect(unsourced.locator("[data-transition-under-review]")).toHaveText(
+      "Under granskning",
+    );
+    await unsourced.locator("[data-transition-detail] summary").click();
+    await expect(unsourced.locator("[data-transition-detail]")).toContainText(
       "Möjlig riktning under granskning",
     );
     await expect(unsourced).toContainText("ingen granskad källa");
@@ -527,23 +539,27 @@ test.describe("regulatory facts", () => {
 /* ================================================================== */
 
 test.describe("progressive disclosure", () => {
-  test("the catalogue and every route detail are absent until asked for", async ({ page }) => {
+  test("the list of professions is shown; every route detail is folded until asked for", async ({
+    page,
+  }) => {
     await stubServerFns(page, BASE_REPLIES);
     // With a stated role, so the pathFrom section renders its detail cards —
     // the surface whose disclosures are being asserted below.
     await page.goto(`${HUB}?from=security-officer`, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-path-from]");
 
-    // The 11-guide catalogue is not rendered on arrival.
-    const panel = page.locator("#yrkeskatalog");
-    await expect(panel).toBeHidden();
-    const toggle = page.locator("[data-catalogue-toggle]");
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // Every published guide is a card on arrival — no toggle, no search box,
+    // no filter between the reader and the professions.
+    await expect(page.locator("#yrkeskatalog")).toBeVisible();
+    expect(
+      await page.locator('#yrkeskatalog a[href^="/career-center/"]').count(),
+    ).toBeGreaterThanOrEqual(11);
+    await expect(page.locator("#utforska-yrken input, #utforska-yrken select")).toHaveCount(0);
 
-    // Path detail is collapsed: the disclosures exist and none is open.
-    const details = page.locator("[data-transition-detail]");
-    expect(await details.count()).toBeGreaterThan(0);
-    expect(await page.locator("[data-transition-detail][open]").count()).toBe(0);
+    // The hub answers; the fördjupning is the guide's. A next-profession card
+    // on the hub has one action — open the profession — and no disclosure.
+    await expect(page.locator("[data-path-from] [data-transition]").first()).toBeVisible();
+    await expect(page.locator("[data-path-from] [data-transition-detail]")).toHaveCount(0);
 
     // The routes section shows SUMMARIES, not detail cards: a summary carries
     // no disclosure at all, which is why it costs a fifth of the height.
@@ -553,34 +569,32 @@ test.describe("progressive disclosure", () => {
     // And only the first route group is open.
     await expect(page.locator("[data-routes-more]")).not.toHaveAttribute("open", "");
 
-    // Materially shorter than the flat version, measured where the review
-    // measured it: a 375px screen. The hub was ~11,700px there.
+    // Shorter than the flat version the review rejected (~11,700px at 375px),
+    // with the list of every guide now shown rather than folded (it was a
+    // toggle plus 29 filter controls; opened, that hub measured ~12,000px).
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${HUB}?from=security-officer`, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-path-from]");
     const height = await page.evaluate(() => document.documentElement.scrollHeight);
-    expect(height, "the 375px hub is still as long as the version that was rejected").toBeLessThan(
-      7000,
+    expect(height, "the 375px hub is as long as the version that was rejected").toBeLessThan(
+      11_000,
     );
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto(`${HUB}?from=security-officer`, { waitUntil: "networkidle" });
-    await page.waitForSelector("[data-path-from]");
 
-    // Opening the catalogue is one click, keyboard operable, and lands in the
-    // URL so the view is shareable.
-    await toggle.focus();
-    await expect(toggle).toBeFocused();
-    await page.keyboard.press("Enter");
-    await expect(toggle).toHaveAttribute("aria-expanded", "true");
-    await expect(panel).toBeVisible();
-    await expect(page).toHaveURL(/all=/);
+    // On the guide, every "Vad steget innebär" exists and none is open.
+    await page.goto(`${BASE}/career-center/security-officer`, { waitUntil: "networkidle" });
+    expect(await page.locator("[data-transition-detail]").count()).toBeGreaterThan(0);
+    expect(await page.locator("[data-transition-detail][open]").count()).toBe(0);
   });
 
-  test("a deep link with a filter opens the catalogue already narrowed", async ({ page }) => {
+  test("an old filter link opens the list, and narrows nothing", async ({ page }) => {
     await stubServerFns(page, BASE_REPLIES);
+    await page.goto(`${HUB}#utforska-yrken`, { waitUntil: "networkidle" });
+    const all = await page.locator('#yrkeskatalog a[href^="/career-center/"]').count();
     await page.goto(`${HUB}?level=entry`, { waitUntil: "networkidle" });
     await expect(page.locator("#yrkeskatalog")).toBeVisible();
-    await expect(page.locator("[data-catalogue-toggle]")).toHaveAttribute("aria-expanded", "true");
+    await expect(page.locator('#yrkeskatalog a[href^="/career-center/"]')).toHaveCount(all);
+    // The ignored filter is taken out of the address, not left to be shared.
+    await expect(page).not.toHaveURL(/level=/);
   });
 
   test("a transition detail opens from the keyboard", async ({ page }) => {
@@ -715,7 +729,7 @@ test.describe("structure and access", () => {
     test.setTimeout(90_000);
     page.setDefaultNavigationTimeout(20_000);
     await stubServerFns(page, BASE_REPLIES);
-    await page.goto(`${HUB}?all=1&from=security-officer`, { waitUntil: "networkidle" });
+    await page.goto(`${HUB}?from=security-officer`, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-path-from]");
 
     const hrefs = await page.evaluate(() =>
@@ -759,9 +773,9 @@ test.describe("structure and access", () => {
     expect(await page.locator("nav[aria-label]").count()).toBeGreaterThan(0);
 
     // A visible focus indicator, not merely a focusable element.
-    const toggle = page.locator("[data-catalogue-toggle]");
-    await toggle.focus();
-    const ring = await toggle.evaluate((el) => {
+    const control = page.locator("[data-path-select]");
+    await control.focus();
+    const ring = await control.evaluate((el) => {
       const s = getComputedStyle(el);
       return { outline: s.outlineStyle, width: s.outlineWidth, shadow: s.boxShadow };
     });
@@ -779,7 +793,7 @@ test.describe("structure and access", () => {
     const small = await page.evaluate(() => {
       const out: string[] = [];
       const scope = document.querySelectorAll(
-        "[data-path-from] a, [data-path-from] button, [data-path-from] select, [data-catalogue-toggle], [data-transition] a, [data-transition] summary",
+        "[data-path-from] a, [data-path-from] button, [data-path-from] select, #yrkeskatalog a, [data-transition] a, [data-transition] summary",
       );
       for (const el of Array.from(scope)) {
         const r = el.getBoundingClientRect();
@@ -806,7 +820,7 @@ test.describe("structure and access", () => {
     await noHorizontalScroll(page);
 
     await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto(`${HUB}?from=security-officer&all=1`, { waitUntil: "networkidle" });
+    await page.goto(`${HUB}?from=security-officer#utforska-yrken`, { waitUntil: "networkidle" });
     await page.waitForSelector("[data-path-from]");
     await noHorizontalScroll(page);
 
@@ -818,7 +832,7 @@ test.describe("structure and access", () => {
     await page.setViewportSize({ width: 640, height: 900 });
     for (const url of [
       `${HUB}?from=security-officer`,
-      `${HUB}?from=security-officer&all=1`,
+      `${HUB}?from=security-officer#utforska-yrken`,
       `${BASE}/career-center/security-officer`,
       `${BASE}/career-center/ordningsvakt`,
     ]) {
@@ -848,7 +862,7 @@ test.describe("structure and access", () => {
     for (const width of [375, 640]) {
       await page.setViewportSize({ width, height: 900 });
       for (const url of [
-        `${HUB}?from=security-officer&all=1`,
+        `${HUB}?from=security-officer#utforska-yrken`,
         `${BASE}/career-center/security-officer`,
         `${BASE}/career-center/security-coordinator`,
       ]) {
@@ -870,7 +884,12 @@ test.describe("structure and access", () => {
       }),
     ).toBeVisible();
     const path = page.locator("[data-path-from]");
-    await expect(path).toContainText("Paths from Security Officer");
+    await expect(path).toContainText("Possible next professions from Security Officer");
+    for (const label of await path
+      .locator("[data-path-next] [data-next-profession-link]")
+      .allTextContents()) {
+      expect(label.trim()).toMatch(/^Read about \S/);
+    }
     await expect(path).toContainText("not a decision that you are eligible");
     await expect(page.locator('[data-career-route="from_security_officer"]')).toContainText(
       "independent of one another",

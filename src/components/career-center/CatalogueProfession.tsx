@@ -81,7 +81,6 @@ export function CatalogueProfessionView({ cigSlug }: { cigSlug: string }) {
               </button>
               <Link
                 to="/career-center"
-                search={{ all: true } as never}
                 hash="utforska-yrken"
                 className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
               >
@@ -111,7 +110,7 @@ export function CatalogueProfessionView({ cigSlug }: { cigSlug: string }) {
               {t("cc.cat.missing.body")}
             </p>
             <div className="mt-8">
-              <PrimaryLink to="/career-center" search={{ all: "1" }} hash="utforska-yrken">
+              <PrimaryLink to="/career-center" hash="utforska-yrken">
                 {t("cc.p.unavailable.cta")}
               </PrimaryLink>
             </div>
@@ -254,27 +253,47 @@ function CatalogueProfessionBody({
           {t("cc.cat.next.subtitle")}
         </p>
         {onward.length > 0 ? (
-          <ul className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <ul data-catalogue-next="list" className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
             {onward.map((e) => (
-              <PathwayItem key={`to-${e.otherSlug}`} edge={e} sv={sv} fromPath={path} />
+              <PathwayItem
+                key={`to-${e.otherSlug}`}
+                edge={e}
+                sv={sv}
+                fromPath={path}
+                fromTitle={{ sv: detail.titleSv, en: detail.titleEn }}
+              />
             ))}
           </ul>
         ) : (
-          <p
-            data-catalogue-next="empty"
-            className="mt-6 max-w-[70ch] text-sm leading-relaxed text-muted-foreground"
-          >
-            {t("cc.cat.next.empty")}
-          </p>
+          <div data-catalogue-next="empty" className="mt-6">
+            <p className="max-w-[70ch] rounded-lg border border-border bg-background p-5 text-sm leading-relaxed text-foreground">
+              {t("cc.cat.next.empty").replace("{role}", title)}
+            </p>
+            <Link
+              to="/career-center"
+              hash="utforska-yrken"
+              data-catalogue-all-professions
+              className="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("cc.path.next.empty.explore")}
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </div>
         )}
         {inbound.length > 0 && (
           <>
             <h3 className="mt-10 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               {t("cc.p.prev.title")}
             </h3>
-            <ul className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <ul className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
               {inbound.map((e) => (
-                <PathwayItem key={`from-${e.otherSlug}`} edge={e} sv={sv} fromPath={path} />
+                <PathwayItem
+                  key={`from-${e.otherSlug}`}
+                  edge={e}
+                  sv={sv}
+                  fromPath={path}
+                  fromTitle={{ sv: detail.titleSv, en: detail.titleEn }}
+                />
               ))}
             </ul>
           </>
@@ -408,10 +427,13 @@ function PathwayItem({
   edge,
   sv,
   fromPath,
+  fromTitle,
 }: {
   edge: ProfessionDetail["pathway"][number];
   sv: boolean;
   fromPath: string;
+  /** This page's profession, so the next page's way back can name it. */
+  fromTitle: { sv: string; en: string };
 }) {
   const { t } = useT();
   const title = sv ? edge.otherTitleSv : edge.otherTitleEn;
@@ -419,9 +441,17 @@ function PathwayItem({
   // every other surface: its guide, else its own catalogue page.
   const info = professionInfoDestination({ cigSlug: edge.otherSlug });
   const kindKey = KIND_KEY[edge.transitionKind];
-  const remember = (href: string) => rememberReturn(href, "profession", `${fromPath}#karriarsteg`);
+  const remember = (href: string) =>
+    rememberReturn(href, "profession", `${fromPath}#karriarsteg`, fromTitle);
+  // One action per card, stretched over the card: the same pattern as the
+  // guide's and the hub's next-profession cards.
+  const linkClass =
+    "mt-auto inline-flex min-h-11 items-center gap-1.5 pt-2 text-sm font-semibold text-accent underline-offset-4 after:absolute after:inset-0 after:rounded-lg after:content-[''] hover:text-[color:var(--accent-hover)] hover:underline focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-offset-2";
   return (
-    <li className="flex h-full flex-col rounded-lg border border-border bg-background p-4">
+    <li
+      data-next-profession={edge.otherSlug}
+      className="relative flex h-full flex-col rounded-lg border border-border bg-background p-4 transition-colors hover:border-accent/40"
+    >
       {kindKey && (
         <span className="self-start rounded-full border border-border bg-secondary px-2 py-0.5 text-[11px] font-medium text-foreground">
           {t(kindKey)}
@@ -433,7 +463,7 @@ function PathwayItem({
           to="/career-center/$profession"
           params={{ profession: info.slug }}
           onClick={() => remember(info.href)}
-          className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)]"
+          className={linkClass}
         >
           {t("cc.info.read").replace("{role}", title)}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -443,12 +473,14 @@ function PathwayItem({
           to="/career-center/yrke/$cigSlug"
           params={{ cigSlug: info.cigSlug }}
           onClick={() => remember(info.href)}
-          className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)]"
+          className={linkClass}
         >
           {t("cc.info.read").replace("{role}", title)}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden />
         </Link>
-      ) : null}
+      ) : (
+        <p className="mt-2 text-sm text-muted-foreground">{t("cc.info.none")}</p>
+      )}
     </li>
   );
 }

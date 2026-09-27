@@ -14,9 +14,11 @@
 //   career_center_test_started  -> career_center_test_started  (new name)
 //   career_test_completed       -> assessment_completed        (existing)
 //   career_profession_opened    -> profession_explored         (existing)
-//   career_filter_used          -> career_filter_used          (new name)
 //
-// Two of the four already have an allowlisted name that means precisely the
+// (`career_filter_used` measured the catalogue filters, and went with them —
+// see the vocabulary below.)
+//
+// Two of the three already have an allowlisted name that means precisely the
 // right thing, and reusing them keeps the existing funnel readable rather
 // than splitting one journey across two vocabularies. `career_test_completed`
 // needs no code here at all: the assessment flow already emits
@@ -62,18 +64,19 @@ import {
   type FunnelEventName,
 } from "@/lib/career-discovery/v31-feedback.functions";
 
+// `career_filter_used` left this vocabulary with the catalogue filters it
+// measured. The wire name stays in the funnel allowlist and in the database
+// CHECK constraint — no schema change for a removed control — so events
+// recorded before the change remain valid rows.
+
 /** The Career Center's own vocabulary, kept separate from the wire names so
  *  call sites read as the product event they mean rather than as whatever
  *  the funnel allowlist happens to call it. */
-export type CareerCenterEvent =
-  | "career_center_test_started"
-  | "career_profession_opened"
-  | "career_filter_used";
+export type CareerCenterEvent = "career_center_test_started" | "career_profession_opened";
 
 export const CAREER_CENTER_EVENT_WIRE_NAME: Readonly<Record<CareerCenterEvent, FunnelEventName>> = {
   career_center_test_started: "career_center_test_started",
   career_profession_opened: "profession_explored",
-  career_filter_used: "career_filter_used",
 };
 
 /** Where in the Career Center an event came from. Kept to a closed set: a
@@ -91,9 +94,8 @@ export type CareerCenterSurface =
 
 export interface CareerCenterEventDetail {
   readonly surface: CareerCenterSurface;
-  /** Profession slug for `career_profession_opened`; filter key for
-   *  `career_filter_used`. Never free text typed by the visitor — a search
-   *  query is content, and content does not belong in telemetry. */
+  /** Profession slug for `career_profession_opened`. Never free text typed
+   *  by the visitor — content does not belong in telemetry. */
   readonly subject?: string;
 }
 

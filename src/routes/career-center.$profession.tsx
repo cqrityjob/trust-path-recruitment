@@ -102,7 +102,9 @@ function ProfessionPage() {
             {t("cc.p.unavailable.body")}
           </p>
           <div className="mt-8">
-            <PrimaryLink to="/career-center">{t("cc.p.unavailable.cta")}</PrimaryLink>
+            <PrimaryLink to="/career-center" hash="utforska-yrken">
+              {t("cc.p.unavailable.cta")}
+            </PrimaryLink>
           </div>
         </div>
       </Section>

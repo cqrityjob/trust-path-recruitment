@@ -10,8 +10,9 @@ import { readReturn, type ReturnContext } from "@/lib/career-center/return-conte
 // Server-rendered as the plain breadcrumb "Karriärcenter / {yrke}", which is
 // true for every reader. After hydration, when this tab recorded where the
 // reader came from for THIS page, the first crumb becomes a named way back
-// to exactly that view — "Tillbaka till yrkeskatalogen", filters and section
-// included. See return-context.ts.
+// to exactly that view — "Tillbaka till ditt nuvarande yrke" (the hub, the
+// chosen profession still chosen), "Tillbaka till Väktare" (the previous
+// profession's next steps). See return-context.ts.
 
 const LABEL: Record<ReturnContext["origin"], TranslationKey> = {
   catalogue: "cc.back.catalogue",
@@ -31,7 +32,7 @@ export function ProfessionBackLink({
   targetPath: string;
   currentTitle: string;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const router = useRouter();
   const [ctx, setCtx] = useState<ReturnContext | null>(null);
   useEffect(() => {
@@ -55,7 +56,12 @@ export function ProfessionBackLink({
             className="inline-flex min-h-11 items-center gap-1.5 font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />
-            {t(LABEL[ctx.origin])}
+            {ctx.origin === "profession" && ctx.title
+              ? t("cc.back.professionNamed").replace(
+                  "{role}",
+                  lang === "sv" ? ctx.title.sv : ctx.title.en,
+                )
+              : t(LABEL[ctx.origin])}
           </a>
         ) : (
           <Link

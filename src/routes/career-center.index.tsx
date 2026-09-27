@@ -1,14 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import {
-  ArrowRight,
-  Building2,
-  ChevronDown,
-  Compass,
-  FileCheck2,
-  MapPin,
-  Users,
-} from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, ChevronDown, FileCheck2, MapPin } from "lucide-react";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useLocalizedHead, useT } from "@/i18n/context";
@@ -17,17 +9,18 @@ import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
 import { MVP_QUESTION_COUNT } from "@/lib/career-discovery/v31/personal-layer";
 import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import {
-  ENTRY_LEVEL_SEARCH,
-  NEXT_LEVEL_SEARCH,
+  L,
   ORIGIN_NONE,
   PUBLISHED_PROFESSION_COUNT,
-  applyExplorerSearch,
+  LEGACY_CATALOGUE_KEYS,
   careerOrigin,
-  nearestNonEmpty,
-  parseExplorerSearch,
+  getFamily,
+  hubProfessions,
+  icon,
+  parseHubSearch,
   personalDirection,
   upcomingProfessions,
-  type ExplorerSearch,
+  type HubSearch,
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
 import {
@@ -44,72 +37,49 @@ import { CareerHero } from "@/components/career-center/CareerHero";
 import { CareerRoutes } from "@/components/career-center/CareerRoutes";
 import { PathFromSection } from "@/components/career-center/PathFromSection";
 import { PersonalDirectionSection } from "@/components/career-center/PersonalDirection";
-import { ProfessionExplorer } from "@/components/career-center/ProfessionExplorer";
+import { ProfessionCard } from "@/components/career-center/ProfessionCard";
 
-// The Career Center hub, built around the questions a reader actually has,
-// in the order they have them:
+// The Career Center hub, built around the four questions a reader has, in
+// the order they have them:
 //
-//   1 hero        what is this and where do I start (three doors: explore,
-//                 "I know my profession", "help me choose" / "my result")
-//   2 din riktning     what did my career analysis recommend?    (fit)
-//                      — HERE only once a signed-in reader's own
-//                      result can be read; otherwise it is the compact
-//                      offer of the analysis, after the catalogue
-//   3 från ditt yrke   I work as X — what is it, where can I go? (pathFrom)
-//   4 utforska yrken   the full catalogue, one click (or one link) away
-//   5 karriärvägar     what directions exist in this industry?
+//   What is this profession?        · What could come next?
+//   What would I need to get there? · Where are the jobs?
+//
+//   1 hero             what this is, and the two ways in: "I know my
+//                      profession" and "help me choose" (or "my result")
+//   2 din riktning     what did MY career analysis suggest?       (fit)
+//                      — HERE once a signed-in reader's own result can be
+//                      read; otherwise the compact offer of the analysis,
+//                      after the list of professions
+//   3 från ditt yrke   I work as X — what is it, and which professions can
+//                      come next? Answered on the spot           (pathFrom)
+//   4 alla yrken       every published guide as a card, no filters
+//   5 karriärvägar     general directions through the industry — not
+//                      about the reader, and said to be so
 //   6 så bygger vi innehållet   why should I believe any of it
 //
-// The catalogue moved above the career routes: "show me the professions"
-// is the question most readers arrive with, and it used to sit below a
-// section of route diagrams.
+// ── WHAT THIS PASS REMOVED, AND WHY ────────────────────────────────────
 //
-// ── TWO PERSONAL SECTIONS, NEVER ONE ───────────────────────────────────
+// The list of professions used to sit behind "Visa alla yrken", and opening
+// it produced a search box, a family filter under four group headings, a
+// level filter, "Fler filter" with four more, and three "quick choice"
+// filter links — 29 controls over eleven guides. Every "explore the others"
+// link on the page (the empty next-steps state, the analysis offer, an
+// unknown saved role) led into that block, so a reader who had just chosen
+// their profession was sent back to searching. The list is now simply shown,
+// and every such link lands on it. See hub-search.ts for what happens to the
+// old filter links (they still open the list, and narrow nothing).
 //
-// `pathFrom` and `fit` answer different questions from different inputs, and
-// they are rendered as separate sections with separate headings, each stating
-// its own basis. A reader must always be able to tell whether a card is there
-// because an instrument scored them or because they named the job they are
-// in. There is no combined "Rekommenderat för dig" heading anywhere, and
-// there is no state in which either section claims eligibility — see
-// ELIGIBILITY_IS_NEVER_ASSESSED in career-origin.ts.
+// ── THREE PERSONAL-ISH SECTIONS, NEVER ONE ─────────────────────────────
 //
-// `pathFrom` comes FIRST because it is the question most readers arrive with,
-// it works for an anonymous visitor, and it needs no assessment.
-//
-// ── THE CATALOGUE IS BEHIND A CLICK ────────────────────────────────────
-//
-// Eleven guides plus a filter bar, rendered unconditionally, is what made
-// this page 11,700px tall on a 375px screen. The explorer now opens on an
-// explicit "Visa alla yrken", and the open state lives in the URL (`?all=1`),
-// so a filtered catalogue view is still shareable and still deep-linkable —
-// and any narrowing filter in the URL forces it open, because a link that
-// filters the catalogue has to show it.
-//
-// ── WHAT CHANGED IN THIS PASS, AND WHY ─────────────────────────────────
-//
-// The previous hub had six sections and THREE competing calls to action
-// above the fold: "Starta karriärtestet" and "Utforska yrken" side by side in
-// the hero, then a "Var står du i dag?" band of three more cards, then a
-// full-width dark section repeating the test CTA a third time. A reader who
-// had already taken the analysis was offered it twice more; a reader who had
-// not was asked to choose between two doors before being told what was behind
-// either.
-//
-// So: one primary action per section, and the hero's primary action is chosen
-// by STATE rather than by hope. A reader whose own analysis is in hand gets
-// "Utgå från mitt resultat"; everybody else gets "Utforska alla yrken". The
-// second door is a quiet link, never a second button.
-//
-// The retired "Var står du i dag?" band's two useful destinations — the
-// explorer pre-filtered to entry level and to mid+senior — survive as quick
-// choices inside the explorer section, which is where a reader is already
-// deciding how to narrow the catalogue. The employer path keeps its link.
-// Nothing that led somewhere was deleted; the competition between them was.
-//
-// The retired dark career-test band's content survives inside section 2,
-// which is the only place on the page where "you have no result yet" is a
-// true statement — so it is the only place the invitation belongs.
+// `fit` (your analysis), `pathFrom` (the profession you named) and the career
+// routes (general directions) answer different questions from different
+// inputs. They are separate sections with separate headings, each stating
+// its own basis, so a reader can always tell whether a card is there because
+// an instrument scored them, because they named the job they are in, or
+// because the routes are an example for everybody. There is no combined
+// "Rekommenderat för dig" heading anywhere, and no state in which any of
+// them claims eligibility — see ELIGIBILITY_IS_NEVER_ASSESSED.
 //
 // ── THE PERSONAL SECTION IS CLIENT-RESOLVED ────────────────────────────
 //
@@ -156,15 +126,16 @@ export const Route = createFileRoute("/career-center/")({
       ],
     };
   },
-  validateSearch: parseExplorerSearch,
+  validateSearch: parseHubSearch,
   component: CareerCenterHub,
 });
 
-const EXPLORER_ANCHOR = "utforska-yrken";
+/** The list of every profession. The id is the one the retired catalogue
+ *  section used, so `#utforska-yrken` links keep landing on the professions. */
+const LIST_ANCHOR = "utforska-yrken";
 const PERSONAL_ANCHOR = "min-riktning";
 const PATH_ANCHOR = "fran-mitt-yrke";
 const ROUTES_ANCHOR = "karriarvagar";
-const EXPLORER_PANEL_ID = "yrkeskatalog";
 
 function CareerCenterHub() {
   const { t, lang } = useT();
@@ -193,19 +164,22 @@ function CareerCenterHub() {
         profileLabel: stated.otherLabel,
         profileTitleSv: stated.catalogueTitleSv,
         profileTitleEn: stated.catalogueTitleEn,
+        profileCatalogueNext: stated.catalogueNext,
       }),
-    [search.from, stated.slug, stated.otherLabel, stated.catalogueTitleSv, stated.catalogueTitleEn],
+    [
+      search.from,
+      stated.slug,
+      stated.otherLabel,
+      stated.catalogueTitleSv,
+      stated.catalogueTitleEn,
+      stated.catalogueNext,
+    ],
   );
 
   const writeFrom = useCallback(
     (value: string | null) => {
       navigate({
-        search: (prev) => {
-          const next = { ...prev } as Record<string, unknown>;
-          if (value) next.from = value;
-          else delete next.from;
-          return next as ExplorerSearch;
-        },
+        search: (): HubSearch => (value ? { from: value } : {}),
         replace: true,
         // The reader is working in this section; do not jump to the top.
         resetScroll: false,
@@ -222,39 +196,27 @@ function CareerCenterHub() {
   );
   const onResetOrigin = useCallback(() => writeFrom(null), [writeFrom]);
 
-  const onToggleCatalogue = useCallback(() => {
+  // A link minted for the retired catalogue — `?all=1#utforska-yrken`,
+  // `?level=entry`, a return link stored before the change — still opens
+  // this page and still lands on the list. Its filters are ignored by the
+  // parser; here they are also taken out of the address, so a reader never
+  // sees or shares a filter that no longer does anything. `from` survives.
+  useEffect(() => {
+    const raw = new URLSearchParams(window.location.search);
+    if (!LEGACY_CATALOGUE_KEYS.some((key) => raw.has(key))) return;
     navigate({
-      search: (prev) => {
-        const next = { ...prev } as Record<string, unknown>;
-        if (prev.all) delete next.all;
-        else next.all = true;
-        return next as ExplorerSearch;
-      },
+      search: (): HubSearch => (search.from ? { from: search.from } : {}),
+      hash: true,
       replace: true,
       resetScroll: false,
     });
-  }, [navigate]);
-
-  const results = useMemo(() => applyExplorerSearch(search, lang), [search, lang]);
-  const relaxation = useMemo(
-    () => (results.length === 0 ? nearestNonEmpty(search, lang) : null),
-    [results.length, search, lang],
-  );
-
-  const onSearchChange = useCallback(
-    (next: ExplorerSearch) => {
-      // `replace` keeps the back button meaning "leave the Career Center"
-      // rather than "undo one chip", which is what a reader expects after
-      // clicking through half a dozen filters.
-      navigate({ search: () => next, replace: true, resetScroll: false });
-      track("career_filter_used", { surface: "hub_explorer" });
-    },
-    [navigate, track],
-  );
+    // Once, on arrival: the page itself never writes these keys.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Opening a profession from the hub records where the reader was — the
-  // exact view, filters included — so the profession page can offer a named
-  // way back to it. Tracking is unchanged.
+  // exact view, current profession included — so the profession page can
+  // offer a named way back to it. Tracking is unchanged.
   const opened = useCallback(
     (
       href: string,
@@ -268,22 +230,23 @@ function CareerCenterHub() {
     [track],
   );
 
-  // A direct link to a section (`?all=true#utforska-yrken`) is scrolled by
-  // the browser before the personal sections have rendered. Once they
-  // settle — and they change height when they do — land the reader on the
-  // section again, unless they have already started scrolling themselves.
+  // A direct link to a section (`#utforska-yrken`) is scrolled by the
+  // browser before the personal sections have rendered. Once they settle —
+  // and they change height when they do — land the reader on the section
+  // again, unless they have already started scrolling themselves.
   const settled =
     signedIn === false ||
     (signedIn === true && direction.state !== "loading" && stated.status !== "loading");
   useSettledHashScroll(settled);
+
+  const professions = useMemo(() => hubProfessions(lang === "en" ? "en" : "sv"), [lang]);
 
   const personalSection = (
     <Section bordered id={PERSONAL_ANCHOR} className="scroll-mt-4 bg-secondary/40 py-12 md:py-16">
       <PersonalDirectionSection
         direction={direction}
         onRetry={refetch}
-        exploreSearch={search as Record<string, unknown>}
-        exploreAnchor={EXPLORER_ANCHOR}
+        listAnchor={LIST_ANCHOR}
         savedProfessionId={origin.saved?.profession?.id ?? null}
         onProfessionOpen={(href) => opened(href, "recommendation", PERSONAL_ANCHOR, "hub_personal")}
         onAssessmentStart={() =>
@@ -296,8 +259,8 @@ function CareerCenterHub() {
   // The reader's own result leads the page once it can be read. Before a
   // session is observed — including the HTML a crawler keeps — and for a
   // reader without a result, the section is the compact offer of the
-  // analysis and sits after the catalogue, so nobody scrolls past an
-  // invitation to reach the professions.
+  // analysis and sits after the list, so nobody scrolls past an invitation
+  // to reach the professions.
   const personalFirst = signedIn === true && direction.state !== "no_result";
 
   return (
@@ -311,41 +274,33 @@ function CareerCenterHub() {
         actions={
           // ONE primary button. Which one depends on whether this reader's own
           // analysis is in hand; the other path is a quiet link beside it, so
-          // the two never compete for the same attention.
+          // the two never compete for the same attention. Both are jumps on
+          // this page, so the reader's current profession (`from`) stays.
           personalised ? (
             <>
-              <PrimaryLink to="/career-center" hash={PERSONAL_ANCHOR} variant="primary">
+              <PrimaryLink
+                to="/career-center"
+                search={search as Record<string, string>}
+                hash={PERSONAL_ANCHOR}
+              >
                 {t("cc.hero.cta.personal")}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
               </PrimaryLink>
-              {/* The reader's current filters plus `all`, so the hero's
-                  secondary action opens the catalogue rather than scrolling to
-                  a collapsed panel. Spread explicitly: the router types its
-                  search reducer against every route's union. */}
-              <Link
-                to="/career-center"
-                search={{ ...search, all: true } as never}
-                hash={EXPLORER_ANCHOR}
-                className={SECONDARY_LINK}
-              >
+              <a href={`#${LIST_ANCHOR}`} className={SECONDARY_LINK}>
                 {t("cc.hero.cta.explore")}
-              </Link>
+              </a>
             </>
           ) : (
             <PrimaryLink
               to="/career-center"
-              search={{ all: "1" }}
-              hash={EXPLORER_ANCHOR}
-              variant="primary"
+              search={search as Record<string, string>}
+              hash={LIST_ANCHOR}
             >
               {t("cc.hero.cta.explore")}
               <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
             </PrimaryLink>
           )
         }
-        // Sketch 4 puts the two ways INTO a career path here. TrustRail
-        // moves to the catalogue section it actually describes -- see the
-        // note there -- rather than being dropped.
         aside={
           <CareerEntryCards
             pathAnchor={PATH_ANCHOR}
@@ -367,105 +322,86 @@ function CareerCenterHub() {
           onClear={onClearOrigin}
           onReset={onResetOrigin}
           onRetryProfile={stated.refetch}
+          listAnchor={LIST_ANCHOR}
           onProfessionOpen={(href) => opened(href, "current_role", PATH_ANCHOR, "hub_personal")}
         />
       </Section>
 
-      {/* ── 4. UTFORSKA YRKEN — one click, or one link, away ───────── */}
-      <Section bordered id={EXPLORER_ANCHOR} className="scroll-mt-4 bg-secondary/40 py-12 md:py-16">
-        {/* TrustRail used to sit in the hero aside, which sketch 4 gives to
-            the two path entry cards. It is not hero content: it counts the
-            profession guides and says where they come from, which is a
-            statement about THIS section's catalogue. So it moves here
-            rather than being deleted — the reader still gets it, beside
-            the thing it describes. */}
+      {/* ── 4. ALLA YRKEN — every published guide, shown, not searched ── */}
+      <Section bordered id={LIST_ANCHOR} className="scroll-mt-4 bg-secondary/40 py-12 md:py-16">
+        {/* TrustRail describes THIS list — how many guides, where their facts
+            come from — so it sits beside the heading on a wide screen. On a
+            phone it follows the cards: above them it pushed the first
+            profession below the fold. */}
         <div className="grid gap-8 md:grid-cols-12 md:items-start">
           <div className="max-w-2xl md:col-span-7">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              {t("cc.explore.title")}
+              {t("cc.explore.title")}{" "}
+              <span className="tabular-nums text-muted-foreground">
+                ({PUBLISHED_PROFESSION_COUNT})
+              </span>
             </h2>
             <p className="mt-3 text-base leading-relaxed text-muted-foreground">
               {t("cc.explore.subtitle")}
             </p>
           </div>
-          <div className="md:col-span-5">
+          <div className="hidden md:col-span-5 md:block">
             <TrustRail />
           </div>
         </div>
 
-        {/* The two surviving destinations of the retired "Var står du i dag?"
-            band, plus the employer path. Quiet links, not cards: they narrow a
-            list the reader is about to see, which is a control rather than a
-            decision about where to go next. Following one opens the catalogue,
-            because `parseExplorerSearch` forces `all` whenever a narrowing
-            filter is present. */}
-        <nav aria-label={t("cc.explore.quick.title")} className="mt-6">
-          <ul className="flex flex-wrap items-center gap-2">
-            <QuickChoice
-              icon={<Compass className="h-3.5 w-3.5" aria-hidden />}
-              label={t("cc.explore.quick.entry")}
-              search={{ ...ENTRY_LEVEL_SEARCH, all: true }}
-            />
-            <QuickChoice
-              icon={<Users className="h-3.5 w-3.5" aria-hidden />}
-              label={t("cc.explore.quick.next")}
-              search={{ ...NEXT_LEVEL_SEARCH, all: true }}
-            />
-            <li>
-              <Link to="/employers" className={QUICK_CHOICE_CLASS}>
-                <Building2 className="h-3.5 w-3.5" aria-hidden />
-                {t("cc.explore.quick.org")}
-              </Link>
+        {/* The id the catalogue panel had, kept for any `#yrkeskatalog`
+            link. Cards carry the classifications the filters used to — level
+            and family — as information, not as controls. */}
+        <ul id="yrkeskatalog" className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {professions.map((p) => (
+            <li key={p.slug}>
+              <ProfessionCard
+                slug={p.slug}
+                title={lang === "sv" ? p.titleSv : p.titleEn}
+                description={L(p.description, lang)}
+                icon={icon(p.icon)}
+                level={t(`cc.level.${p.level}` as TranslationKey)}
+                family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
+                formalRequirement={
+                  p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
+                }
+                onOpen={(slug) =>
+                  opened(`/career-center/${slug}`, "catalogue", LIST_ANCHOR, "hub_explorer")
+                }
+              />
             </li>
-          </ul>
-        </nav>
+          ))}
+        </ul>
 
-        {/* ── PROGRESSIVE DISCLOSURE ───────────────────────────────────
-            A real <button> with aria-expanded and aria-controls, not a
-            <details>: the open state has to live in the URL so a filtered
-            catalogue view is shareable, and that means the toggle navigates
-            rather than toggling DOM state. */}
-        <div className="mt-8">
-          <button
-            type="button"
-            data-catalogue-toggle
-            aria-expanded={Boolean(search.all)}
-            aria-controls={EXPLORER_PANEL_ID}
-            onClick={onToggleCatalogue}
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground shadow-xs transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        <div className="mt-8 md:hidden">
+          <TrustRail />
+        </div>
+
+        {/* "Kommer" — text only, never a card, never a link: these roles have
+            no guide that clears the publishability rule yet. */}
+        {upcomingProfessions.length > 0 && (
+          <div
+            data-upcoming
+            className="mt-10 rounded-lg border border-border bg-background/70 p-5 md:p-6"
           >
-            {search.all ? t("cc.explore.hideAll") : t("cc.explore.showAll")}
-            <span className="tabular-nums text-muted-foreground">
-              ({PUBLISHED_PROFESSION_COUNT})
-            </span>
-            <ChevronDown
-              className={`h-4 w-4 transition-transform duration-200 ${search.all ? "rotate-180" : ""}`}
-              aria-hidden
-            />
-          </button>
-          <p className="mt-2 max-w-[62ch] text-xs leading-relaxed text-muted-foreground">
-            {t("cc.explore.showAll.help")}
-          </p>
-        </div>
-
-        <div id={EXPLORER_PANEL_ID} hidden={!search.all} className="mt-8">
-          <ProfessionExplorer
-            search={search}
-            onSearchChange={onSearchChange}
-            results={results}
-            relaxation={relaxation}
-            upcoming={upcomingProfessions}
-            onProfessionOpen={(slug) =>
-              opened(`/career-center/${slug}`, "catalogue", EXPLORER_ANCHOR, "hub_explorer")
-            }
-          />
-        </div>
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              {t("cc.explore.upcoming.title")}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("cc.explore.upcoming.body")}
+            </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {upcomingProfessions.map((p) => (lang === "sv" ? p.titleSv : p.titleEn)).join(" · ")}
+            </p>
+          </div>
+        )}
       </Section>
 
       {/* ── 2′. DIN RIKTNING — the compact offer, when there is no result */}
       {!personalFirst && personalSection}
 
-      {/* ── 5. KARRIÄRVÄGAR ─────────────────────────────────────────── */}
+      {/* ── 5. KARRIÄRVÄGAR — general, not personal ─────────────────── */}
       <Section bordered id={ROUTES_ANCHOR} className="scroll-mt-4 bg-background py-12 md:py-16">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
@@ -529,33 +465,6 @@ function CareerCenterHub() {
 
 const SECONDARY_LINK =
   "inline-flex h-11 items-center justify-center rounded-md px-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
-
-const QUICK_CHOICE_CLASS =
-  "inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
-
-function QuickChoice({
-  icon,
-  label,
-  search,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  search: ExplorerSearch;
-}) {
-  return (
-    <li>
-      <Link
-        to="/career-center"
-        search={search}
-        hash={EXPLORER_ANCHOR}
-        className={QUICK_CHOICE_CLASS}
-      >
-        {icon}
-        {label}
-      </Link>
-    </li>
-  );
-}
 
 /**
  * Re-land a direct section link once the page has settled.
@@ -621,7 +530,7 @@ function TestFacts({ signedOut }: { signedOut: boolean }) {
   );
 }
 
-/** The hero's supporting panel. Three statements, one of them a number that
+/** The list's supporting panel. Three statements, one of them a number that
  *  is counted rather than claimed. */
 function TrustRail() {
   const { t } = useT();

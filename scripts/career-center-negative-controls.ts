@@ -137,12 +137,60 @@ const CONTROLS: readonly Control[] = [
   {
     name: "the education event and its unreachable schema coming back",
     file: "src/lib/career-center/analytics.ts",
-    from: `  career_filter_used: "career_filter_used",
+    from: `  career_profession_opened: "profession_explored",
 };`,
-    to: `  career_filter_used: "career_filter_used",
+    to: `  career_profession_opened: "profession_explored",
   career_education_opened: "career_education_opened",
 };`,
     expect: "must not return without a reachable caller",
+  },
+
+  // ── The simplified journey (2026-09-27) ─────────────────────────────
+  //
+  // The reported defect: a reader chose their profession, followed a link
+  // onward, and landed in a search box and 29 filter chips. Each control
+  // below brings one piece of that back.
+  {
+    name: "a way on that lands in a filtered catalogue again",
+    file: "src/components/career-center/CatalogueProfession.tsx",
+    from: `              hash="utforska-yrken"
+              data-catalogue-all-professions`,
+    to: `              search={{ all: true } as never}
+              hash="utforska-yrken"
+              data-catalogue-all-professions`,
+    expect: "links to a filtered catalogue",
+  },
+  {
+    name: "a search box back in the list of professions",
+    file: "src/routes/career-center.index.tsx",
+    from: `        <ul id="yrkeskatalog"`,
+    to: `        <input type="search" aria-label="Sök" />
+        <ul id="yrkeskatalog"`,
+    expect: "no search box",
+  },
+  {
+    name: "an old catalogue filter narrowing the list again",
+    file: "src/lib/career-center/hub-search.ts",
+    from: `  return from && isSelectableOrigin(from) ? { from } : {};`,
+    to: `  if (typeof raw.level === "string") return { level: raw.level } as HubSearch;
+  return from && isSelectableOrigin(from) ? { from } : {};`,
+    expect: "must narrow nothing",
+  },
+  {
+    name: "the current profession showing three next steps and a hop for the rest",
+    file: "src/lib/career-center/career-origin.ts",
+    from: `    directions,
+    related: relatedGuides(profession, directions),`,
+    to: `    directions: directions.slice(0, 3),
+    related: relatedGuides(profession, directions),`,
+    expect: "every recorded onward move",
+  },
+  {
+    name: "a next-profession card that does not say where it goes",
+    file: "src/components/career-center/NextProfessionCard.tsx",
+    from: `        {t("cc.info.read").replace("{role}", title)}`,
+    to: `        {t("cc.step.detail")}`,
+    expect: "must say where it goes",
   },
 ];
 

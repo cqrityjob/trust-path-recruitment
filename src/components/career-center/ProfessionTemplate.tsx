@@ -26,7 +26,7 @@ import {
   onwardTransitions,
   professionEducation,
   proficiencyLabels,
-  publishedOnly,
+  relatedGuides,
   type Profession,
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
@@ -40,64 +40,46 @@ import { CompetencyCard } from "./CompetencyCard";
 import { EducationPanel } from "./EducationPanel";
 import { FAQAccordion } from "./FAQAccordion";
 import { ProfessionCard } from "./ProfessionCard";
-import { ProfessionNextSteps } from "./NextStepPanel";
-import { TransitionCard } from "./TransitionCard";
+import { PassportBoundary, ProfessionJobs } from "./NextStepPanel";
+import { NextProfessionCard } from "./NextProfessionCard";
 
-// One published profession guide, in the settled order:
+// One published profession guide, read in the order a reader asks:
 //
-//   1 role hero · 2 fact row · 3 regulatory notice · 4 om yrket ·
-//   5 en dag i rollen · 6 passar dig som · 7 passar mindre bra om ·
-//   8 kompetenser · 9 formella krav · 10 så kommer du in ·
-//   11 utbildning och behörighet · 12 möjliga nästa karriärsteg ·
-//   13 relaterade jobb och ditt Passport · 14 karriäranalys ·
-//   15 relaterade yrken · 16 källor och governance
+//   1 role hero · 2 fact row · 3 regulatory notice ·
+//   4 om yrket och arbetsuppgifter ·
+//   5 formella krav · 6 så kommer du in · 7 utbildning och behörighet ·
+//   8 möjliga nästa yrken · 9 relevanta jobb ·
+//   10 mer om yrket (passar dig som · kompetenser · ditt Passport ·
+//      karriäranalys · relaterade yrken · vanliga frågor) ·
+//   11 källor och granskning
 //
-// ── THE MVP TEXT SPECIFICATION (2026-09-27) ────────────────────────────
+// ── WHAT THE READER NEEDS FIRST, AND WHAT IS FÖRDJUPNING ───────────────
 //
-// Education is back BEFORE the career steps. The specification fixes one
-// order for every profession page — Om yrket → Arbetsuppgifter →
-// Kompetenser → Krav → Utbildning → Möjliga nästa steg → Lediga jobb →
-// Källor — and the catalogue summary (CatalogueProfession) already follows
-// it, so a guide and a summary now read in the same order.
+// Four questions bring a reader to a profession page: what does the work
+// involve, what does it take to get in, where can it lead, and where are the
+// jobs. Sections 4–9 answer them, in that order. Everything else a guide
+// knows — the competency profile, who the role suits, the Passport
+// boundary, the analysis, related roles, FAQs — is fördjupning and follows
+// under one heading. (The MVP text specification of 2026-09-27 had the
+// competency profile between the tasks and the requirements; it now sits in
+// the fördjupning, and the guard follows.)
 //
-// ── WHAT THE PILOT PASS CHANGED ────────────────────────────────────────
+// ── A GUIDE WITH NO RECORDED NEXT STEP IS NOT A DEAD END ───────────────
 //
-// Career steps moved before education, and both were rebuilt. The rebuild
-// stands; the order was superseded by the specification above.
+// Möjliga nästa yrken lists every recorded onward move as a card with one
+// click to that profession (NextProfessionCard), each with its detail behind
+// "Vad steget innebär". When none is recorded — Säkerhetschef and
+// AML-specialist today — the section says so, then shows the professions
+// the guide itself lists as related, named as related rather than as next
+// steps, and the way to every profession. Jobs and the rest of the page
+// still follow.
 //
-//   * "Karriärväg" was two columns of role names. It is now explained
-//     transitions (see TransitionCard): each one classified as an adjacent
-//     step, a formal gate or a longer-term goal, with what transfers, what is
-//     demanded more of, the destination's formal requirements verbatim, and —
-//     for a distant destination — the intermediate role the graph records.
+// ── WHAT THIS PAGE DOES NOT DO ─────────────────────────────────────────
 //
-//   * "Utbildning och certifikat" was two lists of names. It is now the
-//     neutral education surface: every row states whether it is a FORMAL
-//     REQUIREMENT or RECOMMENDED DEVELOPMENT, which country that holds in,
-//     its source and its review date, and rows that cannot carry all four are
-//     named as under review rather than presented as finished.
-//
-//   * Related open jobs and the Passport boundary are new. Section 4.8 of the
-//     directive asked for the first; the second exists because a page that
-//     tells somebody what a role requires, next to a product that records
-//     what they hold, invites exactly one wrong inference — and says so.
-//
-// ── WHAT THIS PAGE NO LONGER DOES ──────────────────────────────────────
-//
-// It no longer renders the Career Center's site-wide statistics panel beside
-// the title of one specific job. It no longer renders three dashed
-// placeholder boxes ("Utbildningsinformation för denna roll byggs upp
-// löpande", the same for certificates, and a jobs panel for a job board that
-// is a separate product area) — a section with no content is now simply
-// absent. And it no longer carries the "under development" notice, because a
-// guide that would have needed one is not routed here at all: the route
-// checks publishability first and shows an unavailable state instead.
-//
-// Every remaining section is conditional on its own data. A guide that has no
-// sourced formal requirements shows no "Formella krav" heading; one whose
-// competency profile is not distinctive enough to say anything honest about
-// fit shows neither fit section. Omission is the designed behaviour, not a
-// gap in the template.
+// It renders no Career-Center-wide statistics beside one job's title, no
+// dashed "coming soon" boxes, and no "under development" notice: a guide that
+// would need one is not routed here at all (the route checks publishability
+// first). Every section below the fold is conditional on its own data.
 
 export function ProfessionTemplate({ profession }: { profession: Profession }) {
   const { t, lang } = useT();
@@ -120,32 +102,57 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
   // transition builders enforce for themselves.
   const onward = onwardTransitions(profession);
   const inbound = inboundTransitions(profession);
-  const relatedRoles = publishedOnly(profession.related ?? []).filter(
-    (p) => p.id !== profession.id,
-  );
+  const related = relatedGuides(profession, onward);
+  // With no recorded onward move, the related professions ARE the way on
+  // and are shown in that section, unfolded; otherwise they are fördjupning.
+  const relatedAsWayOn = onward.length === 0 && related.length > 0;
 
   const dayItems = [...profession.responsibilities];
   const environments = profession.workEnvironments ?? [];
   const hasFormal = (profession.formalRequirements?.length ?? 0) > 0 || steps.length > 0;
   const jobsSlug = jobsEnabled() ? jobsProfessionSlug(profession) : null;
   const guidePath = `/career-center/${profession.slug}`;
-  // A profession opened from THIS guide comes back to this guide's steps.
+  // A profession opened from THIS guide comes back to this guide's steps,
+  // and the way back names this guide.
   const openFromHere = (slug: string, surface: "profession_transitions" | "profession_related") => {
     track("career_profession_opened", { surface, subject: slug });
-    rememberReturn(`/career-center/${slug}`, "profession", `${guidePath}#karriarsteg`);
+    rememberReturn(`/career-center/${slug}`, "profession", `${guidePath}#karriarsteg`, {
+      sv: profession.titleSv,
+      en: profession.titleEn,
+    });
   };
 
-  // The page index. Short labels of their own (cc.nav.*), so the index can
-  // sit above the sections without reordering the guide's own headings.
+  // The page index, in reading order. Short labels of their own (cc.nav.*),
+  // so the index can sit above the sections without reordering the guide's
+  // own headings.
   const sections: SectionLink[] = [
     { id: "om-yrket", label: t("cc.nav.about") },
-    { id: "kompetenser", label: t("cc.nav.competencies") },
     ...(hasFormal ? [{ id: "krav", label: t("cc.nav.requirements") }] : []),
     { id: "utbildning", label: t("cc.nav.education") },
     { id: "karriarsteg", label: t("cc.nav.next") },
     { id: "nasta-steg", label: t("cc.nav.jobs") },
+    { id: "mer-om-yrket", label: t("cc.nav.more") },
     { id: "kallor", label: t("cc.nav.sources") },
   ];
+
+  const relatedCards = (headingLevel: 3 | 4) =>
+    related.map((p) => (
+      <li key={p.slug}>
+        <ProfessionCard
+          slug={p.slug}
+          title={lang === "sv" ? p.titleSv : p.titleEn}
+          description={L(p.description, lang)}
+          icon={icon(p.icon)}
+          level={t(`cc.level.${p.level}` as TranslationKey)}
+          family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
+          formalRequirement={
+            p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
+          }
+          headingLevel={headingLevel}
+          onOpen={(slug) => openFromHere(slug, "profession_related")}
+        />
+      </li>
+    ));
 
   return (
     <>
@@ -158,10 +165,9 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         title={title}
         lead={short}
         actions={
-          // The guide's own next step first: where this profession leads.
-          // Jobs sit beside it only when the job board is open AND the
-          // profession has a job identity; the career analysis is offered
-          // further down, where it belongs (section 14).
+          // Two of the four answers are one jump away from the top: where
+          // this profession can lead, and its jobs — the latter only when the
+          // job board is open AND the profession has a job identity.
           <>
             <PrimaryLink to={guidePath} hash="karriarsteg">
               {t("cc.p.hero.next")}
@@ -242,160 +248,57 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         )}
       </Section>
 
-      {/* 4 — OM YRKET  ·  5 — EN DAG I ROLLEN */}
-      <Section bordered id="om-yrket" className="scroll-mt-14 py-16 md:py-20">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-              {t("cc.p.about")}
-            </h2>
-            <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-              {L(profession.overview, lang)}
-            </p>
-
-            <h3 className="mt-12 text-xl font-semibold tracking-tight text-foreground">
-              {t("cc.p.day")}
-            </h3>
-            <ul className="mt-4 space-y-2.5">
-              {dayItems.map((item, i) => (
-                <li
-                  key={i}
-                  className="flex items-start gap-3 rounded-md border border-border bg-background px-4 py-3 text-sm text-foreground"
-                >
-                  <span
-                    aria-hidden
-                    className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent"
-                  />
-                  {L(item, lang)}
-                </li>
-              ))}
-            </ul>
-            {environments.length > 0 && (
-              <>
-                <h4 className="mt-8 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                  {t("cc.p.day.environments")}
-                </h4>
-                <ul className="mt-3 space-y-2 text-sm text-foreground">
-                  {environments.map((item, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span
-                        aria-hidden
-                        className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent/60"
-                      />
-                      {L(item, lang)}
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-
-          {/* 6 — PASSAR DIG SOM  ·  7 — PASSAR MINDRE BRA OM */}
-          <aside className="space-y-5">
-            <div className="rounded-lg border border-border bg-background p-6">
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                {t("cc.p.fit")}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                {L(signals.lead, lang)}
-              </p>
-              {signals.fits.length > 0 && (
-                <ul className="mt-4 space-y-2.5">
-                  {signals.fits.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
-                      <Check
-                        className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                      {L(s, lang)}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {signals.counters.length > 0 && (
-              <div className="rounded-lg border border-border bg-secondary/50 p-6">
-                <h3 className="text-sm font-semibold tracking-tight text-foreground">
-                  {t("cc.p.notfit")}
-                </h3>
-                <ul className="mt-4 space-y-2.5">
-                  {signals.counters.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
-                      <Minus
-                        className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground"
-                        strokeWidth={2}
-                        aria-hidden
-                      />
-                      {L(s, lang)}
-                    </li>
-                  ))}
-                </ul>
-                <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-                  {t("cc.p.notfit.note")}
-                </p>
-              </div>
-            )}
-          </aside>
-        </div>
-      </Section>
-
-      {/* 8 — KOMPETENSER SOM EFTERFRÅGAS */}
-      <Section bordered id="kompetenser" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
-        <div className="max-w-2xl">
+      {/* 4 — OM YRKET OCH ARBETSUPPGIFTER */}
+      <Section bordered id="om-yrket" className="scroll-mt-14 py-14 md:py-16">
+        <div className="max-w-3xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.p.competencies")}
+            {t("cc.p.about")}
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t("cc.p.competencies.scale")}
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+            {L(profession.overview, lang)}
           </p>
-          {profession.competencies.some((c) => c.critical) && (
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              <span className="font-semibold text-foreground">
-                {t("cc.p.competencies.critical")}:
-              </span>{" "}
-              {t("cc.p.competencies.critical.explainer")}
-            </p>
+
+          <h3 className="mt-10 text-xl font-semibold tracking-tight text-foreground">
+            {t("cc.p.day")}
+          </h3>
+          <ul className="mt-4 space-y-2.5">
+            {dayItems.map((item, i) => (
+              <li
+                key={i}
+                className="flex items-start gap-3 rounded-md border border-border bg-background px-4 py-3 text-sm text-foreground"
+              >
+                <span
+                  aria-hidden
+                  className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent"
+                />
+                {L(item, lang)}
+              </li>
+            ))}
+          </ul>
+          {environments.length > 0 && (
+            <>
+              <h4 className="mt-8 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {t("cc.p.day.environments")}
+              </h4>
+              <ul className="mt-3 space-y-2 text-sm text-foreground">
+                {environments.map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span
+                      aria-hidden
+                      className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent/60"
+                    />
+                    {L(item, lang)}
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
         </div>
-        {/* Eleven competency cards unfolded is 2,000px on a phone for a
-            section most readers skim once. Native <details>: keyboard
-            operable, findable by in-page search, no script. */}
-        <details data-competency-disclosure className="group mt-8">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
-            {t("cc.p.competencies.show")}
-            <span className="tabular-nums text-muted-foreground">
-              ({profession.competencies.length})
-            </span>
-            <ChevronDown
-              className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
-              aria-hidden
-            />
-          </summary>
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {profession.competencies.map((rc) => {
-              const competency = getCompetency(rc.competencyId);
-              if (!competency) return null;
-              return (
-                <CompetencyCard
-                  key={rc.competencyId}
-                  name={L(competency.name, lang)}
-                  definition={L(competency.definition, lang)}
-                  icon={icon(competency.icon)}
-                  level={rc.requiredLevel}
-                  levelLabel={L(proficiencyLabels[rc.requiredLevel], lang)}
-                  critical={rc.critical}
-                />
-              );
-            })}
-          </div>
-        </details>
       </Section>
 
-      {/* 9 — FORMELLA KRAV  ·  10 — SÅ KOMMER DU IN */}
+      {/* 5 — FORMELLA KRAV  ·  6 — SÅ KOMMER DU IN */}
       {hasFormal ? (
-        <Section bordered id="krav" className="scroll-mt-14 py-16 md:py-20">
+        <Section bordered id="krav" className="scroll-mt-14 bg-secondary/40 py-14 md:py-16">
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
             {(profession.formalRequirements?.length ?? 0) > 0 && (
               <div>
@@ -457,44 +360,87 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         </Section>
       ) : null}
 
-      {/* 11 — UTBILDNING OCH BEHÖRIGHET */}
-      <Section bordered id="utbildning" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
+      {/* 7 — UTBILDNING OCH BEHÖRIGHET */}
+      <Section
+        bordered
+        id="utbildning"
+        className={[
+          "scroll-mt-14 py-14 md:py-16",
+          hasFormal ? "bg-background" : "bg-secondary/40",
+        ].join(" ")}
+      >
         <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("cc.p.education.title")}
         </h2>
         <EducationPanel education={education} />
       </Section>
 
-      {/* 12 — MÖJLIGA NÄSTA KARRIÄRSTEG */}
-      <Section bordered id="karriarsteg" className="scroll-mt-14 py-16 md:py-20">
+      {/* 8 — MÖJLIGA NÄSTA YRKEN */}
+      <Section bordered id="karriarsteg" className="scroll-mt-14 bg-secondary/40 py-14 md:py-16">
         <div className="max-w-3xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("cc.p.next.title")}
+            {onward.length > 0 && " "}
+            {onward.length > 0 && (
+              <span className="tabular-nums text-muted-foreground">({onward.length})</span>
+            )}
           </h2>
           <p className="mt-3 text-base leading-relaxed text-muted-foreground">
             {t("cc.p.next.subtitle")}
           </p>
         </div>
         {onward.length > 0 ? (
-          <div className="mt-10 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {onward.map((tr) => (
-              <TransitionCard
-                key={`onward-${tr.to.slug}`}
-                transition={tr}
-                direction="onward"
-                onOpen={(slug) => openFromHere(slug, "profession_transitions")}
-              />
-            ))}
-          </div>
+          <>
+            <ul data-guide-next="list" className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+              {onward.map((tr) => (
+                <li key={`onward-${tr.to.slug}`}>
+                  <NextProfessionCard
+                    transition={tr}
+                    detail
+                    onOpen={(slug) => openFromHere(slug, "profession_transitions")}
+                  />
+                </li>
+              ))}
+            </ul>
+            {onward.some((tr) => tr.evidenceLevel === "under_review") && (
+              <p className="mt-4 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
+                {t("cc.next.underReview.note")}
+              </p>
+            )}
+          </>
         ) : (
-          <p className="mt-6 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-            {t("cc.p.next.none")}
-          </p>
+          <div data-guide-next="empty" className="mt-6">
+            <p className="max-w-[70ch] rounded-lg border border-border bg-background p-5 text-sm leading-relaxed text-foreground">
+              {t("cc.p.next.none").replace("{role}", title)}
+            </p>
+            {relatedAsWayOn && (
+              <div data-guide-related-way-on className="mt-8">
+                <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                  {t("cc.path.related.title")}
+                </h3>
+                <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                  {t("cc.path.related.body").replace("{role}", title)}
+                </p>
+                <ul className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {relatedCards(4)}
+                </ul>
+              </div>
+            )}
+            <Link
+              to="/career-center"
+              hash="utforska-yrken"
+              data-guide-all-professions
+              className="mt-5 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("cc.path.next.empty.explore")}
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            </Link>
+          </div>
         )}
 
-        {/* "Vanliga vägar hit" is reference: a reader on this guide is asking
-            where they can GO. Folded, and counted so the summary is honest
-            about how much is behind it. */}
+        {/* Where people come FROM is context, not the answer to "where can I
+            go": folded, and counted so the summary is honest about how much
+            is behind it. */}
         {inbound.length > 0 && (
           <details data-inbound-disclosure className="group mt-12">
             <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
@@ -508,17 +454,18 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
             <h3 className="mt-6 text-xl font-semibold tracking-tight text-foreground">
               {t("cc.p.prev.title")}
             </h3>
-            <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <ul className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2">
               {inbound.map((tr) => (
-                <TransitionCard
-                  key={`inbound-${tr.from.slug}`}
-                  transition={tr}
-                  direction="inbound"
-                  headingLevel={4}
-                  onOpen={(slug) => openFromHere(slug, "profession_transitions")}
-                />
+                <li key={`inbound-${tr.from.slug}`}>
+                  <NextProfessionCard
+                    transition={tr}
+                    direction="inbound"
+                    headingLevel={4}
+                    onOpen={(slug) => openFromHere(slug, "profession_transitions")}
+                  />
+                </li>
               ))}
-            </div>
+            </ul>
           </details>
         )}
         <p className="mt-8 max-w-[70ch] text-xs leading-relaxed text-muted-foreground">
@@ -526,90 +473,190 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         </p>
       </Section>
 
-      {/* 13 — RELATERADE LEDIGA JOBB · DITT PASSPORT */}
-      <Section bordered id="nasta-steg" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
+      {/* 9 — RELEVANTA JOBB */}
+      <Section bordered id="nasta-steg" className="scroll-mt-14 py-14 md:py-16">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("cc.p.act.title")}
         </h2>
-        <div className="mt-8">
-          <ProfessionNextSteps profession={profession} signedIn={signedIn} />
+        <div className="mt-6">
+          <ProfessionJobs
+            profession={profession}
+            relatedHref={
+              related.length === 0 ? null : relatedAsWayOn ? "#karriarsteg" : "#relaterade-yrken"
+            }
+          />
         </div>
       </Section>
 
-      {/* 14 — KARRIÄRANALYS */}
-      <Section bordered className="py-14 md:py-16">
-        <div className="grid grid-cols-1 gap-8 rounded-xl border border-border bg-background p-8 md:grid-cols-3 md:items-center">
-          <div className="md:col-span-2">
-            <h2 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
-              {t("cc.p.test.title")}
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {/* The duration is the instrument's own, never typed into copy. */}
-              {t("cc.p.test.body")} {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
-            </p>
-          </div>
-          <div className="md:justify-self-end">
-            <PrimaryLink to="/security-career-assessment">
-              {t("cc.test.cta")}
-              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-            </PrimaryLink>
-          </div>
-        </div>
-      </Section>
-
-      {/* 15 — RELATERADE YRKEN */}
-      {relatedRoles.length > 0 && (
-        <Section bordered id="relaterade-yrken" className="py-16 md:py-20">
+      {/* 10 — MER OM YRKET (fördjupning) */}
+      <Section bordered id="mer-om-yrket" className="scroll-mt-14 bg-secondary/40 py-14 md:py-16">
+        <div className="max-w-3xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.p.related")}
+            {t("cc.p.more.title")}
           </h2>
-          {/* A reference list at the foot of the page. Four profession cards
-              unfolded were 1,600px on a phone, below everything a reader came
-              for. */}
-          <details data-related-disclosure className="group mt-6">
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("cc.p.more.subtitle")}
+          </p>
+        </div>
+
+        {/* PASSAR DIG SOM · PASSAR MINDRE BRA OM */}
+        <div className="mt-8 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="rounded-lg border border-border bg-background p-6">
+            <h3 className="text-sm font-semibold tracking-tight text-foreground">
+              {t("cc.p.fit")}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {L(signals.lead, lang)}
+            </p>
+            {signals.fits.length > 0 && (
+              <ul className="mt-4 space-y-2.5">
+                {signals.fits.map((sig, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
+                    <Check
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    {L(sig, lang)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {signals.counters.length > 0 && (
+            <div className="rounded-lg border border-border bg-background p-6">
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                {t("cc.p.notfit")}
+              </h3>
+              <ul className="mt-4 space-y-2.5">
+                {signals.counters.map((sig, i) => (
+                  <li key={i} className="flex items-start gap-2.5 text-sm text-foreground">
+                    <Minus
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground"
+                      strokeWidth={2}
+                      aria-hidden
+                    />
+                    {L(sig, lang)}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+                {t("cc.p.notfit.note")}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* KOMPETENSER SOM EFTERFRÅGAS */}
+        <div id="kompetenser" className="mt-12 scroll-mt-14">
+          <h3 className="text-xl font-semibold tracking-tight text-foreground">
+            {t("cc.p.competencies")}
+          </h3>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            {t("cc.p.competencies.scale")}
+          </p>
+          {profession.competencies.some((c) => c.critical) && (
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              <span className="font-semibold text-foreground">
+                {t("cc.p.competencies.critical")}:
+              </span>{" "}
+              {t("cc.p.competencies.critical.explainer")}
+            </p>
+          )}
+          {/* Eleven competency cards unfolded is 2,000px on a phone for a
+              section most readers skim once. Native <details>: keyboard
+              operable, findable by in-page search, no script. */}
+          <details data-competency-disclosure className="group mt-6">
             <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
-              {t("cc.p.related.show")}
-              <span className="tabular-nums text-muted-foreground">({relatedRoles.length})</span>
+              {t("cc.p.competencies.show")}
+              <span className="tabular-nums text-muted-foreground">
+                ({profession.competencies.length})
+              </span>
               <ChevronDown
                 className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
                 aria-hidden
               />
             </summary>
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {relatedRoles.map((p) => (
-                <ProfessionCard
-                  key={p.slug}
-                  slug={p.slug}
-                  title={lang === "sv" ? p.titleSv : p.titleEn}
-                  description={L(p.description, lang)}
-                  icon={icon(p.icon)}
-                  level={t(`cc.level.${p.level}` as TranslationKey)}
-                  family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
-                  formalRequirement={
-                    p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
-                  }
-                  onOpen={(slug) => openFromHere(slug, "profession_related")}
-                />
-              ))}
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {profession.competencies.map((rc) => {
+                const competency = getCompetency(rc.competencyId);
+                if (!competency) return null;
+                return (
+                  <CompetencyCard
+                    key={rc.competencyId}
+                    name={L(competency.name, lang)}
+                    definition={L(competency.definition, lang)}
+                    icon={icon(competency.icon)}
+                    level={rc.requiredLevel}
+                    levelLabel={L(proficiencyLabels[rc.requiredLevel], lang)}
+                    critical={rc.critical}
+                  />
+                );
+              })}
             </div>
           </details>
-        </Section>
-      )}
+        </div>
 
-      {profession.faqs && profession.faqs.length > 0 && (
-        <Section bordered className="bg-secondary/40 py-16 md:py-20">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.p.faq")}
-          </h2>
-          <div className="mt-8 max-w-3xl">
-            <FAQAccordion
-              items={profession.faqs.map((f) => ({ q: L(f.q, lang), a: L(f.a, lang) }))}
-            />
+        {/* DITT PASSPORT · KARRIÄRANALYS */}
+        <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <PassportBoundary signedIn={signedIn} />
+          <div className="flex flex-col rounded-xl border border-border bg-background p-6 md:p-8">
+            <h3 className="text-lg font-semibold tracking-tight text-foreground">
+              {t("cc.p.test.title")}
+            </h3>
+            <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+              {/* The duration is the instrument's own, never typed into copy. */}
+              {t("cc.p.test.body")} {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
+            </p>
+            <div className="mt-6">
+              <PrimaryLink to="/security-career-assessment" variant="ghost">
+                {t("cc.test.cta")}
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+              </PrimaryLink>
+            </div>
           </div>
-        </Section>
-      )}
+        </div>
 
-      {/* 16 — SOURCES / GOVERNANCE. Publishability guarantees at least one
+        {/* RELATERADE YRKEN — reference, unless it was the way on above */}
+        {related.length > 0 && !relatedAsWayOn && (
+          <div id="relaterade-yrken" className="mt-12 scroll-mt-14">
+            <h3 className="text-xl font-semibold tracking-tight text-foreground">
+              {t("cc.p.related")}
+            </h3>
+            {/* Four profession cards unfolded were 1,600px on a phone, below
+                everything a reader came for. */}
+            <details data-related-disclosure className="group mt-4">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
+                {t("cc.p.related.show")}
+                <span className="tabular-nums text-muted-foreground">({related.length})</span>
+                <ChevronDown
+                  className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
+              <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {relatedCards(4)}
+              </ul>
+            </details>
+          </div>
+        )}
+
+        {profession.faqs && profession.faqs.length > 0 && (
+          <div className="mt-12">
+            <h3 className="text-xl font-semibold tracking-tight text-foreground">
+              {t("cc.p.faq")}
+            </h3>
+            <div className="mt-6 max-w-3xl">
+              <FAQAccordion
+                items={profession.faqs.map((f) => ({ q: L(f.q, lang), a: L(f.a, lang) }))}
+              />
+            </div>
+          </div>
+        )}
+      </Section>
+
+      {/* 11 — SOURCES / GOVERNANCE. Publishability guarantees at least one
           source, a review date and a jurisdiction, so this section is never
           empty on a page that renders. */}
       <Section bordered id="kallor" className="scroll-mt-14 py-14 md:py-16">
