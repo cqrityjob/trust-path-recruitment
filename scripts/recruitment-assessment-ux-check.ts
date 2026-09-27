@@ -107,9 +107,9 @@ console.log("\n1. The information architecture is four tabs, named for the emplo
   check("there is no fifth tab", (tabs.match(/label: "/g) ?? []).length === 4);
 
   check(
-    "the tabs read Översikt / Rekryteringsstöd / Kandidater / Granskning (owner decision 2026-09-19)",
+    "the tabs read Översikt / Testbank / Kandidater / Granskning (separate test dispatch, 2026-09-27)",
     sv["academy.nav.overview"] === "Översikt" &&
-      sv["academy.nav.library"] === "Rekryteringsstöd" &&
+      sv["academy.nav.library"] === "Testbank" &&
       sv["academy.nav.candidates"] === "Kandidater" &&
       sv["academy.nav.reviews"] === "Granskning",
     [

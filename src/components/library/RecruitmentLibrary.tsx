@@ -55,6 +55,7 @@ import {
 } from "@/components/beskt/BesktModulePanels";
 
 export interface LibrarySearch {
+  readonly view?: "guides";
   readonly method?: LibraryMethod;
   readonly group?: RoleGroup;
   readonly role?: RoleProfileKey;
@@ -103,7 +104,7 @@ export function RecruitmentLibrary({
     void navigate({
       to: "/employer/$employerSlug/assessments/library",
       params: { employerSlug },
-      search: next,
+      search: { ...next, view: "guides" },
     });
 
   const content = useLibraryContent(employerId);

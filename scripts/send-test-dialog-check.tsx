@@ -175,13 +175,26 @@ ck(
     .state === "no_content",
 );
 
-ck("a newer blocked draft cannot displace an older permitted version", resolveLevelOffers([
- {...VAKTARE, itemId: "new-draft", versionNumber: 2, assignable: false},
- {...VAKTARE, versionNumber: 1}
-], new Set())[0]!.assessment?.itemId === VAKTARE.itemId);
-ck("the highest permitted version is chosen irrespective of library order", resolveLevelOffers([
- {...VAKTARE, versionNumber: 1}, {...VAKTARE, itemId: "new-permitted", versionNumber: 2}
-], new Set())[0]!.assessment?.itemId === "new-permitted");
+ck(
+  "a newer blocked draft cannot displace an older permitted version",
+  resolveLevelOffers(
+    [
+      { ...VAKTARE, itemId: "new-draft", versionNumber: 2, assignable: false },
+      { ...VAKTARE, versionNumber: 1 },
+    ],
+    new Set(),
+  )[0]!.assessment?.itemId === VAKTARE.itemId,
+);
+ck(
+  "the highest permitted version is chosen irrespective of library order",
+  resolveLevelOffers(
+    [
+      { ...VAKTARE, versionNumber: 1 },
+      { ...VAKTARE, itemId: "new-permitted", versionNumber: 2 },
+    ],
+    new Set(),
+  )[0]!.assessment?.itemId === "new-permitted",
+);
 
 /* ── 2 · the rendered dialog, both languages ───────────────────────── */
 console.log("\n2 · the rendered dialog");

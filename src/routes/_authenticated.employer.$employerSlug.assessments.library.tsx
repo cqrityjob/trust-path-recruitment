@@ -1,11 +1,6 @@
 import { TestBank } from "@/components/recruitment/TestBank";
-// Bibliotek — Tester & intervjuer.
-//
-// METHOD → ROLE → WORK ENVIRONMENT → SETUP → START (TRUST/BESKT product
-// structure v2.0). TRUST and BESKT are the two entrances, side by side and of
-// equal weight; the Väktare test lives inside TRUST's operational setup, not
-// beside the two methods. The choices ride the URL, so Back steps back through
-// them instead of discarding the setup. See src/components/library/.
+// Default: the test bank. The separate guides view retains TRUST/BESKT
+// method choices and all existing deep links and Back navigation.
 
 import { createFileRoute } from "@tanstack/react-router";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -18,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/employer/$employerSlug/ass
   component: LibraryRoute,
   errorComponent: EmployerErrorState,
   validateSearch: (search: Record<string, unknown>): LibrarySearch => ({
+    ...(search.view === "guides" ? { view: "guides" as const } : {}),
     ...(isMethod(search.method) ? { method: search.method } : {}),
     ...(isRoleGroup(search.group) ? { group: search.group } : {}),
     ...(isRoleProfile(search.role) ? { role: search.role } : {}),
@@ -31,7 +27,7 @@ function LibraryRoute() {
   return (
     <AcademyPage employerSlug={employerSlug}>
       {(ws) =>
-        !search.method ? (
+        !search.method && search.view !== "guides" ? (
           <TestBank employerId={ws.employerId} employerSlug={employerSlug} />
         ) : (
           <RecruitmentLibrary

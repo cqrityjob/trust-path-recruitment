@@ -187,6 +187,7 @@ test.describe("Skicka test — the strategic level, end to end", () => {
     await signIn(page, OWNER, `/employer/${EMPLOYER}/assessments/library`);
     await expect(page.getByTestId("test-bank")).toBeVisible();
     await page.getByRole("link", { name: "Förbered intervju", exact: true }).click();
+    await page.getByTestId("lib-method-trust-choose").click();
     await page.getByTestId("lib-group-strategic").check();
     await page.getByTestId("lib-env-general").check();
     const setup = page.getByTestId("lib-setup");
@@ -529,8 +530,9 @@ test.describe("Skicka test — the strategic level, end to end", () => {
     const results = owner.locator("main");
     await expect(results).toContainText(TEST_NAME, { timeout: 60_000 });
     await expect(results).not.toContainText(/Väktare/);
+    // Match verdict words, not the explanatory noun in "inte ett omdöme om lämplighet".
     await expect(results).not.toContainText(
-      /godkänd|underkänd|lämplig|olämplig|approved|rejected/i,
+      /\b(godkänd|underkänd|lämplig|olämplig|approved|rejected)\b/i,
     );
     await shot(owner, "6-results-opened");
     expect(

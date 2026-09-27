@@ -378,7 +378,7 @@ export function TestBank({
         <Link
           to="/employer/$employerSlug/assessments/library"
           params={{ employerSlug }}
-          search={{ method: "trust" }}
+          search={{ view: "guides" }}
           className="mt-2 inline-block underline"
         >
           {sv ? "Förbered intervju" : "Prepare interview"}

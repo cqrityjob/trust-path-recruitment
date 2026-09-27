@@ -406,182 +406,184 @@ export function SendTestDialog({
             }}
           >
             <div hidden={confirming}>
-            <fieldset disabled={confirming || busy} className="mt-2">
-              <legend className="text-sm font-medium text-foreground">{t("sendTest.level")}</legend>
-              <div className="mt-2 space-y-2">
-                {offers.map((o, i) => {
-                  const g = o.level.group;
-                  const active = !versionChoice && g === group;
-                  return (
-                    <label
-                      key={g}
-                      data-testid={`send-test-level-${g}`}
-                      data-state={o.state}
-                      className={
-                        "block cursor-pointer rounded-lg border p-3 transition-colors " +
-                        (active ? "border-accent bg-accent/5" : "border-border hover:bg-muted/30")
-                      }
-                    >
-                      <span className="flex items-start gap-3">
-                        <input
-                          ref={i === 0 ? firstRadio : undefined}
-                          type="radio"
-                          name={`${ids}-level`}
-                          value={g}
-                          checked={active}
-                          onChange={() => {
-                            setGroup(g);
-                            setVersionChoice("");
-                          }}
-                          className="mt-1 h-4 w-4"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-semibold text-foreground">
-                            {t(levelLabel(g))}
-                          </span>
-                          <span className="mt-0.5 block text-[13px] text-muted-foreground">
-                            {t(audienceKey(g))}
-                          </span>
-                          <span className="mt-1 block text-[13px] leading-relaxed text-foreground">
-                            {t(purposeKey(g))}
-                          </span>
-                          {(o.state === "sendable" || o.draftAwaitingRelease) && o.assessment && (
-                            <span
-                              className="mt-2 block rounded-md bg-background px-2.5 py-2 text-[13px]"
-                              data-testid={`send-test-card-${g}`}
-                              data-content-status={o.assessment.contentStatus}
-                            >
-                              <span className="font-medium text-foreground">
-                                {t("sendTest.test")}:{" "}
-                                {sv ? o.assessment.nameSv : o.assessment.nameEn}
-                              </span>
-                              <span className="block text-muted-foreground">
-                                {t("sendTest.test.size")
-                                  .replace("{items}", String(o.assessment.itemCount))
-                                  .replace("{modules}", String(o.assessment.moduleCount))}
-                                {o.assessment.minutesMin && o.assessment.minutesMax
-                                  ? ` · ${t("sendTest.test.minutes")
-                                      .replace("{min}", String(o.assessment.minutesMin))
-                                      .replace("{max}", String(o.assessment.minutesMax))}`
-                                  : ""}
-                              </span>
-                              {o.assessment.contentStatus === "draft" && (
-                                <span className="block text-muted-foreground">
-                                  {t("sendTest.test.closedTest")}
+              <fieldset disabled={confirming || busy} className="mt-2">
+                <legend className="text-sm font-medium text-foreground">
+                  {t("sendTest.level")}
+                </legend>
+                <div className="mt-2 space-y-2">
+                  {offers.map((o, i) => {
+                    const g = o.level.group;
+                    const active = !versionChoice && g === group;
+                    return (
+                      <label
+                        key={g}
+                        data-testid={`send-test-level-${g}`}
+                        data-state={o.state}
+                        className={
+                          "block cursor-pointer rounded-lg border p-3 transition-colors " +
+                          (active ? "border-accent bg-accent/5" : "border-border hover:bg-muted/30")
+                        }
+                      >
+                        <span className="flex items-start gap-3">
+                          <input
+                            ref={i === 0 ? firstRadio : undefined}
+                            type="radio"
+                            name={`${ids}-level`}
+                            value={g}
+                            checked={active}
+                            onChange={() => {
+                              setGroup(g);
+                              setVersionChoice("");
+                            }}
+                            className="mt-1 h-4 w-4"
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold text-foreground">
+                              {t(levelLabel(g))}
+                            </span>
+                            <span className="mt-0.5 block text-[13px] text-muted-foreground">
+                              {t(audienceKey(g))}
+                            </span>
+                            <span className="mt-1 block text-[13px] leading-relaxed text-foreground">
+                              {t(purposeKey(g))}
+                            </span>
+                            {(o.state === "sendable" || o.draftAwaitingRelease) && o.assessment && (
+                              <span
+                                className="mt-2 block rounded-md bg-background px-2.5 py-2 text-[13px]"
+                                data-testid={`send-test-card-${g}`}
+                                data-content-status={o.assessment.contentStatus}
+                              >
+                                <span className="font-medium text-foreground">
+                                  {t("sendTest.test")}:{" "}
+                                  {sv ? o.assessment.nameSv : o.assessment.nameEn}
                                 </span>
-                              )}
-                            </span>
-                          )}
-                          {o.state === "already_sent" && (
-                            <span className="mt-2 block text-[13px] font-medium text-foreground">
-                              {t("sendTest.level.alreadySent")}
-                            </span>
-                          )}
-                          {o.state === "not_assignable" && !o.draftAwaitingRelease && (
-                            <span className="mt-2 block text-[13px] text-foreground">
-                              {t("sendTest.level.notAssignable")}
-                            </span>
-                          )}
-                          {o.draftAwaitingRelease && g === "strategic" && (
-                            <span
-                              className="mt-2 block text-[13px] text-foreground"
-                              data-testid="send-test-strategic-pending"
-                            >
-                              {t("sendTest.level.strategic.pendingApproval")}
-                              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-                                {o.parts.map((m) => (
-                                  <li key={m}>{t(`sendTest.part.${m}` as TranslationKey)}</li>
-                                ))}
-                              </ul>
-                              <span className="mt-1 block">
-                                {t("sendTest.level.strategic.interviewInstead")}
+                                <span className="block text-muted-foreground">
+                                  {t("sendTest.test.size")
+                                    .replace("{items}", String(o.assessment.itemCount))
+                                    .replace("{modules}", String(o.assessment.moduleCount))}
+                                  {o.assessment.minutesMin && o.assessment.minutesMax
+                                    ? ` · ${t("sendTest.test.minutes")
+                                        .replace("{min}", String(o.assessment.minutesMin))
+                                        .replace("{max}", String(o.assessment.minutesMax))}`
+                                    : ""}
+                                </span>
+                                {o.assessment.contentStatus === "draft" && (
+                                  <span className="block text-muted-foreground">
+                                    {t("sendTest.test.closedTest")}
+                                  </span>
+                                )}
                               </span>
-                            </span>
-                          )}
-                          {o.draftAwaitingRelease && g !== "strategic" && (
-                            <span className="mt-2 block text-[13px] text-foreground">
-                              {t("sendTest.level.notAssignable")}
-                            </span>
-                          )}
-                          {o.state === "no_content" && g === "strategic" && (
-                            <span
-                              className="mt-2 block text-[13px] text-foreground"
-                              data-testid="send-test-strategic-missing"
-                            >
-                              {t("sendTest.level.strategic.notInstalled")}
-                              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-                                {o.parts.map((m) => (
-                                  <li key={m}>{t(`sendTest.part.${m}` as TranslationKey)}</li>
-                                ))}
-                              </ul>
-                              <span className="mt-1 block">
-                                {t("sendTest.level.strategic.interviewInstead")}
+                            )}
+                            {o.state === "already_sent" && (
+                              <span className="mt-2 block text-[13px] font-medium text-foreground">
+                                {t("sendTest.level.alreadySent")}
                               </span>
-                            </span>
-                          )}
-                          {o.state === "no_content" && g !== "strategic" && (
-                            <span className="mt-2 block text-[13px] text-foreground">
-                              {t("sendTest.error.noTest")}
-                            </span>
-                          )}
+                            )}
+                            {o.state === "not_assignable" && !o.draftAwaitingRelease && (
+                              <span className="mt-2 block text-[13px] text-foreground">
+                                {t("sendTest.level.notAssignable")}
+                              </span>
+                            )}
+                            {o.draftAwaitingRelease && g === "strategic" && (
+                              <span
+                                className="mt-2 block text-[13px] text-foreground"
+                                data-testid="send-test-strategic-pending"
+                              >
+                                {t("sendTest.level.strategic.pendingApproval")}
+                                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                                  {o.parts.map((m) => (
+                                    <li key={m}>{t(`sendTest.part.${m}` as TranslationKey)}</li>
+                                  ))}
+                                </ul>
+                                <span className="mt-1 block">
+                                  {t("sendTest.level.strategic.interviewInstead")}
+                                </span>
+                              </span>
+                            )}
+                            {o.draftAwaitingRelease && g !== "strategic" && (
+                              <span className="mt-2 block text-[13px] text-foreground">
+                                {t("sendTest.level.notAssignable")}
+                              </span>
+                            )}
+                            {o.state === "no_content" && g === "strategic" && (
+                              <span
+                                className="mt-2 block text-[13px] text-foreground"
+                                data-testid="send-test-strategic-missing"
+                              >
+                                {t("sendTest.level.strategic.notInstalled")}
+                                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                                  {o.parts.map((m) => (
+                                    <li key={m}>{t(`sendTest.part.${m}` as TranslationKey)}</li>
+                                  ))}
+                                </ul>
+                                <span className="mt-1 block">
+                                  {t("sendTest.level.strategic.interviewInstead")}
+                                </span>
+                              </span>
+                            )}
+                            {o.state === "no_content" && g !== "strategic" && (
+                              <span className="mt-2 block text-[13px] text-foreground">
+                                {t("sendTest.error.noTest")}
+                              </span>
+                            )}
+                          </span>
                         </span>
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-            </fieldset>
-
-            {extraTests.length > 0 && (
-              <fieldset disabled={confirming || busy} className="mt-4">
-                <legend>{sv ? "Övriga rekryteringstester" : "Other recruitment tests"}</legend>
-                {extraTests.map((a) => (
-                  <label key={a.itemId} className="my-2 flex gap-2 rounded border p-3">
-                    <input
-                      type="radio"
-                      name={`${ids}-level`}
-                      checked={versionChoice === a.itemId}
-                      onChange={() => setVersionChoice(a.itemId)}
-                    />
-                    {sv ? a.nameSv : a.nameEn} · v{a.versionNumber} · {a.contentStatus}
-                  </label>
-                ))}
+                      </label>
+                    );
+                  })}
+                </div>
               </fieldset>
-            )}
 
-            <fieldset disabled={confirming || busy} className="mt-4">
-              <legend className="text-sm font-medium text-foreground">
-                {t("sendTest.language")}
-              </legend>
-              <div className="mt-1.5 flex gap-4">
-                {(["sv", "en"] as const).map((l) => (
-                  <label key={l} className="inline-flex min-h-9 items-center gap-2 text-sm">
-                    <input
-                      type="radio"
-                      name={`${ids}-language`}
-                      disabled={!availableLanguages.some((v) => v.startsWith(l))}
-                      value={l}
-                      checked={language === l}
-                      onChange={() => setLanguage(l)}
-                      className="h-4 w-4"
-                    />
-                    {t(`sendTest.language.${l}` as TranslationKey)}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+              {extraTests.length > 0 && (
+                <fieldset disabled={confirming || busy} className="mt-4">
+                  <legend>{sv ? "Övriga rekryteringstester" : "Other recruitment tests"}</legend>
+                  {extraTests.map((a) => (
+                    <label key={a.itemId} className="my-2 flex gap-2 rounded border p-3">
+                      <input
+                        type="radio"
+                        name={`${ids}-level`}
+                        checked={versionChoice === a.itemId}
+                        onChange={() => setVersionChoice(a.itemId)}
+                      />
+                      {sv ? a.nameSv : a.nameEn} · v{a.versionNumber} · {a.contentStatus}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
 
-            <label className="mt-4 block text-sm">
-              {sv ? "Sista svarsdag (valfritt)" : "Response deadline (optional)"}
-              <input
-                type="date"
-                value={deadline}
-                min={new Date().toLocaleDateString("en-CA")}
-                disabled={confirming || busy}
-                onChange={(e) => setDeadline(e.target.value)}
-                className="ml-3 rounded border p-2"
-              />
-            </label>
+              <fieldset disabled={confirming || busy} className="mt-4">
+                <legend className="text-sm font-medium text-foreground">
+                  {t("sendTest.language")}
+                </legend>
+                <div className="mt-1.5 flex gap-4">
+                  {(["sv", "en"] as const).map((l) => (
+                    <label key={l} className="inline-flex min-h-9 items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name={`${ids}-language`}
+                        disabled={!availableLanguages.some((v) => v.startsWith(l))}
+                        value={l}
+                        checked={language === l}
+                        onChange={() => setLanguage(l)}
+                        className="h-4 w-4"
+                      />
+                      {t(`sendTest.language.${l}` as TranslationKey)}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <label className="mt-4 block text-sm">
+                {sv ? "Sista svarsdag (valfritt)" : "Response deadline (optional)"}
+                <input
+                  type="date"
+                  value={deadline}
+                  min={new Date().toLocaleDateString("en-CA")}
+                  disabled={confirming || busy}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="ml-3 rounded border p-2"
+                />
+              </label>
             </div>
             {confirming && (
               <div className="mt-4 rounded border p-3" data-testid="send-test-confirmation">

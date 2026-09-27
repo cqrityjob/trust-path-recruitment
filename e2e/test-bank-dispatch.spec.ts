@@ -32,7 +32,10 @@ async function login(page: Page, email: string, destination: string, lang = "sv"
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));
 }
 async function shot(page: Page, name: string) {
-  await page.screenshot({ path: `artifacts/assessment-dispatch/${name}.png`, fullPage: !name.startsWith("confirmation") });
+  await page.screenshot({
+    path: `artifacts/assessment-dispatch/${name}.png`,
+    fullPage: !name.startsWith("confirmation"),
+  });
 }
 for (const lang of ["sv", "en"]) {
   test(`bank, overview, application and mobile entry points (${lang})`, async ({ page }, info) => {
@@ -47,8 +50,10 @@ for (const lang of ["sv", "en"]) {
     await dialog.getByRole("button", { name: /Välj test|Choose test/ }).click();
     await expect(page.getByTestId("send-test-dialog")).toBeVisible();
     await expect(page.getByTestId("send-test-recipient")).not.toHaveText("");
+    await page.locator('input[type="date"]').fill("2030-01-31");
     await page.getByTestId("send-test-submit").click();
     await expect(page.getByTestId("send-test-confirmation")).toContainText(/Uppsala/);
+    await expect(page.getByTestId("send-test-confirmation")).toContainText("2030-01-31");
     await shot(page, `confirmation-${lang}-${info.project.name}`);
     await page.getByRole("button", { name: /^Avbryt$|^Cancel$/ }).click();
     await page.goto(`${BASE}${PREFIX}/assessments`);
@@ -87,11 +92,25 @@ test("member sees action and access explanation; direct assignment still denied"
   const api = process.env.E2E_SUPABASE_URL!;
   expect(api).toMatch(/^http:\/\/(127\.0\.0\.1|localhost):\d+$/);
   const apikey = process.env.E2E_SUPABASE_ANON_KEY!;
-  const auth = await fetch(`${api}/auth/v1/token?grant_type=password`,{method:"POST",headers:{apikey,"content-type":"application/json"},body:JSON.stringify({email:"mats.medlem@nordvakt.test",password:"LocalJourney!2026"})});
+  const auth = await fetch(`${api}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey, "content-type": "application/json" },
+    body: JSON.stringify({ email: "mats.medlem@nordvakt.test", password: "LocalJourney!2026" }),
+  });
   expect(auth.ok).toBe(true);
   const token = (await auth.json()).access_token;
-  const version=sql("SELECT v.id FROM scp_assessment_versions v JOIN scp_assessment_definitions d ON d.id=v.definition_id WHERE d.slug='security-officer-recruitment' AND version_number=1");
-  const denied=await fetch(`${api}/rest/v1/rpc/scp_assign_from_application`,{method:"POST",headers:{apikey,Authorization:`Bearer ${token}`,"content-type":"application/json"},body:JSON.stringify({_employer_id:"11111111-aaaa-4000-8000-000000000001",_application_id:APP,_assessment_version_id:version})});
+  const version = sql(
+    "SELECT v.id FROM scp_assessment_versions v JOIN scp_assessment_definitions d ON d.id=v.definition_id WHERE d.slug='security-officer-recruitment' AND version_number=1",
+  );
+  const denied = await fetch(`${api}/rest/v1/rpc/scp_assign_from_application`, {
+    method: "POST",
+    headers: { apikey, Authorization: `Bearer ${token}`, "content-type": "application/json" },
+    body: JSON.stringify({
+      _employer_id: "11111111-aaaa-4000-8000-000000000001",
+      _application_id: APP,
+      _assessment_version_id: version,
+    }),
+  });
   expect(denied.status).toBe(403);
   expect(await denied.text()).toContain("SCP_NOT_AUTHORISED_TO_ASSIGN");
 });
