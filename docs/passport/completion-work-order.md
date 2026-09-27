@@ -4,132 +4,162 @@
 
 **For** the implementing model
 **Repository** `cqrityjob/trust-path-recruitment`
-**Date** 2026-09-27 · revision 2 (delivery order, hosted state)
-**Author** Claude, Senior Software Architect
-**Supersedes** the four-market completion instruction of the same subject
+**Date** 2026-09-27 · revision 3 (corrected baseline)
+**Author** Claude, Senior Software Architect; baseline corrected at the owner's instruction
+**Supersedes** revision 2 (commit `07cc744`, kept in git history). Where the two differ, this revision governs.
 
 ---
 
 ## How to read this
 
-This document is the whole instruction. Where a number, an order or a wording is given, use it exactly. Where something here is impossible, **stop and report it** — do not substitute your own judgement about how a regulated credential should be presented.
+This document is the whole instruction. Where a number, an order or a wording is given, use it exactly. Where something here is impossible, **stop and report it**. Do not substitute your own judgement about how a regulated credential is presented.
 
-Naming is fixed: the product is **Security Passport**. The artifact in §6 is **the Passport card** — a component descriptor, not a product name. A mockup in circulation labels it "The Trust Card"; that wording is superseded and must not appear in code, copy, routes, file names or commit messages.
+§0 was measured on 2026-09-27, read-only, against `main` at `ed2bcff` and against production. Re-measure before relying on it. A document that names a project, a status or a PR is a claim, not evidence. That includes this one.
 
-**Five PRs, in the order given.** Each merges before the next begins. Do not combine them. A single PR containing more than one phase is a failed delivery regardless of what works in it.
+Naming is fixed: the product is **Security Passport**; the holder's card is **the Passport card**. The "Trust Card" wording from an old mockup must not appear in code, copy, routes, file names or commit messages.
 
-| PR | Phase | Section | Touches schema / RLS |
-|---|---|---|---|
-| **1** | Foundation correctness | §3 | No |
-| **2** | Passport presentation system | §6 | No |
-| **3** | Public-pilot availability | §4 | **Yes** |
-| **4** | Catalogue and save journey | §5 | Additive only |
-| **5** | Review, sharing, admin, release | §7 | Additive only |
+**Objective.** Ordinary registered users can register supported credentials from Sweden, India, the United Kingdom and Dubai without individual pilot grants. Review, sharing and admin operations work, and trust and privacy protections are unchanged.
 
-Presentation comes before the availability model deliberately. PR 1 and PR 2 change no schema, no RLS and no grants, so they cannot make the availability work harder — and they let the owner see and judge the result before the highest-risk change is made. Section numbers below are document sections; follow the PR order in this table, not the order the sections happen to appear in.
+### What revision 3 corrects
+
+| Topic | Revision 2 | Revision 3 |
+|---|---|---|
+| Production | `mlvzmiutmyyqeuvjglco`; market-pack stack never applied | `wrygicdfxwjnrugduxnt`; its migration ledger is identical to `main` (§0.2) |
+| A1–A5, guard defects, replay gate | Open or unverified | Fixed on `main`, with remainders named; three new defects, G3–G5 (§0.3) |
+| Occupation line | Engine-derived title only | The Profile occupation, marked self-described, as shipped today (§1) |
+| Card, badges, trust display | A locked 2:3 redesign | Proposals only. The current compact navy card, shields and flags stay (§1, §6) |
+| Recipient card | No self-declared content; no source-confirmed state | Current selective sharing stays, including labelled self-reported credentials and existing source-confirmed states (§1) |
+| PR 1 | "No schema", yet it held a database-function fix and a rollback fix | PR 1 has no migration; database work has its own PRs, with dependencies named (§3) |
+| Release | A separate hosted catch-up plan | None needed; merging a migration to `main` releases it to production (§0.2) |
 
 ---
 
-## §0 — Preconditions. Do not start until these are true.
+## §0 — Baseline
 
-### 0.1 Owner decisions required first
+### 0.1 Owner decisions and actions
 
-These three are outstanding and block work. Ask for them; do not decide them yourself and do not proceed on an assumption.
+| # | Item | Status | Blocks |
+|---|---|---|---|
+| D1 | A1 gate query | **Closed.** A1 is fixed on `main`; production has no active unscoped skyddsvakt claim | — |
+| D2 | Named owner of the legal-review gate for UK, India and Dubai, and the list of UK and Dubai definitions that open. India's four definitions are already open to every signed-in user; D2 names who owns that statement and does not reopen it | **Open** | PR 4 |
+| D3 | Production release gate. Merging to `main` applies migrations to production (§0.2), so approving the merge of PR 2 or PR 4 approves its release. The 2026-09-27 reconciliation note asked for the integration's "Deploy to production" to stay off pending review. It was on at 17:14Z. Confirm the intended setting and the gate | **Open** | Merging PR 2 and PR 4 |
+| D4 | Withdrawal and catalogue approval stay reviewed migrations, as `docs/passport/closed-catalogue-governance.md` defines. In-app withdrawal with an audit trail would add a PR 5 | **Open**; this plan assumes the current governance | PR 5, only if changed |
+| O1 | Custom SMTP for Auth on `wrygicdfxwjnrugduxnt`. The default mailer refuses addresses outside the project team (`docs/release/2026-09-26-auth-confirmation-email-owner-actions.md`) | **Open**; not visible to read-only tools | Announcing the public pilot |
 
-| # | Decision | Blocks |
-|---|---|---|
-| **D1** | ~~Result of the A1 gate query.~~ **Answered — see §0.2.** A1 must be fixed in PR 1. | ~~blocking~~ |
-| **D2** | Named owner of the legal-review gate for UK, India and Dubai. Public-pilot availability makes a credential registrable by ordinary users; someone must own the statement that its definition is substantiated. | PR 3 |
-| **D3** | Human approval gate for the hosted release. Given §0.2, this is larger than a single additive migration — see §7.5. | PR 5 |
+### 0.2 Production — identified and measured 2026-09-27, read-only
 
-### 0.2 Hosted production state — measured 2026-09-27, read-only
-
-Project `mlvzmiutmyyqeuvjglco`. These are facts from the live database, not assumptions.
-
-**The market-pack stack has never been applied to hosted production.** The gate query failed outright:
-
-```
-ERROR: 42703: column "authorisation_scope" does not exist
-```
-
-The hosted Passport schema contains `sp_claims`, `sp_credential_types`, `sp_jurisdictions`, `sp_evidence`, `sp_disclosures`, `sp_disclosure_accesses`, `sp_experience_periods`, `sp_passport_events`, `sp_passport_profiles`, `sp_public_access_throttle`, `sp_recognition_policies`, `sp_skill_types`, `sp_verification_requests` and `sp_verification_decisions`.
-
-It does **not** contain `sp_professional_titles`, `sp_market_packs` or `sp_pilot_members`. Hosted production runs the pre-market-pack schema.
-
-Measured data:
+**Deployment and project, identified together**
 
 | | |
 |---|---|
-| Claims total | 16 |
-| Distinct holders | 3 |
-| SV claims, active | **1** |
-| Claims with `supersedes_id` set (corrections) | **0** |
+| Deployment | Lovable project "Security Talent Hub" (`9ec625ef-34a1-4b4b-8cbb-712cae168579`), published publicly at `https://trust-path-recruitment.lovable.app`. Lovable reports it synced to `ed2bcff` |
+| Project | Supabase `wrygicdfxwjnrugduxnt`, "CQrityjob Production", eu-central-1, Postgres 17, healthy |
+| Link between them | The project's edge logs (the 24 h to 18:40Z) show browser requests with referer `trust-path-recruitment.lovable.app` to `/auth/v1/token`, `/auth/v1/user`, `/auth/v1/logout` and `/rest/v1/*`; the latest was at 18:27Z |
+| Schema deploys | The Supabase GitHub integration clones `main` and applies new migrations. Its run log shows `Applying migration… 20261219090000_assessment_draft_authoring.sql` at 17:14:55Z, after that PR merged |
+| `mlvzmiutmyyqeuvjglco` | The Supabase connection used for this check lists only `wrygicdfxwjnrugduxnt`, and no request evidence links the deployment to `mlvz…`. Revision 2's §0.2 figures describe that project, not production. The repository's own lock (`supabase/deployment-targets.json`) agrees, but was not relied on |
 
-Three consequences, all of which this work order now assumes:
+Not verified: the deployed JavaScript bundle and the `cqrityjob.com` domain, because the verification session's network policy blocks both hosts. No request in the log window carried a `cqrityjob.com` referer.
 
-1. **A1 becomes real the moment the migration lands.** One active SV claim exists and is by definition unscoped, because the column does not yet exist. It will evaluate as `requires_scope` and be uncorrectable. One row is trivial to handle, but the fix belongs in PR 1 regardless — the next holder reproduces it.
-2. **The B4 rollback risk is currently zero.** Zero corrections means `ON DELETE RESTRICT` has nothing to catch on. Fix it anyway (§0.4); it blocks nothing today.
-3. **Production is effectively pre-launch.** Three holders, sixteen claims. There is room to do this correctly rather than quickly, and no user-facing pressure to rush a hosted release.
+**Production state (aggregates only)**
 
-If a later session finds a different hosted project is the real production target, re-measure before relying on any of the above.
-
-### 0.3 Confirm the A1–A5 defects are resolved on current main
-
-These were found in the three-market review and may or may not have landed since. Verify each on current `main` and report status before writing code. Any still open moves into PR 1.
-
-| ID | Defect |
+| | |
 |---|---|
-| A1 | Legacy skyddsvakt claims cannot be corrected — `sp_correct_claim` drops fields, grandfather clause exempts `UPDATE` only |
-| A2 | Credential-code validators cap at 16 chars; `SE_PERSONNEL_APPROVAL` is 21 |
-| A3 | `authorisation_scope` collected then discarded — recipient path hardcodes `null` |
-| A4 | `name_en` carries a country suffix the surface appends again → "Sweden · Sweden" |
-| A5 | VU1+VU2 renders as the protected title "Väktare" |
+| Migration ledger | 322 rows, latest `20261219090000`: exactly the 322 versions in `supabase/migrations/` on `main` |
+| Market-pack schema | Applied: `sp_market_packs`, `sp_pilot_members`, `sp_professional_titles`, `sp_claims.authorisation_scope` |
+| Claims | 49 (31 active, 18 withdrawn) from 3 holders: SE 29, IN 1, GB 1, international 18 |
+| Corrections (`supersedes_id` set) | 0 |
+| Skyddsvakt claims (scope required) | 1, withdrawn and unscoped. **0 active** |
+| Market packs | `SE` active, legal review `grandfathered`. `GB`, `GB-NI`, `AE-DU` inactive, `internal_pilot`, legal review `pending`. `AE-AZ` inactive, `closed` |
+| Pilot grants | 3 active on each of `GB`, `GB-NI`, `AE-DU` |
+| Definitions | Active: SE 8, IN 4 (no pack), international 14. Inactive: GB 13, GB-NI 1, AE-DU 30, AE-AZ 7 |
+| E-mail sign-up | 4 sign-ups in 21 days, each confirmed after a confirmation was sent. This does not show that an address outside the team can be confirmed (O1) |
 
-Owner decision already taken on A5: the label becomes **`Väktarutbildning (VU1 + VU2)`** / **`Security Guard Training (VU1 + VU2)`**. Do not change the tier architecture to achieve this — it is a label change plus the `market-rules.ts` mirror.
+Consequences:
 
-Owner decision already taken on A3: exact scope is included in application-scoped disclosures and private employer packages; excluded from `public_card`; never in a public title, social card or exported image. The public view may state **that** an authorisation is limited without stating what it is limited to.
+1. Nothing is waiting to be released. Revision 2 §7.5 (the parity list and a dry run against a hosted copy) is withdrawn.
+2. PR 2 and PR 4 change a running system, and each is live the moment it merges.
+3. Production is pre-launch (3 holders): there is room to do this correctly rather than quickly.
 
-### 0.4 Two guard defects that must not be forgotten again
+### 0.3 Defect status on `main` (`ed2bcff`)
 
-Both were dropped from a previous instruction set. They belong in PR 1.
+| ID | Status | Evidence | Remaining |
+|---|---|---|---|
+| A1 legacy skyddsvakt correction | **Fixed** | A superseding INSERT inherits a scopeless predecessor's standing (`20260908090000:181-209`). `sp_correct_claim` carries every field (`20260907091000:451-583`). SV is corrected through `sp_save_international_credential`, which requires a scope (`20261214090000:768-773`) | No test corrects a *verified*, scopeless SV claim with a new scope through that RPC: PR 1. A scopeless correction stays refused by design |
+| A2 code length | **Fixed** | CHECK `^[A-Z0-9_]{2,48}$` (`20260907091000:49-54`). `CREDENTIAL_CODE_MAX_LENGTH = 48` in `src/lib/security-passport/credentials.ts`; `passport-credential-form:check` keeps the two equal | None |
+| A3 scope discarded | **Fixed** per the owner decision | Exact scope only for application-scoped, `employer_review` and `full_verification` disclosures (`20261101090000:573-604`). Never in a public title or the social card | Two latent points (§6) |
+| A4 country rendered twice | **Fixed** | Suffixes removed from titles (`20260908091000:65-117`). `titleWithJurisdictionOnce` on every surface that joins a title to a place, enforced by `passport-page-composition:check` | 12 inactive `AE_DU_TITLE_*` rows still end `· Dubai, UAE` (`20260914091000:210-229`); see §4 |
+| A5 training shown as "Väktare" | **Fixed** | `Väktarutbildning (VU1 + VU2)` / `Security Guard Training (VU1 + VU2)` (`20260908091000:60-63`), with the `identity/market-rules.ts` mirror; both guarded in CI | None |
+| G1 `scripts/` outside typecheck | **Fixed** for `.ts` | `tsconfig.scripts.json` and the CI step "Type-check the Passport guard scripts". `passport-fixture-check.ts` reads fields that exist | 16 `.tsx` guards (`scripts/passport-*.tsx`, `trust-surface-check.tsx`) are not type-checked. 5 Passport checks run in no workflow. PR 1 |
+| G2 Sweden rollback | **Fixed** | The separate artifact `supabase/rollback/20260907091000_sp_sweden_truth_model_rollback.sql` refuses by default; `docs/passport/release-and-rollback.md` documents it | Optional hardening (§6) |
+| Replay gate | **Obsolete** | `scripts/db-test.sh` replays every migration with `ON_ERROR_STOP=1`. The allowlist was removed on 2026-08-28, and `scripts/migration-safety-check.ts` forbids its return | Gate: strict replay from empty passes. Never add an allowlist, a tolerated error or a skip |
+| Presentation (revision 2 §3.1–§3.5) | **Done** | One card on `/passport` and none in the side column. No controls in the card beyond the `+N` link to Credentials. Name rules exactly as specified. Four tabs. All enforced by `passport-page-composition:check` | None |
 
-- `scripts/` is outside `tsconfig.json`. `passport-fixture-check.ts` reads fields that no longer exist, so the social-card privacy guard's exclusion list is **silently inert**. Bring `scripts/` into typecheck and repair the guard.
-- Rollback of the Sweden migration issues an unqualified `DELETE FROM sp_claims` against `supersedes_id ON DELETE RESTRICT`. It **aborts** if any holder has ever corrected one of those credentials. CI never sees it because suites clean up first. Fix the rollback and document the data consequence in `release-and-rollback.md`, not only in the migration header.
+New defects:
 
-### 0.5 Known-unachievable gate
+| ID | Defect | Evidence | Needs |
+|---|---|---|---|
+| G3 | The market gate runs on every UPDATE and tests the acting user's pilot membership. A reviewer without a grant cannot record a decision on a GB, GB-NI or AE-DU claim. After a withdrawal or revocation, the holder cannot archive an existing claim or add evidence to it. Inferred from code; no suite decides a UK or Dubai claim | `sp_claims_credential_rules`, `20261214090000:489-498`, with no `TG_OP` condition | Database function change: PR 2 |
+| G4 | Pack availability is tied to legal approval. `sp_market_pack_active_needs_review` allows `is_active` only with legal review `approved` or `grandfathered`, and `SP_MARKET_PACK_NOT_ACTIVE` names legal review as the reason. Per-member grants are the only way around it | `20260907090000:158-159`, `20261214090000:493-496` | A separate availability state: PR 2. The constraint stays |
+| G5 | `/passport/information` reports India as unsupported because India has no market pack. The credential picker offers India's definitions correctly | `getRegulatedCredentialAvailability` in `src/lib/security-passport/credentials.functions.ts` | Application change: PR 3 |
 
-A clean migration replay from empty is not currently possible — roughly 24 pre-existing allowlisted failures exist from objects created twice across repo history. They are unrelated to this work.
+Stale records:
 
-The gate for this delivery is: **replay passes with the existing allowlist, and the allowlist does not grow.** Do not attempt a historical migration cleanup inside this work. Do not report a replay as clean when it used the allowlist.
+- `docs/passport/release-and-rollback.md` names the retired `zrahptwsnjcdyzfywbeh` as the live backend.
+- `india-market-entry.md` says #298 is unmerged.
+- `pilot-approval-decisions.md` says `20261126090000` is pending.
+- `closed-catalogue-governance.md` counts 22 selectable definitions; there are now 26.
+
+All four are corrected in PR 1.
+
+### 0.4 Coverage on `main`
+
+| Market | Definitions | Who may register | Save, edit, evidence, review | Share | Admin view |
+|---|---|---|---|---|---|
+| Sweden | 8 | Any signed-in user with a Passport | Works | Works | Diagnosed |
+| India | 4 national qualifications, no pack | Any signed-in user with a Passport | Works | Works | Diagnosed; G5 |
+| United Kingdom | GB 13, GB-NI 1 | Named pilot members only | Members only; G3 | Works | Diagnosed |
+| Dubai, UAE | AE-DU 30 (AE-AZ 7 stay closed) | Named pilot members only | Members only; G3 | Works | Diagnosed |
+| International | 14 | Any signed-in user with a Passport | Works | Works | Diagnosed |
+
+The gate lives in the layers below (latest definitions), and every layer must agree:
+
+- **Access helpers:** `sp_market_access` and `sp_is_pilot_member` (`20261109090000:130-187`).
+- **RLS:** `sp_credential_types_read` (`20261109090000:81-96`).
+- **Catalogue view:** `sp_approved_credential_catalogue` (`20261214090000:321-409`).
+- **Save RPC:** `sp_save_international_credential` (`20261214090000:751-818`).
+- **Triggers:** `sp_00_closed_catalogue` (`20261126090000:213-258`) and `sp_claims_credential_rules` (`20261214090000:419-708`).
+- **Server functions:** `credentials.functions.ts`, `international.functions.ts`, `market-access.ts`, `market-catalogue.ts`.
+- **Copy:** `i18n.ts`.
+- **Admin:** `catalogue-diagnostics.ts` and `/admin/passport-catalogue`.
+
+What else is already on `main`:
+
+- **Review:** a queue, clarification with a required message, and one final decision. The holder answers a clarification with evidence.
+- **Sharing:** selected credentials, 7/30/90-day links, preview, revocation, and a QR code of the generated link.
+- **Share link:** it deliberately goes through the backend gateway (`…/functions/v1/passport-share#token`) and hands off to `/p/handoff`, which keeps the bearer token out of hosting logs (`20261104090000`).
 
 ---
 
-## §1 — Baseline before implementation
+## §1 — Owner decisions (binding)
 
-Read the repository instructions. Inspect current `main`, all open Passport PRs, the deployed build and the hosted schema read-only.
-
-Earlier PR numbers in any document, including this one, are historical context and not current truth. Verify heads, merge bases and CI state yourself.
-
-Preserve merged work: the India work, HAYAT, the Passport crash fix, date handling, sharing protections, and improvements from all prior sessions. Work in an isolated branch or worktree. Never overwrite another session's changes.
-
-**India is new relative to the last independent verification.** No India market pack was present then. Establish what exists before assuming it is complete.
-
-Produce this coverage matrix as a working checklist, and keep it updated in the PR description:
-
-| Market | Definitions supported | Availability | Save | Overview | Review | Share | Admin | Release |
-|---|---|---|---|---|---|---|---|---|
-| Sweden | | | | | | | | |
-| India | | | | | | | | |
-| United Kingdom | | | | | | | | |
-| Dubai, UAE | | | | | | | | |
-
-Then close the gaps. This is not a research phase.
-
----
+1. **Occupation line.** The Passport card shows the Profile occupation under the holder's name, marked self-described: "Nuvarande yrke · Egen uppgift" / "Current professional role · Self-declared".
+   - A derived title never replaces it. The derived standing stays in the side panel, marked self-declared.
+   - Profile is the only place the occupation is edited.
+2. **The Passport card.** The current compact navy card, its shields and its flags stay, with their current labels: "Global" with a globe for international credentials, "Dubai", and "Northern Ireland" with the UK flag.
+   - A flag always comes from the credential's own jurisdiction, never from the holder's country.
+   - Fixes in this delivery work inside that card.
+3. **Selective sharing.** The current authorised behaviour stays:
+   - The holder chooses what is shared.
+   - Self-reported credentials, and the Profile title if the holder includes it, stay on the recipient card with their honest labels.
+   - Existing source-confirmed states and their treatment stay.
+   - Nothing is silently removed from the recipient card or downgraded on it.
+   - The share link keeps its gateway design.
+4. **A3 scope.** The exact scope appears in application-scoped disclosures and private employer packages. It never appears in `public_card`, a public title, a social card or an exported image. The public view may say that an authorisation is limited, not what it is limited to.
+5. **A5 label.** `Väktarutbildning (VU1 + VU2)` / `Security Guard Training (VU1 + VU2)`, with no tier change.
 
 ## §2 — The six concepts that must never collapse into each other
 
-This is the core of the whole delivery. Keep these distinct in the schema, in the access rules, in the admin view and in the user-facing copy:
+Keep these distinct in the schema, the access rules, the admin view and the copy:
 
 1. **Credential definition** and its source evidence
 2. **Catalogue availability** — may a user select it today
@@ -140,405 +170,239 @@ This is the core of the whole delivery. Keep these distinct in the schema, in th
 
 Opening a market changes (2) and (3). It changes nothing about (4), (5) or (6).
 
-**Never** mark a pending legal or expert review as complete to make a credential available. If an existing rule conflates availability with approval, implement the explicit separation — do not falsify the approval and do not bypass the rule.
+**Never** mark a pending legal or expert review complete to make a credential available. G4 is resolved with a separate availability state, not by editing the review state or the constraint.
 
 **Never** state or imply that registering a credential grants permission to work.
 
 ---
 
-## §3 — PR 1: foundation correctness
+## §3 — PR sequence: minimum, dependency-ordered
 
-No new features. No market opens in this PR.
+One phase per PR. Each PR merges before any PR that depends on it begins. A PR that carries a migration is released to production by its merge (D3).
 
-**Contents:** any unresolved A1–A5 from §0.3, both guard defects from §0.4, and the presentation defects below.
+| PR | Phase | Layer | Depends on | Blocked on |
+|---|---|---|---|---|
+| **1** | Foundation remainder | Tests, guard config, CI wiring, records. No migration | — | — |
+| **2** | Availability model | Database: one additive migration and its rollback artifact. No market opens | PR 1 | D3 (merge) |
+| **3** | Public pilot in the application | Application. No migration | PR 2 merged and applied | — |
+| **4** | Open UK and Dubai | Database data: one additive migration and its rollback artifact | PR 2, PR 3 | D2, D3 |
 
-### 3.1 One Passport surface on `/passport`
+Announce the public pilot only after PR 4 is verified on production and O1 is done.
 
-Remove the duplicate right-hand card under "What your passport looks like". The right column keeps only non-duplicative content: share and privacy status, credentials expiring within 30 days, next useful action.
+### PR 1 — foundation remainder (no migration)
 
-The full recipient-style preview lives in the Share tab and nowhere else.
+Each item is here because a later PR relies on it.
 
-### 3.2 No controls inside the card, ever
+- **A1 test.** A verified, scopeless legacy SV claim is corrected with a new scope through `sp_save_international_credential`, and a correction without a scope is refused. PR 2 edits both triggers on this path.
+- **G1 remainder.** PR 3 and PR 4 edit guards that are not yet type-checked, so:
+  - Add `scripts/passport-*.tsx` and `scripts/trust-surface-check.tsx` to `tsconfig.scripts.json`, and repair what that surfaces.
+  - Run `passport-date-validation`, `passport-persona-journey`, `passport-recipient-card`, `passport-skill-contract` and `passport-workspace` in CI, or report why one cannot run.
+- **Records.** The releases of PR 2 and PR 4 follow `docs/passport/release-and-rollback.md`, so it must name production correctly:
+  - In `release-and-rollback.md`, production is `wrygicdfxwjnrugduxnt` and `mlvzmiutmyyqeuvjglco` is excluded.
+  - Correct the stale lines in `india-market-entry.md`, `pilot-approval-decisions.md` and `closed-catalogue-governance.md`.
 
-"Add credential" and "Select and share" currently sit inside the identity surface. Move them to an action row below it. The card contains no buttons, tabs, inputs or menus in any variant at any time.
+Acceptance: CI is green on the pushed SHA, and the new test fails when the RPC's scope requirement is removed. No application, schema or copy change.
 
-### 3.3 The headline title comes from the derivation engine only
+### PR 2 — availability model (database)
 
-The card currently shows **"Head of Security — from Profile"** where the derived professional standing belongs. A self-described job title is rendering in the position reserved for a credential-derived one. That is the same class of overclaim the derivation engine exists to remove.
+- **New state.** Add a **public-pilot** availability state for market packs and definitions, independent of `is_active` and `legal_review_state`. A new value of the existing `pilot_state` columns is one way to do it. `sp_market_pack_active_needs_review` and every review state stay unchanged.
+- **Every layer.** Admit that state for any signed-in user in each layer listed in §0.4. Saving still requires a Passport, as today. A gate present in one layer and missing in another is a defect.
+- **G3.** Apply the market and credential gates only to INSERT, and to UPDATEs that change the credential or its jurisdiction. Review decisions, archive and evidence on existing claims keep working after a withdrawal or revocation.
+- **Error text.** `SP_MARKET_PACK_NOT_ACTIVE` stops presenting legal review as the reason a market is unavailable.
+- **Grants.** Keep `sp_pilot_members`, its rows and its RPCs as history. Nothing new depends on a grant.
+- **No data moves.** No pack, definition or claim changes state.
+- **New tests:**
+  - A fixture pack in the new state is registrable by an ordinary user with no grant.
+  - A reviewer without a grant decides a GB and an AE-DU claim.
+  - After withdrawal, an existing claim stays readable, archivable and reviewable, and the definition cannot be newly registered.
+  - AE-AZ stays closed.
+- **Existing tests.** Tests that encode G3's current behaviour are updated here. Member-only tests for current data stay green, because no data moves.
 
-- The primary line under the holder's name shows **only** the engine's output.
-- With no qualifying credential, show the existing neutral fallback. **Never fall back to the Profile occupation.**
-- The Profile occupation may appear as a distinct secondary line, at lower weight, plainly marked as self-described, never above or larger than the derived line.
+Acceptance: strict replay and every SQL suite pass, and the rollback artifact is tested. After merge, a read-only check on production confirms the new ledger row and that no pack, definition or claim changed.
 
-Profile remains the only place the occupation is edited. This changes what Security Passport **displays**, not what it owns.
+### PR 3 — public pilot in the application (no migration)
 
-### 3.4 Holder name rendering
+- **New state.** Handle it in `getRegulatedCredentialAvailability`, `listSelectableMarkets`, `market-access.ts`, `market-catalogue.ts` and the picker's empty state. Where the state is absent, fail closed.
+- **G5.** Report India as supported on `/passport/information`.
+- **Copy (Swedish and English):**
+  - Public pilot, legal review pending and "not permission to work" stay three separate statements.
+  - Availability refusals get their own message instead of the generic save error.
+  - Use the existing Dubai labels; never "UAE" alone.
+- **Admin.** `catalogue-diagnostics.ts` and `/admin/passport-catalogue` show the new state, with legal review in its own column. Regenerate `catalogue-coverage-matrix.md`.
+- **Browser proof** on the local stack, with a fixture pack in the new state.
 
-Current output is `Most / afa / Alsha / wi`. That is not a breakpoint bug — it is a large type size in a container with no fixed width. §6.1 fixes the cause; these rules are permanent:
+Acceptance: CI is green. Screenshots of the picker and `/passport/information` at 390px and 1440px, in Swedish and English. After merge, the owner publishes the app in Lovable.
 
-```css
-overflow-wrap: normal;
-word-break: keep-all;
-hyphens: none;
-/* max 2 lines, then ellipsis */
-font-size: clamp(20px, 5.2cqw, 30px);  /* container query on the card */
-```
+### PR 4 — open UK and Dubai (data)
 
-A holder's name never breaks inside a word. Test `Mostafa Alshawi`, `Jean-Baptiste de la Rochefoucauld`, a single-word mononym, and a Devanagari name before calling this done.
+- **Migration.** One migration moves `GB`, `GB-NI`, `AE-DU` and the definitions named under D2 to the public-pilot state.
+  - `is_active`, `legal_review_state`, every claim and every professional-title rule stay unchanged.
+  - `AE-AZ` and every other emirate stay closed.
+- **Tests.** Update the tests that encode member-only access for those packs to the explicit public-pilot decision:
+  - SQL suites in `supabase/tests/`: `security_passport_market_pilot_test.sql`, `security_passport_pilot_catalogue_visibility_test.sql`, `security_passport_pilot_scope_test.sql`, `security_passport_pilot_write_path_test.sql`, `security_passport_three_market_foundation_test.sql`, `security_passport_catalogue_completeness_test.sql`, `security_passport_india_national_qualifications_test.sql`, `security_passport_pilot_bugfix_1_test.sql`, `security_passport_global_certification_test.sql`.
+  - Scripts: `passport-catalogue-filter-check.ts`, `passport-market-catalogue-check.tsx`, `passport-schema-drift-check.ts`, `passport-global-certification-check.ts`, `passport-catalogue-coverage-matrix.ts`.
+  - Browser specs: `e2e/passport-three-market.spec.ts`, `e2e/passport-workspace.spec.ts`.
+  - Preserve every ownership, privacy, jurisdiction and trust assertion. A shipped migration's postflight is never edited.
+- **Proof.** Prove every case in §5 before merge.
 
-### 3.5 Tabs: seven become four
+Acceptance: §5 passes on an isolated real backend. After merge, a read-only check on production confirms the pack and definition states, and that review states and claims are unchanged.
 
-| Keep | Absorbs |
-|---|---|
-| Overview | — |
-| Credentials | Add credential (becomes a button) |
-| Verification | — |
-| Share | Preview and share · Sharing & privacy |
+### Release order
 
-Nothing is removed. Nothing is renamed beyond these merges.
+1. PR 1 merges. Nothing reaches the database.
+2. PR 2 merges and the integration applies it. Verify read-only.
+3. PR 3 merges, and the owner publishes it in Lovable. UK and Dubai stay members-only, because no pack has moved.
+4. O1 is done any time before the announcement.
+5. After D2, PR 4 merges and the integration applies it. Verify read-only; the owner then runs the smoke test (§8).
 
-### PR 1 acceptance
-
-One passport surface. No control inside it. Name renders correctly at 390 / 768 / 1440px. Headline from the engine; neutral fallback when empty. No country name rendered twice. Four tabs. `scripts/` typechecked and the privacy guard live again. Rollback no longer aborts. Screenshots at 390px and 1440px, Swedish and English.
-
----
-
-## §4 — PR 3: public-pilot availability
-
-The highest-risk change in this delivery, because it opens data-layer gates. It gets its own PR and its own review.
-
-**Blocked on D2.**
-
-### 4.1 What "public pilot" means
-
-"Pilot" describes the product's maturity. It must not require the owner to approve each user before that user can register a supported credential.
-
-Registration must work **without** `sp_pilot_members` entries. Preserve private historical membership and audit data, and all unrelated access rules.
-
-### 4.2 Update every layer consistently
-
-Catalogue views, RLS, access helpers, save RPCs, triggers, server validation, frontend filters, admin diagnostics, error messages. A gate that exists in one layer and not another is a defect even when the journey works.
-
-### 4.3 Explicitly forbidden shortcuts
-
-- Granting broad table access
-- Marking all definitions active indiscriminately
-- Disabling or weakening a guard
-- Assigning pilot membership to every new user
-- Any path that lets a holder raise their own trust level
-
-### 4.4 Withdrawal must remain possible
-
-An individually withdrawn or unsupported definition stays unavailable for new registration. Existing holder records remain readable under their original ownership and sharing rules, with their trust unchanged. Withdrawal never destroys or downgrades an existing claim.
-
-### 4.5 Market boundaries
-
-| Market | Rule |
-|---|---|
-| Sweden | All currently supported and substantiated Swedish definitions. |
-| India | All supported national qualifications and their sourced versions. **National qualifications remain distinct from occupational licences** — this distinction is structural, not cosmetic (see §6.3). |
-| United Kingdom | Supported definitions with correct territorial applicability, including Northern Ireland distinctions. |
-| Dubai, UAE | Supported Dubai definitions with correct `AE` / `AE-DU` scope. **Never relabel a Dubai credential as valid throughout the UAE.** Unsupported emirates stay explicitly outside this release. |
-
-The UI says **"Dubai, UAE"** wherever that is the supported territory. Never "UAE" alone for a Dubai-scoped credential.
-
-### 4.6 Four facts that are not the same fact
-
-Residence · current work country · desired destinations · credential jurisdiction.
-
-Changing one never silently rewrites another and never hides an existing credential. A holder may hold credentials in several countries simultaneously. An Indian resident seeking work in Dubai or the UK is supported — and destination preference is never turned into a credential or a work authorisation.
+The application never depends on schema that production lacks: PR 3 fails closed without PR 2, and PR 4 changes data only.
 
 ---
 
-## §5 — PR 4: catalogue completion and the save journey
-
-An ordinary user must complete: create account → confirm → complete or skip optional setup → choose a credential → enter details → save → return to `/passport` → reload → edit → attach evidence → request review.
-
-### 5.1 Credential selector
-
-- Clear international versus national/regional grouping
-- Country, region, category and issuer filters that are actually useful
-- **No default filter combination that silently conceals valid choices**
-- Dependent filters reset when their parent changes
-- Loading, empty, failure and retry states are visually distinct
-- Stale and out-of-order responses cannot restore a previous country
-- Query-string preselection and resumed drafts use the same canonical mapping
-
-### 5.2 Field collection
-
-The definition determines jurisdiction and required scope. Collect issuer, licensed company, version and dates **only where the definition says they apply**. Preserve source-defined issuer distinctions — do not normalise two issuers into one because they look similar.
-
-Saving works for every supported definition in all four markets through the real application write path. Optional fields may be absent without breaking the Passport. Prevent duplicate submission. Preserve user input after a recoverable error.
-
-### 5.3 Draft tolerance — with the enforcement boundary intact
-
-Drafts may be incomplete. Requirements are enforced when the holder submits for review or activates the claim.
-
-**Enforcement stays in the database layer**, gated on `lifecycle_state` so drafts are exempt. `SP_CREDENTIAL_REQUIRES_SCOPE` and `SP_CREDENTIAL_REQUIRES_VALID_UNTIL` are not moved to Zod or to the form. A UI defect must never be able to create a false active claim.
-
----
-
-## §6 — PR 2: the Passport presentation system
-
-This is the visual specification. It is locked. Previous attempts produced a different result each run because the visual outcome was described in adjectives; everything below is a number, an order or a rule.
-
-Preserve the existing dark navy identity, the credential record components and the add-credential flow. This specification refines them; it does not replace them.
-
-### 6.1 Card geometry
-
-| Property | Value |
-|---|---|
-| Aspect ratio | **2 : 3** portrait, enforced by `aspect-ratio`, never by content height |
-| Width | `min(420px, 100%)`, floor 300px |
-| Corner radius | 16px |
-| Padding | 24px (20px below 360px viewport) |
-| Type scaling context | the card itself — container queries, not viewport |
-
-The card does not grow to fit content. **Content is capped to fit the card.** This is what makes it a card rather than a panel, and it is what permanently prevents the name-wrapping failure.
-
-### 6.2 Zones — fixed order, never reordered
-
-```
-┌──────────────────────────────────────────┐
-│ A  [photo]                    CQrityjob  │  portrait 88×88, radius 8
-│                        Security Passport │  wordmark right
-├──────────────────────────────────────────┤
-│ B  MOSTAFA ALSHAWI                       │  holder name
-│    <derived professional standing>       │  engine output only
-│    <self-described occupation>           │  lower weight, marked
-├──────────────────────────────────────────┤
-│ C  ▣ Records from 2012–2026              │  max 5 lines
-│    ▣ 4 credentials on file               │  icon 20px + one line
-│    ▣ Corporate Security                  │  no line wraps
-├──────────────────────────────────────────┤
-│ D  <trust composition>          ▪▪▪▪     │  footer band
-│    <last updated>               ▪▪▪▪     │  QR 96×96, right
-│                              Live verify │
-└──────────────────────────────────────────┘
-
-       [ Authorisations ]   ← badge rows, OUTSIDE the card
-       [ Certifications ]
-       [ Qualifications ]
-```
-
-Three variants — `holder`, `preview`, `recipient` — render from **one component**. A variant may hide a zone. It never reorders, restyles or re-lays-out. A second card implementation anywhere is a build failure.
-
-### 6.3 The badge system — three forms, never mixed
-
-The single most important visual decision in the product. A state authorisation, a professional certification and a training qualification are different kinds of fact. Rendering them identically tells the recipient something false.
-
-| Class | What it is | Form | Visual weight |
-|---|---|---|---|
-| **Authorisation** | State-issued licence, appointment or approval — Swedish ordningsvaktsförordnande, SIA licence, SIRA permit | **Shield.** Heraldic silhouette, 2px stroke, deep navy fill, brushed-metal edge gradient from top-left | Highest. Largest, strongest contrast |
-| **Certification** | Professional certification from an industry body — ASIS CPP/PSP, BCI BCM | **Hexagon.** Flatter fill, 1.5px stroke, issuer wordmark below | Medium |
-| **Qualification** | Training or education — VU1/VU2, Indian NSQF/SSC levels | **Notched rectangle** (certificate form), 1px stroke, lightest fill | Lowest. Deliberately least authoritative |
-
-Groups are always rendered in that order, always separated, **never interleaved**. An empty group is not rendered — never a placeholder.
-
-A badge carries: short code inside the form, full name on hover and focus, issuer beneath, and its trust indicator (§6.5). Never a reference number.
-
-Indian national qualifications are qualifications, not licences. They take the notched rectangle. Rendering an NSQF level as a shield would assert a work authorisation that does not exist.
-
-### 6.4 Flags — they follow the credential, never the user
-
-A 20px circular flag disc sits at the **bottom-right of the badge**, overlapping the badge edge by roughly 25%, with a 2px ring in the card background colour so it reads as a separate object.
-
-| Case | Disc contains | Label |
-|---|---|---|
-| National credential | That jurisdiction's flag | Country name |
-| **International credential** | **Globe glyph, never a flag** | "International" |
-| Dubai | UAE flag | **"Dubai, UAE"** — never "UAE" alone |
-| Northern Ireland | **UK flag** | "United Kingdom (Northern Ireland)" |
-| Other UK nations, if ever added | UK flag | "United Kingdom (Scotland)" etc. |
-
-**Do not render the Ulster Banner.** It has no official status and is politically contested; using it in a security-industry credential product is an avoidable risk. Territorial distinction is carried by the text label, not by a sub-national flag. Apply the same rule to any other contested or unofficial regional flag.
-
-The flag is derived from the **credential's own jurisdiction**. It is never derived from the holder's profile country, residence or work country. A holder in Stockholm with a SIA licence sees a UK flag on that badge.
-
-Shields are jurisdiction-neutral navy. **Do not colour-code badges by country** — the flag disc carries nationality, and colouring the badge too produces a flag salad that reads as decoration rather than record.
-
-### 6.5 Trust indicator — a ring, not a tick
-
-Trust is shown as a thin ring segment around the badge. The filled fraction indicates the tier. It is **colour-neutral**: no green, no check mark, no shield tick at any tier that currently exists.
-
-| State | Treatment |
-|---|---|
-| Holder-reported | Ring 25%, hairline |
-| Evidence provided | Ring 50% |
-| Under review | Ring 50%, animated only by `prefers-reduced-motion: no-preference`, single slow pulse |
-| Document reviewed | Ring 75% |
-| Verified against source | **Reserved. Not reachable. Do not implement.** |
-| Expired | Desaturate to 30%, diagonal hatch, explicit label. Never silently dropped, never shown as current |
-
-Green is reserved for a state that does not yet exist. Do not spend it now.
-
-### 6.6 Zone D — the trust footer
-
-Replaces the mockup's "VERIFIED RECORDS" block, which would be untrue.
-
-> **4 credentials on file**
-> 3 holder-reported · 1 with evidence
-> Updated 27 Sep 2026
-
-The footer states **what the records are**, never **what they prove**. When the composition is entirely holder-reported, say so in those words. Per-credential trust lives on the credential row; it is never aggregated into a single card-level claim. The existing "Trust state — shown per credential" copy is correct and stays.
-
-### 6.7 Content caps
-
-| Zone | Cap | Overflow |
-|---|---|---|
-| Name | 2 lines | ellipsis, never mid-word |
-| Derived standing | 2 lines | ellipsis |
-| Record lines | 5 | 6th not rendered — the card is not a list |
-| Badges per group | 6 | then `+N`, which opens the Credentials tab rather than expanding in place |
-
-If content does not fit, content loses. The card keeps its shape. Use the existing compact overflow interaction to reach all remaining records.
-
-### 6.8 Never on the card, in any variant
-
-Interactive controls · personnummer or any national identity number · credential or licence reference numbers · the exact authorisation scope · document links, filenames or thumbnails · anything from an inactive market · anything self-declared on the `recipient` variant · internal HAYAT references.
-
-The existing social-card privacy guard's forbidden-key list applies to the share image unchanged. Extend it if you add a field; never shorten it.
-
-### 6.9 Responsive — one layout, three scales
-
-| Width | Card | Badge rows |
-|---|---|---|
-| ≥1200px | 420px left, supporting content right | 6 across |
-| 768–1199px | 420px centred, supporting content below | 6 across |
-| <768px | `100% − 32px`, floor 300px | 3 across, two rows, no horizontal scroll |
-
-Every width: no horizontal page overflow, 44px minimum touch targets, visible keyboard focus, `prefers-reduced-motion` respected.
-
-### 6.10 Motion
-
-The card fades in once on load. That is all. No hover lift, no shimmer, no staggered badge entrance, no animated check. A credential artifact that animates reads as marketing, and this artifact's entire value is that it does not.
-
-### 6.11 Safe rendering
-
-An unknown display category renders safely — it never crashes the page. Missing expiry renders **"Expiry date not provided"**, never lifetime validity. Every displayed credential retains its own trust and validity information. Database-to-application vocabulary checks stay in place.
-
-The overview works for both a brand-new empty account and an established account holding many credentials across all four markets.
-
-### 6.12 No invented hierarchy
-
-Do not invent a ranking of professional importance. Do not infer that holding one qualification proves possession of another. Use only explicitly modelled and supported presentation relationships. Never delete an underlying record to simplify a display.
-
----
-
-## §7 — PR 5: review, sharing, admin, release preparation
-
-### 7.1 HAYAT and human review
-
-Reuse the existing implementation.
-
-Document extraction **helps the holder fill the form**. It does not verify the qualification and does not raise its trust level. The holder confirms extracted values before saving.
-
-Use automated source verification only where an implemented, enabled adapter actually supports it. Otherwise state plainly that automatic verification is unavailable and offer the evidence/review route. **Never invent a verification ID, an issuer confirmation or a successful check.** Preserve existing visibility restrictions on HAYAT references and documents.
-
-The reviewer can: open the request → inspect credential and evidence → see jurisdiction, issuer rule and stated version → request clarification → receive the response → record a decision.
-
-No "verified" label based on upload, OCR success or self-report.
-
-**When automated confirmation is eventually added, it arrives as its own trust state** — `document_checked_automated` or similar — and is never collapsed into the same state as a human or source verification. Leave the enum able to grow. Do not add the state in this delivery.
-
-### 7.2 Trust vocabulary — one source
-
-"Consistent wording across surfaces" is not achievable by instruction. Make it structural: a single enum-backed vocabulary module is the only source of trust labels for holder view, reviewer view, recipient view, QR destination, exports and admin. A guard fails the build if any surface hardcodes a trust string.
-
-### 7.3 Sharing and recipient behaviour
-
-Holder selects credentials → previews the recipient view → creates a time-limited link → can revoke it.
-
-Use the application-domain share route as the user-facing address, never a raw backend endpoint. **The QR encodes the actual generated share link.**
-
-The recipient sees only the authorised selection, with correct country and region, trust and validity. No unselected credentials, private evidence, internal notes, location preferences or internal HAYAT references may leak.
-
-Verify logged-out viewing, expired links and revoked links. **Changing the holder's work country must not rewrite the jurisdiction shown to the recipient.**
-
-### 7.4 Admin
-
-Admin inspects and manages the public-pilot catalogue without creating per-user grants, using the same rules the application actually uses:
-
-definition and jurisdiction · international/national/regional classification · availability for new registration and the reason if blocked · issuer requirements and version/source evidence · **legal and content review state shown separately from availability** · automatic verification support versus manual review.
-
-Reuse governed admin operations and audit every change. Do not expose holder documents, private notes, location or preferences to any role without a defined need and permission.
-
-Provide a withdrawal path per §4.4.
-
-### 7.5 Release preparation
-
-**The hosted release is larger than a single additive migration.** Per §0.2, hosted production runs the pre-market-pack schema: the entire accumulated Passport stack is unreleased. Treat this as its own release plan, not as a closing step of PR 5.
-
-Produce, and do not execute:
-
-1. The exact ordered list of every migration that must be applied to reach parity, from the hosted ledger's current position to the merged head.
-2. For each, whether it is additive, whether it has a matching rollback, and whether that rollback is safe against the measured data in §0.2.
-3. The point in the sequence at which the single active SV claim (§0.2) acquires `requires_scope`, and the exact remediation for it.
-4. A dry run of the whole sequence against a copy of the hosted schema — not against an empty database.
-5. The application/schema release order, and whether they can ship together.
-6. Every remaining owner action, named individually.
-
-Then stop. **No hosted write is authorised by this work order**, and D3 governs the approval gate.
-
-Run affected checks first, then required CI **on the exact pushed SHA**. Inspect every required workflow. Never claim an old green run covers new commits.
-
-Identify production configuration that blocks ordinary registration — **especially confirmation-email delivery**. Do not claim a public pilot works if people cannot create and confirm an account. Prepare the exact missing configuration and name only the specific secret or owner action required. Never print a secret. Never activate a paid service without authorisation.
-
-Do not create subscriptions, scheduled tasks or background reminders.
-
----
-
-## §8 — Proving it
-
-Synthetic accounts on an isolated real backend. **Never create test credentials in the owner's production account.** Leave no test data behind.
+## §4 — Rules carried forward (binding)
+
+- **Forbidden shortcuts:**
+  - Granting broad table access.
+  - Marking all definitions active.
+  - Disabling or weakening a guard.
+  - Giving every new user pilot membership.
+  - Any path that lets a holder raise their own trust level.
+- **Withdrawal:**
+  - A withdrawn or unsupported definition stays unavailable for new registration.
+  - Existing claims stay readable under their original ownership and sharing rules, keep their trust, and can still be archived and reviewed (G3).
+  - Withdrawal never destroys or downgrades a claim.
+- **Market boundaries:**
+  - Sweden: every currently supported and substantiated Swedish definition.
+  - India: national qualifications stay distinct from occupational licences, and never carry an eligibility or a title.
+  - United Kingdom: correct territorial applicability, including Northern Ireland.
+  - Dubai: `AE` / `AE-DU` scope, labelled with the emirate. Never relabel a Dubai credential as valid throughout the UAE. Other emirates, including `AE-AZ`, stay outside this release.
+- **Four facts:** residence, current work country, desired destinations and credential jurisdiction are separate.
+  - Changing one never rewrites another and never hides a credential.
+  - A destination preference never becomes a credential or a work authorisation.
+  - Changing the holder's work country never changes the jurisdiction a recipient sees.
+- **Professional titles:**
+  - Title rules for GB, GB-NI and Dubai stay inactive.
+  - An `AE_DU_TITLE_*` row is activated only by a new data migration that removes its `· Dubai, UAE` suffix, together with a guard that covers non-Swedish titles.
+- **Fields and enforcement:**
+  - The definition decides the jurisdiction, the scope, and which of issuer, version and dates apply.
+  - Source-defined issuer distinctions are kept.
+  - `SP_CREDENTIAL_REQUIRES_SCOPE`, `SP_CREDENTIAL_REQUIRES_VALID_UNTIL` and the other credential rules stay in the database, so a form defect can never create a false active claim.
+- **Never on the Passport card or the social card:**
+  - Personnummer or any other national identity number.
+  - Credential or licence reference numbers.
+  - The exact authorisation scope.
+  - Document links, filenames or thumbnails.
+  - Anything from an inactive market.
+  - Internal HAYAT references.
+  - Interactive controls beyond the `+N` link.
+  - The social-card forbidden-key list is extended when a field is added, and never shortened.
+- **Flags:** no Ulster Banner, and no other unofficial or contested regional flag. Territory is carried by the text label.
+- **Safe rendering:**
+  - An unknown display category renders safely.
+  - A missing expiry reads "Expiry date not provided", never lifetime validity.
+  - Every credential keeps its own trust and validity.
+  - Database-to-application vocabulary checks stay.
+- **No invented hierarchy:** no ranking of professional importance, no inference that one qualification proves another, and no deleting a record to simplify a display.
+- **HAYAT and review:**
+  - Extraction helps the holder fill the form. It never raises trust, and the holder confirms extracted values.
+  - Automatic checks run only where an implemented, enabled adapter supports them. Otherwise, say plainly that automatic verification is unavailable and offer the evidence and review route.
+  - Never invent a verification ID, an issuer confirmation or a successful check.
+  - No "verified" label from an upload, an OCR success or a self-report.
+  - A future automated confirmation becomes its own trust state.
+
+## §5 — Proving it
+
+Use synthetic accounts on an isolated real backend: the local stack that CI uses. **Never create test credentials in the owner's production account**, and leave no test data behind.
 
 | # | Case |
 |---|---|
-| A | Fresh ordinary account with **no pilot grants** browses and saves supported credentials from Sweden, India, UK and Dubai |
-| B | Existing mixed-market account adds each Indian qualification, returns to `/passport`, reloads without error |
-| C | Dubai-specific required fields enforced; unsupported emirates not accidentally opened |
+| A | A fresh ordinary account **with no pilot grant** browses and saves supported credentials from Sweden, India, the UK (GB and GB-NI) and Dubai |
+| B | An existing mixed-market account adds each Indian qualification, returns to `/passport` and reloads without error |
+| C | Dubai's required fields are enforced; AE-AZ and the other emirates stay closed |
 | D | International credentials survive a work-country change unchanged |
-| E | Review: request → clarification → response → decision |
-| F | Selective sharing → QR → logged-out recipient → revocation |
+| E | Review: request → clarification → evidence → decision, including a reviewer without a grant deciding a GB and an AE-DU claim |
+| F | Selective sharing → QR → logged-out recipient → expired link → revoked link; selected self-reported credentials appear with their label |
 | G | Another user can neither read nor modify the holder's private data |
-| H | A withdrawn definition cannot be newly registered; existing records stay accessible under normal rules |
-| I | Legacy unscoped Swedish claim can be corrected (per D1) |
-| J | Card renders correctly for: empty account · VU1+VU2 only · current ordningsvaktsförordnande · expired credential · authorisation + certification + qualification together · 9 credentials (5 lines, 6 badges, `+3`) |
+| H | A withdrawn definition cannot be newly registered; existing claims stay readable, archivable and reviewable |
+| I | A verified, scopeless legacy SV claim is corrected with a scope; without a scope, the correction is refused |
+| J | The current card renders an empty account, VU1+VU2 only, a current ordningsvaktsförordnande, an expired credential, all four markets together, and more credentials than shield slots (`+N`) |
 
-Swedish and English. Desktop and mobile. Long names, missing optional fields, expired credentials, unknown display categories.
+Run every case in Swedish and English, on desktop and mobile, including long names, missing optional fields, expired credentials and unknown display categories.
 
-For catalogue completeness, exercise **every** supported definition through the real save contract with suitable synthetic inputs. Browser-test one representative form per distinct field and validation pattern rather than duplicating hundreds of identical UI tests.
+- Exercise every definition that PR 4 opens through the real save contract.
+- Browser-test one form per distinct field pattern.
+- Mutation-test every guard you touch: each must fail when its protected behaviour is deliberately broken.
+- Never disable an assertion, lower a floor or narrow a locator to hide a regression.
 
-Tests encoding the old member-only restriction are updated to the explicit public-pilot decision. **Preserve every ownership, privacy, jurisdiction and trust test.** Do not disable an assertion, lower a floor or narrow a locator to conceal a regression.
+## §6 — Not in the minimum path
 
-Mutation-test the privacy guard and the trust-vocabulary guard: prove each fails when its protected behaviour is deliberately broken.
+These are the owner's call; none of them blocks the objective.
 
----
+- **Revision 2 visual system:**
+  - The 2:3 portrait card and its zone layout.
+  - Shield, hexagon and notched-rectangle badge forms in external groups.
+  - Percentage trust rings and the rewritten trust footer.
+  - Content caps, responsive scales and motion rules.
+- **Trust vocabulary:** a single module with a build guard. Trust words are still hard-coded in `product-status.ts`, `CredentialWallet.tsx` and `RecipientPassportCard.tsx`.
+- **Draft stage:** governed saves create active claims today.
+- **Clarification replies:** a text reply; today the holder answers with evidence.
+- **Admin:** in-app withdrawal with `audit_logs` entries (D4). A re-issued pilot grant also overwrites the earlier revocation, so that history is lost.
+- **A3, exact scope:** on a holder's direct link to an employer. Selected shares send `authorisation_scope` as NULL by design (`20261126090000:285`).
+- **A3, `scope_limited`:** taking it from `requires_scope` instead of a stored scope. Production has no active scopeless claim that it would affect.
+- **Share links:** on the application domain (revision 2 §7.3). This conflicts with the gateway design that §1 keeps.
+- **G2 hardening:** follow correction chains after the explicit opt-in, and test the refusal against a corrected chain.
+- **Recipient card name:** apply the holder card's name rules; today it wraps without a line clamp.
+- **Social-card guard:** it protects a development-only card; `/p/<token>` uses a static image.
 
-## §9 — Authority and limits
+## §7 — Authority and limits
 
-**Authorised:** inspect the repository and hosted schema read-only · create branches and worktrees · implement · commit forward-only · push · open PRs · monitor and fix CI · prepare every release step.
+**Authorised:**
 
-**Not authorised without separate approval:** merge · publish · deploy · any hosted production write · enabling a paid service · creating a scheduled task.
+- Inspect the repository.
+- Verify production read-only: SELECT-only SQL, logs, the migration ledger.
+- Create branches and worktrees.
+- Implement, commit forward-only, push and open PRs.
+- Monitor and fix CI.
+- Prepare release steps.
 
-**Never:** weaken RLS, grants or a `SECURITY DEFINER` check · expose `service_role` in the application · let a holder write trust attribution directly · edit a shipped migration · use an admin override to bypass an unexplained failure · populate Police, Armed Forces or other regulated content with unverified data.
+**Not authorised without separate approval:**
 
-**Stop and report** if: a PR would span more than one phase · a credential option remains untested · a migration or rollback is unsafe · an unexplained CI failure remains · a market would be only cosmetically open · the branch head changes unexpectedly · production data would need a destructive transformation.
+- Merging. A merge that carries a migration is a production release.
+- Publishing or deploying.
+- Any hosted write.
+- Enabling a paid service.
+- Creating a scheduled task.
 
----
+**Never:**
 
-## §10 — Final report
+- Weaken RLS, grants or a `SECURITY DEFINER` check.
+- Expose `service_role` in the application.
+- Let a holder write trust attribution.
+- Edit a shipped migration, meaning any version in the production ledger.
+- Mark a pending review complete.
+- Use an admin override to bypass an unexplained failure.
+- Populate Police, Armed Forces or other regulated content with unverified data.
 
-1. PR links, final SHAs, CI results per PR
-2. The completed four-market coverage matrix
-3. Confirmation that the §0.2 hosted-state findings still hold, re-measured
-4. Evidence that ordinary users need no pilot grants
-5. Real-backend journey results for every case in §8
-6. Screenshots per §6, Swedish and English, 390px and 1440px
-7. Exact migration and application release order, plus every remaining owner action
-8. A short deployed smoke-test checklist for the owner
-9. Anything in this document you could not build, stated plainly rather than substituted
+**Stop and report** if:
 
-Do not call the product live until the deployed journey is verified. Do not label a functional gap "out of scope" when it prevents a journey in §8.
+- A PR would span more than one phase.
+- A market would be only cosmetically open.
+- A migration or rollback is unsafe.
+- An unexplained CI failure remains.
+- The branch head changes unexpectedly.
+- Production data would need a destructive transformation.
+- Production no longer matches §0.2.
 
-Final line per PR: **READY FOR OWNER REVIEW** or **FIX REQUIRED**.
+## §8 — Final report
+
+1. PR links, final SHAs and CI results on each exact pushed SHA
+2. §0.4's coverage table, completed
+3. §0.2 re-measured read-only, with every difference called out
+4. Evidence that ordinary users need no pilot grant
+5. Results for every case in §5
+6. Screenshots of the current card and the picker, in Swedish and English, at 390px and 1440px
+7. The release order used, and every remaining owner action
+8. A short smoke-test checklist for the owner to run on production
+9. Anything not built, stated plainly rather than substituted
+
+Do not call the pilot live until the deployed journey is verified. Final line per PR: **READY FOR OWNER REVIEW** or **FIX REQUIRED**.
