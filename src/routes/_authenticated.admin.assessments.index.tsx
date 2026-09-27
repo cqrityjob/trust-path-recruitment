@@ -1,3 +1,4 @@
+import { RecruitmentTestEditor } from "@/components/admin/RecruitmentTestEditor";
 // Admin Portal — Assessment Catalog management list.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -32,6 +33,8 @@ function AdminAssessmentsPage() {
         <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
           {t("admin.assessments.list.heading")}
         </h1>
+
+        <RecruitmentTestEditor />
 
         <div className="mt-6 flex flex-wrap gap-1">
           {(["all", "visible", "hidden"] as const).map((v) => (

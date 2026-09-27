@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-27T13:30:00Z",
-  "readBy": "Direct production read after owner-approved history-only reconciliation: 321 rows. Original 320 rows preserved, MD5 7b6bca527143c518199d6991669674d0. Canonical 20261218090000 is a NULL-statements alias of 20260927124146. See docs/security/2026-09-27/reconciliation/README.md.",
+  "readAt": "2026-09-27T17:16:34.210685+00:00",
+  "readBy": "Read-only production verification after #309 merged as 80e63d0. All 321 previous ledger identities preserved; canonical 20261219090000 / assessment_draft_authoring is row 322. Four function bodies match the reviewed migration, column and both enabled triggers verified. See docs/release/2026-09-27-assessment-authoring-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1299,6 +1299,10 @@
     {
       "version": "20261218090000",
       "name": "client_table_privilege_hardening"
+    },
+    {
+      "version": "20261219090000",
+      "name": "assessment_draft_authoring"
     }
   ]
 }
