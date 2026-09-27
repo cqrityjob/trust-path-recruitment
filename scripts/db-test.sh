@@ -1033,6 +1033,7 @@ fi
 # The old body must fail the new suite; restore the migration afterwards.
 # ---------------------------------------------------------------------------
 echo "==> Running recruitment assignment idempotency assertions"
+psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/assessment_draft_authoring_test.sql
 psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_assignment_idempotency_test.sql
 psql_q -d "$TEST_DB" -f supabase/rollback/20261209090000_recruitment_assignment_idempotency_rollback.sql >/dev/null
 ASSIGN_OLD_OUT="$(mktemp)"
