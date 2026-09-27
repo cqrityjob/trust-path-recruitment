@@ -8960,7 +8960,7 @@ export const dictionaries = {
     "home.start.employer": "For employers",
     "home.start.employer.1": "Create an account and register your organisation.",
     "home.start.employer.2":
-      "Follow your organisation’s status while the registration is reviewed.",
+      "Follow your organisation's status while the registration is reviewed.",
     "home.start.employer.3": "Once the workspace is active, you can start your recruitment.",
 
     "home.faq.eyebrow": "Offer and common questions",

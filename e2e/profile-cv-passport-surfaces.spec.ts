@@ -728,7 +728,7 @@ test.describe("Security Passport", () => {
     );
     await page
       .locator("[data-passport-actions]")
-      .getByRole("link", { name: "Add credential" })
+      .getByRole("link", { name: "Add a credential" })
       .click();
     await page.waitForURL("**/passport/credentials/new");
     await page.waitForTimeout(800);

@@ -543,7 +543,7 @@ export function InternationalCredentialForm({
         <h2 className="relative mt-3 text-2xl font-semibold !text-primary-foreground">
           {initial
             ? copy("Ändra merit", "Edit credential")
-            : copy("Lägg till merit", "Add credential")}
+            : copy("Lägg till en merit", "Add a credential")}
         </h2>
         <p className="relative mt-2 text-sm text-primary-foreground/70">
           {copy(

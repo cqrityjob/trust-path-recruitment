@@ -714,7 +714,7 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     await expect(rows(page)).toHaveCount(1);
     await expect(rows(page)).toContainText(/Egen|Registrerat|Tillagd/i);
-    await expect(wallet(page).getByRole("link", { name: "Lägg till meriter" })).toHaveAttribute(
+    await expect(wallet(page).getByRole("link", { name: "Lägg till en merit" })).toHaveAttribute(
       "href",
       "/passport/credentials/new",
     );
@@ -842,14 +842,14 @@ test.describe("Security Passport — governed wallet regression", () => {
     await ready(page);
     await expect(wallet(page)).toContainText("Your first credential");
     await expect(rows(page)).toHaveCount(0);
-    await wallet(page).getByRole("link", { name: "Add credential" }).click();
-    await expect(page.getByRole("heading", { name: "Add credential" })).toBeVisible();
+    await wallet(page).getByRole("link", { name: "Add a credential" }).click();
+    await expect(page.getByRole("heading", { name: "Add a credential" })).toBeVisible();
     await expect(page.getByRole("radio", { name: /^International/ })).toBeVisible();
     await noErrors();
   });
   for (const target of [
     { name: "Preview and share", url: "/passport/share", heading: /Share|Select/ },
-    { name: "Add credential", url: "/passport/credentials/new", heading: /Add credential/ },
+    { name: "Add a credential", url: "/passport/credentials/new", heading: /Add a credential/ },
   ])
     test(`navigation — ${target.name} loads its real destination`, async ({ page }) => {
       await mount(page, JUST_ADDED, "en");
@@ -990,7 +990,7 @@ test.describe("Security Passport — governed wallet regression", () => {
   }) => {
     await mount(page, JUST_ADDED, "en");
     await ready(page);
-    await wallet(page).getByRole("link", { name: "Add credential" }).focus();
+    await wallet(page).getByRole("link", { name: "Add a credential" }).focus();
     await page.keyboard.press("Enter");
     const international = page.getByRole("radio", { name: /^International/ });
     await expect(international).toBeVisible();

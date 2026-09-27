@@ -332,7 +332,7 @@ for (const lang of ["sv", "en"] as const) {
       await expect(step).toHaveCount(1);
       await expect(step).toHaveAttribute("href", `/passport#${credentialRowAnchor(CPP.id)}`);
       await expect(step).toHaveText(T("Visa meriten", "View credential"));
-      await expect(step).not.toHaveText(/Lägg till underlag|Add evidence/);
+      await expect(step).not.toHaveText(/Bifoga underlag|Add supporting evidence/);
       // Still says WHICH credential, and the expiring one is still named.
       await expect(page.locator("[data-passport-next-step]")).toContainText(CPP.titleEn);
       await expect(page.locator(`[data-passport-expiring-item="${OV.id}"]`)).toBeVisible();
@@ -341,7 +341,7 @@ for (const lang of ["sv", "en"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByRole("link", { name: T("Lägg till meriter", "Add credential") }),
+          .getByRole("link", { name: T("Lägg till en merit", "Add a credential") }),
       ).toHaveCount(1);
       const actions = page.locator("[data-passport-actions] a");
       await expect(actions).toHaveCount(2);
@@ -505,7 +505,7 @@ for (const lang of ["sv", "en"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByRole("link", { name: T("Lägg till meriter", "Add credential") }),
+          .getByRole("link", { name: T("Lägg till en merit", "Add a credential") }),
       ).toHaveCount(1);
 
       // ── Names ────────────────────────────────────────────────────────
@@ -581,7 +581,9 @@ for (const lang of ["sv", "en"] as const) {
       const row = await arrived(CPP);
       await expect(row).toContainText(CPP.titleEn);
       // Its REAL action is still there, and still the only claim link for it.
-      const action = row.getByRole("link", { name: T("Lägg till underlag", "Add evidence") });
+      const action = row.getByRole("link", {
+        name: T("Bifoga underlag", "Add supporting evidence"),
+      });
       await expect(action).toBeVisible();
       await expect(action).toHaveAttribute("href", `/passport/entry/claim/${CPP.id}`);
       await expect(page.locator(`a[href="/passport/entry/claim/${CPP.id}"]`)).toHaveCount(1);
