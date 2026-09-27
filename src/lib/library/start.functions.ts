@@ -280,39 +280,70 @@ export type SendTestResult = {
  *  Idempotent end to end: the assignment reuses an existing attempt
  *  (20261209090000), the setup refuses only a DIFFERENT setup, and the
  *  message is keyed on the assignment so a retry cannot write a second one. */
+/** Read the same active owner/admin membership required by the assignment RPC.
+ * A role label or recruitment responsibility is never an assignment grant. */
+export const getTestAssignmentAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ employerId: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }): Promise<boolean> => {
+    const { data: membership, error } = await context.supabase
+      .from("employer_memberships")
+      .select("role")
+      .eq("employer_id", data.employerId)
+      .eq("user_id", context.userId)
+      .eq("status", "active")
+      .maybeSingle();
+    if (error) throw new Error("Could not verify assignment access.");
+    return membership?.role === "owner" || membership?.role === "admin";
+  });
+
 export const sendTestFromSetup = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d: unknown) =>
     startSetupShape
+      .partial()
       .extend({
         employerId: z.string().uuid(),
         applicationId: z.string().uuid(),
         language: z.enum(["sv", "en"]).default("sv"),
+        assessmentVersionId: z.string().uuid().optional(),
+        deadline: z.string().datetime({ offset: true }).nullable().default(null),
       })
+      .refine(
+        (v) =>
+          [v.roleGroup, v.roleProfile, v.environment].every(Boolean) ||
+          [v.roleGroup, v.roleProfile, v.environment].every((x) => x === undefined),
+        "Complete setup or explicit test version required",
+      )
       .parse(d),
   )
   .handler(async ({ context, data }): Promise<SendTestResult> => {
     const db = context.supabase as unknown as Db;
-    const profile = await db
-      .from("scp_recruitment_role_profiles" as never)
-      .select("role_group")
-      .eq("role_profile", data.roleProfile)
-      .maybeSingle();
-    if (profile.error) throw new Error(profile.error.message);
-    const link = await db
-      .from("scp_recruitment_content_links" as never)
-      .select("assessment_definition_id")
-      .eq("role_profile", data.roleProfile)
-      .eq("environment", data.environment)
-      .maybeSingle();
-    if (link.error) throw new Error(link.error.message);
-    const definitionId = (link.data as { assessment_definition_id: string | null } | null)
-      ?.assessment_definition_id;
-    if (
-      (profile.data as { role_group: string } | null)?.role_group !== data.roleGroup ||
-      !definitionId
-    ) {
-      throw new Error("SCP_START_NO_TEST: this setup has no candidate test.");
+    let definitionId: string | null | undefined;
+    const hasSetup = Boolean(data.roleProfile && data.roleGroup && data.environment);
+    if (!hasSetup && !data.assessmentVersionId) throw new Error("SCP_START_NO_TEST");
+    if (hasSetup) {
+      const profile = await db
+        .from("scp_recruitment_role_profiles" as never)
+        .select("role_group")
+        .eq("role_profile", data.roleProfile!)
+        .maybeSingle();
+      if (profile.error) throw new Error(profile.error.message);
+      const link = await db
+        .from("scp_recruitment_content_links" as never)
+        .select("assessment_definition_id")
+        .eq("role_profile", data.roleProfile!)
+        .eq("environment", data.environment!)
+        .maybeSingle();
+      if (link.error) throw new Error(link.error.message);
+      definitionId = (link.data as { assessment_definition_id: string | null } | null)
+        ?.assessment_definition_id;
+      if (
+        (profile.data as { role_group: string } | null)?.role_group !== data.roleGroup ||
+        !definitionId
+      ) {
+        throw new Error("SCP_START_NO_TEST: this setup has no candidate test.");
+      }
     }
     const library = (await rpc(db, "scp_employer_content_library", {
       _employer_id: data.employerId,
@@ -321,9 +352,15 @@ export const sendTestFromSetup = createServerFn({ method: "POST" })
       parent_id: string;
       item_id: string;
       assignable: boolean;
+      designed_for: string;
     }> | null;
     const version = (library ?? []).find(
-      (r) => r.library_kind === "assessment" && r.parent_id === definitionId && r.assignable,
+      (r) =>
+        r.library_kind === "assessment" &&
+        (!definitionId || r.parent_id === definitionId) &&
+        r.designed_for === "recruitment_support" &&
+        r.assignable &&
+        (!data.assessmentVersionId || r.item_id === data.assessmentVersionId),
     );
     if (!version) {
       throw new Error("SCP_START_NO_TEST: the setup's test cannot be sent by this organisation.");
@@ -332,7 +369,7 @@ export const sendTestFromSetup = createServerFn({ method: "POST" })
       _employer_id: data.employerId,
       _application_id: data.applicationId,
       _assessment_version_id: version.item_id,
-      _deadline: null,
+      _deadline: data.deadline,
       _language: data.language,
     })) as
       | Array<{ assignment_id: string; attempt_id?: string }>
@@ -340,21 +377,22 @@ export const sendTestFromSetup = createServerFn({ method: "POST" })
     const row = Array.isArray(assigned) ? assigned[0] : assigned;
     const assignmentId = row!.assignment_id;
     const attemptId = row?.attempt_id ? String(row.attempt_id) : null;
-    let setupRecorded = true;
-    try {
-      await rpc(db, "scp_record_assessment_setup", {
-        _employer_id: data.employerId,
-        _assessment_assignment_id: assignmentId,
-        _role_group: data.roleGroup,
-        _role_profile: data.roleProfile,
-        _environment: data.environment,
-      });
-    } catch (e) {
-      // The test is sent. Without its setup the interview after it asks for
-      // an explicit choice instead of guessing -- so say it, do not hide it.
-      console.error("[library] test setup not recorded", e);
-      setupRecorded = false;
-    }
+    let setupRecorded = hasSetup;
+    if (hasSetup)
+      try {
+        await rpc(db, "scp_record_assessment_setup", {
+          _employer_id: data.employerId,
+          _assessment_assignment_id: assignmentId,
+          _role_group: data.roleGroup,
+          _role_profile: data.roleProfile,
+          _environment: data.environment,
+        });
+      } catch (e) {
+        // The test is sent. Without its setup the interview after it asks for
+        // an explicit choice instead of guessing -- so say it, do not hide it.
+        console.error("[library] test setup not recorded", e);
+        setupRecorded = false;
+      }
     const invitation = await inviteCandidate(context, {
       employerId: data.employerId,
       applicationId: data.applicationId,

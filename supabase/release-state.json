@@ -2274,6 +2274,32 @@
       "hostedVersion": "20260927124146",
       "hostedName": "client_table_privilege_hardening",
       "evidenceSource": "Direct ledger read 2026-09-27 on wrygicdfxwjnrugduxnt: original 320 rows unchanged; 321 rows after owner-approved canonical NULL-statements alias. Security SQL applied once as 20260927124146, MD5 4c989d7bbe67b351f1b80a986816fb72. No administrative client grants remain; DML/RLS unchanged. See docs/security/2026-09-27/reconciliation/README.md."
+    },
+    {
+      "file": "20261219090000_assessment_draft_authoring.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "column",
+          "table": "scp_assessment_versions",
+          "object": "authoring_release_required"
+        },
+        {
+          "kind": "function",
+          "object": "scp_author_assessment_draft(uuid,text,uuid[],text,text,text)"
+        },
+        {
+          "kind": "function",
+          "object": "scp_guard_authoring_release()"
+        },
+        {
+          "kind": "function",
+          "object": "scp_guard_authored_assignment()"
+        }
+      ],
+      "rollback": "supabase/rollback/20261219090000_assessment_draft_authoring_rollback.sql",
+      "verify": "SELECT to_regprocedure('public.scp_author_assessment_draft(uuid,text,uuid[],text,text,text)') IS NOT NULL; SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_assessment_versions' AND column_name='authoring_release_required'; -- expect true, 1. Compare all four function bodies to the reviewed local replay. Verify held drafts cannot be assigned through scp_employer_assign.",
+      "note": "Prepared and verified only in an isolated local stack. No production writes. Adds atomic content-author draft composition and a version-specific assignment hold so a definition-level pilot designation never opens a new draft. New definitions inherit no standard designation. Assigned content stays pinned. No content release, role grant, validation or publication occurs. Requires separate review, schema deployment and read-only hosted verification before dependent administration code can become merge-eligible."
     }
   ], 
   "policyVersion": 2, 

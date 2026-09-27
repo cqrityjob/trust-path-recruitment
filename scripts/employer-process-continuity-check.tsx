@@ -389,7 +389,7 @@ const strip = (projection: ProcessProjection, lang: "sv" | "en" = "sv") =>
   // the application and the level; no address field exists on the surface.
   const dialog = codeOnly(read("src/components/recruitment/SendTestDialog.tsx"));
   ok(
-    /sendFn\(\{\s*data:\s*\{\s*employerId,\s*applicationId,\s*roleGroup/.test(dialog) &&
+    /sendFn\(\{\s*data:\s*\{\s*employerId,\s*applicationId:\s*recipient\.applicationId,/.test(dialog) &&
       !/recipientEmail|_recipient_email|type="email"/.test(dialog),
     "2 · assessment assignment passes the application, not an address",
   );

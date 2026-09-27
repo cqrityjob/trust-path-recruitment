@@ -64,6 +64,7 @@ export interface OfferableAssessment {
   readonly libraryKind: string;
   readonly slug: string;
   readonly itemId: string;
+  readonly versionNumber?: number;
   readonly nameSv: string;
   readonly nameEn: string;
   readonly designedFor: string;
@@ -120,13 +121,14 @@ export function resolveLevelOffers(
     if (!level.assessmentSlug) {
       return { level, state: "no_content", assessment: null, draftAwaitingRelease: false, parts };
     }
-    const row =
-      library.find(
-        (r) =>
-          r.libraryKind === "assessment" &&
-          r.slug === level.assessmentSlug &&
-          r.designedFor === "recruitment_support",
-      ) ?? null;
+    const matches = library.filter(
+      (r) =>
+        r.libraryKind === "assessment" &&
+        r.slug === level.assessmentSlug &&
+        r.designedFor === "recruitment_support",
+    );
+    matches.sort((a, b) => (b.versionNumber ?? 0) - (a.versionNumber ?? 0));
+    const row = matches.find((r) => r.assignable) ?? matches[0] ?? null;
     if (!row) {
       return { level, state: "no_content", assessment: null, draftAwaitingRelease: false, parts };
     }

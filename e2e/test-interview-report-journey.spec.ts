@@ -151,10 +151,11 @@ test.describe("Test → interview → final report", () => {
     });
     await page.locator("#lib-application").selectOption(APPLICATION);
     await page.getByTestId("lib-send-test").click();
-    await expect(page.getByTestId("lib-send-test-done")).toContainText(
-      /skickat till kandidaten, med det här upplägget/,
-      { timeout: 60_000 },
-    );
+    await page.getByTestId("send-test-submit").click();
+    await expect(page.getByTestId("send-test-confirmation")).toBeVisible();
+    await page.getByTestId("send-test-submit").click();
+    await expect(page.getByTestId("send-test-sent")).toBeVisible({ timeout: 60000 });
+    await expect(page.getByTestId("send-test-setup")).toHaveAttribute("data-recorded", "true");
     await shot(page, "1-test-sent");
     const row = sql(
       `SELECT aa.id || '|' || t.id || '|' || s.role_profile || '|' || s.environment

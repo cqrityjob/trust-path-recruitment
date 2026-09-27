@@ -1,10 +1,6 @@
-// Bibliotek — Tester & intervjuer.
-//
-// METHOD → ROLE → WORK ENVIRONMENT → SETUP → START (TRUST/BESKT product
-// structure v2.0). TRUST and BESKT are the two entrances, side by side and of
-// equal weight; the Väktare test lives inside TRUST's operational setup, not
-// beside the two methods. The choices ride the URL, so Back steps back through
-// them instead of discarding the setup. See src/components/library/.
+import { TestBank } from "@/components/recruitment/TestBank";
+// Default: the test bank. The separate guides view retains TRUST/BESKT
+// method choices and all existing deep links and Back navigation.
 
 import { createFileRoute } from "@tanstack/react-router";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -17,6 +13,7 @@ export const Route = createFileRoute("/_authenticated/employer/$employerSlug/ass
   component: LibraryRoute,
   errorComponent: EmployerErrorState,
   validateSearch: (search: Record<string, unknown>): LibrarySearch => ({
+    ...(search.view === "guides" ? { view: "guides" as const } : {}),
     ...(isMethod(search.method) ? { method: search.method } : {}),
     ...(isRoleGroup(search.group) ? { group: search.group } : {}),
     ...(isRoleProfile(search.role) ? { role: search.role } : {}),
@@ -29,15 +26,19 @@ function LibraryRoute() {
   const search = Route.useSearch();
   return (
     <AcademyPage employerSlug={employerSlug}>
-      {(ws) => (
-        <RecruitmentLibrary
-          employerId={ws.employerId}
-          employerSlug={employerSlug}
-          canAssign={ws.role !== "member"}
-          canManage={ws.role === "owner" || ws.role === "admin"}
-          search={search}
-        />
-      )}
+      {(ws) =>
+        !search.method && search.view !== "guides" ? (
+          <TestBank employerId={ws.employerId} employerSlug={employerSlug} />
+        ) : (
+          <RecruitmentLibrary
+            employerId={ws.employerId}
+            employerSlug={employerSlug}
+            canAssign={ws.role !== "member"}
+            canManage={ws.role === "owner" || ws.role === "admin"}
+            search={search}
+          />
+        )
+      }
     </AcademyPage>
   );
 }

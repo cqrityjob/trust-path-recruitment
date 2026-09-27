@@ -110,10 +110,11 @@ test.describe("Bibliotek — method → role → environment → setup → the f
     await signIn(page, OWNER, `/employer/${EMPLOYER}`);
     await navTo(page, /^Tester & bedömningar$|^Tests & assessments$/);
     await page
-      .getByRole("link", { name: /^Rekryteringsstöd$|^Recruitment support$/ })
+      .getByRole("link", { name: /^Testbank$|^Test library$/ })
       .first()
       .click();
     await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
+    await page.getByRole("link", { name: /^Förbered intervju$|^Prepare interview$/ }).click();
     await expect(page.getByRole("heading", { name: /^Rekryteringsstöd$/ })).toBeVisible({
       timeout: 60_000,
     });
@@ -151,11 +152,9 @@ test.describe("Bibliotek — method → role → environment → setup → the f
     );
     await shot(page, "1-trust-operational");
 
-    // Only what can be started is offered: the strategic TRUST content is a
-    // draft the platform has not released (no open pilot, no grant on this
-    // stack), so no strategic role is shown under it -- and no switched-off
-    // environments.
-    await expect(page.getByTestId("lib-group-strategic")).toHaveCount(0);
+    // 20261217090000 opened the strategic pilot. Both real roles are now
+    // offered; environments without content remain absent.
+    await expect(page.getByTestId("lib-group-strategic")).toHaveCount(1);
     await expect(page.getByTestId("lib-env-hospital")).toHaveCount(0);
     await expect(page.getByTestId("lib-env-data_centre")).toHaveCount(0);
 

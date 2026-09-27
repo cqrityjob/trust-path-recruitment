@@ -219,7 +219,8 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // pending.
 // 2026-09-27: all three verified applied; security canonical alias reconciled.
 // Evidence: docs/security/2026-09-27/reconciliation/README.md.
-const expectedPending: string[] = [];
+// Prepared assessment authoring schema; no hosted write is authorised by this task.
+const expectedPending: string[] = ["20261219090000_assessment_draft_authoring.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

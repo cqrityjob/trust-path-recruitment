@@ -96,10 +96,11 @@ async function openLibrary(page: Page, email: string, employer: string): Promise
   await signIn(page, email, `/employer/${employer}`);
   await navTo(page, /^Tester & bedömningar$|^Tests & assessments$/);
   await page
-    .getByRole("link", { name: /^Rekryteringsstöd$|^Recruitment support$/ })
+    .getByRole("link", { name: /^Testbank$|^Test library$/ })
     .first()
     .click();
   await expect(page).toHaveURL(/\/assessments\/library$/, { timeout: 60_000 });
+  await page.getByRole("link", { name: /^Förbered intervju$|^Prepare interview$/ }).click();
   // The library's order, clicked: BESKT → operational role → general environment.
   await page.getByTestId("lib-method-beskt-choose").click();
   await page.getByTestId("lib-group-operational").check();

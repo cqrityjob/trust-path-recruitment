@@ -22,6 +22,10 @@
 
 \set ON_ERROR_STOP on
 
+-- Unwind the newer authoring extension before the historical SCP domain.
+-- Its own rollback refuses authored data rather than removing release holds.
+\ir ../rollback/20261219090000_assessment_draft_authoring_rollback.sql
+
 CREATE OR REPLACE FUNCTION pg_temp.assert(_cond boolean, _label text)
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
