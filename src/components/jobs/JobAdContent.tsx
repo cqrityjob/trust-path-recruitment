@@ -72,6 +72,29 @@ export function pickLocalized(sv: string | null, en: string | null, lang: "sv" |
   return primary || fallback || "";
 }
 
+/** A line that is only an unfilled template placeholder, e.g.
+ *  "[Beskriv arbetsuppgifterna och arbetsplatsen]". Displayed honestly
+ *  as "description not provided" instead of leaking the form template. */
+function isTemplatePlaceholder(line: string): boolean {
+  return /^\[[^\]]*\]$/.test(line.trim());
+}
+
+/** Display-only cleanup of employer prose. Drops unfilled template
+ *  placeholders and a leading line that merely repeats the section's own
+ *  heading (an "Om rollen" line inside the section already titled
+ *  "Om rollen"). Stored data is never touched; every other line renders
+ *  verbatim. Returns "" when nothing meaningful remains. */
+export function cleanAdText(raw: string, sectionLabel: string): string {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !isTemplatePlaceholder(l));
+  if (lines.length > 0 && lines[0].toLowerCase() === sectionLabel.toLowerCase()) {
+    lines.shift();
+  }
+  return lines.join("\n");
+}
+
 /** Requirements may arrive as either a legacy string[] or a structured
  * object with mandatory/preferred/formal/employer_specific keys. Both
  * shapes are accepted; we degrade gracefully. */
@@ -255,14 +278,29 @@ export function JobAdSections({ job }: { job: JobAdContentJob }) {
   const responsibilities = toStringList(job.responsibilities);
   const benefits = toStringList(job.benefits);
 
+  // Display-only cleanup: unfilled template placeholders and a repeated
+  // section heading never reach the reader. An advert whose description
+  // is empty or placeholder-only says so honestly instead of leaking the
+  // form template.
+  const summaryLabel = t("jobs.detail.summary");
+  const lookingForLabel = t("jobs.detail.lookingFor");
+  const descriptionClean = cleanAdText(description, summaryLabel);
+  const requirementsClean = cleanAdText(requirementsText, lookingForLabel);
+
   return (
     <>
-      {description && (
-        <section>
-          <h2 className="text-xl font-semibold">{t("jobs.detail.summary")}</h2>
-          <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">{description}</p>
-        </section>
-      )}
+      <section>
+        <h2 className="text-xl font-semibold">{summaryLabel}</h2>
+        {descriptionClean ? (
+          <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">
+            {descriptionClean}
+          </p>
+        ) : (
+          <p className="mt-3 leading-relaxed text-muted-foreground">
+            {t("jobs.detail.no_description")}
+          </p>
+        )}
+      </section>
 
       {responsibilities.length > 0 && (
         <section>
@@ -271,11 +309,11 @@ export function JobAdSections({ job }: { job: JobAdContentJob }) {
         </section>
       )}
 
-      {requirementsText && (
+      {requirementsClean && (
         <section>
-          <h2 className="text-xl font-semibold">{t("jobs.detail.lookingFor")}</h2>
+          <h2 className="text-xl font-semibold">{lookingForLabel}</h2>
           <p className="mt-3 whitespace-pre-line leading-relaxed text-foreground">
-            {requirementsText}
+            {requirementsClean}
           </p>
         </section>
       )}
