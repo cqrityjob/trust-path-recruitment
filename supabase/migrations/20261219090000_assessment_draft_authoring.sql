@@ -106,7 +106,7 @@ BEGIN
       INSERT INTO public.scp_form_blocks SELECT _block.*;
     END LOOP;
     INSERT INTO public.scp_form_items(form_id,item_version_id,block_key,display_order,randomise_options)
-      SELECT _new_form,fi.item_version_id,fi.block_key,array_position(_item_version_ids,fi.item_version_id),fi.randomise_options
+      SELECT _new_form,fi.item_version_id,fi.block_key,fi.display_order,fi.randomise_options
       FROM public.scp_form_items fi WHERE fi.form_id=_old_form AND fi.item_version_id=ANY(_item_version_ids);
   END LOOP;
   INSERT INTO public.scp_content_events(subject_type,subject_id,action,actor_id,reason,metadata)
