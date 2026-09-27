@@ -20,6 +20,17 @@
 - [ ] Owner visual gate: prove at least one real Preview credential uses the premium record system, or report the data limitation
 - [ ] Verification: focused static safeguards pass; SV/EN desktop, 390px, 375px browser smoke tests remain blocked by the Preview environment
 
+## MVP UX fixes after #301/#302/#303 (pending plan approval)
+
+- [ ] Sync latest main (ee5bd661) into the preview branch — branch is behind; local jobs.$slug.tsx still has the pre-#303 history.back()
+- [ ] Job card title wrapping: "Säkerhetschef" must not break mid-word without a hyphen
+- [ ] Job ad: honest empty-description handling ("Arbetsbeskrivning saknas" / "Job description not provided"); remove duplicate template headings without touching stored data
+- [ ] Jobs mobile: collapse extra filters behind an accessible "Filter" button with active-filter count; keep search and result count visible; preserve URL filters
+- [ ] Homepage hero buttons: fix icon/text spacing
+- [ ] Preserve company-name spelling; no auto-capitalisation; use canonical display labels
+- [ ] Verify #303 back-navigation/login-return still preserves search filters (only fix if a defect reproduces)
+- [ ] Verify SV/EN desktop+mobile; report authenticated flows as unverified without a test account
+
 ## Frozen boundaries
 
 - No hosted Supabase changes or migrations
