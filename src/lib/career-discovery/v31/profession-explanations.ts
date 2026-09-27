@@ -116,6 +116,56 @@ export const RECOMMENDATION_CONFIDENCE_LABEL: Readonly<
   indicative: { sv: "Närmast dina svar", en: "Closest to your answers" },
 };
 
+// ── A SAVED REPORT IS DATA, NOT A TYPE ─────────────────────────────────
+//
+// A frozen snapshot is JSON read back from the database. Its type says
+// `confidence` is one of the three words above; the row can say anything —
+// "high" from an older or hand-edited snapshot, `null`, or nothing at all.
+// Indexing the label map with such a value returned `undefined`, and reading
+// `[locale]` off that threw during render: one unknown word took down the
+// whole Career Center hub and the report view, not just its own badge.
+//
+// So every read of a SAVED confidence goes through the check below, which
+// accepts exactly the keys of RECOMMENDATION_CONFIDENCE_LABEL — the list of
+// valid values cannot drift from the list of labels. An unknown value is
+// never mapped onto a known one: it is not "indicative" (a real, weaker
+// claim the report did not make), and it is never a reason to drop the
+// entry — the profession, its rank and its rationale are what the report
+// said; only the strength word is missing, and the surface says so.
+
+/** Shown in place of the confidence word when a saved report's entry has
+ *  none this build knows. Neutral on purpose: it states that the strength
+ *  word is unavailable — it is not the weakest word, and it is not a guess. */
+export const RECOMMENDATION_CONFIDENCE_UNAVAILABLE_LABEL: Readonly<Record<Locale, string>> = {
+  sv: "Bedömningsstyrka saknas",
+  en: "Assessment confidence unavailable",
+};
+
+/** Whether `value` is one of the confidence words this build renders — an
+ *  OWN key of RECOMMENDATION_CONFIDENCE_LABEL, so `"toString"` and friends
+ *  are not. The one check every read of a saved report's confidence uses. */
+export function isRecommendationConfidence(value: unknown): value is RecommendationConfidence {
+  return (
+    typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(RECOMMENDATION_CONFIDENCE_LABEL, value)
+  );
+}
+
+/** A saved report's confidence as this build can state it: the report's own
+ *  word when it is a known one, otherwise `null` ("unavailable"). */
+export function readRecommendationConfidence(value: unknown): RecommendationConfidence | null {
+  return isRecommendationConfidence(value) ? value : null;
+}
+
+/** The words to print for a confidence: the approved label for a known value,
+ *  exactly as before, and the neutral "unavailable" wording for anything
+ *  else. Total — it cannot throw, whatever the saved report holds. */
+export function recommendationConfidenceLabel(value: unknown, locale: Locale): string {
+  return isRecommendationConfidence(value)
+    ? RECOMMENDATION_CONFIDENCE_LABEL[value][locale]
+    : RECOMMENDATION_CONFIDENCE_UNAVAILABLE_LABEL[locale];
+}
+
 export const TIER_HEADING: Readonly<
   Record<"strongest" | "alsoWorth" | "longerTerm" | "careerPivot", Record<Locale, string>>
 > = {

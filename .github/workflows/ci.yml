@@ -1152,13 +1152,23 @@ jobs:
       - name: Career Center journey check
         run: bun run career-center-journey:check
 
+      # A saved report is data: a ranked profession whose confidence word is
+      # unknown ("high"), null or missing must not take down the Career
+      # Center hub, the report view or the Career Card. Renders all three in
+      # Swedish and English and requires the report's order, titles and
+      # rationales to survive, the neutral "unavailable" wording for exactly
+      # those entries, and strong / moderate / indicative unchanged.
+      - name: Saved-report confidence check
+        run: bun run career-report-confidence:check
+
       # A guard that passes proves nothing on its own. This reintroduces
-      # eleven real defects one at a time — the repealed Act, the age-18
+      # real defects one at a time — the repealed Act, the age-18
       # regression, ISO modelled as a personal certificate, a placeholder
       # transition promoted to reviewed, Säkerhetschef back as a direct step
-      # out of Väktare, the unreachable funnel event — and requires the guard
-      # above to fail with the right message for each, then puts every file
-      # back byte for byte and requires the guard to be green again.
+      # out of Väktare, the unreachable funnel event, an unguarded saved
+      # confidence word — and requires the guard that owns each to fail with
+      # the right message, then puts every file back byte for byte and
+      # requires every guard to be green again.
       - name: Security Career Center negative controls
         run: bun run career-center:negative-controls
 

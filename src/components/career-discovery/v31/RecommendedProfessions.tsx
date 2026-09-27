@@ -32,7 +32,8 @@ import { exploreDestinationFor } from "@/lib/career-center/profession-links";
 import { rememberReturn } from "@/lib/career-center/return-context";
 import {
   explainMatch,
-  RECOMMENDATION_CONFIDENCE_LABEL,
+  readRecommendationConfidence,
+  recommendationConfidenceLabel,
   STAGE_LABEL,
 } from "@/lib/career-discovery/v31/profession-explanations";
 import type { ProfessionStage, RankedProfession } from "@/lib/career-discovery/v31/professions";
@@ -223,8 +224,14 @@ function RecommendationCard({
     >
       <div className="flex flex-wrap items-center gap-2.5">
         <RankBadge rank={entry.rank} locale={locale} />
-        <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-          {RECOMMENDATION_CONFIDENCE_LABEL[entry.confidence][locale]}
+        {/* A saved report's confidence is checked, never trusted: an unknown
+            word prints a neutral "unavailable" and the card keeps its rank,
+            title and rationale (see isRecommendationConfidence). */}
+        <span
+          data-confidence={readRecommendationConfidence(entry.confidence) ?? "unavailable"}
+          className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+        >
+          {recommendationConfidenceLabel(entry.confidence, locale)}
         </span>
         {entry.match.stage !== "explore_now" && (
           <StageBadge stage={entry.match.stage} locale={locale} />

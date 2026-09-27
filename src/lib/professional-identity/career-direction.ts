@@ -32,12 +32,20 @@
 // `indicative` means "closest in the catalogue", not "a good fit", and the
 // copy that renders it has to be able to say so. The confidence is carried
 // out of this module for exactly that reason and is never flattened away.
+//
+// It is READ, like everything else here, so it is checked like everything
+// else here: a saved snapshot whose entry holds no confidence word this build
+// knows ("high", `null`, nothing) carries `null` — "unavailable" — and keeps
+// its place, its title and its rationale. The entry is never dropped (that
+// would promote an alternative to the first-ranked profession) and the value
+// is never guessed (see readRecommendationConfidence).
 
 import type { StoredReportResult } from "@/lib/career-discovery/stored-report.functions";
 import type {
   ProfessionStage,
   RecommendationConfidence,
 } from "@/lib/career-discovery/v31/professions";
+import { readRecommendationConfidence } from "@/lib/career-discovery/v31/profession-explanations";
 import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
 
 export const CAREER_DIRECTION_VERSION = "career-direction-v1" as const;
@@ -58,7 +66,11 @@ export interface RoleSummary {
   /** The catalogue slug, when the match carries one, so a surface can link
    *  to the profession guide instead of to a search. */
   readonly cigSlug: string | null;
-  readonly confidence: RecommendationConfidence;
+  /** The report's own confidence word, or `null` when the saved entry holds
+   *  none this build knows — missing, `null` or an unknown value such as
+   *  "high". Surfaces print a neutral "unavailable" for `null`; it is never
+   *  replaced by a real word. */
+  readonly confidence: RecommendationConfidence | null;
   /** WHY the report named it, in the report's own authored words — the
    *  frozen `inclusionRationale*` of the match. Null when an old snapshot
    *  did not store one; never regenerated. */
@@ -186,7 +198,9 @@ export function deriveCareerDirection(
       titleSv: r.match.titleSv,
       titleEn: r.match.titleEn,
       cigSlug: r.match.cigProfessionSlug ?? null,
-      confidence: r.confidence,
+      // Checked, never trusted and never guessed: an unknown word becomes
+      // "unavailable", and the role keeps its rank.
+      confidence: readRecommendationConfidence(r.confidence),
       rationaleSv:
         typeof r.match.inclusionRationaleSv === "string" ? r.match.inclusionRationaleSv : null,
       rationaleEn:

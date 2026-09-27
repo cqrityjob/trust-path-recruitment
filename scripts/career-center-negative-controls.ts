@@ -20,6 +20,10 @@
  * file and comparing it to the original bytes, so a control that crashed
  * halfway cannot leave a mutation behind and report success.
  *
+ * Most controls are guarded by `career-center:check`. The saved-report
+ * confidence controls are guarded by `career-report-confidence:check`, which
+ * renders the views that used to crash; each control names its own guard.
+ *
  * Run: bun run career-center:negative-controls
  */
 
@@ -30,18 +34,28 @@ import { spawnSync } from "node:child_process";
 const root = path.resolve(import.meta.dir, "..");
 const abs = (p: string) => path.join(root, p);
 
-interface Control {
-  /** What defect this reintroduces. */
-  readonly name: string;
+interface Edit {
   readonly file: string;
   /** Exact text to replace, and what to replace it with. */
   readonly from: string;
   readonly to: string;
+}
+
+interface Control extends Edit {
+  /** What defect this reintroduces. */
+  readonly name: string;
+  /** Further edits the same defect needs (an import it brings back). */
+  readonly also?: readonly Edit[];
+  /** The guard that must catch it. Defaults to career-center:check. */
+  readonly guard?: string;
   /** A fragment the guard's failure output must contain. Asserting the
    *  MESSAGE, not merely a non-zero exit: a guard that fails for an unrelated
    *  reason is not evidence about this defect. */
   readonly expect: string;
 }
+
+const CAREER_CENTER_CHECK = "scripts/career-center-check.ts";
+const CONFIDENCE_CHECK = "scripts/career-report-confidence-check.tsx";
 
 const CONTROLS: readonly Control[] = [
   {
@@ -194,15 +208,121 @@ const CONTROLS: readonly Control[] = [
     to: `        {t("cc.step.detail")}`,
     expect: "must say where it goes",
   },
+
+  // ── A saved report's confidence word (career-report-confidence:check) ──
+  //
+  // An unknown word ("high", null, nothing) in a saved snapshot used to take
+  // down the Career Center hub and the report view. Each control removes one
+  // guard — or swaps in one of the two tempting wrong fixes — and the check
+  // that renders the views must fail, for that reason.
+  {
+    name: "a saved report's unknown confidence passed straight through the read",
+    file: "src/lib/professional-identity/career-direction.ts",
+    from: `      confidence: readRecommendationConfidence(r.confidence),`,
+    to: `      confidence: r.confidence,`,
+    guard: CONFIDENCE_CHECK,
+    expect: "deriveCareerDirection carries an unknown confidence as unavailable",
+  },
+  {
+    name: "an entry with an unknown confidence dropped, promoting an alternative",
+    file: "src/lib/professional-identity/career-direction.ts",
+    from: `    .filter((r) => r && r.match && typeof r.match.titleSv === "string")`,
+    to: `    .filter(
+      (r) =>
+        r &&
+        r.match &&
+        typeof r.match.titleSv === "string" &&
+        readRecommendationConfidence(r.confidence) !== null,
+    )`,
+    guard: CONFIDENCE_CHECK,
+    expect: "the first-ranked profession stays first",
+  },
+  {
+    name: "an unknown confidence read as a real (weaker) word",
+    file: "src/lib/career-discovery/v31/profession-explanations.ts",
+    from: `  return isRecommendationConfidence(value) ? value : null;`,
+    to: `  return isRecommendationConfidence(value) ? value : "indicative";`,
+    guard: CONFIDENCE_CHECK,
+    expect: "is read as unavailable, never as a known word",
+  },
+  {
+    name: "the shared check accepting any string as a confidence",
+    file: "src/lib/career-discovery/v31/profession-explanations.ts",
+    from: `  return (
+    typeof value === "string" &&
+    Object.prototype.hasOwnProperty.call(RECOMMENDATION_CONFIDENCE_LABEL, value)
+  );`,
+    to: `  return typeof value === "string";`,
+    guard: CONFIDENCE_CHECK,
+    expect: '"high" is not a known confidence',
+  },
+  {
+    name: "the Career Center indexing the label map with a saved value again",
+    file: "src/components/career-center/PersonalDirection.tsx",
+    from: `          {recommendationConfidenceLabel(item.confidence, locale)}`,
+    to: `          {RECOMMENDATION_CONFIDENCE_LABEL[item.confidence as RecommendationConfidence][locale]}`,
+    also: [
+      {
+        file: "src/components/career-center/PersonalDirection.tsx",
+        from: `import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";`,
+        to: `import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";
+import { RECOMMENDATION_CONFIDENCE_LABEL } from "@/lib/career-discovery/v31/profession-explanations";
+import type { RecommendationConfidence } from "@/lib/career-discovery/v31/professions";`,
+      },
+    ],
+    guard: CONFIDENCE_CHECK,
+    expect: "the Career Center renders a raw saved value without crashing",
+  },
+  {
+    name: "the report view indexing the label map with a saved value again",
+    file: "src/components/career-discovery/v31/RecommendedProfessions.tsx",
+    from: `          {recommendationConfidenceLabel(entry.confidence, locale)}`,
+    to: `          {RECOMMENDATION_CONFIDENCE_LABEL[entry.confidence][locale]}`,
+    also: [
+      {
+        file: "src/components/career-discovery/v31/RecommendedProfessions.tsx",
+        from: `  explainMatch,
+  readRecommendationConfidence,`,
+        to: `  explainMatch,
+  RECOMMENDATION_CONFIDENCE_LABEL,
+  readRecommendationConfidence,`,
+      },
+    ],
+    guard: CONFIDENCE_CHECK,
+    expect: "the report view renders without crashing",
+  },
+  {
+    name: "the Career Card indexing the label map with a saved value again",
+    file: "src/lib/career-discovery/v31/career-card.ts",
+    from: `    confidenceLabel: recommendationConfidenceLabel(r.confidence, locale),`,
+    to: `    confidenceLabel: RECOMMENDATION_CONFIDENCE_LABEL[r.confidence][locale],`,
+    also: [
+      {
+        file: "src/lib/career-discovery/v31/career-card.ts",
+        from: `import { recommendationConfidenceLabel, STAGE_LABEL } from "./profession-explanations";`,
+        to: `import {
+  RECOMMENDATION_CONFIDENCE_LABEL,
+  recommendationConfidenceLabel,
+  STAGE_LABEL,
+} from "./profession-explanations";`,
+      },
+    ],
+    guard: CONFIDENCE_CHECK,
+    expect: "the Career Card builds without crashing",
+  },
 ];
 
-function runGuard(): { readonly ok: boolean; readonly output: string } {
-  const r = spawnSync("bun", ["run", "scripts/career-center-check.ts"], {
+function runGuard(script: string = CAREER_CENTER_CHECK): {
+  readonly ok: boolean;
+  readonly output: string;
+} {
+  const r = spawnSync("bun", ["run", script], {
     cwd: root,
     encoding: "utf8",
   });
   return { ok: r.status === 0, output: `${r.stdout ?? ""}${r.stderr ?? ""}` };
 }
+const GUARDS = [...new Set(CONTROLS.map((c) => c.guard ?? CAREER_CENTER_CHECK))];
 
 const originals = new Map<string, string>();
 function snapshot(file: string): string {
@@ -216,24 +336,34 @@ function restoreAll(): void {
 const failures: string[] = [];
 
 // The guard must be green before any of this means anything.
-const baseline = runGuard();
-if (!baseline.ok) {
-  console.error("career-center:check is already failing — negative controls prove nothing.");
-  console.error(baseline.output);
-  process.exit(1);
+for (const guard of GUARDS) {
+  const baseline = runGuard(guard);
+  if (!baseline.ok) {
+    console.error(`${guard} is already failing — negative controls prove nothing.`);
+    console.error(baseline.output);
+    process.exit(1);
+  }
+  console.log(`baseline: ${guard} is green`);
 }
-console.log("baseline: career-center:check is green\n");
+console.log("");
 
 try {
   for (const control of CONTROLS) {
-    const original = snapshot(control.file);
-    if (!original.includes(control.from)) {
-      failures.push(`${control.name}: anchor text not found in ${control.file}`);
+    // Every edit the defect needs, each against the file's ORIGINAL bytes so
+    // two edits to one file compose, then everything is put back.
+    const edits: readonly Edit[] = [control, ...(control.also ?? [])];
+    const missing = edits.find((e) => !snapshot(e.file).includes(e.from));
+    if (missing) {
+      failures.push(`${control.name}: anchor text not found in ${missing.file}`);
       continue;
     }
-    writeFileSync(abs(control.file), original.replace(control.from, control.to));
-    const result = runGuard();
-    writeFileSync(abs(control.file), original);
+    const mutated = new Map<string, string>();
+    for (const e of edits) {
+      mutated.set(e.file, (mutated.get(e.file) ?? snapshot(e.file)).replace(e.from, e.to));
+    }
+    for (const [file, content] of mutated) writeFileSync(abs(file), content);
+    const result = runGuard(control.guard ?? CAREER_CENTER_CHECK);
+    for (const file of mutated.keys()) writeFileSync(abs(file), snapshot(file));
 
     if (result.ok) {
       failures.push(`${control.name}: guard stayed GREEN — it does not detect this`);
@@ -259,9 +389,10 @@ for (const [file, content] of originals) {
     failures.push(`${file} was not restored to its original bytes`);
   }
 }
-const after = runGuard();
-if (!after.ok) {
-  failures.push("career-center:check is not green again after restoring every file");
+for (const guard of GUARDS) {
+  if (!runGuard(guard).ok) {
+    failures.push(`${guard} is not green again after restoring every file`);
+  }
 }
 
 if (failures.length > 0) {

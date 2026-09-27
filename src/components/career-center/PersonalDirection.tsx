@@ -12,7 +12,8 @@ import {
 import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import { DIMENSIONS } from "@/lib/career-discovery/v31/dimensions";
 import {
-  RECOMMENDATION_CONFIDENCE_LABEL,
+  readRecommendationConfidence,
+  recommendationConfidenceLabel,
   STAGE_LABEL,
 } from "@/lib/career-discovery/v31/profession-explanations";
 import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
@@ -334,8 +335,11 @@ function PrimaryRecommendation({
         <span className="inline-flex items-center rounded-full bg-accent px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-accent-foreground">
           {t("cc.me.primary.badge")}
         </span>
-        <span className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-          {RECOMMENDATION_CONFIDENCE_LABEL[item.confidence][locale]}
+        <span
+          data-confidence={readRecommendationConfidence(item.confidence) ?? "unavailable"}
+          className="inline-flex items-center rounded-full border border-border px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+        >
+          {recommendationConfidenceLabel(item.confidence, locale)}
         </span>
         {item.stage && (
           <span className="inline-flex items-center rounded-full border border-border bg-muted/40 px-2.5 py-0.5 text-[11px] font-medium text-foreground">
@@ -425,8 +429,11 @@ function AlternativeRecommendation({
         <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
           #{item.rank}
         </span>
-        <span className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-          {RECOMMENDATION_CONFIDENCE_LABEL[item.confidence][locale]}
+        <span
+          data-confidence={readRecommendationConfidence(item.confidence) ?? "unavailable"}
+          className="rounded-full border border-border px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+        >
+          {recommendationConfidenceLabel(item.confidence, locale)}
         </span>
       </div>
       <h4 className="mt-3 text-base font-semibold tracking-tight text-foreground">{title}</h4>

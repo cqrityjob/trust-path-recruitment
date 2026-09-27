@@ -238,6 +238,7 @@
     "candidate-header-desktop:e2e": "playwright test e2e/candidate-header-desktop.spec.ts --project=chromium",
     "career-center:check": "bun run scripts/career-center-check.ts",
     "career-center-journey:check": "bun run scripts/career-center-journey-check.tsx",
+    "career-report-confidence:check": "bun run scripts/career-report-confidence-check.tsx",
     "career-center-persistence:local": "bun run scripts/career-center-persistence-local.ts",
     "career-center:negative-controls": "bun run scripts/career-center-negative-controls.ts",
     "career-center:sources": "bun run scripts/career-center-source-check.ts",
