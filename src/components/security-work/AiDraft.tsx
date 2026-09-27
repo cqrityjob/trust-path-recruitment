@@ -98,6 +98,9 @@ export function AiDraft({
   const [applyId, setApplyId] = useState(() => crypto.randomUUID());
   const [consent, setConsent] = useState(false);
   const [appliedJobId, setAppliedJobId] = useState<string | null>(null);
+  // Which request the shared operation is running, so its progress line can
+  // say what is happening rather than a generic "saving".
+  const [running, setRunning] = useState<"draft" | "apply" | null>(null);
   const [appliedReportId, setAppliedReportId] = useState<string | null>(null);
   const hasEvidence = inputs.some((input) => input.review_status === "accepted");
   const pendingEvidence = inputs.some((input) => input.review_status === "pending");
@@ -176,17 +179,31 @@ export function AiDraft({
             "AI suggests follow-up questions, risks, actions and report text from reviewed evidence. You review and apply the proposal to an editable draft before approving the report separately.",
           )}
         </p>
+        {/* The three availability states in the MVP text specification's
+            words (§9.2), read from the existing server check. A failed read
+            is not "off", and "available" is not a health claim. */}
         {status.isPending ? (
           <p role="status" className="text-sm">
-            {l("Kontrollerar AI-konfiguration…", "Checking AI configuration…")}
+            {l("Kontrollerar tillgänglighet…", "Checking availability…")}
           </p>
         ) : status.isError ? (
-          <WorkError code={status.error.message} onRetry={() => void status.refetch()} />
+          <WorkError
+            code={status.error.message}
+            message={
+              status.error.message === "ACCESS_DENIED"
+                ? undefined
+                : l(
+                    "AI-stödets tillgänglighet kunde inte kontrolleras. Försök igen.",
+                    "AI availability could not be checked. Try again.",
+                  )
+            }
+            onRetry={() => void status.refetch()}
+          />
         ) : !status.data?.enabled ? (
           <p role="status" className="rounded-lg bg-secondary p-4 text-sm">
             {l(
-              "AI är inte aktiverat för arbetsytan. Kontakta pilotansvarig för åtkomst. Du kan fortsätta manuellt; nya AI-utkast kan inte skapas just nu.",
-              "AI is not activated for this workspace. Contact the pilot lead for access. You can continue manually; new AI drafts cannot be generated right now.",
+              "AI-stöd är inte tillgängligt här just nu. Du kan fortsätta med egna underlag, bedömningar och rapporter.",
+              "AI assistance is not available here right now. You can continue with your own evidence, assessments and reports.",
             )}
           </p>
         ) : (
@@ -195,22 +212,24 @@ export function AiDraft({
             <WorkButton
               disabled={!hasEvidence || pendingEvidence || dirty || op.state === "saving"}
               onClick={async () => {
-                await op.run(() =>
-                  draft({
-                    data: {
-                      workspaceId: workspace.id,
-                      assessmentId,
-                      version,
-                      requestId,
-                    },
-                  }),
-                );
+                setRunning("draft");
+                try {
+                  await op.run(() =>
+                    draft({
+                      data: {
+                        workspaceId: workspace.id,
+                        assessmentId,
+                        version,
+                        requestId,
+                      },
+                    }),
+                  );
+                } finally {
+                  setRunning(null);
+                }
               }}
             >
-              {l(
-                "Skapa AI-utkast från granskat underlag",
-                "Create AI draft from reviewed evidence",
-              )}
+              {l("Ta fram AI-utkast", "Generate AI draft")}
             </WorkButton>
           )
         )}
@@ -311,12 +330,22 @@ export function AiDraft({
                     : undefined
           }
         />
-        {op.state !== "error" && <SaveStatus state={op.state} />}
+        {op.state === "saving" && running === "draft" ? (
+          <p role="status" aria-live="polite" className="text-sm text-muted-foreground">
+            {l("AI-utkastet tas fram…", "Generating AI draft…")}
+          </p>
+        ) : (
+          op.state !== "error" && <SaveStatus state={op.state} />
+        )}
         {output && (
           <div className="space-y-5" data-testid="sw-ai-proposal">
-            <h3 className="text-lg font-semibold">
-              {l("Granska AI-förslaget", "Review the AI proposal")}
-            </h3>
+            <h3 className="text-lg font-semibold">{l("Granska AI-utkast", "Review AI draft")}</h3>
+            {/* Nothing in a proposal is reviewed until a person applies it
+                and approves the report version (MVP text specification §3,
+                §9.3: an AI draft is never an approved analysis). */}
+            <p className="inline-flex rounded-full border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+              {l("Utkast – inte granskat", "Draft – not reviewed")}
+            </p>
             {[
               ...output.facts,
               ...output.userInterpretations,
@@ -402,6 +431,9 @@ export function AiDraft({
                       ))}
                       {section.missingInformation && (
                         <p className="text-sm text-muted-foreground">
+                          <span className="font-semibold text-foreground">
+                            {l("Underlag saknas", "Evidence missing")}:
+                          </span>{" "}
                           {section.missingInformation}
                         </p>
                       )}

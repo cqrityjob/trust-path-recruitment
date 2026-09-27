@@ -131,10 +131,20 @@ export function SecurityAnalyses() {
               "A title, purpose, scope and time horizon are required to keep the assessment focused on the right question and period. Next, add your evidence.",
             )}
           </p>
-          <Field label={l("Analystyp", "Analysis type")}>
-            {(id) => (
+          {/* One quiet line for preparedness (MVP text specification §9.1):
+              it is the existing security assessment's own report section,
+              not a third method. */}
+          <Field
+            label={l("Analystyp", "Analysis type")}
+            hint={l(
+              "Säkerhetsbedömningen har en rapportdel för beredskap och incidenthantering och kan användas för beredskapsunderlag.",
+              "The security assessment has a report section on preparedness and incident management, and can be used for preparedness evidence.",
+            )}
+          >
+            {(id, hintId) => (
               <select
                 id={id}
+                aria-describedby={hintId}
                 className={selectClass}
                 value={type}
                 onChange={(e) => setType(e.target.value as AnalysisType)}

@@ -333,8 +333,8 @@ export function SecurityReportDetail({ reportId }: { reportId: string }) {
         <>
           <p role="status" className="rounded-lg bg-secondary p-4 text-sm">
             {l(
-              "Denna godkända version är oföränderlig. Skapa ett nytt revisionsutkast från analysen om något behöver ändras.",
-              "This approved version is immutable. Create a new revision draft from the analysis to make changes.",
+              "Den här rapportversionen är godkänd och kan inte ändras. Skapa en ny revision från analysen om innehållet behöver ändras.",
+              "This report version is approved and cannot be changed. Create a new revision from the analysis if the content needs to change.",
             )}{" "}
             · {formatDate(approval.approved_at, lang, true)}
           </p>
@@ -358,10 +358,10 @@ export function SecurityReportDetail({ reportId }: { reportId: string }) {
               }
             }}
           >
-            {l(
-              "Exportera rapport (HTML / skriv ut till PDF)",
-              "Export report (HTML / print to PDF)",
-            )}
+            {/* The export is the existing HTML download, which the reader
+                prints or saves as PDF from the browser; the label says so
+                rather than promise a PDF service (MVP text specification §9.3). */}
+            {l("Ladda ner – skriv ut eller spara som PDF", "Download – print or save as PDF")}
           </WorkButton>
           <BundleView bundle={approvedBundle.data} />
         </>
@@ -537,7 +537,7 @@ export function SecurityReportDetail({ reportId }: { reportId: string }) {
                       }
                     }}
                   >
-                    {l("Godkänn rapportversion", "Approve report version")}
+                    {l("Godkänn denna rapportversion", "Approve this report version")}
                   </WorkButton>
                 </section>
               )}

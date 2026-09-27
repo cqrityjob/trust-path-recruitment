@@ -1,5 +1,6 @@
 export const securityWorkSv = {
   "sw.name": "Mitt säkerhetsarbete",
+  "sw.meta.title": "Mitt säkerhetsarbete – CQrityjob",
   "sw.product": "CQrityjob Security Intelligence",
   "sw.promise": "Från signal till säkerhetsbeslut",
   "sw.nav.label": "Navigering för mitt säkerhetsarbete",
@@ -37,7 +38,7 @@ export const securityWorkSv = {
   "sw.paused": "Pausad",
   "sw.pause": "Pausa",
   "sw.resume": "Aktivera",
-  "sw.viewer": "Du har läsåtkomst till den här arbetsytan.",
+  "sw.viewer": "Du har läsbehörighet i arbetsytan.",
   "sw.notice":
     "Lägg inte in säkerhetsskyddsklassificerad, hemlig eller annan förbjuden information. Du ansvarar för den professionella bedömningen. Källor kan innehålla fel.",
   "sw.manual": "Manuell bevakning",
@@ -220,6 +221,7 @@ export const securityWorkSv = {
 
 export const securityWorkEn: { [K in keyof typeof securityWorkSv]: string } = {
   "sw.name": "My Security Work",
+  "sw.meta.title": "My Security Work – CQrityjob",
   "sw.product": "CQrityjob Security Intelligence",
   "sw.promise": "From signal to security decision",
   "sw.nav.label": "My Security Work navigation",

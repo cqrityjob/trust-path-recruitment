@@ -294,7 +294,10 @@ for (const locale of ["sv", "en"] as const) {
     await expect(ai.getByText(evidence, { exact: true }).first()).toBeVisible();
     await expect(
       page.getByText(
-        l("AI är inte aktiverat för arbetsytan.", "AI is not activated for this workspace."),
+        l(
+          "AI-stöd är inte tillgängligt här just nu.",
+          "AI assistance is not available here right now.",
+        ),
         { exact: false },
       ),
     ).toBeVisible();
@@ -332,7 +335,7 @@ for (const locale of ["sv", "en"] as const) {
     await assessmentStep();
     await expect(
       page.getByRole("button", {
-        name: l("Skapa AI-utkast från granskat underlag", "Create AI draft from reviewed evidence"),
+        name: l("Ta fram AI-utkast", "Generate AI draft"),
         exact: true,
       }),
     ).toBeEnabled();
@@ -343,7 +346,10 @@ for (const locale of ["sv", "en"] as const) {
       .click();
     await expect(
       page.getByText(
-        l("AI är inte aktiverat för arbetsytan.", "AI is not activated for this workspace."),
+        l(
+          "AI-stöd är inte tillgängligt här just nu.",
+          "AI assistance is not available here right now.",
+        ),
         { exact: false },
       ),
     ).toBeVisible();
@@ -539,9 +545,9 @@ for (const locale of ["sv", "en"] as const) {
         { exact: false },
       ),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: /Skapa AI-utkast|Create AI draft/ })).toHaveCount(
-      0,
-    );
+    await expect(
+      page.getByRole("button", { name: /Ta fram AI-utkast|Generate AI draft/ }),
+    ).toHaveCount(0);
     await expect(ai).toHaveCount(0);
     const original = await db
       .from("sw_processing_jobs")

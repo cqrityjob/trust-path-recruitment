@@ -35,42 +35,77 @@ export function AssistanceStatus() {
       return result.data;
     },
   });
-  const status = (loading: boolean, error: boolean, enabled?: boolean) =>
-    loading
-      ? l("kontrollerar…", "checking…")
-      : error
-        ? l("kunde inte kontrolleras", "could not be checked")
-        : enabled && canEdit
-          ? l("tillgängligt", "available")
-          : l("inte tillgängligt", "unavailable");
+  // ── WHAT THE TWO LINES MAY SAY (MVP text specification §9.2) ─────────
+  //
+  // Each state is read from the existing server check and said as a whole
+  // sentence. A failed read is its own state — never "not available" — and
+  // "available" means the switch is on for this workspace, not that the
+  // provider is healthy right now, so nothing here says "AI fungerar".
+  // A reader without edit rights cannot request either, so for them both
+  // read as not available here, beside the read-only line below.
+  const aiLine = ai.isPending
+    ? l("Kontrollerar tillgänglighet…", "Checking availability…")
+    : ai.isError
+      ? l(
+          "AI-stödets tillgänglighet kunde inte kontrolleras. Försök igen.",
+          "AI availability could not be checked. Try again.",
+        )
+      : ai.data?.enabled && canEdit
+        ? l(
+            "AI-stöd är tillgängligt i den här arbetsytan.",
+            "AI assistance is available in this workspace.",
+          )
+        : l(
+            "AI-stöd är inte tillgängligt här just nu. Du kan fortsätta med egna underlag, bedömningar och rapporter.",
+            "AI assistance is not available here right now. You can continue with your own evidence, assessments and reports.",
+          );
+  const documentLine = processing.isPending
+    ? l("Kontrollerar tillgänglighet…", "Checking availability…")
+    : processing.isError
+      ? l(
+          "Tillgängligheten för textutvinning kunde inte kontrolleras. Försök igen.",
+          "Text extraction availability could not be checked. Try again.",
+        )
+      : processing.data?.enabled && canEdit
+        ? l(
+            "Textutvinning från PDF och DOCX är tillgänglig. Granska utdragen innan du använder dem.",
+            "Text extraction from PDF and DOCX is available. Review the extracts before using them.",
+          )
+        : l(
+            "Automatisk textutvinning är inte tillgänglig här just nu. Du kan registrera relevanta utdrag manuellt.",
+            "Automatic text extraction is not available here right now. You can enter relevant extracts manually.",
+          );
   return (
     <div className="space-y-2 text-sm" data-testid="sw-assistance-status">
-      <p className="flex flex-wrap gap-x-5 gap-y-1" role="status">
-        <span>
-          {l("AI-stöd", "AI assistance")}:{" "}
-          <strong>{status(ai.isPending, ai.isError, ai.data?.enabled)}</strong>
-        </span>
-        <span>
-          {l("PDF/DOCX till text", "PDF/DOCX to text")}:{" "}
-          <strong>
-            {status(processing.isPending, processing.isError, processing.data?.enabled)}
-          </strong>
-        </span>
-      </p>
+      <div className="space-y-1" role="status">
+        <p data-sw-status="ai">{aiLine}</p>
+        <p data-sw-status="documents">{documentLine}</p>
+      </div>
       <p className="text-xs leading-relaxed text-muted-foreground">
         {canEdit
           ? l(
-              "Du kan alltid arbeta med manuellt registrerade utdrag och egna bedömningar. När AI är tillgängligt kan det föreslå kunskapsluckor, frågor, källbelagda utkast och åtgärder. Du väljer vad som förs in och godkänner rapporten separat.",
-              "You can work with manually entered extracts and your own assessments. When available, AI can suggest gaps, questions, sourced drafts and actions. You choose what to apply and approve the report separately.",
+              "AI kan föreslå frågor, kunskapsluckor, utkast och åtgärder. Du granskar förslagen, väljer vad du använder och godkänner rapporten separat.",
+              "AI can suggest questions, information gaps, drafts and actions. You review the suggestions, choose what to use and approve the report separately.",
             )
           : l(
-              "Du har läsbehörighet. Du kan granska sparat arbete; en ägare eller redaktör kan lägga till underlag och begära AI-stöd när det är tillgängligt.",
-              "You have read-only access. You can review saved work; an owner or editor can add evidence and request AI assistance when available.",
+              "Du har läsbehörighet i arbetsytan. Du kan granska sparat arbete; en ägare eller redaktör kan lägga till underlag och begära AI-stöd.",
+              "You have read-only access to this workspace. You can review saved work; an owner or editor can add evidence and request AI assistance.",
             )}
       </p>
       {(ai.isError || processing.isError) && (
         <WorkError
           code={ai.error?.message ?? processing.error?.message}
+          // A failed status READ is not a failed save: the generic fallback
+          // ("could not be saved") would misreport it. Access keeps its own
+          // message.
+          message={
+            (ai.error?.message ?? processing.error?.message) === "ACCESS_DENIED"
+              ? undefined
+              : l(
+                  "Uppgifterna kunde inte hämtas just nu. Försök igen.",
+                  "The information could not be loaded right now. Try again.",
+                )
+          }
           onRetry={() => {
             void ai.refetch();
             void processing.refetch();
