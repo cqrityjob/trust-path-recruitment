@@ -134,6 +134,17 @@ function JobsDiscoveryPage() {
     !!search.experience ||
     !!search.country;
 
+  // On mobile the five select filters collapse behind a "Filter" button so
+  // the results meet the reader first; the count keeps an active selection
+  // visible while the panel is closed. From sm up the panel is always open.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeSelectCount =
+    (search.family ? 1 : 0) +
+    (search.employment ? 1 : 0) +
+    (search.workplace ? 1 : 0) +
+    (search.experience ? 1 : 0) +
+    (search.country ? 1 : 0);
+
   return (
     <SiteLayout>
       <Section className="py-10 md:py-14">

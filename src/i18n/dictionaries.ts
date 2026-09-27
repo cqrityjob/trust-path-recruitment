@@ -373,6 +373,7 @@ export const dictionaries = {
     "jobs.filter.experience_level": "Erfarenhet",
     "jobs.filter.country": "Land",
     "jobs.filter.any": "Alla",
+    "jobs.filter.toggle": "Filter",
     "jobs.browse.families.title": "Utforska jobb efter yrkesområde",
     "jobs.browse.families.subtitle":
       "Utforska olika yrkesområden inom säkerhetsbranschen – från bevakning och cybersäkerhet till riskhantering, företagssäkerhet och kritisk infrastruktur.",
@@ -456,6 +457,7 @@ export const dictionaries = {
     "jobs.family.header": "Jobb inom {family}",
     "jobs.profession.header": "Jobb som {profession}",
     "jobs.detail.summary": "Om rollen",
+    "jobs.detail.no_description": "Arbetsbeskrivning saknas",
     "jobs.detail.requirements.mandatory": "Krav",
     "jobs.detail.requirements.preferred": "Meriterande",
     "jobs.detail.requirements.formal": "Formella krav",
@@ -8991,6 +8993,7 @@ export const dictionaries = {
     "jobs.filter.experience_level": "Experience",
     "jobs.filter.country": "Country",
     "jobs.filter.any": "Any",
+    "jobs.filter.toggle": "Filters",
     "jobs.browse.families.title": "Browse jobs by career area",
     "jobs.browse.families.subtitle":
       "Explore career areas across the security sector – from protective services and cybersecurity to risk management, corporate security and critical infrastructure.",
@@ -9076,6 +9079,7 @@ export const dictionaries = {
     "jobs.family.header": "Jobs in {family}",
     "jobs.profession.header": "Jobs as {profession}",
     "jobs.detail.summary": "About this role",
+    "jobs.detail.no_description": "Job description not provided",
     "jobs.detail.requirements.mandatory": "Mandatory",
     "jobs.detail.requirements.preferred": "Preferred",
     "jobs.detail.requirements.formal": "Formal requirements",
