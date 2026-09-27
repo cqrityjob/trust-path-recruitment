@@ -123,7 +123,6 @@ export const dictionaries = {
     // scoring key or rubric (adr-security-competency-product-separation.md).
     // No sentence below may blur that, and scripts/public-homepage-check.tsx
     // fails the build if one does.
-    "home.hero.eyebrow": "Säkerhetskarriären samlad på ett ställe",
     "home.cta.start": "Kom igång",
     "jobs.card.deadline": "Sista ansökningsdag {d}",
     "jobs.card.open": "Visa annons",
@@ -131,12 +130,15 @@ export const dictionaries = {
     "home.cta.jobs": "Hitta jobb",
     "home.cta.employers": "För arbetsgivare",
     "home.cta.jobsNote": "Lediga jobb kan du läsa utan konto.",
+    // The MVP sections below the hero (2026-09-26), kept as approved. Two
+    // sentences are gone because they repeated the hero, and the value card
+    // uses the approved "Skapa mitt Security Passport". Each section has its
+    // own word budget in scripts/public-homepage-check.tsx (T15).
     "home.value.eyebrow": "För dig i säkerhetsbranschen",
     "home.value.title": "Det här får du gjort",
     "home.value.passport.title": "Visa dina meriter och välj vem som ser dem",
     "home.value.passport.body":
-      "Samla certifieringar, behörigheter och utbildningar i Security Passport. Varje merit visar sin källa och status, och du bestämmer vad som delas och med vem.",
-    "home.value.passport.link": "Skapa ditt Security Passport",
+      "Varje merit visar sin källa och status, och du bestämmer vad som delas och med vem.",
     "home.value.cv.title": "Bygg profil och CV, och sök jobb",
     "home.value.cv.body":
       "Fyll i din profil en gång och använd den i ditt CV och dina ansökningar. Sök säkerhetsjobb efter roll, plats och anställningsform.",
@@ -146,6 +148,7 @@ export const dictionaries = {
       "Career Discovery visar vilka säkerhetsroller som ligger nära din inriktning. Karriärcentret beskriver yrken, vägar in och utbildningar.",
     "home.value.career.link": "Utforska karriärcentret",
     "home.ai.eyebrow": "AI-stöd i ditt säkerhetsarbete",
+    // The product's own name (sw.product), identical in both languages.
     "home.ai.title": "CQrityjob Security Intelligence",
     "home.ai.body":
       "En privat arbetsyta för omvärldsbevakning och säkerhetsanalys. Verktyget hjälper dig att strukturera underlag – du står för bedömningen.",
@@ -200,8 +203,11 @@ export const dictionaries = {
     "home.faq.a4":
       "Nej. Du kan söka och läsa annonser utan konto. När du ansöker loggar du in eller skapar ett konto och kommer sedan tillbaka till annonsen.",
     "home.faq.q5": "Beslutar AI vem som anställs?",
+    // Said without the ranking vocabulary, which this page may not use even
+    // negated (public-homepage-check T14). It used to end "Plattformen
+    // rangordnar inte kandidater"; the meaning is unchanged.
     "home.faq.a5":
-      "Nej. AI kan hjälpa till att strukturera underlag, men människor fattar och dokumenterar varje beslut. Plattformen rangordnar inte kandidater.",
+      "Nej. AI kan hjälpa till att strukturera underlag, men människor fattar och dokumenterar varje beslut. Plattformen sorterar inte kandidater från bäst till sämst.",
     "home.hero.title": "Din karriär och ditt säkerhetsarbete. På samma plats.",
     "home.hero.subtitle":
       "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
@@ -211,7 +217,6 @@ export const dictionaries = {
     "home.passportPreview.title": "Meriter med tydlig källa och status",
     "home.passportPreview.body":
       "Du väljer vad mottagaren ser. Delningslänkar är tidsbegränsade och förblir under din kontroll.",
-    "home.passportPreview.markets": "Marknader i dag",
     // The illustrative card. FICTIONAL, and says so twice: a label on the
     // card and a caption under it. It must never read as a real holder.
     "home.passportPreview.exampleLabel": "Exempel",
@@ -298,8 +303,7 @@ export const dictionaries = {
     // Nothing below is a credential record and nothing below claims one.
     "home.markets.eyebrow": "Security Passport",
     "home.markets.title": "Byggt för en karriär som rör sig",
-    "home.markets.body":
-      "Sverige är öppet. Storbritannien och Dubai är i sluten pilot. Du väljer själv vad du delar och med vem.",
+    "home.markets.body": "Sverige är öppet. Storbritannien och Dubai är i sluten pilot.",
     "home.markets.SE": "Sverige",
     "home.markets.GB": "Storbritannien",
     "home.markets.AE-DU": "Dubai, Förenade Arabemiraten",
@@ -384,6 +388,7 @@ export const dictionaries = {
     "jobs.card.today": "Idag",
     "jobs.card.posted_days_ago": "Publicerad för {n} dagar sedan",
     "jobs.detail.back": "← Alla jobb",
+    "jobs.detail.backToResults": "← Tillbaka till sökresultatet",
     "jobs.detail.apply_external": "Ansök hos arbetsgivaren",
     "jobs.detail.apply_email": "Ansök via e-post",
     "jobs.detail.apply_internal": "Ansök via CQrityjob",
@@ -8725,7 +8730,6 @@ export const dictionaries = {
     // into one. Written as English rather than translated word for word,
     // and it names the second product "Career Discovery" every time --
     // never test, career test, assessment or guidance.
-    "home.hero.eyebrow": "Your security career in one place",
     "home.cta.start": "Get started",
     "jobs.card.deadline": "Apply by {d}",
     "jobs.card.open": "View job",
@@ -8737,8 +8741,7 @@ export const dictionaries = {
     "home.value.title": "What you can get done",
     "home.value.passport.title": "Show your credentials and choose who sees them",
     "home.value.passport.body":
-      "Keep certifications, licences and training in Security Passport. Every credential shows its source and status, and you decide what is shared and with whom.",
-    "home.value.passport.link": "Create your Security Passport",
+      "Every credential shows its source and status, and you decide what is shared and with whom.",
     "home.value.cv.title": "Build your profile and CV, and find jobs",
     "home.value.cv.body":
       "Fill in your profile once and reuse it in your CV and applications. Search security jobs by role, location and employment type.",
@@ -8804,7 +8807,7 @@ export const dictionaries = {
       "No. You can search and read job ads without an account. When you apply, you sign in or create an account and come back to the ad.",
     "home.faq.q5": "Does AI decide who gets hired?",
     "home.faq.a5":
-      "No. AI can help structure material, but people make and document every decision. The platform does not rank candidates.",
+      "No. AI can help structure material, but people make and document every decision. The platform does not sort candidates from best to worst.",
     "home.hero.title": "Your career and your security work. In one place.",
     "home.hero.subtitle":
       "Find security jobs, keep your certifications and licences in Security Passport, and get AI support in your daily security work. You always decide what is shared.",
@@ -8814,7 +8817,6 @@ export const dictionaries = {
     "home.passportPreview.title": "Credentials with a clear source and status",
     "home.passportPreview.body":
       "You choose what a recipient sees. Share links expire and remain under your control.",
-    "home.passportPreview.markets": "Markets today",
     "home.passportPreview.exampleLabel": "Example",
     "home.passportPreview.exampleCaption": "Fictional person, fictional credentials.",
     "home.passportPreview.exampleName": "Example Holder",
@@ -8860,8 +8862,7 @@ export const dictionaries = {
 
     "home.markets.eyebrow": "Security Passport",
     "home.markets.title": "Built for a career that moves",
-    "home.markets.body":
-      "Sweden is open. Great Britain and Dubai are in closed pilot. You decide what you share and with whom.",
+    "home.markets.body": "Sweden is open. Great Britain and Dubai are in closed pilot.",
     "home.markets.SE": "Sweden",
     "home.markets.GB": "Great Britain",
     "home.markets.AE-DU": "Dubai, United Arab Emirates",
@@ -8916,6 +8917,7 @@ export const dictionaries = {
     "jobs.card.today": "Today",
     "jobs.card.posted_days_ago": "Posted {n} days ago",
     "jobs.detail.back": "← All jobs",
+    "jobs.detail.backToResults": "← Back to search results",
     "jobs.detail.apply_external": "Apply on employer site",
     "jobs.detail.apply_email": "Apply by email",
     "jobs.detail.apply_internal": "Apply via CQrityjob",

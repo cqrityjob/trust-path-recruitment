@@ -27,20 +27,11 @@ import { useState, useEffect } from "react";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
 import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
 import { JobsSideColumn } from "@/components/jobs/JobsSideColumn";
-
-type JobSearch = {
-  q?: string;
-  location?: string;
-  family?: string;
-  employment?: string;
-  workplace?: string;
-  experience?: string;
-  country?: string;
-};
-
-function coerceString(v: unknown): string {
-  return typeof v === "string" ? v : "";
-}
+import {
+  jobSearchToFrom,
+  validateJobSearch,
+  type JobSearch,
+} from "@/lib/job-intelligence/job-search";
 
 export const Route = createFileRoute("/jobs/")({
   ssr: false,
@@ -64,24 +55,9 @@ export const Route = createFileRoute("/jobs/")({
     ],
     links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/jobs" }],
   }),
-  validateSearch: (raw: Record<string, unknown>): JobSearch => {
-    const out: JobSearch = {};
-    const q = coerceString(raw.q);
-    if (q) out.q = q;
-    const location = coerceString(raw.location);
-    if (location) out.location = location;
-    const family = coerceString(raw.family);
-    if (family) out.family = family;
-    const employment = coerceString(raw.employment);
-    if (employment) out.employment = employment;
-    const workplace = coerceString(raw.workplace);
-    if (workplace) out.workplace = workplace;
-    const experience = coerceString(raw.experience);
-    if (experience) out.experience = experience;
-    const country = coerceString(raw.country);
-    if (country) out.country = country;
-    return out;
-  },
+  // Shared with the job ad, which parses its `from` with this same validator
+  // to rebuild "Tillbaka till sökresultatet".
+  validateSearch: validateJobSearch,
   component: JobsDiscoveryPage,
 });
 
@@ -275,6 +251,7 @@ function JobsDiscoveryPage() {
               isError={jobsQuery.isError}
               lang={lang}
               profile={profile}
+              from={jobSearchToFrom(search)}
             />
 
             {showInvite && <AssessmentInvite />}

@@ -7,12 +7,9 @@ import {
   CheckCircle2,
   Compass,
   FileText,
-  GraduationCap,
-  Lightbulb,
   MapPin,
   PencilLine,
   ShieldCheck,
-  TrendingUp,
 } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
@@ -93,10 +90,9 @@ const PASSPORT_INTENT = { redirect: "/passport" } as const;
  *  Nothing on this page grants anything. */
 const EMPLOYER_INTENT = { redirect: "/employer" } as const;
 
-/** The two lifecycle destinations that need an account to be useful. Same
- *  validated mechanism, same one door, different landing. */
+/** "Kom igång" creates an account that lands in My Career. Same validated
+ *  mechanism, same one door, different landing. */
 const MY_CAREER_INTENT = { redirect: "/my-career" } as const;
-const ACADEMY_INTENT = { redirect: "/academy" } as const;
 
 /** Career Discovery's canonical public entry, taken from the module that
  *  owns it rather than typed out again — the temporary /discovery alias
@@ -143,13 +139,25 @@ export const Route = createFileRoute("/")({
 
 // ── THE PUBLIC HOMEPAGE ────────────────────────────────────────────────
 //
-// FOUR sections, in this order, and nothing else:
+// SEVEN sections, in the owner-approved MVP order, and nothing else:
 //
-//   1. hero       the framing, and the TWO peer individual entrances
-//   2. employers  the employer strip, visually separate, flag-gated
-//   3. lifecycle  the six stages, as an explanation of one ecosystem
-//   4. passport   the three markets the Passport supports, and what it is
-//                 explicitly NOT
+//   1. hero                   the framing, three actions, and the TWO peer
+//                             individual entrances
+//   2. value                  what a person gets done, and where
+//   3. employers              the employer strip, visually separate,
+//                             flag-gated, ending in the human decision
+//   4. security-intelligence  the private work tool: task, input, output,
+//                             review, and what never goes in
+//   5. get-started            three steps each for a person and an employer
+//   6. passport               the three markets the Passport supports, and
+//                             what it is explicitly NOT
+//   7. faq                    what is offered, pricing status, and five
+//                             questions -- verification and who decides among
+//                             them
+//
+// Every section has its own word budget (public-homepage-check T15), set for
+// this layout when the owner approved it. A section grows only by raising its
+// own line there, in a diff somebody reads.
 //
 // ── WHAT THIS PAGE MAY NOT SAY ─────────────────────────────────────────
 //
@@ -200,8 +208,8 @@ function Index() {
   return (
     <SiteLayout>
       {/* ── 1 · HERO: THE FRAMING AND THE TWO PEER ENTRANCES ───────────
-          One eyebrow, one h1, one subtitle, and then two cards that are the
-          same size, the same weight and the same kind of action.
+          One h1, one subtitle, three actions, and then the two individual
+          entrances: Career Discovery, and the Passport preview.
 
           Depth is CSS only — two restrained radial washes and a faint
           vertical rule grid masked out before the fold. */}
@@ -234,14 +242,11 @@ function Index() {
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)] lg:gap-14">
             <div>
               <div className="max-w-3xl animate-in fade-in slide-in-from-bottom-2 duration-700 motion-reduce:animate-none">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  {t("home.hero.eyebrow")}
-                </p>
                 {/* `[hyphens:auto]` earns its keep at 320-390px, where a Swedish
                 compound does not fit on any line; the document carries
                 `lang`, so the browser breaks where Swedish permits. */}
                 <h1
-                  className="mt-4 max-w-[17ch] text-balance text-[2.15rem] font-semibold leading-[1.06] tracking-tight text-foreground [hyphens:auto] sm:text-[3rem] lg:text-[3.35rem] lg:[hyphens:none] lg:[text-wrap:pretty]"
+                  className="max-w-[17ch] text-balance text-[2.15rem] font-semibold leading-[1.06] tracking-tight text-foreground [hyphens:auto] sm:text-[3rem] lg:text-[3.35rem] lg:[hyphens:none] lg:[text-wrap:pretty]"
                   style={{ fontFamily: "var(--font-display)" }}
                 >
                   {t("home.hero.title")}
@@ -335,9 +340,10 @@ function Index() {
         </div>
       </section>
 
+      {/* ── 2 · VALUE ─────────────────────────────────────────────────── */}
       <HomeValue />
 
-      {/* ── 2 · THE EMPLOYER STRIP ──────────────────────────────────────
+      {/* ── 3 · THE EMPLOYER STRIP ──────────────────────────────────────
           Visually separate from the two individual cards — its own navy
           band, below them — because an employer is a different reader, not
           a third individual product.
@@ -395,9 +401,10 @@ function Index() {
         </div>
       </Section>
 
+      {/* ── 4 · SECURITY INTELLIGENCE, 5 · GET STARTED ──────────────── */}
       <HomeAi />
       <HomeStart />
-      {/* ── 4 · SECURITY PASSPORT: THREE MARKETS, AND WHAT IT IS NOT ────
+      {/* ── 6 · SECURITY PASSPORT: THREE MARKETS, AND WHAT IT IS NOT ────
           The markets are read from PUBLIC_MARKET_SCALE, which carries the
           governed market-pack codes and no credential, no entitlement and
           no holder. Nothing in this section is a record about anybody, and
@@ -450,50 +457,11 @@ function Index() {
           </div>
         </div>
       </Section>
+      {/* ── 7 · FAQ ───────────────────────────────────────────────────── */}
       <HomeFaq />
     </SiteLayout>
   );
 }
-
-/** A quiet in-flow link. Never solid, always at least a 44px target, and
- *  always visibly focusable — the lifecycle section is an explanation, so
- *  its links must not read as a seventh and eighth call to action. */
-function QuietLink({
-  to,
-  search,
-  hash,
-  labelKey,
-}: {
-  to: string;
-  search?: Record<string, string>;
-  hash?: string;
-  labelKey: TranslationKey;
-}) {
-  const { t } = useT();
-  return (
-    <Link
-      to={to}
-      search={search as never}
-      hash={hash}
-      activeOptions={{ exact: to === "/" }}
-      className="inline-flex min-h-[44px] items-center gap-1.5 rounded-md text-sm font-semibold text-accent transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-    >
-      {t(labelKey)}
-      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-    </Link>
-  );
-}
-
-/* ── THE SIX STAGES ────────────────────────────────────────────────────
- *
- * Discover · Understand · Grow · Trust · Work · Continue. One ecosystem
- * described once, in the order a career actually runs.
- *
- * Nothing here claims a stage is complete, gated or required, and nothing
- * here makes one product a prerequisite for another: a person may build a
- * Passport without ever running Career Discovery, and may run Career
- * Discovery without ever building a Passport. */
-type LifecycleKey = "discover" | "understand" | "grow" | "trust" | "work" | "continue";
 
 /* ── THE THREE TRUST LEVELS ────────────────────────────────────────────
  *

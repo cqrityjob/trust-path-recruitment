@@ -144,10 +144,15 @@ export function ApplyInternalDialog({
   jobId,
   employerName,
   label,
+  returnTo,
 }: {
   jobId: string;
   employerName: string | null;
   label: string;
+  /** Where signing in comes back to: the ad WITH the search it was opened
+   *  from, already through safeReturnPath (jobAdReturnPath). Reading
+   *  window.location.pathname here dropped the search. */
+  returnTo: string;
 }) {
   const { t, lang } = useT();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
@@ -469,11 +474,10 @@ export function ApplyInternalDialog({
   }
 
   if (!signedIn) {
-    const redirect = typeof window !== "undefined" ? window.location.pathname : "";
     return (
       <div className="space-y-2">
         <Button asChild className="w-full">
-          <a href={`/login?redirect=${encodeURIComponent(redirect)}`}>
+          <a href={`/login?redirect=${encodeURIComponent(returnTo)}`}>
             {t("jobs.apply.signInToApply")}
           </a>
         </Button>

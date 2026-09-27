@@ -59,8 +59,23 @@ import {
   undersizedTargets,
 } from "./support/public-entry-harness";
 
-/** The four sections the homepage is allowed to have, in order. */
-const SECTION_ORDER = ["hero", "employers", "lifecycle", "passport"] as const;
+/** The seven sections the owner-approved MVP homepage has, in order. They
+ *  replaced the four-section page (hero, employers, lifecycle, passport). */
+const SECTION_ORDER = [
+  "hero",
+  "value",
+  "employers",
+  "security-intelligence",
+  "get-started",
+  "passport",
+  "faq",
+] as const;
+
+/** The MVP h1, in both languages. */
+const H1 = {
+  sv: "Din karriär och ditt säkerhetsarbete. På samma plats.",
+  en: "Your career and your security work. In one place.",
+} as const;
 
 /** Headings, claims and calls to action that were removed and must not come
  *  back — the superseded single-product page, and phrases the product cannot
@@ -79,6 +94,10 @@ const REMOVED_SV = [
   "verifierade meriter",
   "kompetensverifiering",
   "rätt kandidat",
+  // The value-card label the MVP briefly brought back, and the ranking
+  // vocabulary this page may not use even negated.
+  "Skapa ditt Security Passport",
+  "rangordn",
 ] as const;
 
 async function visibleText(page: Page): Promise<string> {
@@ -91,14 +110,14 @@ test.describe("the public homepage", () => {
   });
 
   // H1 ──────────────────────────────────────────────────────────────────
-  test("main carries exactly four sections, in the settled order", async ({ page }) => {
+  test("main carries exactly seven sections, in the approved MVP order", async ({ page }) => {
     const sections = await page.evaluate(() =>
       [...document.querySelector("main")!.children].map((el) => ({
         tag: el.tagName.toLowerCase(),
         id: el.id,
       })),
     );
-    expect(sections.map((s) => s.tag)).toEqual(["section", "section", "section", "section"]);
+    expect(sections.map((s) => s.tag)).toEqual(SECTION_ORDER.map(() => "section"));
     expect(sections.map((s) => s.id)).toEqual([...SECTION_ORDER]);
 
     for (const landmark of ["header", "main", "footer"]) {
@@ -126,18 +145,30 @@ test.describe("the public homepage", () => {
   });
 
   // H3 ──────────────────────────────────────────────────────────────────
-  test("one h1, five h2, and the framing the brief settled", async ({ page }) => {
+  test("one h1, eight h2, five h3, and the MVP framing", async ({ page }) => {
     expect(await page.locator("main h1").count()).toBe(1);
-    expect(await page.locator("main h2").count()).toBe(5);
-    expect(await page.locator("main h3").count()).toBe(6);
-    await expect(page.locator("main h1")).toHaveText("Bygg din framtid inom säkerhet");
+    // The two entrances in the hero, then one per section below it.
+    expect(await page.locator("main h2").count()).toBe(8);
+    expect(await page.locator("#hero h2").count()).toBe(2);
+    for (const id of SECTION_ORDER.slice(1)) {
+      expect(await page.locator(`#${id} h2`).count(), `#${id} has one h2`).toBe(1);
+    }
+    // h3 is the three value cards and the two get-started audiences.
+    expect(await page.locator("main h3").count()).toBe(5);
+    expect(await page.locator("#value h3").count()).toBe(3);
+    expect(await page.locator("#get-started h3").allInnerTexts()).toEqual([
+      "För dig som person",
+      "För arbetsgivare",
+    ]);
+    await expect(page.locator("main h1")).toHaveText(H1.sv);
 
     const hero = page.locator("#hero");
     const heroText = await hero.innerText();
-    expect(heroText.toUpperCase()).toContain("SÄKERHETSKARRIÄREN SAMLAD PÅ ETT STÄLLE");
     expect(heroText).toContain(
-      "Samla dina meriter i ett Security Passport eller upptäck vilka säkerhetsroller som passar din riktning.",
+      "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
     );
+    // Said beside the action it is about.
+    expect(heroText).toContain("Lediga jobb kan du läsa utan konto.");
     // BOTH products are named in the hero. Neither is the page's subject at
     // the other's expense.
     expect(heroText).toContain("Bygg ditt Security Passport");
@@ -269,32 +300,111 @@ test.describe("the public homepage", () => {
   });
 
   // H8 ──────────────────────────────────────────────────────────────────
-  test("the connected lifecycle explains six stages and offers no solid action", async ({
+  //
+  // REPLACES "the connected lifecycle explains six stages and offers no
+  // solid action". The lifecycle section is gone with the MVP layout. What
+  // it guarded still holds for the sections that replaced it: they explain
+  // and link, and none of them draws a solid action of its own.
+  test("the sections below the hero explain and link, and draw no solid action", async ({
     page,
   }) => {
-    const lifecycle = page.locator("#lifecycle");
-    const stages = await lifecycle.locator("h3").allInnerTexts();
-    expect(stages.map((s) => s.replace(/^\d+\.\s*/, ""))).toEqual([
-      "Upptäck",
-      "Förstå",
-      "Utvecklas",
-      "Visa",
-      "Arbeta",
-      "Fortsätt",
-    ]);
     const solid = await page.evaluate(() => {
       const probe = document.createElement("span");
       probe.style.backgroundColor = "var(--primary)";
       document.body.append(probe);
       const navy = getComputedStyle(probe).backgroundColor;
       probe.remove();
-      return [...document.querySelectorAll<HTMLElement>("#lifecycle a")].filter(
-        (el) => getComputedStyle(el).backgroundColor === navy,
-      ).length;
+      return ["value", "security-intelligence", "get-started", "passport", "faq"].map((id) => ({
+        id,
+        solid: [...document.querySelectorAll<HTMLElement>(`#${id} a`)].filter(
+          (el) => getComputedStyle(el).backgroundColor === navy,
+        ).length,
+      }));
     });
-    expect(solid, "the lifecycle is an explanation, not six product cards").toBe(0);
-    // Every stage offers a way onward.
-    expect(await lifecycle.locator("a").count()).toBeGreaterThanOrEqual(6);
+    for (const s of solid) expect(s.solid, `#${s.id} draws a solid action`).toBe(0);
+    // The value cards each offer a way onward.
+    expect(await page.locator("#value a").count()).toBe(3);
+    // Three steps for a person and three for an employer, each in order.
+    await expect(page.locator("#get-started ol")).toHaveCount(2);
+    for (const list of await page.locator("#get-started ol").all()) {
+      await expect(list.locator(":scope > li")).toHaveCount(3);
+    }
+  });
+
+  // H8b ─────────────────────────────────────────────────────────────────
+  //
+  // What the MVP sections say, where a reader meets it: the owner kept this
+  // content (2026-09-27), and only repetition was cut.
+  test("the employer decides, Security Intelligence keeps its boundary, and the steps are there", async ({
+    page,
+  }) => {
+    const strip = page.locator("#employers");
+    await expect(strip).toContainText("För arbetsgivare");
+    const flow = (await strip.locator("ol > li").allInnerTexts()).map((s) =>
+      s.replace(/^\s*\d+\.\s*/, "").trim(),
+    );
+    expect(flow, "the employer flow has five steps").toHaveLength(5);
+    expect(flow.at(-1), "the flow ends in the employer's own decision").toBe("Ni fattar beslutet");
+
+    const si = page.locator("#security-intelligence");
+    const siText = await si.innerText();
+    expect(siText).toContain(
+      "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
+    );
+    // Task, input, output and review.
+    expect(await si.locator("dt").allInnerTexts()).toEqual([
+      "Uppgift",
+      "Ditt underlag",
+      "Det du får",
+      "Din granskning",
+    ]);
+    expect(siText).toContain("du står för bedömningen");
+    expect(siText).toContain("Du bedömer relevansen och ansvarar för slutsatserna.");
+    expect(siText).toContain("AI-utkast finns där funktionen är aktiverad för arbetsytan.");
+    expect(await si.locator("a").count()).toBe(1);
+    await expect(si.locator("a")).toHaveAttribute("href", "/signup?redirect=%2Fsecurity-work");
+
+    const start = await page.locator("#get-started").innerText();
+    expect(start).toContain("Vi granskar kontot innan arbetsytan aktiveras.");
+  });
+
+  // H8c ─────────────────────────────────────────────────────────────────
+  //
+  // Five questions, each a native disclosure: closed until asked, opened by
+  // the keyboard, and the answer that matters most -- who decides -- is
+  // exactly what it says.
+  test("the five questions open by keyboard, and say who decides and what is verified", async ({
+    page,
+  }) => {
+    const faq = page.locator("#faq");
+    const items = faq.locator("details");
+    await expect(items).toHaveCount(5);
+    await expect(faq).toContainText("Priser och paket är inte publicerade ännu");
+
+    const open = async (question: string) => {
+      const item = items.filter({ hasText: question });
+      const summary = item.locator("summary");
+      await summary.focus();
+      await expect(summary).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(item).toHaveAttribute("open", "");
+      const answer = item.locator("p");
+      await expect(answer).toBeVisible();
+      return answer;
+    };
+
+    const who = await open("Beslutar AI vem som anställs?");
+    await expect(who).toContainText("människor fattar och dokumenterar varje beslut.");
+    await expect(who).toContainText("Plattformen sorterar inte kandidater från bäst till sämst.");
+
+    const verified = await open("Är mina meriter verifierade?");
+    await expect(verified).toContainText("En uppladdad handling är inte automatiskt verifierad.");
+    await expect(verified).toContainText(
+      "En internationell certifiering innebär inte automatiskt lokal yrkesbehörighet.",
+    );
+
+    const jobs = await open("Behöver jag ett konto för att söka jobb?");
+    await expect(jobs).toContainText("Du kan söka och läsa annonser utan konto.");
   });
 
   // H9 ──────────────────────────────────────────────────────────────────
@@ -386,13 +496,23 @@ test.describe("the public homepage", () => {
       label: "Se företagsplattformen",
       url: "/employers",
     },
+    // The MVP layout's own links, replacing the lifecycle's.
+    { name: 'hero "Hitta jobb"', scope: "#hero", label: "Hitta jobb", url: "/jobs" },
     {
-      name: 'lifecycle "Karriärvägar"',
-      scope: "#lifecycle",
-      label: "Karriärvägar",
+      name: 'hero "För arbetsgivare"',
+      scope: "#hero",
+      label: "För arbetsgivare",
+      url: "/employers",
+    },
+    {
+      name: 'value "Utforska karriärcentret"',
+      scope: "#value",
+      label: "Utforska karriärcentret",
       url: "/career-center",
     },
-    { name: 'lifecycle "Jobb"', scope: "#lifecycle", label: "Jobb", url: "/jobs" },
+    { name: 'value "Se lediga jobb"', scope: "#value", label: "Se lediga jobb", url: "/jobs" },
+    // A preview form that sends nothing, and says so; kept by owner decision.
+    { name: 'FAQ "Kontakta oss"', scope: "#faq", label: "Kontakta oss", url: "/contact" },
     { name: 'header "Logga in"', scope: "header", label: "Logga in", url: "/login" },
     {
       name: 'header "Karriärvägar"',
@@ -545,11 +665,37 @@ test.describe("the public homepage", () => {
     expect(swapHref).toContain("redirect=%2Femployer");
   });
 
+  // H14b ────────────────────────────────────────────────────────────────
+  //
+  // The MVP layout's two other account actions go through the same door,
+  // and each keeps its own landing through the form and the login swap.
+  for (const intent of [
+    { name: '"Kom igång"', scope: "#hero", label: "Kom igång", landing: "/my-career" },
+    {
+      name: '"Öppna Security Intelligence"',
+      scope: "#security-intelligence",
+      label: "Öppna Security Intelligence",
+      landing: "/security-work",
+    },
+  ] as const) {
+    test(`${intent.name} carries ${intent.landing} into the same one door`, async ({ page }) => {
+      await page.locator(intent.scope).getByRole("link", { name: intent.label }).click();
+      await page.waitForURL("**/signup**", { timeout: 15_000 });
+      const url = new URL(page.url());
+      expect(url.pathname).toBe("/signup");
+      expect(url.searchParams.get("redirect")).toBe(intent.landing);
+      await expect(page.locator('input[type="email"]').first()).toBeVisible();
+      await expect(page.locator('input[type="password"]').first()).toBeVisible();
+      const swapHref = await page.locator('main a[href^="/login?"]').first().getAttribute("href");
+      expect(swapHref).toContain(`redirect=${encodeURIComponent(intent.landing)}`);
+    });
+  }
+
   // H15 ─────────────────────────────────────────────────────────────────
   test("a signed-out visitor stays on the public homepage", async ({ page }) => {
     await page.waitForTimeout(1500);
     expect(new URL(page.url()).pathname).toBe("/");
-    await expect(page.locator("main h1")).toHaveText("Bygg din framtid inom säkerhet");
+    await expect(page.locator("main h1")).toHaveText(H1.sv);
   });
 
   // H16 ─────────────────────────────────────────────────────────────────
@@ -923,8 +1069,8 @@ test.describe("the signed-in visitor", () => {
 // by the `public-entry-browser` CI job whatever the outcome.
 test.describe("routed evidence — the individual entrances", () => {
   for (const [lang, h1] of [
-    ["sv", "Bygg din framtid inom säkerhet"],
-    ["en", "Build your future in security"],
+    ["sv", H1.sv],
+    ["en", H1.en],
   ] as const) {
     for (const width of [1440, 375, 390] as const) {
       test(`homepage ${lang} at ${width}px`, async ({ page }) => {

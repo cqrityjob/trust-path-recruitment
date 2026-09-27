@@ -10,12 +10,15 @@ export function JobResults({
   isError,
   lang,
   profile,
+  from,
 }: {
   jobs: PublicJobCard[] | undefined;
   isLoading: boolean;
   isError: boolean;
   lang: "sv" | "en";
   profile?: CareerProfileForJobsV1;
+  /** The /jobs search these results belong to, as a job ad's `from`. */
+  from?: string;
 }) {
   const { t } = useT();
 
@@ -27,10 +30,7 @@ export function JobResults({
         aria-label={t("jobs.results.loading")}
       >
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="h-40 animate-pulse rounded-lg border border-border bg-muted/40"
-          />
+          <div key={i} className="h-40 animate-pulse rounded-lg border border-border bg-muted/40" />
         ))}
       </div>
     );
@@ -43,9 +43,7 @@ export function JobResults({
         role="alert"
       >
         <h2 className="text-lg font-semibold">{t("jobs.results.error.title")}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("jobs.results.error.body")}
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("jobs.results.error.body")}</p>
       </div>
     );
   }
@@ -54,9 +52,7 @@ export function JobResults({
     return (
       <div className="mt-8 rounded-lg border border-border bg-muted/20 p-8 text-center">
         <h2 className="text-lg font-semibold">{t("jobs.results.empty.title")}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t("jobs.results.empty.body")}
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">{t("jobs.results.empty.body")}</p>
       </div>
     );
   }
@@ -64,10 +60,10 @@ export function JobResults({
   return (
     <>
       <p className="mt-6 text-sm text-muted-foreground" aria-live="polite">
-        {(jobs.length === 1
-          ? t("jobs.results.count_one")
-          : t("jobs.results.count_other")
-        ).replace("{n}", String(jobs.length))}
+        {(jobs.length === 1 ? t("jobs.results.count_one") : t("jobs.results.count_other")).replace(
+          "{n}",
+          String(jobs.length),
+        )}
       </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {jobs.map((job) => (
@@ -76,6 +72,7 @@ export function JobResults({
             job={job}
             lang={lang}
             relevance={profile ? relevanceForJob(job, profile) : undefined}
+            from={from}
           />
         ))}
       </div>

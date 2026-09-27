@@ -59,7 +59,9 @@ export function HomeValue() {
             search={{ redirect: "/passport" }}
             className="mt-6 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary-foreground underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground"
           >
-            {t("home.value.passport.link")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            {/* The approved action, the same words as the hero's: the value
+                card used to say the superseded "Skapa ditt Security Passport". */}
+            {t("cta.passport")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </article>
         <div className="grid gap-6">
