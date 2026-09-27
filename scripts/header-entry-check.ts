@@ -624,7 +624,7 @@ const employerCopy = {
   // strip uses -- the strip and the page may not ask for two different
   // things. "employers.cta.how" is the secondary, same-page action that
   // replaced the dead contact form as the second thing on this page.
-  "employers.cta.register": { sv: "Registrera företag", en: "Register company" },
+  "employers.cta.register": { sv: "Registrera företag", en: "Register your organisation" },
   "employers.cta.how": {
     sv: "Se hur plattformen fungerar",
     en: "See how the platform works",

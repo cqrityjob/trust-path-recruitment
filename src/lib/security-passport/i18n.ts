@@ -1276,9 +1276,9 @@ const sv = {
   // "Väntar på Bevakning AB" and the employer reads "Anställningsverifiering";
   // neither ever reads "referens", because nobody here is being asked for an
   // opinion about a person.
-  "empv.title": "Anställningsverifiering",
+  "empv.title": "Bekräfta anställningsuppgifter",
   "empv.lead":
-    "Personer som uppger att de har arbetat hos er kan be er bekräfta uppgiften. Ni bekräftar fakta — inte personen.",
+    "Granska förfrågningar och bekräfta endast uppgifter som organisationen kan styrka. Ni bekräftar fakta — inte personen.",
   "empv.openHeading": "Väntar på er",
   "empv.waitingHeading": "Väntar på personen",
   "empv.answeredHeading": "Besvarade",
@@ -3470,9 +3470,9 @@ const en: Record<PassportCopyKey, string> = {
   "emp.nav": "Passport requests",
 
   // ── PR 8. Employment verification, as work an employer can find ────
-  "empv.title": "Employment verification",
+  "empv.title": "Confirm employment details",
   "empv.lead":
-    "People who state that they worked for you can ask you to confirm it. You confirm facts — not the person.",
+    "Review requests and confirm only information your organisation can substantiate. You confirm facts — not the person.",
   "empv.openHeading": "Waiting for you",
   "empv.waitingHeading": "Waiting for the person",
   "empv.answeredHeading": "Answered",

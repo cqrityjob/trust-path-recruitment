@@ -434,6 +434,9 @@ for (const file of I18N_SURFACES) {
     "iiu.source.candidate_cv_short", // "CV" — the same abbreviation in both
     "iiu.ev.5e.1", //              "Situation" — the same word in both. The
     //                             other four 5E labels differ and are checked.
+    "iiu.ix.title", //             "Interview Intelligence" — the capability's
+    //                             name, the area heading in both languages
+    //                             (MVP text specification §3, §11.2).
   ]);
   const svPairs = new Map(
     [

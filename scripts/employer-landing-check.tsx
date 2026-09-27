@@ -167,26 +167,28 @@ group("E1 · one h1, the approved copy, and a sane hierarchy");
       headings(main[lang], "h3").length,
     );
   }
+  // MVP text specification §11.1 (2026-09-27): recruitment AND development,
+  // in one place — the same offer the homepage's employer section makes.
   ck(
     "sv h1 is the approved sentence",
-    d("sv")["employers.title"] === "Hela rekryteringen av säkerhetspersonal i en plattform",
+    d("sv")["employers.title"] === "Rekrytera och utveckla säkerhetspersonal på samma plats.",
     d("sv")["employers.title"],
   );
   ck(
     "en h1 is the approved sentence",
-    d("en")["employers.title"] === "The complete security recruitment process in one platform",
+    d("en")["employers.title"] === "Recruit and develop security professionals in one place.",
     d("en")["employers.title"],
   );
   ck(
     "sv lead is the approved sentence",
     d("sv")["employers.lead"] ===
-      "Publicera säkerhetsjobb, hantera ansökningar och använd strukturerade bedömningar och intervjumodeller för både vanliga säkerhetsroller och säkerhetsskyddskänsliga befattningar.",
+      "Publicera jobb, samla ansökningar och arbeta med rekryteringstester och strukturerade intervjuer. Fortsätt med medarbetarnas kompetensutveckling i en egen företagsportal.",
     d("sv")["employers.lead"],
   );
   ck(
     "en lead is the approved sentence",
     d("en")["employers.lead"] ===
-      "Publish security jobs, manage applications and use structured assessments and interview models for both ordinary security roles and security-protection-sensitive positions.",
+      "Post jobs, manage applications and work with recruitment assessments and structured interviews. Continue with employee learning and development in a dedicated employer portal.",
     d("en")["employers.lead"],
   );
   for (const lang of LANGS) {
@@ -224,7 +226,13 @@ group("E2 · the three actions, through the ONE door");
     hrefs.includes("/login?redirect=%2Femployer"),
     hrefs,
   );
-  ck("and there is no fourth destination", hrefs.length === 3, hrefs);
+  // The one addition since the MVP text specification (§11.1): a quiet
+  // cross-link to the PUBLIC section on My Security Work. Nothing else.
+  ck(
+    "the only other destination is the public security-work section",
+    hrefs.length === 4 && hrefs[3] === "/#security-intelligence",
+    hrefs,
+  );
   ck(
     "safeReturnPath accepts the employer landing",
     safeReturnPath("/employer", "/my-career") === "/employer",
@@ -310,18 +318,22 @@ group("E4 · the connected path, ending in a documented human decision");
       headings(main[lang], "h3"),
     );
   }
-  // Step 5 is the one the page exists to make unmistakable.
+  // Step 5 is the one the page exists to make unmistakable: PEOPLE decide,
+  // and the decision is documented. In the specification's words (§11.1) the
+  // title carries the documenting and the body names who is responsible.
   ck(
-    "sv step 5 says a person decides and the decision is documented",
-    /[Mm]änniskor fattar beslutet/.test(d("sv")["employers.path.step5.body"]) &&
-      /dokumenteras/.test(d("sv")["employers.path.step5.body"]),
-    d("sv")["employers.path.step5.body"],
+    "sv step 5 says the team decides and the decision is documented",
+    /[Rr]ekryteringsteamet ansvarar för bedömningen och det slutliga beslutet/.test(
+      d("sv")["employers.path.step5.body"],
+    ) && /dokumentera beslutet/.test(d("sv")["employers.path.step5.title"]),
+    `${d("sv")["employers.path.step5.title"]} — ${d("sv")["employers.path.step5.body"]}`,
   );
   ck(
     "en step 5 says the same",
-    /[Pp]eople make the decision/.test(d("en")["employers.path.step5.body"]) &&
-      /recorded/.test(d("en")["employers.path.step5.body"]),
-    d("en")["employers.path.step5.body"],
+    /recruitment team is responsible for the assessment and final decision/.test(
+      d("en")["employers.path.step5.body"],
+    ) && /document the decision/.test(d("en")["employers.path.step5.title"]),
+    `${d("en")["employers.path.step5.title"]} — ${d("en")["employers.path.step5.body"]}`,
   );
 }
 

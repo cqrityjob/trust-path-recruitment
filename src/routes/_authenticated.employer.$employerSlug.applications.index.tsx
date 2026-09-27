@@ -407,6 +407,9 @@ function ApplicationsList({
       <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
         {t("employer.applications.heading")}
       </h1>
+      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+        {t("employer.applications.lede")}
+      </p>
 
       {/* The filter is shown, not just applied. Arriving from a dashboard
           action and seeing a short list is only reassuring if the page says

@@ -109,6 +109,7 @@ export const dictionaries = {
     "meta.careerCenter.title": "Yrken och karriärvägar inom säkerhet – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – din karriäranalys – CQrityjob",
     "meta.jobs.title": "Lediga jobb inom säkerhet – CQrityjob",
+    "meta.employers.title": "Rekrytera och utveckla säkerhetspersonal – CQrityjob",
 
     // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
     //
@@ -578,9 +579,9 @@ export const dictionaries = {
     //     (säkerhetsprövning), which is the employer's own legal duty.
     //   * Career Discovery data is the candidate's and never appears in an
     //     employer surface, so no sentence here offers it.
-    "employers.title": "Hela rekryteringen av säkerhetspersonal i en plattform",
+    "employers.title": "Rekrytera och utveckla säkerhetspersonal på samma plats.",
     "employers.lead":
-      "Publicera säkerhetsjobb, hantera ansökningar och använd strukturerade bedömningar och intervjumodeller för både vanliga säkerhetsroller och säkerhetsskyddskänsliga befattningar.",
+      "Publicera jobb, samla ansökningar och arbeta med rekryteringstester och strukturerade intervjuer. Fortsätt med medarbetarnas kompetensutveckling i en egen företagsportal.",
 
     // ── THE CONNECTED PATH ──────────────────────────────────────────────
     "employers.path.title": "Så hänger processen ihop",
@@ -590,22 +591,23 @@ export const dictionaries = {
     // decision look like a waypoint rather than the outcome.
     "employers.path.continuation": "Och sedan",
     "employers.path.step1.title": "Publicera jobbet",
-    "employers.path.step1.body": "Beskriv rollen, kraven och arbetsplatsen och publicera annonsen.",
-    "employers.path.step2.title": "Ta emot och ordna ansökningarna",
+    "employers.path.step1.body":
+      "Beskriv arbetsuppgifter, krav och arbetsplats. Granska annonsen före publicering.",
+    "employers.path.step2.title": "Hantera ansökningar",
     "employers.path.step2.body":
-      "Ansökningarna samlas på ett ställe med den information kandidaten valt att dela.",
-    "employers.path.step3.title": "Välj bedömning och intervjumodell",
+      "Samla ansökningar och följ vad som behöver göras i varje rekrytering.",
+    "employers.path.step3.title": "Använd rekryteringstester",
     "employers.path.step3.body":
-      "Välj det arbetssätt rollen kräver — ordinarie säkerhetsroll eller säkerhetsskyddskänslig befattning.",
-    "employers.path.step4.title": "Granska underlaget tillsammans",
+      "Välj tillgängliga tester som är relevanta för rollen och granska underlaget i sitt sammanhang.",
+    "employers.path.step4.title": "Förbered och genomför intervju",
     "employers.path.step4.body":
-      "Rekryteringsteamet läser samma strukturerade underlag om varje kandidat.",
+      "Strukturera frågor, anteckningar och uppföljning med Interview Intelligence. AI-stöd används där det är tillgängligt.",
     "employers.path.step5.title": "Fatta och dokumentera beslutet",
     "employers.path.step5.body":
-      "Människor fattar beslutet, och beslutet dokumenteras med sitt underlag.",
-    "employers.path.step6.title": "Fortsätt med utveckling",
+      "Rekryteringsteamet ansvarar för bedömningen och det slutliga beslutet.",
+    "employers.path.step6.title": "Fortsätt med kompetensutveckling",
     "employers.path.step6.body":
-      "Efter anställningen fortsätter utbildning och kompetensutveckling i samma plattform.",
+      "Efter anställningen fortsätter medarbetarnas kompetensutveckling i företagsportalen.",
 
     // ── TWO RECRUITMENT EXAMPLES ────────────────────────────────────────
     "employers.examples.title": "Två sätt att rekrytera",
@@ -625,6 +627,8 @@ export const dictionaries = {
 
     "employers.disclaimer":
       "CQrityjob stödjer arbetsgivarens beslut. Varken CQrityjob eller AI avgör om en kandidat är lämplig — arbetsgivaren fattar och dokumenterar alltid det slutliga beslutet.",
+    "employers.crossLink.lead": "Arbetar du själv med säkerhet, risk eller beredskap?",
+    "employers.crossLink.action": "Utforska Mitt säkerhetsarbete",
     // The three actions, in the order the two readers need them: a new
     // employer registers, anybody can read how the platform works, and an
     // existing customer gets back into their workspace. All three use the
@@ -2115,18 +2119,16 @@ export const dictionaries = {
     "employer.preferences.purpose":
       "Kontoinställningar som notifieringar, fakturering och integrationer — skilt från organisationens företagsprofil.",
 
-    "employer.askCqrity.heading": "Fråga CQrity",
-    "employer.askCqrity.body":
-      "En framtida AI-assistent som kan svara på frågor om rekrytering och personal utifrån er egen data. Idag ger den genvägar till verklig information — inga påhittade svar.",
-    "employer.askCqrity.shortcutsHeading": "Genvägar",
-    "employer.askCqrity.query.applications": "Visa ansökningar som väntar på granskning",
-    "employer.askCqrity.query.assessments": "Visa tillgängliga bedömningar",
-    "employer.askCqrity.query.employeesWithoutRole": "Visa medarbetare utan angiven roll",
-    "employer.askCqrity.query.draftJobs": "Visa jobbannonser i utkast",
+    "employer.askCqrity.heading": "Genvägar",
+    "employer.askCqrity.body": "Gå direkt till ansökningar, tester, medarbetare och jobbannonser.",
+    "employer.askCqrity.query.applications": "Ansökningar",
+    "employer.askCqrity.query.assessments": "Rekryteringstester",
+    "employer.askCqrity.query.employeesWithoutRole": "Medarbetare",
+    "employer.askCqrity.query.draftJobs": "Jobbannonser",
 
     "employer.workforce.heading": "Medarbetare",
     "employer.workforce.subheading":
-      "Era medarbetare med roller och platser — grunden för en samlad kompetensbild.",
+      "Se organisationens medarbetare och de uppgifter som finns registrerade för ert arbete.",
     "employer.workforce.action.add": "Lägg till medarbetare",
     "employer.workforce.action.edit": "Redigera",
     "employer.workforce.action.deactivate": "Inaktivera",
@@ -2162,7 +2164,7 @@ export const dictionaries = {
     "employer.overview.welcome": "Välkommen, {0}",
     "employer.overview.welcomeAnon": "Välkommen",
     "employer.overview.subheading":
-      "Hantera rekrytering, medarbetare, tester och kompetensutveckling på ett ställe.",
+      "Följ era rekryteringar och se vilka uppgifter som behöver hanteras.",
 
     "employer.overview.card.jobs.title": "Rekryteringar",
     "employer.overview.card.jobs.body":
@@ -2482,6 +2484,7 @@ export const dictionaries = {
     "assignment.recipient.saveResult.link": "Koppla resultatet till min profil",
 
     "employer.applications.heading": "Ansökningar",
+    "employer.applications.lede": "Granska ansökningar och följ nästa steg i varje rekrytering.",
     "employer.applications.empty": "Inga ansökningar har kommit in ännu.",
     "employer.applications.emptyBody":
       "Ansökningar kommer in via publicerade jobbannonser. När en annons är publicerad hamnar ansökningarna här.",
@@ -2616,7 +2619,8 @@ export const dictionaries = {
     "myapps.passport.included": "Security Passport inkluderat",
     "myapps.passport.attach": "Dela verifierat Passport med denna ansökan",
 
-    "employer.settings.heading": "Organisation",
+    "employer.settings.heading": "Organisationsinställningar",
+    "employer.settings.lede": "Håll organisationens uppgifter och inställningar aktuella.",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
     "employer.overview.card.tests.stat.active": "Aktiva",
     "employer.overview.card.tests.stat.awaitingReview": "Väntar på granskning",
@@ -5937,9 +5941,8 @@ export const dictionaries = {
       "Utbildningsleverans är ännu inte aktiverad.",
     "training.nav.programmes": "Program",
     "training.nav.participants": "Tilldelade utbildningar",
-    "training.overview.title": "Utveckling",
-    "training.overview.lede":
-      "Utvecklingsprogram som din organisation har tilldelat, och hur långt medarbetarna har kommit.",
+    "training.overview.title": "Kompetensutveckling",
+    "training.overview.lede": "Planera och följ upp utbildning för era medarbetare.",
     "training.overview.stat.active": "Pågående",
     "training.overview.stat.completed": "Slutförda",
     "training.overview.stat.available": "Program att tilldela",
@@ -7105,9 +7108,9 @@ export const dictionaries = {
     "admin.lifecycle.employer.impactLoading": "Beräknar konsekvens…",
     "admin.lifecycle.job.delete.blocked": "Bara opublicerade utkast kan raderas.",
     "academy.nav.candidates": "Kandidater",
-    "academy.overview.title": "Tester & bedömningar",
+    "academy.overview.title": "Rekryteringstester",
     "academy.overview.lede":
-      "Följ kandidaternas bedömningar från tilldelning till färdigt beslutsunderlag.",
+      "Välj tester, bjud in deltagare och granska resultat som stöd för rekryteringen.",
     "academy.overview.todoTitle": "Att göra nu",
     "academy.overview.todoNothing": "Du har inget som väntar på åtgärd just nu.",
     "academy.overview.todoCandidates.one": "kandidat väntar på granskning",
@@ -8450,7 +8453,8 @@ export const dictionaries = {
     "iiu.new.creating": "Skapar …",
     "iiu.new.cancel": "Avbryt",
     "iiu.ix.lead":
-      "Förbered, intervjua, bedöm och rapportera — mot rollens krav. Du bedömer och beslutar.",
+      "Förbered intervjun, dokumentera samtalet och sammanställ underlaget för er bedömning. Du bedömer och beslutar.",
+    "iiu.ix.title": "Interview Intelligence",
     "iiu.ix.heading": "Intervjuer",
     "iiu.ev.notes.title": "Dina intervjuanteckningar",
     "iiu.ev.notes.body":
@@ -8844,6 +8848,7 @@ export const dictionaries = {
     "meta.careerCenter.title": "Security professions and career paths – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – your career analysis – CQrityjob",
     "meta.jobs.title": "Security jobs – CQrityjob",
+    "meta.employers.title": "Recruit and develop security professionals – CQrityjob",
 
     "cta.passport": "Create my Security Passport",
     "cta.assessment": "Start the Career Analysis",
@@ -9195,30 +9200,30 @@ export const dictionaries = {
     // bind every sentence here: CQrityjob supports a decision and never
     // makes one, BESKT is a governed method that never replaces statutory
     // security vetting, and Career Discovery data never reaches an employer.
-    "employers.title": "The complete security recruitment process in one platform",
+    "employers.title": "Recruit and develop security professionals in one place.",
     "employers.lead":
-      "Publish security jobs, manage applications and use structured assessments and interview models for both ordinary security roles and security-protection-sensitive positions.",
+      "Post jobs, manage applications and work with recruitment assessments and structured interviews. Continue with employee learning and development in a dedicated employer portal.",
 
     "employers.path.title": "How the process connects",
     "employers.path.continuation": "And then",
     "employers.path.step1.title": "Publish the job",
     "employers.path.step1.body":
-      "Describe the role, the requirements and the site, and publish the advert.",
-    "employers.path.step2.title": "Receive and organise applications",
+      "Describe responsibilities, requirements and the workplace. Review the advert before publishing.",
+    "employers.path.step2.title": "Manage applications",
     "employers.path.step2.body":
-      "Applications arrive in one place, with the information each candidate chose to share.",
-    "employers.path.step3.title": "Choose the assessment and interview workflow",
+      "Bring applications together and track what needs to happen in each recruitment.",
+    "employers.path.step3.title": "Use recruitment assessments",
     "employers.path.step3.body":
-      "Pick the way of working the role needs — an ordinary security role or a security-protection-sensitive position.",
-    "employers.path.step4.title": "Review the evidence with the hiring team",
+      "Choose available assessments relevant to the role and review the evidence in context.",
+    "employers.path.step4.title": "Prepare and conduct the interview",
     "employers.path.step4.body":
-      "Everyone on the team reads the same structured record about each candidate.",
+      "Structure questions, notes and follow-up with Interview Intelligence. Use AI assistance where available.",
     "employers.path.step5.title": "Make and document the decision",
     "employers.path.step5.body":
-      "People make the decision, and the decision is recorded together with what it rests on.",
-    "employers.path.step6.title": "Continue with development",
+      "The recruitment team is responsible for the assessment and final decision.",
+    "employers.path.step6.title": "Continue with learning and development",
     "employers.path.step6.body":
-      "After the hire, training and competence development continue in the same platform.",
+      "After the hire, employee learning and development continues in the employer portal.",
 
     "employers.examples.title": "Two ways to recruit",
     "employers.example.ordinary.title": "Ordinary security recruitment",
@@ -9234,7 +9239,9 @@ export const dictionaries = {
 
     "employers.disclaimer":
       "CQrityjob supports the employer's decision. Neither CQrityjob nor AI determines whether a candidate is suitable — the employer always makes and documents the final decision.",
-    "employers.cta.register": "Register company",
+    "employers.crossLink.lead": "Do you work with security, risk or preparedness?",
+    "employers.crossLink.action": "Explore My Security Work",
+    "employers.cta.register": "Register your organisation",
     "employers.cta.how": "See how the platform works",
     "employers.cta.login": "Log in to the employer portal",
 
@@ -10566,18 +10573,17 @@ export const dictionaries = {
     "employer.preferences.purpose":
       "Account-level preferences such as notifications, billing and integrations — distinct from the organisation's company profile.",
 
-    "employer.askCqrity.heading": "Ask CQrity",
+    "employer.askCqrity.heading": "Shortcuts",
     "employer.askCqrity.body":
-      "A future AI assistant that answers recruitment and workforce questions from your own data. Today it offers shortcuts to real information — never invented answers.",
-    "employer.askCqrity.shortcutsHeading": "Shortcuts",
-    "employer.askCqrity.query.applications": "Show applications awaiting review",
-    "employer.askCqrity.query.assessments": "Show available assessments",
-    "employer.askCqrity.query.employeesWithoutRole": "Show employees without a current role",
-    "employer.askCqrity.query.draftJobs": "Show draft jobs",
+      "Go directly to applications, assessments, employees and job adverts.",
+    "employer.askCqrity.query.applications": "Applications",
+    "employer.askCqrity.query.assessments": "Recruitment assessments",
+    "employer.askCqrity.query.employeesWithoutRole": "Employees",
+    "employer.askCqrity.query.draftJobs": "Job adverts",
 
     "employer.workforce.heading": "Employees",
     "employer.workforce.subheading":
-      "Your employees with their roles and sites — the basis for a joined-up competence picture.",
+      "View the organisation's employees and the information recorded for your work.",
     "employer.workforce.action.add": "Add employee",
     "employer.workforce.action.edit": "Edit",
     "employer.workforce.action.deactivate": "Deactivate",
@@ -10609,7 +10615,7 @@ export const dictionaries = {
     "employer.overview.welcome": "Welcome, {0}",
     "employer.overview.welcomeAnon": "Welcome",
     "employer.overview.subheading":
-      "Manage recruitment, employees, tests and competence development in one place.",
+      "Follow your recruitment processes and see which tasks need attention.",
 
     "employer.overview.card.jobs.title": "Recruitments",
     "employer.overview.card.jobs.body":
@@ -10920,6 +10926,8 @@ export const dictionaries = {
     "assignment.recipient.saveResult.link": "Link this result to my profile",
 
     "employer.applications.heading": "Applications",
+    "employer.applications.lede":
+      "Review applications and follow the next step in each recruitment.",
     "employer.applications.empty": "No applications have been received yet.",
     "employer.applications.emptyBody":
       "Applications arrive through published job advertisements. Once an advertisement is live, they appear here.",
@@ -11045,7 +11053,8 @@ export const dictionaries = {
     "myapps.passport.included": "Security Passport included",
     "myapps.passport.attach": "Share verified Passport with this application",
 
-    "employer.settings.heading": "Organisation",
+    "employer.settings.heading": "Organisation settings",
+    "employer.settings.lede": "Keep your organisation's details and settings up to date.",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",
     "employer.overview.card.tests.stat.active": "Active",
     "employer.overview.card.tests.stat.awaitingReview": "Waiting for review",
@@ -14277,9 +14286,8 @@ export const dictionaries = {
     "academy.library.reason.training_delivery_pending": "Training delivery is not enabled yet.",
     "training.nav.programmes": "Programmes",
     "training.nav.participants": "Assigned training",
-    "training.overview.title": "Development",
-    "training.overview.lede":
-      "Development programmes your organisation has assigned, and how far the employees have got.",
+    "training.overview.title": "Learning and development",
+    "training.overview.lede": "Plan and follow up learning for your employees.",
     "training.overview.stat.active": "In progress",
     "training.overview.stat.completed": "Completed",
     "training.overview.stat.available": "Programmes to assign",
@@ -15421,9 +15429,9 @@ export const dictionaries = {
     "admin.lifecycle.employer.impactLoading": "Computing impact…",
     "admin.lifecycle.job.delete.blocked": "Only unpublished drafts can be deleted.",
     "academy.nav.candidates": "Candidates",
-    "academy.overview.title": "Tests & assessments",
+    "academy.overview.title": "Recruitment assessments",
     "academy.overview.lede":
-      "Follow every candidate's assessment from assignment to a finished decision-support brief.",
+      "Choose assessments, invite participants and review results to support recruitment.",
     "academy.overview.todoTitle": "What needs you now",
     "academy.overview.todoNothing": "Nothing is waiting for you right now.",
     "academy.overview.todoCandidates.one": "candidate is waiting for review",
@@ -16762,7 +16770,8 @@ export const dictionaries = {
     "iiu.new.creating": "Creating …",
     "iiu.new.cancel": "Cancel",
     "iiu.ix.lead":
-      "Prepare, interview, assess and report — against what the role requires. You assess and decide.",
+      "Prepare the interview, document the conversation and bring together the evidence for your assessment. You assess and decide.",
+    "iiu.ix.title": "Interview Intelligence",
     "iiu.ix.heading": "Interviews",
     "iiu.ev.notes.title": "Your interview notes",
     "iiu.ev.notes.body":

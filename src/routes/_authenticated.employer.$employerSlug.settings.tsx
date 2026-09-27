@@ -157,6 +157,7 @@ function SettingsForm({
       <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
         {t("employer.settings.heading")}
       </h1>
+      <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{t("employer.settings.lede")}</p>
       {!canEdit && (
         <p className="mt-2 text-sm text-muted-foreground">
           {t("employer.settings.viewOnlyNotice")}

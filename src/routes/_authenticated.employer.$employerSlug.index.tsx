@@ -819,6 +819,10 @@ function EmployerOverview({
             {" \u00b7 "}
             {t("employer.overview.heading")}
           </p>
+          {/* What this page is for (MVP text specification §11.2). */}
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            {t("employer.overview.subheading")}
+          </p>
         </div>
         {status === "active" && (
           <Link
