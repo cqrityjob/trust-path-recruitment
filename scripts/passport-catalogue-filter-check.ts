@@ -668,6 +668,15 @@ console.log("\nguarded release: the application declares the catalogue contract 
     ),
     "G BOTH catalogue readers declare the contract, so the wizard and the market panels list what the wizard can save",
   );
+  // The market reader now reads the view for three answers (the market panel,
+  // India's qualifications, the countries it lists). ONE read site carries the
+  // header, so a second read cannot quietly forget it: the regex above would
+  // still match the one that remembered.
+  check(
+    (readers[1].match(/\.from\("sp_approved_credential_catalogue"/g) ?? []).length === 1 &&
+      (readers[1].match(/readApprovedCatalogue\(supabase/g) ?? []).length >= 3,
+    "G the market reader reads the approved catalogue in ONE place, which declares the contract",
+  );
   const migration = readFileSync(
     path.join(
       root,

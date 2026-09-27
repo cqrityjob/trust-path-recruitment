@@ -173,6 +173,17 @@ export const listSelectableMarkets = createServerFn({ method: "GET" })
     );
   });
 
+/** Every read of the approved catalogue in this file, declaring the contract
+ *  this application can save (catalogue-contract.ts). The market panels lead
+ *  into the same wizard, so they list exactly what that wizard can save --
+ *  and with one reader there is no second read that could forget the header. */
+function readApprovedCatalogue(supabase: SupabaseClient<Database>, columns: string) {
+  return supabase
+    .from("sp_approved_credential_catalogue" as never)
+    .select(columns)
+    .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);
+}
+
 /** The countries whose national qualifications the approved catalogue offers
  *  this caller — read from the view, with the same contract header as every
  *  other catalogue read, so a country is listed only when the save path would
@@ -180,12 +191,9 @@ export const listSelectableMarkets = createServerFn({ method: "GET" })
 async function nationalQualificationCountries(
   supabase: SupabaseClient<Database>,
 ): Promise<ReadonlySet<string>> {
-  const { data, error } = await supabase
-    .from("sp_approved_credential_catalogue" as never)
-    .select("country")
+  const { data, error } = await readApprovedCatalogue(supabase, "country")
     .eq("scope_code", "national_qualification")
-    .is("region", null)
-    .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);
+    .is("region", null);
   if (error) throw new Error("Credential catalogue unavailable");
   return new Set(
     ((data ?? []) as unknown as { country: string | null }[])
@@ -445,13 +453,10 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
     // reach it.
     if (!pack) {
       if (subJurisdictionCode) return { state: "unsupported", ...none };
-      const qualifications = await supabase
-        .from("sp_approved_credential_catalogue" as never)
-        .select("code")
+      const qualifications = await readApprovedCatalogue(supabase, "code")
         .eq("scope_code", "national_qualification")
         .eq("country", jurisdictionCode)
-        .is("region", null)
-        .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);
+        .is("region", null);
       if (qualifications.error) throw new Error("Credential catalogue unavailable");
       const codes = (qualifications.data as unknown as { code: string }[]).map((r) => r.code);
       if (codes.length === 0) return { state: "unsupported", ...none };
@@ -534,12 +539,9 @@ export const getRegulatedCredentialAvailability = createServerFn({ method: "GET"
 
     // The final catalogue decision applies to every selectable surface,
     // including older market panels. Pilot visibility is not claim approval.
-    const approved = await supabase
-      .from("sp_approved_credential_catalogue" as never)
-      .select("code")
-      // The market panels lead into the same wizard, so they declare the same
-      // contract: what is listed here is exactly what that wizard can save.
-      .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);
+    // The market panels lead into the same wizard, so they declare the same
+    // contract: what is listed here is exactly what that wizard can save.
+    const approved = await readApprovedCatalogue(supabase, "code");
     if (approved.error) throw new Error("Credential catalogue unavailable");
     const approvedCodes = new Set(
       (approved.data as unknown as { code: string }[]).map((r) => r.code),
