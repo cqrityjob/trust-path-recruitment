@@ -417,7 +417,7 @@ test.describe("the public pilot, on a real backend", () => {
     // What the database holds: six, self-declared, each under its own
     // territory, and still no grant.
     const rows = sql(
-      `select string_agg(credential_code||':'||coalesce(jurisdiction_code,'-')||'/'||coalesce(sub_jurisdiction_code,'-')||':'||assertion_level, ' ' order by credential_code) from public.sp_claims where holder_user_id='${uid}' and lifecycle_state='active'`,
+      `select string_agg(credential_code||':'||coalesce(jurisdiction_code,'-')||'/'||coalesce(sub_jurisdiction_code,'-')||':'||assertion_level, ' ' order by credential_code collate "C") from public.sp_claims where holder_user_id='${uid}' and lifecycle_state='active'`,
     );
     expect(rows).toBe(
       [
