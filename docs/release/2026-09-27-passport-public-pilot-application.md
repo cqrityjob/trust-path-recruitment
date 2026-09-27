@@ -37,6 +37,15 @@ state (G5), and labels every Dubai-scoped credential "Dubai, UAE".
   and after it: "being prepared and cannot be selected yet" is now "in pilot, and each
   market shows who can register there".
 
+## What changes for a reviewer
+
+- **The review queue names the credential's territory.** It printed the country
+  only, so a Dubai licence read "United Arab Emirates" and a Northern Irish licence
+  "United Kingdom". It now reads "Dubai, UAE" and Northern Ireland.
+  - It reads `sub_jurisdiction`, which 20261220090000 adds to `sp_verifier_queue`.
+    Against a database without it, the line shows the country, as before.
+  - The dispute list uses the same label.
+
 ## Administration
 
 - `/admin/passport-catalogue` shows the new availability ("Selectable by every
@@ -62,7 +71,7 @@ Every column the application newly reads (`pilot_state`, `is_active`, the pack's
 `legal_review_state`) is already applied on the owner project. The schema-first
 gate passes.
 
-## Verified (local, stubbed backend)
+## Verified (stubbed backend)
 
 - **Type-checks:** `bunx tsc --noEmit` and `bun run scripts:typecheck` pass.
 - **Guards:** every Passport guard in CI passes, with new assertions for the public
@@ -75,9 +84,46 @@ gate passes.
 - **Other browser specs:** HAYAT reading, date input and the Profile/CV/Passport
   surfaces pass unchanged.
 
-The walk against a real backend (GoTrue, PostgREST and row-level security) is not in
-this list. It needs synthetic accounts on the isolated local stack and is tracked
-separately.
+## Verified on a real backend
+
+`e2e/passport-public-pilot-local.spec.ts` walks the proof cases of the work order in
+the running application. Every response is real:
+
+- GoTrue registers, confirms and signs the people in.
+- PostgREST and row-level security store and return their rows.
+- The claim rules decide what may be saved.
+- The share function hands the recipient over.
+
+`scripts/fixtures/passport-public-pilot-fixture.sql` puts GB, GB-NI and AE-DU in the
+public-pilot state and seeds synthetic people with **no pilot grant**. It refuses any
+database whose migrations the Supabase tooling recorded, or that holds a non-synthetic
+account. Per project, desktop (screenshots at 1440) and a 390px phone, in Swedish and
+English:
+
+| case | what the walk proves                                                                                                                                                                                                                                                                                                                                                                         |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A    | A person registers at `/signup`, confirms from the e-mail the stack sends, creates the Passport and saves a Dubai card through every wizard step. All four markets are offered, and no grant exists. An ordinary holder saves from Dubai, Great Britain, Northern Ireland, India, Sweden and the international catalogue. All six are on `/passport` after a reload, in Swedish and English. |
+| D    | One form per field pattern: Dubai's required company, a British licence, Northern Ireland's own licence, an Indian qualification's issuer and version, a Swedish course's provider, a certification.                                                                                                                                                                                         |
+| E    | The occupation saved on the profile is on the Passport card.                                                                                                                                                                                                                                                                                                                                 |
+| I    | Moving from Dubai to Sweden and back keeps all six credentials, with the same ids.                                                                                                                                                                                                                                                                                                           |
+| F    | Document → review request → clarification → the holder's answer → approval, by a reviewer with the `passport_verifier` role only and no grant. The holder cannot open the review workspace, and the queue reads "Dubai, UAE".                                                                                                                                                                |
+| G    | Selective share → the QR code is exactly the link, module for module → a logged-out recipient sees the two chosen credentials ("Dubai, UAE", India) and not the others or the scope → revocation ends it.                                                                                                                                                                                    |
+| H    | Another holder, with their own session, reads nothing of this Passport through the page or the API. They cannot change it, raise their own trust level, decide a review or grant themselves a pilot.                                                                                                                                                                                         |
+| B    | A mixed-market holder adds all four Indian qualifications and reloads.                                                                                                                                                                                                                                                                                                                       |
+| J    | Fifteen credentials, one expired, with a long name: the card, the wallet and no horizontal scroll.                                                                                                                                                                                                                                                                                           |
+| K    | The administrator's public-pilot definitions are exactly what a Dubai holder and a GB holder are offered.                                                                                                                                                                                                                                                                                    |
+
+- **Locally:** all 20 runs pass on a stack I built by hand: GoTrue v2.169.0, PostgREST
+  v12.2.3, the share function under Deno and a mail catcher. It has no Storage, so there
+  case F attaches its documents through `sp_attach_evidence` as the holder, and records
+  that in the test's annotations.
+- **In CI:** `.github/workflows/passport-public-pilot-evidence.yml` runs the same walk on
+  the Supabase CLI stack, which includes Storage (`E2E_STORAGE=1`). E-mail confirmation
+  is required there, as on the hosted project, and the share function is served.
+  `scripts/passport-public-pilot-evidence-verify.ts` refuses the report unless every
+  case ran and passed on both projects, the documents went through Storage, and the
+  screenshots exist at both widths.
+- **Not proven here:** delivery by a real mail provider, and the deployed application.
 
 ## Release
 

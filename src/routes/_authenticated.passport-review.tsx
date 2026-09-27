@@ -37,7 +37,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, FileText, Inbox, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatWorkLocation } from "@/lib/security-passport/format";
+import { credentialTerritoryLabel } from "@/lib/security-passport/format";
 import {
   hasCompletedDocumentReview,
   hasLegacyUnsupportedApproval,
@@ -417,7 +417,9 @@ export function PassportReviewWorkspace() {
                       // Which market a case belongs to is often the whole
                       // question, and the queue printed nothing about it --
                       // through the canonical formatter, never the raw code.
-                      item.jurisdiction ? formatWorkLocation(item.jurisdiction, null, lang) : null,
+                      item.jurisdiction
+                        ? credentialTerritoryLabel(item.jurisdiction, item.subJurisdiction, lang)
+                        : null,
                       codeLabel(item.claimType, CLAIM_TYPE_KEY, pt),
                     ]
                       .filter(Boolean)
@@ -995,7 +997,7 @@ function DisputeQueue() {
                 <div className="flex gap-1">
                   <dt>{pt("cred.field.credentialCountry")}:</dt>
                   <dd className="text-foreground">
-                    {formatWorkLocation(item.jurisdiction, item.subJurisdiction, lang)}
+                    {credentialTerritoryLabel(item.jurisdiction, item.subJurisdiction, lang)}
                   </dd>
                 </div>
               </dl>

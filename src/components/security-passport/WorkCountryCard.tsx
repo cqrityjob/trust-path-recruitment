@@ -20,10 +20,11 @@
 //
 // ── WHAT IT DELIBERATELY DOES NOT DO ───────────────────────────────────
 //
-// Choosing a country grants no market. The credential form still builds its own
-// list from the ACTIVE market packs, so a holder who selects the United Kingdom
-// here will still find no UK credential to record — and the note below says so
-// before they go looking, rather than letting them discover it as an absence.
+// Choosing a country grants no market. The credential form builds its own list
+// from the markets the database opens to THIS holder -- active, a public pilot,
+// or an internal pilot they are a member of -- so a country chosen here that is
+// not open offers nothing to record, and the note below says who can register
+// where before they go looking, rather than letting them discover an absence.
 
 import { useState } from "react";
 import { Globe } from "lucide-react";

@@ -7,7 +7,8 @@
 --   * sp_market_access() and the sp_credential_types read policy as
 --     20261109090000 left them;
 --   * the two pilot_state CHECK constraints and column comments as
---     20260915090000 wrote them (closed, internal_pilot).
+--     20260915090000 wrote them (closed, internal_pilot);
+--   * sp_verifier_queue() as 20260818090000 wrote it (no sub_jurisdiction).
 --
 -- This reinstates the defect the forward file fixes (G3): a reviewer without a
 -- pilot grant cannot record a decision on a GB, GB-NI or AE-DU claim, and
@@ -503,6 +504,54 @@ COMMENT ON COLUMN public.sp_credential_types.pilot_state IS
   'its market. Orthogonal to is_active, which remains the production '
   'publication flag and is unchanged by piloting.';
 
+-- ── The review queue, as 20260818090000 wrote it ─────────────────────────
+CREATE OR REPLACE FUNCTION public.sp_verifier_queue(_status text DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE _out jsonb;
+BEGIN
+  IF NOT public.sp_is_verifier(auth.uid()) THEN
+    RAISE EXCEPTION 'SP_NOT_VERIFIER' USING ERRCODE='insufficient_privilege';
+  END IF;
+
+  SELECT coalesce(jsonb_agg(x ORDER BY x->>'submitted_at'), '[]'::jsonb) INTO _out
+  FROM (
+    SELECT jsonb_build_object(
+      'id', r.id,
+      'status', r.status,
+      'submitted_at', r.submitted_at,
+      'subject_type', CASE WHEN r.claim_id IS NOT NULL THEN 'claim' ELSE 'experience' END,
+      'holder_name', coalesce(p.display_name, ''),
+      -- Whether the caller is the holder. Computed here, from auth.uid(), so
+      -- the browser cannot assert it and the answer always matches the guard
+      -- inside `sp_verifier_decide`.
+      'is_self', (r.holder_user_id = auth.uid()),
+      'title', coalesce(c.title, e.role_title),
+      'claim_type', c.claim_type,
+      'issuer', c.claimed_issuer_name,
+      'employer', e.employer_name,
+      'jurisdiction', coalesce(c.jurisdiction_code, e.jurisdiction_code),
+      'assertion', coalesce(c.assertion_level, e.assertion_level),
+      'lifecycle', coalesce(c.lifecycle_state, e.lifecycle_state),
+      'evidence_count', (SELECT count(*) FROM public.sp_evidence ev
+                          WHERE ev.lifecycle_state = 'active'
+                            AND ((r.claim_id IS NOT NULL AND ev.claim_id = r.claim_id)
+                              OR (r.period_id IS NOT NULL AND ev.period_id = r.period_id)))
+    ) AS x
+    FROM public.sp_verification_requests r
+    LEFT JOIN public.sp_claims c              ON c.id = r.claim_id
+    LEFT JOIN public.sp_experience_periods e  ON e.id = r.period_id
+    LEFT JOIN public.sp_passport_profiles p   ON p.holder_user_id = r.holder_user_id
+   WHERE r.request_kind = 'cqrityjob_review'
+     AND (_status IS NULL OR r.status = _status)
+     AND (_status IS NOT NULL OR r.status IN ('pending','clarification_requested'))
+  ) s;
+
+  RETURN _out;
+END; $$;
+
+REVOKE ALL ON FUNCTION public.sp_verifier_queue(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sp_verifier_queue(text) TO authenticated;
+
 -- ── Proof that it stood down ─────────────────────────────────────────────
 DO $$
 DECLARE _left integer;
@@ -514,6 +563,8 @@ BEGIN
            AND (position('public_pilot' IN prosrc) > 0 OR position('_asserts' IN prosrc) > 0))
        + (SELECT count(*) FROM pg_constraint WHERE conname IN ('sp_market_pack_pilot_state_known', 'sp_credential_type_pilot_state_known')
            AND position('public_pilot' IN pg_get_constraintdef(oid)) > 0)
+       + (SELECT count(*) FROM pg_proc WHERE oid = 'public.sp_verifier_queue(text)'::regprocedure
+           AND position('''sub_jurisdiction''' IN prosrc) > 0)
     INTO _left;
   IF _left <> 0 THEN
     RAISE EXCEPTION 'SP_PUBLIC_PILOT_AVAILABILITY_ROLLBACK: % public-pilot clause(s) remain', _left;
