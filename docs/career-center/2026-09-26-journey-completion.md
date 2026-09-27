@@ -132,7 +132,19 @@ zero-jobs state is what a local run shows.
 | `career-profession-bridge:check`, `career-journey:check`, `my-career-premium-overview:check`, `candidate-destination-composition:check` | pass |
 | `tsc --noEmit` | 300 errors, **identical set to untouched main**; all from packages that could not be installed |
 | ESLint on changed files | no new findings (dictionary file's pre-existing Prettier findings unchanged in count) |
-| Browser specs (`e2e/career-center-journey.spec.ts` new; pilot and explore-link specs updated) | **not run** — see blockers |
+| Browser specs (`e2e/career-center-journey.spec.ts` new; pilot and explore-link specs updated) | not runnable here — see blockers; run in CI, below |
+
+In CI, on `4a49b42b` (this branch with main merged in, 2026-09-27):
+
+| Check | Result |
+|---|---|
+| `e2e/career-center-journey.spec.ts` (stubbed server functions), desktop + 375 px | 16/16 pass |
+| `e2e/career-discovery-explore-link.spec.ts`, desktop + 375 px | pass |
+| `e2e/career-center-persistence.spec.ts` against a real local stack (GoTrue + PostgREST + RLS, synthetic people, no simulated server response): profile save → the Career Center updated without a reload → reload → sign-out → another account in the same tab → a new sign-in in English, desktop + 375 px | 4/4 pass; the verify step refuses any skipped, failed or flaky test |
+| Deterministic checks, production build, and every other CI job | pass |
+
+None of this reworks or validates the career-matching calculation: the
+assessment's scores and ranks are read as stored.
 
 ## Blockers in this environment
 
