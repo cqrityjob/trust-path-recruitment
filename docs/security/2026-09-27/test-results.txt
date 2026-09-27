@@ -102,3 +102,9 @@ Review follow-up (same migration and test code, 2026-09-27):
 - release-parity:check PASS (320 canonical, 3 pending, 0 unverified).
 - schema-first-release:check PASS.
 - migrations:check and sql-security:check PASS.
+- First remote CI attempt on f4fdf7d caught the missing exact pending entry
+  in release-frontier-check.ts. Added only this migration to expectedPending;
+  no guard logic or workflow changed. Final CI reruns on the follow-up commit.
+- release-frontier:check PASS (three explicit pending entries).
+- deploy-plan:gate EXPECTED REJECTION (exit 1): pending deployment is blocked.
+- deploy-plan-negative:check PASS; lint of release-frontier-check.ts PASS.

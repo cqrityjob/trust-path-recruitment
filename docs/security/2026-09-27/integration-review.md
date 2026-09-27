@@ -25,7 +25,7 @@ branchfält. Godtyckliga administrativa GitHub-webhooks kunde inte inventeras me
 connectorns behörigheter. Vi påstår därför inte en fullständig export av externa
 integrationsinställningar. Det finns inget identifierat produktionsflöde för den
 nya säkerhetsbranchen eller draft-PR:n. Ingen integration, betalplan, branchkoppling,
-workflow eller spärr har ändrats. Kontrollera efter push att main/Lovable-head och
+workflow eller spärrlogik har ändrats. Kontrollera efter push att main/Lovable-head och
 Supabase-branchlistan är oförändrade; CI får inte användas för produktionsmigration.
 
 ## Release-registret
@@ -37,3 +37,8 @@ Den befintliga ledgersnapshoten har dessutom två äldre väntande innehållsmig
 En framtida generell `supabase db push` skulle planera alla tre; säkerhets-PR:ns
 godkännande innebär inte godkännande att applicera de andra två. Ingen push till
 Supabase, ingen workflow_dispatch och ingen SQL-skrivning mot produktion utförs.
+
+CI fångade även den explicita expectedPending-listan i release-frontier-check.
+Samma enda migration registreras där enligt befintlig arbetsgång. Jämförelsen
+kräver fortfarande exakt överensstämmelse; deploy-plan:gate avvisar fortfarande
+release med väntande migrationer. Inga kontroller stängs av eller hoppas över.
