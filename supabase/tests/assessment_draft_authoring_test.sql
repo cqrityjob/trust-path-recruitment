@@ -27,6 +27,9 @@ SELECT pg_temp.ok((SELECT content_status='draft' AND validation_status='design' 
 SELECT pg_temp.ok((SELECT NOT d.standard_for_recruitment AND d.display_name_sv IS NULL
  FROM public.scp_assessment_definitions d JOIN public.scp_assessment_versions v ON v.definition_id=d.id WHERE v.id=(SELECT id FROM new_test)), 'AD5 new definition inherits no designation/display-name override');
 SELECT pg_temp.ok((SELECT count(*)=5 FROM public.scp_form_items fi JOIN public.scp_forms f ON f.id=fi.form_id WHERE f.assessment_version_id=(SELECT id FROM new_draft)), 'AD6 selected questions copied');
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.scp_form_items fresh JOIN public.scp_forms f ON f.id=fresh.form_id
+ JOIN public.scp_form_items old ON old.item_version_id=fresh.item_version_id JOIN public.scp_forms source ON source.id=old.form_id
+ WHERE f.assessment_version_id=(SELECT id FROM new_draft) AND source.assessment_version_id=(SELECT version_id FROM rjv) AND fresh.display_order<>old.display_order), 'AD14 original question order survives unordered selection input');
 SELECT pg_temp.ok(EXISTS(SELECT 1 FROM public.scp_form_blocks b JOIN public.scp_forms f ON f.id=b.form_id WHERE f.assessment_version_id=(SELECT id FROM new_draft)), 'AD7 participant sections copied');
 SELECT pg_temp.ok((SELECT aa.scp_assessment_version_id=(SELECT version_id FROM rjv) AND a.assessment_version_id=(SELECT version_id FROM rjv)
  FROM public.assessment_assignments aa JOIN public.scp_attempts a ON a.assignment_id=aa.id WHERE aa.id=(SELECT assignment_id FROM pinned)), 'AD8 existing assignment and attempt retain original version');
