@@ -129,16 +129,41 @@ export const dictionaries = {
     "jobs.detail.apply_jump": "Ansök",
     "home.cta.jobs": "Hitta jobb",
     "home.cta.employers": "För arbetsgivare",
-    // The MVP sections below the hero were condensed on 2026-09-27 so the
-    // whole page fits the 340-word ceiling in scripts/public-homepage-check.tsx
-    // (T15). What was cut repeated the hero; every safety sentence was kept.
+    "home.cta.jobsNote": "Lediga jobb kan du läsa utan konto.",
+    // The MVP sections below the hero (2026-09-26), kept as approved. Two
+    // sentences are gone because they repeated the hero, and the value card
+    // uses the approved "Skapa mitt Security Passport". Each section has its
+    // own word budget in scripts/public-homepage-check.tsx (T15).
+    "home.value.eyebrow": "För dig i säkerhetsbranschen",
     "home.value.title": "Det här får du gjort",
+    "home.value.passport.title": "Visa dina meriter och välj vem som ser dem",
+    "home.value.passport.body":
+      "Varje merit visar sin källa och status, och du bestämmer vad som delas och med vem.",
+    "home.value.cv.title": "Bygg profil och CV, och sök jobb",
+    "home.value.cv.body":
+      "Fyll i din profil en gång och använd den i ditt CV och dina ansökningar. Sök säkerhetsjobb efter roll, plats och anställningsform.",
     "home.value.cv.link": "Se lediga jobb",
+    "home.value.career.title": "Utforska karriär och utveckling",
+    "home.value.career.body":
+      "Career Discovery visar vilka säkerhetsroller som ligger nära din inriktning. Karriärcentret beskriver yrken, vägar in och utbildningar.",
     "home.value.career.link": "Utforska karriärcentret",
+    "home.ai.eyebrow": "AI-stöd i ditt säkerhetsarbete",
     // The product's own name (sw.product), identical in both languages.
     "home.ai.title": "CQrityjob Security Intelligence",
     "home.ai.body":
-      "En privat arbetsyta för omvärldsbevakning och säkerhetsanalys. AI-utkast där funktionen är aktiverad – du står för bedömningen.",
+      "En privat arbetsyta för omvärldsbevakning och säkerhetsanalys. Verktyget hjälper dig att strukturera underlag – du står för bedömningen.",
+    "home.ai.task.label": "Uppgift",
+    "home.ai.task.body":
+      "Bevaka det som påverkar din verksamhet och sammanställ analyser och rapporter.",
+    "home.ai.input.label": "Ditt underlag",
+    "home.ai.input.body":
+      "En bevakningsprofil, dina bevakningsfrågor och de källor du själv registrerar.",
+    "home.ai.output.label": "Det du får",
+    "home.ai.output.body":
+      "Sorterade underlag, riskbedömningar, analyser och rapportutkast med hänvisning till källorna. AI-utkast finns där funktionen är aktiverad för arbetsytan.",
+    "home.ai.review.label": "Din granskning",
+    "home.ai.review.body":
+      "Du bedömer relevansen och ansvarar för slutsatserna. Källor och utkast kan innehålla fel.",
     "home.ai.note":
       "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
     "home.ai.cta": "Öppna Security Intelligence",
@@ -148,21 +173,44 @@ export const dictionaries = {
     "home.employers.flow.interview": "Förbered intervjun",
     "home.employers.flow.decision": "Ni fattar beslutet",
     "home.employers.flow.label": "Så hänger rekryteringen ihop",
+    "home.start.eyebrow": "Så kommer du igång",
     "home.start.title": "Tre steg, oavsett var du börjar",
-    "home.start.step.1": "Skapa ett konto.",
-    "home.start.step.2": "Fyll i din profil.",
-    "home.start.step.3": "Sök jobb, bygg ditt Passport eller starta Career Discovery.",
+    "home.start.person": "För dig som person",
+    "home.start.person.1": "Skapa ett konto med din e-postadress.",
+    "home.start.person.2": "Fyll i din profil och lägg till din första merit i Security Passport.",
+    "home.start.person.3": "Sök jobb, bygg ditt CV eller starta Career Discovery.",
+    "home.start.employer": "För arbetsgivare",
+    "home.start.employer.1": "Registrera företaget med namn och land.",
+    "home.start.employer.2": "Vi granskar kontot innan arbetsytan aktiveras.",
+    "home.start.employer.3": "Publicera ditt första jobb och ta emot ansökningar.",
+    "home.faq.eyebrow": "Erbjudande och vanliga frågor",
     "home.faq.title": "Bra att veta innan du börjar",
-    "home.faq.pricing": "Priser och paket är inte publicerade ännu.",
+    "home.faq.offer.person":
+      "För individer: konto, profil, CV, Security Passport, jobbsök, Career Discovery och Security Intelligence.",
+    "home.faq.offer.employer":
+      "För arbetsgivare: jobbannonser, ansökningar, rekryteringstester, intervjuförberedelse och medarbetarutveckling. Priser och paket är inte publicerade ännu – kontakta oss.",
     "home.faq.contact": "Kontakta oss",
-    "home.faq.ai.question": "Beslutar AI vem som anställs?",
+    "home.faq.q1": "Vem är CQrityjob till för?",
+    "home.faq.a1":
+      "Personer som arbetar inom eller vill till säkerhetsbranschen, och organisationer som rekryterar och utvecklar säkerhetspersonal.",
+    "home.faq.q2": "Hur fungerar delning av Security Passport?",
+    "home.faq.a2":
+      "Ditt Security Passport är privat som standard. Du väljer vilka meriter som delas och med vem, och du kan återkalla en delning. En ansökan delar inte ditt Passport automatiskt.",
+    "home.faq.q3": "Är mina meriter verifierade?",
+    "home.faq.a3":
+      "En uppladdad handling är inte automatiskt verifierad. Varje merit visar sin faktiska status, till exempel egen uppgift, granskad handling eller verifierad mot källan. En internationell certifiering innebär inte automatiskt lokal yrkesbehörighet.",
+    "home.faq.q4": "Behöver jag ett konto för att söka jobb?",
+    "home.faq.a4":
+      "Nej. Du kan söka och läsa annonser utan konto. När du ansöker loggar du in eller skapar ett konto och kommer sedan tillbaka till annonsen.",
+    "home.faq.q5": "Beslutar AI vem som anställs?",
     // Said without the ranking vocabulary, which this page may not use even
-    // negated (public-homepage-check T14). It used to read "Plattformen
+    // negated (public-homepage-check T14). It used to end "Plattformen
     // rangordnar inte kandidater"; the meaning is unchanged.
-    "home.faq.ai.answer":
-      "Nej. Människor fattar och dokumenterar varje beslut. Plattformen sorterar inte kandidater från bäst till sämst.",
+    "home.faq.a5":
+      "Nej. AI kan hjälpa till att strukturera underlag, men människor fattar och dokumenterar varje beslut. Plattformen sorterar inte kandidater från bäst till sämst.",
     "home.hero.title": "Din karriär och ditt säkerhetsarbete. På samma plats.",
-    "home.hero.subtitle": "Jobb, Security Passport och AI-stöd. Du bestämmer vad som delas.",
+    "home.hero.subtitle":
+      "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
     "home.account.returning": "Har du redan ett konto?",
     "home.passportPreview.private": "Privat som standard",
     "home.passportPreview.record": "Din professionella dokumentation",
@@ -211,6 +259,7 @@ export const dictionaries = {
     // available one. It says what the platform supports and who decides; it
     // never says CQrityjob or a model approves, rejects, ranks or selects
     // anybody.
+    "home.employers.eyebrow": "För arbetsgivare",
     "home.employers.title": "Rekryterar du inom säkerhet?",
     "home.employers.body":
       "Publicera jobb, hantera kandidater och använd strukturerade tester och intervjuer i samma plattform.",
@@ -8687,12 +8736,36 @@ export const dictionaries = {
     "jobs.detail.apply_jump": "Apply",
     "home.cta.jobs": "Find jobs",
     "home.cta.employers": "For employers",
+    "home.cta.jobsNote": "You can browse open jobs without an account.",
+    "home.value.eyebrow": "For people in security",
     "home.value.title": "What you can get done",
+    "home.value.passport.title": "Show your credentials and choose who sees them",
+    "home.value.passport.body":
+      "Every credential shows its source and status, and you decide what is shared and with whom.",
+    "home.value.cv.title": "Build your profile and CV, and find jobs",
+    "home.value.cv.body":
+      "Fill in your profile once and reuse it in your CV and applications. Search security jobs by role, location and employment type.",
     "home.value.cv.link": "See open jobs",
+    "home.value.career.title": "Explore your career and development",
+    "home.value.career.body":
+      "Career Discovery shows which security roles sit close to your direction. The Career Center describes professions, ways in and training.",
     "home.value.career.link": "Explore the Career Center",
+    "home.ai.eyebrow": "AI support for your security work",
     "home.ai.title": "CQrityjob Security Intelligence",
     "home.ai.body":
-      "A private workspace for monitoring and security analysis. AI drafts where enabled – the judgement stays yours.",
+      "A private workspace for horizon scanning and security analysis. It helps you structure material – the judgement stays yours.",
+    "home.ai.task.label": "Task",
+    "home.ai.task.body":
+      "Monitor what affects your organisation and put together analyses and reports.",
+    "home.ai.input.label": "What you provide",
+    "home.ai.input.body":
+      "A monitoring profile, your monitoring questions and the sources you register yourself.",
+    "home.ai.output.label": "What you get",
+    "home.ai.output.body":
+      "Triaged material, risk ratings, analyses and report drafts that cite their sources. AI drafts are available where the feature is enabled for the workspace.",
+    "home.ai.review.label": "Your review",
+    "home.ai.review.body":
+      "You judge relevance and own the conclusions. Sources and drafts can contain errors.",
     "home.ai.note":
       "Do not add classified or secret information. The workspace is not shared with your CV, Security Passport or employers.",
     "home.ai.cta": "Open Security Intelligence",
@@ -8702,18 +8775,42 @@ export const dictionaries = {
     "home.employers.flow.interview": "Prepare the interview",
     "home.employers.flow.decision": "You make the decision",
     "home.employers.flow.label": "How the recruitment connects",
+    "home.start.eyebrow": "How to get started",
     "home.start.title": "Three steps, wherever you start",
-    "home.start.step.1": "Create an account.",
-    "home.start.step.2": "Complete your profile.",
-    "home.start.step.3": "Search jobs, build your Passport or start Career Discovery.",
+    "home.start.person": "For individuals",
+    "home.start.person.1": "Create an account with your email address.",
+    "home.start.person.2":
+      "Fill in your profile and add your first credential to Security Passport.",
+    "home.start.person.3": "Search jobs, build your CV or start Career Discovery.",
+    "home.start.employer": "For employers",
+    "home.start.employer.1": "Register your company with its name and country.",
+    "home.start.employer.2": "We review the account before the workspace is activated.",
+    "home.start.employer.3": "Publish your first job and receive applications.",
+    "home.faq.eyebrow": "Offer and common questions",
     "home.faq.title": "Good to know before you start",
-    "home.faq.pricing": "Prices and packages are not published yet.",
+    "home.faq.offer.person":
+      "For individuals: account, profile, CV, Security Passport, job search, Career Discovery and Security Intelligence.",
+    "home.faq.offer.employer":
+      "For employers: job ads, applications, recruitment tests, interview preparation and employee development. Prices and packages are not published yet – contact us.",
     "home.faq.contact": "Contact us",
-    "home.faq.ai.question": "Does AI decide who gets hired?",
-    "home.faq.ai.answer":
-      "No. People make and document every decision. The platform does not sort candidates best to worst.",
+    "home.faq.q1": "Who is CQrityjob for?",
+    "home.faq.a1":
+      "People who work in, or want to join, the security industry, and organisations that recruit and develop security staff.",
+    "home.faq.q2": "How does sharing a Security Passport work?",
+    "home.faq.a2":
+      "Your Security Passport is private by default. You choose which credentials are shared and with whom, and you can revoke a share. Applying for a job does not share your Passport automatically.",
+    "home.faq.q3": "Are my credentials verified?",
+    "home.faq.a3":
+      "An uploaded document is not automatically verified. Every credential shows its actual status, such as self-reported, document reviewed or source verified. An international certification does not automatically mean a local licence to practise.",
+    "home.faq.q4": "Do I need an account to search jobs?",
+    "home.faq.a4":
+      "No. You can search and read job ads without an account. When you apply, you sign in or create an account and come back to the ad.",
+    "home.faq.q5": "Does AI decide who gets hired?",
+    "home.faq.a5":
+      "No. AI can help structure material, but people make and document every decision. The platform does not sort candidates from best to worst.",
     "home.hero.title": "Your career and your security work. In one place.",
-    "home.hero.subtitle": "Jobs, Security Passport and AI support. You decide what is shared.",
+    "home.hero.subtitle":
+      "Find security jobs, keep your certifications and licences in Security Passport, and get AI support in your daily security work. You always decide what is shared.",
     "home.account.returning": "Already have an account?",
     "home.passportPreview.private": "Private by default",
     "home.passportPreview.record": "Your professional record",
@@ -8735,6 +8832,7 @@ export const dictionaries = {
     "home.entry.discovery.disclosure":
       "You can start without an account. Create one when you want to save the result and continue in My Career.",
 
+    "home.employers.eyebrow": "For employers",
     "home.employers.title": "Hiring in security?",
     "home.employers.body":
       "Publish jobs, manage candidates and use structured assessments and interviews in one platform.",

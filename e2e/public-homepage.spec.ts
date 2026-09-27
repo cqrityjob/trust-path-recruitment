@@ -145,7 +145,7 @@ test.describe("the public homepage", () => {
   });
 
   // H3 ──────────────────────────────────────────────────────────────────
-  test("one h1, eight h2, three h3, and the MVP framing", async ({ page }) => {
+  test("one h1, eight h2, five h3, and the MVP framing", async ({ page }) => {
     expect(await page.locator("main h1").count()).toBe(1);
     // The two entrances in the hero, then one per section below it.
     expect(await page.locator("main h2").count()).toBe(8);
@@ -153,14 +153,22 @@ test.describe("the public homepage", () => {
     for (const id of SECTION_ORDER.slice(1)) {
       expect(await page.locator(`#${id} h2`).count(), `#${id} has one h2`).toBe(1);
     }
-    // h3 is the three value cards and nothing else.
-    expect(await page.locator("main h3").count()).toBe(3);
+    // h3 is the three value cards and the two get-started audiences.
+    expect(await page.locator("main h3").count()).toBe(5);
     expect(await page.locator("#value h3").count()).toBe(3);
+    expect(await page.locator("#get-started h3").allInnerTexts()).toEqual([
+      "För dig som person",
+      "För arbetsgivare",
+    ]);
     await expect(page.locator("main h1")).toHaveText(H1.sv);
 
     const hero = page.locator("#hero");
     const heroText = await hero.innerText();
-    expect(heroText).toContain("Jobb, Security Passport och AI-stöd. Du bestämmer vad som delas.");
+    expect(heroText).toContain(
+      "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
+    );
+    // Said beside the action it is about.
+    expect(heroText).toContain("Lediga jobb kan du läsa utan konto.");
     // BOTH products are named in the hero. Neither is the page's subject at
     // the other's expense.
     expect(heroText).toContain("Bygg ditt Security Passport");
@@ -316,41 +324,87 @@ test.describe("the public homepage", () => {
     for (const s of solid) expect(s.solid, `#${s.id} draws a solid action`).toBe(0);
     // The value cards each offer a way onward.
     expect(await page.locator("#value a").count()).toBe(3);
-    // And the three steps are three, in order.
-    await expect(page.locator("#get-started ol > li")).toHaveCount(3);
+    // Three steps for a person and three for an employer, each in order.
+    await expect(page.locator("#get-started ol")).toHaveCount(2);
+    for (const list of await page.locator("#get-started ol").all()) {
+      await expect(list.locator(":scope > li")).toHaveCount(3);
+    }
   });
 
   // H8b ─────────────────────────────────────────────────────────────────
   //
-  // The safety sentences the MVP sections carry, where a reader meets them.
-  // Condensing the page to its word ceiling removed repetition, never these.
-  test("the employer decides, Security Intelligence keeps its boundary, people decide hiring", async ({
+  // What the MVP sections say, where a reader meets it: the owner kept this
+  // content (2026-09-27), and only repetition was cut.
+  test("the employer decides, Security Intelligence keeps its boundary, and the steps are there", async ({
     page,
   }) => {
-    const flow = await page.locator("#employers ol > li").allInnerTexts();
-    expect(flow, "the employer flow has five steps").toHaveLength(5);
-    expect(flow.at(-1)?.trim(), "the flow ends in the employer's own decision").toBe(
-      "Ni fattar beslutet",
+    const strip = page.locator("#employers");
+    await expect(strip).toContainText("För arbetsgivare");
+    const flow = (await strip.locator("ol > li").allInnerTexts()).map((s) =>
+      s.replace(/^\s*\d+\.\s*/, "").trim(),
     );
+    expect(flow, "the employer flow has five steps").toHaveLength(5);
+    expect(flow.at(-1), "the flow ends in the employer's own decision").toBe("Ni fattar beslutet");
 
     const si = page.locator("#security-intelligence");
     const siText = await si.innerText();
     expect(siText).toContain(
       "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
     );
+    // Task, input, output and review.
+    expect(await si.locator("dt").allInnerTexts()).toEqual([
+      "Uppgift",
+      "Ditt underlag",
+      "Det du får",
+      "Din granskning",
+    ]);
     expect(siText).toContain("du står för bedömningen");
-    expect(siText).toContain("AI-utkast där funktionen är aktiverad");
+    expect(siText).toContain("Du bedömer relevansen och ansvarar för slutsatserna.");
+    expect(siText).toContain("AI-utkast finns där funktionen är aktiverad för arbetsytan.");
     expect(await si.locator("a").count()).toBe(1);
     await expect(si.locator("a")).toHaveAttribute("href", "/signup?redirect=%2Fsecurity-work");
 
-    // Open, and VISIBLE: who decides is not left behind a click.
-    const answer = page.locator("#faq details p");
-    await expect(answer).toBeVisible();
-    await expect(answer).toContainText("Människor fattar och dokumenterar varje beslut.");
-    await expect(answer).toContainText(
-      "Plattformen sorterar inte kandidater från bäst till sämst.",
+    const start = await page.locator("#get-started").innerText();
+    expect(start).toContain("Vi granskar kontot innan arbetsytan aktiveras.");
+  });
+
+  // H8c ─────────────────────────────────────────────────────────────────
+  //
+  // Five questions, each a native disclosure: closed until asked, opened by
+  // the keyboard, and the answer that matters most -- who decides -- is
+  // exactly what it says.
+  test("the five questions open by keyboard, and say who decides and what is verified", async ({
+    page,
+  }) => {
+    const faq = page.locator("#faq");
+    const items = faq.locator("details");
+    await expect(items).toHaveCount(5);
+    await expect(faq).toContainText("Priser och paket är inte publicerade ännu");
+
+    const open = async (question: string) => {
+      const item = items.filter({ hasText: question });
+      const summary = item.locator("summary");
+      await summary.focus();
+      await expect(summary).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(item).toHaveAttribute("open", "");
+      const answer = item.locator("p");
+      await expect(answer).toBeVisible();
+      return answer;
+    };
+
+    const who = await open("Beslutar AI vem som anställs?");
+    await expect(who).toContainText("människor fattar och dokumenterar varje beslut.");
+    await expect(who).toContainText("Plattformen sorterar inte kandidater från bäst till sämst.");
+
+    const verified = await open("Är mina meriter verifierade?");
+    await expect(verified).toContainText("En uppladdad handling är inte automatiskt verifierad.");
+    await expect(verified).toContainText(
+      "En internationell certifiering innebär inte automatiskt lokal yrkesbehörighet.",
     );
-    await expect(page.locator("#faq")).toContainText("Priser och paket är inte publicerade ännu.");
+
+    const jobs = await open("Behöver jag ett konto för att söka jobb?");
+    await expect(jobs).toContainText("Du kan söka och läsa annonser utan konto.");
   });
 
   // H9 ──────────────────────────────────────────────────────────────────

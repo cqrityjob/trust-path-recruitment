@@ -143,17 +143,21 @@ export const Route = createFileRoute("/")({
 //
 //   1. hero                   the framing, three actions, and the TWO peer
 //                             individual entrances
-//   2. value                  what a person gets done, as three links
+//   2. value                  what a person gets done, and where
 //   3. employers              the employer strip, visually separate,
 //                             flag-gated, ending in the human decision
-//   4. security-intelligence  the private work tool, and what never goes in
-//   5. get-started            three steps
+//   4. security-intelligence  the private work tool: task, input, output,
+//                             review, and what never goes in
+//   5. get-started            three steps each for a person and an employer
 //   6. passport               the three markets the Passport supports, and
 //                             what it is explicitly NOT
-//   7. faq                    pricing status, and who decides
+//   7. faq                    what is offered, pricing status, and five
+//                             questions -- verification and who decides among
+//                             them
 //
-// The whole page is held under 340 words (public-homepage-check T15). A
-// sentence added here is paid for by one taken out somewhere else.
+// Every section has its own word budget (public-homepage-check T15), set for
+// this layout when the owner approved it. A section grows only by raising its
+// own line there, in a diff somebody reads.
 //
 // ── WHAT THIS PAGE MAY NOT SAY ─────────────────────────────────────────
 //
@@ -266,6 +270,7 @@ function Index() {
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
                 </div>
+                <p className="mt-3 text-xs text-muted-foreground">{t("home.cta.jobsNote")}</p>
               </div>
 
               {/* Career Discovery remains a clear independent path while the
@@ -355,12 +360,15 @@ function Index() {
         <EmployerBackdrop />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
           <div className="max-w-2xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">
+              {t("home.employers.eyebrow")}
+            </p>
             {/* `text-primary-foreground` is not optional and is not
                 inherited: styles.css sets an explicit `color` on h1-h6 in
                 @layer base, so a heading on the navy band renders
                 navy-on-navy and disappears unless it names its own colour. */}
             <h2
-              className="text-[1.5rem] font-semibold leading-[1.15] tracking-tight text-primary-foreground md:text-[1.9rem]"
+              className="mt-3 text-[1.5rem] font-semibold leading-[1.15] tracking-tight text-primary-foreground md:text-[1.9rem]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {t("home.employers.title")}
@@ -405,8 +413,11 @@ function Index() {
       <Section id="passport" bordered className="scroll-mt-24 bg-secondary py-16 md:py-24">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
           <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              {t("home.markets.eyebrow")}
+            </p>
             <h2
-              className="text-[1.6rem] font-semibold leading-[1.15] tracking-tight text-foreground md:text-[2.1rem]"
+              className="mt-3 text-[1.6rem] font-semibold leading-[1.15] tracking-tight text-foreground md:text-[2.1rem]"
               style={{ fontFamily: "var(--font-display)" }}
             >
               {t("home.markets.title")}

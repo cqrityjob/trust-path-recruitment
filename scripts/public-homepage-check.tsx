@@ -18,14 +18,19 @@
 // value, employers, security-intelligence, get-started, passport and faq.
 // The assertions that described the four-section page are replaced here,
 // the lifecycle ones with them. Nothing that guards a data boundary, the
-// disclaimer, access, ranking, the human decision or the 340-word ceiling
-// was relaxed; T16 is new and pins the safety sentences the MVP sections
-// carry.
+// disclaimer, access, ranking or the human decision was relaxed.
+//
+// The owner also decided (2026-09-27) that the MVP's content stays --
+// repetition cut, nothing necessary removed -- and that the 340-word ceiling
+// written for the four-section page be adapted to the new layout. T15 now
+// holds a budget per section and a total; T16 pins the content and safety
+// sentences the MVP sections carry.
 //
 //   T1  main carries exactly seven sections, in the approved MVP order
 //   T2  TWO PEER individual entry products render, in both languages, and
 //       the superseded single-product page is gone from the markup
-//   T3  exactly one h1, the eight h2 in order, and h3 only on the value cards
+//   T3  exactly one h1, the eight h2 in order, and h3 only on the three
+//       value cards and the two get-started audiences
 //   T4  the two entrances are PEERS — same card shape, same solid action,
 //       and Career Discovery is not a quiet text link
 //   T5  both primary destinations are canonical and safe, and the Passport
@@ -47,10 +52,13 @@
 //   T13 sv and en carry the same keys, structure and destinations
 //   T14 NO FORBIDDEN CLAIM was introduced — the data boundaries, as
 //       strings a reader could actually meet
-//   T15 the English page is English, and the page stays under 340 words
-//   T16 the MVP sections keep their safety sentences: the employer's own
-//       decision, what never goes into Security Intelligence and who owns
-//       its judgement, and people -- not AI -- deciding who is hired
+//   T15 the English page is English, and every section stays inside its
+//       own word budget
+//   T16 the MVP sections keep their content and their safety sentences:
+//       jobs readable without an account, the employer's own decision, what
+//       Security Intelligence does and what never goes in, both audiences'
+//       three steps, and five questions -- verification, and people, not
+//       AI, deciding who is hired
 //
 // The height, overflow, focus-ring, target-size, viewport and click-through
 // halves of the brief are properties of a LAYOUT and cannot be read out of
@@ -418,7 +426,7 @@ group("T2 · two PEER individual entry products render, in both languages");
 }
 
 /* T3 ---------------------------------------------------------------- */
-group("T3 · one h1, the eight h2 in order, and h3 only on the value cards");
+group("T3 · one h1, the eight h2 in order, and h3 only where the layout puts it");
 {
   const BELOW_HERO = [
     "value",
@@ -448,9 +456,14 @@ group("T3 · one h1, the eight h2 in order, and h3 only on the value cards");
         headings(sectionOf(m, id), "h2"),
       );
     }
+    // h3 is the three value cards and the two get-started audiences, and
+    // nothing else.
     ck(
-      `${lang}: h3 is the three value cards and nothing else`,
-      headings(m, "h3").length === 3 && headings(sectionOf(m, "value"), "h3").length === 3,
+      `${lang}: h3 is the three value cards and the two audiences, nothing else`,
+      headings(m, "h3").length === 5 &&
+        headings(sectionOf(m, "value"), "h3").length === 3 &&
+        JSON.stringify(headings(sectionOf(m, "get-started"), "h3")) ===
+          JSON.stringify([d(lang)["home.start.person"], d(lang)["home.start.employer"]]),
       headings(m, "h3"),
     );
   }
@@ -475,19 +488,17 @@ group("T3 · one h1, the eight h2 in order, and h3 only on the value cards");
       h2.slice(0, 2),
     );
   }
-  // The hero's subtitle is the MVP framing sentence -- jobs, the Passport,
-  // AI support and the person's control over sharing -- condensed on
-  // 2026-09-27 to fit the 340-word ceiling, and pinned verbatim.
+  // The hero's subtitle is the MVP's framing sentence, verbatim.
   ck(
     "sv subtitle",
     d("sv")["home.hero.subtitle"] ===
-      "Jobb, Security Passport och AI-stöd. Du bestämmer vad som delas.",
+      "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
     d("sv")["home.hero.subtitle"],
   );
   ck(
     "en subtitle",
     d("en")["home.hero.subtitle"] ===
-      "Jobs, Security Passport and AI support. You decide what is shared.",
+      "Find security jobs, keep your certifications and licences in Security Passport, and get AI support in your daily security work. You always decide what is shared.",
     d("en")["home.hero.subtitle"],
   );
   for (const lang of LANGS) {
@@ -748,7 +759,10 @@ group("T8 · every link on the page is an existing canonical route");
       anchorsOf(sectionOf(svMain, id)).filter(isSolid),
     );
   }
-  ck("the three steps are an ordered list", sectionOf(svMain, "get-started").includes("<ol"));
+  ck(
+    "both audiences' steps are ordered lists",
+    (sectionOf(svMain, "get-started").match(/<ol\b/g) ?? []).length === 2,
+  );
   ck("the employer flow is an ordered list", sectionOf(svMain, "employers").includes("<ol"));
   // Every destination is an existing canonical route.
   const ROUTES: Record<string, string> = {
@@ -1354,14 +1368,48 @@ group("T15 · the English page is English, decoration included");
     .map((m) => m[1])
     .filter((v) => !v.startsWith("CQrityjob —"));
   ck("no Swedish string literal remains in the route", literals.length === 0, literals.join(" · "));
-  // 4. The page's word count, so a rebuild cannot quietly become a brochure.
-  //    A CEILING rather than a snapshot of today. The seven-section MVP was
-  //    condensed to fit it (2026-09-27); the ceiling itself was not raised.
+  // 4. The word budget, so a rebuild cannot quietly become a brochure. A
+  //    CEILING rather than a snapshot of today, counted over everything a
+  //    person sees, decoration included.
   //
+  //    It used to be one number, 340, written for the four-section page. The
+  //    owner approved the seven-section MVP (2026-09-26) and then decided
+  //    (2026-09-27) that its content stays -- repetition cut, nothing
+  //    necessary removed -- and that this ceiling be adapted to the layout
+  //    rather than the content cut to fit it. So each section now has its
+  //    own ceiling: its approved content in the longer language plus about
+  //    five per cent, rounded up to a multiple of five. The page's total
+  //    ceiling is lower than the sum of the sections, so the headroom cannot
+  //    be spent everywhere at once. A section grows by raising its own line
+  //    here, in a diff somebody reads.
+  const BUDGET: Record<string, number> = {
+    hero: 165,
+    value: 105,
+    employers: 50,
+    "security-intelligence": 125,
+    "get-started": 75,
+    passport: 60,
+    faq: 225,
+  };
+  const TOTAL_CEILING = 780;
+  ck(
+    "every section of the page has a budget, and nothing else does",
+    JSON.stringify(Object.keys(BUDGET)) ===
+      JSON.stringify([...svMain.matchAll(/<section[^>]*\bid="([a-z-]+)"/g)].map((m) => m[1])),
+    Object.keys(BUDGET),
+  );
+  ck(
+    "the total ceiling is below the sum of the section budgets",
+    TOTAL_CEILING < Object.values(BUDGET).reduce((a, b) => a + b, 0),
+  );
   for (const lang of LANGS) {
+    for (const [id, ceiling] of Object.entries(BUDGET)) {
+      const n = wc(fullText(sectionOf(mainOfLang[lang], id)));
+      ck(`${lang}: #${id} renders ${n} words (budget ${ceiling})`, n <= ceiling, n);
+    }
     ck(
-      `${lang}: ${wc(seenOf[lang])} words rendered in total (ceiling 340)`,
-      wc(seenOf[lang]) <= 340,
+      `${lang}: ${wc(seenOf[lang])} words rendered in total (ceiling ${TOTAL_CEILING})`,
+      wc(seenOf[lang]) <= TOTAL_CEILING,
       wc(seenOf[lang]),
     );
     ck(
@@ -1373,17 +1421,53 @@ group("T15 · the English page is English, decoration included");
 }
 
 /* T16 --------------------------------------------------------------- */
-group("T16 · the MVP sections keep their safety sentences");
+group("T16 · the MVP sections keep their content and their safety sentences");
 {
-  // Condensing the MVP sections to the word ceiling removed repetition. It
-  // may never remove one of these, so each is pinned where it renders.
+  // The owner kept the MVP's content (2026-09-27): what was cut repeated
+  // something else on the page. These may never be cut, so each is pinned
+  // where it renders.
 
-  // ── THE EMPLOYER DECIDES ──────────────────────────────────────────
+  // ── JOBS CAN BE READ WITHOUT AN ACCOUNT, SAID BESIDE THE ACTION ───
   for (const lang of LANGS) {
-    const steps = [
-      ...sectionOf(mainOfLang[lang], "employers").matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/g),
-    ].map((m) => fullText(m[1]));
-    ck(`${lang}: the employer flow has five steps`, steps.length === 5, steps);
+    ck(
+      `${lang}: the hero says jobs can be read without an account`,
+      (await copyText(sectionOf(mainOfLang[lang], "hero"))).includes(d(lang)["home.cta.jobsNote"]),
+      d(lang)["home.cta.jobsNote"],
+    );
+  }
+  ck(
+    "in the approved words",
+    d("sv")["home.cta.jobsNote"] === "Lediga jobb kan du läsa utan konto." &&
+      d("en")["home.cta.jobsNote"] === "You can browse open jobs without an account.",
+  );
+
+  // ── THE VALUE CARDS KEEP THE PASSPORT IN ITS OWN SCOPE ────────────
+  // The owner's Passport sentence (2026-09-17) names certifications,
+  // licences and authorisations and nothing else; education and employment
+  // history are the CV's. The value card's first sentence repeated the hero
+  // and claimed "utbildningar"/"training" for the Passport, so it is gone.
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: the value card claims no education or experience for the Passport`,
+      !/utbildning|erfarenhet|training|education|experience/i.test(
+        d(lang)["home.value.passport.body"],
+      ),
+      d(lang)["home.value.passport.body"],
+    );
+  }
+
+  // ── THE EMPLOYER HAS ITS OWN ENTRANCE, AND DECIDES ────────────────
+  for (const lang of LANGS) {
+    const strip = sectionOf(mainOfLang[lang], "employers");
+    ck(
+      `${lang}: the employer strip is labelled for the employer`,
+      (await copyText(strip)).startsWith(d(lang)["home.employers.eyebrow"]),
+      d(lang)["home.employers.eyebrow"],
+    );
+    const steps = [...strip.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/g)].map((m) =>
+      fullText(m[1]).replace(/^\d+\.\s*/, ""),
+    );
+    ck(`${lang}: the employer flow has five numbered steps`, steps.length === 5, steps);
     ck(
       `${lang}: and the last one is the employer's own decision`,
       steps.at(-1) === d(lang)["home.employers.flow.decision"],
@@ -1396,18 +1480,30 @@ group("T16 · the MVP sections keep their safety sentences");
       d("en")["home.employers.flow.decision"] === "You make the decision",
   );
 
-  // ── SECURITY INTELLIGENCE: WHAT NEVER GOES IN, AND WHO JUDGES ─────
+  // ── SECURITY INTELLIGENCE: WHAT IT DOES, WHAT NEVER GOES IN, WHO JUDGES
   const NOTE: Record<Lang, string> = {
     sv: "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
     en: "Do not add classified or secret information. The workspace is not shared with your CV, Security Passport or employers.",
   };
-  const JUDGEMENT: Record<Lang, string> = {
-    sv: "du står för bedömningen",
-    en: "the judgement stays yours",
+  const ROWS = [
+    ["home.ai.task.label", "home.ai.task.body"],
+    ["home.ai.input.label", "home.ai.input.body"],
+    ["home.ai.output.label", "home.ai.output.body"],
+    ["home.ai.review.label", "home.ai.review.body"],
+  ] as const;
+  const JUDGEMENT: Record<Lang, readonly string[]> = {
+    sv: ["du står för bedömningen", "Du bedömer relevansen och ansvarar för slutsatserna."],
+    en: ["the judgement stays yours", "You judge relevance and own the conclusions."],
   };
-  const ONLY_WHERE_ENABLED: Record<Lang, string> = {
-    sv: "AI-utkast där funktionen är aktiverad",
-    en: "AI drafts where enabled",
+  const CAVEATS: Record<Lang, readonly string[]> = {
+    sv: [
+      "AI-utkast finns där funktionen är aktiverad för arbetsytan.",
+      "Källor och utkast kan innehålla fel.",
+    ],
+    en: [
+      "AI drafts are available where the feature is enabled for the workspace.",
+      "Sources and drafts can contain errors.",
+    ],
   };
   for (const lang of LANGS) {
     const si = sectionOf(mainOfLang[lang], "security-intelligence");
@@ -1417,11 +1513,21 @@ group("T16 · the MVP sections keep their safety sentences");
       d(lang)["home.ai.note"] === NOTE[lang] && siCopy.includes(NOTE[lang]),
       d(lang)["home.ai.note"],
     );
-    ck(`${lang}: the person owns the judgement`, siCopy.includes(JUDGEMENT[lang]));
+    const terms = [...si.matchAll(/<dt\b[^>]*>([\s\S]*?)<\/dt>/g)];
     ck(
-      `${lang}: AI drafts are promised only where the feature is enabled`,
-      siCopy.includes(ONLY_WHERE_ENABLED[lang]),
+      `${lang}: task, input, output and review, as four described rows`,
+      terms.length === 4 &&
+        ROWS.every(
+          ([label, body]) => siCopy.includes(d(lang)[label]) && siCopy.includes(d(lang)[body]),
+        ),
+      terms.length,
     );
+    for (const sentence of JUDGEMENT[lang]) {
+      ck(`${lang}: the person owns the judgement ("${sentence}")`, siCopy.includes(sentence));
+    }
+    for (const sentence of CAVEATS[lang]) {
+      ck(`${lang}: the caveat is stated ("${sentence}")`, siCopy.includes(sentence));
+    }
     ck(
       `${lang}: its one action goes through the one door, to /security-work`,
       JSON.stringify(hrefsOf(si)) === JSON.stringify(["/signup?redirect=%2Fsecurity-work"]),
@@ -1429,28 +1535,69 @@ group("T16 · the MVP sections keep their safety sentences");
     );
   }
 
-  // ── PEOPLE, NOT AI, DECIDE WHO IS HIRED ───────────────────────────
+  // ── THREE STEPS FOR A PERSON, THREE FOR AN EMPLOYER ───────────────
+  for (const lang of LANGS) {
+    const start = sectionOf(mainOfLang[lang], "get-started");
+    const lists = [...start.matchAll(/<ol\b[^>]*>([\s\S]*?)<\/ol>/g)].map(
+      (m) => (m[1].match(/<li\b/g) ?? []).length,
+    );
+    ck(`${lang}: two audiences, three steps each`, JSON.stringify(lists) === "[3,3]", lists);
+    ck(
+      `${lang}: an employer is told the account is reviewed before it is activated`,
+      (await copyText(start)).includes(d(lang)["home.start.employer.2"]),
+      d(lang)["home.start.employer.2"],
+    );
+  }
+
+  // ── FIVE QUESTIONS: VERIFICATION, AND PEOPLE -- NOT AI -- DECIDE ──
+  const VERIFIED: Record<Lang, readonly string[]> = {
+    sv: [
+      "En uppladdad handling är inte automatiskt verifierad.",
+      "En internationell certifiering innebär inte automatiskt lokal yrkesbehörighet.",
+    ],
+    en: [
+      "An uploaded document is not automatically verified.",
+      "An international certification does not automatically mean a local licence to practise.",
+    ],
+  };
   const DECIDES: Record<Lang, string> = {
-    sv: "Människor fattar och dokumenterar varje beslut.",
-    en: "People make and document every decision.",
+    sv: "människor fattar och dokumenterar varje beslut.",
+    en: "people make and document every decision.",
   };
   // "Does not rank candidates", said without the ranking vocabulary T14
   // bans from this page even in the negative.
   const NO_ORDER: Record<Lang, string> = {
     sv: "Plattformen sorterar inte kandidater från bäst till sämst.",
-    en: "The platform does not sort candidates best to worst.",
+    en: "The platform does not sort candidates from best to worst.",
   };
   for (const lang of LANGS) {
     const faq = sectionOf(mainOfLang[lang], "faq");
     const faqCopy = await copyText(faq);
+    const items = [...faq.matchAll(/<details\b[^>]*>([\s\S]*?)<\/details>/g)].map((m) => m[1]);
+    ck(`${lang}: five questions`, items.length === 5, items.length);
+    // A native disclosure: every answer is in the markup, inside its own
+    // question, and the browser suite opens it by keyboard.
     ck(
-      `${lang}: the FAQ asks whether AI decides who is hired`,
-      faqCopy.includes(d(lang)["home.faq.ai.question"]),
+      `${lang}: every question carries its answer`,
+      items.length === 5 &&
+        [1, 2, 3, 4, 5].every(
+          (i) =>
+            items[i - 1].includes("<summary") &&
+            fullText(items[i - 1]).includes(d(lang)[`home.faq.q${i}`]) &&
+            fullText(items[i - 1]).includes(d(lang)[`home.faq.a${i}`]),
+        ),
     );
+    for (const sentence of VERIFIED[lang]) {
+      ck(`${lang}: verification is not overstated ("${sentence}")`, faqCopy.includes(sentence));
+    }
     ck(`${lang}: people make and document every decision`, faqCopy.includes(DECIDES[lang]));
     ck(`${lang}: the platform puts no candidates in order`, faqCopy.includes(NO_ORDER[lang]));
-    ck(`${lang}: that answer is open, not behind a click`, /<details[^>]*\sopen=/.test(faq));
-    ck(`${lang}: the pricing status is stated`, faqCopy.includes(d(lang)["home.faq.pricing"]));
+    ck(
+      `${lang}: pricing is said to be unpublished`,
+      /Priser och paket är inte publicerade ännu|Prices and packages are not published yet/.test(
+        faqCopy,
+      ),
+    );
   }
 }
 
