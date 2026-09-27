@@ -243,6 +243,20 @@ export function shareSessionFromCookieHeader(
 }
 
 /**
+ * The privacy headers of every hop between a share link and the recipient's
+ * view. The legacy `/p/<token>` redirect and the `/p` entry below both answer
+ * with exactly these, from this one definition, so the two cannot drift.
+ */
+const SHARE_HOP_HEADERS = {
+  "Cache-Control": "private, no-store",
+  // A share link is private correspondence; it was already noindex on the
+  // page, and the hop says so too rather than relying on the destination.
+  "X-Robots-Tag": "noindex, nofollow, noarchive",
+  // Nothing downstream of these responses carries the token onward.
+  "Referrer-Policy": "no-referrer",
+} as const;
+
+/**
  * The 302 that moves the token out of the URL and into a per-share cookie.
  *
  * `Cache-Control: private, no-store` because this response carries a
@@ -264,12 +278,29 @@ export function buildShareRedirect(token: string, secure: boolean): Response {
     headers: {
       Location: shareViewPath(navigationIdFor(token)),
       "Set-Cookie": buildShareCookie(token, secure),
-      "Cache-Control": "private, no-store",
-      // A share link is private correspondence; it was already noindex on the
-      // page, and the hop says so too rather than relying on the destination.
-      "X-Robots-Tag": "noindex, nofollow, noarchive",
-      // Nothing downstream of this response carries the token onward.
-      "Referrer-Policy": "no-referrer",
+      ...SHARE_HOP_HEADERS,
     },
+  });
+}
+
+/**
+ * The answer to `GET /p`, the application-domain entry of a share link
+ * (`/p#<token>`, see public-origin.ts): a redirect to the gateway, with NO
+ * body, so no document exists at the address that holds the token and nothing
+ * can be injected into one. The Location carries no fragment of its own, so
+ * the browser keeps the one it followed; the server never saw it.
+ *
+ * Anything but GET or HEAD is refused: the entry is a link, never a form.
+ */
+export function buildShareEntryRedirect(method: string, gatewayEntry: string): Response {
+  if (method !== "GET" && method !== "HEAD") {
+    return new Response(null, {
+      status: 405,
+      headers: { ...SHARE_HOP_HEADERS, Allow: "GET, HEAD" },
+    });
+  }
+  return new Response(null, {
+    status: 302,
+    headers: { ...SHARE_HOP_HEADERS, Location: gatewayEntry },
   });
 }

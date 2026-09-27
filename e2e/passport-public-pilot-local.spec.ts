@@ -634,6 +634,7 @@ test.describe("the public pilot, on a real backend", () => {
   test("G · a selective share opens from its QR code for a logged-out recipient, and revocation ends it", async ({
     page,
     browser,
+    request,
   }) => {
     test.info().annotations.push({ type: "proof", description: "G" });
     const uid = uidOf(who("dubai"));
@@ -655,13 +656,27 @@ test.describe("the public pilot, on a real backend", () => {
     await expect(page.locator("[data-share-created]")).toBeVisible({ timeout: 60_000 });
     const link = await page.locator("[data-share-link]").inputValue();
 
-    // The link: the gateway, with the token in the fragment only.
+    // The link: the application's own domain, with the token in the
+    // fragment only (PR 5, the owner's requested outcome).
     const url = new URL(link);
-    expect(url.origin).toBe(new URL(API).origin);
-    expect(url.pathname).toBe("/functions/v1/passport-share");
-    expect([...url.searchParams.keys()]).toEqual([]);
+    expect(url.origin).toBe(new URL(BASE).origin);
+    expect(url.pathname).toBe("/p");
+    expect(url.search).toBe("");
     expect(url.hash).toMatch(/^#[0-9a-f]{64}$/);
     expect(link).not.toContain(uid);
+    const token = url.hash.slice(1);
+    const gatewayEntry = `${new URL(API).origin}/functions/v1/passport-share`;
+
+    // What `GET /p` answers: a redirect to the gateway with no body -- so no
+    // document, and no script a host injects into one, exists at the address
+    // that holds the token -- private, unindexed, and passing no Referer on.
+    const entry = await request.get(`${BASE}/p`, { maxRedirects: 0, ignoreHTTPSErrors: true });
+    expect(entry.status()).toBe(302);
+    expect(entry.headers()["location"]).toBe(gatewayEntry);
+    expect(entry.headers()["cache-control"]).toBe("private, no-store");
+    expect(entry.headers()["referrer-policy"]).toBe("no-referrer");
+    expect(entry.headers()["x-robots-tag"]).toContain("noindex");
+    expect((await entry.body()).byteLength).toBe(0);
 
     // The QR code is exactly this link, module for module.
     const qr = page.getByRole("img", { name: "QR code for your selected disclosure" });
@@ -692,8 +707,19 @@ test.describe("the public pilot, on a real backend", () => {
     expect(drawn).toEqual(Array.from(expected.data, (v) => (v ? 1 : 0)));
     await evidence(page, "en-share-created");
 
-    // A recipient with no account opens what the QR code opens.
+    // A recipient with no account opens what the QR code opens. Every request
+    // their browser sends is recorded: the token must leave it only once, in
+    // the body of the POST that exchanges it at the gateway.
     const { context, page: recipient } = await anotherPerson(browser, "en");
+    const sent: { method: string; url: string; referer: string; body: string }[] = [];
+    recipient.on("request", (r) =>
+      sent.push({
+        method: r.method(),
+        url: r.url(),
+        referer: r.headers()["referer"] ?? "",
+        body: r.postData() ?? "",
+      }),
+    );
     try {
       await recipient.goto(link);
       await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
@@ -714,6 +740,34 @@ test.describe("the public pilot, on a real backend", () => {
       ).toBeLessThanOrEqual(1);
       await evidence(recipient, "en-share-recipient");
 
+      expect(
+        sent.some((r) => r.method === "GET" && r.url === `${new URL(BASE).origin}/p`),
+        "the recipient entered at the application's /p",
+      ).toBe(true);
+      expect(
+        sent.some((r) => r.method === "POST" && r.url === gatewayEntry && r.body.includes(token)),
+        "the gateway exchanged the token",
+      ).toBe(true);
+      for (const r of sent) {
+        expect(r.url, `request URL ${r.method}`).not.toContain(token);
+        expect(r.referer, `Referer of ${r.method} ${new URL(r.url).pathname}`).not.toContain(token);
+        if (r.body.includes(token)) expect(`${r.method} ${r.url}`).toBe(`POST ${gatewayEntry}`);
+      }
+
+      // A link issued before the application-domain entry -- the gateway form
+      // -- still opens the same share, for another recipient.
+      const earlier = await anotherPerson(browser, "en");
+      try {
+        await earlier.page.goto(`${gatewayEntry}#${token}`);
+        await expect(earlier.page).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+        await expect(earlier.page.locator("main")).toContainText(
+          "SIRA Security Cadre Card — Security Guard",
+          { timeout: 60_000 },
+        );
+      } finally {
+        await earlier.context.close();
+      }
+
       // Revocation, and the same recipient reloads.
       const share = sql(
         `select id from public.sp_disclosures where holder_user_id='${uid}' order by created_at desc limit 1`,
@@ -731,6 +785,15 @@ test.describe("the public pilot, on a real backend", () => {
       });
       await expect(recipient.locator("main")).toContainText("The link may have expired");
       await evidence(recipient, "en-share-revoked");
+      // And the link itself, opened again from the start, opens nothing: the
+      // gateway refuses the exchange and says so on its own page, with the
+      // fragment already scrubbed from the address.
+      await recipient.goto(link);
+      await expect(recipient.locator("body")).toContainText("Delningen är inte tillgänglig", {
+        timeout: 60_000,
+      });
+      await expect(recipient.locator("body")).not.toContainText("SIRA Security Cadre Card");
+      expect(new URL(recipient.url()).hash).toBe("");
     } finally {
       await context.close();
     }

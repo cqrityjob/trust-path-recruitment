@@ -198,8 +198,9 @@ jobs:
             echo "VITE_EMPLOYER_PORTAL_ENABLED=true"
             echo "VITE_JOBS_ENABLED=true"
             echo "PUBLIC_SITE_URL=https://127.0.0.1:${APP_TLS_PORT}"
-            # Development only: new share links name this loopback gateway
-            # (public-origin.ts refuses it in a production build).
+            echo "VITE_PUBLIC_SITE_URL=https://127.0.0.1:${APP_TLS_PORT}"
+            # Development only: new share links name this loopback application
+            # and gateway (public-origin.ts refuses both in a production build).
             echo "VITE_PASSPORT_LOCAL_INTEGRATION=1"
           } > .env.local
           mail_url="${MAILPIT_URL:-${INBUCKET_URL:-http://127.0.0.1:54324}}"

@@ -597,12 +597,18 @@ test.describe("Security Passport — sharing, as the holder", () => {
     // token never appears in a request line, a server log or a Referer
     // header. The product was right and this line was a release behind it.
     //
-    // Both halves are asserted now: the gateway path AND the token in the
+    // Both halves are asserted now: the entry path AND the token in the
     // fragment. A regression to a path-carried token fails the second
     // half, which is the half that matters.
+    //
+    // The entry is now the application's own domain, `/p#<token>` (the
+    // owner's requested outcome, PR 5): the server answers `GET /p` with a
+    // body-less redirect to the same gateway, and the browser carries the
+    // fragment across. The token is still never in a path or a query.
     const link = await page.locator("[data-share-link]").inputValue();
-    expect(link).toMatch(/^https:\/\/[^/]+\/functions\/v1\/passport-share#[0-9a-f]{64}$/);
+    expect(link).toMatch(/^https:\/\/[^/]+\/p#[0-9a-f]{64}$/);
     expect(link).not.toMatch(/\/p\/[0-9a-f]{64}/);
+    expect(new URL(link).search).toBe("");
 
     // The expiry the holder chose, stated — as a localised date, because an
     // ISO string is not what a person reads.

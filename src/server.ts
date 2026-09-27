@@ -4,6 +4,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { randomBytes } from "node:crypto";
 import {
+  buildShareEntryRedirect,
   buildShareRedirect,
   buildShareSessionCookie,
   hashShareSecret,
@@ -13,6 +14,11 @@ import {
   SHARE_HANDOFF_PATH,
   shareViewPath,
 } from "./lib/security-passport/share-transport";
+import {
+  publicShareGatewayOrigin,
+  SHARE_ENTRY_PATH,
+  SHARE_GATEWAY_PATH,
+} from "./lib/security-passport/public-origin";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -106,6 +112,16 @@ export default {
     try {
       if (new URL(request.url).pathname === SHARE_HANDOFF_PATH) {
         return consumeShareHandoffRequest(request);
+      }
+      // The application-domain entry of a share link, `/p#<token>`. The token
+      // is in the fragment and never reaches this server; the answer is a
+      // body-less redirect to the gateway, which the browser follows with the
+      // fragment re-attached. See public-origin.ts.
+      if (new URL(request.url).pathname === SHARE_ENTRY_PATH) {
+        return buildShareEntryRedirect(
+          request.method,
+          `${publicShareGatewayOrigin()}${SHARE_GATEWAY_PATH}`,
+        );
       }
       // A share token must never reach a rendered document. See
       // lib/security-passport/share-transport.ts for why this is here, in

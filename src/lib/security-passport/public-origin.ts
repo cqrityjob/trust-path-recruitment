@@ -57,6 +57,17 @@ function isEphemeralHost(origin: string): boolean {
  */
 export function publicShareOrigin(): string {
   const configured = import.meta.env?.VITE_PUBLIC_SITE_URL;
+  // Explicit local integration mode is development-only, as for the gateway
+  // below: an https loopback application (the routed evidence walk) may name
+  // itself. A production build never emits a loopback link.
+  if (
+    import.meta.env?.DEV &&
+    import.meta.env?.VITE_PASSPORT_LOCAL_INTEGRATION === "1" &&
+    typeof configured === "string" &&
+    /^https:\/\/127\.0\.0\.1:\d+$/.test(configured.trim())
+  ) {
+    return configured.trim();
+  }
   if (typeof configured === "string" && configured.trim() !== "") {
     const trimmed = configured.trim().replace(/\/+$/, "");
     if (/^https?:\/\//i.test(trimmed) && !isEphemeralHost(trimmed)) return trimmed;
@@ -64,11 +75,33 @@ export function publicShareOrigin(): string {
   return FALLBACK_ORIGIN;
 }
 
-/** The full public verification URL for one share token. The single place
- *  this shape is built, so the sharing centre and the single-credential
- *  share cannot drift apart. */
+/** Where a share link enters on the application's own domain: `/p#<token>`.
+ *
+ *  The durable token rides the FRAGMENT, which a browser never sends: the
+ *  request for this path is `GET /p` and nothing else. src/server.ts answers
+ *  it, ahead of any page, with a redirect that has no body -- so no document,
+ *  and no script the host injects into documents, ever exists at an address
+ *  holding the token -- to the gateway below, and the browser re-attaches the
+ *  fragment it followed (RFC 9110 §10.2.2). From there the path is the
+ *  gateway's, unchanged: the fragment is scrubbed, exchanged by POST for a
+ *  one-time handoff, and the handoff for a short session. */
+export const SHARE_ENTRY_PATH = "/p";
+
+/** The gateway's own path, on the Supabase origin. */
+export const SHARE_GATEWAY_PATH = "/functions/v1/passport-share";
+
+/** The full public verification URL for one share token: the application's
+ *  domain. The single place this shape is built, so the sharing centre and
+ *  the single-credential share cannot drift apart. */
 export function publicShareUrl(token: string): string {
-  return `${publicShareGatewayOrigin()}/functions/v1/passport-share#${token}`;
+  return `${publicShareOrigin()}${SHARE_ENTRY_PATH}#${token}`;
+}
+
+/** The same share through the gateway directly. Every link issued before the
+ *  application-domain entry has this shape, and it keeps working: the entry
+ *  above only forwards to it. */
+export function publicShareGatewayUrl(token: string): string {
+  return `${publicShareGatewayOrigin()}${SHARE_GATEWAY_PATH}#${token}`;
 }
 
 /** The Supabase entry origin for new share links. The durable bearer token is

@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
+  buildShareEntryRedirect,
   buildShareSessionCookie,
   hashShareSecret,
   sessionNavigationIdFor,
   shareSessionFromCookieHeader,
+  shareTokenFromPath,
 } from "../src/lib/security-passport/share-transport";
 
 const root = path.resolve(import.meta.dir, "..");
@@ -23,13 +25,63 @@ const disclosure = read("src/lib/security-passport/public-disclosure.functions.t
 const config = read("supabase/config.toml");
 
 expect(
-  origin.includes("/functions/v1/passport-share#${token}"),
+  origin.includes("return `${publicShareOrigin()}${SHARE_ENTRY_PATH}#${token}`;"),
   "new links must carry the durable token in a fragment",
+);
+expect(
+  origin.includes('export const SHARE_ENTRY_PATH = "/p";'),
+  "new links must enter on the application's own domain, at /p",
+);
+expect(
+  origin.includes("return `${publicShareGatewayOrigin()}${SHARE_GATEWAY_PATH}#${token}`;") &&
+    origin.includes('export const SHARE_GATEWAY_PATH = "/functions/v1/passport-share";'),
+  "the gateway form of a link must stay buildable, fragment-carried",
 );
 expect(
   !/return\s+`[^`]*\/p\/\$\{token\}`/.test(origin),
   "new links must not put the durable token in a Lovable path",
 );
+// The application-domain entry: answered before any page, with no body.
+const entryAt = server.indexOf("pathname === SHARE_ENTRY_PATH");
+expect(
+  entryAt > 0 && entryAt < server.indexOf("await getServerEntry()"),
+  "the /p entry must be answered before the SSR handler renders anything",
+);
+expect(
+  server.includes("buildShareEntryRedirect(") &&
+    server.includes("`${publicShareGatewayOrigin()}${SHARE_GATEWAY_PATH}`"),
+  "the /p entry must forward to the gateway's own entry, with no fragment of its own",
+);
+const gatewayEntry = "https://gateway.example/functions/v1/passport-share";
+const forward = buildShareEntryRedirect("GET", gatewayEntry);
+expect(forward.status === 302, "GET /p must redirect");
+expect(forward.body === null, "the /p redirect must have no body: nothing to inject a script into");
+expect(
+  forward.headers.get("location") === gatewayEntry,
+  "the /p redirect must go to the gateway entry exactly",
+);
+expect(
+  !(forward.headers.get("location") ?? "").includes("#"),
+  "the /p redirect must not set a fragment, so the browser keeps the one it followed",
+);
+expect(
+  forward.headers.get("cache-control") === "private, no-store",
+  "the /p redirect must be private and no-store",
+);
+expect(
+  forward.headers.get("referrer-policy") === "no-referrer",
+  "the /p redirect must suppress referrers",
+);
+expect(
+  (forward.headers.get("x-robots-tag") ?? "").includes("noindex"),
+  "the /p redirect must not be indexed",
+);
+const posted = buildShareEntryRedirect("POST", gatewayEntry);
+expect(
+  posted.status === 405 && posted.headers.get("location") === null && posted.body === null,
+  "the /p entry must refuse anything but GET and HEAD",
+);
+expect(shareTokenFromPath("/p") === null, "/p itself must not read as a legacy path-carried token");
 expect(
   edge.includes("history.replaceState(null,''"),
   "the fragment must be scrubbed before the exchange",
