@@ -12,12 +12,16 @@
 // Backend handling follows e2e/career-center-pilot.spec.ts: every
 // `/_serverFn/*` call is intercepted and an unstubbed one fails loudly.
 //
-// Run: E2E_BASE_URL=http://localhost:3141 bunx playwright test \
+// Run: E2E_BASE_URL=http://localhost:3100 bunx playwright test \
 //        e2e/career-center-journey.spec.ts --project=chromium --project=mobile-375
+//
+// CI runs it in the `public-entry-browser` job, against the dev server that
+// job pins to port 3100 and without setting E2E_BASE_URL -- the same default
+// e2e/support/public-entry-harness.ts gives the explore-link suite beside it.
 
 import { test, expect, type Page } from "@playwright/test";
 
-const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3141";
+const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 const HUB = `${BASE}/career-center`;
 const USER_ID = "00000000-0000-4000-8000-00000000c0de";
 
