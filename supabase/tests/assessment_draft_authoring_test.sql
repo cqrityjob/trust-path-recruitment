@@ -1,6 +1,8 @@
 \set ON_ERROR_STOP on
 BEGIN;
 \ir recruitment_assignment_fixture.sql
+-- Match Supabase API table grants in the plain-Postgres CI harness. Transactional only; RLS and triggers remain enabled.
+GRANT SELECT, UPDATE ON public.scp_assessment_versions TO authenticated;
 CREATE TEMP TABLE source_items AS SELECT array_agg(fi.item_version_id ORDER BY fi.display_order) ids
 FROM public.scp_form_items fi JOIN public.scp_forms f ON f.id=fi.form_id
 WHERE f.assessment_version_id=(SELECT version_id FROM rjv);
