@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   BookOpen,
+  ArrowLeft,
   ClipboardList,
   FileText,
   ListChecks,
@@ -171,11 +172,15 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
       <aside className="border-b border-border px-4 py-4 lg:min-h-[calc(100dvh-5rem)] lg:border-r lg:border-b-0 lg:px-5 lg:py-7">
         <div className="flex items-center justify-between gap-3 lg:block">
           <div className="min-w-0 lg:mb-6">
+            <p className="text-xs text-muted-foreground">
+              {lang === "sv" ? "Arbetsyta" : "Workspace"}
+            </p>
             <p className="truncate text-sm font-semibold" title={workspace.name}>
               {workspace.name}
             </p>
             <Link
               to="/security-work"
+              search={{ choose: true }}
               className="inline-flex min-h-11 items-center rounded text-xs text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
             >
               {t("sw.switch")}
@@ -204,6 +209,13 @@ export function SecurityWorkLayout({ children }: { children?: ReactNode }) {
         <p className="mt-5 hidden text-xs leading-relaxed text-muted-foreground lg:block">
           {t("sw.manual.body")}
         </p>
+        <Link
+          to="/"
+          className="mt-3 inline-flex min-h-11 items-center gap-2 rounded text-xs text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          {lang === "sv" ? "Till CQrityjob" : "Back to CQrityjob"}
+        </Link>
       </aside>
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-9 lg:py-9">
         <div className="mx-auto max-w-6xl space-y-7">

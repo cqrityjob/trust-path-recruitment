@@ -12,6 +12,7 @@ import { saveWorkInput } from "@/lib/security-work/analysis.functions";
 import type { AnalysisInput } from "@/lib/security-work/analysis-types";
 import { securityWorkKeys } from "@/lib/security-work/query-keys";
 import { useSecurityWorkspace } from "./context";
+import { useProcessingStatus } from "./AssistanceStatus";
 import { NewSourceItem } from "./SourceDetail";
 import { SecuritySourceForm } from "./Sources";
 import {
@@ -59,6 +60,7 @@ export function DocumentUpload({ onManual }: { onManual?: () => void }) {
   const upload = useServerFn(uploadWorkDocument);
   const extract = useServerFn(extractWorkDocument);
   const op = useSavedOperation();
+  const processing = useProcessingStatus();
   const [file, setFile] = useState<File | null>(null);
   const [request, setRequest] = useState(() => crypto.randomUUID());
   const [message, setMessage] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export function DocumentUpload({ onManual }: { onManual?: () => void }) {
       className={`${panelClass} space-y-4`}
       onSubmit={async (e) => {
         e.preventDefault();
-        if (!file || op.state === "saving") return;
+        if (!file || op.state === "saving" || !processing.data || processing.isError) return;
         setMessage(null);
         const document = await op.run(async () => {
           if (!file.size || file.size > 10 * 1024 * 1024 || !/\.(pdf|docx)$/i.test(file.name))
@@ -85,6 +87,17 @@ export function DocumentUpload({ onManual }: { onManual?: () => void }) {
           });
         });
         if (!document) return;
+        if (!processing.data.enabled) {
+          setMessage(
+            l(
+              "Originalet är sparat privat. Skriv in relevanta utdrag manuellt för att fortsätta; automatisk textextraktion är inte tillgänglig.",
+              "The original is saved privately. Enter relevant extracts manually to continue; automatic text extraction is unavailable.",
+            ),
+          );
+          setFile(null);
+          setRequest(crypto.randomUUID());
+          return;
+        }
         const result = await op.run(() =>
           extract({
             data: { workspaceId: workspace.id, documentId: document.id, requestId: document.id },
@@ -109,6 +122,15 @@ export function DocumentUpload({ onManual }: { onManual?: () => void }) {
       }}
     >
       <h3 className="text-lg font-semibold">{l("Ladda upp underlag", "Upload evidence")}</h3>
+      {!processing.isPending && !processing.isError && !processing.data?.enabled && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {l(
+            "PDF/DOCX till text är inte tillgängligt. Du kan spara originalet privat och skriva in relevanta utdrag manuellt.",
+            "PDF/DOCX to text is unavailable. You can save the original privately and enter relevant extracts manually.",
+          )}
+        </p>
+      )}
+      <WorkError code={processing.error?.message} onRetry={() => void processing.refetch()} />
       <Field
         label={l("PDF eller DOCX, högst 10 MB", "PDF or DOCX, up to 10 MB")}
         hint={l(
@@ -148,8 +170,15 @@ export function DocumentUpload({ onManual }: { onManual?: () => void }) {
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <WorkButton type="submit" disabled={!file || op.state === "saving"}>
-          {l("Ladda upp och extrahera", "Upload and extract")}
+        <WorkButton
+          type="submit"
+          disabled={!file || op.state === "saving" || processing.isPending || processing.isError}
+        >
+          {processing.isPending
+            ? l("Kontrollerar…", "Checking…")
+            : processing.data?.enabled
+              ? l("Ladda upp och extrahera", "Upload and extract")
+              : l("Spara original privat", "Save original privately")}
         </WorkButton>
         <SaveStatus state={op.state} />
         {onManual && (

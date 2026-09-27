@@ -1439,6 +1439,14 @@ jobs:
       - name: Public homepage check
         run: bun run public-homepage:check
 
+      # "Tillbaka till sökresultatet" on a job ad. The /jobs search a card
+      # was listed under travels as a validated `from` and survives card ->
+      # ad -> back, a related-ad hop, and signing in to apply (safeReturnPath
+      # -> splitReturnPath -> navigate), through the router's own search
+      # serialisation. A hostile `from` can choose filters and nothing else.
+      - name: Job ad back-navigation check
+        run: bun run job-back-navigation:check
+
       # /employers is where an employer decides whether CQrityjob is for
       # them, and it is the ONE public page that names BESKT -- a governed
       # method published under `synthetic_internal_only` and assignable only

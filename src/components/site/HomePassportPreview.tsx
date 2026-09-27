@@ -1,6 +1,5 @@
-import { ArrowRight, Lock, MapPin } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 import type { ReactNode } from "react";
-import { PUBLIC_MARKET_SCALE } from "./passport-market-scale";
 import { useT } from "@/i18n/context";
 import {
   CredentialConstellation,
@@ -173,25 +172,9 @@ export function HomePassportPreview({ action }: { action?: ReactNode }) {
         {t("home.passportPreview.statusNote")}
       </p>
 
-      <div
-        className="mt-6 border-t border-primary-foreground/15 pt-5"
-        data-home-passport-band="bottom"
-      >
-        <p className="text-xs font-medium text-primary-foreground/65">
-          {t("home.passportPreview.markets")}
-        </p>
-        <ul className="mt-3 flex flex-wrap gap-2">
-          {PUBLIC_MARKET_SCALE.map((market) => (
-            <li
-              key={market.code}
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-primary-foreground/[0.07] px-3 text-xs text-primary-foreground/85"
-            >
-              <MapPin className="h-3 w-3" aria-hidden="true" />
-              {t(market.labelKey)}
-            </li>
-          ))}
-        </ul>
-      </div>
+      {/* No market band on this card: the homepage's Passport section names
+          the three markets together with their pilot status, which a bare
+          "markets today" list here could only overstate. */}
     </article>
   );
 }

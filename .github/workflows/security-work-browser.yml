@@ -49,6 +49,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Analysis, provider and bounded parser contracts
         run: |
+          bun run scripts/security-work-entry-check.ts
           bun run scripts/security-work-analysis-check.ts
           bun run scripts/security-work-processing-check.ts
           bun run scripts/security-work-ai-jobs-check.ts
