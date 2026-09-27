@@ -30,10 +30,14 @@ export function JobCard({
   job,
   lang,
   relevance,
+  from,
 }: {
   job: PublicJobCard;
   lang: "sv" | "en";
   relevance?: RelevanceForJob;
+  /** The /jobs search this card was listed under (job-search.ts). The ad
+   *  rebuilds "Tillbaka till sökresultatet" from it; without it, /jobs. */
+  from?: string;
 }) {
   const { t } = useT();
   const title = pickTitle(job, lang) || t("jobs.card.untitled");
@@ -53,6 +57,7 @@ export function JobCard({
     <Link
       to="/jobs/$slug"
       params={{ slug: job.slug }}
+      search={from ? { from } : {}}
       className="group flex flex-col rounded-xl border border-border bg-card p-5 transition hover:border-accent/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6"
       aria-label={title}
     >

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useSearch } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery, useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { Building2, Mail, Globe } from "lucide-react";
@@ -33,6 +33,11 @@ import { JobCard } from "@/components/jobs/JobCard";
 import { JobRelevancePanel } from "@/components/jobs/JobRelevancePanel";
 import { AssessmentInvite } from "@/components/jobs/AssessmentInvite";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
+import {
+  jobAdReturnPath,
+  jobSearchFromFrom,
+  validateJobAdSearch,
+} from "@/lib/job-intelligence/job-search";
 
 function jobDetailQueryOptions(slug: string) {
   return queryOptions({
@@ -42,6 +47,9 @@ function jobDetailQueryOptions(slug: string) {
 }
 
 export const Route = createFileRoute("/jobs/$slug")({
+  // `from`: the /jobs search this ad was opened from, normalised through the
+  // /jobs validator on arrival (job-search.ts). Nothing else is accepted.
+  validateSearch: validateJobAdSearch,
   loader: ({ params, context }) =>
     context.queryClient.ensureQueryData(jobDetailQueryOptions(params.slug)),
   head: ({ params, loaderData }) => {
@@ -55,8 +63,8 @@ export const Route = createFileRoute("/jobs/$slug")({
 
 function JobDetailPage() {
   const { slug } = Route.useParams();
+  const { from } = Route.useSearch();
   const { t, lang } = useT();
-  const navigate = useNavigate();
 
   const ssr = useSuspenseQuery(jobDetailQueryOptions(slug));
   if (!ssr.data) throw notFound();
@@ -126,16 +134,7 @@ function JobDetailPage() {
     <SiteLayout>
       <Section>
         <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              if (window.history.length > 1) window.history.back();
-              else void navigate({ to: "/jobs" });
-            }}
-            className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            {t("jobs.detail.back")}
-          </button>
+          <BackToResults />
           {!expired && (
             <a
               href="#apply"
@@ -171,11 +170,16 @@ function JobDetailPage() {
               />
             )}
 
-            <RelatedJobs loading={related.isLoading} rows={related.data ?? []} lang={lang} />
+            <RelatedJobs
+              loading={related.isLoading}
+              rows={related.data ?? []}
+              lang={lang}
+              from={from}
+            />
           </article>
 
           <aside id="apply" className="scroll-mt-24 space-y-4 lg:sticky lg:top-6 lg:self-start">
-            <ApplySidebar job={job} expired={expired} />
+            <ApplySidebar job={job} expired={expired} returnTo={jobAdReturnPath(slug, from)} />
             {profileState.status === "ready" && (
               <JobRelevancePanel job={job} profile={profileState.data.profile} />
             )}
@@ -189,7 +193,16 @@ function JobDetailPage() {
   );
 }
 
-function ApplySidebar({ job, expired }: { job: PublicJobDetail; expired: boolean }) {
+function ApplySidebar({
+  job,
+  expired,
+  returnTo,
+}: {
+  job: PublicJobDetail;
+  expired: boolean;
+  /** Where signing in to apply comes back to: this ad, with its search. */
+  returnTo: string;
+}) {
   const { t, lang } = useT();
 
   const applyBlock = () => {
@@ -207,6 +220,7 @@ function ApplySidebar({ job, expired }: { job: PublicJobDetail; expired: boolean
           jobId={job.id}
           employerName={job.employer?.name ?? null}
           label={t("jobs.detail.apply_internal")}
+          returnTo={returnTo}
         />
       );
     }
@@ -386,10 +400,13 @@ function RelatedJobs({
   loading,
   rows,
   lang,
+  from,
 }: {
   loading: boolean;
   rows: Array<import("@/lib/job-intelligence/public-queries").PublicJobCard>;
   lang: "sv" | "en";
+  /** Handed on, so a hop to a related ad keeps the way back to the results. */
+  from: string | undefined;
 }) {
   const { t } = useT();
   if (!loading && rows.length === 0) return null;
@@ -401,11 +418,35 @@ function RelatedJobs({
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {rows.map((r) => (
-            <JobCard key={r.id} job={r} lang={lang} />
+            <JobCard key={r.id} job={r} lang={lang} from={from} />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+/** "Tillbaka till sökresultatet": the /jobs search this ad was opened from,
+ *  rebuilt from its validated `from`. Never history.back(), which returns to
+ *  whatever came before -- another site, a related ad, the login page after
+ *  signing in -- and to nothing at all on a direct entry. Without a search,
+ *  plain /jobs, labelled as such.
+ *
+ *  Read with `strict: false` so the not-found and error states can use it
+ *  too; the value is re-validated here either way. */
+function BackToResults() {
+  const { t } = useT();
+  const search = jobSearchFromFrom((useSearch({ strict: false }) as { from?: unknown }).from);
+  const toResults = Object.keys(search).length > 0;
+  return (
+    <Link
+      to="/jobs"
+      search={search}
+      data-job-back={toResults ? "results" : "all"}
+      className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      {t(toResults ? "jobs.detail.backToResults" : "jobs.detail.back")}
+    </Link>
   );
 }
 
@@ -414,9 +455,7 @@ function NotFoundState() {
   return (
     <SiteLayout>
       <Section>
-        <Link to="/jobs" className="text-sm text-primary hover:underline">
-          {t("jobs.detail.back")}
-        </Link>
+        <BackToResults />
         <h1 className="mt-4 text-2xl font-semibold">{t("jobs.detail.not_found.title")}</h1>
         <p className="mt-2 text-muted-foreground">{t("jobs.detail.not_found.body")}</p>
       </Section>
@@ -429,9 +468,7 @@ function ErrorState({ message }: { message: string }) {
   return (
     <SiteLayout>
       <Section>
-        <Link to="/jobs" className="text-sm text-primary hover:underline">
-          {t("jobs.detail.back")}
-        </Link>
+        <BackToResults />
         <h1 className="mt-4 text-2xl font-semibold">{t("jobs.results.error.title")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{message}</p>
       </Section>
