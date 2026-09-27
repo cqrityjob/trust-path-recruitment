@@ -179,7 +179,7 @@ test.describe("the employer landing page", () => {
   test("English says the same thing, and renders no Swedish", async ({ page }) => {
     await setLang(page, "en");
     const text = await page.locator("main").innerText();
-    expect(text).toContain("The complete security recruitment process in one platform");
+    expect(text).toContain("Recruit and develop security professionals in one place.");
     expect(text).toContain(
       "BESKT is method support. It produces no result, no score and no ranking, and it does not replace security vetting under the Protective Security Act.",
     );
