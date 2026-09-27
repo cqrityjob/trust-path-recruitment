@@ -2277,7 +2277,7 @@
     },
     {
       "file": "20261219090000_assessment_draft_authoring.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
       "introduces": [
         {
           "kind": "column",
@@ -2299,7 +2299,10 @@
       ],
       "rollback": "supabase/rollback/20261219090000_assessment_draft_authoring_rollback.sql",
       "verify": "SELECT to_regprocedure('public.scp_author_assessment_draft(uuid,text,uuid[],text,text,text)') IS NOT NULL; SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='scp_assessment_versions' AND column_name='authoring_release_required'; -- expect true, 1. Compare all four function bodies to the reviewed local replay. Verify held drafts cannot be assigned through scp_employer_assign.",
-      "note": "Prepared and verified only in an isolated local stack. No production writes. Adds atomic content-author draft composition and a version-specific assignment hold so a definition-level pilot designation never opens a new draft. New definitions inherit no standard designation. Assigned content stays pinned. No content release, role grant, validation or publication occurs. Requires separate review, schema deployment and read-only hosted verification before dependent administration code can become merge-eligible."
+      "note": "Applied after schema PR #309 merged; verified read-only on the owner project on 2026-09-27. This follow-up issued no production writes. Adds atomic content-author draft composition and a version-specific assignment hold so a definition-level pilot designation never opens a new draft. New definitions inherit no standard designation. Assigned content stays pinned. No content release, role grant, validation or publication occurs. The schema deployment and read-only hosted verification are complete; dependent administration code can now pass the unchanged schema-first gate.",
+      "hostedVersion": "20261219090000",
+      "hostedName": "assessment_draft_authoring",
+      "evidenceSource": "Read-only Supabase connector verification 2026-09-27T17:16:34Z on wrygicdfxwjnrugduxnt after #309 merged as 80e63d0. Canonical ledger row contains 12 statements; all 321 previous identities preserved in the refreshed 322-row hosted-ledger.json. md5(prosrc) of all four functions matches the reviewed migration byte-for-byte. NOT NULL boolean default false and both enabled row triggers verified; anon cannot execute any of these functions and authenticated cannot directly execute the trigger functions. See docs/release/2026-09-27-assessment-authoring-hosted-verification.md. No production writes or behavioural mutation probes were issued."
     }
   ], 
   "policyVersion": 2, 

@@ -1,6 +1,6 @@
 # Beroende administration för rekryteringstest
 
-**Draft, inte mergeklar.** Kräver schema-PR #309 applicerad och läsverifierad. Befintlig schemaspärr förväntas blockera applikationsrelease tills dess; kontrollerna ändras inte.
+Schemaförutsättningen är uppfylld: #309 är mergad och migrationen är verifierad i den kanoniska produktionsdatabasen. [Läsverifiering och funktionsjämförelse](2026-09-27-assessment-authoring-hosted-verification.md). Releasebokföringen är uppdaterad; den befintliga schemaspärren och säkerhetskontrollerna är oförändrade.
 
 Efter tillämpat schema: öppna `/admin/assessments` som befintlig plattformsadministratör med innehållsbehörighet. Välj testversion, förhandsgranska frågorna på svenska/engelska, ändra urval och versionsanteckning, och spara en ny utkastversion. Alternativet att skapa ett nytt test kräver unikt slug och namn på båda språken. Ny definition ärver ingen standardtillgänglighet. Befintliga frågor återanvänds med sina exakta versioner; poängnycklar och historiska svar skrivs inte om.
 
