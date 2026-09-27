@@ -36,8 +36,10 @@ test.skip(
   !LOOPBACK.test(BASE) || !LOOPBACK.test(API),
   "This spec signs people in and saves a profession; it runs against loopback only.",
 );
-// One walk: the second test reads back what the first one saved.
-test.describe.configure({ mode: "serial" });
+// One walk: the second test reads back what the first one saved. Each test
+// signs in, saves, reloads and switches account against a real stack, which
+// is longer than Playwright's 30-second default.
+test.describe.configure({ mode: "serial", timeout: 120_000 });
 
 const PASSWORD = "LocalJourney!2026";
 /** One pair per project, so each walk starts from the fixture's state. */
@@ -86,15 +88,15 @@ async function openPhoneMenu(page: Page) {
   await page.getByRole("button", { name: /^öppna menyn$|^open menu$/i }).click();
 }
 
-/** "Karriär" in the signed-in navigation -- a client-side navigation, so the
- *  page keeps everything it has already read. */
+/** "Karriär" in the signed-in navigation (CandidateAppNav: the desktop bar,
+ *  or the same list inside the phone menu) -- a client-side navigation, so
+ *  the page keeps everything it has already read. */
 async function goToCareerCenter(page: Page) {
   if (isPhone(page)) await openPhoneMenu(page);
   await page
-    .getByRole("navigation", { name: "Primary" })
-    .getByRole("link", { name: /^karriär$|^career$/i })
+    .locator("[data-candidate-app-nav]")
     .filter({ visible: true })
-    .first()
+    .getByRole("link", { name: /^karriär$|^career$/i })
     .click();
   await page.waitForURL((url) => url.pathname === "/career-center", { timeout: 15_000 });
 }
