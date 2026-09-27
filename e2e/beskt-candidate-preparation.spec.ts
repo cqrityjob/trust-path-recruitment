@@ -192,7 +192,7 @@ async function startFromPanel(page: Page, versionIndex: number): Promise<void> {
 test.describe("BESKT candidate preparation — the routed journey", () => {
   test("1 · the library names the method and states its real state", async ({ page }) => {
     await step("library", "sign in as the recruiter", () =>
-      signIn(page, RECRUITER, `/employer/${EMPLOYER_SLUG}/assessments/library`),
+      signIn(page, RECRUITER, `/employer/${EMPLOYER_SLUG}/assessments/library?view=guides`),
     );
 
     // Since the library's product structure (v2.0) BESKT is one of the two

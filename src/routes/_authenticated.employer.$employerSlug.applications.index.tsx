@@ -706,7 +706,7 @@ function ApplicationsList({
                     >
                       {t("employer.candidate.openAction")}
                     </Link>
-                    {canDecideFor(r.jobId) && isUnresolved(r.status) && (
+                    {isUnresolved(r.status) && (
                       <button
                         type="button"
                         data-testid="send-test"

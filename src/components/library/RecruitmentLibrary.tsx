@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CheckCircle2, Info, Loader2, ShieldCheck } from "lucide-react";
 
@@ -45,7 +45,7 @@ import {
 import { getMyBesktStanding } from "@/lib/beskt/complete.functions";
 import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
 import { recordBesktSetup } from "@/lib/library/setup.functions";
-import { sendTestFromSetup } from "@/lib/library/start.functions";
+import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 import { interviewErrorMessage } from "@/components/employer/interview/InterviewUi";
 import { BesktStartDialog } from "@/components/beskt/BesktStartDialog";
 import { BesktPreviewDialog } from "@/components/beskt/BesktPreviewDialog";
@@ -55,6 +55,7 @@ import {
 } from "@/components/beskt/BesktModulePanels";
 
 export interface LibrarySearch {
+  readonly view?: "guides";
   readonly method?: LibraryMethod;
   readonly group?: RoleGroup;
   readonly role?: RoleProfileKey;
@@ -103,7 +104,7 @@ export function RecruitmentLibrary({
     void navigate({
       to: "/employer/$employerSlug/assessments/library",
       params: { employerSlug },
-      search: next,
+      search: { ...next, view: "guides" },
     });
 
   const content = useLibraryContent(employerId);
@@ -541,7 +542,7 @@ function SetupPanel({
   const { t, lang } = useT();
   const appsFn = useServerFn(listApplicationsForEmployer);
   const recordFn = useServerFn(recordBesktSetup);
-  const sendTestFn = useServerFn(sendTestFromSetup);
+
   const { live, besktMethods, isSecurityOfficer } = content;
   const apps = useQuery({
     queryKey: ["beskt", "start", "applications", employerId],
@@ -552,18 +553,7 @@ function SetupPanel({
   const [applicationId, setApplicationId] = useState("");
   // The role's candidate test, sent for the chosen application WITH this
   // setup, so the interview after it follows the same role and environment.
-  const sendTest = useMutation({
-    mutationFn: (appId: string) =>
-      sendTestFn({
-        data: {
-          employerId,
-          applicationId: appId,
-          roleGroup: group,
-          roleProfile: role,
-          environment: env,
-        },
-      }),
-  });
+  const [sendingTest, setSendingTest] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -796,37 +786,36 @@ function SetupPanel({
               {t("lib.start.trust")}
             </Link>
           </Button>
-          {setup.assessment && canAssign ? (
+          {setup.assessment && (
             <Button
               type="button"
               variant="outline"
               className="min-h-[44px]"
-              disabled={applicationId === "" || sendTest.isPending}
-              onClick={() => sendTest.mutate(applicationId)}
+              disabled={!applicationId}
+              onClick={() => setSendingTest(true)}
               data-testid="lib-send-test"
             >
-              {sendTest.isPending ? t("lib.start.sendTest.sending") : t("lib.start.sendTest")}
+              {t("sendTest.action")}
             </Button>
-          ) : null}
-          {setup.assessment && canAssign && applicationId === "" ? (
+          )}
+          {setup.assessment && !applicationId && (
             <p className="basis-full text-xs text-muted-foreground">
               {t("lib.start.sendTest.needsApplication")}
             </p>
-          ) : null}
-          {sendTest.isSuccess ? (
-            <p role="status" className="basis-full text-sm" data-testid="lib-send-test-done">
-              {t(
-                sendTest.data.setupRecorded
-                  ? "lib.start.sendTest.sent"
-                  : "lib.start.sendTest.sentNoSetup",
-              )}
-            </p>
-          ) : null}
-          {sendTest.isError ? (
-            <p role="alert" className="basis-full text-sm text-destructive">
-              {interviewErrorMessage(sendTest.error, t)}
-            </p>
-          ) : null}
+          )}
+          {sendingTest && (
+            <SendTestDialog
+              employerId={employerId}
+              employerSlug={employerSlug}
+              applicationId={applicationId}
+              candidateName={
+                apps.data?.find((a) => a.id === applicationId)?.applicantDisplayName ?? null
+              }
+              jobTitle={apps.data?.find((a) => a.id === applicationId)?.jobTitleSv ?? null}
+              initialGroup={group}
+              onClose={() => setSendingTest(false)}
+            />
+          )}
         </div>
       ) : (
         <div className="mt-6 flex flex-wrap gap-3">

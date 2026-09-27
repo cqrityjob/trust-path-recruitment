@@ -53,7 +53,6 @@ import {
 import { StageBadge, BookingBadge } from "@/components/recruitment/RecruitmentStatus";
 import { BatchMessageDialog } from "@/components/recruitment/MessageComposer";
 import { BookingDialog } from "@/components/recruitment/BookingDialog";
-import { AssignTestDialog } from "@/components/recruitment/AssignTestDialog";
 import { SendTestDialog } from "@/components/recruitment/SendTestDialog";
 import {
   CANDIDATE_SORTS,
@@ -489,6 +488,9 @@ export function CandidateTable(props: Props) {
             {t("rec.action.open")}
           </button>
         )}
+        {none && (
+          <span className="text-xs text-muted-foreground">{t("rec.action.hint.select")}</span>
+        )}
         {canManage && (
           <button
             type="button"
@@ -511,18 +513,19 @@ export function CandidateTable(props: Props) {
           <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
           {t("rec.action.interview")}
         </button>
-        {props.canAssignTests && (
+        {
           <button
             type="button"
             className={barBtn}
             disabled={none || busy}
+            data-testid="send-test-bulk"
             onClick={() => setAssigningTest(true)}
             title={none ? t("rec.action.hint.select") : undefined}
           >
             <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
             {t("rec.action.assignTest")}
           </button>
-        )}
+        }
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className={barBtn} disabled={none || busy}>
@@ -751,12 +754,13 @@ export function CandidateTable(props: Props) {
                       <Attachments row={r} />
                     </td>
                     <td className="px-2 py-1.5 align-middle text-xs text-muted-foreground">
-                      {props.openAssessmentIds?.has(r.applicationId) ? (
+                      {props.openAssessmentIds?.has(r.applicationId) && (
                         <span className="inline-flex items-center gap-1">
                           <ClipboardList className="h-3 w-3" aria-hidden="true" />
                           {t("rec.marker.testOpen")}
                         </span>
-                      ) : props.canAssignTests && OPEN.includes(r.status) ? (
+                      )}
+                      {OPEN.includes(r.status) && (
                         <button
                           type="button"
                           data-testid="send-test"
@@ -767,8 +771,6 @@ export function CandidateTable(props: Props) {
                           <ClipboardList className="h-3 w-3" aria-hidden="true" />
                           {t("sendTest.action")}
                         </button>
-                      ) : (
-                        "—"
                       )}
                     </td>
                     <td className="px-2 py-1.5 align-middle">
@@ -832,6 +834,17 @@ export function CandidateTable(props: Props) {
                     <div className="mt-1">
                       <NextActivity row={r} lang={lang} />
                     </div>
+                    {OPEN.includes(r.status) && (
+                      <button
+                        type="button"
+                        data-testid="send-test-mobile"
+                        data-application-id={r.applicationId}
+                        onClick={() => setSendTestFor(r)}
+                        className="mt-2 min-h-11 rounded border border-accent/50 px-3 text-sm text-accent"
+                      >
+                        {t("sendTest.action")}
+                      </button>
+                    )}
                   </div>
                 </div>
               </li>
@@ -962,13 +975,16 @@ export function CandidateTable(props: Props) {
       )}
 
       {assigningTest && (
-        <AssignTestDialog
+        <SendTestDialog
           employerId={employerId}
+          employerSlug={employerSlug}
+          applicationId={selectedRows[0]?.applicationId ?? ""}
+          candidateName={selectedRows[0]?.name ?? null}
+          jobTitle={props.jobTitle}
           candidates={selectedRows.map((r) => ({ applicationId: r.applicationId, name: r.name }))}
           onClose={(assigned) => {
             setAssigningTest(false);
-            if (assigned > 0) {
-              setSelected(new Set());
+            if (assigned) {
               props.onChanged();
             }
           }}

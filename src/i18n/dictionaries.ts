@@ -2124,7 +2124,7 @@ export const dictionaries = {
     "employer.overview.card.tests.stat.invited": "Inbjudna",
     "employer.overview.card.tests.stat.inProgress": "Pågående",
     "employer.overview.card.tests.stat.completed": "Genomförda",
-    "employer.overview.card.tests.action.assign": "Tilldela bedömning",
+    "employer.overview.card.tests.action.assign": "Skicka test",
     "employer.overview.card.tests.action.activity": "Pågående tilldelningar",
 
     // The same area the sidebar names, so the card and the navigation agree.
@@ -3956,7 +3956,7 @@ export const dictionaries = {
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tester & bedömningar",
     "academy.nav.overview": "Översikt",
-    "academy.nav.library": "Rekryteringsstöd",
+    "academy.nav.library": "Testbank",
     "academy.nav.reviews": "Granskning",
     "academy.nav.programmes": "Utvecklingsprogram",
     "academy.cancel": "Avbryt",
@@ -4288,7 +4288,7 @@ export const dictionaries = {
     "lib.step.role": "Roll",
     "lib.step.env": "Arbetsmiljö",
     "lib.env.shopping_centre": "Köpcentrum",
-    "lib.start.trust": "Starta ärende",
+    "lib.start.trust": "Förbered intervju",
     "lib.setup.timeUnsetAll": "Inte fastställd.",
     "lib.method.trust.title": "TRUST",
     "lib.setup.beskt.interview":
@@ -10511,7 +10511,7 @@ export const dictionaries = {
     "employer.overview.card.tests.stat.invited": "Invited",
     "employer.overview.card.tests.stat.inProgress": "In progress",
     "employer.overview.card.tests.stat.completed": "Completed",
-    "employer.overview.card.tests.action.assign": "Assign assessment",
+    "employer.overview.card.tests.action.assign": "Send test",
     "employer.overview.card.tests.action.activity": "Assignments in progress",
 
     "employer.overview.card.development.title": "Development",
@@ -12259,7 +12259,7 @@ export const dictionaries = {
     // ── Assessment Center (Academy) — employer + participant ────────────
     "academy.nav.aria": "Tests & assessments",
     "academy.nav.overview": "Overview",
-    "academy.nav.library": "Recruitment support",
+    "academy.nav.library": "Test library",
     "academy.nav.reviews": "Review",
     "academy.nav.programmes": "Development programmes",
     "academy.cancel": "Cancel",
@@ -12584,7 +12584,7 @@ export const dictionaries = {
     "lib.step.role": "Role",
     "lib.step.env": "Work environment",
     "lib.env.shopping_centre": "Shopping centre",
-    "lib.start.trust": "Start case",
+    "lib.start.trust": "Prepare interview",
     "lib.setup.timeUnsetAll": "Not established.",
     "lib.method.trust.title": "TRUST",
     "lib.setup.beskt.interview":

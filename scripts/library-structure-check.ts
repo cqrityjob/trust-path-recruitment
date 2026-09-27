@@ -238,9 +238,9 @@ check(
   ) &&
     /labelKey: "employer\.nav\.interviewIntelligence"/.test(shell) &&
     !/labelKey: "employer\.nav\.library"/.test(shell) &&
-    /"academy\.nav\.library": "Rekryteringsstöd"/.test(dict) &&
+    /"academy\.nav\.library": "Testbank"/.test(dict) &&
     /"lib\.title": "Rekryteringsstöd"/.test(dict),
-  "LS-NAV: Tester & bedömningar and Intervjuer stay separate; the library is the Rekryteringsstöd tab, not a Bibliotek menu item",
+  "LS-NAV: Tester & bedömningar and Intervjuer stay separate; the Testbank tab opens tests and interview preparation remains separate",
 );
 
 // ---- a clean customer surface ----------------------------------------------------
