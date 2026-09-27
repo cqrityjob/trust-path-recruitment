@@ -84,7 +84,11 @@ export function UnifiedAuthForm({ mode }: { mode: UnifiedAuthMode }) {
                 className="mt-3 text-3xl font-semibold tracking-tight text-foreground md:text-4xl lg:text-[2.75rem] lg:leading-[1.1]"
                 style={{ fontFamily: "var(--font-display)" }}
               >
-                {t("auth.unified.proposition")}
+                {/* Named for what the reader is doing here (MVP text
+                    specification §12.3); the mode is the route's own. */}
+                {t(
+                  mode === "signup" ? "auth.unified.proposition" : "auth.unified.propositionSignIn",
+                )}
               </h1>
               <p className="mt-4 max-w-xl text-base leading-relaxed text-muted-foreground">
                 {t("auth.unified.lede")}

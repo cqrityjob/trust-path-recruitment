@@ -327,8 +327,23 @@ for (const file of Object.values(ROUTES)) {
     `D · ${path.basename(file)} shows no "Interview Intelligence" label`,
   );
 }
-for (const key of Object.keys(sv).filter((k) =>
-  /^(iiu|iic|employer\.nav|employer\.candidate)\./.test(k),
+// ONE exception, since the MVP text specification (§3, §11.2, 2026-09-27):
+// the area's page heading carries the capability's name, explained by the
+// line under it. The sidebar and the list of interviews keep "Intervjuer".
+const AREA_HEADING = "iiu.ix.title";
+ok(
+  sv[AREA_HEADING] === "Interview Intelligence" && en[AREA_HEADING] === "Interview Intelligence",
+  "D · the area heading is the capability's name",
+);
+ok(
+  /[Ff]örbered intervjun, dokumentera samtalet/.test(sv["iiu.ix.lead"]) &&
+    /[Pp]repare the interview, document the conversation/.test(en["iiu.ix.lead"]) &&
+    /[Dd]u bedömer och beslutar/.test(sv["iiu.ix.lead"]) &&
+    /[Yy]ou assess and decide/.test(en["iiu.ix.lead"]),
+  "D · and the line under it says what it is for, and who decides",
+);
+for (const key of Object.keys(sv).filter(
+  (k) => /^(iiu|iic|employer\.nav|employer\.candidate)\./.test(k) && k !== AREA_HEADING,
 )) {
   ok(
     !sv[key].includes("Interview Intelligence") &&

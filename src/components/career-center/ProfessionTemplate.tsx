@@ -11,6 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
+import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import {
   L,
@@ -47,16 +48,22 @@ import { TransitionCard } from "./TransitionCard";
 //   1 role hero · 2 fact row · 3 regulatory notice · 4 om yrket ·
 //   5 en dag i rollen · 6 passar dig som · 7 passar mindre bra om ·
 //   8 kompetenser · 9 formella krav · 10 så kommer du in ·
-//   11 möjliga nästa karriärsteg · 12 utbildning och behörighet ·
+//   11 utbildning och behörighet · 12 möjliga nästa karriärsteg ·
 //   13 relaterade jobb och ditt Passport · 14 karriäranalys ·
 //   15 relaterade yrken · 16 källor och governance
 //
+// ── THE MVP TEXT SPECIFICATION (2026-09-27) ────────────────────────────
+//
+// Education is back BEFORE the career steps. The specification fixes one
+// order for every profession page — Om yrket → Arbetsuppgifter →
+// Kompetenser → Krav → Utbildning → Möjliga nästa steg → Lediga jobb →
+// Källor — and the catalogue summary (CatalogueProfession) already follows
+// it, so a guide and a summary now read in the same order.
+//
 // ── WHAT THE PILOT PASS CHANGED ────────────────────────────────────────
 //
-// Career steps moved BEFORE education, and both were rebuilt. The order is
-// the reader's question order: "where could I go" has to be answered before
-// "what would I have to study", or the education section is a list of courses
-// with no destination attached.
+// Career steps moved before education, and both were rebuilt. The rebuild
+// stands; the order was superseded by the specification above.
 //
 //   * "Karriärväg" was two columns of role names. It is now explained
 //     transitions (see TransitionCard): each one classified as an adjacent
@@ -134,8 +141,8 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
     { id: "om-yrket", label: t("cc.nav.about") },
     { id: "kompetenser", label: t("cc.nav.competencies") },
     ...(hasFormal ? [{ id: "krav", label: t("cc.nav.requirements") }] : []),
-    { id: "karriarsteg", label: t("cc.nav.next") },
     { id: "utbildning", label: t("cc.nav.education") },
+    { id: "karriarsteg", label: t("cc.nav.next") },
     { id: "nasta-steg", label: t("cc.nav.jobs") },
     { id: "kallor", label: t("cc.nav.sources") },
   ];
@@ -450,8 +457,16 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         </Section>
       ) : null}
 
-      {/* 11 — MÖJLIGA NÄSTA KARRIÄRSTEG */}
-      <Section bordered id="karriarsteg" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
+      {/* 11 — UTBILDNING OCH BEHÖRIGHET */}
+      <Section bordered id="utbildning" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {t("cc.p.education.title")}
+        </h2>
+        <EducationPanel education={education} />
+      </Section>
+
+      {/* 12 — MÖJLIGA NÄSTA KARRIÄRSTEG */}
+      <Section bordered id="karriarsteg" className="scroll-mt-14 py-16 md:py-20">
         <div className="max-w-3xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("cc.p.next.title")}
@@ -511,14 +526,6 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
         </p>
       </Section>
 
-      {/* 12 — UTBILDNING OCH BEHÖRIGHET */}
-      <Section bordered id="utbildning" className="scroll-mt-14 py-16 md:py-20">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-          {t("cc.p.education.title")}
-        </h2>
-        <EducationPanel education={education} />
-      </Section>
-
       {/* 13 — RELATERADE LEDIGA JOBB · DITT PASSPORT */}
       <Section bordered id="nasta-steg" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
@@ -537,7 +544,8 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
               {t("cc.p.test.title")}
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {t("cc.p.test.body")}
+              {/* The duration is the instrument's own, never typed into copy. */}
+              {t("cc.p.test.body")} {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
             </p>
           </div>
           <div className="md:justify-self-end">

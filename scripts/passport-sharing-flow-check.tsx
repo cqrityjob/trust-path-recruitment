@@ -343,6 +343,16 @@ const render = (lang: "sv" | "en") => renderPresentation(presentation, lang);
 
 const sv = render("sv");
 const en = render("en");
+/** A copy string as React writes it into markup. The recipient help's
+ *  English carries an apostrophe ("credential's"), which the static render
+ *  escapes, so a text assertion compares like with like. */
+const asMarkup = (text: string) =>
+  text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
 
 const SOURCE_SV = passportT("trust.level.source_verified", "sv");
 const DOCUMENTED_SV = passportT("trust.level.documented", "sv");
@@ -451,7 +461,7 @@ ck(
 
 ck(
   "3.10 and what a share IS, before anything about a person",
-  sv.includes(passportT("rec.whatThisIs", "sv")),
+  sv.includes(asMarkup(passportT("rec.whatThisIs", "sv"))),
 );
 
 ck(
@@ -468,12 +478,13 @@ ck(
 //
 // "Verifiering", "den här sidan är källan" and "granskad tid i yrket" each
 // claimed more than a share is: a mixed set the holder chose, some of which
-// nobody has checked.
+// nobody has checked. Titled in the MVP text specification's words (§8,
+// 2026-09-27): information SHARED FROM the Passport.
 ck(
   "3.12a the page is framed as a SHARE, not as a verification",
-  sv.includes("Delat Security Passport") &&
+  sv.includes("Delade uppgifter från Security Passport") &&
     !sv.includes("Verifiering av Security Passport") &&
-    en.includes("Shared Security Passport") &&
+    en.includes("Information shared from Security Passport") &&
     !en.includes("Security Passport verification"),
 );
 ck(
@@ -520,7 +531,7 @@ ck(
 ck(
   "3.13 the English page renders completely, from the same component",
   en.includes(passportT("rec.legendTitle", "en")) &&
-    en.includes(passportT("rec.whatThisIs", "en")) &&
+    en.includes(asMarkup(passportT("rec.whatThisIs", "en"))) &&
     en.includes(passportT("trust.level.documented", "en")) &&
     en.includes(`${passportT("employment.attribution.employer_confirmation", "en")} Nordvakt AB`),
 );

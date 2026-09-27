@@ -289,7 +289,7 @@ export function CredentialWallet({
           className="col-start-2 inline-flex min-h-11 items-center gap-1 justify-self-start text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:col-start-auto sm:justify-self-end"
         >
           {r.status === "registered"
-            ? copy("Lägg till underlag", "Add evidence")
+            ? copy("Bifoga underlag", "Add supporting evidence")
             : r.status === "clarification"
               ? copy("Komplettera uppgifter", "Provide information")
               : copy("Öppna meriter", "View credential")}
@@ -317,9 +317,10 @@ export function CredentialWallet({
           {copy("Mitt Security Passport", "My Security Passport")}
         </p>
         <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+          {/* MVP text specification §8. */}
           {copy(
-            "Dina yrkesmeriter inom säkerhet – internationella och nationella, på ett ställe.",
-            "Your professional security credentials — international and national, in one place.",
+            "Samla dina meriter med underlag och tydlig status. Välj sedan vad du vill dela.",
+            "Collect your credentials with supporting evidence and a clear status. Then choose what to share.",
           )}
         </p>
       </div>
@@ -419,7 +420,10 @@ export function CredentialWallet({
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <Plus size={17} aria-hidden="true" />
-              {copy("Lägg till meriter", "Add credential")}
+              {/* Several credential types are offered behind this door
+                  (international, national and regional), so the general
+                  noun is true here (MVP text specification §8). */}
+              {copy("Lägg till en merit", "Add a credential")}
             </Link>
             <Link
               to="/passport/share"
@@ -520,8 +524,8 @@ export function CredentialWallet({
             </h2>
             <p className="mt-2 text-muted-foreground">
               {copy(
-                "Välj en merit från katalogen och lägg till ditt underlag. Allt förblir privat tills du delar.",
-                "Choose a credential from the catalogue and add your evidence. Everything stays private until you share.",
+                "Du har inte lagt till någon merit ännu. Välj en merit från katalogen och bifoga underlag. Allt förblir privat tills du delar.",
+                "You have not added any credentials yet. Choose a credential from the catalogue and add supporting evidence. Everything stays private until you share.",
               )}
             </p>
           </div>
@@ -582,9 +586,11 @@ export function CredentialWallet({
         )}
 
         <p className="text-xs leading-relaxed text-muted-foreground">
+          {/* The status help (MVP text specification §8), with the date
+              caveat this footer has always carried. */}
           {copy(
-            "Ett aktuellt datum är inte en verifiering. Granskning gäller det enskilda meriten och dess dokumenterade omfattning.",
-            "A current date is not verification. Review applies to the individual credential and its documented scope.",
+            "Statusen visar vilket stöd som finns för uppgiften. Ett bifogat dokument är inte automatiskt granskat eller källbekräftat, och ett aktuellt datum är ingen verifiering.",
+            "The status shows what supports the claim. An attached document is not automatically reviewed or source-confirmed, and a current date is not verification.",
           )}
         </p>
       </div>

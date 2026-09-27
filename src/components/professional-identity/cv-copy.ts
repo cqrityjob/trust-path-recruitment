@@ -17,9 +17,11 @@ export const CV = {
   /* -- shared ------------------------------------------------------- */
   backToList: c("Alla CV", "All CVs"),
   title: c("Ditt CV", "Your CV"),
+  // MVP text specification §7. What the CV holds, and where the Passport's
+  // evidence lives instead, is said once, beside the content (contentLede).
   lede: c(
-    "Vad du har gjort: anställningar, utbildning, språk och färdigheter. Du fyller i innehållet en gång här, och varje CV-dokument byggs av det — AI:n formulerar, den hittar inte på.",
-    "What you have done: employment, education, languages and skills. You enter the content once here, and every CV document is built from it — the AI phrases, it does not invent.",
+    "Skapa och anpassa ditt CV från de uppgifter och meriter du väljer. Granska innehållet innan du exporterar eller använder det i en ansökan.",
+    "Create and tailor your CV using the information and credentials you select. Review it before exporting or using it in an application.",
   ),
 
   /* -- the two halves of the page ----------------------------------- */

@@ -1,23 +1,30 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
-import { useT } from "@/i18n/context";
+import { PrimaryLink } from "@/components/site/PrimaryButton";
+import { CoreCards } from "@/components/site/HomeSections";
+import { useLocalizedHead, useT } from "@/i18n/context";
+import { dictionaries } from "@/i18n/dictionaries";
+
+// ── ABOUT (MVP text specification §12.1) ─────────────────────────────────
+//
+// The same product the homepage describes, in the same words: the lead is
+// the common short description, the three parts ARE the homepage's core
+// cards, and the employer offer is the homepage's employer section. The
+// page used to describe a career, recruitment and assessment platform with
+// a free test, which was a different product from the one on /.
+
+/** The server renders the Swedish page; useLocalizedHead() swaps in the
+ *  English pair on the client. */
+const SV = dictionaries.sv;
 
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "About — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "CQrityjob is building the leading recruitment, verification and assessment platform for the security industry.",
-      },
-      { property: "og:title", content: "About — CQrityjob" },
-      {
-        property: "og:description",
-        content:
-          "Our mission, vision and why we build exclusively for the security industry.",
-      },
+      { title: SV["meta.about.title"] },
+      { name: "description", content: SV["brand.description"] },
+      { property: "og:title", content: SV["meta.about.title"] },
+      { property: "og:description", content: SV["brand.description"] },
       { property: "og:url", content: "https://trust-path-recruitment.lovable.app/about" },
     ],
     links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/about" }],
@@ -25,19 +32,11 @@ export const Route = createFileRoute("/about")({
   component: AboutPage,
 });
 
+const H2 = "text-2xl font-semibold tracking-tight text-foreground md:text-3xl";
+
 function AboutPage() {
   const { t } = useT();
-  const pillars = [
-    { title: t("about.pillars.career.title"), body: t("about.pillars.career.body") },
-    { title: t("about.pillars.recruit.title"), body: t("about.pillars.recruit.body") },
-    { title: t("about.pillars.assessment.title"), body: t("about.pillars.assessment.body") },
-  ];
-  const blocks = [
-    { title: t("about.mission.title"), body: t("about.mission.body") },
-    { title: t("about.vision.title"), body: t("about.vision.body") },
-    { title: t("about.why.title"), body: t("about.why.body") },
-    { title: t("about.expansion.title"), body: t("about.expansion.body") },
-  ];
+  useLocalizedHead("meta.about.title", "brand.description");
   return (
     <SiteLayout>
       <Section>
@@ -52,35 +51,46 @@ function AboutPage() {
             {t("about.title")}
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-            {t("about.lead")}
+            {t("brand.description")}
           </p>
         </div>
       </Section>
+      <Section bordered>
+        <div className="max-w-3xl">
+          <h2 className={H2}>{t("about.mission.title")}</h2>
+          <p className="mt-4 leading-relaxed text-muted-foreground">{t("about.mission.body")}</p>
+        </div>
+      </Section>
       <Section bordered className="bg-muted/40">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-          {t("about.pillars.title")}
-        </h2>
-        <div className="mt-10 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border md:grid-cols-3">
-          {pillars.map((p) => (
-            <div key={p.title} className="bg-background p-8">
-              <h3 className="text-lg font-semibold tracking-tight text-foreground">
-                {p.title}
-              </h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{p.body}</p>
-            </div>
-          ))}
+        <h2 className={H2}>{t("about.pillars.title")}</h2>
+        <CoreCards heading="h3" className="mt-10" />
+      </Section>
+      <Section bordered>
+        <div className="max-w-3xl">
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            {t("home.employers.eyebrow")}
+          </p>
+          <h2 className={`mt-3 ${H2}`}>{t("home.employers.title")}</h2>
+          <p className="mt-4 leading-relaxed text-muted-foreground">{t("home.employers.body")}</p>
+          <PrimaryLink to="/employers" variant="ghost" className="mt-6 w-full sm:w-auto">
+            {t("home.employers.cta.explore")}
+          </PrimaryLink>
         </div>
       </Section>
       <Section bordered>
         <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-          {blocks.map((b) => (
-            <div key={b.title} className="border-t border-border pt-8">
-              <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                {b.title}
-              </h2>
-              <p className="mt-3 text-muted-foreground">{b.body}</p>
-            </div>
-          ))}
+          <div className="border-t border-border pt-8">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">
+              {t("about.ai.title")}
+            </h2>
+            <p className="mt-3 text-muted-foreground">{t("about.ai.body")}</p>
+          </div>
+          <div className="border-t border-border pt-8">
+            <h2 className="text-xl font-semibold tracking-tight text-foreground">
+              {t("about.vision.title")}
+            </h2>
+            <p className="mt-3 text-muted-foreground">{t("about.vision.body")}</p>
+          </div>
         </div>
       </Section>
     </SiteLayout>

@@ -36,17 +36,20 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { PublicAssessmentFlow } from "@/components/career-discovery/v31/PublicAssessmentFlow";
+import { useLocalizedHead } from "@/i18n/context";
+import { dictionaries } from "@/i18n/dictionaries";
+
+/** MVP text specification §14: the product name, explained as a career
+ *  analysis, and the landing page's own ingress as the description. Swedish
+ *  from the server; useLocalizedHead() swaps in English on the client. */
+const SV = dictionaries.sv;
 
 export const Route = createFileRoute("/security-career-assessment")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Din karriär inom säkerhet — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "Security Career Discovery — career guidance for the security industry. Not a test, and not a judgement about employability.",
-      },
+      { title: SV["meta.careerDiscovery.title"] },
+      { name: "description", content: SV["cd.public.introBody"] },
       // Not indexable while the instrument is in internal test. Removed at
       // public launch, which is a separate, owner-approved change.
       { name: "robots", content: "noindex, nofollow" },
@@ -56,6 +59,7 @@ export const Route = createFileRoute("/security-career-assessment")({
 });
 
 function CanonicalAssessmentRoute() {
+  useLocalizedHead("meta.careerDiscovery.title", "cd.public.introBody");
   // The public v3.1 flow is the ONLY assessment this route serves. When v3.1
   // is not administrable it shows an explicit v3.1 unavailable state.
   //

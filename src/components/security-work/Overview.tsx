@@ -35,8 +35,8 @@ export function SecurityOverview() {
       <PageHeading
         title={l("Mitt säkerhetsarbete", "My Security Work")}
         body={l(
-          "Från underlag till tydliga bedömningar, rapporter och nästa steg.",
-          "From evidence to clear assessments, reports and next steps.",
+          "Samla underlag, strukturera bedömningar och följ upp åtgärder för säkerhet, risk och beredskap.",
+          "Collect evidence, structure assessments and follow up actions for security, risk and preparedness.",
         )}
       />
       <div
@@ -66,7 +66,7 @@ export function SecurityOverview() {
       )}
       <section aria-labelledby="sw-service-heading" className="space-y-4" data-testid="sw-services">
         <h2 id="sw-service-heading" className="font-display text-xl font-semibold">
-          {l("Vad vill du ha hjälp med?", "What would you like help with?")}
+          {l("Vad vill du arbeta med?", "What would you like to work on?")}
         </h2>
         <div className="grid gap-4 md:grid-cols-2">
           {(
@@ -74,22 +74,14 @@ export function SecurityOverview() {
               {
                 method: "monitoring",
                 icon: Radio,
-                title: l("Omvärldsbevakning", "External monitoring"),
-                benefit: l(
-                  "Förstå vad som påverkar din verksamhet.",
-                  "Understand what affects your organisation.",
+                title: l("Omvärldsbevakning", "Monitoring"),
+                body: l(
+                  "Samla och bedöm källunderlag utifrån dina bevakningsfrågor. Bygg en omvärldsanalys och briefing som du kan granska och följa upp.",
+                  "Collect and assess source material against your monitoring questions. Build a monitoring analysis and briefing that you can review and follow up.",
                 ),
-                input: l(
-                  "Relevanta källor och verksamhetens sammanhang.",
-                  "Relevant sources and your organisation's context.",
-                ),
-                help: l(
-                  "Sammanställ material, hitta kunskapsluckor och bedöm betydelsen för verksamheten.",
-                  "Bring material together, identify gaps and assess its significance.",
-                ),
-                result: l(
-                  "Granskningsbart omvärldsunderlag med källor och rekommenderade nästa steg.",
-                  "A reviewable monitoring brief with sources and recommended next steps.",
+                note: l(
+                  "Du registrerar själv källor och underlag. Länkar hämtas inte automatiskt.",
+                  "You enter sources and evidence yourself. Links are not fetched automatically.",
                 ),
                 cta: l("Starta omvärldsanalys", "Start monitoring analysis"),
               },
@@ -97,21 +89,13 @@ export function SecurityOverview() {
                 method: "rsa",
                 icon: ShieldCheck,
                 title: l("Riskanalys", "Risk analysis"),
-                benefit: l(
-                  "Från ditt underlag till riskanalys och åtgärdsplan.",
-                  "From your evidence to risk analysis and an action plan.",
+                body: l(
+                  "Beskriv verksamheten, hoten och sårbarheterna. Arbeta fram en riskbedömning och en åtgärdsplan med tydligt underlag.",
+                  "Describe the organisation, threats and vulnerabilities. Develop a risk assessment and action plan with clear supporting evidence.",
                 ),
-                input: l(
-                  "Syfte, avgränsning, verksamhetskontext och dokument.",
-                  "Purpose, scope, organisation context and documents.",
-                ),
-                help: l(
-                  "Identifiera frågor och strukturera scenarier, sårbarheter och bedömningar.",
-                  "Identify questions and structure scenarios, vulnerabilities and assessments.",
-                ),
-                result: l(
-                  "Redigerbar riskanalys, riskmatris och åtgärdsplan att granska och följa upp.",
-                  "An editable risk analysis, risk matrix and action plan to review and follow up.",
+                note: l(
+                  "Risknivåerna bygger på angivna skalor och din bedömning. Du granskar och godkänner rapporten.",
+                  "Risk ratings depend on defined scales and your assessment. You review and approve the report.",
                 ),
                 cta: l("Starta riskanalys", "Start risk analysis"),
               },
@@ -127,31 +111,11 @@ export function SecurityOverview() {
                   <service.icon className="size-5 shrink-0 text-accent" aria-hidden="true" />
                   {service.title}
                 </h3>
-                <p className="mt-2 text-sm font-medium">{service.benefit}</p>
+                {/* MVP text specification §9.1: one sentence pair per
+                    service, then what the service does NOT do. */}
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{service.body}</p>
               </div>
-              <dl className="space-y-2 text-sm leading-relaxed">
-                {[
-                  [l("Underlag", "Input"), service.input],
-                  [l("Hjälp", "Support"), service.help],
-                  [l("Resultat", "Result"), service.result],
-                ].map(([label, text]) => (
-                  <div key={label}>
-                    <dt className="inline font-semibold">{label}: </dt>
-                    <dd className="inline text-muted-foreground">{text}</dd>
-                  </div>
-                ))}
-              </dl>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {service.method === "monitoring"
-                  ? l(
-                      "Du väljer och registrerar källorna. Ingen automatisk nyhetsinhämtning eller realtidsbevakning.",
-                      "You select and enter the sources. No automatic news collection or real-time monitoring.",
-                    )
-                  : l(
-                      "Risknivåer kräver definierade skalor och din bedömning. Rapporten godkänns av en människa.",
-                      "Risk ratings need defined scales and your assessment. A human approves the report.",
-                    )}
-              </p>
+              <p className="text-xs leading-relaxed text-muted-foreground">{service.note}</p>
               <WorkButton asChild className="mt-auto w-full justify-between">
                 <Link
                   to="/security-work/$workspaceId/analyses"

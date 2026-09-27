@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   ClipboardCheck,
@@ -15,8 +15,8 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
-import { useT } from "@/i18n/context";
-import type { TranslationKey } from "@/i18n/dictionaries";
+import { useLocalizedHead, useT } from "@/i18n/context";
+import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
 
 /** ── /employers — THE WHOLE PLATFORM, NOT FOUR ABSTRACT BENEFITS ───────
  *
@@ -62,21 +62,18 @@ import type { TranslationKey } from "@/i18n/dictionaries";
  *    It is candidate-owned, it never enters employer ranking, and this page
  *    therefore does not offer it at all. */
 
+/** MVP text specification §14: the page's title and its ingress as the
+ *  description. The head is the Swedish pair; useLocalizedHead() swaps in the
+ *  English one on the client. */
+const SV = dictionaries.sv;
+
 export const Route = createFileRoute("/employers")({
   head: () => ({
     meta: [
-      { title: "For Employers — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "Publish security jobs, manage applications and use structured assessments and interview models for ordinary security roles and security-protection-sensitive positions. People make and document every decision.",
-      },
-      { property: "og:title", content: "For Employers — CQrityjob" },
-      {
-        property: "og:description",
-        content:
-          "The complete security recruitment process in one platform: job posting, applications, structured assessment and interview, and a documented human decision.",
-      },
+      { title: SV["meta.employers.title"] },
+      { name: "description", content: SV["employers.lead"] },
+      { property: "og:title", content: SV["meta.employers.title"] },
+      { property: "og:description", content: SV["employers.lead"] },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://trust-path-recruitment.lovable.app/employers" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -117,6 +114,7 @@ const PATH = [
 
 function EmployersPage() {
   const { t } = useT();
+  useLocalizedHead("meta.employers.title", "employers.lead");
   const portalOpen = employerPortalEnabled();
 
   return (
@@ -275,6 +273,22 @@ function EmployersPage() {
             aria-hidden="true"
           />
           {t("employers.disclaimer")}
+        </p>
+
+        {/* A quiet cross-link for the reader who does security work
+            themselves (MVP text specification §11.1). It opens the PUBLIC
+            section that explains My Security Work: an organisation's
+            membership is not access to anybody's security workspace, and
+            this page does not suggest it is. */}
+        <p className="mt-6 text-sm leading-relaxed text-muted-foreground">
+          {t("employers.crossLink.lead")}{" "}
+          <Link
+            to="/"
+            hash="security-intelligence"
+            className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            {t("employers.crossLink.action")}
+          </Link>
         </p>
       </Section>
     </SiteLayout>

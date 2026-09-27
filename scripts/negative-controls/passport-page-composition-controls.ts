@@ -178,10 +178,10 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PPC-NC-NEXT-STEP-OVERCLAIMS-ITS-LABEL",
     defect:
-      "the button that only locates a record is labelled 'Add evidence' again, promising an action it does not perform",
+      "the button that only locates a record is labelled with the evidence action again ('Bifoga underlag' / 'Add supporting evidence'), promising an action it does not perform",
     file: SIDE,
     find: '{copy("Visa meriten", "View credential")}',
-    replace: '{copy("Lägg till underlag", "Add evidence")}',
+    replace: '{copy("Bifoga underlag", "Add supporting evidence")}',
     guard: GUARD,
     expect: "labelled truthfully",
   },

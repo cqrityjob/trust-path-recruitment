@@ -27,6 +27,24 @@
 import { ClipboardList, Clock, Layers, ScaleIcon, UserCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
+import { CORE_ITEMS } from "@/lib/career-discovery/v31/core-items";
+import {
+  ADAPTIVE_ITEMS_PER_SESSION,
+  CONTEXT_ITEMS,
+  MVP_QUESTION_COUNT,
+} from "@/lib/career-discovery/v31/personal-layer";
+
+// ── THE COUNTS ARE THE INSTRUMENT'S ────────────────────────────────────
+//
+// The question count and its three parts are read from the instrument, like
+// the duration (MVP text specification §7: time and question count come from
+// the shared constants). The copy carries only the words around them.
+const QUESTION_FACT = String(MVP_QUESTION_COUNT);
+const STAGE_COUNTS = {
+  "{context}": String(CONTEXT_ITEMS.length),
+  "{core}": String(CORE_ITEMS.length),
+  "{adaptive}": String(ADAPTIVE_ITEMS_PER_SESSION),
+} as const;
 
 export function AssessmentIntro({
   onStart,
@@ -38,7 +56,14 @@ export function AssessmentIntro({
   const { t, lang } = useT();
 
   const facts = [
-    { icon: ClipboardList, title: t("cd.public.factQuestions"), body: t("cd.public.factStages") },
+    {
+      icon: ClipboardList,
+      title: t("cd.public.factQuestions").replace("{n}", QUESTION_FACT),
+      body: Object.entries(STAGE_COUNTS).reduce(
+        (text, [slot, count]) => text.replace(slot, count),
+        t("cd.public.factStages"),
+      ),
+    },
     {
       icon: Clock,
       title: DURATION_CLAIM[lang === "en" ? "en" : "sv"],

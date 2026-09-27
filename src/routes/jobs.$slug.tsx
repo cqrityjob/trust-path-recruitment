@@ -57,7 +57,7 @@ export const Route = createFileRoute("/jobs/$slug")({
     return buildJobHeadMeta(params.slug, job ?? null);
   },
   component: JobDetailPage,
-  errorComponent: ({ error }) => <ErrorState message={error.message} />,
+  errorComponent: () => <ErrorState />,
   notFoundComponent: () => <NotFoundState />,
 });
 
@@ -118,7 +118,7 @@ function JobDetailPage() {
       </SiteLayout>
     );
   }
-  if (q.isError) return <ErrorState message={(q.error as Error).message} />;
+  if (q.isError) return <ErrorState />;
   if (!q.data) return <NotFoundState />;
 
   const job = q.data;
@@ -463,14 +463,16 @@ function NotFoundState() {
   );
 }
 
-function ErrorState({ message }: { message: string }) {
+/** A read that failed says so in words (MVP text specification §13), not
+ *  with the raw error text the query happened to carry. */
+function ErrorState() {
   const { t } = useT();
   return (
     <SiteLayout>
       <Section>
         <BackToResults />
-        <h1 className="mt-4 text-2xl font-semibold">{t("jobs.results.error.title")}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{message}</p>
+        <h1 className="mt-4 text-2xl font-semibold">{t("jobs.detail.error.title")}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t("jobs.results.error.body")}</p>
       </Section>
     </SiteLayout>
   );

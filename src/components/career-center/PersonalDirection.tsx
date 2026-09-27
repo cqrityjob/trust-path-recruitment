@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, Compass, Info } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 import {
   icon,
   jobsProfessionSlug,
@@ -75,6 +76,12 @@ export function PersonalDirectionSection({
   facts?: React.ReactNode;
 }) {
   const { t, lang } = useT();
+  // Asked only where the analysis is offered: a signed-out reader answers the
+  // availability question, a signed-in reader without a result also the
+  // tester gate — the same two questions the canonical route asks.
+  const analysisOpen = useCareerAnalysisOpen(
+    direction.state === "anonymous" ? false : direction.state === "no_result" ? true : null,
+  );
 
   if (direction.state === "loading") {
     return (
@@ -96,33 +103,49 @@ export function PersonalDirectionSection({
     );
   }
 
-  // Anonymous and "signed in but no analysis" get the same content on purpose:
-  // in both cases the page has no result, and the honest offer is identical.
-  // Only the extra line differs — a signed-out reader may already HAVE a
-  // result and simply not be signed in, and telling them so is the difference
-  // between a dead end and a door.
+  // Anonymous and "signed in but no analysis" get the same offer on purpose:
+  // in both cases the page has no result. Two lines differ. A signed-in
+  // reader is told plainly that they have no saved analysis (MVP text
+  // specification §6); a signed-out reader may already HAVE one and simply
+  // not be signed in, and telling them so is the difference between a dead
+  // end and a door.
+  //
+  // A definite "not open" answer withdraws the offer rather than advertise a
+  // door the canonical route will refuse, and says so in the homepage's
+  // words. An unknown or failed answer keeps it: the route asks again and
+  // shows its own honest state.
   if (direction.state === "anonymous" || direction.state === "no_result") {
+    const closed = analysisOpen === false;
     return (
       <Shell state={direction.state}>
         <p className="mt-3 text-base font-semibold text-foreground">{t("cc.me.invite.title")}</p>
         <p className="mt-1 max-w-[62ch] text-base leading-relaxed text-muted-foreground">
-          {t("cc.me.invite.body")} {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
+          {closed ? (
+            t("home.career.closed")
+          ) : (
+            <>
+              {t(direction.state === "no_result" ? "cc.me.none.body" : "cc.me.invite.body")}{" "}
+              {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
+            </>
+          )}
         </p>
         {direction.state === "anonymous" && (
           <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
             {t("cc.me.invite.signedout")}
           </p>
         )}
-        {facts}
+        {!closed && facts}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <PrimaryLink
-            to="/security-career-assessment"
-            variant="primary"
-            onClick={onAssessmentStart}
-          >
-            {t("cc.me.invite.cta")}
-            <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-          </PrimaryLink>
+          {!closed && (
+            <PrimaryLink
+              to="/security-career-assessment"
+              variant="primary"
+              onClick={onAssessmentStart}
+            >
+              {t("cc.me.invite.cta")}
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+            </PrimaryLink>
+          )}
           <Link
             to="/career-center"
             search={{ ...exploreSearch, all: true } as never}

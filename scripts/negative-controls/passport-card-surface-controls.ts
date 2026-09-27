@@ -2,8 +2,8 @@
  * Negative controls for the Passport card's ground and the homepage panel.
  *
  * Each mutation brings back one thing the owner's finish removed — a pattern
- * behind the card, a drifted CSS mirror, a verified-looking example, the
- * action moved into the fictional card, or copy that advertises the Passport
+ * behind the card, a drifted CSS mirror, a verified-looking example, an
+ * action placed on the fictional card, or copy that advertises the Passport
  * as the editor for employment history.
  *
  * Run: bun run negative-controls:passport-card-surface
@@ -68,14 +68,15 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "labelled an example",
   },
   {
-    id: "PCSF-NC-ACTION-MOVES-INTO-THE-EXAMPLE",
+    id: "PCSF-NC-ACTION-ON-THE-EXAMPLE",
     defect:
-      "the registration action is rendered after the illustrative card, reading as a control on a fictional person's record",
+      "a registration action is placed on the illustrative card, reading as a control on a fictional person's record",
     file: HOME,
-    find: "            {action}\n",
-    replace: "",
+    find: "        <figcaption\n          data-home-passport-example-caption",
+    replace:
+      '        <a href="/signup?redirect=/passport">{t("cta.passport")}</a>\n        <figcaption\n          data-home-passport-example-caption',
     guard: GUARD,
-    expect: "OUTSIDE and above the illustrative card",
+    expect: "the illustrative card holds no control",
   },
   {
     id: "PCSF-NC-DECORATIVE-TRUST-FACT-RETURNS",
@@ -92,11 +93,11 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the homepage says 'Samla erfarenhet, utbildning och certifieringar' again — employment history is the CV's, not the Passport's",
     file: DICT,
-    find: '      "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",',
+    find: '      "Samla dina certifieringar, licenser och yrkesbehörigheter med underlag och tydlig status. Du väljer vilka uppgifter du delar.",',
     replace:
-      '      "Samla erfarenhet, utbildning och certifieringar. Välj Sverige, Storbritannien eller Dubai och bestäm själv vad du delar.",',
+      '      "Samla erfarenhet, utbildning och certifieringar med underlag och tydlig status. Du väljer vilka uppgifter du delar.",',
     guard: GUARD,
-    expect: "sv · the Passport sentence is the owner's",
+    expect: "sv · the Passport sentences are the specification's",
   },
 ];
 

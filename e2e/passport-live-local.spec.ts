@@ -71,7 +71,7 @@ test("real owner adds and selectively shares a credential, recipient loses acces
   const code = definitionCodes[testInfo.project.name as keyof typeof definitionCodes];
   await page
     .locator("[data-credential-wallet]")
-    .getByRole("link", { name: "Add credential", exact: true })
+    .getByRole("link", { name: "Add a credential", exact: true })
     .click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Continue", exact: true }).click();

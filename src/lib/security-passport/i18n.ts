@@ -868,7 +868,7 @@ const sv = {
   "basics.compactTitlePlaceholder": "Lägg till nuvarande yrkestitel",
   "basics.compactSave": "Spara",
   "basics.compactCancel": "Avbryt",
-  "basics.savedNotice": "Dina grunduppgifter är sparade.",
+  "basics.savedNotice": "Dina profiluppgifter har sparats.",
   // Named after what they change, not after where the control happens to sit.
   "basics.editWorkCountry": "Ändra arbetsland",
   "basics.workCountryUnset": "Arbetsland inte angivet.",
@@ -1001,7 +1001,7 @@ const sv = {
   "ev.title": "Underlag",
   "ev.lead":
     "Dokument du laddar upp är privata. Bara du ser dem — och en granskare hos CQrityjob, men bara så länge en granskning pågår.",
-  "ev.add": "Lägg till dokument",
+  "ev.add": "Bifoga underlag",
   "ev.uploading": "Laddar upp …",
   "ev.none": "Inga dokument ännu.",
   "ev.ceiling":
@@ -1276,9 +1276,9 @@ const sv = {
   // "Väntar på Bevakning AB" and the employer reads "Anställningsverifiering";
   // neither ever reads "referens", because nobody here is being asked for an
   // opinion about a person.
-  "empv.title": "Anställningsverifiering",
+  "empv.title": "Bekräfta anställningsuppgifter",
   "empv.lead":
-    "Personer som uppger att de har arbetat hos er kan be er bekräfta uppgiften. Ni bekräftar fakta — inte personen.",
+    "Granska förfrågningar och bekräfta endast uppgifter som organisationen kan styrka. Ni bekräftar fakta — inte personen.",
   "empv.openHeading": "Väntar på er",
   "empv.waitingHeading": "Väntar på personen",
   "empv.answeredHeading": "Besvarade",
@@ -1466,19 +1466,19 @@ const sv = {
   "sc.expiresOn": "Gäller till",
   "sc.opened": "Öppnad",
   "sc.timesShort": "ggr",
-  "sc.revoke": "Återkalla",
+  "sc.revoke": "Återkalla delningslänk",
   "sc.revoking": "Återkallar …",
   "sc.revokeConfirm":
     "Länken slutar fungera direkt. Den som redan öppnat sidan ser inget nytt efter det.",
   "sc.revoked": "Delningen är återkallad.",
   "rec.brand": "CQrityjob",
-  "rec.title": "Delat Security Passport",
+  "rec.title": "Delade uppgifter från Security Passport",
   "rec.checking": "Hämtar …",
   "rec.authoritative":
     "Det här är den aktuella delningen. Sidan läses om varje gång den öppnas, så den visar läget just nu och ändras om något återkallas eller går ut.",
-  "rec.unavailableTitle": "Länken är inte tillgänglig",
+  "rec.unavailableTitle": "Delningslänken är inte längre tillgänglig",
   "rec.unavailableBody":
-    "Länken kan ha gått ut, ha återkallats eller aldrig ha funnits. Be personen om en ny länk.",
+    "Be innehavaren om en ny länk. Länken kan ha gått ut, ha återkallats eller aldrig ha funnits.",
   "rec.package": "Paket",
   "rec.purpose": "Syfte",
   "rec.holder": "Innehavare",
@@ -1545,8 +1545,8 @@ const sv = {
   // whole thing. What survives is the half that is true of every share.
   "rec.notAssessment": "Ingenting på den här sidan är ett omdöme om personen.",
   "rec.ctaTitle": "Skapa ditt Security Passport",
-  "rec.ctaBody": "Samla din yrkeserfarenhet och dina behörigheter. Du bestämmer vad som delas.",
-  "rec.ctaAction": "Läs mer",
+  "rec.ctaBody": "Samla dina meriter med underlag och tydlig status. Du bestämmer vad som delas.",
+  "rec.ctaAction": "Läs om Security Passport",
   "livecard.lockedNote":
     "Innehållet styrs av verifierade uppgifter. Du kan välja om du delar kortet — inte vad det påstår.",
   "livecard.selfReportedTitle": "Egenrapporterat kort",
@@ -1571,8 +1571,8 @@ const sv = {
   // "Dokumenterad" på alla tre ställen.
   "sel.title": "Dela ditt Security Passport",
   "sel.lead":
-    "Välj vad mottagaren ska se. Du kan förhandsgranska, tidsbegränsa och återkalla länken när du vill.",
-  "sel.step.choose": "Välj vad du delar",
+    "Granska vilka meriter och uppgifter mottagaren kommer att se innan du skapar länken. Du kan tidsbegränsa och återkalla länken när du vill.",
+  "sel.step.choose": "Välj vad du vill dela",
   "sel.step.preview": "Se mottagarens vy",
   "sel.step.settings": "Länkens inställningar",
   "sel.step.create": "Skapa länken",
@@ -1594,7 +1594,7 @@ const sv = {
   "sel.language.sv": "Svenska",
   "sel.language.en": "Engelska",
   "sel.revocable": "Du kan återkalla länken när som helst. Då slutar den fungera direkt.",
-  "sel.create": "Skapa säker delningslänk",
+  "sel.create": "Skapa delningslänk",
   "sel.creating": "Skapar länk …",
   "sel.chooseFirst": "Välj minst en merit för att kunna skapa en länk.",
   "sel.willShare": "Meriter i länken:",
@@ -1666,7 +1666,7 @@ const sv = {
 
   // ── Mottagarens sida: förklaringen och trappan ─────────────────────
   "rec.whatThisIs":
-    "Det här Security Passportet innehåller uppgifter som innehavaren har valt att dela. Varje merit visar var uppgiften kommer ifrån och vilken kontroll som har gjorts.",
+    "Du ser de uppgifter som innehavaren har valt att dela. Kontrollera varje merits status, källa och giltighet.",
   "rec.legendTitle": "Vad orden betyder",
   "rec.legend.self_declared":
     "Innehavaren har lämnat uppgiften själv. Ingen annan har kontrollerat den.",
@@ -3112,7 +3112,7 @@ const en: Record<PassportCopyKey, string> = {
   "basics.compactTitlePlaceholder": "Add current professional title",
   "basics.compactSave": "Save",
   "basics.compactCancel": "Cancel",
-  "basics.savedNotice": "Your profile basics have been saved.",
+  "basics.savedNotice": "Your profile details have been saved.",
   "basics.editWorkCountry": "Change work country",
   "basics.workCountryUnset": "Work country not stated.",
   "basics.browseMarketLabel": "Show authorisations for",
@@ -3231,7 +3231,7 @@ const en: Record<PassportCopyKey, string> = {
   "ev.title": "Supporting documents",
   "ev.lead":
     "Documents you upload are private. Only you can see them — and a CQrityjob reviewer, but only while a review is open.",
-  "ev.add": "Add a document",
+  "ev.add": "Add supporting evidence",
   "ev.uploading": "Uploading …",
   "ev.none": "No documents yet.",
   "ev.ceiling":
@@ -3470,9 +3470,9 @@ const en: Record<PassportCopyKey, string> = {
   "emp.nav": "Passport requests",
 
   // ── PR 8. Employment verification, as work an employer can find ────
-  "empv.title": "Employment verification",
+  "empv.title": "Confirm employment details",
   "empv.lead":
-    "People who state that they worked for you can ask you to confirm it. You confirm facts — not the person.",
+    "Review requests and confirm only information your organisation can substantiate. You confirm facts — not the person.",
   "empv.openHeading": "Waiting for you",
   "empv.waitingHeading": "Waiting for the person",
   "empv.answeredHeading": "Answered",
@@ -3656,19 +3656,19 @@ const en: Record<PassportCopyKey, string> = {
   "sc.expiresOn": "Valid until",
   "sc.opened": "Opened",
   "sc.timesShort": "times",
-  "sc.revoke": "Revoke",
+  "sc.revoke": "Revoke share link",
   "sc.revoking": "Revoking …",
   "sc.revokeConfirm":
     "The link stops working immediately. Anyone who already opened it sees nothing new afterwards.",
   "sc.revoked": "The share has been revoked.",
   "rec.brand": "CQrityjob",
-  "rec.title": "Shared Security Passport",
+  "rec.title": "Information shared from Security Passport",
   "rec.checking": "Loading …",
   "rec.authoritative":
     "This is the current share. The page is re-read every time it is opened, so it shows the position right now and changes if something is revoked or expires.",
-  "rec.unavailableTitle": "This link is not available",
+  "rec.unavailableTitle": "This share link is no longer available",
   "rec.unavailableBody":
-    "The link may have expired, been revoked, or never existed. Ask the person for a new link.",
+    "Ask the holder for a new link. The link may have expired, been revoked, or never existed.",
   "rec.package": "Package",
   "rec.purpose": "Purpose",
   "rec.holder": "Holder",
@@ -3713,8 +3713,8 @@ const en: Record<PassportCopyKey, string> = {
   "rec.notAssessment": "Nothing on this page is a judgement about the person.",
   "rec.ctaTitle": "Create your Security Passport",
   "rec.ctaBody":
-    "Gather your professional experience and authorisations. You decide what is shared.",
-  "rec.ctaAction": "Read more",
+    "Collect your credentials with supporting evidence and a clear status. You decide what is shared.",
+  "rec.ctaAction": "Read about Security Passport",
   "livecard.lockedNote":
     "The contents are set by verified entries. You choose whether to share the card — not what it claims.",
   "livecard.selfReportedTitle": "Self-reported card",
@@ -3734,8 +3734,8 @@ const en: Record<PassportCopyKey, string> = {
   // ── Share Passport: the choice, the preview, the link ───────────────
   "sel.title": "Share your Security Passport",
   "sel.lead":
-    "Choose what the recipient will see. You can preview it, set how long it lasts, and revoke it whenever you like.",
-  "sel.step.choose": "Choose what you share",
+    "Review which credentials and details the recipient will see before creating the link. You can set how long it lasts and revoke it whenever you like.",
+  "sel.step.choose": "Choose what to share",
   "sel.step.preview": "See the recipient's view",
   "sel.step.settings": "Link settings",
   "sel.step.create": "Create the link",
@@ -3758,7 +3758,7 @@ const en: Record<PassportCopyKey, string> = {
   "sel.language.sv": "Swedish",
   "sel.language.en": "English",
   "sel.revocable": "You can revoke the link at any time. It stops working immediately.",
-  "sel.create": "Create secure share link",
+  "sel.create": "Create share link",
   "sel.creating": "Creating link …",
   "sel.chooseFirst": "Choose at least one merit to create a link.",
   "sel.willShare": "Merits in this link:",
@@ -3824,7 +3824,7 @@ const en: Record<PassportCopyKey, string> = {
 
   // ── The recipient page: the explanation and the ladder ─────────────
   "rec.whatThisIs":
-    "This Security Passport contains information the holder has chosen to share. Each merit shows where the information comes from and what checking has been done.",
+    "You are viewing the information the holder chose to share. Check each credential's status, source and validity.",
   "rec.legendTitle": "What the words mean",
   "rec.legend.self_declared": "The holder stated this themselves. Nobody else has checked it.",
   "rec.legend.documented":

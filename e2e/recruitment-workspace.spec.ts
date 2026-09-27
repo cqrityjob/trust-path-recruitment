@@ -545,7 +545,7 @@ test.describe("recruitment case", () => {
     const kim = await ctx.newPage();
     await signIn(kim, "kim.kandidat@test.local");
     await open(kim, "/jobs/nordvakt-vaktare-uppsala-uat4");
-    await kim.getByRole("button", { name: "Ansök via CQrityjob" }).click({ timeout: 60_000 });
+    await kim.getByRole("button", { name: "Ansök om jobbet" }).click({ timeout: 60_000 });
     const dialog = kim.getByRole("dialog");
     for (const group of await dialog
       .locator("input[type=radio][name^=apply-q-]")

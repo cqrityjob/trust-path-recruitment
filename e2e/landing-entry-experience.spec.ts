@@ -1,13 +1,21 @@
 // Product-led homepage entry and the canonical direct login route.
+//
+// The homepage presents three equal core parts (MVP text specification,
+// 2026-09-27): security work, Security Passport, and career and jobs. The
+// illustrative Passport card lives in the Passport section, not the hero.
+// The homepage's one read on arrival -- is the career analysis open? -- is
+// answered locally, so nothing reaches a backend through the dev server.
 
 import { test, expect, type Page } from "@playwright/test";
 import {
+  ANALYSIS_OPEN,
   BASE,
   horizontalOverflow,
   installBoundary,
   observeSupabaseStorageKey,
   plantSession,
   setLang,
+  stubServerFn,
 } from "./support/public-entry-harness";
 
 /** The owner's six widths. 1920 is not in the shared REQUIRED_WIDTHS,
@@ -16,6 +24,7 @@ import {
 const WIDTHS = [320, 375, 768, 1024, 1440, 1920] as const;
 
 const PREVIEW = "[data-home-passport-preview]";
+const CORE = "#hero [data-home-core]";
 
 async function gotoHome(page: Page): Promise<string[]> {
   const errors: string[] = [];
@@ -23,16 +32,20 @@ async function gotoHome(page: Page): Promise<string[]> {
     if (m.type() === "error") errors.push(m.text());
   });
   page.on("pageerror", (e) => errors.push(String(e)));
+  await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   return errors;
 }
 
 test.describe("the landing page is product-led", () => {
-  test("a signed-out visitor sees the Passport anchor and both entrances", async ({ page }) => {
+  test("a signed-out visitor sees the three core parts and the Passport example", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const errors = await gotoHome(page);
     await expect(page.locator(PREVIEW)).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator("#hero [data-home-entry]")).toHaveCount(2);
+    await expect(page.locator(CORE)).toHaveCount(3);
+    await expect(page.locator(`#hero ${PREVIEW}`)).toHaveCount(0);
     await expect(page.locator('#hero input[type="email"]')).toHaveCount(0);
     await expect(page.locator('#hero a[href="/login"]')).toBeVisible();
     expect(errors, `console errors: ${errors.join(" | ")}`).toEqual([]);
@@ -40,6 +53,7 @@ test.describe("the landing page is product-led", () => {
 
   test("a signed-in visitor still reaches their workspace", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
+    await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     const key = await observeSupabaseStorageKey(page);
 
@@ -53,6 +67,8 @@ test.describe("the landing page is product-led", () => {
       countMyAcademyWork: 0,
       countMyReviewQueue: 0,
       ensureMyEmployerCompanyFromSignup: null,
+      getV31Availability: ANALYSIS_OPEN,
+      getV31TesterStatus: { allowed: false },
     });
     await plantSession(page, key);
     await page.goto(`${BASE}/`, { waitUntil: "domcontentloaded" });
@@ -105,37 +121,30 @@ test.describe("the landing page is product-led", () => {
     });
   }
 
-  test("the Passport is the visual anchor and Career Discovery remains clear", async ({ page }) => {
+  test("the three core parts are equal peers, each with one button", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await gotoHome(page);
-    await expect(page.locator('[data-home-entry="passport"]')).toBeVisible();
-    await expect(page.locator('[data-home-entry="discovery"]')).toBeVisible();
-    await expect(page.locator('[data-home-entry="passport"] a')).toBeVisible();
-    await expect(page.locator('[data-home-entry="discovery"] a')).toBeVisible();
+    const cards = page.locator(CORE);
+    await expect(cards).toHaveCount(3);
+    for (const card of await cards.all()) {
+      await expect(card).toBeVisible();
+      await expect(card.locator("a.h-11")).toHaveCount(1);
+      await expect(card.locator("a.h-11")).toBeVisible();
+    }
   });
 
   for (const width of [1440, 1920] as const) {
-    test(`both entrances stay above the fold beside the preview at ${width}px`, async ({
-      page,
-    }) => {
-      await page.setViewportSize({ width, height: 900 });
+    test(`all three core parts stay in the first screen at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: width === 1920 ? 1080 : 900 });
       for (const lang of ["sv", "en"] as const) {
         await gotoHome(page);
         await setLang(page, lang);
-        await expect(page.locator(PREVIEW)).toBeVisible({ timeout: 30_000 });
-        const entries = await page.locator("#hero [data-home-entry]").all();
-        expect(entries).toHaveLength(2);
-        for (const card of entries) {
+        const headings = await page.locator(`${CORE} h2`).all();
+        expect(headings).toHaveLength(3);
+        for (const heading of headings) {
           await expect(
-            card,
-            `${lang}: an entrance is below the fold at ${width}px`,
-          ).toBeInViewport();
-        }
-        // And its action, not merely its top edge.
-        for (const action of await page.locator("#hero [data-home-entry] a").all()) {
-          await expect(
-            action,
-            `${lang}: an entrance action is below the fold at ${width}px`,
+            heading,
+            `${lang}: a core part is below the fold at ${width}px`,
           ).toBeInViewport();
         }
       }
@@ -155,6 +164,7 @@ test.describe("/login remains the canonical authentication page", () => {
 
   test("refresh, back and forward keep both surfaces intact", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
+    await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await expect(page.locator(PREVIEW)).toBeVisible({ timeout: 30_000 });
     await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });

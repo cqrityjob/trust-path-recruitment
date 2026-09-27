@@ -80,8 +80,8 @@ export function SecurityWorkEntry() {
                   "Open the security work you want to continue.",
                 )
               : l(
-                  "Från underlag till tydliga bedömningar, rapporter och nästa steg. Skapa en arbetsyta för att börja.",
-                  "From evidence to clear assessments, reports and next steps. Create a workspace to get started.",
+                  "Samla underlag, strukturera bedömningar och följ upp åtgärder för säkerhet, risk och beredskap. Skapa en arbetsyta för att börja.",
+                  "Collect evidence, structure assessments and follow up actions for security, risk and preparedness. Create a workspace to get started.",
                 )}
         </p>
       </div>

@@ -237,7 +237,7 @@ for (const locale of ["sv", "en"] as const) {
         .toBe(1);
       await expect(page.getByTestId("sw-services")).toBeVisible();
       await expect(page.getByTestId("sw-assistance-status")).toContainText(
-        locale === "sv" ? "inte tillgängligt" : "unavailable",
+        locale === "sv" ? "inte tillgängligt" : "not available",
       );
       await shot(page, locale, "service-overview");
       for (const method of ["monitoring", "rsa"] as const) {

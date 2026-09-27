@@ -5,18 +5,20 @@
 // scripts/public-homepage-check.tsx renders the route to markup: it counts
 // sections, headings and words and reads the copy. It cannot see a layout.
 // It cannot tell you that nothing scrolls sideways at 320px, that a control
-// is 44px, that a focus ring is actually drawn, that the two entry cards are
+// is 44px, that a focus ring is actually drawn, that the three core cards are
 // the SAME SIZE ON SCREEN — or, the one that matters most, that a call to
 // action LANDS somewhere that renders.
 //
-// ── WHAT CHANGED (2026-09-13) ──────────────────────────────────────────
+// ── WHAT CHANGED (MVP text specification, 2026-09-27) ──────────────────
 //
-// This file used to assert the single-product page: one h1, three h2, ONE
-// visually primary CTA, and "the Career Analysis is a supporting tool, not
-// in the hero, in words or as a control". That is superseded. The page now
-// has TWO PEER individual entrances and the spec's job is to prove they are
-// peers where only a browser can see it: same rendered width, same rendered
-// height, same computed button background, both above the fold on a laptop.
+// This file used to assert the two-peer-entrance page: the Passport as the
+// hero's dark anchor, Career Discovery beside it, and a five-item public bar
+// with no product names. That is superseded. The page now presents THREE
+// EQUAL core parts — security work, Security Passport, career and jobs — and
+// a separate employer band, and the public bar names the three parts first.
+// The spec's job is to prove those are equals where only a browser can see
+// it: same rendered width, same rendered height, one equally styled button
+// each, all three in the first screen.
 //
 // Every homepage and header CTA here is clicked. For each one the spec
 // asserts the resulting URL, that the destination rendered a heading or an
@@ -25,29 +27,24 @@
 //
 // ── HOW THE BACKEND IS HANDLED ─────────────────────────────────────────
 //
-// Mostly it is not, because the homepage does not need one: static copy
-// plus a single `supabase.auth.getSession()`. The signed-in tests plant a
-// session the way supabase-js stores one — under the key the client actually
-// asks for, OBSERVED rather than hardcoded, because that key is derived from
-// the project URL and differs between a local stack, a preview and
-// production. Nothing reaches a database.
+// The homepage makes one read on arrival — is the career analysis open? —
+// and every test answers it locally (`stubServerFn`), so nothing reaches a
+// backend through the dev server. The signed-in tests plant a session the
+// way supabase-js stores one — under the key the client actually asks for,
+// OBSERVED rather than hardcoded. Nothing reaches a database.
 //
 // ── THIS SUITE IS BLOCKING CI (2026-09-13) ─────────────────────────────
 //
-// It used to be a local-only suite, on the same footing as
-// e2e/my-career-home.spec.ts. The review was explicit that a spec nobody
-// runs is not evidence, so `public-entry-browser` in .github/workflows/ci.yml
-// starts the real application and runs this file and e2e/employer-landing
-// .spec.ts against it, with no `continue-on-error` and no skip path. The
-// screenshots it writes are uploaded as a CI artifact.
-//
-// Nothing reaches production: e2e/support/public-entry-harness.ts refuses
-// every request to a Supabase host and every unstubbed server function.
+// `public-entry-browser` in .github/workflows/ci.yml starts the real
+// application and runs this file against it, with no `continue-on-error` and
+// no skip path. The screenshots it writes are uploaded as a CI artifact.
 //
 // Run:  E2E_BASE_URL=http://localhost:3100 bunx playwright test e2e/public-homepage.spec.ts
 
 import { test, expect, type Page } from "@playwright/test";
 import {
+  ANALYSIS_CLOSED,
+  ANALYSIS_OPEN,
   BASE,
   horizontalOverflow,
   installBoundary,
@@ -56,30 +53,49 @@ import {
   REQUIRED_WIDTHS,
   setLang,
   shot,
+  stubServerFn,
   undersizedTargets,
 } from "./support/public-entry-harness";
 
-/** The seven sections the owner-approved MVP homepage has, in order. They
- *  replaced the four-section page (hero, employers, lifecycle, passport). */
+/** The seven sections the MVP text specification sets, in order. */
 const SECTION_ORDER = [
   "hero",
-  "value",
-  "employers",
   "security-intelligence",
-  "get-started",
   "passport",
+  "career",
+  "employers",
+  "get-started",
   "faq",
 ] as const;
 
-/** The MVP h1, in both languages. */
+/** The headline, in both languages — kept by the specification. */
 const H1 = {
   sv: "Din karriär och ditt säkerhetsarbete. På samma plats.",
   en: "Your career and your security work. In one place.",
 } as const;
 
+/** The three core cards' headings, in order. */
+const CORE = {
+  sv: [
+    "Stöd i ditt säkerhetsarbete",
+    "Visa dina meriter med Security Passport",
+    "Hitta rätt yrkesväg och jobb",
+  ],
+  en: [
+    "Support for your security work",
+    "Present your credentials with Security Passport",
+    "Find your career path and next role",
+  ],
+} as const;
+
+/** The public bar, in both languages. */
+const NAV = {
+  sv: ["Säkerhetsarbete", "Security Passport", "Karriär", "Jobb", "För arbetsgivare", "Om oss"],
+  en: ["Security work", "Security Passport", "Career", "Jobs", "For employers", "About"],
+} as const;
+
 /** Headings, claims and calls to action that were removed and must not come
- *  back — the superseded single-product page, and phrases the product cannot
- *  support. */
+ *  back — the superseded pages, and phrases the product cannot support. */
 const REMOVED_SV = [
   "Din säkerhetskarriär. Samlad på ett ställe.",
   "Din yrkesidentitet inom säkerhet",
@@ -89,28 +105,40 @@ const REMOVED_SV = [
   "Se lösningar för arbetsgivare",
   "Gör karriärtestet",
   "Kostnadsfritt karriärtest inom säkerhet",
+  "kostnadsfri",
   "mät din kompetens",
   "Prata med oss",
+  "Kontakta oss",
   "verifierade meriter",
   "kompetensverifiering",
   "rätt kandidat",
-  // The value-card label the MVP briefly brought back, and the ranking
-  // vocabulary this page may not use even negated.
   "Skapa ditt Security Passport",
   "rangordn",
+  // The two-peer-entrance page (2026-09-13 to 2026-09-27).
+  "Upptäck din säkerhetskarriär",
+  "Starta Career Discovery",
+  "fortsätta i My Career",
+  "Se företagsplattformen",
+  "Öppna Security Intelligence",
 ] as const;
 
 async function visibleText(page: Page): Promise<string> {
   return page.evaluate(() => document.querySelector("main")!.innerText);
 }
 
+/** The homepage, with the career analysis's status answered locally. */
+async function gotoHome(page: Page, analysis = ANALYSIS_OPEN): Promise<void> {
+  await stubServerFn(page, "getV31Availability", analysis);
+  await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+}
+
 test.describe("the public homepage", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+    await gotoHome(page);
   });
 
   // H1 ──────────────────────────────────────────────────────────────────
-  test("main carries exactly seven sections, in the approved MVP order", async ({ page }) => {
+  test("main carries exactly seven sections, in the specified order", async ({ page }) => {
     const sections = await page.evaluate(() =>
       [...document.querySelector("main")!.children].map((el) => ({
         tag: el.tagName.toLowerCase(),
@@ -127,7 +155,7 @@ test.describe("the public homepage", () => {
   });
 
   // H2 ──────────────────────────────────────────────────────────────────
-  test("the superseded single-product page is gone from the page AND the DOM", async ({ page }) => {
+  test("the superseded pages are gone from the page AND the DOM", async ({ page }) => {
     const text = await visibleText(page);
     for (const phrase of REMOVED_SV) {
       expect(text.toLowerCase(), `"${phrase}" is still rendered`).not.toContain(
@@ -145,91 +173,160 @@ test.describe("the public homepage", () => {
   });
 
   // H3 ──────────────────────────────────────────────────────────────────
-  test("one h1, eight h2, five h3, and the MVP framing", async ({ page }) => {
+  test("one h1, nine h2, five h3, and the specified framing", async ({ page }) => {
     expect(await page.locator("main h1").count()).toBe(1);
-    // The two entrances in the hero, then one per section below it.
-    expect(await page.locator("main h2").count()).toBe(8);
-    expect(await page.locator("#hero h2").count()).toBe(2);
+    // The three core cards in the hero, then one per section below it.
+    expect(await page.locator("main h2").count()).toBe(9);
+    expect(await page.locator("#hero h2").allInnerTexts()).toEqual([...CORE.sv]);
     for (const id of SECTION_ORDER.slice(1)) {
       expect(await page.locator(`#${id} h2`).count(), `#${id} has one h2`).toBe(1);
     }
-    // h3 is the three value cards and the two get-started audiences.
+    // h3 is the three security-work examples and the two get-started
+    // audiences.
     expect(await page.locator("main h3").count()).toBe(5);
-    expect(await page.locator("#value h3").count()).toBe(3);
+    expect(await page.locator("#security-intelligence h3").allInnerTexts()).toEqual([
+      "Omvärldsanalys",
+      "Riskanalys",
+      "Underlag för beredskap",
+    ]);
     expect(await page.locator("#get-started h3").allInnerTexts()).toEqual([
       "För dig som person",
       "För arbetsgivare",
     ]);
     await expect(page.locator("main h1")).toHaveText(H1.sv);
 
-    const hero = page.locator("#hero");
-    const heroText = await hero.innerText();
+    const heroText = await page.locator("#hero").innerText();
     expect(heroText).toContain(
-      "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
+      "Samla dina meriter i Security Passport, hitta rätt yrkesväg och jobb, och få stöd i ditt arbete med säkerhet, risk och krisberedskap.",
     );
-    // Said beside the action it is about.
-    expect(heroText).toContain("Lediga jobb kan du läsa utan konto.");
-    // BOTH products are named in the hero. Neither is the page's subject at
-    // the other's expense.
-    expect(heroText).toContain("Bygg ditt Security Passport");
-    expect(heroText).toContain("Upptäck din säkerhetskarriär");
+    expect(heroText).toContain("Har du redan ett konto?");
+    expect(heroText).toContain("Rekryterar du?");
+    // Said inside the career card.
+    expect(await page.locator('[data-home-core="career"]').innerText()).toContain(
+      "Du kan läsa yrkesinformation och jobbannonser utan konto.",
+    );
   });
 
   // H4 ──────────────────────────────────────────────────────────────────
   //
-  // The Passport is the defining visual product while Career Discovery
-  // remains a clear, independently actionable path.
-  test("the Passport anchors the hero and Career Discovery remains clear", async ({ page }) => {
+  // Equal where only a browser can see it: the same rendered width and
+  // height, and one button each wearing the same computed style.
+  test("the three core cards are equals on screen", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.reload({ waitUntil: "networkidle" });
 
-    await expect(page.locator('[data-home-entry="passport"]')).toBeVisible();
-    await expect(page.locator('[data-home-entry="discovery"]')).toBeVisible();
-    await expect(page.locator('[data-home-entry="passport"] a')).toHaveAttribute(
-      "href",
-      "/signup?redirect=%2Fpassport",
+    const cards = page.locator("#hero [data-home-core]");
+    await expect(cards).toHaveCount(3);
+    const shapes = await cards.evaluateAll((els) =>
+      els.map((el) => {
+        const r = el.getBoundingClientRect();
+        const buttons = [...el.querySelectorAll<HTMLElement>("a")].filter((a) =>
+          a.className.split(/\s+/).includes("h-11"),
+        );
+        const b = buttons[0];
+        const cs = b ? getComputedStyle(b) : null;
+        const h = el.querySelector("h2");
+        return {
+          key: el.getAttribute("data-home-core"),
+          w: Math.round(r.width),
+          h: Math.round(r.height),
+          buttons: buttons.length,
+          buttonStyle: cs ? `${cs.backgroundColor}|${cs.borderTopColor}|${cs.height}` : "",
+          href: b?.getAttribute("href"),
+          heading: h ? getComputedStyle(h).fontSize : "",
+        };
+      }),
     );
-    await expect(page.locator('[data-home-entry="discovery"] a')).toHaveAttribute(
-      "href",
-      "/security-career-assessment",
-    );
+    expect(shapes.map((s) => s.key)).toEqual(["work", "passport", "career"]);
+    for (const s of shapes) expect(s.buttons, `${s.key} has one button`).toBe(1);
+    const [first] = shapes;
+    for (const s of shapes) {
+      expect(Math.abs(s.w - first.w), `${s.key} is not as wide as the others`).toBeLessThanOrEqual(
+        1,
+      );
+      expect(Math.abs(s.h - first.h), `${s.key} is not as tall as the others`).toBeLessThanOrEqual(
+        1,
+      );
+      expect(s.buttonStyle, `${s.key} wears a different button`).toBe(first.buttonStyle);
+      expect(s.heading, `${s.key} has a different heading size`).toBe(first.heading);
+    }
+    expect(shapes.map((s) => s.href)).toEqual([
+      "/#security-intelligence",
+      "/#passport",
+      "/career-center?all=true#utforska-yrken",
+    ]);
+    // No large Passport visual in the hero: the example lives in its section.
+    await expect(page.locator("#hero [data-home-passport-preview]")).toHaveCount(0);
+    await expect(page.locator("#passport [data-home-passport-preview]")).toHaveCount(1);
   });
 
   // H5 ──────────────────────────────────────────────────────────────────
-  test("both entry cards are visible without scrolling on a laptop", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.reload({ waitUntil: "networkidle" });
-    for (const card of await page.locator("#hero [data-home-entry]").all()) {
-      await expect(card).toBeInViewport();
-    }
-  });
+  //
+  // "The reader understands the three core parts within the first screen":
+  // each card's heading is on screen before any scroll, on a small desktop
+  // and on a laptop, in both languages.
+  for (const [width, height] of [
+    [1024, 768],
+    [1440, 900],
+  ] as const) {
+    test(`all three core parts are in the first screen at ${width} by ${height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      for (const lang of ["sv", "en"] as const) {
+        await setLang(page, lang);
+        for (const heading of await page.locator("#hero [data-home-core] h2").all()) {
+          await expect(heading, `${lang}: a core part is below the fold`).toBeInViewport();
+        }
+      }
+    });
+  }
 
-  test("both primary actions fit in a 1024 by 768 desktop viewport, in both languages", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1024, height: 768 });
+  test("on a large screen the three buttons are in the first screen too", async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
     for (const lang of ["sv", "en"] as const) {
       await setLang(page, lang);
-      for (const action of await page.locator("#hero [data-home-entry] a").all()) {
+      for (const card of await page.locator("#hero [data-home-core]").all()) {
         await expect(
-          action,
-          `${lang}: primary entry action is below the first viewport`,
+          card.locator("a.h-11"),
+          `${lang}: a core button is below the fold`,
         ).toBeInViewport();
       }
     }
   });
 
-  // REPLACES "the homepage keeps public navigation neutral until a section
-  // is selected". That test drove the header's Security Passport item,
-  // which pointed at `/#passport` and which the owner has removed from the
-  // public bar. Neutrality was never the rule worth protecting — correct
-  // active state was, and the old nav could only express it by carrying an
-  // item that was current for no page.
+  // H5b ─────────────────────────────────────────────────────────────────
   //
-  // "För dig" points at `/` and is matched exactly, so on the homepage it
-  // IS current, and that is right. What must hold is that exactly one item
-  // is current, that it is the right one, and that it follows navigation.
-  test("exactly one public nav item is current, and it follows the route", async ({ page }) => {
+  // The two product entries in the bar, and the two core buttons that
+  // explain before they ask, land on their own section of this page.
+  for (const [scope, label, section] of [
+    ["header", "Säkerhetsarbete", "security-intelligence"],
+    ["header", "Security Passport", "passport"],
+    ["#hero", "Utforska säkerhetsarbetet", "security-intelligence"],
+    ["#hero", "Utforska Security Passport", "passport"],
+  ] as const) {
+    test(`${scope} "${label}" lands on #${section}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.reload({ waitUntil: "networkidle" });
+      await page
+        .locator(scope)
+        .getByRole("link", { name: label, exact: true })
+        .filter({ visible: true })
+        .first()
+        .click();
+      await page.waitForURL((u) => u.hash === `#${section}`, { timeout: 15_000 });
+      expect(new URL(page.url()).pathname).toBe("/");
+      await expect(page.locator(`#${section} h2`)).toBeInViewport();
+    });
+  }
+
+  // H5c ─────────────────────────────────────────────────────────────────
+  //
+  // On the bare homepage the bar is neutral; a section entry is current only
+  // on its own section, and the marker follows navigation.
+  test("the public bar is neutral on /, and the current item follows the reader", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.reload({ waitUntil: "networkidle" });
 
@@ -243,68 +340,95 @@ test.describe("the public homepage", () => {
         )
       ).map((x) => x.trim());
 
-    expect(await currentLabels(), "on / the umbrella item is the current one").toEqual(["För dig"]);
+    expect(await currentLabels(), "on / no item is current").toEqual([]);
+
+    await items.filter({ hasText: "Security Passport" }).first().click();
+    await page.waitForURL((u) => u.hash === "#passport", { timeout: 15_000 });
+    await expect.poll(currentLabels).toEqual(["Security Passport"]);
 
     await items.filter({ hasText: "Jobb" }).first().click();
-    await page.waitForURL("**/jobs", { timeout: 15_000 });
-    expect(await currentLabels(), "the marker follows the route").toEqual(["Jobb"]);
-
-    // And "För dig" is matched EXACTLY: a prefix match would leave it
-    // current on /jobs too, which is the defect `exact` exists to stop.
-    await expect(items.filter({ hasText: "För dig" }).first()).not.toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await page.waitForURL((u) => u.pathname === "/jobs", { timeout: 15_000 });
+    await expect.poll(currentLabels).toEqual(["Jobb"]);
   });
 
   // H6 ──────────────────────────────────────────────────────────────────
-  test("the anonymous-start disclosure sits beside the Career Discovery action", async ({
+  //
+  // The career analysis follows its existing access status. Open: a direct
+  // action to the canonical route. Not open: the specified sentence, and the
+  // career card drops its analysis link rather than advertise a closed door.
+  test("the career analysis action is offered while it is open", async ({ page }) => {
+    const career = page.locator("#career");
+    await expect(career.getByRole("link", { name: "Gör karriäranalysen" })).toHaveAttribute(
+      "href",
+      "/security-career-assessment",
+    );
+    await expect(
+      page.locator('[data-home-core="career"]').getByRole("link", { name: "Gör karriäranalysen" }),
+    ).toHaveCount(1);
+    await expect(career).toContainText(
+      "Karriäranalysen ger vägledning. Den avgör inte din kompetens, behörighet eller om du får ett jobb.",
+    );
+    await expect(page.locator("[data-career-analysis-closed]")).toHaveCount(0);
+  });
+
+  test("when the analysis is not open, the page says so in the specified words", async ({
     page,
   }) => {
-    const hero = page.locator("#hero");
-    const text = await hero.innerText();
-    expect(text).toContain(
-      "Du kan börja utan konto. Skapa ett konto när du vill spara resultatet och fortsätta i My Career.",
+    await gotoHome(page, ANALYSIS_CLOSED);
+    const closed = page.locator("[data-career-analysis-closed]");
+    await expect(closed).toHaveText(
+      "Karriäranalysen är inte öppen för nya deltagare just nu. Du kan fortfarande utforska yrken och jobb.",
     );
-    const discovery = await page.locator('[data-home-entry="discovery"]').innerText();
-    expect(discovery).toContain("Du kan börja utan konto.");
-    expect(discovery).toContain("Starta Career Discovery");
+    await expect(
+      page.locator("#career").getByRole("link", { name: "Gör karriäranalysen" }),
+    ).toHaveCount(0);
+    await expect(
+      page.locator('[data-home-core="career"]').getByRole("link", { name: "Gör karriäranalysen" }),
+    ).toHaveCount(0);
+    // Professions and jobs are still one click away.
+    await expect(page.locator("#career a[href='/career-center']")).toHaveCount(1);
+    await expect(page.locator("#career a[href='/jobs']")).toHaveCount(1);
+    await shot(
+      page,
+      "homepage-sv-career-analysis-closed",
+      "Career section when the career analysis is not open: the specified sentence, no action",
+    );
   });
 
   // H7 ──────────────────────────────────────────────────────────────────
-  test("the employer strip is separate, below the cards, and is not a third product card", async ({
+  test("the employer band is separate, after the three parts, and is not a fourth card", async ({
     page,
   }) => {
-    const strip = page.locator("#employers");
-    const text = await strip.innerText();
-    expect(text).toContain("Rekryterar du inom säkerhet?");
+    const band = page.locator("#employers");
+    const text = await band.innerText();
+    expect(text).toContain("Rekrytera och utveckla säkerhetspersonal");
     expect(text).toContain(
-      "Publicera jobb, hantera kandidater och använd strukturerade tester och intervjuer i samma plattform.",
+      "Samla jobbannonser, ansökningar, rekryteringstester och strukturerade intervjuer i Företagsportalen. Fortsätt med kompetensutveckling för medarbetarna. Ni fattar och dokumenterar besluten.",
     );
-    const [heroBottom, stripTop] = await page.evaluate(() => [
-      document.querySelector("#hero")!.getBoundingClientRect().bottom + window.scrollY,
+    const [careerBottom, bandTop] = await page.evaluate(() => [
+      document.querySelector("#career")!.getBoundingClientRect().bottom + window.scrollY,
       document.querySelector("#employers")!.getBoundingClientRect().top + window.scrollY,
     ]);
-    expect(stripTop, "the employer strip is not below the two cards").toBeGreaterThanOrEqual(
-      heroBottom - 2,
+    expect(bandTop, "the employer band is not after the three parts").toBeGreaterThanOrEqual(
+      careerBottom - 2,
     );
     // Its own band: a different background from the hero, which is what
     // "visually separate" means to a reader.
-    const [heroBg, stripBg] = await page.evaluate(() => [
+    const [heroBg, bandBg] = await page.evaluate(() => [
       getComputedStyle(document.querySelector("#hero")!).backgroundColor,
       getComputedStyle(document.querySelector("#employers")!).backgroundColor,
     ]);
-    expect(stripBg).not.toBe(heroBg);
-    expect(await strip.locator('a[href="/signup?redirect=%2Femployer"]').count()).toBe(1);
-    expect(await strip.locator('a[href="/employers"]').count()).toBe(1);
+    expect(bandBg).not.toBe(heroBg);
+    expect(await band.locator('a[href="/signup?redirect=%2Femployer"]').count()).toBe(1);
+    expect(await band.locator('a[href="/employers"]').count()).toBe(1);
+    await expect(page.locator("#hero [data-home-core]")).toHaveCount(3);
   });
 
   // H8 ──────────────────────────────────────────────────────────────────
   //
-  // REPLACES "the connected lifecycle explains six stages and offers no
-  // solid action". The lifecycle section is gone with the MVP layout. What
-  // it guarded still holds for the sections that replaced it: they explain
-  // and link, and none of them draws a solid action of its own.
+  // The deep dives explain and link, and none of them draws a solid action
+  // of its own: the page's solid actions are the hero's account action and
+  // the employer registration.
   test("the sections below the hero explain and link, and draw no solid action", async ({
     page,
   }) => {
@@ -314,7 +438,7 @@ test.describe("the public homepage", () => {
       document.body.append(probe);
       const navy = getComputedStyle(probe).backgroundColor;
       probe.remove();
-      return ["value", "security-intelligence", "get-started", "passport", "faq"].map((id) => ({
+      return ["security-intelligence", "passport", "career", "get-started", "faq"].map((id) => ({
         id,
         solid: [...document.querySelectorAll<HTMLElement>(`#${id} a`)].filter(
           (el) => getComputedStyle(el).backgroundColor === navy,
@@ -322,8 +446,8 @@ test.describe("the public homepage", () => {
       }));
     });
     for (const s of solid) expect(s.solid, `#${s.id} draws a solid action`).toBe(0);
-    // The value cards each offer a way onward.
-    expect(await page.locator("#value a").count()).toBe(3);
+    // The career section offers the analysis, the professions and the jobs.
+    expect(await page.locator("#career a").count()).toBe(3);
     // Three steps for a person and three for an employer, each in order.
     await expect(page.locator("#get-started ol")).toHaveCount(2);
     for (const list of await page.locator("#get-started ol").all()) {
@@ -332,54 +456,65 @@ test.describe("the public homepage", () => {
   });
 
   // H8b ─────────────────────────────────────────────────────────────────
-  //
-  // What the MVP sections say, where a reader meets it: the owner kept this
-  // content (2026-09-27), and only repetition was cut.
-  test("the employer decides, Security Intelligence keeps its boundary, and the steps are there", async ({
+  test("the employer decides, security work keeps its boundary, and the steps are there", async ({
     page,
   }) => {
-    const strip = page.locator("#employers");
-    await expect(strip).toContainText("För arbetsgivare");
-    const flow = (await strip.locator("ol > li").allInnerTexts()).map((s) =>
+    const band = page.locator("#employers");
+    await expect(band).toContainText("För arbetsgivare");
+    const flow = (await band.locator("ol > li").allInnerTexts()).map((s) =>
       s.replace(/^\s*\d+\.\s*/, "").trim(),
     );
-    expect(flow, "the employer flow has five steps").toHaveLength(5);
-    expect(flow.at(-1), "the flow ends in the employer's own decision").toBe("Ni fattar beslutet");
+    expect(flow, "the employer flow").toEqual([
+      "Publicera jobb",
+      "Hantera ansökningar",
+      "Använd rekryteringstester",
+      "Förbered intervjun",
+      "Fatta och dokumentera beslutet",
+    ]);
+    // Learning and development after the steps, as continued use.
+    await expect(band).toContainText("Därefter: kompetensutveckling för medarbetarna.");
 
     const si = page.locator("#security-intelligence");
     const siText = await si.innerText();
     expect(siText).toContain(
-      "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
+      "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Ditt säkerhetsarbete delas inte automatiskt med din karriärprofil, Security Passport eller arbetsgivare.",
     );
-    // Task, input, output and review.
+    expect(siText).toContain(
+      "Arbetsytan kan användas manuellt. AI-stöd och dokumentbearbetning har separat tillgänglighet som visas när du öppnar arbetsytan.",
+    );
+    expect(siText).toContain("När AI-stödet är tillgängligt");
+    // Task, evidence, results and review.
     expect(await si.locator("dt").allInnerTexts()).toEqual([
       "Uppgift",
-      "Ditt underlag",
-      "Det du får",
+      "Underlag",
+      "Resultat",
       "Din granskning",
     ]);
-    expect(siText).toContain("du står för bedömningen");
-    expect(siText).toContain("Du bedömer relevansen och ansvarar för slutsatserna.");
-    expect(siText).toContain("AI-utkast finns där funktionen är aktiverad för arbetsytan.");
+    expect(siText).toContain(
+      "Kontrollera källor, osäkerheter och slutsatser. Du väljer vilka förslag du använder och godkänner rapporten.",
+    );
     expect(await si.locator("a").count()).toBe(1);
     await expect(si.locator("a")).toHaveAttribute("href", "/signup?redirect=%2Fsecurity-work");
+    await expect(si.locator("a")).toHaveText("Öppna Mitt säkerhetsarbete");
 
     const start = await page.locator("#get-started").innerText();
-    expect(start).toContain("Vi granskar kontot innan arbetsytan aktiveras.");
+    expect(start).toContain("Följ organisationens status medan registreringen granskas.");
+    expect(start).toContain("Du behöver inte fylla i alla delar för att börja.");
   });
 
   // H8c ─────────────────────────────────────────────────────────────────
   //
-  // Five questions, each a native disclosure: closed until asked, opened by
-  // the keyboard, and the answer that matters most -- who decides -- is
-  // exactly what it says.
-  test("the five questions open by keyboard, and say who decides and what is verified", async ({
+  // Six questions, each a native disclosure: closed until asked, opened by
+  // the keyboard, and the answers that matter most -- who decides, what is
+  // verified, and what AI does -- are exactly what they say.
+  test("the six questions open by keyboard, and say who decides, what is verified and what AI does", async ({
     page,
   }) => {
     const faq = page.locator("#faq");
     const items = faq.locator("details");
-    await expect(items).toHaveCount(5);
-    await expect(faq).toContainText("Priser och paket är inte publicerade ännu");
+    await expect(items).toHaveCount(6);
+    await expect(faq).toContainText("Priser och paket är inte publicerade ännu.");
+    await expect(faq.locator('a[href="/contact"]')).toHaveCount(0);
 
     const open = async (question: string) => {
       const item = items.filter({ hasText: question });
@@ -394,21 +529,26 @@ test.describe("the public homepage", () => {
     };
 
     const who = await open("Beslutar AI vem som anställs?");
-    await expect(who).toContainText("människor fattar och dokumenterar varje beslut.");
-    await expect(who).toContainText("Plattformen sorterar inte kandidater från bäst till sämst.");
-
-    const verified = await open("Är mina meriter verifierade?");
-    await expect(verified).toContainText("En uppladdad handling är inte automatiskt verifierad.");
-    await expect(verified).toContainText(
-      "En internationell certifiering innebär inte automatiskt lokal yrkesbehörighet.",
+    await expect(who).toContainText(
+      "Arbetsgivaren granskar underlaget och fattar och dokumenterar beslutet.",
     );
 
-    const jobs = await open("Behöver jag ett konto för att söka jobb?");
+    const verified = await open("Är mina meriter verifierade?");
+    await expect(verified).toContainText(
+      "En egen uppgift eller en uppladdad handling är inte automatiskt källbekräftad.",
+    );
+
+    const jobs = await open("Behöver jag konto för att läsa jobbannonser?");
     await expect(jobs).toContainText("Du kan söka och läsa annonser utan konto.");
+
+    const ai = await open("Hur hjälper AI till i säkerhetsarbetet?");
+    await expect(ai).toContainText("Arbetsytan kan också användas manuellt.");
   });
 
   // H9 ──────────────────────────────────────────────────────────────────
-  test("the Passport section names three markets and carries the disclaimer", async ({ page }) => {
+  test("the Passport section: what it holds, the fictional example, three markets and the disclaimer", async ({
+    page,
+  }) => {
     const passport = page.locator("#passport");
     const text = await passport.innerText();
     for (const market of ["Sverige", "Storbritannien", "Dubai"]) {
@@ -417,6 +557,16 @@ test.describe("the public homepage", () => {
     expect(text).toContain(
       "Security Passport hjälper dig att strukturera och dela information. Det ersätter inte en myndighetslicens, säkerhetsprövning, rätt att arbeta eller arbetsgivarens egna kontroller.",
     );
+    expect(text).toContain(
+      "Ett uppladdat dokument innebär inte i sig att uppgiften har verifierats.",
+    );
+    expect(text).toContain(
+      "Du väljer vad som delas. En jobbansökan delar inte ditt Security Passport automatiskt.",
+    );
+    await expect(passport.locator("[data-home-passport-example-caption]")).toHaveText(
+      "Exempel – påhittad person och påhittade meriter.",
+    );
+    await expect(passport.locator("[data-home-passport-example] a")).toHaveCount(0);
     // Northern Ireland is a SUBMARKET, Abu Dhabi is closed: neither is a
     // market this page may name.
     for (const absent of ["Nordirland", "Abu Dhabi"]) {
@@ -485,43 +635,51 @@ test.describe("the public homepage", () => {
   // come home.
   const CTAS = [
     {
-      name: 'hero "Starta Career Discovery"',
+      name: 'hero "Se företagsportalen"',
       scope: "#hero",
-      label: "Starta Career Discovery",
+      label: "Se företagsportalen",
+      url: "/employers",
+    },
+    {
+      name: 'career card "Utforska yrken"',
+      scope: "#hero",
+      label: "Utforska yrken",
+      url: "/career-center",
+    },
+    { name: 'career card "Hitta jobb"', scope: "#hero", label: "Hitta jobb", url: "/jobs" },
+    {
+      name: 'career section "Gör karriäranalysen"',
+      scope: "#career",
+      label: "Gör karriäranalysen",
       url: "/security-career-assessment",
     },
     {
-      name: 'employer strip "Se företagsplattformen"',
+      name: 'career section "Utforska yrken och karriärvägar"',
+      scope: "#career",
+      label: "Utforska yrken och karriärvägar",
+      url: "/career-center",
+    },
+    {
+      name: 'career section "Se lediga jobb"',
+      scope: "#career",
+      label: "Se lediga jobb",
+      url: "/jobs",
+    },
+    {
+      name: 'employer band "Utforska Företagsportalen"',
       scope: "#employers",
-      label: "Se företagsplattformen",
+      label: "Utforska Företagsportalen",
       url: "/employers",
     },
-    // The MVP layout's own links, replacing the lifecycle's.
-    { name: 'hero "Hitta jobb"', scope: "#hero", label: "Hitta jobb", url: "/jobs" },
+    { name: 'header "Logga in"', scope: "header", label: "Logga in", url: "/login" },
+    { name: 'header "Karriär"', scope: "header", label: "Karriär", url: "/career-center" },
+    { name: 'header "Jobb"', scope: "header", label: "Jobb", url: "/jobs" },
     {
-      name: 'hero "För arbetsgivare"',
-      scope: "#hero",
+      name: 'header "För arbetsgivare"',
+      scope: "header",
       label: "För arbetsgivare",
       url: "/employers",
     },
-    {
-      name: 'value "Utforska karriärcentret"',
-      scope: "#value",
-      label: "Utforska karriärcentret",
-      url: "/career-center",
-    },
-    { name: 'value "Se lediga jobb"', scope: "#value", label: "Se lediga jobb", url: "/jobs" },
-    // A preview form that sends nothing, and says so; kept by owner decision.
-    { name: 'FAQ "Kontakta oss"', scope: "#faq", label: "Kontakta oss", url: "/contact" },
-    { name: 'header "Logga in"', scope: "header", label: "Logga in", url: "/login" },
-    {
-      name: 'header "Karriärvägar"',
-      scope: "header",
-      label: "Karriärvägar",
-      url: "/career-center",
-    },
-    { name: 'header "Jobb"', scope: "header", label: "Jobb", url: "/jobs" },
-    { name: 'header "Arbetsgivare"', scope: "header", label: "Arbetsgivare", url: "/employers" },
     { name: 'header "Om oss"', scope: "header", label: "Om oss", url: "/about" },
   ] as const;
 
@@ -534,11 +692,11 @@ test.describe("the public homepage", () => {
           ? page.locator("header").filter({ visible: true })
           : page.locator(cta.scope);
       await root
-        .getByRole("link", { name: cta.label, exact: false })
+        .getByRole("link", { name: cta.label, exact: cta.scope === "header" })
         .filter({ visible: true })
         .first()
         .click();
-      await page.waitForURL(`**${cta.url}`, { timeout: 15_000 });
+      await page.waitForURL((u) => u.pathname === cta.url, { timeout: 15_000 });
       expect(new URL(page.url()).pathname).toBe(cta.url);
 
       // It rendered, and it rendered something a person can act on. A blank
@@ -554,14 +712,7 @@ test.describe("the public homepage", () => {
       // toHaveCount RETRIES; a bare .count() is a single sample. waitForURL
       // resolves when the router commits the URL, which is before the
       // outgoing route unmounts, so a one-shot read here can still see the
-      // page we just left. That was invisible while / held no password
-      // field and became a flake the moment the homepage gained its login
-      // panel — it struck 3 of these 8 destinations, and the two reached by
-      // page.goto rather than by a click never failed at all.
-      //
-      // This does not soften the rule. A destination that genuinely asks
-      // for a credential still fails, because the field is still there when
-      // the retries run out. Only the in-flight transition stops counting.
+      // page we just left.
       if (cta.url !== "/login") {
         await expect(page.locator('input[type="password"]')).toHaveCount(0);
       }
@@ -574,60 +725,32 @@ test.describe("the public homepage", () => {
 
   // H12 ─────────────────────────────────────────────────────────────────
   //
-  // REPLACES "the header's Security Passport reaches the homepage section
-  // it names". The owner removed both product names from the public bar,
-  // so that journey no longer exists. What replaces it is the pair of
-  // facts that make the removal safe rather than lossy: the products are
-  // gone from the CHROME, and still present in the CONTENT.
-  test("neither product is named in the public header, and both are still reachable", async ({
-    page,
-  }) => {
-    const header = page.locator("header");
-    await expect(header.getByRole("link", { name: "Security Passport" })).toHaveCount(0);
-    await expect(header.getByRole("link", { name: "Career Discovery" })).toHaveCount(0);
-
-    // The Passport section is still on the page, under its own heading.
-    await expect(page.locator("#passport h2")).toBeVisible();
-    // And Career Discovery still has its hero entrance.
-    await expect(
-      page.locator("#hero").getByRole("link", { name: "Starta Career Discovery" }),
-    ).toHaveCount(1);
-
-    // The footer, deliberately untouched by this decision, still names both.
-    const footer = await page.locator("footer").innerText();
-    expect(footer).toContain("Security Passport");
-    expect(footer).toContain("Career Discovery");
-  });
-
-  // H12b ────────────────────────────────────────────────────────────────
-  //
-  // The owner's five, in order, in BOTH languages, at the desktop bar.
-  // Exact and ordered: this replaces the six-destination expectation with
-  // the same strictness rather than relaxing it.
-  for (const [lang, expected] of [
-    ["sv", ["För dig", "Jobb", "Arbetsgivare", "Karriärvägar", "Om oss"]],
-    ["en", ["For you", "Jobs", "Employers", "Career paths", "About us"]],
-  ] as const) {
-    test(`${lang}: the public bar is exactly the owner's five, in order`, async ({ page }) => {
+  // The six, in order, in BOTH languages, at the desktop bar. Exact and
+  // ordered.
+  for (const lang of ["sv", "en"] as const) {
+    test(`${lang}: the public bar is exactly the specified six, in order`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await setLang(page, lang);
-      await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
       // `:visible`, because the desktop bar and the compact menu BOTH carry
       // aria-label="Primary" and both are in the DOM at every width — only
-      // one of them is on screen. Without this the labels come back twice,
-      // which is exactly what this assertion caught the first time it ran.
+      // one of them is on screen.
       const labels = (
         await page.locator('header nav[aria-label="Primary"] a:visible').allInnerTexts()
       ).map((x) => x.trim());
-      expect(labels, `${lang} public nav`).toEqual([...expected]);
+      expect(labels, `${lang} public nav`).toEqual([...NAV[lang]]);
+      // Career Discovery is not an entry of its own.
+      expect(labels.join(" | ")).not.toContain("Career Discovery");
     });
   }
 
   // H13 ─────────────────────────────────────────────────────────────────
   //
-  // The promise the Passport card makes, followed through the account form.
-  test("the Passport card carries its intent into the account form", async ({ page }) => {
-    await page.locator("#hero").getByRole("link", { name: "Skapa mitt Security Passport" }).click();
+  // The promise the Passport section makes, followed through the account form.
+  test("the Passport section carries its intent into the account form", async ({ page }) => {
+    await page
+      .locator("#passport")
+      .getByRole("link", { name: "Skapa mitt Security Passport" })
+      .click();
     await page.waitForURL("**/signup**", { timeout: 15_000 });
 
     const url = new URL(page.url());
@@ -639,9 +762,7 @@ test.describe("the public homepage", () => {
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
 
     // And the form RESOLVED the intent rather than merely echoing the URL:
-    // the swap link to sign-in is built from the validated return path, so
-    // its href is the observable proof that safeReturnPath accepted the
-    // value instead of silently replacing it with the default destination.
+    // the swap link to sign-in is built from the validated return path.
     const swapHref = await page.locator('main a[href^="/login?"]').first().getAttribute("href");
     expect(swapHref, "the intent is lost if you already have an account").toContain(
       "redirect=%2Fpassport",
@@ -652,7 +773,7 @@ test.describe("the public homepage", () => {
   });
 
   // H14 ─────────────────────────────────────────────────────────────────
-  test("the employer strip carries /employer into the same one door", async ({ page }) => {
+  test("the employer band carries /employer into the same one door", async ({ page }) => {
     await page.locator("#employers").getByRole("link", { name: "Registrera företag" }).click();
     await page.waitForURL("**/signup**", { timeout: 15_000 });
     const url = new URL(page.url());
@@ -667,14 +788,14 @@ test.describe("the public homepage", () => {
 
   // H14b ────────────────────────────────────────────────────────────────
   //
-  // The MVP layout's two other account actions go through the same door,
-  // and each keeps its own landing through the form and the login swap.
+  // The page's two other account actions go through the same door, and each
+  // keeps its own landing through the form and the login swap.
   for (const intent of [
-    { name: '"Kom igång"', scope: "#hero", label: "Kom igång", landing: "/my-career" },
+    { name: '"Skapa konto"', scope: "#hero", label: "Skapa konto", landing: "/my-career" },
     {
-      name: '"Öppna Security Intelligence"',
+      name: '"Öppna Mitt säkerhetsarbete"',
       scope: "#security-intelligence",
-      label: "Öppna Security Intelligence",
+      label: "Öppna Mitt säkerhetsarbete",
       landing: "/security-work",
     },
   ] as const) {
@@ -705,6 +826,7 @@ test.describe("the public homepage", () => {
     const shape = async () =>
       page.evaluate(() => ({
         lang: document.documentElement.lang,
+        title: document.title,
         sections: [...document.querySelector("main")!.children].map((el) => el.id),
         h1: document.querySelectorAll("main h1").length,
         h2: document.querySelectorAll("main h2").length,
@@ -715,10 +837,13 @@ test.describe("the public homepage", () => {
     await setLang(page, "sv");
     const sv = await shape();
     expect(sv.lang).toBe("sv");
+    expect(sv.title).toBe("CQrityjob – din karriär och ditt säkerhetsarbete");
 
     await setLang(page, "en");
     const en = await shape();
     expect(en.lang).toBe("en");
+    // The English reader gets the English title as well as the English page.
+    expect(en.title).toBe("CQrityjob – your career and security work");
 
     expect(en.sections).toEqual(sv.sections);
     expect(en.h1).toBe(sv.h1);
@@ -729,23 +854,17 @@ test.describe("the public homepage", () => {
     expect(en.links).toEqual(sv.links);
 
     const enText = await visibleText(page);
-    expect(enText).toContain("Build your Security Passport");
-    expect(enText).toContain("Discover your security career");
+    for (const heading of CORE.en) expect(enText).toContain(heading);
     expect(enText).toContain("Create my Security Passport");
-    expect(enText).toContain("Start Career Discovery");
-    expect(enText).toContain(
-      "You can start without an account. Create one when you want to save the result and continue in My Career.",
-    );
+    expect(enText).toContain("Explore professions");
     expect(enText).toContain(
       "It does not replace a government licence, security vetting, right-to-work check or an employer's own due diligence.",
     );
     for (const market of ["Sweden", "Great Britain", "Dubai"]) {
       expect(enText, `"${market}" is missing from the English page`).toContain(market);
     }
-    // One name for the second product in English, every time.
     expect(enText).toContain("Career Discovery");
     expect(enText).not.toMatch(/career test/i);
-    expect(enText).not.toMatch(/career analysis/i);
   });
 
   // H17 ─────────────────────────────────────────────────────────────────
@@ -757,7 +876,7 @@ test.describe("the public homepage", () => {
       [],
     );
     for (const phrase of [
-      "Bygg ditt Security Passport",
+      "Visa dina meriter med Security Passport",
       "Registrera företag",
       "Sverige",
       "Storbritannien",
@@ -787,17 +906,11 @@ test.describe("the public homepage", () => {
   //
   // ── 44 x 44, EVERYWHERE, WITH NO EXEMPT REGION ───────────────────────
   //
-  // What this replaced measured `main` on both dimensions, the FOOTER on
-  // height alone, and exempted the desktop header bar entirely — 36px
-  // controls and a two-letter language toggle — on the argument that they
-  // are mouse targets on a >=1024px viewport that clear WCAG 2.5.8's 24 x 24.
-  //
-  // The Platform Entry Specification does not grant that exemption. §4.2
-  // requires the public destinations to be reachable "with 44 pixel
-  // minimum targets" and §12 requires it of every control. A 1024px viewport
-  // is also a tablet. So the exemption is gone, header/main/footer are all
-  // measured, both dimensions are measured, and the components were changed
-  // to meet it rather than the assertion weakened to accept them.
+  // The Platform Entry Specification requires the public destinations to be
+  // reachable "with 44 pixel minimum targets" and requires it of every
+  // control. So header, main and footer are all measured, both dimensions
+  // are measured, and the components are changed to meet it rather than the
+  // assertion weakened to accept them.
   test("every public control is at least 44 x 44 in header, main and footer", async ({ page }) => {
     for (const width of REQUIRED_WIDTHS) {
       await page.setViewportSize({ width, height: 900 });
@@ -810,16 +923,14 @@ test.describe("the public homepage", () => {
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
     await page.getByRole("button", { name: /meny/i }).first().click();
     // `#site-menu nav a`, not `header nav a`: below lg the header carries BOTH
-    // navs in the DOM and the desktop one comes first, so `.first()` on the
-    // looser selector resolves to a permanently hidden link and waits out the
-    // timeout on a page that is behaving correctly.
+    // navs in the DOM and the desktop one comes first.
     await expect(page.locator("#site-menu nav a").first()).toBeVisible();
     const inMenu = await undersizedTargets(page);
     expect(inMenu, `under 44x44 inside the open menu: ${JSON.stringify(inMenu)}`).toEqual([]);
     await shot(
       page,
       "homepage-sv-375-menu-open",
-      "Compact menu open at 375px; all five destinations at >= 44 x 44",
+      "Compact menu open at 375px; all six destinations at >= 44 x 44",
     );
   });
 
@@ -861,6 +972,10 @@ test.describe("the public homepage", () => {
 // the longer language for most of this copy, so a layout that survives
 // English can still break in Swedish.
 test.describe("the homepage at every required width", () => {
+  test.beforeEach(async ({ page }) => {
+    await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
+  });
+
   for (const width of [320, 375, 390, 768, 1024, 1440]) {
     test(`no horizontal overflow at ${width}px, sv and en`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
@@ -872,12 +987,15 @@ test.describe("the homepage at every required width", () => {
       }
     });
 
-    test(`both entry paths remain visible at ${width}px`, async ({ page }) => {
+    test(`all three core parts remain visible at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-      await expect(page.locator("#hero [data-home-entry]")).toHaveCount(2);
-      await expect(page.locator('[data-home-entry="passport"]')).toBeVisible();
-      await expect(page.locator('[data-home-entry="discovery"]')).toBeVisible();
+      const cards = page.locator("#hero [data-home-core]");
+      await expect(cards).toHaveCount(3);
+      for (const card of await cards.all()) {
+        await expect(card).toBeVisible();
+        await expect(card.locator("a.h-11")).toBeVisible();
+      }
     });
   }
 
@@ -889,7 +1007,7 @@ test.describe("the homepage at every required width", () => {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 
-  test("the compact menu carries the same five destinations, in the same order, at 375px", async ({
+  test("the compact menu carries the same six destinations, in the same order, at 375px", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 375, height: 812 });
@@ -899,11 +1017,8 @@ test.describe("the homepage at every required width", () => {
     const labels = (await page.locator("#site-menu nav a").allInnerTexts()).map((x) => x.trim());
 
     // Same ORDER, not merely the same set: one information architecture at
-    // both viewports is the whole point of the single `nav` array.
-    expect(labels).toEqual(["För dig", "Jobb", "Arbetsgivare", "Karriärvägar", "Om oss"]);
-    for (const gone of ["Security Passport", "Career Discovery"]) {
-      expect(labels.join(" | "), `"${gone}" must not be in the compact menu`).not.toContain(gone);
-    }
+    // both viewports is the whole point of the single definition.
+    expect(labels).toEqual([...NAV.sv]);
     // One Login and one Create account, on a phone as on a laptop.
     const header = await page.locator("header").innerText();
     expect(header).toContain("Logga in");
@@ -920,28 +1035,34 @@ test.describe("the homepage at every required width", () => {
       [...el.querySelectorAll("a")].map((a) => a.getAttribute("href")),
     );
     expect(hrefs, "the footer promotes a form that sends nothing").not.toContain("/contact");
-    expect(hrefs, "the footer must name the second individual product too").toContain(
-      "/security-career-assessment",
-    );
+    // The same six as the header.
+    for (const href of [
+      "/#security-intelligence",
+      "/#passport",
+      "/career-center",
+      "/jobs",
+      "/employers",
+      "/about",
+    ]) {
+      expect(hrefs, `the footer lacks ${href}`).toContain(href);
+    }
     const text = await footer.innerText();
     expect(text).toContain("Där förtroende kommer först.");
-    // Rendered, and rendered as text: the routes do not exist yet.
-    for (const dead of ["Integritetspolicy", "Användarvillkor"]) {
-      expect(text).toContain(dead);
-      expect(
-        await footer.getByRole("link", { name: dead, exact: true }).count(),
-        `"${dead}" is presented as a link but has no destination`,
-      ).toBe(0);
-    }
+    // Said plainly, and not presented as a link: the documents are not
+    // published yet.
+    const legal = "Integritetspolicy och användarvillkor är inte publicerade ännu.";
+    expect(text).toContain(legal);
+    expect(
+      await footer.getByRole("link", { name: /Integritetspolicy|användarvillkor/i }).count(),
+    ).toBe(0);
   });
 });
 
 // ── CAREER DISCOVERY'S LOW-FRICTION MODEL, END TO END ───────────────────
 //
-// The homepage promises "start without an account". This is the half of that
-// promise only a browser can check: the canonical route opens signed-out,
-// asks no credential, and the anonymous buffer is this TAB's sessionStorage
-// rather than a row in a database.
+// The canonical route opens signed-out, asks no credential, and the
+// anonymous buffer is this TAB's sessionStorage rather than a row in a
+// database.
 test.describe("Career Discovery still starts without an account", () => {
   test("the canonical route opens signed-out and asks for no credential", async ({ page }) => {
     await page.goto(`${BASE}/security-career-assessment`, { waitUntil: "networkidle" });
@@ -959,9 +1080,8 @@ test.describe("Career Discovery still starts without an account", () => {
 
   test("a claim token is carried, not discarded", async ({ page }) => {
     // The claim path is what makes "create an account later to keep the
-    // result" true. The homepage must not have broken the shape of it: the
-    // route accepts the parameter and stays on the canonical path rather
-    // than stripping it or bouncing to /login.
+    // result" true. The route accepts the parameter and stays on the
+    // canonical path rather than stripping it or bouncing to /login.
     await page.goto(`${BASE}/security-career-assessment?claim=e2e-token`, {
       waitUntil: "networkidle",
     });
@@ -977,12 +1097,6 @@ test.describe("Career Discovery still starts without an account", () => {
   });
 
   // ── THE TOKEN SURVIVES THE ROUND TRIP THROUGH THE ONE DOOR ───────────
-  //
-  // This is the continuity the specification's §6.2 step 7 names: the claim
-  // must survive email confirmation, Google OAuth and a sign-in/signup swap.
-  // A browser can prove the SWAP half end to end, which is the half a
-  // homepage change could break: the return path carries the claim, and the
-  // swap link rebuilds it rather than dropping it.
   test("the claim survives a signup/login swap", async ({ page }) => {
     const returnTo = "/security-career-assessment?claim=e2e-token";
     await page.goto(`${BASE}/signup?redirect=${encodeURIComponent(returnTo)}`, {
@@ -990,14 +1104,9 @@ test.describe("Career Discovery still starts without an account", () => {
     });
     await expect(page.locator('input[type="email"]').first()).toBeVisible({ timeout: 15_000 });
 
-    // The form RESOLVED the return path rather than echoing the URL: the
-    // swap link is built from the validated value.
-    //
     // Scoped to `main` throughout this file: the HEADER's own
     // "Företagsinloggning" is also a `/login?…` link, it carries
-    // `redirect=/employer`, and it precedes <main> in the DOM — an unscoped
-    // `.first()` reads the header's employer door and reports every other
-    // intent as lost.
+    // `redirect=/employer`, and it precedes <main> in the DOM.
     const swap = page.locator('main a[href^="/login?"]').first();
     const swapHref = await swap.getAttribute("href");
     expect(swapHref, "the claim is lost for somebody who already has an account").toContain(
@@ -1019,6 +1128,8 @@ test.describe("Career Discovery still starts without an account", () => {
 // ── THE SIGNED-IN VISITOR ───────────────────────────────────────────────
 test.describe("the signed-in visitor", () => {
   test("a signed-in visitor at / is redirected to /my-career, without a loop", async ({ page }) => {
+    // observeSupabaseStorageKey loads / before the boundary is installed.
+    await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
     const refusals = await installBoundary(page, {
       // Everything the shell and the header ask for on arrival. A `null`
       // answer is a legitimate one for each; what matters here is the
@@ -1027,6 +1138,8 @@ test.describe("the signed-in visitor", () => {
       countMyAcademyWork: 0,
       countMyReviewQueue: 0,
       ensureMyEmployerCompanyFromSignup: null,
+      getV31Availability: ANALYSIS_OPEN,
+      getV31TesterStatus: { allowed: false },
     });
     const key = await observeSupabaseStorageKey(page);
     await plantSession(page, key);
@@ -1040,13 +1153,9 @@ test.describe("the signed-in visitor", () => {
     await page.waitForTimeout(3000);
     expect(page.url(), "the redirect is looping").toBe(first);
     // The security claim, which is what this test is for: nothing reached a
-    // Supabase host. The stricter unstubbed-export assertion is deliberately
-    // NOT made here -- the destination is /my-career, and the candidate
-    // dashboard loads fifteen of its own reads on arrival. Those reads are
-    // not the subject of a redirect test, and stubbing them here would put a
-    // second, drifting copy of the dashboard's data contract in this file.
-    // They never leave the browser: an unstubbed export is refused by the
-    // harness, not forwarded. The specs that own those surfaces assert them.
+    // Supabase host. The destination's own reads are not the subject of a
+    // redirect test; they never leave the browser either (an unstubbed
+    // export is refused by the harness, not forwarded).
     expect(
       refusals.production,
       `the page tried to reach a Supabase host: ${refusals.production.join(", ")}`,
@@ -1067,36 +1176,39 @@ test.describe("the signed-in visitor", () => {
 //
 // Written to artifacts/public-entry-browser/ with a manifest, and uploaded
 // by the `public-entry-browser` CI job whatever the outcome.
-test.describe("routed evidence — the individual entrances", () => {
-  for (const [lang, h1] of [
-    ["sv", H1.sv],
-    ["en", H1.en],
-  ] as const) {
+test.describe("routed evidence — the three core parts", () => {
+  test.beforeEach(async ({ page }) => {
+    await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
+  });
+
+  for (const lang of ["sv", "en"] as const) {
     for (const width of [1440, 375, 390] as const) {
       test(`homepage ${lang} at ${width}px`, async ({ page }) => {
         await page.setViewportSize({ width, height: width >= 1440 ? 900 : 812 });
         await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
         await setLang(page, lang);
 
-        await expect(page.locator("main h1")).toHaveText(h1);
-        // Both entrances are present and both actions are real controls.
-        const cards = page.locator("#hero [data-home-entry]");
-        await expect(cards).toHaveCount(2);
+        await expect(page.locator("main h1")).toHaveText(H1[lang]);
+        // The three parts are present, in order, and each has its button.
+        const cards = page.locator("#hero [data-home-core]");
+        await expect(cards.locator("h2")).toHaveText([...CORE[lang]]);
         for (const card of await cards.all()) {
-          await expect(card.locator("a").first()).toBeVisible();
+          await expect(card.locator("a.h-11")).toBeVisible();
         }
         expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
         expect(await undersizedTargets(page)).toEqual([]);
 
-        // §15.1: at 1440 both offers are visible without scrolling.
+        // At 1440 all three parts are in the first screen.
         if (width === 1440) {
-          for (const card of await cards.all()) await expect(card).toBeInViewport();
+          for (const heading of await cards.locator("h2").all()) {
+            await expect(heading).toBeInViewport();
+          }
         }
 
         await shot(
           page,
           `homepage-${lang}-${width}`,
-          `Homepage ${lang.toUpperCase()} at ${width}px — Passport-led hero, two clear paths, 0px overflow`,
+          `Homepage ${lang.toUpperCase()} at ${width}px — three equal core parts, 0px overflow`,
         );
       });
     }
@@ -1105,7 +1217,10 @@ test.describe("routed evidence — the individual entrances", () => {
   test("the Passport signup destination", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-    await page.locator("#hero").getByRole("link", { name: "Skapa mitt Security Passport" }).click();
+    await page
+      .locator("#passport")
+      .getByRole("link", { name: "Skapa mitt Security Passport" })
+      .click();
     await page.waitForURL("**/signup**", { timeout: 15_000 });
     expect(new URL(page.url()).searchParams.get("redirect")).toBe("/passport");
     await expect(page.locator('input[type="email"]').first()).toBeVisible({ timeout: 15_000 });
@@ -1115,26 +1230,23 @@ test.describe("routed evidence — the individual entrances", () => {
     await shot(
       page,
       "passport-signup-destination",
-      "Passport card -> /signup?redirect=/passport, intent resolved by the form",
+      "Passport section -> /signup?redirect=/passport, intent resolved by the form",
     );
   });
 
-  test("the Career Discovery anonymous landing", async ({ page }) => {
+  test("the career analysis anonymous landing", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
-    await page.locator("#hero").getByRole("link", { name: "Starta Career Discovery" }).click();
+    await page.locator("#career").getByRole("link", { name: "Gör karriäranalysen" }).click();
     await page.waitForURL("**/security-career-assessment**", { timeout: 15_000 });
     expect(new URL(page.url()).pathname).toBe("/security-career-assessment");
     // Signed out, and no credential asked for before the first question.
-    // Retried rather than sampled once, for the reason recorded on the
-    // round-trip assertion above: this arrives by a click from /, so a
-    // single read can still catch the homepage mid-transition.
     await expect(page.locator('input[type="password"]')).toHaveCount(0);
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 20_000 });
     await shot(
       page,
       "career-discovery-anonymous-landing",
-      "Career Discovery canonical landing reached signed out, no credential requested",
+      "Career analysis canonical landing reached signed out, no credential requested",
     );
   });
 });

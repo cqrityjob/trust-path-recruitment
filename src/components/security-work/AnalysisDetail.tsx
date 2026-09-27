@@ -398,28 +398,30 @@ export function SecurityAnalysisDetail({ analysisId }: { analysisId: string }) {
           </WorkButton>
         ))}
       </nav>
+      {/* The guidance per step is the MVP text specification's (§9.3); the
+          sentence after it in each step is this method's own rule and stays. */}
       <p className="text-sm text-muted-foreground" data-testid="sw-step-help">
         {
           [
             l(
-              "Kontrollera beslut, avgränsning och period. Dessa behövs för att bedöma rätt fråga. Din sparade verksamhetsprofil kan anpassas här.",
-              "Check the decision, scope and period. These keep the assessment focused on the right question. You can adapt your saved organisation context here.",
+              "Beskriv vad analysen ska stödja, vad som ingår och vilken period den gäller. Din sparade verksamhetsprofil kan anpassas här.",
+              "Describe what the analysis should support, its scope and the period it covers. You can adapt your saved organisation context here.",
             ),
             l(
-              "Registrera underlag manuellt eller från dokument. Läs och acceptera relevanta utdrag: bara granskat underlag får stödja analysen.",
-              "Enter evidence manually or from documents. Read and accept relevant extracts: only reviewed evidence can support the analysis.",
+              "Lägg till relevanta källor och utdrag. Kontrollera att materialet hör till uppdraget och granska texten innan du använder den. Bara granskat underlag får stödja analysen.",
+              "Add relevant sources and extracts. Check that the material relates to the assignment and review the text before using it. Only reviewed evidence can support the analysis.",
             ),
             l(
-              "Besvara frågor som påverkar beslutet. Skriv okänt när svar saknas. När AI är tillgängligt kan det föreslå frågor och ett första rapportutkast som du granskar innan det förs in.",
-              "Answer questions that affect the decision. Write unknown when an answer is missing. When available, AI can suggest questions and a first report draft for you to review before applying.",
+              "Besvara frågor som påverkar bedömningen. Markera det som är okänt och skilj uppgifter från antaganden. När AI är tillgängligt kan det föreslå frågor och ett första rapportutkast som du granskar innan det förs in.",
+              "Answer questions that affect the assessment. Mark unknowns and distinguish information from assumptions. When available, AI can suggest questions and a first report draft for you to review before applying.",
             ),
             l(
-              "Skilj källuppgifter, egna uppgifter och antaganden. Motivera risknivåer med definierade skalor; lämna okända nivåer tomma. Granska åtgärder och din slutsats.",
-              "Separate source facts, your own information and assumptions. Justify risk ratings with defined scales; leave unknown ratings empty. Review actions and your conclusion.",
+              "Väg samman underlaget, beskriv osäkerheterna och motivera dina slutsatser och föreslagna åtgärder. Motivera risknivåer med definierade skalor; lämna okända nivåer tomma.",
+              "Weigh the evidence, describe uncertainties and explain your conclusions and proposed actions. Justify risk ratings with defined scales; leave unknown ratings empty.",
             ),
             l(
-              "Öppna rapportutkastet, kontrollera källstödet och redigera. Godkänn först när du är klar; därefter kan du exportera.",
-              "Open the report draft, check its sources and edit. Approve only when you are ready; then you can export.",
+              "Granska rapportens text och källhänvisningar. Godkänn den aktuella versionen när granskningen är klar; därefter kan du exportera.",
+              "Review the report text and source references. Approve the current version when the review is complete; then you can export.",
             ),
           ][step]
         }

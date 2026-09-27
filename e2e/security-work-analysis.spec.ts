@@ -366,7 +366,10 @@ for (const locale of ["sv", "en"] as const) {
       .click();
     await expect(
       page.getByText(
-        l("AI är inte aktiverat för arbetsytan.", "AI is not activated for this workspace."),
+        l(
+          "AI-stöd är inte tillgängligt här just nu.",
+          "AI assistance is not available here right now.",
+        ),
         { exact: false },
       ),
     ).toBeVisible();
@@ -450,16 +453,23 @@ for (const locale of ["sv", "en"] as const) {
     await shot(page, locale, "report-review");
     await page.getByRole("checkbox").check();
     await page
-      .getByRole("button", { name: l("Godkänn rapportversion", "Approve report version") })
+      .getByRole("button", {
+        name: l("Godkänn denna rapportversion", "Approve this report version"),
+      })
       .click();
     await expect(
       page.getByText(
-        l("Denna godkända version är oföränderlig.", "This approved version is immutable."),
+        l(
+          "Den här rapportversionen är godkänd och kan inte ändras.",
+          "This report version is approved and cannot be changed.",
+        ),
         { exact: false },
       ),
     ).toBeVisible();
     const download = page.waitForEvent("download");
-    await page.getByRole("button", { name: /Exportera rapport|Export report/ }).click();
+    await page
+      .getByRole("button", { name: /skriv ut eller spara som PDF|print or save as PDF/ })
+      .click();
     const file = await download;
     const path = await file.path();
     expect(path).not.toBeNull();

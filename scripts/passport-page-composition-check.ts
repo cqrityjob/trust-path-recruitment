@@ -247,7 +247,7 @@ check(
 );
 check(
   (side.match(/\{copy\("Visa meriten", "View credential"\)\}/g) ?? []).length === 1 &&
-    !/data-cta="next-step"[\s\S]{0,260}copy\("(Lägg till underlag|Komplettera uppgifter)"/.test(
+    !/data-cta="next-step"[\s\S]{0,260}copy\("(Bifoga underlag|Lägg till underlag|Komplettera uppgifter)"/.test(
       side,
     ),
   'labelled truthfully — "Visa meriten" / "View credential" — because they locate, they do not act',

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { resolveCandidateNav, type CandidateNavKey } from "./candidate-app-nav";
+import { publicNav } from "./public-nav";
 import { CandidateAppNav } from "./CandidateAppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
@@ -165,47 +166,30 @@ export function SiteHeader() {
   // their nav on public pages, and their place in the footer. See
   // candidate-app-nav.ts for the four destinations that replace them.
   //
-  // ── FIVE, AND NO PRODUCT NAMES IN THE PUBLIC BAR (owner, 2026-09-14) ─
+  // ── SIX, THE THREE CORE PARTS FIRST (MVP text specification, 2026-09-27)
   //
-  // This bar used to name Security Passport and Career Discovery as two of
-  // six items. The owner's decision is that a public visitor does not
-  // navigate by product name: they arrive as a candidate, an employer, or
-  // someone reading about the company. So the bar is now five AUDIENCE and
-  // TOPIC entries, and the two products are reached through the content
-  // rather than through the chrome.
+  //   Säkerhetsarbete · Security Passport · Karriär · Jobb ·
+  //   För arbetsgivare · Om oss
   //
-  // NOTHING IS REMOVED FROM THE SITE. Both products keep their routes,
-  // their homepage sections, their calls to action and their authenticated
-  // destinations. Security Passport keeps the homepage's #passport section
-  // and its card's call to action; Career Discovery keeps its own canonical
-  // route, the hero's "Starta Career Discovery" entry and its footer link. The footer still names both, deliberately: the
-  // decision was about the header only. (Career Discovery's canonical
-  // route constant is deliberately not named in this file any more --
-  // header-entry-check asserts its absence here.)
+  // This replaces the owner's 2026-09-14 five, which kept product names out
+  // of the bar. The owner's latest decision makes security work, Security
+  // Passport and career/jobs three EQUAL core parts, and each of them is now
+  // reachable from the chrome under the name the product itself uses. See
+  // public-nav.ts, which is the one definition the desktop bar, the compact
+  // menu and the footer all render.
   //
-  // "För dig" is the public umbrella for candidate content, and it points
-  // at the public landing page itself -- which IS that content: the
-  // proposition, both candidate entrances, the Passport section and the
-  // lifecycle. No second candidate page was created for this, because the
-  // canonical one already exists and duplicating it is the defect this
-  // decision exists to remove. /employers is its employer counterpart.
-  //
-  // "Bedömningar" and "Kontakt" stay out, unchanged and for the unchanged
-  // reasons: neither route is deleted and neither redirects, but /assessment
-  // belongs behind /employers rather than beside it, and /contact carries a
-  // form that calls preventDefault and sends nothing.
+  // The career analysis is not an entry of its own: it keeps a direct action
+  // in the homepage's career card and on the Career Center. "Bedömningar"
+  // and "Kontakt" stay out, for the unchanged reasons: /assessment belongs
+  // behind the career and employer pages rather than beside them, and
+  // /contact carries a form that sends nothing.
   //
   // `exact` matching is required on "/" because a Link matches by PREFIX --
-  // without it this item is marked current on every route on the site. The
-  // `hash` field is kept on the shape (all five are undefined today) so the
-  // active-state contract below stays one expression rather than two.
-  const nav = [
-    { to: "/", hash: undefined, label: t("nav.forYou") },
-    { to: "/jobs", hash: undefined, label: t("nav.jobs") },
-    { to: "/employers", hash: undefined, label: t("nav.employers") },
-    { to: "/career-center", hash: undefined, label: t("nav.career_center") },
-    { to: "/about", hash: undefined, label: t("nav.about") },
-  ] as const;
+  // without it an entry pointing at a homepage section would be marked
+  // current on every route on the site. With `includeHash`, the two section
+  // entries are current only on their own section, so the bare homepage
+  // leaves the bar neutral.
+  const nav = publicNav(signedIn === true).map((item) => ({ ...item, label: t(item.labelKey) }));
 
   // ── The two role entries ────────────────────────────────────────────
   //
@@ -514,7 +498,7 @@ export function SiteHeader() {
             >
               {nav.map((item) => (
                 <Link
-                  key={item.to}
+                  key={item.key}
                   to={item.to}
                   hash={item.hash}
                   activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}
@@ -683,7 +667,7 @@ export function SiteHeader() {
             <nav className="flex flex-col gap-0.5" aria-label="Primary">
               {nav.map((item) => (
                 <Link
-                  key={item.to}
+                  key={item.key}
                   to={item.to}
                   hash={item.hash}
                   activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}

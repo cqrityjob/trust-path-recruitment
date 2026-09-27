@@ -124,12 +124,11 @@ function Page() {
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
       <header>
-        {/* "Interview Intelligence" is what we call the capability; a
-            recruiter opening their week is looking for their interviews. The
-            sidebar already says Intervjuer, and the page disagreed with it. */}
-        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-          {t("iiu.ix.heading")}
-        </h1>
+        {/* The area carries the capability's name, explained in one line
+            (MVP text specification §3 and §11.2). The sidebar keeps the
+            recruiter's word, Intervjuer, and so does the list below: that
+            is where a recruiter opening their week finds their interviews. */}
+        <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">{t("iiu.ix.title")}</h1>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           {t("iiu.ix.lead")}
         </p>

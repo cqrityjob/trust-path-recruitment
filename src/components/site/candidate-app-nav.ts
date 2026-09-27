@@ -31,7 +31,8 @@
 
 /** The owner's seven destinations (2026-09-24):
  * Overview · Security Passport · My Security Work · CV · Jobs · Career ·
- * Tests & development. This explicitly replaces the former six-item canon.
+ * Assessments and development (named so by the MVP text specification §3,
+ * 2026-09-27). This explicitly replaces the former six-item canon.
  * Career Card and My Profile remain contextual/account destinations.
  * Both viewport variants consume this definition; visibility grants no access.
  */

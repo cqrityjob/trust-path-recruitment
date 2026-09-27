@@ -172,7 +172,9 @@ async function stubAnonymous(page: Page): Promise<Calls> {
 /** Answer every question by taking the first offered option — the same
  *  walk e2e/career-discovery-conversion.spec.ts takes. */
 async function completeAssessment(page: Page) {
-  const start = page.getByRole("button", { name: /Börja vägledningen|Start the assessment/ });
+  const start = page.getByRole("button", {
+    name: /Starta karriäranalysen|Start the career analysis/,
+  });
   await expect(start).toBeVisible({ timeout: 60_000 });
   await start.click();
   for (let i = 0; i < 40; i += 1) {
@@ -260,7 +262,7 @@ async function exploreTopAndComeBack(page: Page, resultPath: RegExp) {
   );
   await expect(page.locator(`[data-recommendation-card="SP005"]`)).toContainText("Polis");
   await expect(
-    page.getByRole("button", { name: /Börja vägledningen|Start the assessment/ }),
+    page.getByRole("button", { name: /Starta karriäranalysen|Start the career analysis/ }),
   ).toHaveCount(0);
 }
 

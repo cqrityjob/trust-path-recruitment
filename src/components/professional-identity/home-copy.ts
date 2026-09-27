@@ -37,9 +37,10 @@ export const COMMON = {
 export const HEADER = {
   title: c("Din karriär, {0}", "Your career, {0}"),
   titleAnon: c("Din karriär", "Your career"),
+  // MVP text specification §7.
   lede: c(
-    "Din profil, ditt CV och ditt Security Passport – och ditt nästa steg i säkerhetsbranschen.",
-    "Your profile, your CV and your Security Passport – and your next step in the security sector.",
+    "Här hittar du din profil, dina meriter, din karriäranalys och dina ansökningar.",
+    "Find your profile, credentials, career analysis and applications here.",
   ),
   degraded: c(
     "Delar av din profil kunde inte läsas. Ingenting har tagits bort.",
@@ -49,6 +50,16 @@ export const HEADER = {
   failedBody: c(
     "Resten av sidan visar det som gick att läsa. Ingenting har tagits bort.",
     "The rest of the page shows what could be read. Nothing has been removed.",
+  ),
+} as const;
+
+/** The overview's shortcut to the separate security workspace (MVP text
+ *  specification §7). Named with the workspace's own navigation name. */
+export const WORK_SHORTCUT = {
+  title: c("Fortsätt i Mitt säkerhetsarbete", "Continue in My Security Work"),
+  body: c(
+    "Öppna din separata arbetsyta för analyser, rapporter och åtgärder.",
+    "Open your separate workspace for analyses, reports and actions.",
   ),
 } as const;
 
@@ -423,7 +434,7 @@ export const EMPLOYER_WORK = {
     "Your tests could not be loaded right now.",
   ),
   loading: c("Hämtar dina tester…", "Loading your tests…"),
-  all: c("Öppna Tester & utveckling", "Open Tests & development"),
+  all: c("Öppna Tester och utveckling", "Open Assessments and development"),
   /** Passive, and says outright that nothing is required. Both numbers. */
   waiting: cp(
     c(

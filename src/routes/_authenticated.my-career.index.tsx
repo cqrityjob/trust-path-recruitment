@@ -28,6 +28,7 @@ import {
 } from "@/components/professional-identity/OverviewSurfaces";
 import { RecentActivity } from "@/components/professional-identity/RecentActivity";
 import { LinkEarlierResult } from "@/components/professional-identity/LinkEarlierResult";
+import { SecurityWorkShortcut } from "@/components/professional-identity/SecurityWorkShortcut";
 import { getMyProfessionalIdentity } from "@/lib/professional-identity/identity.functions";
 import {
   deriveVerificationAttention,
@@ -589,6 +590,12 @@ function MyCareerPage() {
             onRetrySharing={() => void sharesQ.refetch()}
             className="mt-8"
           />
+
+          {/* 4b · The way into the separate security workspace (MVP text
+              specification §7). One link and one sentence; it reads nothing
+              from the workspace, so no security content reaches the career
+              overview. */}
+          <SecurityWorkShortcut lang={lang as Lang} className="mt-4" />
 
           {/* 5 · A result taken before this account existed. Renders nothing
               when there is nothing to link, which is almost always — it is an

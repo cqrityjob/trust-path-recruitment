@@ -9,7 +9,7 @@
 // the product vision, not the assistant itself.
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Sparkles, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
@@ -80,27 +80,21 @@ function EmployerAskCqrityPage() {
       activeSection="ask-cqrity"
       hasMultipleWorkspaces={ws.hasMultipleWorkspaces}
     >
-      <div className="flex items-start gap-4">
-        <span
-          className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent"
-          aria-hidden="true"
-        >
-          <Sparkles className="h-5 w-5" />
-        </span>
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-            {t("employer.askCqrity.heading")}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            {t("employer.askCqrity.body")}
-          </p>
-        </div>
+      {/* ── SHORTCUTS, AND NOTHING THAT LOOKS LIKE AN ANSWER ─────────────
+          The route keeps its old name; the page is what it has always done:
+          four links to existing pages (MVP text specification §11.2). No
+          chat field, no AI icon or animation, and no label that reads as a
+          question that has been analysed or a filter that is not applied. */}
+      <div>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          {t("employer.askCqrity.heading")}
+        </h1>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          {t("employer.askCqrity.body")}
+        </p>
       </div>
 
-      <p className="mt-8 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-        {t("employer.askCqrity.shortcutsHeading")}
-      </p>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {shortcuts.map((s) => (
           <Link
             key={s.labelKey}

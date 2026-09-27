@@ -949,7 +949,7 @@ test.describe("Security Passport — the recipient link", () => {
 
     // The renamed public framing: a share, not a verification, and a duration
     // named for what it counts.
-    await expect(page.locator("h1")).toHaveText("Delat Security Passport");
+    await expect(page.locator("h1")).toHaveText("Delade uppgifter från Security Passport");
     await expect(page.locator("[data-recipient-view]")).toContainText("Bekräftad anställningstid");
     await expect(page.locator("[data-recipient-view]")).toContainText("Länkstatus kontrollerad");
     await expect(page.locator("[data-recipient-view]")).not.toContainText(
@@ -985,7 +985,7 @@ test.describe("Security Passport — the recipient link", () => {
       "Employment confirmed by Nordvakt AB (fiktiv)",
     );
     await expect(page.locator("[data-recipient-view]")).not.toContainText("Vad orden betyder");
-    await expect(page.locator("h1")).toHaveText("Shared Security Passport");
+    await expect(page.locator("h1")).toHaveText("Information shared from Security Passport");
     await expect(page.locator("[data-recipient-view]")).toContainText(
       "Confirmed employment duration",
     );
@@ -1001,8 +1001,8 @@ test.describe("Security Passport — the recipient link", () => {
     await mount(page, "/p/abcdef0123456789", { publicPayload: { status: "unavailable" } });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible({ timeout: 30_000 });
 
-    await expect(page.locator("main")).toContainText("Länken är inte tillgänglig");
-    await expect(page.locator("main")).toContainText("Be personen om en ny länk");
+    await expect(page.locator("main")).toContainText("Delningslänken är inte längre tillgänglig");
+    await expect(page.locator("main")).toContainText("Be innehavaren om en ny länk");
     await expect(page.locator("main")).toContainText("säger ingenting om personen");
     await expect(page.getByRole("link", { name: /Om Security Passport/ })).toHaveAttribute(
       "href",

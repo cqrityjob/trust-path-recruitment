@@ -332,7 +332,7 @@ for (const lang of ["sv", "en"] as const) {
       await expect(step).toHaveCount(1);
       await expect(step).toHaveAttribute("href", `/passport#${credentialRowAnchor(CPP.id)}`);
       await expect(step).toHaveText(T("Visa meriten", "View credential"));
-      await expect(step).not.toHaveText(/Lägg till underlag|Add evidence/);
+      await expect(step).not.toHaveText(/Bifoga underlag|Add supporting evidence/);
       // Still says WHICH credential, and the expiring one is still named.
       await expect(page.locator("[data-passport-next-step]")).toContainText(CPP.titleEn);
       await expect(page.locator(`[data-passport-expiring-item="${OV.id}"]`)).toBeVisible();
@@ -341,7 +341,7 @@ for (const lang of ["sv", "en"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByRole("link", { name: T("Lägg till meriter", "Add credential") }),
+          .getByRole("link", { name: T("Lägg till en merit", "Add a credential") }),
       ).toHaveCount(1);
       const actions = page.locator("[data-passport-actions] a");
       await expect(actions).toHaveCount(2);
@@ -505,7 +505,7 @@ for (const lang of ["sv", "en"] as const) {
       await expect(
         page
           .getByRole("main")
-          .getByRole("link", { name: T("Lägg till meriter", "Add credential") }),
+          .getByRole("link", { name: T("Lägg till en merit", "Add a credential") }),
       ).toHaveCount(1);
 
       // ── Names ────────────────────────────────────────────────────────
@@ -581,7 +581,9 @@ for (const lang of ["sv", "en"] as const) {
       const row = await arrived(CPP);
       await expect(row).toContainText(CPP.titleEn);
       // Its REAL action is still there, and still the only claim link for it.
-      const action = row.getByRole("link", { name: T("Lägg till underlag", "Add evidence") });
+      const action = row.getByRole("link", {
+        name: T("Bifoga underlag", "Add supporting evidence"),
+      });
       await expect(action).toBeVisible();
       await expect(action).toHaveAttribute("href", `/passport/entry/claim/${CPP.id}`);
       await expect(page.locator(`a[href="/passport/entry/claim/${CPP.id}"]`)).toHaveCount(1);
@@ -904,16 +906,19 @@ for (const lang of ["sv", "en"] as const) {
         expect(image).not.toContain("repeating-linear-gradient");
         await expect(panel.locator('[class*="passport-grid"]')).toHaveCount(0);
 
-        // The owner's sentence, to the letter.
-        await expect(panel).toContainText(
+        // The Passport section's sentence, to the letter (MVP text
+        // specification §5.4). The illustrative card sits in that section and
+        // holds no heading or action of its own.
+        await expect(page.locator("#passport")).toContainText(
           T(
-            "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",
-            "Bring together your certifications, licences and professional authorisations — internationally and by country. Add supporting evidence and choose what you share.",
+            "Security Passport samlar dina certifieringar, licenser och yrkesbehörigheter. Lägg till underlag och välj vilka meriter du vill dela. Ett uppladdat dokument innebär inte i sig att uppgiften har verifierats.",
+            "Security Passport brings together your certifications, licences and professional authorisations. Add supporting documents and choose which credentials to share. Uploading a document does not by itself verify the information.",
           ),
         );
         expect(await panel.innerText()).not.toMatch(
           /Samla erfarenhet|experience, education|Dokumenterad källa|Documented source|Tillitstillstånd|Trust state/i,
         );
+        await expect(panel.locator("a, button")).toHaveCount(0);
 
         // A labelled, fictional example drawn with the REAL shield system.
         const example = panel.locator("[data-home-passport-example]");
@@ -922,7 +927,10 @@ for (const lang of ["sv", "en"] as const) {
         );
         await expect(example).toHaveAttribute(
           "aria-label",
-          T(/Exempel — Påhittad person/, /Example — Fictional person/),
+          T(
+            "Exempel – påhittad person och påhittade meriter.",
+            "Example – fictional person and fictional credentials.",
+          ),
         );
         await expect(example).toContainText(T("Exempel Exempelsson", "Example Holder"));
         await expect(example.locator("[data-credential-shield]")).toHaveCount(3);

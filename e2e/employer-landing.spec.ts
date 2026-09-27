@@ -47,11 +47,11 @@ test.describe("the employer landing page", () => {
   test("one h1, and it is the approved sentence", async ({ page }) => {
     expect(await page.locator("main h1").count()).toBe(1);
     await expect(page.locator("main h1")).toHaveText(
-      "Hela rekryteringen av säkerhetspersonal i en plattform",
+      "Rekrytera och utveckla säkerhetspersonal på samma plats.",
     );
     const text = await page.locator("main").innerText();
     expect(text).toContain(
-      "Publicera säkerhetsjobb, hantera ansökningar och använd strukturerade bedömningar och intervjumodeller för både vanliga säkerhetsroller och säkerhetsskyddskänsliga befattningar.",
+      "Publicera jobb, samla ansökningar och arbeta med rekryteringstester och strukturerade intervjuer. Fortsätt med medarbetarnas kompetensutveckling i en egen företagsportal.",
     );
     // The four abstract benefit tiles are gone.
     for (const gone of [
@@ -73,9 +73,9 @@ test.describe("the employer landing page", () => {
     const numbered = await page.locator("#how-it-works ol li h3").allInnerTexts();
     expect(numbered.map((s) => s.replace(/^\d+\.\s*/, ""))).toEqual([
       "Publicera jobbet",
-      "Ta emot och ordna ansökningarna",
-      "Välj bedömning och intervjumodell",
-      "Granska underlaget tillsammans",
+      "Hantera ansökningar",
+      "Använd rekryteringstester",
+      "Förbered och genomför intervju",
       "Fatta och dokumentera beslutet",
     ]);
     expect(await page.locator("#how-it-works ol").count()).toBe(1);
@@ -83,17 +83,17 @@ test.describe("the employer landing page", () => {
 
     const text = await page.locator("#how-it-works").innerText();
     expect(text).toContain(
-      "Människor fattar beslutet, och beslutet dokumenteras med sitt underlag.",
+      "Rekryteringsteamet ansvarar för bedömningen och det slutliga beslutet.",
     );
 
     // The continuation is present, outside the list, and unnumbered.
     // `innerText` reflects `text-transform: uppercase`, so the eyebrow reads
     // "OCH SEDAN" on screen; match the words rather than the casing.
     expect(text).toMatch(/och sedan/i);
-    expect(text).toContain("Fortsätt med utveckling");
+    expect(text).toContain("Fortsätt med kompetensutveckling");
     const inList = await page.locator("#how-it-works ol").innerText();
     expect(inList, "the continuation is inside the numbered list").not.toContain(
-      "Fortsätt med utveckling",
+      "Fortsätt med kompetensutveckling",
     );
   });
 
@@ -133,6 +133,8 @@ test.describe("the employer landing page", () => {
       "/signup?redirect=%2Femployer",
       "#how-it-works",
       "/login?redirect=%2Femployer",
+      // The quiet cross-link to the public My Security Work section.
+      "/#security-intelligence",
     ]);
 
     // Register → the one door, carrying /employer.
@@ -177,7 +179,7 @@ test.describe("the employer landing page", () => {
   test("English says the same thing, and renders no Swedish", async ({ page }) => {
     await setLang(page, "en");
     const text = await page.locator("main").innerText();
-    expect(text).toContain("The complete security recruitment process in one platform");
+    expect(text).toContain("Recruit and develop security professionals in one place.");
     expect(text).toContain(
       "BESKT is method support. It produces no result, no score and no ranking, and it does not replace security vetting under the Protective Security Act.",
     );
@@ -402,7 +404,9 @@ test.describe("the employer journey", () => {
     // workspace query resolves, and a one-shot read catches that instead.
     await expect(page.getByText("Tack för din registrering.")).toBeVisible({ timeout: 20_000 });
     const text = await page.evaluate(() => document.body.innerText);
-    expect(text).toContain("Vi granskar nu företagets uppgifter innan kontot aktiveras.");
+    expect(text).toContain(
+      "Organisationens registrering granskas. Här ser du när statusen ändras.",
+    );
     // The receipt: what CQrityjob holds about them.
     expect(text).toContain("Pending Security AB");
     // And a way to re-check without leaving.
@@ -419,8 +423,8 @@ test.describe("the employer journey", () => {
 // ── ROUTED EVIDENCE — THE EMPLOYER LANDING ──────────────────────────────
 test.describe("routed evidence — the employer entrance", () => {
   for (const [lang, h1] of [
-    ["sv", "Hela rekryteringen av säkerhetspersonal i en plattform"],
-    ["en", "The complete security recruitment process in one platform"],
+    ["sv", "Rekrytera och utveckla säkerhetspersonal på samma plats."],
+    ["en", "Recruit and develop security professionals in one place."],
   ] as const) {
     for (const width of [1440, 375] as const) {
       test(`employer landing ${lang} at ${width}px`, async ({ page }) => {

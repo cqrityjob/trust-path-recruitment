@@ -481,6 +481,15 @@ export function ApplyInternalDialog({
             {t("jobs.apply.signInToApply")}
           </a>
         </Button>
+        {/* A reader without an account gets the same way back to this ad
+            (MVP text specification §10): the signup keeps the same
+            validated return path the sign-in carries. */}
+        <a
+          href={`/signup?redirect=${encodeURIComponent(returnTo)}`}
+          className="flex min-h-11 items-center justify-center text-center text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {t("jobs.apply.createAccountToApply")}
+        </a>
         <p className="text-center text-xs text-muted-foreground">
           {t("jobs.apply.signInToApplyHint")}
         </p>
@@ -513,6 +522,16 @@ export function ApplyInternalDialog({
               <DialogTitle>{t("jobs.apply.success.title")}</DialogTitle>
               <DialogDescription>{t("jobs.apply.success.body")}</DialogDescription>
             </DialogHeader>
+            {/* Shown only in this branch, which renders after the server has
+                confirmed the application row. */}
+            <p className="mt-2 text-sm">
+              <Link
+                to="/my-career/applications"
+                className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("jobs.apply.success.next")}
+              </Link>
+            </p>
             {/* Which CV went, read from the row the server created. */}
             <p className="mt-2 flex items-start gap-1.5 text-sm text-muted-foreground">
               <FileText className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
@@ -960,6 +979,8 @@ export function ApplyInternalDialog({
                 />
                 <span>{t("jobs.apply.field.consent")}</span>
               </label>
+
+              <p className="text-sm text-muted-foreground">{t("jobs.apply.reviewBeforeSend")}</p>
 
               {submitError && (
                 <p role="alert" className="text-sm text-destructive">

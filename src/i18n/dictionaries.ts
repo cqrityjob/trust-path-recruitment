@@ -6,23 +6,27 @@ export type Lang = "sv" | "en";
 export const dictionaries = {
   sv: {
     "nav.careers": "Säkerhetskarriärcenter",
+    // ── THE PUBLIC HEADER AND FOOTER (MVP text specification, 2026-09-27) ─
+    //
+    // Säkerhetsarbete · Security Passport · Karriär · Jobb · För arbetsgivare
+    // · Om oss. The three core parts first, each under the same name the
+    // signed-in product uses for it, then the audience and company entries.
+    // The two product entries lead to their homepage sections; a signed-in
+    // reader, whom the homepage sends to their workspace, goes straight
+    // there instead.
+    "nav.securityWorkPublic": "Säkerhetsarbete",
     "nav.passportPublic": "Security Passport",
-    // The SECOND individual product, and a peer of the first in the public
-    // navigation rather than a link buried in a section. It is a product
-    // name and is therefore the same word in both languages.
-    "nav.careerDiscovery": "Career Discovery",
-    "nav.forYou": "För dig",
-    "nav.career_center": "Karriärvägar",
     "nav.jobs": "Jobb",
-    "nav.employers": "Arbetsgivare",
+    "nav.employers": "För arbetsgivare",
     "nav.assessment": "Bedömningar",
     "nav.about": "Om oss",
     "nav.contact": "Kontakt",
     "nav.signin": "Logga in",
-    // The employer DOOR, distinct from "Arbetsgivare" (nav.employers), which
-    // is the information page and stays information. Two different words for
-    // two different things: reusing "Arbetsgivare" for an action is the
-    // original defect scripts/header-entry-check.ts exists to prevent.
+    // The employer DOOR, distinct from "För arbetsgivare" (nav.employers),
+    // which is the information page and stays information. Two different
+    // words for two different things: reusing the information page's label
+    // for an action is the original defect scripts/header-entry-check.ts
+    // exists to prevent.
     // It leads to the ONE door, /login, carrying /employer as its validated
     // return destination -- it is not a second authentication system.
     "nav.employerLogin": "Företagsinloggning",
@@ -75,10 +79,11 @@ export const dictionaries = {
     // what drifts apart later.
     "nav.securityPassport": "Security Passport",
     "nav.career": "Karriär",
-    // "Tester & utveckling": the area holds recruitment tests, their released
+    // "Tester och utveckling": the area holds recruitment tests, their released
     // results AND employer-assigned training. "Tester och resultat" named
-    // half of it. The two are separated INSIDE the page, never mixed.
-    "nav.testsAndDevelopment": "Tester & utveckling",
+    // half of it. The two are separated INSIDE the page, never mixed. Spelled
+    // out with "och" since the MVP text specification (§3, 2026-09-27).
+    "nav.testsAndDevelopment": "Tester och utveckling",
     "nav.reviews": "Granskningar",
     "appnav.aria": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
@@ -86,6 +91,27 @@ export const dictionaries = {
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Där förtroende kommer först.",
+    // The common short description (MVP text specification §3): About, the
+    // homepage's structured data and, where needed, onboarding. The
+    // homepage itself uses its shorter hero sentence.
+    "brand.description":
+      "CQrityjob samlar ditt säkerhetsarbete, dina meriter och din karriär. Använd stöd för säkerhetsanalys, bygg ditt Security Passport och hitta vägar till nästa jobb. Arbetsgivare får en egen arbetsyta för rekrytering och kompetensutveckling.",
+    // ── PAGE TITLES AND DESCRIPTIONS ─────────────────────────────────
+    //
+    // The server renders the Swedish page, so each route's <head> reads the
+    // Swedish pair from here; useLocalizedHead() swaps in the English pair
+    // on the client when the reader has chosen English. No free, guarantee,
+    // integration or volume claim belongs in any of them.
+    "meta.home.title": "CQrityjob – din karriär och ditt säkerhetsarbete",
+    "meta.home.description":
+      "Samla dina meriter i Security Passport, hitta rätt yrkesväg och jobb och arbeta med säkerhetsanalys, risker och beredskapsunderlag i CQrityjob.",
+    "meta.about.title": "Om CQrityjob – säkerhetsarbete, meriter och karriär",
+    "meta.careerCenter.title": "Yrken och karriärvägar inom säkerhet – CQrityjob",
+    "meta.careerDiscovery.title": "Career Discovery – din karriäranalys – CQrityjob",
+    "meta.jobs.title": "Lediga jobb inom säkerhet – CQrityjob",
+    "meta.employers.title": "Rekrytera och utveckla säkerhetspersonal – CQrityjob",
+    "meta.assessment.title": "Karriäranalys, tester och utveckling – CQrityjob",
+    "meta.contact.title": "Kontakta oss – CQrityjob",
 
     // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
     //
@@ -95,204 +121,215 @@ export const dictionaries = {
     // a chrome that says "create your Security Passport" makes the Passport
     // the only product again in every page's top bar.
     "cta.passport": "Skapa mitt Security Passport",
-    "cta.discovery": "Starta Career Discovery",
     "cta.assessment": "Starta karriäranalysen",
     "cta.careers": "Utforska karriärvägar",
     "cta.contact": "Kontakta oss",
     "cta.talk": "Prata med oss",
-    "cta.notify": "Meddela mig vid lansering",
     "cta.learn_more": "Läs mer",
     "cta.all_careers": "Se alla karriärer",
 
-    // ── THE PUBLIC HOMEPAGE (2026-09-13) ────────────────────────────────
+    // ── THE PUBLIC HOMEPAGE (MVP text specification, 2026-09-27) ────────
     //
-    // TWO PEER ENTRANCES FOR A PERSON, ONE FOR AN ORGANISATION.
+    // THREE EQUAL CORE PARTS FOR A PERSON, ONE ENTRANCE FOR AN EMPLOYER.
     //
-    // The copy this block replaced said Security Passport was THE product
-    // and the Career Analysis was a supporting tool, offered once and
-    // quietly, from the third section. That position is SUPERSEDED by the
-    // owner-approved public entry architecture. CQrityjob is one Security
-    // Career Intelligence Platform with two PEER acquisition entrances for
-    // an individual -- build a Security Passport, or discover a security
-    // career -- and one entrance for an employer.
+    // The owner's latest decision supersedes the two-peer-entrance page
+    // (Security Passport and Career Discovery). CQrityjob now presents three
+    // parts of equal weight -- security work with AI support, Security
+    // Passport, and career and jobs -- plus a separate employer offer. The
+    // headline stays. The AI workspace is as visible as the other two parts
+    // and is not the platform's whole message.
     //
-    // The two individual products remain SEPARATE DOMAINS and neither is a
-    // prerequisite for the other. Career Discovery measures ORIENTATION and
-    // never competence (adr-career-discovery-construct-model.md); the
-    // Passport holds a RECORD and receives no assessment answer, prompt,
-    // scoring key or rubric (adr-security-competency-product-separation.md).
-    // No sentence below may blur that, and scripts/public-homepage-check.tsx
-    // fails the build if one does.
-    "home.cta.start": "Kom igång",
+    // The domains stay separate and no sentence below may blur them: the
+    // career analysis gives guidance and never measures competence; the
+    // Passport holds a record and receives no assessment answer; security
+    // work is not shared with the career profile, the Passport or an
+    // employer; people, never a model, make and document every decision.
+    // scripts/public-homepage-check.tsx renders the page and fails the build
+    // if a sentence does.
+    "home.hero.title": "Din karriär och ditt säkerhetsarbete. På samma plats.",
+    "home.hero.subtitle":
+      "Samla dina meriter i Security Passport, hitta rätt yrkesväg och jobb, och få stöd i ditt arbete med säkerhet, risk och krisberedskap.",
+    "home.account.returning": "Har du redan ett konto?",
+    "home.cta.employersLead": "Rekryterar du?",
+    "home.cta.employers": "Se företagsportalen",
     "jobs.card.deadline": "Sista ansökningsdag {d}",
     "jobs.card.open": "Visa annons",
     "jobs.detail.apply_jump": "Ansök",
-    "home.cta.jobs": "Hitta jobb",
-    "home.cta.employers": "För arbetsgivare",
-    "home.cta.jobsNote": "Lediga jobb kan du läsa utan konto.",
-    // The MVP sections below the hero (2026-09-26), kept as approved. Two
-    // sentences are gone because they repeated the hero, and the value card
-    // uses the approved "Skapa mitt Security Passport". Each section has its
-    // own word budget in scripts/public-homepage-check.tsx (T15).
-    "home.value.eyebrow": "För dig i säkerhetsbranschen",
-    "home.value.title": "Det här får du gjort",
-    "home.value.passport.title": "Visa dina meriter och välj vem som ser dem",
-    "home.value.passport.body":
-      "Varje merit visar sin källa och status, och du bestämmer vad som delas och med vem.",
-    "home.value.cv.title": "Bygg profil och CV, och sök jobb",
-    "home.value.cv.body":
-      "Fyll i din profil en gång och använd den i ditt CV och dina ansökningar. Sök säkerhetsjobb efter roll, plats och anställningsform.",
-    "home.value.cv.link": "Se lediga jobb",
-    "home.value.career.title": "Utforska karriär och utveckling",
-    "home.value.career.body":
-      "Career Discovery visar vilka säkerhetsroller som ligger nära din inriktning. Karriärcentret beskriver yrken, vägar in och utbildningar.",
-    "home.value.career.link": "Utforska karriärcentret",
-    "home.ai.eyebrow": "AI-stöd i ditt säkerhetsarbete",
+
+    // ── THE THREE CORE CARDS ────────────────────────────────────────────
+    //
+    // One grid, one set of classes, one heading size and one button style,
+    // so none of the three can drift into being the larger one. Each button
+    // leads to the part's own section on this page (or, for a signed-in
+    // reader, straight into the workspace); the career card also offers the
+    // jobs and, while it is open, the career analysis.
+    "home.core.work.title": "Stöd i ditt säkerhetsarbete",
+    "home.core.work.body":
+      "Strukturera underlag för omvärldsanalys, riskbedömning och beredskap. Arbeta vidare med rapporter och åtgärder. AI-stöd finns där det är aktiverat för arbetsytan.",
+    "home.core.work.cta": "Utforska säkerhetsarbetet",
+    "home.core.passport.title": "Visa dina meriter med Security Passport",
+    "home.core.passport.body":
+      "Samla dina certifieringar, licenser och yrkesbehörigheter med underlag och tydlig status. Du väljer vilka uppgifter du delar.",
+    "home.core.passport.cta": "Utforska Security Passport",
+    "home.core.career.title": "Hitta rätt yrkesväg och jobb",
+    "home.core.career.body":
+      "Utforska säkerhetsyrken, få yrkesförslag genom karriäranalysen och läs vad olika roller kräver. Hitta sedan relevanta lediga jobb.",
+    "home.core.career.cta": "Utforska yrken",
+    "home.core.career.jobs": "Hitta jobb",
+    "home.core.career.note": "Du kan läsa yrkesinformation och jobbannonser utan konto.",
+
+    // ── SECURITY INTELLIGENCE, IN DEPTH ─────────────────────────────────
+    //
+    // What the workspace actually is: a task, evidence, results and the
+    // person's own review. Crisis work is described concretely as evidence
+    // for preparedness, and every AI sentence says "when available": the
+    // workspace works manually and shows AI and document processing status
+    // separately. Nothing here promises that a click activates AI.
+    "home.ai.eyebrow": "Stöd för säkerhet, risk och krisberedskap",
     // The product's own name (sw.product), identical in both languages.
     "home.ai.title": "CQrityjob Security Intelligence",
     "home.ai.body":
-      "En privat arbetsyta för omvärldsbevakning och säkerhetsanalys. Verktyget hjälper dig att strukturera underlag – du står för bedömningen.",
+      "En arbetsyta för att gå från källunderlag till bedömning, rapport och åtgärd. När AI-stödet är tillgängligt kan det föreslå kompletteringsfrågor, synliggöra kunskapsluckor och ta fram utkast som du granskar.",
     "home.ai.task.label": "Uppgift",
     "home.ai.task.body":
-      "Bevaka det som påverkar din verksamhet och sammanställ analyser och rapporter.",
-    "home.ai.input.label": "Ditt underlag",
+      "Beskriv vad du behöver undersöka och vilket beslut underlaget ska stödja.",
+    "home.ai.input.label": "Underlag",
     "home.ai.input.body":
-      "En bevakningsprofil, dina bevakningsfrågor och de källor du själv registrerar.",
-    "home.ai.output.label": "Det du får",
+      "Samla källor och relevanta utdrag. Dokumentbearbetning kan användas när den är tillgänglig i arbetsytan.",
+    "home.ai.output.label": "Resultat",
     "home.ai.output.body":
-      "Sorterade underlag, riskbedömningar, analyser och rapportutkast med hänvisning till källorna. AI-utkast finns där funktionen är aktiverad för arbetsytan.",
+      "Arbeta med analyser, riskbedömningar, rapportutkast och åtgärder med hänvisningar till underlaget.",
     "home.ai.review.label": "Din granskning",
     "home.ai.review.body":
-      "Du bedömer relevansen och ansvarar för slutsatserna. Källor och utkast kan innehålla fel.",
+      "Kontrollera källor, osäkerheter och slutsatser. Du väljer vilka förslag du använder och godkänner rapporten.",
+    "home.ai.cta": "Öppna Mitt säkerhetsarbete",
+    "home.ai.availability":
+      "Arbetsytan kan användas manuellt. AI-stöd och dokumentbearbetning har separat tillgänglighet som visas när du öppnar arbetsytan.",
     "home.ai.note":
-      "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Arbetsytan delas inte med ditt CV, Security Passport eller arbetsgivare.",
-    "home.ai.cta": "Öppna Security Intelligence",
-    "home.employers.flow.jobs": "Publicera jobb",
-    "home.employers.flow.applications": "Hantera ansökningar",
-    "home.employers.flow.tests": "Skicka rekryteringstester",
-    "home.employers.flow.interview": "Förbered intervjun",
-    "home.employers.flow.decision": "Ni fattar beslutet",
-    "home.employers.flow.label": "Så hänger rekryteringen ihop",
-    "home.start.eyebrow": "Så kommer du igång",
-    "home.start.title": "Tre steg, oavsett var du börjar",
-    "home.start.person": "För dig som person",
-    "home.start.person.1": "Skapa ett konto med din e-postadress.",
-    "home.start.person.2": "Fyll i din profil och lägg till din första merit i Security Passport.",
-    "home.start.person.3": "Sök jobb, bygg ditt CV eller starta Career Discovery.",
-    "home.start.employer": "För arbetsgivare",
-    "home.start.employer.1": "Registrera företaget med namn och land.",
-    "home.start.employer.2": "Vi granskar kontot innan arbetsytan aktiveras.",
-    "home.start.employer.3": "Publicera ditt första jobb och ta emot ansökningar.",
-    "home.faq.eyebrow": "Erbjudande och vanliga frågor",
-    "home.faq.title": "Bra att veta innan du börjar",
-    "home.faq.offer.person":
-      "För individer: konto, profil, CV, Security Passport, jobbsök, Career Discovery och Security Intelligence.",
-    "home.faq.offer.employer":
-      "För arbetsgivare: jobbannonser, ansökningar, rekryteringstester, intervjuförberedelse och medarbetarutveckling. Priser och paket är inte publicerade ännu – kontakta oss.",
-    "home.faq.contact": "Kontakta oss",
-    "home.faq.q1": "Vem är CQrityjob till för?",
-    "home.faq.a1":
-      "Personer som arbetar inom eller vill till säkerhetsbranschen, och organisationer som rekryterar och utvecklar säkerhetspersonal.",
-    "home.faq.q2": "Hur fungerar delning av Security Passport?",
-    "home.faq.a2":
-      "Ditt Security Passport är privat som standard. Du väljer vilka meriter som delas och med vem, och du kan återkalla en delning. En ansökan delar inte ditt Passport automatiskt.",
-    "home.faq.q3": "Är mina meriter verifierade?",
-    "home.faq.a3":
-      "En uppladdad handling är inte automatiskt verifierad. Varje merit visar sin faktiska status, till exempel egen uppgift, granskad handling eller verifierad mot källan. En internationell certifiering innebär inte automatiskt lokal yrkesbehörighet.",
-    "home.faq.q4": "Behöver jag ett konto för att söka jobb?",
-    "home.faq.a4":
-      "Nej. Du kan söka och läsa annonser utan konto. När du ansöker loggar du in eller skapar ett konto och kommer sedan tillbaka till annonsen.",
-    "home.faq.q5": "Beslutar AI vem som anställs?",
-    // Said without the ranking vocabulary, which this page may not use even
-    // negated (public-homepage-check T14). It used to end "Plattformen
-    // rangordnar inte kandidater"; the meaning is unchanged.
-    "home.faq.a5":
-      "Nej. AI kan hjälpa till att strukturera underlag, men människor fattar och dokumenterar varje beslut. Plattformen sorterar inte kandidater från bäst till sämst.",
-    "home.hero.title": "Din karriär och ditt säkerhetsarbete. På samma plats.",
-    "home.hero.subtitle":
-      "Hitta jobb inom säkerhet, samla certifieringar och behörigheter i Security Passport och få AI-stöd i ditt dagliga säkerhetsarbete. Du bestämmer alltid vad som delas.",
-    "home.account.returning": "Har du redan ett konto?",
+      "Lägg inte in säkerhetsskyddsklassificerad eller hemlig information. Ditt säkerhetsarbete delas inte automatiskt med din karriärprofil, Security Passport eller arbetsgivare.",
+    // Three examples within the EXISTING methods (monitoring, rsa and the
+    // security assessment, legacy_security). They are not agents, not new
+    // products and create nothing for anybody.
+    "home.ai.examples.label": "Exempel på användning",
+    "home.ai.examples.monitoring.title": "Omvärldsanalys",
+    "home.ai.examples.monitoring.body":
+      "Vilka händelser kan påverka verksamheten? Samla egna källor, bedöm relevansen och ta fram en briefing med tydliga hänvisningar.",
+    "home.ai.examples.risk.title": "Riskanalys",
+    "home.ai.examples.risk.body":
+      "Vad kan inträffa, vilka sårbarheter finns och vad behöver göras? Strukturera bedömningen och följ upp åtgärder.",
+    "home.ai.examples.preparedness.title": "Underlag för beredskap",
+    "home.ai.examples.preparedness.body":
+      "Samla en säkerhetsbedömning med risker, säkerhetsupplägg, beredskap och kontaktpersoner som stöd för verksamhetens planering.",
+
+    // ── SECURITY PASSPORT, IN DEPTH ─────────────────────────────────────
+    //
+    // The section keeps the three markets with their real status, the three
+    // trust levels and the owner-approved disclaimer, and it now carries the
+    // illustrative Passport card that used to sit in the hero. An uploaded
+    // document is never said to be verified.
+    "home.passport.title": "Dina meriter, med tydlig källa och status",
+    "home.passport.body":
+      "Security Passport samlar dina certifieringar, licenser och yrkesbehörigheter. Lägg till underlag och välj vilka meriter du vill dela. Ett uppladdat dokument innebär inte i sig att uppgiften har verifierats.",
+    "home.passport.open": "Öppna Security Passport",
+    "home.passport.sharing":
+      "Du väljer vad som delas. En jobbansökan delar inte ditt Security Passport automatiskt.",
     "home.passportPreview.private": "Privat som standard",
-    "home.passportPreview.record": "Din professionella dokumentation",
-    "home.passportPreview.title": "Meriter med tydlig källa och status",
-    "home.passportPreview.body":
-      "Du väljer vad mottagaren ser. Delningslänkar är tidsbegränsade och förblir under din kontroll.",
     // The illustrative card. FICTIONAL, and says so twice: a label on the
     // card and a caption under it. It must never read as a real holder.
     "home.passportPreview.exampleLabel": "Exempel",
-    "home.passportPreview.exampleCaption": "Påhittad person, påhittade meriter.",
+    "home.passportPreview.exampleCaption": "Exempel – påhittad person och påhittade meriter.",
     "home.passportPreview.exampleName": "Exempel Exempelsson",
     // Replaces "Dokumenterad källa" and "Tillitstillstånd: Dokumenterat", which
     // sat on the panel as decoration and read as a statement about somebody.
     "home.passportPreview.statusNote":
       "Varje merit visar sin egen status. Registrerad är inte verifierad.",
 
-    // ── THE TWO ENTRY CARDS ─────────────────────────────────────────────
+    // ── CAREER, CV AND JOBS, IN DEPTH ───────────────────────────────────
     //
-    // Equal size, equal visual weight, two equally solid actions. The
-    // Passport is rendered first because it is the durable record; that is
-    // an ORDER and not a hierarchy, and Career Discovery may never be
-    // styled as the quiet text link it used to be.
-    "home.entry.passport.title": "Bygg ditt Security Passport",
-    // Certifications, licences and authorisations — and nothing else. Employment
-    // history is the CV's; personal details and current profession are the
-    // Profile's. This sentence used to promise "experience, education and
-    // certifications", which advertised the Passport as the editor for both.
-    "home.entry.passport.body":
-      "Samla dina certifieringar, licenser och yrkesbehörigheter — internationellt och per land. Lägg till underlag och välj vad du delar.",
-    "home.entry.discovery.title": "Upptäck din säkerhetskarriär",
-    "home.entry.discovery.body":
-      "Utforska din arbetsinriktning och få förklarade förslag på roller och karriärvägar inom säkerhet.",
-    // The low-friction model, said where the action is. Career Discovery
-    // may be started without an account, keeps answers in the current tab
-    // and asks for an account when the result is saved -- and the existing
-    // claim token through email confirmation, Google and the login/signup
-    // swap is untouched by this page. This sentence exists so the entrance
-    // never implies a signup wall the product does not have.
-    "home.entry.discovery.disclosure":
-      "Du kan börja utan konto. Skapa ett konto när du vill spara resultatet och fortsätta i My Career.",
+    // Career Discovery is the product name; in Swedish it is explained as
+    // "karriäranalys". It gives guidance and never decides competence,
+    // eligibility or a job. The analysis action follows the existing access
+    // status: when the analysis is not open, the exact sentence below is
+    // shown instead of the action.
+    "home.career.title": "Förstå dina möjligheter. Ta nästa steg.",
+    "home.career.body":
+      "Läs om säkerhetsyrken och deras krav. Använd Career Discovery för att utforska möjliga riktningar utifrån dina svar. Samla din profil och ditt CV i Min karriär och gå vidare till relevanta jobbannonser.",
+    "home.career.analysis": "Gör karriäranalysen",
+    "home.career.professions": "Utforska yrken och karriärvägar",
+    "home.career.jobs": "Se lediga jobb",
+    "home.career.note":
+      "Karriäranalysen ger vägledning. Den avgör inte din kompetens, behörighet eller om du får ett jobb.",
+    "home.career.closed":
+      "Karriäranalysen är inte öppen för nya deltagare just nu. Du kan fortfarande utforska yrken och jobb.",
 
-    // ── THE EMPLOYER STRIP ──────────────────────────────────────────────
+    // ── THE EMPLOYER SECTION ────────────────────────────────────────────
     //
-    // Visually separate, below the two individual cards, and gated by the
-    // employer release flag: a disabled surface is never presented as an
-    // available one. It says what the platform supports and who decides; it
-    // never says CQrityjob or a model approves, rejects, ranks or selects
-    // anybody.
+    // Its own navy band, gated by the employer release flag: a disabled
+    // surface is never presented as an available one. Five recruitment
+    // steps ending in the employer's own documented decision, and learning
+    // and development shown AFTER them as continued use -- never as a
+    // selection step. It never says CQrityjob or a model approves, rejects,
+    // ranks or selects anybody.
     "home.employers.eyebrow": "För arbetsgivare",
-    "home.employers.title": "Rekryterar du inom säkerhet?",
+    "home.employers.title": "Rekrytera och utveckla säkerhetspersonal",
     "home.employers.body":
-      "Publicera jobb, hantera kandidater och använd strukturerade tester och intervjuer i samma plattform.",
+      "Samla jobbannonser, ansökningar, rekryteringstester och strukturerade intervjuer i Företagsportalen. Fortsätt med kompetensutveckling för medarbetarna. Ni fattar och dokumenterar besluten.",
     "home.employers.cta.register": "Registrera företag",
-    "home.employers.cta.explore": "Se företagsplattformen",
+    "home.employers.cta.explore": "Utforska Företagsportalen",
+    "home.employers.flow.label": "Så hänger rekryteringen ihop",
+    "home.employers.flow.jobs": "Publicera jobb",
+    "home.employers.flow.applications": "Hantera ansökningar",
+    "home.employers.flow.tests": "Använd rekryteringstester",
+    "home.employers.flow.interview": "Förbered intervjun",
+    "home.employers.flow.decision": "Fatta och dokumentera beslutet",
+    "home.employers.flow.development": "Därefter: kompetensutveckling för medarbetarna.",
 
-    // ── ONE CONNECTED LIFECYCLE ─────────────────────────────────────────
+    // ── GET STARTED ─────────────────────────────────────────────────────
     //
-    // An explanation of how the parts connect, NOT six competing product
-    // cards: six short stages, each with one quiet link to a canonical
-    // route that already exists. Nothing here promises a match, a job or a
-    // decision, and nothing here turns an orientation result into a merit.
-    "home.lifecycle.eyebrow": "En plattform",
-    "home.lifecycle.title": "Hela säkerhetskarriären hänger ihop",
-    "home.lifecycle.discover.title": "Upptäck",
-    "home.lifecycle.discover.body":
-      "Career Discovery och Karriärvägar visar vilka roller som finns inom säkerhet.",
-    "home.lifecycle.understand.title": "Förstå",
-    "home.lifecycle.understand.body":
-      "Du får en förklarad rapport om din inriktning, inte ett omdöme om dig.",
-    "home.lifecycle.grow.title": "Utvecklas",
-    "home.lifecycle.grow.body": "My Career samlar din profil, dina tester och din utveckling.",
-    "home.lifecycle.trust.title": "Visa",
-    "home.lifecycle.trust.body":
-      "Security Passport håller dina meriter, underlag, verifieringar och ditt CV.",
-    "home.lifecycle.work.title": "Arbeta",
-    "home.lifecycle.work.body": "Jobb, ansökningar och arbetsgivarnas processer fortsätter här.",
-    "home.lifecycle.continue.title": "Fortsätt",
-    "home.lifecycle.continue.body":
-      "Utbildning och kompetensutveckling fortsätter efter anställningen.",
-    "home.lifecycle.understand.link": "Så fungerar rapporten",
-    "home.lifecycle.grow.link": "Kom igång med My Career",
-    "home.lifecycle.continue.link": "Tester och utveckling",
+    // Guidance, not a new mandatory onboarding: each flow keeps its own
+    // requirements.
+    "home.start.eyebrow": "Så kommer du igång",
+    "home.start.title": "Tre steg, oavsett var du börjar",
+    "home.start.person": "För dig som person",
+    "home.start.person.1":
+      "Välj vad du vill göra: utforska yrken och jobb, bygga ditt Security Passport eller öppna säkerhetsarbetsytan.",
+    "home.start.person.2": "Skapa konto när du vill spara och fortsätta i din egen arbetsyta.",
+    "home.start.person.3":
+      "Fortsätt där du behöver stöd. Du behöver inte fylla i alla delar för att börja.",
+    "home.start.employer": "För arbetsgivare",
+    "home.start.employer.1": "Skapa konto och registrera organisationen.",
+    "home.start.employer.2": "Följ organisationens status medan registreringen granskas.",
+    "home.start.employer.3": "När arbetsytan är aktiv kan ni börja med er rekrytering.",
+
+    // ── OFFER AND QUESTIONS ─────────────────────────────────────────────
+    //
+    // Pricing is said once, where the offer is described, and there is no
+    // contact invitation: the contact form does not send anything yet.
+    "home.faq.eyebrow": "Erbjudande och vanliga frågor",
+    "home.faq.title": "Bra att veta innan du börjar",
+    "home.faq.offer.person":
+      "För individer: konto, profil, CV, Security Passport, jobbsök, Career Discovery och Security Intelligence.",
+    "home.faq.offer.employer":
+      "För arbetsgivare: jobbannonser, ansökningar, rekryteringstester, intervjuförberedelse och kompetensutveckling.",
+    "home.faq.pricing": "Priser och paket är inte publicerade ännu.",
+    "home.faq.q1": "Vem är CQrityjob till för?",
+    "home.faq.a1":
+      "För dig som arbetar inom eller vill in i säkerhetsbranschen, och för organisationer som rekryterar och utvecklar säkerhetspersonal.",
+    "home.faq.q2": "Hur fungerar delning av Security Passport?",
+    "home.faq.a2":
+      "Ditt Security Passport är privat som standard. Du väljer vilka meriter som delas och kan återkalla delningslänken. En jobbansökan delar inte ditt Passport automatiskt.",
+    "home.faq.q3": "Är mina meriter verifierade?",
+    "home.faq.a3":
+      "Varje merit visar sin faktiska status. En egen uppgift eller en uppladdad handling är inte automatiskt källbekräftad. Läs statusen och vilket underlag som ligger bakom den.",
+    "home.faq.q4": "Behöver jag konto för att läsa jobbannonser?",
+    "home.faq.a4":
+      "Nej. Du kan söka och läsa annonser utan konto. Vid ansökan följer du annonsens ansökningsväg. För ansökningar i CQrityjob loggar du in eller skapar konto.",
+    "home.faq.q5": "Beslutar AI vem som anställs?",
+    "home.faq.a5":
+      "Nej. AI kan hjälpa till att strukturera underlag. Arbetsgivaren granskar underlaget och fattar och dokumenterar beslutet.",
+    "home.faq.q6": "Hur hjälper AI till i säkerhetsarbetet?",
+    "home.faq.a6":
+      "När AI-stödet är tillgängligt i arbetsytan kan det föreslå kompletteringsfrågor, synliggöra kunskapsluckor och ta fram analys- och rapportutkast. Du granskar förslagen och ansvarar för slutsatserna. Arbetsytan kan också användas manuellt.",
 
     // ── SECURITY PASSPORT: THE THREE MARKETS, AND WHAT IT IS NOT ────────
     //
@@ -302,7 +339,6 @@ export const dictionaries = {
     // this page reads no Passport table, no entitlement and no credential.
     // Nothing below is a credential record and nothing below claims one.
     "home.markets.eyebrow": "Security Passport",
-    "home.markets.title": "Byggt för en karriär som rör sig",
     "home.markets.body": "Sverige är öppet. Storbritannien och Dubai är i sluten pilot.",
     "home.markets.SE": "Sverige",
     "home.markets.GB": "Storbritannien",
@@ -362,7 +398,8 @@ export const dictionaries = {
 
     "jobs.discover.title": "Hitta jobb inom säkerhet",
     "jobs.discover.lead":
-      "Hitta lediga jobb inom säkerhetsbranschen. Sök efter yrke, arbetsgivare, plats eller yrkesområde.",
+      "Sök efter roll, plats och anställningsform. Läs annonsens krav och välj jobb som är relevanta för dig.",
+    "jobs.discover.publicNote": "Du kan söka och läsa jobbannonser utan konto.",
     "jobs.search.keyword_placeholder": "Yrke, kompetens eller nyckelord",
     "jobs.search.location_placeholder": "Ort, region eller land",
     "jobs.search.submit": "Sök",
@@ -374,33 +411,37 @@ export const dictionaries = {
     "jobs.filter.country": "Land",
     "jobs.filter.any": "Alla",
     "jobs.filter.toggle": "Filter",
+    "jobs.filter.active_one": "{n} aktivt filter",
+    "jobs.filter.active_other": "{n} aktiva filter",
     "jobs.browse.families.title": "Utforska jobb efter yrkesområde",
     "jobs.browse.families.subtitle":
       "Utforska olika yrkesområden inom säkerhetsbranschen – från bevakning och cybersäkerhet till riskhantering, företagssäkerhet och kritisk infrastruktur.",
     "jobs.results.count_one": "{n} jobb",
     "jobs.results.count_other": "{n} jobb",
-    "jobs.results.empty.title": "Inga jobb matchar",
-    "jobs.results.empty.body":
-      "Prova andra nyckelord eller ta bort filter. Nya jobb publiceras löpande.",
-    "jobs.results.error.title": "Något gick fel",
-    "jobs.results.error.body": "Vi kunde inte hämta jobb just nu. Försök igen om en stund.",
+    "jobs.results.empty.title": "Inga jobb matchar din sökning",
+    "jobs.results.empty.body": "Prova färre filter eller ett annat sökord.",
+    "jobs.results.error.title": "Jobben kunde inte hämtas just nu",
+    "jobs.results.error.body": "Försök igen.",
+    "jobs.detail.error.title": "Annonsen kunde inte hämtas just nu",
     "jobs.results.loading": "Laddar jobb…",
     "jobs.card.untitled": "Utan titel",
     "jobs.card.today": "Idag",
     "jobs.card.posted_days_ago": "Publicerad för {n} dagar sedan",
-    "jobs.detail.back": "← Alla jobb",
-    "jobs.detail.backToResults": "← Tillbaka till sökresultatet",
-    "jobs.detail.apply_external": "Ansök hos arbetsgivaren",
+    "jobs.detail.back": "← Tillbaka till jobben",
+    "jobs.detail.backToResults": "← Tillbaka till jobben",
+    "jobs.detail.apply_external": "Ansök på arbetsgivarens webbplats",
     "jobs.detail.apply_email": "Ansök via e-post",
-    "jobs.detail.apply_internal": "Ansök via CQrityjob",
+    "jobs.detail.apply_internal": "Ansök om jobbet",
     "jobs.detail.apply_unavailable": "Ansökan är för närvarande inte tillgänglig via CQrityjob.",
 
     "jobs.apply.signInToApply": "Logga in för att ansöka",
+    "jobs.apply.createAccountToApply": "Skapa konto och fortsätt till ansökan",
     "jobs.apply.signInToApplyHint":
       "Du behöver ett CQrityjob-konto för att ansöka via plattformen.",
     "jobs.apply.dialog.title": "Ansök till tjänsten",
     "jobs.apply.dialog.body": "Din ansökan skickas direkt till {employer}.",
     "jobs.apply.dialog.bodyGeneric": "Din ansökan skickas direkt till arbetsgivaren.",
+    "jobs.apply.reviewBeforeSend": "Granska dina uppgifter och bilagor innan du skickar ansökan.",
     "jobs.apply.dialog.submit": "Skicka ansökan",
     "jobs.apply.field.phone": "Telefonnummer (valfritt)",
     "jobs.apply.field.coverNote": "Personligt meddelande (valfritt)",
@@ -441,8 +482,8 @@ export const dictionaries = {
       "Det CV:t är inte klart att skicka. Slutför det under Min karriär och försök igen.",
     "jobs.apply.error.generic": "Kunde inte skicka ansökan. Försök igen.",
     "jobs.apply.success.title": "Ansökan skickad",
-    "jobs.apply.success.body":
-      "Din ansökan har skickats till arbetsgivaren. Du kan följa statusen under Mina ansökningar.",
+    "jobs.apply.success.body": "Din ansökan har skickats.",
+    "jobs.apply.success.next": "Följ ansökan i Mina ansökningar.",
     "jobs.apply.success.close": "Stäng",
     "jobs.apply.success.cvCqrityjob": "Ditt CQrityjob-CV skickades med ansökan.",
     "jobs.apply.success.cvUpload": "Det CV du laddade upp skickades med ansökan.",
@@ -489,8 +530,8 @@ export const dictionaries = {
 
     "jobs.relevance.invite.title": "Få personliga karriärinsikter",
     "jobs.relevance.invite.body":
-      "Gör Security Career Assessment för att få personliga karriärinsikter och se vilka jobb som bäst matchar din profil.",
-    "jobs.relevance.invite.cta": "Gör Security Career Assessment",
+      "Gör karriäranalysen för att få förklarade yrkesförslag och hitta relevanta jobb. Du kan söka jobb utan den.",
+    "jobs.relevance.invite.cta": "Gör karriäranalysen",
     "jobs.relevance.badge.strong": "Nära din profil",
     "jobs.relevance.badge.promising": "Relevant för din profil",
     "jobs.relevance.badge.exploratory": "Värd att utforska",
@@ -539,9 +580,9 @@ export const dictionaries = {
     //     (säkerhetsprövning), which is the employer's own legal duty.
     //   * Career Discovery data is the candidate's and never appears in an
     //     employer surface, so no sentence here offers it.
-    "employers.title": "Hela rekryteringen av säkerhetspersonal i en plattform",
+    "employers.title": "Rekrytera och utveckla säkerhetspersonal på samma plats.",
     "employers.lead":
-      "Publicera säkerhetsjobb, hantera ansökningar och använd strukturerade bedömningar och intervjumodeller för både vanliga säkerhetsroller och säkerhetsskyddskänsliga befattningar.",
+      "Publicera jobb, samla ansökningar och arbeta med rekryteringstester och strukturerade intervjuer. Fortsätt med medarbetarnas kompetensutveckling i en egen företagsportal.",
 
     // ── THE CONNECTED PATH ──────────────────────────────────────────────
     "employers.path.title": "Så hänger processen ihop",
@@ -551,22 +592,23 @@ export const dictionaries = {
     // decision look like a waypoint rather than the outcome.
     "employers.path.continuation": "Och sedan",
     "employers.path.step1.title": "Publicera jobbet",
-    "employers.path.step1.body": "Beskriv rollen, kraven och arbetsplatsen och publicera annonsen.",
-    "employers.path.step2.title": "Ta emot och ordna ansökningarna",
+    "employers.path.step1.body":
+      "Beskriv arbetsuppgifter, krav och arbetsplats. Granska annonsen före publicering.",
+    "employers.path.step2.title": "Hantera ansökningar",
     "employers.path.step2.body":
-      "Ansökningarna samlas på ett ställe med den information kandidaten valt att dela.",
-    "employers.path.step3.title": "Välj bedömning och intervjumodell",
+      "Samla ansökningar och följ vad som behöver göras i varje rekrytering.",
+    "employers.path.step3.title": "Använd rekryteringstester",
     "employers.path.step3.body":
-      "Välj det arbetssätt rollen kräver — ordinarie säkerhetsroll eller säkerhetsskyddskänslig befattning.",
-    "employers.path.step4.title": "Granska underlaget tillsammans",
+      "Välj tillgängliga tester som är relevanta för rollen och granska underlaget i sitt sammanhang.",
+    "employers.path.step4.title": "Förbered och genomför intervju",
     "employers.path.step4.body":
-      "Rekryteringsteamet läser samma strukturerade underlag om varje kandidat.",
+      "Strukturera frågor, anteckningar och uppföljning med Interview Intelligence. AI-stöd används där det är tillgängligt.",
     "employers.path.step5.title": "Fatta och dokumentera beslutet",
     "employers.path.step5.body":
-      "Människor fattar beslutet, och beslutet dokumenteras med sitt underlag.",
-    "employers.path.step6.title": "Fortsätt med utveckling",
+      "Rekryteringsteamet ansvarar för bedömningen och det slutliga beslutet.",
+    "employers.path.step6.title": "Fortsätt med kompetensutveckling",
     "employers.path.step6.body":
-      "Efter anställningen fortsätter utbildning och kompetensutveckling i samma plattform.",
+      "Efter anställningen fortsätter medarbetarnas kompetensutveckling i företagsportalen.",
 
     // ── TWO RECRUITMENT EXAMPLES ────────────────────────────────────────
     "employers.examples.title": "Två sätt att rekrytera",
@@ -586,6 +628,8 @@ export const dictionaries = {
 
     "employers.disclaimer":
       "CQrityjob stödjer arbetsgivarens beslut. Varken CQrityjob eller AI avgör om en kandidat är lämplig — arbetsgivaren fattar och dokumenterar alltid det slutliga beslutet.",
+    "employers.crossLink.lead": "Arbetar du själv med säkerhet, risk eller beredskap?",
+    "employers.crossLink.action": "Utforska Mitt säkerhetsarbete",
     // The three actions, in the order the two readers need them: a new
     // employer registers, anybody can read how the platform works, and an
     // existing customer gets back into their workspace. All three use the
@@ -597,111 +641,45 @@ export const dictionaries = {
     "employers.cta.how": "Se hur plattformen fungerar",
     "employers.cta.login": "Logga in till företagsportalen",
 
-    "assessment.eyebrow": "TVÅ SEPARERADE LÖSNINGAR",
-    "assessment.title": "Tester för karriär och säkerhetskompetens",
-    "assessment.lead":
-      "CQrityjob erbjuder kostnadsfri karriärvägledning för individer och rollbaserade kompetenstest för organisationer som vill bedöma kandidater eller utveckla befintlig säkerhetspersonal.",
-
-    "assessment.individuals.eyebrow": "FÖR INDIVIDER",
-    "assessment.individuals.title": "Hitta din väg inom säkerhet",
-    "assessment.individuals.body":
-      "Utforska vilka säkerhetsyrken som kan passa dina intressen, jämför karriärvägar och få konkreta förslag på nästa steg. Testet ger vägledning och avgör inte om du är behörig eller professionellt lämplig för ett visst yrke.",
-    "assessment.individuals.point.time": "Cirka fem minuter",
-    "assessment.individuals.point.free": "Kostnadsfritt",
-    "assessment.individuals.point.account": "Inget konto krävs",
-    "assessment.individuals.point.guidance": "Personlig karriärvägledning",
-    "assessment.individuals.point.links": "Länkar till yrkesguider och nästa steg",
-    "assessment.individuals.cta": "Gör säkerhetskarriärtestet",
-
-    "assessment.orgs.eyebrow": "FÖR ORGANISATIONER",
-    "assessment.orgs.title": "Bedöm och utveckla säkerhetspersonal",
-    "assessment.orgs.body":
-      "Rollbaserade kompetenstest för organisationer som vill få bättre beslutsunderlag vid rekrytering, kontrollera kunskap hos befintlig personal, identifiera kompetensgap och planera utvecklingsinsatser.",
-    "assessment.orgs.usecaseA.title": "Kandidatbedömning vid rekrytering",
-    "assessment.orgs.usecaseA.body":
-      "Bjud in kandidater till rollspecifika tester och få ett strukturerat beslutsunderlag inför intervju, referenstagning och fortsatt urval.",
-    "assessment.orgs.usecaseB.title": "Kompetenstest av befintlig personal",
-    "assessment.orgs.usecaseB.body":
-      "Testa egen eller upphandlad säkerhetspersonal mot definierade rollkrav, identifiera kunskaps- och kompetensgap och följ utveckling över tid.",
-    "assessment.orgs.customers.title": "Exempel på organisationer",
-    "assessment.orgs.customers.1": "Bevaknings- och säkerhetsföretag",
-    "assessment.orgs.customers.2": "Myndigheter",
-    "assessment.orgs.customers.3": "Datacenter",
-    "assessment.orgs.customers.4": "Kritisk infrastruktur",
-    "assessment.orgs.customers.5": "Företagens säkerhetsavdelningar",
-    "assessment.orgs.customers.6": "Organisationer som upphandlar säkerhetstjänster",
-    "assessment.orgs.cta": "Utforska lösningen för organisationer",
-    "assessment.orgs.status": "Under utveckling — förhandstitt på kommande produkt.",
-
-    "assessment.compare.title": "Skillnaden mellan vägledning och kompetenstest",
-    "assessment.compare.guidance.title": "Karriärvägledning",
-    "assessment.compare.guidance.1": "Utformad för individer",
-    "assessment.compare.guidance.2": "Utforskar intressen och möjliga karriärvägar",
-    "assessment.compare.guidance.3": "Inget anställningsbeslut",
-    "assessment.compare.guidance.4": "Ingen bedömning av behörighet",
-    "assessment.compare.guidance.5": "Kostnadsfri ingångsprodukt",
-    "assessment.compare.pro.title": "Professionellt kompetenstest",
-    "assessment.compare.pro.1": "Beställs av en organisation",
-    "assessment.compare.pro.2": "Kopplad till en definierad roll och ett tydligt syfte",
-    "assessment.compare.pro.3":
-      "Kan innehålla kunskap, situationsbedömning och praktiska scenarier",
-    "assessment.compare.pro.4": "Ger strukturerat beslutsstöd för människor",
-    "assessment.compare.pro.5": "Kan användas för kandidater eller befintlig personal",
-    "assessment.compare.pro.6":
-      "Godkänner, avvisar eller rangordnar aldrig personer för anställning automatiskt",
-
-    "assessment.workflow.title": "Så tänker vi kring arbetsflödet för organisationer",
-    "assessment.workflow.subtitle":
-      "Förhandsvisning av kommande produkt — inte aktiv funktionalitet.",
-    "assessment.workflow.step1": "Välj roll eller kompetensområde",
-    "assessment.workflow.step2": "Bjud in kandidater eller anställda",
-    "assessment.workflow.step3": "Genomför rollspecifikt test",
-    "assessment.workflow.step4": "Granska resultat per delområde",
-    "assessment.workflow.step5": "Identifiera kompetensgap",
-    "assessment.workflow.step6": "Planera intervju, utbildning eller uppföljning",
-
-    "assessment.responsible.title": "Ansvarsfull användning",
-    "assessment.responsible.body":
-      "CQrityjobs professionella kompetenstest stödjer mänskliga beslut. Organisationen ansvarar för slutliga beslut om rekrytering, behörighet, anställning, utbildning och personal.",
-    "assessment.status":
-      "Karriärtestet är tillgängligt idag. Lösningen för organisationer är under utveckling.",
-
-    "about.title": "Vår mission",
-    "about.lead":
-      "CQrityjob är karriär-, rekryterings- och bedömningsplattformen för säkerhetsbranschen. Vi hjälper människor att bygga sin karriär inom säkerhet och organisationer att rekrytera och utveckla rätt kompetens.",
+    // ── ABOUT (MVP text specification §12.1) ─────────────────────────
+    //
+    // Replaces the older product description, which presented CQrityjob as
+    // a career, recruitment and assessment platform and promised a free
+    // test. The lead is the common short description (brand.description);
+    // the three parts reuse the homepage's core cards and the employer offer
+    // reuses the homepage's employer section, so the two pages cannot
+    // describe different products. No claim that other platforms lack
+    // understanding, that CQrityjob leads the world, that every credential
+    // is verified or that every market is open.
+    "about.title": "För hela ditt yrkesliv inom säkerhet.",
     "about.pillars.title": "Tre sammankopplade områden",
-    "about.pillars.career.title": "Karriärutveckling",
-    "about.pillars.career.body":
-      "Vi hjälper individer att upptäcka roller, förstå kompetenskrav och navigera sin långsiktiga professionella utveckling.",
-    "about.pillars.recruit.title": "Rekrytering",
-    "about.pillars.recruit.body":
-      "Vi kopplar samman seriösa arbetsgivare med kvalificerade kandidater — med både digital självbetjäning och professionella rekryteringsuppdrag.",
-    "about.pillars.assessment.title": "Tester och verifiering",
-    "about.pillars.assessment.body":
-      "Kostnadsfritt karriärtest för individer och rollbaserade kompetenstest för organisationer — som beslutsstöd vid rekrytering och för att utveckla befintlig personal.",
     "about.mission.title": "Uppdraget",
     "about.mission.body":
-      "Vi bygger en betrodd digital destination där människor kan utforska en karriär inom säkerhet — och där organisationer kan rekrytera, bedöma och utveckla rätt personal.",
+      "Vi vill göra det enklare att utvecklas och arbeta inom säkerhet. Därför samlar vi stöd för säkerhetsarbete, dokumentation av meriter och vägar till nästa jobb i samma plattform.",
+    "about.ai.title": "AI och ansvar",
+    "about.ai.body":
+      "AI ska hjälpa människor att strukturera information och granska underlag. Användaren ansvarar för sin professionella bedömning, och arbetsgivaren för sina rekryteringsbeslut.",
     "about.vision.title": "Visionen",
     "about.vision.body":
-      "Att bli den ledande karriär-, rekryterings- och bedömningsplattformen för säkerhetsbranschen — med start i Sverige och byggd för internationell expansion.",
-    "about.why.title": "Varför enbart säkerhet",
-    "about.why.body":
-      "Generella plattformar förstår inte säkerhetsbranschens krav på kompetens, licenser och kvalitet. Genom att fokusera uteslutande på säkerhet kan vi bygga verkligt användbara verktyg.",
-    "about.expansion.title": "Från Sverige till världen",
-    "about.expansion.body":
-      "Plattformen är flerspråkig från grunden och utformad för att anpassas till olika marknader och regelverk.",
+      "Vår ambition är att CQrityjob ska vara en naturlig plats att återvända till genom hela yrkeslivet inom säkerhet – för att arbeta, utvecklas och hitta nästa möjlighet.",
+    "assessment.title": "Karriäranalys, rekryteringstester och kompetensutveckling",
+    "assessment.lead":
+      "Välj stöd utifrån vad du vill göra: utforska din karriär, få underlag i en rekrytering eller utveckla medarbetarnas kunskaper.",
+    "assessment.person.title": "Karriäranalys",
+    "assessment.person.body":
+      "Utforska din karriär med Career Discovery. Du får vägledning utifrån dina svar.",
+    "assessment.recruitment.title": "Rekryteringstester",
+    "assessment.recruitment.body":
+      "Använd rollrelevanta rekryteringstester som en del av arbetsgivarens samlade underlag.",
+    "assessment.development.title": "Kompetensutveckling",
+    "assessment.development.body":
+      "Planera och följ upp kompetensutveckling för befintliga medarbetare.",
+    "assessment.responsible":
+      "Ett resultat ska tolkas utifrån sitt syfte och sammanhang. Beslut fattas av människor.",
 
     "contact.title": "Kontakta oss",
     "contact.lead":
-      "Vi arbetar med utvalda partners under uppbyggnaden. Hör av dig så återkopplar vi.",
-    "contact.preview_notice":
-      "Detta formulär är en förhandsvisning och skickar för närvarande inga meddelanden.",
-    "contact.form.name": "Namn",
-    "contact.form.email": "E-post",
-    "contact.form.company": "Organisation",
-    "contact.form.message": "Meddelande",
-    "contact.form.submit": "Skicka",
+      "Kontaktformuläret är inte öppet för meddelanden ännu. Inget skickas från den här sidan.",
 
     "profession.police.title": "Polis",
     "profession.police.desc":
@@ -732,9 +710,6 @@ export const dictionaries = {
       "Planering och ledning av kris- och incidenthantering på organisationsnivå.",
 
     "status.coming_soon": "Kommer snart",
-    "status.in_development": "Under utveckling",
-    "status.preview": "Förhandsvisning",
-    "status.available": "Tillgänglig nu",
 
     "auth.signin.title": "Logga in",
     "auth.signup.title": "Skapa konto",
@@ -816,7 +791,8 @@ export const dictionaries = {
     "auth.companyCountry": "Land",
     "employer.pending.heading": "Företagskonto granskas",
     "employer.pending.thanks": "Tack för din registrering.",
-    "employer.pending.body": "Vi granskar nu företagets uppgifter innan kontot aktiveras.",
+    "employer.pending.body":
+      "Organisationens registrering granskas. Här ser du när statusen ändras.",
     "employer.pending.access":
       "Du får tillgång till arbetsgivarytan när registreringen har godkänts.",
     // ── VERIFIERAD ADRESS, MOTTAGEN ANSÖKAN, GODKÄNT FÖRETAG ──────────
@@ -860,8 +836,6 @@ export const dictionaries = {
     "account.context.underReview": "Granskas",
     "account.context.unavailable": "Inte tillgänglig",
     "employer.pending.checking": "Kontrollerar din registrering …",
-    "auth.intro":
-      "Ditt konto sparar dina karriärtestresultat säkert. Kontot är valfritt — testet fungerar utan inloggning.",
     "auth.google": "Fortsätt med Google",
     "auth.or": "eller",
     // Shown only when the return path is an organisation invitation. Says
@@ -923,9 +897,10 @@ export const dictionaries = {
     // The proposition names the IDENTITY, not the six systems behind it:
     // a visitor should not have to learn the product's internal
     // boundaries to know what an account is for.
-    "auth.unified.proposition": "Din säkerhetskarriär. En yrkesidentitet.",
+    "auth.unified.proposition": "Skapa ditt CQrityjob-konto",
+    "auth.unified.propositionSignIn": "Logga in på CQrityjob",
     "auth.unified.lede":
-      "Din yrkesidentitet, din karriärutveckling och dina verifierade kvalifikationer på ett ställe — med ett enda konto.",
+      "Använd ditt konto för din karriär, ditt Security Passport och ditt säkerhetsarbete. Tillgången till varje arbetsyta följer dess behörigheter.",
     "auth.unified.signin.intro": "Logga in för att fortsätta.",
     "auth.unified.signup.intro":
       "Vi behöver bara det nödvändigaste nu. Resten fyller du i när du behöver det.",
@@ -978,7 +953,7 @@ export const dictionaries = {
     "candidate.applications.heading": "Mina ansökningar",
     "candidate.applications.backToMyCareer": "Tillbaka till Översikt",
     "candidate.applications.loading": "Läser in ansökningar…",
-    "candidate.applications.empty": "Du har inte skickat in några ansökningar än.",
+    "candidate.applications.empty": "Du har inte skickat någon ansökan ännu.",
     "candidate.applications.error.load": "Kunde inte hämta dina ansökningar.",
     "candidate.applications.error.withdraw": "Kunde inte återkalla ansökan.",
     "candidate.applications.error.cvDownload": "Kunde inte hämta CV.",
@@ -1043,16 +1018,17 @@ export const dictionaries = {
     "footer.for_orgs": "För organisationer",
     "footer.company": "Företag",
     "footer.legal": "Juridiskt",
-    "footer.legal.privacy": "Integritetspolicy",
-    "footer.legal.terms": "Användarvillkor",
+    // The privacy policy and the terms of use are not published on this
+    // site yet. Said plainly rather than printed as two document names a
+    // visitor would go looking for; they become links the day approved
+    // documents and their routes exist, and not before.
+    "footer.legal.notice": "Integritetspolicy och användarvillkor är inte publicerade ännu.",
     "footer.rights": "Alla rättigheter förbehållna.",
     "footer.built": "Baserat i Sverige. Byggd för säkerhetsbranschen.",
 
     "lang.switch": "Språk",
 
     "sca.meta.title": "Karriärbedömning inom säkerhet — CQrityjob",
-    "sca.meta.desc":
-      "Upptäck vilka karriärer inom säkerhet som kan passa dig. Kostnadsfri, cirka 12–15 minuter, inget konto krävs.",
     "sca.badge": "Karriärvägledning",
     "sca.landing.title": "Upptäck vilka karriärer inom säkerhet som kan passa dig.",
     // ---- Security Career Discovery v3 (internal test) ----
@@ -1125,7 +1101,7 @@ export const dictionaries = {
     // ── The always-present occupational recommendation ──────────────────
     "careerDiscovery.report.v31.rec.title": "Din rekommenderade yrkesinriktning",
     "careerDiscovery.report.v31.rec.lede":
-      "Utifrån dina svar ligger de här yrkena närmast, i ordning. Din Security Career DNA nedan är underlaget som ger den här ordningen.",
+      "Förslagen utgår från dina svar. De beskriver möjliga riktningar att undersöka, inte ett besked om din kompetens eller behörighet.",
     "careerDiscovery.report.v31.rec.rank1": "Starkaste rekommendation",
     "careerDiscovery.report.v31.rec.traitsLabel": "Det här i din Career DNA bidrar mest",
     "careerDiscovery.report.v31.rec.alternativesTitle": "Näst starkaste alternativ",
@@ -1159,10 +1135,10 @@ export const dictionaries = {
     "careerDiscovery.report.v31.educationTitle": "Utbildning och certifieringar",
     "careerDiscovery.report.v31.pathwayTitle": "Möjlig väg",
     "careerDiscovery.report.v31.currentJobsInDirection": "Aktuella jobb inom den här riktningen",
-    "careerDiscovery.report.v31.currentJobsShort": "Aktuella jobb",
-    "careerDiscovery.report.v31.exploreCareer": "Utforska yrket",
+    "careerDiscovery.report.v31.currentJobsShort": "Se relevanta jobb",
+    "careerDiscovery.report.v31.exploreCareer": "Läs om yrket",
     "careerDiscovery.report.v31.howDoIGetThere": "Hur kommer jag dit?",
-    "careerDiscovery.report.v31.whyThisAppeared": "Varför den här dök upp",
+    "careerDiscovery.report.v31.whyThisAppeared": "Därför föreslås yrket",
     "careerDiscovery.report.v31.closeDetail": "Stäng",
     "careerDiscovery.report.v31.moveForward.title": "Vad kan hjälpa dig vidare?",
     "careerDiscovery.report.v31.moveForward.intro":
@@ -1273,7 +1249,7 @@ export const dictionaries = {
     "careerDiscovery.report.development.title": "Utvecklingsområden",
     "careerDiscovery.report.nextSteps.title": "Möjliga nästa steg",
     "careerDiscovery.report.method.title": "Så här togs resultatet fram",
-    "careerDiscovery.report.header.product": "Security Career Discovery",
+    "careerDiscovery.report.header.product": "Din karriäranalys",
     "careerDiscovery.report.header.internalTest":
       "Intern testversion. Innehållet är framtaget men ännu inte granskat av sakkunniga. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov, inte ett besked om anställningsbarhet och inte en psykologisk bedömning. Resultatet speglar de svar du gav vid det här tillfället.",
     "careerDiscovery.report.actions.myCareer": "Till Min karriär",
@@ -1315,17 +1291,17 @@ export const dictionaries = {
       "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
-    "cd.public.loading": "Förbereder vägledningen…",
-    "cd.public.unavailableTitle": "Vägledningen är inte öppen ännu",
+    "cd.public.loading": "Förbereder karriäranalysen…",
+    "cd.public.unavailableTitle": "Karriäranalysen är inte öppen just nu",
     "cd.public.unavailableBody":
-      "Den uppdaterade versionen av Din karriär inom säkerhet genomgår just nu granskning innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
+      "Den uppdaterade karriäranalysen granskas innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
-    "cd.public.introTitle": "Din karriär inom säkerhet",
+    "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
-      "28 frågor om hur du föredrar att arbeta: två om din situation, 22 som bygger ditt Security Career DNA och fyra som utgår från var du befinner dig. Det finns inga rätta eller felaktiga svar, och det är ingen bedömning av din kompetens eller anställningsbarhet.",
+      "Svara på frågor om hur du vill arbeta och vad som motiverar dig. Du får en karriäranalys med förklarade yrkesförslag att utforska vidare.",
     "cd.public.introNoAccount":
       "Du behöver inget konto för att börja. Dina svar sparas bara i den här fliken, och du loggar in först när du vill spara resultatet.",
-    "cd.public.start": "Börja vägledningen",
+    "cd.public.start": "Starta karriäranalysen",
     "cd.public.progress": "Fråga",
     "cd.public.stageContext": "Din situation",
     "cd.public.stageCareerDna": "Security Career DNA",
@@ -1345,10 +1321,10 @@ export const dictionaries = {
     // the one thing they could not.
     "cd.public.doneBody":
       "Skapa ett kandidatkonto för att spara resultatet och fortsätta bygga din karriärprofil. Dina svar ligger kvar medan du gör det.",
-    "cd.public.createAccountToSave": "Skapa konto och spara resultatet",
+    "cd.public.createAccountToSave": "Skapa konto och spara min karriäranalys",
     "cd.public.haveAccount": "Har du redan ett konto? Logga in",
     "cd.public.signInToSave": "Spara din karriärresa",
-    "cd.public.saveNow": "Spara i din karriärresa",
+    "cd.public.saveNow": "Spara min karriäranalys",
     "cd.public.answersKept":
       "Resultatet sparas i den här webbläsaren tills du hämtar det till ditt konto — även om bekräftelsemejlet öppnas i en ny flik.",
     // The canonical result is built server-side for signed-out visitors too,
@@ -1359,10 +1335,10 @@ export const dictionaries = {
       "Vi kunde inte hämta ditt resultat just nu. Dina svar finns kvar — försök igen.",
     "cd.public.retryResult": "Försök igen",
     "cd.public.downloadResult": "Ladda ner resultat",
-    "cd.public.shareResult": "Dela resultat",
+    "cd.public.shareResult": "Dela din karriärinriktning",
     "cd.public.shareTitle": "Min Security Career DNA",
     "cd.public.shareText":
-      "Jag gjorde precis CQrityjobs karriärvägledning inom säkerhet och fick reda på min Security Career DNA. Utforska själv:",
+      "Jag gjorde precis CQrityjobs karriäranalys och fick reda på min Security Career DNA. Utforska själv:",
     "cd.public.shareShared": "Delat",
     "cd.public.shareCopied": "Kopierat till urklipp",
     "cd.public.saving": "Sparar din rapport…",
@@ -1377,11 +1353,11 @@ export const dictionaries = {
     // copy; this is only the sentence around it.
     "cd.public.factTimeBody":
       "Du kan pausa och fortsätta i samma flik. Det finns ingen tidsgräns per fråga.",
-    "cd.public.introEyebrow": "Karriärvägledning",
+    "cd.public.introEyebrow": "Career Discovery",
     "cd.public.introFactsTitle": "Innan du börjar",
-    "cd.public.factQuestions": "28 frågor",
+    "cd.public.factQuestions": "{n} frågor",
     "cd.public.factStages":
-      "2 om din situation · 22 som bygger ditt Security Career DNA · 4 om din inriktning",
+      "{context} om din situation · {core} som bygger ditt Security Career DNA · {adaptive} om din inriktning",
     "cd.public.factNoJudgement": "Inga rätta eller felaktiga svar",
     "cd.public.factNoJudgementBody":
       "Det är ingen bedömning av din kompetens eller anställningsbarhet.",
@@ -1540,8 +1516,6 @@ export const dictionaries = {
     "sca.landing.lead":
       "En strukturerad karriärbedömning som hjälper dig utforska roller inom säkerhet — baserad på dina intressen, styrkor och sätt att arbeta.",
     "sca.landing.point.time": "Cirka 12–15 minuter",
-    "sca.landing.point.free": "Kostnadsfri",
-    "sca.landing.point.noaccount": "Inget konto krävs",
     "sca.landing.point.guidance": "Personlig karriärvägledning",
     "sca.landing.cta.start": "Starta bedömningen",
     "sca.landing.cta.how": "Så fungerar det",
@@ -1556,7 +1530,6 @@ export const dictionaries = {
     "sca.intro.body":
       "Bedömningen utvärderar intressen, styrkor och föredragna sätt att arbeta. Den avgör inte om någon är lämplig för reglerade yrken.",
     "sca.intro.stat.time": "Tid",
-    "sca.intro.stat.time.value": "≈ 5 min",
     "sca.intro.stat.questions": "Antal frågor",
     "sca.intro.stat.privacy": "Data",
     "sca.intro.stat.privacy.value": "Sparas inte",
@@ -2082,18 +2055,16 @@ export const dictionaries = {
     "employer.preferences.purpose":
       "Kontoinställningar som notifieringar, fakturering och integrationer — skilt från organisationens företagsprofil.",
 
-    "employer.askCqrity.heading": "Fråga CQrity",
-    "employer.askCqrity.body":
-      "En framtida AI-assistent som kan svara på frågor om rekrytering och personal utifrån er egen data. Idag ger den genvägar till verklig information — inga påhittade svar.",
-    "employer.askCqrity.shortcutsHeading": "Genvägar",
-    "employer.askCqrity.query.applications": "Visa ansökningar som väntar på granskning",
-    "employer.askCqrity.query.assessments": "Visa tillgängliga bedömningar",
-    "employer.askCqrity.query.employeesWithoutRole": "Visa medarbetare utan angiven roll",
-    "employer.askCqrity.query.draftJobs": "Visa jobbannonser i utkast",
+    "employer.askCqrity.heading": "Genvägar",
+    "employer.askCqrity.body": "Gå direkt till ansökningar, tester, medarbetare och jobbannonser.",
+    "employer.askCqrity.query.applications": "Ansökningar",
+    "employer.askCqrity.query.assessments": "Rekryteringstester",
+    "employer.askCqrity.query.employeesWithoutRole": "Medarbetare",
+    "employer.askCqrity.query.draftJobs": "Jobbannonser",
 
     "employer.workforce.heading": "Medarbetare",
     "employer.workforce.subheading":
-      "Era medarbetare med roller och platser — grunden för en samlad kompetensbild.",
+      "Se organisationens medarbetare och de uppgifter som finns registrerade för ert arbete.",
     "employer.workforce.action.add": "Lägg till medarbetare",
     "employer.workforce.action.edit": "Redigera",
     "employer.workforce.action.deactivate": "Inaktivera",
@@ -2129,7 +2100,7 @@ export const dictionaries = {
     "employer.overview.welcome": "Välkommen, {0}",
     "employer.overview.welcomeAnon": "Välkommen",
     "employer.overview.subheading":
-      "Hantera rekrytering, medarbetare, tester och kompetensutveckling på ett ställe.",
+      "Följ era rekryteringar och se vilka uppgifter som behöver hanteras.",
 
     "employer.overview.card.jobs.title": "Rekryteringar",
     "employer.overview.card.jobs.body":
@@ -2449,6 +2420,7 @@ export const dictionaries = {
     "assignment.recipient.saveResult.link": "Koppla resultatet till min profil",
 
     "employer.applications.heading": "Ansökningar",
+    "employer.applications.lede": "Granska ansökningar och följ nästa steg i varje rekrytering.",
     "employer.applications.empty": "Inga ansökningar har kommit in ännu.",
     "employer.applications.emptyBody":
       "Ansökningar kommer in via publicerade jobbannonser. När en annons är publicerad hamnar ansökningarna här.",
@@ -2583,7 +2555,8 @@ export const dictionaries = {
     "myapps.passport.included": "Security Passport inkluderat",
     "myapps.passport.attach": "Dela verifierat Passport med denna ansökan",
 
-    "employer.settings.heading": "Organisation",
+    "employer.settings.heading": "Organisationsinställningar",
+    "employer.settings.lede": "Håll organisationens uppgifter och inställningar aktuella.",
     "employer.settings.viewOnlyNotice": "Du har endast läsbehörighet för dessa uppgifter.",
     "employer.overview.card.tests.stat.active": "Aktiva",
     "employer.overview.card.tests.stat.awaitingReview": "Väntar på granskning",
@@ -3266,7 +3239,7 @@ export const dictionaries = {
     "sca.next.jobs.body": "Se jobbmöjligheter inom säkerhetsbranschen.",
     "sca.next.guide.title": "Lär dig om yrket",
     "sca.next.guide.body": "Fördjupa dig i din främsta karriärmatchning.",
-    "sca.next.profile.title": "Skapa en gratis profil",
+    "sca.next.profile.title": "Skapa en profil",
     "sca.next.profile.body": "Spara resultat, följ utveckling och möt arbetsgivare.",
     "sca.next.retake": "Gör om bedömningen",
     "sca.hero.title": "Din möjliga väg inom säkerhet",
@@ -3385,15 +3358,14 @@ export const dictionaries = {
     // these strings — that is why several keys read as a bare noun.
 
     // § 1 — Hero
-    "cc.hero.eyebrow": "Yrkesguider · Karriärvägar · Karriärtest",
+    "cc.hero.eyebrow": "Karriärcenter",
     "cc.hero.title": "Utforska yrken och hitta din nästa karriärväg",
     "cc.hero.name": "Karriärcenter",
     "cc.hero.lead":
-      "Här får du veta vad yrkena inom säkerhetsbranschen faktiskt innebär, vad som krävs för att komma in i dem och vilket steg som är rimligt för dig härnäst.",
-    "cc.hero.cta.test": "Starta karriärtestet — ca 5 min, inget konto",
+      "Läs om säkerhetsyrken, deras krav och möjliga nästa steg. Utgå från ditt nuvarande yrke, din sparade karriäranalys eller hela yrkeskatalogen.",
     "cc.hero.cta.explore": "Utforska alla yrken",
     "cc.hero.cta.personal": "Utgå från mitt resultat",
-    "cc.hero.trust": "Kostnadsfritt. Ingen bedömning av din kompetens eller anställningsbarhet.",
+    "cc.hero.trust": "Ingen bedömning av din kompetens eller anställningsbarhet.",
     "cc.hero.fact.guides": "färdiga yrkesguider",
     "cc.hero.fact.sources.title": "Källhänvisade och granskade",
     "cc.hero.fact.sources.body": "Varje guide anger sina källor och datumet den senast granskades.",
@@ -3418,7 +3390,7 @@ export const dictionaries = {
     "cc.where.org.cta": "Se hur ni kan bedöma säkerhetskompetens",
 
     // § 3 — Karriärtestet
-    "cc.test.eyebrow": "Karriärtest",
+    "cc.test.eyebrow": "Karriäranalys",
     "cc.test.title": "Vet du inte var du passar in? Börja här.",
     "cc.test.body":
       "Frågorna handlar om hur du föredrar att arbeta. Du får en karriärprofil och tydliga yrkesförslag att läsa vidare om. Inga rätta eller felaktiga svar — det är ingen bedömning av din kompetens eller anställningsbarhet.",
@@ -3426,7 +3398,7 @@ export const dictionaries = {
     "cc.test.fact.time": "Cirka 12–15 minuter",
     "cc.test.fact.account": "Inget konto krävs",
     "cc.test.fact.noright": "Inga rätta eller felaktiga svar",
-    "cc.test.cta": "Starta karriärtestet",
+    "cc.test.cta": "Starta karriäranalysen",
 
     // § 4 — Utforska yrken
     "cc.explore.title": "Utforska yrken",
@@ -3494,7 +3466,7 @@ export const dictionaries = {
     "cc.trust.regulatory.body":
       "Där ett yrke är reglerat länkar vi till lagtexten eller myndigheten, inte till vår egen sammanfattning.",
     "cc.trust.closing":
-      "Innehållet är vägledning och utbildningsmaterial. Formella krav kan förändras och ska alltid kontrolleras mot aktuell myndighets- eller arbetsgivarinformation.",
+      "Yrkesinformationen är vägledning. Krav kan ändras och ska kontrolleras mot aktuell myndighets- och arbetsgivarinformation.",
 
     // ── Yrkesguide ──────────────────────────────────────────────────────
     "cc.p.fact.family": "Yrkesfamilj",
@@ -3531,14 +3503,14 @@ export const dictionaries = {
     "cc.p.path.next": "Vanliga steg härifrån",
     "cc.p.test.title": "Osäker på om den här rollen passar dig?",
     "cc.p.test.body":
-      "Karriärtestet tar ungefär 12–15 minuter och ger dig en karriärprofil med yrkesförslag att läsa vidare om. Det bedömer inte din kompetens eller anställningsbarhet.",
+      "Karriäranalysen ger dig förklarade yrkesförslag att utforska vidare, utifrån dina svar. Den bedömer inte din kompetens eller anställningsbarhet.",
     "cc.p.related": "Relaterade yrken",
     "cc.p.faq": "Vanliga frågor",
     "cc.p.sources": "Källor",
     "cc.p.reviewed": "Senast granskad",
     "cc.p.jurisdiction": "Gäller för",
     "cc.p.disclaimer":
-      "Innehållet är vägledning och utbildningsmaterial. Formella krav kan förändras och ska alltid kontrolleras mot aktuell myndighets- eller arbetsgivarinformation.",
+      "Yrkesinformationen är vägledning. Krav kan ändras och ska kontrolleras mot aktuell myndighets- och arbetsgivarinformation.",
     "cc.p.unavailable.title": "Den här yrkesguiden är inte publicerad ännu.",
     "cc.p.unavailable.body":
       "Vi publicerar en guide först när den har källhänvisat innehåll, angiven jurisdiktion och ett granskningsdatum. Tills dess visar vi ingenting hellre än något ofärdigt.",
@@ -3589,7 +3561,7 @@ export const dictionaries = {
     "cc.entry.fromProfession.title": "Jag vet vilket yrke jag har",
     "cc.entry.fromProfession.body":
       "Läs om ditt yrke och se vilka nästa steg som finns registrerade därifrån.",
-    "cc.entry.fromAnalysis.title": "Ditt rekommenderade yrke",
+    "cc.entry.fromAnalysis.title": "Ditt främsta yrkesförslag",
     "cc.entry.fromAnalysis.body": "Se yrket som din karriäranalys rankade högst, och varför.",
     "cc.entry.cta": "Utforska vägar",
     "cc.path.eyebrow": "Från ditt yrke",
@@ -3597,12 +3569,12 @@ export const dictionaries = {
     "cc.path.titleFor": "Vägar från {role}",
     "cc.path.subtitle":
       "Välj yrket du arbetar i för att läsa om det och se vilka nästa steg som finns registrerade därifrån. Stegen utgår från yrket du arbetar i, inte från karriäranalysen.",
-    "cc.path.source.profile": "Utgår från yrket i din profil",
-    "cc.path.source.selected": "Utgår från yrket du valde här",
+    "cc.path.source.profile": "Yrke från din profil",
+    "cc.path.source.selected": "Yrke du valt att utforska",
     "cc.path.select.label": "Vilket yrke arbetar du i i dag?",
     "cc.path.select.none": "Välj yrke",
     "cc.path.select.help":
-      "Valet ändrar inte din profil. Det sparas bara i sidans adress, så du kan dela länken eller byta yrke när du vill.",
+      "Valet här används för att utforska yrket och möjliga nästa steg. Det ändrar inte yrket i din profil.",
     "cc.path.select.change": "Byt yrke",
     "cc.path.none": "Vi har inga registrerade riktningar från det yrket ännu.",
     "cc.path.notEligibility":
@@ -3623,7 +3595,7 @@ export const dictionaries = {
     "cc.back.profession": "Tillbaka till föregående yrke",
     "cc.info.read": "Läs om {role}",
     "cc.info.none": "Det finns ingen publicerad information om det här yrket ännu.",
-    "cc.jobs.for": "Se lediga jobb som {role}",
+    "cc.jobs.for": "Se jobb som {role}",
     "cc.jobs.closed":
       "Jobbsökningen på CQrityjob är inte öppen ännu. Yrkesinformationen ovan gäller oavsett.",
     "cc.nav.onPage": "På den här sidan",
@@ -3645,17 +3617,17 @@ export const dictionaries = {
     "cc.cat.missing.body":
       "Yrket finns inte bland de granskade uppgifterna i vår yrkeskatalog. Vi visar hellre ingenting än information om ett annat yrke.",
     "cc.cat.notice":
-      "Det här är en sammanfattning från CQrityjobs granskade yrkeskatalog. En fullständig yrkesguide för yrket är inte publicerad ännu.",
-    "cc.cat.about.empty": "Katalogen har ingen längre beskrivning av yrket ännu.",
+      "Det här är en sammanfattning från yrkeskatalogen. En fullständig yrkesguide är inte publicerad ännu.",
+    "cc.cat.about.empty": "En längre beskrivning av yrket saknas ännu.",
     "cc.cat.formal.empty":
-      "Inga formella krav är registrerade i katalogen för det här yrket. Det betyder inte att arbetsgivare saknar krav — kontrollera alltid annonsen och aktuell myndighetsinformation.",
+      "Inga formella krav är registrerade här. Kontrollera alltid aktuella krav hos ansvarig myndighet och i jobbannonsen.",
     "cc.cat.formal.boundary":
       "Kraven beskriver yrket, inte dig. CQrityjob prövar inte om du uppfyller dem — det gör regelverket och arbetsgivaren.",
     "cc.cat.education.empty":
       "Katalogen har inga registrerade utbildningar eller certifieringar för det här yrket ännu.",
     "cc.cat.next.subtitle": "Kopplingar mellan yrken som är registrerade i yrkeskatalogen.",
     "cc.cat.next.empty":
-      "Det finns inga dokumenterade karriärsteg från det här yrket i katalogen ännu. Det betyder inte att möjligheterna saknas — bara att vi inte har granskat några.",
+      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
     "cc.cat.kind.promotion": "Befordran",
     "cc.cat.kind.specialisation": "Specialisering",
     "cc.cat.kind.pivot": "Byte av inriktning",
@@ -3667,13 +3639,12 @@ export const dictionaries = {
     "cc.entry.fromProfession.cta": "Välj ditt yrke",
     "cc.entry.fromAnalysis.cta": "Se din rekommendation",
     "cc.entry.guidance.title": "Hjälp mig välja yrke",
-    "cc.entry.guidance.body":
-      "Gör den kostnadsfria karriäranalysen och få ett rekommenderat yrke att läsa vidare om.",
+    "cc.entry.guidance.body": "Gör karriäranalysen och få yrkesförslag att utforska vidare.",
     "cc.entry.guidance.cta": "Gör karriäranalysen",
-    "cc.me.primary.badge": "Högst rankat i din analys",
+    "cc.me.primary.badge": "Ditt främsta yrkesförslag",
     "cc.me.why": "Därför:",
     "cc.me.traits": "Det som pekade hit",
-    "cc.me.alternatives": "Andra yrken i din analys",
+    "cc.me.alternatives": "Andra yrken att utforska",
     "cc.me.sameAsSaved": "Det här är också yrket du har sparat i din profil.",
     "cc.me.allIndicative":
       "Inget yrke stack ut tydligt i din analys. Ordningen visar vilka yrken som låg närmast dina svar — se dem som riktningar att undersöka.",
@@ -3700,7 +3671,7 @@ export const dictionaries = {
     "cc.path.next.cta": "Se möjliga nästa steg",
     "cc.path.next.title": "Möjliga nästa steg från {role}",
     "cc.path.next.empty":
-      "Det finns inga dokumenterade karriärsteg från {role} i vår katalog ännu. Det betyder inte att möjligheterna saknas — bara att vi inte har granskat några än.",
+      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
     "cc.path.next.empty.explore": "Utforska yrkeskatalogen",
     "cc.path.more.count": "Se alla {n} nästa steg i yrkesguiden",
     "cc.explore.showAll": "Visa alla yrken",
@@ -3728,7 +3699,7 @@ export const dictionaries = {
     "cc.me.eyebrow": "Din riktning",
     "cc.me.title": "Utifrån din karriäranalys",
     "cc.me.subtitle":
-      "Yrkena nedan kommer från din egen karriäranalys. De är vägledning om riktning — inte ett besked om att du är lämplig eller behörig.",
+      "Baserat på din sparade karriäranalys. Läs om yrket, varför det föreslås och vilka krav som gäller.",
     "cc.me.completed": "Analys genomförd",
     "cc.me.rank": "Rekommendation",
     "cc.me.reason.ranked": "Din karriäranalys rankade det här yrket högst av de yrken den prövade.",
@@ -3747,18 +3718,19 @@ export const dictionaries = {
     "cc.me.invite.title": "Vet du inte var du passar in?",
     "cc.me.invite.body":
       "Karriäranalysen ger dig yrkesförslag att läsa vidare om. Den bedömer inte din kompetens och ger varken godkänt eller underkänt.",
+    "cc.me.none.body":
+      "Du har ingen sparad karriäranalys ännu. Utforska yrken direkt eller gör analysen för att få yrkesförslag utifrån dina svar.",
     "cc.me.invite.signedout":
       "Har du gjort analysen tidigare? Logga in så visas ditt resultat här.",
     "cc.me.invite.cta": "Gör karriäranalysen",
     "cc.me.invite.secondary": "Utforska alla yrken i stället",
-    "cc.me.unreadable.title": "Vi kan inte läsa din senaste analys just nu",
+    "cc.me.unreadable.title": "Din karriäranalys kunde inte hämtas just nu",
     "cc.me.unreadable.body":
-      "Resultatet finns kvar — det är läsningen som inte gick igenom. Försök igen, eller öppna din analyshistorik.",
+      "Försök igen. Resultatet finns kvar — det är hämtningen som inte gick igenom. Du kan också öppna din analyshistorik.",
     "cc.me.unreadable.retry": "Försök igen",
     "cc.me.unreadable.history": "Se mina analyser",
-    "cc.me.noroles.title": "Din analys pekar ut riktningar, inte enskilda yrken",
-    "cc.me.noroles.body":
-      "Den version du gjorde namnger karriärområden i stället för yrken. Öppna resultatet för att se dem, eller utforska yrkena här.",
+    "cc.me.noroles.title": "Din sparade analys visar yrkesområden",
+    "cc.me.noroles.body": "Utforska yrken inom området för att läsa vidare.",
 
     // ── Yrkeskort (§3C) ─────────────────────────────────────────────────
     "cc.card.cta": "Se yrket",
@@ -3796,7 +3768,8 @@ export const dictionaries = {
     "cc.p.next.title": "Möjliga nästa karriärsteg",
     "cc.p.next.subtitle":
       "Stegen bygger på registrerade kopplingar mellan yrkena. De är exempel på vad som är möjligt — inte en ordning du måste följa.",
-    "cc.p.next.none": "Inga nästa steg är registrerade för det här yrket ännu.",
+    "cc.p.next.none":
+      "Vi har ännu inga publicerade karriärvägar från det här yrket. Du kan läsa om yrket och utforska andra roller.",
     "cc.p.prev.title": "Vanliga vägar hit",
     "cc.p.regulatory.boundary": "Avgränsning",
     "cc.p.education.title": "Utbildning och behörighet",
@@ -5904,9 +5877,8 @@ export const dictionaries = {
       "Utbildningsleverans är ännu inte aktiverad.",
     "training.nav.programmes": "Program",
     "training.nav.participants": "Tilldelade utbildningar",
-    "training.overview.title": "Utveckling",
-    "training.overview.lede":
-      "Utvecklingsprogram som din organisation har tilldelat, och hur långt medarbetarna har kommit.",
+    "training.overview.title": "Kompetensutveckling",
+    "training.overview.lede": "Planera och följ upp utbildning för era medarbetare.",
     "training.overview.stat.active": "Pågående",
     "training.overview.stat.completed": "Slutförda",
     "training.overview.stat.available": "Program att tilldela",
@@ -6817,7 +6789,7 @@ export const dictionaries = {
     "sendTest.cannotSend": "Välj en nivå som har ett test att skicka.",
     "sendTest.sent.title": "Testet är skickat",
     "sendTest.sent.body":
-      "Kandidaten ser testet i sitt konto under Tester & utveckling och kan börja direkt. Ni följer läget här och i Tester & bedömningar.",
+      "Kandidaten ser testet i sitt konto under Tester och utveckling och kan börja direkt. Ni följer läget här och i Tester & bedömningar.",
     "sendTest.sent.setup":
       "Upplägget (nivå och rollprofil) är sparat, så intervjuförberedelsen efter testet behöver inget nytt val.",
     "sendTest.sent.noSetup":
@@ -7072,9 +7044,9 @@ export const dictionaries = {
     "admin.lifecycle.employer.impactLoading": "Beräknar konsekvens…",
     "admin.lifecycle.job.delete.blocked": "Bara opublicerade utkast kan raderas.",
     "academy.nav.candidates": "Kandidater",
-    "academy.overview.title": "Tester & bedömningar",
+    "academy.overview.title": "Rekryteringstester",
     "academy.overview.lede":
-      "Följ kandidaternas bedömningar från tilldelning till färdigt beslutsunderlag.",
+      "Välj tester, bjud in deltagare och granska resultat som stöd för rekryteringen.",
     "academy.overview.todoTitle": "Att göra nu",
     "academy.overview.todoNothing": "Du har inget som väntar på åtgärd just nu.",
     "academy.overview.todoCandidates.one": "kandidat väntar på granskning",
@@ -8417,7 +8389,8 @@ export const dictionaries = {
     "iiu.new.creating": "Skapar …",
     "iiu.new.cancel": "Avbryt",
     "iiu.ix.lead":
-      "Förbered, intervjua, bedöm och rapportera — mot rollens krav. Du bedömer och beslutar.",
+      "Förbered intervjun, dokumentera samtalet och sammanställ underlaget för er bedömning. Du bedömer och beslutar.",
+    "iiu.ix.title": "Interview Intelligence",
     "iiu.ix.heading": "Intervjuer",
     "iiu.ev.notes.title": "Dina intervjuanteckningar",
     "iiu.ev.notes.body":
@@ -8772,17 +8745,15 @@ export const dictionaries = {
   },
   en: {
     "nav.careers": "Security Career Center",
+    "nav.securityWorkPublic": "Security work",
     "nav.passportPublic": "Security Passport",
-    "nav.careerDiscovery": "Career Discovery",
-    "nav.forYou": "For you",
-    "nav.career_center": "Career paths",
     "nav.jobs": "Jobs",
-    "nav.employers": "Employers",
+    "nav.employers": "For employers",
     "nav.assessment": "Assessments",
-    "nav.about": "About us",
+    "nav.about": "About",
     "nav.contact": "Contact",
     "nav.signin": "Sign in",
-    "nav.employerLogin": "Employer login",
+    "nav.employerLogin": "Employer sign-in",
     "nav.createAccount": "Create account",
     "nav.signin.tooltip": "Coming soon",
     "nav.my_career": "My Career",
@@ -8796,7 +8767,7 @@ export const dictionaries = {
     "nav.professionsAndPaths": "Professions and career paths",
     "nav.securityPassport": "Security Passport",
     "nav.career": "Career",
-    "nav.testsAndDevelopment": "Tests & development",
+    "nav.testsAndDevelopment": "Assessments and development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
     "nav.menu.open": "Open menu",
@@ -8804,155 +8775,170 @@ export const dictionaries = {
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
+    "brand.description":
+      "CQrityjob brings together your security work, credentials and career. Use support for security analysis, build your Security Passport and explore paths to your next role. Employers have a dedicated workspace for recruitment and learning and development.",
+    "meta.home.title": "CQrityjob – your career and security work",
+    "meta.home.description":
+      "Bring credentials together in Security Passport, explore career paths and jobs, and work with security analysis, risks and preparedness evidence in CQrityjob.",
+    "meta.about.title": "About CQrityjob – security work, credentials and careers",
+    "meta.careerCenter.title": "Security professions and career paths – CQrityjob",
+    "meta.careerDiscovery.title": "Career Discovery – your career analysis – CQrityjob",
+    "meta.jobs.title": "Security jobs – CQrityjob",
+    "meta.employers.title": "Recruit and develop security professionals – CQrityjob",
+    "meta.assessment.title": "Career analysis, assessments and development – CQrityjob",
+    "meta.contact.title": "Contact us – CQrityjob",
 
     "cta.passport": "Create my Security Passport",
-    "cta.discovery": "Start Career Discovery",
     "cta.assessment": "Start the Career Analysis",
     "cta.careers": "Explore career paths",
     "cta.contact": "Contact us",
     "cta.talk": "Talk to our team",
-    "cta.notify": "Notify me at launch",
     "cta.learn_more": "Learn more",
     "cta.all_careers": "See all careers",
 
-    // The public homepage (2026-09-13). See the Swedish block above for the
-    // architecture this copy follows: two peer individual entrances, one
-    // employer entrance, and two product domains that are never collapsed
-    // into one. Written as English rather than translated word for word,
-    // and it names the second product "Career Discovery" every time --
-    // never test, career test, assessment or guidance.
-    "home.cta.start": "Get started",
+    // The public homepage (MVP text specification, 2026-09-27). See the
+    // Swedish block above for the architecture this copy follows: three
+    // equal core parts for a person, one employer entrance, and domains that
+    // are never collapsed into one. Written as English rather than
+    // translated word for word, using the specification's English copy.
+    "home.hero.title": "Your career and your security work. In one place.",
+    "home.hero.subtitle":
+      "Bring your credentials together in Security Passport, find your career path and next role, and get support for security, risk and crisis preparedness work.",
+    "home.account.returning": "Already have an account?",
+    "home.cta.employersLead": "Hiring?",
+    "home.cta.employers": "Explore the employer portal",
     "jobs.card.deadline": "Apply by {d}",
     "jobs.card.open": "View job",
     "jobs.detail.apply_jump": "Apply",
-    "home.cta.jobs": "Find jobs",
-    "home.cta.employers": "For employers",
-    "home.cta.jobsNote": "You can browse open jobs without an account.",
-    "home.value.eyebrow": "For people in security",
-    "home.value.title": "What you can get done",
-    "home.value.passport.title": "Show your credentials and choose who sees them",
-    "home.value.passport.body":
-      "Every credential shows its source and status, and you decide what is shared and with whom.",
-    "home.value.cv.title": "Build your profile and CV, and find jobs",
-    "home.value.cv.body":
-      "Fill in your profile once and reuse it in your CV and applications. Search security jobs by role, location and employment type.",
-    "home.value.cv.link": "See open jobs",
-    "home.value.career.title": "Explore your career and development",
-    "home.value.career.body":
-      "Career Discovery shows which security roles sit close to your direction. The Career Center describes professions, ways in and training.",
-    "home.value.career.link": "Explore the Career Center",
-    "home.ai.eyebrow": "AI support for your security work",
+
+    "home.core.work.title": "Support for your security work",
+    "home.core.work.body":
+      "Structure evidence for monitoring analysis, risk assessment and preparedness. Continue with reports and actions. AI assistance is available where enabled for the workspace.",
+    "home.core.work.cta": "Explore security work",
+    "home.core.passport.title": "Present your credentials with Security Passport",
+    "home.core.passport.body":
+      "Bring together your certifications, licences and professional authorisations with supporting documents and a clear status. You choose which information to share.",
+    "home.core.passport.cta": "Explore Security Passport",
+    "home.core.career.title": "Find your career path and next role",
+    "home.core.career.body":
+      "Explore security professions, get role suggestions through the career analysis and understand what different roles require. Then find relevant vacancies.",
+    "home.core.career.cta": "Explore professions",
+    "home.core.career.jobs": "Find jobs",
+    "home.core.career.note":
+      "You can read profession information and job adverts without an account.",
+
+    "home.ai.eyebrow": "Support for security, risk and crisis preparedness",
     "home.ai.title": "CQrityjob Security Intelligence",
     "home.ai.body":
-      "A private workspace for horizon scanning and security analysis. It helps you structure material – the judgement stays yours.",
+      "A workspace that takes you from source material to assessment, reporting and action. When AI assistance is available, it can suggest follow-up questions, highlight information gaps and produce drafts for you to review.",
     "home.ai.task.label": "Task",
     "home.ai.task.body":
-      "Monitor what affects your organisation and put together analyses and reports.",
-    "home.ai.input.label": "What you provide",
+      "Describe what you need to investigate and which decision the evidence should support.",
+    "home.ai.input.label": "Evidence",
     "home.ai.input.body":
-      "A monitoring profile, your monitoring questions and the sources you register yourself.",
-    "home.ai.output.label": "What you get",
+      "Collect sources and relevant extracts. Document processing can be used when available in the workspace.",
+    "home.ai.output.label": "Results",
     "home.ai.output.body":
-      "Triaged material, risk ratings, analyses and report drafts that cite their sources. AI drafts are available where the feature is enabled for the workspace.",
+      "Work with analyses, risk assessments, report drafts and actions linked to supporting evidence.",
     "home.ai.review.label": "Your review",
     "home.ai.review.body":
-      "You judge relevance and own the conclusions. Sources and drafts can contain errors.",
+      "Check sources, uncertainties and conclusions. You choose which suggestions to use and approve the report.",
+    "home.ai.cta": "Open My Security Work",
+    "home.ai.availability":
+      "The workspace supports manual work. Availability of AI assistance and document processing is shown separately when you open the workspace.",
     "home.ai.note":
-      "Do not add classified or secret information. The workspace is not shared with your CV, Security Passport or employers.",
-    "home.ai.cta": "Open Security Intelligence",
-    "home.employers.flow.jobs": "Publish jobs",
+      "Do not enter classified or secret information. Your security work is not automatically shared with your career profile, Security Passport or employers.",
+    "home.ai.examples.label": "Examples of use",
+    "home.ai.examples.monitoring.title": "Monitoring analysis",
+    "home.ai.examples.monitoring.body":
+      "Which events could affect operations? Collect your sources, assess relevance and prepare a briefing with clear references.",
+    "home.ai.examples.risk.title": "Risk analysis",
+    "home.ai.examples.risk.body":
+      "What could happen, where are the vulnerabilities and what needs to be done? Structure the assessment and follow up actions.",
+    "home.ai.examples.preparedness.title": "Preparedness evidence",
+    "home.ai.examples.preparedness.body":
+      "Bring together risks, security arrangements, preparedness and contacts in a security assessment to support operational planning.",
+
+    "home.passport.title": "Your credentials, with a clear source and status",
+    "home.passport.body":
+      "Security Passport brings together your certifications, licences and professional authorisations. Add supporting documents and choose which credentials to share. Uploading a document does not by itself verify the information.",
+    "home.passport.open": "Open Security Passport",
+    "home.passport.sharing":
+      "You choose what to share. Applying for a job does not automatically share your Security Passport.",
+    "home.passportPreview.private": "Private by default",
+    "home.passportPreview.exampleLabel": "Example",
+    "home.passportPreview.exampleCaption": "Example – fictional person and fictional credentials.",
+    "home.passportPreview.exampleName": "Example Holder",
+    "home.passportPreview.statusNote":
+      "Each credential shows its own status. Registered is not verified.",
+
+    "home.career.title": "Understand your options. Take the next step.",
+    "home.career.body":
+      "Read about security professions and their requirements. Use Career Discovery to explore possible directions based on your answers. Keep your profile and CV in My Career and continue to relevant job adverts.",
+    "home.career.analysis": "Take the career analysis",
+    "home.career.professions": "Explore professions and career paths",
+    "home.career.jobs": "See vacancies",
+    "home.career.note":
+      "The career analysis provides guidance. It does not determine your competence, professional eligibility or whether you get a job.",
+    "home.career.closed":
+      "The career analysis is not open to new participants right now. You can still explore professions and jobs.",
+
+    "home.employers.eyebrow": "For employers",
+    "home.employers.title": "Recruit and develop security professionals",
+    "home.employers.body":
+      "Bring job adverts, applications, recruitment assessments and structured interviews together in the Employer portal. Continue with learning and development for employees. You make and document the decisions.",
+    "home.employers.cta.register": "Register your organisation",
+    "home.employers.cta.explore": "Explore the Employer portal",
+    "home.employers.flow.label": "How recruitment connects",
+    "home.employers.flow.jobs": "Post a job",
     "home.employers.flow.applications": "Manage applications",
-    "home.employers.flow.tests": "Send recruitment tests",
+    "home.employers.flow.tests": "Use recruitment assessments",
     "home.employers.flow.interview": "Prepare the interview",
-    "home.employers.flow.decision": "You make the decision",
-    "home.employers.flow.label": "How the recruitment connects",
+    "home.employers.flow.decision": "Make and document the decision",
+    "home.employers.flow.development": "Then: learning and development for employees.",
+
     "home.start.eyebrow": "How to get started",
     "home.start.title": "Three steps, wherever you start",
     "home.start.person": "For individuals",
-    "home.start.person.1": "Create an account with your email address.",
+    "home.start.person.1":
+      "Choose what you want to do: explore professions and jobs, build your Security Passport or open the security workspace.",
     "home.start.person.2":
-      "Fill in your profile and add your first credential to Security Passport.",
-    "home.start.person.3": "Search jobs, build your CV or start Career Discovery.",
+      "Create an account when you want to save and continue in your own workspace.",
+    "home.start.person.3":
+      "Continue where you need support. You do not need to complete every area to get started.",
     "home.start.employer": "For employers",
-    "home.start.employer.1": "Register your company with its name and country.",
-    "home.start.employer.2": "We review the account before the workspace is activated.",
-    "home.start.employer.3": "Publish your first job and receive applications.",
+    "home.start.employer.1": "Create an account and register your organisation.",
+    "home.start.employer.2":
+      "Follow your organisation's status while the registration is reviewed.",
+    "home.start.employer.3": "Once the workspace is active, you can start your recruitment.",
+
     "home.faq.eyebrow": "Offer and common questions",
     "home.faq.title": "Good to know before you start",
     "home.faq.offer.person":
       "For individuals: account, profile, CV, Security Passport, job search, Career Discovery and Security Intelligence.",
     "home.faq.offer.employer":
-      "For employers: job ads, applications, recruitment tests, interview preparation and employee development. Prices and packages are not published yet – contact us.",
-    "home.faq.contact": "Contact us",
+      "For employers: job adverts, applications, recruitment assessments, interview preparation and learning and development.",
+    "home.faq.pricing": "Pricing and packages have not been published yet.",
     "home.faq.q1": "Who is CQrityjob for?",
     "home.faq.a1":
-      "People who work in, or want to join, the security industry, and organisations that recruit and develop security staff.",
-    "home.faq.q2": "How does sharing a Security Passport work?",
+      "For people working in or entering the security profession, and organisations recruiting and developing security professionals.",
+    "home.faq.q2": "How does Security Passport sharing work?",
     "home.faq.a2":
-      "Your Security Passport is private by default. You choose which credentials are shared and with whom, and you can revoke a share. Applying for a job does not share your Passport automatically.",
+      "Your Security Passport is private by default. You choose which credentials to share and can revoke the share link. A job application does not automatically share your Passport.",
     "home.faq.q3": "Are my credentials verified?",
     "home.faq.a3":
-      "An uploaded document is not automatically verified. Every credential shows its actual status, such as self-reported, document reviewed or source verified. An international certification does not automatically mean a local licence to practise.",
-    "home.faq.q4": "Do I need an account to search jobs?",
+      "Each credential shows its actual status. A self-reported claim or an uploaded document is not automatically source-confirmed. Check its status and the supporting evidence.",
+    "home.faq.q4": "Do I need an account to read job adverts?",
     "home.faq.a4":
-      "No. You can search and read job ads without an account. When you apply, you sign in or create an account and come back to the ad.",
-    "home.faq.q5": "Does AI decide who gets hired?",
+      "No. You can search and read adverts without an account. To apply, follow the application method in the advert. Applications within CQrityjob require sign-in or an account.",
+    "home.faq.q5": "Does AI decide who is hired?",
     "home.faq.a5":
-      "No. AI can help structure material, but people make and document every decision. The platform does not sort candidates from best to worst.",
-    "home.hero.title": "Your career and your security work. In one place.",
-    "home.hero.subtitle":
-      "Find security jobs, keep your certifications and licences in Security Passport, and get AI support in your daily security work. You always decide what is shared.",
-    "home.account.returning": "Already have an account?",
-    "home.passportPreview.private": "Private by default",
-    "home.passportPreview.record": "Your professional record",
-    "home.passportPreview.title": "Credentials with a clear source and status",
-    "home.passportPreview.body":
-      "You choose what a recipient sees. Share links expire and remain under your control.",
-    "home.passportPreview.exampleLabel": "Example",
-    "home.passportPreview.exampleCaption": "Fictional person, fictional credentials.",
-    "home.passportPreview.exampleName": "Example Holder",
-    "home.passportPreview.statusNote":
-      "Each credential shows its own status. Registered is not verified.",
-
-    "home.entry.passport.title": "Build your Security Passport",
-    "home.entry.passport.body":
-      "Bring together your certifications, licences and professional authorisations — internationally and by country. Add supporting evidence and choose what you share.",
-    "home.entry.discovery.title": "Discover your security career",
-    "home.entry.discovery.body":
-      "Explore your work orientation and receive explained suggestions for security roles and career paths.",
-    "home.entry.discovery.disclosure":
-      "You can start without an account. Create one when you want to save the result and continue in My Career.",
-
-    "home.employers.eyebrow": "For employers",
-    "home.employers.title": "Hiring in security?",
-    "home.employers.body":
-      "Publish jobs, manage candidates and use structured assessments and interviews in one platform.",
-    "home.employers.cta.register": "Register company",
-    "home.employers.cta.explore": "Explore the employer platform",
-
-    "home.lifecycle.eyebrow": "One platform",
-    "home.lifecycle.title": "A security career, connected end to end",
-    "home.lifecycle.discover.title": "Discover",
-    "home.lifecycle.discover.body":
-      "Career Discovery and Career Center show which roles exist in security.",
-    "home.lifecycle.understand.title": "Understand",
-    "home.lifecycle.understand.body":
-      "You receive an explained report about your direction, not a judgement about you.",
-    "home.lifecycle.grow.title": "Grow",
-    "home.lifecycle.grow.body": "My Career holds your profile, your tests and your development.",
-    "home.lifecycle.trust.title": "Trust",
-    "home.lifecycle.trust.body":
-      "Security Passport holds your credentials, evidence, verifications and CV.",
-    "home.lifecycle.work.title": "Work",
-    "home.lifecycle.work.body": "Jobs, applications and employer processes continue here.",
-    "home.lifecycle.continue.title": "Continue",
-    "home.lifecycle.continue.body": "Learning and workforce development carry on after the hire.",
-    "home.lifecycle.understand.link": "How the report works",
-    "home.lifecycle.grow.link": "Get started in My Career",
-    "home.lifecycle.continue.link": "Tests and development",
+      "No. AI can help structure information. The employer reviews the evidence and makes and documents the decision.",
+    "home.faq.q6": "How does AI support security work?",
+    "home.faq.a6":
+      "When available in the workspace, AI assistance can suggest follow-up questions, highlight information gaps and produce analysis and report drafts. You review the suggestions and remain responsible for the conclusions. The workspace also supports manual work.",
 
     "home.markets.eyebrow": "Security Passport",
-    "home.markets.title": "Built for a career that moves",
     "home.markets.body": "Sweden is open. Great Britain and Dubai are in closed pilot.",
     "home.markets.SE": "Sweden",
     "home.markets.GB": "Great Britain",
@@ -8980,9 +8966,10 @@ export const dictionaries = {
     "jobs.coming_soon.body":
       "We are building a job experience designed for the security industry — with role-specific requirements, clear competence needs and serious employers.",
 
-    "jobs.discover.title": "Find security jobs",
+    "jobs.discover.title": "Find jobs in security",
     "jobs.discover.lead":
-      "Find current opportunities across the security sector. Search by job title, employer, location or career area.",
+      "Search by role, location and employment type. Read the requirements and choose roles relevant to you.",
+    "jobs.discover.publicNote": "You can search and read job adverts without an account.",
     "jobs.search.keyword_placeholder": "Job title, skills or keywords",
     "jobs.search.location_placeholder": "City, region or country",
     "jobs.search.submit": "Search",
@@ -8994,32 +8981,37 @@ export const dictionaries = {
     "jobs.filter.country": "Country",
     "jobs.filter.any": "Any",
     "jobs.filter.toggle": "Filters",
+    "jobs.filter.active_one": "{n} active filter",
+    "jobs.filter.active_other": "{n} active filters",
     "jobs.browse.families.title": "Browse jobs by career area",
     "jobs.browse.families.subtitle":
       "Explore career areas across the security sector – from protective services and cybersecurity to risk management, corporate security and critical infrastructure.",
     "jobs.results.count_one": "{n} job",
     "jobs.results.count_other": "{n} jobs",
-    "jobs.results.empty.title": "No jobs match",
-    "jobs.results.empty.body":
-      "Try different keywords or remove filters. New jobs are published continuously.",
-    "jobs.results.error.title": "Something went wrong",
-    "jobs.results.error.body": "We could not load jobs right now. Please try again in a moment.",
+    "jobs.results.empty.title": "No jobs match your search",
+    "jobs.results.empty.body": "Try fewer filters or a different search term.",
+    "jobs.results.error.title": "Jobs could not be loaded right now",
+    "jobs.results.error.body": "Try again.",
+    "jobs.detail.error.title": "The job advert could not be loaded right now",
     "jobs.results.loading": "Loading jobs…",
     "jobs.card.untitled": "Untitled",
     "jobs.card.today": "Today",
     "jobs.card.posted_days_ago": "Posted {n} days ago",
-    "jobs.detail.back": "← All jobs",
-    "jobs.detail.backToResults": "← Back to search results",
-    "jobs.detail.apply_external": "Apply on employer site",
+    "jobs.detail.back": "← Back to jobs",
+    "jobs.detail.backToResults": "← Back to jobs",
+    "jobs.detail.apply_external": "Apply on the employer's website",
     "jobs.detail.apply_email": "Apply by email",
-    "jobs.detail.apply_internal": "Apply via CQrityjob",
+    "jobs.detail.apply_internal": "Apply for this job",
     "jobs.detail.apply_unavailable": "Applications are not currently available via CQrityjob.",
 
     "jobs.apply.signInToApply": "Sign in to apply",
+    "jobs.apply.createAccountToApply": "Create an account and continue to the application",
     "jobs.apply.signInToApplyHint": "You need a CQrityjob account to apply on the platform.",
     "jobs.apply.dialog.title": "Apply for this role",
     "jobs.apply.dialog.body": "Your application will be sent directly to {employer}.",
     "jobs.apply.dialog.bodyGeneric": "Your application will be sent directly to the employer.",
+    "jobs.apply.reviewBeforeSend":
+      "Review your details and attachments before submitting your application.",
     "jobs.apply.dialog.submit": "Submit application",
     "jobs.apply.field.phone": "Phone number (optional)",
     "jobs.apply.field.coverNote": "Cover note (optional)",
@@ -9062,8 +9054,8 @@ export const dictionaries = {
       "That CV is not ready to send. Finish it under My Career and try again.",
     "jobs.apply.error.generic": "Could not submit your application. Please try again.",
     "jobs.apply.success.title": "Application submitted",
-    "jobs.apply.success.body":
-      "Your application has been sent to the employer. You can track its status under My Applications.",
+    "jobs.apply.success.body": "Your application has been submitted.",
+    "jobs.apply.success.next": "Track it in My applications.",
     "jobs.apply.success.close": "Close",
     "jobs.apply.success.cvCqrityjob": "Your CQrityjob CV was sent with your application.",
     "jobs.apply.success.cvUpload": "The CV you uploaded was sent with your application.",
@@ -9078,10 +9070,10 @@ export const dictionaries = {
       "The listing may have been removed or the application deadline may have passed.",
     "jobs.family.header": "Jobs in {family}",
     "jobs.profession.header": "Jobs as {profession}",
-    "jobs.detail.summary": "About this role",
+    "jobs.detail.summary": "About the role",
     "jobs.detail.no_description": "Job description not provided",
-    "jobs.detail.requirements.mandatory": "Mandatory",
-    "jobs.detail.requirements.preferred": "Preferred",
+    "jobs.detail.requirements.mandatory": "Requirements",
+    "jobs.detail.requirements.preferred": "Desirable qualifications",
     "jobs.detail.requirements.formal": "Formal requirements",
     "jobs.detail.requirements.employer": "Employer-specific",
     "jobs.detail.employer.title": "About the employer",
@@ -9111,8 +9103,8 @@ export const dictionaries = {
 
     "jobs.relevance.invite.title": "Get personalised career insights",
     "jobs.relevance.invite.body":
-      "Complete the Security Career Assessment to receive personalised career insights and discover jobs that match your profile.",
-    "jobs.relevance.invite.cta": "Take the Security Career Assessment",
+      "Take the career analysis to get explained role suggestions and find relevant jobs. You can search jobs without it.",
+    "jobs.relevance.invite.cta": "Take the career analysis",
     "jobs.relevance.badge.strong": "Close to your profile",
     "jobs.relevance.badge.promising": "Relevant to your profile",
     "jobs.relevance.badge.exploratory": "Worth exploring",
@@ -9145,30 +9137,30 @@ export const dictionaries = {
     // bind every sentence here: CQrityjob supports a decision and never
     // makes one, BESKT is a governed method that never replaces statutory
     // security vetting, and Career Discovery data never reaches an employer.
-    "employers.title": "The complete security recruitment process in one platform",
+    "employers.title": "Recruit and develop security professionals in one place.",
     "employers.lead":
-      "Publish security jobs, manage applications and use structured assessments and interview models for both ordinary security roles and security-protection-sensitive positions.",
+      "Post jobs, manage applications and work with recruitment assessments and structured interviews. Continue with employee learning and development in a dedicated employer portal.",
 
     "employers.path.title": "How the process connects",
     "employers.path.continuation": "And then",
     "employers.path.step1.title": "Publish the job",
     "employers.path.step1.body":
-      "Describe the role, the requirements and the site, and publish the advert.",
-    "employers.path.step2.title": "Receive and organise applications",
+      "Describe responsibilities, requirements and the workplace. Review the advert before publishing.",
+    "employers.path.step2.title": "Manage applications",
     "employers.path.step2.body":
-      "Applications arrive in one place, with the information each candidate chose to share.",
-    "employers.path.step3.title": "Choose the assessment and interview workflow",
+      "Bring applications together and track what needs to happen in each recruitment.",
+    "employers.path.step3.title": "Use recruitment assessments",
     "employers.path.step3.body":
-      "Pick the way of working the role needs — an ordinary security role or a security-protection-sensitive position.",
-    "employers.path.step4.title": "Review the evidence with the hiring team",
+      "Choose available assessments relevant to the role and review the evidence in context.",
+    "employers.path.step4.title": "Prepare and conduct the interview",
     "employers.path.step4.body":
-      "Everyone on the team reads the same structured record about each candidate.",
+      "Structure questions, notes and follow-up with Interview Intelligence. Use AI assistance where available.",
     "employers.path.step5.title": "Make and document the decision",
     "employers.path.step5.body":
-      "People make the decision, and the decision is recorded together with what it rests on.",
-    "employers.path.step6.title": "Continue with development",
+      "The recruitment team is responsible for the assessment and final decision.",
+    "employers.path.step6.title": "Continue with learning and development",
     "employers.path.step6.body":
-      "After the hire, training and competence development continue in the same platform.",
+      "After the hire, employee learning and development continues in the employer portal.",
 
     "employers.examples.title": "Two ways to recruit",
     "employers.example.ordinary.title": "Ordinary security recruitment",
@@ -9184,114 +9176,41 @@ export const dictionaries = {
 
     "employers.disclaimer":
       "CQrityjob supports the employer's decision. Neither CQrityjob nor AI determines whether a candidate is suitable — the employer always makes and documents the final decision.",
-    "employers.cta.register": "Register company",
+    "employers.crossLink.lead": "Do you work with security, risk or preparedness?",
+    "employers.crossLink.action": "Explore My Security Work",
+    "employers.cta.register": "Register your organisation",
     "employers.cta.how": "See how the platform works",
     "employers.cta.login": "Log in to the employer portal",
 
-    "assessment.eyebrow": "TWO SEPARATE SOLUTIONS",
-    "assessment.title": "Career and Security Competence Assessments",
-    "assessment.lead":
-      "CQrityjob offers free career guidance for individuals and role-based competence assessments for organizations that want to evaluate candidates or develop existing security personnel.",
-
-    "assessment.individuals.eyebrow": "FOR INDIVIDUALS",
-    "assessment.individuals.title": "Find your path in security",
-    "assessment.individuals.body":
-      "Explore which security professions may fit your interests, compare career paths and get concrete suggestions for next steps. The test provides guidance and does not determine whether you are eligible or professionally suitable for a specific role.",
-    "assessment.individuals.point.time": "About five minutes",
-    "assessment.individuals.point.free": "Free",
-    "assessment.individuals.point.account": "No account required",
-    "assessment.individuals.point.guidance": "Personalized career guidance",
-    "assessment.individuals.point.links": "Links to profession guides and next steps",
-    "assessment.individuals.cta": "Take the career test",
-
-    "assessment.orgs.eyebrow": "FOR ORGANIZATIONS",
-    "assessment.orgs.title": "Assess and develop security personnel",
-    "assessment.orgs.body":
-      "Role-based competence assessments for organizations that want stronger decision support during recruitment, verify knowledge among existing personnel, identify competence gaps and plan development activities.",
-    "assessment.orgs.usecaseA.title": "Candidate assessment during recruitment",
-    "assessment.orgs.usecaseA.body":
-      "Invite candidates to role-specific tests and receive structured decision support ahead of interviews, references and further selection.",
-    "assessment.orgs.usecaseB.title": "Competence testing of existing personnel",
-    "assessment.orgs.usecaseB.body":
-      "Test in-house or contracted security personnel against defined role requirements, identify knowledge and competence gaps and track development over time.",
-    "assessment.orgs.customers.title": "Example organizations",
-    "assessment.orgs.customers.1": "Security and guarding companies",
-    "assessment.orgs.customers.2": "Government agencies",
-    "assessment.orgs.customers.3": "Data centers",
-    "assessment.orgs.customers.4": "Critical infrastructure",
-    "assessment.orgs.customers.5": "Corporate security departments",
-    "assessment.orgs.customers.6": "Organizations purchasing security services",
-    "assessment.orgs.cta": "Explore the solution for organizations",
-    "assessment.orgs.status": "In development — preview of an upcoming product.",
-
-    "assessment.compare.title": "The difference between guidance and competence testing",
-    "assessment.compare.guidance.title": "Career guidance",
-    "assessment.compare.guidance.1": "Designed for individuals",
-    "assessment.compare.guidance.2": "Explores interests and possible career paths",
-    "assessment.compare.guidance.3": "No employment decision",
-    "assessment.compare.guidance.4": "No eligibility determination",
-    "assessment.compare.guidance.5": "Free entry product",
-    "assessment.compare.pro.title": "Professional competence assessment",
-    "assessment.compare.pro.1": "Commissioned by an organization",
-    "assessment.compare.pro.2": "Linked to a defined role and purpose",
-    "assessment.compare.pro.3":
-      "May include knowledge, situational judgement and practical scenarios",
-    "assessment.compare.pro.4": "Provides structured human decision support",
-    "assessment.compare.pro.5": "Can be used for candidates or existing personnel",
-    "assessment.compare.pro.6":
-      "Never automatically approves, rejects or ranks people for employment",
-
-    "assessment.workflow.title": "How we think about the organizational workflow",
-    "assessment.workflow.subtitle": "Preview of an upcoming product — not active functionality.",
-    "assessment.workflow.step1": "Select role or competence area",
-    "assessment.workflow.step2": "Invite candidates or employees",
-    "assessment.workflow.step3": "Complete role-specific test",
-    "assessment.workflow.step4": "Review section-level results",
-    "assessment.workflow.step5": "Identify competence gaps",
-    "assessment.workflow.step6": "Plan interview, training or follow-up",
-
-    "assessment.responsible.title": "Responsible use",
-    "assessment.responsible.body":
-      "CQrityjob's professional assessments support human decisions. The organization remains responsible for final recruitment, authorization, employment, training and personnel decisions.",
-    "assessment.status":
-      "The career test is available today. The organization solution is under development.",
-
-    "about.title": "Our mission",
-    "about.lead":
-      "CQrityjob is the career, recruitment and assessment platform for the security industry. We help individuals build a career in security and help organizations recruit and develop the right competence.",
+    "about.title": "For your professional life in security.",
     "about.pillars.title": "Three connected areas",
-    "about.pillars.career.title": "Career development",
-    "about.pillars.career.body":
-      "We help individuals discover roles, understand competence requirements and navigate their long-term professional development.",
-    "about.pillars.recruit.title": "Recruitment",
-    "about.pillars.recruit.body":
-      "We connect serious employers with qualified candidates — through both digital self-service and professional recruitment assignments.",
-    "about.pillars.assessment.title": "Assessments and verification",
-    "about.pillars.assessment.body":
-      "A free career test for individuals and role-based competence assessments for organizations — as decision support during recruitment and for developing existing personnel.",
     "about.mission.title": "The mission",
     "about.mission.body":
-      "We are building a trusted digital destination where people can explore a career in security — and where organizations can recruit, assess and develop the right personnel.",
+      "We want to make it easier to develop and work in the security profession. That is why we bring support for security work, credential documentation and paths to your next role together in one platform.",
+    "about.ai.title": "AI and responsibility",
+    "about.ai.body":
+      "AI should help people organise information and review evidence. Users remain responsible for their professional judgement, and employers for their recruitment decisions.",
     "about.vision.title": "The vision",
     "about.vision.body":
-      "To become the leading career, recruitment and assessment platform for the security industry — starting in Sweden and built for international expansion.",
-    "about.why.title": "Why security only",
-    "about.why.body":
-      "Generic platforms do not understand the competence, licensing and quality demands of the security industry. Focusing exclusively on security lets us build tools that are genuinely useful.",
-    "about.expansion.title": "From Sweden to the world",
-    "about.expansion.body":
-      "The platform is multilingual from the ground up and designed to adapt to different markets and regulations.",
+      "Our ambition is for CQrityjob to be a natural place to return to throughout a professional life in security: to work, develop and find the next opportunity.",
+    "assessment.title": "Career analysis, recruitment assessments and learning",
+    "assessment.lead":
+      "Choose support for your purpose: explore your career, inform a recruitment process or develop employees' knowledge.",
+    "assessment.person.title": "Career analysis",
+    "assessment.person.body":
+      "Explore your career with Career Discovery. Receive guidance based on your answers.",
+    "assessment.recruitment.title": "Recruitment assessments",
+    "assessment.recruitment.body":
+      "Use role-relevant recruitment assessments as part of the employer's overall evidence.",
+    "assessment.development.title": "Learning and development",
+    "assessment.development.body":
+      "Plan and follow up learning and development for existing employees.",
+    "assessment.responsible":
+      "A result should be interpreted according to its purpose and context. People make the decisions.",
 
     "contact.title": "Contact us",
     "contact.lead":
-      "We work with a select set of partners during the build. Reach out and we will get back to you.",
-    "contact.preview_notice":
-      "This form is a preview and does not currently send or store messages.",
-    "contact.form.name": "Name",
-    "contact.form.email": "Email",
-    "contact.form.company": "Organisation",
-    "contact.form.message": "Message",
-    "contact.form.submit": "Send",
+      "The contact form is not accepting messages yet. Nothing is sent from this page.",
 
     "profession.police.title": "Police Officer",
     "profession.police.desc":
@@ -9322,9 +9241,6 @@ export const dictionaries = {
       "Planning and leading incident, crisis and business continuity response.",
 
     "status.coming_soon": "Coming soon",
-    "status.in_development": "In development",
-    "status.preview": "Preview",
-    "status.available": "Available now",
 
     "auth.signin.title": "Sign in",
     "auth.signup.title": "Create account",
@@ -9388,7 +9304,7 @@ export const dictionaries = {
     "employer.pending.heading": "Company account under review",
     "employer.pending.thanks": "Thank you for registering.",
     "employer.pending.body":
-      "We are reviewing your organisation before activating employer access.",
+      "Your organisation's registration is being reviewed. Status changes will appear here.",
     "employer.pending.access":
       "You will receive access to the employer workspace once the registration has been approved.",
     "employer.pending.nextSteps.heading": "What happens next",
@@ -9423,8 +9339,6 @@ export const dictionaries = {
     "account.context.underReview": "Under review",
     "account.context.unavailable": "Unavailable",
     "employer.pending.checking": "Checking your registration …",
-    "auth.intro":
-      "An account keeps your Security Career Assessment results safe. It's optional — the assessment works without signing in.",
     "auth.google": "Continue with Google",
     "auth.or": "or",
     "auth.invite.organisationContext":
@@ -9470,9 +9384,10 @@ export const dictionaries = {
     "auth.redirecting": "Redirecting…",
 
     // The unified front door (2026-08-30). See the Swedish block above.
-    "auth.unified.proposition": "Your security career. One professional identity.",
+    "auth.unified.proposition": "Create your CQrityjob account",
+    "auth.unified.propositionSignIn": "Sign in to CQrityjob",
     "auth.unified.lede":
-      "Your professional identity, your career development and your verified credentials in one place — with a single account.",
+      "Use your account for your career, Security Passport and security work. Access to each workspace follows its permissions.",
     "auth.unified.signin.intro": "Sign in to continue.",
     "auth.unified.signup.intro":
       "We only need the essentials now. Everything else you fill in when you need it.",
@@ -9520,7 +9435,7 @@ export const dictionaries = {
     "candidate.applications.heading": "My applications",
     "candidate.applications.backToMyCareer": "Back to Overview",
     "candidate.applications.loading": "Loading applications…",
-    "candidate.applications.empty": "You haven't submitted any applications yet.",
+    "candidate.applications.empty": "You have not submitted any applications yet.",
     "candidate.applications.error.load": "Could not load your applications.",
     "candidate.applications.error.withdraw": "Could not withdraw the application.",
     "candidate.applications.error.cvDownload": "Could not retrieve the CV.",
@@ -9586,16 +9501,13 @@ export const dictionaries = {
     "footer.for_orgs": "For organizations",
     "footer.company": "Company",
     "footer.legal": "Legal",
-    "footer.legal.privacy": "Privacy policy",
-    "footer.legal.terms": "Terms of use",
+    "footer.legal.notice": "The privacy policy and terms of use have not been published yet.",
     "footer.rights": "All rights reserved.",
     "footer.built": "Based in Sweden. Built for the security industry.",
 
     "lang.switch": "Language",
 
     "sca.meta.title": "Security Career Assessment — CQrityjob",
-    "sca.meta.desc":
-      "Discover which security careers may suit you. Free, about 12–15 minutes, no account required.",
     "sca.badge": "Career guidance",
     "sca.landing.title": "Discover which security careers may suit you.",
     // ---- Security Career Discovery v3 (internal test) ----
@@ -9663,7 +9575,7 @@ export const dictionaries = {
       "Profession matching is not part of this version of the report. It is added once the profession profiles are calibrated and reviewed.",
     "careerDiscovery.report.v31.rec.title": "Your recommended career direction",
     "careerDiscovery.report.v31.rec.lede":
-      "Based on your answers these professions are the closest, in order. Your Security Career DNA below is the evidence that produced that order.",
+      "The suggestions are based on your answers. They describe possible directions to explore, not a determination of your competence or eligibility.",
     "careerDiscovery.report.v31.rec.rank1": "Strongest recommendation",
     "careerDiscovery.report.v31.rec.traitsLabel": "What in your Career DNA contributes most",
     "careerDiscovery.report.v31.rec.alternativesTitle": "Next strongest alternatives",
@@ -9697,10 +9609,10 @@ export const dictionaries = {
     "careerDiscovery.report.v31.educationTitle": "Education and certifications",
     "careerDiscovery.report.v31.pathwayTitle": "Possible path",
     "careerDiscovery.report.v31.currentJobsInDirection": "Current jobs in this career direction",
-    "careerDiscovery.report.v31.currentJobsShort": "Current jobs",
-    "careerDiscovery.report.v31.exploreCareer": "Explore career",
+    "careerDiscovery.report.v31.currentJobsShort": "See relevant jobs",
+    "careerDiscovery.report.v31.exploreCareer": "Read about the profession",
     "careerDiscovery.report.v31.howDoIGetThere": "How do I get there?",
-    "careerDiscovery.report.v31.whyThisAppeared": "Why this appeared",
+    "careerDiscovery.report.v31.whyThisAppeared": "Why this role is suggested",
     "careerDiscovery.report.v31.closeDetail": "Close",
     "careerDiscovery.report.v31.moveForward.title": "What could help you move forward?",
     "careerDiscovery.report.v31.moveForward.intro":
@@ -9804,7 +9716,7 @@ export const dictionaries = {
     "careerDiscovery.report.development.title": "Development areas",
     "careerDiscovery.report.nextSteps.title": "Possible next steps",
     "careerDiscovery.report.method.title": "How this result was produced",
-    "careerDiscovery.report.header.product": "Security Career Discovery",
+    "careerDiscovery.report.header.product": "Your career analysis",
     "careerDiscovery.report.header.internalTest":
       "Internal test version. The content is authored but not yet reviewed by specialists. This is guidance to support a conversation and your own decisions — not a test, not a judgement about employability, and not a psychological assessment. The result reflects the answers you gave on this occasion.",
     "careerDiscovery.report.actions.myCareer": "Go to My Career",
@@ -9842,17 +9754,17 @@ export const dictionaries = {
       "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "This report was saved in an earlier format. Open the full report to see its contents.",
-    "cd.public.loading": "Preparing the assessment…",
-    "cd.public.unavailableTitle": "The assessment isn't open yet",
+    "cd.public.loading": "Preparing the career analysis…",
+    "cd.public.unavailableTitle": "The career analysis is not open right now",
     "cd.public.unavailableBody":
-      "The updated version of Security Career Discovery is going through review before it opens to everyone. We'll open it as soon as that review is complete.",
+      "The updated career analysis is being reviewed before it opens to everyone. We will open it as soon as that review is complete.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
-    "cd.public.introTitle": "Security Career Discovery",
+    "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
-      "28 questions about how you prefer to work: two about where you are now, 22 that build your Security Career DNA, and four that follow from where you are. There are no right or wrong answers, and this is not a judgement of your competence or employability.",
+      "Answer questions about how you prefer to work and what motivates you. Get a career analysis with explained role suggestions to explore further.",
     "cd.public.introNoAccount":
       "You don't need an account to start. Your answers stay in this tab, and you only sign in when you want to save the result.",
-    "cd.public.start": "Start the assessment",
+    "cd.public.start": "Start the career analysis",
     "cd.public.progress": "Question",
     "cd.public.stageContext": "Where you are",
     "cd.public.stageCareerDna": "Security Career DNA",
@@ -9866,10 +9778,10 @@ export const dictionaries = {
     "cd.public.doneTitle": "You've answered every question",
     "cd.public.doneBody":
       "Create a candidate account to save your result and continue building your career profile. Your answers stay put while you do.",
-    "cd.public.createAccountToSave": "Create account and save my result",
+    "cd.public.createAccountToSave": "Create an account and save my career analysis",
     "cd.public.haveAccount": "Already have an account? Log in",
     "cd.public.signInToSave": "Save your Career Journey",
-    "cd.public.saveNow": "Save to your Career Journey",
+    "cd.public.saveNow": "Save my career analysis",
     "cd.public.answersKept":
       "Your result is kept in this browser until you claim it to your account — including when the confirmation email opens in a new tab.",
     "cd.public.buildingResult": "Putting your result together…",
@@ -9877,10 +9789,10 @@ export const dictionaries = {
       "We couldn't load your result just now. Your answers are safe — please try again.",
     "cd.public.retryResult": "Try again",
     "cd.public.downloadResult": "Download result",
-    "cd.public.shareResult": "Share result",
+    "cd.public.shareResult": "Share your career direction",
     "cd.public.shareTitle": "My Security Career DNA",
     "cd.public.shareText":
-      "I just took CQrityjob's security career assessment and found out my Security Career DNA. Try it yourself:",
+      "I just took CQrityjob's career analysis and found out my Security Career DNA. Try it yourself:",
     "cd.public.shareShared": "Shared",
     "cd.public.shareCopied": "Copied to clipboard",
     "cd.public.saving": "Saving your report…",
@@ -9888,16 +9800,16 @@ export const dictionaries = {
     "cd.public.failedBody":
       "Something went wrong while saving. Your answers are still here — please try again.",
     "cd.public.retry": "Try again",
-    "cd.public.shellEyebrow": "Security Career Discovery",
+    "cd.public.shellEyebrow": "Your security career",
     "cd.public.exit": "Exit assessment",
     "cd.public.of": "of",
     "cd.public.factTimeBody":
       "You can pause and continue in the same tab. There is no time limit on any question.",
-    "cd.public.introEyebrow": "Career guidance",
+    "cd.public.introEyebrow": "Career Discovery",
     "cd.public.introFactsTitle": "Before you begin",
-    "cd.public.factQuestions": "28 questions",
+    "cd.public.factQuestions": "{n} questions",
     "cd.public.factStages":
-      "2 about where you are · 22 that build your Security Career DNA · 4 about your direction",
+      "{context} about where you are · {core} that build your Security Career DNA · {adaptive} about your direction",
     "cd.public.factNoJudgement": "No right or wrong answers",
     "cd.public.factNoJudgementBody": "This is not a judgement of your competence or employability.",
     "cd.public.factNoAccountShort": "No account needed to begin",
@@ -10029,8 +9941,6 @@ export const dictionaries = {
     "sca.landing.lead":
       "A structured career assessment that helps you explore security roles — based on your interests, strengths and preferred ways of working.",
     "sca.landing.point.time": "About 12–15 minutes",
-    "sca.landing.point.free": "Free to take",
-    "sca.landing.point.noaccount": "No registration required",
     "sca.landing.point.guidance": "Personalized career guidance",
     "sca.landing.cta.start": "Start assessment",
     "sca.landing.cta.how": "How it works",
@@ -10045,7 +9955,6 @@ export const dictionaries = {
     "sca.intro.body":
       "The assessment evaluates interests, strengths and preferred ways of working. It does not determine whether someone is suitable for regulated professions.",
     "sca.intro.stat.time": "Time",
-    "sca.intro.stat.time.value": "≈ 5 min",
     "sca.intro.stat.questions": "Questions",
     "sca.intro.stat.privacy": "Data",
     "sca.intro.stat.privacy.value": "Not stored",
@@ -10536,18 +10445,17 @@ export const dictionaries = {
     "employer.preferences.purpose":
       "Account-level preferences such as notifications, billing and integrations — distinct from the organisation's company profile.",
 
-    "employer.askCqrity.heading": "Ask CQrity",
+    "employer.askCqrity.heading": "Shortcuts",
     "employer.askCqrity.body":
-      "A future AI assistant that answers recruitment and workforce questions from your own data. Today it offers shortcuts to real information — never invented answers.",
-    "employer.askCqrity.shortcutsHeading": "Shortcuts",
-    "employer.askCqrity.query.applications": "Show applications awaiting review",
-    "employer.askCqrity.query.assessments": "Show available assessments",
-    "employer.askCqrity.query.employeesWithoutRole": "Show employees without a current role",
-    "employer.askCqrity.query.draftJobs": "Show draft jobs",
+      "Go directly to applications, assessments, employees and job adverts.",
+    "employer.askCqrity.query.applications": "Applications",
+    "employer.askCqrity.query.assessments": "Recruitment assessments",
+    "employer.askCqrity.query.employeesWithoutRole": "Employees",
+    "employer.askCqrity.query.draftJobs": "Job adverts",
 
     "employer.workforce.heading": "Employees",
     "employer.workforce.subheading":
-      "Your employees with their roles and sites — the basis for a joined-up competence picture.",
+      "View the organisation's employees and the information recorded for your work.",
     "employer.workforce.action.add": "Add employee",
     "employer.workforce.action.edit": "Edit",
     "employer.workforce.action.deactivate": "Deactivate",
@@ -10579,7 +10487,7 @@ export const dictionaries = {
     "employer.overview.welcome": "Welcome, {0}",
     "employer.overview.welcomeAnon": "Welcome",
     "employer.overview.subheading":
-      "Manage recruitment, employees, tests and competence development in one place.",
+      "Follow your recruitment processes and see which tasks need attention.",
 
     "employer.overview.card.jobs.title": "Recruitments",
     "employer.overview.card.jobs.body":
@@ -10890,6 +10798,8 @@ export const dictionaries = {
     "assignment.recipient.saveResult.link": "Link this result to my profile",
 
     "employer.applications.heading": "Applications",
+    "employer.applications.lede":
+      "Review applications and follow the next step in each recruitment.",
     "employer.applications.empty": "No applications have been received yet.",
     "employer.applications.emptyBody":
       "Applications arrive through published job advertisements. Once an advertisement is live, they appear here.",
@@ -11015,7 +10925,8 @@ export const dictionaries = {
     "myapps.passport.included": "Security Passport included",
     "myapps.passport.attach": "Share verified Passport with this application",
 
-    "employer.settings.heading": "Organisation",
+    "employer.settings.heading": "Organisation settings",
+    "employer.settings.lede": "Keep your organisation's details and settings up to date.",
     "employer.settings.viewOnlyNotice": "You have view-only access to these details.",
     "employer.overview.card.tests.stat.active": "Active",
     "employer.overview.card.tests.stat.awaitingReview": "Waiting for review",
@@ -11662,7 +11573,7 @@ export const dictionaries = {
     "sca.results.section.model_note": "About this model",
     "sca.results.regulated": "Regulated role — eligibility varies",
     "sca.next.title": "Continue your journey",
-    "sca.next.profile.title": "Create a free profile",
+    "sca.next.profile.title": "Create a profile",
     "sca.next.profile.body": "Save results, track progress and meet employers.",
     "sca.next.retake": "Retake the assessment",
     "sca.next.explore.title": "Explore careers",
@@ -11778,15 +11689,14 @@ export const dictionaries = {
     // for why no number is written into any of these strings.
 
     // § 1 — Hero
-    "cc.hero.eyebrow": "Profession guides · Career routes · Career test",
+    "cc.hero.eyebrow": "Career Center",
     "cc.hero.title": "Explore professions and find your next career step",
     "cc.hero.name": "Career Center",
     "cc.hero.lead":
-      "Find out what the professions in the security industry actually involve, what it takes to get into them, and which step makes sense for you next.",
-    "cc.hero.cta.test": "Start the career test — about 5 min, no account",
+      "Explore security professions, their requirements and possible next steps. Start with your current profession, your saved career analysis or the full profession catalogue.",
     "cc.hero.cta.explore": "Explore all professions",
     "cc.hero.cta.personal": "Start from my result",
-    "cc.hero.trust": "Free. Not an assessment of your competence or your employability.",
+    "cc.hero.trust": "Not an assessment of your competence or your employability.",
     "cc.hero.fact.guides": "completed profession guides",
     "cc.hero.fact.sources.title": "Sourced and reviewed",
     "cc.hero.fact.sources.body":
@@ -11813,7 +11723,7 @@ export const dictionaries = {
     "cc.where.org.cta": "See how you can assess security competence",
 
     // § 3 — The career test
-    "cc.test.eyebrow": "Career test",
+    "cc.test.eyebrow": "Career analysis",
     "cc.test.title": "Not sure where you fit? Start here.",
     "cc.test.body":
       "The questions are about how you prefer to work. You get a career profile and concrete professions to read more about. There are no right or wrong answers — this is not an assessment of your competence or your employability.",
@@ -11821,7 +11731,7 @@ export const dictionaries = {
     "cc.test.fact.time": "About 12–15 minutes",
     "cc.test.fact.account": "No account required",
     "cc.test.fact.noright": "No right or wrong answers",
-    "cc.test.cta": "Start the career test",
+    "cc.test.cta": "Start the career analysis",
 
     // § 4 — Explore professions
     "cc.explore.title": "Explore professions",
@@ -11889,7 +11799,7 @@ export const dictionaries = {
     "cc.trust.regulatory.body":
       "Where a profession is regulated we link to the legislation or the authority, not to our own summary.",
     "cc.trust.closing":
-      "This content is guidance and educational material. Formal requirements can change and should always be checked against current information from the relevant authority or employer.",
+      "Profession information is guidance. Requirements can change and should be checked against current authority and employer information.",
 
     // ── Profession guide ────────────────────────────────────────────────
     "cc.p.fact.family": "Profession family",
@@ -11926,14 +11836,14 @@ export const dictionaries = {
     "cc.p.path.next": "Common steps from here",
     "cc.p.test.title": "Not sure whether this role suits you?",
     "cc.p.test.body":
-      "The career test takes approximately 12–15 minutes and gives you a career profile with professions to read more about. It does not assess your competence or your employability.",
+      "The career analysis gives you explained role suggestions to explore further, based on your answers. It does not assess your competence or your employability.",
     "cc.p.related": "Related professions",
     "cc.p.faq": "Common questions",
     "cc.p.sources": "Sources",
     "cc.p.reviewed": "Last reviewed",
     "cc.p.jurisdiction": "Applies to",
     "cc.p.disclaimer":
-      "This content is guidance and educational material. Formal requirements can change and should always be checked against current information from the relevant authority or employer.",
+      "Profession information is guidance. Requirements can change and should be checked against current authority and employer information.",
     "cc.p.unavailable.title": "This profession guide is not published yet.",
     "cc.p.unavailable.body":
       "We publish a guide only once it has sourced content, a stated jurisdiction and a review date. Until then we would rather show nothing than something unfinished.",
@@ -11982,7 +11892,7 @@ export const dictionaries = {
     "cc.entry.fromProfession.title": "I know my profession",
     "cc.entry.fromProfession.body":
       "Read about your profession and see which next steps are recorded from it.",
-    "cc.entry.fromAnalysis.title": "Your recommended profession",
+    "cc.entry.fromAnalysis.title": "Your leading role suggestion",
     "cc.entry.fromAnalysis.body":
       "See the profession your career analysis ranked highest, and why.",
     "cc.entry.cta": "Explore paths",
@@ -11991,12 +11901,12 @@ export const dictionaries = {
     "cc.path.titleFor": "Paths from {role}",
     "cc.path.subtitle":
       "Choose the role you work in to read about it and see which next steps are recorded from there. The steps start from the role you work in, not from the career analysis.",
-    "cc.path.source.profile": "Based on the profession in your profile",
-    "cc.path.source.selected": "Based on the role you selected here",
-    "cc.path.select.label": "Which profession do you work in today?",
+    "cc.path.source.profile": "Profession from your profile",
+    "cc.path.source.selected": "Profession you selected to explore",
+    "cc.path.select.label": "What is your current profession?",
     "cc.path.select.none": "Choose a profession",
     "cc.path.select.help":
-      "The choice does not change your profile. It is only kept in the page address, so you can share the link or change the role whenever you like.",
+      "This selection is used to explore the profession and possible next steps. It does not change the profession in your profile.",
     "cc.path.select.change": "Change role",
     "cc.path.none": "We have no recorded directions out of that profession yet.",
     "cc.path.notEligibility":
@@ -12017,7 +11927,7 @@ export const dictionaries = {
     "cc.back.profession": "Back to the previous profession",
     "cc.info.read": "Read about {role}",
     "cc.info.none": "There is no published information about this profession yet.",
-    "cc.jobs.for": "See open jobs as {role}",
+    "cc.jobs.for": "See jobs for {role}",
     "cc.jobs.closed":
       "The CQrityjob job board is not open yet. The profession information above applies regardless.",
     "cc.nav.onPage": "On this page",
@@ -12039,17 +11949,17 @@ export const dictionaries = {
     "cc.cat.missing.body":
       "The profession is not among the reviewed entries in our catalogue. We would rather show nothing than information about a different profession.",
     "cc.cat.notice":
-      "This is a summary from CQrityjob's reviewed profession catalogue. A full profession guide has not been published for it yet.",
-    "cc.cat.about.empty": "The catalogue has no longer description of this profession yet.",
+      "This is a summary from the profession catalogue. A full profession guide has not been published yet.",
+    "cc.cat.about.empty": "A detailed description of this profession is not yet available.",
     "cc.cat.formal.empty":
-      "No formal requirements are recorded in the catalogue for this profession. That does not mean employers have none — always check the advert and current information from the authorities.",
+      "No formal requirements are recorded here. Always check current requirements with the relevant authority and in the job advert.",
     "cc.cat.formal.boundary":
       "The requirements describe the profession, not you. CQrityjob does not test whether you meet them — regulation and the employer do.",
     "cc.cat.education.empty":
       "The catalogue has no recorded education or certifications for this profession yet.",
     "cc.cat.next.subtitle": "Links between professions recorded in the profession catalogue.",
     "cc.cat.next.empty":
-      "No career steps from this profession are documented in the catalogue yet. That does not mean there are no opportunities — only that we have not reviewed any.",
+      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
     "cc.cat.kind.promotion": "Promotion",
     "cc.cat.kind.specialisation": "Specialisation",
     "cc.cat.kind.pivot": "Change of direction",
@@ -12062,12 +11972,12 @@ export const dictionaries = {
     "cc.entry.fromAnalysis.cta": "See your recommendation",
     "cc.entry.guidance.title": "Help me choose a profession",
     "cc.entry.guidance.body":
-      "Take the free career analysis and get a recommended profession to read more about.",
+      "Take the career analysis and get role suggestions to explore further.",
     "cc.entry.guidance.cta": "Take the career analysis",
-    "cc.me.primary.badge": "Ranked highest in your analysis",
+    "cc.me.primary.badge": "Your leading role suggestion",
     "cc.me.why": "Why:",
     "cc.me.traits": "What pointed here",
-    "cc.me.alternatives": "Other professions in your analysis",
+    "cc.me.alternatives": "Other professions to explore",
     "cc.me.sameAsSaved": "This is also the profession saved in your profile.",
     "cc.me.allIndicative":
       "No profession stood out clearly in your analysis. The order shows which professions were closest to your answers — treat them as directions to explore.",
@@ -12094,7 +12004,7 @@ export const dictionaries = {
     "cc.path.next.cta": "See possible next steps",
     "cc.path.next.title": "Possible next steps from {role}",
     "cc.path.next.empty":
-      "No career steps from {role} are documented in our catalogue yet. That does not mean there are no opportunities — only that we have not reviewed any yet.",
+      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
     "cc.path.next.empty.explore": "Explore the profession catalogue",
     "cc.path.more.count": "See all {n} next steps in the profession guide",
     "cc.explore.showAll": "Show all professions",
@@ -12118,7 +12028,7 @@ export const dictionaries = {
     "cc.me.eyebrow": "Your direction",
     "cc.me.title": "Based on your career analysis",
     "cc.me.subtitle":
-      "The professions below come from your own career analysis. They are guidance on direction — not a decision that you are suitable or eligible.",
+      "Based on your saved career analysis. Read about the role, why it is suggested and which requirements apply.",
     "cc.me.completed": "Analysis completed",
     "cc.me.rank": "Recommendation",
     "cc.me.reason.ranked":
@@ -12138,17 +12048,18 @@ export const dictionaries = {
     "cc.me.invite.title": "Not sure where you fit?",
     "cc.me.invite.body":
       "The career analysis gives you occupations to read more about. It does not assess your competence and produces no pass or fail.",
+    "cc.me.none.body":
+      "You do not have a saved career analysis yet. Explore professions directly or take the analysis to get role suggestions based on your answers.",
     "cc.me.invite.signedout": "Taken it before? Sign in and your result appears here.",
     "cc.me.invite.cta": "Take the career analysis",
     "cc.me.invite.secondary": "Explore all professions instead",
-    "cc.me.unreadable.title": "We cannot read your latest analysis right now",
+    "cc.me.unreadable.title": "Your career analysis could not be loaded right now",
     "cc.me.unreadable.body":
-      "The result is still there — it is the read that did not go through. Try again, or open your analysis history.",
+      "Try again. The result is still there — it is the loading that did not go through. You can also open your analysis history.",
     "cc.me.unreadable.retry": "Try again",
     "cc.me.unreadable.history": "See my analyses",
-    "cc.me.noroles.title": "Your analysis names directions rather than individual professions",
-    "cc.me.noroles.body":
-      "The version you took names career areas instead of occupations. Open the result to see them, or explore the professions here.",
+    "cc.me.noroles.title": "Your saved analysis shows career areas",
+    "cc.me.noroles.body": "Explore professions within the area to find out more.",
 
     // ── Profession card (§3C) ───────────────────────────────────────────
     "cc.card.cta": "See the profession",
@@ -12186,7 +12097,8 @@ export const dictionaries = {
     "cc.p.next.title": "Possible next career steps",
     "cc.p.next.subtitle":
       "The steps come from recorded links between the professions. They are examples of what is possible — not an order you have to follow.",
-    "cc.p.next.none": "No next steps are recorded for this profession yet.",
+    "cc.p.next.none":
+      "We have not yet published career paths from this profession. You can read about the role and explore other professions.",
     "cc.p.prev.title": "Common routes in",
     "cc.p.regulatory.boundary": "Scope",
     "cc.p.education.title": "Education and authorisation",
@@ -14246,9 +14158,8 @@ export const dictionaries = {
     "academy.library.reason.training_delivery_pending": "Training delivery is not enabled yet.",
     "training.nav.programmes": "Programmes",
     "training.nav.participants": "Assigned training",
-    "training.overview.title": "Development",
-    "training.overview.lede":
-      "Development programmes your organisation has assigned, and how far the employees have got.",
+    "training.overview.title": "Learning and development",
+    "training.overview.lede": "Plan and follow up learning for your employees.",
     "training.overview.stat.active": "In progress",
     "training.overview.stat.completed": "Completed",
     "training.overview.stat.available": "Programmes to assign",
@@ -15138,7 +15049,7 @@ export const dictionaries = {
     "sendTest.cannotSend": "Choose a level that has a test to send.",
     "sendTest.sent.title": "The test has been sent",
     "sendTest.sent.body":
-      "The candidate sees the test in their account under Tests & development and can start right away. You follow it here and in Tests & assessments.",
+      "The candidate sees the test in their account under Assessments and development and can start right away. You follow it here and in Tests & assessments.",
     "sendTest.sent.setup":
       "The setup (level and role profile) is recorded, so the interview preparation after the test needs no second choice.",
     "sendTest.sent.noSetup":
@@ -15390,9 +15301,9 @@ export const dictionaries = {
     "admin.lifecycle.employer.impactLoading": "Computing impact…",
     "admin.lifecycle.job.delete.blocked": "Only unpublished drafts can be deleted.",
     "academy.nav.candidates": "Candidates",
-    "academy.overview.title": "Tests & assessments",
+    "academy.overview.title": "Recruitment assessments",
     "academy.overview.lede":
-      "Follow every candidate's assessment from assignment to a finished decision-support brief.",
+      "Choose assessments, invite participants and review results to support recruitment.",
     "academy.overview.todoTitle": "What needs you now",
     "academy.overview.todoNothing": "Nothing is waiting for you right now.",
     "academy.overview.todoCandidates.one": "candidate is waiting for review",
@@ -16731,7 +16642,8 @@ export const dictionaries = {
     "iiu.new.creating": "Creating …",
     "iiu.new.cancel": "Cancel",
     "iiu.ix.lead":
-      "Prepare, interview, assess and report — against what the role requires. You assess and decide.",
+      "Prepare the interview, document the conversation and bring together the evidence for your assessment. You assess and decide.",
+    "iiu.ix.title": "Interview Intelligence",
     "iiu.ix.heading": "Interviews",
     "iiu.ev.notes.title": "Your interview notes",
     "iiu.ev.notes.body":

@@ -448,6 +448,12 @@ export function SecurityRisksActions() {
         <h2 className="text-xl font-semibold">
           {l("Åtgärder att följa upp", "Actions to follow up")}
         </h2>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          {l(
+            "Ange vad som ska göras, vem som ansvarar och när det ska följas upp. Uppdatera status när arbetet går vidare.",
+            "Record what needs to be done, who is responsible and when to follow up. Update the status as work progresses.",
+          )}
+        </p>
         <ul className="divide-y divide-border">
           {query.data.actions.map((action) => (
             <li key={action.id} className="space-y-3 py-4">

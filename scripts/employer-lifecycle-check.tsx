@@ -820,8 +820,14 @@ console.log("employer lifecycle — phases 2 and 3\n");
 {
   ok(sv["employer.nav.training"] === "Utveckling", "12 · the Swedish navigation reads Utveckling");
   ok(en["employer.nav.training"] === "Development", "12 · and the English reads Development");
-  ok(sv["training.overview.title"] === "Utveckling", "12 · the area heading agrees");
-  ok(en["training.overview.title"] === "Development", "12 · in both languages");
+  // The area's heading is the full name since the MVP text specification
+  // (§3, §11.2, 2026-09-27) — Kompetensutveckling / Learning and development,
+  // kept apart from candidate selection. The short navigation word stays.
+  ok(
+    sv["training.overview.title"] === "Kompetensutveckling",
+    "12 · the area heading names it in full",
+  );
+  ok(en["training.overview.title"] === "Learning and development", "12 · in both languages");
   ok(
     sv["employer.overview.card.development.title"] === "Utveckling" &&
       en["employer.overview.card.development.title"] === "Development",

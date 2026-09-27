@@ -37,8 +37,10 @@ export function PrimaryLink({
    *  path containing "?" and silently loses the parameter — the same defect
    *  splitReturnPath() exists to prevent on the way back. The homepage's
    *  primary action needs it, because "?redirect=" is how the intent to
-   *  build a Passport survives account creation. */
-  search?: Record<string, string>;
+   *  build a Passport survives account creation. A boolean is serialised
+   *  as the router serialises it (`?all=true`), which is how the Career
+   *  Center's own catalogue flag is written. */
+  search?: Record<string, string | boolean>;
   /** Fragment for the destination. Same reason as `search`: the router does
    *  not parse a "#" out of `to`, so a primary action that scrolls to a
    *  section on the current page needs it as its own prop rather than as

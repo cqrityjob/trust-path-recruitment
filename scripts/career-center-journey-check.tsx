@@ -69,6 +69,15 @@ await mock.module("@tanstack/react-router", () => ({
   useRouter: () => ({ history: { push: () => undefined } }),
 }));
 
+// The career analysis status (useCareerAnalysisOpen) is a switch here, so the
+// static render never loads the server-function client and the personal
+// section can be rendered with both answers: not known yet (the default, the
+// offer stands) and definitely not open (the offer is withdrawn).
+let analysisOpen: boolean | undefined = undefined;
+await mock.module("@/components/career-discovery/use-career-analysis-open", () => ({
+  useCareerAnalysisOpen: () => analysisOpen,
+}));
+
 const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
 const cc = await import("../src/lib/career-center");
@@ -530,6 +539,42 @@ group("5 · Older reports, failures and anonymous readers keep their own states"
       );
     }
   }
+
+  // MVP text specification §6/§7: the two invitation states, in the
+  // specified words, and the offer withdrawn when the analysis is closed.
+  const anonymous = cc.personalDirection(undefined, { signedIn: false });
+  const noResult = cc.personalDirection({ state: "none" }, { signedIn: true });
+  const invite = (d: typeof anonymous, lang: Lang) =>
+    render(
+      <PersonalDirectionSection direction={d} exploreSearch={{}} exploreAnchor="utforska-yrken" />,
+      lang,
+    );
+  for (const lang of LANGS) {
+    const none = invite(noResult, lang);
+    const anon = invite(anonymous, lang);
+    ck(
+      `5.4 [${lang}] a signed-in reader without an analysis is told so, in the specified words`,
+      none.includes(dict[lang]["cc.me.none.body"]) && !anon.includes(dict[lang]["cc.me.none.body"]),
+    );
+    ck(
+      `5.5 [${lang}] both invitation states offer the analysis while it is open or not yet known`,
+      none.includes('href="/security-career-assessment"') &&
+        anon.includes('href="/security-career-assessment"'),
+    );
+    analysisOpen = false;
+    const closedNone = invite(noResult, lang);
+    const closedAnon = invite(anonymous, lang);
+    analysisOpen = undefined;
+    ck(
+      `5.6 [${lang}] a closed analysis is said, and no link opens it`,
+      [closedNone, closedAnon].every(
+        (h) =>
+          h.includes(dict[lang]["home.career.closed"]) &&
+          !h.includes('href="/security-career-assessment"') &&
+          h.includes("data-explore-catalogue"),
+      ),
+    );
+  }
 }
 
 // =========================================================================
@@ -797,8 +842,9 @@ for (const lang of LANGS) {
   const claims = [...used].filter((k) =>
     [dict.sv[k], dict.en[k]].some(
       (text) =>
-        /(du är (behörig|kvalificerad|godkänd)|you are (qualified|eligible|approved))/i.test(text) &&
-        !/\b(inte|ej|aldrig|not|never|no)\b/i.test(text),
+        /(du är (behörig|kvalificerad|godkänd)|you are (qualified|eligible|approved))/i.test(
+          text,
+        ) && !/\b(inte|ej|aldrig|not|never|no)\b/i.test(text),
     ),
   );
   ck(

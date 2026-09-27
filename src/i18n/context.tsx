@@ -136,6 +136,26 @@ export function useT() {
   return ctx;
 }
 
+/** A page's <title> and description in the language the reader chose.
+ *
+ *  The server always renders the Swedish page (see I18nProvider), so every
+ *  route's `head` carries the Swedish pair, read from the dictionary. This
+ *  swaps in the pair for the current language once the page is on the
+ *  client, and again whenever the reader switches language -- the same
+ *  document.title write the job ad already makes for its own title. It
+ *  changes no canonical address, robots rule or indexing decision. */
+export function useLocalizedHead(titleKey: TranslationKey, descriptionKey?: TranslationKey) {
+  const { t } = useT();
+  useEffect(() => {
+    document.title = t(titleKey);
+    if (descriptionKey) {
+      document
+        .querySelector('meta[name="description"]')
+        ?.setAttribute("content", t(descriptionKey));
+    }
+  }, [t, titleKey, descriptionKey]);
+}
+
 /** A subtree that renders in ONE fixed language, whatever the site toggle says.
  *
  *  ── WHY THIS EXISTS ─────────────────────────────────────────────────
