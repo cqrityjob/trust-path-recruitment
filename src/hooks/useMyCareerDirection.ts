@@ -33,37 +33,67 @@ import {
   isRenderableDiscovery,
 } from "@/lib/career-discovery/active-report.functions";
 import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.functions";
+import { getProfessionDetails } from "@/lib/career-discovery/profession-detail.functions";
 import { getMySecurityCareerProfile } from "@/lib/security-career-profile/profile.functions";
 import {
   deriveCareerDirection,
   type CareerDirection,
 } from "@/lib/professional-identity/career-direction";
+import { careerCenterKeys } from "@/lib/career-center/personal-cache";
+import {
+  isWellFormedCigSlug,
+  publishedProfessionFromAnySlug,
+} from "@/lib/career-center/profession-links";
 
-/**
- * Whether a live Supabase session exists in THIS browser.
+/** Who is signed in in THIS browser, as far as the page has observed.
  *
- * `null` until the first answer, which is the state that matters: defaulting
- * to `false` flashes the signed-out treatment at every signed-in reader on
- * every visit, and defaulting to `true` does the reverse. Public routes that
- * only need to pick the right entry point — not to read any personal data —
- * use this alone and issue no authenticated request at all.
- */
-export function useSupabaseSessionFlag(): boolean | null {
-  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+ *  `signedIn` is `null` until the first answer, which is the state that
+ *  matters: defaulting to `false` flashes the signed-out treatment at every
+ *  signed-in reader on every visit, and defaulting to `true` does the
+ *  reverse. `userId` is what personal reads are keyed on — see
+ *  personal-cache.ts for why a boolean is not enough. */
+export interface SupabaseSessionState {
+  readonly signedIn: boolean | null;
+  readonly userId: string | null;
+}
+
+export function useSupabaseSession(): SupabaseSessionState {
+  const [state, setState] = useState<SupabaseSessionState>({ signedIn: null, userId: null });
   useEffect(() => {
     let alive = true;
+    // An auth event that arrives before getSession() resolves is newer than
+    // it; the late getSession() answer must not overwrite it.
+    let sawEvent = false;
+    const apply = (userId: string | null) => {
+      if (!alive) return;
+      setState((prev) =>
+        prev.signedIn === Boolean(userId) && prev.userId === userId
+          ? prev
+          : { signedIn: Boolean(userId), userId },
+      );
+    };
     void supabase.auth.getSession().then(({ data }) => {
-      if (alive) setSignedIn(Boolean(data.session));
+      if (!sawEvent) apply(data.session?.user?.id ?? null);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSignedIn(Boolean(session));
+      sawEvent = true;
+      apply(session?.user?.id ?? null);
     });
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
     };
   }, []);
-  return signedIn;
+  return state;
+}
+
+/**
+ * Whether a live Supabase session exists in THIS browser. Public routes that
+ * only need to pick the right entry point — not to read any personal data —
+ * use this alone and issue no authenticated request at all.
+ */
+export function useSupabaseSessionFlag(): boolean | null {
+  return useSupabaseSession().signedIn;
 }
 
 /**
@@ -77,37 +107,73 @@ export function useSupabaseSessionFlag(): boolean | null {
  * My Career prints it as their professional identity. Reusing it is right
  * precisely because it was authored for that purpose.
  *
- * `getMySecurityCareerProfile` is also the narrowest read that answers the
- * question — one row, five columns — rather than the whole professional
- * identity seam, which a public career page has no business assembling.
- *
  * It is NOT derived from Security Passport merits, employment history or
  * their absence. See career-origin.ts.
  *
- * A failed read yields `null`, which the surface treats as "no role stated"
- * and offers the selector. That is the correct failure here and not a
- * fail-open: nothing is claimed, and the reader can answer for themselves in
- * one click.
+ * ── A SAVED ROLE WITHOUT A GUIDE IS STILL A SAVED ROLE ─────────────────
+ *
+ * The profile stores a CIG slug, and the catalogue has more CIG professions
+ * than published guides (Larmoperatör, Polis, SOC-analytiker…). For those,
+ * the catalogue's OWN title is read, so the page can name the role the
+ * person saved instead of printing a slug or silently dropping it — and can
+ * link to the reviewed catalogue page for exactly that role.
+ *
+ * A failed read is reported as `error`, which the surface renders as its
+ * own state: "we could not read your profile" is not "you have not said".
  */
-export function useMyStatedProfession(signedIn: boolean | null): {
+export interface StatedProfession {
+  readonly status: "anonymous" | "loading" | "ready" | "error";
   readonly slug: string | null;
-  readonly label: string | null;
-} {
+  /** Free text the person typed because their role was not listed. */
+  readonly otherLabel: string | null;
+  /** The catalogue's title for `slug`, when it has no published guide. */
+  readonly catalogueTitleSv: string | null;
+  readonly catalogueTitleEn: string | null;
+  readonly refetch: () => void;
+}
+
+export function useMyStatedProfession(session: SupabaseSessionState): StatedProfession {
   const loadProfile = useServerFn(getMySecurityCareerProfile);
+  const userId = session.signedIn === true ? session.userId : null;
   const q = useQuery({
-    queryKey: ["career-center", "career-profile", signedIn],
+    queryKey: careerCenterKeys.statedProfession(userId ?? "anonymous"),
     queryFn: () => loadProfile(),
-    enabled: signedIn === true,
-    staleTime: 5 * 60_000,
+    enabled: userId !== null,
+    staleTime: 60_000,
     retry: 1,
     refetchOnWindowFocus: false,
   });
-  if (signedIn !== true || q.isPending || q.isError || !q.data) {
-    return { slug: null, label: null };
+
+  const slug = userId && q.data ? (q.data.currentProfessionSlug ?? null) : null;
+  // Only a slug with no published guide needs the catalogue's title.
+  const needsTitle = isWellFormedCigSlug(slug) && !publishedProfessionFromAnySlug(slug);
+  const loadDetails = useServerFn(getProfessionDetails);
+  const titleQ = useQuery({
+    queryKey: ["career-center", "catalogue-title", slug],
+    queryFn: () => loadDetails({ data: { slugs: [slug as string] } }),
+    enabled: needsTitle,
+    staleTime: 10 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+  const detail = needsTitle && slug ? titleQ.data?.[slug] : undefined;
+
+  const refetch = () => {
+    void q.refetch();
+  };
+  const empty = { slug: null, otherLabel: null, catalogueTitleSv: null, catalogueTitleEn: null };
+  if (session.signedIn === false) return { status: "anonymous", ...empty, refetch };
+  if (session.signedIn === null || !userId || q.isPending) {
+    return { status: "loading", ...empty, refetch };
   }
+  if (q.isError) return { status: "error", ...empty, refetch };
   return {
-    slug: q.data.currentProfessionSlug ?? null,
-    label: q.data.currentProfessionOther ?? null,
+    status: "ready",
+    slug,
+    otherLabel: q.data?.currentProfessionOther?.trim() || null,
+    catalogueTitleSv: detail?.titleSv ?? null,
+    catalogueTitleEn: detail?.titleEn ?? null,
+    refetch,
   };
 }
 
@@ -116,18 +182,22 @@ export interface MyCareerDirectionState {
    *  rather than a default of `false`, which would flash the anonymous
    *  invitation at every signed-in reader on every visit. */
   readonly signedIn: boolean | null;
+  readonly userId: string | null;
   readonly career: CareerDirection | undefined;
   readonly refetch: () => void;
 }
 
-export function useMyCareerDirection(): MyCareerDirectionState {
-  const signedIn = useSupabaseSessionFlag();
+export function useMyCareerDirection(session?: SupabaseSessionState): MyCareerDirectionState {
+  const own = useSupabaseSession();
+  const { signedIn, userId } = session ?? own;
+  const accountId = signedIn === true ? userId : null;
 
   const loadActive = useServerFn(getActiveCareerReport);
   const activeQ = useQuery({
-    queryKey: ["career-center", "active-report", signedIn],
+    queryKey: careerCenterKeys.activeReport(accountId ?? "anonymous"),
     queryFn: () => loadActive({}),
-    enabled: signedIn === true,
+    // No request at all until a specific account has been observed.
+    enabled: accountId !== null,
     staleTime: 60_000,
     // One retry, matching My Career. The default three with backoff leaves
     // the section a skeleton for about seven seconds after a failed read,
@@ -136,12 +206,13 @@ export function useMyCareerDirection(): MyCareerDirectionState {
     refetchOnWindowFocus: false,
   });
 
-  const snapshotId = isRenderableDiscovery(activeQ.data) ? activeQ.data.snapshotId : null;
+  const snapshotId =
+    accountId && isRenderableDiscovery(activeQ.data) ? activeQ.data.snapshotId : null;
   const loadStored = useServerFn(getStoredDiscoveryReport);
   const storedQ = useQuery({
-    queryKey: ["career-center", "stored-report", snapshotId],
+    queryKey: careerCenterKeys.storedReport(accountId ?? "anonymous", snapshotId),
     queryFn: () => loadStored({ data: { snapshotId: snapshotId! } }),
-    enabled: Boolean(snapshotId),
+    enabled: Boolean(accountId && snapshotId),
     staleTime: 5 * 60_000,
     retry: 1,
     refetchOnWindowFocus: false,
@@ -149,13 +220,16 @@ export function useMyCareerDirection(): MyCareerDirectionState {
 
   const refetch = () => {
     void activeQ.refetch();
-    void storedQ.refetch();
+    if (snapshotId) void storedQ.refetch();
   };
 
-  if (signedIn !== true) return { signedIn, career: undefined, refetch };
+  if (signedIn !== true || !accountId) {
+    return { signedIn, userId: null, career: undefined, refetch };
+  }
+  const base = { signedIn, userId: accountId, refetch } as const;
 
   if (activeQ.isError) {
-    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
+    return { ...base, career: deriveCareerDirection(undefined, { isError: true }) };
   }
   // `isLoading` alone is not enough. A query that has SETTLED without an error
   // and without data — a server function that resolved to null, a response the
@@ -163,13 +237,13 @@ export function useMyCareerDirection(): MyCareerDirectionState {
   // `data` undefined. Testing only `isLoading` left that case rendering the
   // loading state forever, with no retry and no way for the reader to tell a
   // slow read from a broken one. Settled-and-empty fails closed.
-  if (activeQ.isPending) return { signedIn, career: { state: "loading" }, refetch };
+  if (activeQ.isPending) return { ...base, career: { state: "loading" } };
   // `== null` deliberately: the response can carry `null` as well as be
   // absent, and the original bug was a truthiness test that treated both as
   // "still loading". The handler's return type is non-nullable, so either
   // value means the response was malformed — a fault, not an absence.
   if (activeQ.data == null) {
-    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
+    return { ...base, career: deriveCareerDirection(undefined, { isError: true }) };
   }
 
   const active = activeQ.data;
@@ -178,42 +252,34 @@ export function useMyCareerDirection(): MyCareerDirectionState {
   // not taken one, so the legacy kind is passed through as its own state
   // rather than collapsed into "none".
   if (!active || active.kind === "none") {
-    return { signedIn, career: { state: "none" }, refetch };
+    return { ...base, career: { state: "none" } };
   }
   if (active.kind === "legacy_v21") {
     return {
-      signedIn,
+      ...base,
       career: {
         state: "legacy",
         completedAt: active.completedAt,
         reportHref: `/security-career-assessment/report/${active.runId}`,
       },
-      refetch,
     };
   }
   if (active.kind === "discovery_unreadable") {
-    return {
-      signedIn,
-      career: { state: "unreadable", completedAt: active.generatedAt },
-      refetch,
-    };
+    return { ...base, career: { state: "unreadable", completedAt: active.generatedAt } };
   }
   // A read that did not answer. Never "you have no analysis".
   if (active.kind === "read_failed") {
-    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
+    return { ...base, career: deriveCareerDirection(undefined, { isError: true }) };
   }
 
   if (storedQ.isError) {
-    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
+    return { ...base, career: deriveCareerDirection(undefined, { isError: true }) };
   }
   // Same rule as above: pending is loading; settled-and-empty is a failure.
-  // This is the case that hung: `!storedQ.data` was true for a completed read
-  // that carried nothing, so the section rendered its loading state forever
-  // with no retry and no way to tell a slow read from a broken one.
-  if (storedQ.isPending) return { signedIn, career: { state: "loading" }, refetch };
+  if (storedQ.isPending) return { ...base, career: { state: "loading" } };
   if (storedQ.data == null) {
-    return { signedIn, career: deriveCareerDirection(undefined, { isError: true }), refetch };
+    return { ...base, career: deriveCareerDirection(undefined, { isError: true }) };
   }
 
-  return { signedIn, career: deriveCareerDirection(storedQ.data), refetch };
+  return { ...base, career: deriveCareerDirection(storedQ.data) };
 }

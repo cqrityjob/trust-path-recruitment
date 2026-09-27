@@ -117,29 +117,39 @@ const { MVP_QUESTION_COUNT } = await import("../src/lib/career-discovery/v31/per
 
 const HUB_SECTION_HEADINGS = [
   "cc.hero.title",
-  // pathFrom before fit: "I work as X, where can I go" is the question most
-  // readers arrive with, it works for an anonymous visitor, and it needs no
-  // assessment. The two are separate sections with separate headings and are
-  // never combined — see 16d.
+  // pathFrom before the catalogue: "I work as X, what is it and where can I
+  // go" is the question most readers arrive with, it works for an anonymous
+  // visitor, and it needs no assessment. It and `fit` are separate sections
+  // with separate headings and are never combined — see 16d.
   "cc.path.title",
-  "cc.me.title",
-  "cc.routes.title",
-  // The catalogue comes last and opens on an explicit click: eleven guides
+  // The catalogue comes before the career routes (journey completion,
+  // 2026-09-26): "show me the professions" is what a reader who clicked
+  // "Utforska yrken" asked for, and it used to sit below a section of route
+  // diagrams. It still opens on an explicit click or link — eleven guides
   // plus a filter bar rendered unconditionally is what made this page
   // 11,700px tall on a phone.
   "cc.explore.title",
+  "cc.routes.title",
   "cc.trust.title",
 ] as const;
 
-// Section 2's heading is rendered by <PersonalDirectionSection>, so the hub's
-// own source carries the component rather than the key. Both are asserted:
-// the component must be mounted in the right position, and the component must
-// render the heading.
+// Section 2's heading is rendered by <PersonalDirectionSection>, and
+// <PathFromSection> renders its own. The hub builds the personal section
+// once and PLACES it by state, so the order is asserted on what the hub
+// returns, with the two placements asserted explicitly:
+//
+//   {personalFirst && personalSection}    right after the hero — only once a
+//                                         signed-in reader's own result can
+//                                         be read
+//   {!personalFirst && personalSection}   after the catalogue — the compact
+//                                         offer of the analysis, so nobody
+//                                         scrolls past an invitation to
+//                                         reach the professions
 const personal = read("src/components/career-center/PersonalDirection.tsx");
 const pathFrom = read("src/components/career-center/PathFromSection.tsx");
-const hubOrderText = hub
-  .replace("<PathFromSection", 't("cc.path.title")')
-  .replace("<PersonalDirectionSection", 't("cc.me.title")');
+const hubReturn = hub.slice(hub.indexOf("  return (\n    <>\n      {/* ── 1. HERO"));
+const hubOrderText = hubReturn.replace("<PathFromSection", 't("cc.path.title")');
+expect(hubReturn.length > 0, "the hub's rendered section order must be readable");
 
 let cursor = -1;
 for (const key of HUB_SECTION_HEADINGS) {
@@ -150,6 +160,26 @@ for (const key of HUB_SECTION_HEADINGS) {
     `hub section "${key}" is out of order — the settled order is ${HUB_SECTION_HEADINGS.join(" → ")}`,
   );
   cursor = at;
+}
+{
+  const first = hubOrderText.indexOf("{personalFirst && personalSection}");
+  const later = hubOrderText.indexOf("{!personalFirst && personalSection}");
+  const path = hubOrderText.indexOf('t("cc.path.title")');
+  const explore = hubOrderText.indexOf('t("cc.explore.title")');
+  const routes = hubOrderText.indexOf('t("cc.routes.title")');
+  expect(
+    first !== -1 && first < path,
+    "the reader's own result must lead the page, right after the hero, when it is in hand",
+  );
+  expect(
+    later > explore && later < routes,
+    "without a result, the analysis offer must follow the catalogue, not precede it",
+  );
+  expect(
+    hub.includes("<PersonalDirectionSection") &&
+      /const personalFirst = signedIn === true && direction\.state !== "no_result";/.test(hub),
+    "the result may only move to the top for a signed-in reader who has one",
+  );
 }
 
 // The four discovery sections that were merged into one explorer, and the

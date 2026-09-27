@@ -3,6 +3,7 @@ import { ArrowRight, Briefcase, IdCard } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { jobsProfessionSlug, type Profession } from "@/lib/career-center";
+import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 
 // "Relaterade lediga jobb" and "Ditt nästa steg".
 //
@@ -43,8 +44,13 @@ export function ProfessionNextSteps({
    *  on this page changes what it CLAIMS based on who is reading. */
   signedIn: boolean | null;
 }) {
-  const { t } = useT();
+  const { t, lang } = useT();
   const jobsSlug = jobsProfessionSlug(profession);
+  // The job board is a release-controlled area: while it is closed every
+  // /jobs URL renders a "coming soon" page. A link there would send the
+  // reader into an unexplained dead end, so the section says it instead.
+  const jobsOpen = jobsEnabled();
+  const title = lang === "sv" ? profession.titleSv : profession.titleEn;
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -52,6 +58,7 @@ export function ProfessionNextSteps({
       <section
         data-related-jobs
         data-jobs-available={jobsSlug ? "true" : "false"}
+        data-jobs-open={jobsOpen ? "true" : "false"}
         className="flex flex-col rounded-xl border border-border bg-card p-6 shadow-xs md:p-8"
       >
         <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-secondary text-accent">
@@ -61,17 +68,21 @@ export function ProfessionNextSteps({
           {jobsSlug ? t("cc.p.jobs.title") : t("cc.p.jobs.unavailable.title")}
         </h3>
         <p className="mt-2 flex-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
-          {jobsSlug ? t("cc.p.jobs.body") : t("cc.p.jobs.unavailable.body")}
+          {!jobsOpen
+            ? t("cc.jobs.closed")
+            : jobsSlug
+              ? t("cc.p.jobs.body")
+              : t("cc.p.jobs.unavailable.body")}
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-          {jobsSlug ? (
+          {!jobsOpen ? null : jobsSlug ? (
             <Link
               to="/jobs/profession/$professionSlug"
               params={{ professionSlug: jobsSlug }}
               data-jobs-link={jobsSlug}
               className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              {t("cc.p.jobs.cta")}
+              {t("cc.jobs.for").replace("{role}", title)}
               <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           ) : (

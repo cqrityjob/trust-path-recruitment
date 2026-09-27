@@ -7,6 +7,7 @@ import { useT } from "@/i18n/context";
 import { ensureFirstRunPassport } from "@/lib/security-passport/first-run.functions";
 import { savePassportBasics } from "@/lib/security-passport/passport.functions";
 import { setMyCurrentProfession } from "@/lib/security-career-profile/profile.functions";
+import { invalidateCurrentProfessionReads } from "@/lib/career-center/personal-cache";
 import {
   listCurrentProfessionOptions,
   type CurrentProfessionOption,
@@ -294,6 +295,7 @@ function NameStep({
   const t = (key: IndiaCopyKey) => indiaT(key, lang);
   const saveBasics = useServerFn(savePassportBasics);
   const saveProfession = useServerFn(setMyCurrentProfession);
+  const queryClient = useQueryClient();
   const [name, setName] = useState(state.displayName ?? "");
   const [profession, setProfession] = useState(
     state.professionOther != null ? OTHER : (state.professionSlug ?? ""),
@@ -333,6 +335,8 @@ function NameStep({
             ? { currentProfessionSlug: null, currentProfessionOther: other.trim() }
             : { currentProfessionSlug: profession, currentProfessionOther: null },
       });
+      // The Career Center and My Career default to the saved profession.
+      invalidateCurrentProfessionReads(queryClient);
       onDone();
     } catch {
       setError(true);

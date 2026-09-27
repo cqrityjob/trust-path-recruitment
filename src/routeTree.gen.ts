@@ -65,6 +65,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAcademyIndexRouteImport } from './routes/_authenticated.academy.index'
 import { Route as JobsProfessionProfessionSlugRouteImport } from './routes/jobs.profession.$professionSlug'
 import { Route as JobsFamilyFamilyIdRouteImport } from './routes/jobs.family.$familyId'
+import { Route as CareerCenterYrkeCigSlugRouteImport } from './routes/career-center.yrke.$cigSlug'
 import { Route as ApiRecruitmentReceiptsSweepRouteImport } from './routes/api.recruitment.receipts-sweep'
 import { Route as AuthenticatedSecurityWorkWorkspaceIdRouteImport } from './routes/_authenticated.security-work.$workspaceId'
 import { Route as AuthenticatedSecurityCareerAssessmentSessionRouteImport } from './routes/_authenticated.security-career-assessment.session'
@@ -495,6 +496,11 @@ const JobsFamilyFamilyIdRoute = JobsFamilyFamilyIdRouteImport.update({
   id: '/family/$familyId',
   path: '/family/$familyId',
   getParentRoute: () => JobsRoute,
+} as any)
+const CareerCenterYrkeCigSlugRoute = CareerCenterYrkeCigSlugRouteImport.update({
+  id: '/yrke/$cigSlug',
+  path: '/yrke/$cigSlug',
+  getParentRoute: () => CareerCenterRoute,
 } as any)
 const ApiRecruitmentReceiptsSweepRoute =
   ApiRecruitmentReceiptsSweepRouteImport.update({
@@ -1440,6 +1446,7 @@ export interface FileRoutesByFullPath {
   '/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/security-work/$workspaceId': typeof AuthenticatedSecurityWorkWorkspaceIdRouteWithChildren
   '/api/recruitment/receipts-sweep': typeof ApiRecruitmentReceiptsSweepRoute
+  '/career-center/yrke/$cigSlug': typeof CareerCenterYrkeCigSlugRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/academy/': typeof AuthenticatedAcademyIndexRoute
@@ -1611,6 +1618,7 @@ export interface FileRoutesByTo {
   '/security-career-assessment/history': typeof AuthenticatedSecurityCareerAssessmentHistoryRoute
   '/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/api/recruitment/receipts-sweep': typeof ApiRecruitmentReceiptsSweepRoute
+  '/career-center/yrke/$cigSlug': typeof CareerCenterYrkeCigSlugRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/academy': typeof AuthenticatedAcademyIndexRoute
@@ -1803,6 +1811,7 @@ export interface FileRoutesById {
   '/_authenticated/security-career-assessment/session': typeof AuthenticatedSecurityCareerAssessmentSessionRoute
   '/_authenticated/security-work/$workspaceId': typeof AuthenticatedSecurityWorkWorkspaceIdRouteWithChildren
   '/api/recruitment/receipts-sweep': typeof ApiRecruitmentReceiptsSweepRoute
+  '/career-center/yrke/$cigSlug': typeof CareerCenterYrkeCigSlugRoute
   '/jobs/family/$familyId': typeof JobsFamilyFamilyIdRoute
   '/jobs/profession/$professionSlug': typeof JobsProfessionProfessionSlugRoute
   '/_authenticated/academy/': typeof AuthenticatedAcademyIndexRoute
@@ -1997,6 +2006,7 @@ export interface FileRouteTypes {
     | '/security-career-assessment/session'
     | '/security-work/$workspaceId'
     | '/api/recruitment/receipts-sweep'
+    | '/career-center/yrke/$cigSlug'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
     | '/academy/'
@@ -2168,6 +2178,7 @@ export interface FileRouteTypes {
     | '/security-career-assessment/history'
     | '/security-career-assessment/session'
     | '/api/recruitment/receipts-sweep'
+    | '/career-center/yrke/$cigSlug'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
     | '/academy'
@@ -2359,6 +2370,7 @@ export interface FileRouteTypes {
     | '/_authenticated/security-career-assessment/session'
     | '/_authenticated/security-work/$workspaceId'
     | '/api/recruitment/receipts-sweep'
+    | '/career-center/yrke/$cigSlug'
     | '/jobs/family/$familyId'
     | '/jobs/profession/$professionSlug'
     | '/_authenticated/academy/'
@@ -2893,6 +2905,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/jobs/family/$familyId'
       preLoaderRoute: typeof JobsFamilyFamilyIdRouteImport
       parentRoute: typeof JobsRoute
+    }
+    '/career-center/yrke/$cigSlug': {
+      id: '/career-center/yrke/$cigSlug'
+      path: '/yrke/$cigSlug'
+      fullPath: '/career-center/yrke/$cigSlug'
+      preLoaderRoute: typeof CareerCenterYrkeCigSlugRouteImport
+      parentRoute: typeof CareerCenterRoute
     }
     '/api/recruitment/receipts-sweep': {
       id: '/api/recruitment/receipts-sweep'
@@ -4517,12 +4536,14 @@ interface CareerCenterRouteChildren {
   CareerCenterProfessionRoute: typeof CareerCenterProfessionRoute
   CareerCenterStartRoute: typeof CareerCenterStartRoute
   CareerCenterIndexRoute: typeof CareerCenterIndexRoute
+  CareerCenterYrkeCigSlugRoute: typeof CareerCenterYrkeCigSlugRoute
 }
 
 const CareerCenterRouteChildren: CareerCenterRouteChildren = {
   CareerCenterProfessionRoute: CareerCenterProfessionRoute,
   CareerCenterStartRoute: CareerCenterStartRoute,
   CareerCenterIndexRoute: CareerCenterIndexRoute,
+  CareerCenterYrkeCigSlugRoute: CareerCenterYrkeCigSlugRoute,
 }
 
 const CareerCenterRouteWithChildren = CareerCenterRoute._addFileChildren(

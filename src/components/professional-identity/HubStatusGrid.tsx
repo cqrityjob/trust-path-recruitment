@@ -58,7 +58,9 @@ import type {
 } from "@/lib/professional-identity/home-presentation";
 import type { CareerDirection } from "@/lib/professional-identity/career-direction";
 import { L, Lf, Lp, type Lang } from "./copy";
-import { APPLICATIONS, APPLICATION_STATUS, HUB_TILE } from "./home-copy";
+import { APPLICATIONS, APPLICATION_STATUS, CAREER, HUB_TILE } from "./home-copy";
+import { professionInfoDestination } from "@/lib/career-center/profession-links";
+import { rememberReturn } from "@/lib/career-center/return-context";
 import { Failed } from "./home-primitives";
 import { LINK, formatDate } from "./home-format";
 
@@ -114,6 +116,34 @@ function Status({ children, muted = false }: { children: React.ReactNode; muted?
 
 /** The one way in. `mt-auto` so every module's link sits on the same line
  *  whatever its status said. */
+/** "Läs om {yrke}" for the report's first-ranked profession — the same
+ *  destination the Career Center and the report use for it (its guide, else
+ *  its reviewed catalogue page), so the three surfaces cannot send the
+ *  reader to different descriptions of one recommendation. */
+function TopRoleInfo({
+  role,
+  l,
+}: {
+  role: NonNullable<Extract<CareerDirection, { state: "ready" }>["topRole"]>;
+  l: Lang;
+}) {
+  const info = professionInfoDestination({ cigSlug: role.cigSlug });
+  if (info.kind === "none") return null;
+  const title = l === "sv" ? role.titleSv : role.titleEn;
+  return (
+    <p className="mt-1 text-sm">
+      <Link
+        to={info.href}
+        onClick={() => rememberReturn(info.href, "my_career", "/my-career")}
+        className={LINK}
+        data-hub-profession={info.kind === "career_center" ? info.slug : info.cigSlug}
+      >
+        {Lf(CAREER.openProfession, l, title)}
+      </Link>
+    </p>
+  );
+}
+
 function Go({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <div className="mt-auto pt-3">
@@ -216,6 +246,7 @@ export function HubStatusGrid({
         {career.state === "none" && !careerClosed && (
           <Go to="/security-career-assessment">{L(HUB_TILE.discovery.start, l)}</Go>
         )}
+        {career.state === "ready" && career.topRole && <TopRoleInfo role={career.topRole} l={l} />}
         {(career.state === "ready" || career.state === "legacy") && (
           <Go to={career.reportHref}>{L(HUB_TILE.discovery.open, l)}</Go>
         )}

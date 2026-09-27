@@ -21,6 +21,7 @@ import {
   getFamily,
   icon,
   inboundTransitions,
+  jobsProfessionSlug,
   onwardTransitions,
   professionEducation,
   proficiencyLabels,
@@ -29,7 +30,11 @@ import {
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
 import { useSupabaseSessionFlag } from "@/hooks/useMyCareerDirection";
+import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
+import { rememberReturn } from "@/lib/career-center/return-context";
 import { CareerHero } from "./CareerHero";
+import { ProfessionBackLink } from "./ProfessionBackLink";
+import { ProfessionSectionNav, type SectionLink } from "./ProfessionSectionNav";
 import { CompetencyCard } from "./CompetencyCard";
 import { EducationPanel } from "./EducationPanel";
 import { FAQAccordion } from "./FAQAccordion";
@@ -114,35 +119,62 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
 
   const dayItems = [...profession.responsibilities];
   const environments = profession.workEnvironments ?? [];
+  const hasFormal = (profession.formalRequirements?.length ?? 0) > 0 || steps.length > 0;
+  const jobsSlug = jobsEnabled() ? jobsProfessionSlug(profession) : null;
+  const guidePath = `/career-center/${profession.slug}`;
+  // A profession opened from THIS guide comes back to this guide's steps.
+  const openFromHere = (slug: string, surface: "profession_transitions" | "profession_related") => {
+    track("career_profession_opened", { surface, subject: slug });
+    rememberReturn(`/career-center/${slug}`, "profession", `${guidePath}#karriarsteg`);
+  };
+
+  // The page index. Short labels of their own (cc.nav.*), so the index can
+  // sit above the sections without reordering the guide's own headings.
+  const sections: SectionLink[] = [
+    { id: "om-yrket", label: t("cc.nav.about") },
+    { id: "kompetenser", label: t("cc.nav.competencies") },
+    ...(hasFormal ? [{ id: "krav", label: t("cc.nav.requirements") }] : []),
+    { id: "karriarsteg", label: t("cc.nav.next") },
+    { id: "utbildning", label: t("cc.nav.education") },
+    { id: "nasta-steg", label: t("cc.nav.jobs") },
+    { id: "kallor", label: t("cc.nav.sources") },
+  ];
 
   return (
     <>
+      {/* The way back first: where the reader came from, named. */}
+      <ProfessionBackLink targetPath={guidePath} currentTitle={title} />
+
       {/* 1 — ROLE HERO */}
       <CareerHero
         eyebrow={family ? L(family.name, lang) : undefined}
         title={title}
         lead={short}
         actions={
-          <PrimaryLink to="/security-career-assessment">
-            {t("cc.test.cta")}
-            <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-          </PrimaryLink>
+          // The guide's own next step first: where this profession leads.
+          // Jobs sit beside it only when the job board is open AND the
+          // profession has a job identity; the career analysis is offered
+          // further down, where it belongs (section 14).
+          <>
+            <PrimaryLink to={guidePath} hash="karriarsteg">
+              {t("cc.p.hero.next")}
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+            </PrimaryLink>
+            {jobsSlug && (
+              <Link
+                to="/jobs/profession/$professionSlug"
+                params={{ professionSlug: jobsSlug }}
+                data-hero-jobs={jobsSlug}
+                className="inline-flex h-11 items-center justify-center rounded-md border border-border bg-background px-5 text-sm font-semibold tracking-tight text-foreground transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("cc.jobs.for").replace("{role}", title)}
+              </Link>
+            )}
+          </>
         }
       />
 
-      <nav aria-label={t("cc.explore.title")} className="border-b border-border bg-muted/40">
-        <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-6 py-3 text-xs text-muted-foreground md:px-8">
-          <Link to="/career-center" className="hover:text-foreground">
-            {/* The product's short NAME, not the hub's headline. The h1 on
-                the hub is a sentence now, and a breadcrumb reading "Utforska
-                yrken och hitta din nästa karriärväg / Väktare" is not a
-                breadcrumb. */}
-            {t("cc.hero.name")}
-          </Link>
-          <span aria-hidden>/</span>
-          <span className="text-foreground">{title}</span>
-        </div>
-      </nav>
+      <ProfessionSectionNav sections={sections} />
 
       <Section className="py-12 md:py-14">
         {/* 2 — FACT ROW */}
@@ -204,7 +236,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       </Section>
 
       {/* 4 — OM YRKET  ·  5 — EN DAG I ROLLEN */}
-      <Section bordered className="py-16 md:py-20">
+      <Section bordered id="om-yrket" className="scroll-mt-14 py-16 md:py-20">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
@@ -303,7 +335,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       </Section>
 
       {/* 8 — KOMPETENSER SOM EFTERFRÅGAS */}
-      <Section bordered className="bg-secondary/40 py-16 md:py-20">
+      <Section bordered id="kompetenser" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
         <div className="max-w-2xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("cc.p.competencies")}
@@ -355,8 +387,8 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       </Section>
 
       {/* 9 — FORMELLA KRAV  ·  10 — SÅ KOMMER DU IN */}
-      {(profession.formalRequirements?.length ?? 0) > 0 || steps.length > 0 ? (
-        <Section bordered className="py-16 md:py-20">
+      {hasFormal ? (
+        <Section bordered id="krav" className="scroll-mt-14 py-16 md:py-20">
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
             {(profession.formalRequirements?.length ?? 0) > 0 && (
               <div>
@@ -419,7 +451,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       ) : null}
 
       {/* 11 — MÖJLIGA NÄSTA KARRIÄRSTEG */}
-      <Section bordered id="karriarsteg" className="bg-secondary/40 py-16 md:py-20">
+      <Section bordered id="karriarsteg" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
         <div className="max-w-3xl">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
             {t("cc.p.next.title")}
@@ -435,12 +467,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
                 key={`onward-${tr.to.slug}`}
                 transition={tr}
                 direction="onward"
-                onOpen={(slug) =>
-                  track("career_profession_opened", {
-                    surface: "profession_transitions",
-                    subject: slug,
-                  })
-                }
+                onOpen={(slug) => openFromHere(slug, "profession_transitions")}
               />
             ))}
           </div>
@@ -473,12 +500,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
                   transition={tr}
                   direction="inbound"
                   headingLevel={4}
-                  onOpen={(slug) =>
-                    track("career_profession_opened", {
-                      surface: "profession_transitions",
-                      subject: slug,
-                    })
-                  }
+                  onOpen={(slug) => openFromHere(slug, "profession_transitions")}
                 />
               ))}
             </div>
@@ -490,7 +512,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       </Section>
 
       {/* 12 — UTBILDNING OCH BEHÖRIGHET */}
-      <Section bordered id="utbildning" className="py-16 md:py-20">
+      <Section bordered id="utbildning" className="scroll-mt-14 py-16 md:py-20">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("cc.p.education.title")}
         </h2>
@@ -498,7 +520,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       </Section>
 
       {/* 13 — RELATERADE LEDIGA JOBB · DITT PASSPORT */}
-      <Section bordered id="nasta-steg" className="bg-secondary/40 py-16 md:py-20">
+      <Section bordered id="nasta-steg" className="scroll-mt-14 bg-secondary/40 py-16 md:py-20">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
           {t("cc.p.act.title")}
         </h2>
@@ -558,12 +580,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
                   formalRequirement={
                     p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
                   }
-                  onOpen={(slug) =>
-                    track("career_profession_opened", {
-                      surface: "profession_related",
-                      subject: slug,
-                    })
-                  }
+                  onOpen={(slug) => openFromHere(slug, "profession_related")}
                 />
               ))}
             </div>
@@ -587,7 +604,7 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
       {/* 16 — SOURCES / GOVERNANCE. Publishability guarantees at least one
           source, a review date and a jurisdiction, so this section is never
           empty on a page that renders. */}
-      <Section bordered className="py-14 md:py-16">
+      <Section bordered id="kallor" className="scroll-mt-14 py-14 md:py-16">
         <div className="rounded-xl border border-border bg-background p-6 md:p-8">
           <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {t("cc.p.sources")}

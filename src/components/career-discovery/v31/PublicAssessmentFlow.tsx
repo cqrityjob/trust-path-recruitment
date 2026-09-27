@@ -63,7 +63,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowRight, Check, Download, Loader2, Share2 } from "lucide-react";
 import { useT } from "@/i18n/context";
@@ -90,6 +90,10 @@ import { getMyCareerJourney } from "@/lib/career-journey/career-journey.function
 import type { CareerJourney } from "@/lib/career-journey/types";
 import { V31ReportView } from "@/components/career-discovery/v31/V31ReportView";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  invalidateAssessmentResultReads,
+  invalidateCurrentProfessionReads,
+} from "@/lib/career-center/personal-cache";
 import {
   copyResultTextToClipboard,
   shareResultText,
@@ -211,6 +215,7 @@ export function PublicAssessmentFlow() {
   const checkAvailability = useServerFn(getV31Availability);
   const checkTesterStatus = useServerFn(getV31TesterStatus);
   const persist = useServerFn(persistPublicV31Run);
+  const queryClient = useQueryClient();
   const previewRun = useServerFn(previewPublicV31Run);
   const trackEventFn = useServerFn(trackV31FunnelEvent);
   // Fire-and-forget: a tracking failure must never block or degrade the
@@ -586,6 +591,10 @@ export function PublicAssessmentFlow() {
       // Claimed exactly once: the staged copy goes at the same moment the
       // buffer does, and only after a confirmed write.
       clearPendingClaim();
+      // A new result is now the account's active one. Every surface that
+      // shows it — My Career, the Career Center, the history — must read it
+      // again rather than serve the previous result from cache.
+      invalidateAssessmentResultReads(queryClient);
       track("result_claimed");
       // ── WHERE A CLAIM LANDS (Emsoms #4) ───────────────────────────────
       //
@@ -1020,9 +1029,11 @@ export function PublicAssessmentFlow() {
               if (slug || other) {
                 void saveProfession({
                   data: { currentProfessionSlug: slug, currentProfessionOther: other },
-                }).catch((err: unknown) => {
-                  console.error("[v31] career profile profession write failed", err);
-                });
+                })
+                  .then(() => invalidateCurrentProfessionReads(queryClient))
+                  .catch((err: unknown) => {
+                    console.error("[v31] career profile profession write failed", err);
+                  });
               }
             }
             setPhase("result");

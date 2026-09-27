@@ -58,8 +58,17 @@
 // nearby" under one heading.
 
 import type { CareerDirection, RoleSummary } from "@/lib/professional-identity/career-direction";
+import type {
+  ProfessionStage,
+  RecommendationConfidence,
+} from "@/lib/career-discovery/v31/professions";
+import type { DimensionId } from "@/lib/career-discovery/v31/dimensions";
 import type { Profession } from "./types";
-import { publishedProfessionFromAnySlug } from "./profession-links";
+import {
+  professionInfoDestination,
+  publishedProfessionFromAnySlug,
+  type ProfessionInfoDestination,
+} from "./profession-links";
 import { ELIGIBILITY_IS_NEVER_ASSESSED } from "./career-origin";
 
 export const MAX_PERSONAL_RECOMMENDATIONS = 3;
@@ -78,12 +87,25 @@ export interface PersonalRecommendation {
    *  array position so nothing can re-sort it into a different claim. */
   readonly rank: number;
   readonly reason: RecommendationReason;
+  /** The report's own confidence word for this entry, never flattened. */
+  readonly confidence: RecommendationConfidence;
   /** The published guide, when the catalogue has one. */
   readonly profession: Profession | null;
-  /** What the report called it, in the language the report was frozen in.
-   *  Rendered when no guide resolves — and never as a link. */
+  /** The CIG slug the report froze — the profession's identity in the
+   *  catalogue and in `jobs.profession_slug`. */
+  readonly cigSlug: string | null;
+  /** Where "Läs om yrket" goes: the published guide, else the reviewed
+   *  catalogue page for EXACTLY this CIG profession. Never a neighbour, and
+   *  `none` only when the report stored no profession identity at all. */
+  readonly info: ProfessionInfoDestination;
+  /** What the report called it, in the language the report was frozen in. */
   readonly reportTitleSv: string;
   readonly reportTitleEn: string;
+  /** The report's authored reason, frozen with the match. */
+  readonly rationaleSv: string | null;
+  readonly rationaleEn: string | null;
+  readonly stage: ProfessionStage | null;
+  readonly alignedDimensions: readonly DimensionId[];
 }
 
 export type PersonalDirection =
@@ -117,6 +139,13 @@ export type PersonalDirection =
       readonly state: "ready";
       readonly reportHref: string;
       readonly completedAt: string | null;
+      /** Rank 1 — the report's first-ranked profession. The result contract
+       *  has no separate "primary" field; the first-ranked entry IS the
+       *  primary recommendation and is labelled as such, never re-derived. */
+      readonly primary: PersonalRecommendation;
+      /** Ranks 2..3, in the report's order. */
+      readonly alternatives: readonly PersonalRecommendation[];
+      /** `[primary, ...alternatives]`, kept for callers that list them. */
       readonly items: readonly PersonalRecommendation[];
       /** Always false. See the header comment: guidance is not eligibility. */
       readonly formalRequirementsAssessed: typeof ELIGIBILITY_IS_NEVER_ASSESSED;
@@ -130,12 +159,21 @@ function toRecommendation(role: RoleSummary): PersonalRecommendation {
   return {
     rank: role.rank,
     reason: role.confidence === "indicative" ? "ranked_indicative" : "ranked_by_report",
+    confidence: role.confidence,
     // The report stores a CIG slug; the Career Center's URL space uses its
     // own. One resolver bridges the two, and returns null rather than a
     // link into the "not published yet" state.
     profession: publishedProfessionFromAnySlug(role.cigSlug) ?? null,
+    cigSlug: role.cigSlug,
+    // The SAME rule the report's "Utforska nu" uses, so the two surfaces
+    // cannot disagree about where one recommendation is described.
+    info: professionInfoDestination({ cigSlug: role.cigSlug }),
     reportTitleSv: role.titleSv,
     reportTitleEn: role.titleEn,
+    rationaleSv: role.rationaleSv ?? null,
+    rationaleEn: role.rationaleEn ?? null,
+    stage: role.stage ?? null,
+    alignedDimensions: role.alignedDimensions ?? [],
   };
 }
 
@@ -173,11 +211,14 @@ export function personalDirection(
     };
   }
 
+  const items = roles.slice(0, MAX_PERSONAL_RECOMMENDATIONS).map(toRecommendation);
   return {
     state: "ready",
     reportHref: career.reportHref,
     completedAt: career.completedAt,
-    items: roles.slice(0, MAX_PERSONAL_RECOMMENDATIONS).map(toRecommendation),
+    primary: items[0],
+    alternatives: items.slice(1),
+    items,
     formalRequirementsAssessed: ELIGIBILITY_IS_NEVER_ASSESSED,
     frozenLocale: career.frozenLocale,
   };

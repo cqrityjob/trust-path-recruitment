@@ -187,6 +187,13 @@ export function toggleLevel(s: ExplorerSearch, level: ExperienceLevel): Explorer
 }
 
 /** Route `validateSearch`. Total: any input produces a valid ExplorerSearch. */
+/** A flag the URL may carry as `true`, `"true"`, `"1"` — or the NUMBER 1,
+ *  which is what the router's JSON search parser makes of a hand-typed
+ *  `?all=1`. Missing that last form silently left such a link collapsed. */
+function isTruthyFlag(v: unknown): boolean {
+  return v === true || v === 1 || v === "true" || v === "1";
+}
+
 export function parseExplorerSearch(raw: Record<string, unknown>): ExplorerSearch {
   const out: {
     q?: string;
@@ -232,7 +239,7 @@ export function parseExplorerSearch(raw: Record<string, unknown>): ExplorerSearc
   // Forced open when an advanced filter is set, so the reader can see and
   // remove the control that is narrowing their results.
   const advancedInUse = ADVANCED_FILTER_KEYS.some((k) => out[k] !== undefined);
-  if (advancedInUse || raw.more === true || raw.more === "true" || raw.more === "1") {
+  if (advancedInUse || isTruthyFlag(raw.more)) {
     out.more = true;
   }
 
@@ -245,7 +252,7 @@ export function parseExplorerSearch(raw: Record<string, unknown>): ExplorerSearc
 
   // A narrowed catalogue is necessarily an open catalogue: a link that
   // filters to entry-level roles has to show them.
-  if (hasNarrowingFilter(out) || raw.all === true || raw.all === "true" || raw.all === "1") {
+  if (hasNarrowingFilter(out) || isTruthyFlag(raw.all)) {
     out.all = true;
   }
 

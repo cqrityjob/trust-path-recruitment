@@ -976,13 +976,22 @@ console.log("\n2c · the /my-career surfaces");
   );
 
   // ── B4 · a save refreshes what reads it ────────────────────────────
+  // The card may name the keys itself or call the shared list in
+  // personal-cache.ts, which every profession writer uses (journey work,
+  // 2026-09-26); either way both read models must be on it.
+  const personalCache = read("src/lib/career-center/personal-cache.ts");
+  const viaShared =
+    profileCard.includes("invalidateCurrentProfessionReads(queryClient)") &&
+    /CURRENT_PROFESSION_READ_KEYS[\s\S]*?\];/.exec(personalCache)?.[0];
   ck(
     "saving the career profile invalidates the identity read model",
-    /invalidateQueries/.test(profileCard) && profileCard.includes('"professional-identity"'),
+    (/invalidateQueries/.test(profileCard) && profileCard.includes('"professional-identity"')) ||
+      Boolean(viaShared && viaShared.includes('"professional-identity"')),
   );
   ck(
     "and the job-matching profile that also derives from it",
-    profileCard.includes('"career-profile-for-jobs"'),
+    profileCard.includes('"career-profile-for-jobs"') ||
+      Boolean(viaShared && viaShared.includes('"career-profile-for-jobs"')),
   );
   ck("without reloading the page", !/window\.location\.reload/.test(profileCard));
 
