@@ -80,19 +80,18 @@ function isTemplatePlaceholder(line: string): boolean {
 }
 
 /** Display-only cleanup of employer prose. Drops unfilled template
- *  placeholders and a leading line that merely repeats the section's own
+ *  placeholders and any line that merely repeats the section's own
  *  heading (an "Om rollen" line inside the section already titled
- *  "Om rollen"). Stored data is never touched; every other line renders
- *  verbatim. Returns "" when nothing meaningful remains. */
+ *  "Om rollen" — a template artifact, not content). Stored data is
+ *  never touched; every other line renders verbatim. Returns "" when
+ *  nothing meaningful remains. */
 export function cleanAdText(raw: string, sectionLabel: string): string {
-  const lines = raw
+  const label = sectionLabel.toLowerCase();
+  return raw
     .split(/\r?\n/)
     .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !isTemplatePlaceholder(l));
-  if (lines.length > 0 && lines[0].toLowerCase() === sectionLabel.toLowerCase()) {
-    lines.shift();
-  }
-  return lines.join("\n");
+    .filter((l) => l.length > 0 && !isTemplatePlaceholder(l) && l.toLowerCase() !== label)
+    .join("\n");
 }
 
 /** Requirements may arrive as either a legacy string[] or a structured
