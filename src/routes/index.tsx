@@ -258,7 +258,7 @@ function Index() {
                   <PrimaryLink to="/signup" search={MY_CAREER_INTENT} className="w-full sm:w-auto">
                     {t("home.cta.start")}
                   </PrimaryLink>
-                  <PrimaryLink to="/jobs" variant="ghost" className="w-full sm:w-auto">
+                  <PrimaryLink to="/jobs" variant="ghost" className="w-full gap-2 sm:w-auto">
                     <Briefcase className="h-4 w-4" aria-hidden="true" />
                     {t("home.cta.jobs")}
                   </PrimaryLink>

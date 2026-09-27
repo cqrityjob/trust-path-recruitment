@@ -72,26 +72,35 @@ export function pickLocalized(sv: string | null, en: string | null, lang: "sv" |
   return primary || fallback || "";
 }
 
-/** A line that is only an unfilled template placeholder, e.g.
- *  "[Beskriv arbetsuppgifterna och arbetsplatsen]". Displayed honestly
- *  as "description not provided" instead of leaking the form template. */
-function isTemplatePlaceholder(line: string): boolean {
-  return /^\[[^\]]*\]$/.test(line.trim());
+/** Exact, known unfilled template placeholders (SV/EN), normalised to
+ *  lower case without surrounding brackets. Unknown bracketed text such as
+ *  "[B-körkort krävs]" is employer content and is never removed. */
+const KNOWN_PLACEHOLDERS = new Set([
+  "beskriv arbetsuppgifterna och arbetsplatsen",
+  "beskriv rollen",
+  "beskriv arbetsuppgifterna",
+  "describe the duties and the workplace",
+  "describe the role",
+  "describe the duties",
+]);
+
+export function isTemplatePlaceholder(line: string): boolean {
+  const m = /^\[([^\]]*)\]$/.exec(line.trim());
+  return m !== null && KNOWN_PLACEHOLDERS.has(m[1].trim().toLowerCase());
 }
 
-/** Display-only cleanup of employer prose. Drops unfilled template
- *  placeholders and any line that merely repeats the section's own
- *  heading (an "Om rollen" line inside the section already titled
- *  "Om rollen" — a template artifact, not content). Stored data is
- *  never touched; every other line renders verbatim. Returns "" when
- *  nothing meaningful remains. */
+/** Display-only cleanup of employer prose. Drops lines that are exactly a
+ *  known template placeholder, and removes the section heading only when it
+ *  is the first non-empty line (a redundant template heading). Everything
+ *  else, including blank-line paragraph structure, renders verbatim.
+ *  Stored data is never touched. Returns "" when nothing meaningful remains. */
 export function cleanAdText(raw: string, sectionLabel: string): string {
-  const label = sectionLabel.toLowerCase();
-  return raw
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !isTemplatePlaceholder(l) && l.toLowerCase() !== label)
-    .join("\n");
+  const label = sectionLabel.trim().toLowerCase();
+  const lines = raw.split(/\r?\n/).filter((l) => !isTemplatePlaceholder(l));
+  const first = lines.findIndex((l) => l.trim() !== "");
+  if (first !== -1 && lines[first].trim().toLowerCase() === label) lines.splice(first, 1);
+  const out = lines.join("\n").trim();
+  return out;
 }
 
 /** Requirements may arrive as either a legacy string[] or a structured
