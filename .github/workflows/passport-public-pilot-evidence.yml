@@ -1,0 +1,348 @@
+name: Passport public pilot — real-backend evidence
+
+# ── WHY THIS IS A WORKFLOW OF ITS OWN ───────────────────────────────────
+#
+# e2e/passport-public-pilot-local.spec.ts walks the proof cases of
+# docs/passport/completion-work-order.md in the RUNNING application:
+#
+#   * a person registers and confirms from the e-mail;
+#   * ordinary holders with no pilot grant save credentials from Sweden, India,
+#     Great Britain, Northern Ireland, Dubai and the international catalogue;
+#   * a reviewer asks for more and decides;
+#   * a share opens from its QR code for a logged-out recipient, and revocation
+#     ends it;
+#   * another holder is refused;
+#   * the administrator's catalogue agrees with what holders are offered.
+#
+# Those are facts about GoTrue, PostgREST, Storage, the share function and
+# row-level security, so the walk runs against a real stack. A simulated server
+# response cannot prove them.
+#
+# It cannot live in ci.yml's browser job, which refuses every Supabase host.
+# The stack here is started from scratch on the runner, proven to be loopback,
+# seeded with synthetic people only, and stopped afterwards. Nothing reaches the
+# owner project.
+#
+# ── WHAT DIFFERS FROM A STOCK LOCAL STACK, AND WHY ──────────────────────
+#
+#   * E-mail confirmation is REQUIRED, as on the hosted project. Messages go to
+#     the stack's own mail catcher, and the walk reads the link from there.
+#     Delivery by a real mail provider is not proven here and is not claimed.
+#   * The application is served on https, behind scripts/local-tls-front.mjs.
+#     The share function hands a recipient only to an https origin.
+#   * The share function runs with PUBLIC_SITE_URL set to that origin.
+#
+# All three are set on the runner at run time. supabase/config.toml in the
+# repository is not changed.
+#
+# ── A GREEN JOB WHERE THE TESTS SKIPPED IS NOT EVIDENCE ───────────────
+#
+# The spec skips itself unless E2E_LOCAL_STACK=1 and every URL is loopback.
+# scripts/passport-public-pilot-evidence-verify.ts reads the JSON report and
+# refuses unless all of the following hold:
+#   * every proof case ran and passed on the desktop AND the 390px project;
+#   * the documents went through Storage;
+#   * the screenshots exist at 1440 and 390.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "e2e/passport-public-pilot-local.spec.ts"
+      - "scripts/fixtures/passport-public-pilot-fixture.sql"
+      - "scripts/passport-public-pilot-evidence-verify.ts"
+      - "scripts/local-tls-front.mjs"
+      - "supabase/migrations/**"
+      - "supabase/functions/**"
+      - ".github/workflows/passport-public-pilot-evidence.yml"
+  workflow_dispatch:
+
+# The same pinned CLI as the other evidence workflows: the stack the evidence
+# runs on is part of the evidence.
+env:
+  SUPABASE_CLI_VERSION: "2.117.0"
+  APP_PORT: "3120"
+  APP_TLS_PORT: "3121"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: passport-public-pilot-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evidence:
+    name: Passport public pilot browser evidence (isolated local stack)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Set up the Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Verify the CLI surface
+        run: |
+          set -euo pipefail
+          installed="$(supabase --version)"
+          echo "supabase CLI: ${installed} (pinned ${SUPABASE_CLI_VERSION})"
+          if [ "${installed}" != "${SUPABASE_CLI_VERSION}" ]; then
+            echo "CLI PIN REFUSED: asked for ${SUPABASE_CLI_VERSION}, got ${installed}" >&2
+            exit 1
+          fi
+          supabase --help > /tmp/supabase-help.txt
+          for c in start stop status functions; do
+            grep -qE "^[[:space:]]+${c}[[:space:]]" /tmp/supabase-help.txt || { echo "CLI SURFACE REFUSED: no 'supabase ${c}'" >&2; exit 1; }
+          done
+
+      # Confirmation required, and the https application origin allowed as a
+      # redirect -- on this runner only. Refuses to append a section the
+      # repository's config already declares, which would be invalid TOML and
+      # would mean this step no longer knows what it is overriding.
+      - name: Require e-mail confirmation, as the hosted project does
+        run: |
+          set -euo pipefail
+          if grep -qE '^\[auth(\.|\])' supabase/config.toml; then
+            echo "CONFIG REFUSED: supabase/config.toml already configures [auth]; merge these settings by hand" >&2
+            exit 1
+          fi
+          cat >> supabase/config.toml <<TOML
+
+          [auth]
+          site_url = "https://127.0.0.1:${APP_TLS_PORT}"
+          additional_redirect_urls = ["https://127.0.0.1:${APP_TLS_PORT}/**"]
+
+          [auth.email]
+          enable_signup = true
+          enable_confirmations = true
+
+          [auth.rate_limit]
+          email_sent = 60
+          TOML
+          tail -n 12 supabase/config.toml
+
+      # Started with the migration history HELD BACK, as the other evidence
+      # workflows do: the history is replayed as `postgres` below, after the
+      # privilege baseline is set. Bounded retries across ghcr.io and
+      # Supabase's public mirror, because anonymous image pulls are throttled.
+      - name: Start the local Supabase stack, history held back
+        run: |
+          set -euo pipefail
+          mv supabase/migrations /tmp/pp-migrations
+          mkdir -p supabase/migrations
+          started=0
+          for attempt in 1 2 3 4; do
+            case "$attempt" in 1|3) registry=ghcr.io ;; *) registry=public.ecr.aws ;; esac
+            if SUPABASE_INTERNAL_IMAGE_REGISTRY="$registry" supabase start; then
+              started=1
+              break
+            fi
+            echo "::warning::supabase start attempt ${attempt} (${registry}) failed"
+            supabase stop --no-backup || true
+            if [ "$attempt" -lt 4 ]; then sleep $((attempt * 30)); fi
+          done
+          if [ "$started" -ne 1 ]; then
+            echo "STACK REFUSED: supabase start failed four times across ghcr.io and public.ecr.aws" >&2
+            exit 1
+          fi
+          rmdir supabase/migrations
+          mv /tmp/pp-migrations supabase/migrations
+          test -d supabase/migrations
+
+      - name: Derive the local configuration
+        id: local
+        run: |
+          set -euo pipefail
+          supabase status -o env > /tmp/supabase-status.env
+          # shellcheck disable=SC1091
+          set -a; . /tmp/supabase-status.env; set +a
+          # The LOCAL stack's keys, for the app server exactly as the other
+          # evidence workflows configure it. They belong to a stack that
+          # exists for one job on this runner; the isolation step below
+          # refuses any hosted credential.
+          {
+            echo "SUPABASE_URL=${API_URL}"
+            echo "VITE_SUPABASE_URL=${API_URL}"
+            echo "SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${ANON_KEY}"
+            echo "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
+            echo "SUPABASE_PROJECT_ID=local-passport-public-pilot"
+            echo "VITE_SUPABASE_PROJECT_ID=local-passport-public-pilot"
+            echo "VITE_EMPLOYER_PORTAL_ENABLED=true"
+            echo "VITE_JOBS_ENABLED=true"
+            echo "PUBLIC_SITE_URL=https://127.0.0.1:${APP_TLS_PORT}"
+            # Development only: new share links name this loopback gateway
+            # (public-origin.ts refuses it in a production build).
+            echo "VITE_PASSPORT_LOCAL_INTEGRATION=1"
+          } > .env.local
+          mail_url="${MAILPIT_URL:-${INBUCKET_URL:-http://127.0.0.1:54324}}"
+          echo "api_url=${API_URL}" >> "$GITHUB_OUTPUT"
+          echo "db_url=${DB_URL}" >> "$GITHUB_OUTPUT"
+          echo "mail_url=${mail_url}" >> "$GITHUB_OUTPUT"
+          echo "anon_key=${ANON_KEY}" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse anything that is not loopback
+        env:
+          API_URL: ${{ steps.local.outputs.api_url }}
+          DB_URL: ${{ steps.local.outputs.db_url }}
+          MAIL_URL: ${{ steps.local.outputs.mail_url }}
+        run: |
+          set -euo pipefail
+          fail() { echo "ISOLATION REFUSED: $1" >&2; exit 1; }
+          case "$API_URL" in
+            http://127.0.0.1:*|http://localhost:*) : ;;
+            *) fail "the Supabase API URL is not loopback: $API_URL" ;;
+          esac
+          case "$DB_URL" in
+            postgresql://*@127.0.0.1:*|postgresql://*@localhost:*) : ;;
+            *) fail "the database URL is not loopback: $DB_URL" ;;
+          esac
+          case "$MAIL_URL" in
+            http://127.0.0.1:*|http://localhost:*) : ;;
+            *) fail "the mail catcher is not loopback: $MAIL_URL" ;;
+          esac
+          if grep -q 'wrygicdfxwjnrugduxnt' .env.local; then fail "the owner project ref reached .env.local"; fi
+          set -a; . /tmp/supabase-status.env; set +a
+          if ! grep -qx "SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}" .env.local; then fail "the service-role key in .env.local is not the local stack's"; fi
+          if grep -q 'RESEND_API_KEY' .env.local; then fail "a mail provider key reached .env.local; mail stays on the runner"; fi
+          for v in SUPABASE_ACCESS_TOKEN SUPABASE_DB_PASSWORD SUPABASE_SERVICE_ROLE_KEY RESEND_API_KEY; do
+            if [ -n "${!v:-}" ]; then fail "$v is set; this job must need no hosted credential"; fi
+          done
+          echo "isolation OK — API $API_URL, DB loopback, mail $MAIL_URL, no hosted credential present"
+
+      # The same privilege baseline as production: a stock local stack grants
+      # every new function to authenticated and service_role by default,
+      # which the owner project does not.
+      - name: Match the hosted privilege baseline
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
+          ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+            REVOKE EXECUTE ON FUNCTIONS FROM authenticated, service_role;
+          SQL
+
+      - name: Replay the migration history
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          n=0
+          for f in supabase/migrations/*.sql; do
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f "$f" || { echo "FAILED: $f" >&2; exit 1; }
+            n=$((n+1))
+          done
+          echo "replayed ${n} migration(s)"
+
+      - name: Seed the synthetic fixture
+        env:
+          DB_URL: ${{ steps.local.outputs.db_url }}
+        run: |
+          set -euo pipefail
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/fixtures/passport-public-pilot-fixture.sql
+          # Run twice: the fixture must return a stack that already holds it to
+          # the same state.
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f scripts/fixtures/passport-public-pilot-fixture.sql
+          psql "$DB_URL" -Atc "SELECT code || ':' || pilot_state || ':' || is_active FROM public.sp_market_packs ORDER BY code"
+          psql "$DB_URL" -Atc "SELECT count(*) || ' pilot grant(s)' FROM public.sp_pilot_members"
+
+      # The share gateway, with the https application origin it hands to.
+      - name: Serve the share function
+        env:
+          API_URL: ${{ steps.local.outputs.api_url }}
+        run: |
+          set -euo pipefail
+          echo "PUBLIC_SITE_URL=https://127.0.0.1:${APP_TLS_PORT}" > /tmp/functions.env
+          nohup supabase functions serve --env-file /tmp/functions.env > /tmp/functions.log 2>&1 &
+          disown
+          for i in $(seq 1 120); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' "${API_URL}/functions/v1/passport-share" || true)"
+            if [ "$code" = "200" ]; then echo "share function up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the share function did not come up"; tail -n 60 /tmp/functions.log; exit 1
+
+      - name: Install Chromium
+        run: |
+          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
+          bunx playwright install --with-deps chromium
+
+      - name: Start the application, on https, against the local stack
+        run: |
+          set -euo pipefail
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=127.0.0.1" \
+            -addext "subjectAltName=IP:127.0.0.1,DNS:localhost" \
+            -keyout /tmp/app-tls.key -out /tmp/app-tls.crt 2>/dev/null
+          nohup bun run dev -- --host 127.0.0.1 --port "${APP_PORT}" --strictPort > /tmp/dev-server.log 2>&1 &
+          disown
+          TLS_FRONT_CERT=/tmp/app-tls.crt TLS_FRONT_KEY=/tmp/app-tls.key \
+            nohup node scripts/local-tls-front.mjs "${APP_TLS_PORT}" "${APP_PORT}" > /tmp/tls-front.log 2>&1 &
+          disown
+          for i in $(seq 1 120); do
+            if curl -skfo /dev/null "https://127.0.0.1:${APP_TLS_PORT}/"; then echo "up after ${i}s"; exit 0; fi
+            sleep 1
+          done
+          echo "the application did not come up"; tail -n 60 /tmp/dev-server.log; cat /tmp/tls-front.log; exit 1
+
+      # Serial, one worker: the cases build on one another per project.
+      - name: Walk the public pilot (desktop and 390px)
+        env:
+          E2E_LOCAL_STACK: "1"
+          E2E_STORAGE: "1"
+          E2E_BASE_URL: https://127.0.0.1:${{ env.APP_TLS_PORT }}
+          E2E_SUPABASE_URL: ${{ steps.local.outputs.api_url }}
+          E2E_DB_URL: ${{ steps.local.outputs.db_url }}
+          E2E_MAIL_URL: ${{ steps.local.outputs.mail_url }}
+          E2E_SUPABASE_ANON_KEY: ${{ steps.local.outputs.anon_key }}
+          PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
+        run: |
+          set -euo pipefail
+          bunx playwright test e2e/passport-public-pilot-local.spec.ts \
+            --project=chromium --project=mobile-390 --workers=1 --trace off \
+            --reporter=list,json
+
+      - name: Refuse a report where the walk was skipped
+        if: always()
+        run: bun run scripts/passport-public-pilot-evidence-verify.ts
+
+      # The walk's own screenshots, pass or fail: synthetic data only, and no
+      # trace is recorded, so nothing here carries a request body or a
+      # session. The share screenshots show a link to a stack that no longer
+      # exists when the job ends.
+      - name: Upload the routed evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-public-pilot-evidence-${{ github.event.pull_request.number || github.run_id }}-${{ github.run_attempt }}
+          path: test-results/**/*.png
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Server logs
+        if: failure()
+        run: |
+          tail -n 80 /tmp/dev-server.log || true
+          tail -n 40 /tmp/functions.log || true
+          tail -n 20 /tmp/tls-front.log || true
+
+      - name: Stop the local stack
+        if: always()
+        run: supabase stop --no-backup || true
