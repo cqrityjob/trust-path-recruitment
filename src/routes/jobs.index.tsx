@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { SlidersHorizontal } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useT } from "@/i18n/context";
@@ -134,6 +135,17 @@ function JobsDiscoveryPage() {
     !!search.experience ||
     !!search.country;
 
+  // On mobile the five select filters collapse behind a "Filter" button so
+  // the results meet the reader first; the count keeps an active selection
+  // visible while the panel is closed. From sm up the panel is always open.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeSelectCount =
+    (search.family ? 1 : 0) +
+    (search.employment ? 1 : 0) +
+    (search.workplace ? 1 : 0) +
+    (search.experience ? 1 : 0) +
+    (search.country ? 1 : 0);
+
   return (
     <SiteLayout>
       <Section className="py-10 md:py-14">
@@ -180,7 +192,32 @@ function JobsDiscoveryPage() {
                 </Button>
               </div>
 
-              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="mt-3 sm:hidden">
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen((v) => !v)}
+                  aria-expanded={filtersOpen}
+                  aria-controls="job-filters"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                  {t("jobs.filter.toggle")}
+                  {activeSelectCount > 0 && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-accent-foreground">
+                      {activeSelectCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              <div
+                id="job-filters"
+                className={
+                  filtersOpen
+                    ? "mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
+                    : "mt-3 hidden gap-2 sm:grid sm:grid-cols-2 lg:grid-cols-5"
+                }
+              >
                 <FilterSelect
                   label={t("jobs.filter.family")}
                   value={search.family ?? ""}

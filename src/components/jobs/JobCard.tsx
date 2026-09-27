@@ -63,7 +63,11 @@ export function JobCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="line-clamp-2 text-lg [overflow-wrap:anywhere] [hyphens:auto] font-semibold leading-snug text-foreground group-hover:text-accent">
+          {/* overflow-wrap:break-word (not `anywhere`) so a long Swedish
+              compound hyphenates at a proper syllable boundary — the
+              document carries `lang` — instead of splitting mid-word
+              without a hyphen ("Säkerhetsc hef"). */}
+          <h3 className="line-clamp-2 hyphens-auto wrap-break-word text-lg font-semibold leading-snug text-foreground group-hover:text-accent">
             {title}
           </h3>
           {job.employer?.name && (
