@@ -544,7 +544,7 @@ for (const lang of ["sv", "en"] as const) {
   }
 }
 expect(
-  hub.includes("hubProfessions(") && /<ul id="yrkeskatalog"/.test(hub),
+  hub.includes("hubProfessions(") && /<ul\s+id="yrkeskatalog"/.test(hub),
   "the hub must render the list from hubProfessions, as a list",
 );
 {

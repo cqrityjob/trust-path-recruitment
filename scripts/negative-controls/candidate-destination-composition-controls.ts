@@ -200,7 +200,10 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "TrustRail is deleted rather than moved when the cards take the hero aside, silently dropping the sourcing statement for the profession guides",
     file: CAREER,
-    find: '          <div className="md:col-span-5">\n            <TrustRail />\n          </div>\n',
+    // One element since the list of professions is shown on the hub: beside
+    // the list's heading on a wide screen, after the cards on a phone (CSS
+    // `order`). Two copies would let one be deleted with nothing detecting it.
+    find: '          <div className="order-last md:order-none md:col-span-5">\n            <TrustRail />\n          </div>\n',
     replace: "",
     guard: GUARD,
     expect: "TrustRail still renders",

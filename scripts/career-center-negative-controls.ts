@@ -163,9 +163,11 @@ const CONTROLS: readonly Control[] = [
   {
     name: "a search box back in the list of professions",
     file: "src/routes/career-center.index.tsx",
-    from: `        <ul id="yrkeskatalog"`,
-    to: `        <input type="search" aria-label="Sök" />
-        <ul id="yrkeskatalog"`,
+    from: `          <ul
+            id="yrkeskatalog"`,
+    to: `          <input type="search" aria-label="Sök" />
+          <ul
+            id="yrkeskatalog"`,
     expect: "no search box",
   },
   {

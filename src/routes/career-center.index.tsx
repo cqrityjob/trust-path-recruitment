@@ -332,8 +332,9 @@ function CareerCenterHub() {
         {/* TrustRail describes THIS list — how many guides, where their facts
             come from — so it sits beside the heading on a wide screen. On a
             phone it follows the cards: above them it pushed the first
-            profession below the fold. */}
-        <div className="grid gap-8 md:grid-cols-12 md:items-start">
+            profession below the fold. One element, placed by `order`, so
+            there is one statement to keep and none to drift. */}
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:items-start">
           <div className="max-w-2xl md:col-span-7">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               {t("cc.explore.title")}{" "}
@@ -345,37 +346,36 @@ function CareerCenterHub() {
               {t("cc.explore.subtitle")}
             </p>
           </div>
-          <div className="hidden md:col-span-5 md:block">
+          <div className="order-last md:order-none md:col-span-5">
             <TrustRail />
           </div>
-        </div>
 
-        {/* The id the catalogue panel had, kept for any `#yrkeskatalog`
-            link. Cards carry the classifications the filters used to — level
-            and family — as information, not as controls. */}
-        <ul id="yrkeskatalog" className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {professions.map((p) => (
-            <li key={p.slug}>
-              <ProfessionCard
-                slug={p.slug}
-                title={lang === "sv" ? p.titleSv : p.titleEn}
-                description={L(p.description, lang)}
-                icon={icon(p.icon)}
-                level={t(`cc.level.${p.level}` as TranslationKey)}
-                family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
-                formalRequirement={
-                  p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
-                }
-                onOpen={(slug) =>
-                  opened(`/career-center/${slug}`, "catalogue", LIST_ANCHOR, "hub_explorer")
-                }
-              />
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-8 md:hidden">
-          <TrustRail />
+          {/* The id the catalogue panel had, kept for any `#yrkeskatalog`
+              link. Cards carry the classifications the filters used to —
+              level and family — as information, not as controls. */}
+          <ul
+            id="yrkeskatalog"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-12 lg:grid-cols-3"
+          >
+            {professions.map((p) => (
+              <li key={p.slug}>
+                <ProfessionCard
+                  slug={p.slug}
+                  title={lang === "sv" ? p.titleSv : p.titleEn}
+                  description={L(p.description, lang)}
+                  icon={icon(p.icon)}
+                  level={t(`cc.level.${p.level}` as TranslationKey)}
+                  family={getFamily(p.family) ? L(getFamily(p.family)!.name, lang) : undefined}
+                  formalRequirement={
+                    p.formalRequirements?.[0] ? L(p.formalRequirements[0], lang) : undefined
+                  }
+                  onOpen={(slug) =>
+                    opened(`/career-center/${slug}`, "catalogue", LIST_ANCHOR, "hub_explorer")
+                  }
+                />
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* "Kommer" — text only, never a card, never a link: these roles have
