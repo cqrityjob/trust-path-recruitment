@@ -67,6 +67,12 @@ Then run the full suite (see [test matrix](./test-matrix.md)).
 
 ## Rollback
 
+If `20261219090000_assessment_draft_authoring.sql` is applied, first run
+`supabase/rollback/20261219090000_assessment_draft_authoring_rollback.sql`.
+It refuses rollback when authored snapshots exist; retain the version holds
+and use a forward repair in that case. The historical domain rollback below
+must not leave authoring functions pointing to removed tables.
+
 Nothing pre-existing is altered, so rollback cannot lose pre-existing data.
 
 > **This block rolls back PR-A only.** Later layers were built on top of it —
