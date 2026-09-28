@@ -264,14 +264,36 @@ psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
-    # 20261214090000 (India national qualifications) is now the newest Passport
-    # migration and stands down FIRST: it replaces the catalogue view, the claim
+    # 20261220090000 (public-pilot availability) is now the newest Passport
+    # migration and stands down FIRST: it replaces the view, the claim rules,
+    # the read policy and sp_market_access() that India left, and widens the two
+    # pilot_state CHECKs. Its rollback must REFUSE while any market is
+    # public_pilot (narrowing the CHECK under those rows would abort half-way),
+    # then restore every body verbatim.
+    pp_refused="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "BEGIN;" \
+      -c "UPDATE public.sp_market_packs SET pilot_state='public_pilot' WHERE code='GB';" \
+      -f "supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql" 2>&1)" \
+      && { echo "FAIL: 20261220090000 rollback ran while a market was public_pilot"; exit 1; }
+    printf '%s' "$pp_refused" | grep -q 'ROLLBACK REFUSED' || { echo "FAIL: 20261220090000 rollback failed for another reason: $pp_refused"; exit 1; }
+    pp_intact="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT pilot_state FROM public.sp_market_packs WHERE code='GB') || '/' || (position('public_pilot' IN pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass)) > 0)::int")"
+    [ "$pp_intact" = "internal_pilot/1" ] || { echo "FAIL: the refused 20261220090000 rollback changed something ($pp_intact)"; exit 1; }
+    echo "    ok  the public-pilot rollback refuses while a market is public_pilot, and changes nothing"
+    psql_q -d "$TEST_DB" -f "supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql" >/dev/null
+    pp_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (position('public_pilot' IN pg_get_viewdef('public.sp_approved_credential_catalogue'::regclass)) > 0)::int + (SELECT count(*) FROM pg_policies WHERE policyname='sp_credential_types_read' AND position('public_pilot' IN qual) > 0) + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('sp_market_access','sp_claims_credential_rules') AND (position('public_pilot' IN prosrc) > 0 OR position('_asserts' IN prosrc) > 0)) + (SELECT count(*) FROM pg_constraint WHERE conname IN ('sp_market_pack_pilot_state_known','sp_credential_type_pilot_state_known') AND position('public_pilot' IN pg_get_constraintdef(oid)) > 0)")"
+    [ "$pp_left" = "0" ] || { echo "FAIL: 20261220090000 rollback left $pp_left public-pilot clause(s) behind"; exit 1; }
+    echo "    ok  public-pilot availability stood down: no public_pilot state, branch or operation policy remains"
+    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_public_pilot_availability_test.sql >/dev/null 2>&1; then
+      echo "FAIL: the public-pilot suite passed WITHOUT its migration -- it proves nothing" >&2
+      exit 1
+    fi
+    echo "    ok  and the public-pilot suite refuses to pass without the migration (negative control)"
+    # 20261214090000 (India national qualifications) stands down next: it replaces the catalogue view, the claim
     # rules, the details guard, the save RPC and the reviewer detail, and every
     # rollback below restores the text IT restored. It must restore them
     # verbatim, and leave no Indian row, scope, class or version behind.
@@ -347,6 +369,9 @@ for passport_round in before after; do
     india_back="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_credential_types WHERE jurisdiction_code='IN' AND scope_code='national_qualification' AND is_active) || '/' || (SELECT count(*) FROM public.sp_market_packs WHERE jurisdiction_code='IN') || '/' || has_table_privilege('anon','public.sp_credential_definition_versions','SELECT')::int")"
     [ "$india_back" = "4/0/0" ] || { echo "FAIL: 20261214090000 reapply: expected 4 active national qualifications, no IN market pack and no anon read, got $india_back"; exit 1; }
     echo "    ok  India national qualifications reapplied: 4 approved, no IN market pack, versions closed to anon"
+    pp_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/20261220090000_sp_public_pilot_availability.sql" 2>&1)" || { echo "$pp_back"; exit 1; }
+    printf '%s' "$pp_back" | grep -q 'SP_PUBLIC_PILOT_AVAILABILITY_PROOF ok' || { echo "FAIL: 20261220090000 did not re-apply on top of its rollback"; exit 1; }
+    echo "    ok  public-pilot availability reapplied on top of India: proof ok, nothing moved"
   fi
 done
 
@@ -6200,12 +6225,15 @@ TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
-# 20261214090000 (India national qualifications) before everything: it is now
-# the newest Passport unit, it replaced the view, the claim rules, the details
-# guard, the save RPC and the reviewer detail, and its metadata rows would read
-# as adoption to 20261118100000's rollback. Then 20261204090000 (HAYAT
-# assessments), whose triggers sit on sp_claims and sp_evidence. This database
-# is discarded at the end of the block, so neither is reapplied here.
+# Newest Passport unit first: 20261220090000 (public-pilot availability)
+# restores the view, the claim rules and the review queue it replaced. Then
+# 20261214090000 (India national qualifications): it replaced the view, the
+# claim rules, the details guard, the save RPC and the reviewer detail, and its
+# metadata rows would read as adoption to 20261118100000's rollback. Then
+# 20261204090000 (HAYAT assessments), whose triggers sit on sp_claims and
+# sp_evidence. This database is discarded at the end of the block, so none is
+# reapplied here.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql >/dev/null
 # 20261126090000 first: its catalogue view reads sp_credential_organisation_roles.
@@ -7588,11 +7616,15 @@ fi
 
 # The schema foundation must be independently reversible without touching an
 # existing disclosure, then safely re-applicable for the remaining suites.
-# 20261214090000 (India) stands down before them all: it replaced the view,
-# the claim rules, the details guard, the save RPC and the reviewer detail that
-# the rollbacks below restore, and its rows would read as adoption to the
-# foundation rollback further down. It is not re-applied: none of the remaining
-# suites reads it.
+# Newest Passport unit first. 20261220090000 (public-pilot availability)
+# replaced the review queue, which reads sub_jurisdiction_code, and no older
+# rollback restores it; left in place it would read a column the market-pack
+# rollbacks further down drop. Then 20261214090000 (India): it replaced the
+# view, the claim rules, the details guard, the save RPC and the reviewer detail
+# that the rollbacks below restore, and its rows would read as adoption to the
+# foundation rollback further down. Neither is re-applied: none of the
+# remaining suites reads them.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 # 20261126090000's catalogue view reads sp_credential_organisation_roles, so it
 # stands down first or the table below cannot be dropped.
