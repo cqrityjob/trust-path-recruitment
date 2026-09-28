@@ -462,7 +462,7 @@ export const listMyApplications = createServerFn({ method: "GET" })
     // vacancy closed the card lost its title, employer and link. The context
     // read also says whether the advertisement is still public, which is the
     // only thing that decides whether a link is offered.
-    const [{ data: rows, error }, context] = await Promise.all([
+    const [{ data: rows, error }, contextRead] = await Promise.all([
       ctx.supabase
         .from("job_applications")
         .select("id, job_id, status, cv_storage_path, cv_source, created_at, updated_at")
@@ -475,12 +475,12 @@ export const listMyApplications = createServerFn({ method: "GET" })
       console.error("[applications] listMyApplications failed", error);
       throw new Error("Could not load your applications.");
     }
-    if (context.error) {
-      console.error("[applications] rec_my_application_context failed", context.error);
+    if (contextRead.error) {
+      console.error("[applications] rec_my_application_context failed", contextRead.error);
       throw new Error("Could not load your applications.");
     }
     const contextById = new Map<string, any>(
-      ((context.data ?? []) as any[]).map((c) => [c.application_id as string, c]),
+      ((contextRead.data ?? []) as any[]).map((c) => [c.application_id as string, c]),
     );
 
     return (rows ?? []).map((r: any) => {
