@@ -69,6 +69,7 @@ on:
       - "scripts/passport-public-pilot-evidence-verify.ts"
       - "scripts/local-tls-front.mjs"
       - "scripts/local-hosted-functions-proxy.ts"
+      - "scripts/local-dev-server-warmup.mjs"
       - "supabase/migrations/**"
       - "supabase/functions/**"
       - ".github/workflows/passport-public-pilot-evidence.yml"
@@ -348,6 +349,15 @@ jobs:
           done
           echo "the application did not come up"; tail -n 60 /tmp/dev-server.log; cat /tmp/tls-front.log; exit 1
 
+      # "Up" is not ready. On this runner's empty dependency cache the first
+      # page a browser loads makes Vite bundle the router's runtime and reload
+      # every open page; landing mid-walk, that reload left case A waiting on
+      # /my-career/profile until it timed out and skipped every later case of
+      # the project. The warm-up takes that reload in a browser of its own and
+      # requires a fresh page to hydrate without one before the walk begins.
+      - name: Settle the dev server before the walk
+        run: node scripts/local-dev-server-warmup.mjs "https://127.0.0.1:${APP_TLS_PORT}"
+
       # Serial, one worker: the cases build on one another per project.
       - name: Walk the public pilot (desktop and 390px)
         env:
@@ -387,6 +397,8 @@ jobs:
       - name: Server logs
         if: failure()
         run: |
+          echo "Dependency re-bundles by the dev server (the warm-up takes the first; a later one reloaded pages under the walk):"
+          grep -E "new dependencies optimized|optimized dependencies changed" /tmp/dev-server.log || echo "  none"
           tail -n 80 /tmp/dev-server.log || true
           tail -n 20 /tmp/tls-front.log || true
           tail -n 20 /tmp/hosted-functions-proxy.log || true
