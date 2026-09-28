@@ -29,6 +29,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { fromJSON } from "seroval";
+import { passportT } from "../src/lib/security-passport/i18n";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
@@ -976,8 +977,16 @@ test.describe("Security Passport — the recipient link", () => {
     await expect(page.locator("[data-recipient-view]")).toContainText("1 januari 2021");
     const html = (await page.locator("[data-recipient-view]").innerHTML()) ?? "";
     expect(html).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    // The public explanation of what a Security Passport is.
-    await expect(page.getByRole("link", { name: /Läs mer/ })).toHaveAttribute("href", "/#passport");
+    // The public explanation of what a Security Passport is. The link's name
+    // comes from the copy, not a literal: this line asserted "Läs mer" and
+    // went stale when 93e6f939 made the link say where it goes. e2e/ is
+    // outside every typecheck, so a renamed key would arrive here as
+    // undefined, and a nameless getByRole matches any link at all.
+    const readAbout = passportT("rec.ctaAction", "sv");
+    expect(readAbout, "rec.ctaAction has no Swedish copy").toMatch(/\S/);
+    await expect(
+      page.locator("[data-recipient-view]").getByRole("link", { name: readAbout, exact: true }),
+    ).toHaveAttribute("href", "/#passport");
     expect(pageErrors).toEqual([]);
     await shoot(page, "recipient-sv");
   });
