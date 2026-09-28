@@ -90,63 +90,6 @@ ok(
   "1.5 a tester claiming is still a tester — no path loses its own reason",
 );
 
-// The release control (20261222090000_cd_access_policy). Absent means
-// internal_test, so 1.1–1.5 above are the internal_test truth table.
-ok(
-  resolveSaveGate({
-    isInternalTester: false,
-    isPlatformAdmin: false,
-    isAnonymousClaim: false,
-    accessState: "public",
-  }) === "allow_public",
-  "1.5a public: a plain signed-in candidate saves the run they started",
-);
-ok(
-  resolveSaveGate({
-    isInternalTester: false,
-    isPlatformAdmin: false,
-    isAnonymousClaim: true,
-    accessState: "public",
-  }) === "allow_public",
-  "1.5b public: claiming an anonymous result is allowed too",
-);
-ok(
-  resolveSaveGate({
-    isInternalTester: false,
-    isPlatformAdmin: false,
-    isAnonymousClaim: false,
-    accessState: "internal_test",
-  }) === "deny",
-  "1.5c internal_test named explicitly is the allowlist rule",
-);
-ok(
-  resolveSaveGate({
-    isInternalTester: true,
-    isPlatformAdmin: false,
-    isAnonymousClaim: false,
-    accessState: "paused",
-  }) === "deny",
-  "1.5d paused closes the save even to an allowlisted tester",
-);
-ok(
-  resolveSaveGate({
-    isInternalTester: false,
-    isPlatformAdmin: false,
-    isAnonymousClaim: true,
-    accessState: "paused",
-  }) === "deny",
-  "1.5e paused closes the claim as well: pausing closes the whole product",
-);
-ok(
-  resolveSaveGate({
-    isInternalTester: false,
-    isPlatformAdmin: true,
-    isAnonymousClaim: false,
-    accessState: "paused",
-  }) === "allow_test_group",
-  "1.5f paused still lets a platform admin verify before reopening",
-);
-
 // The allowlist is still read. A fix that simply deleted it would pass 1.4
 // and quietly open the authenticated entrance, which is not what was decided.
 const serverFns = read("src/lib/career-discovery/v31-public.functions.ts");

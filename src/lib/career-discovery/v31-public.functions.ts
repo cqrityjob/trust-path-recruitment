@@ -348,27 +348,12 @@ export function v31PublicErrorCode(err: unknown): V31PublicErrorCode | null {
   return null;
 }
 
-/** The release control (20261222090000_cd_access_policy): who may start and
- *  save a run right now. Technical availability only -- separate from the
- *  definition's lifecycle and review gates, which stay governance. */
-export type V31AccessState = "internal_test" | "public" | "paused";
-
-export function readV31AccessState(value: unknown): V31AccessState {
-  // Fails closed: an unknown or missing answer reads as paused, which is what
-  // the database function itself returns for a missing policy row.
-  return value === "internal_test" || value === "public" ? value : "paused";
-}
-
 export interface V31Availability {
   /** True only when a real candidate could actually complete and save a run. */
   readonly available: boolean;
   /** Present so the UI can distinguish "coming soon" from "misconfigured". */
   readonly lifecycleStatus: string | null;
   readonly outstandingGates: number;
-  /** The release control's answer. `paused` closes the anonymous entrance as
-   *  well; `internal_test` and `public` differ only for signed-in visitors,
-   *  which getV31TesterStatus decides. */
-  readonly accessState: V31AccessState;
 }
 
 /**
@@ -380,22 +365,13 @@ export interface V31Availability {
  */
 export const getV31Availability = createServerFn({ method: "GET" }).handler(
   async (): Promise<V31Availability> => {
-    const [{ data }, access] = await Promise.all([
-      publicClient
-        .from("cd_definition_versions")
-        .select("lifecycle_status, review_status")
-        .eq("definition_version", DEFINITION_VERSION)
-        .maybeSingle(),
-      // The release control. Readable by anon on purpose: a signed-out
-      // visitor has to learn that the analysis is paused before answering
-      // twenty-eight questions. A failed read counts as paused (closed).
-      publicClient.rpc("cd_access_state"),
-    ]);
-    const accessState = readV31AccessState(access.error ? null : access.data);
+    const { data } = await publicClient
+      .from("cd_definition_versions")
+      .select("lifecycle_status, review_status")
+      .eq("definition_version", DEFINITION_VERSION)
+      .maybeSingle();
 
-    if (!data) {
-      return { available: false, lifecycleStatus: null, outstandingGates: 0, accessState };
-    }
+    if (!data) return { available: false, lifecycleStatus: null, outstandingGates: 0 };
 
     const gates = (data.review_status ?? {}) as Record<string, unknown>;
     const outstanding = Object.values(gates).filter((v) => v !== true).length;
@@ -403,17 +379,11 @@ export const getV31Availability = createServerFn({ method: "GET" }).handler(
 
     // Mirrors the database rule exactly: lifecycle decides admission. Review
     // gates are a governance record, reported here for operators, and never
-    // used to refuse a candidate. The release control is the one operational
-    // switch on top: paused closes the product for everyone, anonymous
-    // visitors included, without touching the lifecycle or a review gate.
+    // used to refuse a candidate.
     return {
-      available:
-        status !== null &&
-        (CANDIDATE_ADMINISTRABLE as readonly string[]).includes(status) &&
-        accessState !== "paused",
+      available: status !== null && (CANDIDATE_ADMINISTRABLE as readonly string[]).includes(status),
       lifecycleStatus: status,
       outstandingGates: outstanding,
-      accessState,
     };
   },
 );
@@ -431,16 +401,11 @@ export const getV31TesterStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<{ readonly allowed: boolean }> => {
     const ctx = context as Ctx;
-    // One database decision, cd_v31_may_start (20261222090000): under
-    // `public` every signed-in user; under `internal_test` the allowlist
-    // (cd_is_internal_tester, which includes platform admins); under `paused`
-    // platform admins only. The allowlist is still read -- by that function.
-    const { data, error } = await ctx.supabase.rpc("cd_v31_may_start", { _user_id: ctx.userId });
-    if (error) {
-      console.error("[career-discovery] cd_v31_may_start failed", error);
-      return { allowed: false };
-    }
-    return { allowed: Boolean(data) };
+    const [tester, admin] = await Promise.all([
+      ctx.supabase.rpc("cd_is_internal_tester", { _user_id: ctx.userId }),
+      ctx.supabase.rpc("is_platform_admin", { _user_id: ctx.userId }),
+    ]);
+    return { allowed: Boolean(tester.data) || Boolean(admin.data) };
   });
 
 /**
@@ -488,7 +453,7 @@ export const getV31TesterStatus = createServerFn({ method: "GET" })
  * control that still bites for everyone, claim included, is A — closing the
  * lifecycle closes the whole product, anonymous runs first.
  */
-export type SaveGateDecision = "allow_test_group" | "allow_public" | "allow_claim" | "deny";
+export type SaveGateDecision = "allow_test_group" | "allow_claim" | "deny";
 
 export function resolveSaveGate(input: {
   readonly isInternalTester: boolean;
@@ -497,16 +462,8 @@ export function resolveSaveGate(input: {
    *  was completed anonymously and is being attached to the account that has
    *  just signed in. */
   readonly isAnonymousClaim: boolean;
-  /** The release control (cd_access_policy). `public` admits every signed-in
-   *  user; `paused` closes the save to everyone but a platform admin, claim
-   *  included -- pausing is the owner's way of closing the whole product.
-   *  Absent means internal_test, so every earlier caller keeps its answer. */
-  readonly accessState?: V31AccessState;
 }): SaveGateDecision {
-  const state = input.accessState ?? "internal_test";
-  if (state === "paused") return input.isPlatformAdmin ? "allow_test_group" : "deny";
   if (input.isInternalTester || input.isPlatformAdmin) return "allow_test_group";
-  if (state === "public") return "allow_public";
   if (input.isAnonymousClaim) return "allow_claim";
   return "deny";
 }
@@ -897,13 +854,6 @@ export const previewPublicV31Run = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data }): Promise<PreviewResult> => {
-    // The release control closes the anonymous computation too: `paused`
-    // means paused for everyone. getV31Availability already turns the UI
-    // away; this refuses the server work for a caller that skipped the UI.
-    const access = await publicClient.rpc("cd_access_state");
-    if (readV31AccessState(access.error ? null : access.data) === "paused") {
-      throw new V31PublicError("not_available", "paused");
-    }
     // Server-side only. A top-level import would put the service-role key in
     // the client bundle — *.functions.ts modules ship to the browser.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -972,16 +922,14 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
     //    exact report via previewPublicV31Run, which is how the result can be
     //    the same before and after signing in. Nothing new is disclosed here.
     const isAnonymousClaim = typeof data.claimToken === "string" && data.claimToken.length > 0;
-    const [tester, admin, access] = await Promise.all([
+    const [tester, admin] = await Promise.all([
       ctx.supabase.rpc("cd_is_internal_tester", { _user_id: ctx.userId }),
       ctx.supabase.rpc("is_platform_admin", { _user_id: ctx.userId }),
-      ctx.supabase.rpc("cd_access_state"),
     ]);
     const decision = resolveSaveGate({
       isInternalTester: Boolean(tester.data),
       isPlatformAdmin: Boolean(admin.data),
       isAnonymousClaim,
-      accessState: readV31AccessState(access.error ? null : access.data),
     });
     if (decision === "deny") {
       throw new V31PublicError("not_available", "test_group_only");
