@@ -376,7 +376,8 @@ const textOf = (svg: string) =>
       );
     }
     for (const { id } of FEED_CHANNELS) {
-      if (id === "copy_link") continue;
+      // Copying a link and the device's own sheet are not platforms.
+      if (id === "copy_link" || id === "native") continue;
       for (const count of [1, 3]) {
         const plan = platformPlan(id, null, "text", count);
         const notice = passportT(plan.noticeKey, lang);
