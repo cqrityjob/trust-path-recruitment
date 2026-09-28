@@ -96,6 +96,9 @@ async function atEvidenceWidth(page: Page) {
 
 async function evidence(page: Page, name: string) {
   mkdirSync(EVIDENCE, { recursive: true });
+  // Never a picture of a page that has not arrived: every screen this walk
+  // records has a heading, and a blank one was once filed as evidence.
+  await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 60_000 });
   const width = page.viewportSize()?.width ?? 0;
   // From the top, so the sticky header is drawn where a person sees it.
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -627,6 +630,9 @@ test.describe("the public pilot, on a real backend", () => {
       "self_declared",
     );
     await page.goto(`${BASE}/passport/entry/claim/${now}`);
+    // The decision as the holder reads it, waited for first: on a page that
+    // has not rendered, the absence below would hold for the wrong reason.
+    await expect(page.getByText("Godkänd").first()).toBeVisible({ timeout: 60_000 });
     await expect(page.getByText("Mer information behövs")).toHaveCount(0);
     await evidence(page, "sv-review-approved");
   });
