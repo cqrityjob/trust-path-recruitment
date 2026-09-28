@@ -4,21 +4,17 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { randomBytes } from "node:crypto";
 import {
-  buildShareEntryRedirect,
+  buildShareEntryPage,
   buildShareRedirect,
-  buildShareSessionCookie,
+  buildShareSessionRedirect,
+  buildShareUnavailableRedirect,
   hashShareSecret,
   isShareToken,
-  sessionNavigationIdFor,
   shareTokenFromPath,
   SHARE_HANDOFF_PATH,
-  shareViewPath,
+  SHARE_OPEN_PATH,
 } from "./lib/security-passport/share-transport";
-import {
-  publicShareGatewayOrigin,
-  SHARE_ENTRY_PATH,
-  SHARE_GATEWAY_PATH,
-} from "./lib/security-passport/public-origin";
+import { SHARE_ENTRY_PATH } from "./lib/security-passport/public-origin";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -35,50 +31,63 @@ async function getServerEntry(): Promise<ServerEntry> {
   return serverEntryPromise;
 }
 
-async function consumeShareHandoffRequest(request: Request): Promise<Response> {
-  const unavailableId = randomBytes(16).toString("hex");
-  const unavailable = () =>
-    new Response(null, {
-      status: 303,
-      headers: {
-        Location: shareViewPath(unavailableId),
-        "Cache-Control": "private, no-store",
-        "X-Robots-Tag": "noindex, nofollow, noarchive",
-        "Referrer-Policy": "no-referrer",
-      },
-    });
-  if (request.method !== "POST") return unavailable();
+/**
+ * One form field from a small POSTed form, or null. Both share hops accept
+ * exactly this and nothing larger: a form the page itself built.
+ */
+async function postedShareSecret(request: Request, field: string): Promise<string | null> {
+  if (request.method !== "POST") return null;
   const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (!Number.isFinite(contentLength) || contentLength > 2048) return unavailable();
+  if (!Number.isFinite(contentLength) || contentLength > 2048) return null;
   const contentType = request.headers.get("content-type") ?? "";
   if (
     !contentType.startsWith("application/x-www-form-urlencoded") &&
     !contentType.startsWith("multipart/form-data")
   )
-    return unavailable();
-  const form = await request.formData();
-  const handoff = form.get("handoff");
-  if (typeof handoff !== "string" || !isShareToken(handoff)) return unavailable();
+    return null;
+  const value = (await request.formData()).get(field);
+  return typeof value === "string" && isShareToken(value) ? value : null;
+}
 
+const unavailableShare = () => buildShareUnavailableRedirect(randomBytes(16).toString("hex"));
+const isHttps = (request: Request) => new URL(request.url).protocol === "https:";
+
+/** A one-time handoff from a gateway page, consumed into a session. */
+async function consumeShareHandoffRequest(request: Request): Promise<Response> {
+  const handoff = await postedShareSecret(request, "handoff");
+  if (!handoff) return unavailableShare();
   const session = randomBytes(32).toString("hex");
   try {
     const { consumeShareHandoff } =
       await import("./lib/security-passport/public-disclosure.server");
-    if (!(await consumeShareHandoff(handoff, hashShareSecret(session)))) return unavailable();
+    if (!(await consumeShareHandoff(handoff, hashShareSecret(session)))) return unavailableShare();
   } catch {
-    return unavailable();
+    return unavailableShare();
   }
-  const navigationId = sessionNavigationIdFor(session);
-  return new Response(null, {
-    status: 303,
-    headers: {
-      Location: shareViewPath(navigationId),
-      "Set-Cookie": buildShareSessionCookie(session, new URL(request.url).protocol === "https:"),
-      "Cache-Control": "private, no-store",
-      "X-Robots-Tag": "noindex, nofollow, noarchive",
-      "Referrer-Policy": "no-referrer",
-    },
-  });
+  return buildShareSessionRedirect(session, isHttps(request));
+}
+
+/**
+ * The `/p` entry page's POST: the token it read from the fragment, exchanged
+ * for a separate session. The token arrives in the body and goes no further
+ * than the throttled RPCs; it is not logged, not stored, and never set as a
+ * cookie -- the browser receives only the session. See share-transport.ts.
+ */
+async function openShareRequest(request: Request): Promise<Response> {
+  const token = await postedShareSecret(request, "token");
+  if (!token) return unavailableShare();
+  const handoff = randomBytes(32).toString("hex");
+  const session = randomBytes(32).toString("hex");
+  // First hop only; the rest of an X-Forwarded-For chain is caller-supplied.
+  const hint = (request.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || "unknown";
+  try {
+    const { openShareByToken } = await import("./lib/security-passport/public-disclosure.server");
+    if (!(await openShareByToken(token, handoff, hashShareSecret(session), hint)))
+      return unavailableShare();
+  } catch {
+    return unavailableShare();
+  }
+  return buildShareSessionRedirect(session, isHttps(request));
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body
@@ -113,15 +122,15 @@ export default {
       if (new URL(request.url).pathname === SHARE_HANDOFF_PATH) {
         return consumeShareHandoffRequest(request);
       }
-      // The application-domain entry of a share link, `/p#<token>`. The token
-      // is in the fragment and never reaches this server; the answer is a
-      // body-less redirect to the gateway, which the browser follows with the
-      // fragment re-attached. See public-origin.ts.
+      // The entry of every new share link, `/p#<token>`. The token is in the
+      // fragment and never reaches this server; the page removes it and POSTs
+      // it to SHARE_OPEN_PATH. Answered here, ahead of the SSR handler, so the
+      // page is exactly this document, under its own CSP. See share-transport.ts.
       if (new URL(request.url).pathname === SHARE_ENTRY_PATH) {
-        return buildShareEntryRedirect(
-          request.method,
-          `${publicShareGatewayOrigin()}${SHARE_GATEWAY_PATH}`,
-        );
+        return buildShareEntryPage(request.method, randomBytes(16).toString("hex"));
+      }
+      if (new URL(request.url).pathname === SHARE_OPEN_PATH) {
+        return openShareRequest(request);
       }
       // A share token must never reach a rendered document. See
       // lib/security-passport/share-transport.ts for why this is here, in

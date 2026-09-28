@@ -2,8 +2,11 @@
 // backend: GoTrue registers and signs the people in and sends the confirmation
 // e-mail, PostgREST and row-level security store and return their rows, the
 // claim rules decide what may be saved, Storage keeps the documents and the
-// share gateway hands a recipient to the application. No server response here
-// is simulated.
+// application exchanges a share link for a recipient session. No server
+// response here is simulated. Two things the hosted platform does, and the
+// local stack does not, are applied in front of it: hosted Supabase's HTML
+// restriction (scripts/local-hosted-functions-proxy.ts) and the host's
+// analytics script (scripts/local-tls-front.mjs).
 //
 // scripts/fixtures/passport-public-pilot-fixture.sql puts Great Britain,
 // Northern Ireland and Dubai in the public-pilot state (20261220090000) -- "a
@@ -24,7 +27,9 @@
 //   F  document -> review request -> clarification -> the holder's answer ->
 //      decision, by a reviewer with the passport_verifier role and no grant;
 //   G  a selective share -> the QR code is exactly the link -> a logged-out
-//      recipient sees the selection and nothing else -> revocation ends it;
+//      recipient sees the selection and nothing else, never a private
+//      document -> the gateway form of the link opens it too, through hosted
+//      Supabase's HTML restriction -> expiry, then revocation, end it;
 //   H  another holder can read nothing of this Passport, change nothing, and
 //      cannot raise their own trust, through the pages or the API;
 //   B  a mixed-market holder adds all four Indian qualifications and reloads;
@@ -52,6 +57,14 @@ const MAIL = process.env.E2E_MAIL_URL ?? "";
  *  attached through the same RPC the upload calls, as its holder, and the
  *  test says so in its annotations; the CI verifier refuses that mode. */
 const STORAGE = process.env.E2E_STORAGE === "1";
+/** Hosted Supabase's HTML restriction in front of the local functions
+ *  (scripts/local-hosted-functions-proxy.ts). Case G opens the gateway form of
+ *  a link through it, because the local stack alone serves HTML that hosted
+ *  Supabase shows as text. */
+const HOSTED_FUNCTIONS = process.env.E2E_HOSTED_FUNCTIONS_URL ?? "";
+/** "1" when the TLS front injects the host's analytics script into every page,
+ *  as the published site's host does (scripts/local-tls-front.mjs). */
+const HOST_ANALYTICS = process.env.E2E_HOST_ANALYTICS === "1";
 const LOOPBACK = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/;
 test.skip(!LOCAL, "Set E2E_LOCAL_STACK=1 to run the local walk.");
 test.skip(
@@ -637,21 +650,52 @@ test.describe("the public pilot, on a real backend", () => {
     await evidence(page, "sv-review-approved");
   });
 
-  test("G · a selective share opens from its QR code for a logged-out recipient, and revocation ends it", async ({
+  test("G · a selective share opens from its QR code for a logged-out recipient; expiry and revocation end it", async ({
     page,
     browser,
     request,
   }) => {
     test.info().annotations.push({ type: "proof", description: "G" });
+    // Both stand-ins for the hosted platform are required. Without them a
+    // share can pass here and fail for every real recipient, as the gateway
+    // page once did.
+    expect(
+      HOSTED_FUNCTIONS,
+      "E2E_HOSTED_FUNCTIONS_URL: the gateway link is opened through scripts/local-hosted-functions-proxy.ts",
+    ).toMatch(LOOPBACK);
+    expect(
+      HOST_ANALYTICS,
+      "E2E_HOST_ANALYTICS=1: the TLS front emulates the host's analytics",
+    ).toBe(true);
+    test.info().annotations.push({
+      type: "share-hosting",
+      description: "hosted-html-restriction+host-analytics",
+    });
     const uid = uidOf(who("dubai"));
     const du = activeClaim(uid, "AE_DU_SIRA_CARD_GUARD");
     const ind = activeClaim(uid, "IN_MEPSC_Q7101");
     const vu1 = activeClaim(uid, "VU1");
+    // The holder's private documents, from case F: none may reach a recipient.
+    const documents = sql(
+      `select string_agg(file_name||'|'||storage_path, ',' order by file_name) from public.sp_evidence where holder_user_id='${uid}'`,
+    )
+      .split(",")
+      .filter(Boolean)
+      .map((row) => {
+        const [name = "", storagePath = ""] = row.split("|");
+        return { name, storagePath };
+      });
+    expect(documents.map((d) => d.name)).toEqual(
+      expect.arrayContaining(["sira-kort-baksida.pdf", "sira-kort-framsida.pdf"]),
+    );
+    const unselected = ["Väktarutbildning 1", "Door Supervision", "Fiktivt Security LLC"];
+
     await inLanguage(page, "en");
     await atEvidenceWidth(page);
     await signIn(page, who("dubai"), "/passport/share");
 
     await page.goto(`${BASE}/passport/share`);
+    await page.locator('[data-share-choice="link"]').click();
     await page.locator(`[data-merit-option="claim:${du}"] input[type="checkbox"]`).check();
     await page.locator(`[data-merit-option="claim:${ind}"] input[type="checkbox"]`).check();
     await expect(
@@ -663,26 +707,53 @@ test.describe("the public pilot, on a real backend", () => {
     const link = await page.locator("[data-share-link]").inputValue();
 
     // The link: the application's own domain, with the token in the
-    // fragment only (PR 5, the owner's requested outcome).
+    // fragment only.
     const url = new URL(link);
-    expect(url.origin).toBe(new URL(BASE).origin);
+    const app = new URL(BASE).origin;
+    expect(url.origin).toBe(app);
     expect(url.pathname).toBe("/p");
     expect(url.search).toBe("");
     expect(url.hash).toMatch(/^#[0-9a-f]{64}$/);
     expect(link).not.toContain(uid);
     const token = url.hash.slice(1);
-    const gatewayEntry = `${new URL(API).origin}/functions/v1/passport-share`;
+    const openUrl = `${app}/p/open`;
 
-    // What `GET /p` answers: a redirect to the gateway with no body -- so no
-    // document, and no script a host injects into one, exists at the address
-    // that holds the token -- private, unindexed, and passing no Referer on.
+    // What `GET /p` answers: the application's own entry page, served as a
+    // document. Its policy lets only its own script run -- not the host's
+    // analytics, which the front injected into it as the host does -- lets its
+    // form post only here and connects nowhere. It is private, unindexed and
+    // sends no Referer.
     const entry = await request.get(`${BASE}/p`, { maxRedirects: 0, ignoreHTTPSErrors: true });
-    expect(entry.status()).toBe(302);
-    expect(entry.headers()["location"]).toBe(gatewayEntry);
-    expect(entry.headers()["cache-control"]).toBe("private, no-store");
-    expect(entry.headers()["referrer-policy"]).toBe("no-referrer");
-    expect(entry.headers()["x-robots-tag"]).toContain("noindex");
-    expect((await entry.body()).byteLength).toBe(0);
+    expect(entry.status()).toBe(200);
+    const entryHeaders = entry.headers();
+    expect(entryHeaders["content-type"]).toBe("text/html; charset=utf-8");
+    const policy = Object.fromEntries(
+      (entryHeaders["content-security-policy"] ?? "").split(";").map((directive) => {
+        const [name = "", ...values] = directive.trim().split(/\s+/);
+        return [name, values.join(" ")];
+      }),
+    );
+    const nonce = /^'nonce-([0-9a-f]{32})'$/.exec(policy["script-src"] ?? "")?.[1] ?? "";
+    expect(nonce, `script-src: ${policy["script-src"]}`).not.toBe("");
+    expect(policy).toEqual({
+      "default-src": "'none'",
+      "script-src": `'nonce-${nonce}'`,
+      "style-src": `'nonce-${nonce}'`,
+      "form-action": "'self'",
+      "base-uri": "'none'",
+      "frame-ancestors": "'none'",
+    });
+    expect(entryHeaders["cache-control"]).toBe("private, no-store");
+    expect(entryHeaders["referrer-policy"]).toBe("no-referrer");
+    expect(entryHeaders["x-robots-tag"]).toContain("noindex");
+    expect(entryHeaders["x-content-type-options"]).toBe("nosniff");
+    const entryHtml = await entry.text();
+    expect(entryHtml).toContain(`<script nonce="${nonce}">`);
+    expect(entryHtml, "the host's analytics tag, injected as the host does").toContain(
+      'src="/~flock.js"',
+    );
+    const again = await request.get(`${BASE}/p`, { maxRedirects: 0, ignoreHTTPSErrors: true });
+    expect(again.headers()["content-security-policy"]).not.toContain(nonce);
 
     // The QR code is exactly this link, module for module.
     const qr = page.getByRole("img", { name: "QR code for your selected disclosure" });
@@ -714,18 +785,42 @@ test.describe("the public pilot, on a real backend", () => {
     await evidence(page, "en-share-created");
 
     // A recipient with no account opens what the QR code opens. Every request
-    // their browser sends is recorded: the token must leave it only once, in
-    // the body of the POST that exchanges it at the gateway.
+    // their browser sends is recorded, with the document that sent it, and
+    // every server-function answer they receive is kept.
     const { context, page: recipient } = await anotherPerson(browser, "en");
-    const sent: { method: string; url: string; referer: string; body: string }[] = [];
-    recipient.on("request", (r) =>
+    const sent: {
+      method: string;
+      url: string;
+      referer: string;
+      body: string;
+      type: string;
+      from: string;
+    }[] = [];
+    recipient.on("request", (r) => {
+      let from = "";
+      try {
+        from = r.frame().url();
+      } catch {
+        // not sent by a frame
+      }
       sent.push({
         method: r.method(),
         url: r.url(),
         referer: r.headers()["referer"] ?? "",
         body: r.postData() ?? "",
-      }),
-    );
+        type: r.resourceType(),
+        from,
+      });
+    });
+    const answers: Promise<string>[] = [];
+    recipient.on("response", (r) => {
+      if (new URL(r.url()).pathname.startsWith("/_serverFn")) {
+        answers.push(r.text().catch(() => ""));
+      }
+    });
+    const pathOf = (address: string) => (address ? new URL(address).pathname : "");
+    const analyticsHits = () =>
+      sent.filter((r) => r.method === "POST" && pathOf(r.url) === "/~api/analytics");
     try {
       await recipient.goto(link);
       await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
@@ -735,9 +830,11 @@ test.describe("the public pilot, on a real backend", () => {
       });
       await expect(main).toContainText("Dubai, UAE");
       await expect(main).toContainText("Security Guard (MEP/Q7101)");
-      await expect(main).not.toContainText("Väktarutbildning 1");
-      await expect(main).not.toContainText("Door Supervision");
-      await expect(main).not.toContainText("Fiktivt Security LLC");
+      for (const text of unselected) await expect(main).not.toContainText(text);
+      for (const d of documents) await expect(main).not.toContainText(d.name);
+      // A rendered page, not its source shown as text.
+      expect(await recipient.evaluate(() => document.contentType)).toBe("text/html");
+      await expect(recipient.locator("body")).not.toContainText("<!doctype");
       expect(new URL(recipient.url()).hash).toBe("");
       expect(
         await recipient.evaluate(
@@ -746,38 +843,120 @@ test.describe("the public pilot, on a real backend", () => {
       ).toBeLessThanOrEqual(1);
       await evidence(recipient, "en-share-recipient");
 
+      // The host's analytics ran on the recipient's page and reported it.
+      await expect.poll(() => analyticsHits().length, { timeout: 15_000 }).toBeGreaterThan(0);
+
       expect(
-        sent.some((r) => r.method === "GET" && r.url === `${new URL(BASE).origin}/p`),
+        sent.filter((r) => r.method === "GET" && r.url === `${app}/p`).length,
         "the recipient entered at the application's /p",
-      ).toBe(true);
+      ).toBe(1);
       expect(
-        sent.some((r) => r.method === "POST" && r.url === gatewayEntry && r.body.includes(token)),
-        "the gateway exchanged the token",
-      ).toBe(true);
+        sent.filter((r) => r.body.includes(token)).map((r) => `${r.method} ${r.url}`),
+        "the token left the browser once, in the body of the exchange",
+      ).toEqual([`POST ${openUrl}`]);
+      expect(
+        sent.filter((r) => r.type === "script" && pathOf(r.from) === "/p").map((r) => r.url),
+        "the entry page fetched no script: the host's was refused by its policy",
+      ).toEqual([]);
       for (const r of sent) {
         expect(r.url, `request URL ${r.method}`).not.toContain(token);
-        expect(r.referer, `Referer of ${r.method} ${new URL(r.url).pathname}`).not.toContain(token);
-        if (r.body.includes(token)) expect(`${r.method} ${r.url}`).toBe(`POST ${gatewayEntry}`);
+        expect(r.referer, `Referer of ${r.method} ${pathOf(r.url)}`).not.toContain(token);
+      }
+      for (const hit of analyticsHits()) expect(hit.body).not.toContain(token);
+
+      // Selective disclosure in what the server sent, not only in what was drawn.
+      const served = await Promise.all(answers);
+      expect(served.length, "the recipient's page read the share").toBeGreaterThan(0);
+      for (const body of served) {
+        for (const text of unselected) expect(body).not.toContain(text);
+        for (const d of documents) {
+          expect(body).not.toContain(d.name);
+          expect(body).not.toContain(d.storagePath);
+        }
+        expect(body).not.toContain(token);
+      }
+      // The documents themselves: out of reach without the holder's session.
+      if (STORAGE) {
+        for (const d of documents) {
+          for (const at of ["", "public/", "authenticated/"]) {
+            const r = await request.get(
+              `${API}/storage/v1/object/${at}passport-evidence/${d.storagePath}`,
+              { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } },
+            );
+            expect(r.status(), `anonymous ${at || "direct/"} read of a private document`).toBe(400);
+          }
+        }
       }
 
-      // A link issued before the application-domain entry -- the gateway form
-      // -- still opens the same share, for another recipient.
-      const earlier = await anotherPerson(browser, "en");
+      // A link issued before this entry existed -- the gateway form, at the
+      // Supabase functions address -- opened through hosted Supabase's HTML
+      // restriction. The function answers with a redirect the restriction
+      // leaves untouched, and the browser carries the fragment on to /p.
+      const gateway = `${HOSTED_FUNCTIONS.replace(/\/+$/, "")}/functions/v1/passport-share`;
+      const hop = await request.get(gateway, { maxRedirects: 0 });
+      expect(hop.status()).toBe(302);
+      expect(hop.headers()["location"]).toBe(`${app}/p`);
+      expect(hop.headers()["content-type"] ?? "").not.toContain("html");
+      expect((await hop.body()).byteLength).toBe(0);
+      const earlier = await anotherPerson(browser, "sv");
+      const earlierSent: string[] = [];
+      earlier.page.on("request", (r) =>
+        earlierSent.push(`${r.method()} ${r.url()} ${r.headers()["referer"] ?? ""}`),
+      );
       try {
-        await earlier.page.goto(`${gatewayEntry}#${token}`);
+        await earlier.page.goto(`${gateway}#${token}`);
         await expect(earlier.page).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
-        await expect(earlier.page.locator("main")).toContainText(
-          "SIRA Security Cadre Card — Security Guard",
-          { timeout: 60_000 },
-        );
+        const theirs = earlier.page.locator("main");
+        await expect(theirs).toContainText("SIRA Security Cadre Card — Security Guard", {
+          timeout: 60_000,
+        });
+        for (const text of unselected) await expect(theirs).not.toContainText(text);
+        expect(new URL(earlier.page.url()).hash).toBe("");
+        await evidence(earlier.page, "sv-share-recipient-gateway-link");
+        for (const line of earlierSent) expect(line).not.toContain(token);
       } finally {
         await earlier.context.close();
       }
 
-      // Revocation, and the same recipient reloads.
+      // Expiry. The share's end moved into the past: the open tab stops on its
+      // next read, and the link opened afresh opens nothing.
       const share = sql(
         `select id from public.sp_disclosures where holder_user_id='${uid}' order by created_at desc limit 1`,
       );
+      const ends = sql(`select expires_at from public.sp_disclosures where id='${share}'`);
+      sql(
+        `update public.sp_disclosures set expires_at = created_at + interval '1 second' where id='${share}'`,
+      );
+      try {
+        await recipient.reload();
+        await expect(recipient.locator("main")).toContainText("The link may have expired", {
+          timeout: 60_000,
+        });
+        await expect(recipient.locator("main")).not.toContainText("SIRA Security Cadre Card");
+        await evidence(recipient, "en-share-expired");
+        const late = await anotherPerson(browser, "en");
+        try {
+          await late.page.goto(link);
+          await expect(late.page).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+          await expect(late.page.locator("main")).toContainText("The link may have expired", {
+            timeout: 60_000,
+          });
+          await expect(late.page.locator("main")).not.toContainText("SIRA Security Cadre Card");
+        } finally {
+          await late.context.close();
+        }
+      } finally {
+        sql(`update public.sp_disclosures set expires_at = '${ends}' where id='${share}'`);
+      }
+      // The end restored, the same tab reads the share again: expiry, and
+      // nothing else, is what closed it.
+      await recipient.reload();
+      await expect(recipient.locator("main")).toContainText(
+        "SIRA Security Cadre Card — Security Guard",
+        { timeout: 60_000 },
+      );
+
+      // Revocation, and the same recipient reloads.
       await page.goto(`${BASE}/passport/share`);
       await page.locator(`[data-share-revoke="${share}"]`).click();
       await expect(page.locator(`[data-share-row="${share}"]`)).toHaveAttribute(
@@ -792,14 +971,20 @@ test.describe("the public pilot, on a real backend", () => {
       await expect(recipient.locator("main")).toContainText("The link may have expired");
       await evidence(recipient, "en-share-revoked");
       // And the link itself, opened again from the start, opens nothing: the
-      // gateway refuses the exchange and says so on its own page, with the
-      // fragment already scrubbed from the address.
+      // exchange refuses it, and the recipient lands on the same "not
+      // available" page as any other link that cannot be opened.
       await recipient.goto(link);
-      await expect(recipient.locator("body")).toContainText("Delningen är inte tillgänglig", {
+      await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+      await expect(recipient.locator("main")).toContainText("The link may have expired", {
         timeout: 60_000,
       });
-      await expect(recipient.locator("body")).not.toContainText("SIRA Security Cadre Card");
+      await expect(recipient.locator("main")).not.toContainText("SIRA Security Cadre Card");
       expect(new URL(recipient.url()).hash).toBe("");
+      for (const r of sent) {
+        expect(r.url, `request URL ${r.method}`).not.toContain(token);
+        expect(r.referer, `Referer of ${r.method} ${pathOf(r.url)}`).not.toContain(token);
+        if (r.body.includes(token)) expect(`${r.method} ${r.url}`).toBe(`POST ${openUrl}`);
+      }
     } finally {
       await context.close();
     }

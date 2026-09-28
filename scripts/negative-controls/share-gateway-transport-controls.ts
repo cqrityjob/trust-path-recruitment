@@ -1,6 +1,9 @@
 import { runControls, type Mutation } from "./runner";
 
 const guard = "passport-share-gateway-transport:check";
+const TRANSPORT = "src/lib/security-passport/share-transport.ts";
+const BOUNDARY = "src/lib/security-passport/public-disclosure.server.ts";
+const FUNCTION = "supabase/functions/passport-share/index.ts";
 const mutations: readonly Mutation[] = [
   {
     id: "GATEWAY-TOKEN-IN-PATH",
@@ -12,60 +15,90 @@ const mutations: readonly Mutation[] = [
     expect: "new links must carry the durable token in a fragment",
   },
   {
-    id: "GATEWAY-NO-FRAGMENT-SCRUB",
-    defect: "the browser keeps the durable token in its visible address",
-    file: "supabase/functions/passport-share/index.ts",
-    find: "history.replaceState(null,'',location.pathname);",
-    replace: "void 0;",
+    id: "ENTRY-NO-FRAGMENT-SCRUB",
+    defect: "the entry page leaves the durable token in the address bar and the history entry",
+    file: TRANSPORT,
+    find: "'history.replaceState(null,\"\",location.pathname);',",
+    replace: "'void 0;',",
     guard,
-    expect: "the fragment must be scrubbed before the exchange",
+    expect: "the fragment must be removed before the token leaves the page",
   },
   {
-    id: "GATEWAY-RAW-HANDOFF-STORAGE",
-    defect: "the edge sends a raw one-time handoff to the database",
-    file: "supabase/functions/passport-share/index.ts",
-    find: "_handoff_hash: await sha256(handoff)",
-    replace: "_handoff_hash: handoff",
+    id: "ENTRY-SCRIPT-SELF",
+    defect:
+      "the entry page admits same-origin scripts, so the host's injected /~flock.js runs where the token is",
+    file: TRANSPORT,
+    find: "`script-src 'nonce-${nonce}'`,",
+    replace: "`script-src 'self' 'nonce-${nonce}'`,",
     guard,
-    expect: "only the handoff hash may reach storage",
-  },
-  {
-    id: "GATEWAY-COOKIE-PATH",
-    defect: "the recipient session cookie rides every same-origin request",
-    file: "src/lib/security-passport/share-transport.ts",
-    find: "`${shareSessionCookieName(navigationId)}=${session}`,\n    `Path=${SHARE_COOKIE_PATH}`",
-    replace: '`${shareSessionCookieName(navigationId)}=${session}`,\n    "Path=/"',
-    guard,
-    expect: "session cookie must not ride analytics or page requests",
-  },
-  {
-    id: "ENTRY-REDIRECT-WITH-BODY",
-    defect: "the /p entry answers with a document, so an injected script can read the token",
-    file: "src/lib/security-passport/share-transport.ts",
-    find: "return new Response(null, {\n    status: 302,\n    headers: { ...SHARE_HOP_HEADERS, Location: gatewayEntry },",
-    replace:
-      'return new Response("<!doctype html><title>Opening</title>", {\n    status: 302,\n    headers: { ...SHARE_HOP_HEADERS, Location: gatewayEntry },',
-    guard,
-    expect: "the /p redirect must have no body",
+    expect: "only the page's own nonce'd script may run",
   },
   {
     id: "ENTRY-KEEPS-REFERRER",
-    defect: "the /p redirect lets the browser send the application address onward",
-    file: "src/lib/security-passport/share-transport.ts",
+    defect: "the share hops let the browser send the address onward",
+    file: TRANSPORT,
     find: '  "Referrer-Policy": "no-referrer",\n} as const;',
     replace: "} as const;",
     guard,
-    expect: "the /p redirect must suppress referrers",
+    expect: "the entry page must suppress referrers",
   },
   {
     id: "ENTRY-AFTER-SSR",
     defect:
-      "the /p entry is left to the page router, which renders a document at the token's address",
+      "the /p entry is left to the page router, which renders the application's own document there",
     file: "src/server.ts",
     find: "if (new URL(request.url).pathname === SHARE_ENTRY_PATH) {",
     replace: "if (false as boolean) {",
     guard,
     expect: "the /p entry must be answered before the SSR handler renders anything",
+  },
+  {
+    id: "OPEN-TOKEN-AS-COOKIE",
+    defect: "the exchange hands the browser the durable token as a cookie instead of a session",
+    file: "src/server.ts",
+    find: "      return unavailableShare();\n  } catch {\n    return unavailableShare();\n  }\n  return buildShareSessionRedirect(session, isHttps(request));\n}\n\n// h3",
+    replace:
+      "      return unavailableShare();\n  } catch {\n    return unavailableShare();\n  }\n  return buildShareRedirect(token, isHttps(request));\n}\n\n// h3",
+    guard,
+    expect: "the browser must receive a separate session, never the durable token as a cookie",
+  },
+  {
+    id: "OPEN-THROTTLE-IGNORED",
+    defect: "the exchange counts a throttled caller but looks the token up anyway",
+    file: BOUNDARY,
+    find: "  if (throttle.error || throttle.data === false) return false;\n\n  const issued",
+    replace: "  const issued",
+    guard,
+    expect: "a throttled caller must be refused before the token is looked up",
+  },
+  {
+    id: "GATEWAY-RAW-HANDOFF-STORAGE",
+    defect: "the exchange stores a raw one-time handoff",
+    file: BOUNDARY,
+    find: "_handoff_hash: hashShareSecret(handoff)",
+    replace: "_handoff_hash: handoff",
+    guard,
+    expect: "only the handoff hash may reach storage",
+  },
+  {
+    id: "FUNCTION-SERVES-HTML",
+    defect:
+      "the Supabase function answers a link with a page again, which hosted Supabase shows as text",
+    file: FUNCTION,
+    find: "return new Response(null, { status: 302, headers: { ...hopHeaders, Location: ENTRY_URL } });",
+    replace:
+      'return new Response("<!doctype html><p>Öppnar</p>", { status: 200, headers: { ...hopHeaders, "Content-Type": "text/html; charset=utf-8" } });',
+    guard,
+    expect: "the function must answer a link with a redirect",
+  },
+  {
+    id: "GATEWAY-COOKIE-PATH",
+    defect: "the recipient session cookie rides every same-origin request",
+    file: TRANSPORT,
+    find: "`${shareSessionCookieName(navigationId)}=${session}`,\n    `Path=${SHARE_COOKIE_PATH}`",
+    replace: '`${shareSessionCookieName(navigationId)}=${session}`,\n    "Path=/"',
+    guard,
+    expect: "session cookie must not ride analytics or page requests",
   },
 ];
 

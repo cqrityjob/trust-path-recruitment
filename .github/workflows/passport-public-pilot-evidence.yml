@@ -29,12 +29,23 @@ name: Passport public pilot — real-backend evidence
 #     the stack's own mail catcher, and the walk reads the link from there.
 #     Delivery by a real mail provider is not proven here and is not claimed.
 #   * The application is served on https, behind scripts/local-tls-front.mjs.
-#     The share function hands a recipient only to an https origin.
+#     The share function redirects a gateway link only to an https origin.
 #   * The share function runs with PUBLIC_SITE_URL set to that origin, from a
 #     supabase/functions/.env written on the runner.
 #
 # All three are set on the runner at run time. supabase/config.toml in the
 # repository is not changed.
+#
+# ── WHAT THE HOSTED PLATFORM DOES THAT A LOCAL STACK DOES NOT ─────────
+#
+# A share gateway page passed every local walk and failed for every real
+# recipient: hosted Supabase serves HTML from its default domain as
+# `text/plain` under `default-src 'none'; sandbox`, so the page showed as its
+# own source. The local stack serves it as a page. So the walk opens the
+# gateway form of a link through scripts/local-hosted-functions-proxy.ts,
+# which applies that restriction. The TLS front also injects the host's
+# analytics script into every page, as the published site's host does, so the
+# walk can prove that script never sees a share token.
 #
 # ── A GREEN JOB WHERE THE TESTS SKIPPED IS NOT EVIDENCE ───────────────
 #
@@ -55,6 +66,7 @@ on:
       - "scripts/fixtures/passport-public-pilot-fixture.sql"
       - "scripts/passport-public-pilot-evidence-verify.ts"
       - "scripts/local-tls-front.mjs"
+      - "scripts/local-hosted-functions-proxy.ts"
       - "supabase/migrations/**"
       - "supabase/functions/**"
       - ".github/workflows/passport-public-pilot-evidence.yml"
@@ -66,6 +78,7 @@ env:
   SUPABASE_CLI_VERSION: "2.117.0"
   APP_PORT: "3120"
   APP_TLS_PORT: "3121"
+  HOSTED_FUNCTIONS_PORT: "54331"
 
 permissions:
   contents: read
@@ -275,26 +288,38 @@ jobs:
           psql "$DB_URL" -Atc "SELECT code || ':' || pilot_state || ':' || is_active FROM public.sp_market_packs ORDER BY code"
           psql "$DB_URL" -Atc "SELECT count(*) || ' pilot grant(s)' FROM public.sp_pilot_members"
 
-      # The share gateway answers, and hands only to the https application
-      # origin: its entry page's Content-Security-Policy names it as the one
-      # place a form may post to. Otherwise it would fall back to production.
-      - name: Check the share function
+      # The share function answers a gateway link with a redirect, with no
+      # body, to the https application's /p entry. Otherwise it would redirect
+      # to production. Then the same, through hosted Supabase's HTML
+      # restriction: a redirect has nothing to rewrite, so it arrives intact.
+      - name: Check the share function, direct and as hosted
         env:
           API_URL: ${{ steps.local.outputs.api_url }}
         run: |
           set -euo pipefail
           for i in $(seq 1 90); do
             code="$(curl -s -o /dev/null -w '%{http_code}' "${API_URL}/functions/v1/passport-share" || true)"
-            if [ "$code" = "200" ]; then break; fi
-            if [ "$i" -eq 90 ]; then echo "the share function did not answer (last HTTP ${code})" >&2; exit 1; fi
+            if [ "$code" = "302" ]; then break; fi
+            if [ "$i" -eq 90 ]; then echo "the share function did not answer with a redirect (last HTTP ${code})" >&2; exit 1; fi
             sleep 1
           done
-          csp="$(curl -s -D - -o /dev/null "${API_URL}/functions/v1/passport-share" | tr -d '\r' | grep -i '^content-security-policy:')"
-          echo "$csp"
-          case "$csp" in
-            *"form-action https://127.0.0.1:${APP_TLS_PORT}"*) echo "the share function hands to https://127.0.0.1:${APP_TLS_PORT}" ;;
-            *) echo "SHARE FUNCTION REFUSED: it does not hand to the local https origin" >&2; exit 1 ;;
-          esac
+          nohup bun run scripts/local-hosted-functions-proxy.ts "${HOSTED_FUNCTIONS_PORT}" "${API_URL}" > /tmp/hosted-functions-proxy.log 2>&1 &
+          disown
+          for i in $(seq 1 30); do
+            if curl -s -o /dev/null "http://127.0.0.1:${HOSTED_FUNCTIONS_PORT}/functions/v1/passport-share"; then break; fi
+            if [ "$i" -eq 30 ]; then echo "the hosted restriction proxy did not start" >&2; cat /tmp/hosted-functions-proxy.log; exit 1; fi
+            sleep 1
+          done
+          for via in "${API_URL}" "http://127.0.0.1:${HOSTED_FUNCTIONS_PORT}"; do
+            curl -s -D /tmp/share-function.headers -o /tmp/share-function.body "${via}/functions/v1/passport-share"
+            tr -d '\r' < /tmp/share-function.headers | grep -iE '^(HTTP|location|content-type):' || true
+            location="$(tr -d '\r' < /tmp/share-function.headers | grep -i '^location:' | cut -d' ' -f2-)"
+            if [ "$location" != "https://127.0.0.1:${APP_TLS_PORT}/p" ]; then
+              echo "SHARE FUNCTION REFUSED via ${via}: it redirects to '${location}', not the local https /p entry" >&2; exit 1
+            fi
+            if [ -s /tmp/share-function.body ]; then echo "SHARE FUNCTION REFUSED via ${via}: its redirect has a body" >&2; exit 1; fi
+          done
+          echo "the share function redirects to https://127.0.0.1:${APP_TLS_PORT}/p, direct and through the hosted restriction"
 
       - name: Install Chromium
         run: |
@@ -309,7 +334,9 @@ jobs:
             -keyout /tmp/app-tls.key -out /tmp/app-tls.crt 2>/dev/null
           nohup bun run dev -- --host 127.0.0.1 --port "${APP_PORT}" --strictPort > /tmp/dev-server.log 2>&1 &
           disown
-          TLS_FRONT_CERT=/tmp/app-tls.crt TLS_FRONT_KEY=/tmp/app-tls.key \
+          # With the host's analytics script injected into every page, as the
+          # published site's host injects it.
+          TLS_FRONT_CERT=/tmp/app-tls.crt TLS_FRONT_KEY=/tmp/app-tls.key TLS_FRONT_HOST_ANALYTICS=1 \
             nohup node scripts/local-tls-front.mjs "${APP_TLS_PORT}" "${APP_PORT}" > /tmp/tls-front.log 2>&1 &
           disown
           for i in $(seq 1 120); do
@@ -328,6 +355,8 @@ jobs:
           E2E_DB_URL: ${{ steps.local.outputs.db_url }}
           E2E_MAIL_URL: ${{ steps.local.outputs.mail_url }}
           E2E_SUPABASE_ANON_KEY: ${{ steps.local.outputs.anon_key }}
+          E2E_HOSTED_FUNCTIONS_URL: http://127.0.0.1:${{ env.HOSTED_FUNCTIONS_PORT }}
+          E2E_HOST_ANALYTICS: "1"
           PLAYWRIGHT_JSON_OUTPUT_NAME: test-results/results.json
         run: |
           set -euo pipefail
@@ -357,6 +386,7 @@ jobs:
         run: |
           tail -n 80 /tmp/dev-server.log || true
           tail -n 20 /tmp/tls-front.log || true
+          tail -n 20 /tmp/hosted-functions-proxy.log || true
           docker ps --format '{{.Names}}' | grep -i edge_runtime | head -1 | xargs -r docker logs --tail 40 || true
 
       - name: Stop the local stack

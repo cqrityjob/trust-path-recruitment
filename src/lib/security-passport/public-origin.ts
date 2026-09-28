@@ -79,15 +79,14 @@ export function publicShareOrigin(): string {
  *
  *  The durable token rides the FRAGMENT, which a browser never sends: the
  *  request for this path is `GET /p` and nothing else. src/server.ts answers
- *  it, ahead of any page, with a redirect that has no body -- so no document,
- *  and no script the host injects into documents, ever exists at an address
- *  holding the token -- to the gateway below, and the browser re-attaches the
- *  fragment it followed (RFC 9110 §10.2.2). From there the path is the
- *  gateway's, unchanged: the fragment is scrubbed, exchanged by POST for a
- *  one-time handoff, and the handoff for a short session. */
+ *  it, ahead of any page, with a small document under a CSP that lets only its
+ *  own script run. That script removes the fragment at once and POSTs the token
+ *  to the throttled exchange, which sets a separate 30-minute session. See
+ *  share-transport.ts. */
 export const SHARE_ENTRY_PATH = "/p";
 
-/** The gateway's own path, on the Supabase origin. */
+/** The gateway's own path, on the Supabase origin. Links issued before the
+ *  application-domain entry carry it; nothing builds a new one. */
 export const SHARE_GATEWAY_PATH = "/functions/v1/passport-share";
 
 /** The full public verification URL for one share token: the application's
@@ -97,15 +96,17 @@ export function publicShareUrl(token: string): string {
   return `${publicShareOrigin()}${SHARE_ENTRY_PATH}#${token}`;
 }
 
-/** The same share through the gateway directly. Every link issued before the
- *  application-domain entry has this shape, and it keeps working: the entry
- *  above only forwards to it. */
+/** A share in the gateway form every link issued before the application-domain
+ *  entry has. The function behind it redirects to `/p` with the fragment kept,
+ *  once that version is deployed; the version it replaces served an HTML page
+ *  that hosted Supabase shows as plain text. Used to test those links, never to
+ *  issue one. */
 export function publicShareGatewayUrl(token: string): string {
   return `${publicShareGatewayOrigin()}${SHARE_GATEWAY_PATH}#${token}`;
 }
 
-/** The Supabase entry origin for new share links. The durable bearer token is
- *  carried only in the URL fragment, which browsers never send in the first
+/** The Supabase origin of the legacy gateway links above. The durable bearer
+ *  token is carried only in the URL fragment, which browsers never send in an
  *  HTTP request or in the Referer header. */
 export function publicShareGatewayOrigin(): string {
   const configured = import.meta.env?.VITE_SUPABASE_URL;
