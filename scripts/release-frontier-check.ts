@@ -227,9 +227,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // only; needs PR 2). Each is pending BY DESIGN until it merges and the official
 // integration applies it; its name comes off this list in the change that
 // records its hosted evidence.
+// 20261223090000_application_notes_employer_only (JB-02 of the 2026-09-28 UAT:
+// the employer's note on an application is no longer readable by the
+// applicant through the API) is pending BY DESIGN until its PR merges and the
+// official integration applies it. Its name comes off this list in the change
+// that records its hosted evidence.
 const expectedPending: string[] = [
   "20261220090000_sp_public_pilot_availability.sql",
   "20261221090000_sp_open_uk_dubai_public_pilot.sql",
+  "20261223090000_application_notes_employer_only.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
