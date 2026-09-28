@@ -1841,6 +1841,16 @@ jobs:
           E2E_BASE_URL: http://localhost:3100
         run: bun run e2e e2e/passport-date-input.spec.ts --project=chromium --project=mobile-375
 
+      # Sharing from both ends: the holder choosing, creating, copying,
+      # reissuing and revoking a link, and the recipient's page, open and
+      # closed. Until this step the spec ran in no job, and twice an assertion
+      # went stale unseen: case 3 when #207 moved the token into the fragment,
+      # case 12 when 93e6f939 renamed the recipient's closing link.
+      - name: Passport sharing browser suite (desktop and 375px)
+        env:
+          E2E_BASE_URL: http://localhost:3100
+        run: bun run e2e:sharing
+
       - name: Server log
         if: failure()
         run: cat /tmp/dev-server.log
