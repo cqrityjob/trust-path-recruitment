@@ -452,7 +452,7 @@ export function SocialShareFlow({
               role="status"
               className="mt-1 text-sm leading-relaxed text-amber-700 dark:text-amber-300"
             >
-              {pt("social.notDrawn")}
+              {pt(one("social.notDrawn", "social.notDrawnMany"))}
             </p>
           ) : null}
         </section>
@@ -557,7 +557,9 @@ export function SocialShareFlow({
                       {id === "copy_link" && copied ? pt("sc.copied") : pt(labelKey)}
                       {id === "instagram" ? (
                         <span className="mt-0.5 block text-xs font-normal leading-relaxed text-muted-foreground">
-                          {pt("share.channel.instagramHint")}
+                          {pt(
+                            one("share.channel.instagramHint", "share.channel.instagramHintMany"),
+                          )}
                         </span>
                       ) : null}
                     </span>

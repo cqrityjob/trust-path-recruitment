@@ -573,6 +573,83 @@ for (const lang of ["sv", "en"] as const) {
     }
 }
 
+// ── A long name stays inside its space ───────────────────────────────────
+// A name wraps at its spaces; a single word wider than its line -- a double
+// surname, a long compound, a holder's own free text -- is drawn smaller
+// instead of past the card's edge or into the next column.
+{
+  const LONG_HOLDER: PassportHolder = {
+    ...holder,
+    displayName: "Alexandra Konstantinopoulou-Lindqvist",
+  };
+  const LONG_WORD = presented("c11", {
+    title: "Säkerhetsskyddsutbildningsintygskurs",
+    code: null,
+    jurisdiction: "SE",
+  });
+  const num = (attrs: string, name: string) =>
+    Number(new RegExp(`\\b${name}="(-?[\\d.]+)"`).exec(attrs)?.[1]);
+  for (const lang of ["sv", "en"] as const)
+    for (const spec of SHARE_FORMATS) {
+      // Each long text on its own: a long credential word draws the whole
+      // card smaller, which would hide a long name running past the edge.
+      const options = {
+        privacyMode: "full_name" as const,
+        anonymousLabel: passportT("share.anonymousLabel", lang),
+        verifyUrl: null,
+      };
+      const named = draw(
+        buildSelectedSocialCard(LONG_HOLDER, "2026-09-28", [SIRA, OWN, CPP], options),
+        spec.id,
+        lang,
+        null,
+      );
+      const model = buildSelectedSocialCard(holder, "2026-09-28", [SIRA, LONG_WORD, CPP], options);
+      const svg = draw(model, spec.id, lang, null);
+      const width = Number(/<svg\b[^>]*width="(\d+)"/.exec(svg)?.[1]);
+      const texts = [...svg.matchAll(/<text\b([^>]*)>([^<]*)<\/text>/g)].map((m) => ({
+        attrs: m[1] ?? "",
+        text: m[2] ?? "",
+      }));
+      // One line or two, depending on how small the format draws it.
+      const nameLines = [...named.matchAll(/<text\b([^>]*)>([^<]*)<\/text>/g)]
+        .map((m) => ({ attrs: m[1] ?? "", text: m[2] ?? "" }))
+        .filter((t) => t.text.includes("Konstantinopoulou"));
+      const namedWidth = Number(/<svg\b[^>]*width="(\d+)"/.exec(named)?.[1]);
+      expect(
+        nameLines.length === 1 &&
+          nameLines.every(
+            (t) =>
+              num(t.attrs, "x") + t.text.length * num(t.attrs, "font-size") * 0.62 <= namedWidth,
+          ),
+        `${lang}/${spec.id}: the holder's long name stays inside the card`,
+      );
+      const dividers = [...svg.matchAll(/<line\b([^>]*)>/g)]
+        .map((m) => m[1] ?? "")
+        .filter((attrs) => num(attrs, "x1") === num(attrs, "x2"))
+        .map((attrs) => num(attrs, "x1"))
+        .sort((a, b) => a - b);
+      const slot = (dividers[1] ?? NaN) - (dividers[0] ?? NaN);
+      const firstLeft = (dividers[0] ?? NaN) - slot;
+      const columnOf = (x: number) => firstLeft + Math.floor((x - firstLeft) / slot) * slot;
+      const credentialLines = texts.filter(
+        (t) => /font-weight="500"/.test(t.attrs) && /text-anchor="middle"/.test(t.attrs),
+      );
+      const outside = credentialLines.filter((t) => {
+        const x = num(t.attrs, "x");
+        const w = t.text.length * num(t.attrs, "font-size") * 0.58;
+        const left = columnOf(x);
+        return x - w / 2 < left + 4 || x + w / 2 > left + slot - 4;
+      });
+      expect(
+        dividers.length === 2 &&
+          credentialLines.some((t) => t.text.startsWith("Säkerhetsskydds")) &&
+          outside.length === 0,
+        `${lang}/${spec.id}: every line of a credential's name stays inside its own column`,
+      );
+    }
+}
+
 // ── Only the card ground, and plain attributes ───────────────────────────
 {
   const svg = draw(card([SIRA, OWN], LINK, "sv"), "og", "sv", QR);

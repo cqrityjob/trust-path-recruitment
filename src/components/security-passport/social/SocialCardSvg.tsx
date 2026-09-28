@@ -70,6 +70,10 @@ export interface SocialCardSvgProps {
 
 const r = (n: number) => Math.round(n * 10) / 10;
 
+/** A bold line's width per character, in em: generous, like `charsFor`, so a
+ *  word that only nearly fits is still drawn smaller rather than clipped. */
+const BOLD_CHAR_EM = 0.62;
+
 /** A generous width estimate, as elsewhere in the exports: an early wrap is
  *  invisible, an overflow is not. */
 const charsFor = (width: number, size: number) => Math.max(6, Math.floor(width / (size * 0.56)));
@@ -272,8 +276,13 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
   );
   y += 26 * u;
 
-  const nameSize = (landscape ? 58 : 72) * u;
-  for (const [i, line] of wrap(p.model.holderLabel, charsFor(headW, nameSize), 2).entries()) {
+  const fullName = (landscape ? 58 : 72) * u;
+  const nameLines = wrap(p.model.holderLabel, charsFor(headW, fullName), 2);
+  // A name wraps at its spaces. A single word wider than the line -- a long
+  // double surname -- is drawn smaller instead of running past the edge.
+  const widestName = Math.max(1, ...nameLines.map((line) => line.length));
+  const nameSize = Math.min(fullName, headW / (widestName * BOLD_CHAR_EM));
+  for (const [i, line] of nameLines.entries()) {
     y += nameSize * 1.12;
     nodes.push(
       <Text key={`name-${i}`} x={pad} y={y} size={nameSize} weight={600} fill={TRUST_PALETTE.ink}>
@@ -378,6 +387,9 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
       );
       cy += 8 * u;
       for (const [j, line] of wrap(name, charsFor(slotW - 28 * u, 21 * u), 3).entries()) {
+        // A name wraps at its spaces; one word wider than its column -- a
+        // long compound, a holder's own free text -- makes the card smaller.
+        if (line.length * 21 * u * 0.58 > slotW - 16 * u) columnsFit = false;
         cy += 27 * u;
         nodes.push(
           <Text

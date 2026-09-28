@@ -2230,6 +2230,7 @@ const sv = {
   "share.channel.instagram": "Instagram",
   "share.channel.copyUrl": "Kopiera URL",
   "share.channel.instagramHint": "Ladda ned Story-bilden och lägg upp den i appen.",
+  "share.channel.instagramHintMany": "Ladda ned Story-bilderna och lägg upp dem i appen.",
 
   // ── Two ways to share (/passport/share) ─────────────────────────────
   "share.via.legend": "Hur vill du dela?",
@@ -2242,7 +2243,7 @@ const sv = {
   "social.step.choose": "Välj vad bilden visar",
   "social.onlyPublishable":
     "Välj de meriter som gäller i dag och som ska synas, var och en med sin egen granskningsnivå — precis som ditt delade Passport. En bild rymmer tre; väljer du fler visas de på flera bilder.",
-  "social.setSummary": "{n} meriter valda — de visas på {k} bilder, tre på varje.",
+  "social.setSummary": "{n} meriter visas på {k} bilder, tre på varje.",
   "social.empty":
     "Du har ännu ingen merit som gäller i dag att visa på en bild. Lägg först till en merit i ditt Passport.",
   "social.step.preview": "Förhandsgranska bilden",
@@ -2257,6 +2258,8 @@ const sv = {
   "social.linkInImageMany": "Bilderna innehåller din delningslänk och dess QR-kod.",
   "social.notDrawn":
     "En eller flera valda meriter visas inte på bilden eftersom de inte längre gäller i dag.",
+  "social.notDrawnMany":
+    "En eller flera valda meriter visas inte på bilderna eftersom de inte längre gäller i dag.",
   "social.step.share": "Dela eller ladda ner",
   "social.device": "Dela bilden",
   "social.deviceMany": "Dela bilderna",
@@ -4398,6 +4401,7 @@ const en: Record<PassportCopyKey, string> = {
   "share.channel.instagram": "Instagram",
   "share.channel.copyUrl": "Copy URL",
   "share.channel.instagramHint": "Download the Story image and post it from the app.",
+  "share.channel.instagramHintMany": "Download the Story images and post them from the app.",
 
   // ── Two ways to share (/passport/share) ─────────────────────────────
   "share.via.legend": "How do you want to share?",
@@ -4410,7 +4414,7 @@ const en: Record<PassportCopyKey, string> = {
   "social.step.choose": "Choose what the image shows",
   "social.onlyPublishable":
     "Choose the credentials valid today that should show, each at its own level of review — just as your shared Passport does. One image holds three; choose more and they are shown on several images.",
-  "social.setSummary": "{n} credentials selected — shown on {k} images, three to each.",
+  "social.setSummary": "{n} credentials are shown on {k} images, three to each.",
   "social.empty":
     "You have no credential valid today to show on an image yet. Add a credential to your Passport first.",
   "social.step.preview": "Preview the image",
@@ -4425,6 +4429,8 @@ const en: Record<PassportCopyKey, string> = {
   "social.linkInImageMany": "The images contain your share link and its QR code.",
   "social.notDrawn":
     "One or more selected credentials are not shown on the image because they are no longer valid today.",
+  "social.notDrawnMany":
+    "One or more selected credentials are not shown on the images because they are no longer valid today.",
   "social.step.share": "Share or download",
   "social.device": "Share the image",
   "social.deviceMany": "Share the images",
