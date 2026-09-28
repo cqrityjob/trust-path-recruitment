@@ -39,7 +39,7 @@ import {
   type ShareFormat,
 } from "@/lib/security-passport/design/trust-system";
 import { FONT_STACK, wrap } from "@/lib/security-passport/social-export";
-import type { SocialCardModel } from "@/lib/security-passport/social";
+import { SOCIAL_CREDENTIALS_PER_IMAGE, type SocialCardModel } from "@/lib/security-passport/social";
 import type { SocialImageStrings } from "@/lib/security-passport/share-image";
 import { resolveCredentialScope, shieldMarkText } from "@/lib/security-passport/credential-shield";
 import { passportT, type PassportLang } from "@/lib/security-passport/i18n";
@@ -261,9 +261,13 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
     </Text>,
   );
   y += glyph + 36 * u;
+  // An image of a set says which one it is: a platform may show it alone.
+  const page = p.model.page;
   nodes.push(
     <Text key="micro" x={pad} y={y} size={18 * u} weight={600} spacing={4.5 * u} fill={RIM_BRIGHT}>
-      {p.strings.brand.toUpperCase()}
+      {page
+        ? `${p.strings.brand.toUpperCase()} · ${page.index} / ${page.count}`
+        : p.strings.brand.toUpperCase()}
     </Text>,
   );
   y += 26 * u;
@@ -335,7 +339,9 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
     );
     y += 64 * u;
   } else {
-    const slotW = contentW / 3;
+    // One column per credential an image holds. A selection of more is a set
+    // of images (socialCardPages); this drawing never receives more.
+    const slotW = contentW / SOCIAL_CREDENTIALS_PER_IMAGE;
     const x0 = pad + (contentW - credentials.length * slotW) / 2;
     const shield = 92 * u;
     const top = y;
@@ -477,6 +483,9 @@ export function SocialCardSvg(props: SocialCardSvgProps) {
       height={H}
       viewBox={`0 0 ${W} ${H}`}
       data-social-card={props.format}
+      data-social-page={
+        props.model.page ? `${props.model.page.index}/${props.model.page.count}` : undefined
+      }
     >
       {/* The one card ground -- see PASSPORT_CARD_SURFACE. No engraving:
           nothing is drawn behind the text, the shields or the QR code. */}

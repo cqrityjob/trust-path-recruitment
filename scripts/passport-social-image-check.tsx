@@ -9,11 +9,21 @@
 //   * the SELECTED credentials only, each at the state the shared
 //     presentation gave it -- never raised to verified -- with its flag or
 //     globe and its written scope;
+//   * every one of them: three to an image, and a larger selection as a set
+//     of whole images, each saying which of the set it is -- never a shorter
+//     list;
+//   * nothing the presentation holds beyond the drawn facts: no issuer, date,
+//     verifier, identifier or authorisation scope, on any image of a set;
 //   * no link and no QR code unless the model carries a link, and then the
 //     link as printed text beside exactly the QR it was given;
 //   * a "snapshot" line whenever there is no link, because a cached image
 //     outlives what it shows;
 //   * nothing drawn outside its own canvas.
+//
+// And what each way out of the page claims: only the device's share sheet,
+// which is handed the PNG files themselves, says the image is attached; every
+// platform button hands the holder the image and says to add it to the post.
+// Nothing creates a link except the holder's own press on "create a link".
 //
 // The browser walk (e2e/passport-public-pilot-local.spec.ts, case S) proves the
 // download is the preview pixel for pixel; this is the fast, structural half.
@@ -21,12 +31,20 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { SocialCardSvg } from "../src/components/security-passport/social/SocialCardSvg";
 import { SHARE_FORMATS } from "../src/lib/security-passport/social-export";
-import { socialImageStrings } from "../src/lib/security-passport/share-image";
+import { readFileSync } from "node:fs";
+import { socialImageFileName, socialImageStrings } from "../src/lib/security-passport/share-image";
 import {
   buildSelectedSocialCard,
-  SOCIAL_CREDENTIAL_LIMIT,
+  SOCIAL_CREDENTIALS_PER_IMAGE,
+  SOCIAL_FORBIDDEN_KEYS,
+  socialCardPages,
   type SocialCardModel,
 } from "../src/lib/security-passport/social";
+import {
+  deviceShareData,
+  FEED_CHANNELS,
+  platformPlan,
+} from "../src/lib/security-passport/share-channels";
 import type { RecipientCredential } from "../src/lib/security-passport/recipient-presentation";
 import { passportT, type PassportLang } from "../src/lib/security-passport/i18n";
 import { deriveVerifiedIdentity } from "../src/lib/security-passport/identity/visibility";
@@ -129,10 +147,16 @@ const textOf = (svg: string) =>
 // ── What is drawn, and at which state ─────────────────────────────────────
 {
   const model = card([SIRA, OWN, CPP, NOT_STATED, LAPSED], null, "sv");
+  const pages = socialCardPages(model);
   expect(
-    model.credentials.length === SOCIAL_CREDENTIAL_LIMIT &&
-      model.credentials.map((c) => c.id).join(",") === "c0,c1,c2",
-    "the image draws at most three credentials, in the order given",
+    model.credentials.map((c) => c.id).join(",") === "c0,c1,c2,c3",
+    "every selected credential that is current is drawn, in the order given: none is cut",
+  );
+  expect(
+    pages.length === 2 &&
+      pages.every((p) => p.credentials.length <= SOCIAL_CREDENTIALS_PER_IMAGE) &&
+      pages.flatMap((p) => p.credentials.map((c) => c.id)).join(",") === "c0,c1,c2,c3",
+    "more than one image holds becomes a set, three to an image, each credential on exactly one",
   );
   expect(
     card([LAPSED], null, "sv").credentials.length === 0,
@@ -140,11 +164,12 @@ const textOf = (svg: string) =>
   );
   expect(
     model.verifiedCredentials.length === 0 &&
-      model.credentials.every((c) => c.state !== "verified"),
+      model.credentials.every((c) => c.state !== "verified") &&
+      pages.every((p) => p.verifiedCredentials.length === 0),
     "nothing is raised to verified for the image",
   );
 
-  const svg = draw(model, "square", "sv", null);
+  const svg = draw(pages[0]!, "square", "sv", null);
   const words = textOf(svg).join("\n");
   expect(
     /data-shield-mark="documented"/.test(svg) && /data-shield-mark="self_declared"/.test(svg),
@@ -164,9 +189,247 @@ const textOf = (svg: string) =>
     "a global certification wears the globe and says so",
   );
   expect(words.includes("SIRA") && words.includes("CPP"), "shields carry their abbreviations");
+  // Read defensively: a set that lost its second image must fail here, by
+  // name, rather than crash the check.
+  const second = pages[1] ? textOf(draw(pages[1], "square", "sv", null)).join("\n") : "";
   expect(
-    !words.includes("A course nobody placed") && !words.includes("An expired licence"),
-    "nothing beyond the three drawn credentials appears",
+    !words.includes("A course nobody placed") && second.includes("A course nobody placed"),
+    "the fourth credential is on the second image, not squeezed onto the first",
+  );
+  expect(
+    !words.includes("An expired licence") && !second.includes("An expired licence"),
+    "and the expired one is on neither",
+  );
+}
+
+// ── Three is one image; more is a set of whole images ────────────────────
+{
+  const three = socialCardPages(card([SIRA, OWN, CPP], null, "sv"));
+  const alone = draw(three[0]!, "square", "sv", null);
+  expect(
+    three.length === 1 &&
+      three[0]!.page === null &&
+      !alone.includes("data-social-page") &&
+      textOf(alone).includes("SECURITY PASSPORT"),
+    "three credentials are one image, which claims no place in a set",
+  );
+  expect(
+    socialCardPages(card([], null, "sv")).length === 1,
+    "a selection with nothing current is still one image, saying so",
+  );
+
+  const more = [
+    SIRA,
+    OWN,
+    CPP,
+    NOT_STATED,
+    presented("c7", { title: "Ordningsvakt", code: "OV", jurisdiction: "SE" }),
+    presented("c8", {
+      title: "SIA Licence — Door Supervision",
+      code: "UK_SIA_LICENCE_DS",
+      jurisdiction: "GB",
+    }),
+    presented("c9", {
+      title: "Certified Fraud Examiner",
+      code: "INTL_ACFE_CFE",
+      definitionScope: "global",
+    }),
+  ];
+  for (const lang of ["sv", "en"] as const) {
+    const whole = card(more, LINK, lang);
+    const set = socialCardPages(whole);
+    expect(
+      set.length === 3 && set.map((p) => p.credentials.length).join(",") === "3,3,1",
+      `${lang}: seven credentials are three images of 3, 3 and 1`,
+    );
+    for (const spec of SHARE_FORMATS) {
+      const drawnIds: string[] = [];
+      for (const [i, page] of set.entries()) {
+        const svg = draw(page, spec.id, lang, QR);
+        const lines = textOf(svg);
+        const joined = lines.join(" ");
+        const at = `${lang}/${spec.id} image ${i + 1}`;
+        expect(
+          svg.includes(`data-social-page="${i + 1}/3"`) &&
+            lines.includes(`SECURITY PASSPORT · ${i + 1} / 3`),
+          `${at}: says it is image ${i + 1} of 3`,
+        );
+        expect(
+          joined.includes("Nadia") && joined.includes(passportT("card.verifyAtSource", lang)),
+          `${at}: is a whole card -- the holder and the footer`,
+        );
+        expect(
+          new RegExp(`<image\\b[^>]*href="${QR.replace(/[+/=.]/g, "\\$&")}"`).test(svg) &&
+            lines.join("").includes(LINK),
+          `${at}: carries the link the holder chose, as every image of the set does`,
+        );
+        const shields = (svg.match(/data-shield-mark=/g) ?? []).length;
+        expect(
+          shields === page.credentials.length && shields <= SOCIAL_CREDENTIALS_PER_IMAGE,
+          `${at}: draws its own credentials, at most ${SOCIAL_CREDENTIALS_PER_IMAGE}`,
+        );
+        // Drawn at the size the same credentials would be drawn alone: a set
+        // does not make an image harder to read.
+        const sizes = (markup: string) =>
+          [...markup.matchAll(/<text\b[^>]*font-size="([\d.]+)"/g)]
+            .map((m) => Number(m[1]))
+            .sort((a, b) => a - b)
+            .join(",");
+        const aloneSvg = draw({ ...page, page: null }, spec.id, lang, QR);
+        expect(
+          sizes(svg) === sizes(aloneSvg),
+          `${at}: drawn at the size the same credentials are drawn alone`,
+        );
+        drawnIds.push(...page.credentials.map((c) => c.id));
+      }
+      expect(
+        drawnIds.join(",") === whole.credentials.map((c) => c.id).join(","),
+        `${lang}/${spec.id}: the set draws every selected credential once, in order`,
+      );
+    }
+  }
+  expect(
+    socialImageFileName("square", null) === "cqrityjob-passport-square.png" &&
+      socialImageFileName("story", { index: 2, count: 3 }) ===
+        "cqrityjob-passport-story-2-of-3.png",
+    "a set's files say which image each is",
+  );
+}
+
+// ── Nothing private reaches any image of a set ───────────────────────────
+{
+  const PRIVATE = [
+    "Hemlig Utfärdare AB",
+    "SEC-NUMBER-4711",
+    "2031-12-24",
+    "2019-01-02",
+    "Hemlig Granskare",
+    "manual_document_check",
+    "Protected object: Central Bank vault",
+  ];
+  const withPrivate = (key: string, title: string) =>
+    presented(key, {
+      title,
+      code: null,
+      issuer: PRIVATE[0],
+      credentialIdentifier: PRIVATE[1],
+      validUntil: PRIVATE[2] as never,
+      issuedOn: PRIVATE[3] as never,
+      verifierOrganisation: PRIVATE[4],
+      verificationMethod: PRIVATE[5],
+      authorisationScope: PRIVATE[6],
+    });
+  const creds = [1, 2, 3, 4, 5].map((n) => withPrivate(`p${n}`, `Licence ${n}`));
+  const model = card(creds, null, "sv");
+  const set = socialCardPages(model);
+  const serialised = JSON.stringify(set);
+  expect(
+    set.length === 2 && PRIVATE.every((v) => !serialised.includes(v)),
+    "no issuer, identifier, date, verifier, method or scope reaches the set's model",
+  );
+  expect(
+    SOCIAL_FORBIDDEN_KEYS.every((k) => !serialised.includes(`"${k}"`)),
+    "no forbidden field name appears in the set's model",
+  );
+  for (const spec of SHARE_FORMATS)
+    for (const page of set) {
+      const svg = draw(page, spec.id, "sv", null);
+      // A wrapped name spreads over several lines; read them as one text too.
+      const text = textOf(svg).join(" ");
+      expect(
+        PRIVATE.every((v) => !svg.includes(v) && !text.includes(v)),
+        `${spec.id} image ${page.page?.index}: none of it is drawn`,
+      );
+    }
+}
+
+// ── What each way out claims ─────────────────────────────────────────────
+{
+  const file = (n: number) => new File([String(n)], `f${n}.png`, { type: "image/png" });
+  const files = [file(1), file(2)];
+  const plain = deviceShareData(files, "Mitt Security Passport från CQrityjob.", null);
+  expect(
+    Array.isArray(plain.files) &&
+      plain.files.length === 2 &&
+      plain.files[0] === files[0] &&
+      plain.files[1] === files[1] &&
+      !("url" in plain),
+    "the device share is handed the image files themselves, and no link unless one was chosen",
+  );
+  expect(
+    deviceShareData(files, "x", LINK).url === LINK,
+    "a link the holder chose for the images travels with them",
+  );
+
+  const claimsAttached = /bifogad|bifogas|finns nu|är med|attached|is now in|included/i;
+  for (const lang of ["sv", "en"] as const) {
+    expect(
+      claimsAttached.test(passportT("social.device.hint", lang)) &&
+        claimsAttached.test(passportT("social.device.hintMany", lang)),
+      `${lang}: the device share says the image is attached -- it is`,
+    );
+    for (const hint of ["social.platformsHint", "social.platformsHintMany"] as const) {
+      const text = passportT(hint, lang);
+      expect(
+        /laddas ner|downloaded/i.test(text) && /själv|yourself/i.test(text),
+        `${lang}: the platform list says the image is downloaded and added by the holder`,
+      );
+    }
+    for (const { id } of FEED_CHANNELS) {
+      if (id === "copy_link") continue;
+      for (const count of [1, 3]) {
+        const plan = platformPlan(id, null, "text", count);
+        const notice = passportT(plan.noticeKey, lang);
+        expect(
+          plan.delivery === "added_by_holder" &&
+            !claimsAttached.test(notice) &&
+            /Lägg till|Bifoga|Lägg upp|Add the|Attach the|Post (it|them)/.test(notice),
+          `${lang}/${id} (${count}): never claims the image went along; says to add it`,
+        );
+        expect(
+          count === 1
+            ? !/bilderna|images|dem |them /.test(notice)
+            : /bilderna|images|dem |them /.test(notice),
+          `${lang}/${id} (${count}): speaks of ${count === 1 ? "the image" : "the images"}`,
+        );
+        expect(
+          plan.url === null || !/data:|\.png|blob:|image=|media=/i.test(plan.url),
+          `${lang}/${id}: its web address carries no image, because none can`,
+        );
+      }
+    }
+  }
+  const instagram = platformPlan("instagram", null, "text", 1);
+  expect(
+    instagram.url === null && instagram.format === "story",
+    "Instagram has no web page to post from: the Story image, and no pretend publish",
+  );
+  expect(
+    platformPlan("linkedin", null, "text", 1).url === "https://www.linkedin.com/feed/" &&
+      !/url=|%2Fp%23/.test(platformPlan("x", null, "text", 1).url ?? ""),
+    "no platform is given a link the holder did not choose",
+  );
+}
+
+// ── A link only on the holder's own press ────────────────────────────────
+{
+  const flow = readFileSync("src/components/security-passport/live/SocialShareFlow.tsx", "utf8");
+  const route = readFileSync("src/routes/_authenticated.passport.share.tsx", "utf8");
+  const uses = (text: string, needle: string) => text.split(needle).length - 1;
+  expect(
+    uses(flow, "link.onCreate") === 1 &&
+      /data-social-link-create\s+onClick=\{link\.onCreate\}/.test(flow),
+    "the social flow creates a link from one place: the holder's press on 'create a link'",
+  );
+  expect(
+    uses(route, "onCreateSocialLink(") === 2 &&
+      /onCreate: \(\) => void onCreateSocialLink\(\)/.test(route),
+    "and the page wires that press, and nothing else, to the create",
+  );
+  expect(
+    /const \[includeLink, setIncludeLink\] = useState\(false\)/.test(route) &&
+      /const imageLink = includeLink && socialLinkUrl \? socialLinkUrl : null;/.test(route),
+    "no link is printed unless the holder created one and ticked it in",
   );
 }
 
