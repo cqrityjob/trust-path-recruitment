@@ -22,9 +22,9 @@ This section is the authoritative release checklist. Sections 1–14 below are t
 |---|---|---|---|
 | 1 | **Nobody outside the Supabase team receives a confirmation or reset mail** (EM-MAIL-01). Registration is impossible for a real UAT tester. | External activation | Custom SMTP + Site URL + Redirect URLs set (`production-readiness/auth-and-email.md` §3, items 1–3) and the §5 probe passes |
 | 2 | **Passport share links end in a blank 503/404** until the site is published at ≥ `f25e05f` and `PASSPORT_SHARE_ENTRY_PUBLISHED=1` is set on the `passport-share` function (§5.3). | External activation | Publish + function secret; `curl -sI …/p` shows the nonce CSP |
-| 3 | **Career Discovery is closed to every signed-in candidate** (CI-01; 0 tester rows). | Code (PR #322) + owner decision | #322 merged and applied; owner runs `cd_set_access_state('public', …)` or grants the UAT group as testers |
-| 4 | **JB-02 privacy defect**: the employer's internal note is readable by the applicant through the API. Gate item 11. | Code (PR #323) | #323 merged and applied |
-| 5 | **The four fix migrations are `pending`** on the hosted project; `release-parity:gate` refuses a deploy until they are applied through the tracked mechanism. | Release step (after merge) | Supabase GitHub integration applies them on merge; `release-state.json` updated to `applied` with evidence |
+| 3 | **Career Discovery is closed to every signed-in candidate** (CI-01; 0 tester rows). | Code (PRs #322 schema, #327 application) + owner decision | #322 merged and applied, #327 merged; owner runs `cd_set_access_state('public', …)` or grants the UAT group as testers |
+| 4 | **JB-02 privacy defect**: the employer's internal note is readable by the applicant through the API. Gate item 11. | Code (PRs #323 EXPAND, #329 application, #330 CONTRACT) | all three merged and applied, in that order |
+| 5 | **The five fix migrations are `pending`** on the hosted project; `release-parity:gate` refuses a deploy until they are applied through the tracked mechanism. | Release step (after each schema merge) | Supabase GitHub integration applies them on merge; `release-state.json` updated to `applied` with evidence; the stacked application PRs then go green |
 
 Not blockers (kept visible): the browser/mobile pass this environment could not run (gate item 14, owner UAT); the P2 product defects JB-01 / AS-01 / AS-02 (fixed in #324 / #325, wanted before UAT but not blocking it); test content on the public job board (clean before *public* release).
 
@@ -36,7 +36,7 @@ Decisions:
 2. **AS-02 deadline: informational or enforced?** #325 makes the employer's deadline visible to the candidate (invitation message + Academy card, "Sista dag" / "Utgången") and does not enforce it in `scp_save_response` / `scp_submit_attempt`, because no product text or migration states enforcement. If it should be enforced, that is a follow-up migration (category D).
 3. **Google OAuth**: configure the provider or hide the two buttons before launch (`auth-and-email.md` §3.8).
 4. **Data cleanup classes** in `production-readiness/production-data-hygiene.md`: approve the REMOVE BEFORE LAUNCH rows, decide the UNKNOWN — OWNER REVIEW rows (Säkerhet AB, cqrityjob, Buller o bång, emma@, carl@, shkachmed@). Nothing is deleted until approved.
-5. **Merges**, in this order (each is independent of the others, all from `b7ed12f`): #323 (JB-02), #322 (Career Discovery release control), #324 (JB-01), #325 (AS-01/AS-02). Then #320 once the state below is true.
+5. **Merges**, in the order under CODE FIXES: #323 → #329 → #330 (JB-02), #322 → #327 (Career Discovery), #324 → #328 (JB-01), #325 (AS-01/AS-02); each schema merge is followed by apply-verify-record before its application PR. Then #320 once the state below is true.
 6. **Hosting plan**: confirm the Hostinger staging subdomain and the production domain (apex vs `www`), and the Supabase production/staging separation option (`supabase-production-hardening.md` §2.3).
 
 Hands-on (dashboard / secrets; none can be done from the repository):
@@ -49,15 +49,23 @@ Hands-on (dashboard / secrets; none can be done from the repository):
 
 ### CODE FIXES (isolated PRs, all draft, none merged; owner decides merges)
 
-| PR | Finding | What it does | Regression evidence | Status |
-|---|---|---|---|---|
-| [#322](https://github.com/cqrityjob/trust-path-recruitment/pull/322) `claude/cd-release-control` | CI-01 (P1) | `cd_access_policy` singleton (`internal_test` / `public` / `paused`), `cd_access_state()`, `cd_v31_may_start()`, admin-only `cd_set_access_state()`; the save gate honours the state; ships in `internal_test`, so nothing changes until the owner opens it; paused is honest for anonymous visitors too. Governance status untouched. | SQL suite 33 assertions incl. rollback refusal while `public`; `resolveSaveGate` truth table extended (1.5a–1.5f); full isolated replay | Draft; CI red on first run (register tests + frontier list), fixed and re-pushed 2026-09-28 evening |
-| [#323](https://github.com/cqrityjob/trust-path-recruitment/pull/323) `claude/jb02-application-note-privacy` | JB-02 (P2 privacy) | Column-level `SELECT` on `job_applications` (no `employer_note`) and `job_application_status_events` (no `note`) for client roles; employer reads through `rec_application_status_events()` / `rec_application_employer_note()` (members only); employer UI switched to them; candidate history no longer selects `note`. | 26 assertions: candidate A cannot read either note (API), employer A can, employer B cannot, admin behaviour unchanged, replay of `rec_submit_application`; full isolated replay incl. workspace rollback cycle | Draft; CI red on first run (workspace rollback residue + frontier list), fixed and re-pushed |
-| [#324](https://github.com/cqrityjob/trust-path-recruitment/pull/324) `claude/jb01-application-history` | JB-01 (P2) | `rec_my_application_context()` returns title, employer and `job_open` for the caller's own applications only; the history card keeps its context after the vacancy closes and shows "Annonsen är stängd"; the public link is offered only while the ad is open. Public job RLS untouched. | 14 assertions (closed/archived/unpublished/inactive-employer cases, other users see nothing); full isolated replay | Draft; CI red on first run (duplicate identifier, workspace rollback residue, frontier list), fixed and re-pushed |
-| [#325](https://github.com/cqrityjob/trust-path-recruitment/pull/325) `claude/as01-as02-assessment-state` | AS-01 (P2), AS-02 (P2, informational half) | `scp_employer_assign` refuses an application not in `submitted` / `reviewing` / `interview` (`SCP_APPLICATION_NOT_OPEN`) or a recruitment not `open` (`SCP_RECRUITMENT_COMPLETED`); the button is hidden / bulk send disabled in the same states; the deadline reaches the candidate (invitation message, Academy card). Not enforced at save/submit (owner decision 2). | 14 assertions incl. rollback → old body accepts a closed application → re-apply; full isolated replay | Draft; CI red on first run (migration name matched the `*_scp_a*` ordering glob, frontier list), renamed and re-pushed |
-| — | SP-01 (P2) | Not resolved by the Passport Completion work (its PRs 1–5 do not touch `SP_METADATA_REVIEW_REQUIRED` mapping). **Deferred to an isolated Passport fix after Passport Completion passes UAT**, to avoid conflicting changes in the same files. | — | Not started (category C) |
+The repository's schema-first release contract (`scripts/schema-first-release-check.ts`) refuses application code that calls a function its own migration introduces, so every fix that adds a database object ships as a **schema PR** (merged and applied first, evidence recorded) and a stacked **application PR** (held by the guard until then). JB-02 needs a third, CONTRACT step because the boundary is a column privilege the application must stop reading before it can be revoked.
 
-Each PR body states the finding, acceptance criteria and the tests; none refactors outside its area. CI on each PR must be green before merge; the frontier-list entries the three migration PRs add are the repository's own convention for a migration pending by design.
+| Finding | Step | PR | What it does | Regression evidence | Status |
+|---|---|---|---|---|---|
+| CI-01 (P1) | 1 schema | [#322](https://github.com/cqrityjob/trust-path-recruitment/pull/322) `claude/cd-release-control` | `cd_access_policy` singleton (`internal_test` / `public` / `paused`), `cd_access_state()`, `cd_v31_may_start()`, admin-only `cd_set_access_state()`; ships in `internal_test`; registered as the fifth reviewed anon-executable definer; governance status untouched | SQL suite 33 assertions incl. rollback refusal while `public`; full isolated replay exit 0 | Draft, CI re-running after the split |
+| CI-01 | 2 application | [#327](https://github.com/cqrityjob/trust-path-recruitment/pull/327) `claude/cd-release-control-app` | availability, tester status and `resolveSaveGate` honour the state; paused is honest for anonymous visitors | truth table 1.5a–1.5f | Draft, **blocked by design** until #322 is applied and recorded |
+| JB-02 (P2 privacy) | 1 EXPAND | [#323](https://github.com/cqrityjob/trust-path-recruitment/pull/323) `claude/jb02-application-note-privacy` | `rec_application_status_events()` / `rec_application_employer_note()` for active members **or platform admins**; `rec_submit_application` reads named fields; no privilege changes | 24 assertions (candidate refused through both, employer A reads, employer B refused, admin reads, anon cannot execute, service role untouched) | Draft, CI re-running after the split |
+| JB-02 | 2 application | [#329](https://github.com/cqrityjob/trust-path-recruitment/pull/329) `claude/jb02-application-note-privacy-app` | employer workspace and admin detail read the timeline through the function; candidate read drops the note it never rendered | — | Draft, **blocked by design** until #323 is applied and recorded |
+| JB-02 | 3 CONTRACT | [#330](https://github.com/cqrityjob/trust-path-recruitment/pull/330) `claude/jb02-application-notes-contract` | `employer_note` and `note` leave the `authenticated` grant (column list); refuses to apply without #323 | 20 assertions (column, wildcard and both functions refused for the candidate; employer reads through the functions only; resubmission still replays) | Draft; **merge only after #329 is live** |
+| JB-01 (P2) | 1 schema | [#324](https://github.com/cqrityjob/trust-path-recruitment/pull/324) `claude/jb01-application-history` | `rec_my_application_context()` returns title, employer and `job_open` for the caller's own applications only; public job RLS untouched | 14 assertions; sequential full replay | Draft, CI re-running after the split |
+| JB-01 | 2 application | [#328](https://github.com/cqrityjob/trust-path-recruitment/pull/328) `claude/jb01-application-history-app` | the history card keeps its context after the vacancy closes, shows "Annonsen är stängd", links only while open | — | Draft, **blocked by design** until #324 is applied and recorded |
+| AS-01 (P2), AS-02 (P2, informational half) | single | [#325](https://github.com/cqrityjob/trust-path-recruitment/pull/325) `claude/as01-as02-assessment-state` | `scp_employer_assign` refuses a closed application or a completed recruitment; button hidden / bulk send disabled in the same states; the deadline reaches the candidate (invitation message, Academy card). Not enforced at save/submit (owner decision 2). The migration introduces no object, so schema and application ship together | 14 assertions incl. rollback → old body accepts a closed application → re-apply; full isolated replay exit 0 | Draft; CI re-running (second push reworded one English label the pilot-truth guard read as a verdict word) |
+| SP-01 (P2) | — | — | Not resolved by the Passport Completion work. **Deferred to an isolated Passport fix after Passport Completion passes UAT** | — | Not started (category C) |
+
+**Merge order for the owner:** #323 → (apply, verify, record) → #329 → #330 → (apply, verify, record); #322 → (apply, verify, record) → #327; #324 → (apply, verify, record) → #328; #325 any time. "Apply, verify, record" = the official Supabase GitHub integration applies the migration on merge, the hosted schema is verified read-only against the `verify` SQL in `release-state.json`, and a small release commit marks it `applied` with evidence and removes it from `expectedPending` in `scripts/release-frontier-check.ts`. Each application PR then merges `main` and its guard turns green.
+
+Each PR body states the finding, acceptance criteria and the tests; none refactors outside its area. The frontier-list entries the schema PRs add are the repository's own convention for a migration pending by design.
 
 ### EXTERNAL ACTIVATIONS
 
@@ -89,9 +97,9 @@ A = must fix before owner UAT · B = must configure/activate before owner UAT ·
 |---|---|---|---|
 | Passport share links (§5.3) | P1 | **B** | publish at ≥ `f25e05f` + `PASSPORT_SHARE_ENTRY_PUBLISHED=1`; social sharing completion stays with the Passport Completion work until owner UAT |
 | EM-MAIL-01 no SMTP | P1 | **B** | `auth-and-email.md` §3.1 |
-| CI-01 signed-in Career Discovery closed | P1 | **A** + decision | PR #322; owner decision 1 |
-| JB-02 employer note readable by applicant | P2 | **A** | PR #323 |
-| JB-01 application history loses context | P2 | **A** | PR #324 |
+| CI-01 signed-in Career Discovery closed | P1 | **A** + decision | PRs #322 + #327; owner decision 1 |
+| JB-02 employer note readable by applicant | P2 | **A** | PRs #323 + #329 + #330 |
+| JB-01 application history loses context | P2 | **A** | PRs #324 + #328 |
 | AS-01 test sendable on closed application | P2 | **A** | PR #325 |
 | AS-02 deadline hidden from candidate | P2 | **A** (visible) / decision (enforced) | PR #325; owner decision 2 |
 | SP-01 correction error unmapped | P2 | **C** | isolated Passport fix after Passport Completion UAT |
@@ -124,16 +132,16 @@ A = must fix before owner UAT · B = must configure/activate before owner UAT ·
 ### FINAL OWNER UAT CHECKLIST (READY FOR OWNER UAT when every line is true)
 
 - [ ] 1. Passport Completion work merged and verified by the owner (share link, QR, revoke, social image; the §5.3 deployed checks).
-- [ ] 2. Career Discovery available to the intended UAT users: #322 merged + applied, and the owner has run `cd_set_access_state('public', …)` or granted the testers; a signed-in candidate can start, complete and save; My Career shows the CTA.
+- [ ] 2. Career Discovery available to the intended UAT users: #322 merged + applied, #327 merged, and the owner has run `cd_set_access_state('public', …)` or granted the testers; a signed-in candidate can start, complete and save; My Career shows the CTA.
 - [ ] 3. Candidate registration and employer registration complete on the published site.
 - [ ] 4. The confirmation e-mail arrives at a non-team mailbox from the CQrityjob sender (Auth log `mail_from` is yours).
 - [ ] 5. Password reset lands on `/reset-password` and the new password works.
-- [ ] 6. Candidate journey: Career Discovery → My Career → Jobs → apply with a PDF → "Mina ansökningar" (with #324, a closed vacancy keeps its title/employer).
+- [ ] 6. Candidate journey: Career Discovery → My Career → Jobs → apply with a PDF → "Mina ansökningar" (with #324 + #328, a closed vacancy keeps its title/employer).
 - [ ] 7. Employer journey: register → pending → approved → draft job → publish → application pipeline → status change → candidate message delivered in-app (and by mail once Resend is set).
 - [ ] 8. Assessment: "Skicka test" on an open application → candidate completes at `/academy` (deadline visible with #325) → review → result released; the button is absent on a rejected/withdrawn application.
 - [ ] 9. Interview Intelligence manual journey: case → preparation → guided interview → evidence → human assessment → finalised report; no AI text anywhere.
 - [ ] 10. Passport: create → add credential with a document → share → open in a private window → revoke → "not available".
-- [ ] 11. JB-02 fixed: #323 merged + applied; `GET /rest/v1/job_applications?select=employer_note` as the applicant returns a column error, not the note.
+- [ ] 11. JB-02 fixed: #323, #329 and #330 merged + applied in that order; `GET /rest/v1/job_applications?select=employer_note` as the applicant returns a column error, not the note.
 - [ ] 12. Hostinger staging deployed from `main` and smoke tests 1–12 of the Hostinger checklist pass (not required for the Lovable-hosted UAT round; required before the DNS switch).
 - [ ] 13. Production environment/secrets checklist complete (`environment-variables.md` every "R" for Prod set; no `VITE_*` secret).
 - [ ] 14. Mobile core journeys tested at 375/390 px: home, Career Discovery, My Career, Passport, Jobs, application dialog, employer pipeline.
