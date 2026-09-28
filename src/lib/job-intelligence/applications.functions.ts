@@ -598,15 +598,10 @@ export type ApplicationStatusEvent = {
   actorRole: "candidate" | "employer";
   previousStatus: ApplicationStatus;
   newStatus: ApplicationStatus;
+  note: string | null;
   createdAt: string;
 };
 
-/**
- * The applicant-visible timeline: stage changes only. The employer's note on
- * a stage change is not granted to authenticated (20261223090000, JB-02);
- * employer members read it through rec_application_status_events in the
- * recruitment workspace, and the candidate never does.
- */
 export const listApplicationStatusEvents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
@@ -616,7 +611,7 @@ export const listApplicationStatusEvents = createServerFn({ method: "POST" })
     // _employer_select already grant exactly the rows the caller may see.
     const { data: rows, error } = await ctx.supabase
       .from("job_application_status_events")
-      .select("id, actor_role, previous_status, new_status, created_at")
+      .select("id, actor_role, previous_status, new_status, note, created_at")
       .eq("application_id", data.applicationId)
       .order("created_at", { ascending: false });
     if (error) {

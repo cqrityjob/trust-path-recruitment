@@ -1,8 +1,9 @@
 -- =============================================================================
--- Applications -- the employer's note is the employer's (JB-02)
+-- Applications -- the employer's note is the employer's (JB-02), EXPAND half
 -- =============================================================================
 --
--- Resolves JB-02 of docs/release/2026-09-28-release-uat-report.md.
+-- Resolves JB-02 of docs/release/2026-09-28-release-uat-report.md together
+-- with 20261226090000_application_notes_column_privileges (the CONTRACT half).
 --
 -- ── THE DEFECT ──────────────────────────────────────────────────────────
 --
@@ -19,58 +20,33 @@
 -- live application carried a 129-character employer note its applicant
 -- could read through the API.
 --
--- ── THE FIX ─────────────────────────────────────────────────────────────
+-- ── THE FIX, IN TWO HALVES ──────────────────────────────────────────────
 --
--- Column-level privileges, the way 20261014090000 / 20261016090000 keep a
--- reviewer's identity from a Passport holder: table-level SELECT is replaced
--- by a SELECT grant on every column EXCEPT the two notes. That holds for
--- every `authenticated` caller -- candidate and employer member alike --
--- because a column privilege cannot tell them apart. The employer therefore
--- gets the notes back through two SECURITY DEFINER functions that check
--- rec_is_member() (an active member of an ACTIVE organisation) first:
+-- The boundary will be column-level privileges, the way 20261014090000 /
+-- 20261016090000 keep a reviewer's identity from a Passport holder: table-
+-- level SELECT replaced by a SELECT grant on every column EXCEPT the two
+-- notes. That holds for every `authenticated` caller -- candidate, employer
+-- member and platform admin alike -- because a column privilege cannot tell
+-- them apart. So the readers who may see the notes need a door of their own
+-- BEFORE the column goes: that door is this migration, the EXPAND half.
 --
 --   rec_application_status_events(_application_id)  the timeline, with note
 --   rec_application_employer_note(_application_id)  the current note
 --
--- Nothing else moves: no row is rewritten, no policy changes, INSERT stays
--- as it was (the candidate's own submission path), set_application_status()
--- keeps writing both columns as SECURITY DEFINER, and the platform admin
--- screens read through the service role, which is untouched.
+-- Both are SECURITY DEFINER, refuse everyone but an active member of the
+-- owning organisation (rec_is_member) or a platform admin (is_platform_admin,
+-- the admin application screens read with the admin's own session), and
+-- refuse an unknown application the same way (no existence oracle).
 --
--- Client code that selected `note` from the events table for the employer
--- (recruitment.functions.ts, the application detail) moves to the function
--- in the same change; the candidate-facing read never selected it and now
--- cannot.
+-- This half changes NO privilege: applying it alone changes nothing for
+-- anyone. The application then moves its three note reads (employer
+-- workspace, admin detail, candidate timeline) onto these functions and off
+-- the column; only after that application is live does the CONTRACT half
+-- revoke the two columns from `authenticated`. That order is the point:
+-- revoking first would break the timeline reads the application still makes.
 -- =============================================================================
 
--- ── 1. job_applications: everything but employer_note ───────────────────
-REVOKE SELECT ON public.job_applications FROM PUBLIC, anon, authenticated;
-GRANT SELECT (
-  id, job_id, employer_id, applicant_user_id, status, phone, cover_note,
-  cv_storage_path, cv_original_filename, cv_mime_type, cv_size_bytes,
-  consent_given_at, withdrawn_at, created_at, updated_at, cv_source,
-  cv_document_id, cv_document_snapshot
-) ON public.job_applications TO authenticated;
-
-COMMENT ON COLUMN public.job_applications.employer_note IS
-  'INTERNAL to the employer. Written by set_application_status() with an '
-  'employer note; not granted to authenticated. Employer members read it '
-  'through rec_application_employer_note(); the applicant never does.';
-
--- ── 2. job_application_status_events: everything but note ───────────────
-REVOKE SELECT ON public.job_application_status_events FROM PUBLIC, anon, authenticated;
-GRANT SELECT (
-  id, application_id, job_id, employer_id, actor_user_id, actor_role,
-  previous_status, new_status, created_at, notified_at, notify_error,
-  notify_attempts
-) ON public.job_application_status_events TO authenticated;
-
-COMMENT ON COLUMN public.job_application_status_events.note IS
-  'INTERNAL to the employer. The note given with a stage change; not granted '
-  'to authenticated. Employer members read it through '
-  'rec_application_status_events(); the applicant sees the stage, never the note.';
-
--- ── 3. The employer''s reads, membership-checked ─────────────────────────
+-- ── 1. The employer''s and the admin''s reads, membership-checked ────────
 CREATE OR REPLACE FUNCTION public.rec_application_status_events(_application_id uuid)
 RETURNS TABLE (
   id uuid,
@@ -85,8 +61,9 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
 DECLARE _employer uuid;
 BEGIN
   SELECT a.employer_id INTO _employer FROM public.job_applications a WHERE a.id = _application_id;
-  IF _employer IS NULL OR NOT public.rec_is_member(_employer) THEN
-    RAISE EXCEPTION 'REC_NOT_MEMBER: the caller is not an active member of the organisation that owns this application'
+  IF _employer IS NULL
+     OR NOT (public.rec_is_member(_employer) OR public.is_platform_admin(auth.uid())) THEN
+    RAISE EXCEPTION 'REC_NOT_MEMBER: the caller is not an active member of the organisation that owns this application, nor a platform admin'
       USING ERRCODE = 'insufficient_privilege';
   END IF;
   RETURN QUERY
@@ -97,8 +74,8 @@ BEGIN
 END $$;
 COMMENT ON FUNCTION public.rec_application_status_events(uuid) IS
   'The stage timeline of one application, WITH the employer''s notes. Active '
-  'members of the owning organisation only (rec_is_member); refuses everyone '
-  'else, the applicant included.';
+  'members of the owning organisation (rec_is_member) and platform admins; '
+  'refuses everyone else, the applicant included.';
 REVOKE ALL ON FUNCTION public.rec_application_status_events(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.rec_application_status_events(uuid) TO authenticated, service_role;
 
@@ -109,23 +86,27 @@ DECLARE _employer uuid; _note text;
 BEGIN
   SELECT a.employer_id, a.employer_note INTO _employer, _note
     FROM public.job_applications a WHERE a.id = _application_id;
-  IF _employer IS NULL OR NOT public.rec_is_member(_employer) THEN
-    RAISE EXCEPTION 'REC_NOT_MEMBER: the caller is not an active member of the organisation that owns this application'
+  IF _employer IS NULL
+     OR NOT (public.rec_is_member(_employer) OR public.is_platform_admin(auth.uid())) THEN
+    RAISE EXCEPTION 'REC_NOT_MEMBER: the caller is not an active member of the organisation that owns this application, nor a platform admin'
       USING ERRCODE = 'insufficient_privilege';
   END IF;
   RETURN _note;
 END $$;
 COMMENT ON FUNCTION public.rec_application_employer_note(uuid) IS
   'The employer''s current internal note on one application. Active members '
-  'of the owning organisation only; refuses everyone else.';
+  'of the owning organisation and platform admins; refuses everyone else.';
 REVOKE ALL ON FUNCTION public.rec_application_employer_note(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.rec_application_employer_note(uuid) TO authenticated, service_role;
 
--- ── 3b. The one invoker-level reader of the whole row ───────────────────
+-- ── 2. The one invoker-level reader of the whole row ────────────────────
 -- rec_submit_application runs as the candidate and replayed an idempotent
--- resubmission with `SELECT * INTO _existing`. A wildcard read now fails for
--- a role without every column, so it reads exactly the three fields the
--- replay answer uses. Body otherwise verbatim from 20261207090000.
+-- resubmission with `SELECT * INTO _existing`. Once the CONTRACT half
+-- (20261226090000) narrows the candidate's column grant, a wildcard read
+-- fails for a role without every column, so it reads exactly the three
+-- fields the replay answer uses -- prepared here, in the EXPAND half, so
+-- the contract can land without touching this function. Body otherwise
+-- verbatim from 20261207090000.
 CREATE OR REPLACE FUNCTION public.rec_submit_application(_application_id uuid, _job_id uuid, _phone text, _cover_note text, _cv_storage_path text, _cv_original_filename text, _cv_size_bytes bigint, _cv_source text DEFAULT 'upload'::text, _cv_document_id uuid DEFAULT NULL::uuid, _include_passport boolean DEFAULT false, _answers jsonb DEFAULT '[]'::jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -202,25 +183,24 @@ END; $function$;
 REVOKE ALL ON FUNCTION public.rec_submit_application(uuid, uuid, text, text, text, text, bigint, text, uuid, boolean, jsonb) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.rec_submit_application(uuid, uuid, text, text, text, text, bigint, text, uuid, boolean, jsonb) TO authenticated;
 
--- ── 4. Postflight ───────────────────────────────────────────────────────
+-- ── 3. Postflight ───────────────────────────────────────────────────────
 DO $$
 BEGIN
-  IF has_column_privilege('authenticated', 'public.job_applications', 'employer_note', 'SELECT') THEN
-    RAISE EXCEPTION 'JB02_PROOF failed: authenticated can still read job_applications.employer_note';
+  IF to_regprocedure('public.rec_application_status_events(uuid)') IS NULL
+     OR to_regprocedure('public.rec_application_employer_note(uuid)') IS NULL THEN
+    RAISE EXCEPTION 'JB02_EXPAND_PROOF failed: an employer read function is missing';
   END IF;
-  IF has_column_privilege('authenticated', 'public.job_application_status_events', 'note', 'SELECT') THEN
-    RAISE EXCEPTION 'JB02_PROOF failed: authenticated can still read job_application_status_events.note';
+  IF has_function_privilege('anon', 'public.rec_application_status_events(uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'public.rec_application_employer_note(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'JB02_EXPAND_PROOF failed: anon may execute an employer read';
   END IF;
-  IF NOT has_column_privilege('authenticated', 'public.job_applications', 'status', 'SELECT')
-     OR NOT has_column_privilege('authenticated', 'public.job_application_status_events', 'new_status', 'SELECT') THEN
-    RAISE EXCEPTION 'JB02_PROOF failed: a candidate-visible column lost its grant';
+  IF NOT has_function_privilege('authenticated', 'public.rec_application_status_events(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'JB02_EXPAND_PROOF failed: authenticated cannot execute the timeline read';
   END IF;
-  IF has_table_privilege('anon', 'public.job_applications', 'SELECT')
-     OR has_table_privilege('anon', 'public.job_application_status_events', 'SELECT') THEN
-    RAISE EXCEPTION 'JB02_PROOF failed: anon can read an application table';
+  -- No privilege moved in this half: the candidate-visible columns AND the
+  -- two notes are granted exactly as before (the CONTRACT half revokes them).
+  IF NOT has_column_privilege('authenticated', 'public.job_applications', 'status', 'SELECT') THEN
+    RAISE EXCEPTION 'JB02_EXPAND_PROOF failed: a candidate-visible column lost its grant';
   END IF;
-  IF has_function_privilege('anon', 'public.rec_application_status_events(uuid)', 'EXECUTE') THEN
-    RAISE EXCEPTION 'JB02_PROOF failed: anon may execute the employer read';
-  END IF;
-  RAISE NOTICE 'JB02_PROOF ok: notes are not granted to authenticated; employer reads are membership-checked';
+  RAISE NOTICE 'JB02_EXPAND_PROOF ok: employer reads exist, membership-or-admin checked; no privilege changed';
 END $$;

@@ -1,18 +1,15 @@
--- Roll back 20261223090000_application_notes_employer_only.
+-- Roll back 20261223090000_application_notes_employer_only (the EXPAND half).
 --
--- Restores the table-level SELECT grants on job_applications and
--- job_application_status_events to `authenticated` exactly as they stood
--- (20260719173615 / 20260720150000) and drops the two employer read
--- functions. This REINSTATES JB-02: the applicant can again read the
--- employer's note through the API. It says so because that is what a
--- rollback is. Roll the application back first or together: the employer
--- application detail at the same commit calls rec_application_status_events().
+-- Drops the two employer read functions and restores rec_submit_application
+-- exactly as 20261207090000 wrote it. No privilege changes here, because
+-- this half changed none: the CONTRACT half (20261226090000) owns the column
+-- grants and has its own rollback, which must run FIRST when both are
+-- applied (its postflight refuses otherwise: the notes would be granted to
+-- nobody but the functions this file drops). Roll the application back first
+-- or together: the employer workspace, the admin detail and the candidate
+-- timeline at the dependent commit read through these functions.
 DROP FUNCTION IF EXISTS public.rec_application_employer_note(uuid);
 DROP FUNCTION IF EXISTS public.rec_application_status_events(uuid);
-REVOKE SELECT ON public.job_applications FROM authenticated;
-REVOKE SELECT ON public.job_application_status_events FROM authenticated;
-GRANT SELECT ON public.job_applications TO authenticated;
-GRANT SELECT ON public.job_application_status_events TO authenticated;
 
 -- rec_submit_application, VERBATIM as 20261207090000 wrote it.
 CREATE OR REPLACE FUNCTION public.rec_submit_application(_application_id uuid, _job_id uuid, _phone text, _cover_note text, _cv_storage_path text, _cv_original_filename text, _cv_size_bytes bigint, _cv_source text DEFAULT 'upload'::text, _cv_document_id uuid DEFAULT NULL::uuid, _include_passport boolean DEFAULT false, _answers jsonb DEFAULT '[]'::jsonb)
