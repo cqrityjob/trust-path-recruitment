@@ -398,6 +398,7 @@ export const sendTestFromSetup = createServerFn({ method: "POST" })
       applicationId: data.applicationId,
       assignmentId,
       language: data.language,
+      deadline: data.deadline,
       assessmentName: (library ?? []).find((r) => r.item_id === version.item_id) as
         | { name_sv?: string; name_en?: string }
         | undefined,
@@ -421,6 +422,8 @@ async function inviteCandidate(
     assignmentId: string;
     language: "sv" | "en";
     assessmentName: { name_sv?: string; name_en?: string } | undefined;
+    /** The employer's deadline, named in the invitation when set (AS-02). */
+    deadline?: string | null;
   },
 ): Promise<TestInvitationOutcome | null> {
   try {
@@ -490,6 +493,7 @@ async function inviteCandidate(
       jobTitle: jobTitle || (p.language === "en" ? "the position" : "tjänsten"),
       assessmentName,
       academyUrl: `${process.env.PUBLIC_SITE_URL || SITE_ORIGIN}/academy`,
+      deadline: p.deadline ?? null,
     });
     const draft = await sb.rpc("rec_save_message_draft", {
       _message_id: null,
