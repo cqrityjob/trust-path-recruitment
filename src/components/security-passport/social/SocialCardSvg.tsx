@@ -187,30 +187,6 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
         );
       }
     }
-    if (qr) {
-      const qx = landscape ? W - pad - qrSize : pad;
-      const qy = landscape ? pad : H - pad - qrSize;
-      nodes.push(
-        <rect
-          key="qr-ground"
-          x={r(qx - 10 * u)}
-          y={r(qy - 10 * u)}
-          width={r(qrSize + 20 * u)}
-          height={r(qrSize + 20 * u)}
-          rx={r(8 * u)}
-          fill="#FFFFFF"
-        />,
-        <image
-          key="qr"
-          x={r(qx)}
-          y={r(qy)}
-          width={r(qrSize)}
-          height={r(qrSize)}
-          href={qr}
-          preserveAspectRatio="none"
-        />,
-      );
-    }
   } else {
     const size = (landscape ? 18 : 22) * u;
     const lines = wrap(p.strings.snapshotNote, charsFor(contentW, size), 2);
@@ -237,6 +213,31 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
       );
       ty += lineH;
     });
+  }
+  // `qr` is the only gate: it is null unless the model carries a link.
+  if (qr) {
+    const qx = landscape ? W - pad - qrSize : pad;
+    const qy = landscape ? pad : H - pad - qrSize;
+    nodes.push(
+      <rect
+        key="qr-ground"
+        x={r(qx - 10 * u)}
+        y={r(qy - 10 * u)}
+        width={r(qrSize + 20 * u)}
+        height={r(qrSize + 20 * u)}
+        rx={r(8 * u)}
+        fill="#FFFFFF"
+      />,
+      <image
+        key="qr"
+        x={r(qx)}
+        y={r(qy)}
+        width={r(qrSize)}
+        height={r(qrSize)}
+        href={qr}
+        preserveAspectRatio="none"
+      />,
+    );
   }
 
   // ── Identity band ────────────────────────────────────────────────────
