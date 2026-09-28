@@ -169,8 +169,30 @@ stated on the certificate; SIRA is recorded as the issuer of no course. Standing
 Arabic vocabulary must be supplied and reviewed before any PUBLIC activation; who issues the
 fitness, fire-safety and life-support documents is the one mapping a reviewer should confirm.
 
+## Public pilot for the 44: prepared, awaiting D2 (completion work order, PR 4)
+
+**Status: prepared, not decided.** The owner asked (2026-09-27) that ordinary registered
+users register supported credentials in the UK, Northern Ireland and Dubai **without
+individual grants**: "'Pilot' describes product maturity. It must not mean that I manually
+approve each user." Schema support is 20261220090000, the `public_pilot` state (PR 2). The
+data change is 20261221090000 (PR 4). It moves `GB`, `GB-NI`, `AE-DU` and the 44 definitions
+above from `internal_pilot` to `public_pilot`, and every signed-in holder can then register them.
+
+- **Default list: exactly the 44 above.** Merging PR 4 is the owner's D2 decision for that
+  list. To hold one back, take its code off the migration's list before merging.
+- **Unchanged:** `is_active` (false on all 44), the legal review (pending), the approval
+  fields, every claim and every grant. Grants stay as audited history. Route A still
+  governs any market left in internal pilot, pinned by the suites listed in the release note.
+- **Abu Dhabi stays closed.** Northern Ireland stays its own market.
+- **The caveats above still stand**, now for every holder rather than named testers: `name_ar`
+  is NULL on the Dubai rows, the issuer mapping for the fitness, fire-safety and life-support
+  documents needs confirming, and the four ICO sources need re-reading. The application shows
+  "legal review pending" and "not permission to work" next to every public-pilot market.
+- **Release:** merging is the production release (D3). See
+  `docs/release/2026-09-27-passport-open-uk-dubai-public-pilot.md`.
+
 ## Not in scope, and not requested
 
 Abu Dhabi (7 definitions) is closed by owner decision and receives nothing. Public activation of
-Great Britain, Northern Ireland or Dubai is not requested: it needs a named legal reviewer and a
-date, which do not exist.
+Great Britain, Northern Ireland or Dubai (`is_active`) is not requested: it needs a named legal
+reviewer and a date, which do not exist. The public pilot above is not activation.

@@ -34,6 +34,16 @@
 
 \set ON_ERROR_STOP on
 
+-- ── SINCE 20261221090000: ROUTE A ON A PINNED FIXTURE ──────────────────
+-- Great Britain, Northern Ireland and Dubai are a PUBLIC pilot now. This
+-- suite proves the members-only route that every market in INTERNAL pilot
+-- still uses, so it runs in one transaction that ends in ROLLBACK, with the
+-- three markets pinned back to internal_pilot for its own duration. Every
+-- assertion below is unchanged. The public pilot is proven by
+-- security_passport_open_uk_dubai_test.sql.
+BEGIN;
+\ir security_passport_route_a_markets_fixture.sql
+
 CREATE OR REPLACE FUNCTION pg_temp.ok(_cond boolean, _label text)
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
@@ -340,3 +350,5 @@ BEGIN
   SELECT count(*) INTO _n FROM public.sp_pilot_members WHERE user_id = _member;
   PERFORM pg_temp.ok(_n = 0, '7.1 the suite left no entitlement behind');
 END $$;
+
+ROLLBACK;

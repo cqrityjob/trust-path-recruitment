@@ -98,8 +98,12 @@ SELECT pg_temp.ok((SELECT count(*)=4 FROM public.sp_approved_credential_catalogu
  '2.2 the holder is offered all four, with the issuer to be stated from the certificate');
 SELECT count(*) AS se_n FROM public.sp_approved_credential_catalogue WHERE country='SE' \gset
 SELECT count(*) AS intl_n FROM public.sp_approved_credential_catalogue WHERE scope_code='global_professional' \gset
-SELECT pg_temp.ok(:se_n=8 AND :intl_n=14 AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country IN ('GB','AE')),
- '2.3 Sweden (8) and the international certifications (14) are unchanged; GB and Dubai stay closed');
+-- Since 20261221090000 the UK and Dubai are a public pilot: their 44 opened
+-- definitions reach this holder too, with no grant, and Abu Dhabi none.
+SELECT pg_temp.ok(:se_n=8 AND :intl_n=14
+   AND (SELECT count(*)=44 FROM public.sp_approved_credential_catalogue WHERE country IN ('GB','AE'))
+   AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
+ '2.3 Sweden (8) and the international certifications (14) are unchanged; GB and Dubai are their 44 public-pilot definitions, Abu Dhabi none');
 
 -- GUARDED RELEASE. Over PostgREST's listing path, an application that does not
 -- send the catalogue contract (one deployed before this release) is offered no
@@ -214,11 +218,14 @@ SELECT pg_temp.ok((SELECT jurisdiction_code='IN' AND sub_jurisdiction_code IS NU
  '4.1 choosing Dubai as a destination leaves the work country India');
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_claims WHERE holder_user_id=auth.uid() AND lifecycle_state='active' AND jurisdiction_code<>'IN'),
  '4.2 and relabels no credential');
-SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'AE-DU')='closed' AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-DU'),
- '4.3 and grants no Dubai access');
+SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'AE-DU')='public_pilot'
+   AND public.sp_market_access(auth.uid(),'AE-AZ')='closed',
+ '4.3 and changes no access: Dubai is the public pilot it is for every signed-in holder, Abu Dhabi stays closed');
 SELECT pg_temp.ok((SELECT locality='पुणे' FROM public.candidate_current_location WHERE user_id=auth.uid()),
  '4.4 a locality in any script is kept as written');
 RESET ROLE;
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_pilot_members WHERE user_id='fd140000-0000-4000-8000-000000000001'),
+ '4.5 and creates no pilot grant');
 -- A Swedish holder sees the same four: availability does not follow residence or work country.
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fd140000-0000-4000-8000-000000000004',true);
