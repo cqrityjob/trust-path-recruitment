@@ -14687,7 +14687,7 @@ export const dictionaries = {
     "academy.home.assigned": "Assigned to you",
     "academy.home.requestedBy": "Requested by",
     "academy.home.deadline": "Due by:",
-    "academy.home.deadlinePassed": "The due date has passed:",
+    "academy.home.deadlinePassed": "Due date, now past:",
     "academy.home.purpose": "Purpose and processing",
     "academy.home.purposeFallback": "Competence development.",
     "academy.home.privacy":
