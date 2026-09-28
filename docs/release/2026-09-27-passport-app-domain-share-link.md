@@ -187,8 +187,8 @@ that. Its LinkedIn profile entry is available again in the social choice.
 - **The CI `verify` job's steps, run locally:** 163 of the 164 steps run here pass,
   including both type-checks, all 41 Passport guards and the production build. The
   one red step is the repository-wide ESLint, which CI runs with
-  `continue-on-error`: 929 problems at this head against 930 on `main`, none in the
-  37 code files this PR changes.
+  `continue-on-error`: 929 problems at this head against 930 on `main`, none in a
+  code file this PR changes.
   - `passport-share-gateway-transport-check` (89 assertions) runs the real function
     and the hosted-restriction proxy over HTTP, before and after the owner's switch.
   - `passport-social-image-check` (116 assertions) is new. It includes checks that
