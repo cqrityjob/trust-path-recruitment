@@ -37,7 +37,7 @@ not approved for the public_.
 |---|---|
 | Implemented and tested | **yes** — all 44, pinned by code, with no approval of any kind in the proofs |
 | Definition approved for the public (`is_active`) | **no, by design** — 0 of 44 |
-| Hosted migration applied | 20261124090000 and 20261125090000 **applied** (ledger verified read-only 2026-09-18); **20261126090000 pending** until PR #265 merges |
+| Hosted migration applied | 20261124090000, 20261125090000 and 20261126090000 **applied** (ledger verified read-only 2026-09-27) |
 | Pilot membership granted | per named tester, per market; none assumed |
 | Selectable and saveable by the actual tester | after the release steps below |
 
@@ -70,7 +70,7 @@ and no window in which a form is offered something it cannot save.
    form keeps working and is offered only what it can save.
 5. **Grant pilot access per tester**: Admin → Users → the tester → _Pilot access_ → grant
    `GB`, `GB-NI` and/or `AE-DU`. Northern Ireland is its own market with its own grant.
-6. **Confirm on the admin page** `/admin/passport-catalogue`: _Selectable by everyone_ 22,
+6. **Confirm on the admin page** `/admin/passport-catalogue`: _Selectable by everyone_ 26 (22 before India's four national qualifications, `20261214090000`),
    _Selectable by this market's pilot members_ 44, _Market closed_ 7, _Blocked_ 0.
 7. **The tester follows** [pilot-checklist-sv.md](pilot-checklist-sv.md).
 

@@ -1355,6 +1355,25 @@ jobs:
       - name: Passport expired-trust language
         run: bun run passport-expired-trust-language:check
 
+      # Five Passport guards that had package scripts but ran in no workflow,
+      # so nothing noticed when one went stale: the persona-journey check
+      # still believed sp_jurisdictions held three countries after India
+      # shipped. Read-only over committed code, nothing hosted.
+      - name: Passport date validation
+        run: bun run passport-date-validation:check
+
+      - name: Passport persona journeys
+        run: bun run passport-persona-journey:check
+
+      - name: Passport recipient card
+        run: bun run passport-recipient-card:check
+
+      - name: Passport skill contract
+        run: bun run passport-skill-contract:check
+
+      - name: Passport workspace
+        run: bun run passport-workspace:check
+
       - name: Candidate destination composition (sketches 3, 4, 5)
         run: bun run candidate-destination-composition:check
 

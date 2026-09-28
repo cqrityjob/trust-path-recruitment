@@ -35,6 +35,7 @@ import path from "node:path";
 import { mock } from "bun:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { MarketOverviewRow } from "../src/components/security-passport/MarketOverviewCards";
 
 // The market cards and the admin section link with the router's <Link>,
 // which needs a router. The workspace guard mocks it the same way.
@@ -876,8 +877,8 @@ group("9 · three market cards, the admin section and the copy, both languages")
     code: string,
     j: string,
     sub: string | null,
-    availability: "available" | "internal_pilot",
-    holderAccess: "production" | "pilot" | "closed",
+    availability: MarketOverviewRow["availability"],
+    holderAccess: MarketOverviewRow["holderAccess"],
     isCurrentWorkMarket = false,
   ) => ({
     marketPackCode: code,

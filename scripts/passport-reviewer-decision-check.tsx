@@ -107,6 +107,7 @@ const VU1: VerifierClaimFacts = {
   assertion: "document_provided",
   lifecycle: "active",
   versionNo: 1,
+  definitionVersion: null,
 };
 
 /** A Dubai licence. `AE` alone would state a UAE-wide validity SIRA never
@@ -142,6 +143,7 @@ const SPARSE: VerifierClaimFacts = {
   assertion: null,
   lifecycle: null,
   versionNo: null,
+  definitionVersion: null,
 };
 
 const PERIOD: VerifierPeriodFacts = {
@@ -497,7 +499,7 @@ group("GROUP 6 — attribution says HOW, not just WHO");
     versionNo: 1,
     supersedesClaimId: null,
   };
-  const row = html(<ClaimRow claim={base} evaluationOn="2026-08-31" />);
+  const row = html(<ClaimRow claim={base} />);
   ck(
     "6.7 the entry row says the document was reviewed, by CQrityjob",
     row.includes(sv("claims.attribution.document_review")) && row.includes("CQrityjob"),
@@ -517,7 +519,6 @@ group("GROUP 6 — attribution says HOW, not just WHO");
         verificationMethod: null,
         verifiedOn: null,
       }}
-      evaluationOn="2026-08-31"
     />,
   );
   ck(

@@ -149,7 +149,9 @@ function panel(over: Partial<React.ComponentProps<typeof VerificationPanel>> = {
       decisions={[] as readonly VerificationDecisionRecord[]}
       hasEvidence
       canAskEmployer={false}
-      employers={[]}
+      employerSearch={{ suggestions: [], truncated: false, loading: false, failed: false }}
+      onEmployerSearch={() => {}}
+      openRequestEmployerName={null}
       onSubmit={noopAsync}
       onWithdrawRequest={noopAsync}
       onDispute={noopAsync}

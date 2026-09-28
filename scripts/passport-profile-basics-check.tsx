@@ -238,6 +238,7 @@ console.log("\nCOMPLETION -- an honest count, in the right vocabulary");
           answers={{}}
           declaredAccurateAt={null}
           onSave={noopSave}
+          onEditProfession={noop}
           onEditWorkCountry={noop}
           onEditCurrentRole={noop}
         />,
