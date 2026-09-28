@@ -30,6 +30,11 @@
 //      recipient sees the selection and nothing else, never a private
 //      document -> the gateway form of the link opens it too, through hosted
 //      Supabase's HTML restriction -> expiry, then revocation, end it;
+//   S  the other choice: a social image of the credentials the holder picks,
+//      in the shared card's shields and truthful words -- previewed exactly as
+//      downloaded, in every format, with no link or QR code until the holder
+//      creates one for it and ticks it in, and platform buttons that only
+//      open a composer;
 //   H  another holder can read nothing of this Passport, change nothing, and
 //      cannot raise their own trust, through the pages or the API;
 //   B  a mixed-market holder adds all four Indian qualifications and reloads;
@@ -42,7 +47,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import QRCode from "qrcode";
 import { test, expect, type Browser, type Page } from "@playwright/test";
@@ -988,6 +993,297 @@ test.describe("the public pilot, on a real backend", () => {
     } finally {
       await context.close();
     }
+  });
+
+  test("S · a social image of what the holder selects: the preview is the download, no link unless chosen, nothing posted for them", async ({
+    page,
+    browser,
+  }) => {
+    test.info().annotations.push({ type: "proof", description: "S" });
+    const uid = uidOf(who("dubai"));
+    const du = activeClaim(uid, "AE_DU_SIRA_CARD_GUARD");
+    const ind = activeClaim(uid, "IN_MEPSC_Q7101");
+    const vu1 = activeClaim(uid, "VU1");
+    const documents = sql(
+      `select string_agg(file_name, ',') from public.sp_evidence where holder_user_id='${uid}'`,
+    )
+      .split(",")
+      .filter(Boolean);
+    const neverOnTheImage = [
+      "Väktarutbildning",
+      "Fiktivt Security LLC",
+      "2028",
+      uid,
+      "/p#",
+      ...documents,
+    ];
+
+    // Every platform button is recorded, not followed: nothing may be posted,
+    // and the test reaches no platform.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __opened: string[] };
+      w.__opened = [];
+      window.open = ((url?: string | URL) => {
+        w.__opened.push(String(url));
+        return null;
+      }) as typeof window.open;
+    });
+    await inLanguage(page, "sv");
+    await atEvidenceWidth(page);
+    await signIn(page, who("dubai"), "/passport/share");
+    await page.goto(`${BASE}/passport/share`);
+
+    // The two choices, and the link flow is where it always was.
+    await expect(page.locator("[data-share-choice]")).toHaveCount(2, { timeout: 60_000 });
+    await expect(page.locator('[data-share-choice="link"]')).toContainText("Dela via länk");
+    await expect(page.locator('[data-share-choice="social"]')).toContainText(
+      "Dela på sociala medier",
+    );
+    await evidence(page, "sv-share-choices");
+    await page.locator('[data-share-choice="social"]').click();
+    const flow = page.locator("[data-social-flow]");
+    await expect(flow).toBeVisible();
+
+    // Credentials only -- an image never names an employer -- chosen by the
+    // holder, nothing ticked for them.
+    await expect(flow.locator('[data-merit-option^="experience:"]')).toHaveCount(0);
+    await expect(flow.locator('input[type="checkbox"]:checked')).toHaveCount(0);
+    await flow.locator(`[data-merit-option="claim:${du}"] input`).check();
+    await flow.locator(`[data-merit-option="claim:${ind}"] input`).check();
+    await expect(flow.locator(`[data-merit-option="claim:${vu1}"] input`)).not.toBeChecked();
+
+    const preview = (format: string) => flow.locator(`[data-social-preview="${format}"]`);
+    const svgOf = async (format: string) => {
+      const src = (await preview(format).getAttribute("src")) ?? "";
+      return decodeURIComponent(src.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
+    };
+    const words = (svg: string) =>
+      [...svg.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map((m) => m[1] ?? "").join("\n");
+
+    // The preview, drawn in the shared card's vocabulary: the shield, the
+    // flag and scope, and each credential's own truthful word.
+    await expect(preview("square")).toBeVisible({ timeout: 60_000 });
+    await expect(preview("square")).toHaveAttribute("data-social-link", "none");
+    await expect(flow.locator('[data-social-link-state="none"]')).toBeVisible();
+    let svg = await svgOf("square");
+    expect(svg).toContain('data-shield-mark="documented"');
+    expect(svg).toContain('data-flag="AE"');
+    let text = words(svg);
+    expect(text).toContain("SIRA");
+    expect(text).toContain("Dubai, UAE");
+    expect(text).toContain("DOKUMENTERAD");
+    expect(text, "nothing is called verified that is not").not.toMatch(/KÄLLBEKRÄFTAD|VERIFIERAD/);
+    expect(text).toContain("En ögonblicksbild.");
+    for (const absent of neverOnTheImage) expect(svg).not.toContain(absent);
+    expect(svg, "no QR code without a link").not.toContain("<image");
+    await evidence(page, "sv-social-preview");
+
+    // The download is the preview: the same SVG, rasterised, pixel for pixel.
+    const downloadMatches = async (format: string, width: number, height: number) => {
+      const shown = (await preview(format).getAttribute("src")) ?? "";
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        flow.locator("[data-social-download]").click(),
+      ]);
+      expect(download.suggestedFilename()).toBe(`cqrityjob-passport-${format}.png`);
+      const png = readFileSync((await download.path())!).toString("base64");
+      const differing = await page.evaluate(
+        async ({ png, shown, width, height }) => {
+          const load = (src: string) =>
+            new Promise<HTMLImageElement>((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = () => reject(new Error("image did not load"));
+              img.src = src;
+            });
+          const [file, drawn] = await Promise.all([
+            load(`data:image/png;base64,${png}`),
+            load(shown),
+          ]);
+          if (file.naturalWidth !== width || file.naturalHeight !== height) return -1;
+          const pixels = (img: HTMLImageElement) => {
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d")!;
+            ctx.drawImage(img, 0, 0, width, height);
+            return ctx.getImageData(0, 0, width, height).data;
+          };
+          const a = pixels(file);
+          const b = pixels(drawn);
+          let differing = 0;
+          for (let i = 0; i < a.length; i += 4) {
+            if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) differing += 1;
+          }
+          return differing;
+        },
+        { png, shown, width, height },
+      );
+      expect(differing, `${format}: the downloaded PNG is the previewed image`).toBe(0);
+    };
+    await downloadMatches("square", 1080, 1080);
+
+    await flow.locator('[data-social-format="og"]').click();
+    await expect(preview("og")).toBeVisible();
+    await downloadMatches("og", 1200, 630);
+
+    // Instagram has no web publishing: its button switches the preview to the
+    // Story image and downloads exactly that.
+    const story = page.waitForEvent("download");
+    await flow.locator('[data-social-channel="instagram"]').click();
+    await expect(preview("story")).toBeVisible();
+    const storyDownload = await story;
+    expect(storyDownload.suggestedFilename()).toBe("cqrityjob-passport-story.png");
+    {
+      const shown = (await preview("story").getAttribute("src")) ?? "";
+      const png = readFileSync((await storyDownload.path())!).toString("base64");
+      const size = await page.evaluate(
+        async ({ png, shown }) => {
+          const img = new Image();
+          img.src = `data:image/png;base64,${png}`;
+          await img.decode();
+          const svg = new Image();
+          svg.src = shown;
+          await svg.decode();
+          return `${img.naturalWidth}x${img.naturalHeight}/${svg.naturalWidth}x${svg.naturalHeight}`;
+        },
+        { png, shown },
+      );
+      expect(size).toBe("1080x1920/1080x1920");
+    }
+    await evidence(page, "sv-social-story");
+
+    // The platforms: a composer or a page for the holder, with no link in it.
+    await flow.locator('[data-social-format="square"]').click();
+    await flow.locator('[data-social-channel="linkedin"]').click();
+    await flow.locator('[data-social-channel="x"]').click();
+    await flow.locator('[data-social-channel="whatsapp"]').click();
+    await expect(flow.locator('[data-social-channel="copy_link"]')).toHaveCount(0);
+    let opened = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+    expect(opened[0]).toBe("https://www.linkedin.com/feed/");
+    expect(opened[1]).toMatch(/^https:\/\/twitter\.com\/intent\/tweet\?text=[^&]+$/);
+    expect(opened[2]).toMatch(/^https:\/\/wa\.me\/\?text=[^&]+$/);
+    for (const url of opened) expect(url).not.toMatch(/url=|%2Fp%23|\/p#/);
+
+    // A link only on purpose: created for exactly this selection, not drawn
+    // until the holder ticks it, and then drawn in the preview before any
+    // download.
+    await flow.locator("[data-social-more] > summary").click();
+    await flow.locator("[data-social-link-create]").click();
+    const linkField = flow.locator("[data-social-link]");
+    await expect(linkField).toBeVisible({ timeout: 60_000 });
+    const link = await linkField.inputValue();
+    expect(new URL(link).pathname).toBe("/p");
+    expect(new URL(link).hash).toMatch(/^#[0-9a-f]{64}$/);
+    await expect(preview("square")).toHaveAttribute("data-social-link", "none");
+    expect(await svgOf("square")).not.toContain(link.slice(-64));
+    await flow.locator("[data-social-link-include]").check();
+    await expect(preview("square")).toHaveAttribute("data-social-link", "included", {
+      timeout: 30_000,
+    });
+    await expect(flow.locator('[data-social-link-state="included"]')).toBeVisible();
+    // The QR code is drawn once it has been generated; the download waits
+    // for it too.
+    await expect
+      .poll(async () => (await svgOf("square")).includes("<image"), {
+        timeout: 30_000,
+      })
+      .toBe(true);
+    svg = await svgOf("square");
+    text = words(svg);
+    expect(text.replace(/\n/g, "")).toContain(link);
+    expect(text).toContain("Kontrollera aktuell status hos CQrityjob");
+    // The QR code drawn into the image is exactly the link, module for module.
+    const qrHref = /<image\b[^>]*href="(data:image\/png;base64,[^"]+)"/.exec(svg)?.[1] ?? "";
+    expect(qrHref).not.toBe("");
+    const expected = QRCode.create(link, { errorCorrectionLevel: "M" }).modules;
+    const drawn = await page.evaluate(
+      async ({ href, size }) => {
+        const img = new Image();
+        img.src = href;
+        await img.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0);
+        const cell = img.naturalWidth / size;
+        const out: number[] = [];
+        for (let y = 0; y < size; y += 1)
+          for (let x = 0; x < size; x += 1) {
+            const px = ctx.getImageData(
+              Math.floor(x * cell + cell / 2),
+              Math.floor(y * cell + cell / 2),
+              1,
+              1,
+            ).data;
+            out.push(px[0]! + px[1]! + px[2]! < 384 ? 1 : 0);
+          }
+        return out;
+      },
+      { href: qrHref, size: expected.size },
+    );
+    expect(drawn).toEqual(Array.from(expected.data, (v) => (v ? 1 : 0)));
+    await downloadMatches("square", 1080, 1080);
+    await flow.locator('[data-social-channel="x"]').click();
+    opened = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+    expect(opened.at(-1)).toContain(`url=${encodeURIComponent(link)}`);
+    await evidence(page, "sv-social-link-included");
+
+    // The link opens exactly what the image shows, for anyone who scans it.
+    const { context, page: recipient } = await anotherPerson(browser, "en");
+    try {
+      await recipient.goto(link);
+      await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+      const main = recipient.locator("main");
+      await expect(main).toContainText("SIRA Security Cadre Card — Security Guard", {
+        timeout: 60_000,
+      });
+      await expect(main).toContainText("Security Guard (MEP/Q7101)");
+      await expect(main).not.toContainText("Väktarutbildning 1");
+      for (const d of documents) await expect(main).not.toContainText(d);
+    } finally {
+      await context.close();
+    }
+
+    // Revocable where every link is.
+    const share = sql(
+      `select id from public.sp_disclosures where holder_user_id='${uid}' order by created_at desc limit 1`,
+    );
+    await page.locator(`[data-share-revoke="${share}"]`).click();
+    await expect(page.locator(`[data-share-row="${share}"]`)).toHaveAttribute(
+      "data-share-state",
+      "revoked",
+      { timeout: 60_000 },
+    );
+
+    // In English, and still inside the page's width.
+    await inLanguage(page, "en");
+    await page.goto(`${BASE}/passport/share`);
+    await page.locator('[data-share-choice="social"]').click();
+    await expect(page.locator('[data-share-choice="social"]')).toContainText(
+      "Share on social media",
+    );
+    const en = page.locator("[data-social-flow]");
+    await en.locator(`[data-merit-option="claim:${du}"] input`).check();
+    await expect(en.locator('[data-social-preview="square"]')).toBeVisible({ timeout: 60_000 });
+    const enText = words(
+      decodeURIComponent(
+        ((await en.locator('[data-social-preview="square"]').getAttribute("src")) ?? "").replace(
+          /^data:image\/svg\+xml;charset=utf-8,/,
+          "",
+        ),
+      ),
+    );
+    expect(enText).toContain("DOCUMENTED");
+    expect(enText).toContain("A snapshot.");
+    expect(enText).not.toMatch(/SOURCE-CONFIRMED|VERIFIED/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await evidence(page, "en-social-preview");
   });
 
   test("H · another holder can read or change nothing of this Passport, and cannot raise their own trust", async ({

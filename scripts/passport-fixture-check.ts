@@ -605,7 +605,7 @@ for (const pkg of DISCLOSURE_PACKAGES) {
 
       // (e) The verify destination must not embed the holder's id.
       expect(
-        !social.verifyUrl.includes(persona.id),
+        social.verifyUrl !== null && !social.verifyUrl.includes(persona.id),
         `${persona.id}/${mode}: verification URL embeds an internal identifier.`,
       );
 

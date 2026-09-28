@@ -66,7 +66,8 @@ export function CardStudio({ personaId, className }: { personaId: string; classN
     anonymousLabel: pt("share.anonymousLabel"),
     staleWarning: overlay !== "none",
   });
-  const verifyUrl = social.verifyUrl;
+  // A fixture card always carries its fixture address.
+  const verifyUrl = social.verifyUrl ?? "";
 
   return (
     <div className={cn("mx-auto w-full max-w-7xl space-y-8", className)}>

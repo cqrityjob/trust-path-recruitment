@@ -360,7 +360,6 @@ export function PrototypeShell() {
                 anonymousLabel: pt("share.anonymousLabel"),
                 verifyUrl: `cqrityjob.example/p/fixture-${personaId}`,
               })}
-              qrDataUrl={null}
             />
           </div>
         ) : null}
