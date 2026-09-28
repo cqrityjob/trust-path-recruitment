@@ -103,6 +103,20 @@ function legalReviewText(state: string | null | undefined, l: "sv" | "en"): stri
   return LEGAL_REVIEW[state]?.[l] ?? state;
 }
 
+/** The definition's pilot state, in words. The raw `closed` printed under an
+ *  active market's code read as "Sweden: closed" beside "Selectable by
+ *  everyone"; it means only that the definition is in no pilot. */
+const PILOT_STATE: Record<string, { sv: string; en: string }> = {
+  closed: { sv: "ingen pilot", en: "no pilot" },
+  internal_pilot: { sv: "intern pilot", en: "internal pilot" },
+  public_pilot: { sv: "öppen pilot", en: "public pilot" },
+};
+
+function pilotStateText(state: string | null | undefined, l: "sv" | "en"): string {
+  if (!state) return "-";
+  return PILOT_STATE[state]?.[l] ?? state;
+}
+
 function AutomaticVerificationText({
   value,
   l,
@@ -330,8 +344,11 @@ function PassportCatalogueRoute() {
                                 : `${r.jurisdictionCode ?? "-"}${r.subJurisdictionCode ? ` · ${copy("region krävs", "region required")}` : ""}`}
                           </span>
                           <br />
-                          <span className="text-muted-foreground" data-catalogue-pilot-state>
-                            {r.pilotState ?? "-"}
+                          <span
+                            className="text-muted-foreground"
+                            data-catalogue-pilot-state={r.pilotState ?? ""}
+                          >
+                            {pilotStateText(r.pilotState, l)}
                           </span>
                         </td>
                         <td className="p-3 text-xs">
