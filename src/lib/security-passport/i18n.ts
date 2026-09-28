@@ -2231,6 +2231,49 @@ const sv = {
   "share.channel.copyUrl": "Kopiera URL",
   "share.channel.instagramHint": "Ladda ned Story-bilden och lägg upp den i appen.",
 
+  // ── Two ways to share (/passport/share) ─────────────────────────────
+  "share.via.legend": "Hur vill du dela?",
+  "share.via.link": "Dela via länk",
+  "share.via.linkHint":
+    "En privat länk och QR-kod till de meriter du väljer. Tidsbegränsad, och du kan återkalla den.",
+  "share.via.social": "Dela på sociala medier",
+  "share.via.socialHint":
+    "En bild av ditt Passport som du laddar ner och publicerar själv. Ingen länk ingår om du inte lägger till en.",
+  "social.step.choose": "Välj vad bilden visar",
+  "social.onlyPublishable":
+    "Bilden visar högst tre meriter som gäller i dag, var och en med sin egen granskningsnivå — precis som ditt delade Passport.",
+  "social.limitReached": "Bilden rymmer tre meriter. Avmarkera en för att välja en annan.",
+  "social.empty":
+    "Du har ännu ingen merit som gäller i dag att visa på en bild. Lägg först till en merit i ditt Passport.",
+  "social.step.preview": "Förhandsgranska bilden",
+  "social.format": "Format",
+  "social.previewAlt": "Förhandsvisning av bilden som laddas ner",
+  "social.noLinkInImage": "Bilden innehåller ingen länk och ingen QR-kod.",
+  "social.linkInImage": "Bilden innehåller din delningslänk och dess QR-kod.",
+  "social.notDrawn":
+    "En eller flera valda meriter visas inte på bilden eftersom de inte längre gäller i dag.",
+  "social.step.share": "Ladda ner och dela",
+  "social.download": "Ladda ner bild",
+  "social.downloaded": "Nedladdad",
+  "social.platformsHint":
+    "Knapparna öppnar tjänsten i en ny flik. Bifoga bilden du laddade ner. Inget publiceras åt dig.",
+  "social.postText": "Mitt Security Passport från CQrityjob.",
+  "social.snapshotNote":
+    "En ögonblicksbild. Aktuell status bekräftas bara via en delningslänk från innehavaren.",
+  "social.more": "Fler alternativ",
+  "social.language": "Bildens språk",
+  "social.link.title": "Lägg till en länk (valfritt)",
+  "social.link.body":
+    "Den som ser bilden kan då öppna exakt de meriter bilden visar, tills länken går ut eller du återkallar den. Plattformar kan behålla bilden även efter det.",
+  "social.link.create": "Skapa en länk för bilden",
+  "social.link.creating": "Skapar länken…",
+  "social.link.created": "Länken är skapad. Den syns inte i bilden förrän du väljer det.",
+  "social.link.include": "Visa länken och QR-koden i bilden och i inlägget",
+  "social.link.stale":
+    "Urvalet har ändrats sedan länken skapades. Skapa en ny länk om bilden ska visa en.",
+  "social.link.revoke": "Länken finns bland dina delningar nedan, där du kan återkalla den.",
+  "social.aboutImage": "Om bilden",
+
   // ── Lägg till i LinkedIn-profil ──────────────────────────────────────
   "lip.title": "Lägg till i LinkedIn-profil",
   "lip.lead":
@@ -4321,6 +4364,49 @@ const en: Record<PassportCopyKey, string> = {
   "share.channel.instagram": "Instagram",
   "share.channel.copyUrl": "Copy URL",
   "share.channel.instagramHint": "Download the Story image and post it from the app.",
+
+  // ── Two ways to share (/passport/share) ─────────────────────────────
+  "share.via.legend": "How do you want to share?",
+  "share.via.link": "Share via link",
+  "share.via.linkHint":
+    "A private link and QR code to the credentials you choose. Time-limited, and you can revoke it.",
+  "share.via.social": "Share on social media",
+  "share.via.socialHint":
+    "An image of your Passport that you download and post yourself. No link is included unless you add one.",
+  "social.step.choose": "Choose what the image shows",
+  "social.onlyPublishable":
+    "The image shows at most three credentials that are valid today, each at its own level of review — just as your shared Passport does.",
+  "social.limitReached": "The image holds three credentials. Clear one to choose another.",
+  "social.empty":
+    "You have no credential valid today to show on an image yet. Add a credential to your Passport first.",
+  "social.step.preview": "Preview the image",
+  "social.format": "Format",
+  "social.previewAlt": "Preview of the image that will be downloaded",
+  "social.noLinkInImage": "The image contains no link and no QR code.",
+  "social.linkInImage": "The image contains your share link and its QR code.",
+  "social.notDrawn":
+    "One or more selected credentials are not shown on the image because they are no longer valid today.",
+  "social.step.share": "Download and share",
+  "social.download": "Download image",
+  "social.downloaded": "Downloaded",
+  "social.platformsHint":
+    "The buttons open the service in a new tab. Attach the image you downloaded. Nothing is posted for you.",
+  "social.postText": "My Security Passport from CQrityjob.",
+  "social.snapshotNote":
+    "A snapshot. Current status is confirmed only through a share link from the holder.",
+  "social.more": "More options",
+  "social.language": "Image language",
+  "social.link.title": "Add a link (optional)",
+  "social.link.body":
+    "Anyone who sees the image can then open exactly the credentials it shows, until the link expires or you revoke it. Platforms may keep the image even after that.",
+  "social.link.create": "Create a link for the image",
+  "social.link.creating": "Creating the link…",
+  "social.link.created": "The link is created. It is not in the image until you choose so.",
+  "social.link.include": "Show the link and QR code in the image and the post",
+  "social.link.stale":
+    "The selection has changed since the link was created. Create a new link if the image should show one.",
+  "social.link.revoke": "The link is in your shares below, where you can revoke it.",
+  "social.aboutImage": "About the image",
 
   // ── Add to LinkedIn profile ──────────────────────────────────────────
   "lip.title": "Add to LinkedIn profile",

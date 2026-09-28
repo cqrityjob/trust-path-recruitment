@@ -373,6 +373,34 @@ export function CredentialPlate({
 
 /** Original wordmark lockup. Type and a drawn shield outline — no imported
  *  logo asset, nothing borrowed. */
+/** The brand shield on its own, as pure SVG: the mark BrandMark sets beside
+ *  the wordmark, and the one the exported social card draws. */
+export function BrandGlyph({
+  tone = TRUST_PALETTE.ink,
+  height = 18,
+}: {
+  tone?: string;
+  height?: number;
+}) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={(height * 16) / 18}
+      height={height}
+      viewBox="0 0 16 18"
+      fill="none"
+    >
+      <path
+        d="M8 1 1 3.6v5.2C1 13.1 4 16.3 8 17c4-.7 7-3.9 7-8.2V3.6z"
+        stroke={tone}
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <path d="M5.4 9.1 7.2 11l3.4-3.6" stroke={tone} strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function BrandMark({
   tone = TRUST_PALETTE.ink,
   compact = false,
@@ -382,15 +410,7 @@ export function BrandMark({
 }) {
   return (
     <span className="inline-flex items-center gap-2">
-      <svg aria-hidden="true" width="16" height="18" viewBox="0 0 16 18" fill="none">
-        <path
-          d="M8 1 1 3.6v5.2C1 13.1 4 16.3 8 17c4-.7 7-3.9 7-8.2V3.6z"
-          stroke={tone}
-          strokeWidth="1.2"
-          strokeLinejoin="round"
-        />
-        <path d="M5.4 9.1 7.2 11l3.4-3.6" stroke={tone} strokeWidth="1.4" strokeLinecap="round" />
-      </svg>
+      <BrandGlyph tone={tone} />
       <span
         className={`font-semibold tracking-tight ${compact ? "text-xs" : "text-sm"}`}
         style={{ color: tone, fontFamily: "var(--font-display)" }}

@@ -35,12 +35,16 @@
 
 import { withoutSelfDeclared } from "./identity/visibility";
 import { effectiveAssertionLevel } from "./provenance";
+import { credentialPresentationOf, presentationWordKeyOf } from "./trust-presentation";
+import type { CredentialPresentationState } from "./design/credential-symbols";
+import type { PassportCopyKey } from "./i18n";
+import type { RecipientCredential } from "./recipient-presentation";
 import { toPublicTitles } from "./identity/presentation";
 import type { PublicTitle } from "./identity/types";
 import { totalsByEvidenceLevel } from "./experience";
 import { recognitionFor } from "./recognition";
 import { validityOf } from "./validity";
-import type { IsoDate, PassportHolder } from "./types";
+import type { Claim, IsoDate, PassportHolder } from "./types";
 
 export type PrivacyMode = "full_name" | "initials" | "anonymous";
 
@@ -50,12 +54,23 @@ export const FIXTURE_VERIFY_ORIGIN = "cqrityjob.example/p";
 
 export interface SocialCredentialName {
   readonly id: string;
-  /** Taxonomy code for the credential symbol, or null for free text. Only
-   *  ever an approved-state mark here: everything in this list is verified
-   *  AND active by the filter below, so the symbol cannot overstate. */
+  /** Taxonomy code for the credential symbol, or null for free text. */
   readonly code: string | null;
   readonly nameSv: string;
   readonly nameEn: string;
+  /** The shield's treatment, from the shared presentation: verified only for
+   *  a source confirmation, documented for a CQrityjob review, self-declared
+   *  for the holder's own entry. Never raised for the image. */
+  readonly state: CredentialPresentationState;
+  /** The word beside the shield, from the shared labeller, for that state. */
+  readonly statusWordKey: PassportCopyKey;
+  /** Where the credential applies, for its flag and written scope: the same
+   *  three facts the shared card resolves its shields from. */
+  readonly scope: {
+    readonly global: boolean;
+    readonly jurisdictionCode: string | null;
+    readonly subJurisdictionCode: string | null;
+  };
 }
 
 export interface SocialCardModel {
@@ -71,11 +86,18 @@ export interface SocialCardModel {
   readonly jurisdictionCode: string | null;
   /** Verified years only, or null. The single permitted prominent number. */
   readonly milestoneYears: number | null;
-  /** NAMES ONLY — no issuer, no dates, no numbers. */
+  /** NAMES ONLY — no issuer, no dates, no numbers. The source-confirmed,
+   *  current credentials: never anything less, under any builder. */
   readonly verifiedCredentials: readonly SocialCredentialName[];
-  /** Fixture verification destination. Carries an opaque token, never an id
-   *  drawn from the holder's data. */
-  readonly verifyUrl: string;
+  /** What the image draws, each at its own truthful state. The fixture card
+   *  draws its verified list; the sharing centre's card draws the holder's
+   *  selection (`buildSelectedSocialCard`). */
+  readonly credentials: readonly SocialCredentialName[];
+  /** The share link printed on the image with its QR code, or NULL: no link
+   *  and no QR at all. A live social image is null unless the holder created
+   *  a link for it and chose to show it. A fixture carries an opaque fixture
+   *  address, never an id drawn from the holder's data. */
+  readonly verifyUrl: string | null;
   /** True when the underlying share is no longer active — the card then
    *  leads with "check current status" rather than the milestone. */
   readonly staleWarning: boolean;
@@ -148,17 +170,50 @@ export interface SocialCardOptions {
    *  card stays a summary rather than a dossier. */
   readonly maxCredentials?: number;
   readonly staleWarning?: boolean;
-  /** The live recipient URL for a real, revocable disclosure.
+  /** The live recipient URL for a real, revocable disclosure, or null for
+   *  an image that carries no link at all.
    *
-   *  Optional so the fixture prototype keeps its opaque fixture token and
-   *  stays incapable of pointing at a real page. When the sharing centre
-   *  passes one it is the /p/<token> address of a share the holder has just
-   *  created — still opaque, still not derived from any identifier, and
-   *  revocable, which the fixture token could never be. */
-  readonly verifyUrl?: string;
+   *  Omitted, the fixture prototype keeps its opaque fixture token and stays
+   *  incapable of pointing at a real page. The sharing centre always passes
+   *  it: null, unless the holder created a link for exactly what the image
+   *  shows and chose to print it. */
+  readonly verifyUrl?: string | null;
 }
 
 const MAX_SOCIAL_CREDENTIALS = 3;
+/** The most credentials one social image names. Exported so the sharing
+ *  centre stops a selection at the same number the image would cut it to. */
+export const SOCIAL_CREDENTIAL_LIMIT = MAX_SOCIAL_CREDENTIALS;
+
+/**
+ * Source-confirmed and current on the day it is read: what may be NAMED AS
+ * VERIFIED on a social image. Nothing less, whatever its standing elsewhere.
+ *
+ * "Current" is DERIVED from the dates, never read from the stored state:
+ * nothing writes `expired` on the day a licence lapses.
+ */
+function isVerifiedAndCurrent(c: Claim, evaluationOn: IsoDate): boolean {
+  return (
+    effectiveAssertionLevel(c) === "verified" &&
+    validityOf(c.lifecycleState, c.validUntil, evaluationOn).effectiveState === "active"
+  );
+}
+
+/**
+ * Whether a credential, as the SHARED presentation derived it, may be drawn on
+ * the holder's social image: when it is CURRENT -- the shared card's own rule
+ * for a shield, which means "holds this now". An expired, revoked, superseded
+ * or disputed credential is history, and history is never published to the
+ * one surface that cannot be recalled.
+ *
+ * It is drawn at the state that presentation gave it, with that state's word:
+ * a CQrityjob review stays "Dokumenterad", the holder's own entry stays
+ * "Egenrapporterad", and only a source confirmation is ever verified. The
+ * image says nothing the shared card would not.
+ */
+export function isSocialPublishable(credential: { readonly lifecycle: string }): boolean {
+  return credential.lifecycle === "active";
+}
 
 export function buildSocialCard(
   holder: PassportHolder,
@@ -178,13 +233,24 @@ export function buildSocialCard(
   // would publish a lapsed authorisation to the one surface that can never
   // be recalled. That is the single worst failure this module could have.
   const verifiedCredentials = holder.claims
-    .filter(
-      (c) =>
-        effectiveAssertionLevel(c) === "verified" &&
-        validityOf(c.lifecycleState, c.validUntil, evaluationOn).effectiveState === "active",
-    )
+    .filter((c) => isVerifiedAndCurrent(c, evaluationOn))
     .slice(0, options.maxCredentials ?? MAX_SOCIAL_CREDENTIALS)
-    .map((c) => ({ id: c.id, code: c.credentialCode, nameSv: c.titleSv, nameEn: c.titleEn }));
+    .map((c) => ({
+      id: c.id,
+      code: c.credentialCode,
+      nameSv: c.titleSv,
+      nameEn: c.titleEn,
+      state: credentialPresentationOf(c, "active"),
+      statusWordKey: presentationWordKeyOf(c, credentialPresentationOf(c, "active")),
+      // The holder's own record does not say whether a DEFINITION is
+      // international, and a globe is never guessed: such a credential wears
+      // its stated jurisdiction, or none.
+      scope: {
+        global: false,
+        jurisdictionCode: c.jurisdictionCode,
+        subJurisdictionCode: c.subJurisdictionCode,
+      },
+    }));
 
   return {
     holderLabel: holderLabelFor(holder, options.privacyMode, options.anonymousLabel),
@@ -208,8 +274,61 @@ export function buildSocialCard(
     jurisdictionCode: holder.jurisdictionCode,
     milestoneYears: recognition.earnedYears,
     verifiedCredentials,
-    verifyUrl: options.verifyUrl ?? `${FIXTURE_VERIFY_ORIGIN}/${fixtureToken(holder.id)}`,
+    credentials: verifiedCredentials,
+    verifyUrl:
+      options.verifyUrl === undefined
+        ? `${FIXTURE_VERIFY_ORIGIN}/${fixtureToken(holder.id)}`
+        : options.verifyUrl,
     staleWarning: options.staleWarning ?? false,
+  };
+}
+
+/**
+ * The social card for a SELECTION, as the sharing centre draws it.
+ *
+ * Who the holder is comes from `buildSocialCard` -- their privacy setting, the
+ * titles their credentials support, their work country -- exactly as before.
+ * Which credentials it draws comes from the selected disclosure's own
+ * presentation (`buildRecipientPresentation` over the server's preview), the
+ * model the recipient card draws from: the same state, the same word, the
+ * same shield and scope. Of those, only what `isSocialPublishable` admits, at
+ * most `SOCIAL_CREDENTIAL_LIMIT`. Anything the holder did not select was never
+ * in the preview, so it cannot appear.
+ *
+ * `verifiedCredentials` keeps its meaning under this builder too: only the
+ * drawn credentials the presentation calls verified, which today -- with no
+ * structural source confirmation for a credential -- is none.
+ *
+ * The presentation is in the image's language already, so each name is used
+ * as given in both slots.
+ */
+export function buildSelectedSocialCard(
+  holder: PassportHolder,
+  evaluationOn: IsoDate,
+  credentials: readonly RecipientCredential[],
+  options: Omit<SocialCardOptions, "maxCredentials"> & { readonly verifyUrl: string | null },
+): SocialCardModel {
+  const identity = buildSocialCard(holder, evaluationOn, { ...options, maxCredentials: 0 });
+  const drawn = credentials
+    .filter(isSocialPublishable)
+    .slice(0, MAX_SOCIAL_CREDENTIALS)
+    .map((c) => ({
+      id: c.key,
+      code: c.code,
+      nameSv: c.title,
+      nameEn: c.title,
+      state: c.presentation,
+      statusWordKey: c.statusWordKey,
+      scope: {
+        global: c.definitionScope === "global",
+        jurisdictionCode: c.jurisdiction,
+        subJurisdictionCode: c.subJurisdiction,
+      },
+    }));
+  return {
+    ...identity,
+    verifiedCredentials: drawn.filter((c) => c.state === "verified"),
+    credentials: drawn,
   };
 }
 

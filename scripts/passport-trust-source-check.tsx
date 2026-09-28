@@ -96,7 +96,7 @@ import {
 import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
 import { totalsByEvidenceLevel } from "../src/lib/security-passport/experience";
 import { buildPassportCard } from "../src/lib/security-passport/card";
-import { buildSocialCard } from "../src/lib/security-passport/social";
+import { buildSelectedSocialCard, buildSocialCard } from "../src/lib/security-passport/social";
 import { linkedInProfileEntries } from "../src/lib/security-passport/linkedin-profile";
 import { isVerifiedClaim } from "../src/lib/professional-identity/types";
 import type { Claim, ExperiencePeriod, PassportHolder } from "../src/lib/security-passport/types";
@@ -1275,7 +1275,7 @@ group("GROUP 11 — derivation: no credential derives a title or an eligibility"
 }
 
 /* ================================================================== */
-group("GROUP 12 — the social image and LinkedIn carry no credential today");
+group("GROUP 12 — the social image and LinkedIn name no credential as verified today");
 /* ================================================================== */
 {
   const holderOf = (claims: readonly Claim[]): PassportHolder => ({
@@ -1312,6 +1312,52 @@ group("GROUP 12 — the social image and LinkedIn carry no credential today");
     "12.3 the anonymous holder label no longer claims a verified guard",
     !/verifierad|verified/i.test(passportT("share.anonymousLabel", "sv")) &&
       !/verifierad|verified/i.test(passportT("share.anonymousLabel", "en")),
+  );
+
+  // The sharing centre's image draws what the holder SELECTED, each at the
+  // state the shared presentation gave it -- here, every disclosed case the
+  // recipient page is tested with above. None is verified today, so the image
+  // names none as verified and wears no verified word.
+  const image = buildSelectedSocialCard(
+    holderOf([]),
+    TODAY,
+    RECIPIENT_CASES.flatMap(([, p]) => p.credentials),
+    {
+      privacyMode: "full_name",
+      anonymousLabel: passportT("share.anonymousLabel", "sv"),
+      verifyUrl: null,
+    },
+  );
+  ck(
+    "12.4 the sharing centre's image draws a reviewed credential as documented, never as verified",
+    image.credentials.length > 0 &&
+      image.credentials.every(
+        (c) => c.state === "documented" && c.statusWordKey !== "trust.level.source_verified",
+      ) &&
+      image.verifiedCredentials.length === 0,
+  );
+  ck(
+    "12.5 and a credential that is no longer current is never drawn on it",
+    buildSelectedSocialCard(
+      holderOf([]),
+      TODAY,
+      [
+        {
+          ...RECIPIENT_CASES[0][1].credentials[0],
+          lifecycle: "expired",
+          presentation: "expired",
+        },
+      ],
+      {
+        privacyMode: "full_name",
+        anonymousLabel: passportT("share.anonymousLabel", "sv"),
+        verifyUrl: null,
+      },
+    ).credentials.length === 0,
+  );
+  ck(
+    "12.6 and it carries no link or QR code unless one was chosen for it",
+    image.verifyUrl === null,
   );
 }
 

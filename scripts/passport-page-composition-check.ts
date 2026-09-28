@@ -428,7 +428,9 @@ for (const surface of [
   "src/components/security-passport/PassportOverview.tsx",
   "src/components/security-passport/RecipientVerification.tsx",
   "src/components/security-passport/live/RecipientPassportCard.tsx",
-  "src/components/security-passport/live/LinkedInShareSection.tsx",
+  // The social image's profession line, for every surface that shows or
+  // downloads the image: SocialFrame, the LinkedIn walkthrough and the share
+  // panels all take it from here.
   "src/lib/security-passport/share-image.ts",
 ]) {
   const src = code(read(surface));
@@ -437,6 +439,20 @@ for (const surface of [
       !/\}\s*·\s*\$\{format(Jurisdiction|WorkLocation)\(/.test(src) &&
       !/\{profession\}\s*·\s*\{jurisdiction\}/.test(src),
     `${surface.split("/").pop()} joins title and jurisdiction through the helper only`,
+  );
+}
+// And none of the image views joins the two on its own.
+for (const surface of [
+  "src/components/security-passport/social/SocialFrame.tsx",
+  "src/components/security-passport/social/SocialCardSvg.tsx",
+  "src/components/security-passport/live/LinkedInShareSection.tsx",
+]) {
+  const src = code(read(surface));
+  check(
+    !/\}\s*·\s*\$\{format(Jurisdiction|WorkLocation)\(/.test(src) &&
+      !/\{profession\}\s*·\s*\{jurisdiction\}/.test(src) &&
+      !/formatJurisdiction\(|formatWorkLocation\(/.test(src),
+    `${surface.split("/").pop()} words no title or jurisdiction of its own`,
   );
 }
 check(

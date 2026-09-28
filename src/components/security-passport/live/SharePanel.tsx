@@ -24,24 +24,11 @@
 // ── NO PARALLEL SHARE LOGIC ────────────────────────────────────────────
 //
 // Channel destinations come from share-channels.ts and image rendering from
-// share-image.ts, both shared with the surfaces that already used them. This
+// SocialCardSvg, both shared with the surfaces that already used them. This
 // component contains no URL construction and no SVG.
 
 import { useState } from "react";
-import {
-  Check,
-  Copy,
-  Download,
-  ChevronDown,
-  Facebook,
-  Instagram,
-  Linkedin,
-  Mail,
-  MessageCircle,
-  Share2,
-  ShieldCheck,
-  X as XIcon,
-} from "lucide-react";
+import { Check, Copy, Download, ChevronDown, Share2, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { SocialCardModel } from "@/lib/security-passport/social";
@@ -51,25 +38,12 @@ import {
   shareIntentUrl,
   type ShareChannel,
 } from "@/lib/security-passport/share-channels";
-import { downloadBlob, renderShareImage } from "@/lib/security-passport/share-image";
+import { downloadBlob } from "@/lib/security-passport/share-image";
+import { renderSocialImage } from "../social/social-image";
 import { SHARE_FORMATS } from "@/lib/security-passport/social-export";
 import type { ShareFormat } from "@/lib/security-passport/design/trust-system";
 import { LinkedInProfileSection } from "./LinkedInProfileSection";
-
-/** Platform marks, tinted only so a row is recognisable at a glance. The
- *  surface, type and spacing around them stay CQrityjob's own. */
-const CHANNEL_ICON: Readonly<
-  Record<ShareChannel, { readonly Icon: typeof Linkedin; readonly colour: string | null }>
-> = {
-  linkedin: { Icon: Linkedin, colour: "#0A66C2" },
-  facebook: { Icon: Facebook, colour: "#1877F2" },
-  x: { Icon: XIcon, colour: null },
-  email: { Icon: Mail, colour: null },
-  instagram: { Icon: Instagram, colour: "#C13584" },
-  whatsapp: { Icon: MessageCircle, colour: "#25D366" },
-  copy_link: { Icon: Copy, colour: null },
-  native: { Icon: Share2, colour: null },
-};
+import { CHANNEL_ICON } from "./channel-icons";
 
 export interface SharePanelProps {
   readonly shareUrl: string;
@@ -96,7 +70,7 @@ export function SharePanel({ shareUrl, model, holder, qrDataUrl }: SharePanelPro
     setBusyFormat(format);
     setError(null);
     try {
-      const blob = await renderShareImage(model, format, lang, pt, qrDataUrl);
+      const blob = await renderSocialImage(model, format, lang, pt, qrDataUrl);
       downloadBlob(blob, `cqrityjob-passport-${format}.png`);
     } catch (err) {
       console.error("[passport] social export failed", err);
@@ -113,7 +87,7 @@ export function SharePanel({ shareUrl, model, holder, qrDataUrl }: SharePanelPro
    *  which is the part that actually verifies. */
   async function cardImageFile(): Promise<File | null> {
     try {
-      const blob = await renderShareImage(model, "og", lang, pt, qrDataUrl);
+      const blob = await renderSocialImage(model, "og", lang, pt, qrDataUrl);
       return new File([blob], "cqrityjob-passport.png", { type: "image/png" });
     } catch (err) {
       console.error("[passport] card image render failed", err);

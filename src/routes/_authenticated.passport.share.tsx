@@ -56,6 +56,15 @@ import {
 // the review read FAILS, every affected row says so instead of falling back
 // to a settled word.
 //
+// ── TWO WAYS TO SHARE ──────────────────────────────────────────────────
+//
+// The screen opens on one choice: "Dela via länk" -- everything above and
+// below, unchanged -- or "Dela på sociala medier", which reconnects the image
+// sharing this page used to offer (SocialShareFlow): the same selection list,
+// a preview that IS the downloaded image, the four formats and the platform
+// buttons. A social image carries no link or QR code unless the holder creates
+// a link for it and chooses, in the preview, to show it.
+//
 // ── WHAT THIS SCREEN DOES NOT CLAIM ────────────────────────────────────
 //
 // * It does not say a recipient has READ anything. `access_count` counts
@@ -71,7 +80,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ChevronLeft, Copy, ExternalLink, Link2, ShieldCheck } from "lucide-react";
+import { Check, ChevronLeft, Copy, ExternalLink, Link2, Share2, ShieldCheck } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { getMyPassport, type PassportSnapshot } from "@/lib/security-passport/passport.functions";
 import { listMyVerificationRequests } from "@/lib/security-passport/verification.functions";
@@ -84,6 +93,7 @@ import {
   buildShareSelection,
   meritKey,
   splitSelection,
+  type ShareGroup,
   type ShareSelectionModel,
 } from "@/lib/security-passport/share-selection";
 import { hasCaveat, type ShareReviewCaveat } from "@/lib/security-passport/share-policy";
@@ -102,6 +112,9 @@ import { MeritStatusChip } from "@/components/security-passport/MeritStatusChip"
 import { formatExpiry, formatIsoDay, formatIsoDayRange } from "@/lib/security-passport/format";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { PassportLang } from "@/lib/security-passport/i18n";
+import { passportT } from "@/lib/security-passport/i18n";
+import { buildSelectedSocialCard, SOCIAL_CREDENTIAL_LIMIT } from "@/lib/security-passport/social";
+import { SocialShareFlow } from "@/components/security-passport/live/SocialShareFlow";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
   ssr: false,
@@ -246,10 +259,29 @@ function PassportShareRoute() {
   const [reissuing, setReissuing] = useState<string | null>(null);
   const [reissueError, setReissueError] = useState<PassportCopyKey | null>(null);
 
+  /** The screen's one choice. The link flow is where it always was. */
+  const [via, setVia] = useState<"link" | "social">("link");
+  // The social image: its own selection, because fewer merits may appear on
+  // a public image than may be sent to one reader.
+  const [socialSelected, setSocialSelected] = useState<ReadonlySet<string>>(new Set());
+  const [imageLang, setImageLang] = useState<PassportLang>(lang);
+  const [socialPreview, setSocialPreview] = useState<RecipientPayload | null>(null);
+  const [socialPreviewState, setSocialPreviewState] = useState<LoadState>("loading");
+  /** A link created FOR the image, with the selection it was created for. */
+  const [socialLink, setSocialLink] = useState<{
+    readonly token: string;
+    readonly claimIds: readonly string[];
+  } | null>(null);
+  const [socialLinkExpiry, setSocialLinkExpiry] = useState<number>(DEFAULT_EXPIRY_DAYS);
+  const [includeLink, setIncludeLink] = useState(false);
+  const [socialCreating, setSocialCreating] = useState(false);
+  const [socialCreateError, setSocialCreateError] = useState<PassportCopyKey | null>(null);
+
   // Held across retries so a lost response cannot become two links. Cleared
   // only once a create has succeeded.
   const requestKey = useRef<string>(newRequestKey());
   const reissueKey = useRef<string>(newRequestKey());
+  const socialRequestKey = useRef<string>(newRequestKey());
   const linkFieldRef = useRef<HTMLInputElement | null>(null);
 
   /* ---------------------------------------------------------------- */
@@ -374,6 +406,94 @@ function PassportShareRoute() {
   );
 
   /* ---------------------------------------------------------------- */
+  /* The social image                                                  */
+  /* ---------------------------------------------------------------- */
+
+  // What may appear on a public image: the same current merits the link flow
+  // offers, credentials only. An image draws shields, and an employment
+  // period -- an employer's name -- is never drawn on one.
+  const socialGroups: readonly ShareGroup[] = useMemo(
+    () =>
+      (selection?.groups ?? [])
+        .map((g) => ({
+          ...g,
+          candidates: g.candidates.filter((c) => c.merit.kind === "claim"),
+        }))
+        .filter((g) => g.candidates.length > 0),
+    [selection],
+  );
+
+  const socialIds = useMemo(() => splitSelection(socialSelected), [socialSelected]);
+  const socialCount = socialSelected.size;
+
+  // Through the one builder, as the link preview is: the image names what the
+  // selected disclosure's presentation says, in the image's language.
+  useEffect(() => {
+    if (via !== "social" || socialIds.claimIds.length === 0) {
+      setSocialPreview(null);
+      return;
+    }
+    let alive = true;
+    setSocialPreviewState("loading");
+    void doPreview({
+      data: {
+        claimIds: socialIds.claimIds,
+        permittedFields: [],
+        expiresDays: DEFAULT_EXPIRY_DAYS,
+        locale: imageLang,
+      },
+    })
+      .then((payload) => {
+        if (!alive) return;
+        setSocialPreview(payload);
+        setSocialPreviewState("ready");
+      })
+      .catch((err) => {
+        console.error("[passport] share: image preview failed", err);
+        if (alive) setSocialPreviewState("failed");
+      });
+    return () => {
+      alive = false;
+    };
+  }, [via, socialIds, imageLang, doPreview]);
+
+  const sameSelection = (a: readonly string[], b: readonly string[]) =>
+    a.length === b.length && [...a].sort().join(",") === [...b].sort().join(",");
+  const socialLinkUrl =
+    socialLink && sameSelection(socialLink.claimIds, socialIds.claimIds)
+      ? publicShareUrl(socialLink.token)
+      : null;
+  // Printed only when the holder chose it, for a link to exactly this image.
+  const imageLink = includeLink && socialLinkUrl ? socialLinkUrl : null;
+
+  const socialModel = useMemo(() => {
+    if (!snapshot?.profile || socialPreview?.status !== "active") return null;
+    return buildSelectedSocialCard(
+      snapshot.holder,
+      today(),
+      buildRecipientPresentation(socialPreview, today()).credentials,
+      {
+        privacyMode: snapshot.profile.privacyMode,
+        anonymousLabel: passportT("share.anonymousLabel", imageLang),
+        verifyUrl: imageLink,
+      },
+    );
+  }, [snapshot, socialPreview, imageLang, imageLink]);
+
+  /** The holder as far as the image goes: the LinkedIn profile entry offers
+   *  only what the image's link opens. */
+  const socialHolder = useMemo(
+    () =>
+      snapshot
+        ? {
+            ...snapshot.holder,
+            claims: snapshot.holder.claims.filter((c) => socialIds.claimIds.includes(c.id)),
+          }
+        : null,
+    [snapshot, socialIds],
+  );
+
+  /* ---------------------------------------------------------------- */
   /* Creating, copying, revoking                                       */
   /* ---------------------------------------------------------------- */
 
@@ -472,6 +592,41 @@ function PassportShareRoute() {
     }
   }
 
+  /** A link for exactly what the image shows. It is shown nowhere until the
+   *  holder ticks the box that prints it; the same create and the same
+   *  idempotency as the link flow. */
+  async function onCreateSocialLink() {
+    setSocialCreating(true);
+    setSocialCreateError(null);
+    try {
+      const result = await doCreate({
+        data: {
+          claimIds: socialIds.claimIds,
+          permittedFields: [],
+          expiresDays: socialLinkExpiry,
+          locale: imageLang,
+          requestKey: socialRequestKey.current,
+        },
+      });
+      if (result.status === "created") {
+        trackFunnelOnce("passport_share_link_created");
+        setSocialLink({ token: result.token, claimIds: [...socialIds.claimIds] });
+        setIncludeLink(false);
+      } else {
+        // Reconciled after a lost answer: only its hash exists, so there is
+        // no link to show, as on the link flow.
+        setSocialCreateError("sel.already.body");
+      }
+      socialRequestKey.current = newRequestKey();
+      await readShares();
+    } catch (err) {
+      console.error("[passport] share: image link create failed", err);
+      setSocialCreateError(CREATE_ERROR_KEY[shareErrorCode(err)]);
+    } finally {
+      setSocialCreating(false);
+    }
+  }
+
   async function onRevoke(id: string) {
     setRevoking(id);
     setRevokeError(false);
@@ -548,8 +703,50 @@ function PassportShareRoute() {
         </p>
       </header>
 
+      {/* ── The one choice: a private link, or an image to post ────── */}
+      <fieldset data-share-via className="min-w-0">
+        <legend className="sr-only">{pt("share.via.legend")}</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(
+            [
+              { id: "link", Icon: Link2, title: "share.via.link", hint: "share.via.linkHint" },
+              {
+                id: "social",
+                Icon: Share2,
+                title: "share.via.social",
+                hint: "share.via.socialHint",
+              },
+            ] as const
+          ).map(({ id, Icon, title, hint }) => (
+            <label
+              key={id}
+              data-share-choice={id}
+              className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-xs)] transition-colors hover:bg-accent/5 has-[:checked]:border-accent has-[:checked]:bg-accent/5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring"
+            >
+              <input
+                type="radio"
+                name="share-via"
+                value={id}
+                checked={via === id}
+                onChange={() => setVia(id)}
+                className="mt-1 h-4 w-4 shrink-0"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2 text-base font-semibold text-foreground">
+                  <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  {pt(title)}
+                </span>
+                <span className="mt-1 block text-sm leading-relaxed text-muted-foreground">
+                  {pt(hint)}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       {/* ── After creation, the result takes the top of the screen ─── */}
-      {outcome ? (
+      {via === "link" && outcome ? (
         <CreatedPanel
           outcome={outcome}
           shareUrl={shareUrl}
@@ -563,7 +760,7 @@ function PassportShareRoute() {
       ) : null}
 
       {/* ── 1 · What to share ──────────────────────────────────────── */}
-      {!outcome ? (
+      {via === "link" && !outcome ? (
         <section aria-labelledby="sel-choose">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             01
@@ -611,76 +808,21 @@ function PassportShareRoute() {
                 which at 320px is wider than its own container and scrolls the
                 whole page sideways. It is what lets the box shrink like every
                 other box. */}
-            {selection?.groups.map((group) => (
-              <fieldset
-                key={group.id}
-                data-share-group={group.id}
-                className="min-w-0 rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-xs)]"
-              >
-                <legend className="px-1 text-sm font-semibold tracking-tight text-foreground">
-                  {pt(group.titleKey)}
-                </legend>
-                <ul className="mt-2 divide-y divide-border">
-                  {group.candidates.map(({ merit, caveat }) => {
-                    const key = meritKey(merit);
-                    const id = `sel-${key.replace(":", "-")}`;
-                    return (
-                      <li key={key}>
-                        <label
-                          htmlFor={id}
-                          data-merit-option={key}
-                          data-merit-caveat={caveat}
-                          className="flex min-h-[44px] cursor-pointer items-start gap-3 py-4"
-                        >
-                          <input
-                            id={id}
-                            type="checkbox"
-                            checked={selected.has(key)}
-                            onChange={(e) =>
-                              setSelected((prev) => {
-                                const next = new Set(prev);
-                                if (e.target.checked) next.add(key);
-                                else next.delete(key);
-                                return next;
-                              })
-                            }
-                            className="mt-1 h-5 w-5 shrink-0 rounded border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-medium text-foreground">
-                              {lang === "sv" ? merit.titleSv : merit.titleEn}
-                            </span>
-                            <span className="mt-0.5 block text-sm text-muted-foreground">
-                              {merit.kind === "claim" && merit.organisation
-                                ? `${lang === "sv" ? "Uppgiven utfärdare" : "Holder-stated issuer"}: ${merit.organisation}`
-                                : (merit.organisation ?? pt("common.notStated"))}
-                              {" · "}
-                              {meritDates(merit, lang, pt)}
-                            </span>
-                            {/* What is in flight on this merit. Never a reason
-                                to withhold it — the recipient reads its stored
-                                standing either way — but the holder is the one
-                                who needs to know the standing may move, and
-                                `unknown` says we could not tell rather than
-                                that nothing is open. */}
-                            {hasCaveat(caveat) ? (
-                              <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
-                                {pt(CAVEAT_KEY[caveat])}
-                              </span>
-                            ) : null}
-                          </span>
-                          <MeritStatusChip
-                            status={merit.label}
-                            lifecycleState={merit.lifecycleState}
-                            className="mt-0.5"
-                          />
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </fieldset>
-            ))}
+            <MeritChoices
+              groups={selection?.groups ?? []}
+              selected={selected}
+              onToggle={(key, on) =>
+                setSelected((prev) => {
+                  const next = new Set(prev);
+                  if (on) next.add(key);
+                  else next.delete(key);
+                  return next;
+                })
+              }
+              idPrefix="sel"
+              lang={lang}
+              pt={pt}
+            />
           </div>
 
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -690,7 +832,7 @@ function PassportShareRoute() {
       ) : null}
 
       {/* ── 2 · The recipient's view ───────────────────────────────── */}
-      {!outcome && selectedCount > 0 ? (
+      {via === "link" && !outcome && selectedCount > 0 ? (
         <section aria-labelledby="sel-preview">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             02
@@ -737,7 +879,7 @@ function PassportShareRoute() {
       ) : null}
 
       {/* ── 3 · Link settings ──────────────────────────────────────── */}
-      {!outcome ? (
+      {via === "link" && !outcome ? (
         <section aria-labelledby="sel-settings">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             03
@@ -834,7 +976,7 @@ function PassportShareRoute() {
       ) : null}
 
       {/* ── 4 · Create ─────────────────────────────────────────────── */}
-      {!outcome ? (
+      {via === "link" && !outcome ? (
         <section aria-labelledby="sel-create">
           <h2 id="sel-create" className="sr-only">
             {pt("sel.step.create")}
@@ -861,6 +1003,54 @@ function PassportShareRoute() {
               : `${pt("sel.willShare")} ${selectedCount}`}
           </p>
         </section>
+      ) : null}
+
+      {/* ── Or: an image to post ─────────────────────────────────────── */}
+      {via === "social" && socialHolder ? (
+        <SocialShareFlow
+          chooser={
+            <div className="mt-3 space-y-5">
+              <MeritChoices
+                groups={socialGroups}
+                selected={socialSelected}
+                onToggle={(key, on) =>
+                  setSocialSelected((prev) => {
+                    const next = new Set(prev);
+                    if (on) next.add(key);
+                    else next.delete(key);
+                    return next;
+                  })
+                }
+                idPrefix="soc"
+                limit={SOCIAL_CREDENTIAL_LIMIT}
+                lang={lang}
+                pt={pt}
+              />
+            </div>
+          }
+          hasCandidates={socialGroups.length > 0}
+          selectedCount={socialCount}
+          limitReached={socialCount >= SOCIAL_CREDENTIAL_LIMIT}
+          previewState={socialPreviewState}
+          model={socialModel}
+          notDrawn={socialModel !== null && socialModel.credentials.length < socialCount}
+          imageLang={imageLang}
+          onImageLang={setImageLang}
+          holder={socialHolder}
+          link={{
+            url: socialLinkUrl,
+            stale: socialLink !== null && socialLinkUrl === null,
+            include: includeLink,
+            onInclude: setIncludeLink,
+            expiryDays: socialLinkExpiry,
+            expiryChoices: EXPIRY_CHOICES,
+            recommendedDays: DEFAULT_EXPIRY_DAYS,
+            onExpiry: setSocialLinkExpiry,
+            creating: socialCreating,
+            error: socialCreateError,
+            onCreate: () => void onCreateSocialLink(),
+          }}
+        />
       ) : null}
 
       {/* ── Existing links ─────────────────────────────────────────── */}
@@ -914,6 +1104,99 @@ function meritDates(
     return merit.from ? formatIsoDayRange(merit.from, merit.to, lang) : pt("common.notStated");
   }
   return merit.to ? formatIsoDay(merit.to, lang) : formatExpiry(null, lang, merit.noExpiry);
+}
+
+/**
+ * The selection list both ways of sharing use: the same rows, words and
+ * review caveats. `limit` stops a social image at the number of credentials it
+ * can hold; the link flow passes none.
+ */
+function MeritChoices({
+  groups,
+  selected,
+  onToggle,
+  idPrefix,
+  limit,
+  lang,
+  pt,
+}: {
+  groups: readonly ShareGroup[];
+  selected: ReadonlySet<string>;
+  onToggle: (key: string, on: boolean) => void;
+  idPrefix: string;
+  limit?: number;
+  lang: PassportLang;
+  pt: (key: PassportCopyKey) => string;
+}) {
+  const full = limit !== undefined && selected.size >= limit;
+  return (
+    <>
+      {groups.map((group) => (
+        <fieldset
+          key={group.id}
+          data-share-group={group.id}
+          className="min-w-0 rounded-lg border border-border bg-card p-5 shadow-[var(--shadow-xs)]"
+        >
+          <legend className="px-1 text-sm font-semibold tracking-tight text-foreground">
+            {pt(group.titleKey)}
+          </legend>
+          <ul className="mt-2 divide-y divide-border">
+            {group.candidates.map(({ merit, caveat }) => {
+              const key = meritKey(merit);
+              const id = `${idPrefix}-${key.replace(":", "-")}`;
+              const checked = selected.has(key);
+              return (
+                <li key={key}>
+                  <label
+                    htmlFor={id}
+                    data-merit-option={key}
+                    data-merit-caveat={caveat}
+                    className="flex min-h-[44px] cursor-pointer items-start gap-3 py-4 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60"
+                  >
+                    <input
+                      id={id}
+                      type="checkbox"
+                      checked={checked}
+                      disabled={full && !checked}
+                      onChange={(e) => onToggle(key, e.target.checked)}
+                      className="mt-1 h-5 w-5 shrink-0 rounded border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-medium text-foreground">
+                        {lang === "sv" ? merit.titleSv : merit.titleEn}
+                      </span>
+                      <span className="mt-0.5 block text-sm text-muted-foreground">
+                        {merit.kind === "claim" && merit.organisation
+                          ? `${lang === "sv" ? "Uppgiven utfärdare" : "Holder-stated issuer"}: ${merit.organisation}`
+                          : (merit.organisation ?? pt("common.notStated"))}
+                        {" · "}
+                        {meritDates(merit, lang, pt)}
+                      </span>
+                      {/* What is in flight on this merit. Never a reason to
+                          withhold it — the recipient reads its stored standing
+                          either way — but the holder is the one who needs to
+                          know the standing may move, and `unknown` says we
+                          could not tell rather than that nothing is open. */}
+                      {hasCaveat(caveat) ? (
+                        <span className="mt-1 block text-xs text-amber-700 dark:text-amber-300">
+                          {pt(CAVEAT_KEY[caveat])}
+                        </span>
+                      ) : null}
+                    </span>
+                    <MeritStatusChip
+                      status={merit.label}
+                      lifecycleState={merit.lifecycleState}
+                      className="mt-0.5"
+                    />
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </fieldset>
+      ))}
+    </>
+  );
 }
 
 function BackLink({ label }: { label: string }) {

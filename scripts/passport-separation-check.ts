@@ -216,6 +216,10 @@ for (const file of passportFiles) {
   const allowed = new Set([
     "sp_get_disclosure",
     "sp_get_disclosure_session",
+    // The gateway's own pair. `issue` ran in the Supabase Edge Function with the
+    // same service role until hosted Supabase stopped serving that function's
+    // HTML; the `/p` entry now runs it here, behind the throttle.
+    "sp_share_gateway_issue",
     "sp_share_gateway_consume",
     "sp_throttle_public_access",
   ]);

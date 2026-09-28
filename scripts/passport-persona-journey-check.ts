@@ -456,8 +456,8 @@ const SURFACES = [
   "src/components/security-passport/PassportOverview.tsx",
   "src/components/security-passport/RecipientVerification.tsx",
   "src/components/security-passport/ClaimRow.tsx",
-  "src/components/security-passport/social/SocialFrame.tsx",
-  "src/components/security-passport/live/LinkedInShareSection.tsx",
+  // Every word on a social image, the holder's jurisdiction included, is
+  // decided here -- and the image views below take it from here.
   "src/lib/security-passport/share-image.ts",
   // The public token page was missed on the first pass and carried its own
   // copy of the ternary; it is in the list now so it cannot drift again.
@@ -476,6 +476,27 @@ for (const rel of SURFACES) {
       src.includes("credentialTerritoryLabel("),
     `${rel} renders the jurisdiction through a shared formatter`,
   );
+  assert(
+    !/jurisdictionCode\s*===\s*"SE"\s*\?/.test(src),
+    `${rel} carries no private copy of the SE-only mapping`,
+  );
+  assert(
+    !/·\s*\$\{[a-zA-Z.]*jurisdictionCode\}/.test(src),
+    `${rel} never interpolates a RAW jurisdiction code into reader-facing text`,
+  );
+}
+
+// The social image views word nothing themselves. The frame takes the words
+// from share-image.ts, the drawing resolves each credential's scope through
+// the shield's own resolver, and the LinkedIn walkthrough shows the frame.
+// None may grow a private mapping or print a raw code.
+for (const [rel, shared] of [
+  ["src/components/security-passport/social/SocialFrame.tsx", /socialImageStrings\(/],
+  ["src/components/security-passport/social/SocialCardSvg.tsx", /resolveCredentialScope\(/],
+  ["src/components/security-passport/live/LinkedInShareSection.tsx", /<SocialFrame\b/],
+] as const) {
+  const src = readFileSync(join(ROOT, rel), "utf8");
+  assert(shared.test(src), `${rel} takes the image's words from the shared wording`);
   assert(
     !/jurisdictionCode\s*===\s*"SE"\s*\?/.test(src),
     `${rel} carries no private copy of the SE-only mapping`,

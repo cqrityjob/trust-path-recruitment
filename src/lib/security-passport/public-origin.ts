@@ -57,6 +57,17 @@ function isEphemeralHost(origin: string): boolean {
  */
 export function publicShareOrigin(): string {
   const configured = import.meta.env?.VITE_PUBLIC_SITE_URL;
+  // Explicit local integration mode is development-only, as for the gateway
+  // below: an https loopback application (the routed evidence walk) may name
+  // itself. A production build never emits a loopback link.
+  if (
+    import.meta.env?.DEV &&
+    import.meta.env?.VITE_PASSPORT_LOCAL_INTEGRATION === "1" &&
+    typeof configured === "string" &&
+    /^https:\/\/127\.0\.0\.1:\d+$/.test(configured.trim())
+  ) {
+    return configured.trim();
+  }
   if (typeof configured === "string" && configured.trim() !== "") {
     const trimmed = configured.trim().replace(/\/+$/, "");
     if (/^https?:\/\//i.test(trimmed) && !isEphemeralHost(trimmed)) return trimmed;
@@ -64,15 +75,38 @@ export function publicShareOrigin(): string {
   return FALLBACK_ORIGIN;
 }
 
-/** The full public verification URL for one share token. The single place
- *  this shape is built, so the sharing centre and the single-credential
- *  share cannot drift apart. */
+/** Where a share link enters on the application's own domain: `/p#<token>`.
+ *
+ *  The durable token rides the FRAGMENT, which a browser never sends: the
+ *  request for this path is `GET /p` and nothing else. src/server.ts answers
+ *  it, ahead of any page, with a small document under a CSP that lets only its
+ *  own script run. That script removes the fragment at once and POSTs the token
+ *  to the throttled exchange, which sets a separate 30-minute session. See
+ *  share-transport.ts. */
+export const SHARE_ENTRY_PATH = "/p";
+
+/** The gateway's own path, on the Supabase origin. Links issued before the
+ *  application-domain entry carry it; nothing builds a new one. */
+export const SHARE_GATEWAY_PATH = "/functions/v1/passport-share";
+
+/** The full public verification URL for one share token: the application's
+ *  domain. The single place this shape is built, so the sharing centre and
+ *  the single-credential share cannot drift apart. */
 export function publicShareUrl(token: string): string {
-  return `${publicShareGatewayOrigin()}/functions/v1/passport-share#${token}`;
+  return `${publicShareOrigin()}${SHARE_ENTRY_PATH}#${token}`;
 }
 
-/** The Supabase entry origin for new share links. The durable bearer token is
- *  carried only in the URL fragment, which browsers never send in the first
+/** A share in the gateway form every link issued before the application-domain
+ *  entry has. The function behind it redirects to `/p` with the fragment kept,
+ *  once that version is deployed; the version it replaces served an HTML page
+ *  that hosted Supabase shows as plain text. Used to test those links, never to
+ *  issue one. */
+export function publicShareGatewayUrl(token: string): string {
+  return `${publicShareGatewayOrigin()}${SHARE_GATEWAY_PATH}#${token}`;
+}
+
+/** The Supabase origin of the legacy gateway links above. The durable bearer
+ *  token is carried only in the URL fragment, which browsers never send in an
  *  HTTP request or in the Referer header. */
 export function publicShareGatewayOrigin(): string {
   const configured = import.meta.env?.VITE_SUPABASE_URL;

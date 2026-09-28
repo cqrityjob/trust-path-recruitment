@@ -106,12 +106,19 @@ check(
   /background: passportCardBackground\(\)/.test(frameSrc) && !/EngravedField/.test(frameSrc),
   "the social preview does the same",
 );
+// Two exported images: the generic link preview (social-export.ts) and the
+// holder's own card, drawn once for preview and download (SocialCardSvg).
 const exportSrc = code(read("src/lib/security-passport/social-export.ts"));
+const cardSvgSrc = code(read("src/components/security-passport/social/SocialCardSvg.tsx"));
 check(
-  (exportSrc.match(/passportCardSvgStops\(\)/g) ?? []).length === 2 &&
-    !/engraving\(/.test(exportSrc) &&
-    !/<circle[^>]*stroke-opacity="0\.0/.test(exportSrc),
-  "both exported formats use the token's stops and draw no engraving behind the QR code",
+  (exportSrc.match(/passportCardSvgStops\(\)/g) ?? []).length === 1 &&
+    (cardSvgSrc.match(/passportCardSvgStops\(\)/g) ?? []).length === 1 &&
+    ![exportSrc, cardSvgSrc].some(
+      (src) =>
+        /engraving\(|EngravedField|Rosette/.test(src) ||
+        /<circle[^>]*stroke-opacity="0\.0/.test(src),
+    ),
+  "both exported images use the token's stops and draw no engraving behind the QR code",
 );
 for (const file of [
   "src/components/security-passport/CredentialWallet.tsx",

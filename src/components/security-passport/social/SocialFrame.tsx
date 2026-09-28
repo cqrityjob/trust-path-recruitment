@@ -1,225 +1,50 @@
 // Social share formats — the socially-safe card, at real export sizes.
 //
-// ── RENDERED AT TRUE PIXEL SIZE, THEN SCALED ───────────────────────────
+// ── THE PREVIEW IS THE EXPORT ──────────────────────────────────────────
 //
-// Each format is laid out at its actual export dimensions (1080×1080 and
-// so on) and scaled down with a CSS transform purely for review. Nothing in
-// the layout responds to the preview size, so what a reviewer sees is what
-// an export would produce — a preview built at review size would look fine
-// and export broken.
+// The frame shows the exact SVG the download rasterises: SocialCardSvg,
+// rendered here once and serialised, laid out at the format's true pixel size
+// (1080×1080 and so on) and only scaled to fit the page. A preview
+// built at review size would look fine and export broken; a preview drawn
+// separately from the export would, and did, disagree with it. `onImage`
+// hands the parent that same string, so its download button cannot produce
+// anything else.
 //
 // ── THE SAFE SUBSET IS THE ONLY THING AVAILABLE HERE ───────────────────
 //
-// These components accept a `SocialCardModel` and nothing else. The full
+// This component accepts a `SocialCardModel` and nothing else. The full
 // Passport model, with its issuers, dates, employers and claim ids, is not
 // in scope: it cannot be rendered here because it is not passed here.
 //
 // ── EVERY FORMAT CARRIES THE SAME TRUST CONTEXT ────────────────────────
 //
 // Layout changes between square, story, OG and compact. The required
-// context does not: brand, holder label, profession, jurisdiction, the
-// verified milestone with its words, verified credential names, the
-// verify-at-source line and the destination. A cached image outliving its
-// credential is the whole risk this wording exists to cover, so no format
-// is permitted to drop it for space.
+// context does not: brand, holder label, profession, jurisdiction, each
+// credential's shield, scope and trust word, and either the link to check
+// at source or the line saying the image is a snapshot. A cached image
+// outliving its credential is the whole risk this wording exists to cover,
+// so no format is permitted to drop it for space.
 
-import { joinTitles } from "@/lib/security-passport/identity/presentation";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  TRUST_PALETTE,
   passportCardBackground,
   shareFormat,
   type ShareFormat,
 } from "@/lib/security-passport/design/trust-system";
-import { useEffect, useRef, useState } from "react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { useQrDataUrl } from "@/lib/security-passport/use-qr";
-import { milestoneStyle } from "@/lib/security-passport/design/trust-system";
 import type { SocialCardModel } from "@/lib/security-passport/social";
-import { formatJurisdiction } from "@/lib/security-passport/format";
-import { BrandMark, EngravedRule, Rosette, VerifiedSeal } from "../card/CardPrimitives";
-import { CredentialSymbol } from "../CredentialSymbol";
+import { socialImageStrings } from "@/lib/security-passport/share-image";
+import { passportT, type PassportCopyKey, type PassportLang } from "@/lib/security-passport/i18n";
+import { SocialCardSvg } from "./SocialCardSvg";
+import { svgDataUrl } from "./social-image";
 
-function useSocialStrings(model: SocialCardModel) {
-  const { pt, lang } = usePassportCopy();
-  return {
-    brand: pt("card.brand"),
-    profession: joinTitles(model.titles, lang, pt("identity.none")),
-    jurisdiction: formatJurisdiction(model.jurisdictionCode, lang),
-    yearsLabel:
-      (model.milestoneYears ?? 0) >= 20
-        ? pt("recognition.yearsPlus")
-        : model.milestoneYears === 1
-          ? pt("duration.year")
-          : pt("recognition.years"),
-    verifiedLabel: pt("recognition.badgePrefix"),
-    verifiedWord: pt("assertion.verified"),
-    verifyAtSource: pt("card.verifyAtSource"),
-    // With verified credentials named below, the empty milestone slot must
-    // say what is actually missing — verified EXPERIENCE — rather than
-    // contradicting the list under it.
-    noVerified:
-      model.verifiedCredentials.length > 0
-        ? pt("card.noVerifiedExperience")
-        : pt("card.noVerifiedYet"),
-    credentials: model.verifiedCredentials.map((c) => ({
-      code: c.code,
-      name: lang === "sv" ? c.nameSv : c.nameEn,
-    })),
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/* Shared building blocks at export scale                              */
-/* ------------------------------------------------------------------ */
-
-function MilestoneBlock({
-  years,
-  yearsLabel,
-  verifiedLabel,
-  scale,
-}: {
-  years: number;
-  yearsLabel: string;
-  verifiedLabel: string;
-  scale: number;
-}) {
-  const style = milestoneStyle(years);
-  return (
-    <div
-      className="relative flex items-center gap-6 overflow-hidden rounded-2xl"
-      style={{
-        padding: `${24 * scale}px ${32 * scale}px`,
-        background: style.field,
-        border: `${2 * scale}px solid ${style.rim}`,
-      }}
-    >
-      <div className="absolute -right-6 -top-10 opacity-40">
-        <Rosette size={220 * scale} tone={style.rimBright} />
-      </div>
-      <div className="relative">
-        <div className="flex items-baseline" style={{ gap: 12 * scale }}>
-          <span
-            className="font-semibold leading-none tracking-tight tabular-nums"
-            style={{
-              fontSize: 108 * scale,
-              color: style.rimBright,
-              fontFamily: "var(--font-display)",
-            }}
-          >
-            {years}
-          </span>
-          <span
-            className="font-medium uppercase tracking-widest"
-            style={{ fontSize: 30 * scale, color: style.rimBright }}
-          >
-            {yearsLabel}
-          </span>
-        </div>
-        <p
-          className="font-semibold uppercase leading-tight tracking-[0.18em]"
-          style={{ marginTop: 12 * scale, fontSize: 20 * scale, color: TRUST_PALETTE.ink }}
-        >
-          {verifiedLabel}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function CredentialLine({
-  code,
-  name,
-  verifiedWord,
-  scale,
-}: {
-  code: string | null;
-  name: string;
-  verifiedWord: string;
-  scale: number;
-}) {
-  return (
-    <li className="flex items-start" style={{ gap: 14 * scale }}>
-      <span style={{ marginTop: 2 * scale }}>
-        {/* Everything in this list is verified AND active by construction,
-            so the verified mark is the only state that can appear here. */}
-        {code ? (
-          <CredentialSymbol code={code} state="verified" name={name} size={44 * scale} />
-        ) : (
-          <VerifiedSeal tone={TRUST_PALETTE.goldBright} size={34 * scale} />
-        )}
-      </span>
-      <span className="min-w-0">
-        <span
-          className="block font-semibold leading-snug"
-          style={{ fontSize: 26 * scale, color: TRUST_PALETTE.ink }}
-        >
-          {name}
-        </span>
-        <span
-          className="block font-semibold uppercase tracking-[0.18em]"
-          style={{ marginTop: 4 * scale, fontSize: 16 * scale, color: TRUST_PALETTE.goldBright }}
-        >
-          {verifiedWord}
-        </span>
-      </span>
-    </li>
-  );
-}
-
-function VerifyFooter({
-  qr,
-  url,
-  verifyAtSource,
-  scale,
-  compact = false,
-}: {
-  qr: string | null;
-  url: string;
-  verifyAtSource: string;
-  scale: number;
-  compact?: boolean;
-}) {
-  return (
-    <div className="flex items-end justify-between" style={{ gap: 24 * scale }}>
-      <div className="min-w-0 flex-1">
-        <BrandMark tone={TRUST_PALETTE.ink} compact={compact} />
-        <p
-          className="leading-snug"
-          style={{ marginTop: 10 * scale, fontSize: 18 * scale, color: TRUST_PALETTE.inkMuted }}
-        >
-          {verifyAtSource}
-        </p>
-        <p
-          className="break-all leading-snug"
-          style={{ marginTop: 6 * scale, fontSize: 16 * scale, color: TRUST_PALETTE.inkFaint }}
-        >
-          {url}
-        </p>
-      </div>
-      <div
-        className="shrink-0 overflow-hidden rounded bg-white"
-        style={{ width: 130 * scale, height: 130 * scale, padding: 8 * scale }}
-      >
-        {qr ? <img src={qr} alt="" aria-hidden="true" className="h-full w-full" /> : null}
-      </div>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* The format canvas                                                   */
-/* ------------------------------------------------------------------ */
-
-/**
- * Renders one social format at true size inside a scaled wrapper.
- *
- * `previewWidth` only sets the transform; the inner canvas is always the
- * real export size.
- */
 export function SocialFrame({
   model,
   format,
   previewWidth,
+  lang: imageLang,
+  onImage,
 }: {
   model: SocialCardModel;
   format: ShareFormat;
@@ -227,136 +52,70 @@ export function SocialFrame({
    *  360px preference on a 343px phone column shrinks rather than pushing
    *  the page sideways. */
   previewWidth: number;
+  /** The image's language; the reader's when omitted. */
+  lang?: PassportLang;
+  /** The SVG this frame shows, once it is complete (a link's QR code drawn),
+   *  or null while it is not. The one string a download may rasterise. */
+  onImage?: (svg: string | null) => void;
 }) {
+  const { pt: readerPt, lang: readerLang } = usePassportCopy();
+  const lang = imageLang ?? readerLang;
   const spec = shareFormat(format);
-  const s = useSocialStrings(model);
-  const qr = useQrDataUrl(model.verifyUrl);
+  const qr = useQrDataUrl(model.verifyUrl ?? "");
+  const pt = useCallback(
+    (key: PassportCopyKey) => (lang === readerLang ? readerPt(key) : passportT(key, lang)),
+    [lang, readerLang, readerPt],
+  );
+  const complete = !model.verifyUrl || qr !== null;
+  const qrForImage = model.verifyUrl ? qr : null;
+  const strings = useMemo(() => socialImageStrings(model, lang, pt), [model, lang, pt]);
+  const [svg, setSvg] = useState<string | null>(null);
 
-  // Measured rather than assumed. A hard-coded preview width overflowed the
-  // viewport by exactly the page padding at 375px — the classic way a
-  // "responsive" page ends up with a horizontal scrollbar.
-  const hostRef = useRef<HTMLDivElement>(null);
-  const [available, setAvailable] = useState<number | null>(null);
+  // The drawing is rendered, hidden, in this frame's own tree and serialised
+  // once it is committed: the string the image below shows and the download
+  // rasterises. (Not a second React root from an effect -- React does not
+  // render synchronously from inside one.)
+  const drawing = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = drawing.current?.querySelector("svg");
+    setSvg(node ? new XMLSerializer().serializeToString(node) : null);
+  }, [model, format, lang, strings, qrForImage]);
+
   useEffect(() => {
-    const el = hostRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setAvailable(el.clientWidth));
-    ro.observe(el);
-    setAvailable(el.clientWidth);
-    return () => ro.disconnect();
-  }, []);
-
-  const targetWidth = Math.min(previewWidth, available ?? previewWidth);
-  const zoom = targetWidth / spec.width;
-  // Layout scale per canvas. Story is 9:16 — square-sized type left roughly
-  // a third of it empty, which reads as an unfinished export rather than as
-  // deliberate space, so the story layout is scaled up to fill its height.
-  // OG is short and wide and needs the opposite.
-  const scale =
-    format === "og" ? 0.78 : format === "compact" ? 0.62 : format === "story" ? 1.42 : 1;
-
-  const pad = (format === "og" ? 56 : format === "compact" ? 44 : 76) * scale;
+    onImage?.(complete ? svg : null);
+  }, [svg, complete, onImage]);
 
   return (
-    <div ref={hostRef} className="w-full max-w-full overflow-hidden rounded-lg">
-      <div
-        style={{
-          width: spec.width,
-          height: spec.height,
-          // `zoom` rather than `transform: scale()`. A transformed 1080px
-          // canvas is promoted to its own compositing layer, which made the
-          // review screenshots come back blank; `zoom` scales layout in
-          // place and screenshots correctly. Either way the canvas is laid
-          // out at true export size, so the preview is faithful.
-          zoom,
-          // The ONE card ground — the same the exported PNG is drawn on.
-          background: passportCardBackground(),
-        }}
-        className="relative isolate"
-      >
-        <div className="relative flex h-full flex-col" style={{ padding: pad }}>
-          {/* Identity */}
-          <header>
-            <p
-              className="font-semibold uppercase tracking-[0.24em]"
-              style={{ fontSize: 20 * scale, color: TRUST_PALETTE.goldBright }}
-            >
-              {s.brand}
-            </p>
-            <h2
-              className="font-semibold leading-[1.05] tracking-tight text-balance"
-              style={{
-                marginTop: 20 * scale,
-                fontSize: (format === "og" ? 64 : 76) * scale,
-                color: TRUST_PALETTE.ink,
-                fontFamily: "var(--font-display)",
-              }}
-            >
-              {model.holderLabel}
-            </h2>
-            <p
-              style={{ marginTop: 14 * scale, fontSize: 28 * scale, color: TRUST_PALETTE.inkMuted }}
-            >
-              {s.profession}
-              <span aria-hidden="true"> · </span>
-              <span style={{ color: TRUST_PALETTE.ink }}>{s.jurisdiction}</span>
-            </p>
-          </header>
-
-          <div style={{ marginTop: 28 * scale }}>
-            <EngravedRule tone={`${TRUST_PALETTE.gold}66`} />
-          </div>
-
-          {/* Milestone */}
-          <div style={{ marginTop: 28 * scale }}>
-            {model.milestoneYears !== null ? (
-              <MilestoneBlock
-                years={model.milestoneYears}
-                yearsLabel={s.yearsLabel}
-                verifiedLabel={s.verifiedLabel}
-                scale={scale}
-              />
-            ) : (
-              <p
-                className="rounded-xl border border-dashed uppercase tracking-[0.16em]"
-                style={{
-                  padding: `${20 * scale}px ${24 * scale}px`,
-                  fontSize: 20 * scale,
-                  borderColor: `${TRUST_PALETTE.inkFaint}66`,
-                  color: TRUST_PALETTE.inkMuted,
-                }}
-              >
-                {s.noVerified}
-              </p>
-            )}
-          </div>
-
-          {/* Verified credential NAMES only */}
-          {s.credentials.length > 0 ? (
-            <ul style={{ marginTop: 30 * scale, display: "grid", rowGap: 20 * scale }}>
-              {s.credentials.map((cred) => (
-                <CredentialLine
-                  key={cred.name}
-                  code={cred.code}
-                  name={cred.name}
-                  verifiedWord={s.verifiedWord}
-                  scale={scale}
-                />
-              ))}
-            </ul>
-          ) : null}
-
-          <div className="flex-1" />
-
-          <VerifyFooter
-            qr={qr}
-            url={model.verifyUrl}
-            verifyAtSource={s.verifyAtSource}
-            scale={scale}
-            compact={format === "compact"}
-          />
-        </div>
+    <div
+      className="w-full overflow-hidden rounded-lg"
+      style={{
+        maxWidth: previewWidth,
+        aspectRatio: `${spec.width} / ${spec.height}`,
+        // The ONE card ground, behind the image while it is drawn.
+        background: passportCardBackground(),
+      }}
+      data-social-frame={format}
+    >
+      <div hidden ref={drawing}>
+        <SocialCardSvg
+          model={model}
+          format={format}
+          lang={lang}
+          strings={strings}
+          qrDataUrl={qrForImage}
+        />
       </div>
+      {svg ? (
+        <img
+          src={svgDataUrl(svg)}
+          alt={readerPt("social.previewAlt")}
+          width={spec.width}
+          height={spec.height}
+          data-social-preview={format}
+          data-social-link={model.verifyUrl ? "included" : "none"}
+          className="block h-auto w-full"
+        />
+      ) : null}
     </div>
   );
 }

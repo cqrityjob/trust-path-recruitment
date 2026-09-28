@@ -14,6 +14,10 @@
  *     failed or flaky, none missing;
  *   * case F uploaded its documents through Storage, not through the RPC-only
  *     path a machine without Storage falls back to;
+ *   * case G opened its links behind both stand-ins for the hosted platform:
+ *     hosted Supabase's HTML restriction and the host's analytics script. A
+ *     share that passes only on a bare local stack is how the gateway page
+ *     reached production broken;
  *   * the screenshots the owner asked for exist, at 1440 and at 390.
  * The names are printed so the job log says which walks were taken.
  *
@@ -34,6 +38,7 @@ const PROOFS = [
   "I",
   "F",
   "G",
+  "S",
   "H",
   "B",
   "J",
@@ -53,7 +58,14 @@ const SCREENS = [
   "sv-review-approved",
   "en-share-created",
   "en-share-recipient",
+  "sv-share-recipient-gateway-link",
+  "en-share-expired",
   "en-share-revoked",
+  "sv-share-choices",
+  "sv-social-preview",
+  "sv-social-story",
+  "sv-social-link-included",
+  "en-social-preview",
   "en-passport-mixed-with-india",
   "sv-passport-large",
   "en-admin-catalogue",
@@ -148,6 +160,15 @@ for (const [project, width] of Object.entries(PROJECTS)) {
       `${project}: case F attached its documents by "${upload ?? "nothing"}", not through Storage -- set E2E_STORAGE=1 on a stack that serves it`,
     );
   }
+  const g = tests.find((t) =>
+    t.annotations.some((a) => a.type === "proof" && a.description === "G"),
+  );
+  const hosting = g?.annotations.find((a) => a.type === "share-hosting")?.description;
+  if (g && hosting !== "hosted-html-restriction+host-analytics") {
+    problems.push(
+      `${project}: case G ran "${hosting ?? "on a bare local stack"}" -- set E2E_HOSTED_FUNCTIONS_URL and E2E_HOST_ANALYTICS=1`,
+    );
+  }
   for (const name of SCREENS) {
     const file = path.join(SHOTS, `${project}-${width}-${name}.png`);
     if (!existsSync(file)) problems.push(`${project}: screenshot missing: ${file}`);
@@ -163,5 +184,5 @@ if (problems.length > 0) {
   process.exit(1);
 }
 console.log(
-  `passport-public-pilot-evidence-verify OK: all ${PROOFS.length} proof cases ran and passed on ${Object.keys(PROJECTS).join(" and ")}, documents through Storage, ${SCREENS.length} screenshots at each width.`,
+  `passport-public-pilot-evidence-verify OK: all ${PROOFS.length} proof cases ran and passed on ${Object.keys(PROJECTS).join(" and ")}, documents through Storage, shares behind the hosted restriction and the host's analytics, ${SCREENS.length} screenshots at each width.`,
 );

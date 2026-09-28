@@ -10,10 +10,12 @@
 //
 // ── WHAT TRAVELS ───────────────────────────────────────────────────────
 //
-// The /p/<token> URL, and nothing else. No credential payload reaches a
-// platform: platforms cache what they are given and a cached credential
-// cannot be revoked, whereas the page behind the link is re-checked on
-// every open.
+// A share link, or nothing but a sentence. No credential payload reaches a
+// platform through an intent: platforms cache what they are given and a
+// cached credential cannot be revoked, whereas the page behind a link is
+// re-checked on every open. A post made from the social image carries NO link
+// unless the holder added one for it; the image travels as an attachment the
+// holder adds themselves, and nothing here publishes anything.
 //
 // ── INSTAGRAM ──────────────────────────────────────────────────────────
 //
@@ -56,14 +58,38 @@ export const FEED_CHANNELS: readonly ShareChannelMeta[] = [
  *
  * `null` is a real answer, not a gap: `copy_link` and `native` are handled by
  * the browser, and `instagram` is handled by downloading the Story image.
+ *
+ * `shareUrl` is null for a post that carries no link. A platform whose only
+ * web intent is a link (LinkedIn, Facebook) is then opened on its own page,
+ * where the holder attaches the image; one that takes text (X, WhatsApp,
+ * e-mail) is given the text alone. Every destination opens a composer or a
+ * page for the holder: nothing is posted.
  */
 export function shareIntentUrl(
   channel: ShareChannel,
-  shareUrl: string,
+  shareUrl: string | null,
   subject: string,
+  text: string = subject,
 ): string | null {
+  const t = encodeURIComponent(text);
+  const subj = encodeURIComponent(subject);
+  if (shareUrl === null) {
+    switch (channel) {
+      case "linkedin":
+        return "https://www.linkedin.com/feed/";
+      case "facebook":
+        return "https://www.facebook.com/";
+      case "x":
+        return `https://twitter.com/intent/tweet?text=${t}`;
+      case "whatsapp":
+        return `https://wa.me/?text=${t}`;
+      case "email":
+        return `mailto:?subject=${subj}&body=${t}`;
+      default:
+        return null;
+    }
+  }
   const u = encodeURIComponent(shareUrl);
-  const t = encodeURIComponent(subject);
   switch (channel) {
     case "linkedin":
       return `https://www.linkedin.com/sharing/share-offsite/?url=${u}`;
@@ -74,7 +100,7 @@ export function shareIntentUrl(
     case "whatsapp":
       return `https://wa.me/?text=${t}%20${u}`;
     case "email":
-      return `mailto:?subject=${t}&body=${u}`;
+      return `mailto:?subject=${subj}&body=${t}%0A%0A${u}`;
     default:
       return null;
   }
