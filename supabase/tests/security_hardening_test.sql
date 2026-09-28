@@ -333,6 +333,12 @@ DO $$ BEGIN RAISE NOTICE 'GROUP S3 — SECURITY DEFINER least privilege'; END $$
 -- The allowlist below is the ONLY place a definer function is permitted to be
 -- anon-executable. It is deliberately small and deliberately hard-coded: this
 -- assertion is the review gate, and a new entry is a diff somebody approves.
+--
+-- cd_access_state() (20261222090000, Career Discovery release control) is the
+-- fifth entry: it returns one of three release words (internal_test, public,
+-- paused) from a single-row policy table no client role can read, takes no
+-- argument, writes nothing and names nobody. The anonymous assessment page
+-- needs it to say honestly whether the instrument is paused.
 -- =========================================================================
 
 SELECT pg_temp.ok(
@@ -344,8 +350,8 @@ SELECT pg_temp.ok(
       AND NOT EXISTS (SELECT 1 FROM pg_depend d
                        WHERE d.objid = p.oid AND d.classid = 'pg_proc'::regclass
                          AND d.deptype = 'e'))
-  = 'cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status',
-  'S3.1 exactly four reviewed SECURITY DEFINER functions are anon-executable');
+  = 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status',
+  'S3.1 exactly five reviewed SECURITY DEFINER functions are anon-executable');
 
 SELECT pg_temp.ok(
   NOT has_function_privilege('anon',

@@ -227,9 +227,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // only; needs PR 2). Each is pending BY DESIGN until it merges and the official
 // integration applies it; its name comes off this list in the change that
 // records its hosted evidence.
+// 20261222090000_cd_access_policy (Career Discovery release control, CI-01 of
+// the 2026-09-28 UAT) is pending BY DESIGN until its PR merges and the
+// official integration applies it; it ships in internal_test, so applying it
+// changes nobody's access until the owner opens it. Its name comes off this
+// list in the change that records its hosted evidence.
 const expectedPending: string[] = [
   "20261220090000_sp_public_pilot_availability.sql",
   "20261221090000_sp_open_uk_dubai_public_pilot.sql",
+  "20261222090000_cd_access_policy.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
