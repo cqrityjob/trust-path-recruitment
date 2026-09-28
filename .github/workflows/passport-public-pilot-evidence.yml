@@ -31,7 +31,9 @@ name: Passport public pilot — real-backend evidence
 #   * The application is served on https, behind scripts/local-tls-front.mjs.
 #     The share function redirects a gateway link only to an https origin.
 #   * The share function runs with PUBLIC_SITE_URL set to that origin, from a
-#     supabase/functions/.env written on the runner.
+#     supabase/functions/.env written on the runner, together with
+#     PASSPORT_SHARE_ENTRY_PUBLISHED=1: the owner's confirmation that the site
+#     answers /p, without which the function refuses every link.
 #
 # All three are set on the runner at run time. supabase/config.toml in the
 # repository is not changed.
@@ -160,6 +162,7 @@ jobs:
           set -euo pipefail
           test ! -e supabase/functions/.env || { echo "ENV REFUSED: supabase/functions/.env already exists" >&2; exit 1; }
           echo "PUBLIC_SITE_URL=https://127.0.0.1:${APP_TLS_PORT}" > supabase/functions/.env
+          echo "PASSPORT_SHARE_ENTRY_PUBLISHED=1" >> supabase/functions/.env
 
       # Started with the migration history HELD BACK, as the other evidence
       # workflows do: the history is replayed as `postgres` below, after the

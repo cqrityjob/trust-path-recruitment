@@ -250,8 +250,9 @@ expect(
 const deno = {
   handler: null as null | ((request: Request) => Response | Promise<Response>),
 };
+const denoEnv: Record<string, string | undefined> = { PUBLIC_SITE_URL: "https://app.example" };
 (globalThis as unknown as { Deno: unknown }).Deno = {
-  env: { get: (key: string) => (key === "PUBLIC_SITE_URL" ? "https://app.example" : undefined) },
+  env: { get: (key: string) => denoEnv[key] },
   serve: (handler: (request: Request) => Response | Promise<Response>) => {
     deno.handler = handler;
   },
@@ -261,6 +262,23 @@ await import(edgeModule);
 expect(deno.handler !== null, "the function must register a handler");
 if (deno.handler) {
   const gatewayUrl = "https://project.supabase.co/functions/v1/passport-share";
+  // Before the owner confirms the site answers /p: no redirect at all. A site
+  // published before this change renders its own page at /p, where the host's
+  // analytics would report the address, fragment and all.
+  for (const unconfirmed of [undefined, "", "0", "true", "yes"]) {
+    denoEnv.PASSPORT_SHARE_ENTRY_PUBLISHED = unconfirmed;
+    for (const method of ["GET", "HEAD"]) {
+      const early = await deno.handler(new Request(gatewayUrl, { method }));
+      expect(
+        early.status === 503 &&
+          early.headers.get("location") === null &&
+          early.body === null &&
+          early.headers.get("cache-control") === "private, no-store",
+        `a link must be refused until the owner confirms the entry is published (${method}, ${JSON.stringify(unconfirmed)})`,
+      );
+    }
+  }
+  denoEnv.PASSPORT_SHARE_ENTRY_PUBLISHED = "1";
   const get = await deno.handler(new Request(gatewayUrl));
   expect(get.status === 302, "the function must answer a link with a redirect");
   expect(
@@ -350,6 +368,15 @@ if (deno.handler) {
   const proxy = await startHostedFunctionsProxy(0, `http://127.0.0.1:${upstreamPort}`);
   const proxied = `http://127.0.0.1:${(proxy.address() as { port: number }).port}`;
   try {
+    denoEnv.PASSPORT_SHARE_ENTRY_PUBLISHED = undefined;
+    const early = await fetch(`${proxied}/functions/v1/passport-share`, { redirect: "manual" });
+    expect(
+      early.status === 503 &&
+        early.headers.get("location") === null &&
+        (await early.arrayBuffer()).byteLength === 0,
+      "through the hosted restriction, an unconfirmed entry must refuse a link with no body",
+    );
+    denoEnv.PASSPORT_SHARE_ENTRY_PUBLISHED = "1";
     const link = await fetch(`${proxied}/functions/v1/passport-share`, { redirect: "manual" });
     expect(
       link.status === 302 &&

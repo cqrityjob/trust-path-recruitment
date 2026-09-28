@@ -46,6 +46,14 @@ its source as text.
   a body-less `302` to `<site>/p`, and the browser keeps the fragment when it
   follows it (RFC 9110 §10.2.2). A redirect with no body has nothing for hosted
   Supabase to rewrite. Every other method gets `405`.
+- **The function redirects only after the owner confirms the site answers `/p`.**
+  Until the secret `PASSPORT_SHARE_ENTRY_PUBLISHED=1` is set, `GET` and `HEAD` get a
+  body-less `503`.
+  - Without this, the order of release would matter. The site published today has no
+    `/p` page: it renders its own 404 there, and the host's analytics script runs on
+    that page and reports the address, token included.
+  - The function can go live before the site is published, and Lovable may deploy it
+    straight from the merged code. It can also outlive a rollback of the site.
 
 ### What is preserved
 
@@ -72,17 +80,18 @@ stored and never set as a cookie. The browser receives only the separate session
 
 ### Link shapes, and what each one does
 
-| Link                                                                                 | Status                                                                                                                 |
-| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| `https://trust-path-recruitment.lovable.app/p#<token>` (new)                         | Works once the application is published.                                                                               |
-| `https://<project>.supabase.co/functions/v1/passport-share#<token>` (issued earlier) | **Broken in production today.** It works once the new function version is deployed.                                    |
-| `https://…/p/<token>` (the oldest shape)                                             | Still redirected by the application. The token is in its first request path, so it can appear in the host's edge logs. |
+| Link                                                                                 | Status                                                                                                                            |
+| ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `https://trust-path-recruitment.lovable.app/p#<token>` (new)                         | Works once the application is published.                                                                                          |
+| `https://<project>.supabase.co/functions/v1/passport-share#<token>` (issued earlier) | **Broken in production today.** It works once the new function is deployed and the owner sets `PASSPORT_SHARE_ENTRY_PUBLISHED=1`. |
+| `https://…/p/<token>` (the oldest shape)                                             | Still redirected by the application. The token is in its first request path, so it can appear in the host's edge logs.            |
 
 **Limitation for existing links.** A gateway link issued before this change shows raw
-HTML until the owner deploys the new `passport-share` function. After that deploy, the
-local walk shows it opening the share through the hosted restriction. What hosted
-Supabase does with a body-less redirect in production has **not** been verified from
-here: the sandbox cannot reach the project. The deployed check below covers it.
+HTML until the new `passport-share` function is deployed. It then gets a blank `503`
+until the owner sets the secret. After that, the local walk shows it opening the
+share through the hosted restriction. What hosted Supabase does with a body-less
+redirect in production has **not** been verified from here: the sandbox cannot reach
+the project. The deployed check below covers it.
 
 **Any holder can re-issue a link** from "Dina delningar" and choose whether the old
 one keeps working.
@@ -165,27 +174,32 @@ WALK_RESULTS
 
 1. **Merge, then publish the application in Lovable.** New links start working once
    the published site answers `/p`.
-2. **Then deploy the `passport-share` function.** This is an owner action with the
-   project's deploy credentials. It rescues the gateway links issued earlier.
-   - Deploy only after step 1: the function redirects to the published site's `/p`.
+2. **Check the entry on the published site.**
+   `curl -sI https://trust-path-recruitment.lovable.app/p` must show the entry page's
+   `Content-Security-Policy` with `script-src 'nonce-…'` and without `'self'`. If the
+   host strips or rewrites that header, stop here and report it.
+3. **Deploy the `passport-share` function**, unless Lovable already deployed it from
+   the merged code. Either way it refuses every link until step 4.
+   - `verify_jwt = false` comes from `supabase/config.toml`.
    - `PUBLIC_SITE_URL` must be the published https origin, or unset for the
      production fallback.
-3. **Deployed checks** (a private window, from the published site):
+4. **Set the function secret `PASSPORT_SHARE_ENTRY_PUBLISHED=1`.** This is the owner's
+   confirmation that step 2 passed. From then on, gateway links issued earlier open
+   the share.
+5. **Deployed checks** (a private window, from the published site):
    1. Create a share, copy the link and open it. The recipient view renders with no
       raw HTML, and the address bar ends in `/p/<32 hex>` with no `#`.
    2. Scan the QR code on a phone: the same view opens.
-   3. `curl -sI https://trust-path-recruitment.lovable.app/p` shows the entry page's
-      `Content-Security-Policy` with `script-src 'nonce-…'` and without `'self'`.
-      If the host strips or rewrites that header, stop and report it.
-   4. In the browser's network panel, no request URL, `Referer` or analytics body
+   3. In the browser's network panel, no request URL, `Referer` or analytics body
       contains the token. The only request carrying it is `POST /p/open`.
-   5. An earlier gateway link, after step 2, opens the same view.
-   6. Revoke the share and reload: "not available". Open the link again: "not
+   4. An earlier gateway link opens the same view.
+   5. Revoke the share and reload: "not available". Open the link again: "not
       available".
-   7. In "Dela på sociala medier", select one credential and download the image. It
+   6. In "Dela på sociala medier", select one credential and download the image. It
       matches the preview and contains no link.
-4. **Rollback** means reverting this PR and republishing, then redeploying the
-   previous function. Gateway links then show raw HTML again, as they do today.
+6. **Rollback:** first remove `PASSPORT_SHARE_ENTRY_PUBLISHED`, so the function stops
+   sending anyone to `/p`. Then revert this PR, republish, and redeploy the previous
+   function. Gateway links then show raw HTML again, as they do today.
 
 **The share in the reported screenshot has its token visible** (`5eca5dbb…`).
 Revoke that share in "Dina delningar", and re-issue it if it is still needed.

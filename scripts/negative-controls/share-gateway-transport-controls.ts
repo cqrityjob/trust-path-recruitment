@@ -92,6 +92,16 @@ const mutations: readonly Mutation[] = [
     expect: "the function must answer a link with a redirect",
   },
   {
+    id: "FUNCTION-REDIRECTS-UNCONFIRMED",
+    defect:
+      "the function redirects before the owner confirms /p is published, so a site without the entry page lets the host's analytics read the token",
+    file: FUNCTION,
+    find: 'return Deno.env.get("PASSPORT_SHARE_ENTRY_PUBLISHED") === "1";',
+    replace: "return true;",
+    guard,
+    expect: "a link must be refused until the owner confirms the entry is published",
+  },
+  {
     id: "GATEWAY-COOKIE-PATH",
     defect: "the recipient session cookie rides every same-origin request",
     file: TRANSPORT,

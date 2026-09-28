@@ -17,6 +17,21 @@
 // reads, scrubs and exchanges the token there (src/server.ts,
 // src/lib/security-passport/share-transport.ts). This function never sees the
 // token: a fragment is not sent.
+//
+// ── WHY IT WAITS FOR THE OWNER ─────────────────────────────────────────
+//
+// The redirect is safe only where the site answers /p with that entry page,
+// whose policy refuses the host's injected analytics script. A site published
+// before this change has no such page: it renders its own 404 at /p, the host's
+// script runs there and reports the address, token and all. This function can
+// be deployed before the site is published, or outlive a rollback of it. So it
+// redirects only once the owner has confirmed the entry is live, by setting
+// PASSPORT_SHARE_ENTRY_PUBLISHED=1. Until then a link gets a 503 with no body:
+// nothing runs, nothing is rewritten, and the token goes nowhere.
+
+function entryPublished(): boolean {
+  return Deno.env.get("PASSPORT_SHARE_ENTRY_PUBLISHED") === "1";
+}
 
 function siteOrigin(): string {
   const fallback = "https://trust-path-recruitment.lovable.app";
@@ -38,6 +53,9 @@ const hopHeaders: HeadersInit = {
 
 Deno.serve((request) => {
   if (request.method === "GET" || request.method === "HEAD") {
+    if (!entryPublished()) {
+      return new Response(null, { status: 503, headers: { ...hopHeaders, "Retry-After": "3600" } });
+    }
     return new Response(null, { status: 302, headers: { ...hopHeaders, Location: ENTRY_URL } });
   }
   return new Response(null, { status: 405, headers: { ...hopHeaders, Allow: "GET, HEAD" } });
