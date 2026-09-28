@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-27T17:16:34.210685+00:00",
-  "readBy": "Read-only production verification after #309 merged as 80e63d0. All 321 previous ledger identities preserved; canonical 20261219090000 / assessment_draft_authoring is row 322. Four function bodies match the reviewed migration, column and both enabled triggers verified. See docs/release/2026-09-27-assessment-authoring-hosted-verification.md.",
+  "readAt": "2026-09-28T20:15:28.542273+00:00",
+  "readBy": "Read-only production verification after #323 merged as 10efc1b. All 322 previous ledger identities preserved; rows 323-325 are 20261220090000 / sp_public_pilot_availability, 20261221090000 / sp_open_uk_dubai_public_pilot (both applied by the integration when #315 and #317 merged) and 20261223090000 / application_notes_employer_only. Digest of version:name over all 325 rows f33d02081052b202cb70b43708ba5616, equal on the connector read and on this file. See docs/release/2026-09-28-jb02-expand-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1303,6 +1303,18 @@
     {
       "version": "20261219090000",
       "name": "assessment_draft_authoring"
+    },
+    {
+      "version": "20261220090000",
+      "name": "sp_public_pilot_availability"
+    },
+    {
+      "version": "20261221090000",
+      "name": "sp_open_uk_dubai_public_pilot"
+    },
+    {
+      "version": "20261223090000",
+      "name": "application_notes_employer_only"
     }
   ]
 }
