@@ -236,6 +236,11 @@ const expectedPending: string[] = [
   "20261220090000_sp_public_pilot_availability.sql",
   "20261221090000_sp_open_uk_dubai_public_pilot.sql",
   "20261223090000_application_notes_employer_only.sql",
+  // Its CONTRACT half (20261226090000: the two note columns leave the
+  // authenticated grant) is pending by design as well, and comes off this
+  // list when its own hosted evidence is recorded -- after the dependent
+  // application is live, never before.
+  "20261226090000_application_notes_column_privileges.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
