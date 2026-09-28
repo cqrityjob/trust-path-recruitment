@@ -130,9 +130,41 @@ async function inLanguage(page: Page, lang: "sv" | "en") {
   await page.addInitScript((value) => localStorage.setItem("cqrityjob.lang", value), lang);
 }
 
+/** The public boundary's throttle: reads per client per five-minute window,
+ *  as the application sets it. */
+const PUBLIC_READS_PER_WINDOW = Number(
+  /const THROTTLE_LIMIT = (\d+);/.exec(
+    readFileSync("src/lib/security-passport/public-disclosure.server.ts", "utf8"),
+  )?.[1],
+);
+
+/** No public read so far was refused by the throttle: a refused one is the
+ *  window's read past the limit, and it would show the same "not available"
+ *  page an expired or revoked link does. */
+function expectNoThrottleRefusal(what: string) {
+  expect(
+    PUBLIC_READS_PER_WINDOW,
+    "the throttle limit was read from the application",
+  ).toBeGreaterThan(0);
+  expect(
+    Number(sql("select coalesce(max(attempts), 0) from public.sp_public_access_throttle")),
+    `${what}: no public read was refused by the throttle`,
+  ).toBeLessThanOrEqual(PUBLIC_READS_PER_WINDOW);
+}
+
 /** A second, independent person on the same machine: their own cookies and
- *  storage, the project's own viewport. */
+ *  storage, the project's own viewport -- and their own throttle budget.
+ *
+ *  Someone else on their own device is a client of their own to the public
+ *  throttle. Here everyone arrives from one loopback client with no
+ *  X-Forwarded-For, so without this one person's reads would spend the next
+ *  one's budget. A fast run then saw its last recipient refused (run
+ *  36436368307: 390px case S, after both projects' G and S fell into one
+ *  window). The throttle itself is unchanged, and every read before the reset
+ *  is first proven to have been within it. */
 async function anotherPerson(browser: Browser, lang: "sv" | "en") {
+  expectNoThrottleRefusal("before another person arrives");
+  sql("delete from public.sp_public_access_throttle");
   const use = test.info().project.use;
   const context = await browser.newContext({
     ignoreHTTPSErrors: true,
@@ -1008,6 +1040,8 @@ test.describe("the public pilot, on a real backend", () => {
         expect(r.referer, `Referer of ${r.method} ${pathOf(r.url)}`).not.toContain(token);
         if (r.body.includes(token)) expect(`${r.method} ${r.url}`).toBe(`POST ${openUrl}`);
       }
+      // Every "not available" above was the expiry or the revocation.
+      expectNoThrottleRefusal("case G");
     } finally {
       await context.close();
     }
@@ -1260,6 +1294,7 @@ test.describe("the public pilot, on a real backend", () => {
       await expect(main).toContainText("Security Guard (MEP/Q7101)");
       await expect(main).not.toContainText("Väktarutbildning 1");
       for (const d of documents) await expect(main).not.toContainText(d);
+      expectNoThrottleRefusal("case S");
     } finally {
       await context.close();
     }
