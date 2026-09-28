@@ -156,7 +156,10 @@ that. Its LinkedIn profile entry is available again in the social choice.
 ## Verified
 
 - **Real-backend walk:** `e2e/passport-public-pilot-local.spec.ts`, all 11 cases at
-  1440 px and 390 px, 22 of 22 runs passed at `18aa6593`.
+  1440 px and 390 px, 22 of 22 runs passed at `c7f278ee`.
+  - It ran as the evidence workflow runs it: an empty dependency cache, a rebuilt
+    database, and the dev server settled by `scripts/local-dev-server-warmup.mjs`.
+    The dev server re-bundled nothing during the walk.
   - It runs against a real auth service, database, mail catcher and share function.
   - It sits behind `scripts/local-hosted-functions-proxy.ts` (hosted Supabase's HTML
     rewrite) and the TLS front's emulation of the host's injected analytics.
@@ -205,7 +208,19 @@ that. Its LinkedIn profile entry is available again in the social choice.
   `93e6f939` changed to "Läs om Security Passport".
 - **CI** (`.github/workflows/passport-public-pilot-evidence.yml`):
   - runs the walk behind both stand-ins for the hosted platform;
-  - its verifier refuses a report where cases G or S did not run that way.
+  - its verifier refuses a report where cases G or S did not run that way;
+  - settles the dev server before the walk.
+    - On the runner's empty dependency cache, the first page a browser loads makes
+      Vite bundle the router's runtime (`@tanstack/router-core` and `history`,
+      `seroval`, `h3-v2`) and reload every open page.
+    - Run 36423283328 met that reload mid-walk. Desktop case A waited on
+      `/my-career/profile` until it timed out, and serial mode skipped the other ten
+      desktop cases, H, B, J and K among them. The 390 px project passed all eleven.
+      Run 36361720007 on PR 4 had failed the same way.
+    - `scripts/local-dev-server-warmup.mjs` takes that reload in a browser of its
+      own. It exits only once a fresh page hydrates with no reload and no
+      re-bundle. Nothing in the application, the stack's privileges, the fixture or
+      the walk changes.
 
 ## Release
 
