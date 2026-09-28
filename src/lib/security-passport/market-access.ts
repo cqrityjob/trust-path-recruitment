@@ -47,8 +47,20 @@
 // full one, never wider.
 
 /** What a holder may do with one market, from the read model's point of view.
- *  Mirrors what `sp_market_access()` returns. */
-export type MarketAccess = "production" | "pilot" | "closed";
+ *  Mirrors what `sp_market_access()` returns.
+ *
+ *  `public_pilot` (20261220090000): every signed-in holder may register, with
+ *  no individual grant, while the market stays NOT legally cleared. It is not
+ *  "production" and must never be presented as one: the market's legal review
+ *  is still pending, and the surfaces say so. */
+export type MarketAccess = "production" | "pilot" | "public_pilot" | "closed";
+
+/** The access values under which a holder may register something NEW. One
+ *  list, so the overview, the market list and the catalogue cannot disagree
+ *  about which answers open a market. */
+export function isRegistrableAccess(access: MarketAccess): boolean {
+  return access === "production" || access === "pilot" || access === "public_pilot";
+}
 
 export interface MarketAccessInputs {
   /** `sp_market_packs.is_active` — public, legally cleared. Unchanged by the
@@ -107,32 +119,62 @@ export function isMissingPilotMembersTable(err: { code?: string } | null | undef
  *  consults the same function before accepting a write.
  *
  *  Without it, the pre-pilot rule applies verbatim: `is_active` and nothing
- *  else. "pilot" is unreachable in that branch, by construction rather than by
- *  care. */
+ *  else. "pilot" and "public_pilot" are unreachable in that branch, by
+ *  construction rather than by care.
+ *
+ *  And an answer this code does not know is "closed". A database that has
+ *  NOT received 20261220090000 never says "public_pilot", so nothing changes
+ *  there; a future state this code has never heard of opens nothing until the
+ *  code is taught what it means. */
 export function resolveMarketAccess(input: MarketAccessInputs): MarketAccess {
   if (input.pilotLayerMissing) {
     return input.packIsActive ? "production" : "closed";
   }
-  return input.rpcAccess === "production" || input.rpcAccess === "pilot"
+  return input.rpcAccess === "production" ||
+    input.rpcAccess === "pilot" ||
+    input.rpcAccess === "public_pilot"
     ? input.rpcAccess
     : "closed";
 }
 
 /** Product availability of one market, for the overview: `available` when
  *  the pack is public (`is_active`), `internal_pilot` only when `pilot_state`
- *  is EXACTLY 'internal_pilot', and `closed` for everything else — a closed
- *  pack, an unknown state, a database whose pack has no pilot_state column.
+ *  is EXACTLY 'internal_pilot', `public_pilot` only when it is EXACTLY
+ *  'public_pilot', and `closed` for everything else — a closed pack, an
+ *  unknown state, a database whose pack has no pilot_state column.
  *
  *  Pure, so the guard can prove the mapping: an inactive pack whose state is
  *  missing, null, 'closed' or anything unrecognised is never presented as a
  *  pilot, because "under review" is a governed claim and the only evidence
- *  for it is the column saying so. */
-export type MarketAvailability = "available" | "internal_pilot" | "closed";
+ *  for it is the column saying so. The same holds for "open to everyone": a
+ *  public pilot is printed only when the column says exactly that. */
+export type MarketAvailability = "available" | "internal_pilot" | "public_pilot" | "closed";
 
 export function marketAvailabilityOf(
   packIsActive: boolean,
   pilotState: string | null | undefined,
 ): MarketAvailability {
   if (packIsActive) return "available";
-  return pilotState === "internal_pilot" ? "internal_pilot" : "closed";
+  if (pilotState === "internal_pilot") return "internal_pilot";
+  return pilotState === "public_pilot" ? "public_pilot" : "closed";
+}
+
+/** The refusal every write path turns an availability refusal into. */
+export const NOT_OPEN_FOR_REGISTRATION = "SP_NOT_OPEN_FOR_REGISTRATION";
+
+/** True when a database refusal means "not open for new registration": the
+ *  definition is not in the caller's approved catalogue
+ *  (SP_APPROVED_DEFINITION_REQUIRED), its market is not open to them
+ *  (SP_MARKET_PACK_NOT_ACTIVE) or the definition itself is not
+ *  (SP_CREDENTIAL_NOT_AVAILABLE). Matched on the codes the database raises by
+ *  name — never on the prose after them, which 20261220090000 rewrote. A
+ *  surface shows its own message for these instead of the generic save error,
+ *  and nothing else is reported as one. */
+export function isAvailabilityRefusal(message: string | null | undefined): boolean {
+  return (
+    typeof message === "string" &&
+    (message.includes("SP_APPROVED_DEFINITION_REQUIRED") ||
+      message.includes("SP_MARKET_PACK_NOT_ACTIVE") ||
+      message.includes("SP_CREDENTIAL_NOT_AVAILABLE"))
+  );
 }

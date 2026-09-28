@@ -79,6 +79,10 @@ export interface AdminPilotAccessRow {
   /** True when the pack is in internal pilot, which is the only state in
    *  which `sp_grant_pilot_member()` accepts a grant. */
   readonly inPilot: boolean;
+  /** True when the pack is in public pilot (20261220090000): every signed-in
+   *  holder may register there with no grant, so none is offered. An earlier
+   *  grant stays listed as history and can still be revoked. */
+  readonly publicPilot: boolean;
   /** The entitlement row, or null when this user was never granted. The
    *  granting and revoking administrators' ids stay in the database: the
    *  page needs WHEN and WHETHER, and an actor id in a browser response is
@@ -171,6 +175,7 @@ export const adminListPassportPilotAccess = createServerFn({ method: "POST" })
           nameSv: pack.name_sv,
           nameEn: pack.name_en,
           inPilot: pilotStates.get(code) === "internal_pilot",
+          publicPilot: pilotStates.get(code) === "public_pilot",
           entitlement: m
             ? {
                 active: m.revoked_at === null,

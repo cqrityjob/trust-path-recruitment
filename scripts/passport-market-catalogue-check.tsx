@@ -151,6 +151,15 @@ console.log("passport-market-catalogue-check");
 /* ══════════════════════════════════════════════════════════════════════
    1 · THE ROUTE WIRING
    ══════════════════════════════════════════════════════════════════════ */
+/** React's static markup escapes text; copy is compared in the same form. */
+const escapeHtml = (t: string) =>
+  t
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+
 group("1 · the entry route passes the catalogue for open AND open_pilot");
 {
   const route = code(read("src/routes/_authenticated.passport.information.tsx"));
@@ -208,12 +217,27 @@ group("1 · the entry route passes the catalogue for open AND open_pilot");
     "1.5 CredentialForm.tsx never names an open state (it is told, or it is closed)",
     !/"open(_pilot)?"/.test(code(read("src/components/security-passport/CredentialForm.tsx"))),
   );
+  // The open states are listed ONCE, in the shared rule. There are four now
+  // (production, internal pilot, public pilot, national qualifications), and
+  // a surface that restated "open || open_pilot" would silently drop the
+  // other two -- which is exactly how the route once dropped open_pilot.
   ck(
-    "1.6 the shared rule is the only place that names both states",
-    /state === "open" \|\| state === "open_pilot"/.test(
+    "1.6 the shared rule is the one place that lists every open state",
+    /const OFFERABLE[^=]*=\s*\[\s*"open",\s*"open_pilot",\s*"open_public_pilot",\s*"open_qualifications",?\s*\]/.test(
       code(read("src/lib/security-passport/market-catalogue.ts")),
     ),
   );
+  for (const f of [
+    "src/routes/_authenticated.passport.information.tsx",
+    "src/components/security-passport/MarketCredentialSection.tsx",
+    "src/components/security-passport/PassportOverview.tsx",
+    "src/components/security-passport/CredentialForm.tsx",
+  ]) {
+    ck(
+      `1.6 ${path.basename(f)} restates no open-state comparison of its own`,
+      !/state === "open(_pilot|_public_pilot|_qualifications)?" \|\|/.test(code(read(f))),
+    );
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -227,6 +251,20 @@ group("2 · the rule, for every market state");
     "2.2 open_pilot -> the catalogue (the regression)",
     catalogueOptionsFor({ state: "open_pilot", types }).length === 13,
   );
+  ck(
+    "2.2 open_public_pilot -> the catalogue (every signed-in holder, no grant)",
+    catalogueOptionsFor({ state: "open_public_pilot", types }).length === 13,
+  );
+  ck(
+    "2.2 open_qualifications -> the catalogue (national qualifications, no pack)",
+    catalogueOptionsFor({ state: "open_qualifications", types }).length === 13,
+  );
+  for (const state of ["public_pilot", "open_public", "OPEN_PUBLIC_PILOT", "open_everything"]) {
+    ck(
+      `2.3 an unknown state "${state}" -> nothing (fails closed)`,
+      catalogueOptionsFor({ state, types }).length === 0,
+    );
+  }
   for (const state of ["pending_review", "unsupported", "no_work_country"]) {
     ck(
       `2.3 ${state} -> nothing, even when types are passed`,
@@ -238,7 +276,11 @@ group("2 · the rule, for every market state");
     "2.5 the predicate agrees with the function",
     isOfferableMarketState("open") &&
       isOfferableMarketState("open_pilot") &&
+      isOfferableMarketState("open_public_pilot") &&
+      isOfferableMarketState("open_qualifications") &&
       !isOfferableMarketState("pending_review") &&
+      !isOfferableMarketState("public_pilot") &&
+      !isOfferableMarketState(null) &&
       !isOfferableMarketState(undefined),
   );
   ck(
@@ -510,6 +552,104 @@ group("4 · the rendered catalogue: 3/5, 7/6, 1/0, 15/15");
       en.includes(passportT("catalogue.group.qualifications", "en")) &&
       !en.includes(passportT("catalogue.group.appointments", "sv")),
   );
+
+  // ── A PUBLIC PILOT (20261220090000) ───────────────────────────────
+  //
+  // The same catalogue as the internal pilot, offered to every signed-in
+  // holder -- and three facts said as three paragraphs: who may register,
+  // that the legal review is still pending, and that registering is not a
+  // permission to work. Never the internal-pilot line, which speaks of a
+  // grant this holder does not have.
+  for (const lang of ["sv", "en"] as const) {
+    const m = html(
+      <MarketCredentialSection
+        state="open_public_pilot"
+        jurisdictionCode="AE"
+        subJurisdictionCode="AE-DU"
+        options={DU}
+        onSelect={noop}
+      />,
+      lang,
+    );
+    ck(`4.public.${lang} the whole Dubai catalogue is offered`, codesIn(m).length === DU.length);
+    const statements = [
+      ["availability", "market.publicPilot.status"],
+      ["legal-review", "market.publicPilot.legalReview"],
+      ["not-permission", "market.publicPilot.notPermission"],
+    ] as const;
+    for (const [attr, key] of statements) {
+      const p = m.match(
+        new RegExp(`<p[^>]*data-public-pilot-statement="${attr}"[^>]*>([^<]*)</p>`),
+      );
+      ck(
+        `4.public.${lang} states "${attr}" in a paragraph of its own`,
+        p !== null && p[1] === escapeHtml(passportT(key, lang)),
+      );
+    }
+    ck(
+      `4.public.${lang} the legal review is PENDING, never complete`,
+      /pågår|pending/i.test(passportT("market.publicPilot.legalReview", lang)) &&
+        !/granskningen är klar|review is complete/i.test(m),
+    );
+    ck(
+      `4.public.${lang} registration is said not to be a permission to work`,
+      /rätt att arbeta|permission to work/i.test(
+        passportT("market.publicPilot.notPermission", lang),
+      ),
+    );
+    ck(
+      `4.public.${lang} no internal-pilot line and no grant is mentioned`,
+      !/market-pilot-status/.test(m) && !m.includes(passportT("market.pilot.body", lang)),
+    );
+    ck(`4.public.${lang} the heading names Dubai`, /Dubai/.test(m));
+  }
+
+  // ── A COUNTRY OF NATIONAL QUALIFICATIONS (G5) ─────────────────────
+  //
+  // India has no market pack; its four NSQF qualifications are open to every
+  // holder. The section offers them under "Qualifications for India" and says
+  // they are qualifications, not licences -- never "not supported".
+  const INDIA = [
+    ["IN_MEPSC_Q7101", "Security Guard (MEP/Q7101)", "Q7101"],
+    ["IN_MEPSC_Q7201", "Security Supervisor (MEP/Q7201)", "Q7201"],
+    ["IN_MEPSC_Q7104", "CCTV Supervisor (MEP/Q7104)", "Q7104"],
+    ["IN_MEPSC_Q7204", "CCTV Video Footage Auditor (MEP/Q7204)", "Q7204"],
+  ].map(([code, name, symbol]) => ({
+    code,
+    category: "qualification" as const,
+    nameSv: name,
+    nameEn: name,
+    symbolLabel: symbol,
+  }));
+  for (const lang of ["sv", "en"] as const) {
+    const m = html(
+      <MarketCredentialSection
+        state="open_qualifications"
+        jurisdictionCode="IN"
+        subJurisdictionCode={null}
+        options={INDIA}
+        onSelect={noop}
+      />,
+      lang,
+    );
+    ck(`4.IN.${lang} all four qualifications are offered`, codesIn(m).length === 4);
+    ck(
+      `4.IN.${lang} under "Qualifications for India", not a licence heading`,
+      m.includes(
+        `${passportT("market.section.qualificationsFor", lang)} ${passportT("jurisdiction.IN", lang)}`,
+      ),
+    );
+    ck(
+      `4.IN.${lang} it says they are qualifications, not licences or permission to work`,
+      /data-testid="market-qualifications-status"/.test(m) &&
+        m.includes(escapeHtml(passportT("workCountry.support.IN", lang))),
+    );
+    ck(
+      `4.IN.${lang} and never that India is unsupported`,
+      !m.includes(passportT("market.unsupported.heading", lang)) &&
+        !m.includes(passportT("market.unsupported.body", lang)),
+    );
+  }
 
   // Loading, failure and emptiness are each words.
   const loading = html(
@@ -1045,6 +1185,57 @@ group("9 · three market cards, the admin section and the copy, both languages")
         !/data-market-action-for="GB-NI"/.test(cards(PILOT, lang)),
     );
   }
+  // A PUBLIC PILOT (20261220090000): every signed-in holder may register in
+  // the UK and Dubai with no grant. The chip says "Public pilot", the market
+  // becomes usable, and the card says -- in two further sentences of its own
+  // -- that the legal review is pending and that registering is not a
+  // permission to work. It never borrows the internal pilot's grant wording.
+  const OPEN_PILOT = [
+    row("SE", "SE", null, "available", "production"),
+    row("GB", "GB", null, "public_pilot", "public_pilot"),
+    row("GB-NI", "GB", "GB-NI", "public_pilot", "public_pilot"),
+    row("AE-DU", "AE", "AE-DU", "public_pilot", "public_pilot", true),
+  ];
+  for (const lang of ["sv", "en"] as const) {
+    const open = cards(OPEN_PILOT, lang);
+    const dubai = open.slice(open.indexOf('data-market-card="AE-DU"'));
+    const uk = open.slice(
+      open.indexOf('data-market-card="GB"'),
+      open.indexOf('data-market-card="AE-DU"'),
+    );
+    ck(
+      `9.${lang} a public-pilot market reads "Public pilot", never "Available" or "Internal pilot"`,
+      /data-market-availability="public_pilot"/.test(dubai) &&
+        dubai.includes(passportT("markets.status.publicPilot", lang)) &&
+        !dubai.includes(passportT("markets.status.pilot", lang)) &&
+        !dubai.includes(passportT("markets.status.available", lang)),
+    );
+    ck(
+      `9.${lang} the holder's own public-pilot market offers "Add credentials" with no grant`,
+      /data-market-card="AE-DU"[^>]*data-holder-access="public_pilot"/.test(open) &&
+        /data-market-action="add"[^>]*data-market-action-for="AE-DU"/.test(dubai),
+    );
+    ck(
+      `9.${lang} and says who may register, then the legal review, then no permission to work`,
+      dubai.includes(escapeHtml(passportT("markets.holder.publicPilot", lang))) &&
+        dubai.includes(escapeHtml(passportT("markets.publicPilot.legalReview", lang))) &&
+        dubai.includes(escapeHtml(passportT("markets.publicPilot.notPermission", lang))),
+    );
+    ck(
+      `9.${lang} no grant wording on a public pilot`,
+      !open.includes(passportT("markets.holder.pilotMember", lang)) &&
+        !/data-market-pilot-note/.test(open),
+    );
+    ck(
+      `9.${lang} Northern Ireland keeps its own submarket line and statements`,
+      /data-market-submarket="GB-NI"[\s\S]*?data-market-public-pilot-note/.test(uk),
+    );
+    ck(
+      `9.${lang} a market that is not the holder's own offers "choose", not "add"`,
+      /data-market-card="GB"[\s\S]*?data-market-action="choose"/.test(uk),
+    );
+  }
+
   const loading = html(<MarketOverviewCards state={{ status: "loading" }} />);
   const failed = html(<MarketOverviewCards state={{ status: "failed" }} />);
   ck(
@@ -1125,6 +1316,41 @@ group("9 · three market cards, the admin section and the copy, both languages")
     ck(
       `9.admin.${lang} the note is optional and internal`,
       m.includes(t("admin.users.pilot.note.optional")),
+    );
+
+    // A public-pilot market needs no grant: the row says so in its own
+    // words, offers no grant, and keeps an earlier entitlement as history
+    // that can still be revoked.
+    const pub = renderToStaticMarkup(
+      <I18nProvider initialLang={lang}>
+        <PassportPilotAccessSection
+          rows={[
+            { ...rows[2], inPilot: false, publicPilot: true },
+            { ...rows[0], inPilot: false, publicPilot: true },
+          ]}
+          status="ready"
+          pending={false}
+          errorMessage={null}
+          onGrant={noop}
+          onRevoke={noop}
+        />
+      </I18nProvider>,
+    );
+    const pubDu = pub.slice(
+      pub.indexOf('data-pilot-market="AE-DU"'),
+      pub.indexOf('data-pilot-market="GB"'),
+    );
+    const pubGrant = /<button[^>]*data-pilot-action="grant"[^>]*>/.exec(pubDu)?.[0] ?? "";
+    ck(
+      `9.admin.${lang} a public-pilot market says no grant is needed, not "not in pilot"`,
+      /data-pilot-public="true"/.test(pubDu) &&
+        pubDu.includes(escapeHtml(t("admin.users.pilot.publicPilot"))) &&
+        !pubDu.includes(escapeHtml(t("admin.users.pilot.notInPilot"))),
+    );
+    ck(`9.admin.${lang} and offers no grant`, pubGrant.length > 0 && /\bdisabled\b/.test(pubGrant));
+    ck(
+      `9.admin.${lang} an earlier grant stays visible as history and can still be revoked`,
+      /data-pilot-market="GB"[\s\S]*?data-pilot-action="revoke"/.test(pub),
     );
   }
 

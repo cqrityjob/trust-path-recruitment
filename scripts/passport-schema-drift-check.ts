@@ -44,8 +44,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
+  isAvailabilityRefusal,
   isMissingPilotLayer,
   isMissingPilotStateColumn,
+  isRegistrableAccess,
   marketAvailabilityOf,
   resolveMarketAccess,
 } from "../src/lib/security-passport/market-access";
@@ -95,8 +97,17 @@ console.log("1 -- a database with no pilot layer degrades to the pre-pilot rule"
       "closed",
   );
 
+  ck(
+    "and neither can a stale 'public_pilot' answer",
+    resolveMarketAccess({
+      packIsActive: false,
+      rpcAccess: "public_pilot",
+      pilotLayerMissing: true,
+    }) === "closed",
+  );
+
   // With the layer present the database's answer is passed through untouched.
-  for (const a of ["production", "pilot"] as const) {
+  for (const a of ["production", "pilot", "public_pilot"] as const) {
     ck(
       `with the pilot layer present, "${a}" is passed through`,
       resolveMarketAccess({
@@ -118,6 +129,21 @@ console.log("1 -- a database with no pilot layer degrades to the pre-pilot rule"
     "a null answer is closed",
     resolveMarketAccess({ packIsActive: true, rpcAccess: null, pilotLayerMissing: false }) ===
       "closed",
+  );
+  // A public pilot is not "production", and a near-miss spelling opens nothing.
+  for (const near of ["PUBLIC_PILOT", "public pilot", "publicPilot", "public"]) {
+    ck(
+      `a near-miss "${near}" is closed`,
+      resolveMarketAccess({ packIsActive: false, rpcAccess: near, pilotLayerMissing: false }) ===
+        "closed",
+    );
+  }
+  ck(
+    "only production, pilot and public_pilot are registrable",
+    isRegistrableAccess("production") &&
+      isRegistrableAccess("pilot") &&
+      isRegistrableAccess("public_pilot") &&
+      !isRegistrableAccess("closed"),
   );
 }
 
@@ -141,6 +167,25 @@ console.log("\n2 -- every other failure still throws");
   const src = read("src/lib/security-passport/market-access.ts");
   // The overview's availability mapping: "internal_pilot" needs the column
   // to say exactly that; every other inactive shape is closed, never a pilot.
+  ck(
+    "marketAvailabilityOf: public_pilot only when pilot_state is exactly public_pilot",
+    marketAvailabilityOf(false, "public_pilot") === "public_pilot" &&
+      marketAvailabilityOf(false, "PUBLIC_PILOT") === "closed" &&
+      marketAvailabilityOf(false, "public") === "closed" &&
+      marketAvailabilityOf(true, "public_pilot") === "available",
+  );
+  ck(
+    "an availability refusal is recognised by its code, and nothing else is",
+    isAvailabilityRefusal("SP_APPROVED_DEFINITION_REQUIRED") &&
+      isAvailabilityRefusal(
+        "SP_MARKET_PACK_NOT_ACTIVE: market pack GB is not open for new registration",
+      ) &&
+      isAvailabilityRefusal("SP_CREDENTIAL_NOT_AVAILABLE: credential X is not available") &&
+      !isAvailabilityRefusal("SP_CREDENTIAL_REQUIRES_SCOPE") &&
+      !isAvailabilityRefusal("SP_TRUST_FIELD_IMMUTABLE") &&
+      !isAvailabilityRefusal("not open for new registration") &&
+      !isAvailabilityRefusal(null),
+  );
   ck(
     "marketAvailabilityOf: internal_pilot only when pilot_state is exactly internal_pilot",
     marketAvailabilityOf(false, "internal_pilot") === "internal_pilot" &&

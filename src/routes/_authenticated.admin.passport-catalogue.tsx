@@ -2,9 +2,9 @@
 //
 // READ-ONLY. Every researched definition, by its stable code, with WHY it is or
 // is not selectable and which decision is outstanding. It approves nothing:
-// definition approval and market activation remain reviewed migrations
-// (docs/passport/closed-catalogue-governance.md), and pilot access for a named
-// user is granted on that user's page.
+// definition approval, market activation and opening a public pilot remain
+// reviewed migrations (docs/passport/closed-catalogue-governance.md), and
+// internal pilot access for a named user is granted on that user's page.
 
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
@@ -32,6 +32,10 @@ const AVAILABILITY: Record<CatalogueAvailability, { sv: string; en: string }> = 
     sv: "Valbar för pilotmedlemmar i marknaden",
     en: "Selectable by this market's pilot members",
   },
+  selectable_public_pilot: {
+    sv: "Valbar för alla inloggade — öppen pilot",
+    en: "Selectable by every signed-in holder — public pilot",
+  },
   awaiting_definition_approval: {
     sv: "Väntar på godkännande av definitionen",
     en: "Awaiting definition approval",
@@ -46,12 +50,20 @@ const REASONS: Record<DiagnosticReason, { sv: string; en: string }> = {
     en: "The definition is not approved (is_active = false). Decided per definition by reviewed migration.",
   },
   market_closed: {
-    sv: "Marknadspaketet är varken aktivt eller i intern pilot.",
-    en: "The market pack is neither active nor in internal pilot.",
+    sv: "Marknadspaketet är varken aktivt eller i pilot.",
+    en: "The market pack is neither active nor in a pilot.",
   },
   market_pilot_members_only: {
     sv: "Marknaden är i intern pilot: erbjuds bara namngivna pilotmedlemmar (ges på användarens sida).",
     en: "The market is in internal pilot: offered to named pilot members only (granted on the user's page).",
+  },
+  market_public_pilot: {
+    sv: "Marknaden är i öppen pilot: alla inloggade användare erbjuds den, utan pilotåtkomst. Den är inte aktiv och inte juridiskt godkänd.",
+    en: "The market is in public pilot: every signed-in user is offered it, with no pilot grant. It is not active and not legally approved.",
+  },
+  public_pilot_not_approved: {
+    sv: "Ägaren har öppnat definitionen i den öppna piloten. Den erbjuds alla inloggade i just den här marknaden, är inte godkänd (is_active = false) och dess juridiska granskning är oförändrad.",
+    en: "Opened by the owner in the public pilot. Offered to every signed-in user in this exact market, not approved (is_active = false), and its legal review is unchanged.",
   },
   pilot_authorised_not_public: {
     sv: "Ägaren har godkänt definitionen för intern pilot. Den erbjuds giltiga pilotmedlemmar i just den här marknaden, är inte godkänd för allmänheten (is_active = false) och publiceras inte av att marknaden aktiveras.",
@@ -75,6 +87,35 @@ const REASONS: Record<DiagnosticReason, { sv: string; en: string }> = {
     en: "National qualification: offered without a market pack because it authorises nothing. No market-pack legal review is required, and none has been made.",
   },
 };
+
+/** The legal review, in its own words and its own column. Availability is a
+ *  different question: a public pilot opens a market whose review is pending,
+ *  and this column is what keeps that visible. */
+const LEGAL_REVIEW: Record<string, { sv: string; en: string }> = {
+  pending: { sv: "Väntar på granskning", en: "Pending" },
+  in_review: { sv: "Granskas", en: "In review" },
+  approved: { sv: "Godkänd", en: "Approved" },
+  grandfathered: { sv: "Äldre godkännande", en: "Grandfathered" },
+};
+
+function legalReviewText(state: string | null | undefined, l: "sv" | "en"): string {
+  if (!state) return "-";
+  return LEGAL_REVIEW[state]?.[l] ?? state;
+}
+
+/** The definition's pilot state, in words. The raw `closed` printed under an
+ *  active market's code read as "Sweden: closed" beside "Selectable by
+ *  everyone"; it means only that the definition is in no pilot. */
+const PILOT_STATE: Record<string, { sv: string; en: string }> = {
+  closed: { sv: "ingen pilot", en: "no pilot" },
+  internal_pilot: { sv: "intern pilot", en: "internal pilot" },
+  public_pilot: { sv: "öppen pilot", en: "public pilot" },
+};
+
+function pilotStateText(state: string | null | undefined, l: "sv" | "en"): string {
+  if (!state) return "-";
+  return PILOT_STATE[state]?.[l] ?? state;
+}
 
 function AutomaticVerificationText({
   value,
@@ -153,8 +194,8 @@ function PassportCatalogueRoute() {
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
               {copy(
-                "Varje undersökt definition, med varför den är eller inte är valbar. Sidan är läsande: godkännande av en definition och aktivering av en marknad sker genom granskad migration, och pilotåtkomst ges på användarens sida.",
-                "Every researched definition, with why it is or is not selectable. This page is read-only: a definition is approved and a market activated by reviewed migration, and pilot access is granted on the user's page.",
+                "Varje undersökt definition, med varför den är eller inte är valbar. Sidan är läsande: godkännande av en definition, aktivering av en marknad och öppning av en öppen pilot sker genom granskad migration, och intern pilotåtkomst ges på användarens sida. Tillgänglighet och juridisk granskning visas i var sin kolumn.",
+                "Every researched definition, with why it is or is not selectable. This page is read-only: a definition is approved, a market activated and a public pilot opened by reviewed migration, and internal pilot access is granted on the user's page. Availability and legal review are shown in separate columns.",
               )}
             </p>
           </header>
@@ -168,7 +209,7 @@ function PassportCatalogueRoute() {
           )}
           {rows && (
             <>
-              <dl className="grid gap-3 sm:grid-cols-5" data-catalogue-counts>
+              <dl className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6" data-catalogue-counts>
                 {(Object.keys(AVAILABILITY) as CatalogueAvailability[]).map((a) => (
                   <div key={a} className="rounded-lg border border-border bg-card p-3">
                     <dt className="text-xs text-muted-foreground">{AVAILABILITY[a][l]}</dt>
@@ -217,7 +258,7 @@ function PassportCatalogueRoute() {
                 </p>
               </div>
               <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="w-full min-w-[60rem] text-left text-sm">
+                <table className="w-full min-w-[68rem] text-left text-sm">
                   <thead className="bg-secondary/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       <th className="p-3">{copy("Kod", "Code")}</th>
@@ -227,6 +268,7 @@ function PassportCatalogueRoute() {
                       <th className="p-3">
                         {copy("Tillgänglighet och orsak", "Availability and reason")}
                       </th>
+                      <th className="p-3">{copy("Juridisk granskning", "Legal review")}</th>
                       <th className="p-3">
                         {copy("Automatisk verifiering", "Automatic verification")}
                       </th>
@@ -302,8 +344,11 @@ function PassportCatalogueRoute() {
                                 : `${r.jurisdictionCode ?? "-"}${r.subJurisdictionCode ? ` · ${copy("region krävs", "region required")}` : ""}`}
                           </span>
                           <br />
-                          <span className="text-muted-foreground">
-                            {r.legalReviewState ?? "-"} · {r.pilotState ?? "-"}
+                          <span
+                            className="text-muted-foreground"
+                            data-catalogue-pilot-state={r.pilotState ?? ""}
+                          >
+                            {pilotStateText(r.pilotState, l)}
                           </span>
                         </td>
                         <td className="p-3 text-xs">
@@ -336,6 +381,22 @@ function PassportCatalogueRoute() {
                               <li key={reason}>{REASONS[reason][l]}</li>
                             ))}
                           </ul>
+                        </td>
+                        <td className="p-3 text-xs" data-catalogue-legal-review>
+                          <p>
+                            {copy("Definition", "Definition")}:{" "}
+                            <span data-legal-review-definition={r.legalReviewState ?? ""}>
+                              {legalReviewText(r.legalReviewState, l)}
+                            </span>
+                          </p>
+                          {r.marketPackCode ? (
+                            <p>
+                              {copy("Marknadspaket", "Market pack")}:{" "}
+                              <span data-legal-review-pack={r.packLegalReviewState ?? ""}>
+                                {legalReviewText(r.packLegalReviewState, l)}
+                              </span>
+                            </p>
+                          ) : null}
                         </td>
                         <td className="p-3 text-xs">
                           <AutomaticVerificationText value={r.automaticVerification} l={l} />

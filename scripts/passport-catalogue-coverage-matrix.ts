@@ -47,6 +47,7 @@ select coalesce(json_agg(row_to_json(x) order by x.pack_order, x.sort_order, x.c
      and (t.sub_jurisdiction_code is null or exists(select 1 from public.sp_sub_jurisdictions s where s.code=t.sub_jurisdiction_code and s.is_active)))) as jurisdiction_active,
   (select p.is_active and p.superseded_on is null from public.sp_market_packs p where p.code=t.market_pack_code) as pack_is_active,
   (select p.pilot_state from public.sp_market_packs p where p.code=t.market_pack_code) as pack_pilot_state,
+  (select p.legal_review_state from public.sp_market_packs p where p.code=t.market_pack_code) as pack_legal_review_state,
   (select v.source_url from public.sp_credential_definition_reviews v where v.credential_code=t.code) as source_url,
   (select v.checked_on::text from public.sp_credential_definition_reviews v where v.credential_code=t.code) as checked_on
  from public.sp_credential_types t) x`;
@@ -83,6 +84,7 @@ const rows = raw.map((t) => {
     jurisdictionActive: t.jurisdiction_active === true,
     packIsActive: t.pack_is_active === null ? null : t.pack_is_active === true,
     packPilotState: (t.pack_pilot_state as string | null) ?? null,
+    packLegalReviewState: (t.pack_legal_review_state as string | null) ?? null,
     review: t.source_url
       ? { sourceUrl: t.source_url as string, checkedOn: t.checked_on as string }
       : null,
@@ -101,10 +103,25 @@ const awarding = (r: (typeof rows)[number]) =>
 const STATE: Record<string, string> = {
   selectable: "approved · open to all",
   selectable_pilot_members: "pilot-authorised (not public) · valid members of this market",
+  selectable_public_pilot: "public pilot (not approved) · every signed-in holder, no grant",
   awaiting_definition_approval: "NOT approved · pilot market",
   market_closed: "market CLOSED",
   blocked: "BLOCKED",
 };
+// The legal review, beside availability and never inside it: a public pilot
+// opens a market whose review is still pending.
+const legalReview = (r: (typeof rows)[number]) =>
+  r.marketPackCode
+    ? `definition ${r.legalReviewState ?? "—"} · pack ${r.packLegalReviewState ?? "—"}`
+    : `definition ${r.legalReviewState ?? "—"} · no pack`;
+const selectableNow = (r: (typeof rows)[number]) =>
+  r.availability === "selectable"
+    ? "yes"
+    : r.availability === "selectable_pilot_members"
+      ? "pilot members"
+      : r.availability === "selectable_public_pilot"
+        ? "every signed-in holder"
+        : "no";
 const inScope = (r: (typeof rows)[number]) => r.marketPackCode !== "AE-AZ";
 const display = (r: (typeof rows)[number]) =>
   r.scopeCode === "global_professional"
@@ -112,7 +129,7 @@ const display = (r: (typeof rows)[number]) =>
     : `flag ${r.subJurisdictionCode ?? r.jurisdictionCode}${r.scopeCode === "national_qualification" ? " · national qualification, not a licence" : ""}${r.requiresScope ? " · scope-limited mark, scope text withheld from an anonymous share" : ""}`;
 
 const line = (r: (typeof rows)[number]) =>
-  `| \`${r.code}\` | ${r.nameEn} | ${territory(r)} | ${r.claimType} / ${r.category} | ${r.regulator ?? "—"} | ${awarding(r)}${r.trainingProviderStatedOnDocument ? "; training provider stated on the certificate" : ""} | ${STATE[r.availability]} | ${r.availability === "selectable" ? "yes" : r.availability === "selectable_pilot_members" ? "pilot members" : "no"} | ${inScope(r) ? `proven${r.holderMustState.length ? ` (holder states ${r.holderMustState.join(" + ").replaceAll("_", " ")})` : ""}${r.availability === "selectable_pilot_members" ? " — as a valid pilot member" : ""}` : "refused (closed market)"} | ${inScope(r) ? "review request + evidence reach the reviewer; definition, issuer as stated, territory and scope shown" : "n/a"} | ${inScope(r) ? display(r) : "n/a"} |`;
+  `| \`${r.code}\` | ${r.nameEn} | ${territory(r)} | ${r.claimType} / ${r.category} | ${r.regulator ?? "—"} | ${awarding(r)}${r.trainingProviderStatedOnDocument ? "; training provider stated on the certificate" : ""} | ${STATE[r.availability]} | ${legalReview(r)} | ${selectableNow(r)} | ${inScope(r) ? `proven${r.holderMustState.length ? ` (holder states ${r.holderMustState.join(" + ").replaceAll("_", " ")})` : ""}${r.availability === "selectable_pilot_members" ? " — as a valid pilot member" : ""}${r.availability === "selectable_public_pilot" ? " — as an ordinary holder with no grant" : ""}` : "refused (closed market)"} | ${inScope(r) ? "review request + evidence reach the reviewer; definition, issuer as stated, territory and scope shown" : "n/a"} | ${inScope(r) ? display(r) : "n/a"} |`;
 
 const count = (a: string) => rows.filter((r) => r.availability === a).length;
 const pending = rows.filter((r) => r.availability === "selectable_pilot_members");
@@ -132,12 +149,12 @@ const groups: [string, (r: (typeof rows)[number]) => boolean][] = [
   ],
 ];
 const HEAD =
-  "| code | name | territory | type / category | regulator | awarding organisation / provider | approval · access | selectable now | saves and reloads | admin review | Passport / share display |\n|---|---|---|---|---|---|---|---|---|---|---|";
+  "| code | name | territory | type / category | regulator | awarding organisation / provider | approval · access | legal review | selectable now | saves and reloads | admin review | Passport / share display |\n|---|---|---|---|---|---|---|---|---|---|---|---|";
 
 const md = `# Security Passport — catalogue coverage matrix
 
 _Generated by \`scripts/passport-catalogue-coverage-matrix.ts\` from a migrated local database
-(all migrations through 20261214090000). Do not edit by hand; regenerate._
+(all migrations through 20261220090000). Do not edit by hand; regenerate._
 
 Every researched definition is reconciled here by its **stable credential code** against the
 actual taxonomy, its approval state, its catalogue visibility and the governed save path. The
@@ -149,6 +166,7 @@ same diagnosis is shown to a platform administrator at \`/admin/passport-catalog
 | in the agreed scope (international, Sweden, India, Great Britain, Northern Ireland, Dubai) | ${rows.filter(inScope).length} |
 | selectable by every holder today | ${count("selectable")} |
 | selectable by VALID PILOT MEMBERS of the definition's own market (Route A) | ${count("selectable_pilot_members")} |
+| selectable by EVERY SIGNED-IN HOLDER as a public pilot, no grant (Route B) | ${count("selectable_public_pilot")} |
 | held back individually or awaiting approval | ${count("awaiting_definition_approval")} |
 | market closed (Abu Dhabi) | ${count("market_closed")} |
 | blocked by missing governed data | ${count("blocked")} |
@@ -162,8 +180,9 @@ definition is reached through a pilot membership alone, exactly as a real tester
 \`is_active\` is never set, temporarily or otherwise.
 
 Three questions are kept apart throughout: **definition approval** (\`is_active\`, per definition),
-**market entitlement** (active pack, or internal pilot + a named member) and **holder
-verification** (never a catalogue matter).
+**market entitlement** (active pack, internal pilot + a named member, or a public pilot for any
+signed-in holder) and **holder verification** (never a catalogue matter). The **legal review** has
+a column of its own: availability never reads it, and a public pilot leaves it pending.
 
 ${groups
   .map(([title, pick]) => {

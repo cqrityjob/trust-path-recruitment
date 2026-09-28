@@ -28,6 +28,7 @@
 
 import { CREDENTIAL_CODE_MAX_LENGTH } from "./credentials";
 import { isCalendarDate } from "./dates";
+import { NOT_OPEN_FOR_REGISTRATION, isAvailabilityRefusal } from "./market-access";
 import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { derivePreviewIdentity } from "./identity/visibility";
@@ -974,7 +975,13 @@ export const correctClaim = createServerFn({ method: "POST" })
       _sub_jurisdiction_code: orNull(data.subJurisdictionCode),
       _authorisation_scope: orNull(data.authorisationScope),
     });
-    if (error) throw new Error(error.message);
+    // A correction is a new registration of the same credential, so a
+    // definition that is no longer open refuses it (20261220090000). That is
+    // a fact about the credential, not a failure, and it has its own message.
+    if (error) {
+      if (isAvailabilityRefusal(error.message)) throw new Error(NOT_OPEN_FOR_REGISTRATION);
+      throw new Error(error.message);
+    }
     return { id: newId as unknown as string };
   });
 

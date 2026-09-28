@@ -233,6 +233,24 @@ export function formatWorkLocation(
 }
 
 /**
+ * Where a CREDENTIAL is valid, as the label printed beside it.
+ *
+ * A Dubai-scoped credential is always "Dubai, UAE" (owner, 2026-09-27) — on
+ * the holder's wallet, the card's shields, the recipient's list, the
+ * reviewer's facts and the CV alike, so no surface prints it as "Dubai" alone
+ * or flattens it to the United Arab Emirates. Every other credential reads as
+ * its work-location phrase, which keeps Northern Ireland as Northern Ireland.
+ */
+export function credentialTerritoryLabel(
+  jurisdictionCode: string | null,
+  subJurisdictionCode: string | null,
+  lang: PassportLang,
+): string {
+  if (subJurisdictionCode === "AE-DU") return passportT("scope.AE-DU", lang);
+  return formatWorkLocation(jurisdictionCode, subJurisdictionCode, lang);
+}
+
+/**
  * A title line with the jurisdiction after it — stated once.
  *
  * Observed on screen: `Public Order Guard (Ordningsvakt) · Sweden · Sweden`.
@@ -293,7 +311,15 @@ const WORK_COUNTRY_SUPPORT_KEY: Readonly<Record<string, PassportCopyKey>> = {
 export function workCountrySupportKey(
   jurisdictionCode: string | null,
   subJurisdictionCode: string | null,
+  /** The governed market state from `getRegulatedCredentialAvailability`, when
+   *  the surface has read it. A market that is OPEN to this holder as a pilot
+   *  is described by that state: the per-country sentences say "not yet
+   *  supported", which is the truth only while the market is closed to them.
+   *  Absent, the per-country sentence applies exactly as before. */
+  marketState?: string | null,
 ): PassportCopyKey {
+  if (marketState === "open_public_pilot") return "workCountry.support.publicPilot";
+  if (marketState === "open_pilot") return "workCountry.support.internalPilot";
   const bySub = subJurisdictionCode ? WORK_COUNTRY_SUPPORT_KEY[subJurisdictionCode] : undefined;
   const byCountry = jurisdictionCode ? WORK_COUNTRY_SUPPORT_KEY[jurisdictionCode] : undefined;
   // A country nobody has written a sentence for falls back to the general

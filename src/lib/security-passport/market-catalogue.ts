@@ -56,13 +56,27 @@ export interface CatalogueGroups {
 
 /** The market states in which a surface may offer a catalogue at all.
  *
- *  "open" and "open_pilot" are the two, and the ONLY two. Every other state
- *  is a different absence — no work country, a pack under review, no pack —
- *  and none of them gets a list, whatever the caller happens to hold. */
-export type OfferableMarketState = "open" | "open_pilot";
+ *  Four, and ONLY these four: a production market, an internal pilot for a
+ *  named member, a public pilot for every signed-in holder, and a country
+ *  whose only registrable definitions are national qualifications. Every
+ *  other state is a different absence — no work country, a pack under review,
+ *  no pack — and none of them gets a list, whatever the caller happens to
+ *  hold. A state this module has never heard of is an absence too. */
+export type OfferableMarketState =
+  | "open"
+  | "open_pilot"
+  | "open_public_pilot"
+  | "open_qualifications";
+
+const OFFERABLE: readonly string[] = [
+  "open",
+  "open_pilot",
+  "open_public_pilot",
+  "open_qualifications",
+] satisfies readonly OfferableMarketState[];
 
 export function isOfferableMarketState(state: string | null | undefined): boolean {
-  return state === "open" || state === "open_pilot";
+  return state != null && OFFERABLE.includes(state);
 }
 
 /** What a surface may offer, from the governed availability answer.

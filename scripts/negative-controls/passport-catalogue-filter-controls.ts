@@ -154,7 +154,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the market panels stop declaring the catalogue contract, so they list fewer credentials than the wizard they lead into can save",
     file: "src/lib/security-passport/credentials.functions.ts",
-    find: "      .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);",
+    // The one read site (readApprovedCatalogue) every market read goes through.
+    find: "    .setHeader(PASSPORT_CATALOGUE_CONTRACT_HEADER, PASSPORT_CATALOGUE_CONTRACT);",
     replace: ";",
     guard: GUARD,
     expect: "G BOTH catalogue readers declare the contract",

@@ -35,8 +35,9 @@ import {
   type CatalogueOption,
 } from "@/lib/security-passport/market-catalogue";
 import { CredentialCatalogue, type CatalogueStatus } from "./CredentialCatalogue";
+import { PublicPilotStatus } from "./PublicPilotStatus";
 
-/** The four governed states, mirroring `RegulatedMarketState` exactly.
+/** The governed states, mirroring `RegulatedMarketState` exactly.
  *
  *  Written structurally rather than imported from `credentials.functions.ts`
  *  so this stays a pure component the fixture harness can render offline —
@@ -49,6 +50,15 @@ export type MarketSectionState =
    *  catalogue AND a market-status line, because a market whose regulatory
    *  content is still under review must not look like a live one. */
   | "open_pilot"
+  /** Open to every signed-in holder as a public pilot, with no grant. Renders
+   *  the catalogue AND three separate statements: that it is a public pilot,
+   *  that the market's legal review is pending, and that registering is not a
+   *  permission to work. */
+  | "open_public_pilot"
+  /** A country whose registrable definitions are national qualifications,
+   *  with no market pack (India). Renders the catalogue and the sentence that
+   *  they are qualifications, not licences. */
+  | "open_qualifications"
   | "pending_review"
   | "unsupported";
 
@@ -73,9 +83,9 @@ export interface MarketCredentialSectionProps {
   readonly onRetry?: () => void;
   readonly jurisdictionCode: string | null;
   readonly subJurisdictionCode: string | null;
-  /** Non-empty only when `state` is "open" or "open_pilot". A caller that
-   *  passes options for any other state is passing a catalogue for a market
-   *  that is closed, and they are ignored rather than rendered. */
+  /** Non-empty only in a state `isOfferableMarketState` accepts. A caller
+   *  that passes options for any other state is passing a catalogue for a
+   *  market that is closed, and they are ignored rather than rendered. */
   readonly options: readonly MarketCredentialOption[];
   /** What already exists in this market. Rendered above the entry controls so
    *  the holder sees their own record before they are asked to add to it. */
@@ -118,7 +128,11 @@ export function MarketCredentialSection({
       ? `${pt("market.section.credentialsFor")} ${marketName}`
       : pt("market.noWorkCountry.heading")
     : isOpen
-      ? `${pt("market.section.credentialsFor")} ${marketName}`
+      ? `${pt(
+          state === "open_qualifications"
+            ? "market.section.qualificationsFor"
+            : "market.section.credentialsFor",
+        )} ${marketName}`
       : state === "pending_review"
         ? `${marketName} ${pt("market.pending.headingSuffix")}`
         : state === "unsupported"
@@ -164,6 +178,18 @@ export function MarketCredentialSection({
             {pt("market.pilot.body")}
           </p>
         </div>
+      ) : null}
+      {settled && state === "open_public_pilot" ? <PublicPilotStatus className="mt-3" /> : null}
+      {/* A national qualification is recorded without a market pack because it
+          authorises nothing, and the section says so in the country's own
+          sentence — the same one the work-country panel prints. */}
+      {settled && state === "open_qualifications" ? (
+        <p
+          data-testid="market-qualifications-status"
+          className="mt-3 max-w-[70ch] rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-muted-foreground"
+        >
+          {pt(workCountrySupportKey(jurisdictionCode, subJurisdictionCode, state))}
+        </p>
       ) : null}
 
       {children ? <div className="mt-4">{children}</div> : null}

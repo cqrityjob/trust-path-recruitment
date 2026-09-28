@@ -2892,6 +2892,8 @@ export const dictionaries = {
     "admin.users.pilot.note.optional": "valfri, visas aldrig för användaren",
     "admin.users.pilot.note.placeholder": "T.ex. UAT: SIA-katalogen",
     "admin.users.pilot.notInPilot": "Marknaden är inte i intern pilot. Åtkomst kan inte beviljas.",
+    "admin.users.pilot.publicPilot":
+      "Marknaden är i öppen pilot: alla inloggade användare kan registrera här utan pilotåtkomst, så ingen beviljas. Tidigare åtkomst visas som historik. Öppen pilot är inte ett juridiskt godkännande.",
     "admin.users.pilot.action.grant": "Bevilja pilotåtkomst",
     "admin.users.pilot.action.regrant": "Bevilja igen",
     "admin.users.pilot.action.revoke": "Återkalla pilotåtkomst",
@@ -11223,6 +11225,8 @@ export const dictionaries = {
     "admin.users.pilot.note.placeholder": "e.g. UAT: SIA catalogue",
     "admin.users.pilot.notInPilot":
       "This market is not in internal pilot. Access cannot be granted.",
+    "admin.users.pilot.publicPilot":
+      "This market is in public pilot: every signed-in user can register here without pilot access, so none is granted. Earlier access is listed as history. A public pilot is not legal approval.",
     "admin.users.pilot.action.grant": "Grant pilot access",
     "admin.users.pilot.action.regrant": "Grant again",
     "admin.users.pilot.action.revoke": "Revoke pilot access",

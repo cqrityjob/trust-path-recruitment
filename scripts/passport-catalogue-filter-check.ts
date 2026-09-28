@@ -539,6 +539,51 @@ console.log("\nwhy a definition is, or is not, selectable (the administrator's d
       "market_closed",
     "D an approved definition in a closed market stays closed: approval does not open a market",
   );
+
+  // ROUTE B (20261220090000): public_pilot definition + public_pilot pack =
+  // every signed-in holder. Still NOT approved and NOT legally reviewed.
+  const publicPilot = { ...base, pilotState: "public_pilot", packPilotState: "public_pilot" };
+  const pub = diagnoseDefinition(publicPilot);
+  check(
+    pub.availability === "selectable_public_pilot" &&
+      pub.reasons.includes("market_public_pilot") &&
+      pub.reasons.includes("public_pilot_not_approved") &&
+      !pub.reasons.includes("definition_not_approved") &&
+      !pub.reasons.includes("market_pilot_members_only") &&
+      !pub.reasons.includes("market_closed"),
+    "D a public-pilot definition in a public-pilot market is selectable by every signed-in holder, and named as NOT approved",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, pilotState: "internal_pilot" }).availability ===
+      "awaiting_definition_approval" &&
+      diagnoseDefinition({ ...publicPilot, pilotState: "closed" }).availability ===
+        "awaiting_definition_approval",
+    "D a definition not opened for the public pilot is held back in a public-pilot market",
+  );
+  check(
+    diagnoseDefinition({ ...base, pilotState: "public_pilot" }).availability ===
+      "awaiting_definition_approval",
+    "D a public-pilot definition in an INTERNAL-pilot market is held back (the view needs both)",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, isActive: true }).availability ===
+      "selectable_public_pilot",
+    "D an approved definition in a public-pilot market is offered to everyone, as a public pilot",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, packPilotState: "closed" }).availability ===
+      "market_closed",
+    "D closing the market again closes its public-pilot definitions",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, deprecated: true }).availability === "blocked",
+    "D a public pilot does not unblock a structural gap",
+  );
+  check(
+    diagnoseDefinition({ ...publicPilot, legalReviewState: "pending" }).availability ===
+      diagnoseDefinition({ ...publicPilot, legalReviewState: "approved" }).availability,
+    "D availability never reads the legal review: the two stay separate columns",
+  );
   check(
     diagnoseDefinition({
       ...base,
@@ -622,6 +667,15 @@ console.log("\nguarded release: the application declares the catalogue contract 
       ),
     ),
     "G BOTH catalogue readers declare the contract, so the wizard and the market panels list what the wizard can save",
+  );
+  // The market reader now reads the view for three answers (the market panel,
+  // India's qualifications, the countries it lists). ONE read site carries the
+  // header, so a second read cannot quietly forget it: the regex above would
+  // still match the one that remembered.
+  check(
+    (readers[1].match(/\.from\("sp_approved_credential_catalogue"/g) ?? []).length === 1 &&
+      (readers[1].match(/readApprovedCatalogue\(supabase/g) ?? []).length >= 3,
+    "G the market reader reads the approved catalogue in ONE place, which declares the contract",
   );
   const migration = readFileSync(
     path.join(

@@ -466,10 +466,14 @@ const SURFACES = [
 for (const rel of SURFACES) {
   const src = readFileSync(join(ROOT, rel), "utf8");
   // `formatWorkLocation` counts: it is the shared formatter for a HOLDER's
-  // work location and delegates to `formatJurisdiction` for both halves. What
-  // must never come back is a surface formatting a jurisdiction by itself.
+  // work location and delegates to `formatJurisdiction` for both halves.
+  // `credentialTerritoryLabel` counts too: it is the shared label for a
+  // CREDENTIAL's territory ("Dubai, UAE") and delegates to formatWorkLocation.
+  // What must never come back is a surface formatting a jurisdiction by itself.
   assert(
-    src.includes("formatJurisdiction(") || src.includes("formatWorkLocation("),
+    src.includes("formatJurisdiction(") ||
+      src.includes("formatWorkLocation(") ||
+      src.includes("credentialTerritoryLabel("),
     `${rel} renders the jurisdiction through a shared formatter`,
   );
   assert(

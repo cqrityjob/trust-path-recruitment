@@ -14,16 +14,23 @@
 //
 // Three separate questions, never merged:
 //   DEFINITION APPROVAL  — sp_credential_types.is_active (per definition)
-//   MARKET ENTITLEMENT   — the pack is active, or internal_pilot + a member row
+//   MARKET ENTITLEMENT   — the pack is active, or internal_pilot + a member
+//                          row, or public_pilot for any signed-in holder
 //   HOLDER VERIFICATION  — not a catalogue question at all, and absent here.
+// And a fourth that none of them answers: the pack's LEGAL REVIEW, which the
+// administration page shows in a column of its own. A public pilot opens a
+// market without completing it.
 
 export type DiagnosticReason =
   /** The definition itself is not approved (`is_active = false`). */
   | "definition_not_approved"
-  /** The market pack is neither active nor in internal pilot. */
+  /** The market pack is neither active nor in a pilot. */
   | "market_closed"
   /** The pack is in internal pilot: only a named pilot member is offered it. */
   | "market_pilot_members_only"
+  /** The pack is in public pilot (20261220090000): every signed-in holder is
+   *  offered it, with no grant. It is not active and not legally cleared. */
+  | "market_public_pilot"
   /**
    * ROUTE A (owner decision 2026-09-18): the definition is internal_pilot in an
    * internal_pilot pack, so the owner's recorded pilot authorisation admits it
@@ -31,6 +38,12 @@ export type DiagnosticReason =
    * (is_active stays false) and is published to nobody by a pack activation.
    */
   | "pilot_authorised_not_public"
+  /**
+   * ROUTE B (20261220090000): the definition is public_pilot in a public_pilot
+   * pack, so every signed-in holder is offered it. It is still NOT approved
+   * (is_active stays false) and its legal review is untouched.
+   */
+  | "public_pilot_not_approved"
   /** No governed issuer and no document-stated issuer under a governed regulator. */
   | "issuer_unresolved"
   | "deprecated"
@@ -46,6 +59,8 @@ export type CatalogueAvailability =
   | "selectable"
   /** Offered to valid pilot members of the definition's own market only. */
   | "selectable_pilot_members"
+  /** Offered to every signed-in holder as a public pilot; not legally cleared. */
+  | "selectable_public_pilot"
   /** Everything is in place except the owner's per-definition approval. */
   | "awaiting_definition_approval"
   /** The market is closed by owner decision. */
@@ -78,6 +93,10 @@ export interface DiagnosticDefinition {
   readonly jurisdictionActive: boolean;
   readonly packIsActive: boolean | null;
   readonly packPilotState: string | null;
+  /** The market pack's own legal review (`sp_market_packs.legal_review_state`).
+   *  Shown beside availability, never folded into it: a public pilot opens a
+   *  market whose review is still pending. */
+  readonly packLegalReviewState?: string | null;
   readonly review: { readonly sourceUrl: string; readonly checkedOn: string } | null;
   /** Governed versions (20261214090000), current first. Empty for most definitions. */
   readonly versions?: readonly DiagnosticVersion[];
@@ -143,12 +162,23 @@ export function diagnoseDefinition(d: DiagnosticDefinition): DefinitionDiagnosis
     !nationalQualification &&
     d.packIsActive !== true &&
     d.packPilotState === "internal_pilot";
-  if (!marketOpen && !marketPilot) reasons.push("market_closed");
+  const marketPublicPilot =
+    !global &&
+    !nationalQualification &&
+    d.packIsActive !== true &&
+    d.packPilotState === "public_pilot";
+  if (!marketOpen && !marketPilot && !marketPublicPilot) reasons.push("market_closed");
   if (marketPilot) reasons.push("market_pilot_members_only");
-  // The SAME rule as sp_approved_credential_catalogue (20261126090000): the
-  // definition is internal_pilot AND its own pack is internal_pilot and not active.
+  if (marketPublicPilot) reasons.push("market_public_pilot");
+  // The SAME rules as sp_approved_credential_catalogue: Route A (20261126090000)
+  // — the definition is internal_pilot AND its own pack is internal_pilot and
+  // not active; Route B (20261220090000) — the same with public_pilot on both.
+  // A definition in the OTHER pilot state than its pack is held back by both.
   const pilotRoute = !global && !d.isActive && d.pilotState === "internal_pilot" && marketPilot;
+  const publicPilotRoute =
+    !global && !d.isActive && d.pilotState === "public_pilot" && marketPublicPilot;
   if (pilotRoute) reasons.push("pilot_authorised_not_public");
+  else if (publicPilotRoute) reasons.push("public_pilot_not_approved");
   else if (!d.isActive) reasons.push("definition_not_approved");
 
   const structural = reasons.some(
@@ -162,9 +192,11 @@ export function diagnoseDefinition(d: DiagnosticDefinition): DefinitionDiagnosis
       ? "blocked"
       : pilotRoute || (d.isActive && marketPilot)
         ? "selectable_pilot_members"
-        : !d.isActive
-          ? "awaiting_definition_approval"
-          : "selectable";
+        : publicPilotRoute || (d.isActive && marketPublicPilot)
+          ? "selectable_public_pilot"
+          : !d.isActive
+            ? "awaiting_definition_approval"
+            : "selectable";
 
   const holderMustState: ("authorisation_scope" | "issuer_name")[] = [];
   if (d.requiresScope) holderMustState.push("authorisation_scope");

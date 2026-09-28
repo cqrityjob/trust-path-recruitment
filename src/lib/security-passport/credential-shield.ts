@@ -57,7 +57,7 @@ export interface ScopeInput {
 /** Scope labels that differ from the work-country label of the same code.
  *  An SIA licence covers Great Britain; the holder's work country may still
  *  read "United Kingdom". Everything else uses the shared formatter. */
-const SCOPE_LABEL_KEY = { GB: "scope.GB" } as const;
+const SCOPE_LABEL_KEY = { GB: "scope.GB", "AE-DU": "scope.AE-DU" } as const;
 
 export function resolveCredentialScope(input: ScopeInput, lang: PassportLang): CredentialScope {
   if (input.global === true) {

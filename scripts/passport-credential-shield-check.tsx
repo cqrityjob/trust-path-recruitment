@@ -94,7 +94,8 @@ for (const [input, flag, en, sv] of [
     "Northern Ireland",
     "Nordirland",
   ],
-  [{ jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" }, "AE", "Dubai", "Dubai"],
+  // Owner, 2026-09-27: "Always label Dubai-scoped credentials 'Dubai, UAE'."
+  [{ jurisdictionCode: "AE", subJurisdictionCode: "AE-DU" }, "AE", "Dubai, UAE", "Dubai, UAE"],
 ] as const) {
   const e = resolveCredentialScope(input, "en");
   const s = resolveCredentialScope(input, "sv");
@@ -430,9 +431,9 @@ check(!/<a\b/.test(region), "the recipient's +N is a count, not a link — there
   );
   check(
     /data-flag="AE"/.test(shieldOf("c2")) &&
-      />Dubai</.test(shieldOf("c2")) &&
+      />Dubai, UAE</.test(shieldOf("c2")) &&
       !/United Arab Emirates/.test(shieldOf("c2")),
-    "a disclosed Dubai credential keeps the emirate, not the country",
+    "a disclosed Dubai credential keeps the emirate, labelled Dubai, UAE, never the country alone",
   );
   check(
     !/data-scope-mark=/.test(shieldOf("c3")) && !/>Global</.test(shieldOf("c3")),

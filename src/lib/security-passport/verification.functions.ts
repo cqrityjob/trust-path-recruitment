@@ -293,6 +293,10 @@ export interface VerifierQueueItem {
   readonly issuer: string | null;
   readonly employer: string | null;
   readonly jurisdiction: string | null;
+  /** The credential's region: Dubai is not the whole UAE, and Northern
+   *  Ireland is not Great Britain. Null for a database that predates
+   *  20261220090000, which returned the country only. */
+  readonly subJurisdiction: string | null;
   readonly assertion: string | null;
   readonly lifecycle: string | null;
   readonly evidenceCount: number;
@@ -338,6 +342,7 @@ export const listVerifierQueue = createServerFn({ method: "POST" })
       issuer: (r.issuer as string | null) ?? null,
       employer: (r.employer as string | null) ?? null,
       jurisdiction: (r.jurisdiction as string | null) ?? null,
+      subJurisdiction: (r.sub_jurisdiction as string | null) ?? null,
       assertion: (r.assertion as string | null) ?? null,
       lifecycle: (r.lifecycle as string | null) ?? null,
       evidenceCount: Number(r.evidence_count ?? 0),

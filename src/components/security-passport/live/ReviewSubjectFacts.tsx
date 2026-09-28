@@ -31,7 +31,7 @@
 // `passport-reviewer-decision-check` asserts the markup.
 
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
-import { formatWorkLocation } from "@/lib/security-passport/format";
+import { credentialTerritoryLabel, formatWorkLocation } from "@/lib/security-passport/format";
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type {
   VerifierClaimFacts,
@@ -120,15 +120,15 @@ export function ReviewClaimFacts({
         <Fact label={pt("vq.issuerStated")} value={claim.issuer} />
         <Fact label={pt("vq.credentialCode")} value={claim.credentialCode} />
         <Fact label={pt("vq.credentialReference")} value={claim.credentialReference} />
-        {/* Country AND sub-jurisdiction, through the canonical formatter. A
-            Dubai licence flattened to "AE" states a UAE-wide validity SIRA
-            never granted, and the reviewer is the last person who can catch
-            that before it becomes a verified fact. */}
+        {/* Country AND sub-jurisdiction, through the credential label every
+            surface uses. A Dubai licence flattened to "AE" states a UAE-wide
+            validity SIRA never granted, and the reviewer is the last person
+            who can catch that before it becomes a verified fact. */}
         <Fact
           label={pt("vq.jurisdiction")}
           value={
             claim.jurisdictionCode
-              ? formatWorkLocation(claim.jurisdictionCode, claim.subJurisdictionCode, lang)
+              ? credentialTerritoryLabel(claim.jurisdictionCode, claim.subJurisdictionCode, lang)
               : null
           }
         />
