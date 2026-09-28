@@ -225,6 +225,91 @@ for (const lang of ["sv", "en"] as const) {
   }
 }
 
+// ── Each place and trust word inside its own column ──────────────────────
+// Both are one line. The longest words are the holder's own entry in Swedish
+// and a source confirmation in English, which no credential reaches today but
+// the drawing must still hold. The longest place is the United Arab Emirates,
+// written out for a national credential. Where one would not fit, the card is
+// drawn smaller instead.
+{
+  const SOURCE = presented("c5", {
+    title: "SIA Licence — Vehicle Immobilisation",
+    code: "GB_NI_SIA_VI",
+    presentation: "verified",
+    statusWordKey: "trust.level.source_verified",
+    jurisdiction: "GB",
+    subJurisdiction: "GB-NI",
+  });
+  const NATIONAL = presented("c6", {
+    title: "A national licence",
+    code: "AE_NATIONAL_LICENCE",
+    jurisdiction: "AE",
+  });
+  const num = (attrs: string, name: string) =>
+    Number(new RegExp(`\\b${name}="(-?[\\d.]+)"`).exec(attrs)?.[1]);
+  const PLACES = [
+    "Sverige",
+    "Sweden",
+    "Nordirland",
+    "Northern Ireland",
+    "Dubai, UAE",
+    "Förenade Arabemiraten",
+    "United Arab Emirates",
+  ];
+  // Beside short places the words decide the scale; beside the long one, the
+  // place does. Each is checked where it is the one that matters.
+  const sets = [
+    ["long words", [OWN, SOURCE, SIRA]],
+    ["the longest place", [OWN, SOURCE, NATIONAL]],
+  ] as const;
+  for (const [what, credentials] of sets)
+    for (const lang of ["sv", "en"] as const) {
+      const model = card(credentials, null, lang);
+      for (const spec of SHARE_FORMATS) {
+        const svg = draw(model, spec.id, lang, null);
+        const dividers = [...svg.matchAll(/<line\b([^>]*)>/g)]
+          .map((m) => m[1] ?? "")
+          .filter((attrs) => num(attrs, "x1") === num(attrs, "x2"))
+          .map((attrs) => num(attrs, "x1"))
+          .sort((a, b) => a - b);
+        const slot = (dividers[1] ?? NaN) - (dividers[0] ?? NaN);
+        const firstLeft = (dividers[0] ?? NaN) - slot;
+        const columnOf = (x: number) => firstLeft + Math.floor((x - firstLeft) / slot) * slot;
+        const texts = [...svg.matchAll(/<text\b([^>]*)>([^<]*)<\/text>/g)].map((m) => ({
+          attrs: m[1] ?? "",
+          text: m[2] ?? "",
+        }));
+        const words = texts.filter(
+          (t) =>
+            /font-weight="600"/.test(t.attrs) &&
+            /text-anchor="middle"/.test(t.attrs) &&
+            /letter-spacing=/.test(t.attrs),
+        );
+        const wordsOutside = words.filter((t) => {
+          const x = num(t.attrs, "x");
+          const width =
+            t.text.length * (num(t.attrs, "font-size") * 0.72 + num(t.attrs, "letter-spacing"));
+          const left = columnOf(x);
+          return x - width / 2 < left + 4 || x + width / 2 > left + slot - 4;
+        });
+        expect(
+          dividers.length === 2 && words.length === 3 && wordsOutside.length === 0,
+          `${lang}/${spec.id}, ${what}: every trust word stays inside its own column`,
+        );
+        const places = texts.filter((t) => PLACES.includes(t.text));
+        const placesOutside = places.filter((t) => {
+          const x = num(t.attrs, "x");
+          const left = columnOf(x);
+          return x + t.text.length * num(t.attrs, "font-size") * 0.55 > left + slot - 4;
+        });
+        expect(
+          places.length === 3 && placesOutside.length === 0,
+          `${lang}/${spec.id}, ${what}: every place stays inside its own column`,
+        );
+      }
+    }
+}
+
 // ── Only the card ground, and plain attributes ───────────────────────────
 {
   const svg = draw(card([SIRA, OWN], LINK, "sv"), "og", "sv", QR);

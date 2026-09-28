@@ -49,6 +49,24 @@ const mutations: readonly Mutation[] = [
     guard,
     expect: "the image draws at most three credentials",
   },
+  {
+    id: "SOCIAL-WORD-OVERFLOW",
+    defect: "a long trust word runs into the next column instead of the card being drawn smaller",
+    file: DRAWING,
+    find: "      if (word.length * (17 * u * 0.72 + 2.4 * u) > slotW - 16 * u) columnsFit = false;\n",
+    replace: "",
+    guard,
+    expect: "every trust word stays inside its own column",
+  },
+  {
+    id: "SOCIAL-PLACE-OVERFLOW",
+    defect: "a long place name runs into the next column instead of the card being drawn smaller",
+    file: DRAWING,
+    find: "        if (markW + 8 * u + labelW > slotW - 16 * u) columnsFit = false;\n",
+    replace: "",
+    guard,
+    expect: "every place stays inside its own column",
+  },
 ];
 
 runControls("social-image", mutations);

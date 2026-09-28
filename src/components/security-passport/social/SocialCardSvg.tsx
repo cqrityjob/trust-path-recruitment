@@ -305,6 +305,9 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
 
   // ── The credentials, as the shared card's shields ────────────────────
   const credentials = p.model.credentials;
+  // A place and a trust word are one line each. Where one would run into the
+  // next column, the whole card is drawn smaller instead.
+  let columnsFit = true;
   if (credentials.length === 0) {
     nodes.push(
       <rect
@@ -392,6 +395,7 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
         const markW = scope.flag ? Math.round(markH) * 1.5 : markH;
         const labelSize = 19 * u;
         const labelW = scope.label.length * labelSize * 0.55;
+        if (markW + 8 * u + labelW > slotW - 16 * u) columnsFit = false;
         const sx = cx - (markW + 8 * u + labelW) / 2;
         nodes.push(
           <g
@@ -414,6 +418,9 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
         cy += markH;
       }
       cy += 30 * u;
+      const word = passportT(c.statusWordKey, p.lang).toUpperCase();
+      // Spaced bold capitals run wider than charsFor's average.
+      if (word.length * (17 * u * 0.72 + 2.4 * u) > slotW - 16 * u) columnsFit = false;
       nodes.push(
         <Text
           key={`word-${c.id}`}
@@ -425,7 +432,7 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
           anchor="middle"
           fill={WORD_TONE[c.state] ?? TRUST_PALETTE.inkMuted}
         >
-          {passportT(c.statusWordKey, p.lang).toUpperCase()}
+          {word}
         </Text>,
       );
       bottom = Math.max(bottom, cy + 12 * u);
@@ -448,7 +455,7 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
     y = bottom;
   }
 
-  return { nodes, fits: y + 24 * u <= footerTop };
+  return { nodes, fits: columnsFit && y + 24 * u <= footerTop };
 }
 
 /**
