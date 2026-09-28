@@ -289,7 +289,15 @@ export function RecipientPassportCard({
                         national licence. This card is what the employer's view
                         of an application renders, so the limit has to appear
                         here and not only on the public page. */}
-                    <CredentialScopeLine credential={c} tone="inline" className="text-[11px]" />
+                    {/* In the card's muted ink, the one this row's trust word
+                        uses. Left to inherit, it took the page's dark text: 1.03:1
+                        on the navy, invisible on every skyddsvakt approval and
+                        every Dubai SIRA card a recipient opened. The muted ink
+                        clears AA on this row's tint wherever it sits on the card
+                        (5.54:1 at worst); the faint ink above does not (4.07:1). */}
+                    <span style={{ color: TRUST_PALETTE.inkMuted }}>
+                      <CredentialScopeLine credential={c} tone="inline" className="text-[11px]" />
+                    </span>
                   </span>
                 </li>
               );

@@ -187,6 +187,36 @@ export function ShieldMark({
 /* One shield                                                          */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Where a status word may break inside its quarter of the card.
+ *
+ * Four across holds from an 18rem container, which at 390px leaves a word
+ * 66px and at 430px 77px. Measured in the card's own face at 10px, four
+ * Swedish words are longer than that and have no break opportunity of their
+ * own ("egenrapporterad" 79px, "dokumenterad" 69, "tillhandahållet" 68,
+ * "komplettering" 66), so they ran into the next shield. A soft hyphen at a
+ * correct break point lets each break as "Egen-" / "rapporterad" only where it
+ * does not fit; the accessible label keeps the word as written. `hyphens:
+ * auto` cannot do this: a browser without a Swedish dictionary never breaks
+ * it. Every English word fits or breaks at its own hyphen.
+ */
+const STATUS_WORD_BREAKS: Readonly<Record<string, number>> = {
+  egenrapporterad: 4,
+  dokumenterad: 4,
+  tillhandahållet: 4,
+  komplettering: 3,
+};
+
+export function breakableStatusWord(word: string): string {
+  return word
+    .split(" ")
+    .map((w) => {
+      const at = STATUS_WORD_BREAKS[w.toLowerCase()];
+      return at ? `${w.slice(0, at)}­${w.slice(at)}` : w;
+    })
+    .join(" ");
+}
+
 export interface ShieldCredential {
   readonly id: string;
   readonly code: string | null;
@@ -264,7 +294,7 @@ export function CredentialShield({
             navy ? "text-primary-foreground/55" : "text-muted-foreground",
           )}
         >
-          {word}
+          {breakableStatusWord(word)}
         </span>
       </span>
     </span>
@@ -353,11 +383,12 @@ export function CredentialConstellation({
   return (
     <ul
       data-shield-constellation={shown.length + (more > 0 ? 1 : 0)}
-      // Four across wherever four FIT. A shield's longest word —
-      // "Egenrapporterad" — needs about 72px; below an 18rem container a
-      // quarter is narrower than that and the words ran into each other (the
-      // homepage's inset example card at 390px). There the same four shields
-      // sit two by two.       // keeps its single row at every width and its height does not change.
+      // Four across wherever four FIT. Below an 18rem container a quarter is
+      // too narrow for a shield at all and the words ran into each other (the
+      // homepage's inset example card at 390px), so there the same four
+      // shields sit two by two. From 18rem up a quarter still leaves a word
+      // only 66px at 390px, so the longest Swedish words break at the soft
+      // hyphen `breakableStatusWord` gives them.
       className={cn(
         "grid grid-cols-2 items-start gap-y-4 @[18rem]:grid-cols-4 @[18rem]:gap-y-0",
         className,

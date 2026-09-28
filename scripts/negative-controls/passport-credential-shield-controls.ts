@@ -99,10 +99,20 @@ const MUTATIONS: readonly Mutation[] = [
     id: "PCS-NC-STATUS-WORD-GONE",
     defect: "the status word beside the mark is removed, leaving the shape to carry trust alone",
     file: SHIELD,
-    find: "          {word}\n",
+    find: "          {breakableStatusWord(word)}\n",
     replace: "",
     guard: GUARD,
     expect: "prints its status WORD",
+  },
+  {
+    id: "PCS-NC-STATUS-WORD-UNBREAKABLE",
+    defect:
+      "the status word loses its break point, so 'Egenrapporterad' runs into the next shield on every Swedish phone between 390 and 430px",
+    file: SHIELD,
+    find: "          {breakableStatusWord(word)}\n",
+    replace: "          {word}\n",
+    guard: GUARD,
+    expect: "the shield prints the Swedish self-declared word with its break point",
   },
   {
     id: "PCS-NC-ABBREVIATION-FROM-THE-DATABASE-CODE",

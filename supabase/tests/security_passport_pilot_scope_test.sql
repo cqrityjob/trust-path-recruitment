@@ -23,6 +23,10 @@
 -- reads through the share session, exactly as the gateway does.
 \set ON_ERROR_STOP on
 BEGIN;
+-- Since 20261221090000 the UK and Dubai are a PUBLIC pilot; this suite proves
+-- the members-only route, so the three markets are pinned back to
+-- internal_pilot for this transaction only (see the fixture's header).
+\ir security_passport_route_a_markets_fixture.sql
 CREATE FUNCTION pg_temp.ok(b boolean,label text) RETURNS void LANGUAGE plpgsql AS $$ BEGIN
  IF b IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %',label; END IF;
  RAISE NOTICE 'ok %',label; END $$;

@@ -264,14 +264,33 @@ psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_sw_race;" >/dev/null
 
 # International Passport: test fixtures roll back; rollback refuses adoption.
 for passport_round in before after; do
-  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability; do
+  for passport_suite in international_foundation international_wallet credential_sharing_v2 closed_catalogue organisation_roles pilot_scope catalogue_completeness hayat_assessments india_national_qualifications public_pilot_availability open_uk_dubai; do
     passport_output="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/security_passport_${passport_suite}_test.sql" 2>&1)" || { echo "$passport_output"; exit 1; }
     passport_count="$(printf '%s\n' "$passport_output" | grep -c 'NOTICE:  ok ' || true)"
     echo "    $passport_count assertions passed: Passport $passport_suite ($passport_round rollback/reapply)"
   done
   if [ "$passport_round" = before ]; then
-    # 20261220090000 (public-pilot availability) is now the newest Passport
-    # migration and stands down FIRST: it replaces the view, the claim rules,
+    # 20261221090000 (the UK and Dubai opened as a public pilot) is DATA only
+    # and the newest Passport migration: it stands down FIRST, returning the
+    # three markets and their 44 definitions to internal pilot and touching no
+    # claim and no grant. It must refuse a second run, and the suite that
+    # proves the opened state must fail without it.
+    ou_out="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql" 2>&1)" || { echo "$ou_out"; exit 1; }
+    printf '%s' "$ou_out" | grep -q 'SP_OPEN_UK_DUBAI_ROLLBACK ok' || { echo "FAIL: 20261221090000 rollback did not prove itself: $ou_out"; exit 1; }
+    ou_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM public.sp_market_packs WHERE pilot_state='public_pilot') + (SELECT count(*) FROM public.sp_credential_types WHERE pilot_state='public_pilot') || '/' || (SELECT count(*) FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU') AND pilot_state='internal_pilot') || '/' || (SELECT count(*) FROM public.sp_credential_types WHERE market_pack_code IN ('GB','GB-NI','AE-DU') AND pilot_state='internal_pilot')")"
+    [ "$ou_left" = "0/3/44" ] || { echo "FAIL: 20261221090000 rollback left public_pilot/internal counts $ou_left, expected 0/3/44"; exit 1; }
+    echo "    ok  the UK and Dubai stood down to internal pilot: no public_pilot row left, 3 packs and 44 definitions members-only again"
+    if psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql" >/dev/null 2>&1; then
+      echo "FAIL: the 20261221090000 rollback ran twice" >&2
+      exit 1
+    fi
+    echo "    ok  and it refuses to run a second time"
+    if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_passport_open_uk_dubai_test.sql >/dev/null 2>&1; then
+      echo "FAIL: the open-UK-and-Dubai suite passed WITHOUT its migration -- it proves nothing" >&2
+      exit 1
+    fi
+    echo "    ok  and the open-UK-and-Dubai suite refuses to pass without the migration (negative control)"
+    # 20261220090000 (public-pilot availability) stands down next: it replaces the view, the claim rules,
     # the read policy and sp_market_access() that India left, and widens the two
     # pilot_state CHECKs. Its rollback must REFUSE while any market is
     # public_pilot (narrowing the CHECK under those rows would abort half-way),
@@ -372,7 +391,24 @@ for passport_round in before after; do
     pp_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/20261220090000_sp_public_pilot_availability.sql" 2>&1)" || { echo "$pp_back"; exit 1; }
     printf '%s' "$pp_back" | grep -q 'SP_PUBLIC_PILOT_AVAILABILITY_PROOF ok' || { echo "FAIL: 20261220090000 did not re-apply on top of its rollback"; exit 1; }
     echo "    ok  public-pilot availability reapplied on top of India: proof ok, nothing moved"
+    ou_back="$(psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "supabase/migrations/20261221090000_sp_open_uk_dubai_public_pilot.sql" 2>&1)" || { echo "$ou_back"; exit 1; }
+    printf '%s' "$ou_back" | grep -q 'SP_OPEN_UK_DUBAI_PROOF ok' || { echo "FAIL: 20261221090000 did not re-apply on top of its rollback"; exit 1; }
+    echo "    ok  the UK and Dubai reopened as a public pilot on top of the availability model: proof ok"
   fi
+done
+
+# Proof case K: the administrator's diagnosis (catalogue-diagnostics.ts, the
+# code behind /admin/passport-catalogue) against what the database actually
+# offers and saves -- for an ordinary holder with no grant, and, with the UK
+# and Dubai pinned to internal pilot, for a holder with a valid grant as well.
+# The TypeScript half diagnoses every definition and prints the SQL; this runs
+# it against the replayed database, as the rds-v1 parity below does.
+echo "==> Running the Passport availability agreement (administrator vs holder)"
+for agreement_mode in "" "--pin-route-a"; do
+  AGREE_SQL="$(PASSPORT_MATRIX_DB_URL="postgresql://${PGUSER:-postgres}:${PGPASSWORD:-postgres}@127.0.0.1:${PGPORT:-5432}/${TEST_DB}" bun run scripts/passport-availability-agreement.ts $agreement_mode)" \
+    || { echo "FAIL: the availability agreement could not be generated ($agreement_mode)"; exit 1; }
+  AGREE_OUT="$(printf '%s\n' "$AGREE_SQL" | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)" || { echo "$AGREE_OUT" | grep -E 'AGREEMENT FAILED|ERROR' | head -5; exit 1; }
+  printf '%s\n' "$AGREE_OUT" | grep 'passport availability agreement' | sed 's/^.*NOTICE:  /    /' || { echo "FAIL: the availability agreement printed no result"; exit 1; }
 done
 
 # Candidate current location and desired destinations (20261215090000): run,
@@ -6225,14 +6261,17 @@ TEST_DB="${PASSPORT_MAIN_TEST_DB}_global_rollback"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "DROP DATABASE ${PASSPORT_MAIN_TEST_DB}_pristine;" >/dev/null
-# Newest Passport unit first: 20261220090000 (public-pilot availability)
-# restores the view, the claim rules and the review queue it replaced. Then
-# 20261214090000 (India national qualifications): it replaced the view, the
-# claim rules, the details guard, the save RPC and the reviewer detail, and its
-# metadata rows would read as adoption to 20261118100000's rollback. Then
-# 20261204090000 (HAYAT assessments), whose triggers sit on sp_claims and
-# sp_evidence. This database is discarded at the end of the block, so none is
-# reapplied here.
+# Newest Passport unit first. 20261221090000 (the UK and Dubai opened as a
+# public pilot) puts the fixture's markets back in internal pilot, where the
+# grants the fixture plants below are still a thing an administrator can
+# give; 20261220090000 (public-pilot availability) then restores the view, the
+# claim rules and the review queue it replaced. Then 20261214090000 (India
+# national qualifications): it replaced the view, the claim rules, the details
+# guard, the save RPC and the reviewer detail, and its metadata rows would read
+# as adoption to 20261118100000's rollback. Then 20261204090000 (HAYAT
+# assessments), whose triggers sit on sp_claims and sp_evidence. This database
+# is discarded at the end of the block, so none is reapplied here.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261204090000_sp_hayat_assessments_rollback.sql >/dev/null
@@ -7616,14 +7655,17 @@ fi
 
 # The schema foundation must be independently reversible without touching an
 # existing disclosure, then safely re-applicable for the remaining suites.
-# Newest Passport unit first. 20261220090000 (public-pilot availability)
-# replaced the review queue, which reads sub_jurisdiction_code, and no older
-# rollback restores it; left in place it would read a column the market-pack
-# rollbacks further down drop. Then 20261214090000 (India): it replaced the
-# view, the claim rules, the details guard, the save RPC and the reviewer detail
-# that the rollbacks below restore, and its rows would read as adoption to the
-# foundation rollback further down. Neither is re-applied: none of the
-# remaining suites reads them.
+# Newest Passport unit first. 20261221090000 (the UK and Dubai opened as a
+# public pilot) returns its markets to internal pilot, without which the next
+# rollback refuses. 20261220090000 (public-pilot availability) replaced the
+# review queue, which reads sub_jurisdiction_code, and no older rollback
+# restores it; left in place it would read a column the market-pack rollbacks
+# further down drop. Then 20261214090000 (India): it replaced the view, the
+# claim rules, the details guard, the save RPC and the reviewer detail that the
+# rollbacks below restore, and its rows would read as adoption to the
+# foundation rollback further down. None is re-applied: none of the remaining
+# suites reads them.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261221090000_sp_open_uk_dubai_public_pilot_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261220090000_sp_public_pilot_availability_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261214090000_sp_india_national_qualifications_rollback.sql >/dev/null
 # 20261126090000's catalogue view reads sp_credential_organisation_roles, so it

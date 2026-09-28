@@ -59,19 +59,28 @@ INSERT INTO public.user_roles(user_id,role) VALUES
  ('fe220000-0000-4000-8000-000000000003','passport_verifier'),
  ('fe220000-0000-4000-8000-000000000005','admin');
 
--- ── 1. Nothing moves ─────────────────────────────────────────────────────
-SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_market_packs WHERE pilot_state='public_pilot')
-   AND (SELECT count(*)=0 FROM public.sp_credential_types WHERE pilot_state='public_pilot'),
- '1.1 the migration moved nothing: no pack and no definition is public_pilot');
-SELECT pg_temp.ok((SELECT bool_and(NOT is_active AND pilot_state='internal_pilot' AND legal_review_state='pending')
+-- ── 1. What is public, and where the rest of this suite starts ─────────
+-- The availability model moved no data; 20261221090000 then opened exactly
+-- three markets and 44 definitions, and nothing else is public_pilot.
+SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_market_packs
+                    WHERE pilot_state='public_pilot' AND code IN ('GB','GB-NI','AE-DU'))
+   AND (SELECT count(*)=3 FROM public.sp_market_packs WHERE pilot_state='public_pilot')
+   AND (SELECT count(*)=44 FROM public.sp_credential_types
+         WHERE pilot_state='public_pilot' AND market_pack_code IN ('GB','GB-NI','AE-DU'))
+   AND (SELECT count(*)=44 FROM public.sp_credential_types WHERE pilot_state='public_pilot'),
+ '1.1 only what 20261221090000 opened is public_pilot: the UK, Northern Ireland, Dubai and their 44 definitions');
+SELECT pg_temp.ok((SELECT bool_and(NOT is_active AND legal_review_state='pending')
      FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU'))
    AND (SELECT NOT is_active AND pilot_state='closed' FROM public.sp_market_packs WHERE code='AE-AZ'),
- '1.2 the UK and Dubai stay internal pilots under pending review; Abu Dhabi stays closed');
+ '1.2 the UK and Dubai are public pilots under pending review, never active; Abu Dhabi stays closed');
+-- The groups below prove the TRANSITIONS, from the state 20261220090000 left:
+-- the three markets in internal pilot. Pinned back for this transaction only.
+\ir security_passport_route_a_markets_fixture.sql
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fe220000-0000-4000-8000-000000000001',true);
 SELECT pg_temp.ok(public.sp_market_access(auth.uid(),'GB')='closed'
    AND (SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE country='GB' OR region='AE-DU'),
- '1.3 so an ordinary holder is offered no UK or Dubai credential');
+ '1.3 with the markets in internal pilot, an ordinary holder is offered no UK or Dubai credential');
 SELECT pg_temp.refused(format('SELECT public.sp_save_international_credential(%L::jsonb)',pg_temp.save_input('UK_SIA_LICENCE_DS')),
  'SP_APPROVED_DEFINITION_REQUIRED','1.4 and cannot save one');
 RESET ROLE;

@@ -24,6 +24,7 @@ import { I18nProvider } from "../src/i18n/context";
 import { RecipientPassportCard } from "../src/components/security-passport/live/RecipientPassportCard";
 import { buildRecipientPresentation } from "../src/lib/security-passport/recipient-presentation";
 import type { RecipientPayloadActive } from "../src/lib/security-passport/packages";
+import { TRUST_PALETTE } from "../src/lib/security-passport/design/trust-system";
 
 // The exact shape the employer application panel receives: one application
 // share, two verified credentials, a named holder.
@@ -57,6 +58,21 @@ const payload = {
       valid_until: null,
       verifier_organisation: "CQrityjob",
       kind: "credential",
+    },
+    // Scope-limited, as every Dubai SIRA cadre card is: the limit is stated,
+    // the scope text withheld from this reader.
+    {
+      id: "c3",
+      title: "SIRA Security Cadre Card — Security Guard",
+      assertion: "verified",
+      lifecycle: "active",
+      valid_until: null,
+      verifier_organisation: "CQrityjob",
+      kind: "credential",
+      jurisdiction: "AE",
+      sub_jurisdiction: "AE-DU",
+      scope_limited: true,
+      authorisation_scope: null,
     },
   ],
   verified_experience: [],
@@ -97,6 +113,17 @@ ck(
 );
 ck("card still renders the holder", without.includes("Mostafa Alshawi"));
 ck("card still renders the credentials", without.includes("Skyddsvaktsf"));
+ck(
+  "a scope-limited credential states its limit on the card",
+  without.includes('data-testid="sp-credential-scope"'),
+);
+// Left to inherit, the line took the page's dark text: 1.03:1 on the navy.
+ck(
+  "the limit is in the card's muted ink, not the page's dark text on navy",
+  new RegExp(
+    `<span style="color:${TRUST_PALETTE.inkMuted}"><span[^>]*data-testid="sp-credential-scope"`,
+  ).test(without),
+);
 
 console.log(fails.length ? `\nFAILED: ${fails.join(", ")}` : "\nPASS");
 process.exit(fails.length ? 1 : 0);

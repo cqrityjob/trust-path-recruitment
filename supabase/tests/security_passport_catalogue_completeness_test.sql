@@ -12,15 +12,16 @@
 --    8 Sweden                           (production)
 --    4 India                            (national qualifications: approved for
 --                                        everyone, no market pack — 20261214090000)
---   13 Great Britain + 1 Northern Ireland   (internal pilot)
---   30 Dubai                            (internal pilot)
+--   13 Great Britain + 1 Northern Ireland   (public pilot)
+--   30 Dubai                            (public pilot)
 --    7 Abu Dhabi                        (CLOSED by owner decision: never listed)
 --
--- ROUTE A (owner decision 2026-09-18). GB, GB-NI and Dubai definitions are
--- internal_pilot and keep is_active = false for the WHOLE suite: nothing is
--- approved here, temporarily or otherwise. They are reached exactly as a real
--- pilot tester reaches them — through a valid membership of the definition's
--- own internal_pilot pack.
+-- THE PUBLIC PILOT (20261221090000). GB, GB-NI and Dubai definitions are
+-- public_pilot and keep is_active = false for the WHOLE suite: nothing is
+-- approved here, temporarily or otherwise. They are reached exactly as an
+-- ordinary registered holder reaches them -- signed in, with NO pilot grant.
+-- The members-only route (Route A) is proven on its own by the pilot suites,
+-- which pin those markets back to internal pilot inside their transactions.
 \set ON_ERROR_STOP on
 BEGIN;
 CREATE FUNCTION pg_temp.ok(b boolean,label text) RETURNS void LANGUAGE plpgsql AS $$ BEGIN
@@ -89,23 +90,22 @@ INSERT INTO public.sp_passport_profiles(holder_user_id,jurisdiction_code,sub_jur
  ('fc260000-0000-4000-8000-000000000002','GB',NULL,now()),
  ('fc260000-0000-4000-8000-000000000003','GB','GB-NI',now()),
  ('fc260000-0000-4000-8000-000000000004','AE','AE-DU',now());
-INSERT INTO public.sp_pilot_members(user_id,market_pack_code,granted_by,note) VALUES
- ('fc260000-0000-4000-8000-000000000002','GB','fc260000-0000-4000-8000-000000000009','completeness suite'),
- ('fc260000-0000-4000-8000-000000000003','GB-NI','fc260000-0000-4000-8000-000000000009','completeness suite'),
- ('fc260000-0000-4000-8000-000000000004','AE-DU','fc260000-0000-4000-8000-000000000009','completeness suite');
+-- No pilot grant for anybody: the UK and Dubai are a public pilot.
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_pilot_members WHERE user_id::text LIKE 'fc260000-%'),
+ 'no principal of this suite holds a pilot grant');
 
 -- ── BEFORE any approval: what the product offers today ──────────────────
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
-SELECT pg_temp.ok((SELECT count(*)=26 FROM public.sp_approved_credential_catalogue),
- 'today a Swedish holder is offered 26: all 14 international, all 8 Swedish (VU1, VU2 and SV included) and the 4 Indian qualifications');
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue),
+ 'today a Swedish holder, with no grant, is offered 70: all 14 international, all 8 Swedish (VU1, VU2 and SV included), the 4 Indian qualifications and the 44 UK and Dubai public-pilot definitions');
 SELECT pg_temp.ok((SELECT count(*)=3 FROM public.sp_approved_credential_catalogue WHERE code IN ('VU1','VU2','SV')),
  'VU1, VU2 and SV are no longer withheld');
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000004',true);
 SELECT pg_temp.ok((SELECT count(*)=30 FROM public.sp_approved_credential_catalogue WHERE country='AE' AND region='AE-DU'),
- 'an entitled Dubai member is offered all 30 Dubai pilot definitions, with none of them approved for the public');
+ 'an ordinary Dubai holder, with no grant, is offered all 30 Dubai public-pilot definitions, with none of them approved');
 RESET ROLE;
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_credential_types WHERE market_pack_code IN ('GB','GB-NI','AE-DU','AE-AZ') AND is_active)
  AND (SELECT count(*)=0 FROM public.sp_market_packs WHERE code IN ('GB','GB-NI','AE-DU','AE-AZ') AND is_active),
@@ -118,15 +118,16 @@ SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000001',true);
 SELECT set_config('request.path','/sp_approved_credential_catalogue',true);
 SELECT set_config('request.headers','{"user-agent":"an application deployed before the migration"}',true);
-SELECT pg_temp.ok((SELECT count(*)=19 FROM public.sp_approved_credential_catalogue)
- AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.code IN ('VU1','VU2','SV')),
- 'an OLD application lists the 19 it can save: no scoped and no document-issuer definition — so none of the four Indian qualifications — is offered to it');
+SELECT pg_temp.ok((SELECT count(*)=27 FROM public.sp_approved_credential_catalogue)
+ AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.code IN ('VU1','VU2','SV'))
+ AND NOT EXISTS(SELECT 1 FROM public.sp_approved_credential_catalogue c WHERE c.region='AE-DU'),
+ 'an OLD application lists the 27 it can save: no scoped and no document-issuer definition — so none of the four Indian qualifications and none of Dubai''s thirty, only the eight UK licences that need neither — is offered to it');
 SELECT set_config('request.headers','{"x-passport-catalogue-contract":"2"}',true);
-SELECT pg_temp.ok((SELECT count(*)=26 FROM public.sp_approved_credential_catalogue),
- 'the NEW application declares the contract and is offered all 26');
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue),
+ 'the NEW application declares the contract and is offered all 70');
 SELECT set_config('request.path','/rpc/sp_save_international_credential',true);
 SELECT set_config('request.headers','{}',true);
-SELECT pg_temp.ok((SELECT count(*)=26 FROM public.sp_approved_credential_catalogue),
+SELECT pg_temp.ok((SELECT count(*)=70 FROM public.sp_approved_credential_catalogue),
  'the guard narrows the LISTING only: the save RPC and the table guards read the whole catalogue');
 SELECT set_config('request.path','',true);
 SELECT set_config('request.headers','',true);
@@ -146,7 +147,7 @@ BEGIN
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub',_uid::text,true);
   SELECT * INTO d FROM public.sp_approved_credential_catalogue WHERE code=e.code;
-  IF NOT FOUND THEN RAISE EXCEPTION 'ASSERTION FAILED: % is not in the catalogue for its entitled holder',e.code; END IF;
+  IF NOT FOUND THEN RAISE EXCEPTION 'ASSERTION FAILED: % is not in the catalogue for an ordinary holder of its market',e.code; END IF;
   _input := jsonb_build_object('definition_code',e.code,'market_country',coalesce(d.country,''),'market_region',coalesce(d.region,''),
      'identifier','','issued_on','2024-05-01','valid_until','2027-05-01','no_expiry',false);
   IF _t.requires_scope THEN _input := _input || jsonb_build_object('authorisation_scope','Fiktivt bevakningsbolag AB'); END IF;
@@ -167,7 +168,7 @@ BEGIN
   RESET ROLE;
   _n := _n + 1;
  END LOOP;
- PERFORM pg_temp.ok(_n=70,'all 70 definitions in scope are visible to their entitled holder, save through the governed RPC and read back with the right territory, issuer and scope');
+ PERFORM pg_temp.ok(_n=70,'all 70 definitions in scope are visible to an ordinary holder with no grant, save through the governed RPC and read back with the right territory, issuer and scope');
 END $$;
 RESET ROLE;
 
@@ -186,7 +187,7 @@ SELECT pg_temp.ok((SELECT count(*)=14 FROM seen s JOIN public.sp_claims c ON c.i
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub','fc260000-0000-4000-8000-000000000004',true);
 SELECT pg_temp.ok((SELECT count(*)=0 FROM public.sp_approved_credential_catalogue WHERE region='AE-AZ'),
- 'Abu Dhabi is offered to nobody, a Dubai member included: the market is closed, not in pilot');
+ 'Abu Dhabi is offered to nobody, a Dubai holder included: the market is closed, not in pilot');
 SELECT pg_temp.refused($q$SELECT public.sp_save_international_credential('{"definition_code":"AE_AZ_PSBD_LICENCE_GUARD","market_country":"AE","market_region":"AE-AZ","identifier":"","issued_on":"2024-05-01","valid_until":"2027-05-01","no_expiry":false,"authorisation_scope":"Fiktivt bolag"}')$q$,
  'SP_APPROVED_DEFINITION_REQUIRED','an Abu Dhabi licence cannot be saved');
 
