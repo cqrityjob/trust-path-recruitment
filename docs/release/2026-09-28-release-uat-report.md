@@ -1,8 +1,143 @@
-# CQrityjob — Full Product Release UAT report
+# CQrityjob — Production Readiness report (Full Product Release UAT, refreshed)
 
 **Date:** 2026-09-28. **Tested commit:** `d9dc41a36dc5b2b2907e09757121fe75883d8328` (`origin/main`; includes merged #319 and #317). The UAT branch `claude/kind-ritchie-84l53x` is identical to `main`. **Hosted backend:** Supabase project `wrygicdfxwjnrugduxnt` (CQrityjob Production). **Lovable project** `9ec625ef…` reports `latest_commit_sha = d9dc41a`; whether the *published* site is at this commit could not be verified from here.
 
 **PR #318** (Passport share link on the application domain + social sharing) was open during the main pass and **merged at 15:39 UTC** (`main` = `f25e05f`, no migration). Its head passed 13 of 13 checks including the Passport public-pilot browser evidence. The sharing retest against the merged code is in §5.3; it is limited to what this environment can reach (code at `f25e05f`, the hosted database and the edge-function deployment state), because the published site is still unreachable from here.
+
+---
+
+## 0. Production readiness — release state (refreshed 2026-09-28 evening against `main` `b7ed12f`)
+
+This section is the authoritative release checklist. Sections 1–14 below are the original UAT record of 2026-09-28 (tested at `d9dc41a`, sharing retested at `f25e05f`) and are kept as evidence; where they disagree with this section, this section wins.
+
+**What changed since the original pass.** `main` is now `b7ed12f`: #318 (Passport share link on the application domain + social sharing) and #321 (the sharing e2e suite runs in CI, case 12 fixed) are merged; no newer merge. Both are test/transport changes with no migration. Two Passport migrations from the separate Passport Completion work (`20261220090000`, `20261221090000`) are merged and *pending by design* on the hosted project. Passport social sharing is **not** marked complete here: that is the Passport Completion Work Order's deliverable and stays open until it passes the owner's UAT. The four code fixes below were prepared as isolated draft PRs from `b7ed12f`; the six readiness documents are in `docs/release/production-readiness/`.
+
+### RELEASE STATUS
+
+**NOT READY FOR OWNER UAT.** No P0 exists and no core journey is broken by code. Owner UAT is blocked by external activations (mail, publish/switch, Career Discovery access) and by four unmerged code fixes. Everything on the path to READY is listed below with an owner.
+
+### BLOCKERS (only what actually stops owner UAT)
+
+| # | Blocker | Kind | Clears when |
+|---|---|---|---|
+| 1 | **Nobody outside the Supabase team receives a confirmation or reset mail** (EM-MAIL-01). Registration is impossible for a real UAT tester. | External activation | Custom SMTP + Site URL + Redirect URLs set (`production-readiness/auth-and-email.md` §3, items 1–3) and the §5 probe passes |
+| 2 | **Passport share links end in a blank 503/404** until the site is published at ≥ `f25e05f` and `PASSPORT_SHARE_ENTRY_PUBLISHED=1` is set on the `passport-share` function (§5.3). | External activation | Publish + function secret; `curl -sI …/p` shows the nonce CSP |
+| 3 | **Career Discovery is closed to every signed-in candidate** (CI-01; 0 tester rows). | Code (PR #322) + owner decision | #322 merged and applied; owner runs `cd_set_access_state('public', …)` or grants the UAT group as testers |
+| 4 | **JB-02 privacy defect**: the employer's internal note is readable by the applicant through the API. Gate item 11. | Code (PR #323) | #323 merged and applied |
+| 5 | **The four fix migrations are `pending`** on the hosted project; `release-parity:gate` refuses a deploy until they are applied through the tracked mechanism. | Release step (after merge) | Supabase GitHub integration applies them on merge; `release-state.json` updated to `applied` with evidence |
+
+Not blockers (kept visible): the browser/mobile pass this environment could not run (gate item 14, owner UAT); the P2 product defects JB-01 / AS-01 / AS-02 (fixed in #324 / #325, wanted before UAT but not blocking it); test content on the public job board (clean before *public* release).
+
+### OWNER ACTIONS (Mostafa)
+
+Decisions:
+
+1. **Career Discovery governance.** The active definition `2026-scd-v3.1.0` still carries `content_version v3.1-draft-5`, `scoring_version v3.1-draft-4`, all 7 review flags false and the route is `noindex`. #322 separates *technical availability* (`internal_test` / `public` / `paused`, DB-backed, admin-only switch) from this governance status and changes none of it. Decide: open `public` with the instrument labelled as it is (and the noindex kept), or keep `internal_test` and grant the UAT group as testers. Detail: `docs/career-discovery/release-control.md` in #322.
+2. **AS-02 deadline: informational or enforced?** #325 makes the employer's deadline visible to the candidate (invitation message + Academy card, "Sista dag" / "Utgången") and does not enforce it in `scp_save_response` / `scp_submit_attempt`, because no product text or migration states enforcement. If it should be enforced, that is a follow-up migration (category D).
+3. **Google OAuth**: configure the provider or hide the two buttons before launch (`auth-and-email.md` §3.8).
+4. **Data cleanup classes** in `production-readiness/production-data-hygiene.md`: approve the REMOVE BEFORE LAUNCH rows, decide the UNKNOWN — OWNER REVIEW rows (Säkerhet AB, cqrityjob, Buller o bång, emma@, carl@, shkachmed@). Nothing is deleted until approved.
+5. **Merges**, in this order (each is independent of the others, all from `b7ed12f`): #323 (JB-02), #322 (Career Discovery release control), #324 (JB-01), #325 (AS-01/AS-02). Then #320 once the state below is true.
+6. **Hosting plan**: confirm the Hostinger staging subdomain and the production domain (apex vs `www`), and the Supabase production/staging separation option (`supabase-production-hardening.md` §2.3).
+
+Hands-on (dashboard / secrets; none can be done from the repository):
+
+7. Supabase Auth: SMTP, Site URL, Redirect URLs, templates, rate limits, HIBP (`auth-and-email.md` §3, 1–7).
+8. Application host: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`, `PUBLIC_SITE_URL` (`auth-and-email.md` §4); `RECRUITMENT_SWEEP_TOKEN` + GitHub secrets if the receipts cron is to run.
+9. Publish the Lovable site at current `main`; set `PUBLIC_SITE_URL` and then `PASSPORT_SHARE_ENTRY_PUBLISHED=1` on `passport-share`; run the §5.3 deployed checks; revoke the share whose token appeared in the reported screenshot.
+10. After the four merges: confirm the integration applied the migrations (`supabase_migrations` rows), run the verify SQL from `release-state.json`, mark them `applied`.
+11. Run the owner UAT checklist at the end of this section with a controlled non-team mailbox.
+
+### CODE FIXES (isolated PRs, all draft, none merged; owner decides merges)
+
+| PR | Finding | What it does | Regression evidence | Status |
+|---|---|---|---|---|
+| [#322](https://github.com/cqrityjob/trust-path-recruitment/pull/322) `claude/cd-release-control` | CI-01 (P1) | `cd_access_policy` singleton (`internal_test` / `public` / `paused`), `cd_access_state()`, `cd_v31_may_start()`, admin-only `cd_set_access_state()`; the save gate honours the state; ships in `internal_test`, so nothing changes until the owner opens it; paused is honest for anonymous visitors too. Governance status untouched. | SQL suite 33 assertions incl. rollback refusal while `public`; `resolveSaveGate` truth table extended (1.5a–1.5f); full isolated replay | Draft; CI red on first run (register tests + frontier list), fixed and re-pushed 2026-09-28 evening |
+| [#323](https://github.com/cqrityjob/trust-path-recruitment/pull/323) `claude/jb02-application-note-privacy` | JB-02 (P2 privacy) | Column-level `SELECT` on `job_applications` (no `employer_note`) and `job_application_status_events` (no `note`) for client roles; employer reads through `rec_application_status_events()` / `rec_application_employer_note()` (members only); employer UI switched to them; candidate history no longer selects `note`. | 26 assertions: candidate A cannot read either note (API), employer A can, employer B cannot, admin behaviour unchanged, replay of `rec_submit_application`; full isolated replay incl. workspace rollback cycle | Draft; CI red on first run (workspace rollback residue + frontier list), fixed and re-pushed |
+| [#324](https://github.com/cqrityjob/trust-path-recruitment/pull/324) `claude/jb01-application-history` | JB-01 (P2) | `rec_my_application_context()` returns title, employer and `job_open` for the caller's own applications only; the history card keeps its context after the vacancy closes and shows "Annonsen är stängd"; the public link is offered only while the ad is open. Public job RLS untouched. | 14 assertions (closed/archived/unpublished/inactive-employer cases, other users see nothing); full isolated replay | Draft; CI red on first run (duplicate identifier, workspace rollback residue, frontier list), fixed and re-pushed |
+| [#325](https://github.com/cqrityjob/trust-path-recruitment/pull/325) `claude/as01-as02-assessment-state` | AS-01 (P2), AS-02 (P2, informational half) | `scp_employer_assign` refuses an application not in `submitted` / `reviewing` / `interview` (`SCP_APPLICATION_NOT_OPEN`) or a recruitment not `open` (`SCP_RECRUITMENT_COMPLETED`); the button is hidden / bulk send disabled in the same states; the deadline reaches the candidate (invitation message, Academy card). Not enforced at save/submit (owner decision 2). | 14 assertions incl. rollback → old body accepts a closed application → re-apply; full isolated replay | Draft; CI red on first run (migration name matched the `*_scp_a*` ordering glob, frontier list), renamed and re-pushed |
+| — | SP-01 (P2) | Not resolved by the Passport Completion work (its PRs 1–5 do not touch `SP_METADATA_REVIEW_REQUIRED` mapping). **Deferred to an isolated Passport fix after Passport Completion passes UAT**, to avoid conflicting changes in the same files. | — | Not started (category C) |
+
+Each PR body states the finding, acceptance criteria and the tests; none refactors outside its area. CI on each PR must be green before merge; the frontier-list entries the three migration PRs add are the repository's own convention for a migration pending by design.
+
+### EXTERNAL ACTIVATIONS
+
+| Service | Item | Doc |
+|---|---|---|
+| Supabase Auth | custom SMTP; Site URL; Redirect URLs (published + preview + staging + production); templates/branding; confirm-email stays ON; rate limits; HIBP on; Google OAuth or hide buttons | `production-readiness/auth-and-email.md` |
+| Supabase project | backups/PITR, plan upgrade window, staging separation, secrets rotation, network restrictions once Hostinger egress is known, advisor ERROR recorded as accepted, `unaccent` deferred | `production-readiness/supabase-production-hardening.md` |
+| Supabase edge function `passport-share` | `PUBLIC_SITE_URL`; `PASSPORT_SHARE_ENTRY_PUBLISHED=1` after `/p` is live | §5.3 |
+| Resend | verified sending domain (SPF/DKIM/DMARC); `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`; the same domain relays Supabase Auth mail | `auth-and-email.md` §4 |
+| Hostinger | Node ≥ 22, Bun install, `NITRO_PRESET=node-server`, `node .output/server/index.mjs`, env per inventory, edge headers, body size, health check, process manager; staging first, smoke tests 1–12, then DNS; rollback = DNS back to Lovable | `production-readiness/HOSTINGER_PRODUCTION_CHECKLIST.md` |
+| Domain | production domain + staging subdomain; update Site URL, allow-list, `PUBLIC_SITE_URL`, `VITE_PUBLIC_SITE_URL`, `RECRUITMENT_SWEEP_URL`, and the hard-coded Lovable origin in code (category C) in the same window | Hostinger checklist §6 |
+| GitHub | repository secrets `RECRUITMENT_SWEEP_URL`, `RECRUITMENT_SWEEP_TOKEN` for the receipts cron | Hostinger checklist §5 |
+| AI | nothing for launch; when wanted: provider DPA, `ANTHROPIC_API_KEY` server-only, `INTERVIEW_AI_PROVIDER`, DB `ai_enabled` per feature; first feature recommended: recruitment writing help | `production-readiness/ai-readiness.md` |
+| Environment variables | one inventory, classes, required per environment, browser exposure (no `VITE_*` carries a secret) | `production-readiness/environment-variables.md` |
+
+### DEFERRED (explicitly safe after initial release)
+
+- SP-02–SP-07 (Passport correction UX, copy, UTC day boundary), JB-03–JB-09 (404 shapes, list caps, document titles, literals), AS-03/AS-04, II-01/II-02, AU-01/AU-03/AU-04, EM-MAIL-03 (dead status-mail module), AI-01 ("Fråga CQrity" naming).
+- AS-02 enforcement at save/submit (only if the owner decides "enforced").
+- `unaccent` out of `public`; tightening the 20 boolean/id oracle functions to `auth.uid()`; a global CSP; a `/api/health` endpoint before Hostinger staging (needed for staging, not for owner UAT).
+- Lockfile re-resolution off Lovable's npm cache (needed before a Hostinger *production* build, not for owner UAT).
+- Performance advisor review after the data cleanup.
+
+### RECLASSIFICATION OF EVERY #320 FINDING (A–E)
+
+A = must fix before owner UAT · B = must configure/activate before owner UAT · C = should fix before public release · D = safe after initial release · E = observation / no action
+
+| Finding | Original | Class | Resolution / owner |
+|---|---|---|---|
+| Passport share links (§5.3) | P1 | **B** | publish at ≥ `f25e05f` + `PASSPORT_SHARE_ENTRY_PUBLISHED=1`; social sharing completion stays with the Passport Completion work until owner UAT |
+| EM-MAIL-01 no SMTP | P1 | **B** | `auth-and-email.md` §3.1 |
+| CI-01 signed-in Career Discovery closed | P1 | **A** + decision | PR #322; owner decision 1 |
+| JB-02 employer note readable by applicant | P2 | **A** | PR #323 |
+| JB-01 application history loses context | P2 | **A** | PR #324 |
+| AS-01 test sendable on closed application | P2 | **A** | PR #325 |
+| AS-02 deadline hidden from candidate | P2 | **A** (visible) / decision (enforced) | PR #325; owner decision 2 |
+| SP-01 correction error unmapped | P2 | **C** | isolated Passport fix after Passport Completion UAT |
+| AU-02 Site URL / Redirect URLs | P2 | **B** | `auth-and-email.md` §3.2–3.3 |
+| EM-MAIL-02 Resend variables | P2 | **B** | `auth-and-email.md` §4 |
+| Data hygiene: junk published job, demo employers, `[TEST DATA]` ads | P2 content | **C** (before public release) | `production-data-hygiene.md`; REMOVE BEFORE LAUNCH rows |
+| Data hygiene: exposed share token, 13 pre-#318 live shares | — | **B** | revoke via "Dina delningar" |
+| Data hygiene: UAT accounts, test grants, storage erasure backlog | — | **D** (after owner UAT) | `production-data-hygiene.md` §7 |
+| HIBP leaked-password protection off | WARN | **B** | `auth-and-email.md` §3.7 |
+| Google OAuth buttons visible, provider unconfigured | — | **B** / decision | owner decision 3 |
+| Lovable publish state unknown | — | **B** | publish at current `main` |
+| Responsive / mobile NOT VERIFIED | — | owner UAT (gate 14) | checklist below |
+| SP-02, SP-03, SP-05, SP-06, SP-07 | P3 | **D** | — |
+| SP-04 iOS numeric keypad | P3 | **E** until device check in owner UAT | gate 14 |
+| JB-03, JB-04, JB-05, JB-06, JB-07, JB-08 | P3 | **D** | — |
+| JB-09 flag-off SSR head | P3 info | **E** | flag is true |
+| AS-03, AS-04 | P3 | **D** | — |
+| II-01 raw provider text if AI flipped without keys | P3 latent | **D** (AI stays off) | `ai-readiness.md` §4 |
+| II-02, AI-01 | P3 | **D** | — |
+| AU-01, AU-03, AU-04, EM-MAIL-03 | P3 | **D** | `auth-and-email.md` §6 |
+| Advisor ERROR `scp_scoring_version_lineage` definer view | ERROR | **E** (accepted, reviewed design) | `supabase-production-hardening.md` §3 |
+| Advisor WARN `unaccent` in `public` | WARN | **D** | separate schema PR after launch |
+| 18 tables RLS without policy | — | **E** | intended deny-all |
+| 20 boolean/id oracles without `auth.uid()` check | — | **D** | pattern in `sp_market_access` |
+| Hostinger: Nitro preset defaults to Cloudflare | new | **B** for staging | `NITRO_PRESET=node-server` |
+| Hostinger: hard-coded Lovable origin (`seo.ts`, canonicals, sitemap, function fallback) | new | **C** | code change to the production domain |
+| Hostinger: lockfile on Lovable's npm cache; no health endpoint | new | **C** | Hostinger checklist §8 |
+| BESKT preparation closed (0 method versions / grants) | — | **E** | honest state |
+
+### FINAL OWNER UAT CHECKLIST (READY FOR OWNER UAT when every line is true)
+
+- [ ] 1. Passport Completion work merged and verified by the owner (share link, QR, revoke, social image; the §5.3 deployed checks).
+- [ ] 2. Career Discovery available to the intended UAT users: #322 merged + applied, and the owner has run `cd_set_access_state('public', …)` or granted the testers; a signed-in candidate can start, complete and save; My Career shows the CTA.
+- [ ] 3. Candidate registration and employer registration complete on the published site.
+- [ ] 4. The confirmation e-mail arrives at a non-team mailbox from the CQrityjob sender (Auth log `mail_from` is yours).
+- [ ] 5. Password reset lands on `/reset-password` and the new password works.
+- [ ] 6. Candidate journey: Career Discovery → My Career → Jobs → apply with a PDF → "Mina ansökningar" (with #324, a closed vacancy keeps its title/employer).
+- [ ] 7. Employer journey: register → pending → approved → draft job → publish → application pipeline → status change → candidate message delivered in-app (and by mail once Resend is set).
+- [ ] 8. Assessment: "Skicka test" on an open application → candidate completes at `/academy` (deadline visible with #325) → review → result released; the button is absent on a rejected/withdrawn application.
+- [ ] 9. Interview Intelligence manual journey: case → preparation → guided interview → evidence → human assessment → finalised report; no AI text anywhere.
+- [ ] 10. Passport: create → add credential with a document → share → open in a private window → revoke → "not available".
+- [ ] 11. JB-02 fixed: #323 merged + applied; `GET /rest/v1/job_applications?select=employer_note` as the applicant returns a column error, not the note.
+- [ ] 12. Hostinger staging deployed from `main` and smoke tests 1–12 of the Hostinger checklist pass (not required for the Lovable-hosted UAT round; required before the DNS switch).
+- [ ] 13. Production environment/secrets checklist complete (`environment-variables.md` every "R" for Prod set; no `VITE_*` secret).
+- [ ] 14. Mobile core journeys tested at 375/390 px: home, Career Discovery, My Career, Passport, Jobs, application dialog, employer pipeline.
+- [ ] 15. No P0/P1 blocker remains: blockers 1–5 above cleared; `release-parity:gate` green; data-hygiene REMOVE BEFORE LAUNCH rows done or explicitly postponed to before public release.
 
 ---
 
@@ -22,7 +157,7 @@ Counts: **P0: 0 · P1: 2 (both activation/owner decisions, not code defects) · 
 
 ---
 
-## 2. Release blockers (P0/P1 only)
+## 2. Release blockers (P0/P1 only) — original record; the live list is §0 BLOCKERS
 
 | ID | Sev | Area | Finding | Kind |
 |---|---|---|---|---|
@@ -211,7 +346,7 @@ No viewport was rendered. Static review found: #319's 390 px Passport fixes pres
 - **JB-02** (P2): employer note about a candidate readable by that candidate through the API (one live row). Recommended: column-level revoke or a view for the applicant policy.
 - **Data hygiene:** test/junk content on the live board; earlier UAT accounts (mailinator.com, example.com, closed-test.invalid) and 5 anonymised deleted accounts remain in `auth.users`.
 
-## 13. External activation checklist (cannot be completed by code)
+## 13. External activation checklist (cannot be completed by code) — original record; the live list is §0 EXTERNAL ACTIVATIONS and OWNER ACTIONS
 
 1. Supabase Auth → custom SMTP (Resend relay or other), sender name/address, rate limits (EM-MAIL-01).
 2. Supabase Auth → Site URL and Redirect URLs `https://…/**` for published, preview and custom domains (AU-02).
@@ -225,7 +360,7 @@ No viewport was rendered. Static review found: #319's 390 px Passport fixes pres
 10. Clean test content from production (junk jobs, demo employers, stale UAT accounts) before real users arrive.
 11. Address the advisor ERROR (`scp_scoring_version_lineage` → `security_invoker`) and move `unaccent` out of `public` (schema changes; separate PR).
 
-## 14. Release recommendation
+## 14. Release recommendation (original, 2026-09-28 afternoon; superseded by §0 RELEASE STATUS)
 
 **NOT READY FOR OWNER UAT.**
 
