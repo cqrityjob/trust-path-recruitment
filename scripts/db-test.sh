@@ -5529,6 +5529,21 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running candidate application context assertions (JB-01)"
+set +e
+JB01_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_application_context_test.sql 2>&1)"
+JB01_RC=$?
+set -e
+echo "$JB01_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+JB01_PASSED="$(echo "$JB01_OUT" | grep -c "ok  " || true)"
+if [ "$JB01_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the candidate application context suite exited with code ${JB01_RC}." >&2
+  echo "$JB01_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  exit 1
+fi
+[ "$JB01_PASSED" -ge 14 ] || { echo "$JB01_OUT"; echo "FAIL: candidate application context assertion shortfall: $JB01_PASSED (floor 14)" >&2; exit 1; }
+echo "    ok  $JB01_PASSED candidate application context assertions passed"
+
 echo "==> Verifying job advertisement archiving"
 set +e
 ARCH_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/jobs_archive_test.sql 2>&1)"

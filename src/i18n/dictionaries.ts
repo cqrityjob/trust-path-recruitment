@@ -966,6 +966,7 @@ export const dictionaries = {
     "candidate.applications.status.rejected": "Ej aktuell",
     "candidate.applications.status.hired": "Anställd",
     "candidate.applications.status.withdrawn": "Återkallad",
+    "candidate.applications.jobClosed": "Annonsen är stängd",
 
     "employer.auth.signin.title": "Logga in som arbetsgivare",
     "employer.auth.signin.intro":
@@ -9430,6 +9431,7 @@ export const dictionaries = {
     "candidate.applications.status.rejected": "Not proceeding",
     "candidate.applications.status.hired": "Hired",
     "candidate.applications.status.withdrawn": "Withdrawn",
+    "candidate.applications.jobClosed": "Advertisement closed",
 
     "employer.auth.signin.title": "Log in as an employer",
     "employer.auth.signin.intro":

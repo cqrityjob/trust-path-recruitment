@@ -162,6 +162,7 @@ export function application(over: Partial<MyApplicationRow> & { id: string }): M
     jobTitleSv: "Väktare, Stockholm",
     jobTitleEn: "Security officer, Stockholm",
     employerName: "Nordväkt AB",
+    jobOpen: true,
     status: "submitted",
     hasCv: true,
     cvSource: "cqrityjob_cv",
