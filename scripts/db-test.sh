@@ -1121,7 +1121,7 @@ bash scripts/recruitment-assignment-race-test.sh
 # the migration must re-apply cleanly afterwards.
 # ---------------------------------------------------------------------------
 echo "==> Running assignment application-state assertions (AS-01)"
-psql_q -d "$TEST_DB" -f supabase/migrations/20261225090000_scp_assign_requires_open_application.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20261225090000_assessment_assign_requires_open_application.sql >/dev/null
 set +e
 AS01_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_assign_requires_open_application_test.sql 2>&1)"
 AS01_RC=$?
@@ -1135,7 +1135,7 @@ if [ "$AS01_RC" -ne 0 ]; then
 fi
 [ "$AS01_PASSED" -ge 14 ] || { echo "$AS01_OUT"; echo "FAIL: assignment application-state assertion shortfall: $AS01_PASSED (floor 14)" >&2; exit 1; }
 echo "    ok  $AS01_PASSED assignment application-state assertions passed"
-psql_q -d "$TEST_DB" -f supabase/rollback/20261225090000_scp_assign_requires_open_application_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20261225090000_assessment_assign_requires_open_application_rollback.sql >/dev/null
 AS01_OLD_OUT="$(mktemp)"
 if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_assign_requires_open_application_test.sql >"$AS01_OLD_OUT" 2>&1; then
   rm -f "$AS01_OLD_OUT"
@@ -1149,7 +1149,7 @@ if ! grep -q 'unexpectedly SUCCEEDED' "$AS01_OLD_OUT"; then
   exit 1
 fi
 rm -f "$AS01_OLD_OUT"
-psql_q -d "$TEST_DB" -f supabase/migrations/20261225090000_scp_assign_requires_open_application.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20261225090000_assessment_assign_requires_open_application.sql >/dev/null
 echo "    ok  the old body accepts a closed application; 20261225090000 re-applied"
 
 # ---------------------------------------------------------------------------

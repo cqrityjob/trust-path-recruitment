@@ -1,4 +1,4 @@
--- Roll back 20261225090000_scp_assign_requires_open_application.
+-- Roll back 20261225090000_assessment_assign_requires_open_application.
 --
 -- Restores scp_employer_assign() VERBATIM as 20261209090000 wrote it. This
 -- REINSTATES AS-01: a test can again be sent to a rejected, hired or
