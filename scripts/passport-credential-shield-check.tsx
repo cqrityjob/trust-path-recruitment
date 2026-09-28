@@ -35,6 +35,7 @@ import {
 import {
   CredentialConstellation,
   CredentialShield,
+  breakableStatusWord,
   type ShieldCredential,
 } from "../src/components/security-passport/CredentialShield";
 import { RecipientPassportCard } from "../src/components/security-passport/live/RecipientPassportCard";
@@ -487,6 +488,42 @@ console.log("\n6 · on a phone, a long credential title never paints over its st
       /sm:flex-col/.test(status) &&
       /sm:items-end/.test(status),
     "the status sits on its own line on a phone, and keeps its right-hand column on desktop",
+  );
+}
+
+/* ------------------------------------------------------------------ */
+console.log("\n7 · a status word breaks inside its own quarter, never into the next");
+
+// Four across leaves a status word 66px at 390px. Measured in the card's face
+// at 10px, these Swedish words are longer and have no break of their own; each
+// may break at a correct point and nowhere else. The rest are left alone.
+const SHY = "­";
+for (const [word, expected] of [
+  ["EGENRAPPORTERAD", `EGEN${SHY}RAPPORTERAD`],
+  ["Dokumenterad", `Doku${SHY}menterad`],
+  ["DOKUMENT TILLHANDAHÅLLET", `DOKUMENT TILL${SHY}HANDAHÅLLET`],
+  ["Komplettering begärd", `Kom${SHY}plettering begärd`],
+  ["Källbekräftad", "Källbekräftad"],
+  ["SELF-DECLARED", "SELF-DECLARED"],
+  ["Source-confirmed", "Source-confirmed"],
+] as const) {
+  check(breakableStatusWord(word) === expected, `"${word}" breaks only where it may`);
+}
+{
+  const sv = html(
+    <CredentialShield
+      credential={shield("w", { j: "SE", state: "self_declared" })}
+      ground="navy"
+    />,
+    "sv",
+  );
+  check(
+    sv.includes(`>EGEN${SHY}RAPPORTERAD</span>`),
+    "the shield prints the Swedish self-declared word with its break point",
+  );
+  check(
+    /aria-label="[^"]*EGENRAPPORTERAD/.test(sv) && /title="[^"]*EGENRAPPORTERAD/.test(sv),
+    "the accessible label and the tooltip keep the word as written",
   );
 }
 
