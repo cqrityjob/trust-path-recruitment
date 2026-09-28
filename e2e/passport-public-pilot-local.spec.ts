@@ -2,8 +2,11 @@
 // backend: GoTrue registers and signs the people in and sends the confirmation
 // e-mail, PostgREST and row-level security store and return their rows, the
 // claim rules decide what may be saved, Storage keeps the documents and the
-// share gateway hands a recipient to the application. No server response here
-// is simulated.
+// application exchanges a share link for a recipient session. No server
+// response here is simulated. Two things the hosted platform does, and the
+// local stack does not, are applied in front of it: hosted Supabase's HTML
+// restriction (scripts/local-hosted-functions-proxy.ts) and the host's
+// analytics script (scripts/local-tls-front.mjs).
 //
 // scripts/fixtures/passport-public-pilot-fixture.sql puts Great Britain,
 // Northern Ireland and Dubai in the public-pilot state (20261220090000) -- "a
@@ -24,7 +27,14 @@
 //   F  document -> review request -> clarification -> the holder's answer ->
 //      decision, by a reviewer with the passport_verifier role and no grant;
 //   G  a selective share -> the QR code is exactly the link -> a logged-out
-//      recipient sees the selection and nothing else -> revocation ends it;
+//      recipient sees the selection and nothing else, never a private
+//      document -> the gateway form of the link opens it too, through hosted
+//      Supabase's HTML restriction -> expiry, then revocation, end it;
+//   S  the other choice: a social image of the credentials the holder picks,
+//      in the shared card's shields and truthful words -- previewed exactly as
+//      downloaded, in every format, with no link or QR code until the holder
+//      creates one for it and ticks it in, and platform buttons that only
+//      open a composer;
 //   H  another holder can read nothing of this Passport, change nothing, and
 //      cannot raise their own trust, through the pages or the API;
 //   B  a mixed-market holder adds all four Indian qualifications and reloads;
@@ -37,7 +47,7 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import QRCode from "qrcode";
 import { test, expect, type Browser, type Page } from "@playwright/test";
@@ -52,6 +62,14 @@ const MAIL = process.env.E2E_MAIL_URL ?? "";
  *  attached through the same RPC the upload calls, as its holder, and the
  *  test says so in its annotations; the CI verifier refuses that mode. */
 const STORAGE = process.env.E2E_STORAGE === "1";
+/** Hosted Supabase's HTML restriction in front of the local functions
+ *  (scripts/local-hosted-functions-proxy.ts). Case G opens the gateway form of
+ *  a link through it, because the local stack alone serves HTML that hosted
+ *  Supabase shows as text. */
+const HOSTED_FUNCTIONS = process.env.E2E_HOSTED_FUNCTIONS_URL ?? "";
+/** "1" when the TLS front injects the host's analytics script into every page,
+ *  as the published site's host does (scripts/local-tls-front.mjs). */
+const HOST_ANALYTICS = process.env.E2E_HOST_ANALYTICS === "1";
 const LOOPBACK = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/;
 test.skip(!LOCAL, "Set E2E_LOCAL_STACK=1 to run the local walk.");
 test.skip(
@@ -112,9 +130,41 @@ async function inLanguage(page: Page, lang: "sv" | "en") {
   await page.addInitScript((value) => localStorage.setItem("cqrityjob.lang", value), lang);
 }
 
+/** The public boundary's throttle: reads per client per five-minute window,
+ *  as the application sets it. */
+const PUBLIC_READS_PER_WINDOW = Number(
+  /const THROTTLE_LIMIT = (\d+);/.exec(
+    readFileSync("src/lib/security-passport/public-disclosure.server.ts", "utf8"),
+  )?.[1],
+);
+
+/** No public read so far was refused by the throttle: a refused one is the
+ *  window's read past the limit, and it would show the same "not available"
+ *  page an expired or revoked link does. */
+function expectNoThrottleRefusal(what: string) {
+  expect(
+    PUBLIC_READS_PER_WINDOW,
+    "the throttle limit was read from the application",
+  ).toBeGreaterThan(0);
+  expect(
+    Number(sql("select coalesce(max(attempts), 0) from public.sp_public_access_throttle")),
+    `${what}: no public read was refused by the throttle`,
+  ).toBeLessThanOrEqual(PUBLIC_READS_PER_WINDOW);
+}
+
 /** A second, independent person on the same machine: their own cookies and
- *  storage, the project's own viewport. */
+ *  storage, the project's own viewport -- and their own throttle budget.
+ *
+ *  Someone else on their own device is a client of their own to the public
+ *  throttle. Here everyone arrives from one loopback client with no
+ *  X-Forwarded-For, so without this one person's reads would spend the next
+ *  one's budget. A fast run then saw its last recipient refused (run
+ *  36436368307: 390px case S, after both projects' G and S fell into one
+ *  window). The throttle itself is unchanged, and every read before the reset
+ *  is first proven to have been within it. */
 async function anotherPerson(browser: Browser, lang: "sv" | "en") {
+  expectNoThrottleRefusal("before another person arrives");
+  sql("delete from public.sp_public_access_throttle");
   const use = test.info().project.use;
   const context = await browser.newContext({
     ignoreHTTPSErrors: true,
@@ -637,20 +687,52 @@ test.describe("the public pilot, on a real backend", () => {
     await evidence(page, "sv-review-approved");
   });
 
-  test("G · a selective share opens from its QR code for a logged-out recipient, and revocation ends it", async ({
+  test("G · a selective share opens from its QR code for a logged-out recipient; expiry and revocation end it", async ({
     page,
     browser,
+    request,
   }) => {
     test.info().annotations.push({ type: "proof", description: "G" });
+    // Both stand-ins for the hosted platform are required. Without them a
+    // share can pass here and fail for every real recipient, as the gateway
+    // page once did.
+    expect(
+      HOSTED_FUNCTIONS,
+      "E2E_HOSTED_FUNCTIONS_URL: the gateway link is opened through scripts/local-hosted-functions-proxy.ts",
+    ).toMatch(LOOPBACK);
+    expect(
+      HOST_ANALYTICS,
+      "E2E_HOST_ANALYTICS=1: the TLS front emulates the host's analytics",
+    ).toBe(true);
+    test.info().annotations.push({
+      type: "share-hosting",
+      description: "hosted-html-restriction+host-analytics",
+    });
     const uid = uidOf(who("dubai"));
     const du = activeClaim(uid, "AE_DU_SIRA_CARD_GUARD");
     const ind = activeClaim(uid, "IN_MEPSC_Q7101");
     const vu1 = activeClaim(uid, "VU1");
+    // The holder's private documents, from case F: none may reach a recipient.
+    const documents = sql(
+      `select string_agg(file_name||'|'||storage_path, ',' order by file_name) from public.sp_evidence where holder_user_id='${uid}'`,
+    )
+      .split(",")
+      .filter(Boolean)
+      .map((row) => {
+        const [name = "", storagePath = ""] = row.split("|");
+        return { name, storagePath };
+      });
+    expect(documents.map((d) => d.name)).toEqual(
+      expect.arrayContaining(["sira-kort-baksida.pdf", "sira-kort-framsida.pdf"]),
+    );
+    const unselected = ["Väktarutbildning 1", "Door Supervision", "Fiktivt Security LLC"];
+
     await inLanguage(page, "en");
     await atEvidenceWidth(page);
     await signIn(page, who("dubai"), "/passport/share");
 
     await page.goto(`${BASE}/passport/share`);
+    await page.locator('[data-share-choice="link"]').click();
     await page.locator(`[data-merit-option="claim:${du}"] input[type="checkbox"]`).check();
     await page.locator(`[data-merit-option="claim:${ind}"] input[type="checkbox"]`).check();
     await expect(
@@ -661,13 +743,54 @@ test.describe("the public pilot, on a real backend", () => {
     await expect(page.locator("[data-share-created]")).toBeVisible({ timeout: 60_000 });
     const link = await page.locator("[data-share-link]").inputValue();
 
-    // The link: the gateway, with the token in the fragment only.
+    // The link: the application's own domain, with the token in the
+    // fragment only.
     const url = new URL(link);
-    expect(url.origin).toBe(new URL(API).origin);
-    expect(url.pathname).toBe("/functions/v1/passport-share");
-    expect([...url.searchParams.keys()]).toEqual([]);
+    const app = new URL(BASE).origin;
+    expect(url.origin).toBe(app);
+    expect(url.pathname).toBe("/p");
+    expect(url.search).toBe("");
     expect(url.hash).toMatch(/^#[0-9a-f]{64}$/);
     expect(link).not.toContain(uid);
+    const token = url.hash.slice(1);
+    const openUrl = `${app}/p/open`;
+
+    // What `GET /p` answers: the application's own entry page, served as a
+    // document. Its policy lets only its own script run -- not the host's
+    // analytics, which the front injected into it as the host does -- lets its
+    // form post only here and connects nowhere. It is private, unindexed and
+    // sends no Referer.
+    const entry = await request.get(`${BASE}/p`, { maxRedirects: 0, ignoreHTTPSErrors: true });
+    expect(entry.status()).toBe(200);
+    const entryHeaders = entry.headers();
+    expect(entryHeaders["content-type"]).toBe("text/html; charset=utf-8");
+    const policy = Object.fromEntries(
+      (entryHeaders["content-security-policy"] ?? "").split(";").map((directive) => {
+        const [name = "", ...values] = directive.trim().split(/\s+/);
+        return [name, values.join(" ")];
+      }),
+    );
+    const nonce = /^'nonce-([0-9a-f]{32})'$/.exec(policy["script-src"] ?? "")?.[1] ?? "";
+    expect(nonce, `script-src: ${policy["script-src"]}`).not.toBe("");
+    expect(policy).toEqual({
+      "default-src": "'none'",
+      "script-src": `'nonce-${nonce}'`,
+      "style-src": `'nonce-${nonce}'`,
+      "form-action": "'self'",
+      "base-uri": "'none'",
+      "frame-ancestors": "'none'",
+    });
+    expect(entryHeaders["cache-control"]).toBe("private, no-store");
+    expect(entryHeaders["referrer-policy"]).toBe("no-referrer");
+    expect(entryHeaders["x-robots-tag"]).toContain("noindex");
+    expect(entryHeaders["x-content-type-options"]).toBe("nosniff");
+    const entryHtml = await entry.text();
+    expect(entryHtml).toContain(`<script nonce="${nonce}">`);
+    expect(entryHtml, "the host's analytics tag, injected as the host does").toContain(
+      'src="/~flock.js"',
+    );
+    const again = await request.get(`${BASE}/p`, { maxRedirects: 0, ignoreHTTPSErrors: true });
+    expect(again.headers()["content-security-policy"]).not.toContain(nonce);
 
     // The QR code is exactly this link, module for module.
     const qr = page.getByRole("img", { name: "QR code for your selected disclosure" });
@@ -698,8 +821,53 @@ test.describe("the public pilot, on a real backend", () => {
     expect(drawn).toEqual(Array.from(expected.data, (v) => (v ? 1 : 0)));
     await evidence(page, "en-share-created");
 
-    // A recipient with no account opens what the QR code opens.
+    // A recipient with no account opens what the QR code opens. Every request
+    // their browser sends is recorded, with the document that sent it and
+    // whether the browser refused it, and every server-function answer they
+    // receive is kept.
     const { context, page: recipient } = await anotherPerson(browser, "en");
+    const sent: {
+      method: string;
+      url: string;
+      referer: string;
+      body: string;
+      type: string;
+      /** The document that sent it: the latest navigation before it. A
+       *  frame's URL can lag behind a navigation, so it is not used. */
+      from: string;
+      /** Why the browser did not send it, e.g. "csp". */
+      failure: string | null;
+    }[] = [];
+    const recorded = new Map<unknown, (typeof sent)[number]>();
+    let documentPath = "";
+    recipient.on("request", (r) => {
+      if (r.isNavigationRequest()) documentPath = new URL(r.url()).pathname;
+      const entry = {
+        method: r.method(),
+        url: r.url(),
+        referer: r.headers()["referer"] ?? "",
+        body: r.postData() ?? "",
+        type: r.resourceType(),
+        from: documentPath,
+        failure: null,
+      };
+      recorded.set(r, entry);
+      sent.push(entry);
+    });
+    recipient.on("requestfailed", (r) => {
+      const entry = recorded.get(r);
+      if (entry) entry.failure = r.failure()?.errorText ?? "failed";
+    });
+    const answers: Promise<string>[] = [];
+    recipient.on("response", (r) => {
+      if (new URL(r.url()).pathname.startsWith("/_serverFn")) {
+        answers.push(r.text().catch(() => ""));
+      }
+    });
+    const pathOf = (address: string) =>
+      address.includes("://") ? new URL(address).pathname : address;
+    const analyticsHits = () =>
+      sent.filter((r) => r.method === "POST" && pathOf(r.url) === "/~api/analytics");
     try {
       await recipient.goto(link);
       await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
@@ -709,9 +877,11 @@ test.describe("the public pilot, on a real backend", () => {
       });
       await expect(main).toContainText("Dubai, UAE");
       await expect(main).toContainText("Security Guard (MEP/Q7101)");
-      await expect(main).not.toContainText("Väktarutbildning 1");
-      await expect(main).not.toContainText("Door Supervision");
-      await expect(main).not.toContainText("Fiktivt Security LLC");
+      for (const text of unselected) await expect(main).not.toContainText(text);
+      for (const d of documents) await expect(main).not.toContainText(d.name);
+      // A rendered page, not its source shown as text.
+      expect(await recipient.evaluate(() => document.contentType)).toBe("text/html");
+      await expect(recipient.locator("body")).not.toContainText("<!doctype");
       expect(new URL(recipient.url()).hash).toBe("");
       expect(
         await recipient.evaluate(
@@ -720,10 +890,128 @@ test.describe("the public pilot, on a real backend", () => {
       ).toBeLessThanOrEqual(1);
       await evidence(recipient, "en-share-recipient");
 
-      // Revocation, and the same recipient reloads.
+      // The host's analytics ran on the recipient's page and reported it.
+      await expect.poll(() => analyticsHits().length, { timeout: 15_000 }).toBeGreaterThan(0);
+
+      expect(
+        sent.filter((r) => r.method === "GET" && r.url === `${app}/p`).length,
+        "the recipient entered at the application's /p",
+      ).toBe(1);
+      expect(
+        sent.filter((r) => r.body.includes(token)).map((r) => `${r.method} ${r.url}`),
+        "the token left the browser once, in the body of the exchange",
+      ).toEqual([`POST ${openUrl}`]);
+      // The host's script was injected into the entry page -- and the entry
+      // page's policy refused every script it tried to load, before anything
+      // was fetched.
+      const entryScripts = sent.filter((r) => r.type === "script" && r.from === "/p");
+      expect(
+        entryScripts.map((r) => r.url),
+        "the host's analytics script was injected into /p, as the host injects it",
+      ).toContain(`${app}/~flock.js`);
+      expect(
+        entryScripts.map((r) => `${r.url} ${r.failure}`),
+        "and /p ran no script but its own: each was refused by its policy",
+      ).toEqual(entryScripts.map((r) => `${r.url} csp`));
+      for (const r of sent) {
+        expect(r.url, `request URL ${r.method}`).not.toContain(token);
+        expect(r.referer, `Referer of ${r.method} ${pathOf(r.url)}`).not.toContain(token);
+      }
+      for (const hit of analyticsHits()) expect(hit.body).not.toContain(token);
+
+      // Selective disclosure in what the server sent, not only in what was drawn.
+      const served = await Promise.all(answers);
+      expect(served.length, "the recipient's page read the share").toBeGreaterThan(0);
+      for (const body of served) {
+        for (const text of unselected) expect(body).not.toContain(text);
+        for (const d of documents) {
+          expect(body).not.toContain(d.name);
+          expect(body).not.toContain(d.storagePath);
+        }
+        expect(body).not.toContain(token);
+      }
+      // The documents themselves: out of reach without the holder's session.
+      if (STORAGE) {
+        for (const d of documents) {
+          for (const at of ["", "public/", "authenticated/"]) {
+            const r = await request.get(
+              `${API}/storage/v1/object/${at}passport-evidence/${d.storagePath}`,
+              { headers: { apikey: ANON, Authorization: `Bearer ${ANON}` } },
+            );
+            expect(r.status(), `anonymous ${at || "direct/"} read of a private document`).toBe(400);
+          }
+        }
+      }
+
+      // A link issued before this entry existed -- the gateway form, at the
+      // Supabase functions address -- opened through hosted Supabase's HTML
+      // restriction. The function answers with a redirect the restriction
+      // leaves untouched, and the browser carries the fragment on to /p.
+      const gateway = `${HOSTED_FUNCTIONS.replace(/\/+$/, "")}/functions/v1/passport-share`;
+      const hop = await request.get(gateway, { maxRedirects: 0 });
+      expect(hop.status()).toBe(302);
+      expect(hop.headers()["location"]).toBe(`${app}/p`);
+      expect(hop.headers()["content-type"] ?? "").not.toContain("html");
+      expect((await hop.body()).byteLength).toBe(0);
+      const earlier = await anotherPerson(browser, "sv");
+      const earlierSent: string[] = [];
+      earlier.page.on("request", (r) =>
+        earlierSent.push(`${r.method()} ${r.url()} ${r.headers()["referer"] ?? ""}`),
+      );
+      try {
+        await earlier.page.goto(`${gateway}#${token}`);
+        await expect(earlier.page).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+        const theirs = earlier.page.locator("main");
+        await expect(theirs).toContainText("SIRA Security Cadre Card — Security Guard", {
+          timeout: 60_000,
+        });
+        for (const text of unselected) await expect(theirs).not.toContainText(text);
+        expect(new URL(earlier.page.url()).hash).toBe("");
+        await evidence(earlier.page, "sv-share-recipient-gateway-link");
+        for (const line of earlierSent) expect(line).not.toContain(token);
+      } finally {
+        await earlier.context.close();
+      }
+
+      // Expiry. The share's end moved into the past: the open tab stops on its
+      // next read, and the link opened afresh opens nothing.
       const share = sql(
         `select id from public.sp_disclosures where holder_user_id='${uid}' order by created_at desc limit 1`,
       );
+      const ends = sql(`select expires_at from public.sp_disclosures where id='${share}'`);
+      sql(
+        `update public.sp_disclosures set expires_at = created_at + interval '1 second' where id='${share}'`,
+      );
+      try {
+        await recipient.reload();
+        await expect(recipient.locator("main")).toContainText("The link may have expired", {
+          timeout: 60_000,
+        });
+        await expect(recipient.locator("main")).not.toContainText("SIRA Security Cadre Card");
+        await evidence(recipient, "en-share-expired");
+        const late = await anotherPerson(browser, "en");
+        try {
+          await late.page.goto(link);
+          await expect(late.page).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+          await expect(late.page.locator("main")).toContainText("The link may have expired", {
+            timeout: 60_000,
+          });
+          await expect(late.page.locator("main")).not.toContainText("SIRA Security Cadre Card");
+        } finally {
+          await late.context.close();
+        }
+      } finally {
+        sql(`update public.sp_disclosures set expires_at = '${ends}' where id='${share}'`);
+      }
+      // The end restored, the same tab reads the share again: expiry, and
+      // nothing else, is what closed it.
+      await recipient.reload();
+      await expect(recipient.locator("main")).toContainText(
+        "SIRA Security Cadre Card — Security Guard",
+        { timeout: 60_000 },
+      );
+
+      // Revocation, and the same recipient reloads.
       await page.goto(`${BASE}/passport/share`);
       await page.locator(`[data-share-revoke="${share}"]`).click();
       await expect(page.locator(`[data-share-row="${share}"]`)).toHaveAttribute(
@@ -737,9 +1025,318 @@ test.describe("the public pilot, on a real backend", () => {
       });
       await expect(recipient.locator("main")).toContainText("The link may have expired");
       await evidence(recipient, "en-share-revoked");
+      // And the link itself, opened again from the start, opens nothing: the
+      // exchange refuses it, and the recipient lands on the same "not
+      // available" page as any other link that cannot be opened.
+      await recipient.goto(link);
+      await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+      await expect(recipient.locator("main")).toContainText("The link may have expired", {
+        timeout: 60_000,
+      });
+      await expect(recipient.locator("main")).not.toContainText("SIRA Security Cadre Card");
+      expect(new URL(recipient.url()).hash).toBe("");
+      for (const r of sent) {
+        expect(r.url, `request URL ${r.method}`).not.toContain(token);
+        expect(r.referer, `Referer of ${r.method} ${pathOf(r.url)}`).not.toContain(token);
+        if (r.body.includes(token)) expect(`${r.method} ${r.url}`).toBe(`POST ${openUrl}`);
+      }
+      // Every "not available" above was the expiry or the revocation.
+      expectNoThrottleRefusal("case G");
     } finally {
       await context.close();
     }
+  });
+
+  test("S · a social image of what the holder selects: the preview is the download, no link unless chosen, nothing posted for them", async ({
+    page,
+    browser,
+  }) => {
+    test.info().annotations.push({ type: "proof", description: "S" });
+    const uid = uidOf(who("dubai"));
+    const du = activeClaim(uid, "AE_DU_SIRA_CARD_GUARD");
+    const ind = activeClaim(uid, "IN_MEPSC_Q7101");
+    const vu1 = activeClaim(uid, "VU1");
+    const documents = sql(
+      `select string_agg(file_name, ',') from public.sp_evidence where holder_user_id='${uid}'`,
+    )
+      .split(",")
+      .filter(Boolean);
+    const neverOnTheImage = [
+      "Väktarutbildning",
+      "Fiktivt Security LLC",
+      "2028",
+      uid,
+      "/p#",
+      ...documents,
+    ];
+
+    // Every platform button is recorded, not followed: nothing may be posted,
+    // and the test reaches no platform.
+    await page.addInitScript(() => {
+      const w = window as unknown as { __opened: string[] };
+      w.__opened = [];
+      window.open = ((url?: string | URL) => {
+        w.__opened.push(String(url));
+        return null;
+      }) as typeof window.open;
+    });
+    await inLanguage(page, "sv");
+    await atEvidenceWidth(page);
+    await signIn(page, who("dubai"), "/passport/share");
+    await page.goto(`${BASE}/passport/share`);
+
+    // The two choices, and the link flow is where it always was.
+    await expect(page.locator("[data-share-choice]")).toHaveCount(2, { timeout: 60_000 });
+    await expect(page.locator('[data-share-choice="link"]')).toContainText("Dela via länk");
+    await expect(page.locator('[data-share-choice="social"]')).toContainText(
+      "Dela på sociala medier",
+    );
+    await evidence(page, "sv-share-choices");
+    await page.locator('[data-share-choice="social"]').click();
+    const flow = page.locator("[data-social-flow]");
+    await expect(flow).toBeVisible();
+
+    // Credentials only -- an image never names an employer -- chosen by the
+    // holder, nothing ticked for them.
+    await expect(flow.locator('[data-merit-option^="experience:"]')).toHaveCount(0);
+    await expect(flow.locator('input[type="checkbox"]:checked')).toHaveCount(0);
+    await flow.locator(`[data-merit-option="claim:${du}"] input`).check();
+    await flow.locator(`[data-merit-option="claim:${ind}"] input`).check();
+    await expect(flow.locator(`[data-merit-option="claim:${vu1}"] input`)).not.toBeChecked();
+
+    const preview = (format: string) => flow.locator(`[data-social-preview="${format}"]`);
+    const svgOf = async (format: string) => {
+      const src = (await preview(format).getAttribute("src")) ?? "";
+      return decodeURIComponent(src.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
+    };
+    const words = (svg: string) =>
+      [...svg.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map((m) => m[1] ?? "").join("\n");
+
+    // The preview, drawn in the shared card's vocabulary: the shield, the
+    // flag and scope, and each credential's own truthful word.
+    await expect(preview("square")).toBeVisible({ timeout: 60_000 });
+    await expect(preview("square")).toHaveAttribute("data-social-link", "none");
+    await expect(flow.locator('[data-social-link-state="none"]')).toBeVisible();
+    let svg = await svgOf("square");
+    expect(svg).toContain('data-shield-mark="documented"');
+    expect(svg).toContain('data-flag="AE"');
+    let text = words(svg);
+    expect(text).toContain("SIRA");
+    expect(text).toContain("Dubai, UAE");
+    expect(text).toContain("DOKUMENTERAD");
+    expect(text, "nothing is called verified that is not").not.toMatch(/KÄLLBEKRÄFTAD|VERIFIERAD/);
+    expect(text).toContain("En ögonblicksbild.");
+    for (const absent of neverOnTheImage) expect(svg).not.toContain(absent);
+    expect(svg, "no QR code without a link").not.toContain("<image");
+    await evidence(page, "sv-social-preview");
+
+    // The download is the preview: the same SVG, rasterised, pixel for pixel.
+    const downloadMatches = async (format: string, width: number, height: number) => {
+      const shown = (await preview(format).getAttribute("src")) ?? "";
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        flow.locator("[data-social-download]").click(),
+      ]);
+      expect(download.suggestedFilename()).toBe(`cqrityjob-passport-${format}.png`);
+      const png = readFileSync((await download.path())!).toString("base64");
+      const differing = await page.evaluate(
+        async ({ png, shown, width, height }) => {
+          const load = (src: string) =>
+            new Promise<HTMLImageElement>((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = () => reject(new Error("image did not load"));
+              img.src = src;
+            });
+          const [file, drawn] = await Promise.all([
+            load(`data:image/png;base64,${png}`),
+            load(shown),
+          ]);
+          if (file.naturalWidth !== width || file.naturalHeight !== height) return -1;
+          const pixels = (img: HTMLImageElement) => {
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d")!;
+            ctx.drawImage(img, 0, 0, width, height);
+            return ctx.getImageData(0, 0, width, height).data;
+          };
+          const a = pixels(file);
+          const b = pixels(drawn);
+          let differing = 0;
+          for (let i = 0; i < a.length; i += 4) {
+            if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) differing += 1;
+          }
+          return differing;
+        },
+        { png, shown, width, height },
+      );
+      expect(differing, `${format}: the downloaded PNG is the previewed image`).toBe(0);
+    };
+    await downloadMatches("square", 1080, 1080);
+
+    await flow.locator('[data-social-format="og"]').click();
+    await expect(preview("og")).toBeVisible();
+    await downloadMatches("og", 1200, 630);
+
+    // Instagram has no web publishing: its button switches the preview to the
+    // Story image and downloads exactly that.
+    const story = page.waitForEvent("download");
+    await flow.locator('[data-social-channel="instagram"]').click();
+    await expect(preview("story")).toBeVisible();
+    const storyDownload = await story;
+    expect(storyDownload.suggestedFilename()).toBe("cqrityjob-passport-story.png");
+    {
+      const shown = (await preview("story").getAttribute("src")) ?? "";
+      const png = readFileSync((await storyDownload.path())!).toString("base64");
+      const size = await page.evaluate(
+        async ({ png, shown }) => {
+          const img = new Image();
+          img.src = `data:image/png;base64,${png}`;
+          await img.decode();
+          const svg = new Image();
+          svg.src = shown;
+          await svg.decode();
+          return `${img.naturalWidth}x${img.naturalHeight}/${svg.naturalWidth}x${svg.naturalHeight}`;
+        },
+        { png, shown },
+      );
+      expect(size).toBe("1080x1920/1080x1920");
+    }
+    await evidence(page, "sv-social-story");
+
+    // The platforms: a composer or a page for the holder, with no link in it.
+    await flow.locator('[data-social-format="square"]').click();
+    await flow.locator('[data-social-channel="linkedin"]').click();
+    await flow.locator('[data-social-channel="x"]').click();
+    await flow.locator('[data-social-channel="whatsapp"]').click();
+    await expect(flow.locator('[data-social-channel="copy_link"]')).toHaveCount(0);
+    let opened = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+    expect(opened[0]).toBe("https://www.linkedin.com/feed/");
+    expect(opened[1]).toMatch(/^https:\/\/twitter\.com\/intent\/tweet\?text=[^&]+$/);
+    expect(opened[2]).toMatch(/^https:\/\/wa\.me\/\?text=[^&]+$/);
+    for (const url of opened) expect(url).not.toMatch(/url=|%2Fp%23|\/p#/);
+
+    // A link only on purpose: created for exactly this selection, not drawn
+    // until the holder ticks it, and then drawn in the preview before any
+    // download.
+    await flow.locator("[data-social-more] > summary").click();
+    await flow.locator("[data-social-link-create]").click();
+    const linkField = flow.locator("[data-social-link-field]");
+    await expect(linkField).toBeVisible({ timeout: 60_000 });
+    const link = await linkField.inputValue();
+    expect(new URL(link).pathname).toBe("/p");
+    expect(new URL(link).hash).toMatch(/^#[0-9a-f]{64}$/);
+    await expect(preview("square")).toHaveAttribute("data-social-link", "none");
+    expect(await svgOf("square")).not.toContain(link.slice(-64));
+    await flow.locator("[data-social-link-include]").check();
+    await expect(preview("square")).toHaveAttribute("data-social-link", "included", {
+      timeout: 30_000,
+    });
+    await expect(flow.locator('[data-social-link-state="included"]')).toBeVisible();
+    // The QR code is drawn once it has been generated; the download waits
+    // for it too.
+    await expect
+      .poll(async () => (await svgOf("square")).includes("<image"), {
+        timeout: 30_000,
+      })
+      .toBe(true);
+    svg = await svgOf("square");
+    text = words(svg);
+    expect(text.replace(/\n/g, "")).toContain(link);
+    expect(text).toContain("Kontrollera aktuell status hos CQrityjob");
+    // The QR code drawn into the image is exactly the link, module for module.
+    const qrHref = /<image\b[^>]*href="(data:image\/png;base64,[^"]+)"/.exec(svg)?.[1] ?? "";
+    expect(qrHref).not.toBe("");
+    const expected = QRCode.create(link, { errorCorrectionLevel: "M" }).modules;
+    const drawn = await page.evaluate(
+      async ({ href, size }) => {
+        const img = new Image();
+        img.src = href;
+        await img.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0);
+        const cell = img.naturalWidth / size;
+        const out: number[] = [];
+        for (let y = 0; y < size; y += 1)
+          for (let x = 0; x < size; x += 1) {
+            const px = ctx.getImageData(
+              Math.floor(x * cell + cell / 2),
+              Math.floor(y * cell + cell / 2),
+              1,
+              1,
+            ).data;
+            out.push(px[0]! + px[1]! + px[2]! < 384 ? 1 : 0);
+          }
+        return out;
+      },
+      { href: qrHref, size: expected.size },
+    );
+    expect(drawn).toEqual(Array.from(expected.data, (v) => (v ? 1 : 0)));
+    await downloadMatches("square", 1080, 1080);
+    await flow.locator('[data-social-channel="x"]').click();
+    opened = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+    expect(opened.at(-1)).toContain(`url=${encodeURIComponent(link)}`);
+    await evidence(page, "sv-social-link-included");
+
+    // The link opens exactly what the image shows, for anyone who scans it.
+    const { context, page: recipient } = await anotherPerson(browser, "en");
+    try {
+      await recipient.goto(link);
+      await expect(recipient).toHaveURL(/\/p\/[0-9a-f]{32}$/, { timeout: 60_000 });
+      const main = recipient.locator("main");
+      await expect(main).toContainText("SIRA Security Cadre Card — Security Guard", {
+        timeout: 60_000,
+      });
+      await expect(main).toContainText("Security Guard (MEP/Q7101)");
+      await expect(main).not.toContainText("Väktarutbildning 1");
+      for (const d of documents) await expect(main).not.toContainText(d);
+      expectNoThrottleRefusal("case S");
+    } finally {
+      await context.close();
+    }
+
+    // Revocable where every link is.
+    const share = sql(
+      `select id from public.sp_disclosures where holder_user_id='${uid}' order by created_at desc limit 1`,
+    );
+    await page.locator(`[data-share-revoke="${share}"]`).click();
+    await expect(page.locator(`[data-share-row="${share}"]`)).toHaveAttribute(
+      "data-share-state",
+      "revoked",
+      { timeout: 60_000 },
+    );
+
+    // In English, and still inside the page's width.
+    await inLanguage(page, "en");
+    await page.goto(`${BASE}/passport/share`);
+    await page.locator('[data-share-choice="social"]').click();
+    await expect(page.locator('[data-share-choice="social"]')).toContainText(
+      "Share on social media",
+    );
+    const en = page.locator("[data-social-flow]");
+    await en.locator(`[data-merit-option="claim:${du}"] input`).check();
+    await expect(en.locator('[data-social-preview="square"]')).toBeVisible({ timeout: 60_000 });
+    const enText = words(
+      decodeURIComponent(
+        ((await en.locator('[data-social-preview="square"]').getAttribute("src")) ?? "").replace(
+          /^data:image\/svg\+xml;charset=utf-8,/,
+          "",
+        ),
+      ),
+    );
+    expect(enText).toContain("DOCUMENTED");
+    expect(enText).toContain("A snapshot.");
+    expect(enText).not.toMatch(/SOURCE-CONFIRMED|VERIFIED/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1);
+    await evidence(page, "en-social-preview");
   });
 
   test("H · another holder can read or change nothing of this Passport, and cannot raise their own trust", async ({

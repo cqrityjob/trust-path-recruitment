@@ -23,10 +23,12 @@
 // execution entirely and puts a real rate limit in front of it.
 //
 // This file may call only the reviewed disclosure RPC family: legacy token
-// reads, gateway handoff consumption, session reads, and the shared throttle.
-// It must never read a table directly or grow an unrelated service-role use.
+// reads, the gateway's handoff issue and consumption, session reads, and the
+// shared throttle. It must never read a table directly or grow an unrelated
+// service-role use.
 
 import type { RecipientPayload } from "./packages";
+import { hashShareSecret } from "./share-transport";
 
 /** Attempts allowed per client per window. A recipient opens one link, maybe
  *  reloads it; anything past this is enumeration, not use. */
@@ -79,6 +81,43 @@ export async function readDisclosureByToken(
 
   if (error || !data) return { status: "unavailable" };
   return data as unknown as RecipientPayload;
+}
+
+/**
+ * Opens a share for the browser that holds its token: the `/p` entry page's
+ * POST. The same two steps the Supabase gateway used to run -- issue a
+ * one-time handoff for a live token, consume it into a session -- run here,
+ * behind the same throttle as every other read on this boundary.
+ *
+ * `sp_share_gateway_issue` hashes the token itself and stores only the
+ * handoff's hash; `sp_share_gateway_consume` stores only the session's. The
+ * token is not kept, logged or returned. A revoked, expired, guessed or
+ * throttled token all return false, and the caller answers each one the same.
+ */
+export async function openShareByToken(
+  token: string,
+  handoff: string,
+  sessionHash: string,
+  clientHint: string,
+): Promise<boolean> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const hash = await clientHash(clientHint);
+  const throttle = await supabaseAdmin.rpc(
+    "sp_throttle_public_access" as never,
+    {
+      _client_hash: hash,
+      _limit: THROTTLE_LIMIT,
+      _window_seconds: THROTTLE_WINDOW_SECONDS,
+    } as never,
+  );
+  if (throttle.error || throttle.data === false) return false;
+
+  const issued = await supabaseAdmin.rpc(
+    "sp_share_gateway_issue" as never,
+    { _token: token, _handoff_hash: hashShareSecret(handoff) } as never,
+  );
+  if (issued.error || issued.data !== true) return false;
+  return consumeShareHandoff(handoff, sessionHash);
 }
 
 export async function consumeShareHandoff(handoff: string, sessionHash: string): Promise<boolean> {

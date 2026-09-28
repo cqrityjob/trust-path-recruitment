@@ -241,6 +241,12 @@ jobs:
       - name: Passport share gateway transport check
         run: bun run passport-share-gateway-transport:check
 
+      # The social image a holder downloads: only what they selected, at the
+      # state the shared presentation gives it, and no link or QR code unless
+      # they chose one.
+      - name: Passport social image check
+        run: bun run passport-social-image:check
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and

@@ -1,6 +1,7 @@
 /** Real GoTrue + PostgREST + Storage + Edge gateway, with no response fixtures.
  * Run scripts/passport-live-local-check.mjs first against the disposable stack.
- * The local Edge PUBLIC_SITE_URL must be https://127.0.0.1:3120.
+ * The local Edge PUBLIC_SITE_URL, and the app's VITE_PUBLIC_SITE_URL, must be
+ * https://127.0.0.1:3120.
  */
 import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
@@ -101,9 +102,11 @@ test("real owner adds and selectively shares a credential, recipient loses acces
   await page.locator("[data-share-cta]").click();
   await expect(page.locator("[data-share-created]")).toBeVisible({ timeout: 30_000 });
   const link = await page.locator("[data-share-link]").inputValue();
+  // The application-domain entry (PR 5): `<app>/p#<token>`, forwarded by a
+  // body-less redirect to the gateway. Needs VITE_PUBLIC_SITE_URL=base.
   const gateway = new URL(link);
-  expect(gateway.origin).toBe(values.API_URL);
-  expect(gateway.pathname).toBe("/functions/v1/passport-share");
+  expect(gateway.origin).toBe(base);
+  expect(gateway.pathname).toBe("/p");
 
   // ── THE QR CODE IS THIS LINK, AND NOTHING ELSE ──────────────────────
   // Scanning it must open the same recipient view the link opens. QR encoding

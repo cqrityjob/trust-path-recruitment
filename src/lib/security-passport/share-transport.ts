@@ -81,13 +81,28 @@
 // is POSTed to `/_serverFn/<hash>`. So that is the path the cookie is scoped
 // to. A capability should travel only to the boundary that validates it.
 //
+// ── HOW A LINK ENTERS NOW ──────────────────────────────────────────────
+//
+// New links are `/p#<token>` on this application's domain (public-origin.ts).
+// The browser requests `GET /p` and nothing else; the page it receives
+// (buildShareEntryPage, below) removes the fragment at once and POSTs the token
+// to SHARE_OPEN_PATH, where src/server.ts exchanges it -- throttled, through
+// the reviewed gateway RPCs -- for a separate 30-minute session. The durable
+// token is never in an HTTP request URL, never in a cookie and never in a
+// Referer.
+//
 // ── LEGACY LINKS ───────────────────────────────────────────────────────
 //
-// New links enter through the Supabase fragment gateway and never send the
-// durable token in an HTTP request URL. The redirect below remains only so
-// links already sent as `/p/<token>` do not break during the transition. It
-// still protects those links from page analytics, but their first request can
-// remain visible to the host's edge logs. Do not use it to build a new link.
+// Two older shapes still reach this boundary:
+//
+//   * `/p/<token>`, handled by the redirect below. It still protects those
+//     links from page analytics, but their first request can remain visible
+//     to the host's edge logs. Do not use it to build a new link.
+//   * `<supabase>/functions/v1/passport-share#<token>`, the gateway links. The
+//     function now answers with a body-less redirect to `/p`, which the browser
+//     follows with the fragment re-attached. Only once that function version is
+//     deployed; the version it replaces served an HTML page that hosted
+//     Supabase shows as plain text.
 
 import { createHash } from "node:crypto";
 
@@ -95,6 +110,8 @@ import { createHash } from "node:crypto";
  *  nowhere else, so no other request carries the token. */
 export const SHARE_COOKIE_PATH = "/_serverFn";
 export const SHARE_HANDOFF_PATH = "/p/handoff";
+/** Where the `/p` entry page POSTs the token it read from the fragment. */
+export const SHARE_OPEN_PATH = "/p/open";
 
 /** Cookie name for one share. Suffixed with the navigation id so two open
  *  shares hold two cookies rather than overwriting each other. */
@@ -243,6 +260,20 @@ export function shareSessionFromCookieHeader(
 }
 
 /**
+ * The privacy headers of every hop between a share link and the recipient's
+ * view. The legacy `/p/<token>` redirect and the `/p` entry below both answer
+ * with exactly these, from this one definition, so the two cannot drift.
+ */
+const SHARE_HOP_HEADERS = {
+  "Cache-Control": "private, no-store",
+  // A share link is private correspondence; it was already noindex on the
+  // page, and the hop says so too rather than relying on the destination.
+  "X-Robots-Tag": "noindex, nofollow, noarchive",
+  // Nothing downstream of these responses carries the token onward.
+  "Referrer-Policy": "no-referrer",
+} as const;
+
+/**
  * The 302 that moves the token out of the URL and into a per-share cookie.
  *
  * `Cache-Control: private, no-store` because this response carries a
@@ -264,12 +295,148 @@ export function buildShareRedirect(token: string, secure: boolean): Response {
     headers: {
       Location: shareViewPath(navigationIdFor(token)),
       "Set-Cookie": buildShareCookie(token, secure),
-      "Cache-Control": "private, no-store",
-      // A share link is private correspondence; it was already noindex on the
-      // page, and the hop says so too rather than relying on the destination.
-      "X-Robots-Tag": "noindex, nofollow, noarchive",
-      // Nothing downstream of this response carries the token onward.
-      "Referrer-Policy": "no-referrer",
+      ...SHARE_HOP_HEADERS,
+    },
+  });
+}
+
+/**
+ * The CSP of the `/p` entry page: its own nonce'd script and style, a form
+ * that may only post to this origin, and nothing else -- no connection, no
+ * image, no frame, no other script.
+ *
+ * `script-src` names the nonce and NOT `'self'`. The script the host injects
+ * into every HTML response is same-origin (`/~flock.js`, see the top of this
+ * file), so `'self'` would let it run on the one page whose address holds the
+ * token. Without the nonce it cannot run at all, and `default-src 'none'`
+ * leaves it nowhere to report to even if it could.
+ */
+export function shareEntryCsp(nonce: string): string {
+  return [
+    "default-src 'none'",
+    `script-src 'nonce-${nonce}'`,
+    `style-src 'nonce-${nonce}'`,
+    "form-action 'self'",
+    "base-uri 'none'",
+    "frame-ancestors 'none'",
+  ].join("; ");
+}
+
+/**
+ * The document at `/p`. It does three things, in this order, and renders two
+ * sentences while it does them:
+ *
+ *   1. reads the token from the fragment;
+ *   2. removes the fragment from the address bar and the history entry, before
+ *      anything else can run -- this executes while the page is still being
+ *      parsed, ahead of any deferred script;
+ *   3. POSTs the token to SHARE_OPEN_PATH in a form, so it travels in a
+ *      request BODY: never a path, a query string or a Referer.
+ *
+ * Bilingual because the recipient's language is not known until the share is
+ * read; the recipient page itself is in the language the holder chose.
+ */
+function shareEntryDocument(nonce: string): string {
+  const script = [
+    "(function(){",
+    'var sv=document.getElementById("sv"),en=document.getElementById("en");',
+    "var t=location.hash.slice(1);",
+    'history.replaceState(null,"",location.pathname);',
+    "if(!/^[0-9a-f]{64}$/.test(t)){",
+    'sv.textContent="Delningen är inte tillgänglig.";',
+    'en.textContent="This share is not available.";',
+    "return;}",
+    'var f=document.createElement("form");f.method="POST";',
+    `f.action=${JSON.stringify(SHARE_OPEN_PATH)};`,
+    'var i=document.createElement("input");i.type="hidden";i.name="token";i.value=t;',
+    "f.appendChild(i);document.body.appendChild(f);f.submit();",
+    "})();",
+  ].join("");
+  return [
+    "<!doctype html>",
+    '<html lang="sv"><head><meta charset="utf-8">',
+    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    '<meta name="robots" content="noindex, nofollow, noarchive">',
+    '<meta name="referrer" content="no-referrer">',
+    "<title>Security Passport</title>",
+    `<style nonce="${nonce}">`,
+    "body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f7f8fa;color:#0e1a2b;",
+    'font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}',
+    "main{max-width:32rem;padding:24px;text-align:center}p{margin:.25rem 0}.en{color:#4f607a}",
+    "</style></head><body><main>",
+    '<p id="sv">Öppnar den delade Security Passport…</p>',
+    '<p id="en" class="en" lang="en">Opening the shared Security Passport…</p>',
+    "<noscript><p>Aktivera JavaScript för att öppna delningen.</p>",
+    '<p class="en" lang="en">Enable JavaScript to open this share.</p></noscript>',
+    `</main><script nonce="${nonce}">${script}</script></body></html>`,
+  ].join("");
+}
+
+/**
+ * The answer to `GET /p`, the entry of every new share link (`/p#<token>`).
+ *
+ * ── WHY THIS DOCUMENT IS SERVED HERE, AND NOT BY THE GATEWAY ───────────
+ *
+ * The entry used to be a Supabase Edge Function page. Hosted Supabase does not
+ * serve HTML from its default domain: it rewrites such a response to
+ * `Content-Type: text/plain` with `Content-Security-Policy: default-src
+ * 'none'; sandbox` and `X-Content-Type-Options: nosniff`, so a recipient saw
+ * the page's source as text and nothing ran. The local stack does not apply
+ * that rewrite, which is why every local walk passed while production failed.
+ * The application's own host serves HTML, so the entry lives here.
+ *
+ * What made the gateway page safe is kept, and each property is asserted in
+ * scripts/passport-share-gateway-transport-check.ts:
+ *
+ *   * the token is only ever in the fragment, which no request carries;
+ *   * the fragment is removed before any other script could run, and the CSP
+ *     above means no other script CAN run on this page -- the host's
+ *     injected analytics included;
+ *   * the token leaves the browser once, in a POST body, to the throttled
+ *     exchange behind SHARE_OPEN_PATH, which turns it into a separate
+ *     30-minute session and never echoes it;
+ *   * the response is private, no-store, noindex and sends no Referer.
+ */
+export function buildShareEntryPage(method: string, nonce: string): Response {
+  if (method !== "GET" && method !== "HEAD") {
+    return new Response(null, {
+      status: 405,
+      headers: { ...SHARE_HOP_HEADERS, Allow: "GET, HEAD" },
+    });
+  }
+  return new Response(method === "HEAD" ? null : shareEntryDocument(nonce), {
+    status: 200,
+    headers: {
+      ...SHARE_HOP_HEADERS,
+      "Content-Type": "text/html; charset=utf-8",
+      "Content-Security-Policy": shareEntryCsp(nonce),
+      "X-Content-Type-Options": "nosniff",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    },
+  });
+}
+
+/**
+ * Where a share lands when it cannot be opened: a navigation id nobody holds a
+ * cookie for, so the recipient page renders the same "not available" state a
+ * revoked, expired, guessed or throttled link does. Deliberately
+ * indistinguishable, as everywhere else on this boundary.
+ */
+export function buildShareUnavailableRedirect(unavailableId: string): Response {
+  return new Response(null, {
+    status: 303,
+    headers: { ...SHARE_HOP_HEADERS, Location: shareViewPath(unavailableId) },
+  });
+}
+
+/** The one-way end of an exchange: the session cookie, and the tab's own view. */
+export function buildShareSessionRedirect(session: string, secure: boolean): Response {
+  return new Response(null, {
+    status: 303,
+    headers: {
+      ...SHARE_HOP_HEADERS,
+      Location: shareViewPath(sessionNavigationIdFor(session)),
+      "Set-Cookie": buildShareSessionCookie(session, secure),
     },
   });
 }

@@ -1,4 +1,4 @@
-// Security Passport — one way to turn a social card model into a PNG.
+// Security Passport — every word printed on a social image, in one place.
 //
 // The same fifteen lines of label plumbing had been copied into the share
 // route, the channel panel and the LinkedIn walkthrough. Three copies of a
@@ -6,51 +6,46 @@
 // for one of them to start saying something the others do not — on the one
 // artifact that leaves CQrityjob's control entirely.
 //
-// The safe subset is still decided upstream by `buildSocialCard`; nothing
-// here can widen it. This module only renders what that model already
-// contains.
+// The safe subset is still decided upstream by `buildSocialCard` /
+// `buildSelectedSocialCard`; nothing here can widen it. This module only words
+// what that model already contains. The drawing is SocialCardSvg, and the one
+// rasteriser is `svgToPngBlob`.
 
 import { joinTitles } from "./identity/presentation";
 import { formatJurisdiction, titleWithJurisdictionOnce } from "./format";
-import { buildSocialSvg, svgToPngBlob } from "./social-export";
-import { shareFormat, type ShareFormat } from "./design/trust-system";
 import type { SocialCardModel } from "./social";
 import type { PassportCopyKey, PassportLang } from "./i18n";
 
 export type PassportTranslate = (key: PassportCopyKey) => string;
 
-/** Renders the card at a given format. Throws only if the browser cannot
- *  rasterise; callers decide whether that blocks them. */
-export async function renderShareImage(
+export interface SocialImageStrings {
+  /** The micro label under the brand mark. */
+  readonly brand: string;
+  readonly professionLine: string;
+  /** Printed beside the QR code, only when the image carries a link. */
+  readonly verifyAtSource: string;
+  /** Printed instead when it carries none: an image is not the record. */
+  readonly snapshotNote: string;
+  readonly noVerified: string;
+  readonly staleWarning: string | null;
+}
+
+export function socialImageStrings(
   model: SocialCardModel,
-  format: ShareFormat,
   lang: PassportLang,
   pt: PassportTranslate,
-  qrDataUrl: string | null,
-): Promise<Blob> {
-  const spec = shareFormat(format);
-  const svg = buildSocialSvg(
-    model,
-    format,
-    lang,
-    {
-      brand: pt("card.brand"),
-      professionLine: titleWithJurisdictionOnce(
-        joinTitles(model.titles, lang, pt("identity.none")),
-        formatJurisdiction(model.jurisdictionCode, lang),
-      ),
-      verifiedLabel: pt("assertion.verified"),
-      yearsLabel: pt("recognition.years"),
-      verifyAtSource: pt("card.verifyAtSource"),
-      noVerifiedYet:
-        model.verifiedCredentials.length > 0
-          ? pt("card.noVerifiedExperience")
-          : pt("card.noVerifiedYet"),
-      staleWarning: model.staleWarning ? pt("card.shareExpired") : null,
-    },
-    qrDataUrl,
-  );
-  return svgToPngBlob(svg, spec.width, spec.height);
+): SocialImageStrings {
+  return {
+    brand: pt("card.brand"),
+    professionLine: titleWithJurisdictionOnce(
+      joinTitles(model.titles, lang, pt("identity.none")),
+      formatJurisdiction(model.jurisdictionCode, lang),
+    ),
+    verifyAtSource: pt("card.verifyAtSource"),
+    snapshotNote: pt("social.snapshotNote"),
+    noVerified: pt("card.noVerifiedYet"),
+    staleWarning: model.staleWarning ? pt("card.shareExpired") : null,
+  };
 }
 
 /** Hands a rendered blob to the browser as a download. */

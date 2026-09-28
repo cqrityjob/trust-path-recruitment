@@ -16,64 +16,41 @@
 // platforms may retain published or cached images after the link is
 // withdrawn, which is exactly why the image says "verify at source".
 
-import { joinTitles } from "@/lib/security-passport/identity/presentation";
 import { useState } from "react";
 import { Copy, Download, ExternalLink, Linkedin } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import type { SocialCardModel } from "@/lib/security-passport/social";
-import { buildSocialSvg, svgToPngBlob } from "@/lib/security-passport/social-export";
+import { svgToPngBlob } from "@/lib/security-passport/social-export";
+import { downloadBlob } from "@/lib/security-passport/share-image";
 import { shareFormat } from "@/lib/security-passport/design/trust-system";
-import { formatJurisdiction, titleWithJurisdictionOnce } from "@/lib/security-passport/format";
 import { SocialFrame } from "../social/SocialFrame";
 
 export function LinkedInShareSection({
   shareUrl,
   model,
-  qrDataUrl,
 }: {
   shareUrl: string;
   model: SocialCardModel;
-  qrDataUrl: string | null;
 }) {
-  const { pt, lang } = usePassportCopy();
+  const { pt } = usePassportCopy();
+  // The exact SVG the frame below shows: the download rasterises it and
+  // nothing else, so the file cannot differ from the preview.
+  const [image, setImage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function downloadImage() {
+    if (!image) return;
     setBusy(true);
     setError(null);
     try {
       const spec = shareFormat("og");
-      const svg = buildSocialSvg(
-        model,
-        "og",
-        lang,
-        {
-          brand: pt("card.brand"),
-          professionLine: titleWithJurisdictionOnce(
-            joinTitles(model.titles, lang, pt("identity.none")),
-            formatJurisdiction(model.jurisdictionCode, lang),
-          ),
-          verifiedLabel: pt("assertion.verified"),
-          yearsLabel: pt("recognition.years"),
-          verifyAtSource: pt("card.verifyAtSource"),
-          noVerifiedYet:
-            model.verifiedCredentials.length > 0
-              ? pt("card.noVerifiedExperience")
-              : pt("card.noVerifiedYet"),
-          staleWarning: model.staleWarning ? pt("card.shareExpired") : null,
-        },
-        qrDataUrl,
+      downloadBlob(
+        await svgToPngBlob(image, spec.width, spec.height),
+        "cqrityjob-passport-linkedin.png",
       );
-      const blob = await svgToPngBlob(svg, spec.width, spec.height);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "cqrityjob-passport-linkedin.png";
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
       setDownloaded(true);
     } catch (err) {
       console.error("[passport] linkedin image export failed", err);
@@ -104,7 +81,7 @@ export function LinkedInShareSection({
 
       {/* The exact artifact, at LinkedIn's own aspect ratio. */}
       <div className="mt-4">
-        <SocialFrame model={model} format="og" previewWidth={480} />
+        <SocialFrame model={model} format="og" previewWidth={480} onImage={setImage} />
       </div>
 
       <ol className="mt-5 space-y-4">
@@ -119,7 +96,7 @@ export function LinkedInShareSection({
             <p className="text-sm text-foreground">{pt("li.step1")}</p>
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !image}
               onClick={() => void downloadImage()}
               className="mt-2 inline-flex h-11 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
