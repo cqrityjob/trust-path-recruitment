@@ -156,10 +156,11 @@ that. Its LinkedIn profile entry is available again in the social choice.
 ## Verified
 
 - **Real-backend walk:** `e2e/passport-public-pilot-local.spec.ts`, all 11 cases at
-  1440 px and 390 px, 22 of 22 runs passed at `c7f278ee`.
+  1440 px and 390 px, 22 of 22 runs passed at `b3d988bb`.
   - It ran as the evidence workflow runs it: an empty dependency cache, a rebuilt
     database, and the dev server settled by `scripts/local-dev-server-warmup.mjs`.
-    The dev server re-bundled nothing during the walk.
+    The dev server re-bundled nothing during the walk, and no public read was
+    refused by the throttle.
   - It runs against a real auth service, database, mail catcher and share function.
   - It sits behind `scripts/local-hosted-functions-proxy.ts` (hosted Supabase's HTML
     rewrite) and the TLS front's emulation of the host's injected analytics.
@@ -219,8 +220,21 @@ that. Its LinkedIn profile entry is available again in the social choice.
       Run 36361720007 on PR 4 had failed the same way.
     - `scripts/local-dev-server-warmup.mjs` takes that reload in a browser of its
       own. It exits only once a fresh page hydrates with no reload and no
-      re-bundle. Nothing in the application, the stack's privileges, the fixture or
-      the walk changes.
+      re-bundle. Nothing in the application, the stack's privileges or the fixture
+      changes.
+  - gives each recipient in the walk a throttle budget of its own.
+    - The public boundary allows 30 reads per client per fixed five-minute window.
+      Behind the TLS front every person in the walk is the same client, and each
+      project's G and S make 17 reads.
+    - Run 36436368307, with the dev server settled, ran fast enough to put both
+      projects' G and S into one window. The 31st read was refused and 390 px case
+      S's recipient saw "no longer available". Filling the window to the limit
+      before the walk reproduces that refusal exactly.
+    - `anotherPerson()` now empties the budget for each new person, as a real
+      recipient has their own. Before it does, and at the end of G and S, the walk
+      asserts that no read so far was refused by the throttle. So every "not
+      available" it accepts is an expiry or a revocation. The throttle and its limit
+      are unchanged.
 
 ## Release
 
