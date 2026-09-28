@@ -155,17 +155,54 @@ that. Its LinkedIn profile entry is available again in the social choice.
 
 ## Verified
 
-WALK_RESULTS
-
-- **Guards:** all 40 `passport-*:check` scripts pass, as do the app and scripts type
-  checks and ESLint.
-  - `passport-share-gateway-transport-check` (78 assertions) runs the real function
-    and the hosted-restriction proxy over HTTP.
+- **Real-backend walk:** `e2e/passport-public-pilot-local.spec.ts`, all 11 cases at
+  1440 px and 390 px, 22 of 22 runs passed at `18aa6593`.
+  - It runs against a real auth service, database, mail catcher and share function.
+  - It sits behind `scripts/local-hosted-functions-proxy.ts` (hosted Supabase's HTML
+    rewrite) and the TLS front's emulation of the host's injected analytics.
+  - **G, the recipient link:**
+    - The new link and a gateway-form link both render for a signed-out recipient.
+    - The QR code equals the link, module for module.
+    - The host's analytics script is injected into `/p` and refused there by its
+      policy.
+    - The token appears only in the body of `POST /p/open`.
+    - Neither the page nor the server's answers carry an unselected credential, a
+      document or a storage path.
+    - Expiry and revocation end both the open tab and a fresh open.
+  - **S, social sharing:**
+    - The downloaded PNG equals the preview pixel for pixel in the square,
+      link-preview and Story formats.
+    - It shows only the selected credentials, each with its own trust word, and no
+      link or QR code until one is chosen.
+    - Platform buttons open a composer without a link.
+    - A link added on purpose is drawn exactly, opens exactly what the image shows,
+      and is revoked like any other.
+    - Swedish and English.
+  - Supabase Storage is not part of the sandbox's stack, so case F attached its
+    documents by RPC there. The evidence workflow runs it with Storage.
+- **The CI `verify` job's steps, run locally:** 163 of the 164 steps run here pass,
+  including both type-checks, all 41 Passport guards and the production build. The
+  one red step is the repository-wide ESLint, which CI runs with
+  `continue-on-error`: 929 problems at this head against 930 on `main`, none in the
+  37 code files this PR changes.
+  - `passport-share-gateway-transport-check` (89 assertions) runs the real function
+    and the hosted-restriction proxy over HTTP, before and after the owner's switch.
+  - `passport-social-image-check` (116 assertions) is new. It includes checks that
+    every place and trust word stays inside its own column.
   - `passport-trust-source-check` gains checks that the image draws a reviewed
     credential as documented, never verified, and never draws a non-current one.
-- **Negative controls:** `negative-controls:share-gateway-transport` catches all 10
-  mutations, including a function that serves HTML again and an entry page that
-  admits `'self'` scripts.
+- **Negative controls:** all 50 groups pass: 1,514 planted defects, each one caught,
+  every file restored.
+  - `share-gateway-transport` catches 11 of 11. These include a function that serves
+    HTML again, a function that redirects before the owner's switch, and an entry
+    page that admits `'self'` scripts.
+  - `social-image` catches 7 of 7: a QR code without a link, raised to verified, an
+    expired credential drawn, no snapshot line, no three-credential limit, and a
+    word or a place running into the next column.
+- **Stubbed browser suites:** `e2e:surfaces` (a CI suite) passes 22 of 22.
+  `e2e:sharing` (not in CI) passes 42 of 44. Its case 12 fails at both widths, on
+  `main` too: it still expects the recipient page's link to read "Läs mer", which
+  `93e6f939` changed to "Läs om Security Passport".
 - **CI** (`.github/workflows/passport-public-pilot-evidence.yml`):
   - runs the walk behind both stand-ins for the hosted platform;
   - its verifier refuses a report where cases G or S did not run that way.
