@@ -103,6 +103,11 @@ became choose → preview → send (`1a732ebd`, 2026-09-07):
 
 `SecureShareQr` (`ba8ac068`) stayed reachable throughout.
 
+`CredentialShareActions` (a per-credential link plus "Add to LinkedIn") stays
+unreachable. `1a043ea9` removed it from the credential page on purpose, so that
+every link goes through the Share page's field choices. Reconnecting it would bypass
+that. Its LinkedIn profile entry is available again in the social choice.
+
 ### How the page works now
 
 `/passport/share` opens with two choices:
