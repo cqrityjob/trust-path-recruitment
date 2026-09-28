@@ -130,9 +130,9 @@ created except by the holder's own press.
   printed on the image, a platform button claiming the image went along, a share sheet
   given no files, a download that creates a link, a long name past the card's edge, and a
   long word into the next column. `SOCIAL-NO-LIMIT`, which encoded the old cut, is gone.
-- **Stubbed browser suites:** `e2e:surfaces` (a CI suite) passes 22 of 22. `e2e:sharing`
-  (not in CI) passes 42 of 44; its case 12 fails on `main` as well, on a stale "Läs mer"
-  expectation outside this PR.
+- **Stubbed browser suites,** with `main` merged in: `e2e:sharing`, which #321 added to CI
+  and whose case 12 it corrected, passes 44 of 44 at desktop and 375 px; `e2e:surfaces`
+  passes 22 of 22.
 - **Not verified here:** a physical phone, and the platforms themselves. No account is
   used from this sandbox, and nothing may be posted.
 
