@@ -436,7 +436,7 @@ export function SocialShareFlow({
                   <p className="text-sm text-foreground">{pt("social.link.created")}</p>
                   <input
                     readOnly
-                    data-social-link
+                    data-social-link-field
                     value={link.url}
                     aria-label={pt("sel.created.link")}
                     onFocus={(e) => e.currentTarget.select()}

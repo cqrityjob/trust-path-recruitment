@@ -790,8 +790,9 @@ test.describe("the public pilot, on a real backend", () => {
     await evidence(page, "en-share-created");
 
     // A recipient with no account opens what the QR code opens. Every request
-    // their browser sends is recorded, with the document that sent it, and
-    // every server-function answer they receive is kept.
+    // their browser sends is recorded, with the document that sent it and
+    // whether the browser refused it, and every server-function answer they
+    // receive is kept.
     const { context, page: recipient } = await anotherPerson(browser, "en");
     const sent: {
       method: string;
@@ -799,23 +800,31 @@ test.describe("the public pilot, on a real backend", () => {
       referer: string;
       body: string;
       type: string;
+      /** The document that sent it: the latest navigation before it. A
+       *  frame's URL can lag behind a navigation, so it is not used. */
       from: string;
+      /** Why the browser did not send it, e.g. "csp". */
+      failure: string | null;
     }[] = [];
+    const recorded = new Map<unknown, (typeof sent)[number]>();
+    let documentPath = "";
     recipient.on("request", (r) => {
-      let from = "";
-      try {
-        from = r.frame().url();
-      } catch {
-        // not sent by a frame
-      }
-      sent.push({
+      if (r.isNavigationRequest()) documentPath = new URL(r.url()).pathname;
+      const entry = {
         method: r.method(),
         url: r.url(),
         referer: r.headers()["referer"] ?? "",
         body: r.postData() ?? "",
         type: r.resourceType(),
-        from,
-      });
+        from: documentPath,
+        failure: null,
+      };
+      recorded.set(r, entry);
+      sent.push(entry);
+    });
+    recipient.on("requestfailed", (r) => {
+      const entry = recorded.get(r);
+      if (entry) entry.failure = r.failure()?.errorText ?? "failed";
     });
     const answers: Promise<string>[] = [];
     recipient.on("response", (r) => {
@@ -823,7 +832,8 @@ test.describe("the public pilot, on a real backend", () => {
         answers.push(r.text().catch(() => ""));
       }
     });
-    const pathOf = (address: string) => (address ? new URL(address).pathname : "");
+    const pathOf = (address: string) =>
+      address.includes("://") ? new URL(address).pathname : address;
     const analyticsHits = () =>
       sent.filter((r) => r.method === "POST" && pathOf(r.url) === "/~api/analytics");
     try {
@@ -859,10 +869,18 @@ test.describe("the public pilot, on a real backend", () => {
         sent.filter((r) => r.body.includes(token)).map((r) => `${r.method} ${r.url}`),
         "the token left the browser once, in the body of the exchange",
       ).toEqual([`POST ${openUrl}`]);
+      // The host's script was injected into the entry page -- and the entry
+      // page's policy refused every script it tried to load, before anything
+      // was fetched.
+      const entryScripts = sent.filter((r) => r.type === "script" && r.from === "/p");
       expect(
-        sent.filter((r) => r.type === "script" && pathOf(r.from) === "/p").map((r) => r.url),
-        "the entry page fetched no script: the host's was refused by its policy",
-      ).toEqual([]);
+        entryScripts.map((r) => r.url),
+        "the host's analytics script was injected into /p, as the host injects it",
+      ).toContain(`${app}/~flock.js`);
+      expect(
+        entryScripts.map((r) => `${r.url} ${r.failure}`),
+        "and /p ran no script but its own: each was refused by its policy",
+      ).toEqual(entryScripts.map((r) => `${r.url} csp`));
       for (const r of sent) {
         expect(r.url, `request URL ${r.method}`).not.toContain(token);
         expect(r.referer, `Referer of ${r.method} ${pathOf(r.url)}`).not.toContain(token);
@@ -1170,7 +1188,7 @@ test.describe("the public pilot, on a real backend", () => {
     // download.
     await flow.locator("[data-social-more] > summary").click();
     await flow.locator("[data-social-link-create]").click();
-    const linkField = flow.locator("[data-social-link]");
+    const linkField = flow.locator("[data-social-link-field]");
     await expect(linkField).toBeVisible({ timeout: 60_000 });
     const link = await linkField.inputValue();
     expect(new URL(link).pathname).toBe("/p");
