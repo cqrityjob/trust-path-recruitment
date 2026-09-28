@@ -5529,6 +5529,21 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running application note privacy assertions (JB-02)"
+set +e
+JB02_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_notes_employer_only_test.sql 2>&1)"
+JB02_RC=$?
+set -e
+echo "$JB02_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+JB02_PASSED="$(echo "$JB02_OUT" | grep -c "ok  " || true)"
+if [ "$JB02_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the application note privacy suite exited with code ${JB02_RC}." >&2
+  echo "$JB02_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  exit 1
+fi
+[ "$JB02_PASSED" -ge 24 ] || { echo "$JB02_OUT"; echo "FAIL: application note privacy assertion shortfall: $JB02_PASSED (floor 24)" >&2; exit 1; }
+echo "    ok  $JB02_PASSED application note privacy assertions passed"
+
 echo "==> Verifying job advertisement archiving"
 set +e
 ARCH_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/jobs_archive_test.sql 2>&1)"

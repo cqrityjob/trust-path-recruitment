@@ -1182,11 +1182,12 @@ export const getApplicationWorkspace = createServerFn({ method: "POST" })
         )
         .eq("application_id", app.id)
         .order("starts_at", { ascending: true }),
-      ctx.supabase
-        .from("job_application_status_events")
-        .select("id, actor_role, actor_user_id, previous_status, new_status, note, created_at")
-        .eq("application_id", app.id)
-        .order("created_at", { ascending: false }),
+      // The stage timeline WITH the employer's notes. `note` is no longer
+      // granted to authenticated on the table (20261223090000, JB-02): the
+      // applicant must never read it, and a column privilege cannot tell a
+      // member from an applicant. rec_application_status_events checks
+      // rec_is_member() first and returns the notes to members only.
+      ctx.supabase.rpc("rec_application_status_events", { _application_id: app.id }),
       ctx.supabase
         .from("recruitment_settings")
         .select("responsible_user_id, completion_state")

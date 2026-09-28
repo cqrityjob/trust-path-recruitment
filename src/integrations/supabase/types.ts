@@ -21499,6 +21499,22 @@ export type Database = {
         Returns: string
       }
       rec_can_manage: { Args: { _job_id: string }; Returns: boolean }
+      rec_application_employer_note: {
+        Args: { _application_id: string }
+        Returns: string
+      }
+      rec_application_status_events: {
+        Args: { _application_id: string }
+        Returns: {
+          actor_role: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          new_status: string
+          note: string
+          previous_status: string
+        }[]
+      }
       rec_candidate_view: {
         Args: {
           _answers?: Json
