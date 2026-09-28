@@ -430,12 +430,6 @@ export type MyApplicationRow = {
   jobTitleSv: string | null;
   jobTitleEn: string | null;
   employerName: string | null;
-  /** Is the advertisement still open to the public? False once its deadline
-   *  or expiry passed, it was archived or unpublished, or the employer is no
-   *  longer active. The title and employer above survive either way; only the
-   *  link goes (jobSlug is null when closed), because the public job page
-   *  itself refuses a closed advertisement. */
-  jobOpen: boolean;
   status: ApplicationStatus;
   /** Is there a submitted CV on this application at all -- of either kind.
    *  Reading only cv_storage_path would report "no CV" for an application
@@ -454,46 +448,33 @@ export const listMyApplications = createServerFn({ method: "GET" })
 
     // RLS-scoped -- job_applications_owner_select already limits this to
     // exactly the caller's own rows.
-    //
-    // The job's title, slug and employer come from rec_my_application_context()
-    // (20261224090000, JB-01), which reads jobs and employers as the owner for
-    // the CALLER'S OWN applications only. Embedding `jobs(…, employers(name))`
-    // here went through the candidate's public jobs policy, so the moment a
-    // vacancy closed the card lost its title, employer and link. The context
-    // read also says whether the advertisement is still public, which is the
-    // only thing that decides whether a link is offered.
-    const [{ data: rows, error }, contextRead] = await Promise.all([
-      ctx.supabase
-        .from("job_applications")
-        .select("id, job_id, status, cv_storage_path, cv_source, created_at, updated_at")
-        .eq("applicant_user_id", ctx.userId)
-        .order("created_at", { ascending: false })
-        .limit(200),
-      ctx.supabase.rpc("rec_my_application_context"),
-    ]);
+    const { data: rows, error } = await ctx.supabase
+      .from("job_applications")
+      .select(
+        "id, job_id, status, cv_storage_path, cv_source, created_at, updated_at, jobs(slug, title_sv, title_en, employers(name))",
+      )
+      .eq("applicant_user_id", ctx.userId)
+      .order("created_at", { ascending: false })
+      .limit(200);
     if (error) {
       console.error("[applications] listMyApplications failed", error);
       throw new Error("Could not load your applications.");
     }
-    if (contextRead.error) {
-      console.error("[applications] rec_my_application_context failed", contextRead.error);
-      throw new Error("Could not load your applications.");
-    }
-    const contextById = new Map<string, any>(
-      ((contextRead.data ?? []) as any[]).map((c) => [c.application_id as string, c]),
-    );
 
     return (rows ?? []).map((r: any) => {
-      const c = contextById.get(r.id as string);
-      const jobOpen = Boolean(c?.job_open);
+      const job = Array.isArray(r.jobs) ? r.jobs[0] : r.jobs;
+      const employer = job
+        ? Array.isArray(job.employers)
+          ? job.employers[0]
+          : job.employers
+        : null;
       return {
         id: r.id as string,
         jobId: r.job_id as string,
-        jobSlug: jobOpen ? ((c?.job_slug as string | null) ?? null) : null,
-        jobTitleSv: (c?.title_sv as string | null) ?? null,
-        jobTitleEn: (c?.title_en as string | null) ?? null,
-        employerName: (c?.employer_name as string | null) ?? null,
-        jobOpen,
+        jobSlug: (job?.slug as string | null) ?? null,
+        jobTitleSv: (job?.title_sv as string | null) ?? null,
+        jobTitleEn: (job?.title_en as string | null) ?? null,
+        employerName: (employer?.name as string | null) ?? null,
         status: r.status as ApplicationStatus,
         hasCv: Boolean(r.cv_storage_path) || r.cv_source === "cqrityjob_cv",
         cvSource: (r.cv_source as ApplicationCvSource) ?? "upload",

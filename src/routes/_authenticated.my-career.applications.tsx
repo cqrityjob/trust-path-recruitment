@@ -163,12 +163,6 @@ function MyApplicationsPage() {
                         )}
                         <p className="text-xs text-muted-foreground">
                           {r.employerName ?? "—"} · {formatDate(r.createdAt, lang)}
-                          {/* The advertisement is gone from the public board
-                              (deadline, expiry, archived, or the employer is
-                              no longer active). The application and its
-                              status are still the candidate's; only the link
-                              is, so the card says why there is none. */}
-                          {!r.jobOpen && <> · {t("candidate.applications.jobClosed")}</>}
                         </p>
                       </div>
                       <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs font-medium">
