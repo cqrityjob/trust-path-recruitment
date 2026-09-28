@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-28. **Tested commit:** `d9dc41a36dc5b2b2907e09757121fe75883d8328` (`origin/main`; includes merged #319 and #317). The UAT branch `claude/kind-ritchie-84l53x` is identical to `main`. **Hosted backend:** Supabase project `wrygicdfxwjnrugduxnt` (CQrityjob Production). **Lovable project** `9ec625ef…` reports `latest_commit_sha = d9dc41a`; whether the *published* site is at this commit could not be verified from here.
 
-**PR #318** (Passport share link on the application domain + social sharing) was **open** throughout this UAT (head `ed211ffd`, base `d9dc41a`, `mergeable_state: unstable` at 12:40 UTC). Passport sharing was therefore **not** assessed, and no new sharing defect is reported. The sharing retest in §5.2 is still to be run after #318 merges and the site is republished.
+**PR #318** (Passport share link on the application domain + social sharing) was open during the main pass and **merged at 15:39 UTC** (`main` = `f25e05f`, no migration). Its head passed 13 of 13 checks including the Passport public-pilot browser evidence. The sharing retest against the merged code is in §5.3; it is limited to what this environment can reach (code at `f25e05f`, the hosted database and the edge-function deployment state), because the published site is still unreachable from here.
 
 ---
 
@@ -12,7 +12,7 @@
 
 **What blocks the owner's UAT today** is not primarily code:
 
-1. **Passport sharing is broken in production** (the current gateway link renders as text) and the fix, #318, is not yet merged or published. Known, in progress, out of scope for this report.
+1. **Passport share links do not open in production yet.** #318 is merged and the edge function redeployed (v3), so the text-page failure cannot recur; the links start working once the site is published at `f25e05f` and the owner sets `PASSPORT_SHARE_ENTRY_PUBLISHED=1` (§5.3). EXTERNAL ACTIVATION REQUIRED.
 2. **New accounts cannot confirm their e-mail** outside the Supabase team: e-mail confirmation is ON in the hosted project, custom SMTP is not configured, and the last confirmation mail went out through Supabase's default mailer. EXTERNAL ACTIVATION REQUIRED (see §10, §14).
 3. **The Career Discovery assessment is closed to every signed-in candidate** in production: the product gates "start and save a run while signed in" on `cd_internal_testers` (0 rows) or platform admin. Anonymous visitors can complete it and claim the result at signup; a signed-in candidate sees "Karriäranalysen är inte öppen just nu" and My Career hides the assessment CTAs. This is a deliberate release control that must be lifted (or testers granted) before real candidates use the product.
 
@@ -26,7 +26,7 @@ Counts: **P0: 0 · P1: 2 (both activation/owner decisions, not code defects) · 
 
 | ID | Sev | Area | Finding | Kind |
 |---|---|---|---|---|
-| — | P1 | Passport sharing | Current production share link (`…supabase.co/functions/v1/passport-share#token`) renders as text. Fixed by open PR #318 (merge, publish, deploy function, set `PASSPORT_SHARE_ENTRY_PUBLISHED=1`). | Known, in progress — not re-reported |
+| — | P1 | Passport sharing | Share links do not open in production until the site is published at `f25e05f` (so `/p` exists) and the function secret `PASSPORT_SHARE_ENTRY_PUBLISHED=1` is set. #318 is merged and the function is deployed (v3); the text-page failure cannot recur. See §5.3. | EXTERNAL ACTIVATION REQUIRED (publish + secret) |
 | EM-MAIL-01 | P1 | Auth / e-mail | Hosted project uses Supabase's default mailer (team-only delivery) with e-mail confirmation ON. A real candidate or employer who registers is shown "Kontrollera din e-post" and never receives the mail, so they cannot sign in. Evidence: `docs/release/2026-09-26-auth-confirmation-email-owner-actions.md` (Auth log `mail_from: noreply@mail.app.supabase.io`); 2 of 20 `auth.users` rows are unconfirmed. | EXTERNAL ACTIVATION REQUIRED |
 | CI-01 | P1 | Career Discovery | Signed-in candidates cannot start the assessment: `PublicAssessmentFlow.tsx:362-366` sets phase `unavailable` unless `getV31TesterStatus` (`v31-public.functions.ts:404-408` → `cd_is_internal_tester` OR `is_platform_admin`) allows; `cd_internal_testers` has **0 rows** in production. My Career derives the same gate and shows "Karriäranalysen är inte öppen för nya deltagare just nu" with no CTA (`dictionaries.ts:263`). Anonymous completion + claim at signup still works. | Owner decision / activation (grant testers via `cd_grant_internal_tester` or remove the gate) |
 
@@ -80,7 +80,28 @@ Static verification (full detail in the audit): controlled catalogue (no free-te
 | SP-06 | P3 | A row stored as `lifecycle_state='expired'` would show a correction button that fails. Edge case. |
 | SP-07 | P3 | Expiry day boundary is UTC, not local day. |
 
-**Sharing retest after #318 (pending):** Passport → Share → recipient/public view → copy/share link → social options → open destination (must render on the app domain, never a Supabase text page); QR equals link; token only in the `POST /p/open` body; revocation ends the view; earlier gateway links open once `PASSPORT_SHARE_ENTRY_PUBLISHED=1`.
+**Sharing retest after #318: see §5.3.**
+
+## 5.3 Security Passport sharing — retest against merged main `f25e05f` (2026-09-28, 15:45–16:00 UTC)
+
+What could be verified from this environment (no browser; the published site is unreachable):
+
+| Step | Result | Evidence |
+|---|---|---|
+| Share page offers "Dela via länk" and "Dela på sociala medier" | PASS (code) | `share.tsx:61-62, 263` (`via: "link" \| "social"`, opens on link); `i18n.ts:2236-2239` |
+| Copied link / QR is on the application's domain, token in the fragment only | PASS (code) | `public-origin.ts:37, 58-95`: `VITE_PUBLIC_SITE_URL` or fallback `https://trust-path-recruitment.lovable.app`, `SHARE_ENTRY_PATH = "/p"`, `publicShareUrl(token)` → `/p#<token>`; the QR encodes the same string |
+| `GET /p` answers before SSR with a nonce-only CSP, `private, no-store`, `no-referrer`, `noindex, nofollow, noarchive`, `nosniff`; other methods 405 | PASS (code) | `share-transport.ts:268-273, 304-318, 339-371, 400-413`; the inline script clears the fragment with `history.replaceState` before POSTing to `/p/open` |
+| `POST /p/open` exchanges the token: throttle → `sp_share_gateway_issue` → `sp_share_gateway_consume` → `303 /p/<navigation id>` + `HttpOnly; SameSite=Lax; Secure; Path=/_serverFn` cookie; every failure lands on one "not available" page | PASS (code) | `share-transport.ts:183-211, 421`; `public-disclosure.server.ts` |
+| Gateway RPCs are not callable by browser roles | PASS (live DB) | `sp_share_gateway_issue`, `sp_share_gateway_consume`, `sp_throttle_public_access`, `sp_get_disclosure_session`: EXECUTE only for `service_role`; `sp_disclosure_payload`: no client role; create/preview/revoke: `authenticated` only |
+| Edge function `passport-share` no longer serves HTML: `GET`/`HEAD` → body-less `302` to `<site>/p` once `PASSPORT_SHARE_ENTRY_PUBLISHED=1`, otherwise body-less `503` + `Retry-After`; other methods `405` | PASS (code) | `supabase/functions/passport-share/index.ts:29-61` |
+| Edge function deployed from the merged code | PASS (live) | Supabase reports `passport-share` **version 3**, updated 2026-09-28 15:40:01 UTC (a minute after the merge) |
+| Function secret `PASSPORT_SHARE_ENTRY_PUBLISHED=1` set | **UNKNOWN — EXTERNAL ACTIVATION REQUIRED** | Secrets are not readable from here; no request has reached the function since 04:55 UTC, so its current answer (302 vs 503) has not been observed |
+| Published site serves `/p` (i.e. Lovable publish of `f25e05f`) | **UNKNOWN — EXTERNAL ACTIVATION REQUIRED** | Lovable editor is at `f25e05f`; publish state not exposed; `curl -sI …/p` must show the nonce CSP without `'self'` (release note step 2) |
+| Existing shares | 13 live disclosures (36 total, last created 04:52 UTC) still carry gateway-form links. Until the secret is set they answer `503` (blank), which is the same failure class the owner reported, just without the exposed source. | live DB |
+| Social image: no link/QR by default, snapshot note, truthful trust words, no expired/issuer/date drawn; platform buttons open a composer with nothing posted | PASS (code, per the PR's 116-assertion `passport-social-image:check` and 7 negative controls in CI) | `share-image.ts:28-45` (`snapshotNote`), `share-channels.ts:57-99` (intents only; Instagram has none) |
+| Recipient view content, expiry, revocation | Unchanged RPCs (`20261104090000_passport_share_gateway.sql`); covered by the PR's real-backend walk case G (22/22 runs) in CI, not re-run here | CI run 36441729426 |
+
+**Outcome:** the code and the deployed function are correct for the designed journey, and no dead Supabase text page can be served any more (the function returns no HTML at all). The journey is **not yet usable in production** until two owner actions land: publish the site so `/p` exists, then set `PASSPORT_SHARE_ENTRY_PUBLISHED=1` on the function. Until then every share link (new or old) ends in a blank `503`/404. This replaces blocker 1 in §2 and §14: it is now an activation item, not a code defect. Deployed checks the owner must still run in a private window: new link renders with no `#` left in the address; QR opens the same view; token appears only in the `POST /p/open` body; an earlier gateway link opens; revoke → reload → "not available"; social image download equals its preview with no link. Also revoke the share whose token appeared in the reported screenshot ("Dina delningar").
 
 ## 6. Jobs — PASS with 1 P2 — 0 P0 · 0 P1 · 1 P2 · 8 P3
 
@@ -198,7 +219,7 @@ No viewport was rendered. Static review found: #319's 390 px Passport fixes pres
 4. Supabase Auth → enable leaked-password protection (advisor WARN); Google OAuth provider credentials if the Google buttons are to work.
 5. Application host secrets: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `ADMIN_NOTIFICATION_EMAIL`, `PUBLIC_SITE_URL` (also for the `passport-share` function), `RECRUITMENT_SWEEP_TOKEN` for the receipts sweep.
 6. Career Discovery access: grant `cd_internal_testers` rows (`cd_grant_internal_tester`) to the UAT group, or lift the signed-in gate for launch (CI-01); decide on the `noindex` and the "draft" content/scoring version labels.
-7. After #318: publish the site, deploy `passport-share`, set `PASSPORT_SHARE_ENTRY_PUBLISHED=1`, run the §5.2 sharing checks; revoke the share whose token appeared in the reported screenshot.
+7. Passport sharing (#318 merged, function v3 deployed): publish the site at `f25e05f`, confirm `curl -sI …/p` shows the nonce CSP, set `PASSPORT_SHARE_ENTRY_PUBLISHED=1`, run the §5.3 deployed checks; revoke the share whose token appeared in the reported screenshot.
 8. AI (only when wanted): `INTERVIEW_AI_PROVIDER` + `ANTHROPIC_API_KEY` + DB `ai_enabled`; `SW_AI_*` + activation row. No key was added here.
 9. Confirm the published Lovable build is at `d9dc41a` (editor is; publish state unknown from here).
 10. Clean test content from production (junk jobs, demo employers, stale UAT accounts) before real users arrive.
@@ -210,7 +231,7 @@ No viewport was rendered. Static review found: #319's 390 px Passport fixes pres
 
 Exact P0/P1 blockers:
 
-1. **Passport sharing broken in production** until PR #318 is merged, the site republished, the function deployed and `PASSPORT_SHARE_ENTRY_PUBLISHED=1` set (known; not re-reported).
+1. **Passport share links do not open in production** until the site is published at `f25e05f` and `PASSPORT_SHARE_ENTRY_PUBLISHED=1` is set on the `passport-share` function (#318 merged 15:39 UTC, function v3 deployed 15:40 UTC; §5.3).
 2. **EM-MAIL-01** — no custom SMTP while e-mail confirmation is ON: nobody outside the Supabase team can complete registration. External activation.
 3. **CI-01** — the Career Discovery assessment is closed to signed-in candidates (empty tester allowlist). Owner decision/activation.
 
