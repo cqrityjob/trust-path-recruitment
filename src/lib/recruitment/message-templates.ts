@@ -215,8 +215,8 @@ export function bookingIcs(input: {
 }
 
 /** The message a candidate receives when a recruitment test is sent to them:
- *  what it is, who asked, for which job, and where to find it. It names no
- *  score, no content and no deadline it does not know. */
+ *  what it is, who asked, for which job, where to find it and, when the
+ *  employer set one, by when. It names no score and no content. */
 export function testInvitationMessage(input: {
   language: "sv" | "en";
   candidateName: string | null;
@@ -224,7 +224,23 @@ export function testInvitationMessage(input: {
   jobTitle: string;
   assessmentName: string;
   academyUrl: string;
+  /** ISO timestamp of the employer's deadline, or null when none was set. */
+  deadline?: string | null;
 }): { subject: string; body: string } {
+  const deadlineLine = (() => {
+    if (!input.deadline) return null;
+    const d = new Date(input.deadline);
+    if (Number.isNaN(d.getTime())) return null;
+    const day = d.toLocaleDateString(input.language === "sv" ? "sv-SE" : "en-GB", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "Europe/Stockholm",
+    });
+    return input.language === "sv"
+      ? `Sista dag att göra testet: ${day}.`
+      : `Please complete it by ${day}.`;
+  })();
   const greet =
     input.language === "sv"
       ? input.candidateName
@@ -242,6 +258,7 @@ export function testInvitationMessage(input: {
         `${input.employerName} har skickat ett test till dig som en del av rekryteringen till ${input.jobTitle}: ${input.assessmentName}.`,
         "",
         `Du hittar testet under Tester och utveckling när du är inloggad på CQrityjob: ${input.academyUrl}`,
+        ...(deadlineLine ? ["", deadlineLine] : []),
         "",
         "Du kan pausa och fortsätta senare. Resultatet är ett underlag inför en intervju – det fattar inget beslut om dig.",
         "",
@@ -258,6 +275,7 @@ export function testInvitationMessage(input: {
       `${input.employerName} has sent you a test as part of the recruitment for ${input.jobTitle}: ${input.assessmentName}.`,
       "",
       `You will find it under Assessments and development when signed in to CQrityjob: ${input.academyUrl}`,
+      ...(deadlineLine ? ["", deadlineLine] : []),
       "",
       "You can pause and continue later. The result is material for an interview – it makes no decision about you.",
       "",

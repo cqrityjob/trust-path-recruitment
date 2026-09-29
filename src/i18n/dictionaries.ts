@@ -6415,6 +6415,8 @@ export const dictionaries = {
       "Här samlas det du blivit ombedd att göra, dina rapporter och det du kan öva på.",
     "academy.home.assigned": "Tilldelat",
     "academy.home.requestedBy": "Begärt av",
+    "academy.home.deadline": "Sista dag:",
+    "academy.home.deadlinePassed": "Sista dagen har passerat:",
     "academy.home.purpose": "Syfte och behandling",
     "academy.home.purposeFallback": "Kompetensutveckling.",
     "academy.home.privacy":
@@ -6711,6 +6713,10 @@ export const dictionaries = {
       "Du behöver vara ägare eller administratör för att skicka en bedömning.",
     "journey.assignNotForRecruitment": "Den här bedömningen är inte öppen för rekrytering.",
     "journey.assignNoBasis": "Er organisation har inte tillgång till den här bedömningen.",
+    "journey.assignApplicationNotOpen":
+      "Ansökan är avslutad eller återkallad. Nya test kan bara skickas till kandidater som är kvar i processen.",
+    "journey.assignRecruitmentCompleted":
+      "Rekryteringen är avslutad. Inga nya test kan skickas i den.",
     "journey.openBrief": "Öppna kandidatunderlag",
     "journey.closedTest": "Pilotversion",
     "journey.closedTestNotForSelection": "Pilotversion – endast för utvärdering",
@@ -6722,6 +6728,8 @@ export const dictionaries = {
     // kandidatlista och kandidatsidan. Båda nivåerna visas alltid; den som
     // saknar godkänt innehåll säger exakt vad som saknas.
     "sendTest.action": "Skicka test",
+    "sendTest.closedApplication":
+      "Ansökan är avslutad, återkallad eller så är rekryteringen klar – inga nya test kan skickas. Det som redan skickats finns kvar ovan.",
     "sendTest.title": "Skicka test",
     "sendTest.lede":
       "Testet skickas till kandidatens konto på CQrityjob. Adressen hämtas från ansökan – ni anger aldrig någon e-postadress.",
@@ -14678,6 +14686,8 @@ export const dictionaries = {
       "Everything you have been asked to do, your reports, and what you can practise.",
     "academy.home.assigned": "Assigned to you",
     "academy.home.requestedBy": "Requested by",
+    "academy.home.deadline": "Due by:",
+    "academy.home.deadlinePassed": "Due date, now past:",
     "academy.home.purpose": "Purpose and processing",
     "academy.home.purposeFallback": "Competence development.",
     "academy.home.privacy":
@@ -14952,6 +14962,10 @@ export const dictionaries = {
     "journey.assignNoAccount":
       "The candidate does not have a CQrityjob account yet. Invite them from the test library — the invitation is connected automatically once the account is created.",
     "journey.assignNoApplication": "That application could not be found in your organisation.",
+    "journey.assignApplicationNotOpen":
+      "The application is closed or withdrawn. New tests can only be sent to candidates still in the process.",
+    "journey.assignRecruitmentCompleted":
+      "The recruitment is completed. No new tests can be sent in it.",
     "journey.assignNotAuthorised":
       "You need to be an owner or an administrator to send an assessment.",
     "journey.assignNotForRecruitment": "This assessment is not open for recruitment.",
@@ -14963,6 +14977,8 @@ export const dictionaries = {
     "journey.stage.cancelled": "Cancelled",
     "journey.stage.expired": "Expired",
     "sendTest.action": "Send test",
+    "sendTest.closedApplication":
+      "The application is closed or withdrawn, or the recruitment is completed – no new tests can be sent. What was already sent stays above.",
     "sendTest.title": "Send test",
     "sendTest.lede":
       "The test is sent to the candidate's CQrityjob account. The address is taken from the application – you never enter an email address.",

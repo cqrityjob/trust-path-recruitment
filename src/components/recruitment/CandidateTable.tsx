@@ -517,10 +517,10 @@ export function CandidateTable(props: Props) {
           <button
             type="button"
             className={barBtn}
-            disabled={none || busy}
+            disabled={none || busy || selectedRows.some((r) => !OPEN.includes(r.status))}
             data-testid="send-test-bulk"
             onClick={() => setAssigningTest(true)}
-            title={none ? t("rec.action.hint.select") : undefined}
+            title={none ? t("rec.action.hint.select") : t("rec.action.hint.openOnly")}
           >
             <ClipboardList className="h-3.5 w-3.5" aria-hidden="true" />
             {t("rec.action.assignTest")}

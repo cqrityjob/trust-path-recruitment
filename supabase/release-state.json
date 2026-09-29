@@ -2362,6 +2362,14 @@
       "rollback": "supabase/rollback/20261224090000_candidate_application_context_rollback.sql",
       "verify": "SELECT has_function_privilege('authenticated','public.rec_my_application_context()','EXECUTE'), has_function_privilege('anon','public.rec_my_application_context()','EXECUTE'); -- expect true, false. No table, policy or row changes.",
       "note": "JB-01 of the 2026-09-28 UAT: a candidate's application history lost the job title, employer and link once the vacancy closed, because the read embedded jobs/employers through the candidate's public jobs policy. Adds one SECURITY DEFINER read that returns the job title, slug, employer name and whether the advertisement is still public for the caller's own applications only. The public jobs and employers policies are untouched. The application at the same commit calls it from listMyApplications, so apply the migration before or with the publish."
+    },
+    {
+      "file": "20261225090000_assessment_assign_requires_open_application.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20261225090000_assessment_assign_requires_open_application_rollback.sql",
+      "verify": "SELECT pg_get_functiondef('public.scp_employer_assign(uuid,uuid,text,timestamptz,text,text,uuid,text,uuid,uuid)'::regprocedure) LIKE '%SCP_APPLICATION_NOT_OPEN%'; -- expect true. No table, policy or row changes.",
+      "note": "AS-01 of the 2026-09-28 UAT: a test could be sent to a rejected, hired or withdrawn application and into a completed recruitment. Replaces scp_employer_assign() (body verbatim from 20261209090000) with two refusals inside the application block: SCP_APPLICATION_NOT_OPEN unless the application is submitted, reviewing or interview (the workspace's UNRESOLVED_STATUSES), and SCP_RECRUITMENT_COMPLETED when recruitment_settings.completion_state is not open. Checked before the idempotent replay, so a re-send to a closed application is refused, not replayed. Introduces no object. The application at the same commit hides the action and names both refusals; it works against the old body too (it only loses the guard)."
     }
   ], 
   "policyVersion": 2, 
