@@ -147,10 +147,20 @@ function referencedBy(item: IntroducedObject): { file: string; line: number } | 
 // function entry written with one, and called by the application, has to be
 // found -- otherwise a pending entry of the same shape would be invisible and
 // this guard would pass exactly the branches it exists to stop.
+//
+// Only a signature WITH parameters can prove that. An entry written as
+// "name()" used verbatim as a pattern is "name" followed by an empty group,
+// which still matches every call of name -- so once the application called
+// such a function (cd_access_state(), 2026-09-29), a matcher that had lost
+// inventoryIdentifier() passed this self-test and the planted defect
+// SFR-NC-SIGNATURE-BLIND went undetected. Parameters between the parentheses
+// turn the verbatim pattern into something no call site contains, so only
+// those entries count here. The matcher itself, and what it blocks, are
+// unchanged; SFR-NC-EMPTY-SIGNATURE-PROOF keeps this from regressing.
 const signatureShaped = state.frontier
   .filter((e) => e.hostedState === "applied")
   .flatMap((e) => e.introduces)
-  .filter((i) => i.kind === "function" && /[^A-Za-z0-9_]/.test(i.object));
+  .filter((i) => i.kind === "function" && /\([^)]+\)/.test(i.object));
 const signatureSeen = signatureShaped.filter((i) => referencedBy(i) !== null);
 if (signatureShaped.length > 0 && signatureSeen.length === 0) {
   console.error("schema-first release contract\n");
