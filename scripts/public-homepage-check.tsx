@@ -410,6 +410,9 @@ group("T2 · the three core parts render in the hero, in the specified words");
       "Öppna Security Intelligence",
       "Det här får du gjort",
       "Byggt för en karriär som rör sig",
+      // The product's name until the owner's decision of 2026-09-29: it is
+      // "CQrityjob Intelligence" (sw.product), never "Security Intelligence".
+      "Security Intelligence",
     ],
     en: [
       "Your security career. All in one place.",
@@ -428,6 +431,7 @@ group("T2 · the three core parts render in the hero, in the specified words");
       "Open Security Intelligence",
       "What you can get done",
       "Built for a career that moves",
+      "Security Intelligence",
     ],
   };
   for (const lang of LANGS) {

@@ -26,7 +26,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
  *  CQrityjob presents THREE EQUAL CORE PARTS to a person:
  *
  *    * Mitt säkerhetsarbete -- the workspace and AI support for security,
- *      risk and preparedness evidence (CQrityjob Security Intelligence);
+ *      risk and preparedness evidence (CQrityjob Intelligence);
  *    * Security Passport -- credentials with a clear source and status,
  *      shared only by the holder's choice;
  *    * Karriär och jobb -- professions, the career analysis, profile, CV and

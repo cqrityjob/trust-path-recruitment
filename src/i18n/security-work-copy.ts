@@ -1,7 +1,7 @@
 export const securityWorkSv = {
   "sw.name": "Mitt säkerhetsarbete",
   "sw.meta.title": "Mitt säkerhetsarbete – CQrityjob",
-  "sw.product": "CQrityjob Security Intelligence",
+  "sw.product": "CQrityjob Intelligence",
   "sw.promise": "Från signal till säkerhetsbeslut",
   "sw.nav.label": "Navigering för mitt säkerhetsarbete",
   "sw.nav.overview": "Översikt",
@@ -222,7 +222,7 @@ export const securityWorkSv = {
 export const securityWorkEn: { [K in keyof typeof securityWorkSv]: string } = {
   "sw.name": "My Security Work",
   "sw.meta.title": "My Security Work – CQrityjob",
-  "sw.product": "CQrityjob Security Intelligence",
+  "sw.product": "CQrityjob Intelligence",
   "sw.promise": "From signal to security decision",
   "sw.nav.label": "My Security Work navigation",
   "sw.nav.overview": "Overview",
