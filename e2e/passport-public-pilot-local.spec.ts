@@ -30,11 +30,14 @@
 //      recipient sees the selection and nothing else, never a private
 //      document -> the gateway form of the link opens it too, through hosted
 //      Supabase's HTML restriction -> expiry, then revocation, end it;
-//   S  the other choice: a social image of the credentials the holder picks,
-//      in the shared card's shields and truthful words -- previewed exactly as
-//      downloaded, in every format, with no link or QR code until the holder
-//      creates one for it and ticks it in, and platform buttons that only
-//      open a composer;
+//   S  the other choice: the Passport image itself, of the credentials the
+//      holder picks, in the shared card's shields and truthful words --
+//      previewed exactly as handed over: to a phone's share sheet as the PNG
+//      files themselves, and to a platform as a download with the plain
+//      instruction to add it, never as a pretend attachment; one credential,
+//      three, and a Passport of fifteen as a set of images with nothing cut;
+//      no link or QR code until the holder creates one and ticks it in, and
+//      that link opens nothing once it is revoked;
 //   H  another holder can read nothing of this Passport, change nothing, and
 //      cannot raise their own trust, through the pages or the API;
 //   B  a mixed-market holder adds all four Indian qualifications and reloads;
@@ -50,7 +53,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import QRCode from "qrcode";
-import { test, expect, type Browser, type Page } from "@playwright/test";
+import { test, expect, type Browser, type Download, type Page } from "@playwright/test";
 
 const LOCAL = process.env.E2E_LOCAL_STACK === "1";
 const BASE = process.env.E2E_BASE_URL ?? "";
@@ -334,6 +337,116 @@ async function attachDocument(page: Page, uid: string, claimId: string, name: st
   // In the holder's list of documents, after a reload too.
   await page.reload();
   await expect(page.getByText(name, { exact: true })).toBeVisible({ timeout: 60_000 });
+}
+
+/** What a share sheet was handed: each file as a data URL, and the words. */
+interface SharedRecord {
+  readonly files: readonly { readonly name: string; readonly type: string; readonly png: string }[];
+  readonly text: string | null;
+  readonly url: string | null;
+}
+
+/** Platform pages are recorded, never followed: nothing may be posted, and
+ *  the walk reaches no platform. `shareSheet` gives the page what a phone's
+ *  browser has -- a share sheet that takes files -- and records the files it
+ *  is handed, bytes and all. The desktop browser here has none. */
+async function recordSharing(page: Page, shareSheet: boolean) {
+  await page.addInitScript((sheet) => {
+    const w = window as unknown as { __opened: string[]; __shared: SharedRecord[] };
+    w.__opened = [];
+    window.open = ((url?: string | URL) => {
+      w.__opened.push(String(url));
+      return null;
+    }) as typeof window.open;
+    if (!sheet) return;
+    w.__shared = [];
+    const dataUrl = (file: File) =>
+      new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      value: (data?: ShareData) => Boolean(data?.files?.length),
+    });
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: async (data: ShareData) => {
+        w.__shared.push({
+          files: await Promise.all(
+            (data.files ?? []).map(async (f) => ({
+              name: f.name,
+              type: f.type,
+              png: await dataUrl(f),
+            })),
+          ),
+          text: data.text ?? null,
+          url: data.url ?? null,
+        });
+      },
+    });
+  }, shareSheet);
+}
+
+/** Every download one action starts, once all `count` have arrived. */
+async function downloadsDuring(page: Page, count: number, act: () => Promise<unknown>) {
+  const got: Download[] = [];
+  const onDownload = (d: Download) => got.push(d);
+  page.on("download", onDownload);
+  try {
+    await act();
+    await expect
+      .poll(() => got.length, { timeout: 30_000, message: `${count} image(s) handed over` })
+      .toBe(count);
+  } finally {
+    page.off("download", onDownload);
+  }
+  return got;
+}
+
+const pngOf = async (download: Download) =>
+  `data:image/png;base64,${readFileSync((await download.path())!).toString("base64")}`;
+
+/** How many pixels of a PNG differ from the image a preview shows: 0 when the
+ *  file is the previewed image, -1 when it is not even its size. */
+async function pixelsDiffering(
+  page: Page,
+  png: string,
+  shown: string,
+  width: number,
+  height: number,
+): Promise<number> {
+  return page.evaluate(
+    async ({ png, shown, width, height }) => {
+      const load = (src: string) =>
+        new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = () => reject(new Error("image did not load"));
+          img.src = src;
+        });
+      const [file, drawn] = await Promise.all([load(png), load(shown)]);
+      if (file.naturalWidth !== width || file.naturalHeight !== height) return -1;
+      const pixels = (img: HTMLImageElement) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, width, height);
+        return ctx.getImageData(0, 0, width, height).data;
+      };
+      const a = pixels(file);
+      const b = pixels(drawn);
+      let differing = 0;
+      for (let i = 0; i < a.length; i += 4) {
+        if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) differing += 1;
+      }
+      return differing;
+    },
+    { png, shown, width, height },
+  );
 }
 
 test.describe("the public pilot, on a real backend", () => {
@@ -1047,11 +1160,12 @@ test.describe("the public pilot, on a real backend", () => {
     }
   });
 
-  test("S · a social image of what the holder selects: the preview is the download, no link unless chosen, nothing posted for them", async ({
+  test("S · social sharing: the Passport image itself goes to the post, a selection of any size is shared, and a link only on purpose", async ({
     page,
     browser,
   }) => {
     test.info().annotations.push({ type: "proof", description: "S" });
+    const phone = device() === "mobile";
     const uid = uidOf(who("dubai"));
     const du = activeClaim(uid, "AE_DU_SIRA_CARD_GUARD");
     const ind = activeClaim(uid, "IN_MEPSC_Q7101");
@@ -1069,17 +1183,12 @@ test.describe("the public pilot, on a real backend", () => {
       "/p#",
       ...documents,
     ];
+    // Every link a holder has, so one made along the way would show.
+    const linksOf = (holder: string) =>
+      Number(sql(`select count(*) from public.sp_disclosures where holder_user_id='${holder}'`));
+    const linksBefore = linksOf(uid);
 
-    // Every platform button is recorded, not followed: nothing may be posted,
-    // and the test reaches no platform.
-    await page.addInitScript(() => {
-      const w = window as unknown as { __opened: string[] };
-      w.__opened = [];
-      window.open = ((url?: string | URL) => {
-        w.__opened.push(String(url));
-        return null;
-      }) as typeof window.open;
-    });
+    await recordSharing(page, phone);
     await inLanguage(page, "sv");
     await atEvidenceWidth(page);
     await signIn(page, who("dubai"), "/passport/share");
@@ -1100,21 +1209,63 @@ test.describe("the public pilot, on a real backend", () => {
     // holder, nothing ticked for them.
     await expect(flow.locator('[data-merit-option^="experience:"]')).toHaveCount(0);
     await expect(flow.locator('input[type="checkbox"]:checked')).toHaveCount(0);
-    await flow.locator(`[data-merit-option="claim:${du}"] input`).check();
-    await flow.locator(`[data-merit-option="claim:${ind}"] input`).check();
-    await expect(flow.locator(`[data-merit-option="claim:${vu1}"] input`)).not.toBeChecked();
 
-    const preview = (format: string) => flow.locator(`[data-social-preview="${format}"]`);
-    const svgOf = async (format: string) => {
-      const src = (await preview(format).getAttribute("src")) ?? "";
-      return decodeURIComponent(src.replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
-    };
+    const preview = (format: string, place?: string) =>
+      flow.locator(
+        `[data-social-preview="${format}"]${place ? `[data-social-page="${place}"]` : ""}`,
+      );
+    const srcOf = async (format: string) => (await preview(format).getAttribute("src")) ?? "";
+    const svgOf = async (format: string) =>
+      decodeURIComponent((await srcOf(format)).replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
     const words = (svg: string) =>
       [...svg.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map((m) => m[1] ?? "").join("\n");
+    const shields = async (format: string) =>
+      ((await svgOf(format)).match(/data-shield-mark=/g) ?? []).length;
+    const opened = () =>
+      page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
+    const handedToSheet = () =>
+      page.evaluate(() => (window as unknown as { __shared?: SharedRecord[] }).__shared ?? []);
+    const ready = flow.locator('[data-social-notice="added_by_holder"]');
+    const prepared = () =>
+      expect(flow.locator("[data-social-download]")).toBeEnabled({ timeout: 60_000 });
 
-    // The preview, drawn in the shared card's vocabulary: the shield, the
-    // flag and scope, and each credential's own truthful word.
+    // ── One credential: one image, handed over as the PNG itself ─────────
+    await flow.locator(`[data-merit-option="claim:${du}"] input`).check();
     await expect(preview("square")).toBeVisible({ timeout: 60_000 });
+    await expect(flow.locator("[data-social-set]")).toHaveAttribute("data-social-set", "1");
+    expect(await svgOf("square"), "one image claims no place in a set").not.toContain(
+      "data-social-page",
+    );
+    await prepared();
+    if (phone) {
+      // A phone that can share files is offered its share sheet first, and the
+      // sheet is given the PNG file itself -- the previewed image, pixel for
+      // pixel -- with the post's sentence and no link.
+      await flow.locator("[data-social-device]").click();
+      await expect(flow.locator('[data-social-notice="attached"]')).toHaveText(
+        "Bilden finns nu i appen du valde. Slutför inlägget där.",
+      );
+      const sheets = await handedToSheet();
+      expect(sheets).toHaveLength(1);
+      expect(sheets[0]!.files.map((f) => `${f.name} ${f.type}`)).toEqual([
+        "cqrityjob-passport-square.png image/png",
+      ]);
+      expect(sheets[0]!.text).toBe("Mitt Security Passport från CQrityjob.");
+      expect(sheets[0]!.url, "no link unless the holder chose one").toBeNull();
+      expect(
+        await pixelsDiffering(page, sheets[0]!.files[0]!.png, await srcOf("square"), 1080, 1080),
+        "the share sheet was handed the previewed image",
+      ).toBe(0);
+    } else {
+      // A browser with no share sheet for files is not offered one.
+      await expect(flow.locator("[data-social-device]")).toHaveCount(0);
+    }
+    await evidence(page, "sv-social-one");
+
+    // ── What the image draws, in the shared card's vocabulary ────────────
+    await flow.locator(`[data-merit-option="claim:${ind}"] input`).check();
+    await expect(flow.locator(`[data-merit-option="claim:${vu1}"] input`)).not.toBeChecked();
+    await expect.poll(() => shields("square"), { timeout: 60_000 }).toBe(2);
     await expect(preview("square")).toHaveAttribute("data-social-link", "none");
     await expect(flow.locator('[data-social-link-state="none"]')).toBeVisible();
     let svg = await svgOf("square");
@@ -1132,46 +1283,15 @@ test.describe("the public pilot, on a real backend", () => {
 
     // The download is the preview: the same SVG, rasterised, pixel for pixel.
     const downloadMatches = async (format: string, width: number, height: number) => {
-      const shown = (await preview(format).getAttribute("src")) ?? "";
-      const [download] = await Promise.all([
-        page.waitForEvent("download"),
+      await prepared();
+      const [file] = await downloadsDuring(page, 1, () =>
         flow.locator("[data-social-download]").click(),
-      ]);
-      expect(download.suggestedFilename()).toBe(`cqrityjob-passport-${format}.png`);
-      const png = readFileSync((await download.path())!).toString("base64");
-      const differing = await page.evaluate(
-        async ({ png, shown, width, height }) => {
-          const load = (src: string) =>
-            new Promise<HTMLImageElement>((resolve, reject) => {
-              const img = new Image();
-              img.onload = () => resolve(img);
-              img.onerror = () => reject(new Error("image did not load"));
-              img.src = src;
-            });
-          const [file, drawn] = await Promise.all([
-            load(`data:image/png;base64,${png}`),
-            load(shown),
-          ]);
-          if (file.naturalWidth !== width || file.naturalHeight !== height) return -1;
-          const pixels = (img: HTMLImageElement) => {
-            const canvas = document.createElement("canvas");
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext("2d")!;
-            ctx.drawImage(img, 0, 0, width, height);
-            return ctx.getImageData(0, 0, width, height).data;
-          };
-          const a = pixels(file);
-          const b = pixels(drawn);
-          let differing = 0;
-          for (let i = 0; i < a.length; i += 4) {
-            if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) differing += 1;
-          }
-          return differing;
-        },
-        { png, shown, width, height },
       );
-      expect(differing, `${format}: the downloaded PNG is the previewed image`).toBe(0);
+      expect(file!.suggestedFilename()).toBe(`cqrityjob-passport-${format}.png`);
+      expect(
+        await pixelsDiffering(page, await pngOf(file!), await srcOf(format), width, height),
+        `${format}: the downloaded PNG is the previewed image`,
+      ).toBe(0);
     };
     await downloadMatches("square", 1080, 1080);
 
@@ -1180,46 +1300,69 @@ test.describe("the public pilot, on a real backend", () => {
     await downloadMatches("og", 1200, 630);
 
     // Instagram has no web publishing: its button switches the preview to the
-    // Story image and downloads exactly that.
-    const story = page.waitForEvent("download");
-    await flow.locator('[data-social-channel="instagram"]').click();
+    // Story image, hands exactly that over, opens nothing, and says where it
+    // goes.
+    const openedBeforeStory = (await opened()).length;
+    const [story] = await downloadsDuring(page, 1, () =>
+      flow.locator('[data-social-channel="instagram"]').click(),
+    );
     await expect(preview("story")).toBeVisible();
-    const storyDownload = await story;
-    expect(storyDownload.suggestedFilename()).toBe("cqrityjob-passport-story.png");
-    {
-      const shown = (await preview("story").getAttribute("src")) ?? "";
-      const png = readFileSync((await storyDownload.path())!).toString("base64");
-      const size = await page.evaluate(
-        async ({ png, shown }) => {
-          const img = new Image();
-          img.src = `data:image/png;base64,${png}`;
-          await img.decode();
-          const svg = new Image();
-          svg.src = shown;
-          await svg.decode();
-          return `${img.naturalWidth}x${img.naturalHeight}/${svg.naturalWidth}x${svg.naturalHeight}`;
-        },
-        { png, shown },
-      );
-      expect(size).toBe("1080x1920/1080x1920");
-    }
+    expect(story!.suggestedFilename()).toBe("cqrityjob-passport-story.png");
+    expect(
+      await pixelsDiffering(page, await pngOf(story!), await srcOf("story"), 1080, 1920),
+      "the Story image handed over is the previewed one",
+    ).toBe(0);
+    await expect(ready).toHaveText(
+      "Din Security Passport-bild är klar i Story-format. Lägg upp den från Instagram-appen.",
+    );
+    expect(await opened()).toHaveLength(openedBeforeStory);
     await evidence(page, "sv-social-story");
 
-    // The platforms: a composer or a page for the holder, with no link in it.
+    // ── Three: still one image, and each platform is handed it ───────────
     await flow.locator('[data-social-format="square"]').click();
-    await flow.locator('[data-social-channel="linkedin"]').click();
-    await flow.locator('[data-social-channel="x"]').click();
-    await flow.locator('[data-social-channel="whatsapp"]').click();
+    await flow.locator(`[data-merit-option="claim:${vu1}"] input`).check();
+    await expect.poll(() => shields("square"), { timeout: 60_000 }).toBe(3);
+    await expect(flow.locator("[data-social-set]")).toHaveAttribute("data-social-set", "1");
+    const platforms = [
+      ["linkedin", /^https:\/\/www\.linkedin\.com\/feed\/$/],
+      ["x", /^https:\/\/twitter\.com\/intent\/tweet\?text=[^&]+$/],
+      ["whatsapp", /^https:\/\/wa\.me\/\?text=[^&]+$/],
+    ] as const;
+    for (const [channel, address] of platforms) {
+      await prepared();
+      const before = (await opened()).length;
+      const [file] = await downloadsDuring(page, 1, () =>
+        flow.locator(`[data-social-channel="${channel}"]`).click(),
+      );
+      expect(file!.suggestedFilename()).toBe("cqrityjob-passport-square.png");
+      expect(
+        await pixelsDiffering(page, await pngOf(file!), await srcOf("square"), 1080, 1080),
+        `${channel}: the image handed over is the previewed one`,
+      ).toBe(0);
+      const urls = await opened();
+      expect(urls).toHaveLength(before + 1);
+      expect(urls.at(-1)).toMatch(address);
+      // What reaches the platform is its own page: no web address can carry
+      // a file, and the holder is told to add the image, not that it went.
+      await expect(ready).toHaveText(
+        "Din Security Passport-bild är klar. Lägg till bilden i ditt inlägg.",
+      );
+    }
     await expect(flow.locator('[data-social-channel="copy_link"]')).toHaveCount(0);
-    let opened = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
-    expect(opened[0]).toBe("https://www.linkedin.com/feed/");
-    expect(opened[1]).toMatch(/^https:\/\/twitter\.com\/intent\/tweet\?text=[^&]+$/);
-    expect(opened[2]).toMatch(/^https:\/\/wa\.me\/\?text=[^&]+$/);
-    for (const url of opened) expect(url).not.toMatch(/url=|%2Fp%23|\/p#/);
+    for (const url of await opened()) expect(url).not.toMatch(/url=|%2Fp%23|\/p#|data:|\.png/);
+    await evidence(page, "sv-social-three-ready");
 
-    // A link only on purpose: created for exactly this selection, not drawn
-    // until the holder ticks it, and then drawn in the preview before any
-    // download.
+    // No link was made along the way: not by a preview, a share sheet, a
+    // download or a platform button.
+    expect(linksOf(uid), "sharing the image created no link").toBe(linksBefore);
+    for (const sheet of await handedToSheet()) expect(sheet.url).toBeNull();
+
+    // ── A link only on purpose ────────────────────────────────────────────
+    // For exactly the two credentials the recipient is checked against below:
+    // created for this selection, not drawn until the holder ticks it, and
+    // then drawn in the preview before anything is handed over.
+    await flow.locator(`[data-merit-option="claim:${vu1}"] input`).uncheck();
+    await expect.poll(() => shields("square"), { timeout: 60_000 }).toBe(2);
     await flow.locator("[data-social-more] > summary").click();
     await flow.locator("[data-social-link-create]").click();
     const linkField = flow.locator("[data-social-link-field]");
@@ -1227,6 +1370,7 @@ test.describe("the public pilot, on a real backend", () => {
     const link = await linkField.inputValue();
     expect(new URL(link).pathname).toBe("/p");
     expect(new URL(link).hash).toMatch(/^#[0-9a-f]{64}$/);
+    expect(linksOf(uid), "one link: the one the holder created").toBe(linksBefore + 1);
     await expect(preview("square")).toHaveAttribute("data-social-link", "none");
     expect(await svgOf("square")).not.toContain(link.slice(-64));
     await flow.locator("[data-social-link-include]").check();
@@ -1277,9 +1421,13 @@ test.describe("the public pilot, on a real backend", () => {
     );
     expect(drawn).toEqual(Array.from(expected.data, (v) => (v ? 1 : 0)));
     await downloadMatches("square", 1080, 1080);
-    await flow.locator('[data-social-channel="x"]').click();
-    opened = await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened);
-    expect(opened.at(-1)).toContain(`url=${encodeURIComponent(link)}`);
+    await downloadsDuring(page, 1, () => flow.locator('[data-social-channel="x"]').click());
+    expect((await opened()).at(-1)).toContain(`url=${encodeURIComponent(link)}`);
+    if (phone) {
+      await flow.locator("[data-social-device]").click();
+      await expect.poll(async () => (await handedToSheet()).length).toBe(2);
+      expect((await handedToSheet())[1]!.url, "the chosen link goes with the image").toBe(link);
+    }
     await evidence(page, "sv-social-link-included");
 
     // The link opens exactly what the image shows, for anyone who scans it.
@@ -1299,7 +1447,7 @@ test.describe("the public pilot, on a real backend", () => {
       await context.close();
     }
 
-    // Revocable where every link is.
+    // Revocable where every link is -- and then it opens nothing.
     const share = sql(
       `select id from public.sp_disclosures where holder_user_id='${uid}' order by created_at desc limit 1`,
     );
@@ -1309,6 +1457,134 @@ test.describe("the public pilot, on a real backend", () => {
       "revoked",
       { timeout: 60_000 },
     );
+    const late = await anotherPerson(browser, "en");
+    try {
+      await late.page.goto(link);
+      await expect(late.page.locator("main")).toContainText("The link may have expired", {
+        timeout: 60_000,
+      });
+      await expect(late.page.locator("main")).not.toContainText("SIRA Security Cadre Card");
+    } finally {
+      await late.context.close();
+    }
+
+    // ── More than three: a Passport of fifteen, shared as a set ───────────
+    // Nothing is blocked and nothing selected is dropped: every credential
+    // valid today is drawn, three to an image, and every image is handed over
+    // as previewed.
+    const large = await anotherPerson(browser, "en");
+    try {
+      const lp = large.page;
+      const largeUid = uidOf(who("large"));
+      const largeLinks = linksOf(largeUid);
+      await recordSharing(lp, phone);
+      await signIn(lp, who("large"), "/passport/share");
+      await lp.goto(`${BASE}/passport/share`);
+      await lp.locator('[data-share-choice="social"]').click({ timeout: 60_000 });
+      const set = lp.locator("[data-social-flow]");
+      const boxes = set.locator('[data-merit-option^="claim:"] input');
+      await expect(boxes).toHaveCount(15, { timeout: 60_000 });
+      for (const box of await boxes.all()) await box.check();
+      await expect(set.locator('[data-merit-option^="claim:"] input:checked')).toHaveCount(15);
+      await expect(set.locator('[data-merit-option^="claim:"] input:disabled')).toHaveCount(0);
+      const current = Number(
+        sql(
+          `select count(*) from public.sp_claims where holder_user_id='${largeUid}' and lifecycle_state='active' and (valid_until is null or valid_until >= current_date)`,
+        ),
+      );
+      const images = Math.ceil(current / 3);
+      expect(images, "more than one image").toBeGreaterThan(1);
+      await expect(set.locator("[data-social-set]")).toHaveAttribute(
+        "data-social-set",
+        String(images),
+        { timeout: 60_000 },
+      );
+      await expect(set.locator("[data-social-set-summary]")).toHaveText(
+        `${current} credentials are shown on ${images} images, three to each.`,
+      );
+      await expect(set.locator("[data-social-download]")).toBeEnabled({ timeout: 60_000 });
+      const shownOf = async (i: number) =>
+        (await set
+          .locator(`[data-social-preview="square"][data-social-page="${i}/${images}"]`)
+          .getAttribute("src")) ?? "";
+      let drawnShields = 0;
+      for (let i = 1; i <= images; i += 1) {
+        const image = decodeURIComponent(
+          (await shownOf(i)).replace(/^data:image\/svg\+xml;charset=utf-8,/, ""),
+        );
+        const count = (image.match(/data-shield-mark=/g) ?? []).length;
+        expect(count, `image ${i} holds at most three`).toBeLessThanOrEqual(3);
+        drawnShields += count;
+        expect(words(image)).toContain(`SECURITY PASSPORT · ${i} / ${images}`);
+        // As legible as one image alone: nothing drawn under 16px on 1080.
+        expect(
+          Math.min(...[...image.matchAll(/font-size="([\d.]+)"/g)].map((m) => Number(m[1]))),
+          `image ${i}: every text at least 16px`,
+        ).toBeGreaterThanOrEqual(16);
+        for (const absent of [
+          "Fiktiv Väktarskola AB",
+          "Fiktivt Training Centre",
+          "Fiktivt Utbildningscenter LLC",
+          largeUid,
+          "/p#",
+        ])
+          expect(image, `image ${i}: nothing private`).not.toContain(absent);
+      }
+      expect(drawnShields, "every credential valid today is on exactly one image").toBe(current);
+      await evidence(lp, "en-social-set");
+
+      const byName = (files: readonly { suggestedFilename(): string }[]) =>
+        files.map((f) => f.suggestedFilename()).sort();
+      const names = Array.from(
+        { length: images },
+        (_, i) => `cqrityjob-passport-square-${i + 1}-of-${images}.png`,
+      );
+      const downloaded = await downloadsDuring(lp, images, () =>
+        set.locator("[data-social-download]").click(),
+      );
+      expect(byName(downloaded)).toEqual([...names].sort());
+      for (const file of downloaded) {
+        const i = Number(/-(\d+)-of-/.exec(file.suggestedFilename())?.[1]);
+        expect(
+          await pixelsDiffering(lp, await pngOf(file), await shownOf(i), 1080, 1080),
+          `image ${i}: the download is the preview`,
+        ).toBe(0);
+      }
+      if (phone) {
+        await set.locator("[data-social-device]").click();
+        await expect(set.locator('[data-social-notice="attached"]')).toHaveText(
+          "The images are now in the app you chose. Finish the post there.",
+        );
+        const [sheet] = await lp.evaluate(
+          () => (window as unknown as { __shared: SharedRecord[] }).__shared,
+        );
+        expect(sheet!.files.map((f) => f.name)).toEqual(names);
+        for (const [i, f] of sheet!.files.entries())
+          expect(
+            await pixelsDiffering(lp, f.png, await shownOf(i + 1), 1080, 1080),
+            `image ${i + 1}: the share sheet was handed the previewed image`,
+          ).toBe(0);
+      }
+      const posted = await downloadsDuring(lp, images, () =>
+        set.locator('[data-social-channel="linkedin"]').click(),
+      );
+      expect(byName(posted)).toEqual([...names].sort());
+      await expect(set.locator('[data-social-notice="added_by_holder"]')).toHaveText(
+        "Your Security Passport images are ready. Add the images to your post.",
+      );
+      expect(
+        (await lp.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).at(-1),
+      ).toBe("https://www.linkedin.com/feed/");
+      expect(
+        await lp.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      ).toBeLessThanOrEqual(1);
+      await evidence(lp, "en-social-set-ready");
+      expect(linksOf(largeUid), "sharing the set created no link").toBe(largeLinks);
+    } finally {
+      await large.context.close();
+    }
 
     // In English, and still inside the page's width.
     await inLanguage(page, "en");

@@ -227,14 +227,26 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // only; needs PR 2). Each is pending BY DESIGN until it merges and the official
 // integration applies it; its name comes off this list in the change that
 // records its hosted evidence.
+// 20261223090000_application_notes_employer_only (JB-02 of the 2026-09-28 UAT:
+// the employer's note on an application is no longer readable by the
+// applicant through the API) is pending BY DESIGN until its PR merges and the
+// official integration applies it. Its name comes off this list in the change
+// that records its hosted evidence.
+// 2026-09-28: all three verified applied read-only on the owner project after
+// #323 merged as 10efc1b -- 20261220090000 and 20261221090000 (the Passport
+// PR 2 and PR 4 rows the integration applied when #315 and #317 merged; the
+// refreshed 325-row hosted ledger already held them, and a resolved name left
+// here would have hidden the next real one) and 20261223090000 (JB-02
+// EXPAND: both employer read functions and rec_submit_application byte-
+// identical to the merged file by md5(prosrc), grants right, no privilege
+// moved). release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-09-28-jb02-expand-hosted-verification.md.
 // 20261225090000_assessment_assign_requires_open_application (AS-01 of the
 // 2026-09-28 UAT: scp_employer_assign refuses a closed application and a
 // completed recruitment) is pending BY DESIGN until its PR merges and the
 // official integration applies it. Its name comes off this list in the change
 // that records its hosted evidence.
 const expectedPending: string[] = [
-  "20261220090000_sp_public_pilot_availability.sql",
-  "20261221090000_sp_open_uk_dubai_public_pilot.sql",
   "20261225090000_assessment_assign_requires_open_application.sql",
 ];
 const hostedIdentities = [
