@@ -1270,7 +1270,16 @@ test.describe("the public pilot, on a real backend", () => {
     expect(svg).toContain('data-flag="AE"');
     let text = words(svg);
     expect(text).toContain("SIRA");
-    expect(text).toContain("Dubai, UAE");
+    // The place is the GROUP heading now, once per scope: a Dubai cadre card
+    // sits under Dubai, never flattened into the UAE, and the Indian
+    // qualification under its own heading.
+    expect(text).toContain("DUBAI, UAE");
+    expect(text).toContain("INDIEN");
+    // Each shield is drawn inside its own scope's group. The shield carries the
+    // payload's presentation key, never the claim id, so the group is matched
+    // by scope alone.
+    expect(svg).toMatch(/data-passport-shield="[^"]+" data-passport-group="jurisdiction:AE-DU"/);
+    expect(svg).toMatch(/data-passport-shield="[^"]+" data-passport-group="jurisdiction:IN"/);
     expect(text).toContain("DOKUMENTERAD");
     expect(text, "nothing is called verified that is not").not.toMatch(/KÄLLBEKRÄFTAD|VERIFIERAD/);
     expect(text).toContain("En ögonblicksbild.");
