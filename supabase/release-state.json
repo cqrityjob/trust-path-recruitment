@@ -2327,6 +2327,19 @@
       "note": "OPEN THE UK AND DUBAI AS A PUBLIC PILOT, PR 4 of docs/passport/completion-work-order.md. DATA ONLY; INTRODUCES NOTHING. Moves sp_market_packs.pilot_state of GB, GB-NI and AE-DU, and of the 44 definitions listed in the file (13 GB, 1 GB-NI, 30 AE-DU: the owner's Route A pilot authorisation of 2026-09-18), from internal_pilot to public_pilot, so every signed-in holder may register them with no individual grant. is_active and legal_review_state stay exactly as they are (false, pending); Abu Dhabi and every other emirate stay closed; no claim, professional-title rule or pilot grant changes, and the migration's own postflight fingerprints all of them before and after and refuses on any difference. Needs 20261220090000 and refuses without it. OWNER DECISION D2 names the definitions that open: the list in the file is the prepared default, and striking a code holds that definition back. Merging is D2 and the production release (D3) at once; verify read-only afterwards. Prepared and verified only on an isolated local replay (scripts/db-test.sh: the rollback returns the markets to internal pilot and refuses a second run, the suite fails without the migration, and the availability agreement proves the administrator's diagnosis matches the catalogue and the save path)."
     },
     {
+      "file": "20261222090000_cd_access_policy.sql",
+      "hostedState": "pending",
+      "introduces": [
+        { "kind": "table", "object": "cd_access_policy" },
+        { "kind": "function", "object": "cd_access_state()" },
+        { "kind": "function", "object": "cd_v31_may_start(uuid)" },
+        { "kind": "function", "object": "cd_set_access_state(text,text)" }
+      ],
+      "rollback": "supabase/rollback/20261222090000_cd_access_policy_rollback.sql",
+      "verify": "SELECT state, note, changed_by, changed_at FROM public.cd_access_policy; -- expect exactly one row, state internal_test immediately after apply. SELECT public.cd_access_state(); -- internal_test. SELECT has_table_privilege('authenticated','public.cd_access_policy','SELECT'); -- false.",
+      "note": "CAREER DISCOVERY RELEASE CONTROL (CI-01 of the 2026-09-28 UAT). Adds one single-row policy table (internal_test | public | paused), a read function callable by anon, a signed-in gate cd_v31_may_start and an admin-only setter. Ships as internal_test, so applying it changes nothing for anyone. OWNER ACTION to open the analysis: as a signed-in platform admin, SELECT public.cd_set_access_state('public', 'launch note'); or from the SQL editor as the database owner, UPDATE public.cd_access_policy SET state='public', note='…', changed_at=now(). Technical availability only: never edits lifecycle_status, review_status, content or scoring versions, or the tester allowlist. The application at the same commit reads cd_access_state() in getV31Availability and cd_v31_may_start() in getV31TesterStatus/persist, so the application must not be published ahead of this migration (both reads fail closed if the functions are missing)."
+    },
+    {
       "file": "20261223090000_application_notes_employer_only.sql",
       "hostedState": "applied",
       "hostedVersion": "20261223090000",
