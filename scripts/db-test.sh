@@ -710,6 +710,21 @@ fi
 # Creates its OWN pilot test instrument, runs the flow, and proves production
 # v3.1 stays internal_test with every review gate outstanding.
 # ---------------------------------------------------------------------------
+echo "==> Running Career Discovery release-control assertions (cd_access_policy)"
+set +e
+CDAP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cd_access_policy_test.sql 2>&1)"
+CDAP_RC=$?
+set -e
+echo "$CDAP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CDAP_PASSED="$(echo "$CDAP_OUT" | grep -c "ok  " || true)"
+if [ "$CDAP_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Career Discovery release-control suite exited with code ${CDAP_RC}." >&2
+  echo "$CDAP_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  exit 1
+fi
+[ "$CDAP_PASSED" -ge 32 ] || { echo "$CDAP_OUT"; echo "FAIL: Career Discovery release-control assertion shortfall: $CDAP_PASSED (floor 32)" >&2; exit 1; }
+echo "    ok  $CDAP_PASSED Career Discovery release-control assertions passed"
+
 echo "==> Running public v3.1 flow assertions"
 set +e
 PUB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/career_discovery_v31_public_flow_test.sql 2>&1)"
