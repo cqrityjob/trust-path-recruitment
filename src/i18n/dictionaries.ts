@@ -187,7 +187,7 @@ export const dictionaries = {
     // separately. Nothing here promises that a click activates AI.
     "home.ai.eyebrow": "Stöd för säkerhet, risk och krisberedskap",
     // The product's own name (sw.product), identical in both languages.
-    "home.ai.title": "CQrityjob Security Intelligence",
+    "home.ai.title": "CQrityjob Intelligence",
     "home.ai.body":
       "En arbetsyta för att gå från källunderlag till bedömning, rapport och åtgärd. När AI-stödet är tillgängligt kan det föreslå kompletteringsfrågor, synliggöra kunskapsluckor och ta fram utkast som du granskar.",
     "home.ai.task.label": "Uppgift",
@@ -308,7 +308,7 @@ export const dictionaries = {
     "home.faq.eyebrow": "Erbjudande och vanliga frågor",
     "home.faq.title": "Bra att veta innan du börjar",
     "home.faq.offer.person":
-      "För individer: konto, profil, CV, Security Passport, jobbsök, Career Discovery och Security Intelligence.",
+      "För individer: konto, profil, CV, Security Passport, jobbsök, Career Discovery och CQrityjob Intelligence.",
     "home.faq.offer.employer":
       "För arbetsgivare: jobbannonser, ansökningar, rekryteringstester, intervjuförberedelse och kompetensutveckling.",
     "home.faq.pricing": "Priser och paket är inte publicerade ännu.",
@@ -544,7 +544,7 @@ export const dictionaries = {
     "jobs.relevance.panel.transitions.title": "Möjliga karriärsteg",
     "jobs.relevance.panel.career_center.cta": "Läs mer om yrket i Karriärcentret",
     "jobs.relevance.panel.disclaimer":
-      "Vägledningen bygger på din Karriäranalys från Career Discovery — inte på verifierade uppgifter. Kontrollera alltid arbetsgivarens formella krav innan du ansöker.",
+      "Vägledningen bygger på din karriäranalys från Career Discovery — inte på verifierade uppgifter. Kontrollera alltid arbetsgivarens formella krav innan du ansöker.",
     "jobs.relevance.panel.family_only.body":
       "Den här rollen ligger inom ett yrkesområde som ligger nära din profil. Vi har ingen specifik yrkesguide att jämföra mot ännu — läs annonsen och arbetsgivarens formella krav noggrant.",
     "jobs.relevance.panel.no_match.body":
@@ -8819,7 +8819,7 @@ export const dictionaries = {
       "You can read profession information and job adverts without an account.",
 
     "home.ai.eyebrow": "Support for security, risk and crisis preparedness",
-    "home.ai.title": "CQrityjob Security Intelligence",
+    "home.ai.title": "CQrityjob Intelligence",
     "home.ai.body":
       "A workspace that takes you from source material to assessment, reporting and action. When AI assistance is available, it can suggest follow-up questions, highlight information gaps and produce drafts for you to review.",
     "home.ai.task.label": "Task",
@@ -8906,7 +8906,7 @@ export const dictionaries = {
     "home.faq.eyebrow": "Offer and common questions",
     "home.faq.title": "Good to know before you start",
     "home.faq.offer.person":
-      "For individuals: account, profile, CV, Security Passport, job search, Career Discovery and Security Intelligence.",
+      "For individuals: account, profile, CV, Security Passport, job search, Career Discovery and CQrityjob Intelligence.",
     "home.faq.offer.employer":
       "For employers: job adverts, applications, recruitment assessments, interview preparation and learning and development.",
     "home.faq.pricing": "Pricing and packages have not been published yet.",
@@ -9108,7 +9108,7 @@ export const dictionaries = {
     "jobs.relevance.panel.transitions.title": "Possible career steps",
     "jobs.relevance.panel.career_center.cta": "Learn more about this role in the Career Center",
     "jobs.relevance.panel.disclaimer":
-      "This guidance is based on your Career Analysis from Career Discovery — not on verified credentials. Always review the employer's formal requirements before applying.",
+      "This guidance is based on your career analysis from Career Discovery — not on verified credentials. Always review the employer's formal requirements before applying.",
     "jobs.relevance.panel.family_only.body":
       "This role sits in a career area that is close to your profile. We do not yet have a specific profession guide to compare against — read the advert and the employer's formal requirements carefully.",
     "jobs.relevance.panel.no_match.body":
