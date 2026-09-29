@@ -39,7 +39,7 @@ import {
   type ShareFormat,
 } from "@/lib/security-passport/design/trust-system";
 import { FONT_STACK, wrap } from "@/lib/security-passport/social-export";
-import type { SocialCardModel } from "@/lib/security-passport/social";
+import { SOCIAL_CREDENTIALS_PER_IMAGE, type SocialCardModel } from "@/lib/security-passport/social";
 import type { SocialImageStrings } from "@/lib/security-passport/share-image";
 import { resolveCredentialScope, shieldMarkText } from "@/lib/security-passport/credential-shield";
 import { passportT, type PassportLang } from "@/lib/security-passport/i18n";
@@ -69,6 +69,10 @@ export interface SocialCardSvgProps {
 }
 
 const r = (n: number) => Math.round(n * 10) / 10;
+
+/** A bold line's width per character, in em: generous, like `charsFor`, so a
+ *  word that only nearly fits is still drawn smaller rather than clipped. */
+const BOLD_CHAR_EM = 0.62;
 
 /** A generous width estimate, as elsewhere in the exports: an early wrap is
  *  invisible, an overflow is not. */
@@ -261,15 +265,24 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
     </Text>,
   );
   y += glyph + 36 * u;
+  // An image of a set says which one it is: a platform may show it alone.
+  const page = p.model.page;
   nodes.push(
     <Text key="micro" x={pad} y={y} size={18 * u} weight={600} spacing={4.5 * u} fill={RIM_BRIGHT}>
-      {p.strings.brand.toUpperCase()}
+      {page
+        ? `${p.strings.brand.toUpperCase()} · ${page.index} / ${page.count}`
+        : p.strings.brand.toUpperCase()}
     </Text>,
   );
   y += 26 * u;
 
-  const nameSize = (landscape ? 58 : 72) * u;
-  for (const [i, line] of wrap(p.model.holderLabel, charsFor(headW, nameSize), 2).entries()) {
+  const fullName = (landscape ? 58 : 72) * u;
+  const nameLines = wrap(p.model.holderLabel, charsFor(headW, fullName), 2);
+  // A name wraps at its spaces. A single word wider than the line -- a long
+  // double surname -- is drawn smaller instead of running past the edge.
+  const widestName = Math.max(1, ...nameLines.map((line) => line.length));
+  const nameSize = Math.min(fullName, headW / (widestName * BOLD_CHAR_EM));
+  for (const [i, line] of nameLines.entries()) {
     y += nameSize * 1.12;
     nodes.push(
       <Text key={`name-${i}`} x={pad} y={y} size={nameSize} weight={600} fill={TRUST_PALETTE.ink}>
@@ -335,7 +348,9 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
     );
     y += 64 * u;
   } else {
-    const slotW = contentW / 3;
+    // One column per credential an image holds. A selection of more is a set
+    // of images (socialCardPages); this drawing never receives more.
+    const slotW = contentW / SOCIAL_CREDENTIALS_PER_IMAGE;
     const x0 = pad + (contentW - credentials.length * slotW) / 2;
     const shield = 92 * u;
     const top = y;
@@ -372,6 +387,9 @@ function layout(p: SocialCardSvgProps, s: number): Laid {
       );
       cy += 8 * u;
       for (const [j, line] of wrap(name, charsFor(slotW - 28 * u, 21 * u), 3).entries()) {
+        // A name wraps at its spaces; one word wider than its column -- a
+        // long compound, a holder's own free text -- makes the card smaller.
+        if (line.length * 21 * u * 0.58 > slotW - 16 * u) columnsFit = false;
         cy += 27 * u;
         nodes.push(
           <Text
@@ -477,6 +495,9 @@ export function SocialCardSvg(props: SocialCardSvgProps) {
       height={H}
       viewBox={`0 0 ${W} ${H}`}
       data-social-card={props.format}
+      data-social-page={
+        props.model.page ? `${props.model.page.index}/${props.model.page.count}` : undefined
+      }
     >
       {/* The one card ground -- see PASSPORT_CARD_SURFACE. No engraving:
           nothing is drawn behind the text, the shields or the QR code. */}
