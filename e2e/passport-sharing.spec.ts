@@ -30,6 +30,8 @@ import path from "node:path";
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { fromJSON } from "seroval";
 import { passportT } from "../src/lib/security-passport/i18n";
+import { deriveVerifiedIdentity } from "../src/lib/security-passport/identity/visibility";
+import { MIRRORED_TITLE_RULES } from "../src/lib/security-passport/identity/market-rules";
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3100";
 const SUPABASE_REF = process.env.E2E_SUPABASE_REF ?? "wrygicdfxwjnrugduxnt";
@@ -79,6 +81,72 @@ const CLAIM_SELF_REPORTED = {
   verificationMethod: null,
   verifiedOn: null,
 };
+
+/** Four current credentials in three controlled scopes -- Sweden twice, an
+ *  international certification and a Great Britain licence -- for the ONE
+ *  Passport image: more than the three the old drawing held, grouped. */
+const CLAIM_VU1 = {
+  ...CLAIM_SHAREABLE,
+  id: "c-vu1-training",
+  credentialCode: "VU1",
+  titleSv: "Väktarutbildning 1",
+  titleEn: "Security Guard Training 1",
+  assertionLevel: "self_declared",
+  verifierName: null,
+  verificationMethod: null,
+  verifiedOn: null,
+};
+const CLAIM_SIA = {
+  ...CLAIM_SELF_REPORTED,
+  id: "c-sia",
+  claimType: "licence",
+  credentialCode: null,
+  titleSv: "SIA Licence — Security Guarding",
+  titleEn: "SIA Licence — Security Guarding",
+  jurisdictionCode: "GB",
+};
+const FOUR_CLAIMS = [CLAIM_SHAREABLE, CLAIM_VU1, CLAIM_SELF_REPORTED, CLAIM_SIA];
+
+/** The densest realistic Passport: eleven current credentials in three
+ *  controlled scopes -- four Swedish, five international, two Dubai. */
+const ownClaim = (
+  id: string,
+  code: string | null,
+  title: string,
+  over: Record<string, unknown> = {},
+) => ({
+  ...CLAIM_VU1,
+  id,
+  credentialCode: code,
+  titleSv: title,
+  titleEn: title,
+  ...over,
+});
+const ELEVEN_CLAIMS = [
+  CLAIM_VU1,
+  ownClaim("c-vu2", "VU2", "Väktarutbildning 2"),
+  ownClaim("c-ov", "OV", "Ordningsvaktsförordnande"),
+  ownClaim("c-sv", "SV", "Skyddsvaktsutbildning"),
+  CLAIM_SELF_REPORTED,
+  ownClaim("c-psp", "INTL_ASIS_PSP", "Physical Security Professional (PSP)", {
+    jurisdictionCode: null,
+  }),
+  ownClaim("c-pci", "INTL_ASIS_PCI", "Professional Certified Investigator (PCI)", {
+    jurisdictionCode: null,
+  }),
+  ownClaim("c-cc", "INTL_ISC2_CC", "Certified in Cybersecurity (CC)", { jurisdictionCode: null }),
+  ownClaim("c-cams", "INTL_ACAMS_CAMS", "Certified Anti-Money Laundering Specialist (CAMS)", {
+    jurisdictionCode: null,
+  }),
+  ownClaim("c-sira-g", "AE_DU_SIRA_CARD_GUARD", "SIRA Security Cadre Card — Security Guard", {
+    jurisdictionCode: "AE",
+    subJurisdictionCode: "AE-DU",
+  }),
+  ownClaim("c-sira-s", "AE_DU_SIRA_CARD_SUP", "SIRA Security Cadre Card — Security Supervisor", {
+    jurisdictionCode: "AE",
+    subJurisdictionCode: "AE-DU",
+  }),
+];
 
 const CLAIM_DRAFT = {
   ...CLAIM_SHAREABLE,
@@ -221,6 +289,54 @@ function recipientPayload(locale: "sv" | "en") {
   };
 }
 
+/** The payload for the four ticked credentials, as the image reads it: the
+ *  definition's scope_code decides the international group. */
+function fourCredentialPayload(locale: "sv" | "en") {
+  const base = recipientPayload(locale);
+  const own = (key: string, title: string, code: string | null, over: Record<string, unknown>) => ({
+    ...base.verified_claims[1]!,
+    key,
+    title,
+    credential_code: code,
+    scope_code: "national_regulated",
+    ...over,
+  });
+  return {
+    ...base,
+    verified_claims: [
+      { ...base.verified_claims[0]!, scope_code: "national_regulated" },
+      own("c-vu1-training", "Väktarutbildning 1", "VU1", {}),
+      own("c-self", "Certified Protection Professional (CPP)", "INTL_ASIS_CPP", {
+        jurisdiction: null,
+        scope_code: "global_professional",
+      }),
+      own("c-sia", "SIA Licence — Security Guarding", null, { jurisdiction: "GB" }),
+    ],
+    verified_experience: [],
+    verified_experience_days: 0,
+  };
+}
+
+/** The payload for the eleven ticked credentials. */
+function elevenCredentialPayload(locale: "sv" | "en") {
+  const base = recipientPayload(locale);
+  const global = new Set(["c-self", "c-psp", "c-pci", "c-cc", "c-cams"]);
+  return {
+    ...base,
+    verified_claims: ELEVEN_CLAIMS.map((c) => ({
+      ...base.verified_claims[1]!,
+      key: c.id,
+      title: c.titleSv,
+      credential_code: c.credentialCode,
+      jurisdiction: global.has(c.id) ? null : c.jurisdictionCode,
+      sub_jurisdiction: c.subJurisdictionCode ?? null,
+      scope_code: global.has(c.id) ? "global_professional" : "national_regulated",
+    })),
+    verified_experience: [],
+    verified_experience_days: 0,
+  };
+}
+
 const SHARE_ROW = {
   id: "d-1",
   createdAt: "2026-09-01T09:00:00Z",
@@ -256,6 +372,19 @@ interface Scenario {
   readonly lang?: "sv" | "en";
   /** For the public page. */
   readonly publicPayload?: unknown;
+  /** Four current credentials in three scopes, and a preview that returns
+   *  exactly them: the ONE-Passport image scenario. Also gives the page a
+   *  share sheet that takes files, and records what it and window.open get. */
+  readonly fourCredentials?: boolean;
+  /** Eleven current credentials in three scopes: the densest realistic
+   *  holder, on ONE image. Same share sheet and window.open recording. */
+  readonly elevenCredentials?: boolean;
+}
+
+interface SharedRecord {
+  readonly files: readonly { readonly name: string; readonly type: string; readonly png: string }[];
+  readonly text: string | null;
+  readonly url: string | null;
 }
 
 let unmatched: string[] = [];
@@ -357,6 +486,23 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
     switch (name) {
       case "getMyPassport":
         if (scenario.passportFails) return boom(route, "passport read failed");
+        if (scenario.fourCredentials || scenario.elevenCredentials)
+          return ok(route, {
+            ...SNAPSHOT,
+            holder: {
+              ...SNAPSHOT.holder,
+              // The image reads the holder's derived identity, as the real
+              // snapshot carries it; the link-only scenarios never needed it.
+              id: USER_ID,
+              displayName: SNAPSHOT.profile.displayName,
+              professionSlug: null,
+              jurisdictionCode: "SE",
+              subJurisdictionCode: null,
+              identity: deriveVerifiedIdentity([], MIRRORED_TITLE_RULES, "2026-09-07"),
+              claims: scenario.elevenCredentials ? ELEVEN_CLAIMS : FOUR_CLAIMS,
+              periods: [],
+            },
+          });
         return ok(
           route,
           scenario.noMerits
@@ -381,6 +527,15 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
 
       case "previewCredentialShare":
         if (scenario.previewFails) return boom(route, "preview failed");
+        if (scenario.fourCredentials || scenario.elevenCredentials)
+          return ok(route, {
+            ...(scenario.elevenCredentials ? elevenCredentialPayload : fourCredentialPayload)(
+              scenario.lang === "en" ? "en" : "sv",
+            ),
+            schema_version: 2,
+            holder: null,
+            privacy_mode: "full_name",
+          });
         return ok(route, {
           ...recipientPayload(scenario.lang === "en" ? "en" : "sv"),
           schema_version: 2,
@@ -468,6 +623,45 @@ async function mount(page: Page, urlPath: string, scenario: Scenario) {
     }),
   );
 
+  if (scenario.fourCredentials || scenario.elevenCredentials) {
+    await page.addInitScript(() => {
+      const w = window as unknown as { __opened: string[]; __shared: SharedRecord[] };
+      w.__opened = [];
+      w.__shared = [];
+      window.open = ((url?: string | URL) => {
+        w.__opened.push(String(url));
+        return null;
+      }) as typeof window.open;
+      const dataUrl = (file: File) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (data?: ShareData) => Boolean(data?.files?.length),
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (data: ShareData) => {
+          w.__shared.push({
+            files: await Promise.all(
+              (data.files ?? []).map(async (f) => ({
+                name: f.name,
+                type: f.type,
+                png: await dataUrl(f),
+              })),
+            ),
+            text: data.text ?? null,
+            url: data.url ?? null,
+          });
+        },
+      });
+    });
+  }
+
   page.on("pageerror", (e) => pageErrors.push(String(e)));
   await page.goto(`${BASE}${urlPath}`, { waitUntil: "domcontentloaded" });
 }
@@ -483,6 +677,11 @@ async function horizontalOverflow(page: Page): Promise<number> {
 
 async function shoot(page: Page, name: string) {
   if (!SHOT_DIR) return;
+  // The owner reviews at roughly 1440 and 390: a desktop run is widened for
+  // its pictures; a phone project keeps its own viewport.
+  const size = page.viewportSize();
+  if (size && size.width > 600 && size.width !== 1440)
+    await page.setViewportSize({ width: 1440, height: 900 });
   const dir = path.resolve(SHOT_DIR);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   await page.screenshot({ path: path.join(dir, `${SHOT_TAG}-${name}.png`), fullPage: true });
@@ -931,6 +1130,193 @@ test.describe("Security Passport — sharing, as the holder", () => {
     await expect(page.locator("[data-share-reissue-panel]")).toBeVisible();
     expect(pageErrors).toEqual([]);
   });
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   The holder's ONE Passport image
+   ══════════════════════════════════════════════════════════════════════ */
+
+test.describe("Security Passport — social sharing, ONE Passport image", () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  test("23 · social sharing: four credentials are ONE Passport image, grouped, previewed, downloaded and shared as one file", async ({
+    page,
+  }) => {
+    await mount(page, "/passport/share", { fourCredentials: true });
+    await shareReady(page);
+    await page.locator('[data-share-choice="social"]').click();
+    const flow = page.locator("[data-social-flow]");
+    await expect(flow).toBeVisible();
+
+    // Four credentials, none blocked: the old fourth-checkbox stop is gone.
+    const boxes = flow.locator('[data-merit-option^="claim:"] input');
+    await expect(boxes).toHaveCount(4);
+    for (const box of await boxes.all()) await box.check();
+    await expect(flow.locator('[data-merit-option^="claim:"] input:disabled')).toHaveCount(0);
+
+    // ONE preview, ONE Passport, every credential on it exactly once.
+    const preview = flow.locator('[data-social-preview="square"]');
+    await expect(preview).toBeVisible({ timeout: 30_000 });
+    await expect(flow.locator("[data-social-passport]")).toHaveCount(1);
+    await expect(flow.locator("[data-social-preview]")).toHaveCount(1);
+    const svgOf = async () =>
+      decodeURIComponent(
+        ((await preview.getAttribute("src")) ?? "").replace(
+          /^data:image\/svg\+xml;charset=utf-8,/,
+          "",
+        ),
+      );
+    const svg = await svgOf();
+    const words = [...svg.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map((m) => m[1] ?? "");
+    expect((svg.match(/data-passport-shield=/g) ?? []).length).toBe(4);
+    expect(svg).toContain('data-passport-credentials="4"');
+    expect(svg).toContain('data-passport-groups="3"');
+    expect(svg).toContain('data-passport-fits="true"');
+    expect(svg).not.toContain("data-social-page");
+    expect(words.join("\n")).not.toMatch(/SECURITY PASSPORT · \d+ \/ \d+/);
+    // Grouped by controlled scope: Sweden twice under one heading, the
+    // international certification under the globe, the licence under Great
+    // Britain -- and each shield with its own trust word.
+    expect(svg).toContain('data-passport-shield="c1" data-passport-group="jurisdiction:SE"');
+    expect(svg).toContain(
+      'data-passport-shield="c-vu1-training" data-passport-group="jurisdiction:SE"',
+    );
+    expect(svg).toContain('data-passport-shield="c-self" data-passport-group="global"');
+    expect(svg).toContain('data-passport-shield="c-sia" data-passport-group="jurisdiction:GB"');
+    expect((svg.match(/data-flag="SE"/g) ?? []).length).toBe(1);
+    expect(words).toContain("SVERIGE");
+    expect(words).toContain("GLOBAL");
+    expect(words).toContain("STORBRITANNIEN");
+    expect(words.filter((w) => w === "EGENRAPPORTERAD").length).toBe(3);
+    expect(words.filter((w) => w === "DOKUMENTERAD").length).toBe(1);
+    expect(words.join("\n")).not.toMatch(/VERIFIERAD|KÄLLBEKRÄFTAD/);
+    // Nothing private, no link, no QR code.
+    // The stub's issuers, the identifier shape, a link and a QR code: none.
+    for (const absent of ["Utbildaren AB", "Polismyndigheten", "/p#", "<image", USER_ID])
+      expect(svg).not.toContain(absent);
+    await expect(flow.locator('[data-social-link-state="none"]')).toBeVisible();
+    expect(createCalls, "no link is created by previewing").toBe(0);
+
+    // The same Passport in words, for whoever cannot see it.
+    const list = flow.locator("[data-passport-group-list]");
+    await expect(list).toBeVisible();
+    await expect(list.locator("[data-passport-group]")).toHaveCount(3);
+    await expect(list.locator("[data-passport-shield]")).toHaveCount(4);
+    await expect(flow.locator("[data-passport-one]")).toHaveText(
+      "Alla 4 valda meriter visas i ett Security Passport, grupperade efter område.",
+    );
+    await expect(flow).not.toContainText(/bild \d+ av \d+|tre på varje/i);
+
+    // One download: the previewed image, as one file.
+    await expect(flow.locator("[data-social-download]")).toBeEnabled({ timeout: 30_000 });
+    const got: string[] = [];
+    page.on("download", (d) => got.push(d.suggestedFilename()));
+    await flow.locator("[data-social-download]").click();
+    await expect.poll(() => got.length, { timeout: 30_000 }).toBe(1);
+    expect(got).toEqual(["cqrityjob-passport-square.png"]);
+
+    // One file to the share sheet, the previewed one.
+    await flow.locator("[data-social-device]").click();
+    await expect(flow.locator('[data-social-notice="attached"]')).toHaveText(
+      "Bilden finns nu i appen du valde. Slutför inlägget där.",
+    );
+    const shared = await page.evaluate(
+      () => (window as unknown as { __shared: SharedRecord[] }).__shared,
+    );
+    expect(shared.length).toBe(1);
+    expect(shared[0]!.files.map((f) => f.name)).toEqual(["cqrityjob-passport-square.png"]);
+    expect(shared[0]!.url).toBeNull();
+
+    // LinkedIn: the one image as a download, the feed opened, and the truth.
+    await flow.locator('[data-social-channel="linkedin"]').click();
+    await expect.poll(() => got.length, { timeout: 30_000 }).toBe(2);
+    expect(got[1]).toBe("cqrityjob-passport-square.png");
+    await expect(flow.locator('[data-social-notice="added_by_holder"]')).toHaveText(
+      "Din Security Passport-bild är klar. Lägg till bilden i ditt inlägg.",
+    );
+    expect(
+      await page.evaluate(() => (window as unknown as { __opened: string[] }).__opened),
+    ).toEqual(["https://www.linkedin.com/feed/"]);
+    expect(createCalls, "sharing created no link").toBe(0);
+
+    // Every format is the same Passport: the complete selection, one image.
+    for (const format of ["og", "story", "compact"] as const) {
+      await flow.locator(`[data-social-format="${format}"]`).click();
+      const shown = flow.locator(`[data-social-preview="${format}"]`);
+      await expect(shown).toBeVisible({ timeout: 30_000 });
+      await expect(flow.locator("[data-social-preview]")).toHaveCount(1);
+      const image = decodeURIComponent(
+        ((await shown.getAttribute("src")) ?? "").replace(
+          /^data:image\/svg\+xml;charset=utf-8,/,
+          "",
+        ),
+      );
+      expect((image.match(/data-passport-shield=/g) ?? []).length, format).toBe(4);
+      expect(image, format).toContain('data-passport-fits="true"');
+    }
+
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+    expect(pageErrors).toEqual([]);
+    await flow.locator('[data-social-format="square"]').click();
+    await shoot(page, `social-one-passport-4-sv-${page.viewportSize()!.width > 600 ? 1440 : 375}`);
+  });
+
+  for (const lang of ["sv", "en"] as const) {
+    test(`24 · ${lang}: the densest realistic Passport -- eleven credentials in three groups -- is ONE image in every format`, async ({
+      page,
+    }) => {
+      await mount(page, "/passport/share", { elevenCredentials: true, lang });
+      await shareReady(page);
+      await page.locator('[data-share-choice="social"]').click();
+      const flow = page.locator("[data-social-flow]");
+      const boxes = flow.locator('[data-merit-option^="claim:"] input');
+      await expect(boxes).toHaveCount(11);
+      for (const box of await boxes.all()) await box.check();
+      await expect(flow.locator('[data-merit-option^="claim:"] input:disabled')).toHaveCount(0);
+      await expect(flow.locator('[data-social-preview="square"]')).toBeVisible({
+        timeout: 30_000,
+      });
+      await expect(flow.locator("[data-social-passport]")).toHaveCount(1);
+      await expect(flow.locator("[data-passport-group-list] [data-passport-group]")).toHaveCount(3);
+      await expect(flow.locator("[data-passport-group-list] [data-passport-shield]")).toHaveCount(
+        11,
+      );
+      await expect(flow.locator("[data-passport-one]")).toHaveText(
+        lang === "sv"
+          ? "Alla 11 valda meriter visas i ett Security Passport, grupperade efter område."
+          : "All 11 selected credentials are shown in one Security Passport, grouped by area.",
+      );
+      for (const format of ["square", "og", "story", "compact"] as const) {
+        await flow.locator(`[data-social-format="${format}"]`).click();
+        const shown = flow.locator(`[data-social-preview="${format}"]`);
+        await expect(shown).toBeVisible({ timeout: 30_000 });
+        await expect(flow.locator("[data-social-preview]")).toHaveCount(1);
+        const image = decodeURIComponent(
+          ((await shown.getAttribute("src")) ?? "").replace(
+            /^data:image\/svg\+xml;charset=utf-8,/,
+            "",
+          ),
+        );
+        expect((image.match(/data-passport-shield=/g) ?? []).length, format).toBe(11);
+        expect(image, format).toContain('data-passport-groups="3"');
+        expect(image, format).toContain('data-passport-fits="true"');
+        expect(image, format).not.toContain("data-social-page");
+        expect(
+          Math.min(...[...image.matchAll(/font-size="([\d.]+)"/g)].map((m) => Number(m[1]))),
+          `${format}: every text at least 14px per 1080`,
+        ).toBeGreaterThanOrEqual(14 * (format === "compact" ? 0.6 : 1) - 0.05);
+        await expect(flow.locator("[data-social-crowded]")).toHaveCount(0);
+        await expect(flow.locator("[data-social-download]")).toBeEnabled({ timeout: 30_000 });
+        await shoot(
+          page,
+          `social-one-passport-11-${format}-${lang}-${page.viewportSize()!.width > 600 ? 1440 : 375}`,
+        );
+      }
+      expect(createCalls, "no link is created").toBe(0);
+      expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
+      expect(pageErrors).toEqual([]);
+    });
+  }
 });
 
 /* ══════════════════════════════════════════════════════════════════════

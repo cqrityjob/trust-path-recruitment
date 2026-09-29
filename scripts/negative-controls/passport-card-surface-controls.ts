@@ -51,9 +51,8 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "an example shield is drawn as verified, so the public homepage shows a fictional person with a verified credential",
     file: HOME,
-    find: '      code: "INTL_ASIS_CPP",\n      name: "Certified Protection Professional (CPP)",\n      state: "self_declared",',
-    replace:
-      '      code: "INTL_ASIS_CPP",\n      name: "Certified Protection Professional (CPP)",\n      state: "verified",',
+    find: '    state: "self_declared",\n    statusWordKey: "assertion.self_declared",',
+    replace: '    state: "verified",\n    statusWordKey: "assertion.self_declared",',
     guard: GUARD,
     expect: "no example shield is verified",
   },

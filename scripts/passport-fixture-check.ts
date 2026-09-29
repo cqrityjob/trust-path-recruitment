@@ -35,6 +35,8 @@ import { passportCopy, type PassportCopyKey } from "../src/lib/security-passport
 import { headlineTitles, labelFor } from "../src/lib/security-passport/identity/presentation";
 import { ASSERTION_LEVELS, LIFECYCLE_STATES } from "../src/lib/security-passport/types";
 import { buildSocialCard, SOCIAL_FORBIDDEN_KEYS } from "../src/lib/security-passport/social";
+import { effectiveAssertionLevel } from "../src/lib/security-passport/provenance";
+import { validityOf } from "../src/lib/security-passport/validity";
 import {
   SHARE_FORMATS,
   TRUST_PALETTE,
@@ -623,9 +625,17 @@ for (const pkg of DISCLOSURE_PACKAGES) {
         );
       }
 
+      // ONE holder, ONE Passport: the fixture card names every verified,
+      // current credential. No count at which a second card begins, and no
+      // cut (owner decision, 2026-09-29).
+      const verifiedCurrent = persona.claims.filter(
+        (c) =>
+          effectiveAssertionLevel(c) === "verified" &&
+          validityOf(c.lifecycleState, c.validUntil, EVAL).effectiveState === "active",
+      ).length;
       expect(
-        social.verifiedCredentials.length <= 3,
-        `${persona.id}/${mode}: social card names more than three credentials.`,
+        social.verifiedCredentials.length === verifiedCurrent,
+        `${persona.id}/${mode}: social card names ${social.verifiedCredentials.length} of ${verifiedCurrent} verified current credentials.`,
       );
     }
   }

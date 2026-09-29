@@ -142,16 +142,14 @@ export function platformPlan(
   channel: PlatformPlan["channel"],
   shareUrl: string | null,
   postText: string,
-  imageCount: number,
 ): PlatformPlan {
-  const many = imageCount > 1;
   if (channel === "instagram") {
     return {
       channel,
       delivery: "added_by_holder",
       format: "story",
       url: null,
-      noticeKey: many ? "social.ready.instagramMany" : "social.ready.instagram",
+      noticeKey: "social.ready.instagram",
     };
   }
   return {
@@ -159,29 +157,19 @@ export function platformPlan(
     delivery: "added_by_holder",
     format: null,
     url: shareIntentUrl(channel, shareUrl, postText, postText),
-    noticeKey:
-      channel === "email"
-        ? many
-          ? "social.ready.emailMany"
-          : "social.ready.email"
-        : many
-          ? "social.ready.postMany"
-          : "social.ready.post",
+    noticeKey: channel === "email" ? "social.ready.email" : "social.ready.post",
   };
 }
 
 /**
- * What the device's share sheet is given: the PNG files themselves -- the
- * images the preview shows -- and the post's sentence. A link travels only
- * when the holder chose one for these images.
+ * What the device's share sheet is given: ONE PNG file -- the holder's whole
+ * Passport, the image the preview shows -- and the post's sentence. Never a
+ * set of files: one holder, one Passport, one image. A link travels only when
+ * the holder chose one for this image.
  */
-export function deviceShareData(
-  files: readonly File[],
-  postText: string,
-  shareUrl: string | null,
-): ShareData {
+export function deviceShareData(file: File, postText: string, shareUrl: string | null): ShareData {
   return {
-    files: [...files],
+    files: [file],
     title: postText,
     text: postText,
     ...(shareUrl ? { url: shareUrl } : {}),

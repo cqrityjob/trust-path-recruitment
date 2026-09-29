@@ -136,12 +136,16 @@ for (const file of [
 console.log("\n3 · the homepage panel is the real system, and the example says it is one");
 
 const home = code(read("src/components/site/HomePassportPreview.tsx"));
+// The ONE-Passport model (2026-09-29): the example is drawn by the same
+// grouped shields the exported Passport image uses, from controlled scopes --
+// an international group, Sweden with several shields, and Great Britain.
 check(
-  /<CredentialConstellation/.test(home) &&
-    /resolveCredentialScope\(\{ global: true \}/.test(home) &&
+  /<PassportGroupedShields/.test(home) &&
+    /global: true/.test(home) &&
     /jurisdictionCode: "SE"/.test(home) &&
-    /jurisdictionCode: "GB"/.test(home),
-  "it draws the shared shields: one international, and Sweden and Great Britain",
+    /jurisdictionCode: "GB"/.test(home) &&
+    !/<CredentialConstellation/.test(home),
+  "it draws the shared grouped shields: one international group, Sweden and Great Britain",
 );
 check(
   !/state: "verified"/.test(home) &&

@@ -13,14 +13,13 @@
 
 import { joinTitles } from "./identity/presentation";
 import { formatJurisdiction, titleWithJurisdictionOnce } from "./format";
-import type { SocialCardModel, SocialCardPage } from "./social";
+import type { SocialCardModel } from "./social";
 import type { PassportCopyKey, PassportLang } from "./i18n";
 
-/** An image's file name: its format, and for an image of a set, which one. */
-export function socialImageFileName(format: string, page: SocialCardPage | null): string {
-  return page
-    ? `cqrityjob-passport-${format}-${page.index}-of-${page.count}.png`
-    : `cqrityjob-passport-${format}.png`;
+/** The ONE image's file name: the holder's Passport, in this format. There is
+ *  no "-1-of-2": one holder, one Passport, one file. */
+export function socialImageFileName(format: string): string {
+  return `cqrityjob-passport-${format}.png`;
 }
 
 export type PassportTranslate = (key: PassportCopyKey) => string;
@@ -35,6 +34,8 @@ export interface SocialImageStrings {
   readonly snapshotNote: string;
   readonly noVerified: string;
   readonly staleWarning: string | null;
+  /** The heading over the credentials nobody placed in a jurisdiction. */
+  readonly notStated: string;
 }
 
 export function socialImageStrings(
@@ -52,6 +53,7 @@ export function socialImageStrings(
     snapshotNote: pt("social.snapshotNote"),
     noVerified: pt("card.noVerifiedYet"),
     staleWarning: model.staleWarning ? pt("card.shareExpired") : null,
+    notStated: pt("scope.notStated"),
   };
 }
 

@@ -1,14 +1,20 @@
 import { Lock } from "lucide-react";
 import { useT } from "@/i18n/context";
-import {
-  CredentialConstellation,
-  type ShieldCredential,
-} from "@/components/security-passport/CredentialShield";
-import { resolveCredentialScope } from "@/lib/security-passport/credential-shield";
+import { PassportGroupedShields } from "@/components/security-passport/PassportGroups";
+import type { SocialCredentialName } from "@/lib/security-passport/social";
 
 /**
- * The homepage's illustrative Security Passport: ONE example card, in the
+ * The homepage's illustrative Security Passport: ONE example Passport, in the
  * Passport section it explains.
+ *
+ * ── WHAT IT TEACHES ────────────────────────────────────────────────────
+ *
+ * One person → one Passport → several credentials, grouped by where they
+ * apply. The example holds six credentials in three groups (Sweden,
+ * international, Great Britain) so a visitor sees the product's actual
+ * shape: not a card that stops at three, not a Passport in several pages,
+ * but one document whose credentials that belong together share a heading
+ * (owner decision, 2026-09-29).
  *
  * ── MOVED OUT OF THE HERO (MVP text specification, 2026-09-27) ─────────
  *
@@ -21,9 +27,10 @@ import { resolveCredentialScope } from "@/lib/security-passport/credential-shiel
  * ── NOT AN IMITATION ───────────────────────────────────────────────────
  *
  * It wears the SAME ground (`passport-signature`, mirrored from
- * PASSPORT_CARD_SURFACE) and draws its credentials with the SAME
- * `CredentialConstellation`, scope resolver, flags and globe the holder's own
- * card uses. There is nothing here to keep in step by hand.
+ * PASSPORT_CARD_SURFACE) and draws its credentials with the SAME grouping
+ * (`groupPassportCredentials`), shields, scope resolver, flags and globe the
+ * exported Passport image uses (`PassportGroupedShields`). There is nothing
+ * here to keep in step by hand.
  *
  * ── THE EXAMPLE IS FICTIONAL, AND SAYS SO ──────────────────────────────
  *
@@ -50,35 +57,53 @@ export function HomePassportPreview() {
   const l = lang === "sv" ? "sv" : "en";
 
   // Fictional, and deliberately unverified. The abbreviations are governed
-  // marks or written in the name itself — see `shieldMarkText`.
-  const example: readonly ShieldCredential[] = [
-    {
-      id: "example-cpp",
-      code: "INTL_ASIS_CPP",
-      name: "Certified Protection Professional (CPP)",
-      state: "self_declared",
-      lifecycle: "active",
-      validUntil: null,
-      scope: resolveCredentialScope({ global: true }, l),
-    },
-    {
-      id: "example-ov",
-      code: "OV",
-      name: l === "sv" ? "Ordningsvaktsförordnande" : "Public Order Guard Appointment",
-      state: "self_declared",
-      lifecycle: "active",
-      validUntil: null,
-      scope: resolveCredentialScope({ jurisdictionCode: "SE" }, l),
-    },
-    {
-      id: "example-sia",
-      code: null,
-      name: "SIA Licence — Security Guarding",
-      state: "self_declared",
-      lifecycle: "active",
-      validUntil: null,
-      scope: resolveCredentialScope({ jurisdictionCode: "GB" }, l),
-    },
+  // marks or written in the name itself — see `shieldMarkText`. Six
+  // credentials, three controlled scopes: Sweden, international, Great
+  // Britain. The grouping is derived from these scopes by the same function
+  // the exported Passport uses; nothing here places a credential by hand.
+  const own = (
+    id: string,
+    code: string | null,
+    nameSv: string,
+    nameEn: string,
+    scope: SocialCredentialName["scope"],
+  ): SocialCredentialName => ({
+    id,
+    code,
+    nameSv,
+    nameEn,
+    state: "self_declared",
+    statusWordKey: "assertion.self_declared",
+    scope,
+  });
+  const sweden = { global: false, jurisdictionCode: "SE", subJurisdictionCode: null };
+  const international = { global: true, jurisdictionCode: null, subJurisdictionCode: null };
+  const britain = { global: false, jurisdictionCode: "GB", subJurisdictionCode: null };
+  const example: readonly SocialCredentialName[] = [
+    own("example-vu1", "VU1", "Väktarutbildning 1", "Security Guard Training 1", sweden),
+    own("example-vu2", "VU2", "Väktarutbildning 2", "Security Guard Training 2", sweden),
+    own("example-ov", "OV", "Ordningsvaktsförordnande", "Public Order Guard Appointment", sweden),
+    own(
+      "example-cpp",
+      "INTL_ASIS_CPP",
+      "Certified Protection Professional (CPP)",
+      "Certified Protection Professional (CPP)",
+      international,
+    ),
+    own(
+      "example-psp",
+      "INTL_ASIS_PSP",
+      "Physical Security Professional (PSP)",
+      "Physical Security Professional (PSP)",
+      international,
+    ),
+    own(
+      "example-sia",
+      null,
+      "SIA Licence — Security Guarding",
+      "SIA Licence — Security Guarding",
+      britain,
+    ),
   ];
 
   return (
@@ -136,9 +161,11 @@ export function HomePassportPreview() {
             </div>
           </div>
 
-          <CredentialConstellation
+          {/* ONE Passport, its credentials grouped by where they apply. */}
+          <PassportGroupedShields
             credentials={example}
-            ground="navy"
+            lang={l}
+            names="accessible"
             className="mt-5 border-t border-primary-foreground/15 pt-4"
           />
         </div>

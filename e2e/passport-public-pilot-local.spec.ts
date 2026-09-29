@@ -35,7 +35,7 @@
 //      previewed exactly as handed over: to a phone's share sheet as the PNG
 //      files themselves, and to a platform as a download with the plain
 //      instruction to add it, never as a pretend attachment; one credential,
-//      three, and a Passport of fifteen as a set of images with nothing cut;
+//      three, and a Passport of fifteen as ONE image with nothing cut;
 //      no link or QR code until the holder creates one and ticks it in, and
 //      that link opens nothing once it is revoked;
 //   H  another holder can read nothing of this Passport, change nothing, and
@@ -1210,10 +1210,7 @@ test.describe("the public pilot, on a real backend", () => {
     await expect(flow.locator('[data-merit-option^="experience:"]')).toHaveCount(0);
     await expect(flow.locator('input[type="checkbox"]:checked')).toHaveCount(0);
 
-    const preview = (format: string, place?: string) =>
-      flow.locator(
-        `[data-social-preview="${format}"]${place ? `[data-social-page="${place}"]` : ""}`,
-      );
+    const preview = (format: string) => flow.locator(`[data-social-preview="${format}"]`);
     const srcOf = async (format: string) => (await preview(format).getAttribute("src")) ?? "";
     const svgOf = async (format: string) =>
       decodeURIComponent((await srcOf(format)).replace(/^data:image\/svg\+xml;charset=utf-8,/, ""));
@@ -1232,7 +1229,7 @@ test.describe("the public pilot, on a real backend", () => {
     // ── One credential: one image, handed over as the PNG itself ─────────
     await flow.locator(`[data-merit-option="claim:${du}"] input`).check();
     await expect(preview("square")).toBeVisible({ timeout: 60_000 });
-    await expect(flow.locator("[data-social-set]")).toHaveAttribute("data-social-set", "1");
+    await expect(flow.locator("[data-social-passport]")).toHaveCount(1);
     expect(await svgOf("square"), "one image claims no place in a set").not.toContain(
       "data-social-page",
     );
@@ -1322,7 +1319,7 @@ test.describe("the public pilot, on a real backend", () => {
     await flow.locator('[data-social-format="square"]').click();
     await flow.locator(`[data-merit-option="claim:${vu1}"] input`).check();
     await expect.poll(() => shields("square"), { timeout: 60_000 }).toBe(3);
-    await expect(flow.locator("[data-social-set]")).toHaveAttribute("data-social-set", "1");
+    await expect(flow.locator("[data-social-passport]")).toHaveCount(1);
     const platforms = [
       ["linkedin", /^https:\/\/www\.linkedin\.com\/feed\/$/],
       ["x", /^https:\/\/twitter\.com\/intent\/tweet\?text=[^&]+$/],
@@ -1468,10 +1465,10 @@ test.describe("the public pilot, on a real backend", () => {
       await late.context.close();
     }
 
-    // ── More than three: a Passport of fifteen, shared as a set ───────────
+    // ── More than three: a Passport of fifteen, shared as ONE image ───────
     // Nothing is blocked and nothing selected is dropped: every credential
-    // valid today is drawn, three to an image, and every image is handed over
-    // as previewed.
+    // valid today is on the one image, grouped by where it applies, and that
+    // one image is handed over as previewed. No set, no "1 / 2".
     const large = await anotherPerson(browser, "en");
     try {
       const lp = large.page;
@@ -1481,96 +1478,87 @@ test.describe("the public pilot, on a real backend", () => {
       await signIn(lp, who("large"), "/passport/share");
       await lp.goto(`${BASE}/passport/share`);
       await lp.locator('[data-share-choice="social"]').click({ timeout: 60_000 });
-      const set = lp.locator("[data-social-flow]");
-      const boxes = set.locator('[data-merit-option^="claim:"] input');
+      const one = lp.locator("[data-social-flow]");
+      const boxes = one.locator('[data-merit-option^="claim:"] input');
       await expect(boxes).toHaveCount(15, { timeout: 60_000 });
       for (const box of await boxes.all()) await box.check();
-      await expect(set.locator('[data-merit-option^="claim:"] input:checked')).toHaveCount(15);
-      await expect(set.locator('[data-merit-option^="claim:"] input:disabled')).toHaveCount(0);
+      await expect(one.locator('[data-merit-option^="claim:"] input:checked')).toHaveCount(15);
+      await expect(one.locator('[data-merit-option^="claim:"] input:disabled')).toHaveCount(0);
       const current = Number(
         sql(
           `select count(*) from public.sp_claims where holder_user_id='${largeUid}' and lifecycle_state='active' and (valid_until is null or valid_until >= current_date)`,
         ),
       );
-      const images = Math.ceil(current / 3);
-      expect(images, "more than one image").toBeGreaterThan(1);
-      await expect(set.locator("[data-social-set]")).toHaveAttribute(
-        "data-social-set",
-        String(images),
-        { timeout: 60_000 },
+      expect(current, "more than three current credentials").toBeGreaterThan(3);
+      await expect(one.locator("[data-social-passport]")).toHaveCount(1, { timeout: 60_000 });
+      await expect(one.locator("[data-passport-one]")).toHaveText(
+        `All ${current} selected credentials are shown in one Security Passport, grouped by area.`,
       );
-      await expect(set.locator("[data-social-set-summary]")).toHaveText(
-        `${current} credentials are shown on ${images} images, three to each.`,
+      await expect(one.locator("[data-social-download]")).toBeEnabled({ timeout: 60_000 });
+      const shown = async () =>
+        (await one.locator('[data-social-preview="square"]').getAttribute("src")) ?? "";
+      const image = decodeURIComponent(
+        (await shown()).replace(/^data:image\/svg\+xml;charset=utf-8,/, ""),
       );
-      await expect(set.locator("[data-social-download]")).toBeEnabled({ timeout: 60_000 });
-      const shownOf = async (i: number) =>
-        (await set
-          .locator(`[data-social-preview="square"][data-social-page="${i}/${images}"]`)
-          .getAttribute("src")) ?? "";
-      let drawnShields = 0;
-      for (let i = 1; i <= images; i += 1) {
-        const image = decodeURIComponent(
-          (await shownOf(i)).replace(/^data:image\/svg\+xml;charset=utf-8,/, ""),
-        );
-        const count = (image.match(/data-shield-mark=/g) ?? []).length;
-        expect(count, `image ${i} holds at most three`).toBeLessThanOrEqual(3);
-        drawnShields += count;
-        expect(words(image)).toContain(`SECURITY PASSPORT · ${i} / ${images}`);
-        // As legible as one image alone: nothing drawn under 16px on 1080.
-        expect(
-          Math.min(...[...image.matchAll(/font-size="([\d.]+)"/g)].map((m) => Number(m[1]))),
-          `image ${i}: every text at least 16px`,
-        ).toBeGreaterThanOrEqual(16);
-        for (const absent of [
-          "Fiktiv Väktarskola AB",
-          "Fiktivt Training Centre",
-          "Fiktivt Utbildningscenter LLC",
-          largeUid,
-          "/p#",
-        ])
-          expect(image, `image ${i}: nothing private`).not.toContain(absent);
-      }
-      expect(drawnShields, "every credential valid today is on exactly one image").toBe(current);
-      await evidence(lp, "en-social-set");
+      expect(
+        (image.match(/data-passport-shield=/g) ?? []).length,
+        "every credential valid today is on the one image, exactly once",
+      ).toBe(current);
+      expect(image).toContain(`data-passport-credentials="${current}"`);
+      expect(image).toContain('data-passport-fits="true"');
+      expect(image).not.toContain("data-social-page");
+      expect(words(image)).not.toMatch(/SECURITY PASSPORT · \d+ \/ \d+/);
+      // Grouped: more than one heading, and every shield inside a group.
+      expect(Number(/data-passport-groups="(\d+)"/.exec(image)?.[1])).toBeGreaterThan(1);
+      await expect(one.locator("[data-passport-group-list] [data-passport-group]")).not.toHaveCount(
+        0,
+      );
+      // As legible as a small Passport: nothing drawn under the floor on 1080.
+      expect(
+        Math.min(...[...image.matchAll(/font-size="([\d.]+)"/g)].map((m) => Number(m[1]))),
+        "every text at least 14px",
+      ).toBeGreaterThanOrEqual(14);
+      for (const absent of [
+        "Fiktiv Väktarskola AB",
+        "Fiktivt Training Centre",
+        "Fiktivt Utbildningscenter LLC",
+        largeUid,
+        "/p#",
+      ])
+        expect(image, "nothing private").not.toContain(absent);
+      await evidence(lp, "en-social-one-passport");
 
-      const byName = (files: readonly { suggestedFilename(): string }[]) =>
-        files.map((f) => f.suggestedFilename()).sort();
-      const names = Array.from(
-        { length: images },
-        (_, i) => `cqrityjob-passport-square-${i + 1}-of-${images}.png`,
+      const [downloaded] = await downloadsDuring(lp, 1, () =>
+        one.locator("[data-social-download]").click(),
       );
-      const downloaded = await downloadsDuring(lp, images, () =>
-        set.locator("[data-social-download]").click(),
-      );
-      expect(byName(downloaded)).toEqual([...names].sort());
-      for (const file of downloaded) {
-        const i = Number(/-(\d+)-of-/.exec(file.suggestedFilename())?.[1]);
-        expect(
-          await pixelsDiffering(lp, await pngOf(file), await shownOf(i), 1080, 1080),
-          `image ${i}: the download is the preview`,
-        ).toBe(0);
-      }
+      expect(downloaded!.suggestedFilename()).toBe("cqrityjob-passport-square.png");
+      expect(
+        await pixelsDiffering(lp, await pngOf(downloaded!), await shown(), 1080, 1080),
+        "the download is the preview",
+      ).toBe(0);
       if (phone) {
-        await set.locator("[data-social-device]").click();
-        await expect(set.locator('[data-social-notice="attached"]')).toHaveText(
-          "The images are now in the app you chose. Finish the post there.",
+        await one.locator("[data-social-device]").click();
+        await expect(one.locator('[data-social-notice="attached"]')).toHaveText(
+          "The image is now in the app you chose. Finish the post there.",
         );
         const [sheet] = await lp.evaluate(
           () => (window as unknown as { __shared: SharedRecord[] }).__shared,
         );
-        expect(sheet!.files.map((f) => f.name)).toEqual(names);
-        for (const [i, f] of sheet!.files.entries())
-          expect(
-            await pixelsDiffering(lp, f.png, await shownOf(i + 1), 1080, 1080),
-            `image ${i + 1}: the share sheet was handed the previewed image`,
-          ).toBe(0);
+        expect(
+          sheet!.files.map((f) => f.name),
+          "ONE file to the share sheet",
+        ).toEqual(["cqrityjob-passport-square.png"]);
+        expect(
+          await pixelsDiffering(lp, sheet!.files[0]!.png, await shown(), 1080, 1080),
+          "the share sheet was handed the previewed image",
+        ).toBe(0);
       }
-      const posted = await downloadsDuring(lp, images, () =>
-        set.locator('[data-social-channel="linkedin"]').click(),
+      const posted = await downloadsDuring(lp, 1, () =>
+        one.locator('[data-social-channel="linkedin"]').click(),
       );
-      expect(byName(posted)).toEqual([...names].sort());
-      await expect(set.locator('[data-social-notice="added_by_holder"]')).toHaveText(
-        "Your Security Passport images are ready. Add the images to your post.",
+      expect(posted.map((f) => f.suggestedFilename())).toEqual(["cqrityjob-passport-square.png"]);
+      await expect(one.locator('[data-social-notice="added_by_holder"]')).toHaveText(
+        "Your Security Passport image is ready. Add the image to your post.",
       );
       expect(
         (await lp.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).at(-1),
@@ -1580,8 +1568,8 @@ test.describe("the public pilot, on a real backend", () => {
           () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
         ),
       ).toBeLessThanOrEqual(1);
-      await evidence(lp, "en-social-set-ready");
-      expect(linksOf(largeUid), "sharing the set created no link").toBe(largeLinks);
+      await evidence(lp, "en-social-one-passport-ready");
+      expect(linksOf(largeUid), "sharing the Passport created no link").toBe(largeLinks);
     } finally {
       await large.context.close();
     }
