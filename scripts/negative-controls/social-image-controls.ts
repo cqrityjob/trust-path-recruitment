@@ -1,75 +1,126 @@
+/**
+ * Negative controls for the ONE-Passport image (owner decision, 2026-09-29).
+ *
+ * Each mutation reintroduces one defect the guard exists to catch: the old
+ * three-credential cut, a second image ("1 / 2"), a dropped or duplicated
+ * credential, a credential in the wrong jurisdiction group, every group
+ * flattened into one, a private field on the image, critical text below the
+ * readability floor, a shared image that is not the preview, a share sheet
+ * handed several files, or a link created without the holder's press.
+ *
+ * Run: bun run negative-controls:social-image
+ */
 import { runControls, type Mutation } from "./runner";
 
 const guard = "passport-social-image:check";
 const DRAWING = "src/components/security-passport/social/SocialCardSvg.tsx";
 const MODEL = "src/lib/security-passport/social.ts";
+const GROUPS = "src/lib/security-passport/passport-groups.ts";
 const CHANNELS = "src/lib/security-passport/share-channels.ts";
+const FLOW = "src/components/security-passport/live/SocialShareFlow.tsx";
+
 const mutations: readonly Mutation[] = [
+  // ── The wrong model, and every way back to it ──────────────────────────
   {
-    id: "SOCIAL-QR-WITHOUT-LINK",
-    defect: "the image draws the QR code it was handed even when the holder chose no link",
-    file: DRAWING,
-    find: "const qr = link ? p.qrDataUrl : null;",
-    replace: "const qr = p.qrDataUrl;",
-    guard,
-    expect: "no link and no QR code when the model carries none",
-  },
-  {
-    id: "SOCIAL-RAISED-TO-VERIFIED",
-    defect: "every shield on the image is drawn as verified, whatever the credential's standing",
-    file: DRAWING,
-    find: "<ShieldMark state={c.state} size={r(shield)} />",
-    replace: '<ShieldMark state="verified" size={r(shield)} />',
-    guard,
-    expect: "each shield wears its own state",
-  },
-  {
-    id: "SOCIAL-HISTORY-PUBLISHED",
-    defect: "an expired credential is drawn on the image that cannot be recalled",
-    file: MODEL,
-    find: 'return credential.lifecycle === "active";',
-    replace: "return credential.lifecycle.length > 0;",
-    guard,
-    expect: "a credential that is no longer current is never drawn",
-  },
-  {
-    id: "SOCIAL-NO-SNAPSHOT-LINE",
-    defect: "an image without a link no longer says it is a snapshot",
-    file: "src/lib/security-passport/share-image.ts",
-    find: 'snapshotNote: pt("social.snapshotNote"),',
-    replace: 'snapshotNote: "",',
-    guard,
-    expect: "an image without a link says it is a snapshot",
-  },
-  {
-    id: "SOCIAL-SELECTION-CUT",
+    id: "ONE-PASSPORT-THREE-CUT",
     defect: "the image quietly keeps the first three of the holder's selection and drops the rest",
     file: MODEL,
     find: "  const drawn = credentials.filter(isSocialPublishable).map((c) => ({",
     replace: "  const drawn = credentials.filter(isSocialPublishable).slice(0, 3).map((c) => ({",
     guard,
-    expect: "every selected credential that is current is drawn, in the order given: none is cut",
+    expect: "the model carries every selected credential once, in order: none is cut",
   },
   {
-    id: "SOCIAL-IMAGE-OVERFULL",
-    defect: "a selection of more than three is crammed onto one image instead of a set",
-    file: MODEL,
-    find: "  if (count === 1) return [{ ...model, page: null }];",
-    replace: "  if (count >= 1) return [{ ...model, page: null }];",
+    id: "ONE-PASSPORT-FOURTH-DROPPED",
+    defect: "credential number four never reaches the drawing: the grouping drops it",
+    file: GROUPS,
+    find: "  for (const c of credentials) {\n    const scope = resolveCredentialScope(",
+    replace:
+      "  for (const c of credentials.filter((_, i) => i !== 3)) {\n    const scope = resolveCredentialScope(",
     guard,
-    expect: "more than one image holds becomes a set, three to an image",
+    expect: "selected credentials are drawn as 4 shields on the one image",
   },
   {
-    id: "SOCIAL-SET-UNMARKED",
-    defect: "an image of a set no longer says which of the set it is",
+    id: "ONE-PASSPORT-PAGES-AGAIN",
+    defect: "the drawing marks itself as image 1 of a set again",
     file: DRAWING,
-    find: "        ? `${p.strings.brand.toUpperCase()} · ${page.index} / ${page.count}`\n",
-    replace: "        ? p.strings.brand.toUpperCase()\n",
+    find: "      {p.strings.brand.toUpperCase()}\n    </Text>,\n  );\n  y += 26 * iu;",
+    replace:
+      "      {`${p.strings.brand.toUpperCase()} · 1 / ${Math.max(2, Math.ceil(p.model.credentials.length / 3))}`}\n    </Text>,\n  );\n  y += 26 * iu;",
     guard,
-    expect: "says it is image 1 of 3",
+    expect: 'no page marker, no "1 / 2", no set',
   },
   {
-    id: "SOCIAL-PRIVATE-ON-IMAGE",
+    id: "ONE-PASSPORT-THREE-PER-IMAGE",
+    defect:
+      "the drawing draws only the first three credentials, the old per-image limit, and leaves the rest to an image that no longer exists",
+    file: DRAWING,
+    find: "  const groups = groupPassportCredentials(p.model.credentials, p.lang);",
+    replace: "  const groups = groupPassportCredentials(p.model.credentials.slice(0, 3), p.lang);",
+    guard,
+    expect: "selected credentials are drawn as 4 shields on the one image",
+  },
+  {
+    id: "ONE-PASSPORT-DUPLICATED",
+    defect: "the first credential is drawn twice: once in its group and once more at the end of it",
+    file: GROUPS,
+    find: '  const placed = [...groups.entries()].filter(([key]) => key !== "not_stated");',
+    replace:
+      '  groups.values().next().value?.credentials.push(credentials[0]!);\n  const placed = [...groups.entries()].filter(([key]) => key !== "not_stated");',
+    guard,
+    expect: "no credential is drawn twice",
+  },
+  // ── Grouping is controlled metadata ────────────────────────────────────
+  {
+    id: "ONE-PASSPORT-WRONG-JURISDICTION",
+    defect: "a Dubai cadre card is grouped under the country, not its exact scope",
+    file: GROUPS,
+    find: '  if (scope.kind === "jurisdiction") return `jurisdiction:${scope.code}`;',
+    replace:
+      '  if (scope.kind === "jurisdiction") return `jurisdiction:${scope.code?.slice(0, 2)}`;',
+    guard,
+    expect: "every shield is drawn in the group its own controlled scope names",
+  },
+  {
+    id: "ONE-PASSPORT-GROUPS-FLATTENED",
+    defect: "every credential is put into one group under the first credential's flag",
+    file: GROUPS,
+    find: "    const key = passportGroupKey(scope);",
+    replace: '    const key = "jurisdiction:SE";',
+    guard,
+    expect: "same-scope credentials share one group",
+  },
+  {
+    id: "ONE-PASSPORT-GLOBAL-GUESSED",
+    defect: "a credential with no stated jurisdiction is grouped as international",
+    file: GROUPS,
+    find: '  if (scope.kind === "global") return "global";',
+    replace: '  if (scope.kind === "global" || scope.kind === "not_stated") return "global";',
+    guard,
+    expect: "an unplaced credential is neither",
+  },
+  // ── Trust stays on the shield ──────────────────────────────────────────
+  {
+    id: "ONE-PASSPORT-RAISED-TO-VERIFIED",
+    defect: "every shield on the image is drawn as verified, whatever the credential's standing",
+    file: DRAWING,
+    find: "              <ShieldMark state={c.state} size={r(shield)} />",
+    replace: '              <ShieldMark state="verified" size={r(shield)} />',
+    guard,
+    expect: "each shield wears its own state",
+  },
+  {
+    id: "ONE-PASSPORT-WORD-PER-GROUP",
+    defect: "the trust word is drawn once per group, from the first shield, instead of per shield",
+    file: DRAWING,
+    find: "              {cell.word.text}",
+    replace: "              {block.cells[0]!.word.text}",
+    guard,
+    expect: "the word is printed per shield, never per group",
+  },
+  // ── Privacy ────────────────────────────────────────────────────────────
+  {
+    id: "ONE-PASSPORT-PRIVATE-ON-IMAGE",
     defect: "the issuer a credential was stated with is printed on the public image",
     file: MODEL,
     find: "    nameSv: c.title,\n    nameEn: c.title,",
@@ -77,68 +128,101 @@ const mutations: readonly Mutation[] = [
     guard,
     expect: "none of it is drawn",
   },
+  // ── Readability ────────────────────────────────────────────────────────
   {
-    id: "SOCIAL-PLATFORM-CLAIMS-ATTACHED",
-    defect: "a platform button tells the holder the image went along when only a page was opened",
+    id: "ONE-PASSPORT-BELOW-FLOOR",
+    defect: "a name that does not fit is shrunk without limit instead of stopping at the floor",
+    file: DRAWING,
+    find: "  const shrunk = Math.max(floor, (maxW / text.length - spacing) / em);",
+    replace: "  const shrunk = (maxW / text.length - spacing) / em;",
+    guard,
+    expect: "no text is drawn below the readability floor",
+  },
+  {
+    id: "ONE-PASSPORT-FLOOR-LOWERED",
+    defect:
+      "the readability floor is lowered so a crowded format shrinks text instead of saying it is crowded",
+    file: DRAWING,
+    find: "export const READABILITY_FLOOR = 14;",
+    replace: "export const READABILITY_FLOOR = 8;",
+    guard,
+    expect: "the approved readability floor is 14px per 1080",
+  },
+  // ── What is shared is what is previewed, and it is one file ────────────
+  {
+    id: "ONE-PASSPORT-SHARE-NOT-PREVIEW",
+    defect:
+      "the share sheet and the platforms are handed a file made from a different drawing than the preview",
+    file: FLOW,
+    find: "  const file = svg && prepared && prepared.svg === svg ? prepared.file : null;",
+    replace: "  const file = prepared ? prepared.file : null;",
+    guard,
+    expect: "the file handed over is the one made from the SVG on screen",
+  },
+  {
+    id: "ONE-PASSPORT-SHEET-GETS-A-SET",
+    defect: "the device share sheet is handed the image twice, as a set of files",
     file: CHANNELS,
-    find: '          ? "social.ready.postMany"\n          : "social.ready.post",',
-    replace: '          ? "social.device.doneMany"\n          : "social.device.done",',
+    find: "    files: [file],",
+    replace: "    files: [file, file],",
+    guard,
+    expect: "the device share is handed ONE image file",
+  },
+  {
+    id: "ONE-PASSPORT-PLATFORM-MANY",
+    defect: "LinkedIn is told the images are ready, as if a set were prepared",
+    file: CHANNELS,
+    find: '    noticeKey: channel === "email" ? "social.ready.email" : "social.ready.post",',
+    replace: '    noticeKey: channel === "email" ? "social.ready.email" : "social.device.hint",',
     guard,
     expect: "never claims the image went along; says to add it",
   },
   {
-    id: "SOCIAL-DEVICE-SHARE-WITHOUT-FILES",
-    defect: "the device share sheet is given the sentence but not the image files",
-    file: CHANNELS,
-    find: "    files: [...files],",
-    replace: "    files: [],",
+    id: "ONE-PASSPORT-FILE-OF-SET",
+    defect: "the downloaded file is named as one of a set again",
+    file: "src/lib/security-passport/share-image.ts",
+    find: "  return `cqrityjob-passport-${format}.png`;",
+    replace: "  return `cqrityjob-passport-${format}-1-of-2.png`;",
     guard,
-    expect: "the device share is handed the image files themselves",
+    expect: "no '-1-of-2' name exists",
   },
+  // ── A link only on the holder's own press ──────────────────────────────
   {
-    id: "SOCIAL-LINK-IMPLICIT",
+    id: "ONE-PASSPORT-LINK-IMPLICIT",
     defect: "downloading the image quietly creates a public link as well",
-    file: "src/components/security-passport/live/SocialShareFlow.tsx",
-    find: "  function download() {\n    if (!files) return;",
-    replace: "  function download() {\n    link.onCreate();\n    if (!files) return;",
+    file: FLOW,
+    find: "  function download() {\n    if (!file) return;",
+    replace: "  function download() {\n    link.onCreate();\n    if (!file) return;",
     guard,
     expect: "the social flow creates a link from one place",
   },
   {
-    id: "SOCIAL-NAME-OVERFLOW",
-    defect: "a holder's long name runs past the edge of the card instead of being drawn smaller",
+    id: "ONE-PASSPORT-QR-WITHOUT-LINK",
+    defect: "the image draws the QR code it was handed even when the holder chose no link",
     file: DRAWING,
-    find: "  const nameSize = Math.min(fullName, headW / (widestName * BOLD_CHAR_EM));",
-    replace: "  const nameSize = fullName;",
+    find: "  const qr = link ? p.qrDataUrl : null;",
+    replace: "  const qr = p.qrDataUrl;",
     guard,
-    expect: "the holder's long name stays inside the card",
+    expect: "no link and no QR code when the model carries none",
   },
   {
-    id: "SOCIAL-CREDENTIAL-NAME-OVERFLOW",
-    defect: "one long word in a credential's name runs into the next column",
-    file: DRAWING,
-    find: "        if (line.length * 21 * u * 0.58 > slotW - 16 * u) columnsFit = false;\n",
-    replace: "",
+    id: "ONE-PASSPORT-NO-SNAPSHOT-LINE",
+    defect: "an image without a link no longer says it is a snapshot",
+    file: "src/lib/security-passport/share-image.ts",
+    find: 'snapshotNote: pt("social.snapshotNote"),',
+    replace: 'snapshotNote: "",',
     guard,
-    expect: "every line of a credential's name stays inside its own column",
+    expect: "an image without a link says it is a snapshot",
   },
+  // ── Accessibility ──────────────────────────────────────────────────────
   {
-    id: "SOCIAL-WORD-OVERFLOW",
-    defect: "a long trust word runs into the next column instead of the card being drawn smaller",
-    file: DRAWING,
-    find: "      if (word.length * (17 * u * 0.72 + 2.4 * u) > slotW - 16 * u) columnsFit = false;\n",
-    replace: "",
+    id: "ONE-PASSPORT-NO-WORDS-BESIDE-PREVIEW",
+    defect: "the preview loses its textual companion, so a screen reader depends on the drawing",
+    file: FLOW,
+    find: "                <figcaption>\n                  <PassportGroupList",
+    replace: "                <figcaption hidden>\n                  {null && <PassportGroupList",
     guard,
-    expect: "every trust word stays inside its own column",
-  },
-  {
-    id: "SOCIAL-PLACE-OVERFLOW",
-    defect: "a long place name runs into the next column instead of the card being drawn smaller",
-    file: DRAWING,
-    find: "        if (markW + 8 * u + labelW > slotW - 16 * u) columnsFit = false;\n",
-    replace: "",
-    guard,
-    expect: "every place stays inside its own column",
+    expect: "the preview is accompanied by the Passport in words",
   },
 ];
 

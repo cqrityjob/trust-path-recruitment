@@ -492,7 +492,8 @@ for (const rel of SURFACES) {
 // None may grow a private mapping or print a raw code.
 for (const [rel, shared] of [
   ["src/components/security-passport/social/SocialFrame.tsx", /socialImageStrings\(/],
-  ["src/components/security-passport/social/SocialCardSvg.tsx", /resolveCredentialScope\(/],
+  ["src/components/security-passport/social/SocialCardSvg.tsx", /groupPassportCredentials\(/],
+  ["src/lib/security-passport/passport-groups.ts", /resolveCredentialScope\(/],
   ["src/components/security-passport/live/LinkedInShareSection.tsx", /<SocialFrame\b/],
 ] as const) {
   const src = readFileSync(join(ROOT, rel), "utf8");

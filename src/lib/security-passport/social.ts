@@ -101,16 +101,6 @@ export interface SocialCardModel {
   /** True when the underlying share is no longer active — the card then
    *  leads with "check current status" rather than the milestone. */
   readonly staleWarning: boolean;
-  /** Which image of a set this is, or NULL for an image that stands alone.
-   *  One image draws at most `SOCIAL_CREDENTIALS_PER_IMAGE` credentials; a
-   *  larger selection is drawn as a set (`socialCardPages`), never cut short. */
-  readonly page: SocialCardPage | null;
-}
-
-export interface SocialCardPage {
-  /** 1-based. */
-  readonly index: number;
-  readonly count: number;
 }
 
 /** Field names that must NEVER appear in a serialized social card. Exported
@@ -176,10 +166,10 @@ export interface SocialCardOptions {
   readonly privacyMode: PrivacyMode;
   /** Localised fallback used when privacyMode is "anonymous". */
   readonly anonymousLabel: string;
-  /** How many verified credential names the card names when it chooses for
-   *  the holder (the fixture card). Capped at three so a card nobody chose the
-   *  contents of stays a summary rather than a dossier. A holder's own
-   *  selection is never capped: see `socialCardPages`. */
+  /** How many verified credential names the fixture card names when it
+   *  chooses for the holder. Unset, it names every one: ONE holder has ONE
+   *  Passport, and nothing in it is cut to fit a drawing. A holder's own
+   *  selection (`buildSelectedSocialCard`) is never capped at all. */
   readonly maxCredentials?: number;
   readonly staleWarning?: boolean;
   /** The live recipient URL for a real, revocable disclosure, or null for
@@ -192,20 +182,16 @@ export interface SocialCardOptions {
   readonly verifyUrl?: string | null;
 }
 
-/** The fixture card's own choice (`buildSocialCard`): it picks for the holder,
- *  so it names a few rather than everything. The sharing centre never cuts a
- *  holder's selection -- see `SOCIAL_CREDENTIALS_PER_IMAGE`. */
-const MAX_SOCIAL_CREDENTIALS = 3;
-
 /**
- * How many credentials ONE image draws: the shared card's three columns, each
- * wide enough for a shield, a name over three lines, a place and a trust word.
+ * ── ONE HOLDER = ONE SECURITY PASSPORT = ONE SHAREABLE IMAGE ───────────
  *
- * A limit of the drawing, not of the Passport. The holder chooses what to
- * share; a selection of more is drawn as a set of images, this many to each,
- * in the order the shared presentation lists them (`socialCardPages`).
+ * There is deliberately no "credentials per image" here. An earlier version
+ * drew three to an image and a larger selection as a set ("SECURITY PASSPORT
+ * · 1 / 2"), because the drawing had three columns. That mistook a layout
+ * constraint for a product rule. The Passport is one document; the drawing
+ * (SocialCardSvg) adapts its density to the credentials, grouped by where
+ * they apply (passport-groups.ts), and never the other way round.
  */
-export const SOCIAL_CREDENTIALS_PER_IMAGE = 3;
 
 /**
  * Source-confirmed and current on the day it is read: what may be NAMED AS
@@ -256,7 +242,7 @@ export function buildSocialCard(
   // be recalled. That is the single worst failure this module could have.
   const verifiedCredentials = holder.claims
     .filter((c) => isVerifiedAndCurrent(c, evaluationOn))
-    .slice(0, options.maxCredentials ?? MAX_SOCIAL_CREDENTIALS)
+    .slice(0, options.maxCredentials ?? Infinity)
     .map((c) => ({
       id: c.id,
       code: c.credentialCode,
@@ -302,7 +288,6 @@ export function buildSocialCard(
         ? `${FIXTURE_VERIFY_ORIGIN}/${fixtureToken(holder.id)}`
         : options.verifyUrl,
     staleWarning: options.staleWarning ?? false,
-    page: null,
   };
 }
 
@@ -315,10 +300,9 @@ export function buildSocialCard(
  * presentation (`buildRecipientPresentation` over the server's preview), the
  * model the recipient card draws from: the same state, the same word, the
  * same shield and scope. Of those, only what `isSocialPublishable` admits --
- * and every one of them: one image holds `SOCIAL_CREDENTIALS_PER_IMAGE`, and a
- * larger selection becomes a set of images (`socialCardPages`), not a shorter
- * list. Anything the holder did not select was never in the preview, so it
- * cannot appear.
+ * and EVERY one of them, on the ONE image: never a shorter list, never a set.
+ * Anything the holder did not select was never in the preview, so it cannot
+ * appear.
  *
  * `verifiedCredentials` keeps its meaning under this builder too: only the
  * drawn credentials the presentation calls verified, which today -- with no
@@ -352,33 +336,6 @@ export function buildSelectedSocialCard(
     verifiedCredentials: drawn.filter((c) => c.state === "verified"),
     credentials: drawn,
   };
-}
-
-/**
- * The image or images a card is shared as: one image when its credentials fit
- * one, otherwise a set, `SOCIAL_CREDENTIALS_PER_IMAGE` to each image, in order.
- *
- * Every image of a set is a whole card -- the holder, the footer, the link and
- * its QR code if the holder chose one -- because a platform may show any one
- * of them alone. Each says which of the set it is. Nothing is added: the pages
- * divide the credentials the card already carries, and together they carry
- * every one of them exactly once.
- */
-export function socialCardPages(model: SocialCardModel): readonly SocialCardModel[] {
-  const count = Math.max(1, Math.ceil(model.credentials.length / SOCIAL_CREDENTIALS_PER_IMAGE));
-  if (count === 1) return [{ ...model, page: null }];
-  return Array.from({ length: count }, (_, i) => {
-    const credentials = model.credentials.slice(
-      i * SOCIAL_CREDENTIALS_PER_IMAGE,
-      (i + 1) * SOCIAL_CREDENTIALS_PER_IMAGE,
-    );
-    return {
-      ...model,
-      credentials,
-      verifiedCredentials: credentials.filter((c) => c.state === "verified"),
-      page: { index: i + 1, count },
-    };
-  });
 }
 
 /** Prototype-only share destinations. No production API is contacted and no

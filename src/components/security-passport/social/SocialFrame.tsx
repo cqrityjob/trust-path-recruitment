@@ -16,14 +16,14 @@
 // Passport model, with its issuers, dates, employers and claim ids, is not
 // in scope: it cannot be rendered here because it is not passed here.
 //
-// ── EVERY FORMAT CARRIES THE SAME TRUST CONTEXT ────────────────────────
+// ── EVERY FORMAT CARRIES THE SAME PASSPORT ─────────────────────────────
 //
-// Layout changes between square, story, OG and compact. The required
-// context does not: brand, holder label, profession, jurisdiction, each
-// credential's shield, scope and trust word, and either the link to check
-// at source or the line saying the image is a snapshot. A cached image
-// outliving its credential is the whole risk this wording exists to cover,
-// so no format is permitted to drop it for space.
+// Layout changes between square, story, OG and compact. The Passport does
+// not: brand, holder label, profession, jurisdiction, EVERY selected
+// credential's shield inside its jurisdiction group with its own trust word,
+// and either the link to check at source or the line saying the image is a
+// snapshot. One holder, one Passport, one image in each format: no format
+// drops a credential for space, and none turns the Passport into a set.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
@@ -55,7 +55,7 @@ export function SocialFrame({
   previewWidth: number;
   /** The image's language; the reader's when omitted. */
   lang?: PassportLang;
-  /** The preview's text alternative, when it is one image of a set. */
+  /** The preview's text alternative; the reader's own line when omitted. */
   alt?: string;
   /** The SVG this frame shows, once it is complete (a link's QR code drawn),
    *  or null while it is not. The one string a download may rasterise. */
@@ -115,7 +115,6 @@ export function SocialFrame({
           width={spec.width}
           height={spec.height}
           data-social-preview={format}
-          data-social-page={model.page ? `${model.page.index}/${model.page.count}` : undefined}
           data-social-link={model.verifyUrl ? "included" : "none"}
           className="block h-auto w-full"
         />
