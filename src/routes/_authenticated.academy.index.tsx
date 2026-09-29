@@ -35,6 +35,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { BookOpen, Compass, GraduationCap, ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
+import { formatDate } from "@/lib/job-intelligence/date-format";
 import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
 import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
@@ -321,6 +322,24 @@ function AssessmentCard({ row, lang }: { row: AcademyWorkItem; lang: string }) {
               <span className="font-medium">
                 {(lang === "en" ? row.jobTitleEn : row.jobTitleSv) ?? ""}
               </span>
+            </p>
+          )}
+          {/* The employer's deadline, said to the person it applies to (AS-02).
+              The employer's own panel already reads "Utgången" past it; the
+              candidate must see the same date. Informational: nothing here
+              refuses an answer after the day, and the copy says so. */}
+          {row.deadline && !done && (
+            <p
+              className={
+                "mt-1 text-[13px] " +
+                (Date.parse(row.deadline) < Date.now() ? "text-destructive" : "text-muted-foreground")
+              }
+              data-testid="assessment-deadline"
+            >
+              {Date.parse(row.deadline) < Date.now()
+                ? t("academy.home.deadlinePassed")
+                : t("academy.home.deadline")}{" "}
+              <span className="font-medium">{formatDate(row.deadline, lang === "en" ? "en" : "sv")}</span>
             </p>
           )}
         </div>

@@ -242,7 +242,12 @@ export function ApplicationAssessmentPanel({
         <p className="mt-2 text-[13px] text-muted-foreground">{t("journey.noAssessmentYet")}</p>
       )}
 
-      {
+      {/* A test is for a candidate still in the process. When the application
+          has been decided on or withdrawn, or the recruitment is completed,
+          the action goes and the panel says why (AS-01). The database refuses
+          the same cases (SCP_APPLICATION_NOT_OPEN, SCP_RECRUITMENT_COMPLETED),
+          so this is the explanation, not the guard. */}
+      {canAssign ? (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -254,7 +259,11 @@ export function ApplicationAssessmentPanel({
             {t("sendTest.action")}
           </button>
         </div>
-      }
+      ) : (
+        <p className="mt-3 text-[13px] text-muted-foreground" data-testid="send-test-closed">
+          {t("sendTest.closedApplication")}
+        </p>
+      )}
       {sending && (
         <SendTestDialog
           employerId={employerId}

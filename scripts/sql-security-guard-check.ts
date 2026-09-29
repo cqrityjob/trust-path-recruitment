@@ -75,6 +75,13 @@ const ANON_EXECUTABLE_ALLOWLIST = new Set([
   "employer_is_active_status",
   "cd_record_funnel_event",
   "cd_submit_test_feedback",
+  // 20261222090000: the Career Discovery release-control state. Returns one
+  // of three release words (internal_test / public / paused) from a
+  // single-row policy table no client role can read; takes no argument,
+  // writes nothing, names nobody. The anonymous assessment entrance needs
+  // it to say honestly whether the instrument is paused. Pinned in the same
+  // words by security_hardening_test S3.1 and the method-library ML10.8.
+  "cd_access_state",
 ]);
 
 /**
