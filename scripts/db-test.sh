@@ -1745,6 +1745,19 @@ echo "    ok  and the suite refuses to pass without the migration (negative cont
 # rec_submit_application with named fields. Stood down ALONE here so 5l-ter's
 # own rollback count still sees zero rec_* functions; reapplied, and its
 # suite run, after 5l-ter.
+# 20261226090000 (JB-02 CONTRACT: the two note columns leave the authenticated
+# grant) is stood down FIRST -- its rollback restores the table grants -- so
+# the EXPAND rollback below can drop the functions with the notes readable
+# again, and 5l-ter's suites run against the grants they were written for.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261226090000_application_notes_column_privileges_rollback.sql >/dev/null
+jb02c_left="$(psql_q -d "$TEST_DB" -Atc "SELECT CASE WHEN has_column_privilege('authenticated','public.job_applications','employer_note','SELECT') AND has_column_privilege('authenticated','public.job_application_status_events','note','SELECT') THEN 0 ELSE 1 END")"
+[ "$jb02c_left" = "0" ] || { echo "FAIL: 20261226090000 rollback did not restore the note columns to authenticated"; exit 1; }
+echo "    ok  application note column privileges stood down alone; the notes are granted again"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_notes_column_privileges_test.sql >/dev/null 2>&1; then
+  echo "FAIL: the application note column privileges suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the suite refuses to pass without the migration (negative control)"
 psql_q -d "$TEST_DB" -f supabase/rollback/20261223090000_application_notes_employer_only_rollback.sql >/dev/null
 jb02_left="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_application_status_events','rec_application_employer_note')")"
 [ "$jb02_left" = "0" ] || { echo "FAIL: 20261223090000 rollback left $jb02_left employer read function(s) behind"; exit 1; }
@@ -1876,6 +1889,9 @@ echo "    ok  application note reads (JB-02 EXPAND) migration reapplied"
 # And the candidate's application context, on top of that.
 psql_q -d "$TEST_DB" -f supabase/migrations/20261224090000_candidate_application_context.sql >/dev/null
 echo "    ok  candidate application context migration reapplied"
+# And the column boundary on top of the reads.
+psql_q -d "$TEST_DB" -f supabase/migrations/20261226090000_application_notes_column_privileges.sql >/dev/null
+echo "    ok  application note column privileges (JB-02 CONTRACT) migration reapplied"
 
 # ---------------------------------------------------------------------------
 # 5l-bis-4. The receipt e-mail under a REAL race: two sessions, two processes
@@ -5650,6 +5666,36 @@ if [ "$JB01_RC" -ne 0 ]; then
 fi
 [ "$JB01_PASSED" -ge 14 ] || { echo "$JB01_OUT"; echo "FAIL: candidate application context assertion shortfall: $JB01_PASSED (floor 14)" >&2; exit 1; }
 echo "    ok  $JB01_PASSED candidate application context assertions passed"
+
+# ---------------------------------------------------------------------------
+echo "==> Running application note column privilege assertions (JB-02 CONTRACT)"
+set +e
+JB02C_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_notes_column_privileges_test.sql 2>&1)"
+JB02C_RC=$?
+set -e
+echo "$JB02C_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+JB02C_PASSED="$(echo "$JB02C_OUT" | grep -c "ok  " || true)"
+if [ "$JB02C_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the application note column privileges suite exited with code ${JB02C_RC}." >&2
+  echo "$JB02C_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  exit 1
+fi
+[ "$JB02C_PASSED" -ge 18 ] || { echo "$JB02C_OUT"; echo "FAIL: application note column privileges assertion shortfall: $JB02C_PASSED (floor 18)" >&2; exit 1; }
+echo "    ok  $JB02C_PASSED application note column privilege assertions passed"
+# The CONTRACT refuses to apply without the EXPAND: drop the reads, expect the precondition.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261226090000_application_notes_column_privileges_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20261223090000_application_notes_employer_only_rollback.sql >/dev/null
+set +e
+JB02C_PRE="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/migrations/20261226090000_application_notes_column_privileges.sql 2>&1)"
+JB02C_PRE_RC=$?
+set -e
+if [ "$JB02C_PRE_RC" -eq 0 ] || ! echo "$JB02C_PRE" | grep -q "JB02_CONTRACT_PRECONDITION"; then
+  echo "FAIL: 20261226090000 applied without 20261223090000 (expected JB02_CONTRACT_PRECONDITION)" >&2; exit 1
+fi
+echo "    ok  the CONTRACT refuses to apply without the EXPAND (JB02_CONTRACT_PRECONDITION)"
+psql_q -d "$TEST_DB" -f supabase/migrations/20261223090000_application_notes_employer_only.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20261226090000_application_notes_column_privileges.sql >/dev/null
+echo "    ok  both halves re-applied in order"
 
 echo "==> Verifying job advertisement archiving"
 set +e

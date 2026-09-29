@@ -2379,6 +2379,14 @@
       "rollback": "supabase/rollback/20261225090000_assessment_assign_requires_open_application_rollback.sql",
       "verify": "SELECT pg_get_functiondef('public.scp_employer_assign(uuid,uuid,text,timestamptz,text,text,uuid,text,uuid,uuid)'::regprocedure) LIKE '%SCP_APPLICATION_NOT_OPEN%'; -- expect true. No table, policy or row changes.",
       "note": "AS-01 of the 2026-09-28 UAT: a test could be sent to a rejected, hired or withdrawn application and into a completed recruitment. Replaces scp_employer_assign() (body verbatim from 20261209090000) with two refusals inside the application block: SCP_APPLICATION_NOT_OPEN unless the application is submitted, reviewing or interview (the workspace's UNRESOLVED_STATUSES), and SCP_RECRUITMENT_COMPLETED when recruitment_settings.completion_state is not open. Checked before the idempotent replay, so a re-send to a closed application is refused, not replayed. Introduces no object. The application at the same commit hides the action and names both refusals; it works against the old body too (it only loses the guard)."
+    },
+    {
+      "file": "20261226090000_application_notes_column_privileges.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20261226090000_application_notes_column_privileges_rollback.sql",
+      "verify": "SELECT has_column_privilege('authenticated','public.job_applications','employer_note','SELECT'), has_column_privilege('authenticated','public.job_application_status_events','note','SELECT'); -- expect false, false. SELECT has_column_privilege('authenticated','public.job_applications','status','SELECT'), has_column_privilege('authenticated','public.job_application_status_events','new_status','SELECT'); -- true, true. SELECT has_table_privilege('anon','public.job_applications','SELECT'); -- false. Compare count(*) of job_applications and job_application_status_events before and after: unchanged.",
+      "note": "JB-02 of the 2026-09-28 UAT, CONTRACT half: table-level SELECT for authenticated on job_applications and job_application_status_events is replaced by a column list that excludes employer_note and note. Refuses to apply unless 20261223090000 (the reads) is there and rec_submit_application reads named fields. APPLY ONLY AFTER the application that reads the timeline through rec_application_status_events() (employer workspace, admin detail) and no longer selects the note for the candidate is LIVE: until then those three reads select the column and would fail with permission denied. No row changes; INSERT and every policy stay as they were; the service role is untouched. Rollback restores the table grants (and the API leak) and says so."
     }
   ], 
   "policyVersion": 2, 
