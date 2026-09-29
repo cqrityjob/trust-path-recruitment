@@ -241,6 +241,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // identical to the merged file by md5(prosrc), grants right, no privilege
 // moved). release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-09-28-jb02-expand-hosted-verification.md.
+// 2026-09-29: the three UAT fix migrations verified applied read-only on the
+// owner project, each right after its PR merged and the official integration
+// applied it -- 20261222090000 (cd_access_policy, #322 as 76bd20b; ships in
+// internal_test, nobody's access changed), 20261224090000
+// (candidate_application_context, #324 as c195732; one definer read, no
+// policy changed) and 20261225090000 (assessment_assign_requires_open_
+// application, #325 as 5a9a3ec; scp_employer_assign replaced, body byte-
+// identical to the merged file). release-state.json and hosted-ledger.json
+// carry the evidence.
+// Evidence: docs/release/2026-09-29-cd-jb01-as01-hosted-verification.md.
 // The JB-02 CONTRACT half (20261226090000: the two note columns leave the
 // authenticated grant) is pending BY DESIGN until its own PR merges and the
 // official integration applies it -- after the dependent application (#329)
