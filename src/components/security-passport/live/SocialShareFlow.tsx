@@ -17,25 +17,51 @@
 // keeps what it is given after the link is revoked. So an image carries no
 // link unless the holder creates one FOR it, sees it drawn in the preview and
 // ticks the box that puts it there -- and that link opens exactly what the
-// image shows. Every platform button opens a composer or a page for the holder
-// to post from; nothing is posted on their behalf.
+// image shows. Nothing is posted on the holder's behalf.
 //
 // The image itself is drawn in the shared card's vocabulary from the selected
 // credentials' own presentation (SocialCardSvg), and the preview is the
 // download.
+//
+// ── WHERE THE IMAGE GOES WHEN THE HOLDER PRESSES SHARE ─────────────────
+//
+// The image is what is being shared, so every way out hands it over, and
+// says truthfully how:
+//
+//   * the device's share sheet (the Web Share API with files) is given the
+//     PNG files themselves -- the one path that attaches the image, and the
+//     only one that says so;
+//   * a platform button downloads the exact image, opens the platform where
+//     there is a page to post from, and says to add the image to the post. No
+//     web address can carry a file, so it never claims the image went along.
+//
+// The PNGs are made ahead of the press from exactly the SVGs on screen, so a
+// press hands them over while the browser still counts it as the holder's own
+// action (a share sheet and a new tab both need that), and so what is shared
+// is, pixel for pixel, what the preview shows.
+//
+// ── MORE THAN THREE ────────────────────────────────────────────────────
+//
+// One image holds three credentials. A larger selection is a set of images,
+// three to each and each marked with its place in the set (socialCardPages),
+// previewed one under another and shared together. The selection is the
+// holder's, and nothing in it is dropped.
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Check, ChevronDown, Copy, Download, Share2 } from "lucide-react";
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { passportT, type PassportCopyKey, type PassportLang } from "@/lib/security-passport/i18n";
-import type { SocialCardModel } from "@/lib/security-passport/social";
+import { socialCardPages, type SocialCardModel } from "@/lib/security-passport/social";
 import type { PassportHolder } from "@/lib/security-passport/types";
 import { SHARE_FORMATS, svgToPngBlob } from "@/lib/security-passport/social-export";
 import { shareFormat, type ShareFormat } from "@/lib/security-passport/design/trust-system";
-import { downloadBlob } from "@/lib/security-passport/share-image";
+import { downloadBlob, socialImageFileName } from "@/lib/security-passport/share-image";
 import {
+  deviceShareData,
   FEED_CHANNELS,
-  shareIntentUrl,
+  platformPlan,
+  type ImageDelivery,
+  type PlatformPlan,
   type ShareChannel,
 } from "@/lib/security-passport/share-channels";
 import { SocialFrame } from "../social/SocialFrame";
@@ -60,11 +86,42 @@ export interface SocialLinkControls {
   readonly onCreate: () => void;
 }
 
+/** The PNG files made from exactly the SVGs the previews show. */
+interface Prepared {
+  readonly svgs: readonly string[];
+  readonly files: readonly File[];
+}
+
+/** What the holder was told about the last hand-over, and where it was said. */
+interface Notice {
+  readonly key: PassportCopyKey;
+  readonly delivery: ImageDelivery;
+}
+
+const sameStrings = (a: readonly string[], b: readonly string[]) =>
+  a.length === b.length && a.every((s, i) => s === b[i]);
+
+/** Whether the frames' SVGs are this set's images in this format: each drawn
+ *  for the format, and each marked as its own place in the set. A frame still
+ *  showing the previous format or the previous set does not count. */
+function isCurrentSet(svgs: readonly (string | null)[], format: ShareFormat): boolean {
+  return (
+    svgs.length > 0 &&
+    svgs.every(
+      (svg, i) =>
+        svg !== null &&
+        svg.includes(`data-social-card="${format}"`) &&
+        (svgs.length === 1
+          ? !svg.includes("data-social-page=")
+          : svg.includes(`data-social-page="${i + 1}/${svgs.length}"`)),
+    )
+  );
+}
+
 export function SocialShareFlow({
   chooser,
   hasCandidates,
   selectedCount,
-  limitReached,
   previewState,
   model,
   notDrawn,
@@ -77,7 +134,6 @@ export function SocialShareFlow({
   chooser: ReactNode;
   hasCandidates: boolean;
   selectedCount: number;
-  limitReached: boolean;
   previewState: LoadState;
   /** Null until the selection's presentation has been read. */
   model: SocialCardModel | null;
@@ -91,17 +147,34 @@ export function SocialShareFlow({
 }) {
   const { pt } = usePassportCopy();
   const [format, setFormat] = useState<ShareFormat>("square");
-  const [image, setImage] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  // One image, or a set of them: the holder's whole selection.
+  const pages = useMemo(() => (model ? socialCardPages(model) : []), [model]);
+  const count = pages.length;
+  const many = count > 1;
+  const one = (single: PassportCopyKey, several: PassportCopyKey) => (many ? several : single);
+  const fill = (key: PassportCopyKey, values: Readonly<Record<string, number>>) =>
+    Object.entries(values).reduce(
+      (text, [name, v]) => text.replace(`{${name}}`, String(v)),
+      pt(key),
+    );
+
+  // The SVG each frame shows, by its place in the set.
+  const [drawn, setDrawn] = useState<Readonly<Record<number, string | null>>>({});
+  const [prepared, setPrepared] = useState<Prepared | null>(null);
   const [downloaded, setDownloaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [canShareFiles, setCanShareFiles] = useState(false);
-  /** "Instagram" was pressed: download the Story image once the frame has
-   *  drawn it, so the file is the one on screen. */
-  const [storyPending, setStoryPending] = useState(false);
+  /** A platform press waiting for its format to be drawn: Instagram posts the
+   *  Story image, switched into the preview first and handed over as drawn. */
+  const [pending, setPending] = useState<PlatformPlan | null>(null);
 
-  const onImage = useCallback((svg: string | null) => setImage(svg), []);
+  const onPageImage = useCallback(
+    (index: number, svg: string | null) =>
+      setDrawn((prev) => (prev[index] === svg ? prev : { ...prev, [index]: svg })),
+    [],
+  );
   const imagePt = useCallback((key: PassportCopyKey) => passportT(key, imageLang), [imageLang]);
   const postText = imagePt("social.postText");
 
@@ -116,60 +189,79 @@ export function SocialShareFlow({
     }
   }, []);
 
-  // A new format, selection or link is a new image; "Nedladdad" was about
-  // the previous one.
-  useEffect(() => setDownloaded(false), [image]);
+  const svgs = useMemo(
+    () => Array.from({ length: count }, (_, i) => drawn[i] ?? null),
+    [drawn, count],
+  );
+  const complete = isCurrentSet(svgs, format);
 
-  async function download() {
-    if (!image) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const spec = shareFormat(format);
-      downloadBlob(
-        await svgToPngBlob(image, spec.width, spec.height),
-        `cqrityjob-passport-${format}.png`,
-      );
-      setDownloaded(true);
-    } catch (err) {
-      console.error("[passport] social image export failed", err);
-      setError(pt("common.error"));
-    } finally {
-      setBusy(false);
-    }
+  // Rasterise exactly those SVGs once, ahead of any press.
+  useEffect(() => {
+    if (!complete) return;
+    const current = svgs as readonly string[];
+    if (prepared && sameStrings(prepared.svgs, current)) return;
+    let alive = true;
+    const spec = shareFormat(format);
+    void Promise.all(current.map((svg) => svgToPngBlob(svg, spec.width, spec.height)))
+      .then((blobs) => {
+        if (!alive) return;
+        setPrepared({
+          svgs: current,
+          files: blobs.map(
+            (blob, i) =>
+              new File([blob], socialImageFileName(format, pages[i]?.page ?? null), {
+                type: "image/png",
+              }),
+          ),
+        });
+      })
+      .catch((err) => {
+        console.error("[passport] social image export failed", err);
+        if (alive) setError(pt("common.error"));
+      });
+    return () => {
+      alive = false;
+    };
+  }, [complete, svgs, format, pages, prepared, pt]);
+
+  /** The files of the images on screen, or null while they are being made. */
+  const files =
+    complete && prepared && sameStrings(prepared.svgs, svgs as readonly string[])
+      ? prepared.files
+      : null;
+
+  // New images -- another selection, format, language or link -- and what was
+  // said about the previous ones no longer holds.
+  useEffect(() => {
+    setDownloaded(false);
+    setNotice(null);
+  }, [files]);
+
+  function downloadFiles(which: readonly File[]) {
+    for (const file of which) downloadBlob(file, file.name);
   }
 
-  // Instagram has no web publishing path: what it gets is the Story image,
-  // switched into the preview first and downloaded as drawn there.
-  useEffect(() => {
-    if (!storyPending || !image?.includes('data-social-card="story"')) return;
-    setStoryPending(false);
-    const spec = shareFormat("story");
-    void svgToPngBlob(image, spec.width, spec.height)
-      .then((blob) => downloadBlob(blob, "cqrityjob-passport-story.png"))
-      .catch((err) => {
-        console.error("[passport] story image export failed", err);
-        setError(pt("common.error"));
-      });
-  }, [storyPending, image, pt]);
-
-  async function shareFromDevice() {
-    if (!image || !model) return;
+  function download() {
+    if (!files) return;
     setError(null);
+    downloadFiles(files);
+    setDownloaded(true);
+  }
+
+  async function shareFromDevice(which: readonly File[]) {
+    setError(null);
+    setNotice(null);
+    const data = deviceShareData(which, postText, model?.verifyUrl ?? null);
+    if (!navigator.canShare?.(data)) {
+      setError(pt(which.length > 1 ? "social.device.oneAtATime" : "common.error"));
+      return;
+    }
     try {
-      const spec = shareFormat(format);
-      const blob = await svgToPngBlob(image, spec.width, spec.height);
-      const file = new File([blob], `cqrityjob-passport-${format}.png`, { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: postText,
-          text: postText,
-          ...(model.verifyUrl ? { url: model.verifyUrl } : {}),
-        });
-        return;
-      }
-      downloadBlob(blob, file.name);
+      await navigator.share(data);
+      setNotice({
+        key: which.length > 1 ? "social.device.doneMany" : "social.device.done",
+        delivery: "attached",
+      });
     } catch (err) {
       // An aborted share sheet is a decision, not a failure.
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -177,6 +269,23 @@ export function SocialShareFlow({
       setError(pt("common.error"));
     }
   }
+
+  /** The image to the holder, then the platform, then the truth about it. */
+  const deliver = useCallback((plan: PlatformPlan, which: readonly File[]) => {
+    for (const file of which) downloadBlob(file, file.name);
+    setDownloaded(true);
+    if (plan.url) {
+      if (plan.url.startsWith("mailto:")) window.location.href = plan.url;
+      else window.open(plan.url, "_blank", "noopener,noreferrer");
+    }
+    setNotice({ key: plan.noticeKey, delivery: plan.delivery });
+  }, []);
+
+  useEffect(() => {
+    if (!pending || !files || format !== pending.format) return;
+    setPending(null);
+    deliver(pending, files);
+  }, [pending, files, format, deliver]);
 
   async function copyLink() {
     if (!model?.verifyUrl) return;
@@ -191,19 +300,20 @@ export function SocialShareFlow({
 
   function open(channel: ShareChannel) {
     setError(null);
-    if (channel === "instagram") {
-      setFormat("story");
-      setStoryPending(true);
-      return;
-    }
     if (channel === "copy_link") {
       void copyLink();
       return;
     }
-    const url = shareIntentUrl(channel, model?.verifyUrl ?? null, postText, postText);
-    if (!url) return;
-    if (url.startsWith("mailto:")) window.location.href = url;
-    else window.open(url, "_blank", "noopener,noreferrer");
+    if (channel === "native") return;
+    const plan = platformPlan(channel, model?.verifyUrl ?? null, postText, count);
+    if (plan.format && plan.format !== format) {
+      setNotice(null);
+      setFormat(plan.format);
+      setPending(plan);
+      return;
+    }
+    if (!files) return;
+    deliver(plan, files);
   }
 
   const channels = FEED_CHANNELS.filter((c) => c.id !== "copy_link" || Boolean(model?.verifyUrl));
@@ -231,21 +341,21 @@ export function SocialShareFlow({
             {pt("social.empty")}
           </p>
         )}
-        {limitReached ? (
-          <p role="status" className="mt-2 text-sm text-muted-foreground">
-            {pt("social.limitReached")}
+        {many && model ? (
+          <p role="status" data-social-set-summary={count} className="mt-2 text-sm text-foreground">
+            {fill("social.setSummary", { n: model.credentials.length, k: count })}
           </p>
         ) : null}
       </section>
 
-      {/* ── 2 · The image, as it will be downloaded ────────────────── */}
+      {/* ── 2 · The image, as it will be shared ────────────────────── */}
       {selectedCount > 0 ? (
         <section aria-labelledby="soc-preview">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             02
           </p>
           <h2 id="soc-preview" className="mt-1 text-lg font-semibold text-foreground">
-            {pt("social.step.preview")}
+            {pt(one("social.step.preview", "social.step.previewMany"))}
           </h2>
           <fieldset className="mt-3 min-w-0">
             <legend className="text-sm font-medium text-foreground">{pt("social.format")}</legend>
@@ -276,13 +386,53 @@ export function SocialShareFlow({
                 {pt("sel.error.preview")}
               </p>
             ) : model ? (
-              <SocialFrame
-                model={model}
-                format={format}
-                previewWidth={format === "story" ? 360 : 560}
-                lang={imageLang}
-                onImage={onImage}
-              />
+              <ol
+                data-social-set={count}
+                className={many ? "grid gap-6 sm:grid-cols-2" : undefined}
+              >
+                {pages.map((pageModel, i) => (
+                  <li key={i} data-social-image={i + 1} className="min-w-0">
+                    <PageFrame
+                      index={i}
+                      model={pageModel}
+                      format={format}
+                      previewWidth={format === "story" ? (many ? 300 : 360) : 560}
+                      lang={imageLang}
+                      alt={many ? fill("social.previewAltOf", { i: i + 1, n: count }) : undefined}
+                      onImage={onPageImage}
+                    />
+                    {many ? (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span className="mr-auto text-sm font-medium text-foreground">
+                          {fill("social.imageOf", { i: i + 1, n: count })}
+                        </span>
+                        <button
+                          type="button"
+                          data-social-page-download={i + 1}
+                          onClick={() => files?.[i] && downloadFiles([files[i]])}
+                          disabled={!files}
+                          className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                          <Download aria-hidden="true" className="h-4 w-4" />
+                          {pt("social.pageDownload")}
+                        </button>
+                        {canShareFiles ? (
+                          <button
+                            type="button"
+                            data-social-page-share={i + 1}
+                            onClick={() => files?.[i] && void shareFromDevice([files[i]])}
+                            disabled={!files}
+                            className="inline-flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm font-medium text-foreground disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                          >
+                            <Share2 aria-hidden="true" className="h-4 w-4" />
+                            {pt("social.pageShare")}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
             ) : (
               <p className="text-sm text-muted-foreground">{pt("common.loading")}</p>
             )}
@@ -291,70 +441,111 @@ export function SocialShareFlow({
             data-social-link-state={model?.verifyUrl ? "included" : "none"}
             className="mt-3 text-sm leading-relaxed text-muted-foreground"
           >
-            {pt(model?.verifyUrl ? "social.linkInImage" : "social.noLinkInImage")}
+            {pt(
+              model?.verifyUrl
+                ? one("social.linkInImage", "social.linkInImageMany")
+                : one("social.noLinkInImage", "social.noLinkInImageMany"),
+            )}
           </p>
           {notDrawn ? (
             <p
               role="status"
               className="mt-1 text-sm leading-relaxed text-amber-700 dark:text-amber-300"
             >
-              {pt("social.notDrawn")}
+              {pt(one("social.notDrawn", "social.notDrawnMany"))}
             </p>
           ) : null}
         </section>
       ) : null}
 
-      {/* ── 3 · Download, then post it yourself ────────────────────── */}
+      {/* ── 3 · The image to the post ──────────────────────────────── */}
       {selectedCount > 0 && model ? (
-        <section aria-labelledby="soc-share">
+        <section aria-labelledby="soc-share" data-social-share>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             03
           </p>
           <h2 id="soc-share" className="mt-1 text-lg font-semibold text-foreground">
             {pt("social.step.share")}
           </h2>
+
+          {/* The device's share sheet: the one path that attaches the image. */}
+          {canShareFiles ? (
+            <div className="mt-3">
+              <button
+                type="button"
+                data-social-device
+                onClick={() => files && void shareFromDevice(files)}
+                disabled={!files}
+                className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-auto"
+              >
+                <Share2 aria-hidden="true" className="h-4 w-4" />
+                {pt(one("social.device", "social.deviceMany"))}
+              </button>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {pt(one("social.device.hint", "social.device.hintMany"))}
+              </p>
+              {notice?.delivery === "attached" ? (
+                <p
+                  role="status"
+                  data-social-notice="attached"
+                  className="mt-2 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground"
+                >
+                  {pt(notice.key)}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
               data-social-download
-              onClick={() => void download()}
-              disabled={!image || busy}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              onClick={download}
+              disabled={!files}
+              className={
+                canShareFiles
+                  ? "inline-flex h-12 w-full items-center justify-center gap-2 rounded-md border border-input px-5 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-auto"
+                  : "inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:w-auto"
+              }
             >
               {downloaded ? (
                 <Check aria-hidden="true" className="h-4 w-4" />
               ) : (
                 <Download aria-hidden="true" className="h-4 w-4" />
               )}
-              {downloaded ? pt("social.downloaded") : pt("social.download")}
+              {downloaded
+                ? pt(one("social.downloaded", "social.downloadedMany"))
+                : pt(one("social.download", "social.downloadMany"))}
             </button>
-            {canShareFiles ? (
-              <button
-                type="button"
-                data-social-device
-                onClick={() => void shareFromDevice()}
-                disabled={!image}
-                className="inline-flex h-12 items-center gap-2 rounded-md border border-input px-4 text-sm font-medium text-foreground transition-colors hover:bg-accent/10 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <Share2 aria-hidden="true" className="h-4 w-4" />
-                {pt("sp.deviceShare")}
-              </button>
-            ) : null}
           </div>
+          {!files && previewState !== "failed" ? (
+            <p role="status" data-social-preparing className="mt-2 text-sm text-muted-foreground">
+              {pt(one("social.preparing", "social.preparingMany"))}
+            </p>
+          ) : null}
 
+          {/* A platform: the image as a download, the platform's page, and
+              what the holder still has to do. */}
+          <h3 className="mt-6 text-sm font-semibold text-foreground">
+            {pt("social.platforms.title")}
+          </h3>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            {pt(one("social.platformsHint", "social.platformsHintMany"))}
+          </p>
           <ul
             data-social-platforms
-            className="mt-4 overflow-hidden rounded-xl border border-border bg-card"
+            className="mt-3 overflow-hidden rounded-xl border border-border bg-card"
           >
             {channels.map(({ id, labelKey }, i) => {
               const { Icon, colour } = CHANNEL_ICON[id];
+              const switchesFormat = id === "instagram" && format !== "story";
               return (
                 <li key={id} className={i > 0 ? "border-t border-border" : undefined}>
                   <button
                     type="button"
                     data-social-channel={id}
                     onClick={() => open(id)}
-                    disabled={id === "instagram" && storyPending}
+                    disabled={pending !== null || (id !== "copy_link" && !files && !switchesFormat)}
                     className="flex min-h-[52px] w-full items-center gap-4 px-5 py-3 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent/5 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
                   >
                     <Icon
@@ -366,7 +557,9 @@ export function SocialShareFlow({
                       {id === "copy_link" && copied ? pt("sc.copied") : pt(labelKey)}
                       {id === "instagram" ? (
                         <span className="mt-0.5 block text-xs font-normal leading-relaxed text-muted-foreground">
-                          {pt("share.channel.instagramHint")}
+                          {pt(
+                            one("share.channel.instagramHint", "share.channel.instagramHintMany"),
+                          )}
                         </span>
                       ) : null}
                     </span>
@@ -375,9 +568,15 @@ export function SocialShareFlow({
               );
             })}
           </ul>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {pt("social.platformsHint")}
-          </p>
+          {notice?.delivery === "added_by_holder" ? (
+            <p
+              role="status"
+              data-social-notice="added_by_holder"
+              className="mt-3 rounded-lg border border-border bg-secondary/40 p-3 text-sm leading-relaxed text-foreground"
+            >
+              {pt(notice.key)}
+            </p>
+          ) : null}
           {error ? (
             <p role="alert" className="mt-2 text-sm text-destructive">
               {error}
@@ -450,7 +649,9 @@ export function SocialShareFlow({
                       onChange={(e) => link.onInclude(e.target.checked)}
                       className="mt-1 h-5 w-5 shrink-0 rounded border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     />
-                    <span className="text-sm text-foreground">{pt("social.link.include")}</span>
+                    <span className="text-sm text-foreground">
+                      {pt(one("social.link.include", "social.link.includeMany"))}
+                    </span>
                   </label>
                   {link.include ? (
                     <button
@@ -555,4 +756,17 @@ export function SocialShareFlow({
       ) : null}
     </div>
   );
+}
+
+/** One image of the set, reporting its SVG under its place in the set. */
+function PageFrame({
+  index,
+  onImage,
+  ...frame
+}: {
+  index: number;
+  onImage: (index: number, svg: string | null) => void;
+} & Omit<Parameters<typeof SocialFrame>[0], "onImage">) {
+  const report = useCallback((svg: string | null) => onImage(index, svg), [index, onImage]);
+  return <SocialFrame {...frame} onImage={report} />;
 }

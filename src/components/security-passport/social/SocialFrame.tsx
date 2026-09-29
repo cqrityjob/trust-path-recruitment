@@ -44,6 +44,7 @@ export function SocialFrame({
   format,
   previewWidth,
   lang: imageLang,
+  alt,
   onImage,
 }: {
   model: SocialCardModel;
@@ -54,6 +55,8 @@ export function SocialFrame({
   previewWidth: number;
   /** The image's language; the reader's when omitted. */
   lang?: PassportLang;
+  /** The preview's text alternative, when it is one image of a set. */
+  alt?: string;
   /** The SVG this frame shows, once it is complete (a link's QR code drawn),
    *  or null while it is not. The one string a download may rasterise. */
   onImage?: (svg: string | null) => void;
@@ -108,10 +111,11 @@ export function SocialFrame({
       {svg ? (
         <img
           src={svgDataUrl(svg)}
-          alt={readerPt("social.previewAlt")}
+          alt={alt ?? readerPt("social.previewAlt")}
           width={spec.width}
           height={spec.height}
           data-social-preview={format}
+          data-social-page={model.page ? `${model.page.index}/${model.page.count}` : undefined}
           data-social-link={model.verifyUrl ? "included" : "none"}
           className="block h-auto w-full"
         />
