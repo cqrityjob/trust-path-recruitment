@@ -251,14 +251,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // identical to the merged file). release-state.json and hosted-ledger.json
 // carry the evidence.
 // Evidence: docs/release/2026-09-29-cd-jb01-as01-hosted-verification.md.
-// The JB-02 CONTRACT half (20261226090000: the two note columns leave the
-// authenticated grant) is pending BY DESIGN until its own PR merges and the
-// official integration applies it -- after the dependent application (#329)
-// is live, never before. Its name comes off this list in the change that
-// records its hosted evidence.
-const expectedPending: string[] = [
-  "20261226090000_application_notes_column_privileges.sql",
-];
+// 2026-09-29 13:30 UTC: the JB-02 CONTRACT half (20261226090000, #330 as
+// a2061fe, owner-merged after the site was published with #329) verified
+// applied read-only: the two note columns are out of the authenticated
+// grant, the applicant is refused on the column and by both reads, the
+// owning employer's member and a platform admin read through the functions,
+// another employer's member and anon are refused. release-state.json and
+// hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-09-29-jb02-contract-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
