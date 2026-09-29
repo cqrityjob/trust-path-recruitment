@@ -3311,6 +3311,30 @@ export type Database = {
           },
         ]
       }
+      cd_access_policy: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          note: string | null
+          singleton: boolean
+          state: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          note?: string | null
+          singleton?: boolean
+          state?: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          note?: string | null
+          singleton?: boolean
+          state?: string
+        }
+        Relationships: []
+      }
       cd_internal_testers: {
         Row: {
           granted_at: string
@@ -21255,11 +21279,17 @@ export type Database = {
           summary: string
         }[]
       }
+      cd_access_state: { Args: never; Returns: string }
       cd_grant_internal_tester: {
         Args: { _note?: string; _user_id: string }
         Returns: undefined
       }
       cd_is_internal_tester: { Args: { _user_id: string }; Returns: boolean }
+      cd_set_access_state: {
+        Args: { _note?: string; _state: string }
+        Returns: string
+      }
+      cd_v31_may_start: { Args: { _user_id: string }; Returns: boolean }
       cd_profession_bands_for_matching: {
         Args: { _profession_ids: string[] }
         Returns: {
@@ -21748,6 +21778,18 @@ export type Database = {
           _user_id: string
         }
         Returns: number
+      }
+      rec_my_application_context: {
+        Args: never
+        Returns: {
+          application_id: string
+          employer_name: string
+          job_id: string
+          job_open: boolean
+          job_slug: string
+          title_en: string
+          title_sv: string
+        }[]
       }
       rec_set_application_stage: {
         Args: {

@@ -710,6 +710,21 @@ fi
 # Creates its OWN pilot test instrument, runs the flow, and proves production
 # v3.1 stays internal_test with every review gate outstanding.
 # ---------------------------------------------------------------------------
+echo "==> Running Career Discovery release-control assertions (cd_access_policy)"
+set +e
+CDAP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/cd_access_policy_test.sql 2>&1)"
+CDAP_RC=$?
+set -e
+echo "$CDAP_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+CDAP_PASSED="$(echo "$CDAP_OUT" | grep -c "ok  " || true)"
+if [ "$CDAP_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the Career Discovery release-control suite exited with code ${CDAP_RC}." >&2
+  echo "$CDAP_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  exit 1
+fi
+[ "$CDAP_PASSED" -ge 32 ] || { echo "$CDAP_OUT"; echo "FAIL: Career Discovery release-control assertion shortfall: $CDAP_PASSED (floor 32)" >&2; exit 1; }
+echo "    ok  $CDAP_PASSED Career Discovery release-control assertions passed"
+
 echo "==> Running public v3.1 flow assertions"
 set +e
 PUB_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/career_discovery_v31_public_flow_test.sql 2>&1)"
@@ -1742,6 +1757,22 @@ if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_notes_emp
 fi
 echo "    ok  and the suite refuses to pass without the migration (negative control)"
 
+# 20261224090000 (JB-01, the candidate's application context) adds one
+# SECURITY DEFINER read on top of the workspace. Stood down ALONE here so
+# 5l-ter's own rollback count still sees zero rec_* functions; reapplied, and
+# its suite run, after 5l-ter.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261224090000_candidate_application_context_rollback.sql >/dev/null
+jb01_left="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='rec_my_application_context'")"
+[ "$jb01_left" = "0" ] || { echo "FAIL: 20261224090000 rollback left rec_my_application_context behind"; exit 1; }
+jb01_rest="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'rec\_%'")"
+[ "$jb01_rest" != "0" ] || { echo "FAIL: 20261224090000 rollback took the workspace's own rec_* functions with it"; exit 1; }
+echo "    ok  candidate application context stood down alone; the workspace functions are intact"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_application_context_test.sql >/dev/null 2>&1; then
+  echo "FAIL: the candidate application context suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the suite refuses to pass without the migration (negative control)"
+
 # ---------------------------------------------------------------------------
 # 5l-ter. The recruitment workspace: EXPAND (20261207090000) and CONTRACT
 # (20261208090000, the job_applications backstops)
@@ -1842,6 +1873,9 @@ run_receipts_suite "after reapply"
 # And the employer's and the admin's note reads, on top of that.
 psql_q -d "$TEST_DB" -f supabase/migrations/20261223090000_application_notes_employer_only.sql >/dev/null
 echo "    ok  application note reads (JB-02 EXPAND) migration reapplied"
+# And the candidate's application context, on top of that.
+psql_q -d "$TEST_DB" -f supabase/migrations/20261224090000_candidate_application_context.sql >/dev/null
+echo "    ok  candidate application context migration reapplied"
 
 # ---------------------------------------------------------------------------
 # 5l-bis-4. The receipt e-mail under a REAL race: two sessions, two processes
@@ -5602,6 +5636,20 @@ if [ "$JB02_RC" -ne 0 ]; then
 fi
 [ "$JB02_PASSED" -ge 22 ] || { echo "$JB02_OUT"; echo "FAIL: application note privacy assertion shortfall: $JB02_PASSED (floor 22)" >&2; exit 1; }
 echo "    ok  $JB02_PASSED application note privacy assertions passed"
+echo "==> Running candidate application context assertions (JB-01)"
+set +e
+JB01_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_application_context_test.sql 2>&1)"
+JB01_RC=$?
+set -e
+echo "$JB01_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+JB01_PASSED="$(echo "$JB01_OUT" | grep -c "ok  " || true)"
+if [ "$JB01_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the candidate application context suite exited with code ${JB01_RC}." >&2
+  echo "$JB01_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  exit 1
+fi
+[ "$JB01_PASSED" -ge 14 ] || { echo "$JB01_OUT"; echo "FAIL: candidate application context assertion shortfall: $JB01_PASSED (floor 14)" >&2; exit 1; }
+echo "    ok  $JB01_PASSED candidate application context assertions passed"
 
 echo "==> Verifying job advertisement archiving"
 set +e
