@@ -617,10 +617,17 @@ export type ApplicationStatusEvent = {
   actorRole: "candidate" | "employer";
   previousStatus: ApplicationStatus;
   newStatus: ApplicationStatus;
-  note: string | null;
   createdAt: string;
 };
 
+/**
+ * The applicant-visible timeline: stage changes only. The employer's note on
+ * a stage change is the employer's (JB-02): employer members and platform
+ * admins read it through rec_application_status_events (20261223090000), the
+ * candidate never does, and the column itself leaves the authenticated grant
+ * in 20261226090000. This read never selected it for rendering; now it does
+ * not select it at all.
+ */
 export const listApplicationStatusEvents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ applicationId: z.string().uuid() }).parse(input))
@@ -630,7 +637,7 @@ export const listApplicationStatusEvents = createServerFn({ method: "POST" })
     // _employer_select already grant exactly the rows the caller may see.
     const { data: rows, error } = await ctx.supabase
       .from("job_application_status_events")
-      .select("id, actor_role, previous_status, new_status, note, created_at")
+      .select("id, actor_role, previous_status, new_status, created_at")
       .eq("application_id", data.applicationId)
       .order("created_at", { ascending: false });
     if (error) {
