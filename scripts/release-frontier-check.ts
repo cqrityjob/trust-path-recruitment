@@ -232,14 +232,21 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // applicant through the API) is pending BY DESIGN until its PR merges and the
 // official integration applies it. Its name comes off this list in the change
 // that records its hosted evidence.
+// 2026-09-28: all three verified applied read-only on the owner project after
+// #323 merged as 10efc1b -- 20261220090000 and 20261221090000 (the Passport
+// PR 2 and PR 4 rows the integration applied when #315 and #317 merged; the
+// refreshed 325-row hosted ledger already held them, and a resolved name left
+// here would have hidden the next real one) and 20261223090000 (JB-02
+// EXPAND: both employer read functions and rec_submit_application byte-
+// identical to the merged file by md5(prosrc), grants right, no privilege
+// moved). release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-09-28-jb02-expand-hosted-verification.md.
+// The JB-02 CONTRACT half (20261226090000: the two note columns leave the
+// authenticated grant) is pending BY DESIGN until its own PR merges and the
+// official integration applies it -- after the dependent application (#329)
+// is live, never before. Its name comes off this list in the change that
+// records its hosted evidence.
 const expectedPending: string[] = [
-  "20261220090000_sp_public_pilot_availability.sql",
-  "20261221090000_sp_open_uk_dubai_public_pilot.sql",
-  "20261223090000_application_notes_employer_only.sql",
-  // Its CONTRACT half (20261226090000: the two note columns leave the
-  // authenticated grant) is pending by design as well, and comes off this
-  // list when its own hosted evidence is recorded -- after the dependent
-  // application is live, never before.
   "20261226090000_application_notes_column_privileges.sql",
 ];
 const hostedIdentities = [

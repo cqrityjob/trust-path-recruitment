@@ -13,8 +13,15 @@
 
 import { joinTitles } from "./identity/presentation";
 import { formatJurisdiction, titleWithJurisdictionOnce } from "./format";
-import type { SocialCardModel } from "./social";
+import type { SocialCardModel, SocialCardPage } from "./social";
 import type { PassportCopyKey, PassportLang } from "./i18n";
+
+/** An image's file name: its format, and for an image of a set, which one. */
+export function socialImageFileName(format: string, page: SocialCardPage | null): string {
+  return page
+    ? `cqrityjob-passport-${format}-${page.index}-of-${page.count}.png`
+    : `cqrityjob-passport-${format}.png`;
+}
 
 export type PassportTranslate = (key: PassportCopyKey) => string;
 
