@@ -186,11 +186,13 @@ export const adminGetApplicationDetail = createServerFn({ method: "POST" })
     if (!row) throw new Error("APPLICATION_NOT_FOUND");
 
     const [{ data: historyRows }, { data: assignmentRows }] = await Promise.all([
-      ctx.supabase
-        .from("job_application_status_events")
-        .select("id, previous_status, new_status, actor_role, note, created_at")
-        .eq("application_id", data.applicationId)
-        .order("created_at", { ascending: false }),
+      // The stage timeline WITH the employer's notes, through the same read
+      // the employer workspace uses (rec_application_status_events,
+      // 20261223090000, JB-02): the platform admin reads with their own
+      // session, not the service role, and the note column leaves the
+      // authenticated grant in 20261226090000. The function admits platform
+      // admins as well as the owning organisation's members.
+      ctx.supabase.rpc("rec_application_status_events", { _application_id: data.applicationId }),
       ctx.supabase
         .from("assessment_assignments")
         .select("id, status")
