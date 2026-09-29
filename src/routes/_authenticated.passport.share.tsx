@@ -113,7 +113,7 @@ import { formatExpiry, formatIsoDay, formatIsoDayRange } from "@/lib/security-pa
 import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import type { PassportLang } from "@/lib/security-passport/i18n";
 import { passportT } from "@/lib/security-passport/i18n";
-import { buildSelectedSocialCard, SOCIAL_CREDENTIAL_LIMIT } from "@/lib/security-passport/social";
+import { buildSelectedSocialCard } from "@/lib/security-passport/social";
 import { SocialShareFlow } from "@/components/security-passport/live/SocialShareFlow";
 
 export const Route = createFileRoute("/_authenticated/passport/share")({
@@ -1022,7 +1022,6 @@ function PassportShareRoute() {
                   })
                 }
                 idPrefix="soc"
-                limit={SOCIAL_CREDENTIAL_LIMIT}
                 lang={lang}
                 pt={pt}
               />
@@ -1030,7 +1029,6 @@ function PassportShareRoute() {
           }
           hasCandidates={socialGroups.length > 0}
           selectedCount={socialCount}
-          limitReached={socialCount >= SOCIAL_CREDENTIAL_LIMIT}
           previewState={socialPreviewState}
           model={socialModel}
           notDrawn={socialModel !== null && socialModel.credentials.length < socialCount}
@@ -1108,15 +1106,14 @@ function meritDates(
 
 /**
  * The selection list both ways of sharing use: the same rows, words and
- * review caveats. `limit` stops a social image at the number of credentials it
- * can hold; the link flow passes none.
+ * review caveats. Neither way limits it: a social image holds three
+ * credentials, and a larger selection is shared as a set of images.
  */
 function MeritChoices({
   groups,
   selected,
   onToggle,
   idPrefix,
-  limit,
   lang,
   pt,
 }: {
@@ -1124,11 +1121,9 @@ function MeritChoices({
   selected: ReadonlySet<string>;
   onToggle: (key: string, on: boolean) => void;
   idPrefix: string;
-  limit?: number;
   lang: PassportLang;
   pt: (key: PassportCopyKey) => string;
 }) {
-  const full = limit !== undefined && selected.size >= limit;
   return (
     <>
       {groups.map((group) => (
@@ -1157,7 +1152,6 @@ function MeritChoices({
                       id={id}
                       type="checkbox"
                       checked={checked}
-                      disabled={full && !checked}
                       onChange={(e) => onToggle(key, e.target.checked)}
                       className="mt-1 h-5 w-5 shrink-0 rounded border-input focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                     />
