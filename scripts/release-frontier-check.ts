@@ -241,26 +241,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // identical to the merged file by md5(prosrc), grants right, no privilege
 // moved). release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-09-28-jb02-expand-hosted-verification.md.
-// 20261222090000_cd_access_policy (Career Discovery release control, CI-01 of
-// the 2026-09-28 UAT) is pending BY DESIGN until its PR merges and the
-// official integration applies it; it ships in internal_test, so applying it
-// changes nobody's access until the owner opens it. Its name comes off this
-// list in the change that records its hosted evidence.
-// 20261224090000_candidate_application_context (JB-01 of the 2026-09-28 UAT:
-// a candidate keeps the title, employer and open/closed state of their own
-// applications after the vacancy closes) is pending BY DESIGN until its PR
-// merges and the official integration applies it. Its name comes off this
-// list in the change that records its hosted evidence.
-// 20261225090000_assessment_assign_requires_open_application (AS-01 of the
-// 2026-09-28 UAT: scp_employer_assign refuses a closed application and a
-// completed recruitment) is pending BY DESIGN until its PR merges and the
-// official integration applies it. Its name comes off this list in the change
-// that records its hosted evidence.
-const expectedPending: string[] = [
-  "20261222090000_cd_access_policy.sql",
-  "20261224090000_candidate_application_context.sql",
-  "20261225090000_assessment_assign_requires_open_application.sql",
-];
+// 2026-09-29: the three UAT fix migrations verified applied read-only on the
+// owner project, each right after its PR merged and the official integration
+// applied it -- 20261222090000 (cd_access_policy, #322 as 76bd20b; ships in
+// internal_test, nobody's access changed), 20261224090000
+// (candidate_application_context, #324 as c195732; one definer read, no
+// policy changed) and 20261225090000 (assessment_assign_requires_open_
+// application, #325 as 5a9a3ec; scp_employer_assign replaced, body byte-
+// identical to the merged file). release-state.json and hosted-ledger.json
+// carry the evidence.
+// Evidence: docs/release/2026-09-29-cd-jb01-as01-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

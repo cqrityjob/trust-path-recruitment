@@ -2328,7 +2328,10 @@
     },
     {
       "file": "20261222090000_cd_access_policy.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20261222090000",
+      "hostedName": "cd_access_policy",
+      "evidenceSource": "Read-only verification 2026-09-29T09:26:33Z through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #322 merged to main as 76bd20b (09:16 UTC) and the official Supabase GitHub integration applied it. supabase_migrations.schema_migrations holds version 20261222090000 / name cd_access_policy (19 statements); 326 rows at read time, digest 1ce1efa75d3c8e69c097b5f3982e193c. public.cd_access_policy exists with RLS on and zero policies; authenticated and anon hold neither SELECT nor UPDATE on it. cd_access_state() (md5(prosrc) c97f4009f966d9e058786e2581d3b823), cd_v31_may_start(uuid) (e43d218e357086825f8db1809229f2ff) and cd_set_access_state(text,text) (a731c7f4c11af2df1afdcfee89c1ebff) are SECURITY DEFINER with search_path=public and byte-identical to the local replay of the merged file; anon can execute cd_access_state() only. Exactly one policy row, state internal_test; cd_access_state() returns internal_test; cd_internal_testers still 0 rows, so applying it changed nobody's access. No hosted write. See docs/release/2026-09-29-cd-jb01-as01-hosted-verification.md.",
       "introduces": [
         { "kind": "table", "object": "cd_access_policy" },
         { "kind": "function", "object": "cd_access_state()" },
@@ -2355,7 +2358,10 @@
     },
     {
       "file": "20261224090000_candidate_application_context.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20261224090000",
+      "hostedName": "candidate_application_context",
+      "evidenceSource": "Read-only verification 2026-09-29T09:46:12Z through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #324 merged to main as c195732 (09:36 UTC) and the official Supabase GitHub integration applied it. supabase_migrations.schema_migrations holds version 20261224090000 / name candidate_application_context (5 statements); 327 rows at read time, digest 70bff3d121bcba1f2bb636ffe2e71a15. rec_my_application_context() exists, SECURITY DEFINER with search_path=public, pg_temp; md5(prosrc) 571502bd7e894dffe175d8e8c800bd7a byte-identical to the local replay of the merged file; executable by authenticated and service_role, not by anon. The public policies on jobs (6), employers (4) and job_applications (5) carry the same digests as the local replay, so no policy changed. No hosted write. See docs/release/2026-09-29-cd-jb01-as01-hosted-verification.md.",
       "introduces": [
         { "kind": "function", "object": "rec_my_application_context()" }
       ],
@@ -2365,7 +2371,10 @@
     },
     {
       "file": "20261225090000_assessment_assign_requires_open_application.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20261225090000",
+      "hostedName": "assessment_assign_requires_open_application",
+      "evidenceSource": "Read-only verification 2026-09-29T10:05:32Z through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #325 merged to main as 5a9a3ec (09:55 UTC) and the official Supabase GitHub integration applied it. supabase_migrations.schema_migrations holds version 20261225090000 / name assessment_assign_requires_open_application (4 statements), the 328th and highest row; hosted-ledger.json refreshed to all 328 rows, digest 91502ba5606b0d18375ad8e0ec77d49c equal on both sides. scp_employer_assign has exactly one definition, SECURITY DEFINER with search_path=public, pg_temp; md5(prosrc) 0f4e39961655ab00fc9e1aef10e83842 byte-identical to the local replay of the merged file, and the body carries both refusals (SCP_APPLICATION_NOT_OPEN, SCP_RECRUITMENT_COMPLETED); grants unchanged from before the migration (authenticated may execute, anon and service_role may not, as on the local pre-migration replay). No table, policy or row changed. No hosted write. See docs/release/2026-09-29-cd-jb01-as01-hosted-verification.md.",
       "introduces": [],
       "rollback": "supabase/rollback/20261225090000_assessment_assign_requires_open_application_rollback.sql",
       "verify": "SELECT pg_get_functiondef('public.scp_employer_assign(uuid,uuid,text,timestamptz,text,text,uuid,text,uuid,uuid)'::regprocedure) LIKE '%SCP_APPLICATION_NOT_OPEN%'; -- expect true. No table, policy or row changes.",
