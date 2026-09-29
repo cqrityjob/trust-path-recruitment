@@ -21779,6 +21779,18 @@ export type Database = {
         }
         Returns: number
       }
+      rec_my_application_context: {
+        Args: never
+        Returns: {
+          application_id: string
+          employer_name: string
+          job_id: string
+          job_open: boolean
+          job_slug: string
+          title_en: string
+          title_sv: string
+        }[]
+      }
       rec_set_application_stage: {
         Args: {
           _application_id: string

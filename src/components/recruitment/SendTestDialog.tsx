@@ -65,6 +65,8 @@ const SEND_ERROR: Record<string, TranslationKey> = {
   SCP_NOT_VALID_FOR_RECRUITMENT: "journey.assignNotForRecruitment",
   SCP_NO_GOVERNANCE_BASIS: "journey.assignNoBasis",
   SCP_START_NO_TEST: "sendTest.error.noTest",
+  SCP_APPLICATION_NOT_OPEN: "journey.assignApplicationNotOpen",
+  SCP_RECRUITMENT_COMPLETED: "journey.assignRecruitmentCompleted",
 };
 
 function retryNotification(result: SendTestResult) {
