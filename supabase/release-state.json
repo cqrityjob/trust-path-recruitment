@@ -2352,6 +2352,16 @@
       "rollback": "supabase/rollback/20261223090000_application_notes_employer_only_rollback.sql",
       "verify": "SELECT to_regprocedure('public.rec_application_status_events(uuid)') IS NOT NULL, to_regprocedure('public.rec_application_employer_note(uuid)') IS NOT NULL; -- true, true. SELECT has_function_privilege('anon','public.rec_application_status_events(uuid)','EXECUTE'); -- false. SELECT prosrc NOT LIKE '%SELECT * INTO _existing%' FROM pg_proc WHERE oid = to_regprocedure('public.rec_submit_application(uuid,uuid,text,text,text,text,bigint,text,uuid,boolean,jsonb)'); -- true. SELECT has_column_privilege('authenticated','public.job_applications','employer_note','SELECT'); -- STILL true: this half changes no privilege. Compare count(*) of job_applications and job_application_status_events before and after: unchanged.",
       "note": "JB-02 of the 2026-09-28 UAT, EXPAND half: the employer's note on an application (job_applications.employer_note, job_application_status_events.note) was readable by the applicant through the API. This half adds the two SECURITY DEFINER reads (active members of the owning organisation, or a platform admin) and re-creates rec_submit_application with named fields instead of SELECT *; it changes NO privilege, so applying it alone changes nothing for anyone. Release order: apply this, record it, merge the application that reads the timeline through rec_application_status_events() (employer workspace, admin detail) and drops the note from the candidate read, THEN apply 20261226090000 (the CONTRACT half: the two columns leave the authenticated grant). Revoking before the application is live breaks the three timeline reads it still makes."
+    },
+    {
+      "file": "20261224090000_candidate_application_context.sql",
+      "hostedState": "pending",
+      "introduces": [
+        { "kind": "function", "object": "rec_my_application_context()" }
+      ],
+      "rollback": "supabase/rollback/20261224090000_candidate_application_context_rollback.sql",
+      "verify": "SELECT has_function_privilege('authenticated','public.rec_my_application_context()','EXECUTE'), has_function_privilege('anon','public.rec_my_application_context()','EXECUTE'); -- expect true, false. No table, policy or row changes.",
+      "note": "JB-01 of the 2026-09-28 UAT: a candidate's application history lost the job title, employer and link once the vacancy closed, because the read embedded jobs/employers through the candidate's public jobs policy. Adds one SECURITY DEFINER read that returns the job title, slug, employer name and whether the advertisement is still public for the caller's own applications only. The public jobs and employers policies are untouched. The application at the same commit calls it from listMyApplications, so apply the migration before or with the publish."
     }
   ], 
   "policyVersion": 2, 

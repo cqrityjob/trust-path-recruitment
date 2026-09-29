@@ -246,8 +246,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // official integration applies it; it ships in internal_test, so applying it
 // changes nobody's access until the owner opens it. Its name comes off this
 // list in the change that records its hosted evidence.
+// 20261224090000_candidate_application_context (JB-01 of the 2026-09-28 UAT:
+// a candidate keeps the title, employer and open/closed state of their own
+// applications after the vacancy closes) is pending BY DESIGN until its PR
+// merges and the official integration applies it. Its name comes off this
+// list in the change that records its hosted evidence.
 const expectedPending: string[] = [
   "20261222090000_cd_access_policy.sql",
+  "20261224090000_candidate_application_context.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
