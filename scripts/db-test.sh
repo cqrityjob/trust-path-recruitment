@@ -1686,6 +1686,23 @@ if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/recruitment_candidate
 fi
 echo "    ok  and the suite refuses to pass without the migration (negative control)"
 
+# 20261223090000 (JB-02 EXPAND: the employer's and the admin's note reads)
+# adds two rec_* functions on top of the workspace and re-creates
+# rec_submit_application with named fields. Stood down ALONE here so 5l-ter's
+# own rollback count still sees zero rec_* functions; reapplied, and its
+# suite run, after 5l-ter.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261223090000_application_notes_employer_only_rollback.sql >/dev/null
+jb02_left="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_application_status_events','rec_application_employer_note')")"
+[ "$jb02_left" = "0" ] || { echo "FAIL: 20261223090000 rollback left $jb02_left employer read function(s) behind"; exit 1; }
+jb02_rest="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'rec\_%'")"
+[ "$jb02_rest" != "0" ] || { echo "FAIL: 20261223090000 rollback took the workspace's own rec_* functions with it"; exit 1; }
+echo "    ok  application note privacy stood down alone; the workspace functions are intact"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_notes_employer_only_test.sql >/dev/null 2>&1; then
+  echo "FAIL: the application note privacy suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the suite refuses to pass without the migration (negative control)"
+
 # 20261224090000 (JB-01, the candidate's application context) adds one
 # SECURITY DEFINER read on top of the workspace. Stood down ALONE here so
 # 5l-ter's own rollback count still sees zero rec_* functions; reapplied, and
@@ -1799,6 +1816,9 @@ run_candidate_view_suite "after reapply"
 psql_q -d "$TEST_DB" -f supabase/migrations/20261213090000_recruitment_application_receipts.sql >/dev/null
 echo "    ok  recruitment application receipts migration reapplied"
 run_receipts_suite "after reapply"
+# And the employer's and the admin's note reads, on top of that.
+psql_q -d "$TEST_DB" -f supabase/migrations/20261223090000_application_notes_employer_only.sql >/dev/null
+echo "    ok  application note reads (JB-02 EXPAND) migration reapplied"
 # And the candidate's application context, on top of that.
 psql_q -d "$TEST_DB" -f supabase/migrations/20261224090000_candidate_application_context.sql >/dev/null
 echo "    ok  candidate application context migration reapplied"
@@ -5548,6 +5568,20 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+echo "==> Running application note read assertions (JB-02 EXPAND)"
+set +e
+JB02_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/application_notes_employer_only_test.sql 2>&1)"
+JB02_RC=$?
+set -e
+echo "$JB02_OUT" | grep -E "GROUP |ASSERTION FAILED" | sed 's/^.*NOTICE:  /    /;s/^.*NOTIS:  /    /' || true
+JB02_PASSED="$(echo "$JB02_OUT" | grep -c "ok  " || true)"
+if [ "$JB02_RC" -ne 0 ]; then
+  echo ""; echo "FAIL: the application note privacy suite exited with code ${JB02_RC}." >&2
+  echo "$JB02_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  exit 1
+fi
+[ "$JB02_PASSED" -ge 22 ] || { echo "$JB02_OUT"; echo "FAIL: application note privacy assertion shortfall: $JB02_PASSED (floor 22)" >&2; exit 1; }
+echo "    ok  $JB02_PASSED application note privacy assertions passed"
 echo "==> Running candidate application context assertions (JB-01)"
 set +e
 JB01_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_application_context_test.sql 2>&1)"

@@ -23,6 +23,19 @@
 // a listed channel because the holder's intent is real; the action behind it
 // is the correctly sized Story image, which they post from the app. A button
 // that pretended to publish would be the dishonest option.
+//
+// ── WHERE THE IMAGE GOES, AND WHAT THE HOLDER IS TOLD ──────────────────
+//
+// No web address carries a file. LinkedIn's share-offsite takes a url,
+// Facebook's sharer a url, X's intent text and a url, WhatsApp's click-to-chat
+// text, a mailto: a subject and a body -- and Instagram has no web intent at
+// all. So a platform button never claims the image went with it: it hands the
+// holder the exact image as a download, opens the platform where there is a
+// page to post from, and says to add the image to the post.
+//
+// The one path that attaches the image is the device's own share sheet (the
+// Web Share API with files), where the PNG itself is handed to the app the
+// holder picks. Only that path says the image is attached.
 
 import type { PassportCopyKey } from "./i18n";
 
@@ -104,4 +117,73 @@ export function shareIntentUrl(
     default:
       return null;
   }
+}
+
+/** How the image reaches a post. Only the device share attaches it. */
+export type ImageDelivery = "attached" | "added_by_holder";
+
+/** What pressing a platform does: the exact image as a download, then the
+ *  platform's page, then what the holder is told. */
+export interface PlatformPlan {
+  readonly channel: Exclude<ShareChannel, "copy_link" | "native">;
+  /** Always the holder's to add: no web intent carries an image. */
+  readonly delivery: "added_by_holder";
+  /** The format the image is prepared in first, or null for the one on
+   *  screen. Instagram posts the Story image. */
+  readonly format: "story" | null;
+  /** The page to open afterwards, or null where the web has none to post
+   *  from (Instagram). */
+  readonly url: string | null;
+  /** Said once the image is ready: "add the image to your post". */
+  readonly noticeKey: PassportCopyKey;
+}
+
+export function platformPlan(
+  channel: PlatformPlan["channel"],
+  shareUrl: string | null,
+  postText: string,
+  imageCount: number,
+): PlatformPlan {
+  const many = imageCount > 1;
+  if (channel === "instagram") {
+    return {
+      channel,
+      delivery: "added_by_holder",
+      format: "story",
+      url: null,
+      noticeKey: many ? "social.ready.instagramMany" : "social.ready.instagram",
+    };
+  }
+  return {
+    channel,
+    delivery: "added_by_holder",
+    format: null,
+    url: shareIntentUrl(channel, shareUrl, postText, postText),
+    noticeKey:
+      channel === "email"
+        ? many
+          ? "social.ready.emailMany"
+          : "social.ready.email"
+        : many
+          ? "social.ready.postMany"
+          : "social.ready.post",
+  };
+}
+
+/**
+ * What the device's share sheet is given: the PNG files themselves -- the
+ * images the preview shows -- and the post's sentence. A link travels only
+ * when the holder chose one for these images.
+ */
+export function deviceShareData(
+  files: readonly File[],
+  postText: string,
+  shareUrl: string | null,
+): ShareData {
+  return {
+    files: [...files],
+    title: postText,
+    text: postText,
+    ...(shareUrl ? { url: shareUrl } : {}),
+  };
 }
