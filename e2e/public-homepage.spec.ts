@@ -512,7 +512,9 @@ test.describe("the locked navigation", () => {
       await setLang(page, lang);
       const labels = (
         await page
-          .locator('header nav[aria-label="Primary"] > :is(a, div > button)')
+          .locator(
+            'header nav[aria-label="Primary"] > a, header nav[aria-label="Primary"] > div > button',
+          )
           .allInnerTexts()
       ).map((x) => x.trim());
       expect(labels).toEqual([...NAV[lang]]);
@@ -634,7 +636,7 @@ test.describe("the homepage at every required width", () => {
     await page.getByRole("button", { name: /meny/i }).first().click();
     await expect(page.locator("#site-menu nav a").first()).toBeVisible();
     const labels = (
-      await page.locator("#site-menu nav > :is(a, div > button)").allInnerTexts()
+      await page.locator("#site-menu nav > a, #site-menu nav > div > button").allInnerTexts()
     ).map((x) => x.trim());
     // Same ORDER, not merely the same set.
     expect(labels).toEqual([...NAV.sv]);

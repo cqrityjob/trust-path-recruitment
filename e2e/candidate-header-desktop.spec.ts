@@ -201,7 +201,7 @@ for (const lang of ["sv", "en"] as const) {
 
         const nav = page.locator('header nav[aria-label="Primary"]').first();
         await expect(nav).toBeVisible();
-        const items = nav.locator(":scope > :is(a, div > button)");
+        const items = nav.locator(":scope > a, :scope > div > button");
         expect((await items.allInnerTexts()).map((x) => x.trim())).toEqual([...PUBLIC_SIX[lang]]);
         const controls = page
           .locator("header")
