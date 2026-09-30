@@ -17,7 +17,7 @@
 //                                    to reduced-motion visitors
 
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { VideoPlaybackToggle } from "@/components/site/VideoPlaybackToggle";
 import { useT } from "@/i18n/context";
 
 export function HeroVideoBackground() {
@@ -71,22 +71,16 @@ export function HeroVideoBackground() {
         </video>
         {/* Legibility: one even dim, then a deeper fall-off where the copy
             and the two entrances sit. */}
-        <div className="absolute inset-0 bg-[#060B12]/40" />
-        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-[#060B12]/60 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-[#060B12]/90 via-[#060B12]/50 to-transparent" />
+        <div className="absolute inset-0 bg-night/40" />
+        <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-night/60 to-transparent" />
+        <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-night/90 via-night/50 to-transparent" />
       </div>
-      <button
-        type="button"
-        onClick={toggle}
-        aria-label={playing ? t("home.hero.video.pause") : t("home.hero.video.play")}
-        className="absolute bottom-4 right-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-[#060B12]/40 text-white backdrop-blur-sm transition-colors hover:bg-[#060B12]/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#060B12] md:bottom-6 md:right-6"
-      >
-        {playing ? (
-          <Pause className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-        ) : (
-          <Play className="h-4 w-4" fill="currentColor" aria-hidden="true" />
-        )}
-      </button>
+      <VideoPlaybackToggle
+        playing={playing}
+        onToggle={toggle}
+        pauseLabel={t("home.hero.video.pause")}
+        playLabel={t("home.hero.video.play")}
+      />
     </>
   );
 }

@@ -2,8 +2,10 @@ import { createFileRoute } from "@tanstack/react-router";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Container } from "@/components/site/Container";
 import { PlatformLayers } from "@/components/site/PlatformLayers";
+import { DARK_H1, ON_DARK } from "@/components/site/dark-surface";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
+import { cn } from "@/lib/utils";
 
 // ── THE PLATFORM (2026-09-30) ───────────────────────────────────────────
 //
@@ -37,19 +39,29 @@ function PlatformPage() {
   useLocalizedHead("meta.platform.title", "meta.platform.description");
   return (
     <SiteLayout>
-      <section id="plattformen" className="bg-[#07080f] pb-16 pt-14 text-white md:pb-24 md:pt-20">
+      <section id="plattformen" className="bg-night pb-16 pt-14 text-white md:pb-24 md:pt-20">
         <Container>
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
+            <p
+              className={cn(
+                "text-[11px] font-semibold uppercase tracking-[0.16em]",
+                ON_DARK.eyebrow,
+              )}
+            >
               {t("platform.eyebrow")}
             </p>
             <h1
-              className="mt-4 text-balance text-[2.1rem] text-white font-semibold leading-[1.08] tracking-tight [hyphens:auto] sm:text-[2.8rem] lg:text-[3.2rem] lg:[hyphens:none]"
+              className={cn("mx-auto mt-4 max-w-[20ch]", DARK_H1)}
               style={{ fontFamily: "var(--font-display)" }}
             >
               {t("platform.title")}
             </h1>
-            <p className="mx-auto mt-5 max-w-[60ch] text-base leading-relaxed text-white/70 md:text-lg">
+            <p
+              className={cn(
+                "mx-auto mt-6 max-w-[62ch] text-base leading-relaxed md:text-lg",
+                ON_DARK.lead,
+              )}
+            >
               {t("platform.lead")}
             </p>
           </div>

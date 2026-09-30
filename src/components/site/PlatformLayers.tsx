@@ -16,7 +16,15 @@
 // name is the list's own button text, which is what a screen reader reads.
 // Each product is a disclosure button; the open one shows its description
 // and ONE link to that product's own page. With reduced motion the video
-// never plays and the label sits on the first frame.
+// never plays and the label sits on the first frame; otherwise the shared
+// pause/play control stops it (WCAG 2.2.2).
+//
+// ── ONE LOOK WITH THE HOMEPAGE HERO ────────────────────────────────────
+//
+// The surface, the glass, the white weights and the focus ring all come from
+// dark-surface.ts, and the chip film is graded to the hero film's cool blue
+// (desaturated, hue pulled from violet towards the brand's trust blue), so
+// the two pages read as one site.
 
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -24,7 +32,9 @@ import { ArrowRight, Minus, Plus } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
+import { FOCUS_ON_DARK, GLASS, GLASS_HOVER, ON_DARK } from "./dark-surface";
 import { CHIP_TRACK, CHIP_TRACK_FPS } from "./platform-chip-track";
+import { VideoPlaybackToggle } from "./VideoPlaybackToggle";
 
 type Product = {
   readonly key: string;
@@ -122,6 +132,8 @@ const VIDEO_H = 1080;
 /** The flat label before it is mapped onto the chip face. Square, like the
  *  chip; its padding keeps the name clear of the face's rounded edge. */
 const LABEL_PX = 400;
+/** The label's inset on each side, as a share of LABEL_PX. */
+const LABEL_PAD = 0.08;
 
 /** The chip face's corners at video time `t`, as fractions of the frame. */
 function faceAt(t: number): number[] {
@@ -154,9 +166,19 @@ function squareToQuad(p: readonly number[]): string {
   return `matrix3d(${[a / s, d / s, 0, g / s, b / s, e / s, 0, h / s, 0, 0, 1, 0, x0, y0, 0, 1].join(",")})`;
 }
 
+/** The name's size on the chip: as large as the face allows, but never so
+ *  large that its longest word ("Säkerhetsarbete", "Arbetsgivarplattform")
+ *  runs off the edge — words are not broken on a chip. */
+function chipFontSize(name: string): number {
+  const longest = Math.max(...name.split(/\s+/).map((w) => w.length));
+  const inner = LABEL_PX * (1 - 2 * LABEL_PAD);
+  return Math.min(68, Math.floor(inner / (0.66 * longest)));
+}
+
 export function PlatformLayers() {
   const { t } = useT();
   const [active, setActive] = useState(PRODUCTS[0].key);
+  const [playing, setPlaying] = useState(false);
   const current = PRODUCTS.find((p) => p.key === active) ?? PRODUCTS[0];
 
   const stageRef = useRef<HTMLDivElement>(null);
@@ -172,14 +194,18 @@ export function PlatformLayers() {
     if (!stage || !video || !label) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    video.muted = true;
     const syncPlayback = () => {
       if (reduce.matches) {
         video.pause();
         video.currentTime = 0;
+        setPlaying(false);
       } else {
-        void video.play().catch(() => {
+        video
+          .play()
+          .then(() => setPlaying(true))
           // Autoplay refused: the poster and the label stay on frame one.
-        });
+          .catch(() => setPlaying(false));
       }
     };
     syncPlayback();
@@ -213,55 +239,84 @@ export function PlatformLayers() {
     };
   }, []);
 
+  const toggle = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.muted = true;
+      video
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
+    } else {
+      video.pause();
+      setPlaying(false);
+    }
+  };
+
   return (
     <div className="relative">
-      <div
-        ref={stageRef}
-        aria-hidden="true"
-        className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-[#07080f] shadow-[var(--shadow-md)] sm:aspect-video lg:aspect-auto lg:h-[760px]"
-      >
-        <video
-          ref={videoRef}
-          className="absolute inset-0 h-full w-full object-cover object-[50%_50%] lg:object-[0%_50%]"
-          src="/media/platform-chip.mp4"
-          poster="/media/platform-chip-poster.jpg"
-          muted
-          loop
-          playsInline
-          preload="auto"
-        />
+      <div className="relative">
         <div
-          ref={labelRef}
-          className="pointer-events-none absolute left-0 top-0 flex origin-top-left flex-col items-center justify-center p-[14%] text-center will-change-transform"
-          style={{ width: LABEL_PX, height: LABEL_PX }}
+          ref={stageRef}
+          aria-hidden="true"
+          className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-night shadow-[var(--shadow-md)] sm:aspect-video lg:aspect-auto lg:h-[760px]"
         >
-          <span
-            key={`brand-${current.key}`}
-            className="text-[24px] font-semibold uppercase tracking-[0.32em] text-[#1b1f3d]/70 animate-in fade-in duration-500 motion-reduce:animate-none"
+          <video
+            ref={videoRef}
+            className="absolute inset-0 h-full w-full object-cover object-[50%_50%] lg:object-[0%_50%]"
+            src="/media/platform-chip.mp4"
+            poster="/media/platform-chip-poster.jpg"
+            muted
+            loop
+            playsInline
+            preload="auto"
+            tabIndex={-1}
+          />
+          <div
+            ref={labelRef}
+            className="pointer-events-none absolute left-0 top-0 flex origin-top-left flex-col items-center justify-center p-[8%] text-center will-change-transform"
+            style={{ width: LABEL_PX, height: LABEL_PX }}
           >
-            CQrityjob
-          </span>
-          <span
-            key={current.key}
-            className="mt-3 text-balance font-semibold leading-[1.05] tracking-tight text-[#141833] animate-in fade-in zoom-in-95 duration-500 motion-reduce:animate-none"
-            style={{
-              fontSize: t(current.title).length > 16 ? 50 : 68,
-              fontFamily: "var(--font-display)",
-              textShadow: "0 1px 0 rgb(255 255 255 / 0.28), 0 -1px 0 rgb(0 0 0 / 0.25)",
-            }}
-          >
-            {t(current.title)}
-          </span>
-        </div>
-        {/* Legibility wash behind the list on wide screens, where it overlays
+            <span
+              key={`brand-${current.key}`}
+              className="text-[24px] font-semibold uppercase tracking-[0.32em] text-primary/70 animate-in fade-in duration-500 motion-reduce:animate-none"
+            >
+              CQrityjob
+            </span>
+            <span
+              key={current.key}
+              className="mt-3 text-balance font-semibold leading-[1.05] tracking-tight text-primary animate-in fade-in zoom-in-95 duration-500 motion-reduce:animate-none"
+              style={{
+                fontSize: chipFontSize(t(current.title)),
+                fontFamily: "var(--font-display)",
+                textShadow: "0 1px 0 rgb(255 255 255 / 0.28), 0 -1px 0 rgb(0 0 0 / 0.25)",
+              }}
+            >
+              {t(current.title)}
+            </span>
+          </div>
+          {/* Legibility wash behind the list on wide screens, where it overlays
             the footage. */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-[28rem] bg-gradient-to-r from-[#07080f]/80 via-[#07080f]/40 to-transparent lg:block" />
+          <div className="pointer-events-none absolute inset-y-0 left-0 hidden w-[28rem] bg-gradient-to-r from-night/80 via-night/40 to-transparent lg:block" />
+        </div>
+        <VideoPlaybackToggle
+          playing={playing}
+          onToggle={toggle}
+          pauseLabel={t("platform.video.pause")}
+          playLabel={t("platform.video.play")}
+        />
       </div>
 
       <div className="mt-6 space-y-6 lg:absolute lg:left-6 lg:top-6 lg:mt-0 lg:max-h-[calc(760px-3rem)] lg:w-[23rem] lg:overflow-y-auto">
         {GROUPS.map((group) => (
           <div key={group.key}>
-            <p className="mb-2.5 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
+            <p
+              className={cn(
+                "mb-2.5 px-1 text-[11px] font-semibold uppercase tracking-[0.16em]",
+                ON_DARK.eyebrow,
+              )}
+            >
               {t(group.label)}
             </p>
             <ul className="flex flex-col items-start gap-2">
@@ -272,8 +327,11 @@ export function PlatformLayers() {
                   <li key={p.key} className={cn(open && "w-full")}>
                     <div
                       className={cn(
-                        "overflow-hidden border border-white/10 bg-white/10 text-white backdrop-blur-md transition-[border-radius,background-color] duration-300 motion-reduce:transition-none",
-                        open ? "rounded-2xl bg-white/15" : "rounded-full hover:bg-white/20",
+                        "overflow-hidden text-white transition-[border-radius,background-color,border-color] duration-300 motion-reduce:transition-none",
+                        GLASS,
+                        open
+                          ? "rounded-2xl border-white/40 bg-white/15"
+                          : cn("rounded-full", GLASS_HOVER),
                       )}
                     >
                       <button
@@ -282,9 +340,9 @@ export function PlatformLayers() {
                         aria-controls={panelId}
                         onClick={() => setActive(p.key)}
                         className={cn(
-                          "flex min-h-11 w-full items-center justify-between gap-3 text-left text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/70",
+                          "flex min-h-11 w-full items-center justify-between gap-3 text-left text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white",
                           open
-                            ? "rounded-t-2xl px-4 pt-3 text-xs text-white/70"
+                            ? cn("rounded-t-2xl px-4 pt-3 text-xs", ON_DARK.eyebrow)
                             : "rounded-full py-2 pl-4 pr-2",
                         )}
                       >
@@ -303,11 +361,16 @@ export function PlatformLayers() {
                         </span>
                       </button>
                       <div id={panelId} hidden={!open} className="px-4 pb-4 pt-1.5">
-                        <p className="text-[15px] leading-relaxed text-white">{t(p.body)}</p>
+                        <p className={cn("text-[15px] leading-relaxed", ON_DARK.lead)}>
+                          {t(p.body)}
+                        </p>
                         <Link
                           to={p.to}
                           hash={p.hash}
-                          className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-white underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                          className={cn(
+                            "mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm font-semibold text-white underline-offset-4 hover:underline",
+                            FOCUS_ON_DARK,
+                          )}
                         >
                           {t("platform.readMore")}
                           <span className="sr-only">: {t(p.title)}</span>
