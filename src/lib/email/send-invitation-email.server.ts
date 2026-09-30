@@ -152,20 +152,16 @@ export async function sendInvitationEmail(params: InvitationEmailParams): Promis
     });
 
     if (!res.ok) {
-      // Provider's own error body may contain request-identifying detail
-      // but never the API key -- safe to log and to persist.
-      const body = await res.text().catch(() => "");
-      console.error("[send-invitation-email] provider rejected the request", res.status, body);
+      // The status only: a provider body can echo the recipient address,
+      // which must not land in the logs. Same rule as the other senders.
+      console.error("[send-invitation-email] provider rejected the request", res.status);
       return { ok: false, skipped: false, error: `HTTP ${res.status}` };
     }
 
     return { ok: true };
   } catch (err) {
-    console.error("[send-invitation-email] network/call failure", err);
-    return {
-      ok: false,
-      skipped: false,
-      error: err instanceof Error ? err.message : "UNKNOWN_ERROR",
-    };
+    const error = err instanceof Error ? err.message.slice(0, 120) : "UNKNOWN_ERROR";
+    console.error("[send-invitation-email] network/call failure", error);
+    return { ok: false, skipped: false, error };
   }
 }

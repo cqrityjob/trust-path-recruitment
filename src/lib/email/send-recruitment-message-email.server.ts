@@ -56,6 +56,9 @@ export type RecruitmentMessageEmailParams = {
   idempotencyKey?: string;
   /** Bounded call time; the default is 15 seconds. */
   timeoutMs?: number;
+  /** Where a reply lands. Only for mail CQrityjob itself writes (see
+   *  lib/email/addresses.ts); an employer's message sets none. */
+  replyTo?: string;
   /** For the guard only: a fetch that never reaches a network. */
   fetchImpl?: typeof fetch;
 };
@@ -172,7 +175,13 @@ export async function sendRecruitmentMessageEmail(
         "Content-Type": "application/json",
         ...(params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : {}),
       },
-      body: JSON.stringify({ from: fromEmail, to: [params.recipientEmail], subject, html }),
+      body: JSON.stringify({
+        from: fromEmail,
+        to: [params.recipientEmail],
+        ...(params.replyTo ? { reply_to: params.replyTo } : {}),
+        subject,
+        html,
+      }),
       signal: controller.signal,
     });
     const classified = classifyProviderResponse(res.status);
