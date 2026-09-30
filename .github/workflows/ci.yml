@@ -1438,6 +1438,12 @@ jobs:
       - name: MCP exposure check
         run: bun run mcp-exposure:check
 
+      # Product e-mail leaves only through the transactional-email Edge
+      # Function (the one holder of the Resend key), which is not an open
+      # relay: executed against a stub provider, never a network.
+      - name: Transactional e-mail function check
+        run: bun run transactional-email:check
+
       # Baseline security headers on every application response, without
       # overriding the /p share entry's own strict policy.
       - name: Security headers check

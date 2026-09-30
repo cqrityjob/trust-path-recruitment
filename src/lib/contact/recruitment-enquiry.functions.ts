@@ -48,9 +48,9 @@ function allow(address: string, now: number): boolean {
 /** Whether the form can send at all. A boolean, never the missing names. */
 export const getRecruitmentEnquiryAvailability = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ open: boolean }> => {
-    const { missingRecruitmentEnquirySettings } =
+    const { recruitmentEnquiryOpen } =
       await import("@/lib/email/send-recruitment-enquiry-email.server");
-    return { open: missingRecruitmentEnquirySettings().length === 0 };
+    return { open: await recruitmentEnquiryOpen() };
   },
 );
 

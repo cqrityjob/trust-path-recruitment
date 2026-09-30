@@ -33,9 +33,8 @@
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { registrationTargetsOrganisation } from "../src/lib/auth/organisation-entrance";
 import { announceEmployerRegistration } from "../src/lib/job-intelligence/employer-registration-notice.server";
+import { EMAIL_TRANSPORT_ENV_KEYS } from "../src/lib/email/transport.server";
 import {
-  ADMIN_RECIPIENT_ENV_KEY,
-  RESEND_ENV_KEYS,
   missingEmployerRegistrationEmailSettings,
   renderEmployerRegistrationAdminEmail,
   renderEmployerRegistrationReceivedEmail,
@@ -140,13 +139,11 @@ console.log("\n2. The transport is inert without configuration, and says so");
 // -----------------------------------------------------------------------------
 {
   const saved = {
-    RESEND_API_KEY: process.env.RESEND_API_KEY,
-    RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
-    ADMIN_NOTIFICATION_EMAIL: process.env.ADMIN_NOTIFICATION_EMAIL,
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   };
-  delete process.env.RESEND_API_KEY;
-  delete process.env.RESEND_FROM_EMAIL;
-  delete process.env.ADMIN_NOTIFICATION_EMAIL;
+  delete process.env.SUPABASE_URL;
+  delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   // A network call with no key configured would be a bug AND would make this
   // guard non-hermetic. The trap proves neither happens.
@@ -173,7 +170,7 @@ console.log("\n2. The transport is inert without configuration, and says so");
     ck(
       "and names both transport settings",
       applicant.status === "not_configured" &&
-        RESEND_ENV_KEYS.every((k) => applicant.missing.includes(k)),
+        EMAIL_TRANSPORT_ENV_KEYS.every((k) => applicant.missing.includes(k)),
       "an operator cannot fix a setting nobody names",
     );
 
@@ -191,17 +188,16 @@ console.log("\n2. The transport is inert without configuration, and says so");
       `got ${admin.status}`,
     );
     ck(
-      "and names the recipient setting too",
-      admin.status === "not_configured" && admin.missing.includes(ADMIN_RECIPIENT_ENV_KEY),
+      "and names the same transport settings",
+      admin.status === "not_configured" &&
+        EMAIL_TRANSPORT_ENV_KEYS.every((k) => admin.missing.includes(k)),
     );
 
     ck("no network call was made", !fetched, "the sender called out with no key configured");
 
     ck(
       "the configuration probe names exactly what is absent",
-      [...RESEND_ENV_KEYS, ADMIN_RECIPIENT_ENV_KEY].every((k) =>
-        missingEmployerRegistrationEmailSettings().includes(k),
-      ),
+      EMAIL_TRANSPORT_ENV_KEYS.every((k) => missingEmployerRegistrationEmailSettings().includes(k)),
     );
   } finally {
     globalThis.fetch = realFetch;
@@ -222,11 +218,11 @@ console.log("\n2. The transport is inert without configuration, and says so");
   // without a network call and without a Resend account.
   {
     const saved = {
-      RESEND_API_KEY: process.env.RESEND_API_KEY,
-      RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+      SUPABASE_URL: process.env.SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     };
-    process.env.RESEND_API_KEY = "re_guard_stub_key";
-    process.env.RESEND_FROM_EMAIL = "no-reply@example.test";
+    process.env.SUPABASE_URL = "https://guard.example.test";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "guard_stub_service_role_key";
     const realFetch = globalThis.fetch;
     let sentBody: string | null = null;
     globalThis.fetch = (async (_url: unknown, init: { body?: string } = {}) => {
@@ -262,8 +258,8 @@ console.log("\n2. The transport is inert without configuration, and says so");
         "a provider body can carry the recipient address and this value is persisted and shown",
       );
       ck(
-        "the api key is never placed in the message body",
-        sentBody !== null && !String(sentBody).includes("re_guard_stub_key"),
+        "the service key is never placed in the message body",
+        sentBody !== null && !String(sentBody).includes("guard_stub_service_role_key"),
       );
     } finally {
       globalThis.fetch = realFetch;
@@ -276,14 +272,15 @@ console.log("\n2. The transport is inert without configuration, and says so");
 
   const sender = read("src/lib/email/send-employer-registration-email.server.ts");
   ck(
-    "the api key is read from the environment, never module-scope-captured",
-    /process\.env\.RESEND_API_KEY/.test(sender) &&
-      !/const .*= process\.env\.RESEND_API_KEY/.test(sender),
+    "the sender holds no provider key: it goes through the transactional-email transport",
+    /sendTransactionalEmail\(/.test(sender) &&
+      !/process\.env\.RESEND_|api\.resend\.com/.test(sender.replace(/^\s*\/\/.*$/gm, "")),
   );
   ck(
-    "the administrator address is configuration, not a literal",
-    /process\.env\[ADMIN_RECIPIENT_ENV_KEY\]/.test(sender) && !/@cqrityjob\.(com|se)/.test(sender),
-    "an address in this file would be a hard-coded recipient",
+    "the administrator address is not the caller's to choose",
+    /deliver\("employer_registration_admin", undefined,/.test(sender) &&
+      !/@cqrityjob\.(com|se)/.test(sender),
+    "an address in this file would be a hard-coded recipient; the function decides the admin inbox",
   );
   ck(
     "a provider failure records the status only, never the response body",
@@ -315,7 +312,10 @@ console.log("\n2b. The key never reaches a browser");
   // named with that prefix AND the module that reads it is never pulled into
   // a client-reachable import graph.
 
-  const SECRET_ENV = [...RESEND_ENV_KEYS, ADMIN_RECIPIENT_ENV_KEY];
+  // The Resend key itself is not in this environment at all: it is a Supabase
+  // Edge Function secret (supabase/functions/transactional-email). What the
+  // app server holds is the transport's own configuration.
+  const SECRET_ENV = [...EMAIL_TRANSPORT_ENV_KEYS];
   for (const key of SECRET_ENV) {
     ck(
       `${key} is not a VITE_ variable`,
@@ -328,6 +328,7 @@ console.log("\n2b. The key never reaches a browser");
   // client.server.ts: a `.server.ts` suffix, and never a static import from
   // anything that ships to the browser.
   const SERVER_ONLY = [
+    "@/lib/email/transport.server",
     "@/lib/email/send-employer-registration-email.server",
     "@/lib/job-intelligence/employer-registration-notice.server",
   ];
@@ -718,11 +719,9 @@ console.log("\n5b. The announcement survives the tab closing, and never repeats 
   // ── AND A SKIPPED CHANNEL IS ITS OWN OUTCOME ────────────────────────
   {
     const saved = {
-      RESEND_API_KEY: process.env.RESEND_API_KEY,
-      RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     };
-    delete process.env.RESEND_API_KEY;
-    delete process.env.RESEND_FROM_EMAIL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
     // The trap records WHERE a call went. announceEmployerRegistration also
     // writes the audit trail, which is a Supabase call and entirely legitimate
     // -- an earlier version of this assertion counted that as a provider call
@@ -759,7 +758,7 @@ console.log("\n5b. The announcement survives the tab closing, and never repeats 
       );
       ck(
         "and no provider call was made with no key configured",
-        !calledUrls.some((u) => u.includes("api.resend.com")),
+        !calledUrls.some((u) => u.includes("api.resend.com") || u.includes("/functions/v1/")),
         calledUrls.join(", "),
       );
     } finally {

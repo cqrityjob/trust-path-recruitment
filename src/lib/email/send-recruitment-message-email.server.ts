@@ -1,10 +1,12 @@
 // The e-mail copy of a message to a candidate: one an employer wrote, or the
 // automatic receipt a recruitment sends when an application has arrived.
 //
-// Same transport as every other sender in this directory: one fetch() at
-// Resend's HTTP API, no dependency, and inert without RESEND_API_KEY and
-// RESEND_FROM_EMAIL -- which returns `not_configured` and makes no call, so
-// an environment without mail never claims to have sent any.
+// Same transport as every other sender in this directory: the
+// `transactional-email` Edge Function (lib/email/transport.server.ts), which
+// alone holds the Resend key and passes Resend's status back unchanged.
+// Without the transport, or with the function holding no key, this returns
+// `not_configured`, so an environment without mail never claims to have sent
+// any.
 //
 // This file adds only the envelope: who it is from, which vacancy it is
 // about, and a button that opens the message inside CQrityjob, where the
@@ -39,6 +41,11 @@
 // whole answer -- both 409s are one "the provider already holds this key"
 // and the provider's message id is not kept.
 
+import {
+  missingEmailTransportSettings,
+  sendTransactionalEmail,
+} from "@/lib/email/transport.server";
+
 export type RecruitmentMessageEmailParams = {
   recipientEmail: string;
   language: "sv" | "en";
@@ -56,9 +63,9 @@ export type RecruitmentMessageEmailParams = {
   idempotencyKey?: string;
   /** Bounded call time; the default is 15 seconds. */
   timeoutMs?: number;
-  /** Where a reply lands. Only for mail CQrityjob itself writes (see
-   *  lib/email/addresses.ts); an employer's message sets none. */
-  replyTo?: string;
+  /** Which transactional kind this is. The function decides the Reply-To
+   *  from it (job@ for candidate mail). Defaults to an employer's message. */
+  kind?: "application_receipt" | "recruitment_message" | "assessment_invitation";
   /** For the guard only: a fetch that never reaches a network. */
   fetchImpl?: typeof fetch;
 };
@@ -160,30 +167,22 @@ export function renderRecruitmentMessageEmail(params: RecruitmentMessageEmailPar
 export async function sendRecruitmentMessageEmail(
   params: RecruitmentMessageEmailParams,
 ): Promise<RecruitmentEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !fromEmail) return { result: "not_configured" };
+  if (missingEmailTransportSettings().length > 0) return { result: "not_configured" };
 
   const { subject, html } = renderRecruitmentMessageEmail(params);
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), params.timeoutMs ?? 15_000);
   try {
-    const res = await (params.fetchImpl ?? fetch)("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        ...(params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : {}),
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [params.recipientEmail],
-        ...(params.replyTo ? { reply_to: params.replyTo } : {}),
-        subject,
-        html,
-      }),
+    const res = await sendTransactionalEmail({
+      kind: params.kind ?? "recruitment_message",
+      to: params.recipientEmail,
+      subject,
+      html,
+      idempotencyKey: params.idempotencyKey,
       signal: controller.signal,
+      fetchImpl: params.fetchImpl,
     });
+    if (res.notConfigured) return { result: "not_configured" };
     const classified = classifyProviderResponse(res.status);
     if (classified.result !== "sent") {
       // The status and our own code only: a provider body can carry the

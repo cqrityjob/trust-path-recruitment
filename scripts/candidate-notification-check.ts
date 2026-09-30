@@ -262,7 +262,9 @@ console.log("\n7. The link goes where the rest of the product goes");
   const sender = read("src/lib/email/send-recruitment-message-email.server.ts");
   ck(
     "the recruitment sender is inert without a provider",
-    /if \(!apiKey \|\| !fromEmail\) return \{ result: "not_configured" \}/.test(sender),
+    /if \(missingEmailTransportSettings\(\)\.length > 0\) return \{ result: "not_configured" \}/.test(
+      sender,
+    ) && /if \(res\.notConfigured\) return \{ result: "not_configured" \}/.test(sender),
   );
   ck("and never persists a provider body", !/res\.text\(\)|res\.json\(\)/.test(sender));
 }

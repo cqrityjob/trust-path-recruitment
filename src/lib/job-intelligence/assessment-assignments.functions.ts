@@ -261,7 +261,7 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
       }
 
       // MVP stabilization: attempt real email delivery. Inert (no network
-      // call) unless RESEND_API_KEY/RESEND_FROM_EMAIL are configured --
+      // call) unless the transactional-email transport is configured --
       // see send-invitation-email.server.ts's own header for the full
       // root-cause trace. Never blocks or fails the assignment itself:
       // the row is already created and the copy-link path already works

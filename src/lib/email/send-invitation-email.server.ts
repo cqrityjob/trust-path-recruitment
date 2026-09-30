@@ -1,36 +1,20 @@
-// MVP stabilization — assessment invitation email delivery.
+// Assessment and academy invitation e-mail.
 //
-// Root cause of "employer invited a candidate, candidate never received an
-// email" (confirmed by tracing createAssessmentAssignment end to end):
-// no email provider was ever integrated in this codebase -- no package,
-// no env var, no supabase/functions edge function, nothing. The
-// invitation link itself has always worked correctly (copy-link, shown
-// to the employer); only the "send it by email automatically" step was
-// never built.
-//
-// This file adds that step using Resend's plain HTTP API (no new npm
-// dependency -- a single fetch() call, matching this codebase's existing
-// preference for minimal surface area). It is entirely inert unless
-// RESEND_API_KEY is present in the server environment: with no key, every
-// call below returns { ok: false, skipped: true } immediately, without a
-// network call, exactly preserving today's copy-link-only behaviour.
+// Rendered here and sent through the `transactional-email` Edge Function
+// (lib/email/transport.server.ts), which alone holds the Resend key and
+// decides the From address and Reply-To. Inert unless the transport is
+// configured: without it every call returns { ok: false, skipped: true }
+// and nothing is sent -- the copy-link behaviour the employer always has.
 //
 // Server-only (.server.ts suffix, matching client.server.ts's own
-// convention) -- never imported from a client component. The API key is
-// read once from process.env inside the function body (never module-
-// scope-captured into a client bundle, never logged, never returned to
-// the caller on success or failure).
-//
-// Two required remaining external configuration steps for Mostafa,
-// documented in the stabilization report:
-//   1. Create a Resend account (or point RESEND_API_KEY at whatever
-//      provider CQrityjob decides to use -- see the report for why
-//      Resend specifically was chosen as the default, lowest-friction
-//      option, not a locked-in decision).
-//   2. Verify a sending domain with that provider and set
-//      RESEND_FROM_EMAIL to an address on it (e.g.
-//      invitations@cqrityjob.com) in Lovable Cloud's environment
-//      variables. Until both are set, this code is a safe no-op.
+// convention) -- never imported from a client component. No key is read
+// here, nothing is logged but the HTTP status, and nothing from the
+// provider is returned to the caller.
+
+import {
+  missingEmailTransportSettings,
+  sendTransactionalEmail,
+} from "@/lib/email/transport.server";
 
 type SendResult =
   | { ok: true }
@@ -47,6 +31,8 @@ export type InvitationEmailParams = {
   expiresAt: string;
   employerMessage: string | null;
   siteOrigin: string;
+  /** Candidate assessment (default) or an employer's academy training. */
+  kind?: "assessment_invitation" | "academy_invitation";
 };
 
 const SUBJECT: Record<"sv" | "en", (assessmentName: string) => string> = {
@@ -127,29 +113,23 @@ function escapeHtml(input: string): string {
 }
 
 export async function sendInvitationEmail(params: InvitationEmailParams): Promise<SendResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !fromEmail) {
-    // Not configured -- inert by design, exactly today's behaviour.
-    return { ok: false, skipped: true };
-  }
+  // Not configured -- inert by design, and decided before any rendering or
+  // network call, exactly the copy-link behaviour.
+  if (missingEmailTransportSettings().length > 0) return { ok: false, skipped: true };
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromEmail,
-        to: [params.recipientEmail],
-        subject: SUBJECT[params.language](
-          params.language === "sv" ? params.assessmentNameSv : params.assessmentNameEn,
-        ),
-        html: renderBody(params),
-      }),
+    const res = await sendTransactionalEmail({
+      kind: params.kind ?? "assessment_invitation",
+      to: params.recipientEmail,
+      subject: SUBJECT[params.language](
+        params.language === "sv" ? params.assessmentNameSv : params.assessmentNameEn,
+      ),
+      html: renderBody(params),
     });
+    if (res.notConfigured) {
+      // Not configured -- inert by design, exactly the copy-link behaviour.
+      return { ok: false, skipped: true };
+    }
 
     if (!res.ok) {
       // The status only: a provider body can echo the recipient address,

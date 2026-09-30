@@ -16,7 +16,7 @@
 //            and accepting a possible duplicate is a manager's explicit
 //            decision.
 //   send     the shared transport, with the provider's idempotency key and
-//            a bounded call. Inert without RESEND_* (not_configured).
+//            a bounded call. Inert without the e-mail transport (not_configured).
 //   settle   rec_settle_receipt_send records the answer FOR THAT ATTEMPT.
 //            A late answer for an earlier attempt is stale and changes
 //            nothing.
@@ -30,7 +30,6 @@
 // the employer to see, and for the recovery to pick up.
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { CANDIDATE_REPLY_TO_EMAIL } from "@/lib/email/addresses";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Loose = any;
@@ -126,7 +125,7 @@ async function sendClaimed(
             cta: RECEIPT_CTA[language],
             idempotencyKey: claim.provider_key ?? undefined,
             timeoutMs: 15_000,
-            replyTo: CANDIDATE_REPLY_TO_EMAIL,
+            kind: "application_receipt",
           })
         : { result: "failed", error: "NO_ADDRESS" };
   } catch (e) {

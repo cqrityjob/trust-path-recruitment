@@ -1,18 +1,14 @@
 // A recruitment enquiry from /contact, handed to CQrityjob's own inbox.
 //
-// ── SAME TRANSPORT, SAME SECRETS, SAME HONESTY ─────────────────────────
+// ── TRANSPORT ──────────────────────────────────────────────────────────
 //
-// One fetch() at Resend's HTTP API, exactly as the other senders in this
-// directory: no new dependency, no new vendor and no new secret name. It
-// reads RESEND_API_KEY and RESEND_FROM_EMAIL for the transport and
-// ADMIN_NOTIFICATION_EMAIL for the recipient — the address employer
-// registrations already notify. With any of them absent it returns
-// `not_configured` WITHOUT a network call, and /contact says the form is not
-// open rather than pretending to send.
-//
-// The recipient is configuration and never comes from the request. The
-// enquirer's address is used only as `reply_to`, so answering is one click
-// and nothing the enquirer types can choose where the message goes.
+// Rendered here, sent through the `transactional-email` Edge Function
+// (lib/email/transport.server.ts), which alone holds the Resend key. The
+// function fixes the recipient of a `contact_enquiry` to CQrityjob's inbox
+// (info@) and the From address; the enquirer's address is used only as the
+// Reply-To, so answering is one click and nothing the enquirer types can
+// choose where the message goes. With the transport not configured nothing
+// is sent and /contact says the form is not open rather than pretending.
 //
 // After the enquiry is accepted, a fixed acknowledgement goes to the
 // enquirer (see the end of this file).
@@ -20,21 +16,26 @@
 // Server-only (`.server.ts`). Nothing is persisted.
 
 import type { EnquiryService, RecruitmentEnquiry } from "@/lib/contact/recruitment-enquiry";
+import {
+  emailTransportReady,
+  missingEmailTransportSettings,
+  sendTransactionalEmail,
+} from "@/lib/email/transport.server";
 
 export type EnquiryEmailOutcome =
   | { readonly status: "sent" }
   | { readonly status: "not_configured"; readonly missing: readonly string[] }
   | { readonly status: "failed"; readonly error: string };
 
-export const ENQUIRY_ENV_KEYS = [
-  "RESEND_API_KEY",
-  "RESEND_FROM_EMAIL",
-  "ADMIN_NOTIFICATION_EMAIL",
-] as const;
-
 /** Which settings are absent — NAMES only, never values. */
 export function missingRecruitmentEnquirySettings(): string[] {
-  return ENQUIRY_ENV_KEYS.filter((key) => !process.env[key]);
+  return missingEmailTransportSettings();
+}
+
+/** Whether the form can send at all: the transport is configured AND the
+ *  e-mail function is deployed with its key. Never throws. */
+export async function recruitmentEnquiryOpen(): Promise<boolean> {
+  return emailTransportReady();
 }
 
 const SERVICE_LABEL: Record<EnquiryService, string> = {
@@ -99,22 +100,14 @@ export async function sendRecruitmentEnquiryEmail(
 
   const { subject, html } = renderRecruitmentEnquiryEmail(enquiry);
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL,
-        to: [process.env.ADMIN_NOTIFICATION_EMAIL],
-        reply_to: enquiry.email,
-        subject,
-        html,
-      }),
+    const res = await sendTransactionalEmail({
+      kind: "contact_enquiry",
+      replyTo: enquiry.email,
+      subject,
+      html,
     });
+    if (res.notConfigured) return { status: "not_configured", missing: [] };
     if (!res.ok) {
-      // The status only: a provider body can echo the addresses.
       console.error("[send-recruitment-enquiry-email] provider rejected", res.status);
       return { status: "failed", error: `HTTP ${res.status}` };
     }
@@ -131,7 +124,7 @@ export async function sendRecruitmentEnquiryEmail(
 // A short, fixed receipt so the enquirer knows it arrived. Sent only after
 // the enquiry itself reached CQrityjob's inbox, and only to the validated
 // address the enquirer typed (whose daily count is capped by the durable
-// throttle). Replies go to CQrityjob's own inbox (ADMIN_NOTIFICATION_EMAIL),
+// throttle). Replies go to CQrityjob's own inbox (info@, set by the function),
 // never to the no-reply sender. It is a transactional receipt: no marketing,
 // no subscription, and nothing the enquirer typed is echoed except a first
 // name that passes a strict letters-only check — so the form cannot be used
@@ -186,21 +179,14 @@ export async function sendEnquiryAcknowledgementEmail(
 
   const { subject, text, html } = renderEnquiryAcknowledgementEmail(enquiry);
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL,
-        to: [enquiry.email],
-        reply_to: process.env.ADMIN_NOTIFICATION_EMAIL,
-        subject,
-        text,
-        html,
-      }),
+    const res = await sendTransactionalEmail({
+      kind: "contact_acknowledgement",
+      to: enquiry.email,
+      subject,
+      text,
+      html,
     });
+    if (res.notConfigured) return { status: "not_configured", missing: [] };
     if (!res.ok) {
       console.error("[send-recruitment-enquiry-email] acknowledgement rejected", res.status);
       return { status: "failed", error: `HTTP ${res.status}` };

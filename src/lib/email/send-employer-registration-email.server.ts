@@ -29,10 +29,10 @@
 //
 // ── SAME TRANSPORT, SAME INERTNESS ─────────────────────────────────────
 //
-// One fetch() at Resend's HTTP API, exactly as send-invitation-email.server.ts
-// and send-application-status-email.server.ts do: no new dependency, no new
-// vendor, no new secret name. With no RESEND_API_KEY / RESEND_FROM_EMAIL the
-// functions return `not_configured` WITHOUT a network call.
+// Sent through the `transactional-email` Edge Function
+// (lib/email/transport.server.ts), which alone holds the Resend key. Without
+// the transport settings, or with the function holding no key, the functions
+// return `not_configured` and nothing is sent.
 //
 // What is new is that `not_configured` is a distinct answer rather than a
 // quiet `skipped`. The caller renders it, so a deployment with no mail
@@ -42,14 +42,22 @@
 // provider, and nothing may report a message as *received*: the strongest
 // claim available here is that Resend accepted it.
 //
-// ── THE ADMINISTRATOR'S ADDRESS IS CONFIGURATION ───────────────────────
+// ── THE ADMINISTRATOR'S ADDRESS IS NOT THE CALLER'S TO CHOOSE ──────────
 //
-// ADMIN_NOTIFICATION_EMAIL, read from the server environment. Never a
-// hard-coded address, and never derived from anything in the request — an
-// attacker-chosen company name must not be able to steer where the
-// notification goes. Absent, the admin channel reports `not_configured` and
-// the administrator still sees the application in /admin/employers, which is
-// the surface that does not depend on mail working at all.
+// The transactional-email function sends `employer_registration_admin` to
+// CQrityjob's inbox (info@) itself; nothing in the request — least of all an
+// attacker-chosen company name — can steer where the notification goes.
+// Without mail the administrator still sees the application in
+// /admin/employers, the surface that does not depend on mail at all.
+
+import {
+  missingEmailTransportSettings,
+  sendTransactionalEmail,
+} from "@/lib/email/transport.server";
+
+/** The Supabase Edge Function secret that must exist for mail to go out.
+ *  Reported by NAME when the function answers "not configured". */
+export const RESEND_SECRET_NAME = "RESEND_API_KEY (Supabase Edge Function secret)";
 
 /** Server-only. Never imported from a client component — `.server.ts`, same
  *  convention as client.server.ts and the two senders beside this file. */
@@ -265,37 +273,25 @@ export function renderEmployerRegistrationAdminEmail(
 // Transport
 // -----------------------------------------------------------------------------
 
-/** The two secrets the transport needs. Named once, so the guard script and
- *  the deployment documentation assert against the same literals. */
-export const RESEND_ENV_KEYS = ["RESEND_API_KEY", "RESEND_FROM_EMAIL"] as const;
-/** Where an administrator notification goes. Configuration, never a literal. */
-export const ADMIN_RECIPIENT_ENV_KEY = "ADMIN_NOTIFICATION_EMAIL";
-
-function missingTransportEnv(): string[] {
-  return RESEND_ENV_KEYS.filter((key) => !process.env[key]);
-}
-
-/**
- * Hand one message to Resend.
+/** Hand one message to the transactional-email function.
  *
  * Never throws: every caller in this flow has already saved the registration,
  * and an exception here would turn a delivery problem into a failed
  * registration. The outcome is returned as a value instead, so the caller can
  * record it and say it out loud.
  */
-async function deliver(to: string, subject: string, html: string): Promise<EmailChannelOutcome> {
-  const missing = missingTransportEnv();
+async function deliver(
+  kind: "employer_registration_received" | "employer_registration_admin",
+  to: string | undefined,
+  subject: string,
+  html: string,
+): Promise<EmailChannelOutcome> {
+  const missing = missingEmailTransportSettings();
   if (missing.length > 0) return { status: "not_configured", missing };
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from: process.env.RESEND_FROM_EMAIL, to: [to], subject, html }),
-    });
+    const res = await sendTransactionalEmail({ kind, to, subject, html });
+    if (res.notConfigured) return { status: "not_configured", missing: [RESEND_SECRET_NAME] };
     if (!res.ok) {
       // The status only. A provider body can carry the recipient address, and
       // this value is persisted and shown to an administrator.
@@ -304,11 +300,9 @@ async function deliver(to: string, subject: string, html: string): Promise<Email
     }
     return { status: "sent" };
   } catch (err) {
-    console.error("[send-employer-registration-email] network failure", err);
-    return {
-      status: "failed",
-      error: err instanceof Error ? err.message.slice(0, 120) : "UNKNOWN_ERROR",
-    };
+    const error = err instanceof Error ? err.message.slice(0, 120) : "UNKNOWN_ERROR";
+    console.error("[send-employer-registration-email] network failure", error);
+    return { status: "failed", error };
   }
 }
 
@@ -317,36 +311,27 @@ export async function sendEmployerRegistrationReceivedEmail(
   params: EmployerRegistrationEmailParams,
 ): Promise<EmailChannelOutcome> {
   const { subject, html } = renderEmployerRegistrationReceivedEmail(params);
-  return deliver(params.recipientEmail, subject, html);
+  return deliver("employer_registration_received", params.recipientEmail, subject, html);
 }
 
 /**
- * The notification the configured administrator address receives.
+ * The notification CQrityjob's own inbox receives.
  *
- * Takes the recipient from the environment rather than from the caller, so
- * there is exactly one place this address can come from and no request can
- * influence it.
+ * The recipient is decided by the transactional-email function (info@), not
+ * by the caller, so there is exactly one place this address comes from and no
+ * request can influence it.
  */
 export async function sendEmployerRegistrationAdminEmail(
   params: Omit<EmployerRegistrationAdminEmailParams, "recipientEmail">,
 ): Promise<EmailChannelOutcome> {
-  const recipient = process.env[ADMIN_RECIPIENT_ENV_KEY];
-  const missing = [...missingTransportEnv(), ...(recipient ? [] : [ADMIN_RECIPIENT_ENV_KEY])];
-  if (missing.length > 0) return { status: "not_configured", missing };
-
-  const { subject, html } = renderEmployerRegistrationAdminEmail({
-    ...params,
-    recipientEmail: recipient as string,
-  });
-  return deliver(recipient as string, subject, html);
+  // The body never shows the recipient; the function decides the inbox.
+  const { subject, html } = renderEmployerRegistrationAdminEmail({ ...params, recipientEmail: "" });
+  return deliver("employer_registration_admin", undefined, subject, html);
 }
 
 /** Which of this flow's settings are absent, for an administrator who needs
  *  to know whether mail notification is live at all. Returns NAMES, never
  *  values — nothing here may leak a key or an address into a response. */
 export function missingEmployerRegistrationEmailSettings(): string[] {
-  return [
-    ...missingTransportEnv(),
-    ...(process.env[ADMIN_RECIPIENT_ENV_KEY] ? [] : [ADMIN_RECIPIENT_ENV_KEY]),
-  ];
+  return missingEmailTransportSettings();
 }
