@@ -630,7 +630,10 @@ const sv = {
   "claims.type.education": "Utbildning",
   "claims.type.professional_membership": "Yrkesmedlemskap",
   "claims.issuer": "Utfärdare",
-  "claims.verifier": "Verifierad av",
+  // The weakest true label: a credential's decider on the Passport card, and
+  // the fallback for an approval with no recorded method -- both a review,
+  // never a source's confirmation (effectiveTrust rates them Dokumenterad).
+  "claims.verifier": "Granskad av",
   // ── UTFÄRDARE ÄR INTE VERIFIERARE ────────────────────────────────────
   // "Utfärdad av BYA" och "Verifierad av BYA" är två skilda påståenden.
   // Etiketten väljs av METODEN som faktiskt användes, aldrig av vem som
@@ -1565,9 +1568,11 @@ const sv = {
   "rec.credentialMarket": "Gäller i",
   "rec.experience": "Anställning",
   "rec.tenure": "Bekräftad anställningstid",
-  "rec.verifiedBy": "Verifierad av",
+  // Only a SOURCE confirmation reaches these (provenanceLabelKeys): the
+  // words follow "Källbekräftad".
+  "rec.verifiedBy": "Bekräftad av",
   "rec.method": "Metod",
-  "rec.verifiedAt": "Verifierad",
+  "rec.verifiedAt": "Bekräftad",
   "rec.validUntil": "Giltig till",
   "rec.state": "Status",
   "rec.issuer": "Utfärdare",
@@ -3046,7 +3051,7 @@ const en: Record<PassportCopyKey, string> = {
   "claims.type.education": "Education",
   "claims.type.professional_membership": "Professional membership",
   "claims.issuer": "Issuer",
-  "claims.verifier": "Verified by",
+  "claims.verifier": "Reviewed by",
   "claims.attribution.document_review": "Document reviewed by",
   "claims.attribution.employer_confirmation": "Confirmed by",
   "claims.attribution.issuer_confirmation": "Confirmed by the issuer",
@@ -3820,9 +3825,9 @@ const en: Record<PassportCopyKey, string> = {
   "rec.credentialMarket": "Valid in",
   "rec.experience": "Employment",
   "rec.tenure": "Confirmed employment duration",
-  "rec.verifiedBy": "Verified by",
+  "rec.verifiedBy": "Confirmed by",
   "rec.method": "Method",
-  "rec.verifiedAt": "Verified",
+  "rec.verifiedAt": "Confirmed",
   "rec.validUntil": "Valid until",
   "rec.state": "Status",
   "rec.issuer": "Issuer",

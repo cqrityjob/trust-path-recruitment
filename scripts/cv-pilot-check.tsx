@@ -679,7 +679,15 @@ group("EXPIRY — the defect this guard exists for");
   );
 
   const text = visibleText(markupOf(lapsed));
-  ck("the CV does NOT print a verification mark on it", !text.includes("Verifierad"));
+  // The mark's words: the attribution line ("Granskad av …", the weakest true
+  // label for an approval whose method the product cannot support) or the
+  // source-confirmed word. Neither may survive expiry.
+  ck(
+    "the CV does NOT print a verification mark on it",
+    !text.includes("Verifierad") &&
+      !text.includes("Granskad av") &&
+      !text.includes("Källbekräftad"),
+  );
   ck("the CV does NOT print an attribution line for it", !text.includes("Länsstyrelsen i Skåne"));
   ck("the CV DOES print the date it was valid until", text.includes("Giltig t.o.m. 2026-03-31"));
   ck("and says, in a word, that it has expired", text.includes("Utgången"));
@@ -695,7 +703,10 @@ group("EXPIRY — the defect this guard exists for");
     claims: [{ ...lapsed.claims[0], validUntil: "2028-03-31" }],
   });
   const currentText = visibleText(markupOf(current));
-  ck("a credential still in date keeps its verification mark", currentText.includes("Verifierad"));
+  ck(
+    "a credential still in date keeps its verification mark",
+    currentText.includes("Granskad av Länsstyrelsen i Skåne"),
+  );
   ck("keeps its attribution line", currentText.includes("Länsstyrelsen i Skåne"));
   ck(
     "and prints its validity date rather than a warning",
