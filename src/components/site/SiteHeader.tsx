@@ -1,14 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, useLocation, useMatches } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Menu, X, ShieldCheck, Building2, Gavel, LogOut, UserPen, UserRound } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  Gavel,
+  LogOut,
+  Menu,
+  ShieldCheck,
+  UserPen,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useT } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { resolveCandidateNav, type CandidateNavKey } from "./candidate-app-nav";
-import { publicNav } from "./public-nav";
+import { EMPLOYER_NAV, publicNav } from "./public-nav";
 import { CandidateAppNav } from "./CandidateAppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
@@ -24,33 +34,20 @@ import { workspaceStatusLabelKey } from "./workspace-status";
 const focusRing =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
-/** The same treatment for a control sitting on the navy utility bar. Only
- *  the ring OFFSET colour differs: offsetting against `background` on a dark
- *  strip draws a pale halo that reads as a rendering fault rather than as
- *  focus. Matches what LanguageSwitcher's `tone="onDark"` already does. */
-const focusRingOnDark =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-primary";
-
 /** The minimum hit area for EVERY interactive control in the public chrome,
- *  at every width.
- *
- *  ── WHY THIS IS NOW ONE CONSTANT, AND WHY THE EXCEPTION IS GONE ───────
- *
- *  This header used to carry a documented exception: the desktop bar's own
- *  36px control height (h-9) and the two-letter language toggle were argued
- *  to be acceptable because they are mouse targets on a >=1024px viewport
- *  and clear WCAG 2.5.8 (AA, 24 x 24). The Platform Entry Specification does
- *  not grant that exception -- §4.2 requires the six public destinations to
- *  be reachable "with 44 pixel minimum targets", and §12 says flatly that
- *  "all controls have visible focus, labels and minimum 44 pixel targets".
- *  A 1024px viewport is also a touch viewport on most tablets, which is
- *  precisely where the old reasoning failed.
- *
- *  So the exception is removed rather than re-argued, BOTH dimensions are
- *  covered, and e2e/public-homepage.spec.ts measures header, main AND footer
- *  at 320/375/390/768/1024/1440 against `getBoundingClientRect()` -- a real
- *  box, not a padding trick a pseudo-element could fake. */
+ *  at every width, in both dimensions (Platform Entry Specification §4.2 and
+ *  §12). e2e/public-homepage.spec.ts measures header, main AND footer at
+ *  320/375/390/768/1024/1440 against `getBoundingClientRect()` -- a real box,
+ *  not a padding trick a pseudo-element could fake. */
 const touchTarget = "min-h-[44px] min-w-[44px]";
+
+/** A public nav entry on the desktop bar. The padding steps up at xl: at
+ *  1024-1279px the locked six, SV / EN and both account actions have ~40px to
+ *  spare, and a wider box is what would spend it. Measured, not guessed. */
+const DESKTOP_ITEM =
+  "relative inline-flex items-center justify-center gap-1 rounded-md px-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground xl:px-2.5";
+const DESKTOP_ACTIVE =
+  "text-foreground after:absolute after:bottom-0 after:left-1.5 after:right-1.5 after:h-[2px] after:rounded-full after:bg-accent xl:after:left-2.5 xl:after:right-2.5";
 
 /** The compact menu sheet's own surface. It scrolls independently: signed in,
  *  with an organisation and the account block, the sheet is taller than a
@@ -62,13 +59,8 @@ export function SiteHeader() {
   const { t, tp } = useT();
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  // Sticky-header depth, added only once the page has actually moved.
-  //
-  // The bar carries a hairline at rest and gains a soft shadow on scroll, so
-  // content passing underneath reads as passing UNDER something rather than
-  // colliding with it. Nothing about the box changes -- no height, padding or
-  // border-width transition -- so there is no layout shift, and the only
-  // animated properties are colour and shadow.
+  // Sticky-header depth, added only once the page has actually moved. Only
+  // colour and shadow animate, so there is no layout shift.
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -78,11 +70,9 @@ export function SiteHeader() {
   }, []);
   // ── THE SHEET CLOSES BY ITSELF ───────────────────────────────────────
   //
-  // Its links call setOpen(false), and nothing else did. So the sheet stayed
-  // open across a back/forward navigation, across a resize past the desktop
-  // breakpoint (it was only CSS-hidden, and reappeared the moment the window
-  // shrank again), and Escape did nothing. Each of those is a person looking
-  // at a full-width menu they did not ask for.
+  // On navigation, on Escape, and on a resize past the desktop breakpoint --
+  // each of those is otherwise a person looking at a full-width menu they did
+  // not ask for.
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
@@ -154,74 +144,35 @@ export function SiteHeader() {
 
   // ── MARKETING CHROME vs APPLICATION CHROME ──────────────────────────
   //
-  // These six links are the WEBSITE's navigation and they stay exactly as
-  // they are for anybody reading the website. What changed is that they
-  // are no longer also served to somebody who is signed in and standing
-  // inside their own workspace — where "Arbetsgivare", "Om oss" and
-  // "Kontakt" were outranking the candidate's own career, and where
-  // "Kontakt" appeared twice on every page (once here, once in the
-  // utility bar above).
+  // These six links are the WEBSITE's navigation. They are not served to
+  // somebody signed in and standing inside their own workspace, where the
+  // candidate's seven destinations replace them (candidate-app-nav.ts).
   //
-  // Nothing is removed from the site: the public pages keep their routes,
-  // their nav on public pages, and their place in the footer. See
-  // candidate-app-nav.ts for the four destinations that replace them.
+  // ── THE LOCKED NAVIGATION (2026-09-30) ──────────────────────────────
   //
-  // ── SIX, THE THREE CORE PARTS FIRST (MVP text specification, 2026-09-27)
+  //   Karriär · Jobb · Security Passport · Säkerhetsarbete ·
+  //   För arbetsgivare ▾ · Om oss            SV / EN · Logga in · Skapa konto
   //
-  //   Säkerhetsarbete · Security Passport · Karriär · Jobb ·
-  //   För arbetsgivare · Om oss
-  //
-  // This replaces the owner's 2026-09-14 five, which kept product names out
-  // of the bar. The owner's latest decision makes security work, Security
-  // Passport and career/jobs three EQUAL core parts, and each of them is now
-  // reachable from the chrome under the name the product itself uses. See
-  // public-nav.ts, which is the one definition the desktop bar, the compact
-  // menu and the footer all render.
-  //
-  // The career analysis is not an entry of its own: it keeps a direct action
-  // in the homepage's career card and on the Career Center. "Bedömningar"
-  // and "Kontakt" stay out, for the unchanged reasons: /assessment belongs
-  // behind the career and employer pages rather than beside them, and
-  // /contact carries a form that sends nothing.
-  //
-  // `exact` matching is required on "/" because a Link matches by PREFIX --
-  // without it an entry pointing at a homepage section would be marked
-  // current on every route on the site. With `includeHash`, the two section
-  // entries are current only on their own section, so the bare homepage
-  // leaves the bar neutral.
+  // One definition (public-nav.ts) renders the desktop bar, the compact menu
+  // and the footer. Only "För arbetsgivare" opens a submenu; its five entries
+  // are sections of /employers (EMPLOYER_NAV). The two product entries open
+  // their PUBLIC pages for a signed-out visitor — never a homepage anchor —
+  // and the product itself for a signed-in one.
   const nav = publicNav(signedIn === true).map((item) => ({ ...item, label: t(item.labelKey) }));
 
   // ── The two role entries ────────────────────────────────────────────
   //
-  // /reviews runs in AssessmentShell, which deliberately has no site
-  // navigation: it should not compete with finishing the work in front of
-  // you. That makes this header the only place a reviewer is offered a way
-  // in, and until it was added there was none — the queue was reachable
-  // only from a card on /my-career, or by typing the URL.
-  //
-  // /academy used to be offered the same way and no longer is: inside the
-  // candidate workspace it is "Bedömningar" in the primary nav, and its
-  // list and released reports now carry the app chrome so somebody who
-  // opens one is not stranded on a page with no way back. Only the RUN
-  // itself keeps the distraction-free shell, which is where that rule was
-  // always earning its keep.
-  //
-  // Each entry is gated by whether the person actually has that kind of work,
-  // and the gate is the data rather than a client-side role check. The review
-  // queue is a security_invoker view, so a non-reviewer gets zero and the entry
-  // never renders; there is no second copy of the capability rule here to drift
-  // out of step with the database.
-  //
-  // Counts only — never a programme name, an employer name or anything a
-  // reviewer is meant to see once, in context, on their own workspace.
+  // Each is gated by whether the person actually has that kind of work, and
+  // the gate is the data rather than a client-side role check. The review
+  // queue is a security_invoker view, so a non-reviewer gets zero and the
+  // entry never renders. Counts only — never a programme or employer name.
   const academyCountFn = useServerFn(countMyAcademyWork);
   const reviewCountFn = useServerFn(countMyReviewQueue);
 
   const academy = useQuery({
     queryKey: ["academy", "my-work-count"],
     queryFn: () => academyCountFn(),
-    // Signed-out visitors never ask. Every page in the app mounts this header,
-    // so the window keeps a normal browsing session to one request per role.
+    // Signed-out visitors never ask.
     enabled: signedIn === true,
     staleTime: 5 * 60 * 1000,
     retry: false,
@@ -235,33 +186,23 @@ export function SiteHeader() {
     retry: false,
   });
 
-  // Does this person actually hold a workspace? Same server function the
-  // dashboard used, same query key, so on /my-career the two share one
-  // request rather than each making their own. `enabled` keeps a signed-out
-  // visitor — and a build with the portal flag off — from asking at all.
+  // Does this person actually hold a workspace? Same server function and
+  // query key as the dashboard, so on /my-career the two share one request.
   const fetchWorkspaces = useServerFn(listMyEmployerWorkspaces);
   const workspaces = useQuery({
     queryKey: ["employer", "my-workspaces"],
     queryFn: () => fetchWorkspaces(),
     enabled: signedIn === true && employerPortalEnabled(),
     staleTime: 5 * 60 * 1000,
-    // The two count queries above use retry: false, because a missing badge
-    // costs a number. This one gates NAVIGATION: if it fails, a member loses
-    // the only route into their workspace from the chrome and gets it back
-    // only by chance on a later page. One retry, so a transient blip does not
-    // strand them.
+    // This one gates NAVIGATION: one retry, so a transient blip does not
+    // strand a member without the route into their workspace.
     retry: 1,
   });
   // Strictly "the database returned an organisation this person belongs to".
-  //
-  // A failed read still reads as no context -- there is nothing truthful to
-  // offer until the answer arrives. An organisation UNDER REVIEW, however, is
-  // carried through with its status, because a registrant who cannot find
-  // their own pending organisation from anywhere in the chrome is the defect
-  // this PR exists to fix: the audit's employer had no route to it at all and
-  // had to type /employer. The status decides the label and the destination
-  // in AccountMenu; it grants nothing, and every route re-verifies access
-  // server-side exactly as it does when the URL is typed.
+  // An organisation UNDER REVIEW is carried through with its status so a
+  // registrant can find their own pending organisation. The status decides
+  // the label and the destination in AccountMenu; it grants nothing, and
+  // every route re-verifies access server-side.
   const myWorkspaces = (workspaces.data ?? []).map((w) => ({
     employerSlug: w.employerSlug,
     employerName: w.employerName,
@@ -271,35 +212,15 @@ export function SiteHeader() {
 
   // ── WHICH CHROME THIS ROUTE GETS ────────────────────────────────────
   //
-  // Asked of the ROUTER, not of the pathname: `useMatches()` hands back
-  // the routes it actually resolved, so a prefix naming no real route
-  // matches nothing rather than silently matching a lookalike path. The
-  // decision itself is a pure function so it can be proven exhaustively
-  // without standing up a router — see candidate-app-nav.ts.
-  //
-  // PRESENTATION ONLY, and this is the load-bearing sentence: being in
-  // the candidate chrome grants nothing and withholds nothing. Every one
-  // of these destinations re-verifies its own access server-side, exactly
-  // as it does when the URL is typed. An employer member reading /jobs in
-  // their personal context gets the candidate chrome and still cannot see
-  // one row their memberships do not entitle them to; their workspace
-  // keeps EmployerAppShell and is reached, by name, from the account menu.
+  // Asked of the ROUTER, not of the pathname. PRESENTATION ONLY: being in
+  // the candidate chrome grants nothing and withholds nothing.
   const matches = useMatches();
   const { inCandidateApp, activeKey } = resolveCandidateNav(
     matches.map((m) => m.routeId as string),
   );
   const appMode = signedIn === true && inCandidateApp;
-  // Job readers need their results above the fold. Keep the existing
-  // candidate chrome, and compact only the public jobs header to one row.
-  // The menu remains available on wide screens for the employer entrance.
-  const compactJobs = !appMode && matches.some((match) => match.routeId === "/jobs");
 
-  /** Which context the CURRENT ROUTE is in.
-   *
-   *  Presentation only. It decides which entry in the switcher wears a tick;
-   *  it grants nothing and is never read as permission. The slug is taken
-   *  from the path this browser is already on -- the route it names
-   *  re-verifies membership itself. */
+  /** Which context the CURRENT ROUTE is in. Presentation only. */
   const employerMatch = /^\/employer\/([^/]+)/.exec(location.pathname);
   const currentContext: AccountIdentity["currentContext"] =
     employerMatch && employerMatch[1]
@@ -316,23 +237,6 @@ export function SiteHeader() {
   const academyActionable = academy.data?.actionable ?? 0;
   const reviewCount = reviews.data ?? 0;
 
-  // A count is shown only when it means "this is waiting for you". A person
-  // whose only run is submitted and awaiting review is not being asked for
-  // anything, and a badge would say otherwise.
-  //
-  // ── WHERE THE ROLE ENTRIES WENT ─────────────────────────────────────
-  //
-  // /academy used to be a pill here; inside the candidate workspace it is
-  // "Bedömningar", a standing primary-nav destination, and the COUNT rides
-  // on that item -- still only when something is genuinely being asked.
-  //
-  // /reviews used to be a pill too: "Granskningar · 34", in the primary
-  // navigation of the candidate's own workspace. Reviewing responses is a
-  // separate authorised capability, and giving it equal billing beside
-  // somebody's own career said the opposite of what the product means. It
-  // is reached from the account menu's workspace switch now, on both
-  // viewports, and stays gated on the queue itself: `reviewCount > 0` is
-  // decided by a security-invoker read, never by a role literal here.
   const identity: AccountIdentity = {
     name: account.name,
     email: account.email,
@@ -340,9 +244,11 @@ export function SiteHeader() {
     reviewQueueCount: reviewCount,
     currentContext,
   };
-  // The public-site chrome keeps the academy pill for somebody signed in
+  // The public-site chrome keeps the assessment entry for somebody signed in
   // and reading the website, so an employer's invitation is findable from
-  // any page.
+  // any page: as its own row in the compact menu, and on the desktop bar as
+  // the count on "Min karriär" — the locked row has no width for a third
+  // pill beside SV / EN.
   const roleLinks: { to: "/academy"; label: string; count: number | null }[] = [];
   if (!appMode && academyTotal > 0) {
     roleLinks.push({
@@ -353,108 +259,21 @@ export function SiteHeader() {
   }
 
   /** The badge for one app-nav item, or null. Only "this is waiting for
-   *  you" earns a number — the same rule the pill used. */
+   *  you" earns a number. */
   const appNavCount = (key: CandidateNavKey): number | null =>
     key === "assessments" && academyActionable > 0 ? academyActionable : null;
 
-  // ── WHY THE DESKTOP BAR STARTS AT lg AND NOT md ─────────────────────
-  //
-  // Six primary-nav items in Swedish ("Säkerhetskarriärcenter" alone is 22
-  // characters), a language toggle and two actions do not fit in 768px.
-  // They never did: at exactly the md breakpoint the desktop layout
-  // switched on and overflowed the viewport by ~240px in Swedish and ~150px
-  // in English, which put the sign-in control off-screen behind a
-  // horizontal scroll on every tablet.
-  //
-  // Measured, not guessed -- a Playwright sweep at 375/768/1280/1440 in
-  // both locales found it, which is exactly the width nobody resizes to by
-  // hand. The mobile menu already handles this range correctly, so the
-  // breakpoint moves rather than the content.
+  const onEmployers = /^\/employers(\/|$)/.test(location.pathname);
+
   return (
     <header className="no-print sticky top-0 z-40 bg-background/90 backdrop-blur">
-      {/* Slim utility bar — the WEBSITE's, desktop only. The brand principle
-          on the left, and the ONE genuinely global control on the right.
-
-          It does not follow anybody into the workspace. A marketing tagline
-          strip above an application is the single loudest way to tell
-          somebody they are still on a website.
-
-          ── WHY "KONTAKT" IS NO LONGER HERE ─────────────────────────────
-          It was the second "Kontakt" in the same header area: once in this
-          bar, once in the primary nav directly underneath, both pointing at
-          /contact. The route is untouched and remains reachable from the
-          primary nav (desktop and mobile) and from the footer — only the
-          visual duplication is gone.
-
-          The language toggle moved UP here from the crowded action cluster:
-          it is a site-wide preference rather than an action, and the main
-          row now carries only the brand, the navigation and the account
-          controls. Mobile keeps its own toggle inside the menu sheet, since
-          this bar is desktop-only. */}
-      <div
-        className={cn(
-          "hidden bg-primary text-primary-foreground/85",
-          !appMode && !compactJobs && "lg:block",
-        )}
-      >
-        <Container className="flex min-h-[44px] min-w-[44px] items-center justify-between gap-4 py-1 text-[11px] font-medium tracking-wide">
-          <span className="inline-flex min-w-0 items-center gap-2">
-            <ShieldCheck
-              className="h-3 w-3 shrink-0 text-[color:var(--gold)]"
-              strokeWidth={2}
-              aria-hidden="true"
-            />
-            <span className="truncate uppercase tracking-[0.14em]">{t("footer.tagline")}</span>
-          </span>
-          <div className="flex shrink-0 items-center gap-5">
-            <LanguageSwitcher tone="onDark" />
-            {/* ── THE EMPLOYER DOOR, FOR A SIGNED-OUT VISITOR ─────────────
-                The ungated "Arbetsgivarportal" that used to sit here was a
-                door offered to everybody, including people holding no
-                membership, and it pointed at a SECOND login. Both defects
-                stay fixed, and neither is what this entry is:
-
-                  * It is offered only while nobody is signed in. A signed-in
-                    person reaches their organisations from the account menu,
-                    BY NAME, and only the organisations RLS actually returned
-                    -- so this never becomes a second, ungated way in beside
-                    a truthful one. That is asserted by header-entry:check.
-                  * It leads to /login -- the one door -- carrying /employer
-                    as a `?redirect=`. Exactly the mechanism the Passport CTA
-                    already uses, validated by safeReturnPath on arrival.
-                  * It grants NOTHING. /employer resolves real organisation
-                    membership server-side on every load: no workspace sends
-                    somebody to onboarding, a pending one to the review state.
-                    An intent in a URL has never been a permission here.
-
-                It is a text link rather than a button, on the utility bar
-                rather than in the action cluster, because the primary
-                navigation and the Passport CTA are the header's job. The
-                word is "Företagsinloggning", never "Arbetsgivare": that word
-                belongs to the information page in the primary nav and to
-                nothing else.
-
-                Gated on the release flag for the same reason /employer
-                itself is -- an entrance to a "coming soon" page is worse
-                than no entrance. The flag remains release control only; it
-                is not, and is not read as, a security boundary. */}
-            {signedIn !== true && employerPortalEnabled() && (
-              <Link
-                to="/login"
-                search={{ redirect: "/employer" } as never}
-                className={cn(
-                  "inline-flex items-center justify-center gap-1.5 rounded-sm px-1 whitespace-nowrap text-primary-foreground/80 underline-offset-4 transition-colors hover:text-primary-foreground hover:underline",
-                  touchTarget,
-                  focusRingOnDark,
-                )}
-              >
-                <Building2 className="h-3 w-3 shrink-0" strokeWidth={2} aria-hidden="true" />
-                {t("nav.employerLogin")}
-              </Link>
-            )}
-          </div>
-        </Container>
-      </div>
+      {/* ── ONE ROW ─────────────────────────────────────────────────────
+          The navy utility strip that used to sit above this row is gone. It
+          carried the slogan, the language toggle and the employer door; the
+          toggle now sits on the right as the locked navigation specifies, the
+          employer door lives in the "För arbetsgivare" menu, and the slogan
+          is the footer's. One row also keeps the sticky header from eating a
+          sixth of a laptop screen. */}
       <div
         className={cn(
           "border-b bg-background/95 transition-shadow duration-200 motion-reduce:transition-none",
@@ -463,31 +282,14 @@ export function SiteHeader() {
             : "border-border shadow-[0_1px_0_0_var(--color-border)]",
         )}
       >
-        <Container
-          className={cn(
-            "flex h-16 items-center justify-between gap-4 xl:gap-8",
-            compactJobs && "max-w-[1360px] gap-3 xl:gap-3",
-          )}
-        >
-          {/* The brand mark goes to the public homepage, always, signed in
-              or not.
-
-              It briefly went to /my-career in the workspace, on the
-              reasoning that a logo is "home" and a candidate's home is
-              their own workspace. The owner's review reversed that: the
-              logo is the way OUT to the public site, and a candidate who
-              wants their overview has a navigation item called Översikt
-              sitting right beside it. One destination, one control —
-              having the logo and the first nav item lead to the same place
-              is the duplication this pass exists to remove.
-
-              `to="/"` unconditionally: a ternary here is what made the
-              mark mean two different things depending on who was reading
-              it, which is the one thing a brand mark must never do. */}
+        <Container className="flex h-16 items-center justify-between gap-3 lg:px-6 xl:gap-6 xl:px-8">
+          {/* The brand mark goes to the public homepage, always, signed in or
+              not. `to="/"` unconditionally: a brand mark must never mean two
+              different things depending on who is reading it. */}
           <Link
             to="/"
             className={cn(
-              "flex shrink-0 items-center gap-2.5 rounded-md font-semibold tracking-tight text-foreground",
+              "flex shrink-0 items-center gap-2 rounded-md font-semibold tracking-tight text-foreground",
               touchTarget,
               focusRing,
             )}
@@ -501,125 +303,78 @@ export function SiteHeader() {
           {appMode ? (
             <CandidateAppNav variant="desktop" activeKey={activeKey} badgeFor={appNavCount} />
           ) : (
-            /* The indicator sits on the item itself rather than being hung
-               off the bottom of the header row: a 2px rule at a hardcoded
-               `-bottom-22px` had to be re-guessed every time the row height
-               or the utility bar changed, and it was the only thing in the
-               header that could not survive a spacing edit. */
             <nav
-              className={cn(
-                "hidden min-w-0 items-center gap-1 xl:gap-2",
-                compactJobs ? "min-[1440px]:flex" : "lg:flex",
-              )}
+              className="hidden min-w-0 items-center gap-0.5 lg:flex xl:gap-1"
               aria-label="Primary"
             >
-              {nav.map((item) => (
-                <Link
-                  key={item.key}
-                  to={item.to}
-                  hash={item.hash}
-                  activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}
-                  className={cn(
-                    "relative inline-flex items-center justify-center rounded-md px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
-                    touchTarget,
-                    focusRing,
-                  )}
-                  activeProps={{
-                    className:
-                      "text-foreground after:absolute after:bottom-0 after:left-2.5 after:right-2.5 after:h-[2px] after:rounded-full after:bg-accent",
-                  }}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {nav.map((item) =>
+                item.key === "employers" ? (
+                  <EmployerMenu
+                    key={item.key}
+                    label={item.label}
+                    active={onEmployers}
+                    signedIn={signedIn}
+                  />
+                ) : (
+                  <Link
+                    key={item.key}
+                    to={item.to}
+                    className={cn(DESKTOP_ITEM, touchTarget, focusRing)}
+                    activeProps={{ className: DESKTOP_ACTIVE }}
+                  >
+                    {item.label}
+                  </Link>
+                ),
+              )}
             </nav>
           )}
 
-          {/* One control height across the whole cluster, so the pills, the
-              two entrances and the account button share a single optical
-              baseline instead of four. That height is now 44px rather than
-              36px -- see `touchTarget`. These two pills render in the PUBLIC
-              header for a signed-in visitor, so they are public-page
-              controls and the same minimum binds them. */}
-          <div
-            className={cn("hidden shrink-0 items-center gap-2 lg:flex", compactJobs && "ml-auto")}
-          >
-            {compactJobs && <LanguageSwitcher />}
-            {roleLinks.map((r) => (
-              <Link
-                key={r.to}
-                to={r.to}
-                className={cn(
-                  "inline-flex h-11 min-w-[44px] items-center justify-center gap-1.5 rounded-md border border-accent/40 bg-secondary px-3 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/60",
-                  focusRing,
-                )}
-                activeProps={{ className: "border-accent bg-secondary" }}
-              >
-                {r.label}
-                {r.count !== null && (
-                  <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold tabular-nums text-accent-foreground">
-                    {r.count}
-                  </span>
-                )}
-              </Link>
-            ))}
+          {/* One control height across the cluster: 44px, like every other
+              control in the public chrome. */}
+          <div className="hidden shrink-0 items-center gap-1.5 lg:flex xl:gap-2">
+            {!appMode && (
+              <>
+                <LanguageSwitcher compact className="xl:hidden" />
+                <LanguageSwitcher className="hidden xl:inline-flex" />
+              </>
+            )}
             {signedIn ? (
               <>
-                {/* The way into the workspace, for somebody who is signed
-                    in but reading the public site. Inside the workspace it
-                    would be a SECOND "Min karriär" beside the primary nav
-                    item, which is the duplicate this PR exists to remove. */}
+                {/* The way into the workspace, for somebody who is signed in
+                    but reading the public site. Inside the workspace it would
+                    be a SECOND "Min karriär" beside the nav item. */}
                 {!appMode && (
                   <Link
                     to="/my-career"
                     className={cn(
-                      "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md border border-border bg-background px-3.5 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/40 hover:bg-secondary",
+                      "inline-flex h-11 min-w-[44px] items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3.5 text-xs font-semibold whitespace-nowrap text-foreground transition-colors hover:border-accent/40 hover:bg-secondary",
                       focusRing,
                     )}
                     activeProps={{ className: "border-accent/50 bg-secondary" }}
                   >
                     {t("nav.my_career")}
+                    {roleLinks[0]?.count != null && (
+                      <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold tabular-nums text-accent-foreground">
+                        {roleLinks[0].count}
+                      </span>
+                    )}
                   </Link>
                 )}
                 {/* Account concerns — identity, workspace switch, sign out —
-                    in the chrome, on every page. Before this they existed
-                    only as a row at the bottom of the /my-career dashboard. */}
+                    in the chrome, on every page. */}
                 <AccountMenu identity={identity} onSignOut={onSignOut} />
               </>
             ) : (
-              // ONE door in, and ONE primary action. The header used to carry
-              // two audience-specific logins, which asked a visitor to
-              // classify themselves before the product had told them that one
-              // account covers both. "Arbetsgivare" still belongs to the
-              // marketing page in the primary nav and to nothing else --
-              // reusing that word for an action is what made this header
-              // unreadable in the first place, and that fix is preserved.
-              //
-              // ── WHY THE SOLID BUTTON IS "SKAPA KONTO" AGAIN (2026-09-13)
-              //
-              // It said "Skapa ditt Security Passport" and carried
-              // `?redirect=/passport`, from the period when the Passport was
-              // the site's single product. Under the two-peer-entrance
-              // architecture that button is a chrome on EVERY page telling
-              // every visitor that one of the two individual products is the
-              // one that matters -- including the visitor standing on Career
-              // Discovery.
-              //
-              // So the chrome goes back to being product-neutral: one door
-              // in at /login, one way to create an account at /signup, and
-              // no product intent attached to either. The INTENT still
-              // exists and is still carried by `?redirect=` -- it now lives
-              // on the two homepage entry cards and on the employer strip,
-              // which is where somebody has actually chosen a product.
-              //
-              // Nothing is lost and nothing is new: /signup is untouched,
-              // the one door stays /login, and there is still exactly one
-              // way to create an account -- see scripts/header-entry-check.ts.
+              // ONE door in, and ONE product-neutral account action. The intent
+              // to use a particular product is carried by `?redirect=` from the
+              // page where somebody chose it — never from this chrome, which
+              // would make one product the site's default. See
+              // scripts/header-entry-check.ts.
               <>
                 <Link
                   to="/login"
                   className={cn(
-                    "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md px-3 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground",
+                    "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md px-2.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground xl:px-3",
                     focusRing,
                   )}
                 >
@@ -628,7 +383,7 @@ export function SiteHeader() {
                 <Link
                   to="/signup"
                   className={cn(
-                    "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none",
+                    "inline-flex h-11 min-w-[44px] items-center justify-center rounded-md bg-primary px-3.5 text-sm font-semibold whitespace-nowrap text-primary-foreground shadow-sm transition-all duration-200 hover:bg-[color:var(--primary-hover)] hover:shadow-md motion-reduce:transition-none xl:px-4",
                     focusRing,
                   )}
                 >
@@ -641,13 +396,10 @@ export function SiteHeader() {
           <button
             type="button"
             className={cn(
-              // 44px touch target, which a p-2 icon button was not.
-              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary",
-              !compactJobs && "lg:hidden",
+              // 44px touch target.
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-secondary lg:hidden",
               focusRing,
             )}
-            /* Was a hardcoded English "Menu" on a Swedish-first product,
-               and said nothing about state beyond aria-expanded. */
             aria-label={open ? t("nav.menu.close") : t("nav.menu.open")}
             aria-expanded={open}
             aria-controls="site-menu"
@@ -662,23 +414,14 @@ export function SiteHeader() {
         </Container>
       </div>
 
-      {/* The sheet scrolls on its own rather than pushing the page: signed in,
-          with an organisation and the account block, it is taller than a 320px
-          phone in landscape, and the last rows were unreachable. */}
-      {/* Both chromes switch to the compact sheet at the SAME breakpoint,
-          lg (1024px). It used to be xl for the signed-in header, which on a
-          Windows PC at 125% scaling meant no desktop navigation at all --
-          see CandidateAppNav for the measurement. */}
-      <div
-        id="site-menu"
-        className={cn(MENU_SURFACE, !compactJobs && "lg:hidden", open ? "block" : "hidden")}
-      >
+      {/* The sheet scrolls on its own rather than pushing the page. Both
+          chromes switch to it at the SAME breakpoint, lg (1024px). */}
+      <div id="site-menu" className={cn(MENU_SURFACE, "lg:hidden", open ? "block" : "hidden")}>
         <Container className="flex flex-col gap-1 py-4">
           {/* ── Mobile is the same product, not a collapsed website ──────
-              The seven destinations come from the SAME array the desktop
-              bar renders, so the two cannot drift; they come FIRST, before
-              anything else in the sheet; and each is a 44px target with
-              the same three-signal current-location treatment. */}
+              The destinations come from the SAME array the desktop bar
+              renders, so the two cannot drift; they come FIRST; and each is a
+              44px target with the same current-location treatment. */}
           {appMode ? (
             <CandidateAppNav
               variant="mobile"
@@ -688,27 +431,32 @@ export function SiteHeader() {
             />
           ) : (
             <nav className="flex flex-col gap-0.5" aria-label="Primary">
-              {nav.map((item) => (
-                <Link
-                  key={item.key}
-                  to={item.to}
-                  hash={item.hash}
-                  activeOptions={{ exact: item.to === "/", includeHash: item.hash !== undefined }}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    // 44px, not the old ~36px row: these are the primary
-                    // destinations on the viewport where they are hardest to hit.
-                    "flex min-h-[44px] min-w-[44px] items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
-                    focusRing,
-                  )}
-                  activeProps={{
-                    className:
-                      "bg-secondary text-foreground border-l-2 border-accent rounded-l-none pl-[10px]",
-                  }}
-                >
-                  {item.label}
-                </Link>
-              ))}
+              {nav.map((item) =>
+                item.key === "employers" ? (
+                  <MobileEmployerGroup
+                    key={item.key}
+                    label={item.label}
+                    active={onEmployers}
+                    onNavigate={() => setOpen(false)}
+                  />
+                ) : (
+                  <Link
+                    key={item.key}
+                    to={item.to}
+                    onClick={() => setOpen(false)}
+                    className={cn(
+                      "flex min-h-[44px] min-w-[44px] items-center rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
+                      focusRing,
+                    )}
+                    activeProps={{
+                      className:
+                        "bg-secondary text-foreground border-l-2 border-accent rounded-l-none pl-[10px]",
+                    }}
+                  >
+                    {item.label}
+                  </Link>
+                ),
+              )}
             </nav>
           )}
           {roleLinks.map((r) => (
@@ -730,8 +478,8 @@ export function SiteHeader() {
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
             <div className="flex items-center justify-between gap-3">
               <LanguageSwitcher />
-              {/* Same rule as desktop: inside the workspace this would be
-                  a second "Min karriär" a few rows under the first. */}
+              {/* Same rule as desktop: inside the workspace this would be a
+                  second "Min karriär" a few rows under the first. */}
               {signedIn && !appMode ? (
                 <Link
                   to="/my-career"
@@ -756,16 +504,9 @@ export function SiteHeader() {
                 </Link>
               )}
             </div>
-            {/* Mobile carries the same single entrance as desktop and the
-                same product-neutral account action. There is no employer
-                door here either: an organisation context is reached from the
-                account section below, by name, and only for organisations
-                the database returned.
-
-                Same destination and same label as the desktop bar, so the
+            {/* Same destination and same label as the desktop bar, so the
                 account somebody creates on a phone is the account they would
-                have created on a laptop. This sheet grows no control the
-                desktop bar does not have, and drops none it does. */}
+                have created on a laptop. */}
             {signedIn !== true && (
               <Link
                 to="/signup"
@@ -779,18 +520,11 @@ export function SiteHeader() {
               </Link>
             )}
             {/* ── THE EMPLOYER DOOR, AT THIS WIDTH ────────────────────────
-                The desktop utility bar is `lg:block`, so without this row
-                the employer entrance would exist on a laptop and nowhere
-                else -- and the person most likely to be reading this on a
-                phone is the site manager who was handed the company's
-                account, not the developer who added the link.
-
-                Same destination, same gate, same words. It is a full-width
-                row with VISIBLE TEXT, a 44px target and the shared focus
-                ring, exactly like every other row in this sheet: an
-                icon-only control here would be an entrance nobody can
-                name. Rendered under the primary action rather than beside
-                it, because it is the secondary of the two. */}
+                The same door the desktop menu carries: /login — the one door —
+                with /employer as its validated `?redirect=`. Signed-out only,
+                gated on the release flag, visible text, 44px, the shared
+                focus ring. It grants nothing: /employer resolves membership
+                server-side on every load. */}
             {signedIn !== true && employerPortalEnabled() && (
               <Link
                 to="/login"
@@ -808,12 +542,9 @@ export function SiteHeader() {
           </div>
 
           {/* ── Account, at this width ──────────────────────────────────
-              A dropdown is the wrong affordance inside an already-open
-              mobile sheet, so the same three concerns are listed inline:
-              who you are, the workspace switch when you hold one, and sign
-              out. Same gate and same actions as the desktop menu — the
-              switch is not duplicated, it is the one control rendered for
-              the one viewport in play. */}
+              A dropdown is the wrong affordance inside an already-open mobile
+              sheet, so the same concerns are listed inline: who you are, the
+              workspace switch when you hold one, and sign out. */}
           {signedIn && (
             <div className="mt-4 border-t border-border pt-4">
               <p className="px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -849,11 +580,9 @@ export function SiteHeader() {
               </Link>
               {hasEmployerWorkspace && (
                 <>
-                  {/* Same rule as the desktop menu, and it has to be the
-                      same rule: an organisation that is discoverable on a
-                      laptop and invisible on a phone is still a registrant
-                      who cannot reach their own registration. Under review
-                      goes to the status page, wearing its status. */}
+                  {/* Same rule as the desktop menu: an organisation that is
+                      discoverable on a laptop must be on a phone too. Under
+                      review goes to the status page, wearing its status. */}
                   {myWorkspaces.map((workspace) => {
                     const statusKey = workspaceStatusLabelKey(workspace.employerStatus);
                     const rowClass =
@@ -915,13 +644,8 @@ export function SiteHeader() {
                 </Link>
               )}
 
-              {/* Parity with the desktop menu. Account settings existed
-                  there and not here, so the one control that lets somebody
-                  correct their own professional identity was desktop-only.
-
-                  It is labelled "Min profil" now, which is what the page it
-                  opens has always called itself. "Konto och profil" was a
-                  third name for the same screen. */}
+              {/* Parity with the desktop menu: the one control that lets
+                  somebody correct their own professional identity. */}
               <Link
                 to="/my-career/profile"
                 onClick={() => setOpen(false)}
@@ -947,5 +671,193 @@ export function SiteHeader() {
         </Container>
       </div>
     </header>
+  );
+}
+
+/**
+ * "För arbetsgivare ▾" on the desktop bar — a DISCLOSURE, not an ARIA menu.
+ *
+ * A button that says whether it is open (`aria-expanded`), and a panel of
+ * ordinary links it controls. That is the WAI-ARIA disclosure-navigation
+ * pattern: Tab walks the links in order, Escape closes the panel and returns
+ * focus to the button, and a click anywhere else, or moving focus out of the
+ * group, closes it. No hover-to-open, which strands keyboard and touch users.
+ *
+ * The five entries are sections of /employers (EMPLOYER_NAV) — every one an
+ * existing destination. Beneath them, for a signed-out visitor only and only
+ * while the employer portal is released, the existing customer's way back in:
+ * the SAME one door, /login, carrying /employer as a validated `?redirect=`.
+ */
+function EmployerMenu({
+  label,
+  active,
+  signedIn,
+}: {
+  label: string;
+  active: boolean;
+  /** The header's own session answer; null while it is not known yet. */
+  signedIn: boolean | null;
+}) {
+  const { t } = useT();
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.hash]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        button.current?.focus();
+      }
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (root.current && !root.current.contains(e.target as Node)) setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", onPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", onPointer);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={root}
+      className="relative"
+      onBlur={(e) => {
+        if (open && root.current && !root.current.contains(e.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        ref={button}
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        data-employer-menu-trigger
+        onClick={() => setOpen((o) => !o)}
+        className={cn(DESKTOP_ITEM, touchTarget, focusRing, active && DESKTOP_ACTIVE)}
+      >
+        {label}
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none",
+            open && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      <div
+        id={panelId}
+        data-employer-menu
+        hidden={!open}
+        className="absolute left-1/2 top-full z-50 mt-2 w-[22rem] -translate-x-1/2 rounded-xl border border-border bg-popover p-2 text-popover-foreground shadow-[var(--shadow-lg)]"
+      >
+        <ul className="flex flex-col">
+          {EMPLOYER_NAV.map((sub) => (
+            <li key={sub.key}>
+              <Link
+                to={sub.to}
+                hash={sub.hash}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex min-h-[44px] flex-col justify-center rounded-lg px-3 py-2.5 transition-colors hover:bg-secondary",
+                  focusRing,
+                )}
+              >
+                <span className="text-sm font-semibold text-foreground">{t(sub.labelKey)}</span>
+                <span className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                  {t(sub.bodyKey)}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        {signedIn !== true && employerPortalEnabled() && (
+          <p className="mt-1 flex flex-wrap items-center gap-x-1 border-t border-border px-3 pt-2 text-xs text-muted-foreground">
+            {t("nav.forEmployers.customerLead")}
+            <Link
+              to="/login"
+              search={{ redirect: "/employer" } as never}
+              onClick={() => setOpen(false)}
+              className={cn(
+                "inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-md px-1 font-semibold text-accent underline-offset-4 hover:underline",
+                focusRing,
+              )}
+            >
+              <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {t("nav.employerLogin")}
+            </Link>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** The same five entries in the compact sheet, behind the same disclosure:
+ *  one row that opens the group, then the sections of /employers. */
+function MobileEmployerGroup({
+  label,
+  active,
+  onNavigate,
+}: {
+  label: string;
+  active: boolean;
+  onNavigate: () => void;
+}) {
+  const { t } = useT();
+  const [expanded, setExpanded] = useState(active);
+  const groupId = useId();
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls={groupId}
+        onClick={() => setExpanded((e) => !e)}
+        className={cn(
+          "flex min-h-[44px] w-full min-w-[44px] items-center justify-between rounded-md px-3 text-left text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground",
+          focusRing,
+          active &&
+            "bg-secondary text-foreground border-l-2 border-accent rounded-l-none pl-[10px]",
+        )}
+      >
+        {label}
+        <ChevronDown
+          className={cn(
+            "h-4 w-4 shrink-0 transition-transform motion-reduce:transition-none",
+            expanded && "rotate-180",
+          )}
+          aria-hidden="true"
+        />
+      </button>
+      <ul id={groupId} hidden={!expanded} className="mt-0.5 flex flex-col gap-0.5 pl-3">
+        {EMPLOYER_NAV.map((sub) => (
+          <li key={sub.key}>
+            <Link
+              to={sub.to}
+              hash={sub.hash}
+              onClick={onNavigate}
+              className={cn(
+                "flex min-h-[44px] min-w-[44px] items-center rounded-md border-l border-border px-3 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground",
+                focusRing,
+              )}
+            >
+              {t(sub.labelKey)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

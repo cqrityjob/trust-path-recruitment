@@ -14,7 +14,7 @@ for (const lang of ["sv", "en"] as const) {
     await page.goto(`${process.env.E2E_BASE_URL ?? "http://127.0.0.1:3100"}/jobs`);
     await page
       .getByRole("heading", {
-        name: lang === "sv" ? "Hitta jobb inom säkerhet" : "Find jobs in security",
+        name: lang === "sv" ? "Lediga jobb inom säkerhet" : "Open jobs in security",
         exact: true,
       })
       .waitFor();
@@ -25,7 +25,6 @@ for (const lang of ["sv", "en"] as const) {
       })
       .first()
       .waitFor();
-    if (width >= 1024) await page.locator('[data-job-detail="test-sakerhetschef"]').waitFor();
     await page.screenshot({ path: `${output}/after-${lang}-${width}.png`, fullPage: true });
   }
   await page

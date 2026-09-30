@@ -6,12 +6,10 @@ function key(from?: string) {
   const { selected: _selected, ...filters } = jobSearchFromFrom(from);
   return `jobs-position:${jobSearchToFrom(filters) ?? "all"}`;
 }
-export function rememberJobListPosition(from?: string) {
+/** `slug` is the advert being opened: on the way back its card gets focus. */
+export function rememberJobListPosition(from?: string, slug?: string) {
   try {
-    sessionStorage.setItem(
-      key(from),
-      JSON.stringify({ y: window.scrollY, selected: jobSearchFromFrom(from).selected }),
-    );
+    sessionStorage.setItem(key(from), JSON.stringify({ y: window.scrollY, selected: slug }));
   } catch {
     // Storage can be unavailable. Navigation still works.
   }

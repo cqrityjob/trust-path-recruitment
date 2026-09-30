@@ -107,7 +107,45 @@ export type Refusals = { unstubbed: string[]; production: string[] };
  * the two auth endpoints a planted session legitimately needs, which are
  * answered locally. Production is unreachable by construction.
  */
-export async function installBoundary(page: Page, table: ServerFnTable = {}): Promise<Refusals> {
+/**
+ * The homepage's latest-jobs section ("Nästa möjlighet kan finnas här.") reads published adverts through the same
+ * public query the jobs page uses: a GET on `rest/v1/jobs`, then a GET on
+ * `rest/v1/employers` for the employers of the adverts it got. Both are
+ * answered HERE, from `rows`, and never upstream -- an empty market by
+ * default, which the section states honestly. Any other Supabase request is
+ * still a leak.
+ */
+export async function answerPublicJobs(page: Page, rows: readonly unknown[] = []): Promise<void> {
+  const employers = [
+    ...new Map(
+      rows
+        .map((row) => (row as { employer?: { id?: string } | null }).employer)
+        .filter((e): e is { id: string } => Boolean(e && e.id))
+        .map((e) => [e.id, e]),
+    ).values(),
+  ];
+  for (const host of ["*.supabase.co", "*.supabase.in"]) {
+    for (const [table, body] of [
+      ["jobs", rows],
+      ["employers", employers],
+    ] as const) {
+      await page.route(`**://${host}/rest/v1/${table}**`, async (route) => {
+        if (route.request().method() !== "GET") return route.abort();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(body),
+        });
+      });
+    }
+  }
+}
+
+export async function installBoundary(
+  page: Page,
+  table: ServerFnTable = {},
+  publicJobs: readonly unknown[] = [],
+): Promise<Refusals> {
   const refusals: Refusals = { unstubbed: [], production: [] };
 
   await page.route("**/_serverFn/**", async (route) => {
@@ -138,6 +176,10 @@ export async function installBoundary(page: Page, table: ServerFnTable = {}): Pr
       return route.abort();
     });
   }
+
+  // The public jobs read, answered locally -- after the catch-all, so it
+  // takes precedence over it.
+  await answerPublicJobs(page, publicJobs);
 
   // The two auth endpoints a planted session actually calls. Registered
   // after the catch-all so they take precedence over it. Answered here,
@@ -233,6 +275,9 @@ export async function observeSupabaseStorageKey(page: Page): Promise<string> {
   // analysis, so the answer is given here and withdrawn afterwards: a suite's
   // own boundary still decides what every later load may ask.
   const release = await stubServerFn(page, "getV31Availability", ANALYSIS_OPEN);
+  // The homepage's latest-jobs read is answered locally too: this load has
+  // no boundary, and a public read must still never reach a live backend.
+  await answerPublicJobs(page);
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await page.waitForTimeout(500);
   const key = await page.evaluate(

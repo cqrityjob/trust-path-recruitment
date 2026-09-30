@@ -14,10 +14,12 @@
 //
 // It also guards the homepage's illustrative Passport card, which used to be a
 // separate imitation of the Passport with decorative trust facts and copy that
-// advertised the Passport as the editor for employment history. Since the MVP
-// text specification (2026-09-27) it sits in the homepage's Passport section
-// as an example only: the section, not the card, carries the heading and the
-// action, and the card holds no control at all.
+// advertised the Passport as the editor for employment history. Since the
+// locked public website (2026-09-30) the homepage only points to the Passport
+// ("HOMEPAGE = BREADTH. SUBPAGE = DEPTH."), and the illustrative card sits in
+// the hero of the Passport's own public page, /security-passport, as an
+// example only: the page, not the card, carries the heading and the action,
+// and the card holds no control at all.
 //
 // Run: bun run passport-card-surface:check
 
@@ -179,32 +181,41 @@ check(
   'the decorative "Documented source" / "Trust state" facts are replaced by the status explanation',
 );
 
-// The Passport's own sentences on the homepage, the core card's and the
-// section's: certifications, licences and authorisations -- and nothing else.
+// The Passport's own sentences: the homepage card's and the public page's
+// lead. Certifications, licences and authorisations -- and nothing else.
 // Employment history is the CV's; personal details and current profession
 // are the Profile's.
 const COPY = {
   sv: {
-    card: "Samla dina certifieringar, licenser och yrkesbehörigheter med underlag och tydlig status. Du väljer vilka uppgifter du delar.",
-    section:
-      "Security Passport samlar dina certifieringar, licenser och yrkesbehörigheter. Lägg till underlag och välj vilka meriter du vill dela. Ett uppladdat dokument innebär inte i sig att uppgiften har verifierats.",
+    // Brand story, 2026-09-30: the Passport is the professional profile that
+    // can move with a person -- its credentials, never their work history.
+    card: "Samla och visa de meriter som bygger din professionella säkerhetsprofil.",
+    lead: "Under en karriär samlar du på dig licenser, certifieringar och andra meriter. Security Passport samlar dem i en professionell säkerhetsprofil som kan följa med dig mellan roller, arbetsgivare och marknader – med underlag och en tydlig status för varje uppgift. Du bestämmer vad som delas och med vem.",
+    documentIsNotVerification: "Ett dokument är inte en verifiering.",
     label: "Exempel",
   },
   en: {
-    card: "Bring together your certifications, licences and professional authorisations with supporting documents and a clear status. You choose which information to share.",
-    section:
-      "Security Passport brings together your certifications, licences and professional authorisations. Add supporting documents and choose which credentials to share. Uploading a document does not by itself verify the information.",
+    card: "Bring together and present the credentials behind your professional security profile.",
+    lead: "Over a career you collect licences, certifications and other credentials. Security Passport brings them together in a professional security profile that can go with you across roles, employers and markets – with supporting evidence and a clear status for every entry. You decide what is shared, and with whom.",
+    documentIsNotVerification: "A document is not a verification.",
     label: "Example",
   },
 } as const;
 for (const lang of ["sv", "en"] as const) {
   const d = dictionaries[lang] as Record<string, string>;
   check(
-    d["home.core.passport.body"] === COPY[lang].card &&
-      d["home.passport.body"] === COPY[lang].section,
-    `${lang} · the Passport sentences are the specification's, to the letter`,
+    d["home.individual.passport.body"] === COPY[lang].card &&
+      d["passportPage.lead"] === COPY[lang].lead,
+    `${lang} · the Passport sentences are the approved ones, to the letter`,
   );
-  for (const key of ["home.core.passport.body", "home.passport.body"]) {
+  check(
+    d["passportPage.status.documentProvided.body"].includes(COPY[lang].documentIsNotVerification),
+    `${lang} · an uploaded document is said not to be a verification`,
+  );
+  const pitch = Object.keys(d).filter(
+    (k) => k === "home.individual.passport.body" || k.startsWith("passportPage."),
+  );
+  for (const key of pitch) {
     check(
       !/erfarenhet|utbildning|anställning|experience|education|employment|work history/i.test(
         d[key],
@@ -227,22 +238,26 @@ for (const lang of ["sv", "en"] as const) {
   }
   assertions += 1;
 }
-const route = code(read("src/routes/index.tsx"));
+const route = code(read("src/routes/security-passport.index.tsx"));
 check(
   /to="\/signup"\s+search=\{PASSPORT_INTENT\}/.test(route) &&
     /PASSPORT_INTENT[^;]*redirect: "\/passport"/s.test(route),
   "the action enters registration and carries the Passport destination through it",
 );
 {
-  // The section's action sits in the section, outside the example card.
-  const passportSection = route.slice(route.indexOf('<Section id="passport"'));
-  const action = passportSection.indexOf("search={PASSPORT_INTENT}");
-  const example = passportSection.indexOf("<HomePassportPreview />");
+  // The page's action sits beside, and outside, the example card.
+  const action = route.indexOf("search={PASSPORT_INTENT}");
+  const example = route.indexOf("<HomePassportPreview />");
   check(
     action !== -1 && example !== -1 && action < example,
-    "the Passport section's own action is rendered outside the illustrative card",
+    "the Passport page's own action is rendered outside the illustrative card",
   );
 }
+check(
+  !code(read("src/components/site/HomeSections.tsx")).includes("HomePassportPreview") &&
+    !code(read("src/routes/index.tsx")).includes("HomePassportPreview"),
+  "the homepage does not explain the Passport in depth -- it links to the Passport's own page",
+);
 
 /* ------------------------------------------------------------------ */
 console.log("");

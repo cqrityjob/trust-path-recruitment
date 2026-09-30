@@ -116,7 +116,7 @@ export function RecipientPassportCard({
               <span className="mt-1 block text-xs">
                 {lang === "sv"
                   ? "Yrkestitel från Profil · egen uppgift"
-                  : "Profile title · self-reported"}
+                  : "Profile title · self-declared"}
               </span>
             </p>
           )}

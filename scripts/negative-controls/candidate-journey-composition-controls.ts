@@ -23,10 +23,11 @@ const MUTATIONS: readonly Mutation[] = [
   /* ── SCREEN 0 · ONE AUTH FLOW ──────────────────────────────────────── */
   {
     id: "CJC-NC-LOGIN-LINK-GONE",
-    defect: "the landing page loses the returning-user route to the canonical login page",
+    defect:
+      "the landing page stops rendering the site chrome, and with it the returning-user route to the canonical login page",
     file: HOME,
-    find: '<Link to="/login" className={INLINE_LINK}>',
-    replace: '<Link to="/signup" className={INLINE_LINK}>',
+    find: "    <SiteLayout>\n      <HomeHero />",
+    replace: "    <div>\n      <HomeHero />",
     guard: GUARD,
     expect: "/ routes returning users to the canonical login page",
   },
@@ -45,8 +46,9 @@ const MUTATIONS: readonly Mutation[] = [
     id: "CJC-NC-AUTH-PANEL-RETURNS",
     defect: "the homepage embeds the full authentication panel and becomes login-led again",
     file: HOME,
-    find: 'import { HomePassportPreview } from "@/components/site/HomePassportPreview";',
-    replace: 'import { UnifiedAuthPanel } from "@/components/auth/UnifiedAuthPanel";',
+    find: 'import { SiteLayout } from "@/components/site/SiteLayout";',
+    replace:
+      'import { SiteLayout } from "@/components/site/SiteLayout";\nimport { UnifiedAuthPanel } from "@/components/auth/UnifiedAuthPanel";',
     guard: GUARD,
     expect: "/ does not embed the full authentication form",
   },

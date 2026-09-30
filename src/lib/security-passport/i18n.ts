@@ -316,7 +316,7 @@ const sv = {
   "onboarding.saved": "Sparat",
   "onboarding.savedAt": "Sparat automatiskt",
   "onboarding.createsClaim":
-    "Ditt svar skapas som EGENRAPPORTERAD uppgift. Det betyder att det kommer från dig och ännu inte är verifierat av någon annan.",
+    "Ditt svar sparas med statusen EGEN UPPGIFT. Det betyder att det kommer från dig och ännu inte har kontrollerats av någon annan.",
   "onboarding.finish": "Granska och slutför",
 
   "onboarding.purpose.title": "Syfte och integritet",
@@ -572,19 +572,37 @@ const sv = {
   "recognition.basis": "Visa vad erkännandet bygger på",
 
   // ── Assertion level and lifecycle ────────────────────────────────────
-  "assertion.self_declared": "EGENRAPPORTERAD",
-  "assertion.document_provided": "DOKUMENT TILLHANDAHÅLLET",
-  "assertion.verified": "VERIFIERAD",
-  // Used wherever a verified credential is no longer CURRENT. The
-  // verification really happened and is never erased — but on a card, beside
+  //
+  // ONE VOCABULARY (brand story, 2026-09-30). The words a holder, a card, a
+  // recipient and the public /security-passport page use are the same four:
+  // Egen uppgift · Dokument inlämnat · Dokumenterad · Källbekräftad. Display
+  // only -- the stored levels, the state machine and every verification rule
+  // are untouched.
+  //
+  // `assertion.verified` is reached only through the EFFECTIVE level
+  // (credentialPresentationOf / effectiveTrust), where "verified" means a
+  // source confirmed the fact: a CQrityjob document review resolves to
+  // Dokumenterad (`trust.level.documented`) before any word is chosen. No
+  // status word says "Verifierad".
+  "assertion.self_declared": "EGEN UPPGIFT",
+  "assertion.document_provided": "DOKUMENT INLÄMNAT",
+  "assertion.verified": "KÄLLBEKRÄFTAD",
+  // Used wherever a source-confirmed entry is no longer CURRENT. The
+  // confirmation really happened and is never erased — but on a card, beside
   // someone's name, the bare word reads as a present fact.
-  "assertion.verified.historical": "TIDIGARE VERIFIERAD",
+  "assertion.verified.historical": "TIDIGARE KÄLLBEKRÄFTAD",
   "assertion.self_declared.help":
     "Uppgiften kommer från dig och är inte kontrollerad av någon annan.",
   "assertion.document_provided.help":
-    "Ett underlag har lämnats. Att ett dokument finns betyder inte att uppgiften är verifierad.",
-  "assertion.verified.help": "En behörig part har bekräftat uppgiften.",
+    "Ett underlag har lämnats men är inte granskat. Ett dokument är inte en verifiering.",
+  "assertion.documented.help":
+    "CQrityjob har granskat underlaget. Utfärdaren har inte själv bekräftat uppgiften.",
+  "assertion.verified.help": "Källan har själv bekräftat uppgiften.",
   "assertion.legend": "Underlagsnivå",
+  // The reviewer's page reads the STORED level without its decision record,
+  // so it cannot tell a document review from a source confirmation. It says
+  // what is known: an earlier review approved the entry.
+  "assertion.verified.stored": "GODKÄND I TIDIGARE GRANSKNING",
 
   "lifecycle.draft": "Utkast",
   "lifecycle.active": "Gällande",
@@ -612,7 +630,10 @@ const sv = {
   "claims.type.education": "Utbildning",
   "claims.type.professional_membership": "Yrkesmedlemskap",
   "claims.issuer": "Utfärdare",
-  "claims.verifier": "Verifierad av",
+  // The weakest true label: a credential's decider on the Passport card, and
+  // the fallback for an approval with no recorded method -- both a review,
+  // never a source's confirmation (effectiveTrust rates them Dokumenterad).
+  "claims.verifier": "Granskad av",
   // ── UTFÄRDARE ÄR INTE VERIFIERARE ────────────────────────────────────
   // "Utfärdad av BYA" och "Verifierad av BYA" är två skilda påståenden.
   // Etiketten väljs av METODEN som faktiskt användes, aldrig av vem som
@@ -755,10 +776,10 @@ const sv = {
   "recipient.shareStatus": "Delningens tillstånd",
   "recipient.verifiedByTitle": "Vad CQrityjob har kontrollerat",
   "recipient.verifiedByBody":
-    "CQrityjob visar underlagsnivån för varje uppgift. VERIFIERAD betyder att en behörig part har bekräftat uppgiften.",
+    "CQrityjob visar underlagsnivån för varje uppgift. KÄLLBEKRÄFTAD betyder att källan själv har bekräftat uppgiften. DOKUMENTERAD betyder att CQrityjob har granskat ett underlag.",
   "recipient.notVerifiedTitle": "Vad CQrityjob inte har kontrollerat",
   "recipient.notVerifiedBody":
-    "Innehavarens juridiska identitet är inte kontrollerad med BankID eller motsvarande i den här fasen. Egenrapporterade uppgifter är inte kontrollerade av någon annan än innehavaren.",
+    "Innehavarens juridiska identitet är inte kontrollerad med BankID eller motsvarande i den här fasen. Uppgifter med statusen Egen uppgift är inte kontrollerade av någon annan än innehavaren.",
   "recipient.unavailableTitle": "Länken är inte tillgänglig",
   "recipient.unavailableBody":
     "Länken går inte att öppna. Kontakta den som skickade den om du behöver ett nytt underlag.",
@@ -974,7 +995,7 @@ const sv = {
   "card.cta.create": "Skapa ditt Security Passport med CQrityjob",
   "card.noVerifiedYet": "Inga granskade uppgifter ännu",
   "card.noVerifiedExperience": "Ingen verifierad yrkeserfarenhet ännu",
-  "card.selfDeclaredHeading": "Egenrapporterad yrkesprofil",
+  "card.selfDeclaredHeading": "Yrkesprofil med egna uppgifter",
 
   "share.title": "Dela som bild",
   "share.lead":
@@ -1128,7 +1149,6 @@ const sv = {
   "ver.renew": "Begär förnyad verifiering",
   "ver.renewBody":
     "Giltigheten har gått ut eller går snart ut. Ladda upp ett nytt intyg och begär verifiering igen.",
-  "ver.expiredNotice": "Verifierad, men giltigheten har gått ut.",
   "ver.expiringSoon": "Giltigheten går ut inom 60 dagar.",
   "ver.dispute": "Anmäl att uppgiften är fel",
   "ver.disputeBody":
@@ -1439,7 +1459,7 @@ const sv = {
   "pkg.exc.employers": "Arbetsgivares namn",
   "pkg.exc.qualifications": "Utbildningar och behörigheter",
   "pkg.exc.evidence": "Dina dokument",
-  "pkg.exc.selfDeclared": "Egenrapporterade uppgifter",
+  "pkg.exc.selfDeclared": "Egna uppgifter",
   "pkg.exc.contact": "Kontaktuppgifter",
   "pkg.exc.internalNotes": "Interna anteckningar från granskning",
   "sc.title": "Dela ditt Passport",
@@ -1511,7 +1531,7 @@ const sv = {
   // no current appointment, and it is deliberately not phrased as a failure:
   // finishing VU1 and not yet being appointed is an ordinary place to be.
   "identity.none": "Ingen aktiv yrkestitel",
-  "identity.selfDeclared": "Egenrapporterad",
+  "identity.selfDeclared": "Egen uppgift",
   "identity.selfDeclaredNote":
     "Titeln bygger på uppgifter du själv har lämnat och som ingen har kontrollerat. Den visas bara för dig.",
   "identity.education": "Genomförd utbildning",
@@ -1548,9 +1568,11 @@ const sv = {
   "rec.credentialMarket": "Gäller i",
   "rec.experience": "Anställning",
   "rec.tenure": "Bekräftad anställningstid",
-  "rec.verifiedBy": "Verifierad av",
+  // Only a SOURCE confirmation reaches these (provenanceLabelKeys): the
+  // words follow "Källbekräftad".
+  "rec.verifiedBy": "Bekräftad av",
   "rec.method": "Metod",
-  "rec.verifiedAt": "Verifierad",
+  "rec.verifiedAt": "Bekräftad",
   "rec.validUntil": "Giltig till",
   "rec.state": "Status",
   "rec.issuer": "Utfärdare",
@@ -1570,7 +1592,7 @@ const sv = {
   "rec.ctaAction": "Läs om Security Passport",
   "livecard.lockedNote":
     "Innehållet styrs av verifierade uppgifter. Du kan välja om du delar kortet — inte vad det påstår.",
-  "livecard.selfReportedTitle": "Egenrapporterat kort",
+  "livecard.selfReportedTitle": "Kort med egna uppgifter",
   "livecard.selfReportedBody":
     "Inget är verifierat ännu, så kortet visar ingen verifieringsstämpel och ingen milstolpe.",
   "livecard.shareCta": "Förhandsvisa och dela",
@@ -2026,7 +2048,7 @@ const sv = {
   "entry.documentAndVerify": "Underlag och kontroll",
   "exp.verifiedLabel": "Verifierad tid i yrket",
   "exp.noneYet": "Ingen verifierad tid ännu",
-  "exp.selfDeclaredAlso": "Egenrapporterat, inte kontrollerat:",
+  "exp.selfDeclaredAlso": "Egen uppgift, inte kontrollerad:",
   "share2.title": "Dela ditt Passport",
   "share2.lead":
     "En länk som visar dina verifierade uppgifter. Du kan återkalla den när som helst.",
@@ -2757,7 +2779,7 @@ const en: Record<PassportCopyKey, string> = {
   "onboarding.saved": "Saved",
   "onboarding.savedAt": "Saved automatically",
   "onboarding.createsClaim":
-    "Your answer is created as a SELF-DECLARED entry. That means it comes from you and has not yet been verified by anyone else.",
+    "Your answer is saved with the status SELF-DECLARED. That means it comes from you and has not yet been checked by anyone else.",
   "onboarding.finish": "Review and finish",
 
   "onboarding.purpose.title": "Purpose and privacy",
@@ -2919,7 +2941,7 @@ const en: Record<PassportCopyKey, string> = {
   "ws.merit.ongoing": "Ongoing",
   "ws.type.employment": "Employment",
 
-  "ws.merit.status.added_by_you": "Self-reported",
+  "ws.merit.status.added_by_you": "Self-declared",
   "ws.merit.status.document_provided": "Document provided",
   "ws.merit.status.verification_requested": "In review",
   "ws.merit.status.clarification_needed": "Waiting for your answer",
@@ -2992,13 +3014,16 @@ const en: Record<PassportCopyKey, string> = {
 
   "assertion.self_declared": "SELF-DECLARED",
   "assertion.document_provided": "DOCUMENT PROVIDED",
-  "assertion.verified": "VERIFIED",
-  "assertion.verified.historical": "PREVIOUSLY VERIFIED",
+  "assertion.verified": "SOURCE-CONFIRMED",
+  "assertion.verified.historical": "PREVIOUSLY SOURCE-CONFIRMED",
   "assertion.self_declared.help": "This comes from you and has not been checked by anyone else.",
   "assertion.document_provided.help":
-    "Documentation has been provided. A document existing does not mean the entry is verified.",
-  "assertion.verified.help": "An authorised party has confirmed this entry.",
+    "A document has been provided but not reviewed. A document is not a verification.",
+  "assertion.documented.help":
+    "CQrityjob has reviewed the document. The issuer has not confirmed the entry itself.",
+  "assertion.verified.help": "The source itself has confirmed this entry.",
   "assertion.legend": "Evidence level",
+  "assertion.verified.stored": "APPROVED IN AN EARLIER REVIEW",
 
   "lifecycle.draft": "Draft",
   "lifecycle.active": "Active",
@@ -3026,7 +3051,7 @@ const en: Record<PassportCopyKey, string> = {
   "claims.type.education": "Education",
   "claims.type.professional_membership": "Professional membership",
   "claims.issuer": "Issuer",
-  "claims.verifier": "Verified by",
+  "claims.verifier": "Reviewed by",
   "claims.attribution.document_review": "Document reviewed by",
   "claims.attribution.employer_confirmation": "Confirmed by",
   "claims.attribution.issuer_confirmation": "Confirmed by the issuer",
@@ -3137,7 +3162,7 @@ const en: Record<PassportCopyKey, string> = {
   "recipient.shareStatus": "Disclosure state",
   "recipient.verifiedByTitle": "What CQrityjob has checked",
   "recipient.verifiedByBody":
-    "CQrityjob shows the evidence level for each entry. VERIFIED means an authorised party has confirmed it.",
+    "CQrityjob shows the evidence level for each entry. SOURCE-CONFIRMED means the source itself has confirmed it. DOCUMENTED means CQrityjob has reviewed a document.",
   "recipient.notVerifiedTitle": "What CQrityjob has not checked",
   "recipient.notVerifiedBody":
     "The holder's legal identity has not been checked with BankID or equivalent in this phase. Self-declared entries have not been checked by anyone other than the holder.",
@@ -3286,7 +3311,7 @@ const en: Record<PassportCopyKey, string> = {
   "card.cta.create": "Create your Security Passport with CQrityjob",
   "card.noVerifiedYet": "No reviewed entries yet",
   "card.noVerifiedExperience": "No verified professional experience yet",
-  "card.selfDeclaredHeading": "Self-reported professional profile",
+  "card.selfDeclaredHeading": "Professional profile – self-declared",
 
   "share.title": "Share as an image",
   "share.lead":
@@ -3421,7 +3446,6 @@ const en: Record<PassportCopyKey, string> = {
   "ver.renew": "Request renewal",
   "ver.renewBody":
     "The validity has ended or ends soon. Upload a current document and request verification again.",
-  "ver.expiredNotice": "Verified, but the validity has ended.",
   "ver.expiringSoon": "Validity ends within 60 days.",
   "ver.dispute": "Report this entry as wrong",
   "ver.disputeBody":
@@ -3801,9 +3825,9 @@ const en: Record<PassportCopyKey, string> = {
   "rec.credentialMarket": "Valid in",
   "rec.experience": "Employment",
   "rec.tenure": "Confirmed employment duration",
-  "rec.verifiedBy": "Verified by",
+  "rec.verifiedBy": "Confirmed by",
   "rec.method": "Method",
-  "rec.verifiedAt": "Verified",
+  "rec.verifiedAt": "Confirmed",
   "rec.validUntil": "Valid until",
   "rec.state": "Status",
   "rec.issuer": "Issuer",
@@ -3820,7 +3844,7 @@ const en: Record<PassportCopyKey, string> = {
   "rec.ctaAction": "Read about Security Passport",
   "livecard.lockedNote":
     "The contents are set by verified entries. You choose whether to share the card — not what it claims.",
-  "livecard.selfReportedTitle": "Self-reported card",
+  "livecard.selfReportedTitle": "Self-declared card",
   "livecard.selfReportedBody":
     "Nothing is verified yet, so the card shows no verification seal and no milestone.",
   "livecard.shareCta": "Preview and share",

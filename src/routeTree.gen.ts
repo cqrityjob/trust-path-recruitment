@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SecurityCareerAssessmentRouteImport } from './routes/security-career-assessment'
+import { Route as SakerhetsarbeteRouteImport } from './routes/sakerhetsarbete'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
@@ -26,6 +27,7 @@ import { Route as AssessmentRouteImport } from './routes/assessment'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SecurityPassportIndexRouteImport } from './routes/security-passport.index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
 import { Route as SecurityPassportIndiaRouteImport } from './routes/security-passport.india'
@@ -218,6 +220,11 @@ const SecurityCareerAssessmentRoute =
     path: '/security-career-assessment',
     getParentRoute: () => rootRouteImport,
   } as any)
+const SakerhetsarbeteRoute = SakerhetsarbeteRouteImport.update({
+  id: '/sakerhetsarbete',
+  path: '/sakerhetsarbete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -285,6 +292,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityPassportIndexRoute = SecurityPassportIndexRouteImport.update({
+  id: '/security-passport/',
+  path: '/security-passport/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JobsIndexRoute = JobsIndexRouteImport.update({
@@ -1372,6 +1384,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1405,6 +1418,7 @@ export interface FileRoutesByFullPath {
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
+  '/security-passport/': typeof SecurityPassportIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/academy/$attemptId': typeof AuthenticatedAcademyAttemptIdRoute
   '/admin/applications': typeof AuthenticatedAdminApplicationsRouteWithChildren
@@ -1563,6 +1577,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1590,6 +1605,7 @@ export interface FileRoutesByTo {
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
+  '/security-passport': typeof SecurityPassportIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/academy/$attemptId': typeof AuthenticatedAcademyAttemptIdRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
@@ -1737,6 +1753,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -1770,6 +1787,7 @@ export interface FileRoutesById {
   '/security-passport/india': typeof SecurityPassportIndiaRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
+  '/security-passport/': typeof SecurityPassportIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/academy/$attemptId': typeof AuthenticatedAcademyAttemptIdRoute
   '/_authenticated/admin/applications': typeof AuthenticatedAdminApplicationsRouteWithChildren
@@ -1932,6 +1950,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/reset-password'
+    | '/sakerhetsarbete'
     | '/security-career-assessment'
     | '/signup'
     | '/sitemap.xml'
@@ -1965,6 +1984,7 @@ export interface FileRouteTypes {
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
+    | '/security-passport/'
     | '/.mcp/invoke-tool/$tool'
     | '/academy/$attemptId'
     | '/admin/applications'
@@ -2123,6 +2143,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/reset-password'
+    | '/sakerhetsarbete'
     | '/security-career-assessment'
     | '/signup'
     | '/sitemap.xml'
@@ -2150,6 +2171,7 @@ export interface FileRouteTypes {
     | '/security-passport/india'
     | '/career-center'
     | '/jobs'
+    | '/security-passport'
     | '/.mcp/invoke-tool/$tool'
     | '/academy/$attemptId'
     | '/admin/audit'
@@ -2296,6 +2318,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/mcp'
     | '/reset-password'
+    | '/sakerhetsarbete'
     | '/security-career-assessment'
     | '/signup'
     | '/sitemap.xml'
@@ -2329,6 +2352,7 @@ export interface FileRouteTypes {
     | '/security-passport/india'
     | '/career-center/'
     | '/jobs/'
+    | '/security-passport/'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/academy/$attemptId'
     | '/_authenticated/admin/applications'
@@ -2491,6 +2515,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SakerhetsarbeteRoute: typeof SakerhetsarbeteRoute
   SecurityCareerAssessmentRoute: typeof SecurityCareerAssessmentRoute
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -2508,6 +2533,7 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
   SecurityPassportIndiaRoute: typeof SecurityPassportIndiaRoute
+  SecurityPassportIndexRoute: typeof SecurityPassportIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiRecruitmentReceiptsSweepRoute: typeof ApiRecruitmentReceiptsSweepRoute
 }
@@ -2533,6 +2559,13 @@ declare module '@tanstack/react-router' {
       path: '/security-career-assessment'
       fullPath: '/security-career-assessment'
       preLoaderRoute: typeof SecurityCareerAssessmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sakerhetsarbete': {
+      id: '/sakerhetsarbete'
+      path: '/sakerhetsarbete'
+      fullPath: '/sakerhetsarbete'
+      preLoaderRoute: typeof SakerhetsarbeteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -2631,6 +2664,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security-passport/': {
+      id: '/security-passport/'
+      path: '/security-passport'
+      fullPath: '/security-passport/'
+      preLoaderRoute: typeof SecurityPassportIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/jobs/': {
@@ -4581,6 +4621,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SakerhetsarbeteRoute: SakerhetsarbeteRoute,
   SecurityCareerAssessmentRoute: SecurityCareerAssessmentRoute,
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -4599,6 +4640,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
   SecurityPassportIndiaRoute: SecurityPassportIndiaRoute,
+  SecurityPassportIndexRoute: SecurityPassportIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiRecruitmentReceiptsSweepRoute: ApiRecruitmentReceiptsSweepRoute,
 }

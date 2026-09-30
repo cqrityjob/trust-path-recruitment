@@ -69,10 +69,17 @@ export function validateJobSearch(raw: Record<string, unknown>): JobSearch {
 }
 
 /** A validated search as a job ad's `from` value: a query string in a fixed
- *  key order, or undefined when there is nothing to carry. */
+ *  key order, or undefined when there is nothing to carry.
+ *
+ *  `selected` is never carried. It named the advert open in the retired
+ *  desktop detail panel; /jobs still ACCEPTS it, so an old link keeps
+ *  working (it forwards to that advert's own page), but a way back to the
+ *  results must never carry it, or "Tillbaka till sökresultatet" would
+ *  forward straight to the advert again. */
 export function jobSearchToFrom(search: JobSearch): string | undefined {
   const params = new URLSearchParams();
   for (const key of JOB_SEARCH_KEYS) {
+    if (key === "selected") continue;
     const value = search[key];
     if (value) params.set(key, value);
   }

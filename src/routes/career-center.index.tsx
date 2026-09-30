@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowRight, ChevronDown, FileCheck2, MapPin } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, BadgeCheck, Briefcase, Compass, FileCheck2, TrendingUp } from "lucide-react";
 import { Section } from "@/components/site/Section";
-import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { CareerEntryCards } from "@/components/career-center/CareerEntryCards";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
@@ -19,7 +18,6 @@ import {
   icon,
   parseHubSearch,
   personalDirection,
-  upcomingProfessions,
   type HubSearch,
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
@@ -45,18 +43,31 @@ import { ProfessionCard } from "@/components/career-center/ProfessionCard";
 //   What is this profession?        · What could come next?
 //   What would I need to get there? · Where are the jobs?
 //
-//   1 hero             what this is, and the two ways in: "I know my
-//                      profession" and "help me choose" (or "my result")
+//   1 hero             what this is, and the two ways in: "Utgå från mitt
+//                      nuvarande yrke" and "Utforska säkerhetsyrken" (or,
+//                      with a result in hand, "Ditt främsta yrkesförslag")
 //   2 din riktning     what did MY career analysis suggest?       (fit)
 //                      — HERE once a signed-in reader's own result can be
 //                      read; otherwise the compact offer of the analysis,
 //                      after the list of professions
-//   3 från ditt yrke   I work as X — what is it, and which professions can
-//                      come next? Answered on the spot           (pathFrom)
-//   4 alla yrken       every published guide as a card, no filters
+//   3 från ditt yrke   "Vilket är ditt nuvarande yrke?" — which professions
+//                      can come next? Answered on the spot        (pathFrom)
+//   4 alla yrken       every published guide as a card, no filters, with
+//                      its basis said in one line under the heading
 //   5 karriärvägar     general directions through the industry — not
 //                      about the reader, and said to be so
-//   6 så bygger vi innehållet   why should I believe any of it
+//   6 din väg framåt   UTFORSKA → UTVECKLAS → VISA → HITTA, each with one
+//                      contextual action; Hitta is the way on to the jobs
+//
+// ── OWNER REVIEW, 2026-09-30 ───────────────────────────────────────────
+//
+// Removed: the hero's trust line ("Ingen bedömning av din kompetens eller
+// anställningsbarhet", which read as unclear — the analysis's own section
+// now says "Karriäranalysen ger vägledning. Du väljer vägen."), the side
+// panel beside "Alla yrken", the "Kommer" box of unpublished roles, and the
+// "Så bygger vi innehållet" section. What the side panel said about the
+// guides — sourced, reviewed, Swedish conditions — is one line under the
+// list's heading, and the count is in the heading itself.
 //
 // ── WHAT THIS PASS REMOVED, AND WHY ────────────────────────────────────
 //
@@ -270,41 +281,11 @@ function CareerCenterHub() {
         eyebrow={t("cc.hero.eyebrow")}
         title={t("cc.hero.title")}
         lead={t("cc.hero.lead")}
-        note={t("cc.hero.trust")}
-        actions={
-          // ONE primary button. Which one depends on whether this reader's own
-          // analysis is in hand; the other path is a quiet link beside it, so
-          // the two never compete for the same attention. Both are jumps on
-          // this page, so the reader's current profession (`from`) stays.
-          personalised ? (
-            <>
-              <PrimaryLink
-                to="/career-center"
-                search={search as Record<string, string>}
-                hash={PERSONAL_ANCHOR}
-              >
-                {t("cc.hero.cta.personal")}
-                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-              </PrimaryLink>
-              <a href={`#${LIST_ANCHOR}`} className={SECONDARY_LINK}>
-                {t("cc.hero.cta.explore")}
-              </a>
-            </>
-          ) : (
-            <PrimaryLink
-              to="/career-center"
-              search={search as Record<string, string>}
-              hash={LIST_ANCHOR}
-            >
-              {t("cc.hero.cta.explore")}
-              <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-            </PrimaryLink>
-          )
-        }
         aside={
           <CareerEntryCards
             pathAnchor={PATH_ANCHOR}
             personalAnchor={PERSONAL_ANCHOR}
+            listAnchor={LIST_ANCHOR}
             personalised={personalised}
           />
         }
@@ -329,13 +310,8 @@ function CareerCenterHub() {
 
       {/* ── 4. ALLA YRKEN — every published guide, shown, not searched ── */}
       <Section bordered id={LIST_ANCHOR} className="scroll-mt-4 bg-secondary/40 py-12 md:py-16">
-        {/* TrustRail describes THIS list — how many guides, where their facts
-            come from — so it sits beside the heading on a wide screen. On a
-            phone it follows the cards: above them it pushed the first
-            profession below the fold. One element, placed by `order`, so
-            there is one statement to keep and none to drift. */}
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-12 md:items-start">
-          <div className="max-w-2xl md:col-span-7">
+        <div className="grid grid-cols-1 gap-8">
+          <div className="max-w-3xl">
             <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
               {t("cc.explore.title")}{" "}
               <span className="tabular-nums text-muted-foreground">
@@ -345,18 +321,23 @@ function CareerCenterHub() {
             <p className="mt-3 text-base leading-relaxed text-muted-foreground">
               {t("cc.explore.subtitle")}
             </p>
-          </div>
-          <div className="order-last md:order-none md:col-span-5">
-            <TrustRail />
+            <p
+              data-explore-basis
+              className="mt-2 flex items-start gap-2 text-sm leading-relaxed text-muted-foreground"
+            >
+              <FileCheck2
+                className="mt-0.5 h-4 w-4 shrink-0 text-accent"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              {t("cc.explore.basis")}
+            </p>
           </div>
 
           {/* The id the catalogue panel had, kept for any `#yrkeskatalog`
               link. Cards carry the classifications the filters used to —
               level and family — as information, not as controls. */}
-          <ul
-            id="yrkeskatalog"
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:col-span-12 lg:grid-cols-3"
-          >
+          <ul id="yrkeskatalog" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {professions.map((p) => (
               <li key={p.slug}>
                 <ProfessionCard
@@ -377,25 +358,6 @@ function CareerCenterHub() {
             ))}
           </ul>
         </div>
-
-        {/* "Kommer" — text only, never a card, never a link: these roles have
-            no guide that clears the publishability rule yet. */}
-        {upcomingProfessions.length > 0 && (
-          <div
-            data-upcoming
-            className="mt-10 rounded-lg border border-border bg-background/70 p-5 md:p-6"
-          >
-            <h3 className="text-sm font-semibold tracking-tight text-foreground">
-              {t("cc.explore.upcoming.title")}
-            </h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {t("cc.explore.upcoming.body")}
-            </p>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              {upcomingProfessions.map((p) => (lang === "sv" ? p.titleSv : p.titleEn)).join(" · ")}
-            </p>
-          </div>
-        )}
       </Section>
 
       {/* ── 2′. DIN RIKTNING — the compact offer, when there is no result */}
@@ -420,51 +382,11 @@ function CareerCenterHub() {
         </div>
       </Section>
 
-      {/* ── 6. SÅ BYGGER VI INNEHÅLLET ──────────────────────────────── */}
-      <Section bordered className="bg-background py-16 md:py-20">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            {t("cc.trust.title")}
-          </h2>
-          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-            {t("cc.trust.subtitle")}
-          </p>
-        </div>
-        {/* Four reference cards are reference material: a reader who wants to know
-            how the content is built asks for it. The claim itself — that we
-            publish only sourced, dated, jurisdictioned guides — stays above,
-            unfolded, because that is the part that has to be seen. */}
-        <details data-trust-disclosure className="group mt-8">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-sm font-semibold text-accent hover:text-[color:var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
-            {t("cc.trust.show")}
-            <ChevronDown
-              className="h-4 w-4 transition-transform duration-200 group-open:rotate-180"
-              aria-hidden
-            />
-          </summary>
-          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <ReferenceCard titleKey="cc.trust.sources.title" bodyKey="cc.trust.sources.body" />
-            <ReferenceCard
-              titleKey="cc.trust.jurisdiction.title"
-              bodyKey="cc.trust.jurisdiction.body"
-            />
-            <ReferenceCard titleKey="cc.trust.reviewed.title" bodyKey="cc.trust.reviewed.body" />
-            <ReferenceCard
-              titleKey="cc.trust.regulatory.title"
-              bodyKey="cc.trust.regulatory.body"
-            />
-          </div>
-          <p className="mt-8 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            {t("cc.trust.closing")}
-          </p>
-        </details>
-      </Section>
+      {/* ── 6. DIN VÄG FRAMÅT — the career journey, and the way on ──── */}
+      <CareerJourney signedIn={signedIn === true} listAnchor={LIST_ANCHOR} />
     </>
   );
 }
-
-const SECONDARY_LINK =
-  "inline-flex h-11 items-center justify-center rounded-md px-1 text-sm font-medium text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
 
 /**
  * Re-land a direct section link once the page has settled.
@@ -530,48 +452,6 @@ function TestFacts({ signedOut }: { signedOut: boolean }) {
   );
 }
 
-/** The list's supporting panel. Three statements, one of them a number that
- *  is counted rather than claimed. */
-function TrustRail() {
-  const { t } = useT();
-  return (
-    <div className="relative rounded-xl border border-border bg-card/80 p-6 shadow-sm backdrop-blur">
-      <div
-        aria-hidden
-        className="absolute -top-px left-6 right-6 h-px bg-gradient-to-r from-transparent via-[color:var(--gold)]/50 to-transparent"
-      />
-      <p className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-        {PUBLISHED_PROFESSION_COUNT}
-      </p>
-      <p className="text-sm font-medium text-foreground">{t("cc.hero.fact.guides")}</p>
-      <ul className="mt-6 space-y-4 border-t border-border/70 pt-5">
-        <RailFact
-          icon={<FileCheck2 className="h-4 w-4" strokeWidth={1.75} aria-hidden />}
-          title={t("cc.hero.fact.sources.title")}
-          body={t("cc.hero.fact.sources.body")}
-        />
-        <RailFact
-          icon={<MapPin className="h-4 w-4" strokeWidth={1.75} aria-hidden />}
-          title={t("cc.hero.fact.market.title")}
-          body={t("cc.hero.fact.market.body")}
-        />
-      </ul>
-    </div>
-  );
-}
-
-function RailFact({ icon, title, body }: { icon: React.ReactNode; title: string; body: string }) {
-  return (
-    <li className="flex items-start gap-3">
-      <span className="mt-0.5 flex-shrink-0 text-accent">{icon}</span>
-      <span>
-        <span className="block text-sm font-semibold tracking-tight text-foreground">{title}</span>
-        <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">{body}</span>
-      </span>
-    </li>
-  );
-}
-
 function TestFact({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-center gap-2 rounded-full border border-border bg-background px-3.5 py-1.5 text-xs font-medium text-foreground">
@@ -580,18 +460,109 @@ function TestFact({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ReferenceCard({
-  titleKey,
-  bodyKey,
-}: {
-  titleKey: TranslationKey;
-  bodyKey: TranslationKey;
-}) {
+/** UTFORSKA → UTVECKLAS → VISA → HITTA — the one public career journey.
+ *  Säkerhetsarbete is its own product and is deliberately not a fifth step.
+ *  Each step has ONE contextual action; "Hitta" is the way on to the jobs,
+ *  so the page ends on the path forward rather than on a jobs section. */
+const JOURNEY = [
+  { key: "explore", icon: Compass },
+  { key: "develop", icon: TrendingUp },
+  { key: "show", icon: BadgeCheck },
+  { key: "find", icon: Briefcase },
+] as const;
+
+function CareerJourney({ signedIn, listAnchor }: { signedIn: boolean; listAnchor: string }) {
   const { t } = useT();
+  const action = (key: (typeof JOURNEY)[number]["key"]) => {
+    const cls =
+      "mt-4 inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+    const arrow = <ArrowRight className="h-4 w-4" aria-hidden />;
+    switch (key) {
+      case "explore":
+        return (
+          <a href={`#${listAnchor}`} className={cls}>
+            {t("cc.journey.explore.cta")}
+            {arrow}
+          </a>
+        );
+      case "develop":
+        return signedIn ? (
+          <Link to="/my-career" className={cls}>
+            {t("cc.journey.develop.ctaSignedIn")}
+            {arrow}
+          </Link>
+        ) : (
+          <Link to="/signup" search={{ redirect: "/my-career" } as never} className={cls}>
+            {t("cc.journey.develop.cta")}
+            {arrow}
+          </Link>
+        );
+      case "show":
+        return (
+          <Link to="/security-passport" className={cls}>
+            {t("cc.journey.show.cta")}
+            {arrow}
+          </Link>
+        );
+      case "find":
+        return (
+          <Link to="/jobs" className={cls}>
+            {t("cc.journey.find.cta")}
+            {arrow}
+          </Link>
+        );
+    }
+  };
   return (
-    <div className="rounded-xl border border-border bg-card p-6">
-      <h3 className="text-sm font-semibold tracking-tight text-foreground">{t(titleKey)}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
-    </div>
+    <Section bordered id="din-vag" className="scroll-mt-4 bg-secondary/40 py-16 md:py-20">
+      <div className="max-w-2xl">
+        <h2 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+          {t("cc.journey.title")}
+        </h2>
+        <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+          {t("cc.journey.lead")}
+        </p>
+      </div>
+      <ol
+        aria-label={t("cc.journey.label")}
+        data-career-journey
+        className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        {JOURNEY.map(({ key, icon: Icon }, i) => (
+          <li
+            key={key}
+            data-career-journey-step={key}
+            className="flex flex-col rounded-xl border border-border bg-card p-6"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="rounded-lg bg-accent/10 p-2 text-accent">
+                <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+              </span>
+              <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+            </div>
+            <h3 className="mt-4 text-sm font-semibold uppercase tracking-[0.12em] text-foreground">
+              {t(`cc.journey.${key}.title` as TranslationKey)}
+            </h3>
+            <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+              {t(`cc.journey.${key}.body` as TranslationKey)}
+            </p>
+            {action(key)}
+          </li>
+        ))}
+      </ol>
+      {/* Säkerhetsarbete is not a step: it is the support a person has while
+          doing the job. One sentence and one link, never a section. */}
+      <p data-career-journey-work className="mt-6 max-w-2xl text-sm text-muted-foreground">
+        {t("cc.journey.work")}{" "}
+        <Link
+          to="/sakerhetsarbete"
+          className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {t("cc.journey.work.cta")}
+        </Link>
+      </p>
+    </Section>
   );
 }

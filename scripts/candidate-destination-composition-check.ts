@@ -33,6 +33,10 @@ const read = (p: string): string => readFileSync(join(ROOT, p), "utf8");
 const code = (s: string): string => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const JOBS = "src/routes/jobs.index.tsx";
+/** The advert's own page. The list no longer mounts a detail panel beside
+ *  itself (owner review, 2026-09-30); every card opens this route. */
+const JOB_AD = "src/routes/jobs.$slug.tsx";
+const JOB_CARD = "src/components/jobs/JobCard.tsx";
 const JOB_DETAIL = "src/components/jobs/JobDetailContent.tsx";
 const APPLY_PANEL = "src/components/jobs/JobApplicationPanel.tsx";
 const APPLY_DIALOG = "src/components/jobs/ApplyInternalDialog.tsx";
@@ -65,7 +69,12 @@ check(
   /to="\/my-career\/applications"/.test(jobs),
   "the Jobs page links directly to the applications page",
 );
-check(/<JobDetailContent[\s>]/.test(jobs), "the Jobs page mounts the job detail reader");
+check(
+  /<JobCard[\s>]/.test(jobs) &&
+    /to="\/jobs\/\$slug"/.test(code(read(JOB_CARD))) &&
+    /<JobDetailContent[\s>]/.test(code(read(JOB_AD))),
+  "every Jobs card opens the advert's own page, which mounts the job detail reader",
+);
 check(/<JobApplicationPanel[\s>]/.test(detail), "the job reader mounts the application panel");
 check(
   /<ApplyInternalDialog[\s>]/.test(panel),
@@ -193,10 +202,14 @@ check(
   !/useQuery|PathFromSection|PersonalDirectionSection/.test(cards),
   "the cards render no professions of their own — they link, they do not duplicate",
 );
-// TrustRail was displaced from the hero by the cards. Displaced, not deleted.
+// The side panel beside "Alla yrken" was removed (owner review,
+// 2026-09-30). What it said about the guides is kept, as one line under the
+// list's heading, with the count in the heading itself.
 check(
-  /<TrustRail \/>/.test(career),
-  "TrustRail still renders — it moved to the catalogue it describes rather than being dropped",
+  /data-explore-basis/.test(career) &&
+    /t\("cc\.explore\.basis"\)/.test(career) &&
+    /PUBLISHED_PROFESSION_COUNT/.test(career),
+  "the list of professions still says how many guides there are and what they are based on",
 );
 
 /* ------------------------------------------------------------------ */

@@ -79,6 +79,7 @@ export function RecipientCredentialList({
                 <CredentialSymbol
                   code={c.code}
                   state={c.presentation}
+                  statusWordKey={c.statusWordKey}
                   name={c.title}
                   size={40}
                   className="mt-0.5 shrink-0"

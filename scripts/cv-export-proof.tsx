@@ -685,7 +685,9 @@ group("POPPLER — the vaktare CV, read as an employer's system reads it");
   ck("the expired authorisation is named", t.includes("Ordningsvaktsförordnande"));
   ck("with its date", t.includes("Giltig t.o.m. 2026-03-31"));
   ck("and labelled expired", t.includes("UTGÅNGEN") || t.includes("Utgången"));
-  ck("the credential still in date keeps its mark", t.includes("Verifierad"));
+  // The mark is the attribution line: "Granskad av …", the weakest true label
+  // for an approval whose method the product cannot support.
+  ck("the credential still in date keeps its mark", t.includes("Granskad av"));
   ck(
     "the contact details the person switched on are readable",
     t.includes("karin.wallin@example.se"),
@@ -746,7 +748,7 @@ group("vaktare — the lapsed authorisation");
   ck("the verifier who once approved it is NOT named beside it", !has(p, "Länsstyrelsen i Skåne"));
 
   ck("the credential still in date is named", has(p, "Väktarutbildning VU1"));
-  ck("it keeps its verification mark", has(p, "Verifierad"));
+  ck("it keeps its verification mark", has(p, "Granskad av"));
   ck("and its own validity date", has(p, "Giltig t.o.m. 2028-04-01"));
   ck("with the verifier named", has(p, "BYA"));
 

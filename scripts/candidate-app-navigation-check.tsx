@@ -268,16 +268,17 @@ group("2 · the workspace carries no marketing navigation");
   }
 
   // "Kontakt" appeared TWICE on every signed-in desktop page: once in the
-  // primary nav and once in the navy utility bar above it. Both are gated
-  // on !appMode now, and the header must keep gating them.
+  // primary nav and once in the navy utility bar above it. The utility bar
+  // is gone (locked navigation, 2026-09-30); the marketing nav and the
+  // language control it carried are gated on !appMode, and must stay so.
   const header = code(read("src/components/site/SiteHeader.tsx"));
   ck(
     "the marketing nav array is rendered only outside the workspace",
     /\{appMode \? \(\s*<CandidateAppNav variant="desktop"/.test(header),
   );
   ck(
-    "the utility bar (the second Kontakt) is gated on !appMode",
-    /!appMode && !compactJobs && "lg:block"/.test(header),
+    "the utility bar is gone, and the marketing language control is gated on !appMode",
+    !/"lg:block"/.test(header) && /\{!appMode && \(\s*<>\s*<LanguageSwitcher compact/.test(header),
   );
   ck(
     'no second "Min karriär" control beside the nav item',

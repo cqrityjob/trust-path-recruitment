@@ -280,7 +280,8 @@ check(
   "verified carries a doubled rim and a check, documented a document glyph, self-declared nothing",
 );
 check(
-  />VERIFIED</.test(v) && />DOCUMENT PROVIDED</.test(d) && />SELF-DECLARED</.test(s),
+  // The public vocabulary (2026-09-30): a verified shield is SOURCE-CONFIRMED.
+  />SOURCE-CONFIRMED</.test(v) && />DOCUMENT PROVIDED</.test(d) && />SELF-DECLARED</.test(s),
   "each prints its status WORD beside the mark",
 );
 check(
@@ -500,6 +501,10 @@ console.log("\n7 · a status word breaks inside its own quarter, never into the 
 const SHY = "­";
 for (const [word, expected] of [
   ["EGENRAPPORTERAD", `EGEN${SHY}RAPPORTERAD`],
+  // The public vocabulary's words: each already fits or breaks at its space.
+  ["EGEN UPPGIFT", "EGEN UPPGIFT"],
+  ["DOKUMENT INLÄMNAT", "DOKUMENT INLÄMNAT"],
+  ["KÄLLBEKRÄFTAD", "KÄLLBEKRÄFTAD"],
   ["Dokumenterad", `Doku${SHY}menterad`],
   ["DOKUMENT TILLHANDAHÅLLET", `DOKUMENT TILL${SHY}HANDAHÅLLET`],
   ["Komplettering begärd", `Kom${SHY}plettering begärd`],
@@ -510,19 +515,25 @@ for (const [word, expected] of [
   check(breakableStatusWord(word) === expected, `"${word}" breaks only where it may`);
 }
 {
+  // "Dokumenterad" is the longest Swedish word the public vocabulary puts on
+  // a shield, and the one that needs its break point.
   const sv = html(
     <CredentialShield
-      credential={shield("w", { j: "SE", state: "self_declared" })}
+      credential={shield("w", {
+        j: "SE",
+        state: "documented",
+        statusWordKey: "trust.level.documented",
+      })}
       ground="navy"
     />,
     "sv",
   );
   check(
-    sv.includes(`>EGEN${SHY}RAPPORTERAD</span>`),
-    "the shield prints the Swedish self-declared word with its break point",
+    sv.includes(`>Doku${SHY}menterad</span>`),
+    "the shield prints the Swedish documented word with its break point",
   );
   check(
-    /aria-label="[^"]*EGENRAPPORTERAD/.test(sv) && /title="[^"]*EGENRAPPORTERAD/.test(sv),
+    /aria-label="[^"]*Dokumenterad/.test(sv) && /title="[^"]*Dokumenterad/.test(sv),
     "the accessible label and the tooltip keep the word as written",
   );
 }

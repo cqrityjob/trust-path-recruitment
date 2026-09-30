@@ -823,7 +823,7 @@ for (const lang of ["sv", "en"] as const) {
   );
   expect(
     /<title id="sp-passport-title">Security Passport · Nadia Fiktiv<\/title>/.test(svg) &&
-      /<desc id="sp-passport-desc">[^<]*Dubai, UAE: SIRA Security Cadre Card — Security Guard \(Dokumenterad\)[^<]*Sverige: Väktarutbildning 1 \(EGENRAPPORTERAD\)/.test(
+      /<desc id="sp-passport-desc">[^<]*Dubai, UAE: SIRA Security Cadre Card — Security Guard \(Dokumenterad\)[^<]*Sverige: Väktarutbildning 1 \(EGEN UPPGIFT\)/.test(
         svg,
       ),
     "the image carries its own accessible description: the holder, then every group and credential with its trust word",

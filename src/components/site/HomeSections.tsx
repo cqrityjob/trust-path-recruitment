@@ -1,269 +1,257 @@
-// Homepage sections: the three core cards, the security work section, the
-// career section, the employer flow, how to start, and the offer + FAQ.
+// The public homepage's six sections (locked decisions, 2026-09-30).
+//
+//   HOMEPAGE = BREADTH. SUBPAGE = DEPTH. CTA = THE PATH FORWARD.
+//
+//   1. hero                  the headline, the positioning (people AND
+//                            employers, locally or internationally) and two
+//                            equal audience entrances
+//   2. for-dig               four entry points for a person — Karriär, Jobb,
+//                            Security Passport, Säkerhetsarbete — each with ONE
+//                            action to that part's own page
+//   3. senaste-jobben        three or four REAL vacancies from the public jobs
+//                            query, and the way to all of them
+//   4. for-arbetsgivare      the employer journey, benefit first
+//   5. rekryteringstjanster  "Vill ni ha hjälp med hela rekryteringen?"
+//   6. varfor                the vision in three sentences, ending in the
+//                            brand line
 //
 // Every link targets an existing public route or the one validated
-// `?redirect=` sign-up door. No prices, counts, people or claims are
-// invented here; pricing is explicitly "not published yet".
+// `?redirect=` sign-up door. No price, count, person or product claim is
+// invented, and no product is described in depth here: each has its own page.
 
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowRight,
+  Award,
   Briefcase,
+  Building2,
+  CalendarClock,
   ClipboardCheck,
   Compass,
-  FileSearch,
-  FileText,
-  Gavel,
-  GraduationCap,
+  FileSignature,
+  IdCard,
+  Inbox,
+  MapPin,
   MessagesSquare,
   Radar,
-  ShieldCheck,
+  Send,
+  Timer,
+  UserRound,
   Users,
 } from "lucide-react";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
+import { EmployerLogo } from "@/components/jobs/EmployerPresentation";
+import { formatJobDate, pickLocalized } from "@/components/jobs/JobAdContent";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
-import { useSignedIn } from "@/hooks/useSignedIn";
-import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
-import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
+import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
+import { listPublicJobs, type PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { cn } from "@/lib/utils";
 
+const DISPLAY = { fontFamily: "var(--font-display)" } as const;
 const H2 =
-  "mt-3 text-[1.6rem] font-semibold leading-[1.15] tracking-tight text-foreground md:text-[2.1rem]";
+  "text-balance text-[1.7rem] font-semibold leading-[1.15] tracking-tight text-foreground md:text-[2.25rem]";
 const EYEBROW = "text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground";
-const LINK =
+const TEXT_LINK =
   "inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-/** Career Discovery's canonical public entry, taken from the module that
- *  owns it rather than typed out again — the temporary /discovery alias
- *  redirects here and may never be linked in its place. */
-const CAREER_DISCOVERY = CANONICAL_ASSESSMENT_PATH;
+/** The sign-up door, carrying the employer intent: /employer resolves real
+ *  organisation membership server-side on arrival. Nothing here grants
+ *  anything; signing up "as an employer" is an intent, never a role. */
+export const EMPLOYER_INTENT = { redirect: "/employer" } as const;
 
-/** The career catalogue, opened: the Career Center's own explorer anchor
- *  and its `all` flag, which the page already reads from the URL. */
-const CATALOGUE = { to: "/career-center", search: { all: true }, hash: "utforska-yrken" } as const;
-
-// ── THE THREE CORE CARDS ───────────────────────────────────────────────
+// ── 1 · HERO ────────────────────────────────────────────────────────────
 //
-// Security work, Security Passport, career and jobs: three EQUAL parts. One
-// list, one card class, one heading size and one outlined button each, so
-// none of the three can drift into being the larger one. They render in the
-// hero's first content group and again on /about, from this one definition.
-//
-// Each button explains before it asks: for a signed-out reader it leads to
-// the part's own section on the homepage. A signed-in reader is sent from
-// the homepage to their workspace (src/routes/index.tsx), so for them the
-// button opens the part itself. Presentation only — every destination
-// re-verifies its own access server-side.
-const CORE = [
+// The locked headline, ONE supporting sentence, and two EQUAL audience
+// entrances: one card class, one heading size, one arrow each. They jump to
+// the audience's own section on this page (2 and 4), which then leads on to
+// the subpages — no competing hero buttons.
+const AUDIENCES = [
   {
-    key: "work",
-    icon: Radar,
-    title: "home.core.work.title",
-    body: "home.core.work.body",
-    cta: "home.core.work.cta",
+    key: "individual",
+    href: "#for-dig",
+    icon: UserRound,
+    title: "home.hero.individual.title",
+    body: "home.hero.individual.body",
   },
   {
-    key: "passport",
-    icon: ShieldCheck,
-    title: "home.core.passport.title",
-    body: "home.core.passport.body",
-    cta: "home.core.passport.cta",
-  },
-  {
-    key: "career",
-    icon: Compass,
-    title: "home.core.career.title",
-    body: "home.core.career.body",
-    cta: "home.core.career.cta",
+    key: "employer",
+    href: "#for-arbetsgivare",
+    icon: Building2,
+    title: "home.hero.employer.title",
+    body: "home.hero.employer.body",
   },
 ] as const satisfies readonly {
   key: string;
-  icon: typeof Radar;
+  href: string;
+  icon: typeof UserRound;
+  title: TranslationKey;
+  body: TranslationKey;
+}[];
+
+export function HomeHero() {
+  const { t } = useT();
+  return (
+    <section id="hero" className="relative overflow-hidden border-b border-border bg-secondary/40">
+      {/* Depth is CSS only: one restrained wash and a faint rule grid, masked
+          out before the fold. Out of the accessibility tree, holding nothing. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "radial-gradient(1000px 460px at 50% -12%, oklch(0.55 0.09 245 / 0.14), transparent 64%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.3]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, oklch(0.235 0.055 258 / 0.05) 1px, transparent 1px)",
+          backgroundSize: "56px 100%",
+          maskImage: "linear-gradient(to bottom, black, transparent 85%)",
+        }}
+      />
+      <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-14 text-center sm:pt-16 md:px-8 md:pb-20 md:pt-20">
+        {/* `[hyphens:auto]` earns its keep at 320-390px, where a Swedish
+            compound does not fit on any line; the document carries `lang`. */}
+        <h1
+          className="mx-auto max-w-[20ch] text-balance text-[2.2rem] font-semibold leading-[1.06] tracking-tight text-foreground [hyphens:auto] sm:text-[3rem] lg:text-[3.6rem] lg:[hyphens:none]"
+          style={DISPLAY}
+        >
+          {t("home.hero.title")}
+        </h1>
+        <p className="mx-auto mt-6 max-w-[62ch] text-base leading-relaxed text-muted-foreground md:text-lg">
+          {t("home.hero.subtitle")}
+        </p>
+        <nav aria-label={t("home.hero.audience.label")} className="mx-auto mt-10 max-w-3xl">
+          <ul className="grid grid-cols-1 gap-4 text-left sm:grid-cols-2 sm:gap-5">
+            {AUDIENCES.map(({ key, href, icon: Icon, title, body }) => (
+              <li key={key} className="flex">
+                <a
+                  href={href}
+                  data-home-audience={key}
+                  className="group flex w-full items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-6"
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-accent">
+                    <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="text-lg font-semibold leading-snug text-foreground">
+                        {t(title)}
+                      </span>
+                      <ArrowRight
+                        className="h-5 w-5 shrink-0 text-accent transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                        aria-hidden="true"
+                      />
+                    </span>
+                    <span className="mt-1.5 block text-sm leading-relaxed text-muted-foreground">
+                      {t(body)}
+                    </span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </section>
+  );
+}
+
+// ── 2 · FÖR DIG I SÄKERHETSBRANSCHEN ────────────────────────────────────
+//
+// Four entry points, one list, one card class and one action each. Each card
+// says what a person can do there and links to that part's OWN page — never
+// to another homepage section, and never straight into an authenticated
+// product. The whole card is the action's target (a stretched link), while
+// the link's own words stay its accessible name.
+const INDIVIDUAL = [
+  {
+    key: "career",
+    icon: Compass,
+    to: "/career-center",
+    title: "home.individual.career.title",
+    body: "home.individual.career.body",
+    cta: "home.individual.career.cta",
+  },
+  {
+    key: "jobs",
+    icon: Briefcase,
+    to: "/jobs",
+    title: "home.individual.jobs.title",
+    body: "home.individual.jobs.body",
+    cta: "home.individual.jobs.cta",
+  },
+  {
+    key: "passport",
+    icon: IdCard,
+    to: "/security-passport",
+    title: "home.individual.passport.title",
+    body: "home.individual.passport.body",
+    cta: "home.individual.passport.cta",
+  },
+  {
+    key: "work",
+    icon: Radar,
+    to: "/sakerhetsarbete",
+    title: "home.individual.work.title",
+    body: "home.individual.work.body",
+    cta: "home.individual.work.cta",
+  },
+] as const satisfies readonly {
+  key: string;
+  icon: typeof Compass;
+  to: "/career-center" | "/jobs" | "/security-passport" | "/sakerhetsarbete";
   title: TranslationKey;
   body: TranslationKey;
   cta: TranslationKey;
 }[];
 
-const CORE_BUTTON = "w-full gap-2 sm:w-auto";
-
-export function CoreCards({
-  heading: Heading = "h2",
-  className,
-}: {
-  /** h2 in the homepage hero, h3 under a section heading on /about. */
-  heading?: "h2" | "h3";
-  className?: string;
-}) {
-  const { t } = useT();
-  const signedIn = useSignedIn();
-  const analysisOpen = useCareerAnalysisOpen(signedIn);
-  const inside = signedIn === true;
-
-  return (
-    // Stacked on phones and tablets, one even row from desktop width: three
-    // columns narrower than that squeeze the buttons' own words.
-    <ul className={cn("grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5", className)}>
-      {CORE.map(({ key, icon: Icon, title, body, cta }) => (
-        <li key={key} className="flex">
-          <article
-            data-home-core={key}
-            className="flex w-full flex-col rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-xs)]"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-accent">
-              <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
-            </span>
-            <Heading className="mt-4 text-lg font-semibold leading-snug text-foreground">
-              {t(title)}
-            </Heading>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(body)}</p>
-
-            {key === "career" && (
-              <>
-                {/* The career card's own two ways on: the vacancies, and —
-                    while it is open — the career analysis, which keeps a
-                    direct action here rather than a seventh header entry. */}
-                <ul className="mt-2 flex flex-wrap gap-x-5">
-                  <li>
-                    <Link to="/jobs" className={LINK}>
-                      {t("home.core.career.jobs")}{" "}
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
-                  </li>
-                  {analysisOpen !== false && (
-                    <li>
-                      <Link to={CAREER_DISCOVERY} className={LINK}>
-                        {t("home.career.analysis")}{" "}
-                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                      </Link>
-                    </li>
-                  )}
-                </ul>
-                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                  {t("home.core.career.note")}
-                </p>
-              </>
-            )}
-
-            <div className="mt-auto pt-6">
-              {key === "work" ? (
-                inside ? (
-                  <PrimaryLink to="/security-work" variant="ghost" className={CORE_BUTTON}>
-                    {t(cta)}
-                  </PrimaryLink>
-                ) : (
-                  <PrimaryLink
-                    to="/"
-                    hash="security-intelligence"
-                    variant="ghost"
-                    className={CORE_BUTTON}
-                  >
-                    {t(cta)}
-                  </PrimaryLink>
-                )
-              ) : key === "passport" ? (
-                inside ? (
-                  <PrimaryLink to="/passport" variant="ghost" className={CORE_BUTTON}>
-                    {t(cta)}
-                  </PrimaryLink>
-                ) : (
-                  <PrimaryLink to="/" hash="passport" variant="ghost" className={CORE_BUTTON}>
-                    {t(cta)}
-                  </PrimaryLink>
-                )
-              ) : (
-                <PrimaryLink
-                  to={CATALOGUE.to}
-                  search={CATALOGUE.search}
-                  hash={CATALOGUE.hash}
-                  variant="ghost"
-                  className={CORE_BUTTON}
-                >
-                  {t(cta)}
-                </PrimaryLink>
-              )}
-            </div>
-          </article>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-// ── SECURITY INTELLIGENCE, IN DEPTH ─────────────────────────────────────
-//
-// Task, evidence, results and the person's own review; whether AI and
-// document processing are available is the workspace's to show, and this
-// section says so rather than implying a click turns anything on. Three
-// examples within the EXISTING methods (monitoring, rsa, the security
-// assessment) — not agents and not new products; they create nothing.
-const AI_ROWS: { label: TranslationKey; body: TranslationKey; icon: typeof Radar }[] = [
-  { label: "home.ai.task.label", body: "home.ai.task.body", icon: Radar },
-  { label: "home.ai.input.label", body: "home.ai.input.body", icon: FileSearch },
-  { label: "home.ai.output.label", body: "home.ai.output.body", icon: FileText },
-  { label: "home.ai.review.label", body: "home.ai.review.body", icon: ClipboardCheck },
-];
-
-const AI_EXAMPLES: { title: TranslationKey; body: TranslationKey }[] = [
-  { title: "home.ai.examples.monitoring.title", body: "home.ai.examples.monitoring.body" },
-  { title: "home.ai.examples.risk.title", body: "home.ai.examples.risk.body" },
-  { title: "home.ai.examples.preparedness.title", body: "home.ai.examples.preparedness.body" },
-];
-
-export function HomeAi() {
+export function HomeForIndividuals() {
   const { t } = useT();
   return (
-    <Section
-      id="security-intelligence"
-      bordered
-      className="scroll-mt-24 bg-secondary py-16 md:py-24"
-    >
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-14">
-        <div>
-          <p className={EYEBROW}>{t("home.ai.eyebrow")}</p>
-          <h2 className={H2} style={{ fontFamily: "var(--font-display)" }}>
-            {t("home.ai.title")}
-          </h2>
-          <p className="mt-4 max-w-[52ch] leading-relaxed text-muted-foreground">
-            {t("home.ai.body")}
-          </p>
-          <p className="mt-4 max-w-[52ch] text-sm leading-relaxed text-muted-foreground">
-            {t("home.ai.availability")}
-          </p>
-          <p className="mt-5 max-w-[52ch] border-l-2 border-accent pl-4 text-sm leading-relaxed text-foreground">
-            {t("home.ai.note")}
-          </p>
-          {/* The workspace is a signed-in account context, reached through
-              the one door with its validated destination. A signed-in
-              reader never sees this section: / sends them to their own
-              workspace. */}
-          <PrimaryLink
-            to="/signup"
-            search={{ redirect: "/security-work" }}
-            variant="ghost"
-            className="mt-7 w-full sm:w-auto"
-          >
-            {t("home.ai.cta")}
-          </PrimaryLink>
-        </div>
-        <dl className="grid content-start gap-px overflow-hidden rounded-2xl border border-border bg-border sm:grid-cols-2">
-          {AI_ROWS.map(({ label, body, icon: Icon }) => (
-            <div key={label} className="bg-background p-6">
-              <dt className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                <Icon className="h-4 w-4 text-accent" strokeWidth={2} aria-hidden="true" />
-                {t(label)}
-              </dt>
-              <dd className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(body)}</dd>
-            </div>
-          ))}
-        </dl>
+    <Section id="for-dig" className="scroll-mt-20 py-16 md:py-24">
+      <div className="mx-auto max-w-2xl text-center">
+        <h2 className={H2} style={DISPLAY}>
+          {t("home.individual.title")}
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+          {t("home.individual.lead")}
+        </p>
       </div>
-      <ul aria-label={t("home.ai.examples.label")} className="mt-10 grid gap-4 md:grid-cols-3">
-        {AI_EXAMPLES.map(({ title, body }) => (
-          <li key={title} className="rounded-xl border border-border bg-background p-5">
-            <h3 className="text-base font-semibold text-foreground">{t(title)}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{t(body)}</p>
+      <ul className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+        {INDIVIDUAL.map(({ key, icon: Icon, to, title, body, cta }) => (
+          <li key={key} className="flex">
+            <article
+              data-home-entry={key}
+              className="group relative flex w-full flex-col rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-xs)] transition-all duration-200 focus-within:border-accent/50 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-[var(--shadow-md)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-secondary text-accent">
+                <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+              </span>
+              <h3 className="mt-5 text-lg font-semibold leading-snug text-foreground">
+                {t(title)}
+              </h3>
+              <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">{t(body)}</p>
+              <Link
+                to={to}
+                className={cn(
+                  TEXT_LINK,
+                  "mt-5 self-start after:absolute after:inset-0 after:rounded-2xl after:content-['']",
+                )}
+              >
+                {t(cta)}
+                <ArrowRight
+                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                  aria-hidden="true"
+                />
+              </Link>
+            </article>
           </li>
         ))}
       </ul>
@@ -271,204 +259,318 @@ export function HomeAi() {
   );
 }
 
-// ── CAREER, CV AND JOBS, IN DEPTH ───────────────────────────────────────
+// ── 3 · SENASTE JOBBEN ──────────────────────────────────────────────────
 //
-// The analysis action follows the analysis's existing access status. While
-// the answer is unknown the action stays (the canonical route shows its own
-// honest state); a definite "not open" replaces it with the exact sentence
-// the specification sets, and professions and jobs remain one click away.
-export function HomeCareer() {
-  const { t } = useT();
-  const signedIn = useSignedIn();
-  const analysisOpen = useCareerAnalysisOpen(signedIn);
+// Real vacancies, from the SAME public query the jobs page lists (RLS on
+// `jobs` already restricts it to active adverts). Nothing is hard-coded:
+// loading, failure and an empty market each say what is true. While the jobs
+// release flag is off there is nothing to fetch, and the section says there
+// are no published jobs rather than showing a door onto a closed page.
+const LATEST_JOB_COUNT = 4;
+
+export function HomeLatestJobs() {
+  const { t, lang } = useT();
+  const open = jobsEnabled();
+  const jobs = useQuery({
+    queryKey: ["home-latest-jobs"],
+    queryFn: () => listPublicJobs({ limit: LATEST_JOB_COUNT }),
+    enabled: open,
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+  const rows = open ? (jobs.data?.slice(0, LATEST_JOB_COUNT) ?? []) : [];
+
   return (
-    <Section id="career" bordered className="scroll-mt-24 py-16 md:py-24">
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-14">
-        <div className="max-w-2xl">
-          <p className={EYEBROW}>{t("nav.career")}</p>
-          <h2 className={H2} style={{ fontFamily: "var(--font-display)" }}>
-            {t("home.career.title")}
+    <Section id="senaste-jobben" bordered className="scroll-mt-20 bg-secondary/40 py-16 md:py-24">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className={H2} style={DISPLAY}>
+            {t("home.jobs.title")}
           </h2>
-          <p className="mt-4 leading-relaxed text-muted-foreground">{t("home.career.body")}</p>
-          <div className="mt-7">
-            {analysisOpen === false ? (
-              <p
-                data-career-analysis-closed
-                className="max-w-[52ch] rounded-lg border border-border bg-secondary/60 p-4 text-sm leading-relaxed text-foreground"
-              >
-                {t("home.career.closed")}
-              </p>
-            ) : (
-              <PrimaryLink to={CAREER_DISCOVERY} variant="ghost" className="w-full sm:w-auto">
-                {t("home.career.analysis")}
-              </PrimaryLink>
-            )}
-          </div>
-          <p className="mt-4 max-w-[56ch] text-sm leading-relaxed text-muted-foreground">
-            {t("home.career.note")}
+          <p className="mt-3 text-base leading-relaxed text-muted-foreground">
+            {t("home.jobs.lead")}
           </p>
         </div>
-        <ul className="grid content-start gap-3">
-          <li>
-            <Link
-              to="/career-center"
-              className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <span className="flex items-center gap-3">
-                <Compass className="h-5 w-5 text-accent" strokeWidth={1.75} aria-hidden="true" />
-                {t("home.career.professions")}
+        <Link to="/jobs" className={cn(TEXT_LINK, "hidden sm:inline-flex")}>
+          {t("home.jobs.all")}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </div>
+
+      <div className="mt-8" aria-live="polite">
+        {open && jobs.isLoading ? (
+          <ul
+            aria-busy="true"
+            aria-label={t("home.jobs.loading")}
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          >
+            {Array.from({ length: LATEST_JOB_COUNT }, (_, i) => (
+              <li
+                key={i}
+                className="h-48 animate-pulse rounded-2xl bg-muted motion-reduce:animate-none"
+              />
+            ))}
+          </ul>
+        ) : open && jobs.isError ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-border bg-card p-6 text-sm leading-relaxed text-foreground"
+          >
+            {t("home.jobs.error")}
+          </p>
+        ) : rows.length === 0 ? (
+          <p
+            data-home-jobs-empty
+            className="rounded-xl border border-border bg-card p-6 text-sm leading-relaxed text-foreground"
+          >
+            {t("home.jobs.empty")}
+          </p>
+        ) : (
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {rows.map((job) => (
+              <li key={job.id} className="flex">
+                <LatestJobCard job={job} lang={lang} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="mt-8 sm:hidden">
+        <PrimaryLink to="/jobs" variant="ghost" className="w-full">
+          {t("home.jobs.all")}
+        </PrimaryLink>
+      </div>
+    </Section>
+  );
+}
+
+/** One vacancy, compact: who, what, where and until when — and the whole card
+ *  opens the advert on its own page, the same route the jobs list opens. */
+function LatestJobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" }) {
+  const { t } = useT();
+  const title = pickLocalized(job.title_sv, job.title_en, lang) || t("jobs.card.untitled");
+  const place = job.location_text || [job.city, job.region].filter(Boolean).join(", ");
+  const deadline = job.deadline_at ? formatJobDate(job.deadline_at, lang) : null;
+  return (
+    <Link
+      to="/jobs/$slug"
+      params={{ slug: job.slug }}
+      data-home-job={job.slug}
+      className="group flex w-full flex-col rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-xs)] transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+    >
+      <div className="flex items-center gap-3">
+        <EmployerLogo
+          name={job.employer?.name}
+          logoUrl={job.employer?.logo_url}
+          className="h-10 w-10 shrink-0"
+        />
+        {job.employer?.name && (
+          <p className="min-w-0 truncate text-sm text-muted-foreground">{job.employer.name}</p>
+        )}
+      </div>
+      <h3 className="mt-4 text-base font-semibold leading-snug text-foreground [hyphens:auto] group-hover:text-accent">
+        {title}
+      </h3>
+      <div className="mt-3 flex-1 space-y-1.5 text-sm text-muted-foreground">
+        {place && (
+          <p className="flex items-start gap-1.5">
+            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{place}</span>
+          </p>
+        )}
+        {deadline && (
+          <p className="flex items-start gap-1.5">
+            <CalendarClock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{t("jobs.card.deadline").replace("{d}", deadline)}</span>
+          </p>
+        )}
+      </div>
+      <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-accent">
+        {t("jobs.card.read")}
+        <ArrowRight
+          className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
+      </span>
+    </Link>
+  );
+}
+
+// ── 4 · FÖR ARBETSGIVARE ────────────────────────────────────────────────
+//
+// The locked employer journey, benefit first. It ends in the employer's own
+// decision and never implies an automated one. Its own navy band, because an
+// employer is a different reader. The registration action is gated by the
+// release flag: a door onto a disabled product is worse than no door.
+const EMPLOYER_STEPS = [
+  { key: "advertise", icon: Send },
+  { key: "receive", icon: Inbox },
+  { key: "assess", icon: ClipboardCheck },
+  { key: "interview", icon: MessagesSquare },
+  { key: "decide", icon: FileSignature },
+] as const;
+
+export function HomeEmployers({ employerOpen }: { employerOpen: boolean }) {
+  const { t } = useT();
+  return (
+    <Section
+      id="for-arbetsgivare"
+      className="relative scroll-mt-20 overflow-hidden bg-primary py-16 text-primary-foreground md:py-24"
+    >
+      <div className="max-w-2xl">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">
+          {t("home.employers.eyebrow")}
+        </p>
+        {/* `text-primary-foreground` is not optional: styles.css sets an
+            explicit colour on h1-h6, so a heading on the navy band would be
+            navy-on-navy unless it names its own colour. */}
+        <h2
+          className="mt-3 text-balance text-[1.7rem] font-semibold leading-[1.15] tracking-tight text-primary-foreground md:text-[2.25rem]"
+          style={DISPLAY}
+        >
+          {t("home.employers.title")}
+        </h2>
+        <p className="mt-4 text-base leading-relaxed text-primary-foreground/80">
+          {t("home.employers.body")}
+        </p>
+      </div>
+
+      <ol
+        aria-label={t("home.employers.steps.label")}
+        className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3"
+      >
+        {EMPLOYER_STEPS.map(({ key, icon: Icon }, i) => (
+          <li
+            key={key}
+            className="flex flex-col rounded-2xl border border-primary-foreground/15 bg-primary-foreground/[0.06] p-5"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-foreground/10">
+                <Icon
+                  className="h-5 w-5 text-primary-foreground"
+                  strokeWidth={1.75}
+                  aria-hidden="true"
+                />
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/jobs"
-              className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-border bg-card px-5 py-4 text-sm font-semibold text-foreground transition-colors hover:border-accent/40 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <span className="flex items-center gap-3">
-                <Briefcase className="h-5 w-5 text-accent" strokeWidth={1.75} aria-hidden="true" />
-                {t("home.career.jobs")}
+              <span className="text-xs font-semibold tabular-nums text-primary-foreground/60">
+                {String(i + 1).padStart(2, "0")}
               </span>
-              <ArrowRight className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
-            </Link>
+            </div>
+            <h3 className="mt-4 text-sm font-semibold uppercase tracking-[0.12em] text-primary-foreground">
+              {t(`home.employers.step.${key}.title` as TranslationKey)}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-primary-foreground/80">
+              {t(`home.employers.step.${key}.body` as TranslationKey)}
+            </p>
           </li>
+        ))}
+      </ol>
+
+      <div className="mt-10 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+        {employerOpen && (
+          <PrimaryLink
+            to="/signup"
+            search={EMPLOYER_INTENT}
+            className="w-full border border-primary-foreground bg-primary-foreground text-primary hover:bg-primary-foreground/90 sm:w-auto"
+          >
+            {t("employers.cta.register")}
+          </PrimaryLink>
+        )}
+        <PrimaryLink
+          to="/employers"
+          variant="ghost"
+          className="w-full border-primary-foreground/40 bg-transparent text-primary-foreground hover:border-primary-foreground/70 hover:bg-primary-foreground/10 sm:w-auto"
+        >
+          {t("home.employers.cta.how")}
+        </PrimaryLink>
+      </div>
+    </Section>
+  );
+}
+
+// ── 5 · REKRYTERINGSTJÄNSTER ────────────────────────────────────────────
+//
+// A concise commercial band: use the platform yourselves, or ask CQrityjob
+// to help. One working contact action — /contact sends the enquiry through
+// the product's existing mail transport, and says so honestly when that
+// transport is not configured.
+const SERVICES = [
+  { key: "recruitment", icon: Users },
+  { key: "executive", icon: Award },
+  { key: "interim", icon: Timer },
+] as const;
+
+export function HomeRecruitmentServices() {
+  const { t } = useT();
+  return (
+    <Section id="rekryteringstjanster" className="scroll-mt-20 py-16 md:py-24">
+      <div className="grid grid-cols-1 gap-10 rounded-3xl border border-border bg-card p-6 shadow-[var(--shadow-sm)] sm:p-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14 lg:p-12">
+        <div className="flex flex-col">
+          <h2 className={H2} style={DISPLAY}>
+            {t("home.services.title")}
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
+            {t("home.services.body")}
+          </p>
+          <div className="mt-8">
+            <PrimaryLink to="/contact" className="w-full gap-2 sm:w-auto">
+              {t("home.services.cta")}
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </PrimaryLink>
+          </div>
+        </div>
+        <ul className="grid content-center gap-3">
+          {SERVICES.map(({ key, icon: Icon }) => (
+            <li
+              key={key}
+              className="flex items-start gap-4 rounded-2xl border border-border bg-background p-5"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-accent">
+                <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-foreground">
+                  {t(`home.services.${key}.title` as TranslationKey)}
+                </h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {t(`home.services.${key}.body` as TranslationKey)}
+                </p>
+              </div>
+            </li>
+          ))}
         </ul>
       </div>
     </Section>
   );
 }
 
-const FLOW: { key: TranslationKey; icon: typeof Briefcase }[] = [
-  { key: "home.employers.flow.jobs", icon: Briefcase },
-  { key: "home.employers.flow.applications", icon: Users },
-  { key: "home.employers.flow.tests", icon: ClipboardCheck },
-  { key: "home.employers.flow.interview", icon: MessagesSquare },
-  { key: "home.employers.flow.decision", icon: Gavel },
-];
-
-/** The five-step recruitment flow, drawn on the navy employer band, and
- *  learning and development AFTER it as continued use — never as a sixth
- *  selection step, so it sits outside the numbered list. */
-export function EmployerFlow() {
+// ── 6 · VARFÖR CQRITYJOB ────────────────────────────────────────────────
+//
+// Short, and about the company and its purpose. The founder's experience is
+// on /about, where it supports the story rather than becoming it.
+export function HomeWhy() {
   const { t } = useT();
   return (
-    <>
-      <ol
-        aria-label={t("home.employers.flow.label")}
-        className="relative mt-10 grid grid-cols-1 gap-3 sm:grid-cols-5"
-      >
-        {FLOW.map(({ key, icon: Icon }, i) => (
-          <li
-            key={key}
-            className="flex items-center gap-3 rounded-xl border border-primary-foreground/15 bg-primary-foreground/5 px-4 py-3 sm:flex-col sm:items-start"
-          >
-            <Icon
-              className="h-5 w-5 shrink-0 text-primary-foreground/80"
-              strokeWidth={1.75}
-              aria-hidden="true"
-            />
-            <span className="text-sm font-medium text-primary-foreground">
-              <span className="tabular-nums text-primary-foreground/60">{i + 1}.</span> {t(key)}
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-4 flex items-center gap-2 text-sm text-primary-foreground/80">
-        <GraduationCap className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
-        {t("home.employers.flow.development")}
-      </p>
-    </>
-  );
-}
-
-export function HomeStart() {
-  const { t } = useT();
-  const col = (title: TranslationKey, steps: TranslationKey[]) => (
-    <div>
-      <h3 className="text-base font-semibold text-foreground">{t(title)}</h3>
-      <ol className="mt-4 space-y-4">
-        {steps.map((s, i) => (
-          <li key={s} className="flex gap-4">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold tabular-nums text-accent">
-              {i + 1}
-            </span>
-            <p className="pt-1 text-sm leading-relaxed text-muted-foreground">{t(s)}</p>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-  return (
-    <Section id="get-started" bordered className="scroll-mt-24 py-16 md:py-24">
-      <p className={EYEBROW}>{t("home.start.eyebrow")}</p>
-      <h2 className={H2} style={{ fontFamily: "var(--font-display)" }}>
-        {t("home.start.title")}
-      </h2>
-      <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-16">
-        {col("home.start.person", [
-          "home.start.person.1",
-          "home.start.person.2",
-          "home.start.person.3",
-        ])}
-        {col("home.start.employer", [
-          "home.start.employer.1",
-          "home.start.employer.2",
-          "home.start.employer.3",
-        ])}
-      </div>
-    </Section>
-  );
-}
-
-const FAQ: [TranslationKey, TranslationKey][] = [
-  ["home.faq.q1", "home.faq.a1"],
-  ["home.faq.q2", "home.faq.a2"],
-  ["home.faq.q3", "home.faq.a3"],
-  ["home.faq.q4", "home.faq.a4"],
-  ["home.faq.q5", "home.faq.a5"],
-  ["home.faq.q6", "home.faq.a6"],
-];
-
-/** The offer, its pricing status, and six questions. No contact invitation:
- *  the contact form does not send anything yet, and an invitation into a
- *  form that discards what you type is not an offer. */
-export function HomeFaq() {
-  const { t } = useT();
-  return (
-    <Section id="faq" bordered className="scroll-mt-24 py-16 md:py-24">
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-14">
-        <div>
-          <p className={EYEBROW}>{t("home.faq.eyebrow")}</p>
-          <h2 className={H2} style={{ fontFamily: "var(--font-display)" }}>
-            {t("home.faq.title")}
-          </h2>
-          <p className="mt-5 text-sm leading-relaxed text-muted-foreground">
-            {t("home.faq.offer.person")}
-          </p>
-          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {t("home.faq.offer.employer")}
-          </p>
-          <p className="mt-3 text-sm font-medium leading-relaxed text-foreground">
-            {t("home.faq.pricing")}
-          </p>
-        </div>
-        <div className="divide-y divide-border border-y border-border">
-          {FAQ.map(([q, a]) => (
-            <details key={q} className="group py-1">
-              <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 rounded-sm py-3 font-medium text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
-                {t(q)}
-                <span
-                  aria-hidden="true"
-                  className="text-xl text-accent transition-transform group-open:rotate-45"
-                >
-                  +
-                </span>
-              </summary>
-              <p className="pb-4 pr-8 text-sm leading-relaxed text-muted-foreground">{t(a)}</p>
-            </details>
-          ))}
-        </div>
+    <Section id="varfor" bordered className="scroll-mt-20 bg-secondary/40 py-16 md:py-24">
+      <div className="mx-auto max-w-3xl text-center">
+        <h2 className={H2} style={DISPLAY}>
+          {t("home.why.title")}
+        </h2>
+        <p className="mx-auto mt-5 max-w-[60ch] text-base leading-relaxed text-muted-foreground md:text-lg">
+          {t("home.why.body")}
+        </p>
+        <p
+          lang="en"
+          className="mt-10 text-[1.6rem] font-semibold tracking-tight text-foreground md:text-[2rem]"
+          style={DISPLAY}
+        >
+          {t("brand.slogan")}
+        </p>
+        <Link to="/about" className={cn(TEXT_LINK, "mt-6")}>
+          {t("home.why.cta")}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
       </div>
     </Section>
   );

@@ -55,6 +55,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { I18nProvider } from "../src/i18n/context";
+import { dictionaries } from "../src/i18n/dictionaries";
 import { ClaimRow } from "../src/components/security-passport/ClaimRow";
 import { MarketBadgeRow } from "../src/components/security-passport/MarketBadgeRow";
 import { RecognitionPanel } from "../src/components/security-passport/RecognitionBadges";
@@ -358,8 +359,8 @@ group("GROUP 4 -- current trust and historical trust are never both claimed");
     !isCurrentlyVerified(revoked),
   );
   ck(
-    "en: the historical word is PREVIOUSLY VERIFIED",
-    passportT("assertion.verified.historical", "en") === "PREVIOUSLY VERIFIED",
+    "en: the historical word is PREVIOUSLY SOURCE-CONFIRMED",
+    passportT("assertion.verified.historical", "en") === "PREVIOUSLY SOURCE-CONFIRMED",
   );
 
   // History is not erased. The decision that happened is still readable.
@@ -370,7 +371,7 @@ group("GROUP 4 -- current trust and historical trust are never both claimed");
   // An active verified credential keeps the present tense.
   const active = render(<AssertionChip level="verified" lifecycleState="active" />);
   ck(
-    "an active verified credential still reads VERIFIERAD",
+    "an active source-confirmed credential reads KÄLLBEKRÄFTAD, in the present tense",
     visibleText(active).includes(passportT("assertion.verified", "sv")),
   );
   // Every state word is real text, not a colour. This is what a screen
@@ -522,7 +523,9 @@ group("GROUP 7 -- premium polish that a trust row must not lose");
   ck("its header wraps rather than pushing the chips off", markup.includes("flex-wrap"));
   ck(
     "the trust status word itself is never truncated",
-    !/class="[^"]*truncate[^"]*"[^>]*>\s*<[^>]*>\s*VERIFIERAD/.test(markup),
+    !/class="[^"]*truncate[^"]*"[^>]*>\s*<[^>]*>\s*(KÄLLBEKRÄFTAD|Dokumenterad|DOKUMENT INLÄMNAT|EGEN UPPGIFT)/.test(
+      markup,
+    ),
   );
 
   // "—" is a model sentinel, not a label a reader should meet.
@@ -531,6 +534,61 @@ group("GROUP 7 -- premium polish that a trust row must not lose");
     "an unrecorded issuer says so in words rather than printing a dash",
     noIssuer.includes(passportT("common.notStated", "sv")),
   );
+}
+
+/* ================================================================== */
+group("GROUP 8 -- one vocabulary: the Passport says what the public page says");
+{
+  // The owner's alignment (2026-09-30): the holder, the card, the recipient
+  // and the public /security-passport page use the same four words for the
+  // same four standings. Display only -- nothing stored changes.
+  const PUBLIC = (lang: "sv" | "en") => dictionaries[lang] as Record<string, string>;
+  for (const lang of ["sv", "en"] as const) {
+    const pairs: readonly [string, string][] = [
+      [
+        passportT("trust.level.self_declared", lang),
+        PUBLIC(lang)["passportPage.status.selfDeclared"],
+      ],
+      [
+        passportT("assertion.self_declared", lang),
+        PUBLIC(lang)["passportPage.status.selfDeclared"],
+      ],
+      [
+        passportT("assertion.document_provided", lang),
+        PUBLIC(lang)["passportPage.status.documentProvided"],
+      ],
+      [passportT("trust.level.documented", lang), PUBLIC(lang)["passportPage.status.documented"]],
+      [
+        passportT("trust.level.source_verified", lang),
+        PUBLIC(lang)["passportPage.status.sourceConfirmed"],
+      ],
+      [passportT("assertion.verified", lang), PUBLIC(lang)["passportPage.status.sourceConfirmed"]],
+    ];
+    for (const [product, pub] of pairs) {
+      ck(
+        `${lang}: the Passport's "${product}" is the public page's "${pub}"`,
+        product.toLocaleLowerCase(lang) === pub.toLocaleLowerCase(lang),
+      );
+    }
+    // No status word says "verified": a document review is Dokumenterad and
+    // a source confirmation is Källbekräftad.
+    for (const key of [
+      "assertion.self_declared",
+      "assertion.document_provided",
+      "assertion.verified",
+      "assertion.verified.historical",
+      "assertion.verified.stored",
+      "trust.level.self_declared",
+      "trust.level.documented",
+      "trust.level.source_verified",
+      "identity.selfDeclared",
+    ] as const) {
+      ck(
+        `${lang}: the status word "${key}" ("${passportT(key, lang)}") does not say verified`,
+        !/verifi/i.test(passportT(key, lang)),
+      );
+    }
+  }
 }
 
 /* ================================================================== */

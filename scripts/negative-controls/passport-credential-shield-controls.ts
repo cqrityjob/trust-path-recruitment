@@ -107,12 +107,12 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PCS-NC-STATUS-WORD-UNBREAKABLE",
     defect:
-      "the status word loses its break point, so 'Egenrapporterad' runs into the next shield on every Swedish phone between 390 and 430px",
+      "the status word loses its break point, so 'Dokumenterad' runs into the next shield on every Swedish phone between 390 and 430px",
     file: SHIELD,
     find: "          {breakableStatusWord(word)}\n",
     replace: "          {word}\n",
     guard: GUARD,
-    expect: "the shield prints the Swedish self-declared word with its break point",
+    expect: "the shield prints the Swedish documented word with its break point",
   },
   {
     id: "PCS-NC-ABBREVIATION-FROM-THE-DATABASE-CODE",

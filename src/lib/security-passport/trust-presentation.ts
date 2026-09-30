@@ -146,10 +146,13 @@ export interface DescribeTrustInput {
   readonly provenanceUnavailable?: boolean;
 }
 
+// The public vocabulary (brand story, 2026-09-30). `verified` is always
+// overridden below by the documented / source-confirmed word; it is spelled
+// as the stronger of the two so no path can print "Verifierad".
 const SHORT: Record<TrustStatus, { sv: string; en: string }> = {
-  self_reported: { sv: "Egen uppgift", en: "Self-reported" },
+  self_reported: { sv: "Egen uppgift", en: "Self-declared" },
   document_provided: { sv: "Dokument inlämnat", en: "Document provided" },
-  verified: { sv: "Verifierad", en: "Verified" },
+  verified: { sv: "Källbekräftad", en: "Source-confirmed" },
   unknown: { sv: "Kunde inte läsas", en: "Could not be loaded" },
 };
 

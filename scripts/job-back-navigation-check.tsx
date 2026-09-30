@@ -341,7 +341,13 @@ console.log("\nJ6 · the wiring, and the words");
     ) && !/window\.location\.pathname/.test(dialog),
   );
   const index = code("src/routes/jobs.index.tsx");
-  ck("/jobs hands its search to the results", /from=\{jobSearchToFrom\(search\)\}/.test(index));
+  // The list hands every card the search it is showing -- without
+  // `selected`, which a way back must never carry (2026-09-30).
+  ck(
+    "/jobs hands its search to the results",
+    /const from = jobSearchToFrom\(querySearch\)/.test(index) &&
+      /<JobCard job=\{job\} lang=\{lang\} from=\{from\} \/>/.test(index),
+  );
   const results = code("src/components/jobs/JobResults.tsx");
   ck("and the results to every card", /from=\{from\}/.test(results));
   const card = code("src/components/jobs/JobCard.tsx");

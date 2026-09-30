@@ -51,7 +51,14 @@ const panel = code(read(AUTH_PANEL));
 console.log("\n0 · the landing page stays product-led, with only one auth flow");
 
 check(!/UnifiedAuthPanel/.test(home), "/ does not embed the full authentication form");
-check(/to="\/login"/.test(home), "/ routes returning users to the canonical login page");
+// The homepage no longer carries its own sign-in line: "Logga in" sits in
+// the header every public page renders, / included (locked navigation,
+// 2026-09-30).
+check(
+  /to="\/login"/.test(code(read("src/components/site/SiteHeader.tsx"))) &&
+    /<SiteLayout>/.test(home),
+  "/ routes returning users to the canonical login page, through the header it renders",
+);
 check(/<UnifiedAuthPanel mode=\{mode\} \/>/.test(form), "and /login mounts the same component");
 check(
   /export function UnifiedAuthForm/.test(form),

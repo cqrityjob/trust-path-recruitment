@@ -60,7 +60,7 @@ function ComingSoonPage() {
                 the contact page does not accept messages (MVP text
                 specification §12.4). The Career Center is open meanwhile. */}
             <PrimaryLink to="/career-center">
-              {t("home.core.career.cta")}
+              {t("nav.exploreProfessions")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </PrimaryLink>
           </div>

@@ -187,7 +187,7 @@ function RecipientRoute() {
             {pt("rec.unavailableNext")}
           </p>
           <a
-            href="/#passport"
+            href="/security-passport"
             className="mt-4 inline-flex h-11 items-center text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {pt("rec.aboutLink")}

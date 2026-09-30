@@ -141,11 +141,48 @@ export function AssertionChip({
   );
 }
 
+/** The four public levels, in the order a reader meets them. "Dokumenterad"
+ *  is a stored `verified` that a CQrityjob document review produced, so its
+ *  chip is drawn from that provenance -- the same resolution every entry's
+ *  chip goes through -- rather than from a level of its own. */
+const LEGEND: readonly {
+  readonly key: string;
+  readonly level: AssertionLevel;
+  readonly provenance: {
+    readonly verificationMethod: string;
+    readonly verifierName: string;
+  } | null;
+  readonly help:
+    | "assertion.self_declared.help"
+    | "assertion.document_provided.help"
+    | "assertion.documented.help"
+    | "assertion.verified.help";
+}[] = [
+  {
+    key: "self_declared",
+    level: "self_declared",
+    provenance: null,
+    help: "assertion.self_declared.help",
+  },
+  {
+    key: "document_provided",
+    level: "document_provided",
+    provenance: null,
+    help: "assertion.document_provided.help",
+  },
+  {
+    key: "documented",
+    level: "verified",
+    provenance: { verificationMethod: "document_review", verifierName: "CQrityjob" },
+    help: "assertion.documented.help",
+  },
+  { key: "source_confirmed", level: "verified", provenance: null, help: "assertion.verified.help" },
+];
+
 /** The legend. Shown wherever chips first appear, so a reader never has to
- *  infer what the three levels mean from their styling. */
+ *  infer what the four levels mean from their styling. */
 export function AssertionLegend({ className }: { className?: string }) {
   const { pt } = usePassportCopy();
-  const levels: AssertionLevel[] = ["self_declared", "document_provided", "verified"];
 
   return (
     <div className={cn("rounded-lg border border-border bg-secondary/40 p-4", className)}>
@@ -153,14 +190,12 @@ export function AssertionLegend({ className }: { className?: string }) {
         {pt("assertion.legend")}
       </p>
       <dl className="mt-3 space-y-3">
-        {levels.map((level) => (
-          <div key={level} className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
+        {LEGEND.map(({ key, level, provenance, help }) => (
+          <div key={key} className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-3">
             <dt className="shrink-0">
-              <AssertionChip level={level} size="sm" />
+              <AssertionChip level={level} provenance={provenance} size="sm" />
             </dt>
-            <dd className="text-sm text-muted-foreground">
-              {pt(`assertion.${level}.help` as const)}
-            </dd>
+            <dd className="text-sm text-muted-foreground">{pt(help)}</dd>
           </div>
         ))}
       </dl>

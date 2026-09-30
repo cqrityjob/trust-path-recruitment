@@ -33,6 +33,7 @@ import {
   type ProvenanceSubjectKind,
 } from "@/lib/security-passport/provenance";
 import {
+  expiredNoteKey,
   methodLabelKey,
   unsupportedSourceNoticeKey,
 } from "@/lib/security-passport/trust-presentation";
@@ -339,8 +340,19 @@ export function VerificationPanel({
         </p>
       ) : null}
 
+      {/* What the entry WAS while it was current -- never "verified" for an
+          entry the holder typed in or CQrityjob only reviewed. */}
       {validity.hasExpired ? (
-        <p className="mt-3 text-sm font-medium text-foreground">{pt("ver.expiredNotice")}</p>
+        <p className="mt-3 text-sm font-medium text-foreground">
+          {pt(
+            expiredNoteKey({
+              assertionLevel,
+              verifierName: latestApproval?.organisation ?? null,
+              verificationMethod: latestApproval?.method ?? null,
+              subjectKind,
+            }),
+          )}
+        </p>
       ) : validity.expiresSoon ? (
         <p className="mt-3 text-sm font-medium text-foreground">{pt("ver.expiringSoon")}</p>
       ) : null}

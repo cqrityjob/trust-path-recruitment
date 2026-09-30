@@ -18,7 +18,7 @@ import { ProfessionInfoAction } from "./ProfessionInfoAction";
 import { NextProfessionCard } from "./NextProfessionCard";
 import { ProfessionCard } from "./ProfessionCard";
 
-// "Vilket yrke arbetar du i i dag?" — the `pathFrom` section.
+// "Vilket är ditt nuvarande yrke?" — the `pathFrom` section.
 //
 // ── THE ANSWER IS ON THE PAGE, NOT ONE HOP AWAY ────────────────────────
 //
@@ -253,7 +253,10 @@ export function PathFromSection({
         </div>
 
         {/* ── THE CHOSEN PROFESSION ──────────────────────────────────── */}
-        <div className="lg:col-span-8">
+        {/* Nothing is drawn beside the choice until there is a profession to
+            describe: an empty placeholder box asking the reader to choose
+            repeated the heading above it (owner review, 2026-09-30). */}
+        <div className="lg:col-span-8" hidden={!somethingShown}>
           {origin.state === "ready" && (
             <SelectedProfession
               profession={origin.profession}
@@ -266,24 +269,6 @@ export function PathFromSection({
               listAnchor={listAnchor}
               onProfessionOpen={onProfessionOpen}
             />
-          )}
-          {origin.state === "unknown" && (
-            <div
-              data-path-empty
-              className="flex h-full flex-col justify-center rounded-xl border border-dashed border-border bg-background/60 p-6"
-            >
-              <p className="text-base font-semibold text-foreground">{t("cc.path.empty.title")}</p>
-              <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
-                {t("cc.path.empty.body")}
-              </p>
-              <a
-                href={`#${listAnchor}`}
-                className="mt-3 inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {t("cc.path.next.empty.explore")}
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-              </a>
-            </div>
           )}
         </div>
       </div>

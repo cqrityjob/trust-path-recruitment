@@ -3,10 +3,11 @@ import { cn } from "@/lib/utils";
 
 /** The two-letter language toggle.
  *
- *  `tone` is presentation only. "onDark" exists because the switcher now sits
- *  in the navy utility bar at the top of the public header, where the default
- *  light border/foreground pair has too little contrast to read as a control.
- *  Every other caller keeps the default and is untouched.
+ *  `tone` is presentation only. "onDark" is for a navy surface, where the
+ *  default light border/foreground pair has too little contrast to read as a
+ *  control. The public header's navy utility bar, its first caller, is gone:
+ *  SV / EN now sits on the right of the one header row (locked navigation,
+ *  2026-09-30).
  *
  *  ── 44 x 44, INCLUDING THE TWO-LETTER BUTTONS (2026-09-13) ───────────
  *
@@ -20,12 +21,36 @@ import { cn } from "@/lib/utils";
 export function LanguageSwitcher({
   className,
   tone = "default",
+  compact = false,
 }: {
   className?: string;
   tone?: "default" | "onDark";
+  /** ONE 44 x 44 button that switches to the other language, for the public
+   *  header between 1024 and 1279px: the locked navigation, the full SV / EN
+   *  pair and both account actions do not fit side by side there. It names
+   *  the language it switches TO, and says so in its accessible name. */
+  compact?: boolean;
 }) {
   const { lang, setLang, t } = useT();
   const onDark = tone === "onDark";
+  if (compact) {
+    const next = lang === "sv" ? "en" : "sv";
+    return (
+      <button
+        type="button"
+        onClick={() => setLang(next)}
+        lang={next}
+        aria-label={t(next === "en" ? "lang.switchToEn" : "lang.switchToSv")}
+        className={cn(
+          "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-border bg-background/60 px-2.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+          className,
+        )}
+      >
+        {next}
+      </button>
+    );
+  }
   return (
     <div
       className={cn(

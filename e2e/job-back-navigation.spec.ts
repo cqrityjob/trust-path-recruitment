@@ -57,7 +57,7 @@ const TITLE = {
   },
 } as const;
 /** The /jobs search form's own name, and the ad's "similar jobs" heading. */
-const SEARCH_LABEL = { sv: "Hitta jobb inom säkerhet", en: "Find jobs in security" } as const;
+const SEARCH_LABEL = { sv: "Lediga jobb inom säkerhet", en: "Open jobs in security" } as const;
 const RELATED_HEADING = "Liknande jobb";
 // One label for the ad's way back, with or without a search behind it (MVP
 // text specification §10). WHERE it goes still differs, and is asserted by
@@ -122,20 +122,13 @@ async function openSearch(page: Page, lang: "sv" | "en" = "sv") {
 /** The ad's own page is on screen. The router keeps the page it came from
  *  mounted until the next one is ready, and that page may list the same
  *  titles -- so a URL alone does not say which page an element belongs to. */
-/** Desktop first opens the split reader; its permalink opens the same ad route
- * that mobile reaches immediately. Both paths must carry the search. */
+/** Every card opens the ad's own page, at every width (the desktop split
+ *  reader was retired, 2026-09-30). The card must carry the search. */
 async function openAdFromList(page: Page, lang: "sv" | "en" = "sv") {
   await page
     .locator('[aria-label="Jobblista"], [aria-label="Job list"]')
     .getByRole("link", { name: TITLE[lang].ad, exact: true })
     .click();
-  if ((page.viewportSize()?.width ?? 0) >= 1024) {
-    await page
-      .getByRole("link", {
-        name: lang === "sv" ? "Öppna annonsen på egen sida" : "Open job on its own page",
-      })
-      .click();
-  }
   await page.waitForURL(`**/jobs/${AD}?from=**`, { timeout: 15_000 });
 }
 

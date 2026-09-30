@@ -21,6 +21,7 @@ import {
 } from "@/lib/security-passport/format";
 import {
   credentialPresentationOf,
+  presentationWordKeyOf,
   provenanceLabelKeys,
   unsupportedSourceNoticeKey,
 } from "@/lib/security-passport/trust-presentation";
@@ -81,6 +82,10 @@ export function ClaimRow({
             <CredentialSymbol
               code={claim.credentialCode}
               state={credentialPresentationOf(claim, claim.lifecycleState)}
+              statusWordKey={presentationWordKeyOf(
+                claim,
+                credentialPresentationOf(claim, claim.lifecycleState),
+              )}
               name={title}
               size={40}
               className="mt-0.5 shrink-0"

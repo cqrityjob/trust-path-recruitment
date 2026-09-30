@@ -6,62 +6,46 @@ import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { publicNav } from "./public-nav";
 
-/** ── THE SITE FOOTER (compacted 2026-09-06) ──────────────────────────────
+/** ── THE SITE FOOTER ─────────────────────────────────────────────────────
  *
- *  It was five columns and ~500px tall, and it carried nine links to six
- *  destinations. "Kontakt" appeared twice. "Bedömningar" appeared twice.
- *  A footer that repeats itself is not a map, it is noise at the bottom of
- *  every page on the site.
+ *  ONE row of links, and every one of them goes somewhere that works: the
+ *  header's six, from the same definition (public-nav.ts), then the
+ *  recruitment contact page and beta feedback.
  *
- *  What is here now is ONE row of links, and every one of them goes
- *  somewhere that works: the header's six, from the same definition
- *  (public-nav.ts), plus beta feedback.
+ *    Karriär · Jobb · Security Passport · Säkerhetsarbete ·
+ *    För arbetsgivare · Om oss · Kontakt · Betafeedback
  *
- *    Säkerhetsarbete · Security Passport · Karriär · Jobb ·
- *    För arbetsgivare · Om oss · Betafeedback
+ *  "Security Passport" and "Säkerhetsarbete" open their PUBLIC pages for a
+ *  signed-out reader (/security-passport, /sakerhetsarbete) and the product
+ *  itself for a signed-in one — never a homepage anchor, and never a login
+ *  form wearing a product name.
  *
- *  "Säkerhetsarbete" and "Security Passport" are the homepage's own
- *  sections for a signed-out reader, not pages of their own: every Passport
- *  and security-work route is authenticated, and a footer link that lands a
- *  signed-out reader on a login form is a dead end wearing a product name.
- *  A signed-in reader goes straight to the product instead.
- *
- *  Career Discovery is no longer a footer entry of its own (MVP text
- *  specification §4): it is reached from the career card and the career
- *  section on the homepage and from the Career Center, and it does not
- *  compete with the three core parts in the site's navigation.
+ *  "Kontakt" is back because /contact now sends: a recruitment enquiry goes
+ *  to CQrityjob through the product's existing mail transport, and the page
+ *  says so honestly while that transport is not configured.
  *
  *  ── WHAT IS DELIBERATELY NOT A LINK ──────────────────────────────────
  *
  *  The privacy policy and the terms of use have no approved pages yet. The
  *  footer says exactly that, as plain text in the muted colour, with no
- *  hover and no cursor change, because a link that does nothing when you
- *  click it is worse on a legal line than an absence -- somebody looking for
- *  the privacy policy learns something true from "not published yet" and
- *  nothing at all from a dead anchor or a bare document name. They become
- *  links the day approved documents and their routes exist, and not before.
- *
- *  ── WHAT IS DELIBERATELY GONE ────────────────────────────────────────
- *
- *  /contact. The route still exists and is still reachable by URL, but the
- *  form on it calls preventDefault and sends nothing. The site should not
- *  invite anybody into it from the bottom of every page until it does. */
+ *  hover and no cursor change: somebody looking for the privacy policy learns
+ *  something true from "not published yet" and nothing at all from a dead
+ *  anchor. They become links the day approved documents and routes exist. */
 export function SiteFooter() {
   const { t } = useT();
   const signedIn = useSignedIn();
   const year = new Date().getFullYear();
 
-  // The same six destinations as the header, in the same order, plus beta
-  // feedback. `hash` rather than "#" in `to` -- the router does not parse
-  // one out of the path.
+  // The same six destinations as the header, in the same order, then the
+  // recruitment contact page and beta feedback.
   const links = [
     ...publicNav(signedIn === true).map((item) => ({
       key: item.key,
       to: item.to,
-      hash: item.hash,
       label: t(item.labelKey),
     })),
-    { key: "feedback", to: "/feedback", hash: undefined, label: t("footer.betaFeedback") },
+    { key: "contact", to: "/contact", label: t("nav.contact") },
+    { key: "feedback", to: "/feedback", label: t("footer.betaFeedback") },
   ] as const;
 
   return (
@@ -77,9 +61,8 @@ export function SiteFooter() {
               <ShieldCheck className="h-5 w-5 shrink-0 text-accent" strokeWidth={1.75} />
               <span className="text-base">{t("brand.name")}</span>
             </Link>
-            {/* The brand principle, once. It used to appear twice in this
-                footer -- as `footer.tagline` beside the mark and again as
-                `brand.slogan` on the bottom rule, saying the same thing. */}
+            {/* The brand line, once: "Where trust comes first." — the owner's
+                slogan, in the same words in both languages. */}
             <p
               className="text-sm text-muted-foreground sm:border-l sm:border-border sm:pl-5"
               style={{ fontFamily: "var(--font-display)" }}
@@ -94,8 +77,6 @@ export function SiteFooter() {
                 <li key={l.key}>
                   <Link
                     to={l.to}
-                    hash={l.hash}
-                    activeOptions={{ exact: l.to === "/", includeHash: l.hash !== undefined }}
                     // 44 x 44, BOTH dimensions. The height was already here;
                     // the width was not, and "Jobb" is a 33px word -- a
                     // 33 x 44 target that the suite used to exempt by

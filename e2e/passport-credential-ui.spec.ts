@@ -29,7 +29,7 @@ test.describe("credential symbols", () => {
     await openHarness(page, "symbols", undefined, "sv");
     await expect(page.getByText("CQrityjobs behörighetssymboler")).toBeVisible();
     // Colour is never alone: the column headers are the words themselves.
-    for (const word of ["Utkast", "EGENRAPPORTERAD", "VERIFIERAD", "Återkallad", "Ersatt"]) {
+    for (const word of ["Utkast", "EGEN UPPGIFT", "KÄLLBEKRÄFTAD", "Återkallad", "Ersatt"]) {
       await expect(page.getByRole("columnheader", { name: word }).first()).toBeVisible();
     }
     await page.screenshot({ path: `${EVIDENCE}/symbols-matrix-sv.png`, fullPage: true });
@@ -126,8 +126,10 @@ test.describe("correction and versions", () => {
 
 test.describe("cards", () => {
   const cardCases: readonly { persona: string; expectWord: RegExp }[] = [
-    { persona: "cred-vu1-approved", expectWord: /VERIFIED/i },
-    { persona: "cred-vu1-vu2", expectWord: /VERIFIED/i },
+    // An approval is a CQrityjob document review (Documented) or a source's
+    // own confirmation (Source-confirmed); the bare word "Verified" is gone.
+    { persona: "cred-vu1-approved", expectWord: /SOURCE-CONFIRMED|DOCUMENTED/i },
+    { persona: "cred-vu1-vu2", expectWord: /SOURCE-CONFIRMED|DOCUMENTED/i },
     { persona: "cred-ov-expired", expectWord: /Expired/i },
     { persona: "cred-sv-disputed", expectWord: /Disputed/i },
     { persona: "career-discovery-only", expectWord: /Nothing to show yet|No verified/i },
@@ -195,19 +197,21 @@ test.describe("the shared recipient Passport", () => {
     // and the whole card warns as well.
     await expect(lapsed.getByText("Expired", { exact: true })).toBeVisible();
     await expect(lapsed.getByText("Contains expired entries")).toBeVisible();
-    await expect(lapsed.getByText("PREVIOUSLY VERIFIED")).toBeVisible();
-    // And it must NOT carry the bare present-tense claim.
-    await expect(lapsed.getByText("VERIFIED", { exact: true })).toHaveCount(0);
+    // A CQrityjob document review keeps its level word once it lapses
+    // (historicalTrustWordKey): "Documented", never "previously" anything --
+    // that past tense belongs only to a source's own confirmation.
+    await expect(lapsed.getByText("Documented", { exact: true }).first()).toBeVisible();
+    await expect(lapsed.getByText(/PREVIOUSLY|SOURCE-CONFIRMED/i)).toHaveCount(0);
 
     // The current one is a CQrityjob document review, and since the
     // trust-source containment (20261030090000) that is presented as
     // DOCUMENTED — "Reviewed by: CQrityjob" — never as the bare present-tense
-    // VERIFIED, which is reserved for a source's own confirmation.
+    // SOURCE-CONFIRMED, which is reserved for a source's own confirmation.
     const current = page.locator("article").first();
     await expect(current.getByText("Stina Testsson")).toBeVisible();
     // (Rendered uppercase by CSS from "Documented", like "Expired" above.)
     await expect(current.getByText("Documented", { exact: true }).first()).toBeVisible();
-    await expect(current.getByText("VERIFIED", { exact: true })).toHaveCount(0);
+    await expect(current.getByText("SOURCE-CONFIRMED", { exact: true })).toHaveCount(0);
 
     await page.screenshot({ path: `${EVIDENCE}/recipient-cards-en.png`, fullPage: true });
   });

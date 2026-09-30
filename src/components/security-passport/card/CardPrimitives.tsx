@@ -22,6 +22,7 @@
 import { useId } from "react";
 import { TRUST_PALETTE, type MilestoneStyle } from "@/lib/security-passport/design/trust-system";
 import type { CredentialPresentationState } from "@/lib/security-passport/design/credential-symbols";
+import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { CredentialSymbol } from "../CredentialSymbol";
 
 /* ------------------------------------------------------------------ */
@@ -265,6 +266,10 @@ export interface CredentialPlateProps {
   /** Presentation state for the symbol. Required whenever symbolCode is
    *  set, so a mark can never render without its status treatment. */
   readonly symbolState?: CredentialPresentationState;
+  /** The entry's own status word for the symbol's accessible name, from
+   *  `presentationWordKeyOf` -- so it matches the evidence word printed on
+   *  the plate. */
+  readonly symbolWordKey?: PassportCopyKey;
 }
 
 /**
@@ -288,6 +293,7 @@ export function CredentialPlate({
   overlayTone,
   symbolCode,
   symbolState,
+  symbolWordKey,
   lifecycleLeads = false,
 }: CredentialPlateProps) {
   return (
@@ -303,7 +309,13 @@ export function CredentialPlate({
           keep the original seal-on-verified treatment. */}
       {symbolCode && symbolState ? (
         <span className="mt-0.5 shrink-0">
-          <CredentialSymbol code={symbolCode} state={symbolState} name={title} size={34} />
+          <CredentialSymbol
+            code={symbolCode}
+            state={symbolState}
+            statusWordKey={symbolWordKey}
+            name={title}
+            size={34}
+          />
         </span>
       ) : premium ? (
         <span className="mt-0.5">

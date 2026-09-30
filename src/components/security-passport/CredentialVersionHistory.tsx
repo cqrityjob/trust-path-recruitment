@@ -8,7 +8,10 @@
 
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
 import { formatDate, formatExpiry } from "@/lib/security-passport/format";
-import { credentialPresentationOf } from "@/lib/security-passport/trust-presentation";
+import {
+  credentialPresentationOf,
+  presentationWordKeyOf,
+} from "@/lib/security-passport/trust-presentation";
 import type { AssertionLevel, LifecycleState } from "@/lib/security-passport/types";
 import { AssertionChip } from "./AssertionChip";
 import { CredentialSymbol } from "./CredentialSymbol";
@@ -71,6 +74,10 @@ export function CredentialVersionHistory({
                   <CredentialSymbol
                     code={v.credentialCode}
                     state={credentialPresentationOf(v, v.lifecycleState as LifecycleState)}
+                    statusWordKey={presentationWordKeyOf(
+                      v,
+                      credentialPresentationOf(v, v.lifecycleState as LifecycleState),
+                    )}
                     name={v.title}
                     size={36}
                     className="shrink-0"
