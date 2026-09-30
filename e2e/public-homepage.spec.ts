@@ -510,11 +510,13 @@ test.describe("the locked navigation", () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
       await setLang(page, lang);
+      // The desktop bar only: the compact sheet carries a second "Primary"
+      // nav in the DOM.
       const labels = (
         await page
-          .locator(
-            'header nav[aria-label="Primary"] > a, header nav[aria-label="Primary"] > div > button',
-          )
+          .locator('header nav[aria-label="Primary"]')
+          .first()
+          .locator(":scope > a, :scope > div > button")
           .allInnerTexts()
       ).map((x) => x.trim());
       expect(labels).toEqual([...NAV[lang]]);
