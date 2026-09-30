@@ -40,6 +40,7 @@ import {
   UserRound,
   Users,
 } from "lucide-react";
+import { HeroVideoBackground } from "@/components/site/HeroVideoBackground";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { EmployerLogo } from "@/components/jobs/EmployerPresentation";
@@ -94,37 +95,22 @@ const AUDIENCES = [
 export function HomeHero() {
   const { t } = useT();
   return (
-    <section id="hero" className="relative overflow-hidden border-b border-border bg-secondary/40">
-      {/* Depth is CSS only: one restrained wash and a faint rule grid, masked
-          out before the fold. Out of the accessibility tree, holding nothing. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(1000px 460px at 50% -12%, oklch(0.55 0.09 245 / 0.14), transparent 64%)",
-        }}
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.3]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, oklch(0.235 0.055 258 / 0.05) 1px, transparent 1px)",
-          backgroundSize: "56px 100%",
-          maskImage: "linear-gradient(to bottom, black, transparent 85%)",
-        }}
-      />
-      <div className="relative mx-auto w-full max-w-6xl px-6 pb-16 pt-14 text-center sm:pt-16 md:px-8 md:pb-20 md:pt-20">
+    <section
+      id="hero"
+      className="relative flex min-h-[560px] items-center overflow-hidden bg-[#060B12] md:min-h-[620px]"
+    >
+      {/* The background film (decorative, pausable): see HeroVideoBackground. */}
+      <HeroVideoBackground />
+      <div className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-16 text-center sm:pt-20 md:px-8 md:pb-24 md:pt-24">
         {/* `[hyphens:auto]` earns its keep at 320-390px, where a Swedish
             compound does not fit on any line; the document carries `lang`. */}
         <h1
-          className="mx-auto max-w-[20ch] text-balance text-[2.2rem] font-semibold leading-[1.06] tracking-tight text-foreground [hyphens:auto] sm:text-[3rem] lg:text-[3.6rem] lg:[hyphens:none]"
+          className="mx-auto max-w-[20ch] text-balance text-[2.2rem] font-semibold leading-[1.04] tracking-tight text-white [hyphens:auto] sm:text-[3rem] lg:text-[4.25rem] lg:[hyphens:none]"
           style={DISPLAY}
         >
           {t("home.hero.title")}
         </h1>
-        <p className="mx-auto mt-6 max-w-[62ch] text-base leading-relaxed text-muted-foreground md:text-lg">
+        <p className="mx-auto mt-6 max-w-[62ch] text-base leading-relaxed text-white/85 md:text-lg">
           {t("home.hero.subtitle")}
         </p>
         <nav aria-label={t("home.hero.audience.label")} className="mx-auto mt-10 max-w-3xl">
@@ -134,22 +120,22 @@ export function HomeHero() {
                 <a
                   href={href}
                   data-home-audience={key}
-                  className="group flex w-full items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-[var(--shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-6"
+                  className="group flex w-full items-start gap-4 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#060B12] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-6"
                 >
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-accent">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
                     <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center justify-between gap-3">
-                      <span className="text-lg font-semibold leading-snug text-foreground">
+                      <span className="text-lg font-semibold leading-snug text-white">
                         {t(title)}
                       </span>
                       <ArrowRight
-                        className="h-5 w-5 shrink-0 text-accent transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+                        className="h-5 w-5 shrink-0 text-white transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
                         aria-hidden="true"
                       />
                     </span>
-                    <span className="mt-1.5 block text-sm leading-relaxed text-muted-foreground">
+                    <span className="mt-1.5 block text-sm leading-relaxed text-white/80">
                       {t(body)}
                     </span>
                   </span>
