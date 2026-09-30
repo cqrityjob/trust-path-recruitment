@@ -11,11 +11,12 @@
 // tokens, secret values or candidate data (the errors this route tree can
 // throw are membership/auth/query failures, not payload dumps).
 
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 
-export function EmployerErrorState({ error, reset }: { error: Error; reset: () => void }) {
+export function EmployerErrorState({ error, reset }: ErrorComponentProps) {
   const { t } = useT();
   const router = useRouter();
   const navigate = useNavigate();

@@ -5,11 +5,12 @@
 // errors this route tree can throw are membership/auth/query failures,
 // not payload dumps).
 
+import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useT } from "@/i18n/context";
 
-export function AdminErrorState({ error, reset }: { error: Error; reset: () => void }) {
+export function AdminErrorState({ error, reset }: ErrorComponentProps) {
   const { t } = useT();
   const router = useRouter();
   const navigate = useNavigate();
