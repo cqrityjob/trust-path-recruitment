@@ -70,16 +70,23 @@ for (const file of MCP_ROUTES) {
 
 const gate = stripComments(readFileSync("src/lib/mcp/access.ts", "utf8"));
 if (!/process\.env\.CQRITYJOB_MCP_ENABLED !== "true"\) return false/.test(gate)) {
-  failures.push("src/lib/mcp/access.ts no longer closes the server unless CQRITYJOB_MCP_ENABLED is \"true\".");
+  failures.push(
+    'src/lib/mcp/access.ts no longer closes the server unless CQRITYJOB_MCP_ENABLED is "true".',
+  );
 }
-if (!/CQRITYJOB_MCP_TOKEN/.test(gate) || !/expected\.length < MIN_TOKEN_LENGTH\) return false/.test(gate)) {
+if (
+  !/CQRITYJOB_MCP_TOKEN/.test(gate) ||
+  !/expected\.length < MIN_TOKEN_LENGTH\) return false/.test(gate)
+) {
   failures.push(
     "src/lib/mcp/access.ts no longer requires a configured bearer token of minimum length.\n" +
       "      Enabled-without-a-token opens the tools to the internet.",
   );
 }
 if (/VITE_/.test(gate)) {
-  failures.push("src/lib/mcp/access.ts reads a VITE_ variable, which is inlined into the client bundle.");
+  failures.push(
+    "src/lib/mcp/access.ts reads a VITE_ variable, which is inlined into the client bundle.",
+  );
 }
 
 if (failures.length) {

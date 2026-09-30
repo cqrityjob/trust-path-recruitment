@@ -59,7 +59,12 @@ export async function takeEnquiryAllowance(
   email: string,
 ): Promise<boolean | null> {
   try {
-    const client = await take("contact-ip", clientHint, PER_CLIENT_LIMIT, PER_CLIENT_WINDOW_SECONDS);
+    const client = await take(
+      "contact-ip",
+      clientHint,
+      PER_CLIENT_LIMIT,
+      PER_CLIENT_WINDOW_SECONDS,
+    );
     if (client !== true) return client;
     return await take(
       "contact-to",

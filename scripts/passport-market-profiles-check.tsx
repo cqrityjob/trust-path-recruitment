@@ -676,7 +676,6 @@ console.log("\n10 -- SV/EN semantic parity on the new copy");
       ck(
         `${k} (${lang}): never says verified — the list includes document-reviewed credentials`,
         !/verifi/i.test(passportT(k, lang)),
-        passportT(k, lang),
       );
     }
   }

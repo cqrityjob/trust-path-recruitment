@@ -124,8 +124,7 @@ function ContactPage() {
         // Back to idle so the button is usable again if the form reopens.
         setPhase({ kind: "idle" });
         void availability.refetch();
-      }
-      else setPhase({ kind: "error", key: "contact.error.failed" });
+      } else setPhase({ kind: "error", key: "contact.error.failed" });
     } catch {
       setPhase({ kind: "error", key: "contact.error.failed" });
     }

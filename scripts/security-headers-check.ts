@@ -30,7 +30,10 @@ expect(
   page.headers.get("referrer-policy") === "strict-origin-when-cross-origin",
   "Referrer-Policy missing",
 );
-expect(/camera=\(\)/.test(page.headers.get("permissions-policy") ?? ""), "Permissions-Policy missing");
+expect(
+  /camera=\(\)/.test(page.headers.get("permissions-policy") ?? ""),
+  "Permissions-Policy missing",
+);
 expect(
   (page.headers.get("strict-transport-security") ?? "").startsWith("max-age="),
   "HSTS missing on an https response",
