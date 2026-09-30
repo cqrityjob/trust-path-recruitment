@@ -21,8 +21,11 @@
 // A header a route already set (the `/p` share entry has its own strict CSP)
 // is never overwritten.
 
-const FRAME_ANCESTORS =
-  "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app https://*.lovableproject.com";
+// Only the Lovable editor (lovable.dev) frames the app; the published and
+// preview origins are the app itself, which 'self' covers. Kept to exactly
+// this, too, because the evidence scanners refuse hosted Lovable backend
+// hostnames in published traces.
+const FRAME_ANCESTORS = "frame-ancestors 'self' https://lovable.dev";
 
 const BASELINE: ReadonlyArray<readonly [string, string]> = [
   ["X-Content-Type-Options", "nosniff"],

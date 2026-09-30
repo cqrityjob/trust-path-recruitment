@@ -39,7 +39,16 @@ expect(
   "HSTS missing on an https response",
 );
 const csp = page.headers.get("content-security-policy") ?? "";
-expect(/^frame-ancestors /.test(csp), "frame-ancestors CSP missing");
+expect(
+  csp === "frame-ancestors 'self' https://lovable.dev",
+  "frame-ancestors CSP must be exactly 'self' plus the Lovable editor",
+);
+// The E4 evidence scan refuses hosted Lovable backend hostnames in traces,
+// and every response header lands in one.
+expect(
+  !/\.lovable(project|)\.(app|dev)/i.test(csp),
+  "the CSP must not name a hosted Lovable backend hostname (the evidence scanners refuse it)",
+);
 expect(
   !/script-src|default-src|style-src/.test(csp),
   "the baseline CSP must stay frame-ancestors only until a report-only rollout proves a fuller policy",
