@@ -1,4 +1,4 @@
-// "Verifierat i andra marknader" — what the holder has earned somewhere else.
+// "Dokumenterat i andra marknader" — what the holder has earned somewhere else.
 //
 // ── WHY THIS PANEL IS NOT AN EDIT SURFACE ──────────────────────────────
 //

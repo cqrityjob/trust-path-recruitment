@@ -668,6 +668,19 @@ console.log("\n10 -- SV/EN semantic parity on the new copy");
     );
   }
 
+  // The "other markets" list holds DOCUMENTED credentials (effectiveTrust
+  // documented OR source_confirmed). A CQrityjob document review is not a
+  // source confirmation, so this panel must never call them verified.
+  for (const k of ["market.other.title", "market.other.lead", "market.other.none"] as const) {
+    for (const lang of ["sv", "en"] as const) {
+      ck(
+        `${k} (${lang}): never says verified — the list includes document-reviewed credentials`,
+        !/verifi/i.test(passportT(k, lang)),
+        passportT(k, lang),
+      );
+    }
+  }
+
   // ── NO MARKET NAME MAY BE BAKED INTO A SENTENCE ──────────────────
   //
   // The market is rendered beside these strings by formatWorkLocation. A
