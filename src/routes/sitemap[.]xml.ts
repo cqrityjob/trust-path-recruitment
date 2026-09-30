@@ -45,6 +45,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/security-passport", changefreq: "monthly", priority: "0.8" },
           { path: "/sakerhetsarbete", changefreq: "monthly", priority: "0.8" },
           { path: "/security-passport/india", changefreq: "monthly", priority: "0.8" },
+          { path: "/plattformen", changefreq: "monthly", priority: "0.7" },
           { path: "/about", changefreq: "monthly", priority: "0.6" },
           { path: "/contact", changefreq: "yearly", priority: "0.4" },
           ...professions.map((p) => ({
