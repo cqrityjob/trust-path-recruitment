@@ -185,7 +185,7 @@ test.describe("the public homepage", () => {
     expect(h1.align).toBe("center");
     expect(Math.abs(h1.centre - h1.viewport), "the headline is off centre").toBeLessThanOrEqual(24);
     await expect(page.locator("#hero")).toContainText(
-      "En plattform för dig som arbetar inom säkerhet – och för organisationer som behöver rätt säkerhetskompetens.",
+      "CQrityjob är platsen för dig som vill utvecklas inom säkerhet, bygga din professionella profil och hitta nästa möjlighet – lokalt eller internationellt.",
     );
   });
 
@@ -387,7 +387,9 @@ test.describe("the public homepage", () => {
     await setLang(page, "sv");
     const sv = await shape();
     expect(sv.lang).toBe("sv");
-    expect(sv.title).toBe("CQrityjob – säkerhetsbranschens plattform för människor och möjligheter");
+    expect(sv.title).toBe(
+      "CQrityjob – säkerhetsbranschens plattform för människor och möjligheter",
+    );
     await setLang(page, "en");
     const en = await shape();
     expect(en.lang).toBe("en");

@@ -108,7 +108,7 @@ export type Refusals = { unstubbed: string[]; production: string[] };
  * answered locally. Production is unreachable by construction.
  */
 /**
- * The homepage's "Senaste jobben" reads published adverts through the same
+ * The homepage's latest-jobs section ("Nästa möjlighet kan finnas här.") reads published adverts through the same
  * public query the jobs page uses: a GET on `rest/v1/jobs`, then a GET on
  * `rest/v1/employers` for the employers of the adverts it got. Both are
  * answered HERE, from `rows`, and never upstream -- an empty market by
