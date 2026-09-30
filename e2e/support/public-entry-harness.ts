@@ -109,23 +109,35 @@ export type Refusals = { unstubbed: string[]; production: string[] };
  */
 /**
  * The homepage's "Senaste jobben" reads published adverts through the same
- * public query the jobs page uses: a GET on `rest/v1/jobs`. It is answered
- * HERE, from `rows`, and never upstream -- an empty market by default, which
- * the section states honestly. Any other Supabase request is still a leak.
+ * public query the jobs page uses: a GET on `rest/v1/jobs`, then a GET on
+ * `rest/v1/employers` for the employers of the adverts it got. Both are
+ * answered HERE, from `rows`, and never upstream -- an empty market by
+ * default, which the section states honestly. Any other Supabase request is
+ * still a leak.
  */
 export async function answerPublicJobs(page: Page, rows: readonly unknown[] = []): Promise<void> {
-  for (const pattern of [
-    "**://*.supabase.co/rest/v1/jobs**",
-    "**://*.supabase.in/rest/v1/jobs**",
-  ]) {
-    await page.route(pattern, async (route) => {
-      if (route.request().method() !== "GET") return route.abort();
-      return route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(rows),
+  const employers = [
+    ...new Map(
+      rows
+        .map((row) => (row as { employer?: { id?: string } | null }).employer)
+        .filter((e): e is { id: string } => Boolean(e && e.id))
+        .map((e) => [e.id, e]),
+    ).values(),
+  ];
+  for (const host of ["*.supabase.co", "*.supabase.in"]) {
+    for (const [table, body] of [
+      ["jobs", rows],
+      ["employers", employers],
+    ] as const) {
+      await page.route(`**://${host}/rest/v1/${table}**`, async (route) => {
+        if (route.request().method() !== "GET") return route.abort();
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(body),
+        });
       });
-    });
+    }
   }
 }
 

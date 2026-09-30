@@ -129,7 +129,7 @@ function SecurityWorkPage() {
                 {t("securityWorkPage.cta.signinLead")}{" "}
                 <Link
                   to="/security-work"
-                  className="font-semibold text-accent underline-offset-4 hover:underline"
+                  className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   {t("securityWorkPage.cta.open")}
                 </Link>
