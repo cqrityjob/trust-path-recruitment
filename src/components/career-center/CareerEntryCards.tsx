@@ -1,34 +1,24 @@
 /**
- * Sketch 4's hero aside: the two ways into a career path, side by side.
+ * The career page's hero aside: the two ways in, side by side (owner review,
+ * 2026-09-30).
+ *
+ *   "Utgå från mitt nuvarande yrke"  → the pathFrom section (#fran-mitt-yrke)
+ *   "Utforska säkerhetsyrken"        → the list of every profession, with the
+ *                                      career analysis as its second action
+ *
+ * Once the reader's own analysis result is in hand, the second door leads to
+ * THEIR recommendation (#min-riktning) instead. Without one, the analysis
+ * is a direct link to the analysis itself — never a jump to an invitation
+ * further down this page.
  *
  * ── THESE ARE DOORS, NOT SECTIONS ──────────────────────────────────────
  *
- * Both destinations already exist on this page and are unchanged:
- * "Från ditt yrke" (#fran-mitt-yrke) and "Din riktning" (#min-riktning).
- * What the page lacked was any statement, at the top, that there ARE two
- * routes in — one from the profession the reader has recorded, one from
- * the analysis they have taken. A reader who had done neither could not
- * tell the two apart by scrolling, because both render as a heading over a
- * list of professions.
- *
- * So these cards name the two and link to them. The second door depends on
- * whether the reader's own result is in hand: with one, it leads to their
- * recommendation; without one, the recommendation section is not above
- * anything worth jumping to, so the door leads to the analysis itself —
- * "help me choose" — rather than to an invitation further down the page.
- *
- * They render no professions
- * of their own and hold no state: duplicating either section's content here
- * would give one fact two places to disagree about itself, and would put
- * roughly two screens of cards above the fold on a phone.
- *
- * The hero aside previously held TrustRail. That content did not belong to
- * the hero specifically — it describes the profession catalogue — so it
- * moves down to the section that renders the catalogue rather than being
- * dropped.
+ * Every destination is a section of this page. The cards render no
+ * professions of their own and hold no state: duplicating a section's
+ * content here would give one fact two places to disagree about itself.
  */
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, TrendingUp, BarChart3 } from "lucide-react";
+import { ArrowRight, BarChart3, Compass, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
@@ -36,10 +26,12 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 export function CareerEntryCards({
   pathAnchor,
   personalAnchor,
+  listAnchor,
   personalised = false,
 }: {
   readonly pathAnchor: string;
   readonly personalAnchor: string;
+  readonly listAnchor: string;
   /** The reader's own assessment result is in hand. */
   readonly personalised?: boolean;
 }) {
@@ -64,12 +56,17 @@ export function CareerEntryCards({
         />
       ) : (
         <EntryCard
-          icon={<BarChart3 className="h-5 w-5" strokeWidth={1.75} aria-hidden />}
-          titleKey="cc.entry.guidance.title"
-          bodyKey="cc.entry.guidance.body"
-          ctaKey="cc.entry.guidance.cta"
-          to="/security-career-assessment"
-          cta="career-entry-assessment"
+          icon={<Compass className="h-5 w-5" strokeWidth={1.75} aria-hidden />}
+          titleKey="cc.entry.explore.title"
+          bodyKey="cc.entry.explore.body"
+          ctaKey="cc.entry.explore.cta"
+          hash={listAnchor}
+          cta="career-entry-explore"
+          secondary={{
+            key: "cc.entry.explore.analysis",
+            to: "/security-career-assessment",
+            cta: "career-entry-assessment",
+          }}
         />
       )}
     </div>
@@ -82,17 +79,22 @@ function EntryCard({
   bodyKey,
   ctaKey,
   hash,
-  to = "/career-center",
   cta,
+  secondary,
 }: {
   readonly icon: ReactNode;
   readonly titleKey: TranslationKey;
   readonly bodyKey: TranslationKey;
   readonly ctaKey: TranslationKey;
-  /** A section on this page; omitted for a door to another route. */
-  readonly hash?: string;
-  readonly to?: string;
+  /** A section on this page. */
+  readonly hash: string;
   readonly cta: string;
+  /** A second, quieter jump on the same page. */
+  readonly secondary?: {
+    readonly key: TranslationKey;
+    readonly to: "/security-career-assessment";
+    readonly cta: string;
+  };
 }) {
   const { t } = useT();
   return (
@@ -104,15 +106,26 @@ function EntryCard({
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
           {/* Same-page link. The two sections are on this route, so this is
               a jump to them rather than navigation away from the hub. */}
-          <Link
-            to={to}
-            hash={hash}
-            data-cta={cta}
-            className="mt-4 inline-flex items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            {t(ctaKey)}
-            <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
-          </Link>
+          <div className="mt-3 flex flex-wrap items-center gap-x-5">
+            <Link
+              to="/career-center"
+              hash={hash}
+              data-cta={cta}
+              className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {t(ctaKey)}
+              <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
+            </Link>
+            {secondary && (
+              <Link
+                to={secondary.to}
+                data-cta={secondary.cta}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {t(secondary.key)}
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </div>

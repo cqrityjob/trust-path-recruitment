@@ -119,7 +119,11 @@ const HUB_SECTION_HEADINGS = [
   // eleven compact cards, no filter bar — rather than opened on a click.
   "cc.explore.title",
   "cc.routes.title",
-  "cc.trust.title",
+  // The page ends on the path forward — UTFORSKA → UTVECKLAS → VISA →
+  // HITTA — not on "Så bygger vi innehållet", which the owner removed
+  // (2026-09-30). What that section claimed about the guides is one line
+  // under the list's heading (asserted in candidate-destination-composition).
+  "cc.journey.title",
 ] as const;
 
 // Section 2's heading is rendered by <PersonalDirectionSection>, and
@@ -137,7 +141,9 @@ const HUB_SECTION_HEADINGS = [
 const personal = read("src/components/career-center/PersonalDirection.tsx");
 const pathFrom = read("src/components/career-center/PathFromSection.tsx");
 const hubReturn = hub.slice(hub.indexOf("  return (\n    <>\n      {/* ── 1. HERO"));
-const hubOrderText = hubReturn.replace("<PathFromSection", 't("cc.path.title")');
+const hubOrderText = hubReturn
+  .replace("<PathFromSection", 't("cc.path.title")')
+  .replace("<CareerJourney", 't("cc.journey.title")');
 expect(hubReturn.length > 0, "the hub's rendered section order must be readable");
 
 let cursor = -1;
@@ -341,11 +347,13 @@ for (const lang of ["sv", "en"] as const) {
   );
 }
 
-// Career Discovery's boundary: guidance, never a competence or employability
-// verdict. Asserted on the exact sentence, in both languages.
+// Career Discovery's boundary: guidance, never a verdict. Asserted on the
+// exact sentence, in both languages. The owner replaced "Ingen bedömning av
+// din kompetens eller anställningsbarhet", which read as unclear, with the
+// positive statement of the same boundary (2026-09-30).
 for (const [lang, needle] of [
-  ["sv", "ingen bedömning av din kompetens eller anställningsbarhet"],
-  ["en", "not an assessment of your competence or your employability"],
+  ["sv", "karriäranalysen ger vägledning. du väljer vägen."],
+  ["en", "the career analysis gives guidance. you choose the path."],
 ] as const) {
   const all = Object.entries(dictionaries[lang])
     .filter(([k]) => k.startsWith("cc."))
@@ -353,7 +361,7 @@ for (const [lang, needle] of [
     .join(" ");
   expect(
     all.includes(needle),
-    `${lang} Career Center copy must state that the career test is not an assessment of competence or employability`,
+    `${lang} Career Center copy must state that the career analysis gives guidance and the reader chooses -- never a verdict`,
   );
 }
 
@@ -421,18 +429,12 @@ for (const p of upcomingProfessions) {
     `"${p.slug}" is unfinished but resolves through getPublishedProfession`,
   );
 }
-expect(hub.includes("upcomingProfessions.map"), "the hub must render the upcoming list");
-{
-  const upcomingBlock = hub.slice(hub.indexOf("upcomingProfessions.length > 0"));
-  const upcomingEnd = upcomingBlock.indexOf("</Section>");
-  const upcoming = upcomingBlock.slice(0, upcomingEnd);
-  expect(
-    upcoming.includes('.join(" · ")') &&
-      !upcoming.includes("<ProfessionCard") &&
-      !upcoming.includes("<Link"),
-    "the upcoming list must be text — never a card, never a link",
-  );
-}
+// …and, since the owner's review (2026-09-30), not listed on the hub at all:
+// the "Kommer" box named roles a reader could not open.
+expect(
+  !hub.includes("upcomingProfessions") && !hub.includes("data-upcoming"),
+  "the hub must not list unfinished guides -- a name that cannot be opened is not a destination",
+);
 expect(
   !/\btag\b\s*[?:]/.test(code(card)) && !code(card).includes("{tag"),
   'ProfessionCard must not carry a "tag" prop — it existed only to badge unfinished guides as "Under utveckling"',

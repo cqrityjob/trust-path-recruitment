@@ -185,7 +185,9 @@ check(
   /<Link to="\/my-career\/cv" data-edit-cv/.test(cvCard) && /<OverviewCvCard/.test(overviewRoute),
   "the Overview still reaches the CV",
 );
-const jobsRoute = code(read("src/routes/jobs.index.tsx"));
+// The list opens each advert on its own page (/jobs/$slug), which is where
+// the reader and its application flow are mounted (2026-09-30).
+const jobsRoute = code(read("src/routes/jobs.$slug.tsx"));
 const jobDetail = code(read("src/components/jobs/JobDetailContent.tsx"));
 const jobApplyPanel = code(read("src/components/jobs/JobApplicationPanel.tsx"));
 const jobApplyDialog = code(read("src/components/jobs/ApplyInternalDialog.tsx"));

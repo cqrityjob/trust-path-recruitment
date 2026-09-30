@@ -29,6 +29,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as JobsIndexRouteImport } from './routes/jobs.index'
 import { Route as CareerCenterIndexRouteImport } from './routes/career-center.index'
 import { Route as SecurityPassportIndiaRouteImport } from './routes/security-passport.india'
+import { Route as SecurityPassportIndexRouteImport } from './routes/security-passport.index'
+import { Route as SakerhetsarbeteRouteImport } from './routes/sakerhetsarbete'
 import { Route as PTokenRouteImport } from './routes/p.$token'
 import { Route as JobsSlugRouteImport } from './routes/jobs.$slug'
 import { Route as InviteTokenRouteImport } from './routes/invite.$token'
@@ -300,6 +302,16 @@ const CareerCenterIndexRoute = CareerCenterIndexRouteImport.update({
 const SecurityPassportIndiaRoute = SecurityPassportIndiaRouteImport.update({
   id: '/security-passport/india',
   path: '/security-passport/india',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityPassportIndexRoute = SecurityPassportIndexRouteImport.update({
+  id: '/security-passport/',
+  path: '/security-passport/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SakerhetsarbeteRoute = SakerhetsarbeteRouteImport.update({
+  id: '/sakerhetsarbete',
+  path: '/sakerhetsarbete',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PTokenRoute = PTokenRouteImport.update({
@@ -1403,6 +1415,8 @@ export interface FileRoutesByFullPath {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
+  '/security-passport/': typeof SecurityPassportIndexRoute
+  '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1588,6 +1602,8 @@ export interface FileRoutesByTo {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
+  '/security-passport': typeof SecurityPassportIndexRoute
+  '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/career-center': typeof CareerCenterIndexRoute
   '/jobs': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1768,6 +1784,8 @@ export interface FileRoutesById {
   '/jobs/$slug': typeof JobsSlugRoute
   '/p/$token': typeof PTokenRoute
   '/security-passport/india': typeof SecurityPassportIndiaRoute
+  '/security-passport/': typeof SecurityPassportIndexRoute
+  '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/career-center/': typeof CareerCenterIndexRoute
   '/jobs/': typeof JobsIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -1963,6 +1981,8 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/security-passport/india'
+    | '/security-passport/'
+    | '/sakerhetsarbete'
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
@@ -2148,6 +2168,8 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/security-passport/india'
+    | '/security-passport'
+    | '/sakerhetsarbete'
     | '/career-center'
     | '/jobs'
     | '/.mcp/invoke-tool/$tool'
@@ -2327,6 +2349,8 @@ export interface FileRouteTypes {
     | '/jobs/$slug'
     | '/p/$token'
     | '/security-passport/india'
+    | '/security-passport/'
+    | '/sakerhetsarbete'
     | '/career-center/'
     | '/jobs/'
     | '/.mcp/invoke-tool/$tool'
@@ -2508,6 +2532,8 @@ export interface RootRouteChildren {
   InviteTokenRoute: typeof InviteTokenRoute
   PTokenRoute: typeof PTokenRoute
   SecurityPassportIndiaRoute: typeof SecurityPassportIndiaRoute
+  SecurityPassportIndexRoute: typeof SecurityPassportIndexRoute
+  SakerhetsarbeteRoute: typeof SakerhetsarbeteRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiRecruitmentReceiptsSweepRoute: typeof ApiRecruitmentReceiptsSweepRoute
 }
@@ -2652,6 +2678,20 @@ declare module '@tanstack/react-router' {
       path: '/security-passport/india'
       fullPath: '/security-passport/india'
       preLoaderRoute: typeof SecurityPassportIndiaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security-passport/': {
+      id: '/security-passport/'
+      path: '/security-passport'
+      fullPath: '/security-passport/'
+      preLoaderRoute: typeof SecurityPassportIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sakerhetsarbete': {
+      id: '/sakerhetsarbete'
+      path: '/sakerhetsarbete'
+      fullPath: '/sakerhetsarbete'
+      preLoaderRoute: typeof SakerhetsarbeteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/p/$token': {
@@ -4599,6 +4639,8 @@ const rootRouteChildren: RootRouteChildren = {
   InviteTokenRoute: InviteTokenRoute,
   PTokenRoute: PTokenRoute,
   SecurityPassportIndiaRoute: SecurityPassportIndiaRoute,
+  SecurityPassportIndexRoute: SecurityPassportIndexRoute,
+  SakerhetsarbeteRoute: SakerhetsarbeteRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiRecruitmentReceiptsSweepRoute: ApiRecruitmentReceiptsSweepRoute,
 }

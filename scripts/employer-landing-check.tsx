@@ -4,21 +4,25 @@
 // ── WHY THIS GUARD EXISTS ──────────────────────────────────────────────
 //
 // /employers used to be four abstract benefit tiles and a contact form, and
-// nothing in CI said anything about what it claimed. It now describes the
-// whole connected recruitment process and names BESKT, which is a governed
-// method under an owner-issued pilot grant — the single place on the public
-// site where an over-claim would be most expensive. So the page gets a
-// guard of its own:
+// nothing in CI said anything about what it claimed. It now describes two
+// ways of working — the platform, used by the employer, and recruitment
+// services — and names TRUST and BESKT, where an over-claim would be the
+// most expensive on the public site. So the page gets a guard of its own
+// (rewritten for the owner-approved page, 2026-09-30):
 //
 //   E1  one h1, the approved copy, and a sane heading hierarchy
-//   E2  the three actions, through the ONE door, with /employer as a
-//       validated return path — and no role granted by intent
-//   E3  the release flag still fails closed: with the portal off there is
-//       no entrance on this page at all
-//   E4  the connected path is six ordered steps, ending in a documented
-//       HUMAN decision and then development
-//   E5  two recruitment examples, one of them BESKT — with its boundary
-//       and its availability stated where the example is read
+//   E2  the actions, through the ONE door, with /employer as a validated
+//       return path — no role granted by intent — plus the working contact
+//       path, and the sections the header's "För arbetsgivare" menu opens
+//   E3  the release flag still fails closed: rendered with the portal off,
+//       there is no entrance on this page at all
+//   E4  the platform journey is ANNONSERA → TA EMOT OCH HANTERA → BEDÖM →
+//       INTERVJUA → BESLUTA, ending in a documented HUMAN decision, then
+//       development
+//   E5  the benefit comes before the method: a fair structured assessment
+//       before TRUST and BESKT, a structured interview before Interview
+//       Intelligence — and BESKT's boundary and availability are stated
+//       where it is read
 //   E6  NO FORBIDDEN CLAIM: no score, ranking, pass/fail, suitability,
 //       credibility, deception, personality or protected-trait inference,
 //       no AI decision, no BESKT-replaces-vetting claim, and no offer of
@@ -156,52 +160,66 @@ group("E1 · one h1, the approved copy, and a sane hierarchy");
       headings(main[lang], "h1").length === 1,
       headings(main[lang], "h1"),
     );
+    // The journey, assessment, interview and the two ways of working.
     ck(
-      `${lang}: two h2 — the connected path and the two examples`,
-      headings(main[lang], "h2").length === 2,
+      `${lang}: four h2 — journey, assessment, interview, recruitment services`,
+      JSON.stringify(headings(main[lang], "h2")) ===
+        JSON.stringify([
+          d(lang)["employers.path.title"],
+          d(lang)["employers.assessment.title"],
+          d(lang)["employers.interview.title"],
+          d(lang)["employers.services.title"],
+        ]),
       headings(main[lang], "h2"),
     );
+    // Five steps, the continuation, TRUST, BESKT, Interview Intelligence,
+    // and the two ways of working.
     ck(
-      `${lang}: eight h3 — five path steps, the continuation and two examples`,
-      headings(main[lang], "h3").length === 8,
+      `${lang}: eleven h3 — five steps, the continuation, three methods, two ways of working`,
+      headings(main[lang], "h3").length === 11,
       headings(main[lang], "h3").length,
     );
   }
-  // MVP text specification §11.1 (2026-09-27): recruitment AND development,
-  // in one place — the same offer the homepage's employer section makes.
+  // Owner review, 2026-09-30: both ways of working, said at once.
   ck(
     "sv h1 is the approved sentence",
-    d("sv")["employers.title"] === "Rekrytera och utveckla säkerhetspersonal på samma plats.",
+    d("sv")["employers.title"] === "Rekrytera säkerhetspersonal – själva eller med vår hjälp",
     d("sv")["employers.title"],
   );
   ck(
     "en h1 is the approved sentence",
-    d("en")["employers.title"] === "Recruit and develop security professionals in one place.",
+    d("en")["employers.title"] === "Recruit security professionals – yourselves or with our help",
     d("en")["employers.title"],
   );
   ck(
-    "sv lead is the approved sentence",
-    d("sv")["employers.lead"] ===
-      "Publicera jobb, samla ansökningar och arbeta med rekryteringstester och strukturerade intervjuer. Fortsätt med medarbetarnas kompetensutveckling i en egen företagsportal.",
+    "sv lead says what the platform does and that CQrityjob can help all the way",
+    /annonserar ni, tar emot ansökningar, bedömer kandidater och genomför strukturerade intervjuer/.test(
+      d("sv")["employers.lead"],
+    ) && /hjälper vi er med rekryteringen/.test(d("sv")["employers.lead"]),
     d("sv")["employers.lead"],
   );
   ck(
-    "en lead is the approved sentence",
-    d("en")["employers.lead"] ===
-      "Post jobs, manage applications and work with recruitment assessments and structured interviews. Continue with employee learning and development in a dedicated employer portal.",
-    d("en")["employers.lead"],
+    'sv: "ta emot ansökningar", never "samla ansökningar"',
+    !Object.entries(d("sv")).some(
+      ([k, v]) =>
+        (k.startsWith("employers.") || k.startsWith("home.")) && /samla ansökningar/i.test(v),
+    ),
   );
   for (const lang of LANGS) {
     ck(`${lang}: the h1 is rendered`, headings(main[lang], "h1")[0] === d(lang)["employers.title"]);
     ck(`${lang}: the lead is rendered`, text[lang].includes(d(lang)["employers.lead"]));
   }
-  // The four abstract benefit tiles are gone from the MARKUP, not hidden.
+  // Retired copy is gone from the MARKUP and the dictionary, not hidden.
   const RETIRED = [
     "employers.offer.recruit.title",
     "employers.offer.assess.title",
     "employers.offer.develop.title",
     "employers.offer.verify.title",
     "employers.cta.createAccount",
+    "employers.examples.title",
+    "employers.example.ordinary.title",
+    "employers.example.protective.title",
+    "employers.crossLink.lead",
   ];
   for (const lang of LANGS) {
     for (const key of RETIRED) {
@@ -211,27 +229,29 @@ group("E1 · one h1, the approved copy, and a sane hierarchy");
 }
 
 /* E2 ---------------------------------------------------------------- */
-group("E2 · the three actions, through the ONE door");
+group("E2 · the actions, through the ONE door, and a contact path that works");
 {
   const hrefs = hrefsOf(main.sv);
   ck(
-    "register goes to /signup with the /employer return path",
-    hrefs.includes("/signup?redirect=%2Femployer"),
+    "exactly these destinations, in this order: register · how it works · sign in · register (way A) · contact (way B)",
+    JSON.stringify(hrefs) ===
+      JSON.stringify([
+        "/signup?redirect=%2Femployer",
+        "#how-it-works",
+        "/login?redirect=%2Femployer",
+        "/signup?redirect=%2Femployer",
+        "/contact",
+      ]),
     hrefs,
   );
-  ck("the secondary action is a same-page anchor", hrefs.includes("#how-it-works"));
-  ck("its target exists", main.sv.includes('id="how-it-works"'));
+  ck("the secondary action's target exists", main.sv.includes('id="how-it-works"'));
+  // The header's "För arbetsgivare" menu opens these sections.
+  for (const id of ["how-it-works", "bedomning", "intervju", "rekrytering", "interim"]) {
+    ck(`the section #${id} exists`, main.sv.includes(`id="${id}"`));
+  }
   ck(
-    "the existing customer reaches /login with the same return path",
-    hrefs.includes("/login?redirect=%2Femployer"),
-    hrefs,
-  );
-  // The one addition since the MVP text specification (§11.1): a quiet
-  // cross-link to the PUBLIC section on My Security Work. Nothing else.
-  ck(
-    "the only other destination is the public security-work section",
-    hrefs.length === 4 && hrefs[3] === "/#security-intelligence",
-    hrefs,
+    '"Logga in" is a plain link, not a third button',
+    /data-employer-login/.test(main.sv) && !/<PrimaryLink[^>]*to="\/login"/.test(pageCode),
   );
   ck(
     "safeReturnPath accepts the employer landing",
@@ -250,8 +270,15 @@ group("E2 · the three actions, through the ONE door");
   for (const banned of ["user_metadata", "employer_memberships", "is_platform_admin", "supabase"]) {
     ck(`the page never touches "${banned}"`, !pageCode.includes(banned));
   }
-  // The dead contact form is not on this page.
-  ck("no invitation into the contact form", !pageCode.includes('"/contact"'));
+  // The contact path SENDS — it is no longer the dead form this guard once
+  // kept off the page — and says it is closed when mail is not configured.
+  const contact = code(read("src/routes/contact.tsx"));
+  ck(
+    "the contact page submits through the server and has an honest closed state",
+    contact.includes("sendRecruitmentEnquiry") &&
+      contact.includes("getRecruitmentEnquiryAvailability") &&
+      contact.includes("data-contact-closed"),
+  );
 }
 
 /* E3 ---------------------------------------------------------------- */
@@ -261,14 +288,27 @@ group("E3 · the release flag still fails closed");
     "the page reads the flag once, at render",
     pageCode.includes("const portalOpen = employerPortalEnabled();"),
   );
-  const gated = pageCode.indexOf("portalOpen ? (");
-  const fallback = pageCode.indexOf(") : (");
-  ck("the entrances are behind it", gated !== -1 && fallback > gated);
-  const closed = pageCode.slice(fallback, pageCode.indexOf(")}", fallback));
+  const before = process.env.VITE_EMPLOYER_PORTAL_ENABLED;
+  process.env.VITE_EMPLOYER_PORTAL_ENABLED = "false";
+  const closedHtml = mainOf(
+    renderToStaticMarkup(
+      <I18nProvider initialLang="sv">
+        <Page />
+      </I18nProvider>,
+    ),
+  );
+  if (before === undefined) delete process.env.VITE_EMPLOYER_PORTAL_ENABLED;
+  else process.env.VITE_EMPLOYER_PORTAL_ENABLED = before;
+  const closedHrefs = hrefsOf(closedHtml);
   ck(
-    "with the portal off there is no entrance at all",
-    !closed.includes('to="/signup"') && !closed.includes('to="/login"'),
-    closed.slice(0, 120),
+    "rendered with the portal off, there is no entrance at all",
+    !closedHrefs.some((h) => h.startsWith("/signup") || h.startsWith("/login")),
+    closedHrefs,
+  );
+  ck(
+    "and the page still explains the platform and offers its same-page anchor",
+    closedHrefs.includes("#how-it-works") && closedHtml.includes('id="how-it-works"'),
+    closedHrefs,
   );
   const flag = read("src/lib/job-intelligence/feature-flag.ts");
   ck("an unset variable is not enabled", flag.includes('String(raw).toLowerCase() === "true"'));
@@ -276,19 +316,19 @@ group("E3 · the release flag still fails closed");
 }
 
 /* E4 ---------------------------------------------------------------- */
-group("E4 · the connected path, ending in a documented human decision");
+group("E4 · the platform journey, ending in a documented human decision");
 {
-  // FIVE numbered outcomes, then a SEPARATE continuation (specification
-  // §8.3). The sixth is asserted below, apart from the list, because a
-  // decision presented as step five of six reads as a waypoint.
+  const LOCKED = {
+    sv: ["Annonsera", "Ta emot och hantera", "Bedöm", "Intervjua", "Besluta"],
+    en: ["Advertise", "Receive and manage", "Assess", "Interview", "Decide"],
+  } as const;
   for (const lang of LANGS) {
-    const steps = headings(main[lang], "h3")
-      .slice(0, 5)
-      .map((h) => h.replace(/^\d+\.\s*/, ""));
+    const steps = headings(main[lang], "h3").slice(0, 5);
     for (let i = 1; i <= 5; i++) {
       ck(
-        `${lang}: step ${i} is "${d(lang)[`employers.path.step${i}.title`]}"`,
-        steps[i - 1] === d(lang)[`employers.path.step${i}.title`],
+        `${lang}: step ${i} is "${LOCKED[lang][i - 1]}"`,
+        steps[i - 1] === LOCKED[lang][i - 1] &&
+          d(lang)[`employers.path.step${i}.title`] === LOCKED[lang][i - 1],
         steps[i - 1],
       );
       ck(
@@ -299,12 +339,11 @@ group("E4 · the connected path, ending in a documented human decision");
   }
   ck("it is an ordered list", main.sv.includes("<ol"));
   ck(
-    "the ordered list holds exactly five outcomes",
+    "the ordered list holds exactly five steps",
     (main.sv.match(/<ol[\s\S]*?<\/ol>/)?.[0].match(/<li\b/g) ?? []).length === 5,
     (main.sv.match(/<ol[\s\S]*?<\/ol>/)?.[0].match(/<li\b/g) ?? []).length,
   );
-  // The continuation: present, outside the list, and labelled as a
-  // continuation rather than numbered.
+  // The continuation: present, outside the list, and not numbered.
   for (const lang of LANGS) {
     ck(
       `${lang}: the continuation is rendered outside the five`,
@@ -314,52 +353,55 @@ group("E4 · the connected path, ending in a documented human decision");
     );
     ck(
       `${lang}: and it is not numbered as a sixth step`,
-      !headings(main[lang], "h3").some((h) => /^6\./.test(h)),
-      headings(main[lang], "h3"),
+      !(main[lang].match(/<ol[\s\S]*?<\/ol>/)?.[0] ?? "").includes(
+        d(lang)["employers.path.step6.title"],
+      ),
     );
   }
-  // Step 5 is the one the page exists to make unmistakable: PEOPLE decide,
-  // and the decision is documented. In the specification's words (§11.1) the
-  // title carries the documenting and the body names who is responsible.
+  // Step 5 is the one the page exists to make unmistakable: the EMPLOYER
+  // decides, and the decision is documented.
   ck(
-    "sv step 5 says the team decides and the decision is documented",
-    /[Rr]ekryteringsteamet ansvarar för bedömningen och det slutliga beslutet/.test(
-      d("sv")["employers.path.step5.body"],
-    ) && /dokumentera beslutet/.test(d("sv")["employers.path.step5.title"]),
+    "sv step 5 says the employer makes and documents the decision",
+    /Ni fattar och dokumenterar beslutet/.test(d("sv")["employers.path.step5.body"]),
     `${d("sv")["employers.path.step5.title"]} — ${d("sv")["employers.path.step5.body"]}`,
   );
   ck(
     "en step 5 says the same",
-    /recruitment team is responsible for the assessment and final decision/.test(
-      d("en")["employers.path.step5.body"],
-    ) && /document the decision/.test(d("en")["employers.path.step5.title"]),
+    /You make and document the decision/.test(d("en")["employers.path.step5.body"]),
     `${d("en")["employers.path.step5.title"]} — ${d("en")["employers.path.step5.body"]}`,
   );
 }
 
 /* E5 ---------------------------------------------------------------- */
-group("E5 · two recruitment examples, and the BESKT boundary");
+group("E5 · the benefit before the method, and the BESKT boundary");
 {
   for (const lang of LANGS) {
-    const examples = headings(main[lang], "h3").slice(6);
+    const t = text[lang];
+    const at = (key: string) => t.indexOf(d(lang)[key]);
     ck(
-      `${lang}: two examples`,
-      examples.length === 2 &&
-        examples[0] === d(lang)["employers.example.ordinary.title"] &&
-        examples[1] === d(lang)["employers.example.protective.title"],
-      examples,
+      `${lang}: the structured assessment is explained before TRUST and BESKT`,
+      at("employers.assessment.body") !== -1 &&
+        at("employers.assessment.body") < at("employers.assessment.trust.body") &&
+        at("employers.assessment.trust.body") < at("employers.assessment.beskt.body"),
     );
     ck(
-      `${lang}: the BESKT note is rendered`,
-      text[lang].includes(d(lang)["employers.example.protective.note"]),
+      `${lang}: the structured interview is explained before Interview Intelligence`,
+      at("employers.interview.body") !== -1 &&
+        at("employers.interview.body") < at("employers.interview.tool.body"),
+    );
+    ck(
+      `${lang}: the BESKT boundary is rendered`,
+      t.includes(d(lang)["employers.assessment.beskt.body"]),
     );
     ck(
       `${lang}: the BESKT availability state is rendered`,
-      text[lang].includes(d(lang)["employers.example.protective.availability"]),
+      t.includes(d(lang)["employers.assessment.beskt.availability"]),
     );
+    ck(`${lang}: the decision disclaimer is rendered`, t.includes(d(lang)["employers.disclaimer"]));
     ck(
-      `${lang}: the decision disclaimer is rendered`,
-      text[lang].includes(d(lang)["employers.disclaimer"]),
+      `${lang}: the two ways of working are both offered`,
+      t.includes(d(lang)["employers.services.self.title"]) &&
+        t.includes(d(lang)["employers.services.help.title"]),
     );
   }
   // ── WHAT THE BESKT SENTENCES MUST ACTUALLY SAY ────────────────────
@@ -367,43 +409,61 @@ group("E5 · two recruitment examples, and the BESKT boundary");
   // Not a paraphrase. A method, with no result, no score and no ranking,
   // and explicitly NOT säkerhetsprövning — which is the employer's own
   // legal duty and something CQrityjob has no authority over.
+  const besktSv = d("sv")["employers.assessment.beskt.body"];
+  const besktEn = d("en")["employers.assessment.beskt.body"];
   ck(
     "sv: BESKT is a method, gives no result/score/ranking, and is not säkerhetsprövning",
-    /metodstöd/i.test(d("sv")["employers.example.protective.note"]) &&
-      /inget resultat/i.test(d("sv")["employers.example.protective.note"]) &&
-      /ingen poäng/i.test(d("sv")["employers.example.protective.note"]) &&
-      /ingen rangordning/i.test(d("sv")["employers.example.protective.note"]) &&
-      /ersätter inte säkerhetsprövning/i.test(d("sv")["employers.example.protective.note"]),
-    d("sv")["employers.example.protective.note"],
+    /metodstöd/i.test(besktSv) &&
+      /inget resultat/i.test(besktSv) &&
+      /ingen poäng/i.test(besktSv) &&
+      /ingen rangordning/i.test(besktSv) &&
+      /ersätter inte säkerhetsprövning/i.test(besktSv),
+    besktSv,
   );
   ck(
     "en: the same four claims",
-    /method support/i.test(d("en")["employers.example.protective.note"]) &&
-      /no result/i.test(d("en")["employers.example.protective.note"]) &&
-      /no score/i.test(d("en")["employers.example.protective.note"]) &&
-      /no ranking/i.test(d("en")["employers.example.protective.note"]) &&
-      /does not replace security vetting/i.test(d("en")["employers.example.protective.note"]),
-    d("en")["employers.example.protective.note"],
+    /method support/i.test(besktEn) &&
+      /no result/i.test(besktEn) &&
+      /no score/i.test(besktEn) &&
+      /no ranking/i.test(besktEn) &&
+      /does not replace security vetting/i.test(besktEn),
+    besktEn,
   );
   // ── AND IT IS NOT PRESENTED AS AVAILABLE ──────────────────────────
   //
-  // BESKT publishes under `release_scope = synthetic_internal_only` and is
-  // assignable only under an owner-issued, time-boxed pilot grant: with no
-  // grant, nothing is assignable anywhere, production included. A public
-  // page that offered it as a feature would be describing a product state
-  // that does not exist.
+  // Release gate C (a published BESKT method) is not met in production, and
+  // BESKT is assignable only under an owner-issued, time-boxed pilot grant.
   ck(
     "sv: availability is stated as under development and approval-gated",
-    /under utveckling/i.test(d("sv")["employers.example.protective.availability"]) &&
-      /godkännande/i.test(d("sv")["employers.example.protective.availability"]),
-    d("sv")["employers.example.protective.availability"],
+    /under utveckling/i.test(d("sv")["employers.assessment.beskt.availability"]) &&
+      /godkännande/i.test(d("sv")["employers.assessment.beskt.availability"]),
+    d("sv")["employers.assessment.beskt.availability"],
   );
   ck(
     "en: the same",
-    /under development/i.test(d("en")["employers.example.protective.availability"]) &&
-      /approval/i.test(d("en")["employers.example.protective.availability"]),
-    d("en")["employers.example.protective.availability"],
+    /under development/i.test(d("en")["employers.assessment.beskt.availability"]) &&
+      /approval/i.test(d("en")["employers.assessment.beskt.availability"]),
+    d("en")["employers.assessment.beskt.availability"],
   );
+  // ── TRUST IS NOT OVERSOLD ─────────────────────────────────────────
+  ck(
+    "sv: TRUST is research-informed and NOT scientifically validated as a whole",
+    /inte vetenskapligt validerad/i.test(d("sv")["employers.assessment.trust.body"]),
+    d("sv")["employers.assessment.trust.body"],
+  );
+  ck(
+    "en: the same",
+    /not scientifically validated/i.test(d("en")["employers.assessment.trust.body"]),
+    d("en")["employers.assessment.trust.body"],
+  );
+  for (const lang of LANGS) {
+    ck(
+      `${lang}: no claim that anything predicts performance or is free of bias`,
+      !/förutsäger|predicts?|bias-?free|fri från (bias|partiskhet)|validerad metod|validated method/i.test(
+        text[lang],
+      ),
+    );
+  }
   // There is no action into BESKT from a public page.
   ck("no BESKT destination is offered", !hrefsOf(main.sv).some((h) => /beskt/i.test(h)));
 }
@@ -492,6 +552,13 @@ group("E6 · no forbidden claim");
 /* E7 ---------------------------------------------------------------- */
 group("E7 · sv and en say the same thing, and the English page is English");
 {
+  const PROPER_NAMES = new Set([
+    "employers.assessment.eyebrow",
+    "employers.assessment.trust.title",
+    "employers.assessment.beskt.title",
+    "employers.interview.tool.title",
+    "employers.services.executive.title",
+  ]);
   const keys = (lang: Lang) =>
     Object.keys(dictionaries[lang])
       .filter((k) => k.startsWith("employers."))
@@ -508,7 +575,12 @@ group("E7 · sv and en say the same thing, and the English page is English");
         typeof d(lang)[key] === "string" && d(lang)[key].trim().length > 0,
       );
     }
-    ck(`"${key}" is actually translated`, d("sv")[key] !== d("en")[key], key);
+    // Method and product names are names, and read the same in both.
+    if (!PROPER_NAMES.has(key)) {
+      ck(`"${key}" is actually translated`, d("sv")[key] !== d("en")[key], key);
+    } else {
+      ck(`"${key}" is the same name in both languages`, d("sv")[key] === d("en")[key], key);
+    }
   }
   ck(
     "same destinations, same order",

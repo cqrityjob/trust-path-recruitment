@@ -916,7 +916,11 @@ group("9 · Entry doors, jobs availability and bilingual copy (D7)");
 // =========================================================================
 for (const lang of LANGS) {
   const anon = render(
-    <CareerEntryCards pathAnchor="fran-mitt-yrke" personalAnchor="min-riktning" />,
+    <CareerEntryCards
+      pathAnchor="fran-mitt-yrke"
+      personalAnchor="min-riktning"
+      listAnchor="utforska-yrken"
+    />,
     lang,
   );
   ck(
@@ -924,7 +928,12 @@ for (const lang of LANGS) {
     anon.includes('href="/security-career-assessment"') && !anon.includes("#min-riktning"),
   );
   const mine = render(
-    <CareerEntryCards pathAnchor="fran-mitt-yrke" personalAnchor="min-riktning" personalised />,
+    <CareerEntryCards
+      pathAnchor="fran-mitt-yrke"
+      personalAnchor="min-riktning"
+      listAnchor="utforska-yrken"
+      personalised
+    />,
     lang,
   );
   ck(`9.2 [${lang}] with a result it leads to the recommendation`, mine.includes("#min-riktning"));

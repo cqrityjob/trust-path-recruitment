@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, ArrowUpRight } from "lucide-react";
+import { ArrowRight, MapPin } from "lucide-react";
 import { useT } from "@/i18n/context";
 import type { PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { employmentTypeLabel, workplaceTypeLabel } from "@/lib/job-intelligence/enum-labels";
@@ -8,22 +8,22 @@ import { JobRelevanceBadge } from "./JobRelevanceBadge";
 import { EmployerLogo } from "./EmployerPresentation";
 import { pickLocalized, formatJobDate, cleanAdText } from "./JobAdContent";
 import { rememberJobListPosition } from "@/lib/job-intelligence/job-list-position";
-import { cn } from "@/lib/utils";
 
+/** One vacancy. The whole card opens the advert on its own page,
+ *  /jobs/$slug, carrying the search it was listed under as `from` so the
+ *  advert can offer a way back to exactly these results. There is no
+ *  in-page "selected" state any more: the retired desktop detail panel
+ *  repeated the advert beside the list (owner review, 2026-09-30). */
 export function JobCard({
   job,
   lang,
   from,
-  selected,
-  onSelect,
   relevance,
 }: {
   job: PublicJobCard;
   lang: "sv" | "en";
   relevance?: RelevanceForJob;
   from?: string;
-  selected?: boolean;
-  onSelect?: () => void;
 }) {
   const { t } = useT();
   const sv = lang === "sv";
@@ -46,28 +46,15 @@ export function JobCard({
       search={from ? { from } : {}}
       id={`job-card-${job.slug}`}
       aria-label={title}
-      aria-current={selected ? "true" : undefined}
       preload={false}
-      onClick={(event) => {
-        if (
-          onSelect &&
-          !event.ctrlKey &&
-          !event.metaKey &&
-          !event.shiftKey &&
-          !event.altKey &&
-          event.button === 0
-        ) {
-          event.preventDefault();
-          onSelect();
-        } else if (!onSelect && window.location.pathname.replace(/\/$/, "") === "/jobs")
-          rememberJobListPosition(from);
+      data-job-card={job.slug}
+      onClick={() => {
+        // Only the results list records a position to return to; a related
+        // advert opened from another advert has no list behind it.
+        if (window.location.pathname.replace(/\/$/, "") === "/jobs")
+          rememberJobListPosition(from, job.slug);
       }}
-      className={cn(
-        "group block min-w-0 rounded-xl border bg-card p-5 text-left transition-colors hover:border-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        selected
-          ? "border-accent bg-accent/5 shadow-[inset_3px_0_0_var(--accent)]"
-          : "border-border",
-      )}
+      className="group flex h-full min-w-0 flex-col rounded-xl border border-border bg-card p-5 text-left transition-colors hover:border-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <div className="flex items-start gap-3">
         <EmployerLogo
@@ -83,7 +70,6 @@ export function JobCard({
             <p className="mt-1 break-words text-sm text-muted-foreground">{job.employer.name}</p>
           )}
         </div>
-        <ArrowUpRight className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       </div>
       {(location || country) && (
         <p className="mt-4 flex items-start gap-1.5 text-sm text-muted-foreground">
@@ -106,13 +92,7 @@ export function JobCard({
       )}
       {date && (
         <p className="mt-4 border-t border-border/70 pt-3 text-xs leading-relaxed text-muted-foreground">
-          {job.deadline_at
-            ? sv
-              ? "Sista ansökningsdag"
-              : "Apply by"
-            : sv
-              ? "Publicerad"
-              : "Published"}{" "}
+          {t(job.deadline_at ? "jobs.card.deadlineLabel" : "jobs.card.publishedLabel")}{" "}
           <time dateTime={job.deadline_at || job.published_at || undefined}>{date}</time>
         </p>
       )}
@@ -121,6 +101,13 @@ export function JobCard({
           <JobRelevanceBadge band={relevance.band} basis={relevance.basis} />
         </div>
       )}
+      <span className="mt-auto inline-flex items-center gap-1.5 pt-4 text-sm font-semibold text-accent">
+        {t("jobs.card.read")}
+        <ArrowRight
+          className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
+      </span>
     </Link>
   );
 }

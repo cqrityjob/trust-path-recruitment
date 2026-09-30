@@ -102,6 +102,23 @@
 // still label-checked and still one array. Career Discovery stays out of the
 // bar and keeps its direct actions in the content.
 //
+// ── WHAT CHANGED (2026-09-30, the locked navigation) ───────────────────
+//
+//   Karriär · Jobb · Security Passport · Säkerhetsarbete ·
+//   För arbetsgivare ▾ · Om oss            SV / EN · Logga in · Skapa konto
+//
+// Still ONE definition (public-nav.ts) for the desktop bar, the compact menu
+// and the footer. What changed: the two product entries open their own
+// PUBLIC pages (/security-passport, /sakerhetsarbete) for a signed-out
+// visitor instead of homepage anchors -- a reader who chose one product kept
+// scrolling into the others -- and "För arbetsgivare" is the ONE entry with
+// a submenu, whose five destinations are sections of /employers
+// (EMPLOYER_NAV). The navy utility strip is gone: SV / EN sits in the one
+// row, and the employer door moved into the "För arbetsgivare" menu, still
+// the same one door (/login?redirect=/employer), still signed-out only,
+// still flag-gated. On /employers, "Logga in" is a plain link after the
+// primary action, and "Kontakta oss" now opens a form that really sends.
+//
 // Plain TS script matching this repository's scripts/*-check.ts convention.
 // The header is a React component with router/query/supabase imports and
 // cannot be rendered outside the app runtime, so its half is a structural
@@ -169,8 +186,7 @@ expect(
   employersLabelUses === 1,
   `"nav.employers" must be used exactly once in public-nav.ts -- the primary-nav information entry (found ${employersLabelUses})`,
 );
-const employersNavEntry =
-  /\{ key: "employers", to: "\/employers", hash: undefined, labelKey: "nav\.employers" \}/;
+const employersNavEntry = /\{ key: "employers", to: "\/employers", labelKey: "nav\.employers" \}/;
 expect(
   employersNavEntry.test(publicNavSrc),
   '"nav.employers" must be the primary-nav entry pointing at /employers (the employer information page)',
@@ -185,41 +201,38 @@ expect(
 );
 
 // -----------------------------------------------------------------------
-// 3b. The specified SIX public destinations, in order, from ONE definition,
-//     rendered at BOTH viewports and in the footer (MVP text specification
-//     §4, 2026-09-27).
+// 3b. The locked SIX public destinations, in order, from ONE definition,
+//     rendered at BOTH viewports and in the footer (2026-09-30).
 //
-//     Säkerhetsarbete · Security Passport · Karriär · Jobb ·
-//     För arbetsgivare · Om oss
+//     Karriär · Jobb · Security Passport · Säkerhetsarbete ·
+//     För arbetsgivare ▾ · Om oss
 //
-//     This REPLACES the owner's 2026-09-14 five rather than relaxing it: the
-//     list is still exact, still ordered, still label-checked and still
-//     required to come from one definition rendered at both viewports. The
-//     two product entries lead to their homepage sections for a signed-out
-//     visitor and to the product for a signed-in one, whom the homepage
-//     would otherwise bounce to their overview.
+//     This REPLACES the 2026-09-27 six rather than relaxing it: the list is
+//     still exact, still ordered, still label-checked and still required to
+//     come from one definition rendered at both viewports. The two product
+//     entries lead to their own public pages for a signed-out visitor --
+//     never a homepage anchor -- and to the product for a signed-in one.
 //
 //     One definition is the load-bearing half. A link that exists at 1440
 //     and not at 375 is the specific bug this shape makes impossible, and
 //     this header has had it before.
 // -----------------------------------------------------------------------
 {
-  const { publicNav } = await import("../src/components/site/public-nav");
-  const shape = (signedIn: boolean) =>
-    publicNav(signedIn).map((i) => `${i.to}${i.hash ? `#${i.hash}` : ""}`);
+  const { publicNav, EMPLOYER_NAV } = await import("../src/components/site/public-nav");
+  const shape = (signedIn: boolean) => publicNav(signedIn).map((i) => i.to);
   const EXPECTED_OUT = [
-    "/#security-intelligence",
-    "/#passport",
     "/career-center",
     "/jobs",
+    "/security-passport",
+    "/sakerhetsarbete",
     "/employers",
     "/about",
   ];
   const EXPECTED_IN = [
-    "/security-work",
-    "/passport",
     "/career-center",
     "/jobs",
+    "/passport",
+    "/security-work",
     "/employers",
     "/about",
   ];
@@ -231,11 +244,26 @@ expect(
     JSON.stringify(shape(true)) === JSON.stringify(EXPECTED_IN),
     `a signed-in reader's product entries must open the product itself, in the same order: ${EXPECTED_IN.join(" · ")} (found ${shape(true).join(" · ")})`,
   );
+  expect(
+    !/to: "\/"[,\s]/.test(publicNavSrc) && !publicNavSrc.includes('to: "/#'),
+    "no public nav entry may point at a homepage anchor -- each area has its own page",
+  );
+  for (const [route, file] of [
+    ["/security-passport", "src/routes/security-passport.index.tsx"],
+    ["/sakerhetsarbete", "src/routes/sakerhetsarbete.tsx"],
+    ["/passport", "src/routes/_authenticated.passport.index.tsx"],
+    ["/security-work", "src/routes/_authenticated.security-work.index.tsx"],
+  ] as const) {
+    expect(
+      existsSync(path.join(root, file)),
+      `the nav entry ${route} must be backed by the existing route ${file}`,
+    );
+  }
   const EXPECTED_LABELS = [
-    "nav.securityWorkPublic",
-    "nav.passportPublic",
     "nav.career",
     "nav.jobs",
+    "nav.passportPublic",
+    "nav.securityWorkPublic",
     "nav.employers",
     "nav.about",
   ];
@@ -252,6 +280,14 @@ expect(
     "nav.career": { sv: "Karriär", en: "Career" },
     "nav.jobs": { sv: "Jobb", en: "Jobs" },
     "nav.about": { sv: "Om oss", en: "About" },
+    "nav.forEmployers.platform": { sv: "Arbetsgivarplattform", en: "Employer platform" },
+    "nav.forEmployers.assessment": { sv: "Assessment", en: "Assessment" },
+    "nav.forEmployers.interview": { sv: "Intervjustöd", en: "Interview support" },
+    "nav.forEmployers.recruitment": {
+      sv: "Rekrytering & Executive Search",
+      en: "Recruitment & Executive Search",
+    },
+    "nav.forEmployers.interim": { sv: "Interim och konsulter", en: "Interim and consultants" },
   } as const;
   for (const [key, expected] of Object.entries(labelCopy)) {
     for (const lang of ["sv", "en"] as const) {
@@ -262,6 +298,44 @@ expect(
       );
     }
   }
+
+  // ── "FÖR ARBETSGIVARE ▾" -- THE ONE SUBMENU ─────────────────────────
+  //
+  // Five entries, in order, every one /employers or a section of it whose
+  // id exists on that page. A submenu entry that lands nowhere is a dead
+  // link wearing a heading.
+  const employersSrc = read("src/routes/employers.tsx");
+  expect(
+    JSON.stringify(EMPLOYER_NAV.map((e) => e.key)) ===
+      JSON.stringify(["platform", "assessment", "interview", "recruitment", "interim"]),
+    `"För arbetsgivare" must list exactly Arbetsgivarplattform · Assessment · Intervjustöd · Rekrytering & Executive Search · Interim och konsulter (found ${EMPLOYER_NAV.map((e) => e.key).join(" · ")})`,
+  );
+  for (const entry of EMPLOYER_NAV) {
+    expect(
+      entry.to === "/employers",
+      `the employer submenu entry "${entry.key}" must open /employers`,
+    );
+    if (entry.hash) {
+      expect(
+        employersSrc.includes(`id="${entry.hash}"`) || employersSrc.includes(`id: "${entry.hash}"`),
+        `the employer submenu entry "${entry.key}" points at #${entry.hash}, which must exist on /employers`,
+      );
+    }
+  }
+  expect(
+    (header.match(/<EmployerMenu\b/g) ?? []).length === 1 &&
+      (header.match(/<MobileEmployerGroup\b/g) ?? []).length === 1,
+    "the employer submenu must be rendered once on the desktop bar and once in the compact menu",
+  );
+  expect(
+    header.includes("{EMPLOYER_NAV.map(") && header.split("{EMPLOYER_NAV.map(").length - 1 === 2,
+    "both viewports must render the employer submenu from EMPLOYER_NAV -- the one definition",
+  );
+  expect(
+    /aria-expanded=\{open\}[\s\S]{0,120}aria-controls=\{panelId\}/.test(header),
+    "the desktop employer submenu must be a disclosure that says whether it is open",
+  );
+
   // Both viewports render from THIS definition and from no second list.
   expect(
     header.includes("const nav = publicNav(signedIn === true)"),
@@ -283,9 +357,8 @@ expect(
 
   // ── CAREER DISCOVERY STAYS OUT OF THE BAR ─────────────────────────────
   //
-  // It keeps a direct action in the homepage's career card and career
-  // section and on the Career Center, and does not compete with the three
-  // core parts as a seventh entry.
+  // It keeps its direct action on the Career page, inside the area it
+  // belongs to, and does not compete as a seventh entry.
   expect(
     !publicNavSrc.includes("nav.careerDiscovery") &&
       !publicNavSrc.includes("/security-career-assessment") &&
@@ -298,23 +371,28 @@ expect(
   );
 }
 
-// 3c. The three core parts and the career analysis remain reachable from
-//     the content, not only from the chrome.
+// 3c. Every area remains reachable from the content, not only from the
+//     chrome: the homepage's four "För dig" cards open the four public
+//     pages, and the career analysis keeps its direct action on the Career
+//     page.
 // -----------------------------------------------------------------------
 {
-  const home = read("src/routes/index.tsx");
   const sections = read("src/components/site/HomeSections.tsx");
+  for (const to of ["/career-center", "/jobs", "/security-passport", "/sakerhetsarbete"]) {
+    expect(
+      sections.includes(`to: "${to}"`),
+      `the homepage's "För dig i säkerhetsbranschen" cards must open ${to}`,
+    );
+  }
   expect(
-    home.includes('id="passport"'),
-    "the homepage must keep its Security Passport section -- the nav's Passport entry points at it",
+    !sections.includes('id="passport"') && !sections.includes('id="security-intelligence"'),
+    "the homepage must not describe a product in depth again -- each product has its own page",
   );
   expect(
-    sections.includes('id="security-intelligence"'),
-    "the homepage must keep its security work section -- the nav's Säkerhetsarbete entry points at it",
-  );
-  expect(
-    sections.includes("CANONICAL_ASSESSMENT_PATH") && sections.includes("CAREER_DISCOVERY"),
-    "the homepage must keep a direct Career Discovery action",
+    read("src/components/career-center/PersonalDirection.tsx").includes(
+      'to="/security-career-assessment"',
+    ),
+    "the Career page must keep a direct career-analysis action",
   );
 }
 
@@ -542,28 +620,23 @@ expect(
 // 1024 and 1279 the seven-destination header showed nothing but a hamburger.
 // e2e/candidate-header-desktop.spec.ts measures the fit; this pins the
 // breakpoint. Locate the full class list, not a matching suffix.
-const menuMarker = 'MENU_SURFACE, !compactJobs && "lg:hidden", open ? "block" : "hidden"';
+const menuMarker = 'MENU_SURFACE, "lg:hidden", open ? "block" : "hidden"';
+expect(header.includes(menuMarker), "the compact sheet must switch off at lg, for every route");
 expect(
-  header.includes(menuMarker),
-  "the compact sheet must switch off at lg except for the scoped public jobs header",
+  !header.includes("compactJobs"),
+  "there is no longer a jobs-only header exception -- one header row for every public route",
 );
 expect(
-  /const compactJobs = !appMode && matches\.some\(\(match\) => match\.routeId === "\/jobs"\)/.test(
-    header,
-  ),
-  "the compact header exception must apply only to public jobs routes, never the signed-in candidate navigation",
-);
-expect(
-  header.includes("{compactJobs && <LanguageSwitcher />}") &&
-    header.includes('!appMode && !compactJobs && "lg:block"'),
-  "jobs must move the language control into the main row when hiding the utility strip",
+  header.includes("<LanguageSwitcher compact") &&
+    header.includes('<LanguageSwitcher className="hidden xl:inline-flex" />'),
+  "SV / EN must sit in the one header row (compact below xl, the full pair from xl)",
 );
 expect(
   !/appMode \? "xl:hidden"/.test(header) && !/appMode \? "xl:flex"/.test(header),
   "the signed-in header must not hide its desktop navigation until xl (no desktop nav at 1024-1279px)",
 );
 expect(
-  header.includes('"hidden shrink-0 items-center gap-2 lg:flex"'),
+  header.includes('"hidden shrink-0 items-center gap-1.5 lg:flex xl:gap-2"'),
   "desktop account actions must appear at lg for both chromes",
 );
 const candidateNav = read("src/components/site/CandidateAppNav.tsx");
@@ -636,14 +709,11 @@ const employerCopy = {
   // things. "employers.cta.how" is the secondary, same-page action that
   // replaced the dead contact form as the second thing on this page.
   "employers.cta.register": { sv: "Registrera företag", en: "Register your organisation" },
-  "employers.cta.how": {
-    sv: "Se hur plattformen fungerar",
-    en: "See how the platform works",
-  },
-  "employers.cta.login": {
-    sv: "Logga in till företagsportalen",
-    en: "Log in to the employer portal",
-  },
+  // "Så fungerar det" and a plain "Logga in" (owner review, 2026-09-30):
+  // on /employers the login is a link under "Har ni redan ett konto?", so
+  // the sentence around it names the audience.
+  "employers.cta.how": { sv: "Så fungerar det", en: "How it works" },
+  "employers.cta.login": { sv: "Logga in", en: "Sign in" },
 } as const;
 
 for (const [key, expected] of Object.entries(employerCopy)) {
@@ -685,10 +755,11 @@ for (const lang of ["sv", "en"] as const) {
 const employerIntentUses = header.split(EMPLOYER_INTENT).length - 1;
 expect(
   employerIntentUses === 2,
-  `the employer entrance must carry search=${EMPLOYER_INTENT} on BOTH the desktop utility bar and the compact menu (found ${employerIntentUses}) -- an entrance that exists only on a laptop is not an entrance`,
+  `the employer entrance must carry search=${EMPLOYER_INTENT} on BOTH the desktop "För arbetsgivare" menu and the compact menu (found ${employerIntentUses}) -- an entrance that exists only on a laptop is not an entrance`,
 );
 
-const desktopBar = header.slice(0, header.indexOf(menuMarker));
+// The desktop door lives in the "För arbetsgivare" disclosure.
+const desktopBar = header.slice(header.indexOf("function EmployerMenu("));
 expect(
   desktopBar.includes(EMPLOYER_INTENT) && desktopBar.includes('{t("nav.employerLogin")}'),
   "the desktop header must offer the employer entrance, labelled nav.employerLogin",
@@ -820,19 +891,16 @@ expect(
   "intent must not survive the legacy employer door -- it selected a form, and was never a permission",
 );
 
-// ── 9g. /employers offers the three actions, in the settled order ─────
+// ── 9g. /employers offers its actions, in the settled order ───────────
 //
-// Register (primary) · See how the platform works (same-page) · Log in to
-// the employer portal (the existing customer). Both auth actions go through
-// the ONE door carrying /employer as a validated return path.
+// Register (primary) · Så fungerar det (same-page) · and, as a plain link
+// under them, "Har ni redan ett konto? Logga in". Both auth actions go
+// through the ONE door carrying /employer as a validated return path.
 //
-// The dead contact form is no longer on this page at all. /contact calls
-// preventDefault and sends nothing -- it says so in its own preview notice
-// -- and the reason it survived here as a demoted text link was that the
-// page had nothing else to offer somebody who wanted to talk first. It now
-// leads with a real entrance and explains the whole process, so an
-// invitation into a form that discards what you type has no remaining job.
-// The route is untouched and still reachable by URL.
+// "Kontakta oss" is back, because /contact now SENDS: it hands the enquiry
+// to the existing mail transport and says the form is closed when that
+// transport is not configured (asserted below), rather than discarding
+// what somebody typed.
 const employersPage = read("src/routes/employers.tsx");
 expect(
   employersPage.includes('<PrimaryLink to="/signup" search={{ redirect: "/employer" }}>') &&
@@ -840,9 +908,8 @@ expect(
   '/employers must offer "employers.cta.register" pointing at /signup with the /employer return path',
 );
 expect(
-  employersPage.includes(
-    '<PrimaryLink to="/login" search={{ redirect: "/employer" }} variant="ghost">',
-  ) && employersPage.includes('{t("employers.cta.login")}'),
+  /<Link\s+to="\/login"\s+search=\{\{ redirect: "\/employer" \} as never\}/.test(employersPage) &&
+    employersPage.includes('{t("employers.cta.login")}'),
   '/employers must offer "employers.cta.login" pointing at /login with the /employer return path',
 );
 expect(
@@ -863,31 +930,41 @@ expect(
     "/employers must lead with registration -- the existing customer's way back in comes after it",
   );
 }
-expect(
-  !employersPage.includes('to="/contact"') && !employersPage.includes('{t("cta.talk")}'),
-  "/employers must not invite anybody into the contact form -- it calls preventDefault and sends nothing",
-);
+{
+  const contact = read("src/routes/contact.tsx");
+  expect(
+    employersPage.includes('<PrimaryLink to="/contact">'),
+    "/employers must offer the working contact path for recruitment services",
+  );
+  expect(
+    contact.includes("sendRecruitmentEnquiry") &&
+      contact.includes("getRecruitmentEnquiryAvailability") &&
+      contact.includes("data-contact-closed") &&
+      !contact.includes('preventDefault();\n    setPhase({ kind: "sent"'),
+    "/contact must send through the server and say it is closed when mail is not configured -- a form that discards what you type may not be linked",
+  );
+}
 // ── 9h. The release flag still fails closed on this page ──────────────
 //
 // With the portal disabled there is NO registration and NO login action:
 // the page explains the platform and offers its own same-page anchor. A
 // disabled product may not be presented as an available one.
-{
-  const gated = employersPage.indexOf("portalOpen ? (");
-  const fallback = employersPage.indexOf(") : (");
-  expect(
-    gated !== -1 && fallback > gated,
-    "/employers must gate its entrances on employerPortalEnabled()",
-  );
-  expect(
-    employersPage.includes("const portalOpen = employerPortalEnabled();"),
-    "/employers must read the release flag once, at render",
-  );
-  const closed = employersPage.slice(fallback, employersPage.indexOf(")}", fallback));
-  expect(
-    !closed.includes('to="/signup"') && !closed.includes('to="/login"'),
-    "/employers must offer no entrance at all while the employer portal is disabled",
-  );
+expect(
+  employersPage.includes("const portalOpen = employerPortalEnabled();"),
+  "/employers must read the release flag once, at render",
+);
+for (const door of ['to="/signup"', 'to="/login"']) {
+  let at = employersPage.indexOf(door);
+  expect(at !== -1, `/employers must carry ${door}`);
+  while (at !== -1) {
+    const before = employersPage.slice(Math.max(0, at - 260), at);
+    expect(
+      /portalOpen (&&|\?) \($/m.test(before.split("\n").slice(-3).join("\n").trimEnd()) ||
+        /portalOpen (&&|\?) \(\s*(<>\s*)?(<p[^>]*>[\s\S]*)?<(PrimaryLink|Link)\s*$/.test(before),
+      `every /employers ${door} entrance must sit inside a portalOpen gate`,
+    );
+    at = employersPage.indexOf(door, at + door.length);
+  }
 }
 
 // -----------------------------------------------------------------------

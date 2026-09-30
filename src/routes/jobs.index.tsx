@@ -6,9 +6,8 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
-import { listPublicJobs, getPublicJobBySlug } from "@/lib/job-intelligence/public-queries";
+import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobCard } from "@/components/jobs/JobCard";
-import { JobDetailContent } from "@/components/jobs/JobDetailContent";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
@@ -46,6 +45,18 @@ export const Route = createFileRoute("/jobs/")({
   component: JobsDiscoveryPage,
 });
 
+// ── THE JOBS PAGE (owner review, 2026-09-30) ───────────────────────────
+//
+// List first. Every card opens the advert on its own page, /jobs/$slug —
+// the page that owns applying (internal and external), sign-in continuity,
+// "Mina ansökningar" and the way back to exactly these results. The desktop
+// detail panel that repeated the selected advert beside the list is gone:
+// it showed one advert twice and pushed the list into a narrow column.
+//
+// `?selected=` is still ACCEPTED, so a link shared while the panel existed
+// keeps working: it forwards (replacing the history entry) to that advert's
+// own page, with the rest of the search as its way back.
+
 function JobsDiscoveryPage() {
   const { t, lang } = useT();
   const sv = lang === "sv";
@@ -55,24 +66,28 @@ function JobsDiscoveryPage() {
   const [qInput, setQInput] = useState(search.q ?? "");
   const [locInput, setLocInput] = useState(search.location ?? "");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [desktop, setDesktop] = useState(false);
-  useEffect(() => {
-    const media = window.matchMedia("(min-width: 1024px)");
-    const update = () => setDesktop(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
   useEffect(() => {
     setQInput(search.q ?? "");
     setLocInput(search.location ?? "");
   }, [search.q, search.location]);
 
-  const { selected: _selected, ...querySearch } = search;
+  const { selected: legacySelected, ...querySearch } = search;
+  const from = jobSearchToFrom(querySearch);
+  useEffect(() => {
+    if (!legacySelected) return;
+    void navigate({
+      to: "/jobs/$slug",
+      params: { slug: legacySelected },
+      search: from ? { from } : {},
+      replace: true,
+    });
+  }, [legacySelected, from, navigate]);
+
   const page = Number(search.page ?? 1);
   const jobsQuery = useQuery({
     queryKey: ["public-jobs", querySearch],
     retry: false,
+    enabled: !legacySelected,
     queryFn: () =>
       listPublicJobs({
         q: search.q,
@@ -89,23 +104,15 @@ function JobsDiscoveryPage() {
   });
   const jobs = jobsQuery.data?.slice(0, 20);
   useEffect(() => {
-    if (jobsQuery.isSuccess) return restoreJobListPosition(jobSearchToFrom(search));
-  }, [jobsQuery.isSuccess, search]);
-  const selected = search.selected ?? jobs?.[0]?.slug;
-  const detail = useQuery({
-    queryKey: ["public-job", selected],
-    retry: false,
-    queryFn: () => getPublicJobBySlug(selected!),
-    enabled: desktop && !!selected,
-  });
-  const setParam = (key: keyof JobSearch, value: string) =>
+    if (jobsQuery.isSuccess) return restoreJobListPosition(from);
+  }, [jobsQuery.isSuccess, from]);
+  const setParam = (key: Exclude<keyof JobSearch, "selected">, value: string) =>
     navigate({
       search: (prev: JobSearch) => ({
         ...prev,
         [key]: value || undefined,
-        ...(key !== "selected"
-          ? { selected: undefined, ...(key !== "page" ? { page: undefined } : {}) }
-          : {}),
+        selected: undefined,
+        ...(key !== "page" ? { page: undefined } : {}),
       }),
       resetScroll: false,
     });
@@ -160,14 +167,14 @@ function JobsDiscoveryPage() {
         : [],
     ),
   ];
-  const keywordLabel = sv ? "Roll, kompetens eller nyckelord" : "Role, skill or keyword";
-  const locationLabel = sv ? "Plats" : "Location";
+  const filterCount = active.filter((a) => !["q", "location"].includes(a.key)).length;
+  const count = jobs?.length ?? 0;
 
   return (
     <SiteLayout>
       <Section className="py-7 md:py-9" containerClassName="max-w-[1360px] px-4 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+        <header className="flex flex-wrap items-end justify-between gap-3">
+          <div className="max-w-3xl">
             <h1
               className="text-3xl font-semibold tracking-tight md:text-4xl"
               style={{ fontFamily: "var(--font-display)" }}
@@ -175,11 +182,16 @@ function JobsDiscoveryPage() {
               {t("jobs.discover.title")}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-              {sv
-                ? "Hitta din nästa roll. Läs och jämför säkerhetsjobb utan konto."
-                : "Find your next role. Read and compare security jobs without an account."}
+              {t("jobs.discover.lead")}
             </p>
           </div>
+          <Link
+            to="/my-career/applications"
+            className="inline-flex min-h-11 items-center gap-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            <BriefcaseBusiness className="h-4 w-4" aria-hidden="true" />
+            {t("jobs.myApplications")}
+          </Link>
         </header>
         <form
           onSubmit={(e) => {
@@ -201,7 +213,9 @@ function JobsDiscoveryPage() {
         >
           <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 sm:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto]">
             <label className="col-span-2 block min-w-0 sm:col-span-1">
-              <span className="mb-1.5 block text-xs font-semibold">{keywordLabel}</span>
+              <span className="mb-1.5 block text-xs font-semibold">
+                {t("jobs.search.keywordLabel")}
+              </span>
               <span className="relative block">
                 <Search
                   className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground"
@@ -211,12 +225,14 @@ function JobsDiscoveryPage() {
                   className="h-11 pl-9"
                   value={qInput}
                   onChange={(e) => setQInput(e.target.value)}
-                  placeholder={sv ? "Till exempel säkerhetschef" : "For example head of security"}
+                  placeholder={t("jobs.search.keywordPlaceholder")}
                 />
               </span>
             </label>
             <label className="block min-w-0">
-              <span className="mb-1.5 block text-xs font-semibold">{locationLabel}</span>
+              <span className="mb-1.5 block text-xs font-semibold">
+                {t("jobs.search.locationLabel")}
+              </span>
               <span className="relative block">
                 <MapPin
                   className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground"
@@ -226,16 +242,20 @@ function JobsDiscoveryPage() {
                   className="h-11 pl-9"
                   value={locInput}
                   onChange={(e) => setLocInput(e.target.value)}
-                  placeholder={sv ? "Ort eller region" : "City or region"}
+                  placeholder={t("jobs.search.locationPlaceholder")}
                 />
               </span>
             </label>
             <Button type="submit" className="h-11 self-end px-4 sm:px-7">
               <Search className="mr-2 h-4 w-4" aria-hidden="true" />
-              {sv ? "Sök jobb" : "Search jobs"}
+              {t("jobs.search.button")}
             </Button>
           </div>
         </form>
+        {/* Said once, quietly, where a visitor wonders — not as a headline. */}
+        <p data-jobs-public-note className="mt-2 text-xs text-muted-foreground">
+          {t("jobs.discover.publicNote")}
+        </p>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
@@ -245,24 +265,15 @@ function JobsDiscoveryPage() {
             onClick={() => setFiltersOpen((v) => !v)}
           >
             <SlidersHorizontal className="mr-2 h-4 w-4" aria-hidden="true" />
-            Filter
-            {active.filter((a) => !["q", "location"].includes(a.key)).length > 0
-              ? ` (${active.filter((a) => !["q", "location"].includes(a.key)).length})`
-              : ""}
+            {t("jobs.filter.toggle")}
+            {filterCount > 0 ? ` (${filterCount})` : ""}
           </Button>
-          <Link
-            to="/my-career/applications"
-            className="ml-auto inline-flex min-h-11 items-center gap-2 text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            <BriefcaseBusiness className="h-4 w-4" aria-hidden="true" />
-            {sv ? "Mina ansökningar" : "My applications"}
-          </Link>
           {active.map((f) => (
             <button
               key={f.key}
               type="button"
-              onClick={() => void setParam(f.key as keyof JobSearch, "")}
-              aria-label={`${sv ? "Ta bort filter" : "Remove filter"}: ${f.label}`}
+              onClick={() => void setParam(f.key as Exclude<keyof JobSearch, "selected">, "")}
+              aria-label={`${t("jobs.filter.remove")}: ${f.label}`}
               className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-secondary px-3 text-sm text-secondary-foreground hover:bg-secondary/70 focus-visible:outline-2 focus-visible:outline-ring"
             >
               <span className="break-words">{f.label}</span>
@@ -271,7 +282,7 @@ function JobsDiscoveryPage() {
           ))}
           {!!active.length && (
             <Button variant="ghost" className="min-h-11" onClick={() => void reset()}>
-              {sv ? "Rensa alla" : "Clear all"}
+              {t("jobs.filter.clearAll")}
             </Button>
           )}
         </div>
@@ -294,45 +305,44 @@ function JobsDiscoveryPage() {
         )}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
           <p role="status" className="text-sm font-medium">
-            {jobsQuery.isLoading
+            {jobsQuery.isLoading || legacySelected
               ? t("jobs.results.loading")
               : jobsQuery.isError
-                ? sv
-                  ? "Jobben kunde inte hämtas"
-                  : "Could not load jobs"
+                ? t("jobs.results.loadFailed")
                 : jobsQuery.data && jobsQuery.data.length > 20
-                  ? sv
-                    ? `Visar ${(page - 1) * 20 + 1}–${page * 20} jobb`
-                    : `Showing ${(page - 1) * 20 + 1}–${page * 20} jobs`
-                  : `${jobs?.length ?? 0} ${sv ? "jobb" : jobs?.length === 1 ? "job" : "jobs"}${page > 1 ? ` · ${sv ? "sida" : "page"} ${page}` : ""}`}
+                  ? t("jobs.results.range")
+                      .replace("{from}", String((page - 1) * 20 + 1))
+                      .replace("{to}", String(page * 20))
+                  : `${(count === 1 ? t("jobs.results.count_one") : t("jobs.results.count_other")).replace("{n}", String(count))}${page > 1 ? ` · ${t("jobs.results.pageSuffix").replace("{n}", String(page))}` : ""}`}
           </p>
           <label className="flex min-h-11 items-center gap-2 text-sm">
-            <span className="text-muted-foreground">{sv ? "Sortera" : "Sort by"}</span>
+            <span className="text-muted-foreground">{t("jobs.sort.label")}</span>
             <select
               className="min-h-11 rounded-md border border-border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-ring"
               value={search.sort ?? "newest"}
               onChange={(e) => void setParam("sort", e.target.value)}
             >
-              <option value="newest">{sv ? "Senast publicerade" : "Newest first"}</option>
-              <option value="deadline">{sv ? "Sista ansökningsdag" : "Closing soon"}</option>
+              <option value="newest">{t("jobs.sort.newest")}</option>
+              <option value="deadline">{t("jobs.sort.deadline")}</option>
             </select>
           </label>
         </div>
-        {jobsQuery.isLoading ? (
+        {jobsQuery.isLoading || legacySelected ? (
           <div
-            className="mt-5 grid gap-4 lg:grid-cols-[2fr_3fr]"
+            className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
             aria-busy="true"
             aria-label={t("jobs.results.loading")}
           >
-            <div className="h-72 rounded-xl bg-muted" />
-            <div className="hidden h-96 rounded-xl bg-muted lg:block" />
+            <div className="h-56 rounded-xl bg-muted" />
+            <div className="hidden h-56 rounded-xl bg-muted md:block" />
+            <div className="hidden h-56 rounded-xl bg-muted xl:block" />
           </div>
         ) : jobsQuery.isError ? (
           <div role="alert" className="mt-5 rounded-xl border border-border p-8">
             <h2 className="text-lg font-semibold">{t("jobs.results.error.title")}</h2>
             <p className="mt-2 text-muted-foreground">{t("jobs.results.error.body")}</p>
             <Button className="mt-4" onClick={() => void jobsQuery.refetch()}>
-              {sv ? "Försök igen" : "Try again"}
+              {t("jobs.action.retry")}
             </Button>
           </div>
         ) : !jobs?.length ? (
@@ -340,129 +350,68 @@ function JobsDiscoveryPage() {
             <Search className="mx-auto mb-4 h-7 w-7 text-muted-foreground" aria-hidden="true" />
             <h2 className="text-xl font-semibold">
               {page > 1
-                ? sv
-                  ? "Inga fler jobb på den här sidan"
-                  : "No more jobs on this page"
+                ? t("jobs.empty.pageTitle")
                 : active.length
-                  ? sv
-                    ? "Inga jobb matchar din sökning"
-                    : "No jobs match your search"
-                  : sv
-                    ? "Inga publicerade jobb just nu"
-                    : "No published jobs right now"}
+                  ? t("jobs.results.empty.title")
+                  : t("jobs.empty.noneTitle")}
             </h2>
             <p className="mx-auto mt-2 max-w-md text-muted-foreground">
               {page > 1
-                ? sv
-                  ? "Jobbutbudet kan ha ändrats. Gå tillbaka till första sidan med samma sökning."
-                  : "The available jobs may have changed. Return to the first page with the same search."
+                ? t("jobs.empty.pageBody")
                 : active.length
-                  ? sv
-                    ? "Prova en annan roll, en större region eller färre filter."
-                    : "Try another role, a wider area or fewer filters."
-                  : sv
-                    ? "Välkommen tillbaka. Under tiden kan du utforska yrken och karriärvägar inom säkerhet."
-                    : "Check back soon. Meanwhile, explore security roles and career paths."}
+                  ? t("jobs.empty.filteredBody")
+                  : t("jobs.empty.noneBody")}
             </p>
             {page > 1 ? (
               <Button className="mt-5" onClick={() => void setParam("page", "")}>
-                {sv ? "Till första sidan" : "Back to first page"}
+                {t("jobs.empty.pageAction")}
               </Button>
             ) : active.length ? (
               <Button className="mt-5" onClick={() => void reset()}>
-                {sv ? "Rensa alla" : "Clear all"}
+                {t("jobs.filter.clearAll")}
               </Button>
             ) : (
               <Link
                 to="/career-center"
                 className="mt-5 inline-flex min-h-11 items-center font-semibold text-accent underline"
               >
-                {sv ? "Utforska karriärguider" : "Explore career guides"}
+                {t("jobs.empty.noneAction")}
               </Link>
             )}
           </div>
         ) : (
-          <div className="mt-4 grid items-start gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-            <div className="min-w-0">
-              <div className="space-y-3" aria-label={sv ? "Jobblista" : "Job list"}>
-                {jobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    lang={lang}
-                    from={jobSearchToFrom({ ...search, selected: job.slug })}
-                    selected={desktop && selected === job.slug}
-                    onSelect={desktop ? () => void setParam("selected", job.slug) : undefined}
-                  />
-                ))}
-              </div>
-              {(page > 1 || (jobsQuery.data?.length ?? 0) > 20) && (
-                <nav
-                  aria-label={sv ? "Resultatsidor" : "Result pages"}
-                  className="mt-4 flex justify-between gap-3"
-                >
-                  <Button
-                    variant="outline"
-                    disabled={page === 1}
-                    onClick={() => void setParam("page", String(page - 1))}
-                  >
-                    {sv ? "Föregående" : "Previous"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={(jobsQuery.data?.length ?? 0) <= 20}
-                    onClick={() => void setParam("page", String(page + 1))}
-                  >
-                    {sv ? "Nästa" : "Next"}
-                  </Button>
-                </nav>
-              )}
-            </div>
-            {desktop && (
-              <div
-                key={selected}
-                className="sticky top-20 max-h-[calc(100dvh-6rem)] min-w-0 overflow-y-auto rounded-2xl border border-border bg-card focus-visible:outline-2 focus-visible:outline-ring"
-                tabIndex={0}
-                role="region"
-                aria-label={sv ? "Vald annons" : "Selected job"}
+          <div className="mt-5">
+            <ul
+              aria-label={t("jobs.list.label")}
+              data-jobs-list
+              className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+            >
+              {jobs.map((job) => (
+                <li key={job.id} className="flex min-w-0">
+                  <JobCard job={job} lang={lang} from={from} />
+                </li>
+              ))}
+            </ul>
+            {(page > 1 || (jobsQuery.data?.length ?? 0) > 20) && (
+              <nav
+                aria-label={t("jobs.pagination.label")}
+                className="mt-6 flex justify-between gap-3"
               >
-                {detail.isLoading ? (
-                  <p role="status" className="p-8">
-                    {t("jobs.results.loading")}
-                  </p>
-                ) : detail.isError ? (
-                  <div role="alert" className="p-8">
-                    <p>{t("jobs.results.error.title")}</p>
-                    <Button
-                      variant="outline"
-                      className="mt-3"
-                      onClick={() => void detail.refetch()}
-                    >
-                      {sv ? "Försök igen" : "Try again"}
-                    </Button>
-                  </div>
-                ) : detail.data ? (
-                  <JobDetailContent
-                    key={detail.data.id}
-                    job={detail.data}
-                    from={jobSearchToFrom(search)}
-                    embedded
-                  />
-                ) : (
-                  <div className="p-8">
-                    <h2 className="text-lg font-semibold">
-                      {sv
-                        ? "Annonsen är inte längre tillgänglig"
-                        : "This job is no longer available"}
-                    </h2>
-                    <p className="mt-2 text-muted-foreground">
-                      {sv
-                        ? "Den kan ha stängts eller tagits bort. Välj ett annat jobb i listan."
-                        : "It may have closed or been removed. Choose another job from the list."}
-                    </p>
-                  </div>
-                )}
-              </div>
+                <Button
+                  variant="outline"
+                  disabled={page === 1}
+                  onClick={() => void setParam("page", String(page - 1))}
+                >
+                  {t("jobs.pagination.previous")}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={(jobsQuery.data?.length ?? 0) <= 20}
+                  onClick={() => void setParam("page", String(page + 1))}
+                >
+                  {t("jobs.pagination.next")}
+                </Button>
+              </nav>
             )}
           </div>
         )}
@@ -471,14 +420,14 @@ function JobsDiscoveryPage() {
             to="/career-center"
             className="inline-flex min-h-11 items-center gap-2 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
           >
-            {sv ? "Utforska yrken i karriärguiderna" : "Explore roles in our career guides"}
+            {t("jobs.footer.careers")}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
           <Link
             to="/employers"
             className="inline-flex min-h-11 items-center hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
           >
-            {sv ? "För arbetsgivare · Publicera jobb" : "For employers · Post a job"}
+            {t("jobs.footer.employers")}
           </Link>
         </div>
       </Section>

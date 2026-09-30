@@ -60,12 +60,14 @@ console.log("\n1. The employer entrance collects a company");
 {
   // The two real CTAs. Both are literal in the source, so a change to either
   // that stops meaning "register a company" fails here.
-  const home = read("src/routes/index.tsx");
+  // The homepage's sections live in HomeSections.tsx since 2026-09-30.
+  const home = read("src/components/site/HomeSections.tsx");
   const employers = read("src/routes/employers.tsx");
   ck(
     "the homepage employer CTA targets /employer",
-    /const EMPLOYER_INTENT = \{ redirect: "\/employer" \}/.test(home),
-    "the CTA this guard reasons about is not in index.tsx",
+    /const EMPLOYER_INTENT = \{ redirect: "\/employer" \}/.test(home) &&
+      /to="\/signup"\s+search=\{EMPLOYER_INTENT\}/.test(home),
+    "the CTA this guard reasons about is not in HomeSections.tsx",
   );
   ck(
     "/employers offers the same entrance",
