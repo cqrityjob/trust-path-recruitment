@@ -122,9 +122,11 @@ export function I18nProvider({
  *  stored: an explicit choice always wins. Adopting stores it, so the rest of
  *  the visit (sign-up, confirmation, setup) stays in that language. */
 export function useAdoptLangIntent(search: string) {
-  const { setLang } = useT();
+  // A URL language hint is optional: outside the provider (e.g. a stale
+  // module instance during a hot reload) it must do nothing, never crash.
+  const setLang = useContext(I18nContext)?.setLang;
   useEffect(() => {
-    if (readStoredLang()) return;
+    if (!setLang || readStoredLang()) return;
     const intent = langIntentFrom(search);
     if (intent) setLang(intent);
   }, [search, setLang]);
