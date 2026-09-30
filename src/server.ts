@@ -15,6 +15,8 @@ import {
   SHARE_OPEN_PATH,
 } from "./lib/security-passport/share-transport";
 import { SHARE_ENTRY_PATH } from "./lib/security-passport/public-origin";
+import { clientIpHint } from "./lib/http/client-ip";
+import { withSecurityHeaders } from "./lib/http/security-headers";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -78,8 +80,8 @@ async function openShareRequest(request: Request): Promise<Response> {
   if (!token) return unavailableShare();
   const handoff = randomBytes(32).toString("hex");
   const session = randomBytes(32).toString("hex");
-  // First hop only; the rest of an X-Forwarded-For chain is caller-supplied.
-  const hint = (request.headers.get("x-forwarded-for") ?? "").split(",")[0]?.trim() || "unknown";
+  // The edge-set client address, not a caller-chosen one (lib/http/client-ip.ts).
+  const hint = clientIpHint(request.headers);
   try {
     const { openShareByToken } = await import("./lib/security-passport/public-disclosure.server");
     if (!(await openShareByToken(token, handoff, hashShareSecret(session), hint)))
@@ -149,7 +151,10 @@ export default {
 
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return withSecurityHeaders(
+        await normalizeCatastrophicSsrResponse(response),
+        new URL(request.url).protocol === "https:",
+      );
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

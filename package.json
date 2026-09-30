@@ -180,6 +180,7 @@
     "passport-regulatory-claim:check": "bun run scripts/passport-regulatory-claim-check.ts",
     "passport-scope-surface:check": "bun run scripts/passport-scope-surface-check.ts",
     "mcp-exposure:check": "bun run scripts/mcp-exposure-check.ts",
+    "security-headers:check": "bun run scripts/security-headers-check.ts",
     "admin-portal:check": "bun run scripts/admin-portal-guard-check.ts",
     "admin-lifecycle:check": "bun run scripts/admin-lifecycle-guard-check.ts",
     "admin-error-contract:check": "bun run scripts/admin-error-contract-check.tsx",
