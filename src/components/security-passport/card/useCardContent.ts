@@ -23,6 +23,7 @@ import {
   credentialPresentationOf,
   effectiveAssertionLevel,
   effectiveTrust,
+  presentationWordKeyOf,
 } from "@/lib/security-passport/trust-presentation";
 import { mayShowBadge } from "@/lib/security-passport/recognition";
 import type {
@@ -182,6 +183,7 @@ export function useCardContent(
       overlayTone: overlay ? overlay.edge : null,
       symbolCode: c.credentialCode,
       symbolState: credentialPresentationOf(c, c.lifecycleState),
+      symbolWordKey: presentationWordKeyOf(c, credentialPresentationOf(c, c.lifecycleState)),
     };
   };
 

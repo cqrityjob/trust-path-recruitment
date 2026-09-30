@@ -155,6 +155,10 @@ export function OverviewPassportContents({
               </div>
               <AssertionChip
                 level={claim.assertionLevel as AssertionLevel}
+                provenance={{
+                  verifierName: claim.verifierName,
+                  verificationMethod: claim.verificationMethod,
+                }}
                 lifecycleState={claim.lifecycleState}
                 size="sm"
                 className="shrink-0"

@@ -278,11 +278,13 @@ export function PassportCardStateLabel({
   const parts: string[] = [];
 
   if (card.state === "empty") parts.push(pt("card.emptyState"));
-  if (card.state === "self_declared_only") parts.push(pt("assertion.self_declared"));
+  // The level words, as the public Passport page spells them. A card state
+  // of "verified" is SOURCE-CONFIRMED (card.ts reads the effective level).
+  if (card.state === "self_declared_only") parts.push(pt("trust.level.self_declared"));
   if (card.state === "documented") parts.push(pt("trust.level.documented"));
   if (card.state === "partially_verified")
-    parts.push(`${pt("assertion.verified")} (${pt("totals.documented")})`);
-  if (card.state === "verified") parts.push(pt("assertion.verified"));
+    parts.push(`${pt("trust.level.source_verified")} (${pt("totals.documented")})`);
+  if (card.state === "verified") parts.push(pt("trust.level.source_verified"));
   if (card.containsExpired) parts.push(pt("card.containsExpired"));
   if (card.containsDisputed) parts.push(pt("card.containsDisputed"));
   if (shareOverlay === "share_expired") parts.push(pt("card.shareExpired"));

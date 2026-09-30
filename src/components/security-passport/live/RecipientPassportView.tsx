@@ -147,7 +147,7 @@ function RecipientPassportBody({
               label={
                 lang === "sv"
                   ? "Yrkestitel från Profil · egen uppgift"
-                  : "Profile title · self-reported"
+                  : "Profile title · self-declared"
               }
               value={presentation.profileTitle}
             />

@@ -38,6 +38,16 @@ import type {
   VerifierPeriodFacts,
 } from "@/lib/security-passport/verification.functions";
 
+/** The STORED level, as the reviewer reads it. This page has no decision
+ *  record, so a stored `verified` cannot be told apart as a document review
+ *  or a source confirmation: it says only that an earlier review approved
+ *  it, and never "Källbekräftad" for what may have been a document review. */
+function storedLevelKey(level: string): PassportCopyKey {
+  return level === "verified"
+    ? "assertion.verified.stored"
+    : (`assertion.${level}` as PassportCopyKey);
+}
+
 /** One labelled fact. Renders NOTHING when there is no value.
  *
  *  An absent field must not print a dash: a reviewer scanning for a
@@ -142,7 +152,7 @@ export function ReviewClaimFacts({
           label={pt("vq.currentState")}
           value={
             claim.assertion
-              ? `${pt(`assertion.${claim.assertion}` as PassportCopyKey)} · ${pt(`lifecycle.${claim.lifecycle}` as PassportCopyKey)}`
+              ? `${pt(storedLevelKey(claim.assertion))} · ${pt(`lifecycle.${claim.lifecycle}` as PassportCopyKey)}`
               : null
           }
         />
@@ -210,7 +220,7 @@ export function ReviewPeriodFacts({
           label={pt("vq.currentState")}
           value={
             period.assertion
-              ? `${pt(`assertion.${period.assertion}` as PassportCopyKey)} · ${pt(`lifecycle.${period.lifecycle}` as PassportCopyKey)}`
+              ? `${pt(storedLevelKey(period.assertion))} · ${pt(`lifecycle.${period.lifecycle}` as PassportCopyKey)}`
               : null
           }
         />

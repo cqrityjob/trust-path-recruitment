@@ -565,7 +565,14 @@ function PassportInformationRoute() {
                       <p className="mt-0.5 text-sm text-muted-foreground">{c.issuerName}</p>
                     ) : null}
                     <span className="mt-1.5 flex flex-wrap items-center gap-2">
-                      <AssertionChip level={c.assertionLevel as AssertionLevel} size="sm" />
+                      <AssertionChip
+                        level={c.assertionLevel as AssertionLevel}
+                        provenance={{
+                          verifierName: c.verifierName,
+                          verificationMethod: c.verificationMethod,
+                        }}
+                        size="sm"
+                      />
                       <LifecycleChip state={c.lifecycleState as LifecycleState} />
                     </span>
                   </div>

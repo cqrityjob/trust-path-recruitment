@@ -1187,7 +1187,7 @@ test.describe("Security Passport — social sharing, ONE Passport image", () => 
     expect(words).toContain("SVERIGE");
     expect(words).toContain("GLOBAL");
     expect(words).toContain("STORBRITANNIEN");
-    expect(words.filter((w) => w === "EGENRAPPORTERAD").length).toBe(3);
+    expect(words.filter((w) => w === "EGEN UPPGIFT").length).toBe(3);
     expect(words.filter((w) => w === "DOKUMENTERAD").length).toBe(1);
     expect(words.join("\n")).not.toMatch(/VERIFIERAD|KÄLLBEKRÄFTAD/);
     // Nothing private, no link, no QR code.

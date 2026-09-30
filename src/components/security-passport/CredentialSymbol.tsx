@@ -15,6 +15,7 @@
 // gets less than a sighted reader.
 
 import { usePassportCopy } from "@/lib/security-passport/use-passport-copy";
+import type { PassportCopyKey } from "@/lib/security-passport/i18n";
 import { credentialMark } from "@/lib/security-passport/credentials";
 import {
   SYMBOL_VIEWBOX,
@@ -40,6 +41,12 @@ export interface CredentialSymbolProps {
   /** Accessible subject — the credential's display name. The state word is
    *  appended automatically. */
   readonly name: string;
+  /** The status word for THIS entry, where the caller holds the entry:
+   *  `presentationWordKeyOf(entry, state)`. The state alone cannot tell a
+   *  document that was merely attached ("Dokument inlämnat") from one
+   *  CQrityjob reviewed ("Dokumenterad") -- both draw the documented mark --
+   *  so a caller that knows says which. Absent, the state's own word. */
+  readonly statusWordKey?: PassportCopyKey;
   /** Rendered size in px. The drawing is vector; any size is crisp. */
   readonly size?: number;
   /** True where the credential's name and state already appear as text
@@ -54,12 +61,13 @@ export function CredentialSymbol({
   state,
   symbolLabel,
   name,
+  statusWordKey,
   size = 44,
   decorative = false,
   className,
 }: CredentialSymbolProps) {
   const { pt } = usePassportCopy();
-  const word = pt(presentationWordKey(state));
+  const word = pt(statusWordKey ?? presentationWordKey(state));
   const mark = symbolLabel ?? credentialMark(code);
   return (
     <svg
@@ -104,6 +112,7 @@ export function CredentialSymbolLockup({
   state,
   symbolLabel,
   name,
+  statusWordKey,
   size = 44,
   className,
 }: CredentialSymbolProps) {
@@ -115,12 +124,13 @@ export function CredentialSymbolLockup({
         state={state}
         symbolLabel={symbolLabel}
         name={name}
+        statusWordKey={statusWordKey}
         size={size}
       />
       <span
         className={`text-[10px] font-semibold uppercase leading-tight tracking-[0.16em] ${WORD_TONE[state]}`}
       >
-        {pt(presentationWordKey(state))}
+        {pt(statusWordKey ?? presentationWordKey(state))}
       </span>
     </span>
   );
