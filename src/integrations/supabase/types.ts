@@ -3101,6 +3101,30 @@ export type Database = {
           },
         ]
       }
+      cd_access_policy: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          note: string | null
+          singleton: boolean
+          state: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          note?: string | null
+          singleton?: boolean
+          state?: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          note?: string | null
+          singleton?: boolean
+          state?: string
+        }
+        Relationships: []
+      }
       cd_career_goals: {
         Row: {
           chosen_profession_id: string
@@ -3310,30 +3334,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      cd_access_policy: {
-        Row: {
-          changed_at: string
-          changed_by: string | null
-          note: string | null
-          singleton: boolean
-          state: string
-        }
-        Insert: {
-          changed_at?: string
-          changed_by?: string | null
-          note?: string | null
-          singleton?: boolean
-          state?: string
-        }
-        Update: {
-          changed_at?: string
-          changed_by?: string | null
-          note?: string | null
-          singleton?: boolean
-          state?: string
-        }
-        Relationships: []
       }
       cd_internal_testers: {
         Row: {
@@ -7880,6 +7880,7 @@ export type Database = {
         Row: {
           approved_at: string | null
           approved_by: string | null
+          authoring_release_required: boolean
           content_hash: string | null
           content_status: string
           created_at: string
@@ -7899,6 +7900,7 @@ export type Database = {
         Insert: {
           approved_at?: string | null
           approved_by?: string | null
+          authoring_release_required?: boolean
           content_hash?: string | null
           content_status?: string
           created_at?: string
@@ -7918,6 +7920,7 @@ export type Database = {
         Update: {
           approved_at?: string | null
           approved_by?: string | null
+          authoring_release_required?: boolean
           content_hash?: string | null
           content_status?: string
           created_at?: string
@@ -20440,8 +20443,8 @@ export type Database = {
       }
       bcp_conduct_record_resolution: {
         Args: {
-          _agreed_statement: string | null
-          _divergent_statement: string | null
+          _agreed_statement: string
+          _divergent_statement: string
           _expected_revision: number
           _item_key: string
           _operation_id: string
@@ -21242,6 +21245,7 @@ export type Database = {
         Args: { _d: string[] }
         Returns: boolean
       }
+      cd_access_state: { Args: never; Returns: string }
       cd_assert_session_writable: {
         Args: { _caller: string; _session_id: string }
         Returns: undefined
@@ -21279,17 +21283,11 @@ export type Database = {
           summary: string
         }[]
       }
-      cd_access_state: { Args: never; Returns: string }
       cd_grant_internal_tester: {
         Args: { _note?: string; _user_id: string }
         Returns: undefined
       }
       cd_is_internal_tester: { Args: { _user_id: string }; Returns: boolean }
-      cd_set_access_state: {
-        Args: { _note?: string; _state: string }
-        Returns: string
-      }
-      cd_v31_may_start: { Args: { _user_id: string }; Returns: boolean }
       cd_profession_bands_for_matching: {
         Args: { _profession_ids: string[] }
         Returns: {
@@ -21314,6 +21312,10 @@ export type Database = {
           missing: string[]
           unexpected: string[]
         }[]
+      }
+      cd_set_access_state: {
+        Args: { _note?: string; _state: string }
+        Returns: string
       }
       cd_submit_test_feedback: {
         Args: {
@@ -21342,6 +21344,7 @@ export type Database = {
         }[]
       }
       cd_v31_funnel_event_names: { Args: never; Returns: string[] }
+      cd_v31_may_start: { Args: { _user_id: string }; Returns: boolean }
       cd_v31_validate_session_evidence: {
         Args: { _session_id: string }
         Returns: {
@@ -21528,7 +21531,6 @@ export type Database = {
         Args: { _application_id: string; _body: string }
         Returns: string
       }
-      rec_can_manage: { Args: { _job_id: string }; Returns: boolean }
       rec_application_employer_note: {
         Args: { _application_id: string }
         Returns: string
@@ -21545,6 +21547,7 @@ export type Database = {
           previous_status: string
         }[]
       }
+      rec_can_manage: { Args: { _job_id: string }; Returns: boolean }
       rec_candidate_view: {
         Args: {
           _answers?: Json
@@ -21662,6 +21665,18 @@ export type Database = {
         Args: { _application_id: string }
         Returns: string
       }
+      rec_my_application_context: {
+        Args: never
+        Returns: {
+          application_id: string
+          employer_name: string
+          job_id: string
+          job_open: boolean
+          job_slug: string
+          title_en: string
+          title_sv: string
+        }[]
+      }
       rec_receipt_actor: {
         Args: {
           _app: Database["public"]["Tables"]["job_applications"]["Row"]
@@ -21778,18 +21793,6 @@ export type Database = {
           _user_id: string
         }
         Returns: number
-      }
-      rec_my_application_context: {
-        Args: never
-        Returns: {
-          application_id: string
-          employer_name: string
-          job_id: string
-          job_open: boolean
-          job_slug: string
-          title_en: string
-          title_sv: string
-        }[]
       }
       rec_set_application_stage: {
         Args: {
@@ -22047,6 +22050,17 @@ export type Database = {
         }[]
       }
       scp_audience_brief: { Args: { _brief: Json }; Returns: Json }
+      scp_author_assessment_draft: {
+        Args: {
+          _item_version_ids: string[]
+          _name_en?: string
+          _name_sv?: string
+          _new_slug?: string
+          _notes: string
+          _source_version_id: string
+        }
+        Returns: string
+      }
       scp_bind_employee_subject: {
         Args: { _employee_id: string; _user_id: string }
         Returns: string
@@ -22806,7 +22820,7 @@ export type Database = {
       scp_iv_finalise_previewed_report: {
         Args: {
           _case_id: string
-          _draft_run_id: string | null
+          _draft_run_id: string
           _expected_basis_hash: string
         }
         Returns: string
