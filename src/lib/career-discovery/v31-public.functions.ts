@@ -511,6 +511,10 @@ export function resolveSaveGate(input: {
   return "deny";
 }
 
+// The instrument has well under a hundred items; the cap only stops an
+// anonymous caller from making the server score an arbitrarily large payload.
+const MAX_BUFFERED_ANSWERS = 200;
+
 const bufferedAnswerSchema = z.union([
   z.object({
     itemId: z.string(),
@@ -890,7 +894,7 @@ export const previewPublicV31Run = createServerFn({ method: "POST" })
     z
       .object({
         locale: z.enum(["sv", "en"]),
-        answers: z.array(bufferedAnswerSchema).min(1),
+        answers: z.array(bufferedAnswerSchema).min(1).max(MAX_BUFFERED_ANSWERS),
         completedAt: z.string().datetime().optional(),
         careerContext: careerContextSchema.optional(),
       })
@@ -936,7 +940,7 @@ export const persistPublicV31Run = createServerFn({ method: "POST" })
     z
       .object({
         locale: z.enum(["sv", "en"]),
-        answers: z.array(bufferedAnswerSchema).min(1),
+        answers: z.array(bufferedAnswerSchema).min(1).max(MAX_BUFFERED_ANSWERS),
         // The moment the candidate's anonymous buffer first became complete
         // (see markComplete in v31-public-buffer.ts), so the report they
         // already saw before signing in and the one now being stored agree
