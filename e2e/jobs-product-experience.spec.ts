@@ -155,6 +155,8 @@ test("every card opens the advert's own page, and the way back restores the resu
 test("an old ?selected= link forwards to the advert's own page", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
+  // Start from the list, so Back has a page of ours to return to.
+  await open(page);
   await page.goto(`${BASE}/jobs?q=chef&selected=${first.slug}`);
   await expect(page).toHaveURL(new RegExp(`/jobs/${first.slug}\\?from=q%3Dchef$`), {
     timeout: 30000,
@@ -162,16 +164,20 @@ test("an old ?selected= link forwards to the advert's own page", async ({ page }
   await expect(
     page.getByRole("heading", { level: 1, name: first.title_sv, exact: true }),
   ).toBeVisible();
-  // The forward REPLACED the entry: Back leaves, it does not bounce.
+  // The forward REPLACED the entry: Back returns to the list, and does not
+  // bounce through the old URL.
   await page.goBack();
-  await expect(page).not.toHaveURL(/selected=/);
+  await expect(page).toHaveURL(/\/jobs$/);
+  await expect(keyword(page)).toBeVisible();
   fixture.assertClean();
 });
 
 test("external application explains the destination and Escape returns focus", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
-  await page.goto(`${BASE}/jobs/${second.slug}`);
+  // Reached the way a visitor reaches it: from the list.
+  await open(page);
+  await card(page, second.title_sv).click();
   const apply = page.getByRole("button", { name: /Ansök.*arbetsgivar|Ansök externt/ }).first();
   await expect(apply).toBeVisible({ timeout: 30000 });
   await apply.click();
@@ -229,7 +235,8 @@ test("sign-in keeps the vacancy, the search and the apply intent", async ({ page
 test("a closed vacancy explains its state before any application", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
-  await page.goto(`${BASE}/jobs/${CLOSED_JOB.slug}`);
+  // A closed ad is not in the list; an old shared link still reaches it.
+  await page.goto(`${BASE}/jobs?selected=${CLOSED_JOB.slug}`);
   await expect(page.getByText("Ansökan är stängd", { exact: true }).first()).toBeVisible({
     timeout: 30000,
   });

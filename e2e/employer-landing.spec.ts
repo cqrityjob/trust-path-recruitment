@@ -265,7 +265,7 @@ test.describe("the employer journey", () => {
 
   test("Register company opens unified signup carrying redirect=/employer", async ({ page }) => {
     await page.goto(`${BASE}/employers`, { waitUntil: "networkidle" });
-    await page.getByRole("link", { name: "Registrera företag" }).click();
+    await page.getByRole("link", { name: "Registrera företag" }).first().click();
     await page.waitForURL("**/signup**", { timeout: 15_000 });
 
     const url = new URL(page.url());
