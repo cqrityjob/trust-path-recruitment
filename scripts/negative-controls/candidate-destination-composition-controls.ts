@@ -17,6 +17,7 @@
 import { runControls, type Mutation } from "./runner";
 
 const JOBS = "src/routes/jobs.index.tsx";
+const JOB_AD = "src/routes/jobs.$slug.tsx";
 const APPLY = "src/components/jobs/ApplyInternalDialog.tsx";
 const CAREER = "src/routes/career-center.index.tsx";
 const CARDS = "src/components/career-center/CareerEntryCards.tsx";
@@ -28,12 +29,22 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "CDC-NC-JOBS-UNREACHABLE",
     defect:
-      "Jobs stops mounting the real job reader, so its contextual application and CV entry points become unreachable",
-    file: JOBS,
+      "the advert's own page stops mounting the real job reader, so the application and CV entry points every Jobs card leads to become unreachable",
+    file: JOB_AD,
     find: "<JobDetailContent",
     replace: "<IgnoredJobDetailContent",
     guard: GUARD,
-    expect: "the Jobs page mounts the job detail reader",
+    expect: "which mounts the job detail reader",
+  },
+  {
+    id: "CDC-NC-JOBS-DETAIL-PANEL-RETURNS-INSTEAD",
+    defect:
+      "the list stops rendering cards that open the advert's page — the retired in-list detail panel's shape",
+    file: JOBS,
+    find: "<JobCard job={job} lang={lang} from={from} />",
+    replace: "<div data-job={job.slug} />",
+    guard: GUARD,
+    expect: "every Jobs card opens the advert's own page",
   },
   {
     id: "CDC-NC-APPLICATIONS-LINK-DROPPED",
@@ -167,8 +178,8 @@ const MUTATIONS: readonly Mutation[] = [
     file: CAREER,
     // The aside became multi-line when the cards learned whether the reader's
     // own result is in hand; the anchor names the real layout.
-    find: "          <CareerEntryCards\n            pathAnchor={PATH_ANCHOR}\n            personalAnchor={PERSONAL_ANCHOR}\n            personalised={personalised}\n          />",
-    replace: "          <TrustRail />",
+    find: "          <CareerEntryCards\n            pathAnchor={PATH_ANCHOR}\n            personalAnchor={PERSONAL_ANCHOR}\n            listAnchor={LIST_ANCHOR}\n            personalised={personalised}\n          />",
+    replace: "          <div />",
     guard: GUARD,
     expect: "the Career hero carries the two entry cards",
   },
@@ -196,17 +207,14 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "render no professions of their own",
   },
   {
-    id: "CDC-NC-TRUSTRAIL-DELETED",
+    id: "CDC-NC-GUIDE-BASIS-DELETED",
     defect:
-      "TrustRail is deleted rather than moved when the cards take the hero aside, silently dropping the sourcing statement for the profession guides",
+      "the one line that says what the profession guides are based on is deleted along with the side panel it replaced, silently dropping the sourcing statement",
     file: CAREER,
-    // One element since the list of professions is shown on the hub: beside
-    // the list's heading on a wide screen, after the cards on a phone (CSS
-    // `order`). Two copies would let one be deleted with nothing detecting it.
-    find: '          <div className="order-last md:order-none md:col-span-5">\n            <TrustRail />\n          </div>\n',
+    find: "              data-explore-basis\n",
     replace: "",
     guard: GUARD,
-    expect: "TrustRail still renders",
+    expect: "the list of professions still says how many guides there are",
   },
 
   /* ── SKETCH 5 · A POINTER STAYS A POINTER ──────────────────────────── */

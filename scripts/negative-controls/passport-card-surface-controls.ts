@@ -90,13 +90,35 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "PCSF-NC-PASSPORT-ADVERTISED-AS-THE-CV",
     defect:
-      "the homepage says 'Samla erfarenhet, utbildning och certifieringar' again — employment history is the CV's, not the Passport's",
+      "the homepage says 'Samla erfarenhet, utbildning och certifikat' again — employment history is the CV's, not the Passport's",
     file: DICT,
-    find: '      "Samla dina certifieringar, licenser och yrkesbehörigheter med underlag och tydlig status. Du väljer vilka uppgifter du delar.",',
+    find: '      "Samla dina certifikat, licenser och behörigheter på ett ställe – och välj själv vad du delar.",',
     replace:
-      '      "Samla erfarenhet, utbildning och certifieringar med underlag och tydlig status. Du väljer vilka uppgifter du delar.",',
+      '      "Samla erfarenhet, utbildning och certifikat på ett ställe – och välj själv vad du delar.",',
     guard: GUARD,
-    expect: "sv · the Passport sentences are the specification's",
+    expect: "sv · the Passport sentences are the approved ones",
+  },
+  {
+    id: "PCSF-NC-PASSPORT-PAGE-ADVERTISES-EMPLOYMENT",
+    defect:
+      "the Passport's own page pitches work history again — a single sentence the exact-copy check would not see",
+    file: DICT,
+    find: '    "passportPage.holds.lead":\n      "Samla det som har betydelse i ditt säkerhetsarbete',
+    replace:
+      '    "passportPage.holds.lead":\n      "Samla din anställning och det som har betydelse i ditt säkerhetsarbete',
+    guard: GUARD,
+    expect: '"passportPage.holds.lead" does not advertise the Passport',
+  },
+  {
+    id: "PCSF-NC-EXAMPLE-BACK-ON-THE-HOMEPAGE",
+    defect:
+      "the illustrative Passport card returns to the homepage, which explains the Passport in depth again instead of pointing to its page",
+    file: "src/components/site/HomeSections.tsx",
+    find: "export function HomeWhy() {",
+    replace:
+      'import { HomePassportPreview } from "@/components/site/HomePassportPreview";\nexport function HomeWhy() {',
+    guard: GUARD,
+    expect: "the homepage does not explain the Passport in depth",
   },
 ];
 
