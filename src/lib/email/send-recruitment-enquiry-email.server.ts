@@ -14,6 +14,9 @@
 // enquirer's address is used only as `reply_to`, so answering is one click
 // and nothing the enquirer types can choose where the message goes.
 //
+// After the enquiry is accepted, a fixed acknowledgement goes to the
+// enquirer (see the end of this file).
+//
 // Server-only (`.server.ts`). Nothing is persisted.
 
 import type { EnquiryService, RecruitmentEnquiry } from "@/lib/contact/recruitment-enquiry";
@@ -117,10 +120,95 @@ export async function sendRecruitmentEnquiryEmail(
     }
     return { status: "sent" };
   } catch (err) {
-    console.error("[send-recruitment-enquiry-email] network failure", err);
-    return {
-      status: "failed",
-      error: err instanceof Error ? err.message.slice(0, 120) : "UNKNOWN_ERROR",
-    };
+    const error = err instanceof Error ? err.message.slice(0, 120) : "UNKNOWN_ERROR";
+    console.error("[send-recruitment-enquiry-email] network failure", error);
+    return { status: "failed", error };
+  }
+}
+
+// ── ACKNOWLEDGEMENT TO THE ENQUIRER ────────────────────────────────────
+//
+// A short, fixed receipt so the enquirer knows it arrived. Sent only after
+// the enquiry itself reached CQrityjob's inbox, and only to the validated
+// address the enquirer typed (whose daily count is capped by the durable
+// throttle). Replies go to CQrityjob's own inbox (ADMIN_NOTIFICATION_EMAIL),
+// never to the no-reply sender. It is a transactional receipt: no marketing,
+// no subscription, and nothing the enquirer typed is echoed except a first
+// name that passes a strict letters-only check — so the form cannot be used
+// to relay arbitrary text or links to a stranger.
+
+const ACK_SUBJECT: Record<RecruitmentEnquiry["language"], string> = {
+  sv: "Vi har tagit emot din förfrågan – CQrityjob",
+  en: "We have received your enquiry – CQrityjob",
+};
+
+/** The first name, or null when it is not plainly a name. */
+export function acknowledgementFirstName(name: string): string | null {
+  const first = name.trim().split(/\s+/)[0] ?? "";
+  return /^[\p{L}\p{M}][\p{L}\p{M}'’-]{0,39}$/u.test(first) ? first : null;
+}
+
+export function renderEnquiryAcknowledgementEmail(enquiry: RecruitmentEnquiry): {
+  subject: string;
+  text: string;
+  html: string;
+} {
+  const first = acknowledgementFirstName(enquiry.name);
+  const lines =
+    enquiry.language === "sv"
+      ? [
+          first ? `Hej ${first},` : "Hej,",
+          "Tack för att du kontaktar CQrityjob.",
+          "Vi har tagit emot din förfrågan och återkommer så snart vi kan.",
+          "Med vänlig hälsning\nCQrityjob\nWhere trust comes first.",
+        ]
+      : [
+          first ? `Hi ${first},` : "Hi,",
+          "Thank you for contacting CQrityjob.",
+          "We have received your enquiry and will get back to you as soon as we can.",
+          "Best regards,\nCQrityjob\nWhere trust comes first.",
+        ];
+  const text = lines.join("\n\n");
+  const html = `<!doctype html><html lang="${enquiry.language}"><body style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;font-size:15px;line-height:1.5;color:#111">
+${lines
+  .map((line) => `<p style="margin:0 0 12px">${escapeHtml(line).replace(/\n/g, "<br>")}</p>`)
+  .join("\n")}
+</body></html>`;
+  return { subject: ACK_SUBJECT[enquiry.language], text, html };
+}
+
+/** Never throws; logs the HTTP status only (a provider body can echo the address). */
+export async function sendEnquiryAcknowledgementEmail(
+  enquiry: RecruitmentEnquiry,
+): Promise<EnquiryEmailOutcome> {
+  const missing = missingRecruitmentEnquirySettings();
+  if (missing.length > 0) return { status: "not_configured", missing };
+
+  const { subject, text, html } = renderEnquiryAcknowledgementEmail(enquiry);
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.RESEND_FROM_EMAIL,
+        to: [enquiry.email],
+        reply_to: process.env.ADMIN_NOTIFICATION_EMAIL,
+        subject,
+        text,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      console.error("[send-recruitment-enquiry-email] acknowledgement rejected", res.status);
+      return { status: "failed", error: `HTTP ${res.status}` };
+    }
+    return { status: "sent" };
+  } catch (err) {
+    const error = err instanceof Error ? err.message.slice(0, 120) : "UNKNOWN_ERROR";
+    console.error("[send-recruitment-enquiry-email] acknowledgement network failure", error);
+    return { status: "failed", error };
   }
 }
