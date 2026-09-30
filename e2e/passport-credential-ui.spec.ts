@@ -197,9 +197,11 @@ test.describe("the shared recipient Passport", () => {
     // and the whole card warns as well.
     await expect(lapsed.getByText("Expired", { exact: true })).toBeVisible();
     await expect(lapsed.getByText("Contains expired entries")).toBeVisible();
-    await expect(lapsed.getByText("PREVIOUSLY SOURCE-CONFIRMED")).toBeVisible();
-    // And it must NOT carry the bare present-tense claim.
-    await expect(lapsed.getByText("SOURCE-CONFIRMED", { exact: true })).toHaveCount(0);
+    // A CQrityjob document review keeps its level word once it lapses
+    // (historicalTrustWordKey): "Documented", never "previously" anything --
+    // that past tense belongs only to a source's own confirmation.
+    await expect(lapsed.getByText("Documented", { exact: true }).first()).toBeVisible();
+    await expect(lapsed.getByText(/PREVIOUSLY|SOURCE-CONFIRMED/i)).toHaveCount(0);
 
     // The current one is a CQrityjob document review, and since the
     // trust-source containment (20261030090000) that is presented as
