@@ -92,9 +92,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the homepage says 'Samla erfarenhet, utbildning och certifikat' again — employment history is the CV's, not the Passport's",
     file: DICT,
-    find: '      "Samla dina certifikat, licenser och behörigheter på ett ställe – och välj själv vad du delar.",',
+    find: '      "Samla och visa de meriter som bygger din professionella säkerhetsprofil.",',
     replace:
-      '      "Samla erfarenhet, utbildning och certifikat på ett ställe – och välj själv vad du delar.",',
+      '      "Samla erfarenhet, utbildning och meriter som bygger din professionella säkerhetsprofil.",',
     guard: GUARD,
     expect: "sv · the Passport sentences are the approved ones",
   },

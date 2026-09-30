@@ -114,17 +114,17 @@ export const dictionaries = {
     // homepage's structured data and, where needed, onboarding. The
     // homepage itself uses its shorter hero sentence.
     "brand.description":
-      "CQrityjob är platsen där säkerhetsbranschen bygger karriärer och team: jobb, karriärutveckling, Security Passport och stöd i säkerhetsarbetet för dig som arbetar inom säkerhet – och rekrytering för arbetsgivare.",
+      "CQrityjob är säkerhetsbranschens plattform för människor och möjligheter: karriärutveckling, Security Passport, jobb och stöd i säkerhetsarbetet för dig som arbetar inom säkerhet – och rekrytering av säkerhetskompetens för arbetsgivare, lokalt eller internationellt.",
     // ── PAGE TITLES AND DESCRIPTIONS ─────────────────────────────────
     //
     // The server renders the Swedish page, so each route's <head> reads the
     // Swedish pair from here; useLocalizedHead() swaps in the English pair
     // on the client when the reader has chosen English. No free, guarantee,
     // integration or volume claim belongs in any of them.
-    "meta.home.title": "CQrityjob – där säkerhetsbranschen bygger karriärer och team",
+    "meta.home.title": "CQrityjob – säkerhetsbranschens plattform för människor och möjligheter",
     "meta.home.description":
-      "Jobb, karriär, Security Passport och rekrytering för säkerhetsbranschen – för dig som arbetar inom säkerhet och för organisationer som behöver rätt säkerhetskompetens.",
-    "meta.about.title": "Om CQrityjob – byggt ur erfarenhet från säkerhetsbranschen",
+      "Utvecklas inom säkerhet, bygg din professionella profil och hitta nästa möjlighet. För arbetsgivare: hitta, bedöm och rekrytera säkerhetskompetens på samma plats.",
+    "meta.about.title": "Om CQrityjob – varför börja om varje gång?",
     "meta.careerCenter.title": "Yrken och karriärvägar inom säkerhet – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – din karriäranalys – CQrityjob",
     "meta.jobs.title": "Lediga jobb inom säkerhet – CQrityjob",
@@ -153,6 +153,13 @@ export const dictionaries = {
     //
     // HOMEPAGE = BREADTH. SUBPAGE = DEPTH. CTA = THE PATH FORWARD.
     //
+    // THE STORY EVERY PAGE TELLS (brand story, 2026-09-30): CQrityjob is the
+    // place people in security return to throughout their working lives, and
+    // the place organisations come to for security competence, locally or
+    // internationally. The products are evidence of that, not the story
+    // itself. The ambition may be international; factual claims describe the
+    // business as it is today (no scale, market-coverage or "leading" claim).
+    //
     // Six sections and nothing else: the hero with its two equal audience
     // entrances, the four entry points for a person, the latest real
     // vacancies, the employer journey, the recruitment services band and why
@@ -164,42 +171,42 @@ export const dictionaries = {
     // usable on this page (see docs/public-website/release-gates.md).
     // scripts/public-homepage-check.tsx renders the page and fails the build
     // if a sentence overclaims.
-    "home.hero.title": "Där säkerhetsbranschen bygger karriärer och team.",
+    "home.hero.title": "Säkerhetsbranschens plattform för människor och möjligheter.",
     "home.hero.subtitle":
-      "En plattform för dig som arbetar inom säkerhet – och för organisationer som behöver rätt säkerhetskompetens.",
+      "CQrityjob är platsen för dig som vill utvecklas inom säkerhet, bygga din professionella profil och hitta nästa möjlighet – lokalt eller internationellt. För arbetsgivare samlar vi verktygen för att hitta, bedöma och rekrytera säkerhetskompetens på samma plats.",
     "home.hero.audience.label": "Välj var du vill börja",
     "home.hero.individual.title": "För dig i säkerhetsbranschen",
     "home.hero.individual.body":
-      "Karriär, jobb, Security Passport och stöd i ditt säkerhetsarbete.",
+      "Utveckla din karriär, hitta jobb, bygg ditt Security Passport och få stöd i säkerhetsarbetet.",
     "home.hero.employer.title": "För arbetsgivare",
-    "home.hero.employer.body": "Annonsera, bedöm och rekrytera – själva eller med vår hjälp.",
+    "home.hero.employer.body":
+      "Hitta, bedöm och rekrytera säkerhetskompetens – lokalt eller internationellt.",
 
     // §2 — Four entry points for a person. Each answers “what can I do here?”
     // and offers ONE action, to that part's own page.
-    "home.individual.title": "För dig i säkerhetsbranschen",
+    "home.individual.title": "Hela karriären. På samma plats.",
     "home.individual.lead":
-      "Välj var du vill börja. Delarna hänger ihop, men du behöver inte använda alla.",
+      "Oavsett var du befinner dig i karriären ska CQrityjob hjälpa dig vidare.",
     "home.individual.career.title": "Karriär",
     "home.individual.career.body":
-      "Utforska säkerhetsyrken, se vad de kräver och hitta ditt nästa steg.",
+      "Förstå dina möjligheter, utveckla din kompetens och planera nästa steg.",
     "home.individual.career.cta": "Utforska karriärvägar",
     "home.individual.jobs.title": "Jobb",
-    "home.individual.jobs.body":
-      "Sök bland lediga jobb inom säkerhet. Du behöver inget konto för att läsa annonserna.",
+    "home.individual.jobs.body": "Hitta nästa roll eller uppdrag inom säkerhet.",
     "home.individual.jobs.cta": "Se lediga jobb",
     "home.individual.passport.title": "Security Passport",
     "home.individual.passport.body":
-      "Samla dina certifikat, licenser och behörigheter på ett ställe – och välj själv vad du delar.",
+      "Samla och visa de meriter som bygger din professionella säkerhetsprofil.",
     "home.individual.passport.cta": "Upptäck Security Passport",
     "home.individual.work.title": "Säkerhetsarbete",
     "home.individual.work.body":
-      "Strukturera omvärldsbevakning, riskbedömningar, rapporter och åtgärder i en egen arbetsyta.",
+      "Få stöd i det dagliga arbetet med analys, risk, beredskap och andra delar av säkerhetsarbetet.",
     "home.individual.work.cta": "Upptäck säkerhetsarbetet",
 
     // §3 — The latest REAL vacancies, read from the same public jobs query the
     // jobs page uses. Nothing is hard-coded; an empty market says so.
-    "home.jobs.title": "Senaste jobben",
-    "home.jobs.lead": "Aktuella lediga tjänster inom säkerhet.",
+    "home.jobs.title": "Nästa möjlighet kan finnas här.",
+    "home.jobs.lead": "Aktuella roller och uppdrag inom säkerhet.",
     "home.jobs.all": "Se alla lediga jobb",
     "home.jobs.loading": "Hämtar de senaste jobben …",
     "home.jobs.error": "Jobben kunde inte hämtas just nu. Du hittar alla lediga jobb på jobbsidan.",
@@ -214,9 +221,9 @@ export const dictionaries = {
     // decision. TRUST and BESKT are not named here: neither is published in
     // production yet (release gate C and the TRUST content state).
     "home.employers.eyebrow": "För arbetsgivare",
-    "home.employers.title": "Hitta rätt säkerhetskompetens – från annons till beslut",
+    "home.employers.title": "Hitta människorna som stärker er säkerhet.",
     "home.employers.body":
-      "Arbetsgivarplattformen samlar hela rekryteringen. Strukturen gör det lättare att jämföra kandidater och att motivera ert beslut.",
+      "CQrityjob samlar rekryteringen av säkerhetskompetens på samma plats – från jobbannons och kandidater till assessment, strukturerad intervju och beslutsunderlag – oavsett om ni söker lokalt eller internationellt.",
     "home.employers.steps.label": "Så går rekryteringen till",
     "home.employers.step.advertise.title": "Annonsera",
     "home.employers.step.advertise.body":
@@ -240,7 +247,7 @@ export const dictionaries = {
     // platform yourselves, or ask CQrityjob to help. One working contact action.
     "home.services.title": "Vill ni ha hjälp med hela rekryteringen?",
     "home.services.body":
-      "Ni kan använda plattformen själva – eller låta CQrityjob hjälpa er att hitta och rekrytera rätt människor.",
+      "Använd plattformen själva eller låt oss hjälpa er att hitta rätt säkerhetskompetens.",
     "home.services.recruitment.title": "Rekrytering",
     "home.services.recruitment.body": "Rekrytering av säkerhetspersonal och specialister.",
     "home.services.executive.title": "Executive Search",
@@ -250,11 +257,9 @@ export const dictionaries = {
     "home.services.cta": "Kontakta oss",
 
     // §6 — Why CQrityjob, briefly, ending in the brand line.
-    "home.why.title": "Varför CQrityjob",
+    "home.why.title": "En bransch. Många yrkesliv. En plats att utvecklas och mötas.",
     "home.why.body":
-      "CQrityjob är byggt ur verklig erfarenhet från säkerhetsbranschen och utformat kring hela yrkeslivet inom säkerhet – från första jobbet och vidareutveckling till rekrytering och ledarskap.",
-    "home.why.trust":
-      "Förtroende är grunden i allt säkerhetsarbete. Därför är vi tydliga med vad som är verifierat, låter dig bestämma vad du delar och låter alltid människor fatta besluten.",
+      "Människor inom säkerhet söker möjligheter att utvecklas. Organisationer söker människorna som kan stärka deras säkerhet. CQrityjob för dem samman – och bygger verktygen som hjälper båda vidare.",
     "home.why.cta": "Läs mer om oss",
 
     // Kept for surfaces outside the homepage: the career analysis action and
@@ -288,9 +293,9 @@ export const dictionaries = {
     // is enabled), so HAYAT is described as the document reader it is. The
     // gate-met wording is kept in docs/public-website/release-gates.md.
     "passportPage.eyebrow": "Security Passport",
-    "passportPage.title": "Dina meriter inom säkerhet – samlade för hela karriären",
+    "passportPage.title": "Din professionella profil ska kunna följa med dig",
     "passportPage.lead":
-      "Security Passport är din professionella säkerhetsprofil: certifikat, licenser, förordnanden och andra meriter på ett ställe, med underlag och en tydlig status för varje uppgift. Du bestämmer vad som delas och med vem.",
+      "Under en karriär samlar du på dig licenser, certifieringar och andra meriter. Security Passport samlar dem i en professionell säkerhetsprofil som kan följa med dig mellan roller, arbetsgivare och marknader – med underlag och en tydlig status för varje uppgift. Du bestämmer vad som delas och med vem.",
     "passportPage.cta.open": "Öppna ditt Security Passport",
     "passportPage.cta.signinLead": "Har du redan ett konto?",
     "passportPage.holds.title": "Det som visar vad du kan och får göra",
@@ -364,7 +369,7 @@ export const dictionaries = {
     "securityWorkPage.eyebrow": "Säkerhetsarbete",
     "securityWorkPage.title": "Stöd för ditt säkerhetsarbete",
     "securityWorkPage.lead":
-      "En egen arbetsyta för omvärldsbevakning, riskbedömningar, rapporter och åtgärder – strukturerat från underlag till beslut.",
+      "CQrityjob ska vara till nytta även när du har fått jobbet. Säkerhetsarbete är din egen arbetsyta för omvärldsbevakning, riskbedömningar, rapporter och åtgärder – strukturerat från underlag till beslut.",
     "securityWorkPage.status":
       "AI-stödet är förberett men ännu inte aktiverat. Arbetsytan fungerar redan i dag utan AI.",
     "securityWorkPage.cta.start": "Kom igång",
@@ -427,7 +432,7 @@ export const dictionaries = {
 
     "jobs.discover.title": "Lediga jobb inom säkerhet",
     "jobs.discover.lead":
-      "Sök efter roll, plats och anställningsform. Läs annonsens krav och välj jobb som är relevanta för dig.",
+      "Sök efter roll, plats och anställningsform. Läs vad varje roll kräver och välj de jobb och uppdrag som passar dig.",
     "jobs.discover.publicNote": "Du behöver inget konto för att söka.",
     // The jobs page's own strings. They were hard-coded as sv/en ternaries
     // in the route; the labels a browser test addresses by name (the two
@@ -642,9 +647,9 @@ export const dictionaries = {
     //     säkerhetsprövning. Release gate C is NOT met in production (no
     //     published method), so the page says it is not available yet;
     //   * interview AI is disabled in production, so no sentence promises it.
-    "employers.title": "Rekrytera säkerhetspersonal – själva eller med vår hjälp",
+    "employers.title": "Hitta rätt säkerhetskompetens – lokalt eller internationellt",
     "employers.lead":
-      "I arbetsgivarplattformen annonserar ni, tar emot ansökningar, bedömer kandidater och genomför strukturerade intervjuer på ett ställe. Vill ni ha hjälp hela vägen hjälper vi er med rekryteringen.",
+      "I arbetsgivarplattformen publicerar ni roller, når relevanta kandidater, tar emot ansökningar, bedömer kandidater och genomför strukturerade intervjuer – med beslutsunderlaget samlat på ett ställe. Vill ni ha hjälp hela vägen hjälper vi er med rekryteringen.",
     "employers.cta.register": "Registrera företag",
     "employers.cta.how": "Så fungerar det",
     "employers.cta.loginLead": "Har ni redan ett konto?",
@@ -720,33 +725,39 @@ export const dictionaries = {
     "employers.disclaimer":
       "CQrityjob stödjer arbetsgivarens beslut. Varken CQrityjob eller AI avgör om en kandidat är lämplig – arbetsgivaren fattar och dokumenterar alltid det slutliga beslutet.",
 
-    // ── ABOUT (rewritten 2026-09-30) ──────────────────────────────────────
+    // ── ABOUT (the origin story, brand story 2026-09-30) ──────────────────
     //
-    // Why CQrityjob exists, the problem it solves, what it builds, the
-    // vision, why it understands the industry and what “Where trust comes
-    // first” means. The founder's experience is evidence of that
-    // understanding, in one paragraph, and the company stays the subject.
-    // No claim that others lack understanding, that CQrityjob leads a
-    // market or that every credential is verified.
+    // The clearest statement of WHY CQrityjob exists: an international
+    // recruitment experience, the question it raised ("varför börja om varje
+    // gång?"), the more international labour market, the step from the next
+    // job to the whole working life, the experience behind it, the vision
+    // and what “Where trust comes first” means. An insight, not a complaint:
+    // no former employer is named or criticised, and the founder's
+    // experience stays one paragraph. No claim that others lack
+    // understanding, that CQrityjob leads a market, that every credential is
+    // verified or that a licence travels between jurisdictions.
     "about.eyebrow": "Om CQrityjob",
-    "about.title": "Byggt ur erfarenhet från säkerhetsbranschen.",
+    "about.title": "Varför börja om varje gång?",
     "about.lead":
-      "CQrityjob finns för att människor och organisationer inom säkerhet ska hitta varandra, utvecklas och arbeta med större tydlighet.",
-    "about.why.title": "Varför CQrityjob finns",
+      "CQrityjob växte fram ur en erfarenhet av internationell rekrytering inom säkerhet – och ur frågan den väckte.",
+    "about.why.title": "Frågan som startade CQrityjob",
     "about.why.body":
-      "Säkerhetsbranschens behov hänger ihop, men verktygen gör det sällan. Jobb finns på ett ställe och utbildningar på ett annat, meriter ligger i pärmar och mejl och rekryteringsunderlag i separata system. Det gör det svårare för människor att visa vad de kan – och för arbetsgivare att hitta och bedöma rätt kompetens.",
-    "about.what.title": "Vad vi bygger",
-    "about.what.body":
-      "En plattform för hela yrkeslivet inom säkerhet. För dig som arbetar i branschen: att utforska yrken och utvecklas, visa dina meriter med Security Passport, hitta nästa jobb och få stöd i det dagliga säkerhetsarbetet. För arbetsgivare: en sammanhållen rekrytering från annons till beslut – och hjälp med rekryteringen när ni vill ha det.",
+      "När vår grundare sökte en internationell säkerhetsroll pågick rekryteringen i flera månader. Erfarenhet, kvalifikationer och kompetens som byggts upp under många år behövde återigen beskrivas, dokumenteras och bedömas. Så fungerar det ofta i dag, oavsett arbetsgivare: varje ny möjlighet börjar med att samma professionella berättelse byggs upp på nytt. Ur det kom frågan som blev CQrityjob – varför ska vi börja om varje gång?",
+    "about.market.title": "En allt mer internationell arbetsmarknad",
+    "about.market.body":
+      "Säkerhetskarriärer rör sig i dag mellan organisationer, branscher, marknader och länder. Den som arbetar inom säkerhet ska kunna bygga en professionell profil över tid, i stället för att börja från noll vid varje byte. Arbetsgivare ska kunna söka relevant säkerhetskompetens bortom sitt närmaste nätverk när de behöver det. Licenser och tillstånd gäller fortfarande där de är utfärdade – men berättelsen om vad du har gjort och kan ska kunna följa med dig.",
+    "about.whole.title": "Från nästa jobb till hela yrkeslivet",
+    "about.whole.body":
+      "Det som började som en idé om en bättre väg mellan kandidat och arbetsgivare har vuxit till något större. I dag bygger vi stöd för hela yrkeslivet: att utforska och utveckla karriären, visa sina meriter med Security Passport, hitta nästa jobb och få stöd i det dagliga säkerhetsarbetet. För arbetsgivare samlar vi rekryteringen – och hjälper till när ni vill ha det.",
     "about.vision.title": "Visionen",
     "about.vision.body":
-      "CQrityjob ska vara platsen dit säkerhetsbranschen vänder sig för att hitta nästa möjlighet, utveckla sin kompetens, anlita rätt människor och få stöd i sitt säkerhetsarbete.",
-    "about.experience.title": "Vi känner branschen inifrån",
+      "CQrityjob ska bli den naturliga platsen att återvända till genom hela yrkeslivet inom säkerhet – och platsen organisationer vänder sig till när de behöver säkerhetskompetens. Lokalt eller internationellt.",
+    "about.experience.title": "Byggt ur erfarenhet från säkerhetsbranschen",
     "about.experience.body":
-      "CQrityjob grundades av Mostafa Alshawi, som har lång erfarenhet av säkerhetsarbete – från polisen och internationellt säkerhetsarbete till personskydd och säkerhetsledning. Den erfarenheten präglar plattformen: den är byggd kring de yrken, krav och beslut som faktiskt finns i branschen.",
+      "CQrityjob grundades av Mostafa Alshawi, som har lång erfarenhet av säkerhetsarbete – från polisen och internationella säkerhetsuppdrag till personskydd, säkerhetsledning och företagssäkerhet. Den erfarenheten präglar plattformen: den är byggd kring de yrken, krav och beslut som faktiskt finns i branschen.",
     "about.trust.title": "Where trust comes first",
     "about.trust.body":
-      "I säkerhetsbranschen är förtroende allt. För oss betyder det att vara tydliga med vad som är verifierat och vad som inte är det, att du själv bestämmer vilka uppgifter du delar och att människor – inte AI – fattar besluten om anställning och säkerhet.",
+      "Förtroende binder ihop allt vi bygger: din professionella identitet, dina meriter, rekryteringen, bedömningarna, AI-stödet och säkerhetsarbetet. Därför är vi tydliga med vad som är kontrollerat och vad som inte är det, du bestämmer själv vad du delar – och AI stödjer arbetet, medan människor ansvarar för besluten.",
     "about.cta.individuals": "För dig i säkerhetsbranschen",
     "about.cta.employers": "För arbetsgivare",
     "assessment.title": "Karriäranalys, rekryteringstester och kompetensutveckling",
@@ -3487,7 +3498,7 @@ export const dictionaries = {
     "cc.hero.title": "Hitta din väg i säkerhetsbranschen",
     "cc.hero.name": "Karriärcenter",
     "cc.hero.lead":
-      "Utforska säkerhetsyrken, se vad de kräver och vilka steg som kan komma härnäst. Utgå från ditt nuvarande yrke eller låt karriäranalysen ge dig förslag.",
+      "Förstå var du står, utforska vart du kan gå och få stöd att ta nästa steg – genom hela karriären. Utgå från ditt nuvarande yrke eller låt karriäranalysen ge dig förslag.",
     "cc.hero.cta.explore": "Se alla yrken",
 
     // § 2 — Var står du i dag?
@@ -3726,7 +3737,8 @@ export const dictionaries = {
     "cc.explore.basis": "Guiderna är källhänvisade, granskade och utgår från svenska förhållanden.",
     "cc.journey.label": "Karriärens fyra steg",
     "cc.journey.title": "Din väg framåt",
-    "cc.journey.lead": "Fyra steg som hänger ihop. Du kan börja var du vill.",
+    "cc.journey.lead":
+      "En karriär är en väg som fortsätter. Börja var du vill – och kom tillbaka när det är dags för nästa steg.",
     "cc.journey.explore.title": "Utforska",
     "cc.journey.explore.body": "Läs om säkerhetsyrken och ta reda på vad som passar dig.",
     "cc.journey.explore.cta": "Se alla yrken",
@@ -3736,11 +3748,15 @@ export const dictionaries = {
     "cc.journey.develop.cta": "Skapa konto",
     "cc.journey.develop.ctaSignedIn": "Till Min karriär",
     "cc.journey.show.title": "Visa",
-    "cc.journey.show.body": "Samla dina meriter i Security Passport och visa vad du kan.",
+    "cc.journey.show.body":
+      "Samla dina meriter i Security Passport – en profil som följer med dig.",
     "cc.journey.show.cta": "Om Security Passport",
     "cc.journey.find.title": "Hitta",
-    "cc.journey.find.body": "Hitta lediga jobb som passar din väg.",
+    "cc.journey.find.body": "Hitta jobb och uppdrag som passar din väg.",
     "cc.journey.find.cta": "Se lediga jobb",
+    "cc.journey.work":
+      "Vid sidan av stegen finns stöd i det dagliga arbetet, när du väl är på plats.",
+    "cc.journey.work.cta": "Om Säkerhetsarbete",
     "cc.entry.fromAnalysis.cta": "Se din rekommendation",
     "cc.me.primary.badge": "Ditt främsta yrkesförslag",
     "cc.me.why": "Därför:",
@@ -8896,11 +8912,11 @@ export const dictionaries = {
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
     "brand.description":
-      "CQrityjob is where the security industry builds careers and teams: jobs, career development, Security Passport and support for security work for people in security – and recruitment for employers.",
-    "meta.home.title": "CQrityjob – where the security industry builds careers and teams",
+      "CQrityjob is the platform for people and opportunities in security: career development, Security Passport, jobs and support for security work for people in security – and recruitment of security professionals for employers, locally or internationally.",
+    "meta.home.title": "CQrityjob – the platform for people and opportunities in security",
     "meta.home.description":
-      "Jobs, careers, Security Passport and recruitment for the security industry – for people who work in security and for organisations that need the right security expertise.",
-    "meta.about.title": "About CQrityjob – built from experience in the security industry",
+      "Develop your security career, build your professional profile and find your next opportunity. For employers: find, assess and recruit security professionals in one place.",
+    "meta.about.title": "About CQrityjob – why start over every time?",
     "meta.careerCenter.title": "Security professions and career paths – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – your career analysis – CQrityjob",
     "meta.jobs.title": "Security jobs – CQrityjob",
@@ -8924,38 +8940,38 @@ export const dictionaries = {
     // the English refinement pass.
     //
     // The public homepage: see the Swedish block for its six sections.
-    "home.hero.title": "Where the security industry builds careers and teams.",
+    "home.hero.title": "The platform for people and opportunities in security.",
     "home.hero.subtitle":
-      "One platform for people who work in security – and for organisations that need the right security expertise.",
+      "CQrityjob is where you develop your security career, build your professional profile and find your next opportunity – locally or internationally. For employers, it brings together the tools to find, assess and recruit security professionals in one place.",
     "home.hero.audience.label": "Choose where to start",
     "home.hero.individual.title": "For people in security",
     "home.hero.individual.body":
-      "Career, jobs, Security Passport and support for your security work.",
+      "Develop your career, find jobs, build your Security Passport and get support in your security work.",
     "home.hero.employer.title": "For employers",
-    "home.hero.employer.body": "Advertise, assess and recruit – yourselves or with our help.",
+    "home.hero.employer.body":
+      "Find, assess and recruit security professionals – locally or internationally.",
 
-    "home.individual.title": "For people in security",
+    "home.individual.title": "Your whole career. In one place.",
     "home.individual.lead":
-      "Choose where to start. The parts connect, but you do not need to use them all.",
+      "Wherever you are in your career, CQrityjob is here to help you take the next step.",
     "home.individual.career.title": "Career",
     "home.individual.career.body":
-      "Explore security professions, see what they require and find your next step.",
+      "Understand your options, develop your skills and plan your next move.",
     "home.individual.career.cta": "Explore career paths",
     "home.individual.jobs.title": "Jobs",
-    "home.individual.jobs.body":
-      "Browse open jobs in security. You do not need an account to read the adverts.",
+    "home.individual.jobs.body": "Find your next role or assignment in security.",
     "home.individual.jobs.cta": "See open jobs",
     "home.individual.passport.title": "Security Passport",
     "home.individual.passport.body":
-      "Bring your certificates, licences and authorisations together in one place – and choose what you share.",
+      "Bring together and present the credentials behind your professional security profile.",
     "home.individual.passport.cta": "Discover Security Passport",
     "home.individual.work.title": "Security work",
     "home.individual.work.body":
-      "Structure monitoring, risk assessments, reports and actions in a workspace of your own.",
+      "Get support in your day-to-day work with analysis, risk, preparedness and the rest of your security role.",
     "home.individual.work.cta": "Discover security work",
 
-    "home.jobs.title": "Latest jobs",
-    "home.jobs.lead": "Current vacancies in security.",
+    "home.jobs.title": "Your next opportunity could be here.",
+    "home.jobs.lead": "Current roles and assignments in security.",
     "home.jobs.all": "See all open jobs",
     "home.jobs.loading": "Loading the latest jobs …",
     "home.jobs.error":
@@ -8967,9 +8983,9 @@ export const dictionaries = {
     "jobs.detail.apply_jump": "Apply",
 
     "home.employers.eyebrow": "For employers",
-    "home.employers.title": "Find the right security expertise – from advert to decision",
+    "home.employers.title": "Find the people who strengthen your security.",
     "home.employers.body":
-      "The employer platform brings the whole recruitment together. Its structure makes candidates easier to compare and your decision easier to explain.",
+      "CQrityjob brings security recruitment together in one place – from job advert and candidates to assessment, structured interviews and decision support – whether you are hiring locally or internationally.",
     "home.employers.steps.label": "How recruitment works",
     "home.employers.step.advertise.title": "Advertise",
     "home.employers.step.advertise.body":
@@ -8989,9 +9005,9 @@ export const dictionaries = {
     "home.employers.cta.how": "How it works",
     "home.employers.cta.explore": "Read about the employer platform",
 
-    "home.services.title": "Would you like help with the whole recruitment?",
+    "home.services.title": "Need help with the whole recruitment process?",
     "home.services.body":
-      "You can use the platform yourselves – or let CQrityjob help you find and recruit the right people.",
+      "Use the platform yourselves, or let us help you find the right security professionals.",
     "home.services.recruitment.title": "Recruitment",
     "home.services.recruitment.body": "Recruitment of security personnel and specialists.",
     "home.services.executive.title": "Executive Search",
@@ -9000,11 +9016,9 @@ export const dictionaries = {
     "home.services.interim.body": "Security expertise for a period or a defined assignment.",
     "home.services.cta": "Contact us",
 
-    "home.why.title": "Why CQrityjob",
+    "home.why.title": "One profession. Many careers. One place to grow and connect.",
     "home.why.body":
-      "CQrityjob is built from real experience in the security industry and designed around the whole professional life in security – from the first job and further development to recruitment and leadership.",
-    "home.why.trust":
-      "Trust is the foundation of all security work. That is why we are clear about what has been verified, let you decide what you share and always leave the decisions to people.",
+      "People in security are looking for opportunities to grow. Organisations are looking for people who can strengthen their security. CQrityjob brings them together – and builds the tools that help both move forward.",
     "home.why.cta": "More about us",
 
     "home.career.analysis": "Take the career analysis",
@@ -9028,9 +9042,9 @@ export const dictionaries = {
     //
     // /security-passport and /sakerhetsarbete: see the Swedish blocks.
     "passportPage.eyebrow": "Security Passport",
-    "passportPage.title": "Your credentials in security – together for your whole career",
+    "passportPage.title": "Your professional profile should move with you",
     "passportPage.lead":
-      "Security Passport is your professional security profile: certificates, licences, authorisations and other credentials in one place, with supporting documents and a clear status for every entry. You decide what is shared and with whom.",
+      "Over a career you collect licences, certifications and other credentials. Security Passport brings them together in a professional security profile that can go with you across roles, employers and markets – with supporting evidence and a clear status for every entry. You decide what is shared, and with whom.",
     "passportPage.cta.open": "Open your Security Passport",
     "passportPage.cta.signinLead": "Already have an account?",
     "passportPage.holds.title": "What shows what you can do and are authorised to do",
@@ -9088,7 +9102,7 @@ export const dictionaries = {
     "securityWorkPage.eyebrow": "Security work",
     "securityWorkPage.title": "Support for your security work",
     "securityWorkPage.lead":
-      "A workspace of your own for monitoring, risk assessments, reports and actions – structured from evidence to decision.",
+      "CQrityjob should stay useful after you land the job. Security work is your own workspace for monitoring, risk assessments, reports and actions – structured from sources to decisions.",
     "securityWorkPage.status":
       "AI assistance is prepared but not yet activated. The workspace already works without AI today.",
     "securityWorkPage.cta.start": "Get started",
@@ -9149,7 +9163,7 @@ export const dictionaries = {
 
     "jobs.discover.title": "Open jobs in security",
     "jobs.discover.lead":
-      "Search by role, location and employment type. Read the requirements and choose roles relevant to you.",
+      "Search by role, location and employment type. Read what each role requires and choose the jobs and assignments that suit you.",
     "jobs.discover.publicNote": "You do not need an account to search.",
     // ENGLISH COPY PENDING THE DEDICATED ENGLISH REVIEW (public website
     // redesign, 2026-09-30). The Swedish text is the approved source; these
@@ -9356,9 +9370,9 @@ export const dictionaries = {
     // the English refinement pass.
     //
     // /employers: see the Swedish block for the rules every sentence follows.
-    "employers.title": "Recruit security professionals – yourselves or with our help",
+    "employers.title": "Find the right security professionals – locally or internationally",
     "employers.lead":
-      "In the employer platform you advertise, receive applications, assess candidates and run structured interviews in one place. If you would like help all the way, we help you with the recruitment.",
+      "In the employer platform you publish roles, reach relevant candidates, receive applications, assess candidates and run structured interviews – with your decision support in one place. If you would like help all the way, we will take on the recruitment with you.",
     "employers.cta.register": "Register your organisation",
     "employers.cta.how": "How it works",
     "employers.cta.loginLead": "Already have an account?",
@@ -9440,24 +9454,27 @@ export const dictionaries = {
     //
     // /about: see the Swedish block.
     "about.eyebrow": "About CQrityjob",
-    "about.title": "Built from experience in the security industry.",
+    "about.title": "Why start over every time?",
     "about.lead":
-      "CQrityjob exists so that people and organisations in security can find each other, develop and work with greater clarity.",
-    "about.why.title": "Why CQrityjob exists",
+      "CQrityjob grew out of an experience of international security recruitment – and the question it raised.",
+    "about.why.title": "The question behind CQrityjob",
     "about.why.body":
-      "The needs of the security industry are connected, but the tools rarely are. Jobs are in one place and training in another, credentials sit in folders and emails, and recruitment evidence in separate systems. That makes it harder for people to show what they can do – and for employers to find and assess the right expertise.",
-    "about.what.title": "What we are building",
-    "about.what.body":
-      "A platform for a whole professional life in security. For people in the industry: exploring professions and developing, showing credentials with Security Passport, finding the next job and getting support in everyday security work. For employers: one connected recruitment from advert to decision – and help with recruitment when you want it.",
-    "about.vision.title": "The vision",
+      "When our founder applied for an international security role, the recruitment process ran for several months. Experience, qualifications and competence built over many years had to be described, documented and assessed all over again. That is how it often works today, whoever the employer: every new opportunity begins by rebuilding the same professional story. Out of that came the question that became CQrityjob – why should we start over every time?",
+    "about.market.title": "A more international security labour market",
+    "about.market.body":
+      "Security careers now move across organisations, sectors, markets and countries. People in security should be able to build a professional profile over time rather than starting from zero with every move. Employers should be able to look for relevant security expertise beyond their immediate network when they need to. Licences and authorisations still apply where they were issued – but the record of what you have done and can do should be able to travel with you.",
+    "about.whole.title": "From the next job to a whole career",
+    "about.whole.body":
+      "What began as an idea for a better path between candidate and employer has grown into something larger. Today we are building support for the whole of a working life: exploring and developing your career, presenting your credentials with Security Passport, finding your next job and getting support in your day-to-day security work. For employers, we bring recruitment together – and help when you want us to.",
+    "about.vision.title": "Our vision",
     "about.vision.body":
-      "CQrityjob is to be the place the security industry turns to when it wants to find the next opportunity, develop its expertise, hire the right people and get support in its security work.",
-    "about.experience.title": "We know the industry from the inside",
+      "CQrityjob aims to be the natural place to return to throughout a career in security – and the place organisations turn to when they need security expertise. Locally or internationally.",
+    "about.experience.title": "Built from security experience",
     "about.experience.body":
-      "CQrityjob was founded by Mostafa Alshawi, who has long experience of security work – from the police and international security work to personal protection and security leadership. That experience shapes the platform: it is built around the professions, requirements and decisions that actually exist in the industry.",
+      "CQrityjob was founded by Mostafa Alshawi, who has long experience across security – from policing and international security assignments to close protection, security management and corporate security. That experience shapes the platform: it is built around the roles, requirements and decisions that actually exist in the profession.",
     "about.trust.title": "Where trust comes first",
     "about.trust.body":
-      "In the security industry, trust is everything. For us it means being clear about what has been verified and what has not, letting you decide what you share, and leaving decisions about employment and security to people – not AI.",
+      "Trust connects everything we build: your professional identity, your credentials, recruitment, assessment, AI support and security work. So we are clear about what has been checked and what has not, you decide what you share – and AI supports the work, while people remain responsible for the decisions.",
     "about.cta.individuals": "For people in security",
     "about.cta.employers": "For employers",
     "assessment.title": "Career analysis, recruitment assessments and learning",
@@ -11993,7 +12010,7 @@ export const dictionaries = {
     "cc.hero.title": "Find your way in the security industry",
     "cc.hero.name": "Career Center",
     "cc.hero.lead":
-      "Explore security professions, see what they require and which steps could come next. Start from your current profession or let the career analysis make suggestions.",
+      "Understand where you are, explore where you could go and get support with the next step – throughout your career. Start from your current role or let the career analysis suggest directions.",
     "cc.hero.cta.explore": "See all professions",
 
     // § 2 — Where are you today?
@@ -12233,7 +12250,8 @@ export const dictionaries = {
     "cc.explore.basis": "The guides are sourced, reviewed and written for Swedish conditions.",
     "cc.journey.label": "The four steps of a career",
     "cc.journey.title": "Your way forward",
-    "cc.journey.lead": "Four connected steps. You can start wherever you like.",
+    "cc.journey.lead":
+      "A career is a path that keeps going. Start wherever you like – and come back when you are ready for the next step.",
     "cc.journey.explore.title": "Explore",
     "cc.journey.explore.body": "Read about security professions and find out what suits you.",
     "cc.journey.explore.cta": "See all professions",
@@ -12244,11 +12262,14 @@ export const dictionaries = {
     "cc.journey.develop.ctaSignedIn": "Go to My Career",
     "cc.journey.show.title": "Show",
     "cc.journey.show.body":
-      "Bring your credentials together in Security Passport and show what you can do.",
+      "Build your Security Passport – a professional profile that goes with you.",
     "cc.journey.show.cta": "About Security Passport",
     "cc.journey.find.title": "Find",
-    "cc.journey.find.body": "Find open jobs that fit your path.",
+    "cc.journey.find.body": "Find jobs and assignments that fit your path.",
     "cc.journey.find.cta": "See open jobs",
+    "cc.journey.work":
+      "Alongside the steps, there is support for your day-to-day work once you are in the role.",
+    "cc.journey.work.cta": "About security work",
     "cc.entry.fromAnalysis.cta": "See your recommendation",
     "cc.me.primary.badge": "Your leading role suggestion",
     "cc.me.why": "Why:",

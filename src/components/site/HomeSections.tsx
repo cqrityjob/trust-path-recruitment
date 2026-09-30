@@ -2,7 +2,8 @@
 //
 //   HOMEPAGE = BREADTH. SUBPAGE = DEPTH. CTA = THE PATH FORWARD.
 //
-//   1. hero                  the headline, one supporting sentence and two
+//   1. hero                  the headline, the positioning (people AND
+//                            employers, locally or internationally) and two
 //                            equal audience entrances
 //   2. for-dig               four entry points for a person — Karriär, Jobb,
 //                            Security Passport, Säkerhetsarbete — each with ONE
@@ -11,7 +12,8 @@
 //                            query, and the way to all of them
 //   4. for-arbetsgivare      the employer journey, benefit first
 //   5. rekryteringstjanster  "Vill ni ha hjälp med hela rekryteringen?"
-//   6. varfor                why CQrityjob, ending in the brand line
+//   6. varfor                the vision in three sentences, ending in the
+//                            brand line
 //
 // Every link targets an existing public route or the one validated
 // `?redirect=` sign-up door. No price, count, person or product claim is
@@ -122,7 +124,7 @@ export function HomeHero() {
         >
           {t("home.hero.title")}
         </h1>
-        <p className="mx-auto mt-6 max-w-[56ch] text-base leading-relaxed text-muted-foreground md:text-lg">
+        <p className="mx-auto mt-6 max-w-[62ch] text-base leading-relaxed text-muted-foreground md:text-lg">
           {t("home.hero.subtitle")}
         </p>
         <nav aria-label={t("home.hero.audience.label")} className="mx-auto mt-10 max-w-3xl">
@@ -555,11 +557,8 @@ export function HomeWhy() {
         <h2 className={H2} style={DISPLAY}>
           {t("home.why.title")}
         </h2>
-        <p className="mt-5 text-base leading-relaxed text-muted-foreground md:text-lg">
+        <p className="mx-auto mt-5 max-w-[60ch] text-base leading-relaxed text-muted-foreground md:text-lg">
           {t("home.why.body")}
-        </p>
-        <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
-          {t("home.why.trust")}
         </p>
         <p
           lang="en"

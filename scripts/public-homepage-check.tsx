@@ -380,16 +380,17 @@ group("T1 · main carries exactly six sections, in the locked order");
 }
 
 /* T2 ---------------------------------------------------------------- */
-group("T2 · the hero: the locked headline, one sentence, two equal entrances");
+group("T2 · the hero: the locked headline, the positioning, two equal entrances");
 {
   const SPEC: Record<Lang, Record<string, string>> = {
     sv: {
-      "home.hero.title": "Där säkerhetsbranschen bygger karriärer och team.",
+      // Brand story, 2026-09-30: the platform for people AND opportunities.
+      "home.hero.title": "Säkerhetsbranschens plattform för människor och möjligheter.",
       "home.hero.individual.title": "För dig i säkerhetsbranschen",
       "home.hero.employer.title": "För arbetsgivare",
     },
     en: {
-      "home.hero.title": "Where the security industry builds careers and teams.",
+      "home.hero.title": "The platform for people and opportunities in security.",
       "home.hero.individual.title": "For people in security",
       "home.hero.employer.title": "For employers",
     },
@@ -405,20 +406,25 @@ group("T2 · the hero: the locked headline, one sentence, two equal entrances");
       headings(hero, "h1")[0] === SPEC[lang]["home.hero.title"],
     );
     ck(`${lang}: the hero is centred`, /<section id="hero"[\s\S]*?text-center/.test(hero));
+    // The positioning is two sentences, one per audience (brand story,
+    // 2026-09-30) -- never a paragraph.
     ck(
-      `${lang}: ONE supporting sentence`,
+      `${lang}: the positioning is rendered, in at most two sentences`,
       heroCopy.includes(d(lang)["home.hero.subtitle"]) &&
-        (d(lang)["home.hero.subtitle"].match(/[.!?](\s|$)/g) ?? []).length === 1,
+        (d(lang)["home.hero.subtitle"].match(/[.!?](\s|$)/g) ?? []).length <= 2,
       d(lang)["home.hero.subtitle"],
     );
-    // It speaks to BOTH audiences (owner review, point 3).
+    // It speaks to BOTH audiences (owner review, point 3), and says the
+    // ambition is local OR international without claiming current scale.
     ck(
-      `${lang}: the subtitle addresses individuals and organisations`,
+      `${lang}: the positioning addresses individuals and employers, locally or internationally`,
       lang === "sv"
-        ? /dig som arbetar inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
-            /organisationer/.test(d(lang)["home.hero.subtitle"])
-        : /people who work in security/.test(d(lang)["home.hero.subtitle"]) &&
-            /organisations/.test(d(lang)["home.hero.subtitle"]),
+        ? /dig som vill utvecklas inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
+            /För arbetsgivare/.test(d(lang)["home.hero.subtitle"]) &&
+            /lokalt eller internationellt/.test(d(lang)["home.hero.subtitle"])
+        : /develop your security career/.test(d(lang)["home.hero.subtitle"]) &&
+            /For employers/.test(d(lang)["home.hero.subtitle"]) &&
+            /locally or internationally/.test(d(lang)["home.hero.subtitle"]),
       d(lang)["home.hero.subtitle"],
     );
     const entrances = anchorsOf(hero);
@@ -1238,7 +1244,8 @@ group("T15 · the English page is English, decoration included");
   //
   //    #senaste-jobben is sized for four vacancies, the most it shows.
   const BUDGET: Record<string, number> = {
-    hero: 55,
+    // Brand story, 2026-09-30: the positioning names both audiences.
+    hero: 80,
     "for-dig": 100,
     "senaste-jobben": 75,
     "for-arbetsgivare": 110,

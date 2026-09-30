@@ -1,22 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Compass, Layers, Quote, Telescope } from "lucide-react";
+import { Compass, Globe2, Layers, Quote, Telescope } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
+import { cn } from "@/lib/utils";
 
-// ── ABOUT (owner review, 2026-09-30) ─────────────────────────────────────
+// ── ABOUT: THE ORIGIN STORY (brand story, 2026-09-30) ────────────────────
 //
-// Rewritten as a whole: why CQrityjob exists, the problem it solves, what it
-// builds, the vision, the founder's experience — briefly, supporting the
-// story rather than becoming it — and what "Where trust comes first" means
-// in practice. It ends on the two audiences' own pages.
+// The page that says most clearly WHY CQrityjob exists, in the order the
+// story happened:
 //
-// No customer, partner, count or credential is claimed here that the
-// product cannot show. The founder's experience is stated as the owner
-// approved it: policing, international security work, personal protection
-// and security leadership.
+//   A  why        an international recruitment experience and the question
+//                 it raised — "why start over every time?"
+//   B  market     security careers cross organisations, markets and borders
+//   C  whole      from the next job to the whole working life
+//   D  experience the security experience the platform is built from
+//   E  vision     the natural place to return to, locally or internationally
+//   F  trust      what "Where trust comes first" means in practice
+//
+// It is an insight, not a founder CV and not a complaint: no former employer
+// is named or criticised. No customer, partner, count or credential is
+// claimed that the product cannot show, and nothing says a licence travels
+// between jurisdictions. It ends on the two audiences' own pages.
 
 /** The server renders the Swedish page; useLocalizedHead() swaps in the
  *  English pair on the client. */
@@ -42,8 +49,8 @@ const H2 =
 
 const STORY = [
   { key: "why", icon: Compass },
-  { key: "what", icon: Layers },
-  { key: "vision", icon: Telescope },
+  { key: "market", icon: Globe2 },
+  { key: "whole", icon: Layers },
 ] as const;
 
 function AboutPage() {
@@ -67,7 +74,7 @@ function AboutPage() {
         </div>
       </Section>
 
-      {/* ── WHY · WHAT · VISION ──────────────────────────────────────── */}
+      {/* ── A · B · C: THE QUESTION, THE MARKET, THE WHOLE WORKING LIFE ─ */}
       <Section className="py-16 md:py-24">
         <div className="mx-auto max-w-3xl space-y-14">
           {STORY.map(({ key, icon: Icon }) => (
@@ -88,7 +95,7 @@ function AboutPage() {
         </div>
       </Section>
 
-      {/* ── EXPERIENCE ───────────────────────────────────────────────── */}
+      {/* ── D · EXPERIENCE ───────────────────────────────────────────── */}
       <Section bordered className="bg-secondary/40 py-16 md:py-20">
         <div className="mx-auto max-w-3xl">
           <h2 className={H2} style={DISPLAY}>
@@ -103,7 +110,24 @@ function AboutPage() {
         </div>
       </Section>
 
-      {/* ── WHERE TRUST COMES FIRST ──────────────────────────────────── */}
+      {/* ── E · VISION ───────────────────────────────────────────────── */}
+      <Section className="py-16 md:py-20">
+        <div data-about-section="vision" className="mx-auto max-w-3xl text-center">
+          <Telescope
+            className="mx-auto h-7 w-7 text-accent"
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
+          <h2 className={cn(H2, "mt-4")} style={DISPLAY}>
+            {t("about.vision.title")}
+          </h2>
+          <p className="mx-auto mt-4 max-w-[58ch] text-base leading-relaxed text-foreground md:text-lg">
+            {t("about.vision.body")}
+          </p>
+        </div>
+      </Section>
+
+      {/* ── F · WHERE TRUST COMES FIRST ──────────────────────────────── */}
       <Section className="bg-primary py-16 text-primary-foreground md:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <Quote className="mx-auto h-8 w-8 text-primary-foreground/50" aria-hidden="true" />

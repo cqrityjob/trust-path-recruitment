@@ -180,24 +180,36 @@ group("E1 · one h1, the approved copy, and a sane hierarchy");
       headings(main[lang], "h3").length,
     );
   }
-  // Owner review, 2026-09-30: both ways of working, said at once.
+  // Brand story, 2026-09-30: the page leads with finding the right security
+  // competence, locally or internationally; both ways of working (the
+  // platform yourselves, or CQrityjob helps) stay in the lead.
   ck(
     "sv h1 is the approved sentence",
-    d("sv")["employers.title"] === "Rekrytera säkerhetspersonal – själva eller med vår hjälp",
+    d("sv")["employers.title"] === "Hitta rätt säkerhetskompetens – lokalt eller internationellt",
     d("sv")["employers.title"],
   );
   ck(
     "en h1 is the approved sentence",
-    d("en")["employers.title"] === "Recruit security professionals – yourselves or with our help",
+    d("en")["employers.title"] === "Find the right security professionals – locally or internationally",
     d("en")["employers.title"],
   );
   ck(
     "sv lead says what the platform does and that CQrityjob can help all the way",
-    /annonserar ni, tar emot ansökningar, bedömer kandidater och genomför strukturerade intervjuer/.test(
+    /publicerar ni roller, når relevanta kandidater, tar emot ansökningar, bedömer kandidater och genomför strukturerade intervjuer/.test(
       d("sv")["employers.lead"],
     ) && /hjälper vi er med rekryteringen/.test(d("sv")["employers.lead"]),
     d("sv")["employers.lead"],
   );
+  // Capability, never coverage: no claim of candidates in a given market.
+  for (const lang of ["sv", "en"] as const) {
+    ck(
+      `${lang}: the lead claims no candidate volume or market coverage`,
+      !/\d|tusentals|thousands|miljon|million|alla marknader|every market|ledande|leading/i.test(
+        d(lang)["employers.lead"] + d(lang)["employers.title"],
+      ),
+      d(lang)["employers.lead"],
+    );
+  }
   ck(
     'sv: "ta emot ansökningar", never "samla ansökningar"',
     !Object.entries(d("sv")).some(

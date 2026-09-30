@@ -67,8 +67,8 @@ const SECTION_ORDER = [
 
 /** The locked headline, in both languages. */
 const H1 = {
-  sv: "Där säkerhetsbranschen bygger karriärer och team.",
-  en: "Where the security industry builds careers and teams.",
+  sv: "Säkerhetsbranschens plattform för människor och möjligheter.",
+  en: "The platform for people and opportunities in security.",
 } as const;
 
 /** The four "För dig" entries: card, action label, destination. */
@@ -168,11 +168,11 @@ test.describe("the public homepage", () => {
     await expect(page.locator("main h1")).toHaveCount(1);
     await expect(page.locator("main h1")).toHaveText(H1.sv);
     await expect(page.locator("main h2")).toHaveText([
-      "För dig i säkerhetsbranschen",
-      "Senaste jobben",
-      "Hitta rätt säkerhetskompetens – från annons till beslut",
+      "Hela karriären. På samma plats.",
+      "Nästa möjlighet kan finnas här.",
+      "Hitta människorna som stärker er säkerhet.",
       "Vill ni ha hjälp med hela rekryteringen?",
-      "Varför CQrityjob",
+      "En bransch. Många yrkesliv. En plats att utvecklas och mötas.",
     ]);
     const h1 = await page.locator("main h1").evaluate((el) => {
       const r = el.getBoundingClientRect();
@@ -387,11 +387,11 @@ test.describe("the public homepage", () => {
     await setLang(page, "sv");
     const sv = await shape();
     expect(sv.lang).toBe("sv");
-    expect(sv.title).toBe("CQrityjob – där säkerhetsbranschen bygger karriärer och team");
+    expect(sv.title).toBe("CQrityjob – säkerhetsbranschens plattform för människor och möjligheter");
     await setLang(page, "en");
     const en = await shape();
     expect(en.lang).toBe("en");
-    expect(en.title).toBe("CQrityjob – where the security industry builds careers and teams");
+    expect(en.title).toBe("CQrityjob – the platform for people and opportunities in security");
     expect(en.sections).toEqual(sv.sections);
     expect(en.h1).toBe(sv.h1);
     expect(en.h2).toBe(sv.h2);
@@ -573,7 +573,7 @@ test.describe("the locked navigation", () => {
       [
         "Security Passport",
         "/security-passport",
-        "Dina meriter inom säkerhet – samlade för hela karriären",
+        "Din professionella profil ska kunna följa med dig",
       ],
       ["Säkerhetsarbete", "/sakerhetsarbete", "Stöd för ditt säkerhetsarbete"],
     ] as const) {
@@ -692,7 +692,7 @@ test.describe("the products' own public pages", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`${BASE}/security-passport`, { waitUntil: "networkidle" });
       await expect(page.locator("main h1")).toHaveText(
-        "Dina meriter inom säkerhet – samlade för hela karriären",
+        "Din professionella profil ska kunna följa med dig",
       );
       await expect(page.locator("[data-passport-disclaimer]")).toHaveText(
         "Security Passport hjälper dig att strukturera och dela information. Det ersätter inte en myndighetslicens, säkerhetsprövning, rätt att arbeta eller arbetsgivarens egna kontroller.",

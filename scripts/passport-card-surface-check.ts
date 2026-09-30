@@ -187,14 +187,16 @@ check(
 // are the Profile's.
 const COPY = {
   sv: {
-    card: "Samla dina certifikat, licenser och behörigheter på ett ställe – och välj själv vad du delar.",
-    lead: "Security Passport är din professionella säkerhetsprofil: certifikat, licenser, förordnanden och andra meriter på ett ställe, med underlag och en tydlig status för varje uppgift. Du bestämmer vad som delas och med vem.",
+    // Brand story, 2026-09-30: the Passport is the professional profile that
+    // can move with a person -- its credentials, never their work history.
+    card: "Samla och visa de meriter som bygger din professionella säkerhetsprofil.",
+    lead: "Under en karriär samlar du på dig licenser, certifieringar och andra meriter. Security Passport samlar dem i en professionell säkerhetsprofil som kan följa med dig mellan roller, arbetsgivare och marknader – med underlag och en tydlig status för varje uppgift. Du bestämmer vad som delas och med vem.",
     documentIsNotVerification: "Ett dokument är inte en verifiering.",
     label: "Exempel",
   },
   en: {
-    card: "Bring your certificates, licences and authorisations together in one place – and choose what you share.",
-    lead: "Security Passport is your professional security profile: certificates, licences, authorisations and other credentials in one place, with supporting documents and a clear status for every entry. You decide what is shared and with whom.",
+    card: "Bring together and present the credentials behind your professional security profile.",
+    lead: "Over a career you collect licences, certifications and other credentials. Security Passport brings them together in a professional security profile that can go with you across roles, employers and markets – with supporting evidence and a clear status for every entry. You decide what is shared, and with whom.",
     documentIsNotVerification: "A document is not a verification.",
     label: "Example",
   },

@@ -21,9 +21,10 @@ import { dictionaries } from "@/i18n/dictionaries";
  *
  *  Exactly six sections, in this order, and nothing else:
  *
- *    1. hero                  "Där säkerhetsbranschen bygger karriärer och
- *                             team.", one supporting sentence, and two equal
- *                             entrances: for a person, and for an employer
+ *    1. hero                  "Säkerhetsbranschens plattform för människor och
+ *                             möjligheter.", the positioning for both
+ *                             audiences, and two equal entrances: for a
+ *                             person, and for an employer
  *    2. for-dig               Karriär, Jobb, Security Passport and
  *                             Säkerhetsarbete — one card and ONE action each,
  *                             to that part's own page

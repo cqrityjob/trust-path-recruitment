@@ -552,6 +552,17 @@ function CareerJourney({ signedIn, listAnchor }: { signedIn: boolean; listAnchor
           </li>
         ))}
       </ol>
+      {/* Säkerhetsarbete is not a step: it is the support a person has while
+          doing the job. One sentence and one link, never a section. */}
+      <p data-career-journey-work className="mt-6 max-w-2xl text-sm text-muted-foreground">
+        {t("cc.journey.work")}{" "}
+        <Link
+          to="/sakerhetsarbete"
+          className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
+          {t("cc.journey.work.cta")}
+        </Link>
+      </p>
     </Section>
   );
 }
