@@ -91,9 +91,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "an absent mail provider is reported as a successful send, which is the one thing a delivery report may never do",
     file: "src/lib/email/send-employer-registration-email.server.ts",
-    find: `  const missing = missingTransportEnv();
+    find: `  const missing = missingEmailTransportSettings();
   if (missing.length > 0) return { status: "not_configured", missing };`,
-    replace: `  const missing = missingTransportEnv();
+    replace: `  const missing = missingEmailTransportSettings();
   if (missing.length > 0) return { status: "sent" };`,
     guard: GUARD,
     expect: "SELF-TEST FAILED",

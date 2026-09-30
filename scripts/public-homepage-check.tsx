@@ -828,15 +828,19 @@ group("T9 · the recruitment services band, and its one working contact action")
       contact.includes("data-contact-closed"),
   );
   const sender = code(read("src/lib/email/send-recruitment-enquiry-email.server.ts"));
+  const emailFn = code(read("supabase/functions/transactional-email/index.ts"));
   ck(
-    "the enquiry uses the existing transport and secret names — no new service",
-    sender.includes("https://api.resend.com/emails") &&
-      /"RESEND_API_KEY",\s*"RESEND_FROM_EMAIL",\s*"ADMIN_NOTIFICATION_EMAIL"/.test(sender),
+    "the enquiry uses the one product-mail transport — no key in the app, no new service",
+    sender.includes("sendTransactionalEmail(") &&
+      !/process\.env\.RESEND_|api\.resend\.com/.test(sender) &&
+      emailFn.includes('Deno.env.get("RESEND_API_KEY")') &&
+      emailFn.includes("https://api.resend.com/emails"),
   );
   ck(
-    "the recipient is configuration, never the request",
-    sender.includes("to: [process.env.ADMIN_NOTIFICATION_EMAIL]") &&
-      sender.includes("reply_to: enquiry.email"),
+    "the recipient is decided by the e-mail function, never the request; the enquirer is only the Reply-To",
+    /kind: "contact_enquiry",\s*replyTo: enquiry\.email,/.test(sender) &&
+      /contact_enquiry: \{ to: "admin", replyTo: "caller" \}/.test(emailFn) &&
+      /const ADMIN_INBOX = "info@cqrityjob\.com";/.test(emailFn),
   );
   ck(
     "nothing is stored — the enquiry path writes no table",
@@ -861,8 +865,8 @@ group("T9 · the recruitment services band, and its one working contact action")
   );
   ck(
     "the acknowledgement goes only to the validated sender, replies go to CQrityjob's inbox, and it follows a sent enquiry",
-    sender.includes("to: [enquiry.email]") &&
-      sender.includes("reply_to: process.env.ADMIN_NOTIFICATION_EMAIL") &&
+    /kind: "contact_acknowledgement",\s*to: enquiry\.email,/.test(sender) &&
+      /contact_acknowledgement: \{ to: "caller", replyTo: "admin" \}/.test(emailFn) &&
       /status === "sent"\) \{[\s\S]*?sendEnquiryAcknowledgementEmail\(data\)/.test(
         code(read("src/lib/contact/recruitment-enquiry.functions.ts")),
       ),

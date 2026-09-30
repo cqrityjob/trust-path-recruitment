@@ -557,7 +557,7 @@ async function academyDestination(): Promise<{ siteOrigin: string; academyUrl: s
 /** Best-effort invitation mail for a governed assignment.
  *
  *  Reuses send-invitation-email.server.ts unchanged. That module is inert
- *  without RESEND_API_KEY/RESEND_FROM_EMAIL, so on an unconfigured deployment
+ *  without the e-mail transport (transactional-email function), so on an unconfigured deployment
  *  this costs one branch and no network call.
  *
  *  Employer and programme names are read back from the database rather than
@@ -613,6 +613,7 @@ async function notifyParticipant(
       invitationUrl: p.academyUrl,
       expiresAt: String(assignment?.expires_at ?? ""),
       employerMessage: null,
+      kind: "academy_invitation",
     });
 
     if (result.ok) return "sent";

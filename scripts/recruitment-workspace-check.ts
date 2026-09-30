@@ -1156,6 +1156,7 @@ const sql = read(F.migration);
   ok(
     /sendRecruitmentMessageEmail\(\{/.test(server) &&
       !/api\.resend\.com|RESEND_API_KEY/.test(server) &&
+      /kind: "application_receipt",/.test(server) &&
       /idempotencyKey: claim\.provider_key \?\? undefined,/.test(server) &&
       /timeoutMs: 15_000,/.test(server) &&
       /link: receiptLink\(origin, claim\.application_id\),/.test(server) &&
@@ -1177,10 +1178,12 @@ const sql = read(F.migration);
     "I · transport: 2xx is accepted, a 4xx (429 included) is a definite refusal, 5xx/408 are unknown, a 409 is the provider already holding this key -- and the provider's body is never read",
   );
   {
-    const savedKey = process.env.RESEND_API_KEY;
-    const savedFrom = process.env.RESEND_FROM_EMAIL;
-    process.env.RESEND_API_KEY = "guard-only-not-a-key";
-    process.env.RESEND_FROM_EMAIL = "guard@example.invalid";
+    // The transport posts to the transactional-email Edge Function (which
+    // alone holds the Resend key) with the service-role key it already has.
+    const savedUrl = process.env.SUPABASE_URL;
+    const savedKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_URL = "https://guard.example.invalid";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "guard-only-not-a-key";
     const calls: { url: string; headers: Record<string, string>; body: string }[] = [];
     const answering =
       (status: number, body: unknown): typeof fetch =>
@@ -1239,6 +1242,14 @@ const sql = read(F.migration);
         timeoutMs: 30,
       });
       const network = await T.sendRecruitmentMessageEmail({ ...base, fetchImpl: failing });
+      const unkeyed = await T.sendRecruitmentMessageEmail({
+        ...base,
+        fetchImpl: answering(503, { outcome: "not_configured" }),
+      });
+      const undeployed = await T.sendRecruitmentMessageEmail({
+        ...base,
+        fetchImpl: answering(404, {}),
+      });
       ok(
         sent.result === "sent" &&
           sent.providerId === null &&
@@ -1251,27 +1262,33 @@ const sql = read(F.migration);
           timedOut.result === "unknown" &&
           timedOut.error === "TIMEOUT" &&
           network.result === "unknown" &&
-          network.error === "NETWORK_ERROR",
-        "I · transport, executed: accepted, without reading the body; refused; 5xx, a busy key, an abort and a network error are all UNKNOWN, never 'failed'",
+          network.error === "NETWORK_ERROR" &&
+          unkeyed.result === "not_configured" &&
+          undeployed.result === "not_configured",
+        "I · transport, executed: accepted, without reading the body; refused; 5xx, a busy key, an abort and a network error are all UNKNOWN, never 'failed'; a function without its key, or not deployed, is not_configured",
       );
       ok(
-        calls.length === 4 &&
-          calls.every((c) => c.url === "https://api.resend.com/emails") &&
+        calls.length === 6 &&
+          calls.every(
+            (c) => c.url === "https://guard.example.invalid/functions/v1/transactional-email",
+          ) &&
           calls.every((c) => c.headers["idempotency-key"] === "receipt:abc") &&
-          calls.every((c) => JSON.parse(c.body).to[0] === "guard@example.invalid"),
-        "I · transport, executed: every call carries the Idempotency-Key of the logical e-mail and goes to the one provider",
+          calls.every((c) => JSON.parse(c.body).to === "guard@example.invalid") &&
+          calls.every((c) => JSON.parse(c.body).kind === "recruitment_message") &&
+          calls.every((c) => !/from|reply_?to/i.test(Object.keys(JSON.parse(c.body)).join(","))),
+        "I · transport, executed: every call carries the Idempotency-Key of the logical e-mail, goes to the one e-mail function, names its kind, and never chooses the From or Reply-To",
       );
-      delete process.env.RESEND_API_KEY;
+      delete process.env.SUPABASE_SERVICE_ROLE_KEY;
       const inert = await T.sendRecruitmentMessageEmail({ ...base, fetchImpl: failing });
       ok(
-        inert.result === "not_configured" && calls.length === 4,
-        "I · transport, executed: without a mail key nothing is called and the answer is not_configured",
+        inert.result === "not_configured" && calls.length === 6,
+        "I · transport, executed: without the transport settings nothing is called and the answer is not_configured",
       );
     } finally {
-      if (savedKey === undefined) delete process.env.RESEND_API_KEY;
-      else process.env.RESEND_API_KEY = savedKey;
-      if (savedFrom === undefined) delete process.env.RESEND_FROM_EMAIL;
-      else process.env.RESEND_FROM_EMAIL = savedFrom;
+      if (savedUrl === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = savedUrl;
+      if (savedKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = savedKey;
     }
     const receipt = T.renderRecruitmentMessageEmail(base);
     const ordinary = T.renderRecruitmentMessageEmail({ ...base, link: undefined, cta: undefined });

@@ -582,13 +582,22 @@ const STATUSES = new Set(["sent", "failed", "not_configured"]);
 /** The trail and the configuration state, shared by the read below and by
  *  the resend, so a resend returns exactly what a reload would. */
 async function readNoticeState(employerId: string): Promise<AdminEmployerNoticeState> {
-  const [{ EMPLOYER_REGISTRATION_NOTICE_ACTION }, { missingEmployerRegistrationEmailSettings }] =
-    await Promise.all([
-      import("@/lib/job-intelligence/employer-registration-notice.server"),
-      import("@/lib/email/send-employer-registration-email.server"),
-    ]);
+  const [
+    { EMPLOYER_REGISTRATION_NOTICE_ACTION },
+    { missingEmployerRegistrationEmailSettings, RESEND_SECRET_NAME },
+    { emailTransportReady },
+  ] = await Promise.all([
+    import("@/lib/job-intelligence/employer-registration-notice.server"),
+    import("@/lib/email/send-employer-registration-email.server"),
+    import("@/lib/email/transport.server"),
+  ]);
 
+  // Names only. With the app-side settings present, the remaining question is
+  // whether the e-mail function is deployed and holds its key.
   const missingSettings = missingEmployerRegistrationEmailSettings();
+  if (missingSettings.length === 0 && !(await emailTransportReady())) {
+    missingSettings.push(RESEND_SECRET_NAME);
+  }
 
   let history: AdminEmployerRegistrationNotice[] = [];
   try {

@@ -20,14 +20,18 @@ function read(relPath: string): string {
 }
 
 // -----------------------------------------------------------------------
-// 1. With no RESEND_API_KEY/RESEND_FROM_EMAIL in the environment, sending
-//    must be a pure no-op: no network call, a clean "skipped" result.
+// 1. With no e-mail transport configured (SUPABASE_URL /
+//    SUPABASE_SERVICE_ROLE_KEY, which reach the transactional-email
+//    function), sending must be a pure no-op: no network call, a clean
+//    "skipped" result.
 //    This is the exact guarantee that keeps today's copy-link-only
 //    behaviour unchanged for every environment that hasn't configured a
 //    provider yet.
 // -----------------------------------------------------------------------
 delete process.env.RESEND_API_KEY;
 delete process.env.RESEND_FROM_EMAIL;
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const result = await sendInvitationEmail({
   recipientEmail: "candidate.test@example.invalid",
@@ -41,7 +45,7 @@ const result = await sendInvitationEmail({
 
 expect(
   result.ok === false && "skipped" in result && result.skipped === true,
-  "sendInvitationEmail() must return a clean skipped result with no RESEND_API_KEY configured -- never attempt a network call",
+  "sendInvitationEmail() must return a clean skipped result with no e-mail transport configured -- never attempt a network call",
 );
 
 // -----------------------------------------------------------------------
@@ -106,8 +110,9 @@ expect(
   "send-invitation-email.server.ts must not read (and so cannot log) the provider's response body",
 );
 expect(
-  sendFn.includes("Authorization: `Bearer ${apiKey}`"),
-  "send-invitation-email.server.ts must send the key only as the Authorization header to the provider, nowhere else",
+  !/RESEND_API_KEY|api\.resend\.com/.test(sendFn.replace(/^\s*\/\/.*$/gm, "")) &&
+    sendFn.includes("sendTransactionalEmail("),
+  "send-invitation-email.server.ts must hold no provider key and reach Resend only through the transactional-email transport",
 );
 
 // -----------------------------------------------------------------------
