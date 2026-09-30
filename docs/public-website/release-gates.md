@@ -10,7 +10,12 @@ in `src/i18n/dictionaries.ts` (Swedish and English), in a reviewed diff, when
 the gate is met.
 
 Verification was read-only against production (`wrygicdfxwjnrugduxnt`) on
-2026-09-29 and re-checked before the pull request was opened.
+2026-09-29 and re-checked before the pull request was opened. Re-checked
+again on 2026-09-30 for the brand-story copy refinement: gate A 0 active
+production activations, gate B `CREDLY_OB2.enabled = false` and
+`PRODUCTION_ISSUER_POLICIES = []`, gate C 0 published method versions. The
+new vision copy does not override any gate: every gated sentence below is
+unchanged.
 
 | Gate | Condition                                                  | Status at release | Live copy         |
 | ---- | ---------------------------------------------------------- | ----------------- | ----------------- |
