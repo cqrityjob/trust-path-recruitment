@@ -102,15 +102,7 @@ function SecurityPassportPage() {
   return (
     <SiteLayout>
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-b border-border bg-secondary/40">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage:
-              "radial-gradient(900px 420px at 15% -10%, oklch(0.55 0.09 245 / 0.14), transparent 62%)",
-          }}
-        />
+      <section className="surface-dawn relative overflow-hidden border-b border-border">
         <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-12 px-6 pb-16 pt-12 md:px-8 md:pt-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:pb-20">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -266,7 +258,7 @@ function SecurityPassportPage() {
       </Section>
 
       {/* ── CLOSING: THE PATH FORWARD ────────────────────────────────── */}
-      <Section className="bg-primary py-16 text-primary-foreground md:py-20">
+      <Section className="surface-night py-16 text-primary-foreground md:py-20">
         <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
             <h2

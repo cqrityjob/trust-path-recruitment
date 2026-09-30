@@ -59,7 +59,7 @@ function AboutPage() {
   return (
     <SiteLayout>
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <Section className="border-b border-border bg-secondary/40 py-16 md:py-24">
+      <Section className="surface-dawn border-b border-border py-16 md:py-24">
         <div className="max-w-3xl">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {t("about.eyebrow")}
@@ -128,7 +128,7 @@ function AboutPage() {
       </Section>
 
       {/* ── F · WHERE TRUST COMES FIRST ──────────────────────────────── */}
-      <Section className="bg-primary py-16 text-primary-foreground md:py-24">
+      <Section className="surface-night py-16 text-primary-foreground md:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <Quote className="mx-auto h-8 w-8 text-primary-foreground/50" aria-hidden="true" />
           {/* The brand line is English in both languages. */}

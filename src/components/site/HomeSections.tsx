@@ -400,7 +400,7 @@ function LatestJobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" })
 // ── 4 · FÖR ARBETSGIVARE ────────────────────────────────────────────────
 //
 // The locked employer journey, benefit first. It ends in the employer's own
-// decision and never implies an automated one. Its own navy band, because an
+// decision and never implies an automated one. Its own night band, because an
 // employer is a different reader. The registration action is gated by the
 // release flag: a door onto a disabled product is worse than no door.
 const EMPLOYER_STEPS = [
@@ -416,14 +416,14 @@ export function HomeEmployers({ employerOpen }: { employerOpen: boolean }) {
   return (
     <Section
       id="for-arbetsgivare"
-      className="relative scroll-mt-20 overflow-hidden bg-primary py-16 text-primary-foreground md:py-24"
+      className="surface-night relative scroll-mt-20 overflow-hidden py-16 text-primary-foreground md:py-24"
     >
       <div className="max-w-2xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">
           {t("home.employers.eyebrow")}
         </p>
         {/* `text-primary-foreground` is not optional: styles.css sets an
-            explicit colour on h1-h6, so a heading on the navy band would be
+            explicit colour on h1-h6, so a heading on the night band would be
             navy-on-navy unless it names its own colour. */}
         <h2
           className="mt-3 text-balance text-[1.7rem] font-semibold leading-[1.15] tracking-tight text-primary-foreground md:text-[2.25rem]"
@@ -441,12 +441,9 @@ export function HomeEmployers({ employerOpen }: { employerOpen: boolean }) {
         className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3"
       >
         {EMPLOYER_STEPS.map(({ key, icon: Icon }, i) => (
-          <li
-            key={key}
-            className="flex flex-col rounded-2xl border border-primary-foreground/15 bg-primary-foreground/[0.06] p-5"
-          >
+          <li key={key} className={cn("flex flex-col rounded-2xl p-5", GLASS)}>
             <div className="flex items-center justify-between gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-foreground/10">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
                 <Icon
                   className="h-5 w-5 text-primary-foreground"
                   strokeWidth={1.75}

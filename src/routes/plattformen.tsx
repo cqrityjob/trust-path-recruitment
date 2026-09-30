@@ -39,7 +39,7 @@ function PlatformPage() {
   useLocalizedHead("meta.platform.title", "meta.platform.description");
   return (
     <SiteLayout>
-      <section id="plattformen" className="bg-night pb-16 pt-14 text-white md:pb-24 md:pt-20">
+      <section id="plattformen" className="surface-night pb-16 pt-14 text-white md:pb-24 md:pt-20">
         <Container>
           <div className="mx-auto max-w-3xl text-center">
             <p

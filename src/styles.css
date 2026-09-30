@@ -168,6 +168,32 @@
   background-image: linear-gradient(168deg, #12294a 0%, #0b1f3a 46%, #061426 100%);
 }
 
+/* The ONE dark band of the public site: the ground of every full-width dark
+ * section — the homepage employer band, the closing bands of Security
+ * Passport, Säkerhetsarbete and About, and /plattformen. It is the films'
+ * own `night`, lit from the top-left and bottom-right by the brand's trust
+ * blue, the way the hero and chip films are lit — so moving from a film to a
+ * band, or from one page's band to the next, never changes the dark. */
+@utility surface-night {
+  background-color: var(--night);
+  background-image:
+    radial-gradient(900px 420px at 12% -10%, oklch(0.492 0.115 245 / 0.22), transparent 65%),
+    radial-gradient(700px 380px at 95% 115%, oklch(0.492 0.115 245 / 0.12), transparent 60%);
+}
+
+/* …and its light counterpart: the ground of every light page-top (Security
+ * Passport, Säkerhetsarbete, Karriär, För arbetsgivare, Om oss). The same
+ * trust-blue light from the same corner as surface-night, so a light page
+ * and a dark band read as one room with the lights on or off. */
+@utility surface-dawn {
+  background-color: color-mix(in oklch, var(--secondary) 45%, var(--background));
+  background-image: radial-gradient(
+    900px 420px at 12% -10%,
+    oklch(0.492 0.115 245 / 0.12),
+    transparent 62%
+  );
+}
+
 /* The frame of a whole CARD — not of the small navy tiles that also take the
  * ground. One restrained hairline and one soft shadow, replacing the mix of
  * accent rings and large drop shadows the three card surfaces each chose. */
