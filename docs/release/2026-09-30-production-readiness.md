@@ -140,6 +140,13 @@ was impersonated. The probe returned counts only, no content.
 - The legacy anonymous assessment-token server functions are dead surface.
   The tokens are 32 random bytes and stored hashed.
 
+### Performance advisors
+
+The findings: 453 INFO unindexed foreign keys, 313 WARN `auth_rls_initplan`,
+134 INFO unused indexes and 86 WARN multiple permissive policies. None of
+them affects stability at pilot scale (20 users, a handful of rows per
+table). They are recorded as later debt.
+
 ## 3. Product gates, against production
 
 | Gate | Production state | Result |
@@ -222,7 +229,22 @@ policy denies these hosts:
 
 Each has a verification step in the owner actions.
 
-## 7. Owner actions (Mostafa)
+## 7. Technical debt register
+
+| Priority | Debt | Risk | Recommended action | When |
+|---|---|---|---|---|
+| P1 | Supabase Auth uses the default mailer | Non-team users receive no confirmation or reset mail | Custom SMTP through Resend (owner action 3) | Before public pilot |
+| P1 | Resend secrets missing on the app host | Contact form closed; no product mail | Owner actions 1 and 2 | Before public pilot |
+| P2 | About 239 server functions return raw Postgres error text | Schema and policy names disclosed (no data, no stack) | Map to error codes in the shared helpers, one module at a time | First 30 days |
+| P2 | Leaked-password protection off; no CAPTCHA on sign-up or reset | Weak passwords; sign-up mail abuse | Toggle HIBP now; consider Supabase CAPTCHA | First 30 days |
+| P2 | `PUBLIC_SITE_URL` falls back to the Lovable origin | Mail links to the Lovable subdomain | Set the secret, then remove the hard-coded fallback once the custom domain is the origin | First 30 days |
+| P2 | Full CSP (script and style) not set | XSS impact is not reduced | Report-only CSP first, then enforce | First 30 days |
+| P3 | `job-application-cvs` has no bucket size or MIME limit | Storage cost if the app check is bypassed | Set 5 MB and pdf/docx on the bucket | Later |
+| P3 | Legacy anonymous assessment-token server functions | Dead attack surface (tokens are strong) | Remove with their retired route | Later |
+| P3 | Performance advisors (FK indexes, `auth.uid()` initplan) | Latency at scale | Batch migration when traffic justifies it | Later |
+| P3 | Employer-registration catch-up can double-send under concurrent tabs | A duplicate notice mail | Claim/lock as in the recruitment path | Later |
+
+## 8. Owner actions (Mostafa)
 
 1. **Resend domain.** Resend → Domains → add or verify `cqrityjob.com`, then
    publish the SPF (TXT), DKIM (CNAME/TXT) and return-path records Resend
