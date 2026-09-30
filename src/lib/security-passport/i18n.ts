@@ -779,7 +779,7 @@ const sv = {
     "CQrityjob visar underlagsnivån för varje uppgift. KÄLLBEKRÄFTAD betyder att källan själv har bekräftat uppgiften. DOKUMENTERAD betyder att CQrityjob har granskat ett underlag.",
   "recipient.notVerifiedTitle": "Vad CQrityjob inte har kontrollerat",
   "recipient.notVerifiedBody":
-    "Innehavarens juridiska identitet är inte kontrollerad med BankID eller motsvarande i den här fasen. Egenrapporterade uppgifter är inte kontrollerade av någon annan än innehavaren.",
+    "Innehavarens juridiska identitet är inte kontrollerad med BankID eller motsvarande i den här fasen. Uppgifter med statusen Egen uppgift är inte kontrollerade av någon annan än innehavaren.",
   "recipient.unavailableTitle": "Länken är inte tillgänglig",
   "recipient.unavailableBody":
     "Länken går inte att öppna. Kontakta den som skickade den om du behöver ett nytt underlag.",
