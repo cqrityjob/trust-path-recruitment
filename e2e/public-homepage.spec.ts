@@ -551,11 +551,16 @@ test.describe("the locked navigation", () => {
       ["Rekrytering & Executive Search", "#rekrytering"],
       ["Interim och konsulter", "#interim"],
     ] as const) {
+      // The menu closes itself on every route change; re-open it only once
+      // the previous navigation has rendered and the menu has settled shut.
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
       await trigger.click();
+      await expect(panel).toBeVisible();
       await panel.getByRole("link", { name: new RegExp(`^${label}`) }).click();
       await page.waitForURL((u) => u.pathname === "/employers" && u.hash === hash, {
         timeout: 15_000,
       });
+      await expect(page.locator("main h1")).toBeVisible();
       if (hash) await expect(page.locator(hash)).toBeInViewport();
       await expect(panel).toBeHidden();
     }
