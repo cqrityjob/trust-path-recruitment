@@ -24,6 +24,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { mount, takeMountBookkeeping } from "./support/career-home-harness";
+import { answerPublicJobs, BASE } from "./support/public-entry-harness";
 
 test.describe.configure({ timeout: 120_000 });
 
@@ -175,3 +176,61 @@ test("the sticky header never covers a field the browser scrolls to", async ({ p
     header!.y + header!.height,
   );
 });
+
+// ── THE SIGNED-OUT PUBLIC BAR, AT THE SAME WIDTHS ─────────────────────────
+//
+// The locked navigation (2026-09-30) puts six destinations, SV / EN, "Logga
+// in" and "Skapa konto" on ONE row from 1024px. Swedish is the longer
+// language. Every control must be inside the viewport, 44px tall, on one
+// row, with no hamburger and no sideways scroll.
+const PUBLIC_SIX = {
+  sv: ["Karriär", "Jobb", "Security Passport", "Säkerhetsarbete", "För arbetsgivare", "Om oss"],
+  en: ["Career", "Jobs", "Security Passport", "Security work", "For employers", "About"],
+} as const;
+
+for (const lang of ["sv", "en"] as const) {
+  test.describe(`signed-out public header · ${lang}`, () => {
+    for (const width of DESKTOP_WIDTHS) {
+      test(`${width}px: the locked six and both account actions fit on one row`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 800 });
+        await page.addInitScript((l) => localStorage.setItem("cqrityjob.lang", l), lang);
+        await answerPublicJobs(page);
+        await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+
+        const nav = page.locator('header nav[aria-label="Primary"]').first();
+        await expect(nav).toBeVisible();
+        const items = nav.locator(":scope > :is(a, div > button)");
+        expect((await items.allInnerTexts()).map((x) => x.trim())).toEqual([...PUBLIC_SIX[lang]]);
+        const controls = page
+          .locator("header")
+          .first()
+          .locator("a, button")
+          .filter({ visible: true });
+        const header = await page.locator("header").first().boundingBox();
+        for (const control of await controls.all()) {
+          const box = await control.boundingBox();
+          if (!box) continue;
+          const name = (await control.innerText()).trim() || "(icon)";
+          expect(box.x, `${name} starts inside the viewport`).toBeGreaterThanOrEqual(0);
+          expect(box.x + box.width, `${name} ends inside the viewport`).toBeLessThanOrEqual(width);
+          expect(box.height, `${name} is a 44px target`).toBeGreaterThanOrEqual(44);
+        }
+        await expect(menuButton(page)).toBeHidden();
+        for (const label of lang === "sv"
+          ? ["Logga in", "Skapa konto"]
+          : ["Sign in", "Create account"]) {
+          await expect(
+            page.locator("header").first().getByRole("link", { name: label, exact: true }),
+          ).toBeVisible();
+        }
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        );
+        expect(overflow, "horizontal overflow").toBe(0);
+        expect(header!.height, "the header wrapped onto a second row").toBeLessThanOrEqual(72);
+      });
+    }
+  });
+}

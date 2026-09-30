@@ -18,7 +18,6 @@ const card = (page: Page, title: string) =>
   page
     .locator('[aria-label="Jobblista"], [aria-label="Job list"]')
     .getByRole("link", { name: title, exact: true });
-const selected = (page: Page) => page.locator('[aria-current="true"]');
 async function open(page: Page, path = "/jobs") {
   await page.goto(`${BASE}${path}`);
   await expect(keyword(page)).toBeVisible({ timeout: 30000 });
@@ -122,37 +121,59 @@ test("search, database filter parameters, sort and browser history remain connec
   fixture.assertClean();
 });
 
-test("desktop selection is URL-addressable, reversible and retains list focus", async ({
+test("every card opens the advert's own page, and the way back restores the results", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
-  await open(page);
+  await open(page, "/jobs?country=SE");
+  // No second copy of an advert beside the list: the list is the page.
+  await expect(page.locator("[data-job-detail]")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: /Vald annons|Selected job/ })).toHaveCount(0);
+  await expect(card(page, first.title_sv)).toContainText("Läs annonsen");
   await card(page, first.title_sv).click();
-  await expect(page).toHaveURL(new RegExp(`selected=${first.slug}`));
-  await expect(selected(page).filter({ hasText: first.title_sv }).first()).toBeVisible();
-  await card(page, second.title_sv).focus();
-  await page.keyboard.press("Enter");
-  await expect(page).toHaveURL(new RegExp(`selected=${second.slug}`));
-  await expect(card(page, second.title_sv)).toBeFocused();
-  await page.goBack();
-  await expect(page).toHaveURL(new RegExp(`selected=${first.slug}`));
-  await page.goForward();
-  await expect(page).toHaveURL(new RegExp(`selected=${second.slug}`));
-  await page.reload();
-  await expect(selected(page).filter({ hasText: second.title_sv }).first()).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/jobs/${first.slug}\\?from=`));
+  const from = new URLSearchParams(new URL(page.url()).searchParams.get("from")!);
+  expect(from.get("country")).toBe("SE");
+  expect(from.get("selected"), "a way back must never carry `selected`").toBeNull();
   await expect(
-    page.getByRole("button", { name: /Ansök.*arbetsgivar|Ansök externt/ }).first(),
+    page.getByRole("heading", { level: 1, name: first.title_sv, exact: true }),
   ).toBeVisible();
+  // Keyboard: the way back is a real link, and it lands on the same card.
+  await page.locator("[data-job-back]").first().click();
+  await expect(page).toHaveURL(/\/jobs\?country=SE$/);
+  await expect(card(page, first.title_sv)).toBeFocused();
+  // And the browser's own Back/Forward still work.
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`/jobs/${first.slug}`));
+  await page.goForward();
+  await expect(page).toHaveURL(/\/jobs\?country=SE$/);
   await noOverflow(page);
+  fixture.assertClean();
+});
+
+test("an old ?selected= link forwards to the advert's own page", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const fixture = await installJobsFixture(page);
+  await page.goto(`${BASE}/jobs?q=chef&selected=${first.slug}`);
+  await expect(page).toHaveURL(new RegExp(`/jobs/${first.slug}\\?from=q%3Dchef$`), {
+    timeout: 30000,
+  });
+  await expect(
+    page.getByRole("heading", { level: 1, name: first.title_sv, exact: true }),
+  ).toBeVisible();
+  // The forward REPLACED the entry: Back leaves, it does not bounce.
+  await page.goBack();
+  await expect(page).not.toHaveURL(/selected=/);
   fixture.assertClean();
 });
 
 test("external application explains the destination and Escape returns focus", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
-  await open(page, `/jobs?selected=${second.slug}`);
+  await page.goto(`${BASE}/jobs/${second.slug}`);
   const apply = page.getByRole("button", { name: /Ansök.*arbetsgivar|Ansök externt/ }).first();
+  await expect(apply).toBeVisible({ timeout: 30000 });
   await apply.click();
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toHaveAccessibleName("Du lämnar CQrityjob");
@@ -188,27 +209,30 @@ test("empty results and failed reads offer understandable recovery", async ({ pa
   fixture.assertClean();
 });
 
-test("sign-in keeps the selected vacancy, search and apply intent", async ({ page }) => {
+test("sign-in keeps the vacancy, the search and the apply intent", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
-  await open(page, `/jobs?q=Säkerhetschef&selected=${first.slug}`);
+  // Through an old shared link, so the forward is part of what is proven.
+  await page.goto(`${BASE}/jobs?q=Säkerhetschef&selected=${first.slug}`);
   const signIn = page.getByRole("link", { name: "Logga in för att ansöka", exact: true }).first();
-  await expect(signIn).toBeVisible();
+  await expect(signIn).toBeVisible({ timeout: 30000 });
   const login = new URL((await signIn.getAttribute("href"))!, BASE);
   const returned = new URL(login.searchParams.get("redirect")!, BASE);
   expect(returned.pathname).toBe(`/jobs/${first.slug}`);
   expect(returned.searchParams.get("apply")).toBe("1");
   const from = new URLSearchParams(returned.searchParams.get("from")!);
   expect(from.get("q")).toBe("Säkerhetschef");
-  expect(from.get("selected")).toBe(first.slug);
+  expect(from.get("selected")).toBeNull();
   fixture.assertClean();
 });
 
-test("a closed selected vacancy explains its state before any application", async ({ page }) => {
+test("a closed vacancy explains its state before any application", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
-  await open(page, `/jobs?selected=${CLOSED_JOB.slug}`);
-  await expect(page.getByText("Ansökan är stängd", { exact: true }).first()).toBeVisible();
+  await page.goto(`${BASE}/jobs/${CLOSED_JOB.slug}`);
+  await expect(page.getByText("Ansökan är stängd", { exact: true }).first()).toBeVisible({
+    timeout: 30000,
+  });
   await expect(
     page.getByRole("link", { name: "Logga in för att ansöka", exact: true }),
   ).toHaveCount(0);
@@ -254,19 +278,21 @@ test("no published jobs has a truthful empty state and useful next step", async 
   await open(page);
   await expect(page.getByRole("heading", { name: "Inga publicerade jobb just nu" })).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Utforska karriärguider", exact: true }),
+    page.getByRole("link", { name: "Utforska säkerhetsyrken", exact: true }),
   ).toHaveAttribute("href", "/career-center");
   await expect(page.locator('[aria-label="Jobblista"]')).toHaveCount(0);
   fixture.assertClean();
 });
 
-test("removed selection preserves the results as a recovery path", async ({ page }) => {
+test("a removed vacancy keeps the results as a recovery path", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const fixture = await installJobsFixture(page);
-  await open(page, "/jobs?selected=test-removed");
-  await expect(
-    page.getByRole("heading", { name: "Annonsen är inte längre tillgänglig" }),
-  ).toBeVisible();
+  // An old link to an advert that no longer exists.
+  await page.goto(`${BASE}/jobs?country=SE&selected=test-removed`);
+  await expect(page).toHaveURL(/\/jobs\/test-removed/, { timeout: 30000 });
+  await expect(page.locator("[data-job-back]").first()).toBeVisible({ timeout: 30000 });
+  await page.locator("[data-job-back]").first().click();
+  await expect(page).toHaveURL(/\/jobs\?country=SE$/);
   await card(page, first.title_sv).click();
   await expect(
     page.getByRole("link", { name: "Logga in för att ansöka", exact: true }).first(),
@@ -293,6 +319,8 @@ test("a broken company logo falls back while company links remain usable", async
   await expect(card(page, first.title_sv)).toBeVisible();
   await expect(card(page, first.title_sv).locator("img")).toHaveCount(0);
   await expect(card(page, first.title_sv).getByText("NS", { exact: true })).toBeVisible();
+  // The company links live on the advert's own page.
+  await card(page, first.title_sv).click();
   const company = page.getByRole("link", { name: /Besök företagets webbplats/ });
   await expect(company).toHaveAttribute("href", "https://employer.example.test/");
   await expect(company).toHaveAttribute("target", "_blank");

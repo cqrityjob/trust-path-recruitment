@@ -356,7 +356,7 @@ function RecipientPassportBody({
           </h2>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{pt("rec.ctaBody")}</p>
           <a
-            href="/#passport"
+            href="/security-passport"
             className="mt-3 inline-flex h-11 items-center gap-2 text-sm font-medium text-accent hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             {pt("rec.ctaAction")}

@@ -6,8 +6,8 @@
 // and it is the one public page that names BESKT — a governed method that
 // is assignable only under an owner-issued pilot grant. scripts/
 // employer-landing-check.tsx proves the copy and the destinations against
-// rendered markup. This proves the things only a browser answers: that the
-// three actions LAND somewhere that renders, that the same-page anchor
+// rendered markup. This proves the things only a browser answers: that its
+// actions LAND somewhere that renders, that the same-page anchor
 // actually moves the page and lands ON its target rather than under the
 // sticky header, that nothing overflows at 320-1440, and that every control
 // is a real 44px target with a visible focus ring.
@@ -25,6 +25,7 @@
 // Run:  E2E_BASE_URL=http://localhost:3100 bunx playwright test e2e/employer-landing.spec.ts
 
 import { test, expect } from "@playwright/test";
+import { dictionaries } from "../src/i18n/dictionaries";
 import {
   assertNoRefusals,
   BASE,
@@ -35,8 +36,12 @@ import {
   REQUIRED_WIDTHS,
   setLang,
   shot,
+  stubServerFn,
   undersizedTargets,
 } from "./support/public-entry-harness";
+
+const SV = dictionaries.sv as Record<string, string>;
+const EN = dictionaries.en as Record<string, string>;
 
 test.describe("the employer landing page", () => {
   test.beforeEach(async ({ page }) => {
@@ -46,49 +51,38 @@ test.describe("the employer landing page", () => {
   // P1 ──────────────────────────────────────────────────────────────────
   test("one h1, and it is the approved sentence", async ({ page }) => {
     expect(await page.locator("main h1").count()).toBe(1);
-    await expect(page.locator("main h1")).toHaveText(
-      "Rekrytera och utveckla säkerhetspersonal på samma plats.",
-    );
+    await expect(page.locator("main h1")).toHaveText(SV["employers.title"]);
     const text = await page.locator("main").innerText();
-    expect(text).toContain(
-      "Publicera jobb, samla ansökningar och arbeta med rekryteringstester och strukturerade intervjuer. Fortsätt med medarbetarnas kompetensutveckling i en egen företagsportal.",
-    );
-    // The four abstract benefit tiles are gone.
+    expect(text).toContain(SV["employers.lead"]);
+    // The review's own words: "ta emot", never "samla" ansökningar.
+    expect(text).not.toMatch(/samla ansökningar/i);
+    // The four abstract benefit tiles and the two worked examples are gone.
     for (const gone of [
       "Kandidatbedömning",
       "Kompetensverifiering",
-      "Kompetenstest av befintlig personal",
       "Prata med oss",
+      "Ordinarie säkerhetsrekrytering",
+      "Säkerhetsskyddskänslig rekrytering",
     ]) {
       expect(text, `"${gone}" is still rendered`).not.toContain(gone);
     }
   });
 
   // P2 ──────────────────────────────────────────────────────────────────
-  test("five ordered outcomes ending in a documented human decision, then a separate continuation", async ({
+  test("the locked journey, ending in a documented human decision, then a separate continuation", async ({
     page,
   }) => {
-    // Specification §8.3: five outcomes, then a continuation shown apart from
-    // them. A decision rendered as step five of six reads as a waypoint.
     const numbered = await page.locator("#how-it-works ol li h3").allInnerTexts();
-    expect(numbered.map((s) => s.replace(/^\d+\.\s*/, ""))).toEqual([
-      "Publicera jobbet",
-      "Hantera ansökningar",
-      "Använd rekryteringstester",
-      "Förbered och genomför intervju",
-      "Fatta och dokumentera beslutet",
-    ]);
+    // `innerText` reflects `text-transform: uppercase`; compare the words.
+    expect(numbered.map((s) => s.toLowerCase())).toEqual(
+      ["Annonsera", "Ta emot och hantera", "Bedöm", "Intervjua", "Besluta"].map((s) =>
+        s.toLowerCase(),
+      ),
+    );
     expect(await page.locator("#how-it-works ol").count()).toBe(1);
     expect(await page.locator("#how-it-works ol > li").count()).toBe(5);
-
     const text = await page.locator("#how-it-works").innerText();
-    expect(text).toContain(
-      "Rekryteringsteamet ansvarar för bedömningen och det slutliga beslutet.",
-    );
-
-    // The continuation is present, outside the list, and unnumbered.
-    // `innerText` reflects `text-transform: uppercase`, so the eyebrow reads
-    // "OCH SEDAN" on screen; match the words rather than the casing.
+    expect(text).toContain("Ni fattar och dokumenterar beslutet.");
     expect(text).toMatch(/och sedan/i);
     expect(text).toContain("Fortsätt med kompetensutveckling");
     const inList = await page.locator("#how-it-works ol").innerText();
@@ -98,34 +92,32 @@ test.describe("the employer landing page", () => {
   });
 
   // P3 ──────────────────────────────────────────────────────────────────
-  test("two recruitment examples, and BESKT carries its boundary where it is read", async ({
+  test("the benefit comes before the method, and BESKT carries its boundary where it is read", async ({
     page,
   }) => {
-    const examples = await page.locator("#examples h3").allInnerTexts();
-    expect(examples).toEqual([
-      "Ordinarie säkerhetsrekrytering",
-      "Säkerhetsskyddskänslig rekrytering",
-    ]);
-    const text = await page.locator("#examples").innerText();
-    expect(text).toContain(
-      "BESKT är ett metodstöd. Det ger inget resultat, ingen poäng och ingen rangordning, och det ersätter inte säkerhetsprövning enligt säkerhetsskyddslagen.",
-    );
-    expect(text).toContain(
+    const assessment = await page.locator("#bedomning").innerText();
+    // A fair, structured assessment first — then TRUST and BESKT.
+    const benefit = assessment.indexOf(SV["employers.assessment.body"]);
+    expect(benefit).toBeGreaterThanOrEqual(0);
+    expect(assessment.indexOf("TRUST")).toBeGreaterThan(benefit);
+    expect(assessment).toContain("inte vetenskapligt validerad");
+    const beskt = await page.locator('[data-employer-method="beskt"]').innerText();
+    expect(beskt).toContain(SV["employers.assessment.beskt.body"]);
+    expect(beskt).toContain(
       "BESKT är under utveckling och kan användas först efter granskning och ett uttryckligt godkännande för er organisation.",
     );
-    expect(text).toContain(
-      "Varken CQrityjob eller AI avgör om en kandidat är lämplig — arbetsgivaren fattar och dokumenterar alltid det slutliga beslutet.",
+    // A structured interview first — then the tool.
+    const interview = await page.locator("#intervju").innerText();
+    expect(interview.indexOf(SV["employers.interview.body"])).toBeLessThan(
+      interview.indexOf("Interview Intelligence"),
     );
-    // The boundary sentence lives INSIDE the example, not in a footnote at
-    // the bottom of the page that a reader meets after the claim.
-    const card = await page.locator("#examples article").nth(1).innerText();
-    expect(card).toContain("ersätter inte säkerhetsprövning");
+    await expect(page.locator("main")).toContainText(SV["employers.disclaimer"]);
     // No action into BESKT from a public page — it is not open.
     expect(await page.locator('main a[href*="beskt" i]').count()).toBe(0);
   });
 
   // P4 ──────────────────────────────────────────────────────────────────
-  test("the three actions, and each lands somewhere that renders", async ({ page }) => {
+  test("the actions, and each lands somewhere that renders", async ({ page }) => {
     const hrefs = await page.evaluate(() =>
       [...document.querySelectorAll("main a")].map((a) => a.getAttribute("href")),
     );
@@ -133,35 +125,42 @@ test.describe("the employer landing page", () => {
       "/signup?redirect=%2Femployer",
       "#how-it-works",
       "/login?redirect=%2Femployer",
-      // The quiet cross-link to the public My Security Work section.
-      "/#security-intelligence",
+      // Way A: use the platform yourselves.
+      "/signup?redirect=%2Femployer",
+      // Way B: CQrityjob helps — the working contact path.
+      "/contact",
     ]);
 
     // Register → the one door, carrying /employer.
-    await page.getByRole("link", { name: "Registrera företag" }).click();
+    await page.getByRole("link", { name: "Registrera företag" }).first().click();
     await page.waitForURL("**/signup**", { timeout: 15_000 });
     expect(new URL(page.url()).searchParams.get("redirect")).toBe("/employer");
     await expect(page.locator('input[type="email"]').first()).toBeVisible();
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
-    // The form RESOLVED the intent rather than echoing the URL.
     const swapHref = await page.locator('main a[href^="/login?"]').first().getAttribute("href");
     expect(swapHref).toContain("redirect=%2Femployer");
-
     await page.goBack({ waitUntil: "networkidle" });
 
-    // Existing customer → the same door, same return path.
-    await page.getByRole("link", { name: "Logga in till företagsportalen" }).click();
+    // Existing customer → a plain "Logga in" link, the same door.
+    await page.locator("main [data-employer-login]").click();
     await page.waitForURL("**/login**", { timeout: 15_000 });
     expect(new URL(page.url()).searchParams.get("redirect")).toBe("/employer");
     await expect(page.locator('input[type="password"]').first()).toBeVisible();
+    await page.goBack({ waitUntil: "networkidle" });
+
+    // CQrityjob helps → the contact page, which says honestly whether it
+    // can send (answered here: not configured).
+    await stubServerFn(page, "getRecruitmentEnquiryAvailability", { open: false });
+    await page.locator('[data-employer-way="help"]').getByRole("link").click();
+    await page.waitForURL((u) => u.pathname === "/contact", { timeout: 15_000 });
+    await expect(page.locator("main h1")).toHaveText("Kontakta oss om rekrytering");
+    await expect(page.locator("[data-contact-closed]")).toBeVisible({ timeout: 15_000 });
   });
 
   // P5 ──────────────────────────────────────────────────────────────────
-  test('"Se hur plattformen fungerar" scrolls this page, opening no second journey', async ({
-    page,
-  }) => {
+  test('"Så fungerar det" scrolls this page, opening no second journey', async ({ page }) => {
     const before = await page.evaluate(() => window.scrollY);
-    await page.getByRole("link", { name: "Se hur plattformen fungerar" }).click();
+    await page.getByRole("link", { name: "Så fungerar det" }).first().click();
     await page.waitForTimeout(500);
     expect(new URL(page.url()).pathname, "it must not navigate away").toBe("/employers");
     expect(new URL(page.url()).hash).toBe("#how-it-works");
@@ -179,19 +178,15 @@ test.describe("the employer landing page", () => {
   test("English says the same thing, and renders no Swedish", async ({ page }) => {
     await setLang(page, "en");
     const text = await page.locator("main").innerText();
-    expect(text).toContain("Recruit and develop security professionals in one place.");
-    expect(text).toContain(
-      "BESKT is method support. It produces no result, no score and no ranking, and it does not replace security vetting under the Protective Security Act.",
-    );
-    expect(text).toContain(
-      "Neither CQrityjob nor AI determines whether a candidate is suitable — the employer always makes and documents the final decision.",
-    );
+    expect(text).toContain(EN["employers.title"]);
+    expect(text).toContain(EN["employers.assessment.beskt.body"]);
+    expect(text).toContain(EN["employers.disclaimer"]);
     expect(text).toMatch(/and then/i);
     const diacritics = text.match(/\S*[åäöÅÄÖ]\S*/g) ?? [];
     expect(diacritics, `Swedish on the English page: ${diacritics.join(", ")}`).toEqual([]);
     // Career Discovery data is candidate-owned: an employer page never
     // offers it, in either language.
-    expect(text).not.toMatch(/career discovery/i);
+    expect(text).not.toMatch(/career discovery|career analysis/i);
   });
 
   // P7 ──────────────────────────────────────────────────────────────────
@@ -423,8 +418,8 @@ test.describe("the employer journey", () => {
 // ── ROUTED EVIDENCE — THE EMPLOYER LANDING ──────────────────────────────
 test.describe("routed evidence — the employer entrance", () => {
   for (const [lang, h1] of [
-    ["sv", "Rekrytera och utveckla säkerhetspersonal på samma plats."],
-    ["en", "Recruit and develop security professionals in one place."],
+    ["sv", SV["employers.title"]!],
+    ["en", EN["employers.title"]!],
   ] as const) {
     for (const width of [1440, 375] as const) {
       test(`employer landing ${lang} at ${width}px`, async ({ page }) => {

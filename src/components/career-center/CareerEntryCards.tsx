@@ -89,7 +89,7 @@ function EntryCard({
   /** A section on this page. */
   readonly hash: string;
   readonly cta: string;
-  /** A second, quieter jump on the same page. */
+  /** A second, quieter action: the career analysis itself. */
   readonly secondary?: {
     readonly key: TranslationKey;
     readonly to: "/security-career-assessment";
@@ -104,8 +104,8 @@ function EntryCard({
         <div className="min-w-0">
           <h2 className="text-base font-semibold tracking-tight text-foreground">{t(titleKey)}</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{t(bodyKey)}</p>
-          {/* Same-page link. The two sections are on this route, so this is
-              a jump to them rather than navigation away from the hub. */}
+          {/* The primary action is a jump to a section of this page; the
+              secondary one, where there is one, opens the career analysis. */}
           <div className="mt-3 flex flex-wrap items-center gap-x-5">
             <Link
               to="/career-center"

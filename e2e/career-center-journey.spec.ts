@@ -308,7 +308,7 @@ test.describe("every profession, shown", () => {
   });
 });
 
-test.describe("Vilket yrke arbetar du i i dag?", () => {
+test.describe("Vilket är ditt nuvarande yrke?", () => {
   test("choosing a profession shows it and its next professions, each one click away", async ({
     page,
   }) => {

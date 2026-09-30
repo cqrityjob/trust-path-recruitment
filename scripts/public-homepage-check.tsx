@@ -359,6 +359,20 @@ group("T1 · main carries exactly six sections, in the locked order");
   for (const retired of ["security-intelligence", "passport", "career", "get-started", "faq"]) {
     ck(`the retired section #${retired} is gone`, !svMain.includes(`id="${retired}"`));
   }
+  // An old link into a retired section keeps working: it is forwarded to
+  // the page that holds that content now.
+  const { RETIRED_HOME_ANCHORS } = await import("../src/components/site/legacy-home-anchors");
+  ck(
+    "the homepage forwards its retired anchors",
+    routeCode.includes("useRetiredHomeAnchors()") &&
+      RETIRED_HOME_ANCHORS.passport.to === "/security-passport" &&
+      RETIRED_HOME_ANCHORS["security-intelligence"].to === "/sakerhetsarbete" &&
+      RETIRED_HOME_ANCHORS.career.to === "/career-center",
+  );
+  ck(
+    "no retired anchor is forwarded to a section that still exists under its old name",
+    Object.keys(RETIRED_HOME_ANCHORS).every((id) => !svMain.includes(`id="${id}"`)),
+  );
   ck(
     "the Passport example card is not on the homepage — it lives on /security-passport",
     !svMain.includes("data-home-passport-preview") && !pageCode.includes("HomePassportPreview"),

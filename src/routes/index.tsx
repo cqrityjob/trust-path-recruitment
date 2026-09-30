@@ -10,6 +10,7 @@ import {
   HomeRecruitmentServices,
   HomeWhy,
 } from "@/components/site/HomeSections";
+import { useRetiredHomeAnchors } from "@/components/site/legacy-home-anchors";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useLocalizedHead } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
@@ -92,6 +93,9 @@ export const Route = createFileRoute("/")({
 function Index() {
   const navigate = useNavigate();
   useLocalizedHead("meta.home.title", "meta.home.description");
+  // A bookmark or an old shared link to a retired section (/#passport,
+  // /#security-intelligence …) lands on the page that holds it now.
+  useRetiredHomeAnchors();
   // Authenticated visitors land on their personal dashboard. Runs
   // client-side only; SSR still serves the public landing page for crawlers
   // and signed-out users. This is the ONLY redirect implementation on this
