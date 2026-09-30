@@ -181,6 +181,10 @@ export const dictionaries = {
     "home.hero.employer.title": "För arbetsgivare",
     "home.hero.employer.body":
       "Hitta, bedöm och rekrytera säkerhetskompetens – lokalt eller internationellt.",
+    // The hero's background film: a decorative loop, out of the accessibility
+    // tree, with a visible control to stop it (WCAG 2.2.2).
+    "home.hero.video.pause": "Pausa bakgrundsfilmen",
+    "home.hero.video.play": "Spela bakgrundsfilmen",
 
     // §2 — Four entry points for a person. Each answers “what can I do here?”
     // and offers ONE action, to that part's own page.
@@ -8950,6 +8954,8 @@ export const dictionaries = {
     "home.hero.employer.title": "For employers",
     "home.hero.employer.body":
       "Find, assess and recruit security professionals – locally or internationally.",
+    "home.hero.video.pause": "Pause the background film",
+    "home.hero.video.play": "Play the background film",
 
     "home.individual.title": "Your whole career. In one place.",
     "home.individual.lead":
