@@ -23,8 +23,13 @@
 // So the route is now closed unless it is explicitly opened, server-side:
 //
 //   CQRITYJOB_MCP_ENABLED=true     — required; anything else serves 404
-//   CQRITYJOB_MCP_TOKEN=<secret>   — if set, a matching bearer token is also
-//                                    required
+//   CQRITYJOB_MCP_TOKEN=<secret>   — required too (at least 16 characters);
+//                                    a matching bearer token must be sent
+//
+// The same gate (src/lib/mcp/access.ts) guards the side routes the SDK also
+// mounts — /.mcp/list-tools, /.mcp/invoke-tool/$tool and the
+// /.well-known/oauth-protected-resource document — which used to answer
+// anonymously even while this route was closed.
 //
 // Both are read from the SERVER environment. Neither is a VITE_ variable, on
 // purpose: VITE_ values are inlined into the client bundle and would publish
@@ -39,6 +44,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { createTanStackMcpHandler } from "@lovable.dev/mcp-js/stacks/tanstack";
 
+import { mcpAccessDenied } from "../lib/mcp/access";
 import mcp from "../lib/mcp/index";
 
 const mcpHandler = createTanStackMcpHandler(mcp, {
@@ -47,38 +53,12 @@ const mcpHandler = createTanStackMcpHandler(mcp, {
   trustForwardedHost: true,
 });
 
-function notFound(): Response {
-  return new Response("Not found", { status: 404 });
-}
-
-function isEnabled(): boolean {
-  return process.env.CQRITYJOB_MCP_ENABLED === "true";
-}
-
-/** Constant-time-ish comparison; avoids leaking length via early return. */
-function tokenMatches(presented: string, expected: string): boolean {
-  if (presented.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < presented.length; i += 1) {
-    diff |= presented.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-function authorised(request: Request): boolean {
-  const expected = process.env.CQRITYJOB_MCP_TOKEN;
-  if (!expected) return true; // enabled without a token: explicit owner choice
-  const header = request.headers.get("authorization") ?? "";
-  const presented = header.startsWith("Bearer ") ? header.slice(7) : "";
-  return presented.length > 0 && tokenMatches(presented, expected);
-}
-
 export const Route = createFileRoute("/mcp")({
   server: {
     handlers: {
       ANY: (ctx) => {
-        if (!isEnabled()) return notFound();
-        if (!authorised(ctx.request)) return notFound();
+        const denied = mcpAccessDenied(ctx.request);
+        if (denied) return denied;
         return (mcpHandler as (c: typeof ctx) => Response | Promise<Response>)(ctx);
       },
     },

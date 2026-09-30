@@ -99,6 +99,12 @@ expect(
   !/console\.(log|error|warn)\([^)]*apiKey/i.test(sendFn),
   "send-invitation-email.server.ts must never log the API key variable",
 );
+// A provider response body can echo the recipient address; only the HTTP
+// status may be logged.
+expect(
+  !/res\.text\(\)/.test(sendFn),
+  "send-invitation-email.server.ts must not read (and so cannot log) the provider's response body",
+);
 expect(
   sendFn.includes("Authorization: `Bearer ${apiKey}`"),
   "send-invitation-email.server.ts must send the key only as the Authorization header to the provider, nowhere else",

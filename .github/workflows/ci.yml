@@ -1432,6 +1432,22 @@ jobs:
       - name: Employer registration notification chain check
         run: bun run employer-registration-notice:check
 
+      # Every route that mounts the MCP server (/mcp and the SDK's side
+      # routes /.mcp/* and /.well-known/oauth-protected-resource) stays
+      # closed by default behind one bearer-token gate.
+      - name: MCP exposure check
+        run: bun run mcp-exposure:check
+
+      # Baseline security headers on every application response, without
+      # overriding the /p share entry's own strict policy.
+      - name: Security headers check
+        run: bun run security-headers:check
+
+      # The legacy assessment invitation sender: recipient validation and a
+      # delivery log that never carries the provider's response body.
+      - name: Invitation email guard check
+        run: bun run invitation-email-guard:check
+
 
       # ── ADMIN PORTAL ────────────────────────────────────────────────────
       #

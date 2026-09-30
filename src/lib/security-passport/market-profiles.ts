@@ -195,7 +195,7 @@ export function deriveMarketProfiles<T extends MarketScopedClaim>(
 
 /** The profiles that are NOT the holder's current work market.
  *
- *  This is the "Verifierat i andra marknader" list. It is informative and it is
+ *  This is the "Dokumenterat i andra marknader" list. It is informative and it is
  *  never an edit surface: a holder working in Dubai must not be able to reach a
  *  Swedish credential form through a panel that exists to tell them their
  *  Swedish credentials are safe. */

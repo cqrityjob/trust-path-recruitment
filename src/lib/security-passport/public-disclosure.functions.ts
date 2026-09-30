@@ -11,6 +11,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
+import { clientIpHint } from "@/lib/http/client-ip";
 import type { RecipientPayload } from "./packages";
 import { shareSessionFromCookieHeader, shareTokenFromCookieHeader } from "./share-transport";
 
@@ -66,9 +67,8 @@ export const getPublicDisclosureFromCookie = createServerFn({ method: "POST" })
 
 async function readForToken(token: string): Promise<RecipientPayload> {
   const request = getRequest();
-  const forwarded = request?.headers?.get("x-forwarded-for") ?? "";
-  // First hop only; the rest of an X-Forwarded-For chain is caller-supplied.
-  const hint = forwarded.split(",")[0]?.trim() || "unknown";
+  // The edge-set client address, not a caller-chosen one (lib/http/client-ip.ts).
+  const hint = clientIpHint(request?.headers);
 
   const { readDisclosureByToken } = await import("./public-disclosure.server");
   return readDisclosureByToken(token, hint);
@@ -76,8 +76,7 @@ async function readForToken(token: string): Promise<RecipientPayload> {
 
 async function readForSession(session: string): Promise<RecipientPayload> {
   const request = getRequest();
-  const forwarded = request?.headers?.get("x-forwarded-for") ?? "";
-  const hint = forwarded.split(",")[0]?.trim() || "unknown";
+  const hint = clientIpHint(request?.headers);
   const { readDisclosureBySession } = await import("./public-disclosure.server");
   return readDisclosureBySession(session, hint);
 }

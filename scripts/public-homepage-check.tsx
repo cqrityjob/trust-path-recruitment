@@ -844,6 +844,29 @@ group("T9 · the recruitment services band, and its one working contact action")
       code(read("src/lib/contact/recruitment-enquiry.functions.ts")) + sender,
     ),
   );
+  const throttle = code(read("src/lib/contact/enquiry-throttle.server.ts"));
+  const throttleRpcs = [...throttle.matchAll(/\.rpc\(\s*["']([a-z_]+)["']/g)].map((m) => m[1]);
+  ck(
+    "the durable abuse limit calls only the shared throttle and stores hashed keys, never the enquiry",
+    JSON.stringify(throttleRpcs) === JSON.stringify(["sp_throttle_public_access"]) &&
+      !/\.from\(|\.insert\(/.test(throttle) &&
+      throttle.includes('createHash("sha256")'),
+    throttleRpcs,
+  );
+  ck(
+    "every enquiry passes the durable limit before anything is sent",
+    /takeEnquiryAllowance\([\s\S]*?\)[\s\S]*?sendRecruitmentEnquiryEmail\(data\)/.test(
+      code(read("src/lib/contact/recruitment-enquiry.functions.ts")),
+    ),
+  );
+  ck(
+    "the acknowledgement goes only to the validated sender, replies go to CQrityjob's inbox, and it follows a sent enquiry",
+    sender.includes("to: [enquiry.email]") &&
+      sender.includes("reply_to: process.env.ADMIN_NOTIFICATION_EMAIL") &&
+      /status === "sent"\) \{[\s\S]*?sendEnquiryAcknowledgementEmail\(data\)/.test(
+        code(read("src/lib/contact/recruitment-enquiry.functions.ts")),
+      ),
+  );
 }
 
 /* T10 --------------------------------------------------------------- */

@@ -174,7 +174,11 @@ const submitApplicationSchema = z.intersection(
     z.object({
       cvSource: z.literal("upload"),
       cvFilename: z.string().trim().min(1).max(200),
-      cvBase64: z.string().min(1),
+      // Bounded before decoding: base64 of MAX_CV_BYTES, plus padding.
+      cvBase64: z
+        .string()
+        .min(1)
+        .max(Math.ceil((MAX_CV_BYTES * 4) / 3) + 4),
     }),
     z.object({
       cvSource: z.literal("cqrityjob_cv"),

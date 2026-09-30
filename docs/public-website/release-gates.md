@@ -17,6 +17,20 @@ production activations, gate B `CREDLY_OB2.enabled = false` and
 new vision copy does not override any gate: every gated sentence below is
 unchanged.
 
+**Production-readiness re-check, 2026-09-30** (`docs/release/2026-09-30-production-readiness.md`):
+all three gates remain **not met**, and the copy stays on its temporary
+wording. Gate A: 0 rows in `sw_ai_activations`, 0 `sw_private.worker_keys`,
+no provider key or `SW_*` configuration. Gate B: unchanged — the Credly
+source still awaits written permission and no issuer policy exists. Gate C:
+0 `beskt_method_versions` rows at all (nothing authored, reviewed or
+published).
+
+A gate needs more than its row to be met. Gate A also needs the `SW_*`
+settings, a matching `sw_private.worker_keys` row and a synthetic run that
+succeeds. Gate C also needs the second query under Gate C below to return 0,
+because a version opened with `pilot_availability = 'open'` is startable by
+every active employer without publication.
+
 | Gate | Condition                                                  | Status at release | Live copy         |
 | ---- | ---------------------------------------------------------- | ----------------- | ----------------- |
 | A    | An active, unrevoked, unexpired row in `sw_ai_activations` | **Not met**       | Temporary (below) |
@@ -101,6 +115,16 @@ the owner-issued internal test grants.
 
 ```sql
 select count(*) from public.beskt_method_versions where content_status = 'published';
+```
+
+Also check this before switching the copy. `bcp_offer_covers` (migration
+`20261201090000`) lets every active employer start a draft or in-review
+version that a publisher has opened with `pilot_availability = 'open'`.
+The copy's "explicit approval for your organisation" would then be untrue:
+
+```sql
+select count(*) from public.beskt_method_versions
+where content_status <> 'published' and pilot_availability = 'open';
 ```
 
 **Evidence (2026-09-29).** 0 published method versions and 0 internal test
