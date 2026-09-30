@@ -9428,7 +9428,7 @@ export const dictionaries = {
       "The tool helps you prepare the interview, keep the structure and link each assessment to what the candidate actually said. You make the assessment and the decision.",
 
     "employers.services.eyebrow": "Recruitment & Executive Search",
-    "employers.services.title": "Would you like help with the whole recruitment?",
+    "employers.services.title": "Need help with the whole recruitment process?",
     "employers.services.lead": "Choose the way of working that suits you.",
     "employers.services.self.title": "Use the platform yourselves",
     "employers.services.self.body":
