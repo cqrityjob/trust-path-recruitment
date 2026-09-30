@@ -584,9 +584,8 @@ group("GROUP 8 -- one vocabulary: the Passport says what the public page says");
       "identity.selfDeclared",
     ] as const) {
       ck(
-        `${lang}: the status word "${key}" does not say verified`,
+        `${lang}: the status word "${key}" ("${passportT(key, lang)}") does not say verified`,
         !/verifi/i.test(passportT(key, lang)),
-        passportT(key, lang),
       );
     }
   }
