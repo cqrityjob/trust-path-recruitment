@@ -115,7 +115,44 @@ export type Refusals = { unstubbed: string[]; production: string[] };
  * default, which the section states honestly. Any other Supabase request is
  * still a leak.
  */
+/**
+ * The Security Passport Network band's ONE public read: `sp_network_stats()`,
+ * a POST to `rest/v1/rpc/sp_network_stats` made by the homepage and by
+ * /security-passport. Answered HERE and never upstream. The default is what
+ * production says today -- `{"display":"hidden"}`, which draws nothing -- so a
+ * suite that does not care about the band sees exactly the page it saw before.
+ * A suite that does passes the document it wants rendered (or `null` for an
+ * unavailable read, or a number for an HTTP failure).
+ *
+ * Registered with `answerPublicJobs`, and callable on its own for a page that
+ * installs no other boundary.
+ */
+export const NETWORK_HIDDEN = { display: "hidden" } as const;
+
+export async function answerNetworkStats(
+  page: Page,
+  answer: unknown | number = NETWORK_HIDDEN,
+): Promise<void> {
+  for (const host of ["*.supabase.co", "*.supabase.in"]) {
+    await page.route(`**://${host}/rest/v1/rpc/sp_network_stats**`, async (route) => {
+      if (route.request().method() !== "POST") return route.abort();
+      if (typeof answer === "number")
+        return route.fulfill({
+          status: answer,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "stubbed failure" }),
+        });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(answer),
+      });
+    });
+  }
+}
+
 export async function answerPublicJobs(page: Page, rows: readonly unknown[] = []): Promise<void> {
+  await answerNetworkStats(page);
   const employers = [
     ...new Map(
       rows

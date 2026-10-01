@@ -110,6 +110,10 @@ export async function installJobsFixture(page: Page, language: "sv" | "en" = "sv
   for (const host of ["**://*.supabase.co/**", "**://*.supabase.in/**"]) {
     await page.route(host, async (route) => {
       const url = new URL(route.request().url());
+      // The Security Passport Network band's public read, answered "hidden" --
+      // what production says today -- so it draws nothing here.
+      if (url.pathname.endsWith("/rest/v1/rpc/sp_network_stats"))
+        return respond(route, { display: "hidden" });
       if (route.request().method() !== "GET") {
         unexpected.push(`${route.request().method()} ${url.pathname}`);
         return route.abort();

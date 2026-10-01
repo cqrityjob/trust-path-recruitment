@@ -10,6 +10,7 @@ import {
   HomeRecruitmentServices,
   HomeWhy,
 } from "@/components/site/HomeSections";
+import { SecurityPassportNetwork } from "@/components/site/SecurityPassportNetwork";
 import { useRetiredHomeAnchors } from "@/components/site/legacy-home-anchors";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useLocalizedHead } from "@/i18n/context";
@@ -54,6 +55,12 @@ import { dictionaries } from "@/i18n/dictionaries";
  *  * that AI is active where it is not — availability is the workspace's to
  *    show;
  *  * a price, a count, a customer or a person that the product cannot back.
+ *
+ *  ONE conditional band sits between 2 and 3: the Security Passport Network
+ *  figures (real, aggregate, database-approved). It renders nothing while the
+ *  owner's publication setting is not `public`, so the page above is exactly
+ *  the six-section page until the owner chooses otherwise. It is the one
+ *  place a count may appear, because the database backs it.
  *
  *  The sections live in components/site/HomeSections.tsx. */
 
@@ -125,6 +132,10 @@ function Index() {
     <SiteLayout>
       <HomeHero />
       <HomeForIndividuals />
+      {/* Not a seventh section: a quiet proof band that draws NOTHING until the
+          owner publishes it (publication setting 'public') and the
+          figures exist. */}
+      <SecurityPassportNetwork surface="homepage" />
       <HomeLatestJobs />
       <HomeEmployers employerOpen={employerOpen} />
       <HomeRecruitmentServices />

@@ -3,7 +3,7 @@
 Real, aggregate, automatically updated growth figures for the public site.
 Nothing is seeded, inflated or hand-maintained.
 
-> **Delivered in two steps (schema-first-release rule).** This change is the database half: the migration, its rollback, its database tests and the guard updates. The homepage and Passport-page UI (component, copy, guard, negative controls, screenshots) follows in a second PR, opened only after this migration is merged and applied on the hosted project and recorded `applied` in `supabase/release-state.json`. Sections below describe the whole feature.
+> **Delivered in two steps (schema-first-release rule).** Step 1 — the database half (migration, rollback, database tests, guard updates) — is merged and applied on production (`docs/release/2026-10-01-passport-network-statistics-hosted-verification.md`). Step 2 — this UI — adds the homepage and Passport-page band, the Swedish and English copy, the guards and the browser proof. **Production stays `hidden`: nothing is published by either step.**
 
 ## Definitions (audited against production, 2026-10-01)
 
@@ -53,7 +53,10 @@ INSERT INTO public.sp_statistics_exclusions (holder_user_id, reason) VALUES ('<u
 
 ## Tests
 
-`bun run passport-network-stats:db` (28 behavioural checks against a throwaway Postgres: counting rule, repeated reads, credential edits, staff/test exclusion, threshold, anon cannot enumerate, RLS unchanged). The 101-assertion UI/contract guard, its 14 negative controls and the screenshots ship with the UI PR.
+`bun run passport-network-stats:db` (28 behavioural checks against a throwaway Postgres: counting rule, repeated reads, credential edits, staff/test exclusion, threshold, anon cannot enumerate, RLS unchanged). `bun run passport-network-stats:check` (101 contract/privacy/render/layout assertions), `bun run negative-controls:passport-network-stats` (14 mutations), and `e2e/passport-network.spec.ts` (hermetic browser proof, run by `bun run e2e:public-entry`: hidden / failed / malformed / zero / one / small / large / populated, both languages, 1440 and 390 px, placement, one request per load, accessibility). Evidence screenshots: `network-statistics-evidence/` (the real components with the real stylesheet; the CI run also uploads the browser suite's own screenshots).
+
+### Browser-test harness
+The hermetic suites fail any request to a Supabase host. The band's one read (`POST rest/v1/rpc/sp_network_stats`) is answered locally by `answerNetworkStats` in `e2e/support/public-entry-harness.ts` (default: the production answer, `{"display":"hidden"}`, which draws nothing); `answerPublicJobs` and the jobs fixture call it, and the three tests that open `/security-passport` with no other boundary call it directly.
 
 ## Existing guards extended (reviewed exception)
 
