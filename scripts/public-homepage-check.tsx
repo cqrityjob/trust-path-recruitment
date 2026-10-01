@@ -1037,7 +1037,8 @@ group("T13 · sv and en say the same thing, with the same structure");
     JSON.stringify(pageKeys("sv")) === JSON.stringify(pageKeys("en")),
     pageKeys("sv").filter((k) => !pageKeys("en").includes(k)),
   );
-  // Product names are the same in both. Nothing else may be — an untouched
+  // Product names (and the locked brand statements below) are the same in
+  // both. Nothing else may be — an untouched
   // English string is an untranslated one. Each exception is PROVEN to be a
   // product name rather than trusted to be one: it must equal, in both
   // languages, the name the product itself carries elsewhere. A sentence
@@ -1047,7 +1048,21 @@ group("T13 · sv and en say the same thing, with the same structure");
     "home.individual.passport.title": "nav.securityPassport",
     "home.services.executive.title": "nav.forEmployers.recruitment",
   };
-  const SAME_IN_BOTH = new Set<string>(Object.keys(PRODUCT_NAMES));
+  // The locked brand statements (owner decision, 2026-10-01) are English in
+  // both languages, like "brand.slogan". Each is PROVEN by its exact,
+  // approved wording, so no other sentence can join it untranslated.
+  const BRAND_STATEMENTS: Record<string, string> = {
+    "home.hero.title": "Security careers, without limits.",
+  };
+  for (const [key, locked] of Object.entries(BRAND_STATEMENTS)) {
+    for (const lang of LANGS) {
+      ck(`${lang} "${key}" is the locked brand statement`, d(lang)[key] === locked, d(lang)[key]);
+    }
+  }
+  const SAME_IN_BOTH = new Set<string>([
+    ...Object.keys(PRODUCT_NAMES),
+    ...Object.keys(BRAND_STATEMENTS),
+  ]);
   for (const [key, nameKey] of Object.entries(PRODUCT_NAMES)) {
     for (const lang of LANGS) {
       ck(
