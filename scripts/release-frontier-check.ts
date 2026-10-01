@@ -289,6 +289,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // its PR merges and the official integration applies it. Its name comes off
 // this list in the change that records its hosted evidence. Evidence to come:
 // docs/release/2026-10-01-job-application-insert-boundary.md.
+// 20261231090000_scp_resolve_employment_owner_only (P1-3 of the 2026-10-01
+// audit: the employment-binding helper is not a client entry point) is pending
+// BY DESIGN until its PR merges and the official integration applies it. Its
+// name comes off this list in the change that records its hosted evidence.
+// Evidence to come: docs/release/2026-10-01-employment-binding-owner-only.md.
 // 20270101090000_catalogue_read_hardening (the four owner-approved items of
 // the 2026-10-01 pre-release security pass: drafts, unapproved professions
 // and the interviewer guide stop being readable by every signed-in account,
@@ -298,6 +303,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence to come: docs/release/2026-10-01-catalogue-read-hardening.md.
 const expectedPending: string[] = [
   "20261230090000_job_application_insert_boundary.sql",
+  "20261231090000_scp_resolve_employment_owner_only.sql",
   "20270101090000_catalogue_read_hardening.sql",
 ];
 const hostedIdentities = [
