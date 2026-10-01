@@ -840,6 +840,10 @@ section("G. Career Discovery's bridge and approved_for_ranking are untouched and
     "20260912090000_cd_ranking_guard_recommendation.sql",
     "20260913092000_cig_security_leadership_professions.sql",
     "20261006090000_cd_layer4_entry_gap_professions.sql",
+    // Reads approved_for_ranking in cd_professions_read (approved-or-admin);
+    // changes no row, no flag and no bridge slug. The approved set above is
+    // still asserted on its own.
+    "20270101090000_catalogue_read_hardening.sql",
   ];
   assert(
     JSON.stringify(touching) === JSON.stringify(known),
