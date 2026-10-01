@@ -171,11 +171,18 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- anon still reaches none of the four hardened read tables.
-  IF has_table_privilege('anon', 'public.scp_behaviour_versions', 'SELECT')
-     OR has_table_privilege('anon', 'public.scp_role_versions', 'SELECT')
-     OR has_table_privilege('anon', 'public.cd_professions', 'SELECT')
-     OR has_table_privilege('anon', 'public.scp_interview_guide_prompts', 'SELECT') THEN
+  -- anon still reaches none of the four hardened read tables: RLS is on and no
+  -- read policy applies to anon or PUBLIC. (Asserted on policies, not grants:
+  -- a Supabase stack's default privileges grant anon SELECT that RLS refuses.)
+  IF EXISTS (SELECT 1 FROM pg_class c
+              WHERE c.oid IN ('public.scp_behaviour_versions'::regclass, 'public.scp_role_versions'::regclass,
+                              'public.cd_professions'::regclass, 'public.scp_interview_guide_prompts'::regclass)
+                AND NOT c.relrowsecurity)
+     OR EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+                  AND tablename IN ('scp_behaviour_versions', 'scp_role_versions',
+                                    'cd_professions', 'scp_interview_guide_prompts')
+                  AND cmd IN ('SELECT', 'ALL')
+                  AND roles && ARRAY['anon', 'public']::name[]) THEN
     RAISE EXCEPTION 'CATALOGUE_HARDENING_PROOF: anon can read a hardened table';
   END IF;
 
