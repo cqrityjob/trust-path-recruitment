@@ -113,6 +113,25 @@ const appLog = logs
   .map((n) => readFileSync(join(state, n), "utf8"))
   .join("\n")
   .split("\n");
-writeFileSync(join(out, "dev-server-tail.log"), redact(appLog.slice(-600).join("\n")) + "\n");
+// The head (startup, dependency scan) and every line about optimisation or
+// reloads, then the tail; the inputValidator deprecation noise is dropped.
+const signal = appLog.filter(
+  (l) =>
+    /optimi|reload|new dep|scan|hmr|page reload|vite/i.test(l) &&
+    !/inputValidator|Plugin:|File:/.test(l),
+);
+writeFileSync(
+  join(out, "dev-server-tail.log"),
+  redact(
+    [
+      "=== head",
+      ...appLog.slice(0, 80),
+      "=== vite signal",
+      ...signal,
+      "=== tail",
+      ...appLog.slice(-150),
+    ].join("\n"),
+  ) + "\n",
+);
 if (!existsSync(join(out, "trace-digest.txt"))) throw new Error("no digest written");
 console.log(`digest: ${lines.length} trace lines, ${logs.length} dev-server log(s)`);
