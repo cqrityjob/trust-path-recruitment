@@ -156,8 +156,8 @@ const GEO =
   /geolocat|geoip|ip_address|inet_client_addr|x-forwarded|cf-ipcountry|navigator\.geolocation|ipapi|ipinfo|maxmind|timezone/i;
 const SURFACES = [
   MIGRATION,
-  "src/lib/security-passport/network-stats.ts",
-  "src/components/security-passport/SecurityPassportNetwork.tsx",
+  "src/lib/public-stats/passport-network.ts",
+  "src/components/site/SecurityPassportNetwork.tsx",
 ];
 for (const f of SURFACES)
   ok(
@@ -184,7 +184,7 @@ ok(
 );
 
 // ── N5 · PARSING ───────────────────────────────────────────────────────
-const lib = await import("../src/lib/security-passport/network-stats");
+const lib = await import("../src/lib/public-stats/passport-network");
 const GOOD = {
   display: "public",
   passports: 1247,
@@ -259,7 +259,7 @@ const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
 const { QueryClient, QueryClientProvider } = await import("@tanstack/react-query");
 const { SecurityPassportNetwork, SecurityPassportNetworkView } =
-  await import("../src/components/security-passport/SecurityPassportNetwork");
+  await import("../src/components/site/SecurityPassportNetwork");
 
 function renderView(stats: unknown, lang: "sv" | "en", link = false): string {
   return renderToStaticMarkup(
@@ -430,25 +430,23 @@ const allSrc = (await import("node:child_process"))
   .filter((f) => /\.(ts|tsx)$/.test(f) && !f.endsWith("types.ts"));
 const callers = allSrc.filter((f) => /rpc\(\s*"sp_network_stats"/.test(read(f)));
 ok(
-  JSON.stringify(callers) === JSON.stringify(["src/lib/security-passport/network-stats.ts"]),
+  JSON.stringify(callers) === JSON.stringify(["src/lib/public-stats/passport-network.ts"]),
   `N8.4 exactly one caller of the aggregate (${callers.join(",")})`,
 );
-const libSrc = read("src/lib/security-passport/network-stats.ts");
+const libSrc = read("src/lib/public-stats/passport-network.ts");
 ok(
-  !/\.from\(/.test(libSrc + read("src/components/security-passport/SecurityPassportNetwork.tsx")),
+  !/\.from\(/.test(libSrc + read("src/components/site/SecurityPassportNetwork.tsx")),
   "N8.5 no table is read from the browser",
 );
 ok(
   !/\.channel\(|\.subscribe\(|postgres_changes|refetchInterval|setInterval/.test(
-    libSrc + read("src/components/security-passport/SecurityPassportNetwork.tsx"),
+    libSrc + read("src/components/site/SecurityPassportNetwork.tsx"),
   ),
   "N8.6 no realtime, polling or timers",
 );
 ok(/staleTime:\s*10 \* 60 \* 1000/.test(libSrc), "N8.7 cached for ten minutes");
 ok(
-  /useQuery\(NETWORK_STATS_QUERY\)/.test(
-    read("src/components/security-passport/SecurityPassportNetwork.tsx"),
-  ),
+  /useQuery\(NETWORK_STATS_QUERY\)/.test(read("src/components/site/SecurityPassportNetwork.tsx")),
   "N8.8 both surfaces share one query key (one request per page view)",
 );
 ok(
@@ -488,7 +486,7 @@ ok(
 );
 
 // ── N10 · MOBILE (~390px) ──────────────────────────────────────────────
-const comp = read("src/components/security-passport/SecurityPassportNetwork.tsx");
+const comp = read("src/components/site/SecurityPassportNetwork.tsx");
 ok(
   /flex-col items-center justify-center gap-8 sm:flex-row/.test(comp),
   "N10.1 the figures stack below the sm breakpoint",

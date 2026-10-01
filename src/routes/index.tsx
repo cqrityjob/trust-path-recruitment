@@ -10,7 +10,7 @@ import {
   HomeRecruitmentServices,
   HomeWhy,
 } from "@/components/site/HomeSections";
-import { SecurityPassportNetwork } from "@/components/security-passport/SecurityPassportNetwork";
+import { SecurityPassportNetwork } from "@/components/site/SecurityPassportNetwork";
 import { useRetiredHomeAnchors } from "@/components/site/legacy-home-anchors";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useLocalizedHead } from "@/i18n/context";

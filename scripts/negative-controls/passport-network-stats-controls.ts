@@ -14,8 +14,8 @@ import { runControls, type Mutation } from "./runner";
 
 const GUARD = "passport-network-stats:check";
 const MIG = "supabase/migrations/20261227090000_sp_network_statistics.sql";
-const LIB = "src/lib/security-passport/network-stats.ts";
-const COMP = "src/components/security-passport/SecurityPassportNetwork.tsx";
+const LIB = "src/lib/public-stats/passport-network.ts";
+const COMP = "src/components/site/SecurityPassportNetwork.tsx";
 
 const MUTATIONS: readonly Mutation[] = [
   {
@@ -99,7 +99,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: "const LOCALE = ",
     replace: "const GEO = navigator.geolocation;\nconst LOCALE = ",
     guard: GUARD,
-    expect: "N4 no geolocation in src/lib/security-passport/network-stats.ts",
+    expect: "N4 no geolocation in src/lib/public-stats/passport-network.ts",
   },
   {
     id: "NET-NC-POLLING",

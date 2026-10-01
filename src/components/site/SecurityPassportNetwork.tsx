@@ -1,7 +1,7 @@
 // Security Passport Network — a small, quiet proof section.
 //
 // Draws ONLY what the database approved to publish (see
-// src/lib/security-passport/network-stats.ts). It is not a dashboard and not a
+// src/lib/public-stats/passport-network.ts). It is not a dashboard and not a
 // scoreboard: two figures at most, and the markets as a plain sentence in
 // alphabetical order of their ISO code — no counts, no ranks, no comparison.
 //
@@ -20,7 +20,7 @@ import {
   mayShowNetworkStats,
   NETWORK_STATS_QUERY,
   type NetworkStats,
-} from "@/lib/security-passport/network-stats";
+} from "@/lib/public-stats/passport-network";
 
 const DISPLAY = { fontFamily: "var(--font-display)" } as const;
 

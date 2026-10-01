@@ -14,7 +14,7 @@ import {
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
-import { SecurityPassportNetwork } from "@/components/security-passport/SecurityPassportNetwork";
+import { SecurityPassportNetwork } from "@/components/site/SecurityPassportNetwork";
 import { HomePassportPreview } from "@/components/site/HomePassportPreview";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
