@@ -116,7 +116,7 @@ const MUTATIONS: readonly Mutation[] = [
     find: 'if (r.display !== "passport_page" && r.display !== "public") return null;',
     replace: 'if (r.display === undefined) return null;',
     guard: GUARD,
-    expect: "N5.1 hidden → nothing",
+    expect: "N5.1 hidden → nothing, even if numbers are attached",
   },
   {
     id: "NET-NC-RANKING-HEADLINE",

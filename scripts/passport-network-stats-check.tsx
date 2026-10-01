@@ -162,7 +162,7 @@ ok(!/sp_jurisdictions|sub_jurisdiction|jurisdiction_code\s+FROM public\.sp_claim
 // ── N5 · PARSING ───────────────────────────────────────────────────────
 const lib = await import("../src/lib/security-passport/network-stats");
 const GOOD = { display: "public", passports: 1247, credentials: 3841, markets: ["AE", "GB", "SE"], otherMarkets: true };
-ok(lib.parseNetworkStats({ display: "hidden" }) === null, "N5.1 hidden → nothing");
+ok(lib.parseNetworkStats({ display: "hidden" }) === null && lib.parseNetworkStats({ ...GOOD, display: "hidden" }) === null, "N5.1 hidden → nothing, even if numbers are attached");
 ok(lib.parseNetworkStats(null) === null && lib.parseNetworkStats("x") === null && lib.parseNetworkStats([]) === null, "N5.2 malformed → nothing");
 ok(lib.parseNetworkStats({ ...GOOD, passports: -1 }) === null, "N5.3 a negative count → nothing");
 ok(lib.parseNetworkStats({ ...GOOD, passports: 1.5 }) === null, "N5.4 a fractional count → nothing");
