@@ -1504,6 +1504,12 @@ jobs:
       - name: Public homepage check
         run: bun run public-homepage:check
 
+      # The two locked brand statements (owner decision, 2026-10-01): the
+      # hero "Security careers, without limits." and the brand promise
+      # "Where trust comes first.". Read-only over the dictionaries and source.
+      - name: Brand messaging check
+        run: bun run brand-messaging:check
+
       # "Tillbaka till sökresultatet" on a job ad. The /jobs search a card
       # was listed under travels as a validated `from` and survives card ->
       # ad -> back, a related-ad hop, and signing in to apply (safeReturnPath

@@ -219,6 +219,7 @@
     "header-entry:check": "bun run scripts/header-entry-check.ts",
     "employer-landing:check": "bun run scripts/employer-landing-check.tsx",
     "public-homepage:check": "bun run scripts/public-homepage-check.tsx",
+    "brand-messaging:check": "bun run scripts/brand-messaging-check.ts",
     "job-back-navigation:check": "bun run scripts/job-back-navigation-check.tsx",
     "recruitment-decision-support:check": "bun run scripts/recruitment-decision-support-check.ts",
     "recruitment-report-render:check": "bun run scripts/recruitment-report-render-check.tsx",

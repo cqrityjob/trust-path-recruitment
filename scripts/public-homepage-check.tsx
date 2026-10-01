@@ -384,13 +384,14 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
 {
   const SPEC: Record<Lang, Record<string, string>> = {
     sv: {
-      // Brand story, 2026-09-30: the platform for people AND opportunities.
-      "home.hero.title": "Säkerhetsbranschens plattform för människor och möjligheter.",
+      // Locked owner decision, 2026-10-01: the English brand statement is
+      // the hero in BOTH languages, never translated.
+      "home.hero.title": "Security careers, without limits.",
       "home.hero.individual.title": "För dig i säkerhetsbranschen",
       "home.hero.employer.title": "För arbetsgivare",
     },
     en: {
-      "home.hero.title": "The platform for people and opportunities in security.",
+      "home.hero.title": "Security careers, without limits.",
       "home.hero.individual.title": "For people in security",
       "home.hero.employer.title": "For employers",
     },
@@ -404,6 +405,10 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
     ck(
       `${lang}: the h1 is the locked headline`,
       headings(hero, "h1")[0] === SPEC[lang]["home.hero.title"],
+    );
+    ck(
+      `${lang}: the h1 is marked lang="en" — an English brand statement on every page`,
+      /<h1[^>]*lang="en"/.test(hero),
     );
     ck(`${lang}: the hero is centred`, /<section id="hero"[\s\S]*?text-center/.test(hero));
     // The positioning is two sentences, one per audience (brand story,
@@ -419,10 +424,12 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
     ck(
       `${lang}: the positioning addresses individuals and employers, locally or internationally`,
       lang === "sv"
-        ? /dig som vill utvecklas inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
+        ? /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /din karriär inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
             /För arbetsgivare/.test(d(lang)["home.hero.subtitle"]) &&
             /lokalt eller internationellt/.test(d(lang)["home.hero.subtitle"])
-        : /develop your security career/.test(d(lang)["home.hero.subtitle"]) &&
+        : /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /develop your security career/.test(d(lang)["home.hero.subtitle"]) &&
             /For employers/.test(d(lang)["home.hero.subtitle"]) &&
             /locally or internationally/.test(d(lang)["home.hero.subtitle"]),
       d(lang)["home.hero.subtitle"],
@@ -1030,7 +1037,8 @@ group("T13 · sv and en say the same thing, with the same structure");
     JSON.stringify(pageKeys("sv")) === JSON.stringify(pageKeys("en")),
     pageKeys("sv").filter((k) => !pageKeys("en").includes(k)),
   );
-  // Product names are the same in both. Nothing else may be — an untouched
+  // Product names (and the locked brand statements below) are the same in
+  // both. Nothing else may be — an untouched
   // English string is an untranslated one. Each exception is PROVEN to be a
   // product name rather than trusted to be one: it must equal, in both
   // languages, the name the product itself carries elsewhere. A sentence
@@ -1040,7 +1048,21 @@ group("T13 · sv and en say the same thing, with the same structure");
     "home.individual.passport.title": "nav.securityPassport",
     "home.services.executive.title": "nav.forEmployers.recruitment",
   };
-  const SAME_IN_BOTH = new Set<string>(Object.keys(PRODUCT_NAMES));
+  // The locked brand statements (owner decision, 2026-10-01) are English in
+  // both languages, like "brand.slogan". Each is PROVEN by its exact,
+  // approved wording, so no other sentence can join it untranslated.
+  const BRAND_STATEMENTS: Record<string, string> = {
+    "home.hero.title": "Security careers, without limits.",
+  };
+  for (const [key, locked] of Object.entries(BRAND_STATEMENTS)) {
+    for (const lang of LANGS) {
+      ck(`${lang} "${key}" is the locked brand statement`, d(lang)[key] === locked, d(lang)[key]);
+    }
+  }
+  const SAME_IN_BOTH = new Set<string>([
+    ...Object.keys(PRODUCT_NAMES),
+    ...Object.keys(BRAND_STATEMENTS),
+  ]);
   for (const [key, nameKey] of Object.entries(PRODUCT_NAMES)) {
     for (const lang of LANGS) {
       ck(

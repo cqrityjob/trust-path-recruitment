@@ -21,8 +21,9 @@ import { dictionaries } from "@/i18n/dictionaries";
  *
  *  Exactly six sections, in this order, and nothing else:
  *
- *    1. hero                  "Säkerhetsbranschens plattform för människor och
- *                             möjligheter.", the positioning for both
+ *    1. hero                  "Security careers, without limits." (locked
+ *                             owner decision, 2026-10-01; English in both
+ *                             languages), the positioning for both
  *                             audiences, and two equal entrances: for a
  *                             person, and for an employer
  *    2. for-dig               Karriär, Jobb, Security Passport and
@@ -32,8 +33,8 @@ import { dictionaries } from "@/i18n/dictionaries";
  *    4. for-arbetsgivare      ANNONSERA → TA EMOT OCH HANTERA → BEDÖM →
  *                             INTERVJUA → BESLUTA, benefit first
  *    5. rekryteringstjanster  "Vill ni ha hjälp med hela rekryteringen?"
- *    6. varfor                why CQrityjob, ending in "Where trust comes
- *                             first."
+ *    6. varfor                why CQrityjob, ending in the brand promise
+ *                             "Where trust comes first."
  *
  *  This SUPERSEDES the seven-section page of 2026-09-27, which explained
  *  Säkerhetsarbete, the Passport and the career area IN DEPTH on the
