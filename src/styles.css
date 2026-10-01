@@ -59,6 +59,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-night: var(--night);
   --font-display: "Sora", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
 }
@@ -86,6 +87,9 @@
   --muted: oklch(0.965 0.012 245);
   --muted-foreground: oklch(0.48 0.026 258); /* #475467 */
   --accent: oklch(0.492 0.115 245); /* #1769AA trust blue */
+  /* #060B12 night — the ONE surface behind every film (homepage hero,
+   * /plattformen). Films are graded to sit on it; see dark-surface.ts. */
+  --night: oklch(0.147 0.018 254.4);
   --accent-foreground: oklch(0.988 0.003 95);
   --accent-hover: oklch(0.43 0.108 246); /* #12568C */
   --gold: oklch(0.72 0.075 78); /* #B79255 restrained gold */
@@ -131,6 +135,7 @@
   --muted: oklch(0.279 0.041 260.031);
   --muted-foreground: oklch(0.704 0.04 256.788);
   --accent: oklch(0.279 0.041 260.031);
+  --night: oklch(0.147 0.018 254.4);
   --accent-foreground: oklch(0.984 0.003 247.858);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.984 0.003 247.858);
@@ -161,6 +166,32 @@
 @utility passport-signature {
   background-color: #0b1f3a;
   background-image: linear-gradient(168deg, #12294a 0%, #0b1f3a 46%, #061426 100%);
+}
+
+/* The ONE dark band of the public site: the ground of every full-width dark
+ * section — the homepage employer band, the closing bands of Security
+ * Passport, Säkerhetsarbete and About, and /plattformen. It is the films'
+ * own `night`, lit from the top-left and bottom-right by the brand's trust
+ * blue, the way the hero and chip films are lit — so moving from a film to a
+ * band, or from one page's band to the next, never changes the dark. */
+@utility surface-night {
+  background-color: var(--night);
+  background-image:
+    radial-gradient(900px 420px at 12% -10%, oklch(0.492 0.115 245 / 0.22), transparent 65%),
+    radial-gradient(700px 380px at 95% 115%, oklch(0.492 0.115 245 / 0.12), transparent 60%);
+}
+
+/* …and its light counterpart: the ground of every light page-top (Security
+ * Passport, Säkerhetsarbete, Karriär, För arbetsgivare, Om oss). The same
+ * trust-blue light from the same corner as surface-night, so a light page
+ * and a dark band read as one room with the lights on or off. */
+@utility surface-dawn {
+  background-color: color-mix(in oklch, var(--secondary) 45%, var(--background));
+  background-image: radial-gradient(
+    900px 420px at 12% -10%,
+    oklch(0.492 0.115 245 / 0.12),
+    transparent 62%
+  );
 }
 
 /* The frame of a whole CARD — not of the small navy tiles that also take the

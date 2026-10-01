@@ -22,6 +22,7 @@ import { Route as EmployersRouteImport } from './routes/employers'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
+import { Route as PlattformenRouteImport } from './routes/plattformen'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SakerhetsarbeteRouteImport } from './routes/sakerhetsarbete'
 import { Route as SecurityCareerAssessmentRouteImport } from './routes/security-career-assessment'
@@ -266,6 +267,11 @@ const LoginRoute = LoginRouteImport.update({
 const McpRoute = McpRouteImport.update({
   id: '/mcp',
   path: '/mcp',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlattformenRoute = PlattformenRouteImport.update({
+  id: '/plattformen',
+  path: '/plattformen',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -1383,6 +1389,7 @@ export interface FileRoutesByFullPath {
   '/jobs': typeof JobsRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plattformen': typeof PlattformenRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
@@ -1576,6 +1583,7 @@ export interface FileRoutesByTo {
   '/employers': typeof EmployersRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plattformen': typeof PlattformenRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
@@ -1752,6 +1760,7 @@ export interface FileRoutesById {
   '/jobs': typeof JobsRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
+  '/plattformen': typeof PlattformenRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sakerhetsarbete': typeof SakerhetsarbeteRoute
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
@@ -1949,6 +1958,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/login'
     | '/mcp'
+    | '/plattformen'
     | '/reset-password'
     | '/sakerhetsarbete'
     | '/security-career-assessment'
@@ -2142,6 +2152,7 @@ export interface FileRouteTypes {
     | '/employers'
     | '/login'
     | '/mcp'
+    | '/plattformen'
     | '/reset-password'
     | '/sakerhetsarbete'
     | '/security-career-assessment'
@@ -2317,6 +2328,7 @@ export interface FileRouteTypes {
     | '/jobs'
     | '/login'
     | '/mcp'
+    | '/plattformen'
     | '/reset-password'
     | '/sakerhetsarbete'
     | '/security-career-assessment'
@@ -2514,6 +2526,7 @@ export interface RootRouteChildren {
   JobsRoute: typeof JobsRouteWithChildren
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
+  PlattformenRoute: typeof PlattformenRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SakerhetsarbeteRoute: typeof SakerhetsarbeteRoute
   SecurityCareerAssessmentRoute: typeof SecurityCareerAssessmentRoute
@@ -2629,6 +2642,13 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/plattformen': {
+      id: '/plattformen'
+      path: '/plattformen'
+      fullPath: '/plattformen'
+      preLoaderRoute: typeof PlattformenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reset-password': {
@@ -4620,6 +4640,7 @@ const rootRouteChildren: RootRouteChildren = {
   JobsRoute: JobsRouteWithChildren,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
+  PlattformenRoute: PlattformenRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SakerhetsarbeteRoute: SakerhetsarbeteRoute,
   SecurityCareerAssessmentRoute: SecurityCareerAssessmentRoute,

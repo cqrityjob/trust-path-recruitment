@@ -128,6 +128,18 @@ export const dictionaries = {
     "meta.home.description":
       "Upptäck din riktning inom säkerhet, bygg ditt Security Passport, hitta lediga säkerhetsjobb och utveckla din karriär. För arbetsgivare: hitta, bedöm och rekrytera säkerhetskompetens på samma plats.",
     "meta.about.title": "Om CQrityjob – varför börja om varje gång?",
+    "meta.platform.title": "Plattformen – CQrityjob",
+    "meta.platform.description":
+      "CQrityjobs produkter på ett ställe: Karriär, Jobb, Security Passport och Säkerhetsarbete för dig i säkerhetsbranschen – och verktygen för arbetsgivare som rekryterar.",
+    "platform.eyebrow": "Plattformen",
+    "platform.title": "Ett fundament. Varje del av en säkerhetskarriär.",
+    "platform.lead":
+      "Välj en del av plattformen för att se vad den gör. Varje del har sin egen sida med mer.",
+    "platform.group.individual": "För dig",
+    "platform.group.employer": "För arbetsgivare",
+    "platform.readMore": "Läs mer",
+    "platform.video.pause": "Pausa filmen",
+    "platform.video.play": "Spela filmen",
     "meta.careerCenter.title": "Yrken och karriärvägar inom säkerhet – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – din karriäranalys – CQrityjob",
     "meta.jobs.title": "Lediga jobb inom säkerhet – CQrityjob",
@@ -8932,6 +8944,18 @@ export const dictionaries = {
     "meta.home.description":
       "Discover your direction in security, build your Security Passport, find security jobs and develop your career. For employers: find, assess and recruit security professionals in one place.",
     "meta.about.title": "About CQrityjob – why start over every time?",
+    "meta.platform.title": "The platform – CQrityjob",
+    "meta.platform.description":
+      "CQrityjob's products in one place: Career, Jobs, Security Passport and Security work for people in security – and the tools for employers who recruit.",
+    "platform.eyebrow": "The platform",
+    "platform.title": "One foundation. Every part of a security career.",
+    "platform.lead":
+      "Choose a part of the platform to see what it does. Each has its own page with more.",
+    "platform.group.individual": "For you",
+    "platform.group.employer": "For employers",
+    "platform.readMore": "Read more",
+    "platform.video.pause": "Pause the film",
+    "platform.video.play": "Play the film",
     "meta.careerCenter.title": "Security professions and career paths – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – your career analysis – CQrityjob",
     "meta.jobs.title": "Security jobs – CQrityjob",

@@ -135,7 +135,7 @@ function EmployersPage() {
   return (
     <SiteLayout>
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <Section className="border-b border-border bg-secondary/40 py-16 md:py-24">
+      <Section className="surface-dawn border-b border-border py-16 md:py-24">
         <div className="max-w-3xl">
           <p className={EYEBROW}>{t("nav.employers")}</p>
           <h1
