@@ -3,6 +3,8 @@
 Real, aggregate, automatically updated growth figures for the public site.
 Nothing is seeded, inflated or hand-maintained.
 
+> **Delivered in two steps (schema-first-release rule).** This change is the database half: the migration, its rollback, its database tests and the guard updates. The homepage and Passport-page UI (component, copy, guard, negative controls, screenshots) follows in a second PR, opened only after this migration is merged and applied on the hosted project and recorded `applied` in `supabase/release-state.json`. Sections below describe the whole feature.
+
 ## Definitions (audited against production, 2026-10-01)
 
 | Term | Rule |
@@ -51,7 +53,7 @@ INSERT INTO public.sp_statistics_exclusions (holder_user_id, reason) VALUES ('<u
 
 ## Tests
 
-`bun run passport-network-stats:check` (101 contract/privacy/render/layout assertions), `bun run negative-controls:passport-network-stats` (14 mutations), `bun run passport-network-stats:db` (28 behavioural checks against a throwaway Postgres: counting rule, repeated reads, credential edits, staff/test exclusion, threshold, anon cannot enumerate, RLS unchanged). Evidence screenshots: `network-statistics-evidence/`.
+`bun run passport-network-stats:db` (28 behavioural checks against a throwaway Postgres: counting rule, repeated reads, credential edits, staff/test exclusion, threshold, anon cannot enumerate, RLS unchanged). The 101-assertion UI/contract guard, its 14 negative controls and the screenshots ship with the UI PR.
 
 ## Existing guards extended (reviewed exception)
 

@@ -261,11 +261,10 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // Evidence: docs/release/2026-09-29-jb02-contract-hosted-verification.md.
 // Pending by design: 20261227090000_sp_network_statistics.sql (Security Passport
 // Network live statistics, this branch). It ships HIDDEN -- sp_network_stats()
-// returns no number until the owner publishes -- and the application reads a
-// missing function as "unavailable" and draws nothing, so the code and the
-// migration may land in either order. Remove it from this list, and record the
-// hosted evidence in release-state.json, once the official integration has
-// applied it. Docs: docs/passport/network-statistics.md.
+// returns no number until the owner publishes. Merged ALONE per the
+// schema-first rule; the UI that calls it follows in a second PR. Remove it
+// from this list, and record the hosted evidence in release-state.json, once
+// the official integration has applied it. Docs: docs/passport/network-statistics.md.
 const expectedPending: string[] = ["20261227090000_sp_network_statistics.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
