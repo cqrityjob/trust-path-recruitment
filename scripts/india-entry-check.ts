@@ -311,7 +311,7 @@ const M_LOC = "supabase/migrations/20261215090000_candidate_location_and_destina
   {
     const provider = read("src/i18n/context.tsx");
     const hook =
-      /export function useAdoptLangIntent\(search: string\) \{[\s\S]*?if \(readStoredLang\(\)\) return;\s*const intent = langIntentFrom\(search\);\s*if \(intent\) setLang\(intent\);\s*\}, \[search, setLang\]\);/.test(
+      /export function useAdoptLangIntent\(search: string\) \{[\s\S]*?if \(!setLang \|\| readStoredLang\(\)\) return;\s*const intent = langIntentFrom\(search\);\s*if \(intent\) setLang\(intent\);\s*\}, \[search, setLang\]\);/.test(
         provider,
       );
     ok(hook, "5.8 a carried language is adopted only when none is stored, on every navigation");
