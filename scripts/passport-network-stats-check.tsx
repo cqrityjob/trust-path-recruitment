@@ -272,7 +272,7 @@ function renderView(stats: unknown, lang: "sv" | "en", link = false): string {
 }
 function renderSurface(data: unknown, surface: "homepage" | "passport_page"): string {
   const qc = new QueryClient();
-  qc.setQueryData(lib.NETWORK_STATS_QUERY.queryKey as never, data);
+  qc.setQueryData(lib.NETWORK_STATS_QUERY.queryKey as never, data as never);
   return renderToStaticMarkup(
     React.createElement(
       QueryClientProvider,
