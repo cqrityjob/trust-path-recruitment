@@ -283,15 +283,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is served options carrying exactly option_id and label.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-delivery-answer-key-leak-hosted-verification.md.
-// 20261230090000_job_application_insert_boundary (P1-1 and P1-2 of the
-// 2026-10-01 audit: a candidate creates their own application in its initial
-// state only, with a CV path in their own folder) is pending BY DESIGN until
-// its PR merges and the official integration applies it. Its name comes off
-// this list in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-01-job-application-insert-boundary.md.
-const expectedPending: string[] = [
-  "20261230090000_job_application_insert_boundary.sql",
-];
+// 2026-10-01 20:34 UTC: 20261230090000 (job_application_insert_boundary,
+// P1-1 and P1-2 of the pre-release security audit, #353 as e81a1dc) verified
+// applied read-only: the insert policy and the 13-column INSERT grant equal
+// the merged file, anon holds no INSERT, 14 applications are unchanged with
+// 0 off the path rule, and a rolled-back probe as a real candidate is refused
+// a CV path in another applicant's folder and accepted in its own.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-01-job-application-insert-boundary-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

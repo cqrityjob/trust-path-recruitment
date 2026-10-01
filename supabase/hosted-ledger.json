@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-01T19:34:08+00:00",
-  "readBy": "Read-only production verification after #351 merged as 6748588 (release-blocking: the assessment delivery payload must not carry the answer key). All 331 previous ledger identities preserved; the new row is 20261229090000 / scp_delivery_answer_key_leak, applied by the official integration. md5 of version:name joined by newline over all 332 rows 4a70a523c9b47f66eab454da9803267f, equal on the connector read and on this file. See docs/release/2026-10-01-delivery-answer-key-leak-hosted-verification.md.",
+  "readAt": "2026-10-01T20:34:03+00:00",
+  "readBy": "Read-only production verification after #353 merged as e81a1dc (P1-1/P1-2: a candidate creates an application, never the employer's side of it). All 332 previous ledger identities preserved; the new row is 20261230090000 / job_application_insert_boundary, applied by the official integration. md5 of version:name joined by newline over all 333 rows f5124acc449b8ceaddf92d648c882ab8, equal on the connector read and on this file. See docs/release/2026-10-01-job-application-insert-boundary-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1343,6 +1343,10 @@
     {
       "version": "20261229090000",
       "name": "scp_delivery_answer_key_leak"
+    },
+    {
+      "version": "20261230090000",
+      "name": "job_application_insert_boundary"
     }
   ]
 }
