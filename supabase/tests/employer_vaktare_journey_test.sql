@@ -286,11 +286,10 @@ SELECT pg_temp.ok(
 -- score, no rationale, no error type, no best/worst flag.
 SELECT pg_temp.ok(
   (SELECT bool_and(
-     (SELECT bool_and(k IN ('option_id','option_key','label'))
-        FROM jsonb_object_keys(elem) k))
+     (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(elem) k) = ARRAY['label','option_id'])
      FROM vji v, jsonb_array_elements(v.options) elem
     WHERE v.item_format <> 'constructed_response'),
-  'VJ4.3e a served option exposes only its id, key and label — no scoring metadata');
+  'VJ4.3e a served option exposes exactly its id and label — no key, no scoring metadata (20261229090000)');
 
 -- The scoring key must not travel with the question. Read from the function's
 -- actual result signature, which is what the participant receives.

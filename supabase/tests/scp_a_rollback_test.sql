@@ -1075,6 +1075,9 @@ DROP FUNCTION IF EXISTS public.scp_assign_option_order_seed()            CASCADE
 DROP FUNCTION IF EXISTS public.scp_guard_option_order_seed_immutable()   CASCADE;
 DROP FUNCTION IF EXISTS public.scp_option_order_key(integer, uuid, uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_item_order_is_meaningful(text)        CASCADE;
+-- 20261229090000 (delivery answer key): the one-shot seeding helper takes no
+-- governance type either, so it is dropped here for the same reason.
+DROP FUNCTION IF EXISTS public.scp_seed_unanswered_legacy_attempts()      CASCADE;
 
 ALTER TABLE public.scp_item_versions       DISABLE TRIGGER USER;
 ALTER TABLE public.scp_assessment_versions DISABLE TRIGGER USER;

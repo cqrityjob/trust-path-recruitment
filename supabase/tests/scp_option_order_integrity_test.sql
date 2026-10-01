@@ -57,11 +57,15 @@ EXCEPTION
     RAISE NOTICE '    ok  %', _label;
 END $$;
 
--- The served order of one item's options, as the candidate sees it.
+-- The served order of one item's options, as the candidate sees it, named by
+-- authored key. The payload carries only option_id and label (20261229090000:
+-- the key is part of the answer key and never leaves the database), so the
+-- id is mapped back to its key here, as the table owner.
 CREATE OR REPLACE FUNCTION pg_temp.served_keys(_options jsonb)
 RETURNS text[] LANGUAGE sql AS $$
-  SELECT array_agg((e->>'option_key') ORDER BY ord)
-    FROM jsonb_array_elements(_options) WITH ORDINALITY AS t(e, ord);
+  SELECT array_agg(o.option_key ORDER BY ord)
+    FROM jsonb_array_elements(_options) WITH ORDINALITY AS t(e, ord)
+    JOIN public.scp_item_options o ON o.id = (e->>'option_id')::uuid;
 $$;
 
 -- ── Fixture ────────────────────────────────────────────────────────────────
@@ -303,9 +307,9 @@ SELECT pg_temp.ok(
 
 SELECT pg_temp.ok(
   (SELECT bool_and(
-     (SELECT bool_and(k IN ('option_id','option_key','label')) FROM jsonb_object_keys(e) k))
+     (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(e) k) = ARRAY['label','option_id'])
      FROM served_1 s, jsonb_array_elements(s.options) e),
-  'T5.4 a served option still carries only id, key and label -- no scoring metadata');
+  'T5.4 a served option carries exactly its id and label -- no key, no scoring metadata (20261229090000)');
 
 -- ═══════════════════════════════════════════════════════════════════════════
 DO $$ BEGIN RAISE NOTICE 'T3 -- different attempts, different order'; END $$;
