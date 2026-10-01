@@ -288,6 +288,58 @@ set -e
 [ "$DK_RC" -eq 0 ] || { echo "$DK_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: delivery answer-key suite does not pass after rollback and re-apply" >&2; exit 1; }
 echo "    ok  delivery answer-key migration re-applied after rollback (postflight proved); suite passes again"
 
+# 20261230090000: a candidate creates their own application in its initial
+# state only (P1-1, P1-2). The suite reproduces the forged hired application,
+# the employer-note injection, the composed CV snapshot and the foreign CV path
+# on the pre-fix boundary itself (JA0). Negative controls, each of which MUST
+# make the suite fail on an assertion:
+#   NC1  the real rollback (any field, any path)              -> JA2.x
+#   NC2  the original row check, column grants kept           -> JA3.x
+#   NC3  the row check without the CqrityJob snapshot rule    -> JA4.1
+run_ja_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/job_application_insert_boundary_test.sql 2>&1
+}
+ja_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ja_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: application insert-boundary negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: JA[0-9.]*' | head -1))"
+}
+ja_plant_policy() {
+  psql_q -d "$TEST_DB" -c "DROP POLICY job_applications_owner_insert ON public.job_applications; CREATE POLICY job_applications_owner_insert ON public.job_applications FOR INSERT TO authenticated WITH CHECK ($1);" >/dev/null
+}
+echo "==> Running application insert-boundary assertions"
+set +e
+JA_OUT="$(run_ja_suite)"; JA_RC=$?
+set -e
+JA_PASSED="$(echo "$JA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$JA_RC" -ne 0 ]; then
+  echo "$JA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the application insert-boundary suite exited with code ${JA_RC}." >&2
+  exit 1
+fi
+[ "$JA_PASSED" -ge 44 ] || { echo "$JA_OUT"; echo "FAIL: application insert-boundary assertion shortfall: $JA_PASSED (floor 44)" >&2; exit 1; }
+echo "    ok  $JA_PASSED application insert-boundary assertions passed (forgery reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261230090000_job_application_insert_boundary_rollback.sql >/dev/null
+ja_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20261230090000_job_application_insert_boundary.sql >/dev/null
+ja_plant_policy "applicant_user_id = auth.uid()"
+ja_nc_expect_fail "NC2 original row check, column grants kept"
+ja_plant_policy "applicant_user_id = auth.uid() AND status = 'submitted' AND employer_note IS NULL AND withdrawn_at IS NULL AND created_at = now() AND updated_at = now() AND (cv_storage_path IS NULL OR (cv_storage_path ~ ('^' || auth.uid()::text || '/' || id::text || '/[A-Za-z0-9._-]{1,120}\$') AND split_part(cv_storage_path, '/', 3) !~ '^\\.+\$'))"
+ja_nc_expect_fail "NC3 no CqrityJob snapshot rule"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261230090000_job_application_insert_boundary_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20261230090000_job_application_insert_boundary.sql >/dev/null
+set +e
+JA_OUT="$(run_ja_suite)"; JA_RC=$?
+set -e
+[ "$JA_RC" -eq 0 ] || { echo "$JA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: application insert-boundary suite does not pass after rollback and re-apply" >&2; exit 1; }
+echo "    ok  application insert-boundary migration re-applied after rollback (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
@@ -570,8 +622,12 @@ for cv_round in before after; do
   [ "$cv_count" -ge 19 ] || { echo "CV snapshot assertion shortfall: $cv_count"; exit 1; }
   echo "    $cv_count assertions passed: authenticated CV submission ($cv_round rollback/reapply)"
   if [ "$cv_round" = before ]; then
+    # 20261230090000's insert policy calls cv_owned_application_snapshot, so
+    # it stands down first and comes back last.
+    psql_q -d "$TEST_DB" -f supabase/rollback/20261230090000_job_application_insert_boundary_rollback.sql >/dev/null
     psql_q -d "$TEST_DB" -f supabase/rollback/20261122090000_cv_owned_application_snapshot_rollback.sql >/dev/null
     psql_q -d "$TEST_DB" -f supabase/migrations/20261122090000_cv_owned_application_snapshot.sql >/dev/null
+    psql_q -d "$TEST_DB" -f supabase/migrations/20261230090000_job_application_insert_boundary.sql >/dev/null
   fi
 done
 
@@ -595,6 +651,9 @@ done
 # Stand down the later owner-snapshot entry point before testing the historical
 # four-entry-point CV contract. Its final authenticated contract and its own
 # rollback/reapply have already run above, against the fully replayed schema.
+# 20261230090000's insert policy depends on it, so that stands down first; its
+# own suite and controls have already run above as well.
+psql_q -d "$TEST_DB" -f supabase/rollback/20261230090000_job_application_insert_boundary_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20261122090000_cv_owned_application_snapshot_rollback.sql >/dev/null
 if [ -f supabase/rollback/20261103090000_cv_documents_lockdown_rollback.sql ]; then
   echo "==> Standing the CV lockdown down to reach the phase-1 state"
