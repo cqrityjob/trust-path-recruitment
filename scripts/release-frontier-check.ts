@@ -283,12 +283,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is served options carrying exactly option_id and label.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-delivery-answer-key-leak-hosted-verification.md.
+// 20261230090000_job_application_insert_boundary (P1-1 and P1-2 of the
+// 2026-10-01 audit: a candidate creates their own application in its initial
+// state only, with a CV path in their own folder) is pending BY DESIGN until
+// its PR merges and the official integration applies it. Its name comes off
+// this list in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-01-job-application-insert-boundary.md.
 // 20261231090000_scp_resolve_employment_owner_only (P1-3 of the 2026-10-01
 // audit: the employment-binding helper is not a client entry point) is pending
 // BY DESIGN until its PR merges and the official integration applies it. Its
 // name comes off this list in the change that records its hosted evidence.
 // Evidence to come: docs/release/2026-10-01-employment-binding-owner-only.md.
 const expectedPending: string[] = [
+  "20261230090000_job_application_insert_boundary.sql",
   "20261231090000_scp_resolve_employment_owner_only.sql",
 ];
 const hostedIdentities = [
