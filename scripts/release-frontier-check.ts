@@ -266,19 +266,20 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // EXECUTE on sp_network_stats() only, and the Passport tables are unchanged.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-passport-network-statistics-hosted-verification.md.
-// 20261228090000_scp_response_option_ownership (P0 of the 2026-10-01
-// pre-release security audit: an answer's option must belong to the item it
-// answers; save-path check plus composite item-option foreign keys) is pending
-// BY DESIGN until its PR merges and the official integration applies it. Its
-// name comes off this list in the change that records its hosted evidence.
-// Evidence to come: docs/release/2026-10-01-p0-response-option-ownership.md.
+// 2026-10-01 17:13 UTC: 20261228090000 (scp_response_option_ownership, the P0
+// of the pre-release security audit, #348 as 2bbc64a) verified applied
+// read-only: the three item-option keys exist and are validated, the
+// scp_save_response body equals the merged file, 0 of 682 stored responses
+// name another item's option, and a rolled-back probe as a real participant
+// is refused a foreign and a fabricated option and accepted its own.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-01-p0-response-option-ownership-hosted-verification.md.
 // 20261229090000_scp_delivery_answer_key_leak (release-blocking: the delivery
 // payload carried each option's option_key, and the preferred option is keyed
 // 'a') is pending BY DESIGN until its PR merges and the official integration
 // applies it. Its name comes off this list in the change that records its
 // hosted evidence. Evidence to come: docs/release/2026-10-01-delivery-answer-key-leak.md.
 const expectedPending: string[] = [
-  "20261228090000_scp_response_option_ownership.sql",
   "20261229090000_scp_delivery_answer_key_leak.sql",
 ];
 const hostedIdentities = [
