@@ -49,6 +49,8 @@ export default defineConfig({
         "@tanstack/router-core/ssr/client",
         "@tanstack/router-core/ssr/server",
         "h3",
+        "h3-v2",
+        "seroval",
       ],
     },
   },
