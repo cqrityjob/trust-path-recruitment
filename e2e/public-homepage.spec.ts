@@ -649,7 +649,8 @@ test.describe("the homepage at every required width", () => {
             lines: Math.round(el.getBoundingClientRect().height / parseFloat(cs.lineHeight)),
           };
         });
-        expect(box.hyphens, `${lang} at ${width}px`).toBe("manual");
+        // "none" or "manual": either way the browser never inserts a hyphen.
+        expect(box.hyphens, `${lang} at ${width}px`).not.toBe("auto");
         expect(box.lines, `${lang} at ${width}px`).toBeLessThanOrEqual(width < 768 ? 3 : 2);
         expect(box.fontSize, `${lang} at ${width}px`).toBeGreaterThanOrEqual(32);
       }
