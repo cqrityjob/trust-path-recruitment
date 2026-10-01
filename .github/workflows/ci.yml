@@ -247,9 +247,14 @@ jobs:
       - name: Passport social image check
         run: bun run passport-social-image:check
 
-      # Security Passport Network: the behavioural proof of the counting rule,
+      # Security Passport Network: the contract, privacy, render and layout
+      # guard for the statistics band (the browser proof is in the public-entry
+      # job), then the behavioural proof of the counting rule,
       # the privacy threshold and the anon boundary against a real local Postgres
       # (the runner's own throwaway cluster; the runner image ships Postgres).
+      - name: Security Passport Network statistics check
+        run: bun run passport-network-stats:check
+
       - name: Security Passport Network statistics database test
         run: bun run passport-network-stats:db
 

@@ -41,6 +41,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
   ANALYSIS_OPEN,
+  answerNetworkStats,
   answerPublicJobs,
   BASE,
   horizontalOverflow,
@@ -719,6 +720,7 @@ test.describe("the products' own public pages", () => {
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
+      await answerNetworkStats(page);
       await page.goto(`${BASE}/security-passport`, { waitUntil: "networkidle" });
       await expect(page.locator("main h1")).toHaveText(
         "Din professionella profil ska kunna följa med dig",
@@ -758,6 +760,7 @@ test.describe("the products' own public pages", () => {
   }
 
   test("the Passport page carries its intent into the account form", async ({ page }) => {
+    await answerNetworkStats(page);
     await page.goto(`${BASE}/security-passport`, { waitUntil: "networkidle" });
     await page.getByRole("link", { name: "Skapa mitt Security Passport" }).first().click();
     await page.waitForURL("**/signup**", { timeout: 15_000 });

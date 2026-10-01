@@ -214,6 +214,19 @@ export const dictionaries = {
     "home.individual.title": "Hela karriären. På samma plats.",
     "home.individual.lead":
       "Oavsett var du befinner dig i karriären ska CQrityjob hjälpa dig vidare.",
+    // Security Passport Network — real, aggregate, anonymous growth figures.
+    // "Security Passport" is the product name and is never translated.
+    "network.eyebrow": "Security Passport Network",
+    "network.title": "Ett Security Passport. En växande säkerhetsgemenskap.",
+    "network.passports.label": "Security Passport skapade",
+    "network.passports.label.one": "Security Passport skapat",
+    "network.credentials.label": "Registrerade meriter",
+    "network.credentials.label.one": "Registrerad merit",
+    "network.markets.lead": "Växer i",
+    "network.markets.other": "Övriga marknader",
+    "network.note":
+      "Sammanräknad och anonym statistik som uppdateras automatiskt. Marknader med få Security Passport visas samlat.",
+    "network.cta": "Läs mer om Security Passport",
     "home.individual.career.title": "Karriär",
     "home.individual.career.body":
       "Förstå dina möjligheter, utveckla din kompetens och planera nästa steg.",
@@ -8996,6 +9009,18 @@ export const dictionaries = {
     "home.individual.title": "Your whole career. In one place.",
     "home.individual.lead":
       "Wherever you are in your career, CQrityjob is here to help you take the next step.",
+    // Security Passport Network — real, aggregate, anonymous growth figures.
+    "network.eyebrow": "Security Passport Network",
+    "network.title": "One Security Passport. A growing security community.",
+    "network.passports.label": "Security Passports created",
+    "network.passports.label.one": "Security Passport created",
+    "network.credentials.label": "Credentials represented",
+    "network.credentials.label.one": "Credential represented",
+    "network.markets.lead": "Growing across",
+    "network.markets.other": "Other markets",
+    "network.note":
+      "Aggregated, anonymous figures that update automatically. Markets with few Security Passports are shown together.",
+    "network.cta": "Learn more about Security Passport",
     "home.individual.career.title": "Career",
     "home.individual.career.body":
       "Understand your options, develop your skills and plan your next move.",

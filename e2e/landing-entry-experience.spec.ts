@@ -10,6 +10,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import {
   ANALYSIS_OPEN,
+  answerNetworkStats,
   answerPublicJobs,
   BASE,
   horizontalOverflow,
@@ -102,6 +103,7 @@ test.describe("the landing page is audience-led", () => {
     test(`the Passport preview renders on its own page in ${lang}`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       const errors = collectErrors(page);
+      await answerNetworkStats(page);
       await page.goto(`${BASE}/security-passport`, { waitUntil: "networkidle" });
       await setLang(page, lang);
       const text = (await page.locator(PREVIEW).innerText()).toLowerCase();
