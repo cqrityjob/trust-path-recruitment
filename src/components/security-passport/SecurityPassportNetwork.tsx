@@ -40,9 +40,7 @@ export function SecurityPassportNetworkView({
     {
       key: "passports",
       value: stats.passports,
-      label: t(
-        stats.passports === 1 ? "network.passports.label.one" : "network.passports.label",
-      ),
+      label: t(stats.passports === 1 ? "network.passports.label.one" : "network.passports.label"),
     },
     // A credentials figure beside zero Passports would only be noise.
     ...(stats.credentials > 0
@@ -61,11 +59,7 @@ export function SecurityPassportNetworkView({
   ];
 
   return (
-    <Section
-      id="security-passport-network"
-      bordered
-      className="scroll-mt-20 py-12 md:py-16"
-    >
+    <Section id="security-passport-network" bordered className="scroll-mt-20 py-12 md:py-16">
       <div
         data-passport-network
         aria-labelledby="passport-network-title"
@@ -122,11 +116,7 @@ export function SecurityPassportNetworkView({
 
 /** Fetches (one cached request) and draws nothing unless the owner has
  *  enabled this surface. */
-export function SecurityPassportNetwork({
-  surface,
-}: {
-  surface: "homepage" | "passport_page";
-}) {
+export function SecurityPassportNetwork({ surface }: { surface: "homepage" | "passport_page" }) {
   const query = useQuery(NETWORK_STATS_QUERY);
   const stats = query.data ?? null;
   if (!mayShowNetworkStats(stats, surface)) return null;
