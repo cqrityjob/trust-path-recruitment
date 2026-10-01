@@ -262,12 +262,17 @@ test.describe("cost", () => {
     });
   }
 
-  test("the band opens no socket", async ({ page }) => {
-    let sockets = 0;
-    page.on("websocket", () => (sockets += 1));
+  test("the band opens no realtime channel", async ({ page }) => {
+    // The dev server's own hot-reload socket is not the band's: only a socket
+    // to a Supabase host or a realtime endpoint counts.
+    const realtime: string[] = [];
+    page.on("websocket", (ws) => {
+      if (/supabase\.(co|in)|\/realtime\//i.test(ws.url())) realtime.push(ws.url());
+    });
     await open(page, "/", POPULATED, "en");
+    await expect(page.locator(BAND)).toHaveCount(1);
     await page.waitForTimeout(1000);
-    expect(sockets).toBe(0);
+    expect(realtime, `realtime sockets: ${realtime.join(", ")}`).toEqual([]);
   });
 });
 
