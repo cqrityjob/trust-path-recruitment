@@ -159,6 +159,57 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 
+# P0 20261228090000: an answer's option must belong to the item it answers.
+# The suite reproduces the exploit on the pre-fix state itself (OO0), then
+# proves the fix. Negative controls, each of which MUST make the suite fail on
+# an assertion:
+#   NC1  the real rollback (both layers gone)          -> a foreign option is accepted
+#   NC2  only the save-path check removed, keys kept   -> the refusal is no longer the ownership refusal
+#   NC3  only the composite keys removed, check kept   -> the owner can store a mismatched row
+# Then the migration is re-applied with its postflight and the suite passes again.
+run_p0_option_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_response_option_ownership_test.sql 2>&1
+}
+echo "==> Running P0 response option ownership assertions"
+set +e
+P0O_OUT="$(run_p0_option_suite)"; P0O_RC=$?
+set -e
+P0O_PASSED="$(echo "$P0O_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$P0O_RC" -ne 0 ]; then
+  echo "$P0O_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the P0 response option ownership suite exited with code ${P0O_RC}." >&2
+  exit 1
+fi
+[ "$P0O_PASSED" -ge 45 ] || { echo "$P0O_OUT"; echo "FAIL: P0 option ownership assertion shortfall: $P0O_PASSED (floor 45)" >&2; exit 1; }
+echo "    ok  $P0O_PASSED P0 option ownership assertions passed (exploit reproduced pre-fix, refused post-fix)"
+p0_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_p0_option_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: P0 negative control '${label}': the suite PASSED with the ownership validation removed -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: OO[0-9.]*' | head -1))"
+}
+psql_q -d "$TEST_DB" -f supabase/rollback/20261228090000_scp_response_option_ownership_rollback.sql >/dev/null
+p0_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20261228090000_scp_response_option_ownership.sql >/dev/null
+psql_q -d "$TEST_DB" -c "CREATE OR REPLACE FUNCTION public.scp_save_response(_attempt_id uuid, _item_version_id uuid, _selected_option_id uuid DEFAULT NULL, _best_option_id uuid DEFAULT NULL, _worst_option_id uuid DEFAULT NULL, _response_text text DEFAULT NULL) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp AS \$f\$ DECLARE _status text; _form_id uuid; _id uuid; BEGIN SELECT a.status, a.form_id INTO _status, _form_id FROM public.scp_attempts a JOIN public.scp_subject_identities si ON si.subject_id = a.subject_id WHERE a.id = _attempt_id AND si.user_id = auth.uid(); IF _form_id IS NULL THEN RAISE EXCEPTION 'SCP_ATTEMPT_NOT_YOURS' USING ERRCODE = 'insufficient_privilege'; END IF; IF _status <> 'in_progress' THEN RAISE EXCEPTION 'SCP_ATTEMPT_NOT_OPEN' USING ERRCODE = 'check_violation'; END IF; IF NOT EXISTS (SELECT 1 FROM public.scp_form_items WHERE form_id = _form_id AND item_version_id = _item_version_id) THEN RAISE EXCEPTION 'SCP_ITEM_NOT_ON_FORM' USING ERRCODE = 'check_violation'; END IF; INSERT INTO public.scp_candidate_responses (attempt_id, item_version_id, selected_option_id, best_option_id, worst_option_id, response_text) VALUES (_attempt_id, _item_version_id, _selected_option_id, _best_option_id, _worst_option_id, nullif(btrim(coalesce(_response_text,'')), '')) ON CONFLICT (attempt_id, item_version_id) DO UPDATE SET selected_option_id = EXCLUDED.selected_option_id, best_option_id = EXCLUDED.best_option_id, worst_option_id = EXCLUDED.worst_option_id, response_text = EXCLUDED.response_text, responded_at = now() RETURNING id INTO _id; RETURN _id; END; \$f\$;" >/dev/null
+p0_nc_expect_fail "NC2 save-path ownership check removed"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261228090000_scp_response_option_ownership_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20261228090000_scp_response_option_ownership.sql >/dev/null
+psql_q -d "$TEST_DB" -c "ALTER TABLE public.scp_candidate_responses DROP CONSTRAINT scp_candidate_responses_selected_option_on_item_fkey, DROP CONSTRAINT scp_candidate_responses_best_option_on_item_fkey, DROP CONSTRAINT scp_candidate_responses_worst_option_on_item_fkey;" >/dev/null
+p0_nc_expect_fail "NC3 composite item-option keys removed"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261228090000_scp_response_option_ownership_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20261228090000_scp_response_option_ownership.sql >/dev/null
+set +e
+P0O_OUT="$(run_p0_option_suite)"; P0O_RC=$?
+set -e
+[ "$P0O_RC" -eq 0 ] || { echo "$P0O_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: P0 suite does not pass after rollback and re-apply" >&2; exit 1; }
+echo "    ok  P0 migration re-applied after rollback (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
