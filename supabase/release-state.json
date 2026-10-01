@@ -2420,7 +2420,10 @@
     },
     {
       "file": "20261229090000_scp_delivery_answer_key_leak.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20261229090000",
+      "hostedName": "scp_delivery_answer_key_leak",
+      "evidenceSource": "Read-only verification 2026-10-01T19:34Z through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #351 merged to main as 6748588 (head 8013907, CI fully green) and the official Supabase GitHub integration applied it. supabase_migrations.schema_migrations holds version 20261229090000 / name scp_delivery_answer_key_leak (10 statements); 332 rows, md5 of version:name joined by newline 4a70a523c9b47f66eab454da9803267f, equal to hosted-ledger.json. md5(prosrc) of scp_get_attempt_items is 10957712bd615f097e709fcdb16c1ca6 and of scp_seed_unanswered_legacy_attempts 58efb852ca011a78b98ad4128bd47998, both equal to a strict local replay of the merged files; the delivery body builds no key-like field. The helper is executable by its owner only (no PUBLIC, anon or authenticated); scp_get_attempt_items is executable by authenticated and not by anon. scp_attempts_option_seed_immutable is enabled (O). 0 in_progress attempts remain seedless, unanswered and on a randomised unordered form; the one legacy attempt on security-officer-recruitment-form-a now carries a seed (it has no linked sign-in identity, so it is served to nobody until one is linked). 30 answered seedless attempts were left seedless. scp_candidate_responses holds 682 rows, unchanged. Rolled-back probe as the real participant of the most recent seeded in_progress attempt: 37 items, 118 options, every option has exactly the keys label and option_id. No hosted write.",
       "introduces": [
         {"kind": "function", "object": "scp_seed_unanswered_legacy_attempts()"}
       ],
