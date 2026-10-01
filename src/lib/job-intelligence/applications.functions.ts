@@ -82,6 +82,20 @@ export type ApplicationCvSource = "upload" | "cqrityjob_cv";
 const MAX_CV_BYTES = 5 * 1024 * 1024; // 5MB, matches the DB CHECK constraint
 const PDF_MAGIC = "%PDF-";
 
+// The only shape submitJobApplication writes: `<applicant>/<application>/<file>`,
+// the file name already reduced to [A-Za-z0-9._-]. The same rule as the
+// database's insert policy (20261230090000).
+function isOwnApplicationCvPath(path: string, applicantUserId: string, applicationId: string) {
+  const parts = path.split("/");
+  return (
+    parts.length === 3 &&
+    parts[0] === applicantUserId &&
+    parts[1] === applicationId &&
+    /^[A-Za-z0-9._-]{1,120}$/.test(parts[2]) &&
+    !/^\.+$/.test(parts[2])
+  );
+}
+
 async function loadApplication(ctx: Ctx, applicationId: string) {
   // Deliberately narrow, and deliberately WITHOUT cv_document_snapshot. Three
   // callers use this to authorise an action; none of them renders a CV, and a
@@ -775,6 +789,16 @@ export const getApplicationCvSignedUrl = createServerFn({ method: "POST" })
     const isApplicant = app.applicant_user_id === ctx.userId;
     if (!isApplicant) {
       await assertEmployerWorkspaceMember(ctx, app.employer_id);
+    }
+
+    // The link is signed with service-role access, so the stored path is not
+    // trusted on its own: it must lie in the applicant's folder for THIS
+    // application, the only place submitJobApplication ever writes. The
+    // database refuses any other path at insert (20261230090000); this holds
+    // the same line for a row written before that, or by any other writer.
+    if (!isOwnApplicationCvPath(app.cv_storage_path, app.applicant_user_id, app.id)) {
+      console.error("[applications] CV path outside the applicant's folder", app.id);
+      throw new Error("Could not generate a download link for this CV.");
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
