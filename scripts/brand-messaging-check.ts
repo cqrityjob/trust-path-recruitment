@@ -65,6 +65,11 @@ const heroFn = sections.slice(
 const h1 = heroFn.match(/<h1[\s\S]*?<\/h1>/)?.[0] ?? "";
 ck("B1: HomeHero renders home.hero.title as its h1", /\{t\("home\.hero\.title"\)\}/.test(h1), h1);
 ck('B1: the hero h1 carries lang="en"', /<h1\s[^>]*lang="en"/.test(h1), h1);
+ck(
+  "B1: the hero h1 is never auto-hyphenated (overrides the shared DARK_H1)",
+  /\[hyphens:none\]/.test(h1) && !/\[hyphens:auto\]/.test(h1),
+  h1,
+);
 ck("B1: HomeHero has exactly one h1", (heroFn.match(/<h1[\s>]/g) ?? []).length === 1);
 ck(
   "B1: the homepage still mounts HomeHero first",
