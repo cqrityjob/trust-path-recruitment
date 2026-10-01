@@ -305,6 +305,49 @@ JA_OUT="$(run_ja_suite)"; JA_RC=$?
 set -e
 [ "$JA_RC" -eq 0 ] || { echo "$JA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: application insert-boundary suite does not pass after rollback and re-apply" >&2; exit 1; }
 echo "    ok  application insert-boundary migration re-applied after rollback (postflight proved); suite passes again"
+# 20261231090000: only the assignment path may bind an employment record to a
+# person (P1-3). The suite reproduces a non-member binding another employer's
+# employee on the pre-fix grant itself (RB0). Negative controls, each of which
+# MUST make the suite fail on an assertion:
+#   NC1  the real rollback (authenticated granted again)   -> RB1.1
+#   NC2  the grant given back through PUBLIC                -> RB1.1
+run_rb_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_resolve_employment_owner_only_test.sql 2>&1
+}
+rb_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_rb_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: employment-binding negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: RB[0-9.]*' | head -1))"
+}
+echo "==> Running employment-binding helper assertions"
+set +e
+RB_OUT="$(run_rb_suite)"; RB_RC=$?
+set -e
+RB_PASSED="$(echo "$RB_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$RB_RC" -ne 0 ]; then
+  echo "$RB_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the employment-binding suite exited with code ${RB_RC}." >&2
+  exit 1
+fi
+[ "$RB_PASSED" -ge 13 ] || { echo "$RB_OUT"; echo "FAIL: employment-binding assertion shortfall: $RB_PASSED (floor 13)" >&2; exit 1; }
+echo "    ok  $RB_PASSED employment-binding assertions passed (binding reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261231090000_scp_resolve_employment_owner_only_rollback.sql >/dev/null
+rb_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20261231090000_scp_resolve_employment_owner_only.sql >/dev/null
+psql_q -d "$TEST_DB" -c "GRANT EXECUTE ON FUNCTION public.scp_resolve_employment_for_assignment(uuid, text, uuid) TO PUBLIC;" >/dev/null
+rb_nc_expect_fail "NC2 granted back through PUBLIC"
+psql_q -d "$TEST_DB" -f supabase/migrations/20261231090000_scp_resolve_employment_owner_only.sql >/dev/null
+set +e
+RB_OUT="$(run_rb_suite)"; RB_RC=$?
+set -e
+[ "$RB_RC" -eq 0 ] || { echo "$RB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employment-binding suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  employment-binding migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
