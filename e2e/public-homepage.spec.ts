@@ -65,10 +65,11 @@ const SECTION_ORDER = [
   "varfor",
 ] as const;
 
-/** The locked headline, in both languages. */
+/** The locked hero (owner decision, 2026-10-01): one English brand
+ *  statement, the same in both languages. */
 const H1 = {
-  sv: "Säkerhetsbranschens plattform för människor och möjligheter.",
-  en: "The platform for people and opportunities in security.",
+  sv: "Security careers, without limits.",
+  en: "Security careers, without limits.",
 } as const;
 
 /** The four "För dig" entries: card, action label, destination. */
@@ -185,7 +186,7 @@ test.describe("the public homepage", () => {
     expect(h1.align).toBe("center");
     expect(Math.abs(h1.centre - h1.viewport), "the headline is off centre").toBeLessThanOrEqual(24);
     await expect(page.locator("#hero")).toContainText(
-      "CQrityjob är platsen för dig som vill utvecklas inom säkerhet, bygga din professionella profil och hitta nästa möjlighet – lokalt eller internationellt.",
+      "Upptäck din riktning, bygg ditt Security Passport, hitta nästa möjlighet och utveckla din karriär inom säkerhet – lokalt eller internationellt.",
     );
   });
 
@@ -387,13 +388,11 @@ test.describe("the public homepage", () => {
     await setLang(page, "sv");
     const sv = await shape();
     expect(sv.lang).toBe("sv");
-    expect(sv.title).toBe(
-      "CQrityjob – säkerhetsbranschens plattform för människor och möjligheter",
-    );
+    expect(sv.title).toBe("CQrityjob – Security careers, without limits.");
     await setLang(page, "en");
     const en = await shape();
     expect(en.lang).toBe("en");
-    expect(en.title).toBe("CQrityjob – the platform for people and opportunities in security");
+    expect(en.title).toBe("CQrityjob – Security careers, without limits.");
     expect(en.sections).toEqual(sv.sections);
     expect(en.h1).toBe(sv.h1);
     expect(en.h2).toBe(sv.h2);
@@ -627,6 +626,33 @@ test.describe("the homepage at every required width", () => {
       const cards = page.locator("#for-dig [data-home-entry]");
       await expect(cards).toHaveCount(4);
       for (const card of await cards.all()) await expect(card).toBeVisible();
+    });
+  }
+
+  // The locked hero is an English brand statement on both pages: marked
+  // lang="en", never hyphenated, and at most three intentional lines on a
+  // phone -- not shrunk onto one.
+  for (const width of [390, 1440] as const) {
+    test(`the hero h1 breaks between words at ${width}px, sv and en`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
+      for (const lang of ["sv", "en"] as const) {
+        await setLang(page, lang);
+        const h1 = page.locator("main h1");
+        await expect(h1).toHaveText(H1[lang]);
+        await expect(h1).toHaveAttribute("lang", "en");
+        const box = await h1.evaluate((el) => {
+          const cs = getComputedStyle(el);
+          return {
+            hyphens: cs.hyphens,
+            fontSize: parseFloat(cs.fontSize),
+            lines: Math.round(el.getBoundingClientRect().height / parseFloat(cs.lineHeight)),
+          };
+        });
+        expect(box.hyphens, `${lang} at ${width}px`).toBe("manual");
+        expect(box.lines, `${lang} at ${width}px`).toBeLessThanOrEqual(width < 768 ? 3 : 2);
+        expect(box.fontSize, `${lang} at ${width}px`).toBeGreaterThanOrEqual(32);
+      }
     });
   }
 

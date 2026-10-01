@@ -384,13 +384,14 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
 {
   const SPEC: Record<Lang, Record<string, string>> = {
     sv: {
-      // Brand story, 2026-09-30: the platform for people AND opportunities.
-      "home.hero.title": "Säkerhetsbranschens plattform för människor och möjligheter.",
+      // Locked owner decision, 2026-10-01: the English brand statement is
+      // the hero in BOTH languages, never translated.
+      "home.hero.title": "Security careers, without limits.",
       "home.hero.individual.title": "För dig i säkerhetsbranschen",
       "home.hero.employer.title": "För arbetsgivare",
     },
     en: {
-      "home.hero.title": "The platform for people and opportunities in security.",
+      "home.hero.title": "Security careers, without limits.",
       "home.hero.individual.title": "For people in security",
       "home.hero.employer.title": "For employers",
     },
@@ -404,6 +405,10 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
     ck(
       `${lang}: the h1 is the locked headline`,
       headings(hero, "h1")[0] === SPEC[lang]["home.hero.title"],
+    );
+    ck(
+      `${lang}: the h1 is marked lang="en" — an English brand statement on every page`,
+      /<h1[^>]*lang="en"/.test(hero),
     );
     ck(`${lang}: the hero is centred`, /<section id="hero"[\s\S]*?text-center/.test(hero));
     // The positioning is two sentences, one per audience (brand story,
@@ -419,10 +424,12 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
     ck(
       `${lang}: the positioning addresses individuals and employers, locally or internationally`,
       lang === "sv"
-        ? /dig som vill utvecklas inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
+        ? /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /din karriär inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
             /För arbetsgivare/.test(d(lang)["home.hero.subtitle"]) &&
             /lokalt eller internationellt/.test(d(lang)["home.hero.subtitle"])
-        : /develop your security career/.test(d(lang)["home.hero.subtitle"]) &&
+        : /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /develop your security career/.test(d(lang)["home.hero.subtitle"]) &&
             /For employers/.test(d(lang)["home.hero.subtitle"]) &&
             /locally or internationally/.test(d(lang)["home.hero.subtitle"]),
       d(lang)["home.hero.subtitle"],

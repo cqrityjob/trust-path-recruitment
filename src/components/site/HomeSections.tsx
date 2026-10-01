@@ -102,10 +102,13 @@ export function HomeHero() {
       {/* The background film (decorative, pausable): see HeroVideoBackground. */}
       <HeroVideoBackground />
       <div className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-16 text-center sm:pt-20 md:px-8 md:pb-24 md:pt-24">
-        {/* `[hyphens:auto]` earns its keep at 320-390px, where a Swedish
-            compound does not fit on any line; the document carries `lang`. */}
+        {/* The locked hero, "Security careers, without limits.", is the same
+            English brand statement in both languages, so it carries
+            lang="en" like the brand line in §6. No hyphenation: an English
+            brand line breaks between words, never inside one. */}
         <h1
-          className="mx-auto max-w-[20ch] text-balance text-[2.2rem] font-semibold leading-[1.04] tracking-tight text-white [hyphens:auto] sm:text-[3rem] lg:text-[4.25rem] lg:[hyphens:none]"
+          lang="en"
+          className="mx-auto max-w-[20ch] text-balance text-[2.2rem] font-semibold leading-[1.04] tracking-tight text-white sm:text-[3rem] lg:text-[4.25rem]"
           style={DISPLAY}
         >
           {t("home.hero.title")}

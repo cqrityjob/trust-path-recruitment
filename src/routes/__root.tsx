@@ -85,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "The modern recruitment, verification and assessment platform built exclusively for the security industry.",
+          "Security careers, without limits. Career development, Security Passport, security jobs and recruitment of security professionals – for people in security and the employers who hire them.",
       },
       { name: "author", content: "CQrityjob" },
       { property: "og:site_name", content: "CQrityjob" },

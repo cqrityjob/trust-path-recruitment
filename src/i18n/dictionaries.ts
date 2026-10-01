@@ -121,9 +121,12 @@ export const dictionaries = {
     // Swedish pair from here; useLocalizedHead() swaps in the English pair
     // on the client when the reader has chosen English. No free, guarantee,
     // integration or volume claim belongs in any of them.
-    "meta.home.title": "CQrityjob – säkerhetsbranschens plattform för människor och möjligheter",
+    // The homepage title leads with the locked hero (owner decision,
+    // 2026-10-01), in English in both languages like "brand.slogan"; the
+    // description carries the Swedish search terms.
+    "meta.home.title": "CQrityjob – Security careers, without limits.",
     "meta.home.description":
-      "Utvecklas inom säkerhet, bygg din professionella profil och hitta nästa möjlighet. För arbetsgivare: hitta, bedöm och rekrytera säkerhetskompetens på samma plats.",
+      "Upptäck din riktning inom säkerhet, bygg ditt Security Passport, hitta lediga säkerhetsjobb och utveckla din karriär. För arbetsgivare: hitta, bedöm och rekrytera säkerhetskompetens på samma plats.",
     "meta.about.title": "Om CQrityjob – varför börja om varje gång?",
     "meta.careerCenter.title": "Yrken och karriärvägar inom säkerhet – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – din karriäranalys – CQrityjob",
@@ -171,9 +174,17 @@ export const dictionaries = {
     // usable on this page (see docs/public-website/release-gates.md).
     // scripts/public-homepage-check.tsx renders the page and fails the build
     // if a sentence overclaims.
-    "home.hero.title": "Säkerhetsbranschens plattform för människor och möjligheter.",
+    //
+    // THE HERO (locked owner decision, 2026-10-01): "Security careers,
+    // without limits." is CQrityjob's primary hero and an international
+    // brand statement. Like "brand.slogan" it is the SAME English sentence
+    // in both languages and is rendered with lang="en"; it is never
+    // translated. "Where trust comes first." stays the brand promise and
+    // closes the page (§6), not the hero. scripts/brand-messaging-check.ts
+    // guards both.
+    "home.hero.title": "Security careers, without limits.",
     "home.hero.subtitle":
-      "CQrityjob är platsen för dig som vill utvecklas inom säkerhet, bygga din professionella profil och hitta nästa möjlighet – lokalt eller internationellt. För arbetsgivare samlar vi verktygen för att hitta, bedöma och rekrytera säkerhetskompetens på samma plats.",
+      "Upptäck din riktning, bygg ditt Security Passport, hitta nästa möjlighet och utveckla din karriär inom säkerhet – lokalt eller internationellt. För arbetsgivare samlar CQrityjob verktygen för att hitta, bedöma och rekrytera säkerhetskompetens på samma plats.",
     "home.hero.audience.label": "Välj var du vill börja",
     "home.hero.individual.title": "För dig i säkerhetsbranschen",
     "home.hero.individual.body":
@@ -8917,9 +8928,9 @@ export const dictionaries = {
     "brand.slogan": "Where trust comes first.",
     "brand.description":
       "CQrityjob is the platform for people and opportunities in security: career development, Security Passport, jobs and support for security work for people in security – and recruitment of security professionals for employers, locally or internationally.",
-    "meta.home.title": "CQrityjob – the platform for people and opportunities in security",
+    "meta.home.title": "CQrityjob – Security careers, without limits.",
     "meta.home.description":
-      "Develop your security career, build your professional profile and find your next opportunity. For employers: find, assess and recruit security professionals in one place.",
+      "Discover your direction in security, build your Security Passport, find security jobs and develop your career. For employers: find, assess and recruit security professionals in one place.",
     "meta.about.title": "About CQrityjob – why start over every time?",
     "meta.careerCenter.title": "Security professions and career paths – CQrityjob",
     "meta.careerDiscovery.title": "Career Discovery – your career analysis – CQrityjob",
@@ -8944,9 +8955,10 @@ export const dictionaries = {
     // the English refinement pass.
     //
     // The public homepage: see the Swedish block for its six sections.
-    "home.hero.title": "The platform for people and opportunities in security.",
+    // The locked hero: the same English sentence in both languages.
+    "home.hero.title": "Security careers, without limits.",
     "home.hero.subtitle":
-      "CQrityjob is where you develop your security career, build your professional profile and find your next opportunity – locally or internationally. For employers, it brings together the tools to find, assess and recruit security professionals in one place.",
+      "Discover your direction, build your Security Passport, find your next opportunity and develop your security career – locally or internationally. For employers, CQrityjob brings together the tools to find, assess and recruit security professionals in one place.",
     "home.hero.audience.label": "Choose where to start",
     "home.hero.individual.title": "For people in security",
     "home.hero.individual.body":
