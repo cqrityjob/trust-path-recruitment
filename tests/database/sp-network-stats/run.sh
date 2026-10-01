@@ -13,7 +13,10 @@ cleanup() { as_pg "pg_ctl -D $TMP/db -m immediate stop" >/dev/null 2>&1 || true;
 trap cleanup EXIT
 as_pg "initdb -D $TMP/db -A trust >/dev/null"
 as_pg "pg_ctl -D $TMP/db -o '-p $PORT -k $TMP' -l $TMP/log -w start >/dev/null"
-export PGHOST="$TMP" PGPORT=$PORT PGUSER=postgres
+# The cluster superuser is whoever ran initdb: "postgres" when this script runs as
+# root (su postgres above), the invoking user (a CI runner) otherwise.
+if [ "$(id -u)" = 0 ]; then DBUSER=postgres; else DBUSER="$(id -un)"; fi
+export PGHOST="$TMP" PGPORT=$PORT PGUSER="$DBUSER"
 psql -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE t" postgres
 export PGDATABASE=t
 psql -v ON_ERROR_STOP=1 -q -f "$HERE/00_schema.sql"
