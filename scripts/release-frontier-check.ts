@@ -272,7 +272,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // BY DESIGN until its PR merges and the official integration applies it. Its
 // name comes off this list in the change that records its hosted evidence.
 // Evidence to come: docs/release/2026-10-01-p0-response-option-ownership.md.
-const expectedPending: string[] = ["20261228090000_scp_response_option_ownership.sql"];
+// 20261229090000_scp_delivery_answer_key_leak (release-blocking: the delivery
+// payload carried each option's option_key, and the preferred option is keyed
+// 'a') is pending BY DESIGN until its PR merges and the official integration
+// applies it. Its name comes off this list in the change that records its
+// hosted evidence. Evidence to come: docs/release/2026-10-01-delivery-answer-key-leak.md.
+const expectedPending: string[] = [
+  "20261228090000_scp_response_option_ownership.sql",
+  "20261229090000_scp_delivery_answer_key_leak.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

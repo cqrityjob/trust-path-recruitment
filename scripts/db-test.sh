@@ -210,6 +210,50 @@ set -e
 [ "$P0O_RC" -eq 0 ] || { echo "$P0O_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: P0 suite does not pass after rollback and re-apply" >&2; exit 1; }
 echo "    ok  P0 migration re-applied after rollback (postflight proved); suite passes again"
 
+# 20261229090000: the delivery payload must not carry the answer key. The suite
+# reproduces the leak on the pre-fix body itself (DK0). Negative controls, each
+# of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (option_key served again)       -> DK1.2
+#   NC2  the seeding helper reduced to a no-op               -> DK3.x
+run_dk_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_delivery_answer_key_test.sql 2>&1
+}
+dk_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_dk_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: delivery answer-key negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: DK[0-9.]*' | head -1))"
+}
+echo "==> Running delivery answer-key assertions"
+set +e
+DK_OUT="$(run_dk_suite)"; DK_RC=$?
+set -e
+DK_PASSED="$(echo "$DK_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$DK_RC" -ne 0 ]; then
+  echo "$DK_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the delivery answer-key suite exited with code ${DK_RC}." >&2
+  exit 1
+fi
+[ "$DK_PASSED" -ge 20 ] || { echo "$DK_OUT"; echo "FAIL: delivery answer-key assertion shortfall: $DK_PASSED (floor 20)" >&2; exit 1; }
+echo "    ok  $DK_PASSED delivery answer-key assertions passed (leak reproduced pre-fix, closed post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261229090000_scp_delivery_answer_key_leak_rollback.sql >/dev/null
+dk_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20261229090000_scp_delivery_answer_key_leak.sql >/dev/null
+psql_q -d "$TEST_DB" -c "CREATE OR REPLACE FUNCTION public.scp_seed_unanswered_legacy_attempts() RETURNS integer LANGUAGE sql AS 'SELECT 0';" >/dev/null
+dk_nc_expect_fail "NC2 seeding helper is a no-op"
+psql_q -d "$TEST_DB" -f supabase/rollback/20261229090000_scp_delivery_answer_key_leak_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20261229090000_scp_delivery_answer_key_leak.sql >/dev/null
+set +e
+DK_OUT="$(run_dk_suite)"; DK_RC=$?
+set -e
+[ "$DK_RC" -eq 0 ] || { echo "$DK_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: delivery answer-key suite does not pass after rollback and re-apply" >&2; exit 1; }
+echo "    ok  delivery answer-key migration re-applied after rollback (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
