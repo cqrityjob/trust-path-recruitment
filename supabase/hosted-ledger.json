@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-01T17:13:54+00:00",
-  "readBy": "Read-only production verification after #348 merged as 2bbc64a (P0: an answer's option must belong to the item it answers). All 330 previous ledger identities preserved; the new row is 20261228090000 / scp_response_option_ownership, applied by the official integration. md5 of version:name joined by newline over all 331 rows c44c467492c802edabbe6a5621ca5391, equal on the connector read and on this file. See docs/release/2026-10-01-p0-response-option-ownership-hosted-verification.md.",
+  "readAt": "2026-10-01T19:34:08+00:00",
+  "readBy": "Read-only production verification after #351 merged as 6748588 (release-blocking: the assessment delivery payload must not carry the answer key). All 331 previous ledger identities preserved; the new row is 20261229090000 / scp_delivery_answer_key_leak, applied by the official integration. md5 of version:name joined by newline over all 332 rows 4a70a523c9b47f66eab454da9803267f, equal on the connector read and on this file. See docs/release/2026-10-01-delivery-answer-key-leak-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1339,6 +1339,10 @@
     {
       "version": "20261228090000",
       "name": "scp_response_option_ownership"
+    },
+    {
+      "version": "20261229090000",
+      "name": "scp_delivery_answer_key_leak"
     }
   ]
 }
