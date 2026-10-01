@@ -114,9 +114,6 @@ const MUTATIONS: readonly Mutation[] = [
     id: "INDIA-NC-URL-LANG-OVERRIDES-CHOICE",
     defect: "a language in the URL overrides a visitor's explicit, stored choice",
     file: "src/i18n/context.tsx",
-    // The hook tolerates a missing provider (main, 2026-09-30), so the
-    // stored-choice test shares its line with that guard; the defect drops
-    // the stored-choice test and keeps the provider guard.
     find: "    if (!setLang || readStoredLang()) return;\n    const intent = langIntentFrom(search);",
     replace: "    if (!setLang) return;\n    const intent = langIntentFrom(search);",
     guard: GUARD,
