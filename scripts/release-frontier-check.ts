@@ -266,8 +266,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // EXECUTE on sp_network_stats() only, and the Passport tables are unchanged.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-passport-network-statistics-hosted-verification.md.
-// Nothing is pending.
-const expectedPending: string[] = [];
+// 20261228090000_scp_response_option_ownership (P0 of the 2026-10-01
+// pre-release security audit: an answer's option must belong to the item it
+// answers; save-path check plus composite item-option foreign keys) is pending
+// BY DESIGN until its PR merges and the official integration applies it. Its
+// name comes off this list in the change that records its hosted evidence.
+// Evidence to come: docs/release/2026-10-01-p0-response-option-ownership.md.
+const expectedPending: string[] = ["20261228090000_scp_response_option_ownership.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
