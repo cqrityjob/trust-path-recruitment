@@ -114,6 +114,23 @@ jobs:
           path: ${{ steps.browser.outputs.evidence_dir }}
           if-no-files-found: error
           retention-days: 14
+      # TEMPORARY (PR #341 diagnosis): on failure only, a REDACTED digest of the
+      # failed journey -- no raw trace, storage state, headers or bodies.
+      - name: Build redacted failure digest (temporary)
+        if: failure() && steps.browser.outcome == 'failure'
+        run: |
+          bun run scripts/diagnostics/sw-browser-failure-digest.ts "$RUNNER_TEMP/sw-failure-digest"
+          for f in "$RUNNER_TEMP"/sw-failure-digest/*.md "$RUNNER_TEMP/sw-failure-digest/trace-digest.txt" "$RUNNER_TEMP/sw-failure-digest/dev-server-tail.log"; do
+            [ -f "$f" ] && { echo "::group::$(basename "$f")"; cat "$f"; echo "::endgroup::"; }
+          done
+      - name: Upload redacted failure digest (temporary)
+        if: failure() && steps.browser.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-work-browser-failure-digest
+          path: ${{ runner.temp }}/sw-failure-digest
+          if-no-files-found: warn
+          retention-days: 3
       - name: Real document-to-report SV/EN desktop and mobile journeys
         id: analysis
         run: bash scripts/security-work-analysis-browser-run.sh
