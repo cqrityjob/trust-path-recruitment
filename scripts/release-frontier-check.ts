@@ -279,8 +279,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 'a') is pending BY DESIGN until its PR merges and the official integration
 // applies it. Its name comes off this list in the change that records its
 // hosted evidence. Evidence to come: docs/release/2026-10-01-delivery-answer-key-leak.md.
+// 20270101090000_catalogue_read_hardening (the four owner-approved items of
+// the 2026-10-01 pre-release security pass: drafts, unapproved professions
+// and the interviewer guide stop being readable by every signed-in account,
+// and three catalogues lose stray client write grants) is pending BY DESIGN
+// until its PR merges and the official integration applies it. Its name
+// comes off this list in the change that records its hosted evidence.
+// Evidence to come: docs/release/2026-10-01-catalogue-read-hardening.md.
 const expectedPending: string[] = [
   "20261229090000_scp_delivery_answer_key_leak.sql",
+  "20270101090000_catalogue_read_hardening.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

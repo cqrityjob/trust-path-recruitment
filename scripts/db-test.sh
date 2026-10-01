@@ -159,6 +159,40 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 
+# 20270101090000: four catalogue reads narrowed (drafts and unapproved
+# professions to authors/admins, the interviewer guide to authors) and three
+# stray client write grants revoked. Run the suite, prove it cannot pass on the
+# pre-hardening state (rollback -> suite must fail on an assertion), prove the
+# rollback restores exactly that state, then re-apply with its postflight.
+echo "==> Running catalogue read hardening assertions"
+set +e
+CRH_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/catalogue_read_hardening_test.sql 2>&1)"
+CRH_RC=$?
+set -e
+CRH_PASSED="$(echo "$CRH_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$CRH_RC" -ne 0 ]; then
+  echo "$CRH_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the catalogue read hardening suite exited with code ${CRH_RC}." >&2
+  exit 1
+fi
+[ "$CRH_PASSED" -ge 150 ] || { echo "$CRH_OUT"; echo "FAIL: catalogue read hardening assertion shortfall: $CRH_PASSED (floor 150)" >&2; exit 1; }
+echo "    ok  $CRH_PASSED catalogue read hardening assertions passed"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270101090000_catalogue_read_hardening_rollback.sql >/dev/null
+crh_back="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_policies WHERE schemaname='public' AND cmd='SELECT' AND qual='true' AND ('anon'=ANY(roles) OR 'authenticated'=ANY(roles))")"
+[ "$crh_back" = "45" ] || { echo "FAIL: 20270101090000 rollback left $crh_back USING (true) catalogue reads (expected the pre-hardening 45)"; exit 1; }
+echo "    ok  rollback restores the pre-hardening state (45 USING (true) catalogue reads, write grants back)"
+set +e
+CRH_NC="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/catalogue_read_hardening_test.sql 2>&1)"
+CRH_NC_RC=$?
+set -e
+if [ "$CRH_NC_RC" -eq 0 ] || ! echo "$CRH_NC" | grep -q "ASSERTION FAILED"; then
+  echo "FAIL: the catalogue read hardening suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the suite fails on an assertion without the migration (negative control)"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270101090000_catalogue_read_hardening.sql >/dev/null
+echo "    ok  catalogue read hardening migration re-applied (postflight proved)"
+
 # P0 20261228090000: an answer's option must belong to the item it answers.
 # The suite reproduces the exploit on the pre-fix state itself (OO0), then
 # proves the fix. Negative controls, each of which MUST make the suite fail on
