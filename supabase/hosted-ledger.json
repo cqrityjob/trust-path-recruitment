@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-01T13:06:51+00:00",
-  "readBy": "Read-only production verification after #345 merged as 1c0fd8e (approved head f073fce). All 329 previous ledger identities preserved; the new row is 20261227090000 / sp_network_statistics (Security Passport Network statistics, database half), applied by the official integration. md5 of version:name joined by newline over all 330 rows d628b215c6fb12e31848b850eac03e24, equal on the connector read and on this file. See docs/release/2026-10-01-passport-network-statistics-hosted-verification.md.",
+  "readAt": "2026-10-01T17:13:54+00:00",
+  "readBy": "Read-only production verification after #348 merged as 2bbc64a (P0: an answer's option must belong to the item it answers). All 330 previous ledger identities preserved; the new row is 20261228090000 / scp_response_option_ownership, applied by the official integration. md5 of version:name joined by newline over all 331 rows c44c467492c802edabbe6a5621ca5391, equal on the connector read and on this file. See docs/release/2026-10-01-p0-response-option-ownership-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1335,6 +1335,10 @@
     {
       "version": "20261227090000",
       "name": "sp_network_statistics"
+    },
+    {
+      "version": "20261228090000",
+      "name": "scp_response_option_ownership"
     }
   ]
 }
