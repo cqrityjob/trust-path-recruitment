@@ -37,26 +37,9 @@ export function CareerHero({
   aside?: ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-border bg-secondary/60">
-      {/* Restrained editorial background — subtle radial + faint grid, no photos */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(900px 420px at 15% -10%, oklch(0.492 0.115 245 / 0.10), transparent 62%), radial-gradient(700px 380px at 100% 0%, oklch(0.235 0.055 258 / 0.09), transparent 60%)",
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, oklch(0.235 0.055 258 / 0.05) 1px, transparent 1px)",
-          backgroundSize: "56px 100%",
-          maskImage: "linear-gradient(to bottom, black, transparent 90%)",
-        }}
-      />
+    <section className="surface-dawn relative overflow-hidden border-b border-border">
+      {/* The shared light page-top ground (surface-dawn in styles.css), the
+          same as every other public page's — no photos. */}
       <div
         className={[
           "relative mx-auto w-full max-w-6xl px-6 pb-16 pt-14 md:px-8 md:pb-24 md:pt-20",

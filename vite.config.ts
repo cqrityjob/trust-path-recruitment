@@ -36,4 +36,22 @@ export default defineConfig({
     server: { entry: "server" },
     client: { entry: "client" },
   },
+  vite: {
+    // Dev server only. Since the TanStack Router/Start upgrade the dependency
+    // scan misses these, so Vite finds them on the first page load, re-bundles
+    // and force-reloads every open page ("optimized dependencies changed.
+    // reloading"). Listing them makes the first load final.
+    optimizeDeps: {
+      include: [
+        "@tanstack/history",
+        "@tanstack/router-core",
+        "@tanstack/router-core/isServer",
+        "@tanstack/router-core/ssr/client",
+        "@tanstack/router-core/ssr/server",
+        "h3",
+        "h3-v2",
+        "seroval",
+      ],
+    },
+  },
 });

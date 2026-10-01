@@ -41,6 +41,13 @@ import {
   Users,
 } from "lucide-react";
 import { HeroVideoBackground } from "@/components/site/HeroVideoBackground";
+import {
+  DARK_H1,
+  FOCUS_ON_DARK,
+  GLASS,
+  GLASS_HOVER,
+  ON_DARK,
+} from "@/components/site/dark-surface";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { EmployerLogo } from "@/components/jobs/EmployerPresentation";
@@ -97,20 +104,22 @@ export function HomeHero() {
   return (
     <section
       id="hero"
-      className="relative flex min-h-[560px] items-center overflow-hidden bg-[#060B12] md:min-h-[620px]"
+      className="relative flex min-h-[560px] items-center overflow-hidden bg-night md:min-h-[620px]"
     >
       {/* The background film (decorative, pausable): see HeroVideoBackground. */}
       <HeroVideoBackground />
       <div className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-16 text-center sm:pt-20 md:px-8 md:pb-24 md:pt-24">
         {/* `[hyphens:auto]` earns its keep at 320-390px, where a Swedish
             compound does not fit on any line; the document carries `lang`. */}
-        <h1
-          className="mx-auto max-w-[20ch] text-balance text-[2.2rem] font-semibold leading-[1.04] tracking-tight text-white [hyphens:auto] sm:text-[3rem] lg:text-[4.25rem] lg:[hyphens:none]"
-          style={DISPLAY}
-        >
+        <h1 className={cn("mx-auto max-w-[20ch]", DARK_H1)} style={DISPLAY}>
           {t("home.hero.title")}
         </h1>
-        <p className="mx-auto mt-6 max-w-[62ch] text-base leading-relaxed text-white/85 md:text-lg">
+        <p
+          className={cn(
+            "mx-auto mt-6 max-w-[62ch] text-base leading-relaxed md:text-lg",
+            ON_DARK.lead,
+          )}
+        >
           {t("home.hero.subtitle")}
         </p>
         <nav aria-label={t("home.hero.audience.label")} className="mx-auto mt-10 max-w-3xl">
@@ -120,7 +129,12 @@ export function HomeHero() {
                 <a
                   href={href}
                   data-home-audience={key}
-                  className="group flex w-full items-start gap-4 rounded-2xl border border-white/20 bg-white/10 p-5 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#060B12] motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-6"
+                  className={cn(
+                    "group flex w-full items-start gap-4 rounded-2xl p-5 transition-all duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:p-6",
+                    GLASS,
+                    GLASS_HOVER,
+                    FOCUS_ON_DARK,
+                  )}
                 >
                   <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15 text-white">
                     <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden="true" />
@@ -135,7 +149,7 @@ export function HomeHero() {
                         aria-hidden="true"
                       />
                     </span>
-                    <span className="mt-1.5 block text-sm leading-relaxed text-white/80">
+                    <span className={cn("mt-1.5 block text-sm leading-relaxed", ON_DARK.body)}>
                       {t(body)}
                     </span>
                   </span>
@@ -386,7 +400,7 @@ function LatestJobCard({ job, lang }: { job: PublicJobCard; lang: "sv" | "en" })
 // ── 4 · FÖR ARBETSGIVARE ────────────────────────────────────────────────
 //
 // The locked employer journey, benefit first. It ends in the employer's own
-// decision and never implies an automated one. Its own navy band, because an
+// decision and never implies an automated one. Its own night band, because an
 // employer is a different reader. The registration action is gated by the
 // release flag: a door onto a disabled product is worse than no door.
 const EMPLOYER_STEPS = [
@@ -402,14 +416,14 @@ export function HomeEmployers({ employerOpen }: { employerOpen: boolean }) {
   return (
     <Section
       id="for-arbetsgivare"
-      className="relative scroll-mt-20 overflow-hidden bg-primary py-16 text-primary-foreground md:py-24"
+      className="surface-night relative scroll-mt-20 overflow-hidden py-16 text-primary-foreground md:py-24"
     >
       <div className="max-w-2xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">
           {t("home.employers.eyebrow")}
         </p>
         {/* `text-primary-foreground` is not optional: styles.css sets an
-            explicit colour on h1-h6, so a heading on the navy band would be
+            explicit colour on h1-h6, so a heading on the night band would be
             navy-on-navy unless it names its own colour. */}
         <h2
           className="mt-3 text-balance text-[1.7rem] font-semibold leading-[1.15] tracking-tight text-primary-foreground md:text-[2.25rem]"
@@ -427,12 +441,9 @@ export function HomeEmployers({ employerOpen }: { employerOpen: boolean }) {
         className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3"
       >
         {EMPLOYER_STEPS.map(({ key, icon: Icon }, i) => (
-          <li
-            key={key}
-            className="flex flex-col rounded-2xl border border-primary-foreground/15 bg-primary-foreground/[0.06] p-5"
-          >
+          <li key={key} className={cn("flex flex-col rounded-2xl p-5", GLASS)}>
             <div className="flex items-center justify-between gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-foreground/10">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
                 <Icon
                   className="h-5 w-5 text-primary-foreground"
                   strokeWidth={1.75}
