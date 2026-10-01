@@ -23661,6 +23661,11 @@ export type Database = {
         Args: { _market_pack_code: string; _user_id: string }
         Returns: string
       }
+      sp_network_stats: { Args: never; Returns: Json }
+      sp_set_network_stats_display: {
+        Args: { _display: string; _note?: string }
+        Returns: string
+      }
       sp_my_application_disclosures: {
         Args: never
         Returns: {

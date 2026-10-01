@@ -14,6 +14,7 @@ import {
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
+import { SecurityPassportNetwork } from "@/components/security-passport/SecurityPassportNetwork";
 import { HomePassportPreview } from "@/components/site/HomePassportPreview";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
@@ -135,6 +136,9 @@ function SecurityPassportPage() {
           <HomePassportPreview />
         </div>
       </section>
+
+      {/* ── NETWORK (renders nothing until the owner publishes) ─────── */}
+      <SecurityPassportNetwork surface="passport_page" />
 
       {/* ── WHAT IT HOLDS ────────────────────────────────────────────── */}
       <Section id="innehall" className="scroll-mt-20 py-16 md:py-24">
