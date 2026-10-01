@@ -326,6 +326,11 @@ jobs:
           done
           echo "replayed ${n} migration(s)"
 
+      - name: Install Chromium
+        run: |
+          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
+          bunx playwright install --with-deps chromium
+
       - name: Seed the synthetic fixtures
         env:
           DB_URL: ${{ steps.local.outputs.db_url }}
@@ -333,11 +338,6 @@ jobs:
           set -euo pipefail
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/interview-journey-fixture.sql
           psql "$DB_URL" -v ON_ERROR_STOP=1 -f scripts/fixtures/employer-final-report-fixture.sql
-
-      - name: Install Chromium
-        run: |
-          grep -rlZ 'dl.google.com/linux/chrome' /etc/apt/sources.list.d 2>/dev/null | xargs -0r sudo rm -f
-          bunx playwright install --with-deps chromium
 
       - name: Start the application against the local stack
         run: |
