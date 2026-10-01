@@ -31,7 +31,48 @@ Hosted project `wrygicdfxwjnrugduxnt` (eu-central-1, PostgreSQL 17.6). Audited r
 
 ### `scp_scoring_version_lineage` is a SECURITY DEFINER view (advisor ERROR)
 
-**Genuine security concern: no. Do not change it.** The view is a deliberate read model: `20260727150000` (LOW-4) removed every client read policy from `scp_scoring_versions` so no candidate or employer can read scoring weights, and the view exposes only the lineage columns (no weights) on the caller's behalf. A previous linter-driven flip to `security_invoker = true` (`20260731053218`) made lineage unreadable for exactly the two audiences the read model serves and was reverted in `20260801100000`, which also set `security_barrier = true` and documented the reason. `scripts/cd-outstanding-reviews-check.ts` and its negative controls guard against repeating the flip. The linter flags definer views generically; this one is reviewed. **Action: none; record the advisor item as accepted with this reference.**
+**Status: reviewed — accepted risk — no action required.** Owner decision 2026-10-01: the current design is kept. No migration, code, grant or database change follows from this advisor item.
+
+| | |
+|---|---|
+| Advisor lint | `security_definer_view` (0010), level ERROR |
+| Entity | `public.scp_scoring_version_lineage` |
+| Reloptions | `security_invoker=false`, `security_barrier=true` (set in `20260801100000`) |
+| Grants | `SELECT` to `authenticated` and `service_role`; `anon` and `PUBLIC` hold nothing on the view or its base table |
+| Decision | Reviewed / accepted risk / no action required |
+| Decision record | this section; rationale in `supabase/migrations/20260801100000_scp_restore_scoring_lineage_readability.sql` and in the view's `COMMENT` |
+
+**Why security definer is used.** `20260727150000_scp_a4_scoring_visibility.sql` (review finding LOW-4) removed every client read policy from `scp_scoring_versions` and `scp_role_weight_profile_weights`, so only Security Competency authoring roles and platform admins can read the scoring model. Candidate and employer reports must still be able to state which scoring version produced a result and its validation status (spec 9.3, acceptance criterion 18). The view is the only authorised path to that information: it runs with the owner's rights, reads the restricted base table on the caller's behalf and returns only the columns listed in its body. Because the projection is an explicit column list, a column later added to `scp_scoring_versions` does not appear in the view.
+
+**The nine exposed columns** (exactly these, no others):
+
+1. `id`
+2. `slug`
+3. `version_number`
+4. `content_status`
+5. `validation_status`
+6. `published_at`
+7. `retired_at`
+8. `core_summary_is_indicative`: presentation policy, whether a report may show the summary index alone
+9. `norm_comparison_permitted`: presentation policy, whether a report may compare with a norm
+
+**What is not exposed.** The scoring weights `sjt_weight` and `biq_weight`, the `content_hash`, the per-competency role weights (`scp_role_weight_profile_weights`) and the per-option scoring keys (`scp_item_options`). These stay readable by authoring roles and admins only, through RLS on the base tables.
+
+**Why `security_invoker` is not used.** It was tried and caused an outage. The linter sweep `20260731053218_ebac47bc-fefb-457c-add0-71b0d6e6d768.sql` set `security_invoker = true`. The view then ran as the caller and hit the LOW-4 restriction, so candidates and employers read zero rows and reports could no longer state their scoring version. No data leaked, but the feature stopped working. `20260801100000_scp_restore_scoring_lineage_readability.sql` reverted only that change (the search_path pinning and anon EXECUTE revokes from the same sweep were kept), added `security_barrier = true`, restated the grants and documented the reason in the view's comment. The linter's other remedy, a read policy on `scp_scoring_versions`, is worse: RLS is row-level, so the policy would expose the weights on every readable row.
+
+**Tests and negative controls that protect the design.**
+
+| Guard | What it asserts |
+|---|---|
+| `20260801100000` postflight blocks 3a–3c | The migration fails if the view exposes `sjt_weight`/`biq_weight`/`content_hash` (`SCP_LINEAGE_LEAKS_SCORING_INTERNALS`), if a permissive read policy returns on the scoring tables (`SCP_SCORING_TABLES_UNRESTRICTED`), or if the view is still invoker (`SCP_LINEAGE_STILL_INVOKER`) |
+| `supabase/tests/scp_a1_domain_model_test.sql` GROUP 20 | Candidate and employer read zero scoring versions, weights and option keys but can read lineage rows with real id, slug and validation status. Authors can read scoring versions. anon has no grant. The view exposes no weights or hash and is **exactly** the nine columns above |
+| `supabase/tests/scp_a1_domain_model_test.sql` GROUP 20b | Pins the mechanism: the object is a view and runs with `security_invoker=false`; anon gets `permission denied` on the view and on the base tables |
+| `supabase/tests/cd_outstanding_reviews_operator_only_test.sql` CDO4 | `scp_scoring_version_lineage` still carries `security_invoker=false` (contrast case to `cd_outstanding_reviews`, which is deliberately invoker) |
+| `scripts/cd-outstanding-reviews-check.ts` (`bun run cd-outstanding-reviews:check`) | Static migration-history guard: fails with `CDO-GUARD-LINEAGE-FLIPPED` if the view ends as `security_invoker = true`, and with `CDO-GUARD-LINEAGE-MISSING` if it disappears |
+| `scripts/negative-controls/cd-outstanding-reviews-controls.ts` `CDO-NC-LINEAGE-FLIPPED` (`bun run negative-controls:cd-outstanding-reviews`, part of `negative-controls:all`) | Injects the generic linter remediation (`security_invoker = true`) and proves the guard above catches it |
+| `supabase/tests/scp_a_rollback_test.sql` | The LOW-4 lineage view exists before rollback |
+
+**Reopening.** Do not flip this view to `security_invoker` in response to the advisor; the guards above will fail. Reopen only if a CTO or security review finds a concrete, exploitable issue (for example a column in the view that should not be public to authenticated users). In that case the alternative to evaluate as a separate change is: move the projection into a `SECURITY DEFINER` function with a pinned `search_path` in a schema not exposed through the API, and keep the public view as `security_invoker = true` over that function. That change must update every guard in the table above in the same PR.
 
 ### `unaccent` installed in the `public` schema (advisor WARN)
 
@@ -48,4 +89,4 @@ Hosted project `wrygicdfxwjnrugduxnt` (eu-central-1, PostgreSQL 17.6). Audited r
 - [ ] Backups confirmed; PITR decision made
 - [ ] The four fix migrations applied through the tracked mechanism, `release-parity:gate` green
 - [ ] `passport-share`: `PUBLIC_SITE_URL` set, switch set after `/p` is live
-- [ ] Advisor ERROR recorded as accepted (§3)
+- [x] Advisor ERROR recorded as accepted (§3, owner decision 2026-10-01: reviewed / accepted risk / no action required)
