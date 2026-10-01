@@ -274,18 +274,21 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is refused a foreign and a fabricated option and accepted its own.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-p0-response-option-ownership-hosted-verification.md.
-// 20261229090000_scp_delivery_answer_key_leak (release-blocking: the delivery
-// payload carried each option's option_key, and the preferred option is keyed
-// 'a') is pending BY DESIGN until its PR merges and the official integration
-// applies it. Its name comes off this list in the change that records its
-// hosted evidence. Evidence to come: docs/release/2026-10-01-delivery-answer-key-leak.md.
+// 2026-10-01 19:34 UTC: 20261229090000 (scp_delivery_answer_key_leak, the
+// release-blocking answer-key fix, #351 as 6748588) verified applied
+// read-only: both function bodies equal the merged file, the delivery payload
+// builds no key-like field, the seeding helper is owner-only, the seed guard
+// is enabled, no unanswered seedless attempt on a randomised form remains,
+// 682 responses are unchanged, and a rolled-back probe as a real participant
+// is served options carrying exactly option_id and label.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-01-delivery-answer-key-leak-hosted-verification.md.
 // 20261231090000_scp_resolve_employment_owner_only (P1-3 of the 2026-10-01
 // audit: the employment-binding helper is not a client entry point) is pending
 // BY DESIGN until its PR merges and the official integration applies it. Its
 // name comes off this list in the change that records its hosted evidence.
 // Evidence to come: docs/release/2026-10-01-employment-binding-owner-only.md.
 const expectedPending: string[] = [
-  "20261229090000_scp_delivery_answer_key_leak.sql",
   "20261231090000_scp_resolve_employment_owner_only.sql",
 ];
 const hostedIdentities = [
