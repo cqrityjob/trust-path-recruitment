@@ -259,13 +259,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // another employer's member and anon are refused. release-state.json and
 // hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-09-29-jb02-contract-hosted-verification.md.
-// Pending by design: 20261227090000_sp_network_statistics.sql (Security Passport
-// Network live statistics, this branch). It ships HIDDEN -- sp_network_stats()
-// returns no number until the owner publishes. Merged ALONE per the
-// schema-first rule; the UI that calls it follows in a second PR. Remove it
-// from this list, and record the hosted evidence in release-state.json, once
-// the official integration has applied it. Docs: docs/passport/network-statistics.md.
-const expectedPending: string[] = ["20261227090000_sp_network_statistics.sql"];
+// 2026-10-01 13:06 UTC: 20261227090000 (sp_network_statistics, #345 as 1c0fd8e;
+// ships HIDDEN -- sp_network_stats() returns no number until the owner
+// publishes) verified applied read-only: both tables have RLS and no policy and
+// no client privilege, the function bodies equal the merged file, anon holds
+// EXECUTE on sp_network_stats() only, and the Passport tables are unchanged.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-01-passport-network-statistics-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

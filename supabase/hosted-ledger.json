@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-09-29T13:30:38.043853+00:00",
-  "readBy": "Read-only production verification after #330 merged as a2061fe (owner-merged 13:27 UTC 2026-09-29, after the site was published from main at >= d8f6266). All 328 previous ledger identities preserved; the new row is 20261226090000 / application_notes_column_privileges (JB-02 CONTRACT), applied by the official integration within minutes of the merge. Digest of version:name over all 329 rows 818869f89fa9f0e61dcd40378bb83255, equal on the connector read and on this file. See docs/release/2026-09-29-jb02-contract-hosted-verification.md.",
+  "readAt": "2026-10-01T13:06:51+00:00",
+  "readBy": "Read-only production verification after #345 merged as 1c0fd8e (approved head f073fce). All 329 previous ledger identities preserved; the new row is 20261227090000 / sp_network_statistics (Security Passport Network statistics, database half), applied by the official integration. md5 of version:name joined by newline over all 330 rows d628b215c6fb12e31848b850eac03e24, equal on the connector read and on this file. See docs/release/2026-10-01-passport-network-statistics-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1331,6 +1331,10 @@
     {
       "version": "20261226090000",
       "name": "application_notes_column_privileges"
+    },
+    {
+      "version": "20261227090000",
+      "name": "sp_network_statistics"
     }
   ]
 }

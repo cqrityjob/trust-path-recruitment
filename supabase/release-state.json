@@ -2393,7 +2393,10 @@
     },
     {
       "file": "20261227090000_sp_network_statistics.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20261227090000",
+      "hostedName": "sp_network_statistics",
+      "evidenceSource": "Read-only verification 2026-10-01T13:06:51Z through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #345 merged to main as 1c0fd8e (approved head f073fce, CI green) and the official Supabase GitHub integration applied it. supabase_migrations.schema_migrations holds version 20261227090000 / name sp_network_statistics, the 330th and highest row; hosted-ledger.json refreshed to all 330 rows, md5 of version:name joined by newline d628b215c6fb12e31848b850eac03e24 equal on the connector read and on this file (the 329 earlier rows are unchanged). Objects: sp_network_stats_policy and sp_statistics_exclusions exist with RLS enabled and ZERO policies; anon and authenticated hold no privilege on either; service_role holds SELECT+UPDATE on the policy table and SELECT+INSERT (no DELETE) on the exclusions table; the policy row is singleton=true, display='hidden', min_group_size=5, with the CHECKs display IN (hidden, passport_page, public) and min_group_size >= 5; sp_statistics_exclusions has 0 rows. Functions: sp_network_stats() and sp_set_network_stats_display(text,text) are SECURITY DEFINER with search_path=public; the bodies' md5 (49f4cf6204e44e9345e886aa74ebfba7 and 77cfdb5b8bd48c9e137c23d69ea984d9) equal the md5 of the bodies in the merged migration file; sp_network_stats() is STABLE and executable by anon, authenticated and service_role (the one reviewed anon read), sp_set_network_stats_display is not executable by anon. Passport tables unchanged: anon holds no SELECT on sp_passport_profiles or sp_claims, which keep their 4 and 4 policies. Read-only call of sp_network_stats() returns {\"display\":\"hidden\"} and no number. Production data audited read-only before the change: 4 profile rows, 2 completed, both completed Passports belong to staff accounts. No hosted write by this verification. See docs/release/2026-10-01-passport-network-statistics-hosted-verification.md.",
       "introduces": [
         {"kind": "function", "object": "sp_network_stats()"},
         {"kind": "function", "object": "sp_set_network_stats_display(text,text)"},
@@ -2402,7 +2405,7 @@
       ],
       "rollback": "supabase/rollback/20261227090000_sp_network_statistics_rollback.sql",
       "verify": "SELECT public.sp_network_stats(); -- expect {\"display\": \"hidden\"} and no number. SELECT has_table_privilege('anon','public.sp_passport_profiles','SELECT'), has_table_privilege('anon','public.sp_network_stats_policy','SELECT'), has_table_privilege('anon','public.sp_statistics_exclusions','SELECT'); -- all false. SELECT has_function_privilege('anon','public.sp_network_stats()','EXECUTE'); -- true (the one reviewed anon read).",
-      "note": "Security Passport Network live statistics. Ships HIDDEN: the function returns no number until a platform admin runs sp_set_network_stats_display. Migration-only: the UI that calls sp_network_stats() ships in a second PR after this is applied (schema-first-release rule). Adds one reviewed anon-executable SECURITY DEFINER function (supabase/tests/security_hardening_test.sql S3.1 now allowlists six). Changes no Passport table, policy or grant."
+      "note": "Security Passport Network live statistics. Ships HIDDEN: the function returns no number until a platform admin runs sp_set_network_stats_display. Migration-only (schema-first-release rule): applied hosted and verified; the UI that calls sp_network_stats() ships in a second PR. Adds one reviewed anon-executable SECURITY DEFINER function (supabase/tests/security_hardening_test.sql S3.1 now allowlists six). Changes no Passport table, policy or grant."
     }
   ], 
   "policyVersion": 2, 
