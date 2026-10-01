@@ -321,10 +321,27 @@ BEGIN
 END $$;
 SELECT pg_temp.ok(NOT has_function_privilege('anon', 'public.scp_save_response(uuid,uuid,uuid,uuid,uuid,text)', 'EXECUTE'),
   'OO7.4 anon cannot execute scp_save_response');
-SELECT pg_temp.ok(NOT has_table_privilege('authenticated', 'public.scp_candidate_responses', 'INSERT')
-              AND NOT has_table_privilege('authenticated', 'public.scp_candidate_responses', 'UPDATE')
-              AND NOT has_table_privilege('anon', 'public.scp_candidate_responses', 'INSERT'),
-  'OO7.5 no client role can write scp_candidate_responses around the function');
+-- Behavioural, so it holds whether the environment's default privileges grant
+-- table writes (a Supabase stack) or not (a plain replay): RLS refuses them.
+DO $$
+DECLARE _r text; _n bigint;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', '0f0a0000-0000-4000-8000-000000000001', true);
+  SET LOCAL ROLE authenticated;
+  BEGIN
+    UPDATE public.scp_candidate_responses SET selected_option_id = (SELECT id FROM foreign_opt)
+     WHERE attempt_id = (SELECT aid FROM att WHERE who = 'P');
+    GET DIAGNOSTICS _n = ROW_COUNT; _r := 'rows=' || _n;
+  EXCEPTION WHEN OTHERS THEN _r := SQLSTATE;
+  END;
+  RESET ROLE;
+  PERFORM pg_temp.ok(_r IN ('42501', 'rows=0'),
+    'OO7.5 the participant cannot write their own responses around the function (' || _r || ')');
+END $$;
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_candidate_responses'
+                AND cmd IN ('INSERT', 'UPDATE', 'ALL') AND roles && ARRAY['anon', 'authenticated', 'public']::name[]),
+  'OO7.6 no RLS policy lets a client role insert or update scp_candidate_responses');
 
 -- =========================================================================
 DO $$ BEGIN RAISE NOTICE 'GROUP OO8 — scoring cannot consume an option of another item'; END $$;

@@ -190,8 +190,14 @@ BEGIN
   IF has_function_privilege('anon', 'public.scp_save_response(uuid,uuid,uuid,uuid,uuid,text)', 'EXECUTE') THEN
     RAISE EXCEPTION 'SCP_OPTION_OWNERSHIP_PROOF: anon may execute scp_save_response';
   END IF;
-  IF has_table_privilege('authenticated', 'public.scp_candidate_responses', 'INSERT')
-     OR has_table_privilege('authenticated', 'public.scp_candidate_responses', 'UPDATE') THEN
+  -- The function is the only client write path: RLS is on and no policy lets
+  -- a client role INSERT or UPDATE. (Asserted on policies, not grants: a
+  -- Supabase stack's default privileges grant table writes that RLS refuses.)
+  IF NOT (SELECT relrowsecurity FROM pg_class WHERE oid = 'public.scp_candidate_responses'::regclass)
+     OR EXISTS (SELECT 1 FROM pg_policies
+                 WHERE schemaname = 'public' AND tablename = 'scp_candidate_responses'
+                   AND cmd IN ('INSERT', 'UPDATE', 'ALL')
+                   AND roles && ARRAY['anon', 'authenticated', 'public']::name[]) THEN
     RAISE EXCEPTION 'SCP_OPTION_OWNERSHIP_PROOF: a client role can write scp_candidate_responses directly';
   END IF;
   RAISE NOTICE 'SCP_OPTION_OWNERSHIP_PROOF ok: an answer can name only options of its own item, at the save path and in the table';
