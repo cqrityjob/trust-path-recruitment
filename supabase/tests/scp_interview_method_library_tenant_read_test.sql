@@ -678,7 +678,7 @@ BEGIN
   PERFORM pg_temp.ok(true, 'ML10.6 the internal entitlement halves are executable by service_role only');
 
   -- Schema-wide: no SECURITY DEFINER function in public is executable by
-  -- PUBLIC, and the anon-executable set is exactly the five reviewed names
+  -- PUBLIC, and the anon-executable set is exactly the six reviewed names
   -- that supabase/tests/security_hardening_test.sql S3.1 allowlists.
   PERFORM pg_temp.ok(NOT EXISTS (
       SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace,
@@ -691,8 +691,8 @@ BEGIN
        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
       WHERE n.nspname = 'public' AND p.prosecdef AND has_function_privilege('anon', p.oid, 'EXECUTE')
         AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.classid = 'pg_proc'::regclass AND d.deptype = 'e'))
-    = 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status',
-    'ML10.8 the anon-executable SECURITY DEFINER set is exactly the five reviewed functions');
+    = 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status, sp_network_stats',
+    'ML10.8 the anon-executable SECURITY DEFINER set is exactly the six reviewed functions');
   SELECT string_agg(p.proname, ', ') INTO _unpinned
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE n.nspname = 'public' AND p.prosecdef

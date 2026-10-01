@@ -264,6 +264,7 @@
     "passport-credential-shield:check": "bun run scripts/passport-credential-shield-check.tsx",
     "passport-hayat:check": "bun run scripts/passport-hayat-check.ts",
     "negative-controls:passport-hayat": "bun run scripts/negative-controls/passport-hayat-controls.ts",
+    "passport-network-stats:db": "bash tests/database/sp-network-stats/run.sh",
     "india-entry:check": "bun run scripts/india-entry-check.ts",
     "negative-controls:india-entry": "bun run scripts/negative-controls/india-entry-controls.ts",
     "passport-card-surface:check": "bun run scripts/passport-card-surface-check.ts",

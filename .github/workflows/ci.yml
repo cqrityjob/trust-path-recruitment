@@ -247,6 +247,12 @@ jobs:
       - name: Passport social image check
         run: bun run passport-social-image:check
 
+      # Security Passport Network: the behavioural proof of the counting rule,
+      # the privacy threshold and the anon boundary against a real local Postgres
+      # (the runner's own throwaway cluster; the runner image ships Postgres).
+      - name: Security Passport Network statistics database test
+        run: bun run passport-network-stats:db
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and

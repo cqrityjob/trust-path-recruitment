@@ -350,8 +350,8 @@ SELECT pg_temp.ok(
       AND NOT EXISTS (SELECT 1 FROM pg_depend d
                        WHERE d.objid = p.oid AND d.classid = 'pg_proc'::regclass
                          AND d.deptype = 'e'))
-  = 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status',
-  'S3.1 exactly five reviewed SECURITY DEFINER functions are anon-executable');
+  = 'cd_access_state, cd_get_shared_report, cd_record_funnel_event, cd_submit_test_feedback, employer_is_active_status, sp_network_stats',
+  'S3.1 exactly six reviewed SECURITY DEFINER functions are anon-executable (the sixth, sp_network_stats, is the aggregate-only Security Passport Network read, 20261227090000)');
 
 SELECT pg_temp.ok(
   NOT has_function_privilege('anon',

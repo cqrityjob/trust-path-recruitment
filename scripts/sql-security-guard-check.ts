@@ -82,6 +82,15 @@ const ANON_EXECUTABLE_ALLOWLIST = new Set([
   // it to say honestly whether the instrument is paused. Pinned in the same
   // words by security_hardening_test S3.1 and the method-library ML10.8.
   "cd_access_state",
+  // 20261227090000: the Security Passport Network statistics. Returns ONE
+  // jsonb document of approved aggregates (completed-Passport count, active
+  // credential count, market ISO codes at or above a disclosure threshold of
+  // at least five, and a boolean for smaller markets) -- never a row, an id,
+  // a name, an email, a timestamp or a per-market count. Returns only
+  // {"display":"hidden"} until a platform admin publishes, and reads a missing
+  // policy row as hidden. Takes no argument and writes nothing. Pinned in the
+  // same words by security_hardening_test S3.1 and the method-library ML10.8.
+  "sp_network_stats",
 ]);
 
 /**
