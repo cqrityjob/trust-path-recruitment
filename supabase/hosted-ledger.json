@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-01T20:34:03+00:00",
-  "readBy": "Read-only production verification after #353 merged as e81a1dc (P1-1/P1-2: a candidate creates an application, never the employer's side of it). All 332 previous ledger identities preserved; the new row is 20261230090000 / job_application_insert_boundary, applied by the official integration. md5 of version:name joined by newline over all 333 rows f5124acc449b8ceaddf92d648c882ab8, equal on the connector read and on this file. See docs/release/2026-10-01-job-application-insert-boundary-hosted-verification.md.",
+  "readAt": "2026-10-01T20:49:13+00:00",
+  "readBy": "Read-only production verification after #354 merged (P1-3: the employment-binding helper is not a client entry point), following #353's verification earlier the same evening. All 333 previous ledger identities preserved; the new row is 20261231090000 / scp_resolve_employment_owner_only, applied by the official integration. md5 of version:name joined by newline over all 334 rows f4dead77ace6cfd387c3318411ed96b7, equal on the connector read and on this file. See docs/release/2026-10-01-employment-binding-owner-only-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1347,6 +1347,10 @@
     {
       "version": "20261230090000",
       "name": "job_application_insert_boundary"
+    },
+    {
+      "version": "20261231090000",
+      "name": "scp_resolve_employment_owner_only"
     }
   ]
 }

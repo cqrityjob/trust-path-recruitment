@@ -291,6 +291,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // a CV path in another applicant's folder and accepted in its own.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-job-application-insert-boundary-hosted-verification.md.
+// 2026-10-01 20:49 UTC: 20261231090000 (scp_resolve_employment_owner_only,
+// P1-3 of the pre-release security audit, #354) verified applied read-only:
+// the binding helper's ACL is its owner alone, its body is unchanged, both
+// callers are SECURITY DEFINER under the same owner, bindings are unchanged
+// (2 of 5), and a rolled-back probe as a signed-in non-member is refused
+// (42501) with nothing bound.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-01-employment-binding-owner-only-hosted-verification.md.
 // Nothing is pending.
 const expectedPending: string[] = [];
 const hostedIdentities = [
