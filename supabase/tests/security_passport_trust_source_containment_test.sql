@@ -547,8 +547,12 @@ BEGIN
   SELECT count(*) INTO _n
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE n.nspname = 'public' AND p.proname LIKE 'sp\_%'
+     -- The one reviewed exception: the aggregate-only, owner-gated Security
+     -- Passport Network read (20261227090000). It touches no Passport table
+     -- on the caller's behalf and returns {"display":"hidden"} until published.
+     AND p.proname <> 'sp_network_stats'
      AND has_function_privilege('anon', p.oid, 'EXECUTE');
-  PERFORM pg_temp.ok(_n = 0, '8.4 anon can execute no sp_ function');
+  PERFORM pg_temp.ok(_n = 0, '8.4 anon can execute no sp_ function (but the reviewed sp_network_stats)');
 
   PERFORM pg_temp.ok(
     (SELECT public FROM storage.buckets WHERE id = 'passport-evidence') = false,

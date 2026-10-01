@@ -133,7 +133,7 @@ function Index() {
       <HomeHero />
       <HomeForIndividuals />
       {/* Not a seventh section: a quiet proof band that draws NOTHING until the
-          owner publishes (sp_network_stats_policy.display = 'public') and the
+          owner publishes it (publication setting 'public') and the
           figures exist. */}
       <SecurityPassportNetwork surface="homepage" />
       <HomeLatestJobs />

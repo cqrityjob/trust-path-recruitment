@@ -2390,6 +2390,19 @@
       "rollback": "supabase/rollback/20261226090000_application_notes_column_privileges_rollback.sql",
       "verify": "SELECT has_column_privilege('authenticated','public.job_applications','employer_note','SELECT'), has_column_privilege('authenticated','public.job_application_status_events','note','SELECT'); -- expect false, false. SELECT has_column_privilege('authenticated','public.job_applications','status','SELECT'), has_column_privilege('authenticated','public.job_application_status_events','new_status','SELECT'); -- true, true. SELECT has_table_privilege('anon','public.job_applications','SELECT'); -- false. Compare count(*) of job_applications and job_application_status_events before and after: unchanged.",
       "note": "JB-02 of the 2026-09-28 UAT, CONTRACT half: table-level SELECT for authenticated on job_applications and job_application_status_events is replaced by a column list that excludes employer_note and note. Refuses to apply unless 20261223090000 (the reads) is there and rec_submit_application reads named fields. APPLY ONLY AFTER the application that reads the timeline through rec_application_status_events() (employer workspace, admin detail) and no longer selects the note for the candidate is LIVE: until then those three reads select the column and would fail with permission denied. No row changes; INSERT and every policy stay as they were; the service role is untouched. Rollback restores the table grants (and the API leak) and says so."
+    },
+    {
+      "file": "20261227090000_sp_network_statistics.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {"kind": "function", "object": "sp_network_stats()"},
+        {"kind": "function", "object": "sp_set_network_stats_display(text,text)"},
+        {"kind": "table", "object": "sp_network_stats_policy"},
+        {"kind": "table", "object": "sp_statistics_exclusions"}
+      ],
+      "rollback": "supabase/rollback/20261227090000_sp_network_statistics_rollback.sql",
+      "verify": "SELECT public.sp_network_stats(); -- expect {\"display\": \"hidden\"} and no number. SELECT has_table_privilege('anon','public.sp_passport_profiles','SELECT'), has_table_privilege('anon','public.sp_network_stats_policy','SELECT'), has_table_privilege('anon','public.sp_statistics_exclusions','SELECT'); -- all false. SELECT has_function_privilege('anon','public.sp_network_stats()','EXECUTE'); -- true (the one reviewed anon read).",
+      "note": "Security Passport Network live statistics. Ships HIDDEN: the function returns no number until a platform admin runs sp_set_network_stats_display. The application degrades to drawing nothing when the function is absent (the RPC error is read as unavailable), so the code may deploy before or after the migration. Adds one reviewed anon-executable SECURITY DEFINER function (supabase/tests/security_hardening_test.sql S3.1 now allowlists six). Changes no Passport table, policy or grant."
     }
   ], 
   "policyVersion": 2, 

@@ -460,7 +460,9 @@ SELECT pg_temp.ok(
 
 SELECT pg_temp.ok(
   (SELECT count(*) FROM information_schema.role_routine_grants
-    WHERE grantee='anon' AND routine_schema='public' AND routine_name LIKE 'sp\_%') = 0,
+    WHERE grantee='anon' AND routine_schema='public' AND routine_name LIKE 'sp\_%'
+       -- the one reviewed exception: the aggregate-only Security Passport Network read (20261227090000)
+       AND routine_name <> 'sp_network_stats') = 0,
   '9.2 anon can execute NO sp_* function');
 
 SELECT pg_temp.ok(

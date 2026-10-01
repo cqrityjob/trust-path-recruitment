@@ -36,6 +36,7 @@ SELECT public.sp_set_network_stats_display('hidden', 'reason');
 
 -- keep a test / UAT / demo account out of the figures (SQL editor)
 INSERT INTO public.sp_statistics_exclusions (holder_user_id, reason) VALUES ('<uuid>', 'UAT account');
+-- no application role holds DELETE on any sp_* table (Phase 8 rule); an exclusion is lifted by the database owner in the SQL editor.
 ```
 
 ## Placement
@@ -51,3 +52,7 @@ INSERT INTO public.sp_statistics_exclusions (holder_user_id, reason) VALUES ('<u
 ## Tests
 
 `bun run passport-network-stats:check` (101 contract/privacy/render/layout assertions), `bun run negative-controls:passport-network-stats` (14 mutations), `bun run passport-network-stats:db` (28 behavioural checks against a throwaway Postgres: counting rule, repeated reads, credential edits, staff/test exclusion, threshold, anon cannot enumerate, RLS unchanged). Evidence screenshots: `network-statistics-evidence/`.
+
+## Existing guards extended (reviewed exception)
+
+`sp_network_stats()` is the one `sp_*` function `anon` may execute. The anon-executable SECURITY DEFINER allowlist (`security_hardening_test.sql` S3.1, `scp_interview_method_library_tenant_read_test.sql` ML10.8 and its guard script) now lists six, and the four "anon executes no `sp_*` function" assertions (phase 3 6.2, phase 5 7.2, phase 7 9.2, trust-source 8.4) name that single exception. The migration is classified `pending` in `supabase/release-state.json`.

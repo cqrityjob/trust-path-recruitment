@@ -113,7 +113,7 @@ COMMENT ON TABLE public.sp_statistics_exclusions IS
 
 ALTER TABLE public.sp_statistics_exclusions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.sp_statistics_exclusions FROM PUBLIC, anon, authenticated;
-GRANT SELECT, INSERT, DELETE ON TABLE public.sp_statistics_exclusions TO service_role;
+GRANT SELECT, INSERT ON TABLE public.sp_statistics_exclusions TO service_role;
 
 -- ── The ONE public read ────────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.sp_network_stats()
