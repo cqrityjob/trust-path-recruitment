@@ -2479,6 +2479,19 @@
       "rollback": "supabase/rollback/20270103090000_scp_submit_assessment_only_rollback.sql",
       "verify": "SELECT position('SCP_NOT_AN_ASSESSMENT' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_submit_attempt(uuid)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.scp_submit_attempt(uuid)','EXECUTE'); -- false. Rolled-back probe: a candidate starts a learning run, saves the feedback-preferred answers and calls scp_submit_attempt on it; refused with SCP_NOT_AN_ASSESSMENT (23514), 0 evidence rows written, the run stays in_progress. Evidence written by scp_submit_attempt from a learning run: 0.",
       "note": "P1-1 of the 2026-10-02 pre-launch hostile-user audit (docs/release/2026-10-02-submit-assessment-only.md). scp_submit_attempt never checked the run's mode, so a candidate could submit a Learning Mode run answered with the preferred options that learning feedback reveals and receive full-credit (1.000/1.000) assessment_form evidence, repeatably. The function now refuses any run whose mode is not 'assessment' before reading or writing anything. Learning and training runs still close through scp_complete_learning_module / scp_complete_training_module, which never called it. Hosted had 10 learning runs and 0 submission evidence from any of them; no row changes. Rollback restores the hosted body (md5 624e9f119ef21feee2a5858e9d87a633) and says the forgery path is back."
+    },
+    {
+      "file": "20270104090000_scp_development_recommendations_employer_scope.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "scp_compute_maturity_for_issuers(uuid,uuid,text,timestamp with time zone,uuid[])"
+        }
+      ],
+      "rollback": "supabase/rollback/20270104090000_scp_development_recommendations_employer_scope_rollback.sql",
+      "verify": "SELECT position('scp_compute_maturity_for_issuers' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_development_recommendations(uuid)'::regprocedure; -- true. SELECT has_function_privilege('authenticated','public.scp_compute_maturity_for_issuers(uuid,uuid,text,timestamp with time zone,uuid[])','EXECUTE'); -- false. SELECT has_function_privilege('anon','public.scp_development_recommendations(uuid)','EXECUTE'); -- false. Rolled-back probe: for a subject assessed by two employers, a member of only one receives no module selected solely by the other's evidence and levels equal to scp_compute_maturity_for_issuers over its own organisation. Row counts unchanged.",
+      "note": "P1-2 of the 2026-10-02 pre-launch hostile-user audit (docs/release/2026-10-02-development-recommendations-employer-scope.md). scp_development_recommendations let any active member of any organisation with one released attempt for a subject receive modules selected from, and maturity levels computed over, every employer's evidence for that subject; hosted had 2 subjects released by two or more employers. For an employer caller, rows and levels now come only from evidence its own organisations issued (active membership plus a released attempt, the gate it already used), through a new private helper scp_compute_maturity_for_issuers (scp_compute_maturity's body plus one issuer filter; no client role may execute it). The participant branch, scp_compute_maturity, columns and grants unchanged; no row changes. Rollback restores the hosted body (md5 4f95eafb1ee4c7161c14b2bf7fa409f9), drops the helper and says the leak is back."
     }
   ], 
   "policyVersion": 2, 
