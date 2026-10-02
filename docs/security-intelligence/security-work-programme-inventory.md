@@ -144,7 +144,7 @@ general-purpose assistant and no generic suggestion store.
 
 ## Release conventions that constrain this change
 
-- Next canonical migration slot: `20270108090000` (ledger leads the clock).
+- Canonical migration slot at inventory time: `20270108090000`; main took 20270108–20270110 while this branch was open, so the programme migration ships as `20270111090000`.
 - Every migration needs a rollback in `supabase/rollback/`, an entry in
   `supabase/release-state.json` (`hostedState: pending`, `introduces`), a
   line in `scripts/release-frontier-check.ts` `expectedPending`, and a

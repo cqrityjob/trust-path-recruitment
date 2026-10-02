@@ -695,7 +695,7 @@ echo "    ok  panel-reveal migration re-applied (postflight proved); suite passe
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_pristine;" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_pristine TEMPLATE ${TEST_DB};" >/dev/null
 
-# Programme extension (20270108090000) depends on the analysis contract and
+# Programme extension (20270111090000) depends on the analysis contract and
 # the foundation, so it is proven and stood down first. Its rollback must
 # refuse adopted programme records and restore the previous lifecycle body.
 echo "==> Running Security Work programme assertions"
@@ -704,14 +704,14 @@ SWP_PASSED="$(printf '%s\n' "$SWP_OUT" | grep -c 'NOTICE:  ok  SW-PROG ' || true
 [ "$SWP_PASSED" -ge 56 ] || { echo "$SWP_OUT"; echo "FAIL: Security Work programme assertion shortfall: $SWP_PASSED (floor 56)"; exit 1; }
 echo "    ok  $SWP_PASSED Security Work programme assertions passed"
 SWP_LOG="$(mktemp)"
-if psql -v ON_ERROR_STOP=1 -v sw_programme_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_programme_test.sql -c 'RESET ROLE;' -f supabase/rollback/20270108090000_security_work_programme_rollback.sql >"$SWP_LOG" 2>&1; then
+if psql -v ON_ERROR_STOP=1 -v sw_programme_keep_fixture=true -d "$TEST_DB" -f supabase/tests/security_work_programme_test.sql -c 'RESET ROLE;' -f supabase/rollback/20270111090000_security_work_programme_rollback.sql >"$SWP_LOG" 2>&1; then
   cat "$SWP_LOG"; rm -f "$SWP_LOG"; echo 'FAIL: adopted programme rollback succeeded'; exit 1
 fi
 grep -q 'SW_PROGRAMME_ROLLBACK_DATA_PRESENT' "$SWP_LOG" || { cat "$SWP_LOG"; rm -f "$SWP_LOG"; exit 1; }
 rm -f "$SWP_LOG"
 echo '    ok  programme rollback preserves adopted work'
 SWP_LIFECYCLE_BEFORE="$(psql_q -d "$TEST_DB" -Atc "SELECT md5(pg_get_functiondef('sw_private.guard_lifecycle()'::regprocedure))")"
-psql_q -d "$TEST_DB" -f supabase/rollback/20270108090000_security_work_programme_rollback.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/rollback/20270111090000_security_work_programme_rollback.sql >/dev/null
 SWP_LEFT="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sw_security_mandates','sw_protected_assets','sw_risk_assets','sw_baseline_assessments','sw_baseline_answers','sw_gaps','sw_evidence_links','sw_ai_suggestions','sw_programme_plans','sw_management_reports')) + (SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND ((table_name='sw_risks' AND column_name IN ('owner_id','threat_scenario','source_kind')) OR (table_name='sw_actions' AND column_name IN ('gap_id','asset_id','source_kind','approval_required','approval_note'))))")"
 [ "$SWP_LEFT" = 0 ] || { echo "FAIL: programme rollback left $SWP_LEFT object(s)"; exit 1; }
 SWP_LIFECYCLE_AFTER="$(psql_q -d "$TEST_DB" -Atc "SELECT md5(pg_get_functiondef('sw_private.guard_lifecycle()'::regprocedure))")"
@@ -805,7 +805,7 @@ done
 psql_q -d "$TEST_DB" -f supabase/migrations/20261211090000_security_work_analysis_contract.sql >/dev/null
 SWA_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWA_OUT"; exit 1; }
 echo '    ok  analysis reapplied; extension and foundation assertions pass together'
-psql_q -d "$TEST_DB" -f supabase/migrations/20270108090000_security_work_programme.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20270111090000_security_work_programme.sql >/dev/null
 SWP_OUT="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/security_work_programme_test.sql -f supabase/tests/security_work_analysis_contract_test.sql -f supabase/tests/security_work_foundation_test.sql 2>&1)" || { echo "$SWP_OUT"; exit 1; }
 echo '    ok  programme reapplied; programme, analysis and foundation assertions pass together'
 
