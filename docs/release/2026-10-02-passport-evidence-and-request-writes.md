@@ -1,8 +1,7 @@
 # P1: Passport evidence and verification requests are written only by their functions
 
-**Status: PENDING.** This is an isolated PR from `origin/main` for P1-4 of the
-2026-10-02 pre-launch hostile-user audit. It is not merged, and nothing was
-written to the hosted database.
+**Status: APPLIED.** Merged and verified on production on 2026-10-02. See
+`docs/release/2026-10-02-security-gate-blockers-hosted-verification.md`.
 
 | Part | File |
 |---|---|
