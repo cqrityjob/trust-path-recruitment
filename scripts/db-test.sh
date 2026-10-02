@@ -1280,6 +1280,54 @@ set -e
 [ "$FR_RC" -eq 0 ] || { echo "$FR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: findings review-writes suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  findings review-writes migration re-applied (postflight proved); suite passes again"
 
+# 20270118090000: an employer creates an assessment assignment as an invitation
+# only and cannot write its result (P1-L of the 2026-10-02 final audit). The
+# suite reproduces an already-completed assignment with an invented
+# engine_result on the pre-fix grant itself (FA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (table-level INSERT back)                     -> FA1.1
+#   NC2  only INSERT (status, engine_result) granted back                -> FA1.2
+run_fa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/assessment_assignment_insert_columns_test.sql 2>&1
+}
+fa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_fa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: assignment insert-columns negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: FA[0-9.]*' | head -1))"
+}
+FA_MIG=supabase/migrations/20270118090000_assessment_assignment_insert_columns.sql
+FA_RB=supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql
+echo "==> Running assessment assignment insert-columns assertions"
+psql_q -d "$TEST_DB" -f "$FA_MIG" >/dev/null
+set +e
+FA_OUT="$(run_fa_suite)"; FA_RC=$?
+set -e
+FA_PASSED="$(echo "$FA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$FA_RC" -ne 0 ]; then
+  echo "$FA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the assignment insert-columns suite exited with code ${FA_RC}." >&2
+  exit 1
+fi
+[ "$FA_PASSED" -ge 11 ] || { echo "$FA_OUT"; echo "FAIL: assignment insert-columns assertion shortfall: $FA_PASSED (floor 11)" >&2; exit 1; }
+echo "    ok  $FA_PASSED assignment insert-columns assertions passed (forged completed result reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$FA_RB" >/dev/null
+fa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$FA_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "GRANT INSERT (status, engine_result) ON public.assessment_assignments TO authenticated" >/dev/null
+fa_nc_expect_fail "NC2 status and engine_result insertable again"
+psql_q -d "$TEST_DB" -f "$FA_MIG" >/dev/null
+set +e
+FA_OUT="$(run_fa_suite)"; FA_RC=$?
+set -e
+[ "$FA_RC" -eq 0 ] || { echo "$FA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assignment insert-columns suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  assignment insert-columns migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
