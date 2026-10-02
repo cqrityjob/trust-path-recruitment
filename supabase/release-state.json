@@ -2681,6 +2681,14 @@
       "rollback": "supabase/rollback/20270119090000_access_request_no_role_escalation_rollback.sql",
       "verify": "SELECT position('20270119090000' IN prosrc) > 0 FROM pg_proc WHERE oid='public.approve_access_request(uuid,text,text)'::regprocedure; -- true. Rolled-back probe: an active org admin who files and approves their own request as owner is refused (Forbidden); an owner approving a live member's request with another role is refused (Already a member); admitting a new person as member still succeeds.",
       "note": "P1-G of the 2026-10-02 final audit. approve_access_request: only a platform admin grants owner; no self-approval except a platform admin; a requester with an active membership is refused, so an approval never rewrites a live member's role. Body otherwise identical to hosted. No row touched."
+    },
+    {
+      "file": "20270120090000_scp_iv_erase_vetting_boundary.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270120090000_scp_iv_erase_vetting_boundary_rollback.sql",
+      "verify": "SELECT position('bcp_case_access_ok' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_iv_erase_source(uuid,text)'::regprocedure; -- true. Rolled-back probe: an active owner who is not the security officer calling scp_iv_erase_source on a security-vetting case's source is refused SCP_IV_NOT_CASE_MEMBER and the source stays active.",
+      "note": "P1-K of the 2026-10-02 final audit. scp_iv_erase_source additionally requires bcp_case_access_ok, as scp_iv_confirm_transcript_basis does. Body otherwise identical to hosted. No row touched."
     }
   ], 
   "policyVersion": 2, 
