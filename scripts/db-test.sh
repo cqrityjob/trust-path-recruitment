@@ -1328,6 +1328,65 @@ set -e
 [ "$FA_RC" -eq 0 ] || { echo "$FA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assignment insert-columns suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  assignment insert-columns migration re-applied (postflight proved); suite passes again"
 
+# 20270118090000: a Passport entry under review cannot change underneath the
+# reviewer (P1-H of the 2026-10-02 final audit). The suite reproduces a pending
+# period rewritten by its holder and then verified (ER0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> ER1.1
+#   NC2  only the claims trigger dropped                                -> ER2.1
+#   NC3  the helper never returns a clarification to review             -> ER3.2
+run_er_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_entry_frozen_under_review_test.sql 2>&1
+}
+er_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_er_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: entry-under-review negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: ER[0-9.]*' | head -1))"
+}
+ER_MIG=supabase/migrations/20270118090000_sp_entry_frozen_under_review.sql
+ER_RB=supabase/rollback/20270118090000_sp_entry_frozen_under_review_rollback.sql
+echo "==> Running Passport entry-under-review assertions"
+psql_q -d "$TEST_DB" -f "$ER_MIG" >/dev/null
+set +e
+ER_OUT="$(run_er_suite)"; ER_RC=$?
+set -e
+ER_PASSED="$(echo "$ER_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$ER_RC" -ne 0 ]; then
+  echo "$ER_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the entry-under-review suite exited with code ${ER_RC}." >&2
+  exit 1
+fi
+[ "$ER_PASSED" -ge 15 ] || { echo "$ER_OUT"; echo "FAIL: entry-under-review assertion shortfall: $ER_PASSED (floor 15)" >&2; exit 1; }
+echo "    ok  $ER_PASSED entry-under-review assertions passed (edit-while-pending verification reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$ER_RB" >/dev/null
+er_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$ER_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "DROP TRIGGER sp_claims_frozen_under_review ON public.sp_claims" >/dev/null
+er_nc_expect_fail "NC2 claims unguarded"
+psql_q -d "$TEST_DB" -f "$ER_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+CREATE OR REPLACE FUNCTION public.sp_entry_review_on_holder_edit(_claim_id uuid, _period_id uuid)
+ RETURNS text LANGUAGE sql SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $f$
+  SELECT CASE WHEN EXISTS (SELECT 1 FROM public.sp_verification_requests r
+                            WHERE r.status = 'pending' AND (r.claim_id = _claim_id OR r.period_id = _period_id))
+              THEN 'pending' END;
+$f$;
+SQL
+er_nc_expect_fail "NC3 clarification never returns to review"
+psql_q -d "$TEST_DB" -f "$ER_MIG" >/dev/null
+set +e
+ER_OUT="$(run_er_suite)"; ER_RC=$?
+set -e
+[ "$ER_RC" -eq 0 ] || { echo "$ER_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: entry-under-review suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  entry-under-review migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
