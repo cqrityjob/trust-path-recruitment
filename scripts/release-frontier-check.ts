@@ -327,21 +327,21 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder Passport write and no forged verification stamp.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md.
-// 20270117090000_assessment_assignment_insert_columns (P1-L of the 2026-10-02
+// 20270118090000_assessment_assignment_insert_columns (P1-L of the 2026-10-02
 // final audit: an employer creates an assessment assignment as an invitation
 // only and cannot write its result) is pending BY DESIGN until its PR merges
 // and the official integration applies it. Its name comes off this list in
 // the change that records its hosted evidence. Evidence to come:
 // docs/release/2026-10-02-assessment-assignment-insert-columns.md.
-// 20270118090000_sp_entry_frozen_under_review (P1-H of the 2026-10-02 final
+// 20270119090000_sp_entry_frozen_under_review (P1-H of the 2026-10-02 final
 // audit: a Passport entry under review cannot change underneath the reviewer)
 // is pending BY DESIGN until its PR merges and the official integration
 // applies it. Its name comes off this list in the change that records its
 // hosted evidence. Evidence to come:
 // docs/release/2026-10-02-passport-entry-frozen-under-review.md.
 const expectedPending: string[] = [
-  "20270117090000_assessment_assignment_insert_columns.sql",
-  "20270118090000_sp_entry_frozen_under_review.sql",
+  "20270118090000_assessment_assignment_insert_columns.sql",
+  "20270119090000_sp_entry_frozen_under_review.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

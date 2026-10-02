@@ -5,8 +5,8 @@ audit. It is not merged, and nothing was written to the hosted database.
 
 | Part | File |
 |---|---|
-| Migration | `supabase/migrations/20270117090000_assessment_assignment_insert_columns.sql` |
-| Rollback | `supabase/rollback/20270117090000_assessment_assignment_insert_columns_rollback.sql` |
+| Migration | `supabase/migrations/20270118090000_assessment_assignment_insert_columns.sql` |
+| Rollback | `supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql` |
 | Suite | `supabase/tests/assessment_assignment_insert_columns_test.sql` (11 assertions) |
 
 ## 1. Root cause

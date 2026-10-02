@@ -30,7 +30,7 @@
 -- entries with no open request; CV-only claims with no request; any row.
 -- Production holds 0 open requests on claims or periods.
 --
--- Rollback: supabase/rollback/20270118090000_sp_entry_frozen_under_review_rollback.sql
+-- Rollback: supabase/rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql
 -- Suite:    supabase/tests/sp_entry_frozen_under_review_test.sql
 -- =============================================================================
 

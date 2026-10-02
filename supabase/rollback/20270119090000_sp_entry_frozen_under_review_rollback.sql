@@ -1,4 +1,4 @@
--- Rollback of 20270118090000_sp_entry_frozen_under_review.
+-- Rollback of 20270119090000_sp_entry_frozen_under_review.
 --
 -- !! THIS REOPENS P1-H !! A holder can again change a claim or period while a
 -- reviewer is looking at it and have the changed content verified. Run it
