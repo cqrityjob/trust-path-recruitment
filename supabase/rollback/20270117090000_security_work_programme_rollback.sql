@@ -1,4 +1,4 @@
--- Rollback for 20270111090000_security_work_programme.sql.
+-- Rollback for 20270117090000_security_work_programme.sql.
 -- Pre-adoption only: refuses to destroy any programme record, any risk or
 -- action that exists only because of this migration, and restores the
 -- 20261211090000 lifecycle body verbatim. Remove dependent application code

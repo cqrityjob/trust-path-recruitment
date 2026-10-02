@@ -2570,7 +2570,7 @@
       "note": "P1-B (3/5) of the 2026-10-02 full hostile-user re-audit (docs/release/2026-10-02-assessment-actions-active-employer.md). A suspended or not-yet-approved organisation could still review its participants' responses (scp_can_review_for, behind the review queue, workload and scp_review_authorisation), release reports, record employer decisions, cancel invitations and record assessment setups, and read setups directly. The five gates and the scp_assessment_setups read policy now call has_active_employer_role (20270108090000), keeping each existing role requirement and refusal; a platform admin's break-glass review is unchanged. Reviewer staffing (grant/revoke) is the organisation's own set-up and unchanged; assigning and inviting are P1-D. No row changes; grants unchanged. Rollback restores the five hosted bodies (md5 pinned) and the policy; the primitive stays."
     },
     {
-      "file": "20270111090000_security_work_programme.sql",
+      "file": "20270117090000_security_work_programme.sql",
       "hostedState": "pending",
       "introduces": [
         {"kind": "table", "object": "sw_security_mandates"},
@@ -2592,7 +2592,7 @@
         {"kind": "function", "object": "sw_private.guard_programme()"},
         {"kind": "function", "object": "sw_private.guard_action_approval()"}
       ],
-      "rollback": "supabase/rollback/20270111090000_security_work_programme_rollback.sql",
+      "rollback": "supabase/rollback/20270117090000_security_work_programme_rollback.sql",
       "verify": "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sw_security_mandates','sw_protected_assets','sw_risk_assets','sw_baseline_assessments','sw_baseline_answers','sw_gaps','sw_evidence_links','sw_ai_suggestions','sw_programme_plans','sw_management_reports'); -- 10, all with relrowsecurity. SELECT is_nullable FROM information_schema.columns WHERE table_name IN ('sw_risks','sw_actions') AND column_name='assessment_id'; -- YES, YES. SELECT position('NEW.assessment_id IS NOT NULL AND NOT EXISTS' IN prosrc) > 0 FROM pg_proc WHERE oid='sw_private.guard_lifecycle()'::regprocedure; -- true. anon/service_role hold no privilege on any of the ten tables; authenticated cannot execute sw_private.guard_programme() or sw_private.guard_action_approval(). Existing sw_risks/sw_actions row counts unchanged; every existing row keeps its assessment_id.",
       "note": "Security Work programme (docs/security-intelligence/security-work-programme.md): mission & mandate, protected assets, risk-to-asset links, security baseline answers (question content is versioned in the repository), unified gaps, actions usable from gaps/assets/plan, evidence links to the shared library, AI suggestions (proposed/approved/rejected, content immutable, decision stamped by trigger, nothing copies a suggestion into an authoritative table), 90-day plan progress and management status reports (facts / computed / narrative stored apart). sw_risks.assessment_id and sw_actions.assessment_id become nullable; a risk without an analysis parent may be accepted by an approver with a rationale (the only lifecycle change). Existing rows and rules are untouched. Rollback refuses adopted data, drops the ten tables and the new columns, and restores the 20261211090000 guard_lifecycle body verbatim (local replay md5 59c499760b866c3d3f99e12276dc957f before and after)."
     }

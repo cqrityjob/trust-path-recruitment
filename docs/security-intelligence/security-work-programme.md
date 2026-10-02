@@ -47,7 +47,7 @@ pipeline (RSA/monitoring analyses, approvals, revisions), monitoring
 `usePortfolio`, `useSavedOperation`, `RiskRating`/`riskColour` (fixed
 matrix), every existing route and URL.
 
-## 3. Database changes (`supabase/migrations/20270111090000_security_work_programme.sql`)
+## 3. Database changes (`supabase/migrations/20270117090000_security_work_programme.sql`)
 
 New tables (all RLS, workspace-scoped, editor-insert/update, audited):
 `sw_security_mandates`, `sw_protected_assets`, `sw_risk_assets`,
@@ -69,7 +69,7 @@ one open per workspace, completion stamped) and
 `sw_private.guard_action_approval` (approval-required actions completed by
 approvers only, with a note).
 
-Rollback `supabase/rollback/20270111090000_security_work_programme_rollback.sql`
+Rollback `supabase/rollback/20270117090000_security_work_programme_rollback.sql`
 refuses adopted data and restores the previous lifecycle body verbatim
 (local md5 equal before/after). Registered in `release-state.json` as
 `pending`, in `release-frontier-check.ts` and in `scripts/db-test.sh`.

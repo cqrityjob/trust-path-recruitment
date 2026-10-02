@@ -1,4 +1,4 @@
--- Security Work programme (20270111090000): workspace isolation, roles,
+-- Security Work programme (20270117090000): workspace isolation, roles,
 -- lifecycle and AI-suggestion guardrails executed as real database roles.
 -- Everything is synthetic and transaction-local (rolled back at the end
 -- unless sw_programme_keep_fixture is set by the rollback proof).

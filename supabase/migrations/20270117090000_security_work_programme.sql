@@ -39,7 +39,7 @@
 -- NOT CHANGED: foundation RLS, analysis approval bundles, processing jobs,
 -- AI activations, exports, Storage policies.
 --
--- Rollback: supabase/rollback/20270111090000_security_work_programme_rollback.sql
+-- Rollback: supabase/rollback/20270117090000_security_work_programme_rollback.sql
 -- Suite:    supabase/tests/security_work_programme_test.sql
 BEGIN;
 
@@ -409,7 +409,7 @@ BEGIN
       IF NOT sw_private.can_approve(NEW.workspace_id) THEN RAISE EXCEPTION 'SW_APPROVER_REQUIRED' USING ERRCODE = '42501'; END IF;
       IF btrim(NEW.decision_rationale) = '' THEN RAISE EXCEPTION 'SW_DECISION_RATIONALE_REQUIRED' USING ERRCODE = '23514'; END IF;
       IF _after = 'accepted' THEN
-        -- 20270111090000: a programme risk (no analysis parent) needs no approved analysis.
+        -- 20270117090000: a programme risk (no analysis parent) needs no approved analysis.
         IF NEW.assessment_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.sw_assessments a WHERE a.workspace_id = NEW.workspace_id AND a.id = NEW.assessment_id AND a.status = 'approved') THEN
           RAISE EXCEPTION 'SW_APPROVED_ASSESSMENT_REQUIRED' USING ERRCODE = '23514';
         END IF;

@@ -144,7 +144,7 @@ general-purpose assistant and no generic suggestion store.
 
 ## Release conventions that constrain this change
 
-- Canonical migration slot at inventory time: `20270108090000`; main took 20270108–20270110 while this branch was open, so the programme migration ships as `20270111090000`.
+- Canonical migration slot at inventory time: `20270108090000`; the P1 security chain (#370–#374, #366, #367, #369) took 20270108–20270116 while this branch was open, so the programme migration ships as `20270117090000`, the next slot after that complete chain.
 - Every migration needs a rollback in `supabase/rollback/`, an entry in
   `supabase/release-state.json` (`hostedState: pending`, `introduces`), a
   line in `scripts/release-frontier-check.ts` `expectedPending`, and a
