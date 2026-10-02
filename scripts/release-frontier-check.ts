@@ -317,9 +317,36 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder or learning-run leak.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.
-// 20270111090000 (Security Work programme) awaits the owner apply; see
-// supabase/release-state.json and docs/security-intelligence/security-work-programme.md.
-const expectedPending: string[] = ["20270111090000_security_work_programme.sql"];
+// 20270108090000_employer_active_reads (P1-B 1/5 of the 2026-10-02 full
+// re-audit: one active-employer rule, has_active_employer_role, applied to
+// employer reports and assessment reads) is pending BY DESIGN until its PR
+// merges and the official integration applies it. Its name comes off this list
+// in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-employer-active-reads.md.
+// 20270109090000_candidate_identity_active_employer (P1-B 2/5 of the
+// 2026-10-02 full re-audit: candidate identity, interview notes and candidate
+// notifications require an active organisation) is pending BY DESIGN until its
+// PR merges and the official integration applies it. Its name comes off this
+// list in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-candidate-identity-active-employer.md.
+// 20270110090000_assessment_actions_active_employer (P1-B 3/5 of the
+// 2026-10-02 full re-audit: assessment actions require an active organisation)
+// is pending BY DESIGN until its PR merges and the official integration applies
+// it. Its name comes off this list in the change that records its hosted
+// evidence. Evidence to come:
+// docs/release/2026-10-02-assessment-actions-active-employer.md.
+// 20270111090000_security_work_programme (Security Work programme: mandate,
+// protected assets, baseline, gaps, AI suggestions, plans, management
+// reports) is pending BY DESIGN until its PR merges and the official
+// integration applies it. Its name comes off this list in the change that
+// records its hosted evidence. See
+// docs/security-intelligence/security-work-programme.md.
+const expectedPending: string[] = [
+  "20270108090000_employer_active_reads.sql",
+  "20270109090000_candidate_identity_active_employer.sql",
+  "20270110090000_assessment_actions_active_employer.sql",
+  "20270111090000_security_work_programme.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",

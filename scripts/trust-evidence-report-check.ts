@@ -1003,11 +1003,38 @@ console.log("\nH. The future contracts name every locked field and no forbidden 
     ),
   );
   const R3A_MIGRATION = "20260906125945_scp_trust_evidence_report_r3a_contract.sql";
+  // Migrations that re-create scp_release_attempt_report for an authorisation
+  // gate only (20270110090000, P1-B 3/5: an active organisation is required).
+  // Each is admitted by name, and only while its manifest write is R1's own
+  // INSERT statement byte for byte and it creates, alters or drops nothing on
+  // the manifest -- so it is the same engine, not a parallel one.
+  const RELEASE_REGATES = ["20270110090000_assessment_actions_active_employer.sql"];
+  const manifestInsert = (src: string): string[] =>
+    src.match(/INSERT INTO public\.scp_report_computation_manifests[^;]*;/g) ?? [];
+  const r1Insert = manifestInsert(
+    readFileSync(join(ROOT, "supabase/migrations", R1_MIGRATION), "utf8"),
+  )[0];
+  const regatesFaithful = RELEASE_REGATES.filter((f) => migrationMentions.includes(f)).every(
+    (f) => {
+      const src = readFileSync(join(ROOT, "supabase/migrations", f), "utf8");
+      const mentions = src.match(/scp_report_computation_manifests/g) ?? [];
+      const inserts = manifestInsert(src);
+      return (
+        r1Insert !== undefined &&
+        mentions.length === 1 &&
+        inserts.length === 1 &&
+        inserts[0] === r1Insert &&
+        /CREATE OR REPLACE FUNCTION public\.scp_release_attempt_report\(/.test(src)
+      );
+    },
+  );
+  const otherMentions = migrationMentions.filter((f) => !RELEASE_REGATES.includes(f));
   check(
-    "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it)",
-    migrationMentions.length === 2 &&
-      migrationMentions.includes(R1_MIGRATION) &&
-      migrationMentions.includes(R3A_MIGRATION),
+    "H11 exactly two migrations name scp_report_computation_manifests: PR-R1 (creates it) and PR-R3A (reads counts from it); a release-function re-gate may repeat R1's INSERT verbatim and nothing else",
+    otherMentions.length === 2 &&
+      otherMentions.includes(R1_MIGRATION) &&
+      otherMentions.includes(R3A_MIGRATION) &&
+      regatesFaithful,
     migrationMentions.join(", "),
   );
   const r1 = read(`supabase/migrations/${R1_MIGRATION}`);

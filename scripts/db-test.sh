@@ -689,6 +689,220 @@ set -e
 [ "$PR_RC" -eq 0 ] || { echo "$PR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: panel-reveal suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  panel-reveal migration re-applied (postflight proved); suite passes again"
 
+# 20270108090000: employer reports and assessment reads require an ACTIVE
+# organisation through the canonical has_active_employer_role (P1-B 1/4 of the
+# 2026-10-02 re-audit). The suite reproduces the suspended-employer reads on
+# the pre-fix state itself (AR0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (primitive kept, so the suite can call it)  -> AR1.1
+#   NC2  only scp_report_snapshot_readable back on its pre-fix body     -> AR1.1
+#   NC3  only the four row policies back on their pre-fix predicates    -> AR1.1
+#   NC4  a deny-list primitive that refuses only 'suspended'            -> AR2.1
+run_ar_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_active_reads_test.sql 2>&1
+}
+ar_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ar_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: employer-active-reads negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: AR[0-9.]*' | head -1))"
+}
+AR_MIG=supabase/migrations/20270108090000_employer_active_reads.sql
+AR_RB=supabase/rollback/20270108090000_employer_active_reads_rollback.sql
+ar_primitive() {
+  sed -n '/^CREATE OR REPLACE FUNCTION public.has_active_employer_role/,/^\$function\$/p' "$AR_MIG"
+}
+echo "==> Running employer active-reads assertions"
+# Earlier blocks roll back and re-apply their own migrations, and two of them
+# (20270102 and 20270104) redefine functions this migration also rewrites.
+# Re-apply it first so the suite tests the final state, not theirs.
+psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
+set +e
+AR_OUT="$(run_ar_suite)"; AR_RC=$?
+set -e
+AR_PASSED="$(echo "$AR_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$AR_RC" -ne 0 ]; then
+  echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the employer active-reads suite exited with code ${AR_RC}." >&2
+  exit 1
+fi
+[ "$AR_PASSED" -ge 24 ] || { echo "$AR_OUT"; echo "FAIL: employer active-reads assertion shortfall: $AR_PASSED (floor 24)" >&2; exit 1; }
+echo "    ok  $AR_PASSED employer active-reads assertions passed (suspended reads reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$AR_RB" >/dev/null
+# The suite calls the primitive by name (AR5) and its own rollback drops it
+# (AR0); restore the primitive alone so NC1 fails on behaviour.
+psql_q -d "$TEST_DB" -c "$(ar_primitive)" >/dev/null
+psql_q -d "$TEST_DB" -c "REVOKE ALL ON FUNCTION public.has_active_employer_role(uuid,uuid,text[]) FROM PUBLIC, anon; GRANT EXECUTE ON FUNCTION public.has_active_employer_role(uuid,uuid,text[]) TO authenticated, service_role" >/dev/null
+ar_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
+AR_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable/,/^\$function\$/p' "$AR_RB")"
+grep -q "employer_memberships" <<<"$AR_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$AR_NC2_SQL" \
+  || { echo "FAIL: employer-active-reads NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AR_NC2_SQL" >/dev/null
+ar_nc_expect_fail "NC2 pre-fix report-snapshot helper"
+psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
+AR_NC3_SQL="$(sed -n '/^ALTER POLICY scp_assessment_invitations_employer_read/,/^DO \$\$/p' "$AR_RB" | sed '$d')"
+[ "$(grep -c '^ALTER POLICY' <<<"$AR_NC3_SQL")" -eq 4 ] && ! grep -q "has_active_employer_role" <<<"$AR_NC3_SQL" \
+  || { echo "FAIL: employer-active-reads NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AR_NC3_SQL" >/dev/null
+ar_nc_expect_fail "NC3 pre-fix row policies"
+psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+CREATE OR REPLACE FUNCTION public.has_active_employer_role(_user_id uuid, _employer_id uuid, _roles text[] DEFAULT NULL::text[])
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $function$
+  SELECT coalesce(public.has_employer_role(_user_id, _employer_id, _roles), false)
+     AND coalesce((SELECT status <> 'suspended' FROM public.employers WHERE id = _employer_id), false);
+$function$;
+SQL
+ar_nc_expect_fail "NC4 deny-list primitive (suspended only)"
+psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
+set +e
+AR_OUT="$(run_ar_suite)"; AR_RC=$?
+set -e
+[ "$AR_RC" -eq 0 ] || { echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employer active-reads suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  employer active-reads migration re-applied (postflight proved); suite passes again"
+
+# 20270109090000: candidate identity, interview notes and candidate
+# notifications require an ACTIVE organisation (P1-B 2/5 of the 2026-10-02
+# re-audit). The suite reproduces the suspended-employer reads and writes on the
+# pre-fix state itself (CI0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> CI1.1
+#   NC2  only jase_notification_payload back on its pre-fix body        -> CI1.1
+#   NC3  only the scp_interview_notes read policy back on its predicate -> CI1.1
+#   NC4  only scp_record_interview_note back on its pre-fix body        -> CI1.3
+run_ci_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_identity_active_employer_test.sql 2>&1
+}
+ci_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ci_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: candidate-identity negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: CI[0-9.]*' | head -1))"
+}
+CI_MIG=supabase/migrations/20270109090000_candidate_identity_active_employer.sql
+CI_RB=supabase/rollback/20270109090000_candidate_identity_active_employer_rollback.sql
+ci_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$CI_RB"
+}
+echo "==> Running candidate identity active-employer assertions"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+set +e
+CI_OUT="$(run_ci_suite)"; CI_RC=$?
+set -e
+CI_PASSED="$(echo "$CI_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$CI_RC" -ne 0 ]; then
+  echo "$CI_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the candidate identity suite exited with code ${CI_RC}." >&2
+  exit 1
+fi
+[ "$CI_PASSED" -ge 19 ] || { echo "$CI_OUT"; echo "FAIL: candidate identity assertion shortfall: $CI_PASSED (floor 19)" >&2; exit 1; }
+echo "    ok  $CI_PASSED candidate identity assertions passed (suspended reads and writes reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$CI_RB" >/dev/null
+ci_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+CI_NC2_SQL="$(ci_rb_fn jase_notification_payload)"
+grep -q "employer_memberships" <<<"$CI_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$CI_NC2_SQL" \
+  || { echo "FAIL: candidate-identity NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$CI_NC2_SQL" >/dev/null
+ci_nc_expect_fail "NC2 pre-fix notification payload"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+ALTER POLICY scp_interview_notes_employer_read ON public.scp_interview_notes
+  USING (EXISTS (SELECT 1 FROM public.employer_memberships m
+                  WHERE m.employer_id = scp_interview_notes.employer_id
+                    AND m.user_id = auth.uid() AND m.status = 'active'));
+SQL
+ci_nc_expect_fail "NC3 pre-fix interview-notes read policy"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+CI_NC4_SQL="$(ci_rb_fn scp_record_interview_note)"
+grep -q "employer_memberships" <<<"$CI_NC4_SQL" && ! grep -q "has_active_employer_role" <<<"$CI_NC4_SQL" \
+  || { echo "FAIL: candidate-identity NC4 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$CI_NC4_SQL" >/dev/null
+ci_nc_expect_fail "NC4 pre-fix note recording"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+set +e
+CI_OUT="$(run_ci_suite)"; CI_RC=$?
+set -e
+[ "$CI_RC" -eq 0 ] || { echo "$CI_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: candidate identity suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  candidate identity migration re-applied (postflight proved); suite passes again"
+
+# 20270110090000: assessment actions require an ACTIVE organisation (P1-B 3/5
+# of the 2026-10-02 re-audit). The suite reproduces a suspended employer
+# reviewing, releasing, deciding, cancelling and recording setups on the
+# pre-fix state itself (AA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> AA1.1
+#   NC2  only scp_can_review_for back on its pre-fix body               -> AA1.1
+#   NC3  only scp_release_attempt_report back on its pre-fix body       -> AA1.3
+#   NC4  only the assessment-setups read policy back on its predicate   -> AA1.1
+run_aa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/assessment_actions_active_employer_test.sql 2>&1
+}
+aa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_aa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: assessment-actions negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: AA[0-9.]*' | head -1))"
+}
+AA_MIG=supabase/migrations/20270110090000_assessment_actions_active_employer.sql
+AA_RB=supabase/rollback/20270110090000_assessment_actions_active_employer_rollback.sql
+aa_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$AA_RB"
+}
+echo "==> Running assessment actions active-employer assertions"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+set +e
+AA_OUT="$(run_aa_suite)"; AA_RC=$?
+set -e
+AA_PASSED="$(echo "$AA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$AA_RC" -ne 0 ]; then
+  echo "$AA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the assessment actions suite exited with code ${AA_RC}." >&2
+  exit 1
+fi
+[ "$AA_PASSED" -ge 18 ] || { echo "$AA_OUT"; echo "FAIL: assessment actions assertion shortfall: $AA_PASSED (floor 18)" >&2; exit 1; }
+echo "    ok  $AA_PASSED assessment actions assertions passed (suspended actions reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$AA_RB" >/dev/null
+aa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+AA_NC2_SQL="$(aa_rb_fn scp_can_review_for)"
+grep -q "employer_memberships" <<<"$AA_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$AA_NC2_SQL" \
+  || { echo "FAIL: assessment-actions NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AA_NC2_SQL" >/dev/null
+aa_nc_expect_fail "NC2 pre-fix reviewer authority"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+AA_NC3_SQL="$(aa_rb_fn scp_release_attempt_report)"
+grep -q "employer_memberships" <<<"$AA_NC3_SQL" && ! grep -q "has_active_employer_role" <<<"$AA_NC3_SQL" \
+  || { echo "FAIL: assessment-actions NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AA_NC3_SQL" >/dev/null
+aa_nc_expect_fail "NC3 pre-fix release"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "ALTER POLICY scp_assessment_setups_member_read ON public.scp_assessment_setups USING (public.has_employer_role(auth.uid(), employer_id, ARRAY['owner','admin','member']))" >/dev/null
+aa_nc_expect_fail "NC4 pre-fix setups read policy"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+set +e
+AA_OUT="$(run_aa_suite)"; AA_RC=$?
+set -e
+[ "$AA_RC" -eq 0 ] || { echo "$AA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assessment actions suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  assessment actions migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
