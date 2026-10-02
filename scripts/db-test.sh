@@ -838,6 +838,71 @@ set -e
 [ "$CI_RC" -eq 0 ] || { echo "$CI_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: candidate identity suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  candidate identity migration re-applied (postflight proved); suite passes again"
 
+# 20270110090000: assessment actions require an ACTIVE organisation (P1-B 3/5
+# of the 2026-10-02 re-audit). The suite reproduces a suspended employer
+# reviewing, releasing, deciding, cancelling and recording setups on the
+# pre-fix state itself (AA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> AA1.1
+#   NC2  only scp_can_review_for back on its pre-fix body               -> AA1.1
+#   NC3  only scp_release_attempt_report back on its pre-fix body       -> AA1.3
+#   NC4  only the assessment-setups read policy back on its predicate   -> AA1.1
+run_aa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/assessment_actions_active_employer_test.sql 2>&1
+}
+aa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_aa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: assessment-actions negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: AA[0-9.]*' | head -1))"
+}
+AA_MIG=supabase/migrations/20270110090000_assessment_actions_active_employer.sql
+AA_RB=supabase/rollback/20270110090000_assessment_actions_active_employer_rollback.sql
+aa_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$AA_RB"
+}
+echo "==> Running assessment actions active-employer assertions"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+set +e
+AA_OUT="$(run_aa_suite)"; AA_RC=$?
+set -e
+AA_PASSED="$(echo "$AA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$AA_RC" -ne 0 ]; then
+  echo "$AA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the assessment actions suite exited with code ${AA_RC}." >&2
+  exit 1
+fi
+[ "$AA_PASSED" -ge 18 ] || { echo "$AA_OUT"; echo "FAIL: assessment actions assertion shortfall: $AA_PASSED (floor 18)" >&2; exit 1; }
+echo "    ok  $AA_PASSED assessment actions assertions passed (suspended actions reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$AA_RB" >/dev/null
+aa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+AA_NC2_SQL="$(aa_rb_fn scp_can_review_for)"
+grep -q "employer_memberships" <<<"$AA_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$AA_NC2_SQL" \
+  || { echo "FAIL: assessment-actions NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AA_NC2_SQL" >/dev/null
+aa_nc_expect_fail "NC2 pre-fix reviewer authority"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+AA_NC3_SQL="$(aa_rb_fn scp_release_attempt_report)"
+grep -q "employer_memberships" <<<"$AA_NC3_SQL" && ! grep -q "has_active_employer_role" <<<"$AA_NC3_SQL" \
+  || { echo "FAIL: assessment-actions NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AA_NC3_SQL" >/dev/null
+aa_nc_expect_fail "NC3 pre-fix release"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "ALTER POLICY scp_assessment_setups_member_read ON public.scp_assessment_setups USING (public.has_employer_role(auth.uid(), employer_id, ARRAY['owner','admin','member']))" >/dev/null
+aa_nc_expect_fail "NC4 pre-fix setups read policy"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+set +e
+AA_OUT="$(run_aa_suite)"; AA_RC=$?
+set -e
+[ "$AA_RC" -eq 0 ] || { echo "$AA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assessment actions suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  assessment actions migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
