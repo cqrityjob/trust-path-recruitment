@@ -83,3 +83,11 @@ row to show.
 The candidate-corrections policy reads its case through the cases table's own
 row policy, which `scp_iv_case_row_visible` already gates. Planting it alone
 is therefore not observable, and NC3 covers that path.
+
+**Older suites aligned with the new boundary:**
+- `scp_interview_method_library_tenant_read_test.sql` ML7.1 asserted that a
+  suspended organisation's owner still reads its existing case. It now
+  expects the refusal. ML7.2–ML7.4 (the pinned method and pack, library
+  content rather than candidate data) are unchanged and still pass.
+- `scripts/db-test.sh` stands 20270111090000 down before the 20261203090000
+  rollback, which pins `scp_iv_confirm_transcript_basis`.
