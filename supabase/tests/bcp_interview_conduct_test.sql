@@ -935,12 +935,12 @@ BEGIN
 END $c7$;
 
 -- ---------------------------------------------------------------------------
--- C7.9-C7.12 -- 20270121090000 (P1-J): every position is locked and there is
+-- C7.9-C7.12 -- 20270122090000 (P1-J): every position is locked and there is
 -- no panel yet, so each assessor can read the others (C7.7). From here a
 -- reopen would let a recorded view be revised in their light.
 -- ---------------------------------------------------------------------------
 SAVEPOINT p1j_pre_fix;
-\ir ../rollback/20270121090000_bcp_conduct_reopen_after_exposure_rollback.sql
+\ir ../rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql
 DO $c7r$
 DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE;
 BEGIN

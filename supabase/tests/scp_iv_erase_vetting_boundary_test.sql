@@ -1,4 +1,4 @@
--- P1-K (20270120090000): only the security function erases material on a
+-- P1-K (20270121090000): only the security function erases material on a
 -- security vetting.
 --
 --   VE-F the fixture: employer E (active) with owner O, admin S appointed as
@@ -120,7 +120,7 @@ SELECT pg_temp.ok(public.bcp_case_vetting_restricted(pg_temp.v('cv')) AND NOT pu
 
 -- ── VE0 reproduction on the hosted body ──────────────────────────────────
 SAVEPOINT pre_fix;
-\ir ../rollback/20270120090000_scp_iv_erase_vetting_boundary_rollback.sql
+\ir ../rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql
 SELECT pg_temp.ok(pg_temp.erase(pg_temp.v('o'), '0f200000-6666-4000-8000-0000000000a1') = 'ok'
   AND pg_temp.state('0f200000-6666-4000-8000-0000000000a1') = 'erased',
   'VE0.1 REPRODUCTION: pre-fix, the owner erases material on a vetting case they cannot read');

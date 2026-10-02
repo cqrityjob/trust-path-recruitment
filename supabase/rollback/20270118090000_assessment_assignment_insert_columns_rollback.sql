@@ -1,4 +1,4 @@
--- Rollback of 20270117090000_assessment_assignment_insert_columns.
+-- Rollback of 20270118090000_assessment_assignment_insert_columns.
 --
 -- !! THIS REOPENS P1-L !! An owner or admin can again create an assignment
 -- that is already completed with an invented engine_result. Run it ONLY in an

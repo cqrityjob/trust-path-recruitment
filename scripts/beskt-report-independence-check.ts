@@ -321,7 +321,7 @@ check(
   "BOUNDARY-SUITE: after the lock BOTH assessors are present — the fix is not a wall",
 );
 
-// 20270121090000 (P1-J): once both positions are locked each assessor has
+// 20270122090000 (P1-J): once both positions are locked each assessor has
 // been able to read the other, so reopening from there is refused -- a
 // reopen would let a recorded view be revised in the other's light. The
 // suite must prove that refusal (B6.1) and that the position stays locked.

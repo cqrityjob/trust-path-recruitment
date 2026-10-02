@@ -1,4 +1,4 @@
--- Rollback of 20270119090000_access_request_no_role_escalation.
+-- Rollback of 20270120090000_access_request_no_role_escalation.
 --
 -- !! THIS REOPENS P1-G !! An organisation admin can again approve their own
 -- access request as owner. Run it ONLY in an isolated test database
