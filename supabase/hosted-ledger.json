@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-02T05:52:24+00:00",
-  "readBy": "Read-only production verification after #355 merged (the four owner-approved catalogue read hardenings). All 334 previous ledger identities preserved; the new row is 20270101090000 / catalogue_read_hardening, applied by the official integration. md5 of version:name joined by newline over all 335 rows 1ae98c1c7b2b17300e5bade67516ad30, equal on the connector read and on this file. See docs/release/2026-10-02-catalogue-read-hardening-hosted-verification.md.",
+  "readAt": "2026-10-02T10:37:18+00:00",
+  "readBy": "Read-only production verification after the six 2026-10-02 security-gate fixes merged (#358-#363). All 335 previous ledger identities preserved (their digest is still 1ae98c1c7b2b17300e5bade67516ad30); the six new rows are 20270102090000 through 20270107090000, applied by the official integration. md5 of version:name joined by newline over all 341 rows 1adae30d18655a674a605ea1cf8b500d, equal on the connector read and on this file. See docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1355,6 +1355,30 @@
     {
       "version": "20270101090000",
       "name": "catalogue_read_hardening"
+    },
+    {
+      "version": "20270102090000",
+      "name": "scp_subject_progress_employer_scope"
+    },
+    {
+      "version": "20270103090000",
+      "name": "scp_submit_assessment_only"
+    },
+    {
+      "version": "20270104090000",
+      "name": "scp_development_recommendations_employer_scope"
+    },
+    {
+      "version": "20270105090000",
+      "name": "suspended_employer_applicant_reads"
+    },
+    {
+      "version": "20270106090000",
+      "name": "sp_evidence_and_request_writes_rpc_only"
+    },
+    {
+      "version": "20270107090000",
+      "name": "scp_iv_panel_reveal_boundary"
     }
   ]
 }

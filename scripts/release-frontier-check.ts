@@ -308,50 +308,17 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // admin reads every row.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-catalogue-read-hardening-hosted-verification.md.
-// 20270102090000_scp_subject_progress_employer_scope (P0-1 of the 2026-10-02
-// pre-launch audit: the progress series shows an employer only its own
-// organisation's reports) is pending BY DESIGN until its PR merges and the
-// official integration applies it. Its name comes off this list in the change
-// that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-subject-progress-employer-scope.md.
-// 20270103090000_scp_submit_assessment_only (P1-1 of the 2026-10-02
-// pre-launch audit: a Learning Mode run never becomes assessment evidence) is
-// pending BY DESIGN until its PR merges and the official integration applies
-// it. Its name comes off this list in the change that records its hosted
-// evidence. Evidence to come:
-// docs/release/2026-10-02-submit-assessment-only.md.
-// 20270104090000_scp_development_recommendations_employer_scope (P1-2 of the
-// 2026-10-02 pre-launch audit: development recommendations show an employer
-// only what its own evidence supports) is pending BY DESIGN until its PR
-// merges and the official integration applies it. Its name comes off this list
-// in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-development-recommendations-employer-scope.md.
-// 20270105090000_suspended_employer_applicant_reads (P1-3 of the 2026-10-02
-// pre-launch audit: a suspended employer reads no applicant through the
-// definer functions) is pending BY DESIGN until its PR merges and the official
-// integration applies it. Its name comes off this list in the change that
-// records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-suspended-employer-applicant-reads.md.
-// 20270106090000_sp_evidence_and_request_writes_rpc_only (P1-4 of the
-// 2026-10-02 pre-launch audit: Passport evidence and verification requests are
-// written only by their functions) is pending BY DESIGN until its PR merges
-// and the official integration applies it. Its name comes off this list in the
-// change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-passport-evidence-and-request-writes.md.
-// 20270107090000_scp_iv_panel_reveal_boundary (P1-5 of the 2026-10-02
-// pre-launch audit: a panel reviewer sees no other reviewer's assessment
-// before the reveal) is pending BY DESIGN until its PR merges and the official
-// integration applies it. Its name comes off this list in the change that
-// records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-interview-panel-reveal-boundary.md.
-const expectedPending: string[] = [
-  "20270102090000_scp_subject_progress_employer_scope.sql",
-  "20270103090000_scp_submit_assessment_only.sql",
-  "20270104090000_scp_development_recommendations_employer_scope.sql",
-  "20270105090000_suspended_employer_applicant_reads.sql",
-  "20270106090000_sp_evidence_and_request_writes_rpc_only.sql",
-  "20270107090000_scp_iv_panel_reveal_boundary.sql",
-];
+// 2026-10-02 ~10:45 UTC: the six security-gate fixes (P0-1 #358, P1-1 #359,
+// P1-2 #360, P1-3 #361, P1-4 #363, P1-5 #362) verified applied read-only:
+// 20270102090000 .. 20270107090000 are in the ledger (341 rows, digest
+// 1adae30d18655a674a605ea1cf8b500d), every deployed function body equals its
+// merged source, the reshaped grants and policies are exactly as merged, and a
+// rolled-back probe of each fix as real principals found no cross-employer,
+// cross-holder or learning-run leak.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
