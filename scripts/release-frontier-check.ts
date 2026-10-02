@@ -317,6 +317,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder or learning-run leak.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.
+// 20270108090000_employer_active_reads (P1-B 1/5 of the 2026-10-02 full
+// re-audit: one active-employer rule, has_active_employer_role, applied to
+// employer reports and assessment reads) is pending BY DESIGN until its PR
+// merges and the official integration applies it. Its name comes off this list
+// in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-employer-active-reads.md.
 // 20270116090000_scp_iv_findings_review_writes (P1-C of the 2026-10-02 full
 // re-audit: only an owner or admin reviews an interview finding, only its
 // review columns, and the database records who) is pending BY DESIGN until its
@@ -324,6 +330,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // list in the change that records its hosted evidence. Evidence to come:
 // docs/release/2026-10-02-interview-findings-review-writes.md.
 const expectedPending: string[] = [
+  "20270108090000_employer_active_reads.sql",
   "20270116090000_scp_iv_findings_review_writes.sql",
 ];
 const hostedIdentities = [
