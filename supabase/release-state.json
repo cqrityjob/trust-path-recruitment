@@ -2471,6 +2471,14 @@
       "rollback": "supabase/rollback/20270102090000_scp_subject_progress_employer_scope_rollback.sql",
       "verify": "SELECT position('scp_report_snapshot_readable' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_subject_progress(uuid)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.scp_subject_progress(uuid)','EXECUTE'); -- false. Rolled-back probe: an active member of employer A who is not a member of employer B calls scp_subject_progress for a subject both assessed; 0 rows describe B's attempts (pre-fix 4 of 13). Row counts unchanged.",
       "note": "P0-1 of the 2026-10-02 pre-launch hostile-user audit (docs/release/2026-10-02-subject-progress-employer-scope.md). scp_subject_progress returned every employer-audience snapshot of a subject to any active member of any organisation with one released attempt for that subject, so employer A read employer B's report rows (evidence state, observation and safety-flag counts, attempt id, release date); hosted had two such caller/subject pairs. Every returned row now passes scp_report_snapshot_readable, the predicate the snapshot table's own RLS uses. Audience selection, columns, ordering and grants unchanged; no row changes. Rollback restores the hosted body (md5 8d67a323904788c41f9be3f7384ae606) and says the leak is back."
+    },
+    {
+      "file": "20270103090000_scp_submit_assessment_only.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270103090000_scp_submit_assessment_only_rollback.sql",
+      "verify": "SELECT position('SCP_NOT_AN_ASSESSMENT' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_submit_attempt(uuid)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.scp_submit_attempt(uuid)','EXECUTE'); -- false. Rolled-back probe: a candidate starts a learning run, saves the feedback-preferred answers and calls scp_submit_attempt on it; refused with SCP_NOT_AN_ASSESSMENT (23514), 0 evidence rows written, the run stays in_progress. Evidence written by scp_submit_attempt from a learning run: 0.",
+      "note": "P1-1 of the 2026-10-02 pre-launch hostile-user audit (docs/release/2026-10-02-submit-assessment-only.md). scp_submit_attempt never checked the run's mode, so a candidate could submit a Learning Mode run answered with the preferred options that learning feedback reveals and receive full-credit (1.000/1.000) assessment_form evidence, repeatably. The function now refuses any run whose mode is not 'assessment' before reading or writing anything. Learning and training runs still close through scp_complete_learning_module / scp_complete_training_module, which never called it. Hosted had 10 learning runs and 0 submission evidence from any of them; no row changes. Rollback restores the hosted body (md5 624e9f119ef21feee2a5858e9d87a633) and says the forgery path is back."
     }
   ], 
   "policyVersion": 2, 
