@@ -299,13 +299,21 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (42501) with nothing bound.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-employment-binding-owner-only-hosted-verification.md.
-// 20270101090000_catalogue_read_hardening (the four owner-approved items of
-// the 2026-10-01 pre-release security pass: drafts, unapproved professions
-// and the interviewer guide stop being readable by every signed-in account,
-// and three catalogues lose stray client write grants) is pending BY DESIGN
-// until its PR merges and the official integration applies it. Its name
-// comes off this list in the change that records its hosted evidence.
-// Evidence to come: docs/release/2026-10-01-catalogue-read-hardening.md.
+// 2026-10-02 05:52 UTC: 20270101090000 (catalogue_read_hardening, #355)
+// verified applied read-only: the four read predicates equal the merged file,
+// 41 USING (true) catalogue reads remain (was 45), the three catalogues carry
+// no client write privilege, anon reads none of the four, row counts are
+// unchanged, and a rolled-back probe shows a candidate and a non-author
+// employer 0 drafts, 0 unapproved professions and 0 guide prompts while an
+// admin reads every row.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-02-catalogue-read-hardening-hosted-verification.md.
+// 20270102090000_scp_subject_progress_employer_scope (P0-1 of the 2026-10-02
+// pre-launch audit: the progress series shows an employer only its own
+// organisation's reports) is pending BY DESIGN until its PR merges and the
+// official integration applies it. Its name comes off this list in the change
+// that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-subject-progress-employer-scope.md.
 // 20270103090000_scp_submit_assessment_only (P1-1 of the 2026-10-02
 // pre-launch audit: a Learning Mode run never becomes assessment evidence) is
 // pending BY DESIGN until its PR merges and the official integration applies
@@ -313,7 +321,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // evidence. Evidence to come:
 // docs/release/2026-10-02-submit-assessment-only.md.
 const expectedPending: string[] = [
-  "20270101090000_catalogue_read_hardening.sql",
+  "20270102090000_scp_subject_progress_employer_scope.sql",
   "20270103090000_scp_submit_assessment_only.sql",
 ];
 const hostedIdentities = [
