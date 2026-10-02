@@ -626,6 +626,11 @@ BEGIN
   PERFORM pg_temp.ok(
     (SELECT ended_on FROM public.sp_experience_periods WHERE id = _period) = DATE '2025-10-31',
     '6.9 the candidate corrects their own employment period');
+  -- 20270119090000 (P1-H): answering a clarification returns the request to
+  -- review, so the employer decides on the corrected period.
+  PERFORM pg_temp.ok(
+    (SELECT status FROM public.sp_verification_requests WHERE id = _req) = 'pending',
+    '6.9b and the corrected request is back in review');
 
   -- 6.10 And the organisation is named to them from the DECISION record, which
   --      is what the database wrote -- not from the company name they typed
@@ -649,7 +654,7 @@ DECLARE _amina uuid := 'e8000000-0000-0000-0000-000000000001';
         _req uuid; _period uuid;
 BEGIN
   SELECT id, period_id INTO _req, _period FROM public.sp_verification_requests
-   WHERE holder_user_id = _amina AND status = 'clarification_requested' LIMIT 1;
+   WHERE holder_user_id = _amina AND status = 'pending' LIMIT 1;  -- back in review since 6.9b (P1-H)
 
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _xadmin::text, true);

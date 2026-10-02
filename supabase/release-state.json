@@ -2686,6 +2686,23 @@
       "rollback": "supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql",
       "verify": "SELECT has_table_privilege('authenticated','public.assessment_assignments','INSERT'); -- false. SELECT has_column_privilege('authenticated','public.assessment_assignments','engine_result','INSERT'), has_column_privilege('authenticated','public.assessment_assignments','status','INSERT'); -- false, false. SELECT has_column_privilege('authenticated','public.assessment_assignments','recipient_email','INSERT'); -- true. Rolled-back probe: an active owner inserting a status='completed' row with an engine_result is refused 42501.",
       "note": "P1-L of the 2026-10-02 final audit. Replaces table-level INSERT for authenticated on assessment_assignments with a column grant on exactly the columns createAssessmentAssignment sets; lifecycle and result columns stay server-written. Grants only; no row touched."
+    },
+    {
+      "file": "20270119090000_sp_entry_frozen_under_review.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "sp_entry_review_on_holder_edit(uuid,uuid)"
+        },
+        {
+          "kind": "function",
+          "object": "sp_guard_entry_under_review()"
+        }
+      ],
+      "rollback": "supabase/rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql",
+      "verify": "SELECT count(*) FROM pg_trigger WHERE tgname IN ('sp_claims_frozen_under_review','sp_periods_frozen_under_review') AND NOT tgisinternal; -- 2. SELECT has_function_privilege('anon','public.sp_entry_review_on_holder_edit(uuid,uuid)','EXECUTE'); -- false. Rolled-back probe: a holder editing a period with a pending request is refused SP_ENTRY_UNDER_REVIEW; after a clarification request the edit succeeds and the request is pending again.",
+      "note": "P1-H of the 2026-10-02 final audit. A BEFORE UPDATE trigger on sp_claims and sp_experience_periods refuses a holder's direct edit while a request is pending, and returns a clarification request to review when the holder answers it by editing. Passport SECURITY DEFINER functions are unaffected. No row touched."
     }
   ], 
   "policyVersion": 2, 
