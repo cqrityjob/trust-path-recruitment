@@ -2697,6 +2697,14 @@
       "rollback": "supabase/rollback/20270121090000_bcp_conduct_reopen_after_exposure_rollback.sql",
       "verify": "SELECT position('BCP_CONDUCT_POSITIONS_ALREADY_SEEN' IN prosrc) > 0 FROM pg_proc WHERE proname='bcp_conduct_reopen_position'; -- true. Production holds no conduct session with two locked positions; the behaviour is proven by the conduct suite (C7.9 reproduction, C7.10-C7.12 refusal).",
       "note": "P1-J of the 2026-10-02 final audit. bcp_conduct_reopen_position also refuses (BCP_CONDUCT_POSITIONS_ALREADY_SEEN) when every other position in the session is locked, the moment bcp_conduct_may_see_others opens. Body otherwise identical to hosted. No row touched."
+    },
+    {
+      "file": "20270122090000_employer_identity_rereview.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270122090000_employer_identity_rereview_rollback.sql",
+      "verify": "SELECT position('20270122090000' IN prosrc) > 0 FROM pg_proc WHERE proname='employers_validate_before_write'; -- true. Rolled-back probe: an active owner who changes E's name and registration_number has the update saved and E's status becomes 'pending'; a description or logo edit keeps it 'active'.",
+      "note": "P1-I of the 2026-10-02 final audit (owner decision: re-review). employers_validate_before_write returns an active organisation to 'pending' when a non-platform-admin changes name, country, registration_number or website outside moderation. Body otherwise identical to hosted. No row touched."
     }
   ], 
   "policyVersion": 2, 

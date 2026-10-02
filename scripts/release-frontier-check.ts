@@ -357,12 +357,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // integration applies it. Its name comes off this list in the change that
 // records its hosted evidence. Evidence to come:
 // docs/release/2026-10-02-beskt-reopen-after-exposure.md.
+// 20270122090000_employer_identity_rereview (P1-I of the 2026-10-02 final
+// audit: an approved organisation that changes its identity goes back to
+// review) is pending BY DESIGN until its PR merges and the official
+// integration applies it. Its name comes off this list in the change that
+// records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-employer-identity-rereview.md.
 const expectedPending: string[] = [
   "20270117090000_assessment_assignment_insert_columns.sql",
   "20270118090000_sp_entry_frozen_under_review.sql",
   "20270119090000_access_request_no_role_escalation.sql",
   "20270120090000_scp_iv_erase_vetting_boundary.sql",
   "20270121090000_bcp_conduct_reopen_after_exposure.sql",
+  "20270122090000_employer_identity_rereview.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
