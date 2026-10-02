@@ -1037,6 +1037,68 @@ set -e
 [ "$PA_RC" -eq 0 ] || { echo "$PA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: passport attestation suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  passport attestation migration re-applied (postflight proved); suite passes again"
 
+# 20270113090000: only an ACTIVE (approved, not suspended) organisation assigns,
+# invites, schedules, trains or binds people (P1-D of the 2026-10-02
+# re-audit). The suite reproduces a pending organisation doing all six on the
+# pre-fix bodies itself (PE0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> PE1.1
+#   NC2  only scp_employer_assign back on its pre-fix body              -> PE1.1
+#   NC3  only scp_claim_assessment_invitations back on its pre-fix body -> PE3.1
+#   NC4  only scp_bind_employee_subject back on its pre-fix body        -> PE1.1
+run_pe_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/pending_employer_actions_test.sql 2>&1
+}
+pe_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_pe_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: pending-employer negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: PE[0-9.]*' | head -1))"
+}
+PE_MIG=supabase/migrations/20270113090000_pending_employer_actions.sql
+PE_RB=supabase/rollback/20270113090000_pending_employer_actions_rollback.sql
+pe_plant_fn() {
+  local sql; sql="$(sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\(END; \\)\\?\\\$function\\\$/p" "$PE_RB")"
+  grep -q "^CREATE OR REPLACE FUNCTION public.$1(" <<<"$sql" && ! grep -q "20270113090000" <<<"$sql" \
+    || { echo "FAIL: pending-employer control could not plant the pre-fix $1" >&2; exit 1; }
+  psql_q -d "$TEST_DB" -c "$sql" >/dev/null
+}
+echo "==> Running pending-employer actions assertions"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+set +e
+PE_OUT="$(run_pe_suite)"; PE_RC=$?
+set -e
+PE_PASSED="$(echo "$PE_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$PE_RC" -ne 0 ]; then
+  echo "$PE_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the pending-employer suite exited with code ${PE_RC}." >&2
+  exit 1
+fi
+[ "$PE_PASSED" -ge 14 ] || { echo "$PE_OUT"; echo "FAIL: pending-employer assertion shortfall: $PE_PASSED (floor 14)" >&2; exit 1; }
+echo "    ok  $PE_PASSED pending-employer assertions passed (pending actions reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$PE_RB" >/dev/null
+pe_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+pe_plant_fn scp_employer_assign
+pe_nc_expect_fail "NC2 pre-fix assign"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+pe_plant_fn scp_claim_assessment_invitations
+pe_nc_expect_fail "NC3 pre-fix invitation claim"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+pe_plant_fn scp_bind_employee_subject
+pe_nc_expect_fail "NC4 pre-fix bind"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+set +e
+PE_OUT="$(run_pe_suite)"; PE_RC=$?
+set -e
+[ "$PE_RC" -eq 0 ] || { echo "$PE_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: pending-employer suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  pending-employer migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
