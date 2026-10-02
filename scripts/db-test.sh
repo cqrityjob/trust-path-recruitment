@@ -1387,6 +1387,60 @@ set -e
 [ "$ER_RC" -eq 0 ] || { echo "$ER_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: entry-under-review suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  entry-under-review migration re-applied (postflight proved); suite passes again"
 
+# 20270120090000: an access-request approval admits a person; it cannot make an
+# owner or change a live member's role (P1-G of the 2026-10-02 final audit).
+# The suite reproduces an admin approving their own request as owner (AR0).
+# Negative controls, each of which MUST make the suite fail on an assertion.
+# NC2-NC4 each drop exactly one rule (marked "-- rule:<name>" in the file):
+#   NC1  the real rollback                                              -> AR1.1
+#   NC2  without rule:owner (the organisation may grant owner)          -> AR2.1
+#   NC3  without rule:self (self-approval allowed)                      -> AR1.2
+#   NC4  without rule:live (a live member's role may be rewritten)      -> AR3.1
+run_ar_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/access_request_no_role_escalation_test.sql 2>&1
+}
+ar_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ar_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: access-request negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: AR[0-9.]*' | head -1))"
+}
+ar_without_rule() {
+  sed "/-- rule:$1/,/^    END IF;/d" "$AR_MIG" | sed '/^DO \$\$$/,$d'
+}
+AR_MIG=supabase/migrations/20270120090000_access_request_no_role_escalation.sql
+AR_RB=supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql
+echo "==> Running access-request role-escalation assertions"
+psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
+set +e
+AR_OUT="$(run_ar_suite)"; AR_RC=$?
+set -e
+AR_PASSED="$(echo "$AR_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$AR_RC" -ne 0 ]; then
+  echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the access-request suite exited with code ${AR_RC}." >&2
+  exit 1
+fi
+[ "$AR_PASSED" -ge 12 ] || { echo "$AR_OUT"; echo "FAIL: access-request assertion shortfall: $AR_PASSED (floor 12)" >&2; exit 1; }
+echo "    ok  $AR_PASSED access-request assertions passed (admin self-promotion reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$AR_RB" >/dev/null
+ar_nc_expect_fail "NC1 full rollback"
+for _rule in owner self live; do
+  psql_q -d "$TEST_DB" -c "$(ar_without_rule "$_rule")" >/dev/null
+  ar_nc_expect_fail "rule:${_rule} removed"
+done
+psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
+set +e
+AR_OUT="$(run_ar_suite)"; AR_RC=$?
+set -e
+[ "$AR_RC" -eq 0 ] || { echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: access-request suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  access-request migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
@@ -10159,7 +10213,20 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_ROLLBACK_S
 # Only generated local fixture accounts owning types removed by this rollback.
 # Account erasure honours all cascade/append-only guards; none are disabled.
 psql_q -d "$TEST_DB" -c "SELECT 'local fixture accounts removed from rollback clone' AS operation, count(*) FROM auth.users WHERE id IN (SELECT holder_user_id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL'));"
-psql_q -d "$TEST_DB" -c "DELETE FROM auth.users WHERE id IN (SELECT holder_user_id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL'));" >/dev/null
+# Holders go before the accounts that verified their claims: erasing a
+# verifier first would null verified_by_user_id on a surviving claim, which
+# the 20270115090000 stamp guard rightly refuses. Row order inside one DELETE
+# is not defined, so the order is made explicit here.
+psql_q -d "$TEST_DB" -c "DO \$fixture\$ DECLARE _n int; BEGIN
+  CREATE TEMP TABLE _gone ON COMMIT DROP AS SELECT DISTINCT holder_user_id AS id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL');
+  LOOP
+    DELETE FROM auth.users u WHERE u.id IN (SELECT id FROM _gone)
+       AND NOT EXISTS (SELECT 1 FROM public.sp_claims c WHERE c.verified_by_user_id = u.id AND c.holder_user_id <> u.id);
+    GET DIAGNOSTICS _n = ROW_COUNT;
+    EXIT WHEN _n = 0;
+  END LOOP;
+  DELETE FROM auth.users WHERE id IN (SELECT id FROM _gone);
+END \$fixture\$;" >/dev/null
 echo "==> Verifying the Swedish truth model rollback"
 set +e
 # The Swedish rollback REFUSES while any holder row records what an

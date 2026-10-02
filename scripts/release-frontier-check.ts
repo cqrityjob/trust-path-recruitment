@@ -346,9 +346,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // applies it. Its name comes off this list in the change that records its
 // hosted evidence. Evidence to come:
 // docs/release/2026-10-02-passport-entry-frozen-under-review.md.
+// 20270120090000_access_request_no_role_escalation (P1-G of the 2026-10-02
+// final audit: an access-request approval admits a person; it cannot make an
+// owner or change a live member's role) is pending BY DESIGN until its PR
+// merges and the official integration applies it. Its name comes off this
+// list in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-access-request-no-role-escalation.md.
 const expectedPending: string[] = [
   "20270118090000_assessment_assignment_insert_columns.sql",
   "20270119090000_sp_entry_frozen_under_review.sql",
+  "20270120090000_access_request_no_role_escalation.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",

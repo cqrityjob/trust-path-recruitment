@@ -2703,6 +2703,14 @@
       "rollback": "supabase/rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql",
       "verify": "SELECT count(*) FROM pg_trigger WHERE tgname IN ('sp_claims_frozen_under_review','sp_periods_frozen_under_review') AND NOT tgisinternal; -- 2. SELECT has_function_privilege('anon','public.sp_entry_review_on_holder_edit(uuid,uuid)','EXECUTE'); -- false. Rolled-back probe: a holder editing a period with a pending request is refused SP_ENTRY_UNDER_REVIEW; after a clarification request the edit succeeds and the request is pending again.",
       "note": "P1-H of the 2026-10-02 final audit. A BEFORE UPDATE trigger on sp_claims and sp_experience_periods refuses a holder's direct edit while a request is pending, and returns a clarification request to review when the holder answers it by editing. Passport SECURITY DEFINER functions are unaffected. No row touched."
+    },
+    {
+      "file": "20270120090000_access_request_no_role_escalation.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql",
+      "verify": "SELECT position('20270120090000' IN prosrc) > 0 FROM pg_proc WHERE oid='public.approve_access_request(uuid,text,text)'::regprocedure; -- true. Rolled-back probe: an active org admin who files and approves their own request as owner is refused (Forbidden); an owner approving a live member's request with another role is refused (Already a member); admitting a new person as member still succeeds.",
+      "note": "P1-G of the 2026-10-02 final audit. approve_access_request: only a platform admin grants owner; no self-approval except a platform admin; a requester with an active membership is refused, so an approval never rewrites a live member's role. Body otherwise identical to hosted. No row touched."
     }
   ], 
   "policyVersion": 2, 
