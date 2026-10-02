@@ -8,6 +8,7 @@ import {
   ListChecks,
   Radio,
   Settings2,
+  ShieldCheck,
   Sparkles,
   TriangleAlert,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import {
   recommendedNextAction,
 } from "@/lib/security-work/programme/rules";
 import type { ProgrammeAreaId } from "@/lib/security-work/programme/types";
+import { AssistanceStatus } from "./AssistanceStatus";
 import { useSecurityWorkspace } from "./context";
 import { usePortfolio, useWorkText, WorkStatus } from "./analysis-ui";
 import { AREA_ROUTES, AreaStatus, useProgramme } from "./programme-ui";
@@ -366,6 +368,48 @@ export function SecurityOverview() {
                 </li>
               ))}
             </ul>
+            {/* Direct analysis entry points and the assistance status, kept
+                from the previous overview: existing journeys start here. */}
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              {(
+                [
+                  {
+                    method: "monitoring",
+                    icon: Radio,
+                    title: l("Starta omvärldsanalys", "Start monitoring analysis"),
+                  },
+                  {
+                    method: "rsa",
+                    icon: ShieldCheck,
+                    title: l("Starta riskanalys", "Start risk analysis"),
+                  },
+                ] as const
+              ).map((service) => (
+                <div
+                  key={service.method}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-dashed border-border p-3"
+                  data-testid={`sw-service-${service.method}`}
+                >
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <service.icon className="size-4 text-accent" aria-hidden="true" />
+                    {service.title}
+                  </span>
+                  <WorkButton asChild variant="outline" className="min-h-10">
+                    <Link
+                      to="/security-work/$workspaceId/analyses"
+                      params={params}
+                      search={canEdit ? { new: true, method: service.method } : { new: false }}
+                    >
+                      {canEdit ? l("Starta", "Start") : l("Visa analyser", "View analyses")}
+                      <ArrowRight aria-hidden="true" />
+                    </Link>
+                  </WorkButton>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4">
+              <AssistanceStatus />
+            </div>
           </Group>
         </>
       )}
