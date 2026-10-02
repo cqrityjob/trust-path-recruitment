@@ -1,4 +1,4 @@
--- P1-H (20270118090000): a Passport entry under review cannot change
+-- P1-H (20270119090000): a Passport entry under review cannot change
 -- underneath the reviewer.
 --
 --   ER-F the fixture: holder A with self-declared periods and a credential;
@@ -127,7 +127,7 @@ $$;
 
 -- ── ER0 reproduction: no guard ───────────────────────────────────────────
 SAVEPOINT pre_fix;
-\ir ../rollback/20270118090000_sp_entry_frozen_under_review_rollback.sql
+\ir ../rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql
 CREATE TEMP TABLE er0 AS SELECT pg_temp.submit(NULL, '0f180000-4444-4000-8000-0000000000a1') AS req;
 CREATE TEMP TABLE er0b AS SELECT pg_temp.try_as('0f180000-0000-4000-8000-00000000000a',
   pg_temp.forge_sql('0f180000-4444-4000-8000-0000000000a1')) AS r;

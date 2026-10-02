@@ -2650,15 +2650,15 @@
       "note": "P1-C of the 2026-10-02 full hostile-user re-audit (docs/release/2026-10-02-interview-findings-review-writes.md). authenticated held UPDATE on every column of scp_interview_findings and the update policy required only scp_iv_can_write_case (any member), so a plain member could mark a finding resolved or not relevant (dropping it from the report's unresolved list), rewrite the AI run's recorded statement, kind and citations, and attribute the review to someone else. Three layers: UPDATE is granted only on resolution_state, human_state and human_note; the policy additionally requires an owner or admin of the case's employer (the bar for finalising); and a BEFORE UPDATE trigger stamps human_actor_id = auth.uid() and human_actor_at = now() whenever a review column changes. Reads, scp_iv_record_findings and the report builders are unchanged. Hosted: 0 findings; no row changes. Rollback restores table-level UPDATE, the hosted policy (md5 eedd2ff88ee20bc5d5fdfeb1f6e1be33) and drops the trigger."
     },
     {
-      "file": "20270117090000_assessment_assignment_insert_columns.sql",
+      "file": "20270118090000_assessment_assignment_insert_columns.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270117090000_assessment_assignment_insert_columns_rollback.sql",
+      "rollback": "supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql",
       "verify": "SELECT has_table_privilege('authenticated','public.assessment_assignments','INSERT'); -- false. SELECT has_column_privilege('authenticated','public.assessment_assignments','engine_result','INSERT'), has_column_privilege('authenticated','public.assessment_assignments','status','INSERT'); -- false, false. SELECT has_column_privilege('authenticated','public.assessment_assignments','recipient_email','INSERT'); -- true. Rolled-back probe: an active owner inserting a status='completed' row with an engine_result is refused 42501.",
       "note": "P1-L of the 2026-10-02 final audit. Replaces table-level INSERT for authenticated on assessment_assignments with a column grant on exactly the columns createAssessmentAssignment sets; lifecycle and result columns stay server-written. Grants only; no row touched."
     },
     {
-      "file": "20270118090000_sp_entry_frozen_under_review.sql",
+      "file": "20270119090000_sp_entry_frozen_under_review.sql",
       "hostedState": "pending",
       "introduces": [
         {
@@ -2670,16 +2670,16 @@
           "object": "sp_guard_entry_under_review()"
         }
       ],
-      "rollback": "supabase/rollback/20270118090000_sp_entry_frozen_under_review_rollback.sql",
+      "rollback": "supabase/rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql",
       "verify": "SELECT count(*) FROM pg_trigger WHERE tgname IN ('sp_claims_frozen_under_review','sp_periods_frozen_under_review') AND NOT tgisinternal; -- 2. SELECT has_function_privilege('anon','public.sp_entry_review_on_holder_edit(uuid,uuid)','EXECUTE'); -- false. Rolled-back probe: a holder editing a period with a pending request is refused SP_ENTRY_UNDER_REVIEW; after a clarification request the edit succeeds and the request is pending again.",
       "note": "P1-H of the 2026-10-02 final audit. A BEFORE UPDATE trigger on sp_claims and sp_experience_periods refuses a holder's direct edit while a request is pending, and returns a clarification request to review when the holder answers it by editing. Passport SECURITY DEFINER functions are unaffected. No row touched."
     },
     {
-      "file": "20270119090000_access_request_no_role_escalation.sql",
+      "file": "20270120090000_access_request_no_role_escalation.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270119090000_access_request_no_role_escalation_rollback.sql",
-      "verify": "SELECT position('20270119090000' IN prosrc) > 0 FROM pg_proc WHERE oid='public.approve_access_request(uuid,text,text)'::regprocedure; -- true. Rolled-back probe: an active org admin who files and approves their own request as owner is refused (Forbidden); an owner approving a live member's request with another role is refused (Already a member); admitting a new person as member still succeeds.",
+      "rollback": "supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql",
+      "verify": "SELECT position('20270120090000' IN prosrc) > 0 FROM pg_proc WHERE oid='public.approve_access_request(uuid,text,text)'::regprocedure; -- true. Rolled-back probe: an active org admin who files and approves their own request as owner is refused (Forbidden); an owner approving a live member's request with another role is refused (Already a member); admitting a new person as member still succeeds.",
       "note": "P1-G of the 2026-10-02 final audit. approve_access_request: only a platform admin grants owner; no self-approval except a platform admin; a requester with an active membership is refused, so an approval never rewrites a live member's role. Body otherwise identical to hosted. No row touched."
     }
   ], 
