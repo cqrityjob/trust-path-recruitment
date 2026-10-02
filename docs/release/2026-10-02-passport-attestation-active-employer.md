@@ -75,3 +75,10 @@ nothing to repair.
 | NC1 | The real rollback | PA1.1 |
 | NC2 | Only `sp_employer_attestation_queue` pre-fix | PA1.1 |
 | NC3 | Only `sp_verifier_decide` pre-fix | PA1.2 |
+
+**Older suite aligned with the new boundary:**
+`security_passport_employer_matching_test.sql` 5.1 asserted that a suspended
+organisation's owner still reads requests placed before the suspension. That
+is the read this PR closes, so 5.1 now expects `SP_NOT_EMPLOYER_REPRESENTATIVE`.
+A new 5.4 proves that the request is kept and is back in the queue after
+reactivation. Both are on `scripts/db-test.sh`'s mandatory-assertion list.
