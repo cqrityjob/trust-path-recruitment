@@ -689,6 +689,65 @@ set -e
 [ "$PR_RC" -eq 0 ] || { echo "$PR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: panel-reveal suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  panel-reveal migration re-applied (postflight proved); suite passes again"
 
+# 20270115090000: a holder cannot set or change a claim's verification stamp
+# (P1-F of the 2026-10-02 re-audit). The suite reproduces the forged
+# verified_at on the pre-fix trigger and policy itself (VS0), and proves each
+# layer alone (VS3).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> VS1.1
+#   NC2  only the trigger back on its pre-fix body (policy kept)        -> VS1.1
+#   NC3  a trigger that guards verified_at but not verified_by_user_id  -> VS1.2
+run_vs_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_claim_verification_stamp_test.sql 2>&1
+}
+vs_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_vs_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: verification-stamp negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: VS[0-9.]*' | head -1))"
+}
+VS_MIG=supabase/migrations/20270115090000_sp_claim_verification_stamp.sql
+VS_RB=supabase/rollback/20270115090000_sp_claim_verification_stamp_rollback.sql
+echo "==> Running Passport verification-stamp assertions"
+psql_q -d "$TEST_DB" -f "$VS_MIG" >/dev/null
+set +e
+VS_OUT="$(run_vs_suite)"; VS_RC=$?
+set -e
+VS_PASSED="$(echo "$VS_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$VS_RC" -ne 0 ]; then
+  echo "$VS_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the verification-stamp suite exited with code ${VS_RC}." >&2
+  exit 1
+fi
+[ "$VS_PASSED" -ge 20 ] || { echo "$VS_OUT"; echo "FAIL: verification-stamp assertion shortfall: $VS_PASSED (floor 20)" >&2; exit 1; }
+echo "    ok  $VS_PASSED verification-stamp assertions passed (forged stamp reproduced pre-fix, refused post-fix by each layer)"
+psql_q -d "$TEST_DB" -f "$VS_RB" >/dev/null
+vs_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$VS_MIG" >/dev/null
+VS_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.sp_guard_trust_fields_immutable/,/^\$function\$/p' "$VS_RB")"
+grep -q "SP_TRUST_FIELD_IMMUTABLE" <<<"$VS_NC2_SQL" && ! grep -q "verified_at" <<<"$VS_NC2_SQL" \
+  || { echo "FAIL: verification-stamp NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$VS_NC2_SQL" >/dev/null
+vs_nc_expect_fail "NC2 pre-fix trigger, new policy"
+psql_q -d "$TEST_DB" -f "$VS_MIG" >/dev/null
+VS_NC3_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.sp_guard_trust_fields_immutable/,/^\$function\$/p' "$VS_MIG" \
+  | sed 's/        OR NEW.verified_by_user_id IS DISTINCT FROM OLD.verified_by_user_id)/        )/')"
+grep -q "verified_at IS DISTINCT FROM OLD.verified_at" <<<"$VS_NC3_SQL" && ! grep -q "verified_by_user_id IS DISTINCT" <<<"$VS_NC3_SQL" \
+  || { echo "FAIL: verification-stamp NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$VS_NC3_SQL" >/dev/null
+vs_nc_expect_fail "NC3 verified_by_user_id unguarded"
+psql_q -d "$TEST_DB" -f "$VS_MIG" >/dev/null
+set +e
+VS_OUT="$(run_vs_suite)"; VS_RC=$?
+set -e
+[ "$VS_RC" -eq 0 ] || { echo "$VS_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: verification-stamp suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  verification-stamp migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
