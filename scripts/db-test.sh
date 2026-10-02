@@ -10213,7 +10213,20 @@ psql_q -d postgres -c "CREATE DATABASE ${TEST_DB} TEMPLATE ${PASSPORT_ROLLBACK_S
 # Only generated local fixture accounts owning types removed by this rollback.
 # Account erasure honours all cascade/append-only guards; none are disabled.
 psql_q -d "$TEST_DB" -c "SELECT 'local fixture accounts removed from rollback clone' AS operation, count(*) FROM auth.users WHERE id IN (SELECT holder_user_id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL'));"
-psql_q -d "$TEST_DB" -c "DELETE FROM auth.users WHERE id IN (SELECT holder_user_id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL'));" >/dev/null
+# Holders go before the accounts that verified their claims: erasing a
+# verifier first would null verified_by_user_id on a surviving claim, which
+# the 20270115090000 stamp guard rightly refuses. Row order inside one DELETE
+# is not defined, so the order is made explicit here.
+psql_q -d "$TEST_DB" -c "DO \$fixture\$ DECLARE _n int; BEGIN
+  CREATE TEMP TABLE _gone ON COMMIT DROP AS SELECT DISTINCT holder_user_id AS id FROM public.sp_claims WHERE credential_code IN ('OV_TRAINING','OV_REFRESHER','OV_TRANSPORT','SE_PERSONNEL_APPROVAL');
+  LOOP
+    DELETE FROM auth.users u WHERE u.id IN (SELECT id FROM _gone)
+       AND NOT EXISTS (SELECT 1 FROM public.sp_claims c WHERE c.verified_by_user_id = u.id AND c.holder_user_id <> u.id);
+    GET DIAGNOSTICS _n = ROW_COUNT;
+    EXIT WHEN _n = 0;
+  END LOOP;
+  DELETE FROM auth.users WHERE id IN (SELECT id FROM _gone);
+END \$fixture\$;" >/dev/null
 echo "==> Verifying the Swedish truth model rollback"
 set +e
 # The Swedish rollback REFUSES while any holder row records what an
