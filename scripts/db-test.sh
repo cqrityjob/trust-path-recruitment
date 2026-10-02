@@ -903,6 +903,82 @@ set -e
 [ "$AA_RC" -eq 0 ] || { echo "$AA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assessment actions suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  assessment actions migration re-applied (postflight proved); suite passes again"
 
+# 20270111090000: Interview Intelligence and BESKT require an ACTIVE
+# organisation (P1-B 4/5 of the 2026-10-02 re-audit). The suite reproduces a
+# suspended employer reading and working an interview case on the pre-fix
+# state itself (IB0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> IB1.1
+#   NC2  only scp_iv_can_read_case back on its pre-fix body             -> IB1.1
+#   NC3  only scp_iv_case_row_visible back on its pre-fix body          -> IB1.1
+#   NC4  only the internal-test-activation read policy back             -> IB1.1
+#   (The candidate-corrections policy reads its case through the cases table's
+#   own row policy, which scp_iv_case_row_visible already gates, so planting
+#   it alone is not observable; NC3 covers that path.)
+#   NC5  only scp_iv_finalise_report back on its pre-fix body           -> IB1.3
+run_ib_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/interview_beskt_active_employer_test.sql 2>&1
+}
+ib_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ib_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: interview-beskt negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: IB[0-9.]*' | head -1))"
+}
+IB_MIG=supabase/migrations/20270111090000_interview_beskt_active_employer.sql
+IB_RB=supabase/rollback/20270111090000_interview_beskt_active_employer_rollback.sql
+ib_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$IB_RB"
+}
+ib_plant_fn() {
+  local sql; sql="$(ib_rb_fn "$1")"
+  grep -q "has_employer_role(" <<<"$sql" && ! grep -q "has_active_employer_role" <<<"$sql" \
+    || { echo "FAIL: interview-beskt control could not plant the pre-fix $1" >&2; exit 1; }
+  psql_q -d "$TEST_DB" -c "$sql" >/dev/null
+}
+echo "==> Running Interview Intelligence and BESKT active-employer assertions"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+set +e
+IB_OUT="$(run_ib_suite)"; IB_RC=$?
+set -e
+IB_PASSED="$(echo "$IB_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$IB_RC" -ne 0 ]; then
+  echo "$IB_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the interview-beskt suite exited with code ${IB_RC}." >&2
+  exit 1
+fi
+[ "$IB_PASSED" -ge 18 ] || { echo "$IB_OUT"; echo "FAIL: interview-beskt assertion shortfall: $IB_PASSED (floor 18)" >&2; exit 1; }
+echo "    ok  $IB_PASSED interview-beskt assertions passed (suspended case access reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$IB_RB" >/dev/null
+ib_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+ib_plant_fn scp_iv_can_read_case
+ib_nc_expect_fail "NC2 pre-fix case read helper"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+ib_plant_fn scp_iv_case_row_visible
+ib_nc_expect_fail "NC3 pre-fix case row visibility"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+ALTER POLICY bcp_ita_party_read ON public.bcp_internal_test_activations
+  USING (public.is_platform_admin(auth.uid())
+         OR public.has_employer_role(auth.uid(), employer_id, ARRAY['owner'::text, 'admin'::text, 'member'::text]));
+SQL
+ib_nc_expect_fail "NC4 pre-fix test-activation read policy"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+ib_plant_fn scp_iv_finalise_report
+ib_nc_expect_fail "NC5 pre-fix finalise"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+set +e
+IB_OUT="$(run_ib_suite)"; IB_RC=$?
+set -e
+[ "$IB_RC" -eq 0 ] || { echo "$IB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: interview-beskt suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  interview-beskt migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
