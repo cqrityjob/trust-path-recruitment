@@ -2541,6 +2541,19 @@
       "note": "P1-5 of the 2026-10-02 pre-launch hostile-user audit (docs/release/2026-10-02-interview-panel-reveal-boundary.md). The panel reveal rule held only in scp_iv_panel_visible_assessments: scp_interview_assessments and scp_interview_case_events were readable on case access alone (assessment_recorded events carry the level), and scp_iv_preview_report built every live assessment into the report basis, so a panel reviewer read the others' levels and rationales before submitting their own. New helper scp_iv_panel_hides_others(case) is true while a panel is in its individual phase; then both table policies show a reader only their own assessments and assessment events, scp_iv_preview_report refuses (SCP_IV_PANEL_NOT_REVEALED) and scp_iv_report_blockers adds PANEL_NOT_REVEALED, so finalise refuses too. Cases with no panel, and revealed or concluded panels, are unchanged. Hosted: 0 panels, 18 cases; no row changes. Rollback restores both policies and the two hosted bodies (md5 22114e6e583b480010ba7f1e9f9744d6, 35a96d5bf530b214ed0be9ea69093136), drops the helper and says the gap is back."
     },
     {
+      "file": "20270108090000_employer_active_reads.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "has_active_employer_role(uuid,uuid,text[])"
+        }
+      ],
+      "rollback": "supabase/rollback/20270108090000_employer_active_reads_rollback.sql",
+      "verify": "SELECT pg_get_functiondef('public.has_active_employer_role(uuid,uuid,text[])'::regprocedure); -- has_employer_role AND employer_is_active_status, coalesced to false. SELECT proname, md5(prosrc) FROM pg_proc WHERE proname IN ('scp_report_snapshot_readable','scp_report_issuer_admin','scp_employer_participants','scp_employer_assessment_pipeline','scp_employer_person_overview','scp_employer_person_assessments','scp_employer_training_status','scp_employer_decisions','scp_employer_invitations','scp_employer_review_board','scp_employer_review_pressure','scp_subject_progress','scp_development_recommendations'); -- each equals the merged file and calls has_active_employer_role. SELECT policyname, qual FROM pg_policies WHERE policyname IN ('scp_assessment_invitations_employer_read','scp_employer_decisions_member_read','scp_training_assignments_read','scp_training_progress_read'); -- each calls has_active_employer_role. anon may execute none. Rolled-back probe: suspend an employer through the moderation marker; its non-admin owner and member read 0 rows from every listed read; reactivated, the counts return. Row counts unchanged.",
+      "note": "P1-B (1/5) of the 2026-10-02 full hostile-user re-audit (docs/release/2026-10-02-employer-active-reads.md). An employer that is not active (suspended or not yet approved) lost application access through RLS, but most SECURITY DEFINER employer reads and four row policies checked membership only, so a suspended employer still read its participants, pipeline, person overviews, released reports, subject progress, recommendations, decisions, invitations, training and review board. New canonical primitive has_active_employer_role(user, employer, roles) = has_employer_role AND employer_is_active_status, false for every non-active status; the 13 read gates and the four policies now call it, and an inactive organisation gets the non-member answer. Each body is the hosted body verbatim except its gate. An organisation's own set-up (team, library, content library, jobs) is unchanged. No row changes; grants unchanged. Rollback restores the 13 hosted bodies (md5 pinned) and four policies and drops the primitive, keeping it while a later migration still calls it."
+    },
+    {
       "file": "20270115090000_sp_claim_verification_stamp.sql",
       "hostedState": "pending",
       "introduces": [],

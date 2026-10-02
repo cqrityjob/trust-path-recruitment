@@ -317,12 +317,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder or learning-run leak.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.
+// 20270108090000_employer_active_reads (P1-B 1/5 of the 2026-10-02 full
+// re-audit: one active-employer rule, has_active_employer_role, applied to
+// employer reports and assessment reads) is pending BY DESIGN until its PR
+// merges and the official integration applies it. Its name comes off this list
+// in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-employer-active-reads.md.
 // 20270115090000_sp_claim_verification_stamp (P1-F of the 2026-10-02 full
 // re-audit: a holder cannot set or change a claim's verification stamp) is
 // pending BY DESIGN until its PR merges and the official integration applies
 // it. Its name comes off this list in the change that records its hosted
 // evidence. Evidence to come: docs/release/2026-10-02-passport-verification-stamp.md.
 const expectedPending: string[] = [
+  "20270108090000_employer_active_reads.sql",
   "20270115090000_sp_claim_verification_stamp.sql",
 ];
 const hostedIdentities = [
