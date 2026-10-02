@@ -353,6 +353,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // official integration applies it. Its name comes off this list in the change
 // that records its hosted evidence. Evidence to come:
 // docs/release/2026-10-02-pending-employer-actions.md.
+// 20270114090000_sp_passport_target_holder (P1-E of the 2026-10-02 full
+// re-audit: a Passport request or evidence row names exactly one entry, and it
+// is the holder's own) is pending BY DESIGN until its PR merges and the
+// official integration applies it. Its name comes off this list in the change
+// that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-passport-target-holder.md.
 const expectedPending: string[] = [
   "20270108090000_employer_active_reads.sql",
   "20270109090000_candidate_identity_active_employer.sql",
@@ -360,6 +366,7 @@ const expectedPending: string[] = [
   "20270111090000_interview_beskt_active_employer.sql",
   "20270112090000_passport_attestation_active_employer.sql",
   "20270113090000_pending_employer_actions.sql",
+  "20270114090000_sp_passport_target_holder.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
