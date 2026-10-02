@@ -1,8 +1,7 @@
 # P1-J: a BESKT position cannot be reopened once the others are readable
 
-**Status: PENDING.** This PR fixes P1-J of the 2026-10-02 final hostile-user
-audit. It builds on P1-K (20270121090000) and merges after it. It is not
-merged, and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#381, 2b42035) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

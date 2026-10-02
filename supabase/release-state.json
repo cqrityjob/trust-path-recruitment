@@ -2681,7 +2681,10 @@
     },
     {
       "file": "20270118090000_assessment_assignment_insert_columns.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270118090000",
+      "hostedName": "assessment_assignment_insert_columns",
+      "evidenceSource": "Read-only verification 2026-10-02 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #377 merged to main (dac3e59, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270118090000 / name assessment_assignment_insert_columns; 357 rows, md5 of version:name joined by newline f4f87e56322142f2ac03b5eda5c1cfae, equal to hosted-ledger.json. has_table_privilege(authenticated, assessment_assignments, INSERT) = false; column INSERT engine_result false, status false, recipient_email true; anon INSERT false. Rolled-back probe as authenticated: creating a row with status='completed' and an engine_result is refused 42501. PROBE_ROLLED_BACK; no hosted write.",
       "introduces": [],
       "rollback": "supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql",
       "verify": "SELECT has_table_privilege('authenticated','public.assessment_assignments','INSERT'); -- false. SELECT has_column_privilege('authenticated','public.assessment_assignments','engine_result','INSERT'), has_column_privilege('authenticated','public.assessment_assignments','status','INSERT'); -- false, false. SELECT has_column_privilege('authenticated','public.assessment_assignments','recipient_email','INSERT'); -- true. Rolled-back probe: an active owner inserting a status='completed' row with an engine_result is refused 42501.",
@@ -2689,7 +2692,10 @@
     },
     {
       "file": "20270119090000_sp_entry_frozen_under_review.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270119090000",
+      "hostedName": "sp_entry_frozen_under_review",
+      "evidenceSource": "Read-only verification 2026-10-02 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #378 merged to main (ecc06d6, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270119090000 / name sp_entry_frozen_under_review; 357 rows, md5 of version:name joined by newline f4f87e56322142f2ac03b5eda5c1cfae, equal to hosted-ledger.json. Triggers sp_claims_frozen_under_review and sp_periods_frozen_under_review enabled; sp_entry_review_on_holder_edit md5 926a3a7913652e482b28ab7c93732872 and sp_guard_entry_under_review md5 1cce4b8afdceae84a97ba202320dacd8 = local replay of the merged file; anon EXECUTE on the helper false. Rolled-back probe: a verification request set to pending, the holder (authenticated, own sub) moving started_on 3650 days is refused 23514 SP_ENTRY_UNDER_REVIEW. PROBE_ROLLED_BACK; no hosted write.",
       "introduces": [
         {
           "kind": "function",
@@ -2706,7 +2712,10 @@
     },
     {
       "file": "20270120090000_access_request_no_role_escalation.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270120090000",
+      "hostedName": "access_request_no_role_escalation",
+      "evidenceSource": "Read-only verification 2026-10-02 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #379 merged to main (09398bb, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270120090000 / name access_request_no_role_escalation; 357 rows, md5 of version:name joined by newline f4f87e56322142f2ac03b5eda5c1cfae, equal to hosted-ledger.json. approve_access_request md5 91ce1c857970f99b10081a76c763e331 = local replay of the merged file (was 1a4bfdb83919585be20282413c93f5c6). Rolled-back probe: an active admin files a request to their own organisation and approves it — as owner refused 42501 'only a platform admin can grant the owner role', as member refused 42501 'you cannot approve your own access request'; membership role unchanged. PROBE_ROLLED_BACK; no hosted write.",
       "introduces": [],
       "rollback": "supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql",
       "verify": "SELECT position('20270120090000' IN prosrc) > 0 FROM pg_proc WHERE oid='public.approve_access_request(uuid,text,text)'::regprocedure; -- true. Rolled-back probe: an active org admin who files and approves their own request as owner is refused (Forbidden); an owner approving a live member's request with another role is refused (Already a member); admitting a new person as member still succeeds.",
@@ -2714,7 +2723,10 @@
     },
     {
       "file": "20270121090000_scp_iv_erase_vetting_boundary.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270121090000",
+      "hostedName": "scp_iv_erase_vetting_boundary",
+      "evidenceSource": "Read-only verification 2026-10-02 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #380 merged to main (0a51b5d, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270121090000 / name scp_iv_erase_vetting_boundary; 357 rows, md5 of version:name joined by newline f4f87e56322142f2ac03b5eda5c1cfae, equal to hosted-ledger.json. scp_iv_erase_source md5 ef55350f71e35a5edf23598395884b1c = local replay of the merged file (was fc3984e279784abff4f197f0b3aa45a9); anon EXECUTE false. Production holds 0 bcp_case_links, so the probe simulated a restricted case inside the rolled-back transaction (bcp_case_access_ok replaced by false): an active owner/admin erasing a source is refused SCP_IV_NOT_CASE_MEMBER and the source stays active; bcp_case_access_ok verified unchanged afterwards. PROBE_ROLLED_BACK; no hosted write.",
       "introduces": [],
       "rollback": "supabase/rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql",
       "verify": "SELECT position('bcp_case_access_ok' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_iv_erase_source(uuid,text)'::regprocedure; -- true. Rolled-back probe: an active owner who is not the security officer calling scp_iv_erase_source on a security-vetting case's source is refused SCP_IV_NOT_CASE_MEMBER and the source stays active.",
@@ -2722,7 +2734,10 @@
     },
     {
       "file": "20270122090000_bcp_conduct_reopen_after_exposure.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270122090000",
+      "hostedName": "bcp_conduct_reopen_after_exposure",
+      "evidenceSource": "Read-only verification 2026-10-02 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #381 merged to main (2b42035, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270122090000 / name bcp_conduct_reopen_after_exposure; 357 rows, md5 of version:name joined by newline f4f87e56322142f2ac03b5eda5c1cfae, equal to hosted-ledger.json. bcp_conduct_reopen_position md5 771e48719165dbfce94aac37fd26da1e = local replay of the merged file (was 55e5e05559d9b9624bf411b68ee2f322); anon EXECUTE false. Production holds 0 conduct sessions; rolled-back probe with a synthetic session and two positions seeded under replica on an existing case of an active employer: both locked → the owner's reopen is refused BCP_CONDUCT_POSITIONS_ALREADY_SEEN; control with the other position still open → the call passes the guard. PROBE_ROLLED_BACK; no hosted write.",
       "introduces": [],
       "rollback": "supabase/rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql",
       "verify": "SELECT position('BCP_CONDUCT_POSITIONS_ALREADY_SEEN' IN prosrc) > 0 FROM pg_proc WHERE proname='bcp_conduct_reopen_position'; -- true. Production holds no conduct session with two locked positions; the behaviour is proven by the conduct suite (C7.9 reproduction, C7.10-C7.12 refusal).",
@@ -2730,7 +2745,10 @@
     },
     {
       "file": "20270123090000_employer_identity_rereview.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270123090000",
+      "hostedName": "employer_identity_rereview",
+      "evidenceSource": "Read-only verification 2026-10-02 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #382 merged to main (ed62d48, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270123090000 / name employer_identity_rereview; 357 rows, md5 of version:name joined by newline f4f87e56322142f2ac03b5eda5c1cfae, equal to hosted-ledger.json. employers_validate_before_write md5 55de38b7a4bdbb37d1eb4220e43bd814 = local replay of the merged file (was e3fd899458d95fe8c00c5f4dfa082fa8). Rolled-back probe as a non-platform-admin active owner of an active employer: description edit → active; case/space-only rename → active; registration_number change → pending and has_active_employer_role(owner/admin) false. PROBE_ROLLED_BACK; no hosted write.",
       "introduces": [],
       "rollback": "supabase/rollback/20270123090000_employer_identity_rereview_rollback.sql",
       "verify": "SELECT position('20270123090000' IN prosrc) > 0 FROM pg_proc WHERE proname='employers_validate_before_write'; -- true. Rolled-back probe: an active owner who changes E's name and registration_number has the update saved and E's status becomes 'pending'; a description or logo edit keeps it 'active'.",

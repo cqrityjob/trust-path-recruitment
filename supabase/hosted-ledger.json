@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-02T19:41:05+00:00",
-  "readBy": "Read-only production verification after the Security Work programme schema contract merged (#376). All 350 previous ledger identities preserved (their digest is still 29249f9a262f9f33b0139403caa3293d); the one new row is 20270117090000 security_work_programme, applied by the official integration. md5 of version:name joined by newline over all 351 rows d51e277eb053ef50833765ebb9f751b0, equal on the connector read and on this file. See docs/release/2026-10-02-security-work-programme-hosted-verification.md.",
+  "readAt": "2026-10-02T22:38:00+00:00",
+  "readBy": "Read-only production verification after the six 2026-10-02 final-audit P1 fixes merged (#377, #378, #379, #380, #381, #382). All 351 previous ledger identities preserved (their digest is still d51e277eb053ef50833765ebb9f751b0); the six new rows are 20270118090000 through 20270123090000, applied by the official integration. md5 of version:name joined by newline over all 357 rows f4f87e56322142f2ac03b5eda5c1cfae, equal on the connector read and on this file. See docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1419,6 +1419,30 @@
     {
       "version": "20270117090000",
       "name": "security_work_programme"
+    },
+    {
+      "version": "20270118090000",
+      "name": "assessment_assignment_insert_columns"
+    },
+    {
+      "version": "20270119090000",
+      "name": "sp_entry_frozen_under_review"
+    },
+    {
+      "version": "20270120090000",
+      "name": "access_request_no_role_escalation"
+    },
+    {
+      "version": "20270121090000",
+      "name": "scp_iv_erase_vetting_boundary"
+    },
+    {
+      "version": "20270122090000",
+      "name": "bcp_conduct_reopen_after_exposure"
+    },
+    {
+      "version": "20270123090000",
+      "name": "employer_identity_rereview"
     }
   ]
 }
