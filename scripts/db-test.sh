@@ -1280,7 +1280,7 @@ set -e
 [ "$FR_RC" -eq 0 ] || { echo "$FR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: findings review-writes suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  findings review-writes migration re-applied (postflight proved); suite passes again"
 
-# 20270117090000: an employer creates an assessment assignment as an invitation
+# 20270118090000: an employer creates an assessment assignment as an invitation
 # only and cannot write its result (P1-L of the 2026-10-02 final audit). The
 # suite reproduces an already-completed assignment with an invented
 # engine_result on the pre-fix grant itself (FA0).
@@ -1301,8 +1301,8 @@ fa_nc_expect_fail() {
   fi
   echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: FA[0-9.]*' | head -1))"
 }
-FA_MIG=supabase/migrations/20270117090000_assessment_assignment_insert_columns.sql
-FA_RB=supabase/rollback/20270117090000_assessment_assignment_insert_columns_rollback.sql
+FA_MIG=supabase/migrations/20270118090000_assessment_assignment_insert_columns.sql
+FA_RB=supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql
 echo "==> Running assessment assignment insert-columns assertions"
 psql_q -d "$TEST_DB" -f "$FA_MIG" >/dev/null
 set +e
