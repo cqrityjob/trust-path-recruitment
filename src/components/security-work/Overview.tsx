@@ -51,6 +51,7 @@ export function SecurityOverview() {
       ["draft", "in_review"].includes(analysis.status),
     ) ?? [];
   const draftReports = facts?.managementReports.filter((report) => report.status === "draft") ?? [];
+  const recentReports = portfolio.data?.reports.slice(0, 3) ?? [];
   const ctaFor = (area: ProgrammeAreaId, id: string) => {
     if (id === "monitoring_pending")
       return {
@@ -338,6 +339,43 @@ export function SecurityOverview() {
                   </li>
                 ))}
               </ul>
+            </Group>
+          )}
+          {recentReports.length > 0 && (
+            <Group
+              id="sw-recent-reports"
+              title={l("Senaste rapporter", "Recent reports")}
+              icon={<FileText className="size-5" />}
+              data-testid="sw-overview-reports"
+            >
+              <ul className="mt-3 divide-y divide-border">
+                {recentReports.map((report) => (
+                  <li key={report.id}>
+                    <Link
+                      to="/security-work/$workspaceId/reports/$reportId"
+                      params={{ ...params, reportId: report.id }}
+                      className="flex min-h-16 items-center justify-between gap-4 rounded-md py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                    >
+                      <span className="min-w-0">
+                        <span className="block break-words font-semibold">{report.title}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-2">
+                          <WorkStatus status={report.status} />
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(report.approved_at ?? report.updated_at, lang)}
+                          </span>
+                        </span>
+                      </span>
+                      <ArrowRight className="size-4 shrink-0 text-accent" aria-hidden="true" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <WorkButton asChild variant="ghost" className="mt-2 px-0">
+                <Link to="/security-work/$workspaceId/reports" params={params}>
+                  {l("Alla rapporter", "All reports")}
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+              </WorkButton>
             </Group>
           )}
           <Group id="sw-work" title={t("sw.prog.work.heading")} data-testid="sw-services">
