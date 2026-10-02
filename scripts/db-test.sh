@@ -382,6 +382,151 @@ RB_OUT="$(run_rb_suite)"; RB_RC=$?
 set -e
 [ "$RB_RC" -eq 0 ] || { echo "$RB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employment-binding suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  employment-binding migration re-applied (postflight proved); suite passes again"
+# 20270103090000: only an assessment run is scored by scp_submit_attempt
+# (P1-1 of the 2026-10-02 audit). The suite reproduces a learning run scored
+# as full-credit assessment evidence on the pre-fix body itself (SA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (any run of the caller's is scored)          -> SA1.1
+#   NC2  only an employer-less learning run is refused (training runs
+#        under an employer still score)                                  -> SA2.1
+run_sa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_submit_assessment_only_test.sql 2>&1
+}
+sa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_sa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: assessment-only negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: SA[0-9.]*' | head -1))"
+}
+echo "==> Running assessment-only submission assertions"
+set +e
+SA_OUT="$(run_sa_suite)"; SA_RC=$?
+set -e
+SA_PASSED="$(echo "$SA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$SA_RC" -ne 0 ]; then
+  echo "$SA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the assessment-only suite exited with code ${SA_RC}." >&2
+  exit 1
+fi
+[ "$SA_PASSED" -ge 25 ] || { echo "$SA_OUT"; echo "FAIL: assessment-only assertion shortfall: $SA_PASSED (floor 25)" >&2; exit 1; }
+echo "    ok  $SA_PASSED assessment-only assertions passed (learning run scored pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270103090000_scp_submit_assessment_only_rollback.sql >/dev/null
+sa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270103090000_scp_submit_assessment_only.sql >/dev/null
+SA_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION/,/^END; \$function\$/p' supabase/migrations/20270103090000_scp_submit_assessment_only.sql \
+  | sed "s/IF _a.mode IS DISTINCT FROM 'assessment' THEN/IF _a.mode = 'learning' AND _a.issuer_organization_id IS NULL THEN/")"
+echo "$SA_NC2_SQL" | grep -q "_a.issuer_organization_id IS NULL THEN" || { echo "FAIL: assessment-only NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$SA_NC2_SQL" >/dev/null
+sa_nc_expect_fail "NC2 employer learning runs still scored"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270103090000_scp_submit_assessment_only.sql >/dev/null
+set +e
+SA_OUT="$(run_sa_suite)"; SA_RC=$?
+set -e
+[ "$SA_RC" -eq 0 ] || { echo "$SA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assessment-only suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  assessment-only migration re-applied (postflight proved); suite passes again"
+
+# 20270102090000: the progress series shows an employer only its own
+# organisation's reports (P0-1 of the 2026-10-02 audit). The suite reproduces
+# the cross-employer read on the pre-fix body itself (PS0). Negative controls,
+# each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (every employer report of the subject)   -> PS1.1
+#   NC2  scoped by organisation but ignoring membership status       -> PS4.1
+run_ps_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_subject_progress_scope_test.sql 2>&1
+}
+ps_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ps_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: progress-scope negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: PS[0-9.]*' | head -1))"
+}
+echo "==> Running progress-series employer scope assertions"
+set +e
+PS_OUT="$(run_ps_suite)"; PS_RC=$?
+set -e
+PS_PASSED="$(echo "$PS_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$PS_RC" -ne 0 ]; then
+  echo "$PS_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the progress-scope suite exited with code ${PS_RC}." >&2
+  exit 1
+fi
+[ "$PS_PASSED" -ge 12 ] || { echo "$PS_OUT"; echo "FAIL: progress-scope assertion shortfall: $PS_PASSED (floor 12)" >&2; exit 1; }
+echo "    ok  $PS_PASSED progress-scope assertions passed (cross-employer read reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270102090000_scp_subject_progress_employer_scope_rollback.sql >/dev/null
+ps_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql >/dev/null
+PS_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION/,/^\$function\$;/p' supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql \
+  | sed "s/AND public.scp_report_snapshot_readable(s.audience, s.subject_id, s.issuer_organization_id)/AND (s.audience = 'participant' OR EXISTS (SELECT 1 FROM public.employer_memberships mm WHERE mm.employer_id = s.issuer_organization_id AND mm.user_id = auth.uid()))/")"
+echo "$PS_NC2_SQL" | grep -q "mm.user_id = auth.uid()" || { echo "FAIL: progress-scope NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$PS_NC2_SQL" >/dev/null
+ps_nc_expect_fail "NC2 membership status ignored"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql >/dev/null
+set +e
+PS_OUT="$(run_ps_suite)"; PS_RC=$?
+set -e
+[ "$PS_RC" -eq 0 ] || { echo "$PS_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: progress-scope suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  progress-scope migration re-applied (postflight proved); suite passes again"
+# 20270104090000: development recommendations show an employer only what its
+# own evidence supports (P1-2 of the 2026-10-02 audit). The suite reproduces
+# the cross-employer derivation on the pre-fix body itself (DR0). Negative
+# controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (rows and levels from every employer's evidence) -> DR1.1
+#   NC2  rows scoped to the caller's evidence, levels still over all of it  -> DR1.2
+run_dr_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_development_recommendations_scope_test.sql 2>&1
+}
+dr_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_dr_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: recommendations-scope negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: DR[0-9.]*' | head -1))"
+}
+echo "==> Running development-recommendations employer scope assertions"
+set +e
+DR_OUT="$(run_dr_suite)"; DR_RC=$?
+set -e
+DR_PASSED="$(echo "$DR_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$DR_RC" -ne 0 ]; then
+  echo "$DR_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the recommendations-scope suite exited with code ${DR_RC}." >&2
+  exit 1
+fi
+[ "$DR_PASSED" -ge 16 ] || { echo "$DR_OUT"; echo "FAIL: recommendations-scope assertion shortfall: $DR_PASSED (floor 16)" >&2; exit 1; }
+echo "    ok  $DR_PASSED recommendations-scope assertions passed (cross-employer derivation reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270104090000_scp_development_recommendations_employer_scope_rollback.sql >/dev/null
+# The suite calls the helper by name (DR3.3, DR4.4); restore it alone so NC1
+# fails on behaviour, not on a missing function.
+psql_q -d "$TEST_DB" -c "$(sed -n '/^CREATE OR REPLACE FUNCTION public.scp_compute_maturity_for_issuers/,/^\$function\$$/p' supabase/migrations/20270104090000_scp_development_recommendations_employer_scope.sql)" >/dev/null
+psql_q -d "$TEST_DB" -c "REVOKE ALL ON FUNCTION public.scp_compute_maturity_for_issuers(uuid, uuid, text, timestamp with time zone, uuid[]) FROM PUBLIC, anon, authenticated" >/dev/null
+dr_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270104090000_scp_development_recommendations_employer_scope.sql >/dev/null
+DR_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.scp_development_recommendations/,/^END; \$function\$/p' supabase/migrations/20270104090000_scp_development_recommendations_employer_scope.sql \
+  | sed "s/ELSE public.scp_compute_maturity_for_issuers(_subject_id, cv.id, 'v1', now(), _issuers)/ELSE public.scp_compute_maturity(_subject_id, cv.id, 'v1', now())/")"
+grep -qF 'END; $function$' <<<"$DR_NC2_SQL" && ! grep -q "scp_compute_maturity_for_issuers" <<<"$DR_NC2_SQL" \
+  || { echo "FAIL: recommendations-scope NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$DR_NC2_SQL" >/dev/null
+dr_nc_expect_fail "NC2 levels still over every employer's evidence"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270104090000_scp_development_recommendations_employer_scope.sql >/dev/null
+set +e
+DR_OUT="$(run_dr_suite)"; DR_RC=$?
+set -e
+[ "$DR_RC" -eq 0 ] || { echo "$DR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: recommendations-scope suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  recommendations-scope migration re-applied (postflight proved); suite passes again"
 # 20270105090000: a suspended employer reads no applicant through the definer
 # functions (P1-3 of the 2026-10-02 audit). The suite reproduces the read on
 # the pre-fix bodies itself (SE0). Negative controls, each of which MUST make
