@@ -382,6 +382,64 @@ RB_OUT="$(run_rb_suite)"; RB_RC=$?
 set -e
 [ "$RB_RC" -eq 0 ] || { echo "$RB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employment-binding suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  employment-binding migration re-applied (postflight proved); suite passes again"
+# 20270107090000: a panel reviewer sees no other reviewer's assessment before
+# the reveal (P1-5 of the 2026-10-02 audit). The suite reproduces all three
+# pre-reveal reads on the pre-fix policies and bodies themselves (PR0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> PR1.1
+#   NC2  assessments hidden, case events still case-access only         -> PR1.4
+#   NC3  both tables hidden, the pre-fix preview restored               -> PR2.1
+run_pr_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_iv_panel_reveal_boundary_test.sql 2>&1
+}
+pr_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_pr_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: panel-reveal negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: PR[0-9.]*' | head -1))"
+}
+echo "==> Running Interview panel reveal-boundary assertions"
+set +e
+PR_OUT="$(run_pr_suite)"; PR_RC=$?
+set -e
+PR_PASSED="$(echo "$PR_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$PR_RC" -ne 0 ]; then
+  echo "$PR_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the panel-reveal suite exited with code ${PR_RC}." >&2
+  exit 1
+fi
+[ "$PR_PASSED" -ge 22 ] || { echo "$PR_OUT"; echo "FAIL: panel-reveal assertion shortfall: $PR_PASSED (floor 22)" >&2; exit 1; }
+echo "    ok  $PR_PASSED panel-reveal assertions passed (pre-reveal reads reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270107090000_scp_iv_panel_reveal_boundary_rollback.sql >/dev/null
+# The suite calls the helper by name (PR5.2); restore it alone so NC1 fails on
+# behaviour, not on a missing function.
+psql_q -d "$TEST_DB" -c "$(sed -n '/^CREATE OR REPLACE FUNCTION public.scp_iv_panel_hides_others/,/^\$function\$;/p' supabase/migrations/20270107090000_scp_iv_panel_reveal_boundary.sql)" >/dev/null
+psql_q -d "$TEST_DB" -c "REVOKE ALL ON FUNCTION public.scp_iv_panel_hides_others(uuid) FROM PUBLIC, anon; GRANT EXECUTE ON FUNCTION public.scp_iv_panel_hides_others(uuid) TO authenticated" >/dev/null
+pr_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270107090000_scp_iv_panel_reveal_boundary.sql >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+DROP POLICY scp_interview_case_events_read ON public.scp_interview_case_events;
+CREATE POLICY scp_interview_case_events_read ON public.scp_interview_case_events
+  FOR SELECT TO authenticated USING (public.scp_iv_can_read_case(case_id));
+SQL
+pr_nc_expect_fail "NC2 case events still case-access only"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270107090000_scp_iv_panel_reveal_boundary.sql >/dev/null
+PR_NC3_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.scp_iv_preview_report/,/^END; \$function\$/p' supabase/rollback/20270107090000_scp_iv_panel_reveal_boundary_rollback.sql)"
+grep -qF 'END; $function$' <<<"$PR_NC3_SQL" && ! grep -q "scp_iv_panel_hides_others" <<<"$PR_NC3_SQL" \
+  || { echo "FAIL: panel-reveal NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$PR_NC3_SQL" >/dev/null
+pr_nc_expect_fail "NC3 pre-fix preview"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270107090000_scp_iv_panel_reveal_boundary.sql >/dev/null
+set +e
+PR_OUT="$(run_pr_suite)"; PR_RC=$?
+set -e
+[ "$PR_RC" -eq 0 ] || { echo "$PR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: panel-reveal suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  panel-reveal migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
