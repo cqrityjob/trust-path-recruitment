@@ -298,9 +298,15 @@ ok(
   definitions.length >= 1 && definitions[0].file === path.basename(RUNTIME_MIGRATION),
   "E · scp_iv_finalise_report is first defined by the runtime migration",
 );
+// 20270111090000 (P1-B 4/5 of the 2026-10-02 re-audit) redefines it once more,
+// to require that the organisation is ACTIVE as well (has_active_employer_role,
+// same owner/admin list). That only narrows the boundary, and it is checked
+// below exactly like the others.
+const ACTIVE_ORG_MIGRATION = "20270111090000_interview_beskt_active_employer.sql";
 ok(
-  definitions.length === 2 &&
-    definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql",
+  definitions.length === 3 &&
+    definitions[1].file === "20261020090000_scp_interview_evidence_reliability.sql" &&
+    definitions[2].file === ACTIVE_ORG_MIGRATION,
   `E · every redefinition of scp_iv_finalise_report is a known, reviewed one (found ${definitions.length})`,
 );
 // EXPAND → CUTOVER → CONTRACT. 20261107090000 adds the preview-bound
@@ -324,12 +330,29 @@ ok(
 );
 if (previewedAt > 0)
   definitions.push({ file: path.basename(BASIS_MIGRATION), body: basisSql.slice(previewedAt) });
+// The active-organisation migration redefines the preview-bound one too; its
+// boundary is checked the same way.
+const activeOrgSql = read(path.join("supabase/migrations", ACTIVE_ORG_MIGRATION));
+const activePreviewedAt = activeOrgSql.indexOf(
+  "CREATE OR REPLACE FUNCTION public.scp_iv_finalise_previewed_report(",
+);
+ok(
+  activePreviewedAt > 0,
+  "E · the active-organisation migration redefines the preview-bound finalisation alongside",
+);
+if (activePreviewedAt > 0)
+  definitions.push({
+    file: `${ACTIVE_ORG_MIGRATION} (previewed)`,
+    body: activeOrgSql.slice(activePreviewedAt),
+  });
 const finaliseFn = definitions[definitions.length - 1].body;
 
 for (const def of definitions) {
   const head = def.body.slice(0, 2000);
   ok(
-    /has_employer_role\(\s*\n?\s*auth\.uid\(\),\s*_c\.employer_id,\s*ARRAY\['owner','admin'\]\)/.test(
+    // has_active_employer_role is the same owner/admin check plus an active
+    // organisation (20270111090000); either spelling keeps the role list.
+    /has_(?:active_)?employer_role\(\s*\n?\s*auth\.uid\(\),\s*_c\.employer_id,\s*ARRAY\['owner','admin'\]\)/.test(
       head,
     ),
     `E · ${def.file}: scp_iv_finalise_report requires owner or admin`,
