@@ -45,6 +45,7 @@ import {
   useWorkText,
 } from "./analysis-ui";
 import { CitationEditor } from "./Citations";
+import { ManagementReportsSection } from "./ManagementReportsSection";
 
 export function SecurityReports() {
   const l = useWorkText();
@@ -56,10 +57,14 @@ export function SecurityReports() {
       <PageHeading
         title={l("Rapporter", "Reports")}
         body={l(
-          "Utkast och godkända versioner, samlade med sina analyser.",
-          "Drafts and approved versions, linked to their analyses.",
+          "Ledningsrapporter om säkerhetsläget, och analysrapporter samlade med sina analyser.",
+          "Management reports on the security position, and analysis reports linked to their analyses.",
         )}
       />
+      <ManagementReportsSection />
+      <h2 className="font-display text-lg font-semibold">
+        {l("Analysrapporter", "Analysis reports")}
+      </h2>
       {query.isPending ? (
         <LoadingState />
       ) : query.isError ? (
