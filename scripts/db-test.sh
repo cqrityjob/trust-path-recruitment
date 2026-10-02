@@ -1539,6 +1539,53 @@ set -e
 [ "$CR_RC" -eq 0 ] || { echo "$CR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: conduct suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  conduct reopen-after-exposure migration re-applied (postflight proved); suite passes again"
 
+# 20270123090000: an approved organisation that changes its identity goes back
+# to review (P1-I of the 2026-10-02 final audit; owner decision: re-review).
+# The suite reproduces an approved organisation taking another one's name and
+# number and staying approved (EI0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> EI1.1
+#   NC2  the organisation number dropped from the material fields       -> EI2.2
+run_ei_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_identity_rereview_test.sql 2>&1
+}
+ei_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ei_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: identity re-review negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: EI[0-9.]*' | head -1))"
+}
+EI_MIG=supabase/migrations/20270123090000_employer_identity_rereview.sql
+EI_RB=supabase/rollback/20270123090000_employer_identity_rereview_rollback.sql
+echo "==> Running employer identity re-review assertions"
+psql_q -d "$TEST_DB" -f "$EI_MIG" >/dev/null
+set +e
+EI_OUT="$(run_ei_suite)"; EI_RC=$?
+set -e
+EI_PASSED="$(echo "$EI_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$EI_RC" -ne 0 ]; then
+  echo "$EI_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the identity re-review suite exited with code ${EI_RC}." >&2
+  exit 1
+fi
+[ "$EI_PASSED" -ge 13 ] || { echo "$EI_OUT"; echo "FAIL: identity re-review assertion shortfall: $EI_PASSED (floor 13)" >&2; exit 1; }
+echo "    ok  $EI_PASSED identity re-review assertions passed (unreviewed identity takeover reproduced pre-fix, returned to review post-fix)"
+psql_q -d "$TEST_DB" -f "$EI_RB" >/dev/null
+ei_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -c "$(grep -v 'coalesce(NEW.registration_number' "$EI_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+ei_nc_expect_fail "NC2 organisation number not material"
+psql_q -d "$TEST_DB" -f "$EI_MIG" >/dev/null
+set +e
+EI_OUT="$(run_ei_suite)"; EI_RC=$?
+set -e
+[ "$EI_RC" -eq 0 ] || { echo "$EI_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: identity re-review suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  identity re-review migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
