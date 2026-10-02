@@ -308,8 +308,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // admin reads every row.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-catalogue-read-hardening-hosted-verification.md.
-// Nothing is pending.
-const expectedPending: string[] = [];
+// 20270102090000_scp_subject_progress_employer_scope (P0-1 of the 2026-10-02
+// pre-launch audit: the progress series shows an employer only its own
+// organisation's reports) is pending BY DESIGN until its PR merges and the
+// official integration applies it. Its name comes off this list in the change
+// that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-subject-progress-employer-scope.md.
+const expectedPending: string[] = [
+  "20270102090000_scp_subject_progress_employer_scope.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
