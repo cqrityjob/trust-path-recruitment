@@ -2648,6 +2648,33 @@
       "rollback": "supabase/rollback/20270116090000_scp_iv_findings_review_writes_rollback.sql",
       "verify": "SELECT has_table_privilege('authenticated','public.scp_interview_findings','UPDATE'); -- false. SELECT column_name FROM information_schema.column_privileges WHERE table_name='scp_interview_findings' AND grantee='authenticated' AND privilege_type='UPDATE'; -- human_note, human_state, resolution_state. SELECT qual, with_check FROM pg_policies WHERE policyname='scp_interview_findings_update'; -- scp_iv_can_write_case AND has_employer_role(owner, admin). SELECT tgname FROM pg_trigger WHERE tgname='scp_interview_findings_review_stamp'; -- 1 row; function md5 equals the merged file. Hosted has 0 findings; the behavioural probe is the isolated suite. Row counts unchanged.",
       "note": "P1-C of the 2026-10-02 full hostile-user re-audit (docs/release/2026-10-02-interview-findings-review-writes.md). authenticated held UPDATE on every column of scp_interview_findings and the update policy required only scp_iv_can_write_case (any member), so a plain member could mark a finding resolved or not relevant (dropping it from the report's unresolved list), rewrite the AI run's recorded statement, kind and citations, and attribute the review to someone else. Three layers: UPDATE is granted only on resolution_state, human_state and human_note; the policy additionally requires an owner or admin of the case's employer (the bar for finalising); and a BEFORE UPDATE trigger stamps human_actor_id = auth.uid() and human_actor_at = now() whenever a review column changes. Reads, scp_iv_record_findings and the report builders are unchanged. Hosted: 0 findings; no row changes. Rollback restores table-level UPDATE, the hosted policy (md5 eedd2ff88ee20bc5d5fdfeb1f6e1be33) and drops the trigger."
+    },
+    {
+      "file": "20270117090000_security_work_programme.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {"kind": "table", "object": "sw_security_mandates"},
+        {"kind": "table", "object": "sw_protected_assets"},
+        {"kind": "table", "object": "sw_risk_assets"},
+        {"kind": "table", "object": "sw_baseline_assessments"},
+        {"kind": "table", "object": "sw_baseline_answers"},
+        {"kind": "table", "object": "sw_gaps"},
+        {"kind": "table", "object": "sw_evidence_links"},
+        {"kind": "table", "object": "sw_ai_suggestions"},
+        {"kind": "table", "object": "sw_programme_plans"},
+        {"kind": "table", "object": "sw_management_reports"},
+        {"kind": "column", "object": "owner_id", "table": "sw_risks"},
+        {"kind": "column", "object": "threat_scenario", "table": "sw_risks"},
+        {"kind": "column", "object": "gap_id", "table": "sw_actions"},
+        {"kind": "column", "object": "asset_id", "table": "sw_actions"},
+        {"kind": "column", "object": "approval_required", "table": "sw_actions"},
+        {"kind": "column", "object": "approval_note", "table": "sw_actions"},
+        {"kind": "function", "object": "sw_private.guard_programme()"},
+        {"kind": "function", "object": "sw_private.guard_action_approval()"}
+      ],
+      "rollback": "supabase/rollback/20270117090000_security_work_programme_rollback.sql",
+      "verify": "SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname IN ('sw_security_mandates','sw_protected_assets','sw_risk_assets','sw_baseline_assessments','sw_baseline_answers','sw_gaps','sw_evidence_links','sw_ai_suggestions','sw_programme_plans','sw_management_reports'); -- 10, all with relrowsecurity. SELECT is_nullable FROM information_schema.columns WHERE table_name IN ('sw_risks','sw_actions') AND column_name='assessment_id'; -- YES, YES. SELECT position('NEW.assessment_id IS NOT NULL AND NOT EXISTS' IN prosrc) > 0 FROM pg_proc WHERE oid='sw_private.guard_lifecycle()'::regprocedure; -- true. anon/service_role hold no privilege on any of the ten tables; authenticated cannot execute sw_private.guard_programme() or sw_private.guard_action_approval(). Existing sw_risks/sw_actions row counts unchanged; every existing row keeps its assessment_id.",
+      "note": "Security Work programme (docs/security-intelligence/security-work-programme.md): mission & mandate, protected assets, risk-to-asset links, security baseline answers (question content is versioned in the repository), unified gaps, actions usable from gaps/assets/plan, evidence links to the shared library, AI suggestions (proposed/approved/rejected, content immutable, decision stamped by trigger, nothing copies a suggestion into an authoritative table), 90-day plan progress and management status reports (facts / computed / narrative stored apart). sw_risks.assessment_id and sw_actions.assessment_id become nullable; a risk without an analysis parent may be accepted by an approver with a rationale (the only lifecycle change). Existing rows and rules are untouched. Rollback refuses adopted data, drops the ten tables and the new columns, and restores the 20261211090000 guard_lifecycle body verbatim (local replay md5 59c499760b866c3d3f99e12276dc957f before and after)."
     }
   ], 
   "policyVersion": 2, 

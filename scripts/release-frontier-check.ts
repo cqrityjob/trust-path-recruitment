@@ -327,8 +327,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder Passport write and no forged verification stamp.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md.
-// Nothing is pending.
-const expectedPending: string[] = [];
+// 20270117090000_security_work_programme (Security Work programme: mandate,
+// protected assets, baseline, gaps, AI suggestions, plans, management
+// reports) is pending BY DESIGN until its PR merges and the official
+// integration applies it. Its name comes off this list in the change that
+// records its hosted evidence. See
+// docs/security-intelligence/security-work-programme.md.
+const expectedPending: string[] = ["20270117090000_security_work_programme.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
