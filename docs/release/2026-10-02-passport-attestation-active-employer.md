@@ -1,9 +1,7 @@
 # P1-B (5/5): employer attestation in the Security Passport requires an active organisation
 
-**Status: PENDING.** This is the fifth of five PRs for P1-B of the 2026-10-02
-full hostile-user re-audit. It builds on 20270108090000
-(`has_active_employer_role`) and merges after P1-B 4/5. It is not merged, and
-nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#373, 3c09455) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

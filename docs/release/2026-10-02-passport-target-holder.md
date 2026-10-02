@@ -1,8 +1,7 @@
 # P1-E: a Passport request or evidence row names exactly one entry, and it is the holder's own
 
-**Status: PENDING.** This is an isolated PR from `origin/main` for P1-E of the
-2026-10-02 full hostile-user re-audit. It is not merged, and nothing was
-written to the hosted database.
+**Status: APPLIED.** Merged (#369, e062e4b) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|
