@@ -299,13 +299,45 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (42501) with nothing bound.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-employment-binding-owner-only-hosted-verification.md.
-// 20270101090000_catalogue_read_hardening (the four owner-approved items of
-// the 2026-10-01 pre-release security pass: drafts, unapproved professions
-// and the interviewer guide stop being readable by every signed-in account,
-// and three catalogues lose stray client write grants) is pending BY DESIGN
-// until its PR merges and the official integration applies it. Its name
-// comes off this list in the change that records its hosted evidence.
-// Evidence to come: docs/release/2026-10-01-catalogue-read-hardening.md.
+// 2026-10-02 05:52 UTC: 20270101090000 (catalogue_read_hardening, #355)
+// verified applied read-only: the four read predicates equal the merged file,
+// 41 USING (true) catalogue reads remain (was 45), the three catalogues carry
+// no client write privilege, anon reads none of the four, row counts are
+// unchanged, and a rolled-back probe shows a candidate and a non-author
+// employer 0 drafts, 0 unapproved professions and 0 guide prompts while an
+// admin reads every row.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-02-catalogue-read-hardening-hosted-verification.md.
+// 20270102090000_scp_subject_progress_employer_scope (P0-1 of the 2026-10-02
+// pre-launch audit: the progress series shows an employer only its own
+// organisation's reports) is pending BY DESIGN until its PR merges and the
+// official integration applies it. Its name comes off this list in the change
+// that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-subject-progress-employer-scope.md.
+// 20270103090000_scp_submit_assessment_only (P1-1 of the 2026-10-02
+// pre-launch audit: a Learning Mode run never becomes assessment evidence) is
+// pending BY DESIGN until its PR merges and the official integration applies
+// it. Its name comes off this list in the change that records its hosted
+// evidence. Evidence to come:
+// docs/release/2026-10-02-submit-assessment-only.md.
+// 20270104090000_scp_development_recommendations_employer_scope (P1-2 of the
+// 2026-10-02 pre-launch audit: development recommendations show an employer
+// only what its own evidence supports) is pending BY DESIGN until its PR
+// merges and the official integration applies it. Its name comes off this list
+// in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-development-recommendations-employer-scope.md.
+// 20270105090000_suspended_employer_applicant_reads (P1-3 of the 2026-10-02
+// pre-launch audit: a suspended employer reads no applicant through the
+// definer functions) is pending BY DESIGN until its PR merges and the official
+// integration applies it. Its name comes off this list in the change that
+// records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-suspended-employer-applicant-reads.md.
+// 20270106090000_sp_evidence_and_request_writes_rpc_only (P1-4 of the
+// 2026-10-02 pre-launch audit: Passport evidence and verification requests are
+// written only by their functions) is pending BY DESIGN until its PR merges
+// and the official integration applies it. Its name comes off this list in the
+// change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-passport-evidence-and-request-writes.md.
 // 20270107090000_scp_iv_panel_reveal_boundary (P1-5 of the 2026-10-02
 // pre-launch audit: a panel reviewer sees no other reviewer's assessment
 // before the reveal) is pending BY DESIGN until its PR merges and the official
@@ -313,7 +345,11 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // records its hosted evidence. Evidence to come:
 // docs/release/2026-10-02-interview-panel-reveal-boundary.md.
 const expectedPending: string[] = [
-  "20270101090000_catalogue_read_hardening.sql",
+  "20270102090000_scp_subject_progress_employer_scope.sql",
+  "20270103090000_scp_submit_assessment_only.sql",
+  "20270104090000_scp_development_recommendations_employer_scope.sql",
+  "20270105090000_suspended_employer_applicant_reads.sql",
+  "20270106090000_sp_evidence_and_request_writes_rpc_only.sql",
   "20270107090000_scp_iv_panel_reveal_boundary.sql",
 ];
 const hostedIdentities = [

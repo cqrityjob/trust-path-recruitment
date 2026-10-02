@@ -198,22 +198,27 @@ BEGIN
     '2.7 the holder cannot PLANT an internal note on their own request');
 END $$;
 
--- The legitimate submission shape still works. Without this, 2.7 could be
--- passing because holders can no longer file requests at all.
+-- The legitimate submission still works. Without this, 2.7 could be passing
+-- because holders can no longer file requests at all. Since 20270106090000 a
+-- holder files a request only through sp_submit_for_verification (no client
+-- holds INSERT on the table), so that is the path proven here. The request is
+-- undone in a subtransaction so later groups see the fixture unchanged.
 DO $$
-DECLARE _h uuid := 'cd000000-0000-0000-0000-000000000001'; _n int;
+DECLARE _h uuid := 'cd000000-0000-0000-0000-000000000001'; _id uuid; _note text := 'unset';
 BEGIN
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _h::text, true);
-  INSERT INTO public.sp_verification_requests
-    (holder_user_id, period_id, request_kind, status)
-  SELECT _h, e.id, 'employer_attestation', 'pending'
-    FROM public.sp_experience_periods e WHERE e.holder_user_id = _h LIMIT 0;
-  GET DIAGNOSTICS _n = ROW_COUNT;
-  -- The INSERT is deliberately a no-op on rows; what is asserted is that the
-  -- statement PARSED AND WAS PERMITTED against the narrowed column grant.
-  PERFORM pg_temp.ok(_n = 0,
-    '2.8 a holder INSERT naming only holder-supplied columns is still permitted');
+  BEGIN
+    SET LOCAL ROLE authenticated;
+    PERFORM set_config('request.jwt.claim.sub', _h::text, true);
+    _id := public.sp_submit_for_verification('cd000000-0000-0000-0000-0000000000c1', NULL, 'cqrityjob_review', NULL);
+    RESET ROLE;
+    SELECT decision_note INTO _note FROM public.sp_verification_requests WHERE id = _id;
+    RAISE EXCEPTION 'NP_PROBE_UNDO';
+  EXCEPTION WHEN raise_exception THEN
+    IF SQLERRM <> 'NP_PROBE_UNDO' THEN RAISE; END IF;
+  END;
+  RESET ROLE;
+  PERFORM pg_temp.ok(_id IS NOT NULL AND _note IS NULL,
+    '2.8 a holder still files a request through sp_submit_for_verification, with no internal note');
 END $$;
 
 
