@@ -584,6 +584,8 @@ DROP FUNCTION IF EXISTS public.scp_iv_panel_submit(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_reveal(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_conclude(uuid, text);
 DROP FUNCTION IF EXISTS public.scp_iv_panel_visible_assessments(uuid);
+-- The reveal rule the read policies and report path share (20270107090000).
+DROP FUNCTION IF EXISTS public.scp_iv_panel_hides_others(uuid);
 DROP FUNCTION IF EXISTS public.scp_iv_guard_panel_preserves_individual();
 -- The origin-in-case guard (20261020090000). Its three triggers go with the
 -- tables above; the function would otherwise survive and fail the zero-count.
