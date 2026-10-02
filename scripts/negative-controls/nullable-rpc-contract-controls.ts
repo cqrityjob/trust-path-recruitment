@@ -20,7 +20,11 @@ const TYPES = "src/integrations/supabase/types.ts";
 const BESKT = "src/lib/beskt/interview-conduct.functions.ts";
 const IV = "src/lib/interview-intelligence/runtime.functions.ts";
 const BESKT_SQL = "supabase/migrations/20261113090000_bcp_interview_conduct.sql";
-const IV_SQL = "supabase/migrations/20261107090000_scp_iv_report_basis_integrity.sql";
+// The definition in force: the guard reads the NEWEST migration that defines
+// the function, so a planted defect must land there. 20261107090000 created
+// it; 20270111090000 (P1-B 4/5) re-created it with the active-organisation
+// gate, in pg_get_functiondef layout.
+const IV_SQL = "supabase/migrations/20270111090000_interview_beskt_active_employer.sql";
 const GUARD = "nullable-rpc-contract:check";
 
 const MUTATIONS: readonly Mutation[] = [
@@ -90,9 +94,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "a migration gives the draft run id a DEFAULT, after which the generator CAN express it and the hand-maintained entry is stale rather than necessary",
     file: IV_SQL,
-    find: "  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid)\nRETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$\nDECLARE\n  _c public.scp_interview_cases%ROWTYPE;\n  _blockers text; _n integer; _next integer; _report_id uuid; _payload jsonb;\n  _latest_id",
+    find: "scp_iv_finalise_previewed_report(_case_id uuid, _expected_basis_hash text, _draft_run_id uuid)\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER",
     replace:
-      "  _case_id uuid, _expected_basis_hash text, _draft_run_id uuid DEFAULT NULL)\nRETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$\nDECLARE\n  _c public.scp_interview_cases%ROWTYPE;\n  _blockers text; _n integer; _next integer; _report_id uuid; _payload jsonb;\n  _latest_id",
+      "scp_iv_finalise_previewed_report(_case_id uuid, _expected_basis_hash text, _draft_run_id uuid DEFAULT NULL)\n RETURNS uuid\n LANGUAGE plpgsql\n SECURITY DEFINER",
     guard: GUARD,
     expect: "_draft_run_id has no DEFAULT",
   },

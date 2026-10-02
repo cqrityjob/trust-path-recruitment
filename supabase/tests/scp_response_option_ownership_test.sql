@@ -146,7 +146,8 @@ SELECT pg_temp.ok((SELECT count(DISTINCT fmt) FROM items) = 4,
 CREATE TEMP TABLE foreign_opt AS
 SELECT o.id, o.item_version_id FROM public.scp_item_options o
  WHERE o.item_version_id NOT IN (SELECT fi.item_version_id FROM public.scp_form_items fi
-                                  WHERE fi.form_id IN ((SELECT form_id FROM fx), (SELECT learning_form_id FROM fx)))
+                                  WHERE fi.form_id IN ((SELECT form_id FROM fx), (SELECT learning_form_id FROM fx),
+                                                       (SELECT biq_form_id FROM fx)))
    AND o.score_value = (SELECT max(o2.score_value) FROM public.scp_item_options o2 WHERE o2.item_version_id = o.item_version_id)
  ORDER BY o.id LIMIT 1;
 SELECT pg_temp.ok((SELECT count(*) FROM foreign_opt) = 1, 'OO.2 a top-scoring option of another assessment exists');
