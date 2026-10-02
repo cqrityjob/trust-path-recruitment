@@ -1,8 +1,7 @@
 # P1-B (1/5): one active-employer rule, applied to employer reports and reads
 
-**Status: PENDING.** This is an isolated PR from `origin/main`, the first of
-five for P1-B of the 2026-10-02 full hostile-user re-audit. It is not merged,
-and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#365, 3fff45f) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

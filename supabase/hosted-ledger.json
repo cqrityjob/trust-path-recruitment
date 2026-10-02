@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-02T10:37:18+00:00",
-  "readBy": "Read-only production verification after the six 2026-10-02 security-gate fixes merged (#358-#363). All 335 previous ledger identities preserved (their digest is still 1ae98c1c7b2b17300e5bade67516ad30); the six new rows are 20270102090000 through 20270107090000, applied by the official integration. md5 of version:name joined by newline over all 341 rows 1adae30d18655a674a605ea1cf8b500d, equal on the connector read and on this file. See docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.",
+  "readAt": "2026-10-02T18:40:13+00:00",
+  "readBy": "Read-only production verification after the nine 2026-10-02 re-audit fixes merged (#365, #368, #370, #371, #373, #374, #369, #366, #367). All 341 previous ledger identities preserved (their digest is still 1adae30d18655a674a605ea1cf8b500d); the nine new rows are 20270108090000 through 20270116090000, applied by the official integration. md5 of version:name joined by newline over all 350 rows 29249f9a262f9f33b0139403caa3293d, equal on the connector read and on this file. See docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1379,6 +1379,42 @@
     {
       "version": "20270107090000",
       "name": "scp_iv_panel_reveal_boundary"
+    },
+    {
+      "version": "20270108090000",
+      "name": "employer_active_reads"
+    },
+    {
+      "version": "20270109090000",
+      "name": "candidate_identity_active_employer"
+    },
+    {
+      "version": "20270110090000",
+      "name": "assessment_actions_active_employer"
+    },
+    {
+      "version": "20270111090000",
+      "name": "interview_beskt_active_employer"
+    },
+    {
+      "version": "20270112090000",
+      "name": "passport_attestation_active_employer"
+    },
+    {
+      "version": "20270113090000",
+      "name": "pending_employer_actions"
+    },
+    {
+      "version": "20270114090000",
+      "name": "sp_passport_target_holder"
+    },
+    {
+      "version": "20270115090000",
+      "name": "sp_claim_verification_stamp"
+    },
+    {
+      "version": "20270116090000",
+      "name": "scp_iv_findings_review_writes"
     }
   ]
 }

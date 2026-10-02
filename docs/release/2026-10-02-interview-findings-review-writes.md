@@ -1,8 +1,7 @@
 # P1-C: only an owner or admin reviews an interview finding, only its review fields, and the database records who
 
-**Status: PENDING.** This is an isolated PR from `origin/main` for P1-C of the
-2026-10-02 full hostile-user re-audit. It is not merged, and nothing was
-written to the hosted database.
+**Status: APPLIED.** Merged (#367, e81e4de) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|
