@@ -382,6 +382,52 @@ RB_OUT="$(run_rb_suite)"; RB_RC=$?
 set -e
 [ "$RB_RC" -eq 0 ] || { echo "$RB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employment-binding suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  employment-binding migration re-applied (postflight proved); suite passes again"
+# 20270105090000: a suspended employer reads no applicant through the definer
+# functions (P1-3 of the 2026-10-02 audit). The suite reproduces the read on
+# the pre-fix bodies itself (SE0). Negative controls, each of which MUST make
+# the suite fail on an assertion:
+#   NC1  the real rollback (membership checked, organisation not)       -> SE1.1
+#   NC2  a deny-list: only a 'suspended' organisation is refused         -> SE2
+run_se_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/suspended_employer_applicant_reads_test.sql 2>&1
+}
+se_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_se_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: suspended-employer negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: SE[0-9.]*' | head -1))"
+}
+echo "==> Running suspended-employer applicant read assertions"
+set +e
+SE_OUT="$(run_se_suite)"; SE_RC=$?
+set -e
+SE_PASSED="$(echo "$SE_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$SE_RC" -ne 0 ]; then
+  echo "$SE_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the suspended-employer suite exited with code ${SE_RC}." >&2
+  exit 1
+fi
+[ "$SE_PASSED" -ge 18 ] || { echo "$SE_OUT"; echo "FAIL: suspended-employer assertion shortfall: $SE_PASSED (floor 18)" >&2; exit 1; }
+echo "    ok  $SE_PASSED suspended-employer assertions passed (suspended read reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270105090000_suspended_employer_applicant_reads_rollback.sql >/dev/null
+se_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270105090000_suspended_employer_applicant_reads.sql >/dev/null
+SE_NC2_SQL="$(sed -n '/^-- ── 1\. The three gates/,/^-- ── 2\. Postflight/p' supabase/migrations/20270105090000_suspended_employer_applicant_reads.sql \
+  | sed "s/OR NOT coalesce(public.employer_is_active_status(_employer), false)/OR EXISTS (SELECT 1 FROM public.employers ee WHERE ee.id = _employer AND ee.status = 'suspended')/")"
+[ "$(grep -c "ee.status = 'suspended'" <<<"$SE_NC2_SQL")" -eq 3 ] || { echo "FAIL: suspended-employer NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$SE_NC2_SQL" >/dev/null
+se_nc_expect_fail "NC2 only 'suspended' refused"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270105090000_suspended_employer_applicant_reads.sql >/dev/null
+set +e
+SE_OUT="$(run_se_suite)"; SE_RC=$?
+set -e
+[ "$SE_RC" -eq 0 ] || { echo "$SE_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: suspended-employer suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  suspended-employer migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback

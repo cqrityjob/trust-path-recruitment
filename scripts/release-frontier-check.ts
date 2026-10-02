@@ -306,8 +306,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // until its PR merges and the official integration applies it. Its name
 // comes off this list in the change that records its hosted evidence.
 // Evidence to come: docs/release/2026-10-01-catalogue-read-hardening.md.
+// 20270105090000_suspended_employer_applicant_reads (P1-3 of the 2026-10-02
+// pre-launch audit: a suspended employer reads no applicant through the
+// definer functions) is pending BY DESIGN until its PR merges and the official
+// integration applies it. Its name comes off this list in the change that
+// records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-suspended-employer-applicant-reads.md.
 const expectedPending: string[] = [
   "20270101090000_catalogue_read_hardening.sql",
+  "20270105090000_suspended_employer_applicant_reads.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
