@@ -1,8 +1,7 @@
 # P1-F: a holder cannot set or change a claim's verification stamp
 
-**Status: PENDING.** This is an isolated PR from `origin/main` for P1-F of the
-2026-10-02 full hostile-user re-audit. It is not merged, and nothing was
-written to the hosted database.
+**Status: APPLIED.** Merged (#366, 2d0d6e5) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|
