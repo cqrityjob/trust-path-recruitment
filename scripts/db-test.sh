@@ -1441,6 +1441,59 @@ set -e
 [ "$AR_RC" -eq 0 ] || { echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: access-request suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  access-request migration re-applied (postflight proved); suite passes again"
 
+# 20270121090000: only the security function erases material on a security
+# vetting (P1-K of the 2026-10-02 final audit). The suite reproduces an owner
+# who cannot read a vetting case erasing its material (VE0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> VE1.1
+#   NC2  bcp_case_access_ok answering true for everyone                 -> VE-F
+run_ve_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_iv_erase_vetting_boundary_test.sql 2>&1
+}
+ve_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ve_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: vetting-erase negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: VE[0-9.A-Z-]*' | head -1))"
+}
+VE_MIG=supabase/migrations/20270121090000_scp_iv_erase_vetting_boundary.sql
+VE_RB=supabase/rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql
+echo "==> Running vetting erase-boundary assertions"
+psql_q -d "$TEST_DB" -f "$VE_MIG" >/dev/null
+set +e
+VE_OUT="$(run_ve_suite)"; VE_RC=$?
+set -e
+VE_PASSED="$(echo "$VE_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$VE_RC" -ne 0 ]; then
+  echo "$VE_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the vetting erase-boundary suite exited with code ${VE_RC}." >&2
+  exit 1
+fi
+[ "$VE_PASSED" -ge 6 ] || { echo "$VE_OUT"; echo "FAIL: vetting erase-boundary assertion shortfall: $VE_PASSED (floor 6)" >&2; exit 1; }
+echo "    ok  $VE_PASSED vetting erase-boundary assertions passed (owner erasure of vetting material reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$VE_RB" >/dev/null
+ve_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$VE_MIG" >/dev/null
+VE_ACCESS_OK="$(psql -tAq -d "$TEST_DB" -c "SELECT pg_get_functiondef('public.bcp_case_access_ok(uuid)'::regprocedure)")"
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+CREATE OR REPLACE FUNCTION public.bcp_case_access_ok(_case_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $f$ SELECT true $f$;
+SQL
+ve_nc_expect_fail "NC2 vetting helper always true"
+psql_q -d "$TEST_DB" -c "$VE_ACCESS_OK" >/dev/null
+psql_q -d "$TEST_DB" -f "$VE_MIG" >/dev/null
+set +e
+VE_OUT="$(run_ve_suite)"; VE_RC=$?
+set -e
+[ "$VE_RC" -eq 0 ] || { echo "$VE_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: vetting erase-boundary suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  vetting erase-boundary migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
