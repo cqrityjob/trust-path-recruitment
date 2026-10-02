@@ -689,6 +689,66 @@ set -e
 [ "$PR_RC" -eq 0 ] || { echo "$PR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: panel-reveal suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  panel-reveal migration re-applied (postflight proved); suite passes again"
 
+# 20270116090000: only an owner or admin reviews an interview finding, only
+# its review columns, and the database records who (P1-C of the 2026-10-02
+# re-audit). The suite reproduces a plain member settling, rewriting and
+# misattributing findings on the pre-fix grants and policy itself (FR0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> FR1.1
+#   NC2  table-level UPDATE granted back (policy kept)                  -> FR1.3
+#   NC3  the update policy back on case access alone (grants kept)      -> FR1.1
+#   NC4  the attribution trigger dropped                                -> FR2.2
+run_fr_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_iv_findings_review_writes_test.sql 2>&1
+}
+fr_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_fr_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: findings-review negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: FR[0-9.]*' | head -1))"
+}
+FR_MIG=supabase/migrations/20270116090000_scp_iv_findings_review_writes.sql
+FR_RB=supabase/rollback/20270116090000_scp_iv_findings_review_writes_rollback.sql
+echo "==> Running Interview findings review-writes assertions"
+psql_q -d "$TEST_DB" -f "$FR_MIG" >/dev/null
+set +e
+FR_OUT="$(run_fr_suite)"; FR_RC=$?
+set -e
+FR_PASSED="$(echo "$FR_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$FR_RC" -ne 0 ]; then
+  echo "$FR_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the findings review-writes suite exited with code ${FR_RC}." >&2
+  exit 1
+fi
+[ "$FR_PASSED" -ge 16 ] || { echo "$FR_OUT"; echo "FAIL: findings review-writes assertion shortfall: $FR_PASSED (floor 16)" >&2; exit 1; }
+echo "    ok  $FR_PASSED findings review-writes assertions passed (member rewrites reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$FR_RB" >/dev/null
+fr_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$FR_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "GRANT UPDATE ON public.scp_interview_findings TO authenticated" >/dev/null
+fr_nc_expect_fail "NC2 table-level UPDATE back"
+psql_q -d "$TEST_DB" -f "$FR_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+ALTER POLICY scp_interview_findings_update ON public.scp_interview_findings
+  USING (public.scp_iv_can_write_case(case_id))
+  WITH CHECK (public.scp_iv_can_write_case(case_id));
+SQL
+fr_nc_expect_fail "NC3 policy on case access alone"
+psql_q -d "$TEST_DB" -f "$FR_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "DROP TRIGGER scp_interview_findings_review_stamp ON public.scp_interview_findings" >/dev/null
+fr_nc_expect_fail "NC4 no attribution trigger"
+psql_q -d "$TEST_DB" -f "$FR_MIG" >/dev/null
+set +e
+FR_OUT="$(run_fr_suite)"; FR_RC=$?
+set -e
+[ "$FR_RC" -eq 0 ] || { echo "$FR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: findings review-writes suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  findings review-writes migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
