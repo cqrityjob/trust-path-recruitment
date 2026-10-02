@@ -5473,6 +5473,13 @@ fi
 # meaning. Its rollback runs before 20261129090000's, because that one
 # restores functions this one extends.
 # ---------------------------------------------------------------------------
+echo "==> Standing 20270111090000 down before the 20261203090000 rollback"
+# 20270111090000 (P1-B 4/5) re-creates scp_iv_confirm_transcript_basis and
+# scp_iv_case_row_visible, whose 20261203090000 bodies that rollback pins. It
+# comes down here; its own block above re-applied and proved it already, and
+# every suite from here on is an older one that predates it.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20270111090000_interview_beskt_active_employer_rollback.sql >/dev/null
 echo "==> Standing 20261203090000 down before 20261202090000"
 # It re-creates scp_interview_cases' read policy on 20261130090000's BESKT
 # predicates, so it comes down before the 20261202/20261201/20261130 cycles
