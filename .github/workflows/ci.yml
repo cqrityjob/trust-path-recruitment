@@ -2012,6 +2012,8 @@ jobs:
       # Swedish/English copy, on desktop and a 375px phone. Server functions
       # are answered from an in-memory fixture; hosted Supabase is blocked.
       - name: Security Work programme browser journey
+        env:
+          E2E_BASE_URL: http://localhost:3100
         run: bun run e2e:security-work-programme
 
       # "Utforska nu" on the Career Discovery recommendation is a real link

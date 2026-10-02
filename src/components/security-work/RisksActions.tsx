@@ -706,6 +706,10 @@ export function SecurityRisksActions() {
   const [creating, setCreating] = useState<"risk" | "action" | null>(null);
   const [selectedRisk, setSelectedRisk] = useState<string | null>(search.riskId ?? null);
   const [actionFilter, setActionFilter] = useState<"open" | "overdue" | "high" | "all">("open");
+  // The action just saved stays on screen whatever the filter says, so a
+  // follow-up that completes or cancels it shows its new status instead of
+  // vanishing from the "Open" list.
+  const [recentlySavedActionId, setRecentlySavedActionId] = useState<string | null>(null);
   const [decision, setDecision] = useState<{
     id: string;
     status: "accepted" | "closed";
@@ -755,14 +759,16 @@ export function SecurityRisksActions() {
   const { risks, actions, assets, riskAssets, analyses, gaps, evidenceLinks, today } =
     programme.data;
   const openActions = actions.filter(isOpenAction);
-  const visibleActions = actions.filter((action) =>
-    actionFilter === "all"
-      ? true
-      : actionFilter === "open"
-        ? isOpenAction(action)
-        : actionFilter === "overdue"
-          ? isOverdue(action, today)
-          : isOpenAction(action) && ["high", "urgent"].includes(action.priority),
+  const visibleActions = actions.filter(
+    (action) =>
+      action.id === recentlySavedActionId ||
+      (actionFilter === "all"
+        ? true
+        : actionFilter === "open"
+          ? isOpenAction(action)
+          : actionFilter === "overdue"
+            ? isOverdue(action, today)
+            : isOpenAction(action) && ["high", "urgent"].includes(action.priority)),
   );
   const assetNames = (riskId: string) =>
     riskAssets
@@ -851,7 +857,10 @@ export function SecurityRisksActions() {
                 variant={actionFilter === value ? "default" : "outline"}
                 aria-pressed={actionFilter === value}
                 className="min-h-10"
-                onClick={() => setActionFilter(value)}
+                onClick={() => {
+                  setRecentlySavedActionId(null);
+                  setActionFilter(value);
+                }}
               >
                 {
                   {
@@ -932,6 +941,7 @@ export function SecurityRisksActions() {
                       assessmentId={action.assessment_id}
                       onDirtyChange={setEditDirty}
                       onSaved={() => {
+                        setRecentlySavedActionId(action.id);
                         setEdit(null);
                         setEditDirty(false);
                         void refresh();

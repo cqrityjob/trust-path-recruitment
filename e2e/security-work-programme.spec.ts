@@ -651,4 +651,25 @@ test("a new organisation walks the programme end to end, in Swedish, without AI"
     await go(page, "/gaps");
     await expect(page.getByTestId("sw-gap-row")).toContainText("No action");
   });
+
+  await test.step("Follow-up: an action completed from the list stays on screen with its new status", async () => {
+    // The list opens on the "Open" filter. Completing an action must not make
+    // it vanish mid-follow-up; the row shows "Completed" until the user
+    // chooses another filter.
+    await go(page, "/risks");
+    await page.getByRole("button", { name: "Follow up", exact: true }).click();
+    await page.getByLabel("Status", { exact: true }).selectOption("completed");
+    await page.getByLabel("Decision rationale").fill("Route inspected; patrol in place.");
+    await page.getByLabel("Evidence of completion").fill("Patrol log, week 1.");
+    await page.getByRole("button", { name: "Save action" }).click();
+    await expect(page.getByTestId("sw-action-row")).toContainText("Completed");
+    await expect(
+      page.getByRole("button", { name: "Follow up", exact: true }).filter({ visible: true }),
+    ).toHaveCount(0);
+    await page.getByRole("button", { name: /^Open \(0\)$/ }).click();
+    await expect(page.getByTestId("sw-action-row")).toHaveCount(0);
+    await expect(page.getByText("No actions match the filter.")).toBeVisible();
+    await page.getByRole("button", { name: "All", exact: true }).click();
+    await expect(page.getByTestId("sw-action-row")).toContainText("Completed");
+  });
 });
