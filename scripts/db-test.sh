@@ -8137,7 +8137,8 @@ else
     "3.2 but cannot ask their own unapproved organisation to confirm their employment" \
     "3.4 the holder cannot decide their own employment confirmation" \
     "4.1 a candidate sees no organisation they are unrelated to and that has no live job" \
-    "5.1 a request placed before suspension is still in the employer's queue"; do
+    "5.1 a suspended organisation's owner no longer reads its attestation queue (20270112090000)" \
+    "5.4 and the request placed before suspension is back in the reactivated employer's queue"; do
     if ! echo "$EMM_OUT" | grep -qF "$REQUIRED"; then
       echo "FAIL: a mandatory employer-matching assertion did not run: ${REQUIRED}" >&2
       suite_failed "Security Passport employer matching and eligibility (missing: ${REQUIRED})"

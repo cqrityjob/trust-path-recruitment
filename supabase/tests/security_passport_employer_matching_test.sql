@@ -436,13 +436,15 @@ BEGIN
     pg_temp.employer_status(_nordvakt) = 'suspended',
     '5.0 the organisation is suspended by the platform, through moderation');
 
-  -- 5.1 The request placed before the suspension is still the employer's to
-  --     answer. Read as the OWNER, through the queue function itself.
+  -- 5.1 Since 20270112090000 (P1-B 5/5) a suspended organisation no longer
+  --     reads its attestation queue: the request (and the holder's employment
+  --     details) waits until the platform reactivates it. Read as the OWNER,
+  --     through the queue function itself.
   PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
-  _queue := public.sp_employer_attestation_queue(_nordvakt);
-  PERFORM pg_temp.ok(
-    EXISTS (SELECT 1 FROM jsonb_array_elements(_queue) e WHERE e->>'id' = _req::text),
-    '5.1 a request placed before suspension is still in the employer''s queue');
+  PERFORM pg_temp.must_fail(
+    format('SELECT public.sp_employer_attestation_queue(%L)', _nordvakt),
+    'SP_NOT_EMPLOYER_REPRESENTATIVE',
+    '5.1 a suspended organisation''s owner no longer reads its attestation queue (20270112090000)');
 
   -- 5.2 And a NEW one cannot be started against it.
   PERFORM set_config('request.jwt.claim.sub', _nadia::text, true);
@@ -458,6 +460,14 @@ BEGIN
   PERFORM pg_temp.ok(
     pg_temp.employer_status(_nordvakt) = 'active',
     '5.3 and reactivation restores it, so the fixture leaves no residue');
+
+  -- 5.4 The request placed before the suspension was kept, and is the
+  --     employer's to answer again once it is active.
+  PERFORM set_config('request.jwt.claim.sub', _owner::text, true);
+  _queue := public.sp_employer_attestation_queue(_nordvakt);
+  PERFORM pg_temp.ok(
+    EXISTS (SELECT 1 FROM jsonb_array_elements(_queue) e WHERE e->>'id' = _req::text),
+    '5.4 and the request placed before suspension is back in the reactivated employer''s queue');
 
   RESET ROLE;
 END $$;
