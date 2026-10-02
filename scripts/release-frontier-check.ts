@@ -333,7 +333,16 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // integration applies it. Its name comes off this list in the change that
 // records its hosted evidence. See
 // docs/security-intelligence/security-work-programme.md.
-const expectedPending: string[] = ["20270117090000_security_work_programme.sql"];
+// 20270118090000_assessment_assignment_insert_columns (P1-L of the 2026-10-02
+// final audit: an employer creates an assessment assignment as an invitation
+// only and cannot write its result) is pending BY DESIGN until its PR merges
+// and the official integration applies it. Its name comes off this list in
+// the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-assessment-assignment-insert-columns.md.
+const expectedPending: string[] = [
+  "20270117090000_security_work_programme.sql",
+  "20270118090000_assessment_assignment_insert_columns.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
