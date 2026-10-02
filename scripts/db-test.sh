@@ -979,6 +979,64 @@ set -e
 [ "$IB_RC" -eq 0 ] || { echo "$IB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: interview-beskt suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  interview-beskt migration re-applied (postflight proved); suite passes again"
 
+# 20270112090000: employer attestation in the Security Passport requires an
+# ACTIVE organisation (P1-B 5/5 of the 2026-10-02 re-audit). The suite
+# reproduces a suspended employer seeing its queue and verifying a holder's
+# employment on the pre-fix state itself (PA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> PA1.1
+#   NC2  only sp_employer_attestation_queue back on its pre-fix body    -> PA1.1
+#   NC3  only sp_verifier_decide back on its pre-fix body               -> PA1.2
+run_pa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/passport_attestation_active_employer_test.sql 2>&1
+}
+pa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_pa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: passport-attestation negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: PA[0-9.]*' | head -1))"
+}
+PA_MIG=supabase/migrations/20270112090000_passport_attestation_active_employer.sql
+PA_RB=supabase/rollback/20270112090000_passport_attestation_active_employer_rollback.sql
+pa_plant_fn() {
+  local sql; sql="$(sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\(END; \\)\\?\\\$function\\\$/p" "$PA_RB")"
+  grep -q "has_employer_role(" <<<"$sql" && ! grep -q "has_active_employer_role" <<<"$sql" \
+    || { echo "FAIL: passport-attestation control could not plant the pre-fix $1" >&2; exit 1; }
+  psql_q -d "$TEST_DB" -c "$sql" >/dev/null
+}
+echo "==> Running Passport attestation active-employer assertions"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+set +e
+PA_OUT="$(run_pa_suite)"; PA_RC=$?
+set -e
+PA_PASSED="$(echo "$PA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$PA_RC" -ne 0 ]; then
+  echo "$PA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the passport attestation suite exited with code ${PA_RC}." >&2
+  exit 1
+fi
+[ "$PA_PASSED" -ge 16 ] || { echo "$PA_OUT"; echo "FAIL: passport attestation assertion shortfall: $PA_PASSED (floor 16)" >&2; exit 1; }
+echo "    ok  $PA_PASSED passport attestation assertions passed (suspended attestation reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$PA_RB" >/dev/null
+pa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+pa_plant_fn sp_employer_attestation_queue
+pa_nc_expect_fail "NC2 pre-fix attestation queue"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+pa_plant_fn sp_verifier_decide
+pa_nc_expect_fail "NC3 pre-fix decision"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+set +e
+PA_OUT="$(run_pa_suite)"; PA_RC=$?
+set -e
+[ "$PA_RC" -eq 0 ] || { echo "$PA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: passport attestation suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  passport attestation migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
