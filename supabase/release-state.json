@@ -2608,6 +2608,19 @@
       "rollback": "supabase/rollback/20270115090000_sp_claim_verification_stamp_rollback.sql",
       "verify": "SELECT position('verified_at IS DISTINCT FROM OLD.verified_at' IN prosrc) > 0 FROM pg_proc WHERE oid = 'public.sp_guard_trust_fields_immutable()'::regprocedure; -- true; md5 equals the merged file. SELECT with_check FROM pg_policies WHERE tablename='sp_claims' AND policyname='sp_claims_self_update'; -- ends with verified_at IS NULL. SELECT count(*) FROM sp_claims WHERE assertion_level='self_declared' AND (verified_at IS NOT NULL OR verified_by_user_id IS NOT NULL); -- 0. Rolled-back probe as a holder with a live Passport session: UPDATE sp_claims SET verified_at = now() on an own self-declared claim -> SP_TRUST_FIELD_IMMUTABLE; an ordinary own-field edit still updates 1 row. Row counts unchanged.",
       "note": "P1-F of the 2026-10-02 full hostile-user re-audit (docs/release/2026-10-02-passport-verification-stamp.md). sp_claims_self_update required verified_by_user_id IS NULL but nothing covered verified_at, and the trust-field trigger guarded only assertion_level and lifecycle_state, so a holder wrote verified_at on their own self-declared credential and recipient payloads showed a verification time. Two independent layers: sp_guard_trust_fields_immutable now refuses any change to verified_at or verified_by_user_id on sp_claims outside sp.verification_context (only sp_verifier_decide sets it), and sp_claims_self_update's WITH CHECK also requires verified_at IS NULL. The period table shares the trigger and is unaffected. Hosted: every stamped claim has an approved decision; no self-declared claim carries a stamp, and the migration refuses to apply if one does. No row changes; grants unchanged. Rollback restores the hosted trigger body (md5 5023814211fa52d78d4af1d14aab19cf) and policy (md5 0dfb5e338f259e51ea3d11980b578ed7)."
+    },
+    {
+      "file": "20270116090000_scp_iv_findings_review_writes.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "function",
+          "object": "scp_iv_stamp_finding_review()"
+        }
+      ],
+      "rollback": "supabase/rollback/20270116090000_scp_iv_findings_review_writes_rollback.sql",
+      "verify": "SELECT has_table_privilege('authenticated','public.scp_interview_findings','UPDATE'); -- false. SELECT column_name FROM information_schema.column_privileges WHERE table_name='scp_interview_findings' AND grantee='authenticated' AND privilege_type='UPDATE'; -- human_note, human_state, resolution_state. SELECT qual, with_check FROM pg_policies WHERE policyname='scp_interview_findings_update'; -- scp_iv_can_write_case AND has_employer_role(owner, admin). SELECT tgname FROM pg_trigger WHERE tgname='scp_interview_findings_review_stamp'; -- 1 row; function md5 equals the merged file. Hosted has 0 findings; the behavioural probe is the isolated suite. Row counts unchanged.",
+      "note": "P1-C of the 2026-10-02 full hostile-user re-audit (docs/release/2026-10-02-interview-findings-review-writes.md). authenticated held UPDATE on every column of scp_interview_findings and the update policy required only scp_iv_can_write_case (any member), so a plain member could mark a finding resolved or not relevant (dropping it from the report's unresolved list), rewrite the AI run's recorded statement, kind and citations, and attribute the review to someone else. Three layers: UPDATE is granted only on resolution_state, human_state and human_note; the policy additionally requires an owner or admin of the case's employer (the bar for finalising); and a BEFORE UPDATE trigger stamps human_actor_id = auth.uid() and human_actor_at = now() whenever a review column changes. Reads, scp_iv_record_findings and the report builders are unchanged. Hosted: 0 findings; no row changes. Rollback restores table-level UPDATE, the hosted policy (md5 eedd2ff88ee20bc5d5fdfeb1f6e1be33) and drops the trigger."
     }
   ], 
   "policyVersion": 2, 

@@ -364,6 +364,12 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // pending BY DESIGN until its PR merges and the official integration applies
 // it. Its name comes off this list in the change that records its hosted
 // evidence. Evidence to come: docs/release/2026-10-02-passport-verification-stamp.md.
+// 20270116090000_scp_iv_findings_review_writes (P1-C of the 2026-10-02 full
+// re-audit: only an owner or admin reviews an interview finding, only its
+// review columns, and the database records who) is pending BY DESIGN until its
+// PR merges and the official integration applies it. Its name comes off this
+// list in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-interview-findings-review-writes.md.
 const expectedPending: string[] = [
   "20270108090000_employer_active_reads.sql",
   "20270109090000_candidate_identity_active_employer.sql",
@@ -373,6 +379,7 @@ const expectedPending: string[] = [
   "20270113090000_pending_employer_actions.sql",
   "20270114090000_sp_passport_target_holder.sql",
   "20270115090000_sp_claim_verification_stamp.sql",
+  "20270116090000_scp_iv_findings_review_writes.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
