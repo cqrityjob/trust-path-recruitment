@@ -382,6 +382,53 @@ RB_OUT="$(run_rb_suite)"; RB_RC=$?
 set -e
 [ "$RB_RC" -eq 0 ] || { echo "$RB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employment-binding suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  employment-binding migration re-applied (postflight proved); suite passes again"
+# 20270103090000: only an assessment run is scored by scp_submit_attempt
+# (P1-1 of the 2026-10-02 audit). The suite reproduces a learning run scored
+# as full-credit assessment evidence on the pre-fix body itself (SA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (any run of the caller's is scored)          -> SA1.1
+#   NC2  only an employer-less learning run is refused (training runs
+#        under an employer still score)                                  -> SA2.1
+run_sa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_submit_assessment_only_test.sql 2>&1
+}
+sa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_sa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: assessment-only negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: SA[0-9.]*' | head -1))"
+}
+echo "==> Running assessment-only submission assertions"
+set +e
+SA_OUT="$(run_sa_suite)"; SA_RC=$?
+set -e
+SA_PASSED="$(echo "$SA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$SA_RC" -ne 0 ]; then
+  echo "$SA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the assessment-only suite exited with code ${SA_RC}." >&2
+  exit 1
+fi
+[ "$SA_PASSED" -ge 25 ] || { echo "$SA_OUT"; echo "FAIL: assessment-only assertion shortfall: $SA_PASSED (floor 25)" >&2; exit 1; }
+echo "    ok  $SA_PASSED assessment-only assertions passed (learning run scored pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270103090000_scp_submit_assessment_only_rollback.sql >/dev/null
+sa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270103090000_scp_submit_assessment_only.sql >/dev/null
+SA_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION/,/^END; \$function\$/p' supabase/migrations/20270103090000_scp_submit_assessment_only.sql \
+  | sed "s/IF _a.mode IS DISTINCT FROM 'assessment' THEN/IF _a.mode = 'learning' AND _a.issuer_organization_id IS NULL THEN/")"
+echo "$SA_NC2_SQL" | grep -q "_a.issuer_organization_id IS NULL THEN" || { echo "FAIL: assessment-only NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$SA_NC2_SQL" >/dev/null
+sa_nc_expect_fail "NC2 employer learning runs still scored"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270103090000_scp_submit_assessment_only.sql >/dev/null
+set +e
+SA_OUT="$(run_sa_suite)"; SA_RC=$?
+set -e
+[ "$SA_RC" -eq 0 ] || { echo "$SA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assessment-only suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  assessment-only migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
