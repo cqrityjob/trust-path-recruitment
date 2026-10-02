@@ -33,7 +33,8 @@ function configurationReason(env: Env): string | null {
   }
   return null;
 }
-async function loadConfiguration(
+/** Exported for the Security AI assistant: the same activation gate, the same env. */
+export async function loadConfiguration(
   caller: SecurityWorkCaller,
   workspaceId: string,
   env: Env,
