@@ -1,13 +1,13 @@
 # P1-K: only the security function erases material on a security vetting
 
 **Status: PENDING.** This PR fixes P1-K of the 2026-10-02 final hostile-user
-audit. It builds on P1-G (20270119090000) and merges after it. It is not
+audit. It builds on P1-G (20270120090000) and merges after it. It is not
 merged, and nothing was written to the hosted database.
 
 | Part | File |
 |---|---|
-| Migration | `supabase/migrations/20270120090000_scp_iv_erase_vetting_boundary.sql` |
-| Rollback | `supabase/rollback/20270120090000_scp_iv_erase_vetting_boundary_rollback.sql` |
+| Migration | `supabase/migrations/20270121090000_scp_iv_erase_vetting_boundary.sql` |
+| Rollback | `supabase/rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql` |
 | Suite | `supabase/tests/scp_iv_erase_vetting_boundary_test.sql` (6 assertions) |
 
 ## 1. Root cause
@@ -26,7 +26,7 @@ case they cannot even read. A rolled-back production probe showed
 refuses with `SCP_IV_NOT_CASE_MEMBER`, exactly as
 `scp_iv_confirm_transcript_basis` does. The body is otherwise the hosted
 one: md5 `fc3984e279784abff4f197f0b3aa45a9`, pinned by the rollback. The
-added block is marked `20270120090000`.
+added block is marked `20270121090000`.
 
 I checked every other role-gated SECURITY DEFINER `scp_iv_*` function:
 - the case helpers and `confirm_transcript_basis` already check the vetting

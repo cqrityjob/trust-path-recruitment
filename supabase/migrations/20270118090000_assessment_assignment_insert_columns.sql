@@ -31,7 +31,7 @@
 -- SELECT; the service-role completion path; any row. Production holds 0
 -- completed legacy assignments without a run, so nothing to repair.
 --
--- Rollback: supabase/rollback/20270117090000_assessment_assignment_insert_columns_rollback.sql
+-- Rollback: supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql
 -- Suite:    supabase/tests/assessment_assignment_insert_columns_test.sql
 -- =============================================================================
 

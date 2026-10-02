@@ -1,4 +1,4 @@
--- P1-G (20270119090000): an access-request approval admits a person; it
+-- P1-G (20270120090000): an access-request approval admits a person; it
 -- cannot make an owner or change a live member's role.
 --
 --   AR-F the fixture: employer E (active) with owner O, admin A, member M; a
@@ -91,7 +91,7 @@ SELECT pg_temp.ok(pg_temp.owners() = 1 AND pg_temp.role_of((SELECT a FROM ar)) =
 
 -- ── AR0 reproduction on the hosted body ──────────────────────────────────
 SAVEPOINT pre_fix;
-\ir ../rollback/20270119090000_access_request_no_role_escalation_rollback.sql
+\ir ../rollback/20270120090000_access_request_no_role_escalation_rollback.sql
 SELECT pg_temp.ok(pg_temp.approve((SELECT a FROM ar), pg_temp.req((SELECT a FROM ar)), 'owner') = 'ok'
   AND pg_temp.role_of((SELECT a FROM ar)) = 'owner/active' AND pg_temp.owners() = 2,
   'AR0.1 REPRODUCTION: pre-fix, admin A approves A''s own request as owner and becomes an owner');

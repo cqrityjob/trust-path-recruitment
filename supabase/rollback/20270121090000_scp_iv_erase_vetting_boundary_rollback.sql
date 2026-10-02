@@ -1,4 +1,4 @@
--- Rollback of 20270120090000_scp_iv_erase_vetting_boundary.
+-- Rollback of 20270121090000_scp_iv_erase_vetting_boundary.
 --
 -- !! THIS REOPENS P1-K !! An owner or admin who is not the security officer
 -- can again erase material on a security vetting. Run it ONLY in an isolated

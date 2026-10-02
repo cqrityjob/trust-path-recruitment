@@ -1,13 +1,13 @@
 # P1-G: an access-request approval admits a person; it cannot make an owner
 
 **Status: PENDING.** This PR fixes P1-G of the 2026-10-02 final hostile-user
-audit. It builds on P1-H (20270118090000) and merges after it. It is not
+audit. It builds on P1-H (20270119090000) and merges after it. It is not
 merged, and nothing was written to the hosted database.
 
 | Part | File |
 |---|---|
-| Migration | `supabase/migrations/20270119090000_access_request_no_role_escalation.sql` |
-| Rollback | `supabase/rollback/20270119090000_access_request_no_role_escalation_rollback.sql` |
+| Migration | `supabase/migrations/20270120090000_access_request_no_role_escalation.sql` |
+| Rollback | `supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql` |
 | Suite | `supabase/tests/access_request_no_role_escalation_test.sql` (12 assertions) |
 
 ## 1. Root cause
@@ -25,7 +25,7 @@ and the team UI deliberately offers no "approve as owner".
 
 ## 2. Fix
 
-The function body is the hosted one plus one block, marked `20270119090000`.
+The function body is the hosted one plus one block, marked `20270120090000`.
 Unless the caller is a platform admin:
 
 | Rule | Refusal |
