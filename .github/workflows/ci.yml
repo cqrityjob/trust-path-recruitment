@@ -2006,6 +2006,14 @@ jobs:
       - name: Signed-in header desktop widths
         run: bun run candidate-header-desktop:e2e
 
+      # Security Work programme: the routed shell, grouped navigation, the
+      # command-center overview, mandate → assets → baseline → gaps → risks &
+      # actions → management report, the Security AI panel's no-AI path and
+      # Swedish/English copy, on desktop and a 375px phone. Server functions
+      # are answered from an in-memory fixture; hosted Supabase is blocked.
+      - name: Security Work programme browser journey
+        run: bun run e2e:security-work-programme
+
       # "Utforska nu" on the Career Discovery recommendation is a real link
       # to the occupation's page (its guide, or its reviewed catalogue page
       # where no guide is published), and the result survives the trip there

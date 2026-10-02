@@ -169,6 +169,8 @@ export function SecurityBaselinePage() {
     assessment.id,
   );
   const setAnswer = async (question: BaselineQuestion, value: BaselineAnswerValue) => {
+    // Keep the domain the user is working in open, even once it is complete.
+    setExpanded(question.domain);
     setBusy(question.id);
     setError(null);
     const result = await answer({
@@ -296,9 +298,7 @@ export function SecurityBaselinePage() {
                 type="button"
                 className="flex min-h-14 w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left"
                 aria-expanded={isOpen}
-                onClick={() =>
-                  setExpanded(isOpen ? "" : domain.id)
-                }
+                onClick={() => setExpanded(isOpen ? "" : domain.id)}
               >
                 <span className="min-w-0">
                   <span className="block font-semibold">
