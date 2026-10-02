@@ -166,7 +166,7 @@ BEGIN
   PERFORM pg_temp.leave();
 
   -- The third employer builds its case while active, and is then suspended:
-  -- continuity access to work that exists is what ML7 checks.
+  -- ML7 checks what a suspended organisation still reaches.
   PERFORM pg_temp.become(_s);
   _case_s := public.scp_iv_create_case(_emp_s, 'SYNTETISK intervju S', _open, 'SYNTETISK kandidat', NULL, 'ML-S-1');
   PERFORM pg_temp.leave();
@@ -456,18 +456,20 @@ END $$;
 
 
 -- ###########################################################################
-DO $$ BEGIN RAISE NOTICE 'GROUP ML7 — suspended and pending employer behaviour is unchanged'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP ML7 — suspended and pending employer behaviour (case read gated by 20270111090000)'; END $$;
 -- ###########################################################################
 DO $$
 DECLARE f ml%ROWTYPE; _n integer;
 BEGIN
   SELECT * INTO f FROM ml;
 
-  -- The suspended employer's owner: continuity access to the case that
-  -- exists and the draft method it pins; no new case; empty startable list.
+  -- The suspended employer's owner: since 20270111090000 (P1-B 4/5) the
+  -- case itself, which carries candidate data, is closed to a non-active
+  -- organisation. The draft method it pins stays readable (library content,
+  -- not candidate data); no new case; empty startable list.
   PERFORM pg_temp.become('73000000-0000-4000-8000-00000000000d');
-  PERFORM pg_temp.ok(public.scp_iv_can_read_case(f.case_s),
-    'ML7.1 a suspended employer''s owner still reads the case that exists (continuity, unchanged)');
+  PERFORM pg_temp.ok(NOT public.scp_iv_can_read_case(f.case_s),
+    'ML7.1 a suspended employer''s owner no longer reads the case that exists (20270111090000: active organisation required)');
   PERFORM pg_temp.ok(public.scp_iv_employer_may_read_method(f.trust_method),
     'ML7.2 and the draft method that case pins -- continuity is not re-gated on employer status');
   SELECT count(*) INTO _n FROM public.scp_interview_conduct_steps;
