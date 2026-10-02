@@ -1,9 +1,7 @@
 # P1-B (2/5): candidate identity, interview notes and candidate notifications require an active organisation
 
-**Status: PENDING.** This is the second of five PRs for P1-B of the
-2026-10-02 full hostile-user re-audit. It builds on 20270108090000
-(`has_active_employer_role`, P1-B 1/5) and merges after it. It is not merged,
-and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#368, 23e8bf4) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

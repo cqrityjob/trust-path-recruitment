@@ -317,77 +317,23 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder or learning-run leak.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.
-// 20270108090000_employer_active_reads (P1-B 1/5 of the 2026-10-02 full
-// re-audit: one active-employer rule, has_active_employer_role, applied to
-// employer reports and assessment reads) is pending BY DESIGN until its PR
-// merges and the official integration applies it. Its name comes off this list
-// in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-employer-active-reads.md.
-// 20270109090000_candidate_identity_active_employer (P1-B 2/5 of the
-// 2026-10-02 full re-audit: candidate identity, interview notes and candidate
-// notifications require an active organisation) is pending BY DESIGN until its
-// PR merges and the official integration applies it. Its name comes off this
-// list in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-candidate-identity-active-employer.md.
-// 20270110090000_assessment_actions_active_employer (P1-B 3/5 of the
-// 2026-10-02 full re-audit: assessment actions require an active organisation)
-// is pending BY DESIGN until its PR merges and the official integration applies
-// it. Its name comes off this list in the change that records its hosted
-// evidence. Evidence to come:
-// docs/release/2026-10-02-assessment-actions-active-employer.md.
-// 20270111090000_interview_beskt_active_employer (P1-B 4/5 of the 2026-10-02
-// full re-audit: Interview Intelligence and BESKT require an active
-// organisation) is pending BY DESIGN until its PR merges and the official
-// integration applies it. Its name comes off this list in the change that
-// records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-interview-beskt-active-employer.md.
-// 20270112090000_passport_attestation_active_employer (P1-B 5/5 of the
-// 2026-10-02 full re-audit: employer attestation in the Security Passport
-// requires an active organisation) is pending BY DESIGN until its PR merges and
-// the official integration applies it. Its name comes off this list in the
-// change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-passport-attestation-active-employer.md.
-// 20270113090000_pending_employer_actions (P1-D of the 2026-10-02 full
-// re-audit: only an active, approved organisation assigns, invites, schedules,
-// trains or binds people) is pending BY DESIGN until its PR merges and the
-// official integration applies it. Its name comes off this list in the change
-// that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-pending-employer-actions.md.
-// 20270114090000_sp_passport_target_holder (P1-E of the 2026-10-02 full
-// re-audit: a Passport request or evidence row names exactly one entry, and it
-// is the holder's own) is pending BY DESIGN until its PR merges and the
-// official integration applies it. Its name comes off this list in the change
-// that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-passport-target-holder.md.
-// 20270115090000_sp_claim_verification_stamp (P1-F of the 2026-10-02 full
-// re-audit: a holder cannot set or change a claim's verification stamp) is
-// pending BY DESIGN until its PR merges and the official integration applies
-// it. Its name comes off this list in the change that records its hosted
-// evidence. Evidence to come: docs/release/2026-10-02-passport-verification-stamp.md.
-// 20270116090000_scp_iv_findings_review_writes (P1-C of the 2026-10-02 full
-// re-audit: only an owner or admin reviews an interview finding, only its
-// review columns, and the database records who) is pending BY DESIGN until its
-// PR merges and the official integration applies it. Its name comes off this
-// list in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-interview-findings-review-writes.md.
+// 2026-10-02 ~18:40 UTC: the nine re-audit fixes (P1-B 1/5-5/5 #365 #368
+// #370 #371 #373, P1-D #374, P1-E #369, P1-F #366, P1-C #367) verified
+// applied read-only: 20270108090000 .. 20270116090000 are in the ledger (350
+// rows, digest 29249f9a262f9f33b0139403caa3293d; the first 341 unchanged), every deployed
+// function body equals its merged source, policies, grants and constraints
+// are exactly as merged, and a rolled-back probe of each fix as real
+// principals found no suspended- or pending-organisation access, no
+// cross-holder Passport write and no forged verification stamp.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-02-reaudit-p1-fixes-hosted-verification.md.
 // 20270117090000_security_work_programme (Security Work programme: mandate,
 // protected assets, baseline, gaps, AI suggestions, plans, management
 // reports) is pending BY DESIGN until its PR merges and the official
 // integration applies it. Its name comes off this list in the change that
 // records its hosted evidence. See
 // docs/security-intelligence/security-work-programme.md.
-const expectedPending: string[] = [
-  "20270108090000_employer_active_reads.sql",
-  "20270109090000_candidate_identity_active_employer.sql",
-  "20270110090000_assessment_actions_active_employer.sql",
-  "20270111090000_interview_beskt_active_employer.sql",
-  "20270112090000_passport_attestation_active_employer.sql",
-  "20270113090000_pending_employer_actions.sql",
-  "20270114090000_sp_passport_target_holder.sql",
-  "20270115090000_sp_claim_verification_stamp.sql",
-  "20270116090000_scp_iv_findings_review_writes.sql",
-  "20270117090000_security_work_programme.sql",
-];
+const expectedPending: string[] = ["20270117090000_security_work_programme.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
