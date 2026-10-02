@@ -82,7 +82,7 @@ export const analysisInputHash = (input: AnalysisInput) =>
   sha(JSON.stringify(analysisInputSchema.parse(input)));
 
 /** Vocabulary screening is a mitigation; schema/citation/draft-only controls remain authoritative. */
-const sourceInstruction =
+export const sourceInstruction =
   /(?:ignore\s+(?:all\s+)?(?:previous|above)\s+instructions|ignorera\s+(?:alla\s+)?(?:tidigare|ovanstående)\s+instruktioner|(?:system|developer)\s*(?:message|prompt)\s*:|<\/?(?:system|assistant|developer)>|reveal\s+(?:the\s+)?(?:api\s*key|system\s*prompt)|print\s+(?:the\s+)?(?:secret|password))/iu;
 
 export function validateAnalysisInput(value: unknown): AnalysisInput {
