@@ -1,8 +1,7 @@
 # P1-H: a Passport entry under review cannot change underneath the reviewer
 
-**Status: PENDING.** This PR fixes P1-H of the 2026-10-02 final hostile-user
-audit. It builds on P1-L (20270118090000) and merges after it. It is not
-merged, and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#378, ecc06d6) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

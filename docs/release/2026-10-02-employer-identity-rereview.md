@@ -1,8 +1,7 @@
 # P1-I: an approved organisation that changes its identity goes back to review
 
-**Status: PENDING.** This PR fixes P1-I of the 2026-10-02 final hostile-user
-audit. It builds on P1-J (20270122090000) and merges after it. It is not
-merged, and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#382, ed62d48) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

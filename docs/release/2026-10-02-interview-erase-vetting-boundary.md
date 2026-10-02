@@ -1,8 +1,7 @@
 # P1-K: only the security function erases material on a security vetting
 
-**Status: PENDING.** This PR fixes P1-K of the 2026-10-02 final hostile-user
-audit. It builds on P1-G (20270120090000) and merges after it. It is not
-merged, and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#380, 0a51b5d) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

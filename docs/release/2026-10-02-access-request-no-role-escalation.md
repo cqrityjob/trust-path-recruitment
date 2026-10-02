@@ -1,8 +1,7 @@
 # P1-G: an access-request approval admits a person; it cannot make an owner
 
-**Status: PENDING.** This PR fixes P1-G of the 2026-10-02 final hostile-user
-audit. It builds on P1-H (20270119090000) and merges after it. It is not
-merged, and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#379, 09398bb) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

@@ -1,7 +1,7 @@
 # P1-L: an employer creates an assessment assignment as an invitation only
 
-**Status: PENDING.** This PR fixes P1-L of the 2026-10-02 final hostile-user
-audit. It is not merged, and nothing was written to the hosted database.
+**Status: APPLIED.** Merged (#377, dac3e59) and verified on production on 2026-10-02.
+See `docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md`.
 
 | Part | File |
 |---|---|

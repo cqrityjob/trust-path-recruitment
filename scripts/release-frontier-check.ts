@@ -334,50 +334,19 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // policies, anon and service_role without privilege, and a rolled-back probe
 // as a non-member reading nothing and writing nothing.
 // Evidence: docs/release/2026-10-02-security-work-programme-hosted-verification.md.
-// 20270118090000_assessment_assignment_insert_columns (P1-L of the 2026-10-02
-// final audit: an employer creates an assessment assignment as an invitation
-// only and cannot write its result) is pending BY DESIGN until its PR merges
-// and the official integration applies it. Its name comes off this list in
-// the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-assessment-assignment-insert-columns.md.
-// 20270119090000_sp_entry_frozen_under_review (P1-H of the 2026-10-02 final
-// audit: a Passport entry under review cannot change underneath the reviewer)
-// is pending BY DESIGN until its PR merges and the official integration
-// applies it. Its name comes off this list in the change that records its
-// hosted evidence. Evidence to come:
-// docs/release/2026-10-02-passport-entry-frozen-under-review.md.
-// 20270120090000_access_request_no_role_escalation (P1-G of the 2026-10-02
-// final audit: an access-request approval admits a person; it cannot make an
-// owner or change a live member's role) is pending BY DESIGN until its PR
-// merges and the official integration applies it. Its name comes off this
-// list in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-access-request-no-role-escalation.md.
-// 20270121090000_scp_iv_erase_vetting_boundary (P1-K of the 2026-10-02 final
-// audit: only the security function erases material on a security vetting)
-// is pending BY DESIGN until its PR merges and the official integration
-// applies it. Its name comes off this list in the change that records its
-// hosted evidence. Evidence to come:
-// docs/release/2026-10-02-interview-erase-vetting-boundary.md.
-// 20270122090000_bcp_conduct_reopen_after_exposure (P1-J of the 2026-10-02
-// final audit: a BESKT position cannot be reopened once the others are
-// readable) is pending BY DESIGN until its PR merges and the official
-// integration applies it. Its name comes off this list in the change that
-// records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-beskt-reopen-after-exposure.md.
-// 20270123090000_employer_identity_rereview (P1-I of the 2026-10-02 final
-// audit: an approved organisation that changes its identity goes back to
-// review) is pending BY DESIGN until its PR merges and the official
-// integration applies it. Its name comes off this list in the change that
-// records its hosted evidence. Evidence to come:
-// docs/release/2026-10-02-employer-identity-rereview.md.
-const expectedPending: string[] = [
-  "20270118090000_assessment_assignment_insert_columns.sql",
-  "20270119090000_sp_entry_frozen_under_review.sql",
-  "20270120090000_access_request_no_role_escalation.sql",
-  "20270121090000_scp_iv_erase_vetting_boundary.sql",
-  "20270122090000_bcp_conduct_reopen_after_exposure.sql",
-  "20270123090000_employer_identity_rereview.sql",
-];
+// 2026-10-02 ~22:38 UTC: the six final-audit P1 fixes (P1-L #377, P1-H #378,
+// P1-G #379, P1-K #380, P1-J #381, P1-I #382) verified applied read-only:
+// 20270118090000 .. 20270123090000 are in the ledger (357 rows, digest
+// f4f87e56322142f2ac03b5eda5c1cfae; the first 351 unchanged), every deployed function
+// body equals its merged source, grants are exactly as merged, and a
+// rolled-back probe of each fix as real principals found no forged
+// assignment result, no edit under review, no role escalation through the
+// access queue, no vetting erasure outside the security function, no
+// reopen after exposure and no identity change that stays approved.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
