@@ -2,6 +2,7 @@
   "private": true,
   "scripts": {
     "security-work:service-check": "bun run scripts/security-work-service-check.ts",
+    "security-work:programme-check": "bun run scripts/security-work-programme-check.ts",
     "security-work:analysis-check": "bun run scripts/security-work-analysis-check.ts",
     "security-work:processing-check": "bun run scripts/security-work-processing-check.ts && bun run scripts/security-work-ai-jobs-check.ts && bun run scripts/security-work-processor-check.ts",
     "security-work:processor-integration": "bash scripts/security-work-processor-integration-test.sh",
@@ -102,6 +103,7 @@
     "e2e:sharing": "playwright test e2e/passport-sharing.spec.ts --project=chromium --project=mobile-375",
     "e2e:homepage": "playwright test e2e/public-homepage.spec.ts --project=chromium",
     "e2e:employers": "playwright test e2e/employer-landing.spec.ts --project=chromium",
+    "e2e:security-work-programme": "playwright test e2e/security-work-programme.spec.ts --project=chromium --project=mobile-375",
     "e2e:public-entry": "playwright test e2e/public-homepage.spec.ts e2e/employer-landing.spec.ts e2e/landing-entry-experience.spec.ts e2e/client-hydration.spec.ts e2e/india-landing.spec.ts e2e/passport-network.spec.ts --project=chromium",
     "e2e:passport-network": "playwright test e2e/passport-network.spec.ts --project=chromium",
     "e2e:landing-panel": "playwright test e2e/landing-entry-experience.spec.ts --project=chromium",
