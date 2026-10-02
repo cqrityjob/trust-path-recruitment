@@ -52,7 +52,8 @@ const OUTPUT_CONTRACTS: Record<SuggestionKind, string> = {
     '{"actions": [{"title": string, "description": string, "why": string}]} (1-5 concrete, proportionate actions; no owner, date or priority)',
   report_narrative:
     '{"sections": {sectionId: string}, "caveats": string[]} (only the sections requested; every number must come from computed/facts verbatim; mark anything not supported by the data as a caveat)',
-  explanation: '{"text": string} (a clear explanation of at most 250 words; no assessment of the organisation)',
+  explanation:
+    '{"text": string} (a clear explanation of at most 250 words; no assessment of the organisation)',
   question_list: '{"questions": string[]} (5-12 questions)',
 };
 
@@ -71,7 +72,9 @@ async function collectContext(
   const mandate = checked(
     await db
       .from("sw_security_mandates")
-      .select("id,organisation_description,security_mission,reporting_line,key_stakeholders,decision_authority,risk_acceptance_authority,geographic_scope,key_requirements,review_date")
+      .select(
+        "id,organisation_description,security_mission,reporting_line,key_stakeholders,decision_authority,risk_acceptance_authority,geographic_scope,key_requirements,review_date",
+      )
       .eq("workspace_id", workspaceId)
       .maybeSingle(),
   );
@@ -148,7 +151,9 @@ async function collectContext(
     const gap = checked(
       await db
         .from("sw_gaps")
-        .select("id,title,description,domain,evidence_note,business_impact,source_kind,baseline_question_id,related_asset_id,related_risk_id")
+        .select(
+          "id,title,description,domain,evidence_note,business_impact,source_kind,baseline_question_id,related_asset_id,related_risk_id",
+        )
         .eq("workspace_id", workspaceId)
         .eq("id", contextId)
         .maybeSingle(),
@@ -163,7 +168,9 @@ async function collectContext(
       evidence_note: settled(gap.evidence_note),
       business_impact: gap.business_impact,
       source: gap.source_kind,
-      baseline_question: question ? { text: question.text.en, why: question.why.en, evidence: question.evidence.en } : null,
+      baseline_question: question
+        ? { text: question.text.en, why: question.why.en, evidence: question.evidence.en }
+        : null,
     };
   }
   if (contextKind === "baseline_question" && contextId) {
@@ -188,7 +195,10 @@ async function collectContext(
     );
     if (!action) throw new AnalysisFailure("ACCESS_DENIED");
     sources.push({ table: "sw_actions", id: action.id });
-    context.action = { title: settled(action.title, 500), description: settled(action.description) };
+    context.action = {
+      title: settled(action.title, 500),
+      description: settled(action.description),
+    };
   }
   if (contextKind === "management_report" && contextId) {
     const report = checked(
@@ -240,14 +250,18 @@ async function callProvider(
     .object({
       model: z.string(),
       stop_reason: z.string(),
-      content: z.array(z.object({ type: z.string(), text: z.string().optional() }).passthrough()).max(8),
+      content: z
+        .array(z.object({ type: z.string(), text: z.string().optional() }).passthrough())
+        .max(8),
     })
     .passthrough()
     .safeParse(raw);
   if (!envelope.success) throw new AnalysisFailure("AI_PROVIDER_FAILED");
   if (envelope.data.stop_reason !== "end_turn") throw new AnalysisFailure("AI_INCOMPLETE");
   return {
-    text: envelope.data.content.flatMap((block) => (block.type === "text" && block.text ? [block.text] : [])).join(""),
+    text: envelope.data.content
+      .flatMap((block) => (block.type === "text" && block.text ? [block.text] : []))
+      .join(""),
     model: envelope.data.model,
   };
 }
@@ -273,7 +287,11 @@ export async function requestSuggestion(
   if (existing) return existing;
   const configuration = await loadConfiguration(caller, data.workspaceId, env);
   const workspace = checked(
-    await caller.supabase.from("sw_workspaces").select("language").eq("id", data.workspaceId).maybeSingle(),
+    await caller.supabase
+      .from("sw_workspaces")
+      .select("language")
+      .eq("id", data.workspaceId)
+      .maybeSingle(),
   );
   if (!workspace) throw new AnalysisFailure("ACCESS_DENIED");
   const { context, sources } = await collectContext(
@@ -341,7 +359,10 @@ export async function requestSuggestion(
       workspace_id: data.workspaceId,
       kind: capability.kind,
       context_kind: data.contextKind,
-      context_id: data.contextId && z.string().uuid().safeParse(data.contextId).success ? data.contextId : null,
+      context_id:
+        data.contextId && z.string().uuid().safeParse(data.contextId).success
+          ? data.contextId
+          : null,
       request_text: requestText,
       content: content.data as Json,
       source_records: sources as unknown as Json,
@@ -498,7 +519,11 @@ export async function decideSuggestion(
       const narrative = { ...((report.narrative as Record<string, unknown>) ?? {}) };
       for (const section of apply.sections)
         if (draft.sections[section])
-          narrative[section] = { text: draft.sections[section], origin: "ai", suggestion_id: suggestion.id };
+          narrative[section] = {
+            text: draft.sections[section],
+            origin: "ai",
+            suggestion_id: suggestion.id,
+          };
       const saved = checked(
         await caller.supabase
           .from("sw_management_reports")

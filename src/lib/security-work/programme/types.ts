@@ -34,13 +34,7 @@ export type SecurityDomainId =
   | "culture_training"
   | "compliance";
 
-export type ProgrammeAreaId =
-  | "mandate"
-  | "assets"
-  | "risks"
-  | "baseline"
-  | "actions"
-  | "reporting";
+export type ProgrammeAreaId = "mandate" | "assets" | "risks" | "baseline" | "actions" | "reporting";
 export type ProgrammeAreaStatus = "not_started" | "in_progress" | "needs_attention" | "complete";
 
 /** Everything the deterministic rules need, as plain data. The server builds

@@ -9,7 +9,9 @@ import * as service from "./services";
 export const getSecurityProgramme = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(inputs.scope)
-  .handler(({ context, data }) => analysisResult(() => service.readProgramme(context, data.workspaceId)));
+  .handler(({ context, data }) =>
+    analysisResult(() => service.readProgramme(context, data.workspaceId)),
+  );
 export const saveSecurityMandate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(inputs.saveMandateInput)
@@ -65,15 +67,21 @@ export const saveSecurityPlan = createServerFn({ method: "POST" })
 export const createSecurityManagementReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(inputs.createManagementReportInput)
-  .handler(({ context, data }) => analysisResult(() => service.createManagementReport(context, data)));
+  .handler(({ context, data }) =>
+    analysisResult(() => service.createManagementReport(context, data)),
+  );
 export const saveSecurityManagementReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(inputs.saveManagementReportInput)
-  .handler(({ context, data }) => analysisResult(() => service.saveManagementReport(context, data)));
+  .handler(({ context, data }) =>
+    analysisResult(() => service.saveManagementReport(context, data)),
+  );
 export const decideSecurityManagementReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator(inputs.decideManagementReportInput)
-  .handler(({ context, data }) => analysisResult(() => service.decideManagementReport(context, data)));
+  .handler(({ context, data }) =>
+    analysisResult(() => service.decideManagementReport(context, data)),
+  );
 
 // The assistant lives in a server-only module so no provider code, key
 // handling or prompt text reaches the client bundle.

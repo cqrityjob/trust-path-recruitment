@@ -70,7 +70,10 @@ export const CAPABILITIES: Capability[] = [
     id: "mandate_ceo_questions",
     kind: "question_list",
     contexts: ["mandate", "workspace"],
-    label: { sv: "Hjälp mig förbereda frågor till VD", en: "Help me prepare questions for the CEO" },
+    label: {
+      sv: "Hjälp mig förbereda frågor till VD",
+      en: "Help me prepare questions for the CEO",
+    },
     fallback: {
       sv: "Fråga: Vad får absolut inte hända? Vilka beslut vill du att jag tar själv? Vem accepterar risk? Vilka krav från kunder och myndigheter oroar dig mest?",
       en: "Ask: What must never happen? Which decisions do you want me to take myself? Who accepts risk? Which customer and regulatory requirements worry you most?",
@@ -81,7 +84,10 @@ export const CAPABILITIES: Capability[] = [
     id: "asset_suggestions",
     kind: "asset_suggestions",
     contexts: ["workspace", "asset"],
-    label: { sv: "Föreslå skyddsvärden utifrån verksamhetsbeskrivningen", en: "Suggest protected assets from the organisation description" },
+    label: {
+      sv: "Föreslå skyddsvärden utifrån verksamhetsbeskrivningen",
+      en: "Suggest protected assets from the organisation description",
+    },
     fallback: {
       sv: "Gå igenom kategorierna: personer, verksamhet, lokaler, information, system, leverantörer och anseende. Vad måste fungera för att ni ska nå era mål?",
       en: "Walk through the categories: people, operations, facilities, information, systems, suppliers and reputation. What must keep working for you to meet your goals?",
@@ -147,7 +153,10 @@ export const CAPABILITIES: Capability[] = [
     id: "gap_action",
     kind: "gap_action",
     contexts: ["gap"],
-    label: { sv: "Föreslå praktiska åtgärder för gapet", en: "Suggest practical actions for this gap" },
+    label: {
+      sv: "Föreslå praktiska åtgärder för gapet",
+      en: "Suggest practical actions for this gap",
+    },
     fallback: {
       sv: "En bra åtgärd är konkret, har en ägare, ett datum och ett tydligt resultat. Börja med den minsta åtgärd som stänger gapet.",
       en: "A good action is concrete, has an owner, a date and a clear result. Start with the smallest action that closes the gap.",
@@ -168,7 +177,16 @@ export const CAPABILITIES: Capability[] = [
   {
     id: "explain_term",
     kind: "explanation",
-    contexts: ["workspace", "risk", "gap", "mandate", "asset", "action", "baseline_question", "management_report"],
+    contexts: [
+      "workspace",
+      "risk",
+      "gap",
+      "mandate",
+      "asset",
+      "action",
+      "baseline_question",
+      "management_report",
+    ],
     label: { sv: "Förklara en term", en: "Explain a term" },
     fallback: {
       sv: "Hjälptexterna i varje modul förklarar de begrepp som används. AI-förklaringar är inte tillgängliga just nu.",
@@ -191,7 +209,9 @@ const bounded = (max: number) => z.string().trim().min(1).max(max);
  * suggestion is stored. No field carries a score, a level, an owner or a
  * decision. */
 export const suggestionContentSchemas = {
-  mandate_draft: z.object({ text: bounded(16000), caveats: z.array(bounded(500)).max(10) }).strict(),
+  mandate_draft: z
+    .object({ text: bounded(16000), caveats: z.array(bounded(500)).max(10) })
+    .strict(),
   asset_suggestions: z
     .object({
       assets: z
@@ -199,7 +219,16 @@ export const suggestionContentSchemas = {
           z
             .object({
               name: bounded(300),
-              category: z.enum(["people", "operations", "facilities", "information", "systems", "suppliers", "reputation", "other"]),
+              category: z.enum([
+                "people",
+                "operations",
+                "facilities",
+                "information",
+                "systems",
+                "suppliers",
+                "reputation",
+                "other",
+              ]),
               reason: bounded(1000),
             })
             .strict(),
@@ -241,7 +270,12 @@ export const suggestionContentSchemas = {
   explanation: z.object({ text: bounded(8000) }).strict(),
   question_list: z.object({ questions: z.array(bounded(500)).min(1).max(15) }).strict(),
 } satisfies Record<SuggestionKind, z.ZodTypeAny>;
-export type SuggestionContent<K extends SuggestionKind> = z.infer<(typeof suggestionContentSchemas)[K]>;
+export type SuggestionContent<K extends SuggestionKind> = z.infer<
+  (typeof suggestionContentSchemas)[K]
+>;
 export function parseSuggestionContent<K extends SuggestionKind>(kind: K, value: unknown) {
-  return suggestionContentSchemas[kind].safeParse(value) as z.SafeParseReturnType<unknown, SuggestionContent<K>>;
+  return suggestionContentSchemas[kind].safeParse(value) as z.SafeParseReturnType<
+    unknown,
+    SuggestionContent<K>
+  >;
 }

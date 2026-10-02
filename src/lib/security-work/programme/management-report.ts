@@ -23,13 +23,19 @@ export type ReportSectionId = (typeof REPORT_SECTIONS)[number];
 export const REPORT_SECTION_TITLES: Record<ReportSectionId, { sv: string; en: string }> = {
   executive_position: { sv: "Säkerhetsläget i korthet", en: "Executive security position" },
   major_risks: { sv: "Största risker", en: "Major risks" },
-  changes_since_previous: { sv: "Förändringar sedan förra rapporten", en: "Key changes since previous report" },
+  changes_since_previous: {
+    sv: "Förändringar sedan förra rapporten",
+    en: "Key changes since previous report",
+  },
   priority_actions: { sv: "Prioriterade åtgärder", en: "High-priority actions" },
   overdue_actions: { sv: "Försenade åtgärder", en: "Overdue actions" },
   incidents: { sv: "Incidenter", en: "Incidents" },
   maturity_changes: { sv: "Förändringar i säkerhetsmognad", en: "Security maturity changes" },
   external_developments: { sv: "Omvärld", en: "External developments" },
-  decisions_required: { sv: "Beslut som krävs av ledningen", en: "Decisions required from management" },
+  decisions_required: {
+    sv: "Beslut som krävs av ledningen",
+    en: "Decisions required from management",
+  },
 };
 export const narrativeSectionSchema = z
   .object({
@@ -73,7 +79,13 @@ export type ReportFacts = {
     approval_required: boolean;
   }[];
   gaps: { id: string; title: string; domain: string | null; impact: string; status: string }[];
-  assets: { id: string; name: string; category: string; owner: boolean; consequence: number | null }[];
+  assets: {
+    id: string;
+    name: string;
+    category: string;
+    owner: boolean;
+    consequence: number | null;
+  }[];
   mandate: { mission: string; review_date: string | null } | null;
   monitoring: { pending_items: number; requirements: number };
   previous_report: { id: string; approved_at: string | null; computed: unknown } | null;
@@ -120,10 +132,15 @@ export function buildManagementReportData(
     names.push(assetNames.get(link.asset_id) ?? "");
     linksByRisk.set(link.risk_id, names);
   }
-  const maturity = d.quickAnswered >= d.quickTotal && d.detailed.answered > d.quick.answered ? d.detailed : d.quick;
+  const maturity =
+    d.quickAnswered >= d.quickTotal && d.detailed.answered > d.quick.answered
+      ? d.detailed
+      : d.quick;
   const previousComputed = previous ? (previous.computed as Partial<ReportComputed>) : null;
   const score = (risk: { likelihood: number | null; consequence: number | null }) =>
-    risk.likelihood !== null && risk.consequence !== null ? risk.likelihood * risk.consequence : null;
+    risk.likelihood !== null && risk.consequence !== null
+      ? risk.likelihood * risk.consequence
+      : null;
   const topRisks = d.openRisks
     .map((risk) => ({ id: risk.id, title: risk.title, score: score(risk) }))
     .sort((a, b) => (b.score ?? -1) - (a.score ?? -1))
@@ -155,13 +172,17 @@ export function buildManagementReportData(
     top_risks: topRisks,
     changes_since_previous: {
       maturity_delta:
-        previousComputed?.maturity && !previousComputed.maturity.not_assessed && !maturity.overallNotAssessed
+        previousComputed?.maturity &&
+        !previousComputed.maturity.not_assessed &&
+        !maturity.overallNotAssessed
           ? maturity.overall - previousComputed.maturity.overall
           : null,
-      open_risks_delta:
-        previousComputed?.counts ? d.openRisks.length - previousComputed.counts.open_risks : null,
-      overdue_actions_delta:
-        previousComputed?.counts ? d.overdueActions.length - previousComputed.counts.overdue_actions : null,
+      open_risks_delta: previousComputed?.counts
+        ? d.openRisks.length - previousComputed.counts.open_risks
+        : null,
+      overdue_actions_delta: previousComputed?.counts
+        ? d.overdueActions.length - previousComputed.counts.overdue_actions
+        : null,
     },
   };
   const reportFacts: ReportFacts = {
@@ -233,7 +254,8 @@ export function computedSummaryLines(computed: ReportComputed, lang: Lang): stri
     .sort((a, b) => a.level - b.level)
     .slice(0, 3)
     .map((domain) => `${domainTitle(domain.domain as never)[lang]} (${domain.level})`);
-  if (weakest.length) lines.push(`${t("Svagaste områden", "Weakest domains")}: ${weakest.join(", ")}`);
+  if (weakest.length)
+    lines.push(`${t("Svagaste områden", "Weakest domains")}: ${weakest.join(", ")}`);
   const delta = computed.changes_since_previous;
   if (delta.maturity_delta !== null || delta.open_risks_delta !== null)
     lines.push(

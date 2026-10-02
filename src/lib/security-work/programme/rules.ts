@@ -166,7 +166,9 @@ export type DerivedProgramme = ReturnType<typeof deriveProgramme>;
  *             in 90 days while the programme has content · in_progress:
  *             monitoring set up but no approved management report · complete
  */
-export function programmeStatus(facts: ProgrammeFacts): Record<ProgrammeAreaId, ProgrammeAreaStatus> {
+export function programmeStatus(
+  facts: ProgrammeFacts,
+): Record<ProgrammeAreaId, ProgrammeAreaStatus> {
   const d = deriveProgramme(facts);
   const mandate: ProgrammeAreaStatus = !facts.mandate
     ? "not_started"
@@ -178,7 +180,9 @@ export function programmeStatus(facts: ProgrammeFacts): Record<ProgrammeAreaId, 
   const assets: ProgrammeAreaStatus =
     d.activeAssets.length === 0
       ? "not_started"
-      : d.assetsWithoutOwner.length || d.assetsWithoutConsequence.length || d.assetsOverdueReview.length
+      : d.assetsWithoutOwner.length ||
+          d.assetsWithoutConsequence.length ||
+          d.assetsOverdueReview.length
         ? "needs_attention"
         : d.activeAssets.length < 3
           ? "in_progress"
@@ -207,7 +211,8 @@ export function programmeStatus(facts: ProgrammeFacts): Record<ProgrammeAreaId, 
         : d.gapsWithoutAction.length || d.openActions.length
           ? "in_progress"
           : "complete";
-  const programmeHasContent = facts.risks.length > 0 || facts.actions.length > 0 || facts.gaps.length > 0;
+  const programmeHasContent =
+    facts.risks.length > 0 || facts.actions.length > 0 || facts.gaps.length > 0;
   const reporting: ProgrammeAreaStatus =
     !facts.monitoring.profileExists &&
     facts.monitoring.requirements === 0 &&
@@ -256,28 +261,106 @@ export function attentionItems(facts: ProgrammeFacts): AttentionItem[] {
   const push = (item: Omit<AttentionItem, "count"> & { count: number }) => {
     if (item.count > 0) items.push(item);
   };
-  push({ id: "overdue_actions", count: d.overdueActions.length, severity: "high", area: "actions" });
-  push({ id: "high_impact_gaps", count: d.highImpactGapsWithoutAction.length, severity: "high", area: "actions" });
-  push({ id: "risks_without_owner", count: d.risksWithoutOwner.length, severity: "high", area: "risks" });
-  push({ id: "reports_awaiting_approval", count: d.draftManagementReports.length, severity: "medium", area: "reporting" });
-  push({ id: "monitoring_pending", count: facts.monitoring.pendingItems, severity: "medium", area: "reporting" });
-  push({ id: "analyses_in_review", count: d.analysesInReview.length, severity: "medium", area: "reporting" });
-  push({ id: "risks_without_rating", count: d.risksWithoutRating.length, severity: "medium", area: "risks" });
-  push({ id: "risks_without_asset", count: d.risksWithoutAsset.length, severity: "medium", area: "risks" });
-  push({ id: "assets_without_owner", count: d.assetsWithoutOwner.length, severity: "medium", area: "assets" });
-  push({ id: "assets_without_consequence", count: d.assetsWithoutConsequence.length, severity: "medium", area: "assets" });
-  push({ id: "high_priority_actions", count: d.highPriorityActions.filter((a) => !d.overdueActions.includes(a)).length, severity: "medium", area: "actions" });
-  push({ id: "actions_without_owner", count: d.actionsWithoutOwner.length, severity: "medium", area: "actions" });
-  push({ id: "gaps_without_action", count: d.gapsWithoutAction.length - d.highImpactGapsWithoutAction.length, severity: "low", area: "actions" });
+  push({
+    id: "overdue_actions",
+    count: d.overdueActions.length,
+    severity: "high",
+    area: "actions",
+  });
+  push({
+    id: "high_impact_gaps",
+    count: d.highImpactGapsWithoutAction.length,
+    severity: "high",
+    area: "actions",
+  });
+  push({
+    id: "risks_without_owner",
+    count: d.risksWithoutOwner.length,
+    severity: "high",
+    area: "risks",
+  });
+  push({
+    id: "reports_awaiting_approval",
+    count: d.draftManagementReports.length,
+    severity: "medium",
+    area: "reporting",
+  });
+  push({
+    id: "monitoring_pending",
+    count: facts.monitoring.pendingItems,
+    severity: "medium",
+    area: "reporting",
+  });
+  push({
+    id: "analyses_in_review",
+    count: d.analysesInReview.length,
+    severity: "medium",
+    area: "reporting",
+  });
+  push({
+    id: "risks_without_rating",
+    count: d.risksWithoutRating.length,
+    severity: "medium",
+    area: "risks",
+  });
+  push({
+    id: "risks_without_asset",
+    count: d.risksWithoutAsset.length,
+    severity: "medium",
+    area: "risks",
+  });
+  push({
+    id: "assets_without_owner",
+    count: d.assetsWithoutOwner.length,
+    severity: "medium",
+    area: "assets",
+  });
+  push({
+    id: "assets_without_consequence",
+    count: d.assetsWithoutConsequence.length,
+    severity: "medium",
+    area: "assets",
+  });
+  push({
+    id: "high_priority_actions",
+    count: d.highPriorityActions.filter((a) => !d.overdueActions.includes(a)).length,
+    severity: "medium",
+    area: "actions",
+  });
+  push({
+    id: "actions_without_owner",
+    count: d.actionsWithoutOwner.length,
+    severity: "medium",
+    area: "actions",
+  });
+  push({
+    id: "gaps_without_action",
+    count: d.gapsWithoutAction.length - d.highImpactGapsWithoutAction.length,
+    severity: "low",
+    area: "actions",
+  });
   push({
     id: "baseline_unanswered",
-    count: facts.baseline.assessment && facts.baseline.answers.length ? d.quickTotal - d.quickAnswered : 0,
+    count:
+      facts.baseline.assessment && facts.baseline.answers.length
+        ? d.quickTotal - d.quickAnswered
+        : 0,
     severity: "low",
     area: "baseline",
   });
   push({ id: "baseline_stale", count: d.baselineStale ? 1 : 0, severity: "low", area: "baseline" });
-  push({ id: "mandate_review_overdue", count: d.mandateOverdue ? 1 : 0, severity: "low", area: "mandate" });
-  push({ id: "assets_review_overdue", count: d.assetsOverdueReview.length, severity: "low", area: "assets" });
+  push({
+    id: "mandate_review_overdue",
+    count: d.mandateOverdue ? 1 : 0,
+    severity: "low",
+    area: "mandate",
+  });
+  push({
+    id: "assets_review_overdue",
+    count: d.assetsOverdueReview.length,
+    severity: "low",
+    area: "assets",
+  });
   // Stable sort: within a severity band the push order above is the order
   // (overdue work before unowned risks before unrated risks …).
   const rank = { high: 0, medium: 1, low: 2 };
@@ -324,7 +407,8 @@ export function recommendedNextAction(facts: ProgrammeFacts): NextAction {
     return facts.risks.length
       ? { id: "assets_before_risks", area: "assets", prerequisite: "assets" }
       : { id: "add_assets", area: "assets" };
-  if (d.risksWithoutAsset.length) return { id: "link_assets_to_risks", area: "risks", prerequisite: "assets" };
+  if (d.risksWithoutAsset.length)
+    return { id: "link_assets_to_risks", area: "risks", prerequisite: "assets" };
   if (d.risksWithoutOwner.length) return { id: "assign_risk_owners", area: "risks" };
   if (d.risksWithoutRating.length) return { id: "rate_risks", area: "risks" };
   if (!facts.baseline.assessment || facts.baseline.answers.length === 0)
@@ -337,8 +421,10 @@ export function recommendedNextAction(facts: ProgrammeFacts): NextAction {
   ).length;
   if (potential > recordedForBaseline) return { id: "record_gaps", area: "actions" };
   if (d.gapsWithoutAction.length) return { id: "convert_gaps", area: "actions" };
-  if (d.draftManagementReports.length) return { id: "approve_management_report", area: "reporting" };
-  if (facts.managementReports.length === 0) return { id: "first_management_report", area: "reporting" };
+  if (d.draftManagementReports.length)
+    return { id: "approve_management_report", area: "reporting" };
+  if (facts.managementReports.length === 0)
+    return { id: "first_management_report", area: "reporting" };
   if (d.reportStale) return { id: "refresh_management_report", area: "reporting" };
   if (d.mandateOverdue) return { id: "review_mandate", area: "mandate" };
   return { id: "all_clear", area: "reporting" };

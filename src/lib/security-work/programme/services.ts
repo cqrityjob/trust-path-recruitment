@@ -79,11 +79,31 @@ export async function readProgramme(
     members,
   ] = await Promise.all([
     db.from("sw_security_mandates").select("*").eq("workspace_id", workspaceId).maybeSingle(),
-    db.from("sw_protected_assets").select("*").eq("workspace_id", workspaceId).limit(LIMIT).order("created_at"),
+    db
+      .from("sw_protected_assets")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .limit(LIMIT)
+      .order("created_at"),
     db.from("sw_risk_assets").select("*").eq("workspace_id", workspaceId).limit(LIMIT),
-    db.from("sw_risks").select("*").eq("workspace_id", workspaceId).limit(LIMIT).order("updated_at", { ascending: false }),
-    db.from("sw_actions").select("*").eq("workspace_id", workspaceId).limit(LIMIT).order("updated_at", { ascending: false }),
-    db.from("sw_gaps").select("*").eq("workspace_id", workspaceId).limit(LIMIT).order("created_at", { ascending: false }),
+    db
+      .from("sw_risks")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .limit(LIMIT)
+      .order("updated_at", { ascending: false }),
+    db
+      .from("sw_actions")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .limit(LIMIT)
+      .order("updated_at", { ascending: false }),
+    db
+      .from("sw_gaps")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .limit(LIMIT)
+      .order("created_at", { ascending: false }),
     db
       .from("sw_baseline_assessments")
       .select("*")
@@ -104,10 +124,20 @@ export async function readProgramme(
       .eq("status", "pending"),
     db.from("sw_assessments").select("*").eq("workspace_id", workspaceId).limit(LIMIT),
     db.from("sw_reports").select("*").eq("workspace_id", workspaceId).limit(LIMIT),
-    db.from("sw_management_reports").select("*").eq("workspace_id", workspaceId).limit(LIMIT).order("created_at", { ascending: false }),
+    db
+      .from("sw_management_reports")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .limit(LIMIT)
+      .order("created_at", { ascending: false }),
     db.from("sw_programme_plans").select("*").eq("workspace_id", workspaceId).maybeSingle(),
     db.from("sw_evidence_links").select("*").eq("workspace_id", workspaceId).limit(LIMIT),
-    db.from("sw_ai_suggestions").select("*").eq("workspace_id", workspaceId).limit(LIMIT).order("created_at", { ascending: false }),
+    db
+      .from("sw_ai_suggestions")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .limit(LIMIT)
+      .order("created_at", { ascending: false }),
     db
       .from("sw_workspace_memberships")
       .select("user_id, role")
@@ -286,7 +316,13 @@ export async function saveProgrammeRisk(
     version === null
       ? await caller.supabase
           .from("sw_risks")
-          .insert({ ...fields, id, workspace_id: workspaceId, assessment_id: null, source_kind: "programme" })
+          .insert({
+            ...fields,
+            id,
+            workspace_id: workspaceId,
+            assessment_id: null,
+            source_kind: "programme",
+          })
           .select("*")
           .single()
       : await caller.supabase
@@ -578,7 +614,10 @@ export async function linkEvidence(
 }
 
 // ── 90-day plan ──────────────────────────────────────────────────────────────
-export async function savePlan(caller: SecurityWorkCaller, data: inputs.PlanInput): Promise<ProgrammePlan> {
+export async function savePlan(
+  caller: SecurityWorkCaller,
+  data: inputs.PlanInput,
+): Promise<ProgrammePlan> {
   await access(caller, data.workspaceId, true);
   const result =
     data.version === null
@@ -678,7 +717,10 @@ export async function saveManagementReport(
     const snapshot = await readProgramme(caller, data.workspaceId);
     const previous = await latestApprovedReport(caller, data.workspaceId, data.id);
     const built = buildManagementReportData(snapshot, previous);
-    refreshed = { facts: built.facts as unknown as Json, computed: built.computed as unknown as Json };
+    refreshed = {
+      facts: built.facts as unknown as Json,
+      computed: built.computed as unknown as Json,
+    };
   }
   const saved = checked(
     await caller.supabase

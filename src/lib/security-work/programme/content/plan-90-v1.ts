@@ -155,7 +155,10 @@ export const PLAN_90_TASKS: PlanTask[] = [
     id: "d90.report",
     period: "d90",
     area: "reporting",
-    title: { sv: "Rapportera säkerhetsläget till ledningen", en: "Report the security position to management" },
+    title: {
+      sv: "Rapportera säkerhetsläget till ledningen",
+      en: "Report the security position to management",
+    },
     description: {
       sv: "Skapa en ledningsrapport: läge, största risker, prioriterade åtgärder och beslut som krävs.",
       en: "Create a management report: position, major risks, priority actions and decisions required.",
@@ -165,7 +168,10 @@ export const PLAN_90_TASKS: PlanTask[] = [
     id: "d90.cadence",
     period: "d90",
     area: "reporting",
-    title: { sv: "Besluta rapporterings- och granskningsrytm", en: "Agree a reporting and review cadence" },
+    title: {
+      sv: "Besluta rapporterings- och granskningsrytm",
+      en: "Agree a reporting and review cadence",
+    },
     description: {
       sv: "Kom överens om hur ofta läget rapporteras och när mandat, skyddsvärden och risker ses över.",
       en: "Agree how often the position is reported and when the mandate, assets and risks are reviewed.",

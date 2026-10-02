@@ -41,7 +41,16 @@ export const saveAssetInput = scope
     version: version.nullable(),
     name: required(300),
     description: text(8000),
-    category: z.enum(["people", "operations", "facilities", "information", "systems", "suppliers", "reputation", "other"]),
+    category: z.enum([
+      "people",
+      "operations",
+      "facilities",
+      "information",
+      "systems",
+      "suppliers",
+      "reputation",
+      "other",
+    ]),
     owner_id: uuid.nullable(),
     owner_label: text(200),
     business_importance: z.enum(["low", "medium", "high", "critical"]),
@@ -97,7 +106,18 @@ export const saveGapInput = scope
     version: version.nullable(),
     source_kind: z.enum(["baseline", "risk", "monitoring", "analysis", "incident", "manual"]),
     domain: z
-      .enum(["governance", "personnel", "physical", "information_cyber", "incident", "continuity", "suppliers", "travel_events", "culture_training", "compliance"])
+      .enum([
+        "governance",
+        "personnel",
+        "physical",
+        "information_cyber",
+        "incident",
+        "continuity",
+        "suppliers",
+        "travel_events",
+        "culture_training",
+        "compliance",
+      ])
       .nullable(),
     title: required(500),
     description: text(8000),
@@ -139,7 +159,16 @@ export const saveProgrammeActionInput = scope
 export const evidenceLinkInput = scope
   .extend({
     sourceId: uuid,
-    targetKind: z.enum(["mandate", "asset", "risk", "baseline_answer", "gap", "action", "report", "management_report"]),
+    targetKind: z.enum([
+      "mandate",
+      "asset",
+      "risk",
+      "baseline_answer",
+      "gap",
+      "action",
+      "report",
+      "management_report",
+    ]),
     targetId: uuid,
     note: text(2000),
     linked: z.boolean(),
@@ -195,7 +224,16 @@ export const decideSuggestionInput = scope
                 z
                   .object({
                     name: required(300),
-                    category: z.enum(["people", "operations", "facilities", "information", "systems", "suppliers", "reputation", "other"]),
+                    category: z.enum([
+                      "people",
+                      "operations",
+                      "facilities",
+                      "information",
+                      "systems",
+                      "suppliers",
+                      "reputation",
+                      "other",
+                    ]),
                     description: text(8000),
                   })
                   .strict(),
@@ -203,9 +241,7 @@ export const decideSuggestionInput = scope
               .max(15),
           })
           .strict(),
-        z
-          .object({ kind: z.literal("risk_scenario"), riskId: uuid, version })
-          .strict(),
+        z.object({ kind: z.literal("risk_scenario"), riskId: uuid, version }).strict(),
         z
           .object({
             kind: z.literal("actions"),
@@ -242,7 +278,16 @@ export const requestSuggestionInput = scope
       "report_narrative",
       "explain_term",
     ]),
-    contextKind: z.enum(["workspace", "mandate", "asset", "risk", "gap", "baseline_question", "action", "management_report"]),
+    contextKind: z.enum([
+      "workspace",
+      "mandate",
+      "asset",
+      "risk",
+      "gap",
+      "baseline_question",
+      "action",
+      "management_report",
+    ]),
     contextId: z.string().min(1).max(120).nullable(),
     requestText: text(2000),
     requestId: uuid,
