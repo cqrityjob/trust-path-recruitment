@@ -606,6 +606,10 @@ if [ "$SV_RC" -ne 0 ]; then
 fi
 [ "$SV_PASSED" -ge 29 ] || { echo "$SV_OUT"; echo "FAIL: passport-writes assertion shortfall: $SV_PASSED (floor 29)" >&2; exit 1; }
 echo "    ok  $SV_PASSED passport-writes assertions passed (cross-holder plant reproduced pre-fix, refused post-fix)"
+# 20270114090000 (P1-E) later added a table-level invariant that refuses the
+# same cross-holder rows. These controls prove THIS migration's layers, so the
+# later invariant is lifted while they run and restored afterwards.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270114090000_sp_passport_target_holder_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270106090000_sp_evidence_and_request_writes_rpc_only_rollback.sql >/dev/null
 sv_nc_expect_fail "NC1 full rollback"
 psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
@@ -625,6 +629,7 @@ GRANT INSERT (id, holder_user_id, claim_id, period_id, request_kind, target_empl
 SQL
 sv_nc_expect_fail "NC3 write grants back, policies SELECT-only"
 psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20270114090000_sp_passport_target_holder.sql >/dev/null
 set +e
 SV_OUT="$(run_sv_suite)"; SV_RC=$?
 set -e
@@ -688,6 +693,66 @@ PR_OUT="$(run_pr_suite)"; PR_RC=$?
 set -e
 [ "$PR_RC" -eq 0 ] || { echo "$PR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: panel-reveal suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  panel-reveal migration re-applied (postflight proved); suite passes again"
+
+# 20270114090000: a Passport request or evidence row names exactly one entry,
+# and it is the holder's own (P1-E of the 2026-10-02 re-audit). The suite
+# reproduces the cross-holder attach / review / approve / revoke chain on the
+# pre-fix functions and tables itself (TH0), and proves the table layer alone
+# (TH3).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> TH1.1
+#   NC2  only the four functions back on their pre-fix bodies           -> TH1.1
+#   NC3  only the table constraints dropped (functions kept)            -> TH3.3
+run_th_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_passport_target_holder_test.sql 2>&1
+}
+th_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_th_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: passport-target-holder negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: TH[0-9.]*' | head -1))"
+}
+TH_MIG=supabase/migrations/20270114090000_sp_passport_target_holder.sql
+TH_RB=supabase/rollback/20270114090000_sp_passport_target_holder_rollback.sql
+echo "==> Running Passport target-holder assertions"
+set +e
+TH_OUT="$(run_th_suite)"; TH_RC=$?
+set -e
+TH_PASSED="$(echo "$TH_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$TH_RC" -ne 0 ]; then
+  echo "$TH_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the passport target-holder suite exited with code ${TH_RC}." >&2
+  exit 1
+fi
+[ "$TH_PASSED" -ge 20 ] || { echo "$TH_OUT"; echo "FAIL: passport target-holder assertion shortfall: $TH_PASSED (floor 20)" >&2; exit 1; }
+echo "    ok  $TH_PASSED passport target-holder assertions passed (cross-holder chain reproduced pre-fix, refused post-fix by each layer)"
+psql_q -d "$TEST_DB" -f "$TH_RB" >/dev/null
+th_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$TH_MIG" >/dev/null
+TH_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.sp_attach_evidence/,$p' "$TH_RB" | sed '/^DO \$\$/,$d')"
+[ "$(grep -c '^CREATE OR REPLACE FUNCTION' <<<"$TH_NC2_SQL")" -eq 4 ] && ! grep -q "SP_TARGET_AMBIGUOUS" <<<"$TH_NC2_SQL" \
+  || { echo "FAIL: passport-target-holder NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$TH_NC2_SQL" >/dev/null
+th_nc_expect_fail "NC2 pre-fix functions, constraints kept"
+psql_q -d "$TEST_DB" -f "$TH_RB" >/dev/null
+psql_q -d "$TEST_DB" -f "$TH_MIG" >/dev/null
+TH_NC3_SQL="$(sed -n '/^ALTER TABLE public.sp_verification_requests/,/^ALTER TABLE public.sp_claims DROP/p' "$TH_RB")"
+[ "$(grep -c 'DROP CONSTRAINT' <<<"$TH_NC3_SQL")" -eq 8 ] \
+  || { echo "FAIL: passport-target-holder NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$TH_NC3_SQL" >/dev/null
+th_nc_expect_fail "NC3 constraints dropped, functions kept"
+psql_q -d "$TEST_DB" -f "$TH_RB" >/dev/null
+psql_q -d "$TEST_DB" -f "$TH_MIG" >/dev/null
+set +e
+TH_OUT="$(run_th_suite)"; TH_RC=$?
+set -e
+[ "$TH_RC" -eq 0 ] || { echo "$TH_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: passport target-holder suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  passport target-holder migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback

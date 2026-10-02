@@ -317,8 +317,15 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder or learning-run leak.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.
-// Nothing is pending.
-const expectedPending: string[] = [];
+// 20270114090000_sp_passport_target_holder (P1-E of the 2026-10-02 full
+// re-audit: a Passport request or evidence row names exactly one entry, and it
+// is the holder's own) is pending BY DESIGN until its PR merges and the
+// official integration applies it. Its name comes off this list in the change
+// that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-02-passport-target-holder.md.
+const expectedPending: string[] = [
+  "20270114090000_sp_passport_target_holder.sql",
+];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
