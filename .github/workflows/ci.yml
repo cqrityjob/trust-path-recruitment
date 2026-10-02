@@ -72,6 +72,13 @@ jobs:
       - name: CIE deterministic regression check
         run: bun run cie:check
 
+      # Security Work programme rules: programme status, maturity, gap
+      # derivation, attention items, the recommended next action, management
+      # report facts/computed separation, AI output shapes and the Swedish /
+      # English copy parity. All deterministic; AI never produces any of them.
+      - name: Security Work programme rules check
+        run: bun run security-work:programme-check
+
       # The legacy -> CIG profession bridge. Before PR-A it pointed
       # data-centre security at airport security and fraud investigation at
       # the police civilian investigator "to avoid an empty state", and two
