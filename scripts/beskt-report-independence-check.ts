@@ -321,10 +321,15 @@ check(
   "BOUNDARY-SUITE: after the lock BOTH assessors are present — the fix is not a wall",
 );
 
+// 20270121090000 (P1-J): once both positions are locked each assessor has
+// been able to read the other, so reopening from there is refused -- a
+// reopen would let a recorded view be revised in the other's light. The
+// suite must prove that refusal (B6.1) and that the position stays locked.
 check(
   /bcp_conduct_reopen_position/.test(suite) &&
-    /'BCP_CONDUCT_NOT_VISIBLE_YET',\s*\n\s*'B6\.2/.test(suite),
-  "BOUNDARY-SUITE: reopening closes it again, so the boundary is a live predicate not a latch",
+    /'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',\s*\n\s*'B6\.1/.test(suite) &&
+    /'B6\.2 and it stays locked/.test(suite),
+  "BOUNDARY-SUITE: once both have been readable, no position can be reopened and revised",
 );
 
 check(

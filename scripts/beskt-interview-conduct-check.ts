@@ -703,7 +703,10 @@ const race = read(RACE);
 {
   const dbTest = read(DB_TEST);
   check(
-    dbTest.includes("supabase/tests/bcp_interview_conduct_test.sql"),
+    // The suite's own registration (the CND block with its floor). Since
+    // 20270121090000 the P1-J block runs the same suite too; that second run
+    // must not stand in for this one.
+    dbTest.includes('-f supabase/tests/bcp_interview_conduct_test.sql 2>&1)"'),
     "CONDUCT-REGISTRATION: the behaviour suite runs in scripts/db-test.sh",
   );
   const floor = /CND_PASSED" -lt (\d+)/.exec(dbTest);

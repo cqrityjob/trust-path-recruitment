@@ -558,28 +558,27 @@ BEGIN
 END $after_lock$;
 
 -- ---------------------------------------------------------------------------
--- B6 -- Reopening closes it again. The boundary is a live predicate, not a
---       one-way latch that a single lock opens for good.
+-- B6 -- Once both positions are locked each assessor has been able to read the
+--       other (B5), so neither position can be reopened and revised in its
+--       light (20270121090000, P1-J). The report stays readable.
+--       (Previously B6 reopened here and showed the report closing again; that
+--       reopen is the defect P1-J closes.)
 -- ---------------------------------------------------------------------------
 DO $reopen$
 DECLARE _r rp%ROWTYPE; _rev integer;
 BEGIN
   SELECT * INTO _r FROM rp;
-
-  PERFORM pg_temp.become(_r.rec_a); SET LOCAL ROLE authenticated;
   SELECT revision INTO _rev FROM public.bcp_conduct_positions WHERE id = _r.pos1;
-  PERFORM public.bcp_conduct_reopen_position(gen_random_uuid(), _r.pos1, _rev,
-    'SYNTETISK anledning att öppna igen');
-  RESET ROLE; PERFORM pg_temp.nobody();
-
-  PERFORM pg_temp.ok(
-    (SELECT state FROM public.bcp_conduct_positions WHERE id = _r.pos1) <> 'locked',
-    'B6.1 the position is open again');
 
   PERFORM pg_temp.must_fail_as('authenticated', _r.rec_a,
-    format('SELECT public.bcp_conduct_preview_report(%L)', _r.sess),
-    'BCP_CONDUCT_NOT_VISIBLE_YET',
-    'B6.2 and the report closes again with it');
+    format('SELECT public.bcp_conduct_reopen_position(%L, %L, %s, %L)',
+           gen_random_uuid(), _r.pos1, _rev, 'SYNTETISK anledning att öppna igen'),
+    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',
+    'B6.1 once both have been readable, the position cannot be reopened');
+
+  PERFORM pg_temp.ok(
+    (SELECT state FROM public.bcp_conduct_positions WHERE id = _r.pos1) = 'locked',
+    'B6.2 and it stays locked, so the report stays readable as previewed');
 END $reopen$;
 
 -- ---------------------------------------------------------------------------
