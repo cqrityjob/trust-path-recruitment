@@ -1184,6 +1184,8 @@ ALTER TABLE public.scp_item_versions DROP COLUMN IF EXISTS mode;
 
 DROP VIEW  IF EXISTS public.scp_rm_competency_profile;
 DROP FUNCTION IF EXISTS public.scp_compute_maturity(uuid, uuid, text, timestamptz);
+-- Its issuer-scoped twin (20270104090000), called by scp_development_recommendations.
+DROP FUNCTION IF EXISTS public.scp_compute_maturity_for_issuers(uuid, uuid, text, timestamptz, uuid[]);
 DROP FUNCTION IF EXISTS public.scp_guard_evidence_append_only() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_behaviour_has_competency() CASCADE;
 DROP FUNCTION IF EXISTS public.scp_guard_evidence_source_has_writer() CASCADE;
