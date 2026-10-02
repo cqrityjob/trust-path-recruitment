@@ -7,14 +7,14 @@ Branch `claude/compassionate-turing-2a2evm`. Inventory first:
 
 One programme, six areas, no wizard:
 
-| # | Area                     | Records                                                       | Module(s)                               |
-| - | ------------------------ | ------------------------------------------------------------- | --------------------------------------- |
-| 1 | Mission & Mandate        | `sw_security_mandates`                                        | `/mandate`                              |
-| 2 | Protected Assets         | `sw_protected_assets`, `sw_risk_assets`                       | `/assets`                               |
-| 3 | Threats & Risks          | `sw_risks` (+ owner, scenario, source), `sw_risk_assets`      | `/risks` (existing)                     |
-| 4 | Security Baseline & Gaps | `sw_baseline_assessments`, `sw_baseline_answers`, `sw_gaps`   | `/baseline`, `/gaps`                    |
-| 5 | Actions & Governance     | `sw_actions` (+ gap, asset, source, approval)                 | `/risks`, `/gaps`                       |
-| 6 | Monitoring & Reporting   | existing monitoring, `sw_management_reports`                  | `/monitoring`, `/reports` (existing)    |
+| #   | Area                     | Records                                                     | Module(s)                            |
+| --- | ------------------------ | ----------------------------------------------------------- | ------------------------------------ |
+| 1   | Mission & Mandate        | `sw_security_mandates`                                      | `/mandate`                           |
+| 2   | Protected Assets         | `sw_protected_assets`, `sw_risk_assets`                     | `/assets`                            |
+| 3   | Threats & Risks          | `sw_risks` (+ owner, scenario, source), `sw_risk_assets`    | `/risks` (existing)                  |
+| 4   | Security Baseline & Gaps | `sw_baseline_assessments`, `sw_baseline_answers`, `sw_gaps` | `/baseline`, `/gaps`                 |
+| 5   | Actions & Governance     | `sw_actions` (+ gap, asset, source, approval)               | `/risks`, `/gaps`                    |
+| 6   | Monitoring & Reporting   | existing monitoring, `sw_management_reports`                | `/monitoring`, `/reports` (existing) |
 
 Cross-cutting: `sw_evidence_links` (evidence library attached to any record),
 `sw_ai_suggestions` (every AI output), `sw_programme_plans` (optional 90-day
@@ -89,7 +89,7 @@ requested list.
 ## 5. Deterministic rules (all in `rules.ts`, tested in `scripts/security-work-programme-check.ts`)
 
 - **Programme status** per area: `not_started | in_progress |
-  needs_attention | complete`, see the doc comment on `programmeStatus`.
+needs_attention | complete`, see the doc comment on `programmeStatus`.
 - **Maturity**: Informal/Managed/Measured/Optimised. A domain reaches level
   L only when every applicable question at L and below is answered Yes and
   at least one applicable question at L is in scope; Partly/No/unanswered
@@ -156,10 +156,10 @@ menu, baseline, overview, management report).
 
 ## 10. Known limitations
 
-- The schema-first merge contract (`scripts/schema-first-release-check.ts`)
-  is red by design on this combined branch: the migration must merge and be
-  applied first, then the application half. The commits are ordered so the
-  first commit is the schema half.
+- The schema half shipped alone in #376 (`20270117090000`), was applied by
+  the official integration and verified read-only
+  (`docs/release/2026-10-02-security-work-programme-hosted-verification.md`);
+  this branch carries the application half and that record.
 - The assistant is wired to the activation gate but has not been exercised
   against a live provider (none is activated). Its provider call is a
   single bounded POST without the processing-job budget ledger.
