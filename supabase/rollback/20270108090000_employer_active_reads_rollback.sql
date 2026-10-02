@@ -7,8 +7,9 @@
 -- pipeline, person overviews, released reports, decisions, invitations,
 -- training status and review board. No row is touched.
 --
--- Later migrations reuse has_active_employer_role. Roll those back first; this
--- file refuses to drop the primitive while anything else still calls it.
+-- Later migrations reuse has_active_employer_role. Roll those back first for a
+-- complete rollback: while anything else still calls the primitive, this file
+-- restores its own bodies and policies but keeps the primitive.
 
 CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(_audience text, _subject_id uuid, _issuer_organization_id uuid)
  RETURNS boolean
@@ -505,23 +506,24 @@ ALTER POLICY scp_training_progress_read ON public.scp_training_module_progress
                                      WHERE si.subject_id = ta.subject_id
                                        AND si.user_id = auth.uid()))));
 
+-- Drop the primitive only when nothing else calls it. Later migrations in
+-- this series reuse it; while any of them is still applied it stays, and the
+-- notice says so. Roll those back first for a complete rollback.
 DO $$
-DECLARE _n int;
+DECLARE _f int; _p int;
 BEGIN
-  SELECT count(*) INTO _n FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  SELECT count(*) INTO _f FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
    WHERE n.nspname = 'public' AND p.proname <> 'has_active_employer_role'
      AND p.prosrc LIKE '%has_active_employer_role%';
-  IF _n > 0 THEN
-    RAISE EXCEPTION 'EMPLOYER_ACTIVE_READS_ROLLBACK: % other function(s) still call has_active_employer_role; roll back the later migrations first', _n;
-  END IF;
-  SELECT count(*) INTO _n FROM pg_policies
+  SELECT count(*) INTO _p FROM pg_policies
    WHERE coalesce(qual, '') || coalesce(with_check, '') LIKE '%has_active_employer_role%';
-  IF _n > 0 THEN
-    RAISE EXCEPTION 'EMPLOYER_ACTIVE_READS_ROLLBACK: % polic(ies) still call has_active_employer_role; roll back the later migrations first', _n;
+  IF _f = 0 AND _p = 0 THEN
+    DROP FUNCTION public.has_active_employer_role(uuid, uuid, text[]);
+    RAISE NOTICE 'EMPLOYER_ACTIVE_READS_ROLLBACK: has_active_employer_role dropped';
+  ELSE
+    RAISE NOTICE 'EMPLOYER_ACTIVE_READS_ROLLBACK: has_active_employer_role KEPT -- % later function(s) and % polic(ies) still call it; roll those migrations back first', _f, _p;
   END IF;
 END $$;
-
-DROP FUNCTION public.has_active_employer_role(uuid, uuid, text[]);
 
 DO $$
 DECLARE _m text;

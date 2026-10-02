@@ -1,7 +1,7 @@
-# P1-B (1/4): one active-employer rule, applied to employer reports and reads
+# P1-B (1/5): one active-employer rule, applied to employer reports and reads
 
 **Status: PENDING.** This is an isolated PR from `origin/main`, the first of
-four for P1-B of the 2026-10-02 full hostile-user re-audit. It is not merged,
+five for P1-B of the 2026-10-02 full hostile-user re-audit. It is not merged,
 and nothing was written to the hosted database.
 
 | Part | File |
@@ -78,9 +78,10 @@ before any of these functions is called
 (`src/routes/_authenticated.employer.$employerSlug.tsx`), so no legitimate
 screen loses data.
 
-The other three P1-B PRs cover:
-- candidate identity and job notifications;
-- assessment actions and Interview Intelligence;
+The other four P1-B PRs cover:
+- candidate identity, interview notes and candidate notifications;
+- assessment actions;
+- Interview Intelligence and BESKT;
 - the Security Passport.
 
 ## 3. Hosted state (read-only, 2026-10-02)
@@ -132,6 +133,6 @@ suite passes again.
 ## 5. Rollback
 
 The rollback restores the 13 hosted bodies (md5 pinned) and the four policies,
-then drops the primitive. It refuses to drop the primitive while any other
-function or policy still calls it, so later migrations in this series must be
-rolled back first.
+then drops the primitive. While a later migration in this series still calls
+the primitive, the rollback keeps it and says so; roll those back first for a
+complete rollback.
