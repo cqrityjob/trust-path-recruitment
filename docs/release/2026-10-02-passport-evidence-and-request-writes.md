@@ -92,3 +92,27 @@ There is nothing to repair.
 
 After the controls, the migration is re-applied (postflight proven) and the
 suite passes again.
+
+## 5. Existing suites updated
+
+Three existing suites sent a direct client INSERT into
+`sp_verification_requests` and expected the table's constraint or index to
+refuse it. The client is now refused earlier, by privilege, so each of those
+checks was kept and split in two. No check was removed:
+
+- the original check now runs as the table owner. This proves the constraint
+  or index itself, which also binds the SECURITY DEFINER functions;
+- a new `b` check proves the client cannot send that INSERT at all.
+
+| Suite | Checks |
+|---|---|
+| `security_passport_trust_boundary_test.sql` | 1.5/1.5b, 1.6/1.6b, 6.2/6.2b |
+| `security_passport_employer_verification_test.sql` | 1.4/1.4b, 1.8/1.8b |
+
+`security_passport_note_privacy_test.sql` 2.8 asserted that a holder could
+still INSERT directly, the exact path this change closes. Its stated purpose
+is to show that 2.7 does not pass merely because holders cannot file at all.
+That purpose is kept: 2.8 now files a request through
+`sp_submit_for_verification` (undone in a subtransaction) and checks that the
+request carries no internal note.
+

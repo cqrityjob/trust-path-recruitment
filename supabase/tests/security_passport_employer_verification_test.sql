@@ -237,13 +237,22 @@ BEGIN
     '1.3 an employer still cannot be asked to confirm a VU1 credential');
 
   -- 1.4 A request naming no organisation at all is not a request anybody can
-  --     answer, and the table has refused it since Phase 3.
+  --     answer, and the table has refused it since Phase 3. Proven as the
+  --     table owner: since 20270106090000 no client may INSERT here (1.4b).
+  RESET ROLE;
   PERFORM pg_temp.must_fail(
     format('INSERT INTO public.sp_verification_requests
               (holder_user_id, period_id, request_kind, status)
             VALUES (%L, %L, ''employer_attestation'', ''pending'')', _amina, _period),
     'sp_vr_employer_kind_has_employer',
     '1.4 an employer attestation naming no employer is refused by the table');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.sp_verification_requests
+              (holder_user_id, period_id, request_kind, status)
+            VALUES (%L, %L, ''employer_attestation'', ''pending'')', _amina, _period),
+    'permission denied for table sp_verification_requests',
+    '1.4b and the candidate cannot send that INSERT at all');
 
   -- 1.5 An organisation that does not exist. What stops a crafted call from
   --     addressing a request into nowhere and leaving it permanently
@@ -285,14 +294,23 @@ BEGIN
     'SP_REQUEST_ALREADY_OPEN',
     '1.7 a second open confirmation request on the same period is refused');
 
-  -- 1.8 And not merely through the RPC: `authenticated` holds INSERT on this
-  --     table, so the crafted call that matters skips the function.
+  -- 1.8 And not merely through the RPC: the index refuses a duplicate from
+  --     any writer (proven as the table owner), and since 20270106090000 a
+  --     client cannot send the crafted INSERT at all (1.8b).
+  RESET ROLE;
   PERFORM pg_temp.must_fail(
     format('INSERT INTO public.sp_verification_requests
               (holder_user_id, period_id, request_kind, status, target_employer_id)
             VALUES (%L, %L, ''employer_attestation'', ''pending'', %L)', _amina, _period, _x),
     'sp_vr_one_open_request_per_period',
     '1.8 a direct INSERT of a duplicate open request is refused by the index');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.sp_verification_requests
+              (holder_user_id, period_id, request_kind, status, target_employer_id)
+            VALUES (%L, %L, ''employer_attestation'', ''pending'', %L)', _amina, _period, _x),
+    'permission denied for table sp_verification_requests',
+    '1.8b and the candidate cannot send that INSERT at all');
 
   RESET ROLE;
 END $$;
