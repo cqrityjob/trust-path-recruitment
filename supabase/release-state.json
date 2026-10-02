@@ -2719,6 +2719,14 @@
       "rollback": "supabase/rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql",
       "verify": "SELECT position('bcp_case_access_ok' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_iv_erase_source(uuid,text)'::regprocedure; -- true. Rolled-back probe: an active owner who is not the security officer calling scp_iv_erase_source on a security-vetting case's source is refused SCP_IV_NOT_CASE_MEMBER and the source stays active.",
       "note": "P1-K of the 2026-10-02 final audit. scp_iv_erase_source additionally requires bcp_case_access_ok, as scp_iv_confirm_transcript_basis does. Body otherwise identical to hosted. No row touched."
+    },
+    {
+      "file": "20270122090000_bcp_conduct_reopen_after_exposure.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql",
+      "verify": "SELECT position('BCP_CONDUCT_POSITIONS_ALREADY_SEEN' IN prosrc) > 0 FROM pg_proc WHERE proname='bcp_conduct_reopen_position'; -- true. Production holds no conduct session with two locked positions; the behaviour is proven by the conduct suite (C7.9 reproduction, C7.10-C7.12 refusal).",
+      "note": "P1-J of the 2026-10-02 final audit. bcp_conduct_reopen_position also refuses (BCP_CONDUCT_POSITIONS_ALREADY_SEEN) when every other position in the session is locked, the moment bcp_conduct_may_see_others opens. Body otherwise identical to hosted. No row touched."
     }
   ], 
   "policyVersion": 2, 

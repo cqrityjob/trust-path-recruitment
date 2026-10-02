@@ -1494,6 +1494,51 @@ set -e
 [ "$VE_RC" -eq 0 ] || { echo "$VE_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: vetting erase-boundary suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  vetting erase-boundary migration re-applied (postflight proved); suite passes again"
 
+# 20270122090000: a BESKT position cannot be reopened once the others are
+# readable (P1-J of the 2026-10-02 final audit). The regression lives in the
+# conduct suite, which already builds a two-assessor session: C7.9 reproduces
+# the reopen on the pre-fix body, C7.10-C7.12 refuse it.
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> C7.10
+#   NC2  the guard applies only once a panel exists                     -> C7.10
+run_cr_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/bcp_interview_conduct_test.sql 2>&1
+}
+cr_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_cr_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: conduct-reopen negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: C[0-9.]*' | head -1))"
+}
+CR_MIG=supabase/migrations/20270122090000_bcp_conduct_reopen_after_exposure.sql
+CR_RB=supabase/rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql
+echo "==> Running BESKT conduct reopen-after-exposure assertions"
+psql_q -d "$TEST_DB" -f "$CR_MIG" >/dev/null
+set +e
+CR_OUT="$(run_cr_suite)"; CR_RC=$?
+set -e
+if [ "$CR_RC" -ne 0 ] || ! echo "$CR_OUT" | grep -q "ok  C7.10 " || ! echo "$CR_OUT" | grep -q "ok  C7.9 REPRODUCTION"; then
+  echo "$CR_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the conduct suite does not prove the reopen-after-exposure boundary (rc ${CR_RC})." >&2
+  exit 1
+fi
+echo "    ok  conduct suite passes with the reopen reproduced pre-fix (C7.9) and refused post-fix (C7.10-C7.12)"
+psql_q -d "$TEST_DB" -f "$CR_RB" >/dev/null
+cr_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -c "$(sed 's/  IF EXISTS (SELECT 1 FROM public.bcp_conduct_positions o$/  IF EXISTS (SELECT 1 FROM public.bcp_conduct_panels pp WHERE pp.session_id = _p.session_id) AND EXISTS (SELECT 1 FROM public.bcp_conduct_positions o/' "$CR_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+cr_nc_expect_fail "NC2 guard only with a panel"
+psql_q -d "$TEST_DB" -f "$CR_MIG" >/dev/null
+set +e
+CR_OUT="$(run_cr_suite)"; CR_RC=$?
+set -e
+[ "$CR_RC" -eq 0 ] || { echo "$CR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: conduct suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  conduct reopen-after-exposure migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.

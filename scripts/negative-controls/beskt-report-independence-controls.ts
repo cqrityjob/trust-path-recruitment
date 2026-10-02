@@ -426,14 +426,12 @@ const MUTATIONS: readonly Mutation[] = [
   {
     id: "RIB-NC-SUITE-NO-REOPEN",
     defect:
-      "the suite stops proving that reopening closes the boundary again, so a one-way latch would pass",
+      "the suite stops proving that a position cannot be reopened once both have been readable (P1-J), so a reopen-and-revise would pass",
     file: SUITE,
-    find: "  PERFORM public.bcp_conduct_reopen_position(gen_random_uuid(), _r.pos1, _rev,",
-    replace:
-      "  PERFORM public.bcp_conduct_lock_position(gen_random_uuid(), _r.pos1, _rev); PERFORM (",
+    find: "    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',\n    'B6.1 once both",
+    replace: "    'BCP_CONDUCT_NOT_PERMITTED',\n    'B6.1 once both",
     guard: GUARD,
-    expect:
-      "BOUNDARY-SUITE: reopening closes it again, so the boundary is a live predicate not a latch",
+    expect: "BOUNDARY-SUITE: once both have been readable, no position can be reopened and revised",
   },
   {
     id: "RIB-NC-SUITE-NO-HELPER-PROBE",

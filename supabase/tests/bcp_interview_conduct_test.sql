@@ -935,6 +935,53 @@ BEGIN
 END $c7$;
 
 -- ---------------------------------------------------------------------------
+-- C7.9-C7.12 -- 20270122090000 (P1-J): every position is locked and there is
+-- no panel yet, so each assessor can read the others (C7.7). From here a
+-- reopen would let a recorded view be revised in their light.
+-- ---------------------------------------------------------------------------
+SAVEPOINT p1j_pre_fix;
+\ir ../rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql
+DO $c7r$
+DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE;
+BEGIN
+  SELECT * INTO _r FROM lk; SELECT * INTO _k FROM ck;
+  PERFORM pg_temp.become(_r.rec_a);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.bcp_conduct_reopen_position(gen_random_uuid(), _k.pos_a,
+    (SELECT revision FROM public.bcp_conduct_positions WHERE id = _k.pos_a),
+    'SYNTETISKT: ändrar efter att ha läst kollegans.');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(
+    (SELECT state = 'open' FROM public.bcp_conduct_positions WHERE id = _k.pos_a),
+    'C7.9 REPRODUCTION: pre-fix, having read the other position, the first assessor reopens their own');
+END $c7r$;
+ROLLBACK TO SAVEPOINT p1j_pre_fix;
+
+DO $c7x$
+DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE;
+BEGIN
+  SELECT * INTO _r FROM lk; SELECT * INTO _k FROM ck;
+  PERFORM pg_temp.must_fail_as('authenticated', _r.rec_a,
+    format('SELECT public.bcp_conduct_reopen_position(%L, %L, %s, %L)',
+           gen_random_uuid(), _k.pos_a,
+           (SELECT revision FROM public.bcp_conduct_positions WHERE id = _k.pos_a),
+           'SYNTETISKT: ändrar efter att ha läst kollegans.'),
+    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',
+    'C7.10 once every position is locked, the first assessor cannot reopen theirs');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b5000000-0000-4000-8000-0000000000d3',
+    format('SELECT public.bcp_conduct_reopen_position(%L, %L, %s, %L)',
+           gen_random_uuid(), _k.pos_b,
+           (SELECT revision FROM public.bcp_conduct_positions WHERE id = _k.pos_b),
+           'SYNTETISKT: ändrar efter att ha läst kollegans.'),
+    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',
+    'C7.11 nor can the second');
+  PERFORM pg_temp.ok(
+    (SELECT count(*) FROM public.bcp_conduct_positions
+      WHERE session_id = _k.session AND state = 'locked') = 2,
+    'C7.12 and both positions stay locked as recorded');
+END $c7x$;
+
+-- ---------------------------------------------------------------------------
 -- C8 -- The panel: disagreement is recorded, not resolved away.
 -- ---------------------------------------------------------------------------
 DO $c8$
