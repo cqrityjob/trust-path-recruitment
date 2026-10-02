@@ -301,5 +301,5 @@ BEGIN
       RAISE EXCEPTION 'CANDIDATE_IDENTITY_ACTIVE_PROOF: policy % does not use has_active_employer_role alone', _p;
     END IF;
   END LOOP;
-  RAISE NOTICE 'CANDIDATE_IDENTITY_ACTIVE_PROOF ok: 5 functions and 1 policies require an active organisation';
+  RAISE NOTICE 'CANDIDATE_IDENTITY_ACTIVE_PROOF ok: 5 functions and 1 policy require an active organisation';
 END $$;
