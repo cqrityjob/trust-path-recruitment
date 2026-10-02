@@ -768,6 +768,76 @@ set -e
 [ "$AR_RC" -eq 0 ] || { echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employer active-reads suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  employer active-reads migration re-applied (postflight proved); suite passes again"
 
+# 20270109090000: candidate identity, interview notes and candidate
+# notifications require an ACTIVE organisation (P1-B 2/5 of the 2026-10-02
+# re-audit). The suite reproduces the suspended-employer reads and writes on the
+# pre-fix state itself (CI0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> CI1.1
+#   NC2  only jase_notification_payload back on its pre-fix body        -> CI1.1
+#   NC3  only the scp_interview_notes read policy back on its predicate -> CI1.1
+#   NC4  only scp_record_interview_note back on its pre-fix body        -> CI1.3
+run_ci_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_identity_active_employer_test.sql 2>&1
+}
+ci_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ci_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: candidate-identity negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: CI[0-9.]*' | head -1))"
+}
+CI_MIG=supabase/migrations/20270109090000_candidate_identity_active_employer.sql
+CI_RB=supabase/rollback/20270109090000_candidate_identity_active_employer_rollback.sql
+ci_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$CI_RB"
+}
+echo "==> Running candidate identity active-employer assertions"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+set +e
+CI_OUT="$(run_ci_suite)"; CI_RC=$?
+set -e
+CI_PASSED="$(echo "$CI_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$CI_RC" -ne 0 ]; then
+  echo "$CI_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the candidate identity suite exited with code ${CI_RC}." >&2
+  exit 1
+fi
+[ "$CI_PASSED" -ge 19 ] || { echo "$CI_OUT"; echo "FAIL: candidate identity assertion shortfall: $CI_PASSED (floor 19)" >&2; exit 1; }
+echo "    ok  $CI_PASSED candidate identity assertions passed (suspended reads and writes reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$CI_RB" >/dev/null
+ci_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+CI_NC2_SQL="$(ci_rb_fn jase_notification_payload)"
+grep -q "employer_memberships" <<<"$CI_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$CI_NC2_SQL" \
+  || { echo "FAIL: candidate-identity NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$CI_NC2_SQL" >/dev/null
+ci_nc_expect_fail "NC2 pre-fix notification payload"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+ALTER POLICY scp_interview_notes_employer_read ON public.scp_interview_notes
+  USING (EXISTS (SELECT 1 FROM public.employer_memberships m
+                  WHERE m.employer_id = scp_interview_notes.employer_id
+                    AND m.user_id = auth.uid() AND m.status = 'active'));
+SQL
+ci_nc_expect_fail "NC3 pre-fix interview-notes read policy"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+CI_NC4_SQL="$(ci_rb_fn scp_record_interview_note)"
+grep -q "employer_memberships" <<<"$CI_NC4_SQL" && ! grep -q "has_active_employer_role" <<<"$CI_NC4_SQL" \
+  || { echo "FAIL: candidate-identity NC4 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$CI_NC4_SQL" >/dev/null
+ci_nc_expect_fail "NC4 pre-fix note recording"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+set +e
+CI_OUT="$(run_ci_suite)"; CI_RC=$?
+set -e
+[ "$CI_RC" -eq 0 ] || { echo "$CI_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: candidate identity suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  candidate identity migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
