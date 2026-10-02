@@ -573,6 +573,63 @@ SE_OUT="$(run_se_suite)"; SE_RC=$?
 set -e
 [ "$SE_RC" -eq 0 ] || { echo "$SE_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: suspended-employer suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  suspended-employer migration re-applied (postflight proved); suite passes again"
+# 20270106090000: Passport evidence and verification requests are written only
+# by their functions (P1-4 of the 2026-10-02 audit). The suite reproduces the
+# cross-holder plant on the pre-fix grants and policies themselves (SV0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (grants and write policies back)            -> SV1.1
+#   NC2  old write policies back, write grants still revoked            -> SV4.1
+#   NC3  write grants back, SELECT-only policies kept                   -> SV1.2
+run_sv_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_evidence_and_request_writes_test.sql 2>&1
+}
+sv_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_sv_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: passport-writes negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: SV[0-9.]*' | head -1))"
+}
+echo "==> Running Passport evidence/request write-path assertions"
+set +e
+SV_OUT="$(run_sv_suite)"; SV_RC=$?
+set -e
+SV_PASSED="$(echo "$SV_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$SV_RC" -ne 0 ]; then
+  echo "$SV_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the passport-writes suite exited with code ${SV_RC}." >&2
+  exit 1
+fi
+[ "$SV_PASSED" -ge 29 ] || { echo "$SV_OUT"; echo "FAIL: passport-writes assertion shortfall: $SV_PASSED (floor 29)" >&2; exit 1; }
+echo "    ok  $SV_PASSED passport-writes assertions passed (cross-holder plant reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270106090000_sp_evidence_and_request_writes_rpc_only_rollback.sql >/dev/null
+sv_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+DROP POLICY sp_evidence_self ON public.sp_evidence;
+CREATE POLICY sp_evidence_self ON public.sp_evidence FOR ALL TO authenticated
+  USING (holder_user_id = auth.uid()) WITH CHECK (holder_user_id = auth.uid());
+CREATE POLICY sp_vr_self_insert ON public.sp_verification_requests FOR INSERT TO authenticated
+  WITH CHECK (holder_user_id = auth.uid() AND status = 'pending' AND decided_by IS NULL);
+SQL
+sv_nc_expect_fail "NC2 write policies back, grants revoked"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+GRANT INSERT, UPDATE ON public.sp_evidence TO authenticated;
+GRANT INSERT (id, holder_user_id, claim_id, period_id, request_kind, target_employer_id, status)
+  ON public.sp_verification_requests TO authenticated;
+SQL
+sv_nc_expect_fail "NC3 write grants back, policies SELECT-only"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
+set +e
+SV_OUT="$(run_sv_suite)"; SV_RC=$?
+set -e
+[ "$SV_RC" -eq 0 ] || { echo "$SV_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: passport-writes suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  passport-writes migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback

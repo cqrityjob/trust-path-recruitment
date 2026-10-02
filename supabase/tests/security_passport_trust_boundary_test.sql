@@ -225,18 +225,20 @@ BEGIN
   RESET ROLE;
 END $$;
 
--- 1.5-1.7 The RPC is not the boundary. `authenticated` holds INSERT on this
--- table under RLS, so the crafted call that matters skips the function
--- entirely -- which is exactly what a hand-written PostgREST request does.
+-- 1.5-1.7 The RPC is not the only boundary. Since 20270106090000 no client
+-- holds INSERT on this table at all (1.5b/1.6b): a hand-written PostgREST
+-- request is refused before any constraint runs. The table's own constraint
+-- is still proven, as the table owner, so it holds for every writer --
+-- including the SECURITY DEFINER functions.
 DO $$
 DECLARE _h uuid := 'cb000000-0000-0000-0000-000000000001'; _claim uuid; _period uuid;
 BEGIN
   SELECT id INTO _claim FROM public.sp_claims
    WHERE holder_user_id = _h AND credential_code = 'OV_TRAINING' LIMIT 1;
 
-  SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _h::text, true);
 
+  -- As the table owner: the constraint itself.
   PERFORM pg_temp.must_fail(
     format('INSERT INTO public.sp_verification_requests
               (holder_user_id, claim_id, request_kind, status, target_employer_id)
@@ -244,6 +246,16 @@ BEGIN
            _h, _claim, 'cb000000-0000-0000-0000-0000000000e1'),
     'sp_vr_employer_attestation_is_employment_only',
     '1.5 a direct INSERT of employer attestation on a claim is refused by the table');
+  -- As the holder: no direct INSERT at all.
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.sp_verification_requests
+              (holder_user_id, claim_id, request_kind, status, target_employer_id)
+            VALUES (%L, %L, ''employer_attestation'', ''pending'', %L)',
+           _h, _claim, 'cb000000-0000-0000-0000-0000000000e1'),
+    'permission denied for table sp_verification_requests',
+    '1.5b and the holder cannot send that INSERT at all');
+  RESET ROLE;
 
   SELECT id INTO _period FROM public.sp_experience_periods
    WHERE holder_user_id = _h ORDER BY id LIMIT 1;
@@ -254,6 +266,14 @@ BEGIN
            _h, _claim, _period, 'cb000000-0000-0000-0000-0000000000e1'),
     'sp_vr_employer_attestation_is_employment_only',
     '1.6 a direct INSERT naming both is refused by the table');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.sp_verification_requests
+              (holder_user_id, claim_id, period_id, request_kind, status, target_employer_id)
+            VALUES (%L, %L, %L, ''employer_attestation'', ''pending'', %L)',
+           _h, _claim, _period, 'cb000000-0000-0000-0000-0000000000e1'),
+    'permission denied for table sp_verification_requests',
+    '1.6b and the holder cannot send that INSERT at all');
   RESET ROLE;
 END $$;
 
@@ -586,15 +606,25 @@ BEGIN
     'SP_REQUEST_ALREADY_OPEN',
     '6.1 a second submission on an open entry is refused, as before');
 
-  -- 6.2 And the same answer when the function is skipped entirely -- which is
-  --     what the concurrent second submission effectively does, since it gets
-  --     past the function's own check before the first one commits.
+  -- 6.2 And the same answer when the function's own check is skipped --
+  --     which is what the concurrent second submission effectively does,
+  --     since it gets past that check before the first one commits. The index
+  --     is proven as the table owner (the function writes with the owner's
+  --     rights); since 20270106090000 a client cannot send the INSERT at all.
+  RESET ROLE;
   PERFORM pg_temp.must_fail(
     format('INSERT INTO public.sp_verification_requests
               (holder_user_id, claim_id, request_kind, status)
             VALUES (%L, %L, ''cqrityjob_review'', ''pending'')', _h, _claim),
     'sp_vr_one_open_request_per_claim',
     '6.2 a second open request written directly is refused by the index');
+  SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.must_fail(
+    format('INSERT INTO public.sp_verification_requests
+              (holder_user_id, claim_id, request_kind, status)
+            VALUES (%L, %L, ''cqrityjob_review'', ''pending'')', _h, _claim),
+    'permission denied for table sp_verification_requests',
+    '6.2b and the holder cannot send that INSERT at all');
   RESET ROLE;
 END $$;
 
