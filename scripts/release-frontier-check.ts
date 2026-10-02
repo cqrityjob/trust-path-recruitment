@@ -317,8 +317,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // cross-holder or learning-run leak.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-security-gate-blockers-hosted-verification.md.
-// Nothing is pending.
-const expectedPending: string[] = [];
+// 20270108090000 (Security Work programme) awaits the owner apply; see
+// supabase/release-state.json and docs/security-intelligence/security-work-programme.md.
+const expectedPending: string[] = ["20270108090000_security_work_programme.sql"];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
