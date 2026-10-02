@@ -283,17 +283,22 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // is served options carrying exactly option_id and label.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-01-delivery-answer-key-leak-hosted-verification.md.
-// 20261230090000_job_application_insert_boundary (P1-1 and P1-2 of the
-// 2026-10-01 audit: a candidate creates their own application in its initial
-// state only, with a CV path in their own folder) is pending BY DESIGN until
-// its PR merges and the official integration applies it. Its name comes off
-// this list in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-01-job-application-insert-boundary.md.
-// 20261231090000_scp_resolve_employment_owner_only (P1-3 of the 2026-10-01
-// audit: the employment-binding helper is not a client entry point) is pending
-// BY DESIGN until its PR merges and the official integration applies it. Its
-// name comes off this list in the change that records its hosted evidence.
-// Evidence to come: docs/release/2026-10-01-employment-binding-owner-only.md.
+// 2026-10-01 20:34 UTC: 20261230090000 (job_application_insert_boundary,
+// P1-1 and P1-2 of the pre-release security audit, #353 as e81a1dc) verified
+// applied read-only: the insert policy and the 13-column INSERT grant equal
+// the merged file, anon holds no INSERT, 14 applications are unchanged with
+// 0 off the path rule, and a rolled-back probe as a real candidate is refused
+// a CV path in another applicant's folder and accepted in its own.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-01-job-application-insert-boundary-hosted-verification.md.
+// 2026-10-01 20:49 UTC: 20261231090000 (scp_resolve_employment_owner_only,
+// P1-3 of the pre-release security audit, #354) verified applied read-only:
+// the binding helper's ACL is its owner alone, its body is unchanged, both
+// callers are SECURITY DEFINER under the same owner, bindings are unchanged
+// (2 of 5), and a rolled-back probe as a signed-in non-member is refused
+// (42501) with nothing bound.
+// release-state.json and hosted-ledger.json carry the evidence.
+// Evidence: docs/release/2026-10-01-employment-binding-owner-only-hosted-verification.md.
 // 20270101090000_catalogue_read_hardening (the four owner-approved items of
 // the 2026-10-01 pre-release security pass: drafts, unapproved professions
 // and the interviewer guide stop being readable by every signed-in account,
@@ -302,8 +307,6 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // comes off this list in the change that records its hosted evidence.
 // Evidence to come: docs/release/2026-10-01-catalogue-read-hardening.md.
 const expectedPending: string[] = [
-  "20261230090000_job_application_insert_boundary.sql",
-  "20261231090000_scp_resolve_employment_owner_only.sql",
   "20270101090000_catalogue_read_hardening.sql",
 ];
 const hostedIdentities = [
