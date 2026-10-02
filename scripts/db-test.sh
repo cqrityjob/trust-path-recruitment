@@ -606,6 +606,10 @@ if [ "$SV_RC" -ne 0 ]; then
 fi
 [ "$SV_PASSED" -ge 29 ] || { echo "$SV_OUT"; echo "FAIL: passport-writes assertion shortfall: $SV_PASSED (floor 29)" >&2; exit 1; }
 echo "    ok  $SV_PASSED passport-writes assertions passed (cross-holder plant reproduced pre-fix, refused post-fix)"
+# 20270114090000 (P1-E) later added a table-level invariant that refuses the
+# same cross-holder rows. These controls prove THIS migration's layers, so the
+# later invariant is lifted while they run and restored afterwards.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270114090000_sp_passport_target_holder_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/rollback/20270106090000_sp_evidence_and_request_writes_rpc_only_rollback.sql >/dev/null
 sv_nc_expect_fail "NC1 full rollback"
 psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
@@ -625,6 +629,7 @@ GRANT INSERT (id, holder_user_id, claim_id, period_id, request_kind, target_empl
 SQL
 sv_nc_expect_fail "NC3 write grants back, policies SELECT-only"
 psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20270114090000_sp_passport_target_holder.sql >/dev/null
 set +e
 SV_OUT="$(run_sv_suite)"; SV_RC=$?
 set -e
@@ -767,6 +772,396 @@ AR_OUT="$(run_ar_suite)"; AR_RC=$?
 set -e
 [ "$AR_RC" -eq 0 ] || { echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employer active-reads suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  employer active-reads migration re-applied (postflight proved); suite passes again"
+# 20270114090000: a Passport request or evidence row names exactly one entry,
+# and it is the holder's own (P1-E of the 2026-10-02 re-audit). The suite
+# reproduces the cross-holder attach / review / approve / revoke chain on the
+# pre-fix functions and tables itself (TH0), and proves the table layer alone
+# (TH3).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> TH1.1
+#   NC2  only the four functions back on their pre-fix bodies           -> TH1.1
+#   NC3  only the table constraints dropped (functions kept)            -> TH3.3
+run_th_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_passport_target_holder_test.sql 2>&1
+}
+th_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_th_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: passport-target-holder negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: TH[0-9.]*' | head -1))"
+}
+TH_MIG=supabase/migrations/20270114090000_sp_passport_target_holder.sql
+TH_RB=supabase/rollback/20270114090000_sp_passport_target_holder_rollback.sql
+echo "==> Running Passport target-holder assertions"
+set +e
+TH_OUT="$(run_th_suite)"; TH_RC=$?
+set -e
+TH_PASSED="$(echo "$TH_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$TH_RC" -ne 0 ]; then
+  echo "$TH_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the passport target-holder suite exited with code ${TH_RC}." >&2
+  exit 1
+fi
+[ "$TH_PASSED" -ge 20 ] || { echo "$TH_OUT"; echo "FAIL: passport target-holder assertion shortfall: $TH_PASSED (floor 20)" >&2; exit 1; }
+echo "    ok  $TH_PASSED passport target-holder assertions passed (cross-holder chain reproduced pre-fix, refused post-fix by each layer)"
+psql_q -d "$TEST_DB" -f "$TH_RB" >/dev/null
+th_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$TH_MIG" >/dev/null
+TH_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.sp_attach_evidence/,$p' "$TH_RB" | sed '/^DO \$\$/,$d')"
+[ "$(grep -c '^CREATE OR REPLACE FUNCTION' <<<"$TH_NC2_SQL")" -eq 4 ] && ! grep -q "SP_TARGET_AMBIGUOUS" <<<"$TH_NC2_SQL" \
+  || { echo "FAIL: passport-target-holder NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$TH_NC2_SQL" >/dev/null
+th_nc_expect_fail "NC2 pre-fix functions, constraints kept"
+psql_q -d "$TEST_DB" -f "$TH_RB" >/dev/null
+psql_q -d "$TEST_DB" -f "$TH_MIG" >/dev/null
+TH_NC3_SQL="$(sed -n '/^ALTER TABLE public.sp_verification_requests/,/^ALTER TABLE public.sp_claims DROP/p' "$TH_RB")"
+[ "$(grep -c 'DROP CONSTRAINT' <<<"$TH_NC3_SQL")" -eq 8 ] \
+  || { echo "FAIL: passport-target-holder NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$TH_NC3_SQL" >/dev/null
+th_nc_expect_fail "NC3 constraints dropped, functions kept"
+psql_q -d "$TEST_DB" -f "$TH_RB" >/dev/null
+psql_q -d "$TEST_DB" -f "$TH_MIG" >/dev/null
+set +e
+TH_OUT="$(run_th_suite)"; TH_RC=$?
+set -e
+[ "$TH_RC" -eq 0 ] || { echo "$TH_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: passport target-holder suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  passport target-holder migration re-applied (postflight proved); suite passes again"
+
+# 20270109090000: candidate identity, interview notes and candidate
+# notifications require an ACTIVE organisation (P1-B 2/5 of the 2026-10-02
+# re-audit). The suite reproduces the suspended-employer reads and writes on the
+# pre-fix state itself (CI0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> CI1.1
+#   NC2  only jase_notification_payload back on its pre-fix body        -> CI1.1
+#   NC3  only the scp_interview_notes read policy back on its predicate -> CI1.1
+#   NC4  only scp_record_interview_note back on its pre-fix body        -> CI1.3
+run_ci_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_identity_active_employer_test.sql 2>&1
+}
+ci_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ci_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: candidate-identity negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: CI[0-9.]*' | head -1))"
+}
+CI_MIG=supabase/migrations/20270109090000_candidate_identity_active_employer.sql
+CI_RB=supabase/rollback/20270109090000_candidate_identity_active_employer_rollback.sql
+ci_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$CI_RB"
+}
+echo "==> Running candidate identity active-employer assertions"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+set +e
+CI_OUT="$(run_ci_suite)"; CI_RC=$?
+set -e
+CI_PASSED="$(echo "$CI_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$CI_RC" -ne 0 ]; then
+  echo "$CI_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the candidate identity suite exited with code ${CI_RC}." >&2
+  exit 1
+fi
+[ "$CI_PASSED" -ge 19 ] || { echo "$CI_OUT"; echo "FAIL: candidate identity assertion shortfall: $CI_PASSED (floor 19)" >&2; exit 1; }
+echo "    ok  $CI_PASSED candidate identity assertions passed (suspended reads and writes reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$CI_RB" >/dev/null
+ci_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+CI_NC2_SQL="$(ci_rb_fn jase_notification_payload)"
+grep -q "employer_memberships" <<<"$CI_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$CI_NC2_SQL" \
+  || { echo "FAIL: candidate-identity NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$CI_NC2_SQL" >/dev/null
+ci_nc_expect_fail "NC2 pre-fix notification payload"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+ALTER POLICY scp_interview_notes_employer_read ON public.scp_interview_notes
+  USING (EXISTS (SELECT 1 FROM public.employer_memberships m
+                  WHERE m.employer_id = scp_interview_notes.employer_id
+                    AND m.user_id = auth.uid() AND m.status = 'active'));
+SQL
+ci_nc_expect_fail "NC3 pre-fix interview-notes read policy"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+CI_NC4_SQL="$(ci_rb_fn scp_record_interview_note)"
+grep -q "employer_memberships" <<<"$CI_NC4_SQL" && ! grep -q "has_active_employer_role" <<<"$CI_NC4_SQL" \
+  || { echo "FAIL: candidate-identity NC4 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$CI_NC4_SQL" >/dev/null
+ci_nc_expect_fail "NC4 pre-fix note recording"
+psql_q -d "$TEST_DB" -f "$CI_MIG" >/dev/null
+set +e
+CI_OUT="$(run_ci_suite)"; CI_RC=$?
+set -e
+[ "$CI_RC" -eq 0 ] || { echo "$CI_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: candidate identity suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  candidate identity migration re-applied (postflight proved); suite passes again"
+
+# 20270110090000: assessment actions require an ACTIVE organisation (P1-B 3/5
+# of the 2026-10-02 re-audit). The suite reproduces a suspended employer
+# reviewing, releasing, deciding, cancelling and recording setups on the
+# pre-fix state itself (AA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> AA1.1
+#   NC2  only scp_can_review_for back on its pre-fix body               -> AA1.1
+#   NC3  only scp_release_attempt_report back on its pre-fix body       -> AA1.3
+#   NC4  only the assessment-setups read policy back on its predicate   -> AA1.1
+run_aa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/assessment_actions_active_employer_test.sql 2>&1
+}
+aa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_aa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: assessment-actions negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: AA[0-9.]*' | head -1))"
+}
+AA_MIG=supabase/migrations/20270110090000_assessment_actions_active_employer.sql
+AA_RB=supabase/rollback/20270110090000_assessment_actions_active_employer_rollback.sql
+aa_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$AA_RB"
+}
+echo "==> Running assessment actions active-employer assertions"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+set +e
+AA_OUT="$(run_aa_suite)"; AA_RC=$?
+set -e
+AA_PASSED="$(echo "$AA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$AA_RC" -ne 0 ]; then
+  echo "$AA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the assessment actions suite exited with code ${AA_RC}." >&2
+  exit 1
+fi
+[ "$AA_PASSED" -ge 18 ] || { echo "$AA_OUT"; echo "FAIL: assessment actions assertion shortfall: $AA_PASSED (floor 18)" >&2; exit 1; }
+echo "    ok  $AA_PASSED assessment actions assertions passed (suspended actions reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$AA_RB" >/dev/null
+aa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+AA_NC2_SQL="$(aa_rb_fn scp_can_review_for)"
+grep -q "employer_memberships" <<<"$AA_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$AA_NC2_SQL" \
+  || { echo "FAIL: assessment-actions NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AA_NC2_SQL" >/dev/null
+aa_nc_expect_fail "NC2 pre-fix reviewer authority"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+AA_NC3_SQL="$(aa_rb_fn scp_release_attempt_report)"
+grep -q "employer_memberships" <<<"$AA_NC3_SQL" && ! grep -q "has_active_employer_role" <<<"$AA_NC3_SQL" \
+  || { echo "FAIL: assessment-actions NC3 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$AA_NC3_SQL" >/dev/null
+aa_nc_expect_fail "NC3 pre-fix release"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "ALTER POLICY scp_assessment_setups_member_read ON public.scp_assessment_setups USING (public.has_employer_role(auth.uid(), employer_id, ARRAY['owner','admin','member']))" >/dev/null
+aa_nc_expect_fail "NC4 pre-fix setups read policy"
+psql_q -d "$TEST_DB" -f "$AA_MIG" >/dev/null
+set +e
+AA_OUT="$(run_aa_suite)"; AA_RC=$?
+set -e
+[ "$AA_RC" -eq 0 ] || { echo "$AA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assessment actions suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  assessment actions migration re-applied (postflight proved); suite passes again"
+
+# 20270111090000: Interview Intelligence and BESKT require an ACTIVE
+# organisation (P1-B 4/5 of the 2026-10-02 re-audit). The suite reproduces a
+# suspended employer reading and working an interview case on the pre-fix
+# state itself (IB0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> IB1.1
+#   NC2  only scp_iv_can_read_case back on its pre-fix body             -> IB1.1
+#   NC3  only scp_iv_case_row_visible back on its pre-fix body          -> IB1.1
+#   NC4  only the internal-test-activation read policy back             -> IB1.1
+#   (The candidate-corrections policy reads its case through the cases table's
+#   own row policy, which scp_iv_case_row_visible already gates, so planting
+#   it alone is not observable; NC3 covers that path.)
+#   NC5  only scp_iv_finalise_report back on its pre-fix body           -> IB1.3
+run_ib_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/interview_beskt_active_employer_test.sql 2>&1
+}
+ib_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ib_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: interview-beskt negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: IB[0-9.]*' | head -1))"
+}
+IB_MIG=supabase/migrations/20270111090000_interview_beskt_active_employer.sql
+IB_RB=supabase/rollback/20270111090000_interview_beskt_active_employer_rollback.sql
+ib_rb_fn() {
+  sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\\$function\\\$/p" "$IB_RB"
+}
+ib_plant_fn() {
+  local sql; sql="$(ib_rb_fn "$1")"
+  grep -q "has_employer_role(" <<<"$sql" && ! grep -q "has_active_employer_role" <<<"$sql" \
+    || { echo "FAIL: interview-beskt control could not plant the pre-fix $1" >&2; exit 1; }
+  psql_q -d "$TEST_DB" -c "$sql" >/dev/null
+}
+echo "==> Running Interview Intelligence and BESKT active-employer assertions"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+set +e
+IB_OUT="$(run_ib_suite)"; IB_RC=$?
+set -e
+IB_PASSED="$(echo "$IB_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$IB_RC" -ne 0 ]; then
+  echo "$IB_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the interview-beskt suite exited with code ${IB_RC}." >&2
+  exit 1
+fi
+[ "$IB_PASSED" -ge 18 ] || { echo "$IB_OUT"; echo "FAIL: interview-beskt assertion shortfall: $IB_PASSED (floor 18)" >&2; exit 1; }
+echo "    ok  $IB_PASSED interview-beskt assertions passed (suspended case access reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$IB_RB" >/dev/null
+ib_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+ib_plant_fn scp_iv_can_read_case
+ib_nc_expect_fail "NC2 pre-fix case read helper"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+ib_plant_fn scp_iv_case_row_visible
+ib_nc_expect_fail "NC3 pre-fix case row visibility"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+ALTER POLICY bcp_ita_party_read ON public.bcp_internal_test_activations
+  USING (public.is_platform_admin(auth.uid())
+         OR public.has_employer_role(auth.uid(), employer_id, ARRAY['owner'::text, 'admin'::text, 'member'::text]));
+SQL
+ib_nc_expect_fail "NC4 pre-fix test-activation read policy"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+ib_plant_fn scp_iv_finalise_report
+ib_nc_expect_fail "NC5 pre-fix finalise"
+psql_q -d "$TEST_DB" -f "$IB_MIG" >/dev/null
+set +e
+IB_OUT="$(run_ib_suite)"; IB_RC=$?
+set -e
+[ "$IB_RC" -eq 0 ] || { echo "$IB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: interview-beskt suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  interview-beskt migration re-applied (postflight proved); suite passes again"
+
+# 20270112090000: employer attestation in the Security Passport requires an
+# ACTIVE organisation (P1-B 5/5 of the 2026-10-02 re-audit). The suite
+# reproduces a suspended employer seeing its queue and verifying a holder's
+# employment on the pre-fix state itself (PA0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> PA1.1
+#   NC2  only sp_employer_attestation_queue back on its pre-fix body    -> PA1.1
+#   NC3  only sp_verifier_decide back on its pre-fix body               -> PA1.2
+run_pa_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/passport_attestation_active_employer_test.sql 2>&1
+}
+pa_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_pa_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: passport-attestation negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: PA[0-9.]*' | head -1))"
+}
+PA_MIG=supabase/migrations/20270112090000_passport_attestation_active_employer.sql
+PA_RB=supabase/rollback/20270112090000_passport_attestation_active_employer_rollback.sql
+pa_plant_fn() {
+  local sql; sql="$(sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\(END; \\)\\?\\\$function\\\$/p" "$PA_RB")"
+  grep -q "has_employer_role(" <<<"$sql" && ! grep -q "has_active_employer_role" <<<"$sql" \
+    || { echo "FAIL: passport-attestation control could not plant the pre-fix $1" >&2; exit 1; }
+  psql_q -d "$TEST_DB" -c "$sql" >/dev/null
+}
+echo "==> Running Passport attestation active-employer assertions"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+set +e
+PA_OUT="$(run_pa_suite)"; PA_RC=$?
+set -e
+PA_PASSED="$(echo "$PA_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$PA_RC" -ne 0 ]; then
+  echo "$PA_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the passport attestation suite exited with code ${PA_RC}." >&2
+  exit 1
+fi
+[ "$PA_PASSED" -ge 16 ] || { echo "$PA_OUT"; echo "FAIL: passport attestation assertion shortfall: $PA_PASSED (floor 16)" >&2; exit 1; }
+echo "    ok  $PA_PASSED passport attestation assertions passed (suspended attestation reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$PA_RB" >/dev/null
+pa_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+pa_plant_fn sp_employer_attestation_queue
+pa_nc_expect_fail "NC2 pre-fix attestation queue"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+pa_plant_fn sp_verifier_decide
+pa_nc_expect_fail "NC3 pre-fix decision"
+psql_q -d "$TEST_DB" -f "$PA_MIG" >/dev/null
+set +e
+PA_OUT="$(run_pa_suite)"; PA_RC=$?
+set -e
+[ "$PA_RC" -eq 0 ] || { echo "$PA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: passport attestation suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  passport attestation migration re-applied (postflight proved); suite passes again"
+
+# 20270113090000: only an ACTIVE (approved, not suspended) organisation assigns,
+# invites, schedules, trains or binds people (P1-D of the 2026-10-02
+# re-audit). The suite reproduces a pending organisation doing all six on the
+# pre-fix bodies itself (PE0).
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> PE1.1
+#   NC2  only scp_employer_assign back on its pre-fix body              -> PE1.1
+#   NC3  only scp_claim_assessment_invitations back on its pre-fix body -> PE3.1
+#   NC4  only scp_bind_employee_subject back on its pre-fix body        -> PE1.1
+run_pe_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/pending_employer_actions_test.sql 2>&1
+}
+pe_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_pe_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: pending-employer negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: PE[0-9.]*' | head -1))"
+}
+PE_MIG=supabase/migrations/20270113090000_pending_employer_actions.sql
+PE_RB=supabase/rollback/20270113090000_pending_employer_actions_rollback.sql
+pe_plant_fn() {
+  local sql; sql="$(sed -n "/^CREATE OR REPLACE FUNCTION public.$1(/,/^\\(END; \\)\\?\\\$function\\\$/p" "$PE_RB")"
+  grep -q "^CREATE OR REPLACE FUNCTION public.$1(" <<<"$sql" && ! grep -q "20270113090000" <<<"$sql" \
+    || { echo "FAIL: pending-employer control could not plant the pre-fix $1" >&2; exit 1; }
+  psql_q -d "$TEST_DB" -c "$sql" >/dev/null
+}
+echo "==> Running pending-employer actions assertions"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+set +e
+PE_OUT="$(run_pe_suite)"; PE_RC=$?
+set -e
+PE_PASSED="$(echo "$PE_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$PE_RC" -ne 0 ]; then
+  echo "$PE_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the pending-employer suite exited with code ${PE_RC}." >&2
+  exit 1
+fi
+[ "$PE_PASSED" -ge 14 ] || { echo "$PE_OUT"; echo "FAIL: pending-employer assertion shortfall: $PE_PASSED (floor 14)" >&2; exit 1; }
+echo "    ok  $PE_PASSED pending-employer assertions passed (pending actions reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$PE_RB" >/dev/null
+pe_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+pe_plant_fn scp_employer_assign
+pe_nc_expect_fail "NC2 pre-fix assign"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+pe_plant_fn scp_claim_assessment_invitations
+pe_nc_expect_fail "NC3 pre-fix invitation claim"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+pe_plant_fn scp_bind_employee_subject
+pe_nc_expect_fail "NC4 pre-fix bind"
+psql_q -d "$TEST_DB" -f "$PE_MIG" >/dev/null
+set +e
+PE_OUT="$(run_pe_suite)"; PE_RC=$?
+set -e
+[ "$PE_RC" -eq 0 ] || { echo "$PE_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: pending-employer suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  pending-employer migration re-applied (postflight proved); suite passes again"
 # 20270115090000: a holder cannot set or change a claim's verification stamp
 # (P1-F of the 2026-10-02 re-audit). The suite reproduces the forged
 # verified_at on the pre-fix trigger and policy itself (VS0), and proves each
@@ -5200,6 +5595,13 @@ fi
 # meaning. Its rollback runs before 20261129090000's, because that one
 # restores functions this one extends.
 # ---------------------------------------------------------------------------
+echo "==> Standing 20270111090000 down before the 20261203090000 rollback"
+# 20270111090000 (P1-B 4/5) re-creates scp_iv_confirm_transcript_basis and
+# scp_iv_case_row_visible, whose 20261203090000 bodies that rollback pins. It
+# comes down here; its own block above re-applied and proved it already, and
+# every suite from here on is an older one that predates it.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20270111090000_interview_beskt_active_employer_rollback.sql >/dev/null
 echo "==> Standing 20261203090000 down before 20261202090000"
 # It re-creates scp_interview_cases' read policy on 20261130090000's BESKT
 # predicates, so it comes down before the 20261202/20261201/20261130 cycles
@@ -7857,7 +8259,8 @@ else
     "3.2 but cannot ask their own unapproved organisation to confirm their employment" \
     "3.4 the holder cannot decide their own employment confirmation" \
     "4.1 a candidate sees no organisation they are unrelated to and that has no live job" \
-    "5.1 a request placed before suspension is still in the employer's queue"; do
+    "5.1 a suspended organisation's owner no longer reads its attestation queue (20270112090000)" \
+    "5.4 and the request placed before suspension is back in the reactivated employer's queue"; do
     if ! echo "$EMM_OUT" | grep -qF "$REQUIRED"; then
       echo "FAIL: a mandatory employer-matching assertion did not run: ${REQUIRED}" >&2
       suite_failed "Security Passport employer matching and eligibility (missing: ${REQUIRED})"

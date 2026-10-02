@@ -130,6 +130,9 @@ DO $$ BEGIN RAISE NOTICE 'GROUP SV0 — reproduction: direct writes plant eviden
 -- =========================================================================
 SAVEPOINT pre_fix;
 \ir ../rollback/20270106090000_sp_evidence_and_request_writes_rpc_only_rollback.sql
+-- 20270114090000 (P1-E) later added a table-level invariant that also refuses
+-- a cross-holder row. Lift it too, so this reproduces the state before both.
+\ir ../rollback/20270114090000_sp_passport_target_holder_rollback.sql
 DO $$
 DECLARE _r text;
 BEGIN
