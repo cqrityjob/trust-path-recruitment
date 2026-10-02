@@ -17,12 +17,12 @@
 -- THE FIX: scp_iv_erase_source also requires bcp_case_access_ok(_case_id),
 -- refusing with SCP_IV_NOT_CASE_MEMBER exactly as confirm_transcript_basis
 -- does. The body is otherwise the hosted one (md5 fc3984e279784abff4f197f0b3aa45a9,
--- pinned by the rollback); the added block is marked 20270120090000.
+-- pinned by the rollback); the added block is marked 20270121090000.
 --
 -- NOT CHANGED: erasure on ordinary cases; the security officer's own erasure;
 -- every other function; any row.
 --
--- Rollback: supabase/rollback/20270120090000_scp_iv_erase_vetting_boundary_rollback.sql
+-- Rollback: supabase/rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql
 -- Suite:    supabase/tests/scp_iv_erase_vetting_boundary_test.sql
 -- =============================================================================
 
@@ -46,7 +46,7 @@ BEGIN
       'SCP_IV_ERASE_ROLE: erasing candidate material requires an employer owner or admin.'
       USING ERRCODE = 'insufficient_privilege';
   END IF;
-  -- 20270120090000 (P1-K): a security vetting's case is the appointed
+  -- 20270121090000 (P1-K): a security vetting's case is the appointed
   -- security function's alone (bcp_case_access_ok). Being the employer's owner
   -- or admin is not that -- the same rule scp_iv_confirm_transcript_basis
   -- applies.
@@ -93,7 +93,7 @@ END; $function$
 DO $$
 DECLARE _src text := (SELECT prosrc FROM pg_proc WHERE oid = 'public.scp_iv_erase_source(uuid,text)'::regprocedure);
 BEGIN
-  IF position('bcp_case_access_ok' IN _src) = 0 OR position('20270120090000' IN _src) = 0 THEN
+  IF position('bcp_case_access_ok' IN _src) = 0 OR position('20270121090000' IN _src) = 0 THEN
     RAISE EXCEPTION 'SCP_IV_ERASE_VETTING_PROOF: scp_iv_erase_source does not check the vetting boundary';
   END IF;
   RAISE NOTICE 'SCP_IV_ERASE_VETTING_PROOF ok: only the security function erases material on a security vetting';

@@ -1,13 +1,13 @@
 # P1-H: a Passport entry under review cannot change underneath the reviewer
 
 **Status: PENDING.** This PR fixes P1-H of the 2026-10-02 final hostile-user
-audit. It builds on P1-L (20270117090000) and merges after it. It is not
+audit. It builds on P1-L (20270118090000) and merges after it. It is not
 merged, and nothing was written to the hosted database.
 
 | Part | File |
 |---|---|
-| Migration | `supabase/migrations/20270118090000_sp_entry_frozen_under_review.sql` |
-| Rollback | `supabase/rollback/20270118090000_sp_entry_frozen_under_review_rollback.sql` |
+| Migration | `supabase/migrations/20270119090000_sp_entry_frozen_under_review.sql` |
+| Rollback | `supabase/rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql` |
 | Suite | `supabase/tests/sp_entry_frozen_under_review_test.sql` (15 assertions) |
 
 ## 1. Root cause

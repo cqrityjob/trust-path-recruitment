@@ -626,7 +626,7 @@ BEGIN
   PERFORM pg_temp.ok(
     (SELECT ended_on FROM public.sp_experience_periods WHERE id = _period) = DATE '2025-10-31',
     '6.9 the candidate corrects their own employment period');
-  -- 20270118090000 (P1-H): answering a clarification returns the request to
+  -- 20270119090000 (P1-H): answering a clarification returns the request to
   -- review, so the employer decides on the corrected period.
   PERFORM pg_temp.ok(
     (SELECT status FROM public.sp_verification_requests WHERE id = _req) = 'pending',

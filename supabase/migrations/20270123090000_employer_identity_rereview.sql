@@ -31,7 +31,7 @@
 -- is otherwise the hosted one (md5 e3fd899458d95fe8c00c5f4dfa082fa8, pinned by
 -- the rollback).
 --
--- Rollback: supabase/rollback/20270122090000_employer_identity_rereview_rollback.sql
+-- Rollback: supabase/rollback/20270123090000_employer_identity_rereview_rollback.sql
 -- Suite:    supabase/tests/employer_identity_rereview_test.sql
 -- =============================================================================
 
@@ -60,7 +60,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- 20270122090000 (P1-I): an approved organisation that
+  -- 20270123090000 (P1-I): an approved organisation that
   -- changes the identity moderation approved -- its name, country,
   -- organisation number or website, exactly what the moderation queue reviews
   -- (admin-employer-moderation.functions.ts) -- goes back to review. Profile
@@ -87,7 +87,7 @@ DO $$
 DECLARE _src text := (SELECT prosrc FROM pg_proc WHERE proname = 'employers_validate_before_write'
                          AND pronamespace = 'public'::regnamespace);
 BEGIN
-  IF position('20270122090000' IN _src) = 0 OR position('registration_number' IN _src) = 0 THEN
+  IF position('20270123090000' IN _src) = 0 OR position('registration_number' IN _src) = 0 THEN
     RAISE EXCEPTION 'EMPLOYER_IDENTITY_REREVIEW_PROOF: the status guard does not return identity changes to review';
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'employers_validate_before_write_trigger'

@@ -1,13 +1,13 @@
 # P1-J: a BESKT position cannot be reopened once the others are readable
 
 **Status: PENDING.** This PR fixes P1-J of the 2026-10-02 final hostile-user
-audit. It builds on P1-K (20270120090000) and merges after it. It is not
+audit. It builds on P1-K (20270121090000) and merges after it. It is not
 merged, and nothing was written to the hosted database.
 
 | Part | File |
 |---|---|
-| Migration | `supabase/migrations/20270121090000_bcp_conduct_reopen_after_exposure.sql` |
-| Rollback | `supabase/rollback/20270121090000_bcp_conduct_reopen_after_exposure_rollback.sql` |
+| Migration | `supabase/migrations/20270122090000_bcp_conduct_reopen_after_exposure.sql` |
+| Rollback | `supabase/rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql` |
 | Suite | `supabase/tests/bcp_interview_conduct_test.sql`, C7.9–C7.12 (new) |
 
 ## 1. Root cause
@@ -37,7 +37,7 @@ and every other position is locked. That is exactly the moment
 A reopen while another assessor is still open is unchanged, because nothing
 is readable yet. A session with one assessor is unchanged. The body is
 otherwise the hosted one: md5 `55e5e05559d9b9624bf411b68ee2f322`, pinned by
-the rollback. The added block is marked `20270121090000`.
+the rollback. The added block is marked `20270122090000`.
 
 **Older suite and guards aligned:**
 - `bcp_conduct_report_independence_test.sql` B6 used to reopen after both

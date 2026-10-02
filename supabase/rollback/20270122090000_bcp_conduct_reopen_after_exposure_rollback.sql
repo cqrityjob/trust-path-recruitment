@@ -1,4 +1,4 @@
--- Rollback of 20270121090000_bcp_conduct_reopen_after_exposure.
+-- Rollback of 20270122090000_bcp_conduct_reopen_after_exposure.
 --
 -- !! THIS REOPENS P1-J !! An assessor can again read the others' locked
 -- positions and then reopen and revise their own. Run it ONLY in an isolated

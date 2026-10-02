@@ -1,4 +1,4 @@
--- Rollback of 20270122090000_employer_identity_rereview.
+-- Rollback of 20270123090000_employer_identity_rereview.
 --
 -- !! THIS REOPENS P1-I !! An approved organisation can again take another
 -- organisation's identity without review. Run it ONLY in an isolated test

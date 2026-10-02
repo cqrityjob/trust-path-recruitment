@@ -1,4 +1,4 @@
--- P1-L (20270117090000): an employer creates an assessment assignment as an
+-- P1-L (20270118090000): an employer creates an assessment assignment as an
 -- invitation only; it cannot write the result.
 --
 --   FA-F the fixture: employer E (active) with an owner, a published legacy
@@ -77,7 +77,7 @@ $$;
 
 -- ── FA0 reproduction on the pre-fix grant ─────────────────────────────────
 SAVEPOINT pre_fix;
-\i supabase/rollback/20270117090000_assessment_assignment_insert_columns_rollback.sql
+\i supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql
 SELECT pg_temp.ok(
   pg_temp.try_as((SELECT o FROM fa)::text,
     pg_temp.create_sql('status, completed_at, completion_id, engine_result, answers',

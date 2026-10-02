@@ -1,13 +1,13 @@
 # P1-I: an approved organisation that changes its identity goes back to review
 
 **Status: PENDING.** This PR fixes P1-I of the 2026-10-02 final hostile-user
-audit. It builds on P1-J (20270121090000) and merges after it. It is not
+audit. It builds on P1-J (20270122090000) and merges after it. It is not
 merged, and nothing was written to the hosted database.
 
 | Part | File |
 |---|---|
-| Migration | `supabase/migrations/20270122090000_employer_identity_rereview.sql` |
-| Rollback | `supabase/rollback/20270122090000_employer_identity_rereview_rollback.sql` |
+| Migration | `supabase/migrations/20270123090000_employer_identity_rereview.sql` |
+| Rollback | `supabase/rollback/20270123090000_employer_identity_rereview_rollback.sql` |
 | Suite | `supabase/tests/employer_identity_rereview_test.sql` (13 assertions) |
 
 ## 1. Root cause

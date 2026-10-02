@@ -15,7 +15,7 @@
 --   (update_employer_membership).
 --
 -- THE FIX (the function body is otherwise exactly the hosted one; the added
--- block is marked 20270119090000):
+-- block is marked 20270120090000):
 --   - only a platform admin grants 'owner';
 --   - nobody approves their own request, except a platform admin;
 --   - a requester with an ACTIVE membership is refused, so an approval never
@@ -26,7 +26,7 @@
 -- the platform admin path; the request insert policy; audit logging; any row.
 -- Production holds 0 pending requests and 0 approvals that granted 'owner'.
 --
--- Rollback: supabase/rollback/20270119090000_access_request_no_role_escalation_rollback.sql
+-- Rollback: supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql
 -- Suite:    supabase/tests/access_request_no_role_escalation_test.sql
 -- =============================================================================
 
@@ -75,7 +75,7 @@ BEGIN
     RAISE EXCEPTION 'Forbidden: owner, admin, or platform admin required';
   END IF;
 
-  -- 20270119090000 (P1-G): an approval admits a person; it does not hand over
+  -- 20270120090000 (P1-G): an approval admits a person; it does not hand over
   -- the organisation or change an existing member's role.
   --   - only a platform admin grants 'owner' (the queue offers no
   --     "approve as owner", EmployerTeamPanel);
@@ -159,7 +159,7 @@ $function$
 DO $$
 DECLARE _src text := (SELECT prosrc FROM pg_proc WHERE oid = 'public.approve_access_request(uuid,text,text)'::regprocedure);
 BEGIN
-  IF position('20270119090000' IN _src) = 0
+  IF position('20270120090000' IN _src) = 0
      OR position('only a platform admin can grant the owner role' IN _src) = 0
      OR position('cannot approve your own access request' IN _src) = 0
      OR position('cannot change an existing member' IN _src) = 0 THEN

@@ -20,12 +20,12 @@
 -- opens. A reopen while any other assessor is still open (nothing readable
 -- yet) is unchanged. The body is otherwise the hosted one (md5
 -- 55e5e05559d9b9624bf411b68ee2f322, pinned by the rollback); the added block
--- is marked 20270121090000.
+-- is marked 20270122090000.
 --
 -- NOT CHANGED: may_see_others; locking; the panel; every other function; any
 -- row.
 --
--- Rollback: supabase/rollback/20270121090000_bcp_conduct_reopen_after_exposure_rollback.sql
+-- Rollback: supabase/rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql
 -- Suite:    supabase/tests/bcp_interview_conduct_test.sql (C7.9-C7.12)
 -- =============================================================================
 
@@ -98,7 +98,7 @@ BEGIN
       USING ERRCODE = 'check_violation';
   END IF;
 
-  -- 20270121090000 (P1-J): once every position in the session is locked,
+  -- 20270122090000 (P1-J): once every position in the session is locked,
   -- bcp_conduct_may_see_others opens the others to each assessor -- with or
   -- without a panel. A position reopened from there could be revised in the
   -- light of them, the dependency the reveal guard above refuses. So once
@@ -137,7 +137,7 @@ DO $$
 DECLARE _src text := (SELECT prosrc FROM pg_proc WHERE proname = 'bcp_conduct_reopen_position'
                          AND pronamespace = 'public'::regnamespace);
 BEGIN
-  IF position('BCP_CONDUCT_POSITIONS_ALREADY_SEEN' IN _src) = 0 OR position('20270121090000' IN _src) = 0 THEN
+  IF position('BCP_CONDUCT_POSITIONS_ALREADY_SEEN' IN _src) = 0 OR position('20270122090000' IN _src) = 0 THEN
     RAISE EXCEPTION 'BCP_CONDUCT_REOPEN_PROOF: bcp_conduct_reopen_position does not refuse after exposure';
   END IF;
   RAISE NOTICE 'BCP_CONDUCT_REOPEN_PROOF ok: no position is reopened once the others are readable';

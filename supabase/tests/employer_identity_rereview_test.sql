@@ -1,4 +1,4 @@
--- P1-I (20270122090000): an approved organisation that changes its identity
+-- P1-I (20270123090000): an approved organisation that changes its identity
 -- goes back to review.
 --
 --   EI-F the fixture: approved employers E and X with distinct identities;
@@ -72,7 +72,7 @@ SELECT pg_temp.ok(pg_temp.status() = 'active'
 
 -- ── EI0 reproduction on the hosted guard ─────────────────────────────────
 SAVEPOINT pre_fix;
-\ir ../rollback/20270122090000_employer_identity_rereview_rollback.sql
+\ir ../rollback/20270123090000_employer_identity_rereview_rollback.sql
 SELECT pg_temp.ok(pg_temp.edit('0f220000-0000-4000-8000-000000000001',
     'name = ''EI Annan Säkerhet AB'', registration_number = ''556000-0009''') = 'ok:1'
   AND pg_temp.status() = 'active',

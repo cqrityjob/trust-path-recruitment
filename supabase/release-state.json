@@ -2650,15 +2650,15 @@
       "note": "P1-C of the 2026-10-02 full hostile-user re-audit (docs/release/2026-10-02-interview-findings-review-writes.md). authenticated held UPDATE on every column of scp_interview_findings and the update policy required only scp_iv_can_write_case (any member), so a plain member could mark a finding resolved or not relevant (dropping it from the report's unresolved list), rewrite the AI run's recorded statement, kind and citations, and attribute the review to someone else. Three layers: UPDATE is granted only on resolution_state, human_state and human_note; the policy additionally requires an owner or admin of the case's employer (the bar for finalising); and a BEFORE UPDATE trigger stamps human_actor_id = auth.uid() and human_actor_at = now() whenever a review column changes. Reads, scp_iv_record_findings and the report builders are unchanged. Hosted: 0 findings; no row changes. Rollback restores table-level UPDATE, the hosted policy (md5 eedd2ff88ee20bc5d5fdfeb1f6e1be33) and drops the trigger."
     },
     {
-      "file": "20270117090000_assessment_assignment_insert_columns.sql",
+      "file": "20270118090000_assessment_assignment_insert_columns.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270117090000_assessment_assignment_insert_columns_rollback.sql",
+      "rollback": "supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql",
       "verify": "SELECT has_table_privilege('authenticated','public.assessment_assignments','INSERT'); -- false. SELECT has_column_privilege('authenticated','public.assessment_assignments','engine_result','INSERT'), has_column_privilege('authenticated','public.assessment_assignments','status','INSERT'); -- false, false. SELECT has_column_privilege('authenticated','public.assessment_assignments','recipient_email','INSERT'); -- true. Rolled-back probe: an active owner inserting a status='completed' row with an engine_result is refused 42501.",
       "note": "P1-L of the 2026-10-02 final audit. Replaces table-level INSERT for authenticated on assessment_assignments with a column grant on exactly the columns createAssessmentAssignment sets; lifecycle and result columns stay server-written. Grants only; no row touched."
     },
     {
-      "file": "20270118090000_sp_entry_frozen_under_review.sql",
+      "file": "20270119090000_sp_entry_frozen_under_review.sql",
       "hostedState": "pending",
       "introduces": [
         {
@@ -2670,40 +2670,40 @@
           "object": "sp_guard_entry_under_review()"
         }
       ],
-      "rollback": "supabase/rollback/20270118090000_sp_entry_frozen_under_review_rollback.sql",
+      "rollback": "supabase/rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql",
       "verify": "SELECT count(*) FROM pg_trigger WHERE tgname IN ('sp_claims_frozen_under_review','sp_periods_frozen_under_review') AND NOT tgisinternal; -- 2. SELECT has_function_privilege('anon','public.sp_entry_review_on_holder_edit(uuid,uuid)','EXECUTE'); -- false. Rolled-back probe: a holder editing a period with a pending request is refused SP_ENTRY_UNDER_REVIEW; after a clarification request the edit succeeds and the request is pending again.",
       "note": "P1-H of the 2026-10-02 final audit. A BEFORE UPDATE trigger on sp_claims and sp_experience_periods refuses a holder's direct edit while a request is pending, and returns a clarification request to review when the holder answers it by editing. Passport SECURITY DEFINER functions are unaffected. No row touched."
     },
     {
-      "file": "20270119090000_access_request_no_role_escalation.sql",
+      "file": "20270120090000_access_request_no_role_escalation.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270119090000_access_request_no_role_escalation_rollback.sql",
-      "verify": "SELECT position('20270119090000' IN prosrc) > 0 FROM pg_proc WHERE oid='public.approve_access_request(uuid,text,text)'::regprocedure; -- true. Rolled-back probe: an active org admin who files and approves their own request as owner is refused (Forbidden); an owner approving a live member's request with another role is refused (Already a member); admitting a new person as member still succeeds.",
+      "rollback": "supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql",
+      "verify": "SELECT position('20270120090000' IN prosrc) > 0 FROM pg_proc WHERE oid='public.approve_access_request(uuid,text,text)'::regprocedure; -- true. Rolled-back probe: an active org admin who files and approves their own request as owner is refused (Forbidden); an owner approving a live member's request with another role is refused (Already a member); admitting a new person as member still succeeds.",
       "note": "P1-G of the 2026-10-02 final audit. approve_access_request: only a platform admin grants owner; no self-approval except a platform admin; a requester with an active membership is refused, so an approval never rewrites a live member's role. Body otherwise identical to hosted. No row touched."
     },
     {
-      "file": "20270120090000_scp_iv_erase_vetting_boundary.sql",
+      "file": "20270121090000_scp_iv_erase_vetting_boundary.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270120090000_scp_iv_erase_vetting_boundary_rollback.sql",
+      "rollback": "supabase/rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql",
       "verify": "SELECT position('bcp_case_access_ok' IN prosrc) > 0 FROM pg_proc WHERE oid='public.scp_iv_erase_source(uuid,text)'::regprocedure; -- true. Rolled-back probe: an active owner who is not the security officer calling scp_iv_erase_source on a security-vetting case's source is refused SCP_IV_NOT_CASE_MEMBER and the source stays active.",
       "note": "P1-K of the 2026-10-02 final audit. scp_iv_erase_source additionally requires bcp_case_access_ok, as scp_iv_confirm_transcript_basis does. Body otherwise identical to hosted. No row touched."
     },
     {
-      "file": "20270121090000_bcp_conduct_reopen_after_exposure.sql",
+      "file": "20270122090000_bcp_conduct_reopen_after_exposure.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270121090000_bcp_conduct_reopen_after_exposure_rollback.sql",
+      "rollback": "supabase/rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql",
       "verify": "SELECT position('BCP_CONDUCT_POSITIONS_ALREADY_SEEN' IN prosrc) > 0 FROM pg_proc WHERE proname='bcp_conduct_reopen_position'; -- true. Production holds no conduct session with two locked positions; the behaviour is proven by the conduct suite (C7.9 reproduction, C7.10-C7.12 refusal).",
       "note": "P1-J of the 2026-10-02 final audit. bcp_conduct_reopen_position also refuses (BCP_CONDUCT_POSITIONS_ALREADY_SEEN) when every other position in the session is locked, the moment bcp_conduct_may_see_others opens. Body otherwise identical to hosted. No row touched."
     },
     {
-      "file": "20270122090000_employer_identity_rereview.sql",
+      "file": "20270123090000_employer_identity_rereview.sql",
       "hostedState": "pending",
       "introduces": [],
-      "rollback": "supabase/rollback/20270122090000_employer_identity_rereview_rollback.sql",
-      "verify": "SELECT position('20270122090000' IN prosrc) > 0 FROM pg_proc WHERE proname='employers_validate_before_write'; -- true. Rolled-back probe: an active owner who changes E's name and registration_number has the update saved and E's status becomes 'pending'; a description or logo edit keeps it 'active'.",
+      "rollback": "supabase/rollback/20270123090000_employer_identity_rereview_rollback.sql",
+      "verify": "SELECT position('20270123090000' IN prosrc) > 0 FROM pg_proc WHERE proname='employers_validate_before_write'; -- true. Rolled-back probe: an active owner who changes E's name and registration_number has the update saved and E's status becomes 'pending'; a description or logo edit keeps it 'active'.",
       "note": "P1-I of the 2026-10-02 final audit (owner decision: re-review). employers_validate_before_write returns an active organisation to 'pending' when a non-platform-admin changes name, country, registration_number or website outside moderation. Body otherwise identical to hosted. No row touched."
     }
   ], 

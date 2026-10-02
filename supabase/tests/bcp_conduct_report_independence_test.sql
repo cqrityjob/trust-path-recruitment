@@ -560,7 +560,7 @@ END $after_lock$;
 -- ---------------------------------------------------------------------------
 -- B6 -- Once both positions are locked each assessor has been able to read the
 --       other (B5), so neither position can be reopened and revised in its
---       light (20270121090000, P1-J). The report stays readable.
+--       light (20270122090000, P1-J). The report stays readable.
 --       (Previously B6 reopened here and showed the report closing again; that
 --       reopen is the defect P1-J closes.)
 -- ---------------------------------------------------------------------------

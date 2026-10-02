@@ -1280,7 +1280,7 @@ set -e
 [ "$FR_RC" -eq 0 ] || { echo "$FR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: findings review-writes suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  findings review-writes migration re-applied (postflight proved); suite passes again"
 
-# 20270117090000: an employer creates an assessment assignment as an invitation
+# 20270118090000: an employer creates an assessment assignment as an invitation
 # only and cannot write its result (P1-L of the 2026-10-02 final audit). The
 # suite reproduces an already-completed assignment with an invented
 # engine_result on the pre-fix grant itself (FA0).
@@ -1301,8 +1301,8 @@ fa_nc_expect_fail() {
   fi
   echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: FA[0-9.]*' | head -1))"
 }
-FA_MIG=supabase/migrations/20270117090000_assessment_assignment_insert_columns.sql
-FA_RB=supabase/rollback/20270117090000_assessment_assignment_insert_columns_rollback.sql
+FA_MIG=supabase/migrations/20270118090000_assessment_assignment_insert_columns.sql
+FA_RB=supabase/rollback/20270118090000_assessment_assignment_insert_columns_rollback.sql
 echo "==> Running assessment assignment insert-columns assertions"
 psql_q -d "$TEST_DB" -f "$FA_MIG" >/dev/null
 set +e
@@ -1328,7 +1328,7 @@ set -e
 [ "$FA_RC" -eq 0 ] || { echo "$FA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: assignment insert-columns suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  assignment insert-columns migration re-applied (postflight proved); suite passes again"
 
-# 20270118090000: a Passport entry under review cannot change underneath the
+# 20270119090000: a Passport entry under review cannot change underneath the
 # reviewer (P1-H of the 2026-10-02 final audit). The suite reproduces a pending
 # period rewritten by its holder and then verified (ER0).
 # Negative controls, each of which MUST make the suite fail on an assertion:
@@ -1349,8 +1349,8 @@ er_nc_expect_fail() {
   fi
   echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: ER[0-9.]*' | head -1))"
 }
-ER_MIG=supabase/migrations/20270118090000_sp_entry_frozen_under_review.sql
-ER_RB=supabase/rollback/20270118090000_sp_entry_frozen_under_review_rollback.sql
+ER_MIG=supabase/migrations/20270119090000_sp_entry_frozen_under_review.sql
+ER_RB=supabase/rollback/20270119090000_sp_entry_frozen_under_review_rollback.sql
 echo "==> Running Passport entry-under-review assertions"
 psql_q -d "$TEST_DB" -f "$ER_MIG" >/dev/null
 set +e
@@ -1387,7 +1387,7 @@ set -e
 [ "$ER_RC" -eq 0 ] || { echo "$ER_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: entry-under-review suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  entry-under-review migration re-applied (postflight proved); suite passes again"
 
-# 20270119090000: an access-request approval admits a person; it cannot make an
+# 20270120090000: an access-request approval admits a person; it cannot make an
 # owner or change a live member's role (P1-G of the 2026-10-02 final audit).
 # The suite reproduces an admin approving their own request as owner (AR0).
 # Negative controls, each of which MUST make the suite fail on an assertion.
@@ -1413,8 +1413,8 @@ ar_nc_expect_fail() {
 ar_without_rule() {
   sed "/-- rule:$1/,/^    END IF;/d" "$AR_MIG" | sed '/^DO \$\$$/,$d'
 }
-AR_MIG=supabase/migrations/20270119090000_access_request_no_role_escalation.sql
-AR_RB=supabase/rollback/20270119090000_access_request_no_role_escalation_rollback.sql
+AR_MIG=supabase/migrations/20270120090000_access_request_no_role_escalation.sql
+AR_RB=supabase/rollback/20270120090000_access_request_no_role_escalation_rollback.sql
 echo "==> Running access-request role-escalation assertions"
 psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
 set +e
@@ -1441,7 +1441,7 @@ set -e
 [ "$AR_RC" -eq 0 ] || { echo "$AR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: access-request suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  access-request migration re-applied (postflight proved); suite passes again"
 
-# 20270120090000: only the security function erases material on a security
+# 20270121090000: only the security function erases material on a security
 # vetting (P1-K of the 2026-10-02 final audit). The suite reproduces an owner
 # who cannot read a vetting case erasing its material (VE0).
 # Negative controls, each of which MUST make the suite fail on an assertion:
@@ -1461,8 +1461,8 @@ ve_nc_expect_fail() {
   fi
   echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: VE[0-9.A-Z-]*' | head -1))"
 }
-VE_MIG=supabase/migrations/20270120090000_scp_iv_erase_vetting_boundary.sql
-VE_RB=supabase/rollback/20270120090000_scp_iv_erase_vetting_boundary_rollback.sql
+VE_MIG=supabase/migrations/20270121090000_scp_iv_erase_vetting_boundary.sql
+VE_RB=supabase/rollback/20270121090000_scp_iv_erase_vetting_boundary_rollback.sql
 echo "==> Running vetting erase-boundary assertions"
 psql_q -d "$TEST_DB" -f "$VE_MIG" >/dev/null
 set +e
@@ -1494,7 +1494,7 @@ set -e
 [ "$VE_RC" -eq 0 ] || { echo "$VE_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: vetting erase-boundary suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  vetting erase-boundary migration re-applied (postflight proved); suite passes again"
 
-# 20270121090000: a BESKT position cannot be reopened once the others are
+# 20270122090000: a BESKT position cannot be reopened once the others are
 # readable (P1-J of the 2026-10-02 final audit). The regression lives in the
 # conduct suite, which already builds a two-assessor session: C7.9 reproduces
 # the reopen on the pre-fix body, C7.10-C7.12 refuse it.
@@ -1515,8 +1515,8 @@ cr_nc_expect_fail() {
   fi
   echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: C[0-9.]*' | head -1))"
 }
-CR_MIG=supabase/migrations/20270121090000_bcp_conduct_reopen_after_exposure.sql
-CR_RB=supabase/rollback/20270121090000_bcp_conduct_reopen_after_exposure_rollback.sql
+CR_MIG=supabase/migrations/20270122090000_bcp_conduct_reopen_after_exposure.sql
+CR_RB=supabase/rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql
 echo "==> Running BESKT conduct reopen-after-exposure assertions"
 psql_q -d "$TEST_DB" -f "$CR_MIG" >/dev/null
 set +e
@@ -1539,7 +1539,7 @@ set -e
 [ "$CR_RC" -eq 0 ] || { echo "$CR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: conduct suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  conduct reopen-after-exposure migration re-applied (postflight proved); suite passes again"
 
-# 20270122090000: an approved organisation that changes its identity goes back
+# 20270123090000: an approved organisation that changes its identity goes back
 # to review (P1-I of the 2026-10-02 final audit; owner decision: re-review).
 # The suite reproduces an approved organisation taking another one's name and
 # number and staying approved (EI0).
@@ -1560,8 +1560,8 @@ ei_nc_expect_fail() {
   fi
   echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: EI[0-9.]*' | head -1))"
 }
-EI_MIG=supabase/migrations/20270122090000_employer_identity_rereview.sql
-EI_RB=supabase/rollback/20270122090000_employer_identity_rereview_rollback.sql
+EI_MIG=supabase/migrations/20270123090000_employer_identity_rereview.sql
+EI_RB=supabase/rollback/20270123090000_employer_identity_rereview_rollback.sql
 echo "==> Running employer identity re-review assertions"
 psql_q -d "$TEST_DB" -f "$EI_MIG" >/dev/null
 set +e
