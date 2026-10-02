@@ -383,6 +383,53 @@ set -e
 [ "$RB_RC" -eq 0 ] || { echo "$RB_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: employment-binding suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  employment-binding migration re-applied (postflight proved); suite passes again"
 
+# 20270102090000: the progress series shows an employer only its own
+# organisation's reports (P0-1 of the 2026-10-02 audit). The suite reproduces
+# the cross-employer read on the pre-fix body itself (PS0). Negative controls,
+# each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback (every employer report of the subject)   -> PS1.1
+#   NC2  scoped by organisation but ignoring membership status       -> PS4.1
+run_ps_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/scp_subject_progress_scope_test.sql 2>&1
+}
+ps_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_ps_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: progress-scope negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: PS[0-9.]*' | head -1))"
+}
+echo "==> Running progress-series employer scope assertions"
+set +e
+PS_OUT="$(run_ps_suite)"; PS_RC=$?
+set -e
+PS_PASSED="$(echo "$PS_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$PS_RC" -ne 0 ]; then
+  echo "$PS_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the progress-scope suite exited with code ${PS_RC}." >&2
+  exit 1
+fi
+[ "$PS_PASSED" -ge 12 ] || { echo "$PS_OUT"; echo "FAIL: progress-scope assertion shortfall: $PS_PASSED (floor 12)" >&2; exit 1; }
+echo "    ok  $PS_PASSED progress-scope assertions passed (cross-employer read reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f supabase/rollback/20270102090000_scp_subject_progress_employer_scope_rollback.sql >/dev/null
+ps_nc_expect_fail "NC1 full rollback"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql >/dev/null
+PS_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION/,/^\$function\$;/p' supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql \
+  | sed "s/AND public.scp_report_snapshot_readable(s.audience, s.subject_id, s.issuer_organization_id)/AND (s.audience = 'participant' OR EXISTS (SELECT 1 FROM public.employer_memberships mm WHERE mm.employer_id = s.issuer_organization_id AND mm.user_id = auth.uid()))/")"
+echo "$PS_NC2_SQL" | grep -q "mm.user_id = auth.uid()" || { echo "FAIL: progress-scope NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$PS_NC2_SQL" >/dev/null
+ps_nc_expect_fail "NC2 membership status ignored"
+psql_q -d "$TEST_DB" -f supabase/migrations/20270102090000_scp_subject_progress_employer_scope.sql >/dev/null
+set +e
+PS_OUT="$(run_ps_suite)"; PS_RC=$?
+set -e
+[ "$PS_RC" -eq 0 ] || { echo "$PS_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: progress-scope suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  progress-scope migration re-applied (postflight proved); suite passes again"
+
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
 # of their catalogue must refuse, not erase those fixtures to make a test pass.
