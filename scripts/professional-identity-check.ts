@@ -1745,6 +1745,63 @@ console.log("\n9 . saved CV documents");
   ck("a factual saved document writes no summary", factual.summary === "");
   ck("and claims no AI authorship", buildSavedCvDocument(bundle, factual).origin === "factual");
 
+  // -- A factual CV shows every employment of its selection ------------
+  // Production 2026-10-03: the factual save stored an empty order, and
+  // every saved CV and its PDF showed no employment at all.
+  const emptyOrder = buildSavedCvDocument(bundle, {
+    ...factual,
+    experience: [],
+  });
+  ck(
+    "a factual CV stored with an empty order still shows every employment, in bundle order",
+    emptyOrder.experience.length === bundle.employment.length &&
+      emptyOrder.experience.every((x, i) => x.fact.id === bundle.employment[i]?.id) &&
+      emptyOrder.omittedEmployment.length === 0,
+  );
+  const partialOrder = buildSavedCvDocument(bundle, {
+    ...factual,
+    experience: [{ sourceId: bundle.employment[1]!.id, bullets: ["Egen rad."] }],
+  });
+  ck(
+    "a factual CV keeps its listed order and the person's lines, then adds the rest",
+    partialOrder.experience.length === bundle.employment.length &&
+      partialOrder.experience[0]?.fact.id === bundle.employment[1]?.id &&
+      partialOrder.experience[0]?.bullets[0] === "Egen rad." &&
+      partialOrder.omittedEmployment.length === 0,
+  );
+  const tailored = buildSavedCvDocument(bundle, {
+    ...stored,
+    experience: stored.experience.slice(0, 1),
+  });
+  ck(
+    "a drafted CV that left an employment out still reports it as omitted",
+    tailored.experience.length === 1 &&
+      tailored.omittedEmployment.length === bundle.employment.length - 1,
+  );
+  // The healing reads the CV's OWN selection, never the live profile: an
+  // employment recorded after the CV was saved is not in its bundle, so it
+  // cannot appear on it.
+  const selectedOnly = buildCvSourceBundle({
+    identity: ESTABLISHED,
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+    includedIds: [bundle.employment[0]!.id],
+  });
+  const narrowed = buildSavedCvDocument(selectedOnly, { ...factual, experience: [] });
+  ck(
+    "a factual CV shows only the employments its own selection carries, not later profile entries",
+    bundle.employment.length > 1 &&
+      narrowed.experience.length === 1 &&
+      narrowed.experience[0]?.fact.id === bundle.employment[0]?.id,
+  );
+  const storeSrc = read("src/lib/professional-identity/cv/cv-store.functions.ts");
+  ck(
+    "creating a factual CV stores its employments, not an empty presentation",
+    !storeSrc.includes("_presentation: data.presentation ?? {}") &&
+      /data\.presentation \?\? \{\s*\.\.\.factualStoredPresentation\(/.test(storeSrc),
+  );
+
   // -- The stored schema must not impose the model's floors on a person
   const shortByHuman = storedPresentationSchema.safeParse({
     headline: "",
