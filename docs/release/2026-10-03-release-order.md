@@ -227,8 +227,9 @@ konfigurationsraden till plattformsadministratörer; att merga det applicerar de
 oberoende läsare (Astra 21:11 UTC, registrerat i `main` av #405; en andra läsning ~21:20 UTC med samma värden):
 ledgern har 368 rader, digest `c086806d9fb5f0c92609678f037b73ba` (de första 367 oförändrade); båda funktionskropparna lika
 med en strikt lokal replay; `anon` saknar `EXECUTE`; `scp_scenario_versions_read` är begränsad till `scp_can_author`.
-Den gamla konfigurationsläsningen är medvetet kvar tills kontraktet. #405 är mergad (`4736e310`, 21:34 UTC) men **inte
-publicerad och inte verifierad** i produktion; #406 är inte mergad och inte applicerad. Evidens:
+Den gamla konfigurationsläsningen är medvetet kvar tills kontraktet. #405 är mergad (`4736e310`, 21:34 UTC) och enligt
+driftsessionen publicerad i Lovable 22:05 UTC (deployment `5d49df0e`), men **inte verifierad i den körande appen** (det kräver
+ett öppnat intervjuärende och `rpc/scp_iv_case_capabilities` 200 i API-loggarna); #406 är inte mergad och inte applicerad. Evidens:
 `2026-10-03-interview-access-expand-hosted-verification.md` (andra läsningen) och
 `../security/interview-access/expand-hosted-verification.md` (första).
 

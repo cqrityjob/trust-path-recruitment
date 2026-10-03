@@ -65,5 +65,9 @@ the 40 remaining `USING (true)` reads, the empty scenario table, and the rolled-
 registration.
 
 What is still open after this record: #405 (the application that reads the flags through `scp_iv_case_capabilities`) is
-merged but **not published and not verified in production**, and the contract `20270207090000` (#406) is **not applied**,
-so the full `scp_interview_ai_config` row stays readable by every signed-in user until it is.
+merged (`4736e310`, 21:34 UTC) and, according to the production session, was published in Lovable at 22:05 UTC (deployment
+`5d49df0e`; the client bundle is unchanged because the change is server-side). It is **not yet verified in the running app**:
+that needs an authorised case reader to open an interview case and a `rpc/scp_iv_case_capabilities` 200 in the API logs. The
+contract `20270207090000` (#406) is **not applied**, so the full `scp_interview_ai_config` row stays readable by every
+signed-in user until it is. The publication and the rolled-back probes the production session reported are its own; this
+author did not observe them.
