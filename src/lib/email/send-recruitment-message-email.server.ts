@@ -80,16 +80,18 @@ export type RecruitmentEmailResult =
 const FRAME = {
   sv: {
     about: (employer: string, job: string) => `Meddelande från ${employer} om din ansökan: ${job}`,
-    cta: "Läs och svara i CQrityjob",
+    // "Läs", not "Läs och svara": a candidate cannot reply in the product yet,
+    // and the e-mail must not promise what the product cannot do.
+    cta: "Läs i CQrityjob",
     footer:
-      "Du får det här meddelandet eftersom du har sökt en tjänst via CQrityjob. Meddelandet finns också under Mina ansökningar.",
+      "Du får det här meddelandet eftersom du har sökt en tjänst via CQrityjob. Meddelandet finns också under Mina ansökningar. Om du svarar på det här mejlet går svaret till CQrityjob (job@cqrityjob.com) och inte direkt till arbetsgivaren.",
   },
   en: {
     about: (employer: string, job: string) =>
       `A message from ${employer} about your application: ${job}`,
-    cta: "Read and reply in CQrityjob",
+    cta: "Read in CQrityjob",
     footer:
-      "You are receiving this because you applied for a position through CQrityjob. The message is also under My applications.",
+      "You are receiving this because you applied for a position through CQrityjob. The message is also under My applications. If you reply to this e-mail, your reply goes to CQrityjob (job@cqrityjob.com), not directly to the employer.",
   },
 } as const;
 
@@ -176,6 +178,8 @@ export async function sendRecruitmentMessageEmail(
     const res = await sendTransactionalEmail({
       kind: params.kind ?? "recruitment_message",
       to: params.recipientEmail,
+      // The candidate sees who wrote: "<employer> via CQrityjob".
+      senderName: params.employerName,
       subject,
       html,
       idempotencyKey: params.idempotencyKey,

@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { I18nProvider, useAdoptLangIntent } from "../i18n/context";
 import { RootError, RootNotFound } from "@/components/site/RootFallbacks";
+import { TermsAcceptanceGate } from "../components/legal/TermsAcceptanceGate";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -110,6 +111,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <LangIntentFromUrl />
+        {/* Every signed-in page: an account without accepted terms is asked
+            before it can use the product (Google sign-in included). */}
+        <TermsAcceptanceGate />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </I18nProvider>

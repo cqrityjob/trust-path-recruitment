@@ -1,6 +1,6 @@
 // A mailto to the one address that always reaches CQrityjob.
 //
-// The address is CONTACT_EMAIL (src/lib/contact/contact-address.ts), the same one
+// The address is CONTACT_EMAIL (src/lib/site-contact.ts), the same one
 // /contact shows beside its form and in its closed state, so it works whatever the
 // form is doing. Pages that tell somebody to "contact us" -- a rejected
 // organisation, a removed member, an organisation waiting for review -- used to
@@ -10,7 +10,7 @@
 // reads the mail knows which case it is without asking.
 
 import { useT } from "@/i18n/context";
-import { CONTACT_EMAIL } from "@/lib/contact/contact-address";
+import { CONTACT_EMAIL } from "@/lib/site-contact";
 
 export function ContactMailto({ organisationName }: { organisationName?: string }) {
   const { t } = useT();
