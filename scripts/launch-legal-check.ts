@@ -25,6 +25,7 @@ import path from "node:path";
 import { PRIVACY, TERMS, type LegalDocument } from "../src/lib/legal/documents";
 import {
   ACCEPTED_TERMS_VERSION,
+  OWNER_APPROVED,
   PRIVACY_FINAL,
   TERMS_FINAL,
   openPoints,
@@ -96,11 +97,19 @@ group("GROUP 1 — the owner's documents, as given");
   const gaps = (t: string) =>
     (t.match(/\[(?:Ange|ange|Länk|länk|publiceringsdatum)[^\]]*\]/g) ?? []).length;
   ck(
-    "1.6 the owner's undecided points are still open: 2 in the terms",
-    gaps(terms) === 2,
+    "1.6 the terms carry the owner's two decisions and no open point: 18 years, closing through info@",
+    gaps(terms) === 0 &&
+      terms.includes("Du måste vara minst 18 år för att skapa ett konto.") &&
+      terms.includes(
+        "Du kan avsluta ditt konto genom att skriva till info@cqrityjob.com från den e-postadress som kontot är registrerat på.",
+      ),
     String(gaps(terms)),
   );
-  ck("1.7 and 7 in the privacy policy", gaps(privacy) === 7, String(gaps(privacy)));
+  ck(
+    "1.7 the privacy policy's 7 undecided points are still open",
+    gaps(privacy) === 7,
+    String(gaps(privacy)),
+  );
   ck(
     "1.8 the 7-day retention lines are the owner's, unchanged",
     privacy.includes("Supportärenden\n7 dagar") &&
@@ -212,9 +221,11 @@ group("GROUP 5 — drafts are drafts, and every account accepts");
 /* ================================================================== */
 {
   ck(
-    "5.1 a document with open points is not final",
-    TERMS_FINAL === (openPoints(TERMS).length === 0) &&
-      PRIVACY_FINAL === (openPoints(PRIVACY).length === 0) &&
+    "5.1 a document is final only with no open point AND the owner's approval; neither is approved yet",
+    TERMS_FINAL === (openPoints(TERMS).length === 0 && OWNER_APPROVED.terms) &&
+      PRIVACY_FINAL === (openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy) &&
+      !OWNER_APPROVED.terms &&
+      !OWNER_APPROVED.privacy &&
       !TERMS_FINAL &&
       !PRIVACY_FINAL,
   );
@@ -254,8 +265,21 @@ group("GROUP 5 — drafts are drafts, and every account accepts");
     needsTermsAcceptance({ ...email, user_metadata: { terms_version: "2025-01-01" } }),
   );
   ck(
-    "5.9 an email account from before the terms is not gated (owner decision)",
-    !needsTermsAcceptance(email) && !needsTermsAcceptance(null),
+    "5.9 an email account from before the terms is not asked to accept a draft",
+    !needsTermsAcceptance(email, { version: "2026-10-01-utkast", final: false }) &&
+      !needsTermsAcceptance(null),
+  );
+  ck(
+    "5.12 once the terms are final, every existing account accepts them (owner decision)",
+    needsTermsAcceptance(email, { version: "2026-10-01", final: true }) &&
+      needsTermsAcceptance(
+        { ...email, user_metadata: { terms_version: "2026-10-01-utkast" } },
+        { version: "2026-10-01", final: true },
+      ) &&
+      !needsTermsAcceptance(
+        { ...email, user_metadata: { terms_version: "2026-10-01" } },
+        { version: "2026-10-01", final: true },
+      ),
   );
   const gateSrc = code("src/components/legal/TermsAcceptanceGate.tsx");
   ck(

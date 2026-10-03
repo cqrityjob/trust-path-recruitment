@@ -4,7 +4,8 @@
 // and the contact address is info@cqrityjob.com (the text said
 // "[kontaktadress]"). A bracketed "[Ange …]" / "[Länk …]" is a decision the
 // owner has not made yet. It is rendered as a visible placeholder, never
-// filled in here. See docs/release/2026-10-03-launch-legal-and-contact.md.
+// filled in here. Filled since, by owner decision of 2026-10-03: terms §2
+// (18 years) and terms §13 (closing an account through info@). See docs/release/2026-10-03-launch-legal-and-contact.md.
 //
 // Inline markup in the strings: **bold** only.
 
@@ -80,10 +81,8 @@ export const TERMS: LegalDocument = {
           type: "p",
           text: "Om du företräder ett företag ska du ha rätt att ingå avtalet och använda tjänsten för företagets räkning. Företaget ansvarar för sina användares behörigheter och för att ta bort åtkomst när den inte längre behövs.",
         },
-        {
-          type: "placeholder",
-          text: "[Ange beslutad åldersgräns och eventuella regler för minderåriga användare.]",
-        },
+        // Owner decision 2026-10-03 (was "[Ange beslutad åldersgräns …]").
+        { type: "p", text: "Du måste vara minst 18 år för att skapa ett konto." },
       ],
     },
     {
@@ -301,7 +300,7 @@ export const TERMS: LegalDocument = {
       blocks: [
         {
           type: "p",
-          text: "Du kan avsluta ditt konto genom [ange faktiskt tillgängligt förfarande]. För betaltjänster gäller även avtalad uppsägningstid.",
+          text: "Du kan avsluta ditt konto genom att skriva till info@cqrityjob.com från den e-postadress som kontot är registrerat på. För betaltjänster gäller även avtalad uppsägningstid.",
         },
         {
           type: "p",

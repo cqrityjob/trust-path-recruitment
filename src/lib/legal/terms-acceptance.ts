@@ -1,4 +1,4 @@
-import { ACCEPTED_TERMS_VERSION } from "./status";
+import { ACCEPTED_TERMS_VERSION, TERMS_FINAL } from "./status";
 
 // ── WHO STILL HAS TO ACCEPT THE TERMS ───────────────────────────────────
 //
@@ -14,9 +14,9 @@ import { ACCEPTED_TERMS_VERSION } from "./status";
 //     one (a draft accepted before the final text, or older terms), is
 //     asked by TermsAcceptanceGate before it can use the product.
 //
-// An email account created before the terms existed carries no version and
-// is not gated: whether those accounts must accept is the owner's decision
-// (docs/release/2026-10-03-launch-legal-decisions.md).
+//   * An email account created before the terms existed carries no version.
+//     It is asked once the terms are FINAL (owner decision 2026-10-03);
+//     asking it to accept a draft would record nothing worth keeping.
 
 const KEY = "cq.termsAccepted";
 const MAX_AGE_MS = 30 * 60 * 1000;
@@ -26,14 +26,22 @@ type MinimalUser = {
   readonly user_metadata?: { readonly terms_version?: unknown } | null;
 };
 
-export function needsTermsAcceptance(user: MinimalUser | null | undefined): boolean {
+export function needsTermsAcceptance(
+  user: MinimalUser | null | undefined,
+  current: { readonly version: string; readonly final: boolean } = {
+    version: ACCEPTED_TERMS_VERSION,
+    final: TERMS_FINAL,
+  },
+): boolean {
   if (!user) return false;
   const accepted = user.user_metadata?.terms_version;
   if (typeof accepted === "string" && accepted.length > 0) {
-    return accepted !== ACCEPTED_TERMS_VERSION;
+    return accepted !== current.version;
   }
   const provider = user.app_metadata?.provider;
-  return typeof provider === "string" && provider !== "email";
+  if (typeof provider === "string" && provider !== "email") return true;
+  // An account from before the terms: asked once they are final.
+  return current.final && typeof provider === "string";
 }
 
 /** The metadata an acceptance writes. */

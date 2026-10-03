@@ -6,8 +6,8 @@ import { PRIVACY, TERMS, type LegalDocument } from "./documents";
 // "[Länk …]", "[publiceringsdatum]"). A document with even one of them is a
 // DRAFT, and the product says so: a banner on the page, noindex, no sitemap
 // entry, and an acceptance recorded against the draft version, never against
-// the final one. The moment the last gap is filled the document becomes
-// final by itself, everywhere, with no second switch to forget.
+// the final one. A document becomes final when its last gap is filled AND
+// the owner has approved it (OWNER_APPROVED); then everywhere at once.
 
 export const OPEN_POINT = /\[(?:Ange|ange|Länk|länk|publiceringsdatum)[^\]]*\]/g;
 
@@ -27,8 +27,13 @@ export function openPoints(doc: LegalDocument): string[] {
   return out;
 }
 
-export const TERMS_FINAL = openPoints(TERMS).length === 0;
-export const PRIVACY_FINAL = openPoints(PRIVACY).length === 0;
+/** The owner's explicit approval of the text as published, one per document.
+ *  Filling the last gap is not enough: a document with no open points is
+ *  still a draft until the owner approves it here, in a reviewed change. */
+export const OWNER_APPROVED = { terms: false, privacy: false } as const;
+
+export const TERMS_FINAL = openPoints(TERMS).length === 0 && OWNER_APPROVED.terms;
+export const PRIVACY_FINAL = openPoints(PRIVACY).length === 0 && OWNER_APPROVED.privacy;
 
 /** What an account records when it accepts the terms. A draft's acceptance
  *  is recorded as a draft's, so the final text is asked for again. */

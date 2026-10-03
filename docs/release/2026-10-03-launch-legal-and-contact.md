@@ -107,18 +107,18 @@ Auth, configured in the Supabase dashboard. See §5.
 Every open point, with verified facts and a recommended text, is in
 `docs/release/2026-10-03-launch-legal-decisions.md`. In short:
 
-1. **Decide the placeholders (A1–B7).** These are the age limit, account
-   closure, AI providers, vendor list, transfers, retention and cookies.
-   The documents stay drafts until then.
+1. **Terms (A).** The age limit (18) and account closure (via info@) are
+   filled in, as decided. The terms stay a draft until the owner sets
+   `OWNER_APPROVED.terms`. Every existing account then accepts them once.
 2. **Retention ("7 dagar").** Verified as not true today, for both support
-   enquiries and logs (B6). Choose between writing the actual periods and
+   enquiries and logs (C). Choose between writing the actual periods and
    building purging first.
 3. **Deploy the mail function** after merge. The deployed function refuses
    the app's key, so no product mail has been sent through it; #386 fixes
    that in the function.
 4. **Resend, SMTP and mailboxes.** Already in place. Auth mail via custom SMTP
    is verified working since 2026-09-30 14:27 UTC. No change proposed.
-5. **Candidate replies (E).** Decide who handles job@, and whether to build
+5. **Candidate replies (D).** Decide who handles job@, and whether to build
    the in-app reply.
 6. **Production domain.** Canonical and og:url still point at
    `trust-path-recruitment.lovable.app`. The launch session (#387) moves them
