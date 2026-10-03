@@ -359,6 +359,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 const expectedPending: string[] = [
   "20270124090000_bcp_conduct_exposure_is_durable.sql",
   "20270125090000_sp_decision_bound_to_reviewed_content.sql",
+  // Job-board launch-readiness (docs/release/2026-10-03-jobs-*.md,
+  // 2026-10-03-job-cvs-no-client-writes.md): written, tested on the full replay and
+  // recorded `pending` in release-state.json; none is applied hosted. Each name
+  // comes OFF this list in the change that records its production evidence.
+  "20270130090000_jobs_not_editable_in_place.sql",
+  "20270131090000_jobs_publish_window_and_url_scheme.sql",
+  "20270201090000_job_cvs_no_client_writes.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
