@@ -161,6 +161,8 @@ test("India: landing → confirmed account → setup → credential → review �
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   const signup = page.waitForRequest((r) => r.url().includes("/auth/v1/signup"));
+  // Registration requires accepting the terms of use (2026-10-03).
+  await page.getByTestId("signup-terms").check();
   await page.getByRole("button", { name: "Create account" }).click();
   const redirectTo = new URL((await signup).url()).searchParams.get("redirect_to") ?? "";
   expect(redirectTo, "the confirmation link returns to the India setup").toBe(

@@ -463,6 +463,8 @@ test.describe("the public pilot, on a real backend", () => {
     await page.getByLabel(/^Namn/).fill("Nora Ny");
     await page.getByLabel(/^E-post$/).fill(email);
     await page.getByLabel(/^Lösenord$/).fill(PASSWORD);
+    // Registration requires accepting the terms of use (2026-10-03).
+    await page.getByTestId("signup-terms").check();
     await page.getByRole("button", { name: "Skapa konto", exact: true }).click();
     await expect(page.getByTestId("auth-awaiting-confirmation")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId("auth-confirmation-email")).toContainText(email);

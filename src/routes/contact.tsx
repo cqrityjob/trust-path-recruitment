@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useId, useState, type FormEvent } from "react";
 import { CheckCircle2, Info, Lock } from "lucide-react";
 import { SiteLayout } from "@/components/site/SiteLayout";
+import { CONTACT_EMAIL, JOB_EMAIL } from "@/lib/site-contact";
 import { Section } from "@/components/site/Section";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,7 +22,6 @@ import {
   sendRecruitmentEnquiry,
 } from "@/lib/contact/recruitment-enquiry.functions";
 import { siteUrl } from "@/lib/site-origin";
-import { CONTACT_EMAIL } from "@/lib/contact/contact-address";
 
 // ── CONTACT: A RECRUITMENT ENQUIRY THAT ACTUALLY ARRIVES (2026-09-30) ────
 //
@@ -148,6 +148,31 @@ function ContactPage() {
           <p className="mt-4 text-base leading-relaxed text-muted-foreground md:text-lg">
             {t("contact.lead")}
           </p>
+          {/* The two addresses a person may write to directly (owner,
+              2026-10-03); no-reply@ sends automated mail and is never one. */}
+          <dl
+            data-testid="contact-addresses"
+            className="mt-5 grid gap-1 text-sm text-muted-foreground sm:grid-cols-[auto_1fr] sm:gap-x-3"
+          >
+            <dt>{t("contact.address.general")}</dt>
+            <dd>
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline"
+              >
+                {CONTACT_EMAIL}
+              </a>
+            </dd>
+            <dt>{t("contact.address.job")}</dt>
+            <dd>
+              <a
+                href={`mailto:${JOB_EMAIL}`}
+                className="inline-flex min-h-11 items-center font-medium text-accent underline-offset-4 hover:underline"
+              >
+                {JOB_EMAIL}
+              </a>
+            </dd>
+          </dl>
 
           {availability.isLoading ? (
             <p role="status" className="mt-8 text-sm text-muted-foreground">

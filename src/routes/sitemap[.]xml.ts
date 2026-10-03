@@ -3,6 +3,7 @@ import type {} from "@tanstack/react-start";
 import { professions } from "@/lib/career-center";
 import { publishedProfessions } from "@/lib/career-center/publishability";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
+import { PRIVACY_FINAL, TERMS_FINAL } from "@/lib/legal/status";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
 import { analysisIndexable } from "@/lib/career-discovery/analysis-access";
 import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
@@ -82,6 +83,13 @@ export const Route = createFileRoute("/sitemap.xml")({
           // The career analysis follows the release control (see above).
           ...(analysisListed
             ? [{ path: CANONICAL_ASSESSMENT_PATH, changefreq: "monthly" as const, priority: "0.8" }]
+            : []),
+          // Listed once final; a draft is not offered as the published text.
+          ...(TERMS_FINAL
+            ? [{ path: "/villkor", changefreq: "yearly" as const, priority: "0.3" }]
+            : []),
+          ...(PRIVACY_FINAL
+            ? [{ path: "/integritetspolicy", changefreq: "yearly" as const, priority: "0.3" }]
             : []),
           // Published guides only: an unpublished profession either redirects
           // to its catalogue page or renders a noindex "not published yet" page.

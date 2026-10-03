@@ -246,7 +246,17 @@ check(
       unresolved.push(urlPath);
       continue;
     }
-    const noindex = /name:\s*"robots",\s*content:\s*"[^"]*noindex/.test(route.source);
+    // A route whose noindex is itself conditional on a `*_FINAL` flag (the legal
+    // documents: a draft is noindex, the final text is indexable) is fine to
+    // list when, and only when, the sitemap lists it under that SAME flag.
+    const flag =
+      /\b(\w+_FINAL)\s*\?\s*\[\]\s*:\s*\[\{\s*name:\s*"robots",\s*content:\s*"[^"]*noindex/.exec(
+        route.source,
+      )?.[1];
+    const listedUnderSameFlag =
+      !!flag && new RegExp(`\\.\\.\\.\\(${flag}\\s*\\?\\s*\\[\\{ path: "${urlPath}"`).test(sitemap);
+    const noindex =
+      /name:\s*"robots",\s*content:\s*"[^"]*noindex/.test(route.source) && !listedUnderSameFlag;
     // A route whose robots rule FOLLOWS the release control (it is derived
     // through analysisRobots(), not written as a string) is indexable only
     // while that control says `public`, so a STATIC sitemap entry for it is

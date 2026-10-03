@@ -117,6 +117,16 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "the sitemap lists only PUBLISHED profession guides",
   },
+  {
+    id: "SO-NC-SITEMAP-DRAFT-LEGAL",
+    defect:
+      "the sitemap lists /villkor whether or not the terms are final, so a crawler is invited to a draft that carries noindex",
+    file: "src/routes/sitemap[.]xml.ts",
+    find: '          ...(TERMS_FINAL\n            ? [{ path: "/villkor", changefreq: "yearly" as const, priority: "0.3" }]\n            : []),',
+    replace: '          { path: "/villkor", changefreq: "yearly" as const, priority: "0.3" },',
+    guard: GUARD,
+    expect: "the sitemap lists a page a crawler may not index",
+  },
 ];
 
 runControls("site-origin", MUTATIONS);
