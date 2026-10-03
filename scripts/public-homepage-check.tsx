@@ -36,7 +36,7 @@
 //   T11 the signed-in redirect to /my-career is intact, and is the only
 //       redirect implementation on the route
 //   T12 the public chrome: six destinations from one definition, one Login,
-//       one Create account, an honest legal line, and the signed-in
+//       one Create account, the published legal links, and the signed-in
 //       candidate nav untouched
 //   T13 sv and en carry the same keys, structure and destinations
 //   T14 NO FORBIDDEN CLAIM was introduced — the data boundaries, as
@@ -979,19 +979,42 @@ group("T12 · the public chrome, and the untouched candidate chrome");
     !footerCode.includes('"/contact"') ||
       code(read("src/routes/contact.tsx")).includes("sendRecruitmentEnquiry"),
   );
+  // The terms and the privacy policy are published (owner, 2026-10-03):
+  // the legal row links both and names the contact address.
   ck(
-    "the legal line says the documents are not published, as text",
-    footerCode.includes('<span>{t("footer.legal.notice")}</span>'),
+    "the legal row links the terms of use and the privacy policy",
+    footerCode.includes("<Link to={TERMS_PATH}") &&
+      footerCode.includes("<Link to={PRIVACY_PATH}") &&
+      footerCode.includes('{t("footer.terms")}') &&
+      footerCode.includes('{t("footer.privacy")}'),
   );
   ck(
-    "no anchor wraps the legal line",
-    !/<Link[^>]*>\s*\{t\("footer\.legal\.notice"\)\}/.test(footerSrc),
+    "the legal row names info@ as the contact address",
+    footerCode.includes("href={`mailto:${CONTACT_EMAIL}`}") &&
+      read("src/lib/site-contact.ts").includes(
+        'export const CONTACT_EMAIL = "info@cqrityjob.com";',
+      ),
   );
-  for (const [lang, expected] of [
-    ["sv", "Integritetspolicy och användarvillkor är inte publicerade ännu."],
-    ["en", "The privacy policy and terms of use have not been published yet."],
+  ck(
+    "the not-published line is gone",
+    !footerCode.includes("footer.legal.notice") &&
+      !("footer.legal.notice" in d("sv")) &&
+      !("footer.legal.notice" in d("en")),
+  );
+  for (const [lang, terms, privacy] of [
+    ["sv", "Användarvillkor", "Integritetspolicy"],
+    ["en", "Terms of use", "Privacy policy"],
   ] as const) {
-    ck(`${lang} legal notice`, d(lang)["footer.legal.notice"] === expected);
+    ck(
+      `${lang} legal link names`,
+      d(lang)["footer.terms"] === terms && d(lang)["footer.privacy"] === privacy,
+    );
+  }
+  for (const route of ["src/routes/villkor.tsx", "src/routes/integritetspolicy.tsx"]) {
+    ck(
+      `${route} exists and renders the owner's document`,
+      code(read(route)).includes("<LegalDocumentView"),
+    );
   }
 
   // The owner's 2026-09-24 decision adds Security Work immediately after

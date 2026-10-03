@@ -160,6 +160,8 @@ test("1 · the employer entrance collects a company", async ({ page }) => {
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.locator('input[name="organization"]').fill(COMPANY);
   await page.locator('input[name="country"]').fill("Sverige");
+  // Registration requires accepting the terms of use (2026-10-03).
+  await page.getByTestId("signup-terms").check();
   await page.getByRole("button", { name: /^(skapa konto|create account)$/i }).click();
 
   // Whether the project confirms addresses or returns a session immediately,

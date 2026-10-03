@@ -19,6 +19,7 @@ import { Route as CareersRouteImport } from './routes/careers'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DiscoveryRouteImport } from './routes/discovery'
 import { Route as EmployersRouteImport } from './routes/employers'
+import { Route as IntegritetspolicyRouteImport } from './routes/integritetspolicy'
 import { Route as JobsRouteImport } from './routes/jobs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -28,6 +29,7 @@ import { Route as SakerhetsarbeteRouteImport } from './routes/sakerhetsarbete'
 import { Route as SecurityCareerAssessmentRouteImport } from './routes/security-career-assessment'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as VillkorRouteImport } from './routes/villkor'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated.admin'
@@ -260,6 +262,11 @@ const EmployersRoute = EmployersRouteImport.update({
   path: '/employers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegritetspolicyRoute = IntegritetspolicyRouteImport.update({
+  id: '/integritetspolicy',
+  path: '/integritetspolicy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const JobsRoute = JobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -304,6 +311,11 @@ const SignupRoute = SignupRouteImport.update({
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VillkorRoute = VillkorRouteImport.update({
+  id: '/villkor',
+  path: '/villkor',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93ListToolsRoute =
@@ -1430,6 +1442,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
+  '/integritetspolicy': typeof IntegritetspolicyRoute
   '/jobs': typeof JobsRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
@@ -1439,6 +1452,7 @@ export interface FileRoutesByFullPath {
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/villkor': typeof VillkorRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -1631,6 +1645,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
+  '/integritetspolicy': typeof IntegritetspolicyRoute
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
   '/plattformen': typeof PlattformenRoute
@@ -1639,6 +1654,7 @@ export interface FileRoutesByTo {
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/villkor': typeof VillkorRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/feedback': typeof AuthenticatedFeedbackRoute
@@ -1813,6 +1829,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/discovery': typeof DiscoveryRoute
   '/employers': typeof EmployersRoute
+  '/integritetspolicy': typeof IntegritetspolicyRoute
   '/jobs': typeof JobsRouteWithChildren
   '/login': typeof LoginRoute
   '/mcp': typeof McpRoute
@@ -1822,6 +1839,7 @@ export interface FileRoutesById {
   '/security-career-assessment': typeof SecurityCareerAssessmentRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/villkor': typeof VillkorRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -2017,6 +2035,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/discovery'
     | '/employers'
+    | '/integritetspolicy'
     | '/jobs'
     | '/login'
     | '/mcp'
@@ -2026,6 +2045,7 @@ export interface FileRouteTypes {
     | '/security-career-assessment'
     | '/signup'
     | '/sitemap.xml'
+    | '/villkor'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/admin'
@@ -2218,6 +2238,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/discovery'
     | '/employers'
+    | '/integritetspolicy'
     | '/login'
     | '/mcp'
     | '/plattformen'
@@ -2226,6 +2247,7 @@ export interface FileRouteTypes {
     | '/security-career-assessment'
     | '/signup'
     | '/sitemap.xml'
+    | '/villkor'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/feedback'
@@ -2399,6 +2421,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/discovery'
     | '/employers'
+    | '/integritetspolicy'
     | '/jobs'
     | '/login'
     | '/mcp'
@@ -2408,6 +2431,7 @@ export interface FileRouteTypes {
     | '/security-career-assessment'
     | '/signup'
     | '/sitemap.xml'
+    | '/villkor'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/admin'
@@ -2603,6 +2627,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DiscoveryRoute: typeof DiscoveryRoute
   EmployersRoute: typeof EmployersRoute
+  IntegritetspolicyRoute: typeof IntegritetspolicyRoute
   JobsRoute: typeof JobsRouteWithChildren
   LoginRoute: typeof LoginRoute
   McpRoute: typeof McpRoute
@@ -2612,6 +2637,7 @@ export interface RootRouteChildren {
   SecurityCareerAssessmentRoute: typeof SecurityCareerAssessmentRoute
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  VillkorRoute: typeof VillkorRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   AdminLoginRoute: typeof AdminLoginRoute
@@ -2703,6 +2729,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EmployersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integritetspolicy': {
+      id: '/integritetspolicy'
+      path: '/integritetspolicy'
+      fullPath: '/integritetspolicy'
+      preLoaderRoute: typeof IntegritetspolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/jobs': {
       id: '/jobs'
       path: '/jobs'
@@ -2764,6 +2797,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/villkor': {
+      id: '/villkor'
+      path: '/villkor'
+      fullPath: '/villkor'
+      preLoaderRoute: typeof VillkorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -4777,6 +4817,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DiscoveryRoute: DiscoveryRoute,
   EmployersRoute: EmployersRoute,
+  IntegritetspolicyRoute: IntegritetspolicyRoute,
   JobsRoute: JobsRouteWithChildren,
   LoginRoute: LoginRoute,
   McpRoute: McpRoute,
@@ -4786,6 +4827,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityCareerAssessmentRoute: SecurityCareerAssessmentRoute,
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  VillkorRoute: VillkorRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,

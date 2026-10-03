@@ -743,16 +743,20 @@ test.describe("the homepage at every required width", () => {
       "/employers",
       "/about",
       "/contact",
+      // The published documents and the contact address (owner, 2026-10-03).
+      "/villkor",
+      "/integritetspolicy",
+      "mailto:info@cqrityjob.com",
     ]) {
       expect(hrefs, `the footer lacks ${href}`).toContain(href);
     }
     const text = await footer.innerText();
     expect(text).toContain("Where trust comes first.");
-    const legal = "Integritetspolicy och användarvillkor är inte publicerade ännu.";
-    expect(text).toContain(legal);
-    expect(
-      await footer.getByRole("link", { name: /Integritetspolicy|användarvillkor/i }).count(),
-    ).toBe(0);
+    expect(text).not.toContain("inte publicerade ännu");
+    await expect(footer.getByRole("link", { name: "Användarvillkor", exact: true })).toBeVisible();
+    await expect(
+      footer.getByRole("link", { name: "Integritetspolicy", exact: true }),
+    ).toBeVisible();
   });
 });
 

@@ -109,7 +109,7 @@ await mock.module("@/lib/job-intelligence/membership.functions", () => ({
 
 const { I18nProvider } = await import("../src/i18n/context");
 const { dictionaries } = await import("../src/i18n/dictionaries");
-const { CONTACT_EMAIL } = await import("../src/lib/contact/contact-address");
+const { CONTACT_EMAIL } = await import("../src/lib/site-contact");
 const membership = await import("../src/lib/job-intelligence/membership-admin");
 const { adminErrorCode, AdminMutationError, ADMIN_ERROR_CODES, ADMIN_ERROR_COPY } =
   await import("../src/lib/admin/admin-error");
@@ -546,7 +546,7 @@ ck(
   ) &&
     /import \{ ContactMailto \} from "@\/components\/employer\/ContactMailto"/.test(pending) &&
     /mailto:\$\{CONTACT_EMAIL\}/.test(contactMailto) &&
-    /import \{ CONTACT_EMAIL \} from "@\/lib\/contact\/contact-address"/.test(contactMailto),
+    /import \{ CONTACT_EMAIL \} from "@\/lib\/site-contact"/.test(contactMailto),
 );
 ck(
   "so does a suspended or archived one",
