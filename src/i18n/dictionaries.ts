@@ -1966,6 +1966,14 @@ export const dictionaries = {
     "employer.jobs.form.error.jobNotCloseable": "Endast en publicerad annons kan stängas.",
     "employer.jobs.form.error.invalidData":
       "Ogiltiga uppgifter. Kontrollera de obligatoriska fälten, inklusive arbetsplatstyp, anställningsform och yrkesområde, och försök igen.",
+    "employer.jobs.form.error.expiresInPast":
+      "Annonsen kan inte publiceras: sista visningsdag har redan passerat. Välj en ny dag i annonsen och försök igen.",
+    "employer.jobs.form.error.expiresTooFar":
+      "Annonsen kan inte publiceras: sista visningsdag får ligga högst 90 dagar fram. Välj en tidigare dag och försök igen.",
+    "employer.jobs.form.error.deadlineInPast":
+      "Annonsen kan inte publiceras: sista ansökningsdag har redan passerat. Välj en ny dag, eller ta bort datumet, och försök igen.",
+    "employer.jobs.form.error.applicationUrlInvalid":
+      "Ansökningslänken måste börja med http:// eller https://. Rätta länken i annonsen och försök igen.",
     "employer.jobs.form.error.saveDraftFailed": "Utkastet kunde inte sparas.",
     "employer.jobs.form.error.submitForReviewFailed":
       "Jobbannonsen kunde inte skickas till granskning.",
@@ -2381,6 +2389,9 @@ export const dictionaries = {
     "employer.jobs.readiness.applicationMethod": "Så här söker man",
     "employer.jobs.readiness.applicationTarget": "Länk eller e-postadress för ansökan",
     "employer.jobs.readiness.expiresAt": "Sista visningsdag",
+    "employer.jobs.readiness.expiresWindow":
+      "Sista visningsdag ligger framåt i tiden, högst 90 dagar bort",
+    "employer.jobs.readiness.deadline": "Sista ansökningsdag har inte passerat",
     "employer.jobs.readiness.location": "Plats eller ort",
     "employer.jobs.readiness.bothLanguages": "Både svenska och engelska",
     "employer.jobs.readiness.descriptionDepth": "En beskrivning som säger något om tjänsten",
@@ -10578,6 +10589,14 @@ export const dictionaries = {
     "employer.jobs.form.error.jobNotCloseable": "Only a published job can be closed.",
     "employer.jobs.form.error.invalidData":
       "Invalid job data. Please check the required fields, including workplace type, employment type and career area, and try again.",
+    "employer.jobs.form.error.expiresInPast":
+      "This ad cannot be published: its last display day has already passed. Choose a new day in the ad and try again.",
+    "employer.jobs.form.error.expiresTooFar":
+      "This ad cannot be published: the last display day can be at most 90 days ahead. Choose an earlier day and try again.",
+    "employer.jobs.form.error.deadlineInPast":
+      "This ad cannot be published: its application deadline has already passed. Choose a new day, or remove the date, and try again.",
+    "employer.jobs.form.error.applicationUrlInvalid":
+      "The application link must start with http:// or https://. Correct the link in the ad and try again.",
     "employer.jobs.form.error.saveDraftFailed": "This draft could not be saved.",
     "employer.jobs.form.error.submitForReviewFailed": "This job could not be submitted for review.",
     "employer.jobs.form.error.closeJobFailed": "This job could not be closed.",
@@ -10975,6 +10994,9 @@ export const dictionaries = {
     "employer.jobs.readiness.applicationMethod": "How to apply",
     "employer.jobs.readiness.applicationTarget": "Application link or email address",
     "employer.jobs.readiness.expiresAt": "Last day shown",
+    "employer.jobs.readiness.expiresWindow":
+      "Last day shown is in the future, at most 90 days ahead",
+    "employer.jobs.readiness.deadline": "Application deadline has not passed",
     "employer.jobs.readiness.location": "Location or city",
     "employer.jobs.readiness.bothLanguages": "Both Swedish and English",
     "employer.jobs.readiness.descriptionDepth": "A description that says something about the role",

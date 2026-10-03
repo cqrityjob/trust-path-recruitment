@@ -1379,6 +1379,20 @@ jobs:
       - name: Job ad JSON-LD escaping
         run: bun run job-jsonld-escaping:check
 
+      # The job board's launch-readiness corrections, application half: an advert
+      # whose dates have passed is refused by name (restore -> publish used to
+      # publish an ad nobody could see), application_url is a web address at every
+      # layer, /jobs/new keeps the draft it created, the employer's list refreshes
+      # the overview its badges come from and shows drafts, the all-applications
+      # list counts a CQrityjob CV, a failed submission reads the application back
+      # before it removes the CV it may already point at, and a closed job's URL
+      # answers 404 from the loader. The database half is in db-test.sh (the
+      # jobs_not_editable_in_place, jobs_publish_window_and_url_scheme and
+      # job_cvs_no_client_writes suites). Its planted controls run in
+      # negative-controls:all.
+      - name: Job board launch readiness
+        run: bun run job-board-launch:check
+
       # The Passport card's ONE ground (owner addendum, pilot finish): the CSS
       # mirror matches PASSPORT_CARD_SURFACE, no stripes, grid or engraving sits
       # behind any card, and the homepage panel draws the real shield system

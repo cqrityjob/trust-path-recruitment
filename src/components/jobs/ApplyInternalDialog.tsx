@@ -85,6 +85,10 @@ const ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
   CV_DOCUMENT_NOT_FOUND: "jobs.apply.error.cvDocumentNotFound",
   CV_DOCUMENT_NOT_READY: "jobs.apply.error.cvDocumentNotReady",
   SUBMISSION_FAILED: "jobs.apply.error.generic",
+  // The server could not tell whether the application committed (the answer
+  // was lost) and has kept the CV. The same sentence as a lost request: try
+  // again, and the same attempt id cannot send it twice.
+  SUBMISSION_UNCONFIRMED: "rec.apply.error.network",
   // 20261207090000: the database's own refusals, each with its own sentence.
   VACANCY_CLOSED: "rec.apply.error.closed",
   APPLICATION_ANSWERS_MISSING: "rec.apply.error.answersMissing",
