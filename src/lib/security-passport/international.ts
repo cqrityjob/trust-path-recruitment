@@ -15,7 +15,7 @@ export const CREDENTIAL_CLASSES = {
   // qualifications). Mirrors public.sp_credential_classes -- scripts/
   // india-entry-check.ts refuses a class the database has and this lacks.
   vocational_qualification: { sv: "Yrkeskvalifikation", en: "Vocational qualification" },
-  // 20270206090000: the kinds of award the certification research integration
+  // 20270212090000: the kinds of award the certification research integration
   // distinguishes. A personal certification keeps `certification`; these four
   // say what the other awards ARE, so a course certificate is never mistaken
   // for a professional certification.

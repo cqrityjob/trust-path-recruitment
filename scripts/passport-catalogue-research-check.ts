@@ -472,7 +472,7 @@ ok(
 /* ─────────────────────────────────────────────────────────────── */
 group("GROUP 7 — the shared vocabularies know every class the SQL introduces");
 const foundation =
-  readRepoFile("supabase/migrations/20270206090000_sp_catalogue_research_foundation.sql") ?? "";
+  readRepoFile("supabase/migrations/20270212090000_sp_catalogue_research_foundation.sql") ?? "";
 const classInsert = foundation.slice(
   foundation.indexOf("INSERT INTO public.sp_credential_classes"),
   foundation.indexOf("ON CONFLICT (code) DO NOTHING;"),

@@ -1136,8 +1136,15 @@ const sql = read(F.migration);
     /const \{ dispatchApplicationReceipt \} = await import\("@\/lib\/recruitment\/receipt\.server"\);\n\s+await dispatchApplicationReceipt\(result\.id\);/.test(
       submit,
     ) &&
+      // The anchor is the branch that turns a failed submission into an error
+      // (`if (insertErr && !committed) {`). It was once written `if (insertErr) {`;
+      // when the code changed, indexOf answered -1 and this comparison passed
+      // for any position of the dispatch. Both positions must now EXIST, so a
+      // renamed branch fails here instead of silently testing nothing.
+      submit.indexOf("if (insertErr && !committed) {") >= 0 &&
+      submit.indexOf("dispatchApplicationReceipt(result.id)") >= 0 &&
       submit.indexOf("dispatchApplicationReceipt(result.id)") >
-        submit.indexOf("if (insertErr) {") &&
+        submit.indexOf("if (insertErr && !committed) {") &&
       !/dispatchApplicationReceipt\(ctx\.supabase/.test(submit),
     "I · the e-mail goes after the submission succeeded, from the same request, with the server's credentials rather than the candidate's session",
   );

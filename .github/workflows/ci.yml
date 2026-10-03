@@ -13,6 +13,8 @@ on:
       # depends on a PR that is not merged yet) is checked too. Without this its
       # head had no CI at all, because its base is not main.
       - "claude/**"
+      # Schema/app/contract PRs for interview access are stacked on codex branches.
+      - "codex/**"
 
 permissions:
   contents: read
@@ -63,6 +65,9 @@ jobs:
       # SQL definitions, so the exception cannot outlive the facts behind it.
       - name: Nullable RPC argument contract check
         run: bun run nullable-rpc-contract:check
+
+      - name: Interview case capability reader
+        run: bun run scripts/interview-case-capabilities-check.ts
 
       - name: Type-check
         run: bunx tsc --noEmit
@@ -1592,6 +1597,16 @@ jobs:
       # relay: executed against a stub provider, never a network.
       - name: Transactional e-mail function check
         run: bun run transactional-email:check
+
+      # The employer is e-mailed when a candidate submits a NEW application:
+      # the recipient is chosen in SQL and never by the request, the mail goes
+      # once (the provider key is the outbox row), carries no personal data,
+      # stays out of the apply request's time (a three-second ceiling) and is a
+      # logged no-op until its migration is applied. Executed against a scripted
+      # database and a stub provider. Planted controls run in
+      # negative-controls:all.
+      - name: Employer new-application notice check
+        run: bun run employer-application-notice:check
 
       # Baseline security headers on every application response, without
       # overriding the /p share entry's own strict policy.

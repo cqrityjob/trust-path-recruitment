@@ -1,12 +1,14 @@
 # Gemensam releaseordning (2026-10-03)
 
-**Status 2026-10-03 ~16:55 UTC.** Mergade i main: #395 (`97b5112`), #386 (`071f69e`), #387 (`b18e5e5`, 15:42 UTC), #398 (`65823f2`, 15:47),
-#399 (`55d1862`) och #396 (`2b5015d`). #387:s tre migrationer (steg 2) och #396:s tre (`20270202`–`20270204`, steg 3) är
-applicerade av integrationen och verifierade skrivskyddat. Publiceringspunkt 1 (Lovable, `65823f2`) är gjord av driftsessionen
-15:49–15:51 UTC och kontrollerad på www (canonical, villkorsruta, readiness 200, CV-rättningen). **Kvar:** #397 (appen för
-behörighetsrättningen), #392 → #393 (mejl till arbetsgivaren), #391 (karriäranalysen) och #400, nästa publicering, funktionen
-`transactional-email`s hemlighet, Auth-/DNS-inställningar och produktionsproven. Den som skrev dokumentet har inte publicerat,
-driftsatt någon funktion, ändrat Auth, DNS eller Lovable, och inga mejl har skickats av den. Det ersätter den "provisoriska" migrationslistan i
+**Status 2026-10-03 ~20:00 UTC.** Mergade i main: #395, #386, #387, #398, #399, #396 (`2b5015d`), #401, #402 (Lovables hero och dess
+kontroller), #397 (`72b4df8`, appen för behörighetsrättningen), #391 (karriäranalysen), #400 (`a3814f9`) och #392 (`d2c02b8`, schemat
+för mejl till arbetsgivaren); dessutom #403 (annan författare: startsidans bakgrundsvideo byttes). Migrationerna i steg 2 (#387), steg 3 (#396, `20270202`–`20270204`) och steg 4 (#392, `20270205`) är
+applicerade av integrationen och verifierade skrivskyddat av två läsare; ledgern har 367 rader, digest
+`77e07c074bb73aac9ac11a569b5ca214`. Publiceringspunkt 1 (Lovable, `65823f2`) gjordes av driftsessionen 15:49–15:51 UTC och kontrollerades på www
+(canonical, villkorsruta, readiness 200, CV-rättningen); senare publiceringar sköts av driftsessionen. **Kvar:** #393 (appen för mejl till arbetsgivaren), att kontrollera att `transactional-email` i
+produktion har `employer_new_application` före dess publicering, nästa publicering i Lovable, funktionen `transactional-email`s
+hemlighet, Auth-/DNS-inställningar och produktionsproven. Den som skrev dokumentet har inte publicerat, driftsatt någon funktion, ändrat
+Auth, DNS eller Lovable, och inga mejl har skickats av den. Det ersätter den "provisoriska" migrationslistan i
 `2026-10-03-launch-completion-report.md`: ordningen nedan är beroendebaserad. Claude-sessionen som
 äger Passport, juridik, kontaktadresser och Auth har bekräftat sin del: #386 är **mergad** (main
 `071f69e`) och funktionen `transactional-email` version 3 är driftsatt 2026-10-03 13:47:03 UTC
@@ -163,6 +165,12 @@ Efter steg 3 (versionsordning). Additivt: inget ändras för någon förrän app
 1. Merge E1. Integrationen applicerar `20270205090000`.
 2. Verifiera de sex pinnade `md5(prosrc)` (release-noten), att inga av de nya funktionerna har
    `EXECUTE` för `anon`/`authenticated`, att utkorgen har RLS påtvingad och ingen policy. Registrera.
+   **Utfall 2026-10-03:** #392 mergad (`d2c02b8`, huvud `aa8e7a5`). Verifierat skrivskyddat av två läsare: ledgern har 367 rader,
+   sista versionen `20270205090000`, digest `77e07c074bb73aac9ac11a569b5ca214` (de första 366 oförändrade); alla sex
+   funktionskroppar lika med den lokala replayen; `anon` och `authenticated` saknar `EXECUTE` på alla sex, `service_role` har det
+   på fem (inte backoff-hjälparen); utkorgen har RLS påtvingad, 0 policyer, 0 triggrar, ingen rättighet för klienterna
+   (`service_role` bara `SELECT`) och 0 rader. Inga skrivprov och inga kandidatdata. Evidens:
+   `2026-10-03-employer-notice-hosted-verification.md`.
 3. Merge E2. **Driftsätt `transactional-email` en gång till, före publicering**: raden
    `employer_new_application` finns bara i E2, så #386:s driftsättning innehåller den inte. Gör man
    det i omvänd ordning svarar den gamla funktionen 400 på kinden och raderna blir `failed`/400 utan återförsök
@@ -221,3 +229,9 @@ omdirigera den gamla värden (L1) **sist** (se `2026-10-03-www-domain-cutover.md
 6. Kvarstår medvetet utanför dessa PR:er: innehållsrollernas `*_author_read`-policyer (läser alla
    hyresgästers kandidatsvar; antalet innehavare okänt), BESKT:s `bcp_employer_*`-medlemsläsningar,
    den pensionerade v3.0-karriäranalysen som fortfarande kontrollerar testarlistan oavsett läge.
+7. Rådgivarens fynd `security_definer_view` på `scp_scoring_version_lineage`: Astras oberoende granskning är registrerad
+   som **accepterad enligt dokumenterat designbeslut, inget nytt bekräftat lanseringshinder**; vyn är inte ändrad.
+   Uttryckligen: **utkastmetadata är läsbara för alla inloggade**, och **faktisk rapportanvändning är inte verifierad**.
+   Se `2026-10-03-scoring-lineage-review.md` (testbevisen ligger i `evidence/2026-10-03-scoring-lineage/`) och
+   [#406](https://github.com/cqrityjob/trust-path-recruitment/pull/406). Åtkomstfixarna i #404–#406 är separata releaser
+   och påverkas inte.

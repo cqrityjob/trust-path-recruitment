@@ -39,7 +39,7 @@ BEGIN
   RAISE NOTICE 'ok  %', _label;
 END $$;
 
--- ── SINCE 20270207090000: THE REVIEWED FOURTEEN, NOT "EVERYTHING" ─────────
+-- ── SINCE 20270213090000: THE REVIEWED FOURTEEN, NOT "EVERYTHING" ─────────
 -- The certification research import ADDS 140 definitions and 31 issuers, all
 -- inactive. This suite pins the fourteen definitions and five issuers that
 -- 20261111090000 reviewed; it must keep pinning exactly those, and must keep

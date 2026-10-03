@@ -1,0 +1,36 @@
+# Local run of supabase/tests/cd_outstanding_reviews_operator_only_test.sql (CDO4 pins that scp_scoring_version_lineage stays a definer view)
+# Database: same scratch replay as above. Command: psql -v ON_ERROR_STOP=1 -d <scratch> -f supabase/tests/cd_outstanding_reviews_operator_only_test.sql   (exit 0)
+
+SET
+BEGIN
+CREATE FUNCTION
+CREATE FUNCTION
+INSERT 0 6
+INSERT 0 2
+INSERT 0 2
+INSERT 0 1
+INSERT 0 2
+    ok  CDO0 fixture: 14 uncleared gate row(s) exist, 7 of them on live instruments
+    ok  CDO0b at least one uncleared gate sits on a pilot/active instrument (the trap row)
+── Structure ───────────────────────────────────────────────
+    ok  CDO1 the view is security_invoker = true
+    ok  CDO2 the view is security_barrier = true
+    ok  CDO3 the operator predicate is in the view body, not merely in a comment
+    ok  CDO4 scp_scoring_version_lineage is still deliberately definer -- untouched
+── Actor matrix ────────────────────────────────────────────
+    ok  CDO5 anon holds no SELECT privilege on the view at all
+    ok  CDO6 anonymous  -> refused (permission denied)
+    ok  CDO7 ordinary candidate -> 0 rows (saw 0)
+    ok  CDO8 ordinary employer (tenant A) -> 0 rows (saw 0)
+    ok  CDO9 cross-tenant employer (tenant B) -> 0 rows (saw 0)
+    ok  CDO10 internal tester -> ALL 14 gate row(s), including internal_test (saw 14)
+    ok  CDO11 platform admin -> ALL 14 gate row(s) (saw 14)
+    ok  CDO12 superadmin -> ALL 14 gate row(s) (saw 14)
+── The specific regression this closes ─────────────────────
+    ok  CDO13 a candidate still reads live rows on the BASE TABLE -- so invoker alone could not have been the fix
+    ok  CDO14 ...and none of those live rows reach the candidate through the view
+    ok  CDO15 owner session with no JWT subject -> 0 rows (the body predicate refuses)
+    ok  CDO16 authenticated retains SELECT, so operators are not locked out by privilege
+    ok  16 operator-only assertions passed
+DO
+ROLLBACK

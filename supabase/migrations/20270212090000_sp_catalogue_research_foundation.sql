@@ -2,8 +2,8 @@
 --
 -- Additive, with three RELAXED constraints (named in section 3) and no change
 -- to any existing row. This is the SCHEMA release of the certification
--- research integration; the data is 20270207090000 and the publication of
--- the definitions it creates is 20270208090000. Application code that reads
+-- research integration; the data is 20270213090000 and the publication of
+-- the definitions it creates is 20270214090000. Application code that reads
 -- anything below ships separately, after this is applied and recorded.
 --
 -- ══ WHAT THIS ADDS ═══════════════════════════════════════════════════════
@@ -45,7 +45,7 @@
 --
 -- Production schema: nothing here is read by the running application until the
 -- application release. Rollback: supabase/rollback/
--- 20270206090000_sp_catalogue_research_foundation_rollback.sql, which refuses
+-- 20270212090000_sp_catalogue_research_foundation_rollback.sql, which refuses
 -- once any request exists or any definition uses a new class.
 
 BEGIN;

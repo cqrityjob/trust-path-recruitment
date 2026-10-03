@@ -6,7 +6,7 @@
 -- scripts/passport-catalogue-research-check.ts fails when this file differs
 -- from what the generator produces.
 --
--- Depends on 20270206090000_sp_catalogue_research_foundation.sql.
+-- Depends on 20270212090000_sp_catalogue_research_foundation.sql.
 --
 -- ══ WHAT THIS MIGRATION DOES ═════════════════════════════════════════
 --
@@ -26,7 +26,7 @@
 --
 --   * It activates nothing. Every new definition is is_active = false, so no
 --     holder can select one and the approved catalogue view is unchanged.
---     Publication is 20270208090000_sp_catalogue_research_publish.sql, which
+--     Publication is 20270214090000_sp_catalogue_research_publish.sql, which
 --     is released only after the application that renders these kinds.
 --   * It touches no existing definition, issuer, claim, market pack or grant.
 --   * research_scope and jurisdiction_context stay verbatim research metadata.

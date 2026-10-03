@@ -1,8 +1,8 @@
--- Rollback of 20270206090000_sp_catalogue_research_foundation.sql
+-- Rollback of 20270212090000_sp_catalogue_research_foundation.sql
 --
 -- A rollback refuses rather than destroys. It stops if a holder has made a
 -- catalogue request, if a research record or a definition that needs the new
--- shape still exists (roll back 20270208090000 and then 20270207090000 first,
+-- shape still exists (roll back 20270214090000 and then 20270213090000 first,
 -- in that order), or if a claim already carries one of the new credential
 -- classes. Prefer a forward fix.
 --
@@ -19,11 +19,11 @@ BEGIN
   END IF;
   IF to_regclass('public.sp_catalogue_research_records') IS NOT NULL
      AND EXISTS (SELECT 1 FROM public.sp_catalogue_research_records) THEN
-    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: research records exist; roll back 20270207090000 first';
+    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: research records exist; roll back 20270213090000 first';
   END IF;
   IF to_regclass('public.sp_certification_definition_aliases') IS NOT NULL
      AND EXISTS (SELECT 1 FROM public.sp_certification_definition_aliases) THEN
-    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definition aliases exist; roll back 20270207090000 first';
+    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definition aliases exist; roll back 20270213090000 first';
   END IF;
   IF EXISTS (SELECT 1 FROM public.sp_credential_details
               WHERE credential_class IN ('professional_qualification', 'professional_designation',
@@ -33,16 +33,16 @@ BEGIN
   IF EXISTS (SELECT 1 FROM public.sp_credential_definition_metadata
               WHERE credential_class IN ('professional_qualification', 'professional_designation',
                                          'assessed_certificate', 'course_certificate')) THEN
-    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definitions use the new credential classes; roll back 20270207090000 first';
+    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definitions use the new credential classes; roll back 20270213090000 first';
   END IF;
   IF EXISTS (SELECT 1 FROM public.sp_credential_definition_reviews
               WHERE professional_domain IN ('insurance', 'risk_compliance', 'resilience_safety')) THEN
-    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definitions use the new subject domains; roll back 20270207090000 first';
+    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definitions use the new subject domains; roll back 20270213090000 first';
   END IF;
   IF EXISTS (SELECT 1 FROM public.sp_certification_definitions
               WHERE abbreviation IS NULL OR length(btrim(abbreviation)) > 12
                  OR maintenance_policy_type = 'not_assessed') THEN
-    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definitions need the relaxed abbreviation or maintenance policy; roll back 20270207090000 first';
+    RAISE EXCEPTION 'SP_RESEARCH_FOUNDATION_ROLLBACK_REFUSED: definitions need the relaxed abbreviation or maintenance policy; roll back 20270213090000 first';
   END IF;
 END $$;
 

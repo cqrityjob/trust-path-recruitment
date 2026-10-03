@@ -17,6 +17,15 @@
 // each, bounded, one sweep at a time. It generates nothing retroactively and
 // it sends nothing that is not registered. The answer is a count, never an
 // address.
+//
+// The same call also sends the EMPLOYER's new-application notices that are
+// due (src/lib/recruitment/employer-notice.server.ts): never started, lease
+// expired, a retryable failure past its backoff -- bounded, one worker per
+// row, under the same token and on the same schedule, so there is no second
+// scheduler. It runs whatever the receipts did, and a database without the
+// notice migration answers `available: false` for it rather than failing.
+// After the claim loop it also deletes the settled notices that are more than
+// 90 days old (the retention). The answer's `employerNotices` is counts only.
 
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -61,13 +70,27 @@ export const Route = createFileRoute("/api/recruitment/receipts-sweep")({
           // No body, or not JSON: the defaults.
         }
         const { sweepReceipts } = await import("@/lib/recruitment/receipt.server");
+        const { sweepEmployerNotices } = await import("@/lib/recruitment/employer-notice.server");
+        let receipts: Awaited<ReturnType<typeof sweepReceipts>> | null = null;
         try {
-          const summary = await sweepReceipts({ limit, employerId });
-          return Response.json({ ok: true, at: new Date().toISOString(), ...summary });
+          receipts = await sweepReceipts({ limit, employerId });
         } catch (e) {
           console.error("[recruitment] receipt sweep failed", e);
-          return Response.json({ ok: false, code: "RECRUITMENT_ACTION_FAILED" }, { status: 500 });
         }
+        // Never throws; the employer's notices are swept whatever the receipts did.
+        const employerNotices = await sweepEmployerNotices({ limit });
+        if (!receipts) {
+          return Response.json(
+            { ok: false, code: "RECRUITMENT_ACTION_FAILED", employerNotices },
+            { status: 500 },
+          );
+        }
+        return Response.json({
+          ok: true,
+          at: new Date().toISOString(),
+          ...receipts,
+          employerNotices,
+        });
       },
       ANY: () => notFound(),
     },

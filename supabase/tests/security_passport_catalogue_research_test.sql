@@ -1,7 +1,7 @@
 -- Security Passport — the certification research integration.
 --
--- Covers 20270206090000 (foundation), 20270207090000 (import) and
--- 20270208090000 (publication), in the final state after all three.
+-- Covers 20270212090000 (foundation), 20270213090000 (import) and
+-- 20270214090000 (publication), in the final state after all three.
 -- Synthetic holders only. Everything rolls back.
 --
 -- Labels RS<group>.<n> are the names the negative controls in scripts/db-test.sh
