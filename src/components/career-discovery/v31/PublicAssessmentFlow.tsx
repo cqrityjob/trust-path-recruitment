@@ -467,7 +467,7 @@ export function PublicAssessmentFlow() {
           // takes the same honest, retryable "could not check" screen as any
           // other failed read, instead of telling the person their account
           // may not start on the strength of a database hiccup.
-          if (access.door === "unknown") throw new Error("cd_v31_may_start did not answer");
+          if (access.door === "unknown") throw new Error("the signed-in gate did not answer");
           if (access.door === "closed") {
             setClosedReason(access.reason);
             setClosedKeep(closedKeepFor(null));
