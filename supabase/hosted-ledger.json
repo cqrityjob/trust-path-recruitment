@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-03T06:53:55+00:00",
-  "readBy": "Read-only production verification after #384 merged (BESKT exposure durability and Passport decision bound to reviewed content). All 357 previous ledger identities preserved (their digest is still f4f87e56322142f2ac03b5eda5c1cfae); the two new rows are 20270124090000 and 20270125090000, applied by the official integration. md5 of version:name joined by newline over all 359 rows 52e21ce44d6964ae72605bdf2b67817a, equal on the connector read and on this file. See docs/release/2026-10-03-beskt-exposure-and-passport-review-hosted-verification.md.",
+  "readAt": "2026-10-03T10:00:00+00:00",
+  "readBy": "Read-only production verification after #388 merged (Passport evidence added under review binds the decision). All 359 previous ledger identities preserved (their digest is still 52e21ce44d6964ae72605bdf2b67817a); the one new row is 20270126090000 sp_evidence_change_under_review, applied by the official integration. md5 of version:name joined by newline over all 360 rows dcb7e4bcb694e2afece115a18a595383, equal on the connector read and on this file. See docs/release/2026-10-03-passport-evidence-change-under-review.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1451,6 +1451,10 @@
     {
       "version": "20270125090000",
       "name": "sp_decision_bound_to_reviewed_content"
+    },
+    {
+      "version": "20270126090000",
+      "name": "sp_evidence_change_under_review"
     }
   ]
 }
