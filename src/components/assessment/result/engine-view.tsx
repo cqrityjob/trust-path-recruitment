@@ -327,7 +327,7 @@ function Hero({
   primary: Match;
   profile: CareerProfile;
   lang: Lang;
-  onRetake: () => void;
+  onRetake?: () => void;
 }) {
   const profileLbl = careerProfileLabel(profile);
   const evidenceLevel = overallEvidenceLevel(result.overallEvidenceScore);
@@ -533,14 +533,19 @@ function Hero({
         >
           {lang === "sv" ? "Se din utvecklingsplan" : "View your action plan"}
         </button>
-        <button
-          type="button"
-          onClick={onRetake}
-          className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
-        >
-          <RotateCcw className="h-3 w-3" strokeWidth={1.75} />
-          {lang === "sv" ? "Gör om testet" : "Retake assessment"}
-        </button>
+        {/* Offered only when the caller passes one: the host withdraws it when
+            the career analysis is closed to this reader, because a retake
+            that lands on "not open" is a dead door. */}
+        {onRetake && (
+          <button
+            type="button"
+            onClick={onRetake}
+            className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+          >
+            <RotateCcw className="h-3 w-3" strokeWidth={1.75} />
+            {lang === "sv" ? "Gör om testet" : "Retake assessment"}
+          </button>
+        )}
       </div>
     </section>
   );
@@ -1793,7 +1798,8 @@ export function EngineResultView({
 }: {
   result: EngineResultV1;
   lang: Lang;
-  onRetake: () => void;
+  /** Absent = no retake control (the host decided the analysis is closed). */
+  onRetake?: () => void;
   // "live" (default) is the assessment results page — unchanged behavior.
   // "saved" is a replay of a stored report (Phase 2): suppresses the
   // sign-in-to-save prompt, which is meaningless once already saved.

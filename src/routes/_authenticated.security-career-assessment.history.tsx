@@ -19,6 +19,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, FileText } from "lucide-react";
 import { AssessmentLayout } from "@/components/assessment/AssessmentLayout";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 import { useT } from "@/i18n/context";
 import { AREAS_BY_ID } from "@/lib/career-discovery/career-areas";
 import type { SecurityCareerAreaId } from "@/lib/career-discovery/career-areas";
@@ -30,6 +31,10 @@ export const Route = createFileRoute("/_authenticated/security-career-assessment
 
 function DiscoveryHistoryRoute() {
   const { t, lang } = useT();
+  // The empty state offers to start the analysis, which is a door into the
+  // canonical route: it asks the one availability hook the route asks.
+  // Authenticated route, so the reader is signed in.
+  const analysisOpen = useCareerAnalysisOpen(true);
   const load = useServerFn(listMyDiscoveryReports);
   const [data, setData] = useState<Awaited<ReturnType<typeof listMyDiscoveryReports>> | null>(null);
   const [failed, setFailed] = useState(false);
@@ -99,14 +104,37 @@ function DiscoveryHistoryRoute() {
         <div className="mt-10 rounded-lg border border-border bg-background p-8 text-center">
           <FileText className="mx-auto h-6 w-6 text-muted-foreground" aria-hidden="true" />
           <p className="mt-4 text-sm text-muted-foreground">{t("careerDiscovery.history.empty")}</p>
-          <div className="mt-6 flex justify-center">
-            <Link to="/security-career-assessment">
-              <PrimaryButton>
-                {t("careerDiscovery.history.startCta")}
-                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-              </PrimaryButton>
-            </Link>
-          </div>
+          {analysisOpen === false ? (
+            // The analysis is closed to this account right now: no start
+            // button into a page that says no. Say so, and offer what they
+            // can do instead.
+            <>
+              <p
+                className="mx-auto mt-3 max-w-[52ch] text-sm text-muted-foreground"
+                data-career-analysis-closed
+              >
+                {t("home.career.closed")}
+              </p>
+              <div className="mt-6 flex justify-center">
+                <Link
+                  to="/career-center"
+                  className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline"
+                >
+                  {t("cd.public.exploreInstead")}
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="mt-6 flex justify-center">
+              <Link to="/security-career-assessment">
+                <PrimaryButton>
+                  {t("careerDiscovery.history.startCta")}
+                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                </PrimaryButton>
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

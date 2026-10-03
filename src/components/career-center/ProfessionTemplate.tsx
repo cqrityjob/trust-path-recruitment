@@ -31,6 +31,7 @@ import {
 } from "@/lib/career-center";
 import { useCareerCenterTracking } from "@/lib/career-center/analytics";
 import { useSupabaseSessionFlag } from "@/hooks/useMyCareerDirection";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 import { rememberReturn } from "@/lib/career-center/return-context";
 import { CareerHero } from "./CareerHero";
@@ -87,6 +88,11 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
   // Only used to choose the right Passport entry point. Nothing this page
   // CLAIMS depends on who is reading it.
   const signedIn = useSupabaseSessionFlag();
+  // The analysis card at the foot of the guide is a door into the canonical
+  // route, so it asks the one availability hook the route asks. A definite
+  // "closed" withdraws the action and says so in the words the rest of the
+  // site uses; "not answered yet" keeps it.
+  const analysisOpen = useCareerAnalysisOpen(signedIn);
   const family = getFamily(profession.family);
 
   const title = lang === "sv" ? profession.titleSv : profession.titleEn;
@@ -605,16 +611,27 @@ export function ProfessionTemplate({ profession }: { profession: Profession }) {
             <h3 className="text-lg font-semibold tracking-tight text-foreground">
               {t("cc.p.test.title")}
             </h3>
-            <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
-              {/* The duration is the instrument's own, never typed into copy. */}
-              {t("cc.p.test.body")} {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
-            </p>
-            <div className="mt-6">
-              <PrimaryLink to="/security-career-assessment" variant="ghost">
-                {t("cc.test.cta")}
-                <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
-              </PrimaryLink>
-            </div>
+            {analysisOpen === false ? (
+              <p
+                className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground"
+                data-career-analysis-closed
+              >
+                {t("home.career.closed")}
+              </p>
+            ) : (
+              <>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
+                  {/* The duration is the instrument's own, never typed into copy. */}
+                  {t("cc.p.test.body")} {DURATION_CLAIM[lang === "en" ? "en" : "sv"]}.
+                </p>
+                <div className="mt-6">
+                  <PrimaryLink to="/security-career-assessment" variant="ghost">
+                    {t("cc.test.cta")}
+                    <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
+                  </PrimaryLink>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
