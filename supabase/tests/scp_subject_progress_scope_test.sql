@@ -70,7 +70,11 @@ SELECT e1, both_m, 'member', 'active' FROM ps UNION ALL
 SELECT e2, both_m, 'member', 'active' FROM ps;
 INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
 SELECT e1, r1, ARRAY['workforce','recruitment']::text[], o1 FROM ps UNION ALL
-SELECT e2, r2, ARRAY['workforce','recruitment']::text[], o2 FROM ps;
+SELECT e2, r2, ARRAY['workforce','recruitment']::text[], o2 FROM ps UNION ALL
+-- The member of both organisations holds a reviewer grant in each (the basis for reading:
+-- membership alone gives none since 20270203090000/20270204090000).
+SELECT e1, both_m, ARRAY['workforce','recruitment']::text[], o1 FROM ps UNION ALL
+SELECT e2, both_m, ARRAY['workforce','recruitment']::text[], o2 FROM ps;
 
 CREATE TEMP TABLE psv AS
 SELECT av.id AS version_id, av.definition_id

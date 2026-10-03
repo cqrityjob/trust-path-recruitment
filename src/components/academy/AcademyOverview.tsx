@@ -38,6 +38,7 @@ import type { TranslationKey } from "@/i18n/dictionaries";
 import { useT } from "@/i18n/context";
 import { AcademyHeading } from "@/components/academy/AcademyWorkspace";
 import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
+import { ReportAccessNotice, useReportAccess } from "@/components/employer/ReportAccess";
 
 export function AcademyOverview({
   employerId,
@@ -79,16 +80,25 @@ export function AcademyOverview({
 
   const hasWork = !loading && (awaitingCandidates > 0 || ready > 0);
 
+  // An ordinary member of the organisation is not entitled to read these
+  // numbers, and the database now returns them nothing. Four tiles reading "0"
+  // would say "nothing is happening" when the true answer is "you may not see
+  // it". Only a CONFIRMED answer from the database does this; until it is known
+  // (or if the migration is not applied) the page is exactly what it was.
+  const noAccess = useReportAccess(employerId).stateFor("recruitment") === "none";
+
   return (
     <>
       <AcademyHeading title={t("academy.overview.title")} lede={t("academy.overview.lede")} />
 
       <SendTestEntry employerId={employerId} employerSlug={employerSlug} />
 
+      {noAccess ? <ReportAccessNotice need="recruitment" /> : null}
+
       {/* Four tiles, in journey order, answering exactly the four questions the
           recruiter has: what is running, what needs a person, what is waiting
           on me, what is done. */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={noAccess ? "hidden" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"}>
         <StatLink
           icon={Users}
           label="academy.overview.active"
@@ -145,6 +155,7 @@ export function AcademyOverview({
        *  knowing they are done. */}
       <section
         aria-labelledby="academy-todo"
+        hidden={noAccess}
         className="mt-8 rounded-[14px] border border-border bg-card p-5 shadow-[var(--shadow-xs)]"
       >
         <h2 id="academy-todo" className="text-sm font-semibold text-foreground">

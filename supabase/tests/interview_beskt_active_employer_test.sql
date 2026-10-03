@@ -55,6 +55,11 @@ INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VAL
   ('0f130000-1111-4000-8000-000000000001', '0f130000-0000-4000-8000-000000000002', 'member', 'active'),
   ('0f130000-1111-4000-8000-000000000001', '0f130000-0000-4000-8000-000000000003', 'member', 'active'),
   ('0f130000-1111-4000-8000-000000000009', '0f130000-0000-4000-8000-000000000009', 'owner', 'active');
+-- The two members' BASIS for working the case: a recruitment reviewer grant made by the
+-- owner (membership alone gives none since 20270203090000/20270204090000).
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by) VALUES
+  ('0f130000-1111-4000-8000-000000000001', '0f130000-0000-4000-8000-000000000002', ARRAY['recruitment']::text[], '0f130000-0000-4000-8000-000000000001'),
+  ('0f130000-1111-4000-8000-000000000001', '0f130000-0000-4000-8000-000000000003', ARRAY['recruitment']::text[], '0f130000-0000-4000-8000-000000000001');
 
 DO $$
 DECLARE _packv uuid; _case uuid; _q uuid; _q2 uuid;

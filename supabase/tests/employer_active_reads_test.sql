@@ -4,13 +4,16 @@
 --   AR-F the fixture: one person assessed by employer E through the real
 --        assign -> answer -> submit -> review -> release flow, a second sitting
 --        waiting for review, a training assignment, an open invitation and an
---        employer decision. While E is active its owner and plain member read
---        every one of them.
---   AR0  REPRODUCTION. E is suspended. Inside a savepoint the pre-fix bodies
---        and policies are restored by running the real rollback file, and E's
---        owner still reads the participants, pipeline, released report,
---        subject progress, recommendations, decisions, invitations, training
---        and review board. Rolled back.
+--        employer decision. While E is active its owner and its authorised
+--        reviewer read every one of them; a PLAIN MEMBER reads none (20270203090000:
+--        membership alone no longer reads -- this suite used to assert that a
+--        plain member read the same as the owner, AR-F.2).
+--   AR0  REPRODUCTION. E is suspended. Inside a savepoint the access model
+--        (20270204090000, 20270203090000) and then the pre-fix bodies and
+--        policies of 20270108090000 are restored by running the real rollback
+--        files, and E's owner still reads the participants, pipeline, released
+--        report, subject progress, recommendations, decisions, invitations,
+--        training and review board. Rolled back.
 --   AR1  with E suspended, every read gives E's owner, member and reviewer
 --        exactly what a member of an unrelated employer gets: nothing.
 --   AR2  the same for every other non-active status (pending, rejected,
@@ -228,10 +231,11 @@ END $$;
 CREATE TEMP TABLE ar_base AS SELECT
   pg_temp.reads_as((SELECT o FROM ar)) AS owner_reads,
   pg_temp.reads_as((SELECT m FROM ar)) AS member_reads,
+  pg_temp.reads_as((SELECT r FROM ar)) AS reviewer_reads,
   pg_temp.reads_as((SELECT xo FROM ar)) AS outsider_reads;
 
 -- ── AR-F · the fixture, while E is active ───────────────────────────────
-DO $$ BEGIN RAISE NOTICE 'GROUP AR-F -- while E is active its members read everything'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP AR-F -- while E is active its owner and reviewer read everything, a plain member nothing'; END $$;
 SELECT pg_temp.ok(
   pg_temp.nonempty((SELECT owner_reads FROM ar_base)) =
   ARRAY['decisions','employer_report','employer_report_v3','invitations','participant_report_for_issuer',
@@ -240,9 +244,13 @@ SELECT pg_temp.ok(
         'rls_training_progress','subject_progress','training_status'],
   'AR-F.1 E''s owner reads every one of the 19 reads: ' || (SELECT owner_reads FROM ar_base)::text);
 SELECT pg_temp.ok(
-  (SELECT member_reads FROM ar_base) = (SELECT owner_reads FROM ar_base) - 'participant_report_for_issuer'
+  pg_temp.nonempty((SELECT member_reads FROM ar_base)) = ARRAY[]::text[]
+  AND (SELECT member_reads FROM ar_base) = (SELECT outsider_reads FROM ar_base),
+  'AR-F.2 a PLAIN MEMBER reads nothing -- not one of the 19 reads, no row and no count -- exactly what a member of an unrelated employer reads (was: the same as the owner, bar the issuer-admin report): ' || (SELECT member_reads FROM ar_base)::text);
+SELECT pg_temp.ok(
+  (SELECT reviewer_reads FROM ar_base) = (SELECT owner_reads FROM ar_base) - 'participant_report_for_issuer'
      || jsonb_build_object('participant_report_for_issuer', 0),
-  'AR-F.2 a plain member reads the same, except the issuer-admin participant report: ' || (SELECT member_reads FROM ar_base)::text);
+  'AR-F.2b the authorised REVIEWER (a grant for the use case of the assessments) reads the same as the owner, except the issuer-admin participant report: ' || (SELECT reviewer_reads FROM ar_base)::text);
 SELECT pg_temp.ok(pg_temp.nonempty((SELECT outsider_reads FROM ar_base)) = ARRAY[]::text[],
   'AR-F.3 a member of an unrelated employer reads nothing');
 
@@ -252,6 +260,8 @@ SELECT pg_temp.moderate('suspended');
 SELECT pg_temp.ok((SELECT status FROM public.employers WHERE id = (SELECT e FROM ar)) = 'suspended',
   'AR0.1 E is suspended through moderate_employer()');
 SAVEPOINT before_fix;
+\ir ../rollback/20270204090000_interview_case_access_model_rollback.sql
+\ir ../rollback/20270203090000_employer_report_access_model_rollback.sql
 \ir ../rollback/20270108090000_employer_active_reads_rollback.sql
 SELECT pg_temp.ok(
   pg_temp.nonempty(pg_temp.reads_as((SELECT o FROM ar))) = pg_temp.nonempty((SELECT owner_reads FROM ar_base)),
@@ -305,7 +315,9 @@ SELECT pg_temp.ok((SELECT status FROM public.employers WHERE id = (SELECT e FROM
 SELECT pg_temp.ok(pg_temp.reads_as((SELECT o FROM ar)) = (SELECT owner_reads FROM ar_base),
   'AR3.2 the owner reads exactly what it read before the suspension');
 SELECT pg_temp.ok(pg_temp.reads_as((SELECT m FROM ar)) = (SELECT member_reads FROM ar_base),
-  'AR3.3 the plain member reads exactly what it read before');
+  'AR3.3 the plain member reads exactly what it read before (nothing)');
+SELECT pg_temp.ok(pg_temp.reads_as((SELECT r FROM ar)) = (SELECT reviewer_reads FROM ar_base),
+  'AR3.4 the reviewer reads exactly what it read before the suspension');
 SELECT pg_temp.ok(pg_temp.participant_reads() = (SELECT v FROM ar_p_suspended),
   'AR4.2 the participant reads the same while E is active as while it was suspended');
 

@@ -419,7 +419,7 @@ function SavedConfirmation() {
     <div
       role="status"
       data-testid="cd-claim-saved"
-      className="mb-8 flex items-start gap-3 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-4"
+      className="no-print mb-8 flex items-start gap-3 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-4"
     >
       <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
       <div className="min-w-0">

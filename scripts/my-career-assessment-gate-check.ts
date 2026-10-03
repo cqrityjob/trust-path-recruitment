@@ -52,8 +52,15 @@ const ROOT = join(import.meta.dir, "..");
 // /my-career. A gate honoured in one and not the other is the same dead
 // door this guard was written for.
 const PAGE = join(ROOT, "src/routes/_authenticated.my-career.index.tsx");
+// The ONE hook every surface reads for "is the analysis open to this reader".
+// My Career used to carry its own copy of the two-question query; it reads the
+// hook now, so the questions are asserted against the hook's source and the
+// page is asserted to USE it (GROUP 1).
+const HOOK = join(ROOT, "src/components/career-discovery/use-career-analysis-open.ts");
+const pageSrc = readFileSync(PAGE, "utf8");
 const src = [
   PAGE,
+  HOOK,
   join(ROOT, "src/components/professional-identity/HubStatusGrid.tsx"),
   join(ROOT, "src/components/professional-identity/CareerDirectionSection.tsx"),
   join(ROOT, "src/lib/professional-identity/home-presentation.ts"),
@@ -79,6 +86,15 @@ console.log("my-career-assessment-gate-check\n");
 
 console.log("GROUP 1 -- the page asks the SAME questions the route asks");
 
+// The page asks through the shared hook and keeps no private copy of the query
+// (scripts/career-analysis-availability-check.ts holds that rule for every
+// surface; it is stated here too because this guard is the one that names the
+// My Career failure).
+assert(
+  pageSrc.includes("useCareerAnalysisOpen(true)") &&
+    !/getV31Availability|getV31TesterStatus|checkTesterStatus|assessment-open/.test(pageSrc),
+  "My Career reads the shared availability hook and carries no private copy of the query",
+);
 assert(src.includes("getV31Availability"), "My Career reads the availability gate");
 assert(
   src.includes("getV31TesterStatus"),
@@ -102,7 +118,7 @@ console.log("\nGROUP 2 -- 'closed' is DERIVED, never assumed");
 // undefined, and treating that as closed would flash a closed notice at a
 // tester who is in fact allowed in.
 assert(
-  /assessmentClosed\s*=\s*assessmentOpenQ\.data === false/.test(src),
+  /assessmentClosed\s*=\s*assessmentOpen === false/.test(src),
   "closed means the gate ANSWERED no, not merely 'not yet answered yes'",
 );
 assert(!/assessmentClosed\s*=\s*!/.test(src), "a pending query is not mistaken for a refusal");

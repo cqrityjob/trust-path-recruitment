@@ -82,9 +82,12 @@ BEGIN
 END $$;
 
 -- ---------------------------------------------------------------------------
--- 1. Two more people: an ordinary MEMBER of the journey employer (a second
---    assessor, and the person who may not finalise), and a CANDIDATE with a
---    login and no seat anywhere (the person who must be denied).
+-- 1. Three more people: a MEMBER of the journey employer who holds a
+--    recruitment reviewer grant (a second assessor: authorised to read the
+--    report, and not to finalise it), an ORDINARY member with no basis at all
+--    (membership alone is not access to a report, 20270203090000 and
+--    20270204090000: the person who must be denied), and a CANDIDATE with a
+--    login and no seat anywhere (the person who must also be denied).
 -- ---------------------------------------------------------------------------
 -- GoTrue scans the token columns as non-nullable strings, so they must be ''
 -- rather than NULL. Leaving them NULL produces a 500 on sign-in with the
@@ -100,6 +103,12 @@ VALUES
    'interviewer@local.test', crypt('LocalJourney!2026', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}'::jsonb,
    '{"full_name":"Intervjuare Testare"}'::jsonb, now(), now(),
+   '', '', '', '', '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000',
+   '9e000000-0000-4000-8000-000000000004', 'authenticated', 'authenticated',
+   'ordinary@local.test', crypt('LocalJourney!2026', gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}'::jsonb,
+   '{"full_name":"Ordinarie Medlem"}'::jsonb, now(), now(),
    '', '', '', '', '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000',
    'e4000000-0000-4000-8000-0000000000c1', 'authenticated', 'authenticated',
@@ -120,14 +129,30 @@ VALUES
   ('9e000000-0000-4000-8000-000000000003', '9e000000-0000-4000-8000-000000000003',
    '{"sub":"9e000000-0000-4000-8000-000000000003","email":"interviewer@local.test","email_verified":true}'::jsonb,
    'email', now(), now(), now()),
+  ('9e000000-0000-4000-8000-000000000004', '9e000000-0000-4000-8000-000000000004',
+   '{"sub":"9e000000-0000-4000-8000-000000000004","email":"ordinary@local.test","email_verified":true}'::jsonb,
+   'email', now(), now(), now()),
   ('e4000000-0000-4000-8000-0000000000c1', 'e4000000-0000-4000-8000-0000000000c1',
    '{"sub":"e4000000-0000-4000-8000-0000000000c1","email":"kandidat@local.test","email_verified":true}'::jsonb,
    'email', now(), now(), now())
 ON CONFLICT (provider, provider_id) DO NOTHING;
 
 INSERT INTO public.employer_memberships (user_id, employer_id, role, status) VALUES
-  ('9e000000-0000-4000-8000-000000000003', '9e000000-0000-4000-8000-00000000000a', 'member', 'active')
+  ('9e000000-0000-4000-8000-000000000003', '9e000000-0000-4000-8000-00000000000a', 'member', 'active'),
+  ('9e000000-0000-4000-8000-000000000004', '9e000000-0000-4000-8000-00000000000a', 'member', 'active')
 ON CONFLICT (user_id, employer_id) DO UPDATE SET status = 'active', role = EXCLUDED.role;
+
+-- The interviewer's BASIS for reading the report: a recruitment reviewer grant
+-- (the existing per-use-case grant an owner makes). Without it, membership
+-- alone reads nothing (20270203090000 / 20270204090000). The ordinary member
+-- deliberately has none. Superuser plumbing, like the rest of this section.
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+SELECT '9e000000-0000-4000-8000-00000000000a', '9e000000-0000-4000-8000-000000000003',
+       ARRAY['recruitment']::text[], '9e000000-0000-4000-8000-000000000001'
+ WHERE NOT EXISTS (
+   SELECT 1 FROM public.scp_employer_reviewers r
+    WHERE r.employer_id = '9e000000-0000-4000-8000-00000000000a'
+      AND r.user_id = '9e000000-0000-4000-8000-000000000003' AND r.revoked_at IS NULL);
 
 -- The owner has a display name, so the finalising actor renders as a person.
 -- The member deliberately has none, so the version list's fallback to the

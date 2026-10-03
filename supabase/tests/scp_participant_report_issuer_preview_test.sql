@@ -338,8 +338,14 @@ SELECT pg_temp.ok(
      (SELECT attempt_id FROM prun))) = 0,
   'P3.1 an ordinary active member gets nothing — they cannot share the result, so they do not read what sharing would produce');
 SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_report((SELECT attempt_id FROM prun))) = 0,
+  'P3.2 and, since 20270203090000, the ordinary member has no employer read either: membership alone is no basis');
+RESET ROLE; RESET request.jwt.claim.sub;
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'e2100000-0000-0000-0000-000000000006';
+SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_employer_report((SELECT attempt_id FROM prun))) = 1,
-  'P3.2 and the member''s existing employer read is untouched');
+  'P3.2b while the member who holds a reviewer grant keeps the employer read');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 SET LOCAL ROLE authenticated;
@@ -428,9 +434,8 @@ SELECT pg_temp.ok(
   'P5.5 both row policies still evaluate the canonical audience predicate — this migration re-pointed neither');
 
 SELECT pg_temp.ok(
-  (SELECT prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'scp_report_snapshot_readable')
-    NOT LIKE '%owner%',
-  'P5.6 scp_report_snapshot_readable was not widened to admit an issuer admin — the new authority lives in its own predicate');
+  (SELECT bool_and(p.prosrc NOT LIKE '%scp_report_issuer_admin%') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'scp_report_snapshot_readable'),
+  'P5.6 no overload of scp_report_snapshot_readable calls the issuer-admin authority — it lives in its own predicate (there are two overloads since 20270203090000, and the audience predicate is the one definition of who reads)');
 
 ROLLBACK;

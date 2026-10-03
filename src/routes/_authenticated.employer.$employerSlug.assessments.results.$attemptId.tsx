@@ -104,7 +104,7 @@ function ResultsRoute() {
   const { employerSlug, attemptId } = Route.useParams();
   const { application } = Route.useSearch();
   return (
-    <AcademyPage employerSlug={employerSlug}>
+    <AcademyPage employerSlug={employerSlug} requires="reports">
       {(ws) => (
         <Report
           attemptId={attemptId}

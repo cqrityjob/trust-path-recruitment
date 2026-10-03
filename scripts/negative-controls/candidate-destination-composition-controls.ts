@@ -177,8 +177,9 @@ const MUTATIONS: readonly Mutation[] = [
       "the Career hero stops naming the two ways in, so a reader who has done neither cannot tell the two sections apart by scrolling",
     file: CAREER,
     // The aside became multi-line when the cards learned whether the reader's
-    // own result is in hand; the anchor names the real layout.
-    find: "          <CareerEntryCards\n            pathAnchor={PATH_ANCHOR}\n            personalAnchor={PERSONAL_ANCHOR}\n            listAnchor={LIST_ANCHOR}\n            personalised={personalised}\n          />",
+    // own result is in hand, and gained `signedIn` when the analysis link
+    // began asking the one availability hook; the anchor names the real layout.
+    find: "          <CareerEntryCards\n            pathAnchor={PATH_ANCHOR}\n            personalAnchor={PERSONAL_ANCHOR}\n            listAnchor={LIST_ANCHOR}\n            personalised={personalised}\n            signedIn={signedIn}\n          />",
     replace: "          <div />",
     guard: GUARD,
     expect: "the Career hero carries the two entry cards",

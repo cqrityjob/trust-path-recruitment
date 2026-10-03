@@ -82,6 +82,11 @@ INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VAL
   ('0f0f0000-1111-4000-8000-000000000001', '0f0f0000-0000-4000-8000-00000000000a', 'member', 'active'),
   ('0f0f0000-1111-4000-8000-000000000001', '0f0f0000-0000-4000-8000-00000000000b', 'member', 'active'),
   ('0f0f0000-1111-4000-8000-000000000009', '0f0f0000-0000-4000-8000-000000000009', 'owner', 'active');
+-- The two reviewers' BASIS for working the case: a recruitment reviewer grant (membership alone gives
+-- none since 20270203090000/20270204090000).
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by) VALUES
+  ('0f0f0000-1111-4000-8000-000000000001', '0f0f0000-0000-4000-8000-00000000000a', ARRAY['recruitment']::text[], '0f0f0000-0000-4000-8000-000000000001'),
+  ('0f0f0000-1111-4000-8000-000000000001', '0f0f0000-0000-4000-8000-00000000000b', ARRAY['recruitment']::text[], '0f0f0000-0000-4000-8000-000000000001');
 
 CREATE TEMP TABLE fx(label text PRIMARY KEY, id uuid);
 GRANT ALL ON fx TO authenticated;
