@@ -543,7 +543,9 @@ test("08b · an ordinary member: membership alone is not access to the report", 
   // none of the report's text, and the page says "denied", not "empty".
   await phase("no report is on the page, and none of its text", async () => {
     await page.goto(reportUrl(caseEn));
-    await page.waitForLoadState("networkidle");
+    // The positive wait: the page has DECIDED (it says "denied"), so the absences
+    // below are not a page that has not loaded yet.
+    await expect(main(page)).toContainText(copy("sv", "iiu.denied.title"), { timeout: 30_000 });
     await expect(page.locator("article[data-report-mode]")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: /Slutför rapporten|Complete the report/ }),
