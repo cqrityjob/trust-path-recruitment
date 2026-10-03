@@ -1,0 +1,47 @@
+# Driftsättning: `transactional-email` version 3 (2026-10-03)
+
+**Projekt:** `wrygicdfxwjnrugduxnt` (Supabase Pro, eu-central-1).
+
+## Vad som driftsattes
+
+|               |                                                                                                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Källa         | `supabase/functions/transactional-email/index.ts` på main `071f69e` (merge av #386). Filen är identisk med `43180b8`, den commit som granskningen godkände                                       |
+| Driftsatt     | 2026-10-03 13:47:03 UTC, version 3, `verify_jwt = false` (funktionen autentiserar själv sin anropare)                                                                                            |
+| `ezbr_sha256` | `f45137045e5b719db95ea38e1301104074e5131282a9250b343565f6cb1d34b1`                                                                                                                               |
+| Före          | Version 1 (2026-09-30 18:47 UTC) nekade varje anrop från appen med 401. Version 2 driftsattes av något annat än den här sessionen efter merge, troligen Lovables synk, och ersattes av version 3 |
+| Återställning | Version 1 finns sparad lokalt, men att gå tillbaka ger samma 401 som tidigare. Att återställa betyder i praktiken att stänga produktens mejl. Det görs genom att driftsätta om version 1         |
+
+**Likvärdig representation.** I den driftsatta källan står tecknet ’ (U+2019) bokstavligt i teckenklassen för avsändarnamn. I repot står escape-sekvensen `’`, så raden lyder `/[^\p{L}\p{N} .&'’-]+/gu` i repot och `/[^\p{L}\p{N} .&'’-]+/gu` i driftsatt källa.
+
+- Skillnaden uppstår när källan överförs vid driftsättningen.
+- I ett reguljärt uttryck med flaggan `u` betecknar båda samma kodpunkt, så de matchar exakt samma tecken.
+- Detta är den enda skillnaden mot main.
+- Ingen ny driftsättning behövs för den, enligt ägarens beslut 2026-10-03.
+
+## Anroparkontrollen i den driftsatta versionen
+
+- Projektets Auth tillfrågas vid varje anrop. Ingen positiv cache finns, och miljöns egen nyckelkopia ger ingen genväg.
+- Motstridiga headers, och `Authorization` som inte är `Bearer`, nekas först.
+- Fel, timeout och interna fel ger 401.
+- Granskningen godkändes på `43180b8` den 2026-10-03.
+
+## Sluttester (T1–T6)
+
+Körplanen finns i `docs/release/2026-10-03-production-test-request.md` (#387). Mottagarna är bara de adresser ägaren har godkänt, och de skrivs inte in i repot.
+
+- **T1** går till en syntetisk kandidatadress som ägaren har godkänt.
+- **T2–T6** går till ägarens godkända testadress.
+
+Den här sessionen skickar, Sonnet-sessionen kontrollerar loggarna och ägaren bekräftar mottagningen.
+
+| Test | Mejltyp                                    | Förutsättning                                                           | Status                                                          |
+| ---- | ------------------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------- |
+| T1   | Registreringsbekräftelse (Auth/SMTP)       | Syntetisk adress utan konto (kontrollerat: 0 konton)                    | Väntar: sessionen når inte webbplatsen eller Supabase över HTTP |
+| T2   | Lösenordsåterställning (Auth/SMTP)         | Befintligt konto; länken används inte                                   | Väntar: samma nätverkshinder                                    |
+| T3   | Kontakt: förfrågan till info@ och kvittens | Version 3 driftsatt                                                     | Väntar: samma nätverkshinder                                    |
+| T4   | Ansökningskvitto                           | Version 3 och det syntetiska kandidatkontot                             | Väntar på T1                                                    |
+| T5   | Rekryteringsmeddelande                     | Version 3 och en ansökan från T4                                        | Väntar på T4                                                    |
+| T6   | `employer_new_application`                 | #392 applicerad och registrerad, #393 mergad, funktionen driftsatt igen | Väntar                                                          |
+
+Resultaten fylls i per test: tid i UTC, mejltyp, appens svar, funktionens och Auth-loggens status, antal mottagare utanför de godkända adresserna, ägarens bekräftelse på mottagning, och om länkarna fungerar.
