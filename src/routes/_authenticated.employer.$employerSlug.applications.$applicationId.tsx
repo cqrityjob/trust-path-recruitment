@@ -124,6 +124,11 @@ import {
   type ApplicationCandidate,
 } from "@/lib/security-competency/academy-employer.functions";
 import { ProcessContinuityStrip } from "@/components/employer/ProcessContinuityStrip";
+import { useReportAccess } from "@/components/employer/ReportAccess";
+import {
+  canOpenInterviewCases,
+  canReadVacancyResults,
+} from "@/lib/security-competency/report-access";
 import {
   projectAssessmentTrack,
   projectDecisionTrack,
@@ -352,12 +357,39 @@ function Candidate360({
   const readOf = (q: { isLoading: boolean; isError: boolean }): TrackRead =>
     q.isLoading ? "loading" : q.isError ? "failed" : "ready";
 
+  // The ONE case in which a read is known to have been refused: the database
+  // itself told us, through employer_report_access, that this member has no
+  // basis to read this vacancy's results (or any interview case). An ordinary
+  // member is then returned no assessment rows and no cases, and "nothing has
+  // been sent" / "no interview" would be claims about the candidate that nobody
+  // checked. Unknown (loading, failed, or the migration not applied) changes
+  // nothing: the tracks are read exactly as they always were.
+  const reportAccess = useReportAccess(employerId);
+  const accessFacts = reportAccess.facts;
+  // The vacancy must be known: before it is, a responsible recruiter would be
+  // told "refused" for the length of one request.
+  const resultsRefused =
+    accessFacts !== null &&
+    accessFacts.isMember &&
+    listJobId !== null &&
+    !canReadVacancyResults(accessFacts, listJobId);
+  const casesRefused =
+    accessFacts !== null && accessFacts.isMember && !canOpenInterviewCases(accessFacts);
+  const withheld = (refused: boolean, read: TrackRead): TrackRead =>
+    refused && read !== "loading" ? "refused" : read;
+
   const assessmentTrack = projectAssessmentTrack(
-    readOf(assessmentsQuery),
+    withheld(resultsRefused, readOf(assessmentsQuery)),
     assessmentsQuery.data ?? [],
   );
-  const interviewTrack = projectInterviewTrack(readOf(interviewCasesQuery), interviewCases);
-  const reportTrack = projectReportTrack(readOf(interviewCasesQuery), interviewCases);
+  const interviewTrack = projectInterviewTrack(
+    withheld(casesRefused, readOf(interviewCasesQuery)),
+    interviewCases,
+  );
+  const reportTrack = projectReportTrack(
+    withheld(casesRefused, readOf(interviewCasesQuery)),
+    interviewCases,
+  );
 
   // ── WHERE THE HIRED PERSON NOW LIVES ──────────────────────────────────
   //
@@ -976,6 +1008,7 @@ function Candidate360({
           canAssign={canAssign && !completed && status !== null && isUnresolved(status)}
           candidateName={c.displayName}
           jobTitle={jobTitle}
+          jobId={c.jobId ?? null}
           prepareInterview
         />
       </section>
