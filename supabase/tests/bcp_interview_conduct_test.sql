@@ -940,6 +940,7 @@ END $c7$;
 -- reopen would let a recorded view be revised in their light.
 -- ---------------------------------------------------------------------------
 SAVEPOINT p1j_pre_fix;
+\ir ../rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql
 \ir ../rollback/20270122090000_bcp_conduct_reopen_after_exposure_rollback.sql
 DO $c7r$
 DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE;
@@ -980,6 +981,173 @@ BEGIN
       WHERE session_id = _k.session AND state = 'locked') = 2,
     'C7.12 and both positions stay locked as recorded');
 END $c7x$;
+
+-- ---------------------------------------------------------------------------
+-- C7.13-C7.21 -- 20270124090000: exposure is durable. A and B have locked and
+-- read each other (C7.7). A third authorised assessor, C, now joins with an
+-- OPEN position, so "every other position is locked" is false again for A.
+-- A's and B's positions must stay as recorded; C keeps the independence rule
+-- (sees nothing until C locks), and once C locks, everyone reads everyone.
+-- A position nobody has been able to read is still reopened as before.
+-- Everything here is rolled back to the savepoint, so C8 onwards sees the
+-- two-assessor session it was written for.
+-- ---------------------------------------------------------------------------
+SAVEPOINT bx_third_assessor;
+DO $bxf$
+DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE; _res jsonb;
+BEGIN
+  SELECT * INTO _r FROM lk; SELECT * INTO _k FROM ck;
+  INSERT INTO auth.users (id, email) VALUES
+    ('b5000000-0000-4000-8000-0000000000d4', 'bridge-rec-a3@synthetic.test'),
+    ('b5000000-0000-4000-8000-0000000000d5', 'bridge-rec-a4@synthetic.test')
+  ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VALUES
+    (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d4', 'member', 'active'),
+    (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d5', 'member', 'active')
+  ON CONFLICT DO NOTHING;
+  PERFORM pg_temp.become('b5000000-0000-4000-8000-0000000000d4');
+  SET LOCAL ROLE authenticated;
+  _res := public.bcp_conduct_join_session(gen_random_uuid(), _k.session, 'assessor');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  CREATE TEMP TABLE bx (pos_c uuid, pos_d uuid);
+  GRANT SELECT ON bx TO authenticated;
+  INSERT INTO bx VALUES ((_res ->> 'position_id')::uuid, NULL);
+END $bxf$;
+
+-- Reproduction: without the exposure record (its real rollback), C's open
+-- position makes P1-J's predicate false and A reopens the position B has read.
+SAVEPOINT bx_pre_fix;
+\ir ../rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql
+DO $bx0$
+DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE;
+BEGIN
+  SELECT * INTO _r FROM lk; SELECT * INTO _k FROM ck;
+  PERFORM pg_temp.become(_r.rec_a);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.bcp_conduct_reopen_position(gen_random_uuid(), _k.pos_a,
+    (SELECT revision FROM public.bcp_conduct_positions WHERE id = _k.pos_a),
+    'SYNTETISKT: ändrar efter att ha läst kollegans.');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(
+    (SELECT state = 'open' FROM public.bcp_conduct_positions WHERE id = _k.pos_a),
+    'C7.13 REPRODUCTION: without the exposure record, a third assessor joining lets A reopen the position B has read');
+END $bx0$;
+ROLLBACK TO SAVEPOINT bx_pre_fix;
+
+DO $bx1$
+DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE; _c uuid := 'b5000000-0000-4000-8000-0000000000d4';
+        _pc uuid; _w jsonb; _res jsonb;
+BEGIN
+  SELECT * INTO _r FROM lk; SELECT * INTO _k FROM ck; SELECT pos_c INTO _pc FROM bx;
+
+  PERFORM pg_temp.ok(
+    (SELECT state FROM public.bcp_conduct_positions WHERE id = _pc) = 'open'
+    AND (SELECT count(*) FROM public.bcp_conduct_positions WHERE session_id = _k.session) = 3,
+    'C7.14 an authorised third assessor joins the session with an open position');
+
+  PERFORM pg_temp.must_fail_as('authenticated', _r.rec_a,
+    format('SELECT public.bcp_conduct_reopen_position(%L, %L, %s, %L)',
+           gen_random_uuid(), _k.pos_a,
+           (SELECT revision FROM public.bcp_conduct_positions WHERE id = _k.pos_a),
+           'SYNTETISKT: ändrar efter att ha läst kollegans.'),
+    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',
+    'C7.15 A still cannot reopen the position B has read, although C is open');
+  PERFORM pg_temp.must_fail_as('authenticated', 'b5000000-0000-4000-8000-0000000000d3',
+    format('SELECT public.bcp_conduct_reopen_position(%L, %L, %s, %L)',
+           gen_random_uuid(), _k.pos_b,
+           (SELECT revision FROM public.bcp_conduct_positions WHERE id = _k.pos_b),
+           'SYNTETISKT: ändrar efter att ha läst kollegans.'),
+    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',
+    'C7.16 nor can B');
+  PERFORM pg_temp.must_fail(
+    format($q$UPDATE public.bcp_conduct_positions
+                 SET state = 'open', locked_at = NULL, lock_operation_id = NULL,
+                     reopened_at = now(), reopened_by = assessor_id,
+                     reopen_reason = 'SYNTETISKT: direkt.', reopen_count = reopen_count + 1,
+                     revision = revision + 1
+               WHERE id = %L$q$, _k.pos_a),
+    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',
+    'C7.17 nor does a direct table write, owner included -- the exposure is a database fact');
+
+  -- C's independence: nothing of A's or B's before C locks.
+  PERFORM pg_temp.ok(
+    pg_temp.count_as(_c, format('SELECT count(*) FROM public.bcp_conduct_entries WHERE position_id IN (%L, %L)',
+                                _k.pos_a, _k.pos_b)) = 0,
+    'C7.18 the newcomer sees nothing of A''s or B''s until C has locked their own');
+
+  -- C records and locks; now every position is locked and everyone reads everyone.
+  PERFORM pg_temp.become(_c);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.bcp_conduct_save_entry(gen_random_uuid(), _pc,
+    (SELECT revision FROM public.bcp_conduct_positions WHERE id = _pc),
+    jsonb_build_object('item_key', _k.omit_key,
+      'observable_fact', 'SYNTETISKT: tredje bedömarens iakttagelse.',
+      'interviewer_interpretation', 'SYNTETISKT: tredje bedömarens läsning.'));
+  PERFORM public.bcp_conduct_lock_position(gen_random_uuid(), _pc,
+    (SELECT revision FROM public.bcp_conduct_positions WHERE id = _pc));
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(
+    pg_temp.count_as(_c, format('SELECT count(*) FROM public.bcp_conduct_entries WHERE position_id = %L', _k.pos_a)) > 0
+    AND pg_temp.count_as(_r.rec_a, format('SELECT count(*) FROM public.bcp_conduct_entries WHERE position_id = %L', _pc)) > 0,
+    'C7.19 once C has locked, the colleagues on the case read each other''s positions');
+END $bx1$;
+
+-- C has now read A and B, so C's own position is exposed as well (C7.20). A
+-- position nobody has been able to read is still corrected as before: a fourth
+-- assessor D joins and records (C7.21 below).
+DO $bx2$
+DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE; _d uuid := 'b5000000-0000-4000-8000-0000000000d5';
+        _pc uuid; _res jsonb;
+BEGIN
+  SELECT * INTO _r FROM lk; SELECT * INTO _k FROM ck; SELECT pos_c INTO _pc FROM bx;
+  PERFORM pg_temp.must_fail_as('authenticated', 'b5000000-0000-4000-8000-0000000000d4',
+    format('SELECT public.bcp_conduct_reopen_position(%L, %L, %s, %L)',
+           gen_random_uuid(), _pc,
+           (SELECT revision FROM public.bcp_conduct_positions WHERE id = _pc),
+           'SYNTETISKT: ändrar efter att ha läst kollegerna.'),
+    'BCP_CONDUCT_POSITIONS_ALREADY_SEEN',
+    'C7.20 C, having read the others, cannot reopen C''s own either');
+
+  -- D joins and records an entry.
+  PERFORM pg_temp.become(_d);
+  SET LOCAL ROLE authenticated;
+  _res := public.bcp_conduct_join_session(gen_random_uuid(), _k.session, 'assessor');
+  PERFORM public.bcp_conduct_save_entry(gen_random_uuid(), (_res ->> 'position_id')::uuid,
+    (SELECT revision FROM public.bcp_conduct_positions WHERE id = (_res ->> 'position_id')::uuid),
+    jsonb_build_object('item_key', _k.omit_key, 'observable_fact', 'SYNTETISKT: fjärde bedömaren.'));
+  RESET ROLE; PERFORM pg_temp.nobody();
+  UPDATE bx SET pos_d = (_res ->> 'position_id')::uuid;
+END $bx2$;
+-- A fifth assessor E joins and stays open, so when D locks nobody can read
+-- D's position yet; D may still reopen it, and the reopen is attributed.
+DO $bx3$
+DECLARE _r lk%ROWTYPE; _k ck%ROWTYPE; _d uuid := 'b5000000-0000-4000-8000-0000000000d5'; _pd uuid;
+BEGIN
+  SELECT * INTO _r FROM lk; SELECT * INTO _k FROM ck; SELECT pos_d INTO _pd FROM bx;
+  INSERT INTO auth.users (id, email) VALUES ('b5000000-0000-4000-8000-0000000000d6', 'bridge-rec-a5@synthetic.test')
+  ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
+  VALUES (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d6', 'member', 'active') ON CONFLICT DO NOTHING;
+  PERFORM pg_temp.become('b5000000-0000-4000-8000-0000000000d6');
+  SET LOCAL ROLE authenticated;
+  PERFORM public.bcp_conduct_join_session(gen_random_uuid(), _k.session, 'assessor');
+  RESET ROLE; PERFORM pg_temp.nobody();
+
+  PERFORM pg_temp.become(_d);
+  SET LOCAL ROLE authenticated;
+  PERFORM public.bcp_conduct_lock_position(gen_random_uuid(), _pd,
+    (SELECT revision FROM public.bcp_conduct_positions WHERE id = _pd));
+  PERFORM public.bcp_conduct_reopen_position(gen_random_uuid(), _pd,
+    (SELECT revision FROM public.bcp_conduct_positions WHERE id = _pd),
+    'SYNTETISKT: rättar innan någon har läst.');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(
+    (SELECT state = 'open' AND reopen_count = 1 AND reopened_by = _d FROM public.bcp_conduct_positions WHERE id = _pd)
+    AND NOT EXISTS (SELECT 1 FROM public.bcp_conduct_position_exposures WHERE position_id = _pd)
+    AND (SELECT count(*) FROM public.bcp_conduct_position_exposures WHERE session_id = _k.session) = 3,
+    'C7.21 a locked position nobody has read is still reopened, attributably; only the three read positions are on the exposure record');
+END $bx3$;
+ROLLBACK TO SAVEPOINT bx_third_assessor;
 
 -- ---------------------------------------------------------------------------
 -- C8 -- The panel: disagreement is recorded, not resolved away.
