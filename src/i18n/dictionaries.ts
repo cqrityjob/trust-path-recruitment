@@ -1463,14 +1463,16 @@ export const dictionaries = {
     "careerDiscovery.dashboard.allReports": "Alla mina rapporter",
     "careerDiscovery.dashboard.nextStepFallback":
       "Läs mer om de säkerhetsområden som stämmer bäst med din profil.",
+    // The key name predates the wording: the analysis is open to the public, so
+    // it is no longer an "internal test". What is true is that the content has
+    // not been reviewed by specialists, and that is what this says.
     "careerDiscovery.dashboard.internalTestNote":
-      "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
+      "Karriäranalysen är under utveckling. Innehållet är framtaget men ännu inte granskat av sakkunniga. Det är vägledning som stöd för samtal och egna beslut – inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
     "cd.public.loading": "Förbereder karriäranalysen…",
     "cd.public.unavailableTitle": "Karriäranalysen är inte öppen just nu",
-    "cd.public.unavailableBody":
-      "Den uppdaterade karriäranalysen granskas innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
+    "cd.public.unavailableBody": "Karriäranalysen är inte öppen för nya deltagare just nu.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
     "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
@@ -6271,6 +6273,7 @@ export const dictionaries = {
     "academy.attempt.scored": "Bedömd",
     "academy.attempt.released": "Frisläppt",
     "academy.attempt.other": "Annan status",
+    "academy.attempt.exit": "Till Tester och utveckling",
     "academy.reviews.title": "Granskning",
     "academy.reviews.lede":
       "Här finns kandidatsvar som behöver mänsklig bedömning innan underlaget kan färdigställas. Den som tilldelade testet får aldrig granska det själv.",
@@ -10136,14 +10139,16 @@ export const dictionaries = {
     "careerDiscovery.dashboard.allReports": "All my reports",
     "careerDiscovery.dashboard.nextStepFallback":
       "Read more about the Security Career Areas that best match your profile.",
+    // The key name predates the wording: the analysis is open to the public, so
+    // it is no longer an "internal test". What is true is that the content has
+    // not been reviewed by specialists, and that is what this says.
     "careerDiscovery.dashboard.internalTestNote":
-      "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
+      "The career analysis is still in development. Its content has not yet been reviewed by specialists. It is guidance to support conversation and your own decisions – not a test and not a judgement about employability.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "This report was saved in an earlier format. Open the full report to see its contents.",
     "cd.public.loading": "Preparing the career analysis…",
     "cd.public.unavailableTitle": "The career analysis is not open right now",
-    "cd.public.unavailableBody":
-      "The updated career analysis is being reviewed before it opens to everyone. We will open it as soon as that review is complete.",
+    "cd.public.unavailableBody": "The career analysis is not open to new participants right now.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
     "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
@@ -14758,6 +14763,7 @@ export const dictionaries = {
     "academy.attempt.scored": "Assessed",
     "academy.attempt.released": "Released",
     "academy.attempt.other": "Other status",
+    "academy.attempt.exit": "To Assessments and development",
     "academy.reviews.title": "Review",
     "academy.reviews.lede":
       "These are the candidate responses that need a human assessment before the brief can be completed. Whoever assigned the test may never review it themselves.",

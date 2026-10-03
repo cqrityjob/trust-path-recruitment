@@ -454,13 +454,13 @@ group("9 · Where a claim LANDS (Emsoms #4)");
   // case".
   //
   // Scoped to the FINAL return -- lastIndexOf, not indexOf. Three branches
-  // of this component open with <AssessmentShell wide>, and the
+  // of this component open with <CareerDiscoveryShell wide>, and the
   // "result could not be loaded" branch legitimately carries its own save
   // control: there is no report to sit beside there, the answers are still
   // staged, and the retry is the only other thing on the screen. Counting
   // from the first shell would have swept that unrelated branch in and
   // failed for a reason that has nothing to do with this rule.
-  const resultBranch = flowSrc.slice(flowSrc.lastIndexOf("<AssessmentShell wide>"));
+  const resultBranch = flowSrc.slice(flowSrc.lastIndexOf("<CareerDiscoveryShell wide"));
   ok(
     (resultBranch.match(/saveCta/g) ?? []).length === 1,
     "9.9 and appears exactly once on the result screen -- no second copy at the bottom",
