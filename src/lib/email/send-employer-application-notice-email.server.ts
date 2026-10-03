@@ -47,10 +47,29 @@
 import {
   missingEmailTransportSettings,
   sendTransactionalEmail,
+  type TransactionalEmailKind,
 } from "@/lib/email/transport.server";
 import { classifyProviderResponse } from "@/lib/email/send-recruitment-message-email.server";
 
+/**
+ * Every kind of employer notice this worker can send, and the e-mail kind the
+ * `transactional-email` function knows it by. ONE table, and the only place that
+ * says so: the claim is asked for exactly these kinds (employer-notice.server.ts
+ * derives its `_kinds` from the keys), and the sender looks the e-mail kind up
+ * here. A later kind -- the database widens the CHECK on
+ * recruitment_employer_notices.kind in its own migration; the claim and settle
+ * functions name no kind -- adds ONE line here, its template, and one KINDS line
+ * in the function. A worker that does not have the kind in this table is never
+ * handed it by the claim.
+ */
+export const EMPLOYER_NOTICE_EMAIL_KINDS = {
+  new_application: "employer_new_application",
+} as const satisfies Record<string, TransactionalEmailKind>;
+export type EmployerNoticeKind = keyof typeof EMPLOYER_NOTICE_EMAIL_KINDS;
+
 export type EmployerApplicationNoticeParams = {
+  /** Which notice this is: a key of EMPLOYER_NOTICE_EMAIL_KINDS. */
+  noticeKind: EmployerNoticeKind;
   /** The address the DATABASE chose (rec_claim_employer_notices). Nothing else
    *  may be put here: it is never taken from a request or a candidate. */
   recipientEmail: string;
@@ -201,7 +220,7 @@ export async function sendEmployerApplicationNoticeEmail(
   try {
     const { subject, html, text } = renderEmployerApplicationNotice(params);
     const res = await sendTransactionalEmail({
-      kind: "employer_new_application",
+      kind: EMPLOYER_NOTICE_EMAIL_KINDS[params.noticeKind],
       to: params.recipientEmail,
       subject,
       html,

@@ -51,7 +51,7 @@ try {
     console.log(
       notices.available === false
         ? "employer-notice-sweep: NOT AVAILABLE -- the notice migration is not applied; nothing was swept."
-        : `employer-notice-sweep: claimed ${notices.claimed} · sent ${notices.sent} · failed ${notices.failed} · not configured ${notices.notConfigured} · unsettled ${notices.unsettled}`,
+        : `employer-notice-sweep: claimed ${notices.claimed} · sent ${notices.sent} · failed ${notices.failed} · not configured ${notices.notConfigured} · unsettled ${notices.unsettled} · purged ${notices.purged}`,
     );
   }
 } catch (e) {

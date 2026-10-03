@@ -23,7 +23,10 @@
 //             THAT attempt. A late answer for an earlier attempt is stale.
 //   sweep     the same claim without an application: what is due anywhere --
 //             never started, lease expired, a retryable failure past its
-//             backoff -- bounded, one worker per row.
+//             backoff -- bounded, one worker per row. After its claim loop the
+//             sweep deletes the notices settled more than 90 days ago
+//             (rec_purge_employer_notices; never a pending, claimed or retryable
+//             row).
 //
 // ── THE APPLY REQUEST COMES FIRST ──────────────────────────────────────────
 //
@@ -51,14 +54,23 @@
 // transport that is not configured is 'not_configured'. Nothing here is ever
 // shown to the candidate. Only statuses are logged: never an address.
 
+import {
+  EMPLOYER_NOTICE_EMAIL_KINDS,
+  type EmployerNoticeKind,
+} from "@/lib/email/send-employer-application-notice-email.server";
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Loose = any;
 
 /** Everything enqueue + the first send attempts may take inside the apply
  *  request. A hard ceiling: callers may ask for less, never for more. */
 export const EMPLOYER_NOTICE_BUDGET_MS = 3000;
-/** The notice kinds this worker can render. The claim hands over nothing else. */
-const KINDS = ["new_application"];
+/** The notice kinds this worker can render: the keys of the one table in the
+ *  sender. The claim hands over nothing else, so an older worker is never given
+ *  a kind a newer migration added. */
+const KINDS: string[] = Object.keys(EMPLOYER_NOTICE_EMAIL_KINDS);
+/** How long a settled notice is kept. The database refuses anything under a day. */
+export const EMPLOYER_NOTICE_RETENTION = "90 days";
 
 type RpcAnswer = { data: unknown; error: { code?: string; message?: string } | null };
 export type EmployerNoticeRpc = (fn: string, args: Record<string, unknown>) => Promise<RpcAnswer>;
@@ -158,6 +170,13 @@ async function sendClaimedNotice(
 ): Promise<NoticeSendOutcome> {
   let result: "sent" | "failed" | "not_configured";
   let status: number | null = null;
+  if (!Object.prototype.hasOwnProperty.call(EMPLOYER_NOTICE_EMAIL_KINDS, claim.kind)) {
+    // Not a kind this worker can render (the claim should never hand one over).
+    // Nothing is sent and nothing is settled: the lease runs out and a worker
+    // that knows the kind takes it.
+    console.error("[employer-notice] a claimed notice of a kind this worker cannot render");
+    return "unsettled";
+  }
   try {
     const { sendEmployerApplicationNoticeEmail } =
       await import("@/lib/email/send-employer-application-notice-email.server");
@@ -165,6 +184,7 @@ async function sendClaimedNotice(
     const answer =
       claim.recipient_email && claim.application_id
         ? await sendEmployerApplicationNoticeEmail({
+            noticeKind: claim.kind as EmployerNoticeKind,
             recipientEmail: claim.recipient_email,
             language: claim.language === "en" ? "en" : "sv",
             via: String(claim.via ?? ""),
@@ -334,24 +354,59 @@ export async function notifyEmployerOfNewApplication(
   return outcome;
 }
 
+// ── retention ─────────────────────────────────────────────────────────────
+
+/** Delete the notices that were settled more than 90 days ago (sent, skipped, and
+ *  failed ones that will not be tried again -- never a pending, claimed or
+ *  retryable one; the database decides, at most 1000 per call). Called by the
+ *  sweep after its claim loop. Never throws; returns the number deleted.
+ *
+ *  A purged row can no longer stop enqueue from queueing its application again.
+ *  That cannot send a second mail: enqueue is called when an application is
+ *  CREATED (and when a replay of that same request arrives), and the database
+ *  refuses any application older than an hour, while a purged row is at least a
+ *  day old (the database refuses a shorter window). */
+export async function purgeEmployerNotices(deps: EmployerNoticeDeps = {}): Promise<number> {
+  try {
+    const { data, error } = await rpcOf(deps)("rec_purge_employer_notices", {
+      _older_than: EMPLOYER_NOTICE_RETENTION,
+    });
+    if (error) {
+      if (!isMissingNoticeObject(error)) {
+        console.error("[employer-notice] purge failed", error.code ?? "unknown");
+      }
+      return 0;
+    }
+    return typeof data === "number" ? data : 0;
+  } catch (e) {
+    console.error("[employer-notice] purge failed", e instanceof Error ? e.name : "unknown");
+    return 0;
+  }
+}
+
 // ── the sweep ─────────────────────────────────────────────────────────────
 
-/** The recovery: take what is due anywhere and send it, one attempt per row.
- *  Claims in small batches so that no claim waits long for its send, stops at
- *  `limit` rows or after `budgetMs`, and never throws. The database bounds the
- *  attempts per row and never hands a row to two workers. */
+export type SweepSummary = DispatchSummary & {
+  /** Settled notices deleted by the retention, after the claim loop. */
+  purged: number;
+};
+
+/** The recovery: take what is due anywhere and send it, one attempt per row,
+ *  then apply the retention. Claims in small batches so that no claim waits long
+ *  for its send, stops at `limit` rows or after `budgetMs`, and never throws. The
+ *  database bounds the attempts per row and never hands a row to two workers. */
 export async function sweepEmployerNotices(
   opts: { limit?: number; budgetMs?: number } = {},
   deps: EmployerNoticeDeps = {},
-): Promise<DispatchSummary> {
-  const summary = emptySummary();
+): Promise<SweepSummary> {
+  const summary: SweepSummary = { ...emptySummary(), purged: 0 };
   const limit = Math.max(1, Math.min(Math.floor(opts.limit ?? 20), 200));
   const deadline = Date.now() + (opts.budgetMs ?? 90_000);
   try {
     while (summary.claimed < limit && Date.now() < deadline) {
       const batch = Math.min(5, limit - summary.claimed);
       const claimed = await claimNotices({ application: null, limit: batch }, deps);
-      if (claimed.state === "unavailable") return emptySummary(false);
+      if (claimed.state === "unavailable") return { ...emptySummary(false), purged: 0 };
       if (claimed.state === "failed") break;
       for (const claim of claimed.claims) {
         summary.claimed += 1;
@@ -365,5 +420,6 @@ export async function sweepEmployerNotices(
   } catch (e) {
     console.error("[employer-notice] sweep failed", e instanceof Error ? e.name : "unknown");
   }
+  summary.purged = await purgeEmployerNotices(deps);
   return summary;
 }

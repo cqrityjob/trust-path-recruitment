@@ -24,7 +24,8 @@
 // row, under the same token and on the same schedule, so there is no second
 // scheduler. It runs whatever the receipts did, and a database without the
 // notice migration answers `available: false` for it rather than failing.
-// The answer's `employerNotices` is counts only.
+// After the claim loop it also deletes the settled notices that are more than
+// 90 days old (the retention). The answer's `employerNotices` is counts only.
 
 import { createFileRoute } from "@tanstack/react-router";
 
