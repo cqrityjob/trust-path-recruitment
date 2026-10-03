@@ -364,7 +364,7 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "happens twice in Stockholm",
   },
   {
-    id: "RW-RECEIPT-DISPATCH-REMOVED",
+    id: "RW-RECEIPT-BEFORE-COMMIT",
     defect:
       "the receipt is written when the application row is inserted, before its answers exist and before the commit that may still be refused",
     file: RECEIPTS,
