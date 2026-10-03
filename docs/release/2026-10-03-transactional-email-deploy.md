@@ -35,13 +35,24 @@ Körplanen finns i `docs/release/2026-10-03-production-test-request.md` (#387). 
 
 Den här sessionen skickar, Sonnet-sessionen kontrollerar loggarna och ägaren bekräftar mottagningen.
 
-| Test | Mejltyp                                    | Förutsättning                                                           | Status                                                          |
-| ---- | ------------------------------------------ | ----------------------------------------------------------------------- | --------------------------------------------------------------- |
-| T1   | Registreringsbekräftelse (Auth/SMTP)       | Syntetisk adress utan konto (kontrollerat: 0 konton)                    | Väntar: sessionen når inte webbplatsen eller Supabase över HTTP |
-| T2   | Lösenordsåterställning (Auth/SMTP)         | Befintligt konto; länken används inte                                   | Väntar: samma nätverkshinder                                    |
-| T3   | Kontakt: förfrågan till info@ och kvittens | Version 3 driftsatt                                                     | Väntar: samma nätverkshinder                                    |
-| T4   | Ansökningskvitto                           | Version 3 och det syntetiska kandidatkontot                             | Väntar på T1                                                    |
-| T5   | Rekryteringsmeddelande                     | Version 3 och en ansökan från T4                                        | Väntar på T4                                                    |
-| T6   | `employer_new_application`                 | #392 applicerad och registrerad, #393 mergad, funktionen driftsatt igen | Väntar                                                          |
+| Test | Mejltyp                                    | Förutsättning                                                           | Status                                                                                                                                                |
+| ---- | ------------------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| T1   | Registreringsbekräftelse (Auth/SMTP)       | Syntetisk adress utan konto (kontrollerat 14:05 UTC: 0 konton)          | Hålls inne: den publicerade sajten saknar #386, och Auth-omdirigeringen till www är inte rättad                                                       |
+| T2   | Lösenordsåterställning (Auth/SMTP)         | Befintligt konto; länken används inte                                   | Skickad 14:10:52 UTC via www/login. Appen: "skickas en återställningslänk". Auth `user_recovery_requested` 200 (1,65 s). Mottagning: väntar på ägaren |
+| T3   | Kontakt: förfrågan till info@ och kvittens | Version 3 driftsatt och `RESEND_API_KEY` satt                           | Blockerad: funktionen svarar 503 `not_configured` (14:08:35 och 14:09:17 UTC), och formuläret visar "inte öppet"                                      |
+| T4   | Ansökningskvitto                           | Version 3 och det syntetiska kandidatkontot                             | Väntar på T1                                                                                                                                          |
+| T5   | Rekryteringsmeddelande                     | Version 3 och en ansökan från T4                                        | Väntar på T4                                                                                                                                          |
+| T6   | `employer_new_application`                 | #392 applicerad och registrerad, #393 mergad, funktionen driftsatt igen | Väntar                                                                                                                                                |
+
+**Kontroller i produktion 2026-10-03:**
+
+- **Obehöriga anrop till funktionen.** Anrop med anon- eller publishable-nyckel, förfalskade token, andra projekts nycklar, skräpvärden eller utan nyckel gav 401, både för GET och POST.
+  - Undantag: en enstaka POST gav 504 efter 160 s, utan "booted" i loggen. Det upprepades inte; tre nya försök gav 401.
+- **Appens servernyckel godtas.** Svaret blev 503 `not_configured`, inte 401.
+- **Domäner.**
+  - `https://www.cqrityjob.com` svarar 200, och `http://www` ger 301 till https.
+  - `cqrityjob.com` (utan www) har både en A-post (185.158.133.1) och en AAAA-post (2a02:4780:9:2098::3a02:c73a:2). HTTPS ger TLS-fel, och HTTP ger 421.
+- **Publicerad sajt.** Asset-filen är `index-xgt2Sdnu.js`. `/villkor` och `/integritetspolicy` ger 404, villkorsrutan saknas och canonical pekar på lovable.app. Lovable har synkat `071f69e` men inte publicerat den.
+- **Auth-omdirigering.** Auth-loggen anger `referer` = lovable.app, fast appen bad om omdirigering till www.
 
 Resultaten fylls i per test: tid i UTC, mejltyp, appens svar, funktionens och Auth-loggens status, antal mottagare utanför de godkända adresserna, ägarens bekräftelse på mottagning, och om länkarna fungerar.
