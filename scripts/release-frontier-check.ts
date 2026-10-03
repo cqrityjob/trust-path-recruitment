@@ -360,17 +360,18 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // sp_attach_evidence equals a local replay of main, grants unchanged. No
 // production write probe was run.
 // Evidence: docs/release/2026-10-03-passport-evidence-change-under-review.md.
-// Pending by design (written, replayed on the full chain, recorded `pending` in
-// release-state.json, none applied hosted): the job-board launch-readiness
-// migrations (docs/release/2026-10-03-jobs-not-editable-in-place.md,
-// 2026-10-03-jobs-publish-window-and-url-scheme.md,
-// 2026-10-03-job-cvs-no-client-writes.md). Each name comes OFF this list in the
-// change that records its production evidence.
-const expectedPending: string[] = [
-  "20270130090000_jobs_not_editable_in_place.sql",
-  "20270131090000_jobs_publish_window_and_url_scheme.sql",
-  "20270201090000_job_cvs_no_client_writes.sql",
-];
+// 2026-10-03 ~15:45 UTC: #387 (merge b18e5e5, every mandatory CI job green on
+// 082752c) verified applied read-only: 20270130090000_jobs_not_editable_in_place,
+// 20270131090000_jobs_publish_window_and_url_scheme and
+// 20270201090000_job_cvs_no_client_writes are in the ledger (363 rows, digest
+// fbfc766e1fd85a3d19fc82b8f4fbc8c7; the first 360 unchanged),
+// jobs_validate_before_write is md5 bc292d28d31dd973c81f1cffc145b5bf with no
+// EXECUTE for anon or authenticated, and the job-application-cvs bucket has
+// exactly one policy, job_cvs_employer_select. No production write probe was
+// run.
+// Evidence: docs/release/2026-10-03-job-board-hosted-verification.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
