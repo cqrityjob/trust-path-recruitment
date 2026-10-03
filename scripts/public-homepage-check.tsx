@@ -437,20 +437,16 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
     // (a job, the Security Passport, their own expertise) and the employer.
     // Owner decision 2026-10-03: the subtitle no longer says "locally or
     // internationally"; the employer entrance still does, and is asserted
-    // right below. The sentence about AI agents in the new copy is NOT locked
+    // right below. The "AI-stöd" / "AI support" phrase in the copy is NOT locked
     // here: AI functions are off in production and the privacy policy says no
     // AI provider is used, so it is an open owner item, not a verified claim.
     ck(
       `${lang}: the positioning addresses individuals and employers`,
       lang === "sv"
-        ? /Hitta nästa jobb/.test(d(lang)["home.hero.subtitle"]) &&
-            /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /din kompetens/.test(d(lang)["home.hero.subtitle"]) &&
-            /arbetsgivare/.test(d(lang)["home.hero.subtitle"])
-        : /Find your next job/.test(d(lang)["home.hero.subtitle"]) &&
-            /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /your expertise/.test(d(lang)["home.hero.subtitle"]) &&
-            /employers/.test(d(lang)["home.hero.subtitle"]),
+        ? /^Jobb, kompetens, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /Rekryteringsverktyg för arbetsgivare/.test(d(lang)["home.hero.subtitle"])
+        : /^Jobs, expertise, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /Recruitment tools for employers/.test(d(lang)["home.hero.subtitle"]),
       d(lang)["home.hero.subtitle"],
     );
     ck(

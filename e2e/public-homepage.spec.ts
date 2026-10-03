@@ -186,12 +186,11 @@ test.describe("the public homepage", () => {
     });
     expect(h1.align).toBe("center");
     expect(Math.abs(h1.centre - h1.viewport), "the headline is off centre").toBeLessThanOrEqual(24);
-    // The positioning's first sentence (owner copy, 2026-10-03). The sentence
-    // about AI agents that follows it is deliberately not asserted here: AI
-    // functions are off in production, so it is an open owner item.
-    await expect(page.locator("#hero")).toContainText(
-      "Hitta nästa jobb, bygg ditt Security Passport och utveckla din kompetens.",
-    );
+    // The positioning (owner copy, refined in Lovable 2026-10-03). Its "AI-stöd"
+    // phrase is deliberately not asserted here: AI functions are off in
+    // production, so it is an open owner item.
+    await expect(page.locator("#hero")).toContainText("Jobb, kompetens, Security Passport");
+    await expect(page.locator("#hero")).toContainText("Rekryteringsverktyg för arbetsgivare");
     // The English brand line sits below the two entrances as the slogan.
     await expect(page.locator('#hero p[lang="en"]')).toHaveText(
       "Security careers, without limits.",
