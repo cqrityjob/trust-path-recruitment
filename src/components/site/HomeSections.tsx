@@ -115,9 +115,9 @@ export function HomeHero() {
             without limits." sits below the two entrances as a quieter slogan. */}
         <h1
           className={cn(
-            "mx-auto max-w-[22ch]",
+            "mx-auto max-w-[20ch] sm:max-w-[22ch] lg:max-w-[24ch]",
             DARK_H1,
-            "text-[2rem] [hyphens:none] sm:text-[2.6rem] lg:text-[3.5rem]",
+            "text-[2rem] leading-[1.12] [hyphens:none] sm:text-[2.6rem] sm:leading-[1.1] lg:text-[3.5rem]",
           )}
           style={DISPLAY}
         >
@@ -167,10 +167,11 @@ export function HomeHero() {
             ))}
           </ul>
         </nav>
+        {/* 32–40px to the slogan on desktop, 24–32px on mobile (locked). */}
         <p
           lang="en"
           className={cn(
-            "mx-auto mt-10 text-sm font-medium tracking-wide md:mt-12 md:text-base",
+            "mx-auto mt-8 text-sm font-medium tracking-wide md:mt-10 md:text-base",
             ON_DARK.lead,
           )}
         >
