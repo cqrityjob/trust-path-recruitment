@@ -45,6 +45,13 @@ import {
   validateCatalogueRequest,
 } from "../src/lib/security-passport/credential-picker";
 import { credentialClassLabel } from "../src/lib/security-passport/international";
+import { personaById } from "../src/lib/security-passport/fixtures/personas";
+import { buildShareSelection } from "../src/lib/security-passport/share-selection";
+import { buildPassportWorkspace } from "../src/lib/security-passport/workspace";
+import { passportCopy } from "../src/lib/security-passport/i18n";
+import { credentialMark } from "../src/lib/security-passport/credentials";
+import { RESEARCH_CREDENTIAL_MARKS } from "../src/lib/security-passport/catalogue-research-marks";
+import { credentialSymbolMarkup } from "../src/lib/security-passport/design/credential-symbols";
 import type { InternationalCredentialInput } from "../src/lib/security-passport/international.functions";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -685,10 +692,12 @@ console.log("\n6 · structure: a request is not a definition, and a filter is no
     });
   const direct = writers("src")
     .filter((rel) => !/integrations\/supabase\/types\.ts$/.test(rel))
+    // The administrator's own, read-only queue (checked by passport-catalogue-admin:check).
+    .filter((rel) => rel !== "src/lib/job-intelligence/admin-catalogue-research.functions.ts")
     .filter((rel) => /from\(\s*"sp_catalogue_(requests|research_records)"/.test(read(rel)));
   check(
     direct.length === 0,
-    `6.4 no application code reads or writes a request or a research record as a table — ${direct.join(", ") || "none"}`,
+    `6.4 no holder-side code reads or writes a request or a research record as a table — ${direct.join(", ") || "none"}`,
   );
   check(
     /rpc\("sp_request_catalogue_definition"/.test(fns) &&
@@ -748,6 +757,92 @@ console.log("\n6 · structure: a request is not a definition, and a filter is no
     /Ett bifogat dokument är underlag, inte en verifiering/.test(form) &&
       /Att välja en merit/.test(form) === false,
     "6.14 the review step still says a document is evidence, not verification",
+  );
+}
+
+// ── 7. The plate prints the whole mark ───────────────────────────────────
+
+console.log("\n7 · a credential's plate prints its whole governed mark");
+{
+  const legendOf = (code: string | null, mark: string | null) =>
+    /<text[^>]*>([^<]*)<\/text>/.exec(credentialSymbolMarkup(code, "verified", mark))?.[1] ?? "";
+  check(
+    legendOf("INTL_ISC2_CISSP", credentialMark("INTL_ISC2_CISSP")) === "CISSP" &&
+      legendOf("INTL_ISACA_CRISC", credentialMark("INTL_ISACA_CRISC")) === "CRISC",
+    "7.1 CISSP and CRISC are printed whole, not as CISS and CRIS",
+  );
+  const marks = Object.entries(RESEARCH_CREDENTIAL_MARKS);
+  check(
+    marks.length === 140 &&
+      marks.every(([code, mark]) => credentialMark(code) === mark) &&
+      marks.every(([code, mark]) => legendOf(code, mark) === mark.toUpperCase()),
+    "7.2 every one of the 140 researched definitions resolves to a mark and prints it whole",
+  );
+  const longest = Math.max(...marks.map(([, m]) => m.length));
+  const sizes = new Set(
+    ["VU1", "CPP", "CISSP", "ANZIIF", "PenTest+"].map(
+      (m) => /font-size="([^"]+)"/.exec(credentialSymbolMarkup(null, "verified", m))?.[1],
+    ),
+  );
+  check(
+    longest <= 8 && sizes.size === 4,
+    "7.3 a longer mark is set smaller so it fits the plate (four or fewer keep the original size)",
+  );
+  check(
+    credentialSymbolMarkup(null, "verified", "VU1").includes(
+      'font-size="8.6" font-weight="700" letter-spacing="1.1"',
+    ),
+    "7.4 a mark that already shipped is byte-for-byte the same plate",
+  );
+  check(
+    credentialMark("INTL_NOT_A_REAL_DEFINITION") === null &&
+      !credentialSymbolMarkup("INTL_NOT_A_REAL_DEFINITION", "verified", null).includes("<text"),
+    "7.5 an unknown definition has no mark and no plate legend: nothing is derived from its code",
+  );
+}
+
+// ── 8. A claim type this build does not know is still shown and shareable ──
+
+console.log("\n8 · an unknown claim type is named generically and never silently dropped");
+{
+  const persona = personaById("overlapping-employers");
+  const odd = {
+    ...persona.claims[0],
+    id: "f1900000-0000-4000-8000-0000000000aa",
+    claimType: "kind_from_the_future" as never,
+    lifecycleState: "active" as const,
+    assertionLevel: "self_declared" as const,
+    validUntil: "2099-01-01",
+  };
+  const model = buildShareSelection({
+    claims: [odd],
+    periods: [],
+    attention: null,
+    reviewState: "failed",
+    now: new Date("2026-10-03T00:00:00Z"),
+  });
+  check(
+    model.eligibleCount === 1 &&
+      model.groups.some((g) => g.candidates.some((c) => c.merit.id === odd.id)),
+    "8.1 the sharing screen lists a credential of an unknown type, under a neutral group",
+  );
+  const workspace = buildPassportWorkspace({
+    claims: [odd],
+    periods: [],
+    attention: null,
+    reviewState: "failed",
+    now: new Date("2026-10-03T00:00:00Z"),
+  });
+  const merits = Object.values(workspace.groups).flat() as readonly {
+    id: string;
+    typeKey?: string;
+  }[];
+  const shown = merits.find((m) => m.id === odd.id);
+  check(
+    shown?.typeKey === "claims.type.other" &&
+      passportCopy.sv["claims.type.other"] === "Annan merit" &&
+      passportCopy.en["claims.type.other"] === "Other credential",
+    "8.2 the Passport names it generically, in both languages, instead of printing nothing",
   );
 }
 
