@@ -115,9 +115,9 @@ export function HomeHero() {
             without limits." sits below the two entrances as a quieter slogan. */}
         <h1
           className={cn(
-            "mx-auto max-w-[22ch] text-balance text-3xl sm:text-4xl md:text-5xl",
+            "mx-auto max-w-[22ch]",
             DARK_H1,
-            "[hyphens:none]",
+            "text-[2rem] [hyphens:none] sm:text-[2.6rem] lg:text-[3.5rem]",
           )}
           style={DISPLAY}
         >

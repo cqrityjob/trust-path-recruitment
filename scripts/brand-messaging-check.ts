@@ -52,8 +52,8 @@ const dict = (lang: (typeof LANGS)[number]) => dictionaries[lang] as Record<stri
 /* B1 ---------------------------------------------------------------- */
 for (const lang of LANGS) {
   ck(
-    `B1 ${lang}: home.hero.title is the locked hero`,
-    dict(lang)["home.hero.title"] === HERO,
+    `B1 ${lang}: home.hero.slogan is the locked brand line`,
+    dict(lang)["home.hero.slogan"] === HERO,
     dict(lang)["home.hero.title"],
   );
 }
