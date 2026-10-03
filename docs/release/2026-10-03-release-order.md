@@ -229,3 +229,9 @@ omdirigera den gamla värden (L1) **sist** (se `2026-10-03-www-domain-cutover.md
 6. Kvarstår medvetet utanför dessa PR:er: innehållsrollernas `*_author_read`-policyer (läser alla
    hyresgästers kandidatsvar; antalet innehavare okänt), BESKT:s `bcp_employer_*`-medlemsläsningar,
    den pensionerade v3.0-karriäranalysen som fortfarande kontrollerar testarlistan oavsett läge.
+7. Rådgivarens fynd `security_definer_view` på `scp_scoring_version_lineage`: Astras oberoende granskning är registrerad
+   som **accepterad enligt dokumenterat designbeslut, inget nytt bekräftat lanseringshinder**; vyn är inte ändrad.
+   Uttryckligen: **utkastmetadata är läsbara för alla inloggade**, och **faktisk rapportanvändning är inte verifierad**.
+   Se `2026-10-03-scoring-lineage-review.md` (testbevisen ligger i `evidence/2026-10-03-scoring-lineage/`) och
+   [#406](https://github.com/cqrityjob/trust-path-recruitment/pull/406). Åtkomstfixarna i #404–#406 är separata releaser
+   och påverkas inte.

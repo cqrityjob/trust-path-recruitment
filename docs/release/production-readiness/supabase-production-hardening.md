@@ -33,6 +33,8 @@ Hosted project `wrygicdfxwjnrugduxnt` (eu-central-1, PostgreSQL 17.6). Audited r
 
 **Status: reviewed — accepted risk — no action required.** Owner decision 2026-10-01: the current design is kept. No migration, code, grant or database change follows from this advisor item.
 
+**Independent re-review 2026-10-03:** accepted according to this documented design decision; no new confirmed launch blocker. Draft metadata are readable by every signed-in user (the view has no row filter), and actual report usage has not been verified. See `docs/release/2026-10-03-scoring-lineage-review.md`; test evidence is kept in `docs/release/evidence/2026-10-03-scoring-lineage/`.
+
 | | |
 |---|---|
 | Advisor lint | `security_definer_view` (0010), level ERROR |
