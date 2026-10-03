@@ -2908,7 +2908,10 @@
     },
     {
       "file": "20270205090000_employer_new_application_notices.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270205090000",
+      "hostedName": "employer_new_application_notices",
+      "evidenceSource": "Read-only verification 2026-10-03 ~19:55 UTC through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #392 merged to main (d2c02b8; head aa8e7a5, every mandatory CI job green) and the official integration applied it. supabase_migrations.schema_migrations holds 20270205090000 employer_new_application_notices as the last row: 367 rows, md5 of version:name joined by newline 77e07c074bb73aac9ac11a569b5ca214, equal to hosted-ledger.json; the first 366 rows unchanged (ae6f49cb25fa072932ae6aaf8d2b4ddc). All six function bodies equal the local replay: rec_claim_employer_notices 0fa89f23d04d5ba24e9af6742fc62eac, rec_employer_notice_backoff 592882928f58355fb8bb465bd8035a70 (not SECURITY DEFINER), rec_employer_notice_recipients 17528f0b956dedb7459e0a8099607a74, rec_enqueue_employer_new_application_notices 72f34824a4ac10db4b7e5e3c50494c59, rec_purge_employer_notices 537e33913d1539c276c75d6a444eb687, rec_settle_employer_notice 7a3d025492ad3273f60a9f8ebc532136. anon and authenticated have no EXECUTE on any of the six; service_role has EXECUTE on five (not the backoff helper). recruitment_employer_notices: relrowsecurity and relforcerowsecurity true, 0 policies, 0 triggers, no privilege for anon or authenticated, service_role holds SELECT only (INSERT, UPDATE and DELETE false), 0 rows. No production write probe was run and no candidate data was read; behaviour is proven by employer_new_application_notices_test EN1-EN9.",
       "introduces": [
         {
           "kind": "table",
