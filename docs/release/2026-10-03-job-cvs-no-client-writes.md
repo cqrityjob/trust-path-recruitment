@@ -90,7 +90,11 @@ Negative controls (`scripts/db-test.sh`):
 | CV NC2 | Only the applicant INSERT policy back | CV1.1 |
 | CV NC3 | Applicant SELECT and DELETE policies back (a DELETE policy alone cannot act on a row its role cannot SELECT) | CV1.4 |
 
-## 5. Release order
+## 5. Grants
+
+No function is created; the migration only drops four policies.
+
+## 6. Release order
 
 No application change is needed and none depends on it; it may be applied before
 or after any code deploy. **Before applying (read-only):** list every policy on

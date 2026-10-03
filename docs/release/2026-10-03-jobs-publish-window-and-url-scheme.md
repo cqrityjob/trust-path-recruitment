@@ -110,7 +110,13 @@ After the migration `md5(prosrc) = bc292d28d31dd973c81f1cffc145b5bf`.
 `job-board-launch:check` has planted controls for the application half
 (`negative-controls:job-board-launch`).
 
-## 5. Release order (expand/contract)
+## 5. Grants
+
+No function is created or dropped; `CREATE OR REPLACE` keeps the owner and the
+ACL of `jobs_validate_before_write()` (EXECUTE for the owner only on the replay),
+so there is nothing to `REVOKE`.
+
+## 6. Release order (expand/contract)
 
 The application checks the same three things first and works unchanged
 **before** this migration is applied. Applied first, the database refuses the

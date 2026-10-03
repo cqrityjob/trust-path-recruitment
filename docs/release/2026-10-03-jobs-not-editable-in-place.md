@@ -126,7 +126,14 @@ a savepoint, edits a live and an archived advert as a member, and rolls back.
   `source_type`, `content_hash`, `slug`...) on a **draft**. That is a column
   privilege question, not an in-place edit.
 
-## 7. Release order
+## 7. Grants
+
+No function is created or dropped. `CREATE OR REPLACE` keeps the owner and the
+ACL: on the replay `proacl` of `jobs_validate_before_write()` is
+`{postgres=X/postgres}` (EXECUTE for the owner only), so there is nothing to
+`REVOKE`. Read the hosted ACL together with the `md5` before applying.
+
+## 8. Release order
 
 No application change is needed and none depends on it: the application already
 refuses non-drafts. It may be applied before or after any code deploy. It must
