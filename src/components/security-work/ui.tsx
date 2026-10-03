@@ -106,7 +106,9 @@ export function PageHeading({
           </p>
         )}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {/* `empty:hidden`: an action made only of AssistantButton renders nothing
+          while AI is unavailable, and an empty box would still take the gap. */}
+      {action && <div className="shrink-0 empty:hidden">{action}</div>}
     </div>
   );
 }

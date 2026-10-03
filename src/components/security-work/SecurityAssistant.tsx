@@ -83,9 +83,29 @@ export function useAssistantContext(context: AssistantContext) {
     return () => setContext({ kind: "workspace", id: null, title: "" });
   }, [key, setContext]);
 }
+/**
+ * The entry point to the assistant, on every page that has one.
+ *
+ * ── IT IS OFFERED ONLY WHEN THERE IS SOMETHING TO ASK ──────────────────
+ *
+ * "Ask Security AI" printed on a page is a promise that a question will be
+ * answered. While the workspace has no active AI approval (the owner's Gate A)
+ * it was printed anyway, on eight pages and in the navigation, and every click
+ * ended in a panel saying it is not available. The panel is honest; the button
+ * that led to it was not. So the button follows the same signal the panel
+ * itself reads: it renders nothing until the status read has answered and AI is
+ * enabled here for somebody who can edit. A pending or failed read is not
+ * "available", so it stays out of the way then too -- the Security Work
+ * overview says in words what the state is (AssistanceStatus).
+ *
+ * The panel and its deterministic help are unchanged and still open for
+ * anyone who is already in it.
+ */
 export function AssistantButton({ className, label }: { className?: string; label?: string }) {
   const { t } = useT();
   const { setOpen } = useAssistantState();
+  const availability = useAiAvailability();
+  if (!availability.available) return null;
   return (
     <WorkButton
       variant="outline"
