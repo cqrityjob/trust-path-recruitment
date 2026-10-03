@@ -211,12 +211,14 @@ check(
 // A sitemap is an invitation to index, so it lists no page a crawler may not
 // index. Each static entry is resolved to its route file and refused if that
 // route is noindex (it names a robots rule containing "noindex") or is nothing
-// but a redirect (it throws `redirect(` and renders no component). The two
-// that were listed -- /security-career-assessment (noindex) and
-// /career-center/start (a redirect to /career-center) -- are the planted
-// controls; the profession guides are held to the same rule through the
-// publishability list, because an unpublished profession either redirects to
-// its catalogue page or renders a noindex "not published yet" page.
+// but a redirect (its `beforeLoad` starts with `throw redirect(`, which is how
+// a retired route says "always go elsewhere"; or it throws one and renders no
+// component). The two that were listed -- /security-career-assessment (noindex)
+// and /career-center/start (a redirect to /career-center, with an empty
+// component beside it) -- are the planted controls; the profession guides are
+// held to the same rule through the publishability list, because an
+// unpublished profession either redirects to its catalogue page or renders a
+// noindex "not published yet" page.
 {
   const staticPaths = [...sitemap.matchAll(/\{ path: "(\/[^"]*)"/g)].map((m) => m[1]);
   check(
@@ -245,7 +247,9 @@ check(
       continue;
     }
     const noindex = /name:\s*"robots",\s*content:\s*"[^"]*noindex/.test(route.source);
-    const onlyARedirect = /\bredirect\(/.test(route.source) && !/\bcomponent:/.test(route.source);
+    const onlyARedirect =
+      /beforeLoad:\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*throw redirect\(/.test(route.source) ||
+      (/\bredirect\(/.test(route.source) && !/\bcomponent:/.test(route.source));
     if (noindex) notIndexable.push(`${urlPath} (${route.file} is noindex)`);
     if (onlyARedirect) notIndexable.push(`${urlPath} (${route.file} only redirects)`);
   }
