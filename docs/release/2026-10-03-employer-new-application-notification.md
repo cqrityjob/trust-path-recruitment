@@ -8,7 +8,7 @@ reach one).
 | ---------------------- | ---------------------------------------------------------------------------------------------------- |
 | Migration              | `supabase/migrations/20270205090000_employer_new_application_notices.sql`                            |
 | Rollback               | `supabase/rollback/20270205090000_employer_new_application_notices_rollback.sql`                     |
-| SQL suite              | `supabase/tests/employer_new_application_notices_test.sql` (87 assertions, EN1-EN7)                  |
+| SQL suite              | `supabase/tests/employer_new_application_notices_test.sql` (108 assertions, EN1-EN9)                  |
 | SQL controls and races | `scripts/db-test.sh`, "employer new-application notice"                                              |
 | Edge function kind     | `supabase/functions/transactional-email/index.ts` (one `KINDS` line)                                 |
 | Sender                 | `src/lib/email/send-employer-application-notice-email.server.ts`                                     |
@@ -104,6 +104,7 @@ pending ──claim──▶ claimed ──settle sent────────�
 | `rec_settle_employer_notice(attempt, result, http_status)`  | `service_role` | Records `sent` / `failed` / `not_configured` **only for a `claimed` row and only for the attempt it names**. A late answer for an earlier attempt returns `stale` and changes nothing; a row that is not claimed answers with its state.                                                                                                                                                              |
 | `rec_employer_notice_recipients(application)`               | `service_role` | Section 2.                                                                                                                                                                                                                                                                                                                                                                                            |
 | `rec_employer_notice_backoff(attempts)`                     | nobody         | Internal.                                                                                                                                                                                                                                                                                                                                                                                             |
+| `rec_purge_employer_notices(older_than := 90 days)` | `service_role` | **Retention** (below). Returns the number of rows deleted. |
 
 **Retry rules.** At most **6 attempts**, spaced **5 min, 15 min, 45 min, 2 h,
 4 h**, and **nothing after 23 hours** (the provider's idempotency key lives 24
@@ -114,6 +115,48 @@ transport may be configured later). Every other 4xx is final. A row that is
 never tried within 23 hours becomes `skipped` / `EXPIRED`; a claim that never
 reported on its last attempt becomes `failed` / 0.
 A sent row is **never** claimed again.
+
+**Retention: 90 days.** `rec_purge_employer_notices(_older_than interval DEFAULT
+'90 days')` (`SECURITY DEFINER`, `service_role` only, `anon` / `authenticated` /
+`PUBLIC` revoked) deletes **settled** rows whose `settled_at` (the moment the
+last outcome was recorded, or the database ended the row) is older than the
+window: `sent` and `skipped` rows, and `failed` / `not_configured` rows that will
+not be tried again (six attempts made, the 23-hour window closed, or a definite
+refusal). It **never** deletes a `pending`, a `claimed` or a still-retryable row,
+whatever its timestamps say; it refuses a window under one day
+(`NOTICE_RETENTION_TOO_SHORT`); it takes at most 1000 rows per call. The
+receipts sweep calls it once, after its claim loop, and reports the count as
+`purged`; the apply request never calls it. A `pending` row that no sweep ever
+claimed is not terminal and is not purged (the sweep that would purge it expires
+it first).
+
+*A purged row can no longer suppress a re-enqueue for the same application.*
+That cannot send a second mail: enqueue is called only when an application is
+**created** (`submitJobApplication`, once the application has committed) and when
+a **replay of that same request** arrives, and the database refuses to queue any
+application that is older than an hour or no longer `submitted`, while a purged
+row is at least a day old (the database refuses a shorter window). The guard
+checks that nothing else in `src/` reaches the enqueue (only the server module,
+only from `notifyEmployerOfNewApplication`, whose only two callers are the two
+places in the submission). The unique key (application, recipient, kind) holds
+for every row that exists, and for a new application there are no rows to
+purge.
+
+**A second kind is cheap.** `kind` is in the unique key and in an allow-list
+`CHECK` whose name is stable (`recruitment_employer_notices_kind_check`). No
+function but the enqueue of a *new application* names a kind: the claim filters
+by the `_kinds` it is given, builds the provider key from the row's own kind
+(`employer-<kind>:<row id>`), and the settle and the retention are kind-blind. A
+later migration (a `candidate_replied` notice, say) widens the `CHECK` and adds an
+enqueue; nothing here is rewritten (EN9 does exactly that inside the suite, and
+asserts that no function body changed). In the application there is **one**
+table from the outbox's kind to the e-mail kind
+(`EMPLOYER_NOTICE_EMAIL_KINDS` in the sender); the worker asks the claim for
+exactly its keys, so an older worker is never handed a kind a newer migration
+added, and the guard checks every entry against the `CHECK` and the edge
+function's `KINDS`. A new kind needs one line there, its template, and one
+`KINDS` line in the function. **Not built:** `candidate_replied`, or any other
+kind.
 
 **Provider-level dedupe (second line).** `Idempotency-Key:
 employer-new-application:<outbox row id>` on every attempt; the transport
@@ -205,11 +248,12 @@ UPDATE public.recruitment_employer_notices
 
 | Function                                             | md5                                |
 | ---------------------------------------------------- | ---------------------------------- |
-| `rec_claim_employer_notices(uuid,integer,text[])`    | `11e4cb275745cc8f1d08e395a097381c` |
+| `rec_claim_employer_notices(uuid,integer,text[])`    | `0fa89f23d04d5ba24e9af6742fc62eac` |
 | `rec_employer_notice_backoff(integer)`               | `592882928f58355fb8bb465bd8035a70` |
 | `rec_employer_notice_recipients(uuid)`               | `17528f0b956dedb7459e0a8099607a74` |
 | `rec_enqueue_employer_new_application_notices(uuid)` | `72f34824a4ac10db4b7e5e3c50494c59` |
-| `rec_settle_employer_notice(uuid,text,integer)`      | `94a875996cdd8a5d3e0a17ce2426f5e3` |
+| `rec_settle_employer_notice(uuid,text,integer)`      | `7a3d025492ad3273f60a9f8ebc532136` |
+| `rec_purge_employer_notices(interval)` | `537e33913d1539c276c75d6a444eb687` |
 
 Compare the hosted bodies after step 1. Grants (`release-sequence.md`, step 7):
 new `public` functions are granted `EXECUTE` to `anon` by default on the hosted
@@ -221,7 +265,7 @@ that it landed**.
 ### Rollback
 
 `supabase/rollback/20270205090000_employer_new_application_notices_rollback.sql`
-drops the five functions and the outbox (a queued, unsent notice is lost; a sent
+drops the six functions and the outbox (a queued, unsent notice is lost; a sent
 one has already left). The application tolerates the absence, so it can be rolled
 back at any time and in either order. To stop the mail without touching the
 database, undeploy the function or remove the Resend secret: the rows become
@@ -277,18 +321,20 @@ need a new optional field for.
 
 ## 10. Tests
 
-SQL (`employer_new_application_notices_test.sql`, 87 assertions, one transaction
+SQL (`employer_new_application_notices_test.sql`, 108 assertions, one transaction
 that ends in `ROLLBACK`, all fixtures synthetic):
 
 | Group | Proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | EN1   | The responsible person beats owners and admins; otherwise active owners and admins; a plain member only when responsible; invited, suspended and removed members, non-active organisations, accounts without an address, with an unconfirmed address or disabled, and a "responsible" stranger get nothing; fall-through when the responsible person is suspended or removed; the cap of ten (owners first); the address is `auth.users.email` as of the call                                         |
-| EN2   | No `EXECUTE` for `anon`, `authenticated` or `PUBLIC` on any of the five functions; no table privilege for them; the server's own table privilege is read-only; RLS enabled, forced, no policy; every client role, **as itself**, is refused the table, the recipient list, the enqueue, the claim and the settle; no client-callable function reads the outbox or the recipient list                                                                                                                  |
+| EN2   | No `EXECUTE` for `anon`, `authenticated` or `PUBLIC` on any of the six functions; no table privilege for them; the server's own table privilege is read-only; RLS enabled, forced, no policy; every client role, **as itself**, is refused the table, the recipient list, the enqueue, the claim and the settle; no client-callable function reads the outbox or the recipient list                                                                                                                  |
 | EN3   | Enqueue is idempotent and set-once (a replay after the recipients changed adds nobody); the unique key is (application, recipient, kind); only the allow-listed kind exists; an application that is old, withdrawn or already moved is not announced; the outbox has no column for an address, a name, a text or a response                                                                                                                                                                           |
 | EN4   | A claim hands over one attempt per due notice with the address, provider key and organisation; the recipient's language; nothing that can name the candidate; the lease holds; a worker that renders another kind gets nothing; the limit bounds a claim; lease expiry gives a new attempt id and the same provider key; a sent row is never claimed again; eligibility is decided again (suspended person, withdrawn application, suspended organisation); never-tried and too old becomes `EXPIRED` |
 | EN5   | Settle only for a claimed row and the attempt it names; a late answer is `stale`; a bad result or a missing attempt is refused; the backoff and the status are recorded; an out-of-range status is not stored                                                                                                                                                                                                                                                                                         |
 | EN6   | Retryable and final statuses; the backoff; the 23-hour window; six attempts and no seventh; an unreported last claim becomes `failed`; the sweep across applications; the cap of 50 per claim (60 due rows are taken 50 then 10, none twice)                                                                                                                                                                                                                                                          |
 | EN7   | The shape constraints; deleting an application or an account deletes its notices                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| EN8   | Retention: a sent, a skipped and three final failed rows older than 90 days are deleted and the call returns five; a row settled 89 days ago stays; a pending, a claimed and a still-retryable failed or not_configured row stay whatever their timestamps say; a second purge returns zero; a window under a day (nothing, 12 hours, NULL) is refused; the window is a parameter; a purge is bounded (1000); anon and authenticated cannot call it; the purged row of an old application is gone and a re-enqueue for that application still queues nothing |
+| EN9   | A second kind needs no new functions: no function but the enqueue names a kind; after the allow-list is widened (what a later migration would do) the same claim hands over only the kind asked for with its own provider key, the same settle and the same retention serve it, the same person can hold both kinds for one application, and no function body changed |
 
 Planted controls in `scripts/db-test.sh`, each of which **must** make the suite
 fail on the named assertion (the migration's own SQL with one substitution):
@@ -307,6 +353,11 @@ fail on the named assertion (the migration's own SQL with one substitution):
 | NC10    | A sent row is claimed again                   | EN4.11   |
 | NC11    | Settle takes a row that is not claimed        | EN5.2    |
 | NC12    | No cap on attempts                            | EN6.4    |
+| NC13    | The retention deletes a claimed row           | EN8.1    |
+| NC14    | The retention ignores its window              | EN8.1    |
+| NC15    | The retention deletes rows that can still be retried | EN8.1 |
+| NC16    | A client role may execute the retention       | EN2.1    |
+| NC17    | The retention accepts a window under a day    | EN8.6    |
 
 After them: the real rollback (run twice), the migration applied twice, and the
 suite again. Then four **two-session races** (committed synthetic fixtures,
@@ -324,7 +375,7 @@ claim, honest outcomes for 200, 202, 429, 422, 500, 502, 409, 408, network error
 404 and 401, the three-second ceiling and clamp, never throws, a logged no-op for
 `PGRST202`, `PGRST205`, `42883` and `42P01`, the sweep, the wiring, and that the SQL and the
 app agree on names, arguments, grants and locking), with
-`negative-controls:employer-application-notice` (25 planted defects).
+`negative-controls:employer-application-notice` (34 planted defects).
 
 ## 11. Noticed and not changed
 
