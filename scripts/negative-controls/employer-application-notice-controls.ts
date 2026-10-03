@@ -262,6 +262,94 @@ const MUTATIONS: Mutation[] = [
     guard: GUARD,
     expect: "FAILED",
   },
+
+  // ── another kind is a table entry; the retention and its one caller ──
+  {
+    id: "EN-NC-KIND-HARD-WIRED-IN-THE-CLAIM",
+    defect: "the claim names the one kind, so a second kind would need the function rewritten",
+    file: MIGRATION,
+    find: "       AND n.created_at > now() - interval '23 hours'\n       AND n.attempts < 6",
+    replace:
+      "       AND n.created_at > now() - interval '23 hours'\n       AND n.kind = 'new_application'\n       AND n.attempts < 6",
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-KIND-TABLE-POINTS-NOWHERE",
+    defect: "the table maps the kind to an e-mail kind the function does not know",
+    file: SENDER,
+    find: '  new_application: "employer_new_application",',
+    replace: '  new_application: "employer_new_application_typo",',
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-KIND-WRITTEN-OUT-IN-THE-WORKER",
+    defect: "the worker asks the claim for a literal kind instead of the table's kinds",
+    file: SERVER,
+    find: "const KINDS: string[] = Object.keys(EMPLOYER_NOTICE_EMAIL_KINDS);",
+    replace: 'const KINDS: string[] = ["new_application"];',
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-PURGE-NOT-IN-THE-SWEEP",
+    defect: "the sweep never applies the retention, so settled notices are kept for ever",
+    file: SERVER,
+    find: "summary.purged = await purgeEmployerNotices(deps);",
+    replace: "summary.purged = 0;",
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-PURGE-IN-THE-APPLY-REQUEST",
+    defect: "the apply request runs the retention, so a delete can slow or fail an application",
+    file: SERVER,
+    find: "    outcome.enqueue = queued.state;",
+    replace: "    outcome.enqueue = queued.state;\n    await purgeEmployerNotices(deps);",
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-ENQUEUE-FROM-THE-SWEEP",
+    defect:
+      "the sweep route queues notices, so a purged row could be queued again for an old application",
+    file: ROUTE,
+    find: "const employerNotices = await sweepEmployerNotices({ limit });",
+    replace:
+      "await enqueueEmployerNotices(String(limit));\n        const employerNotices = await sweepEmployerNotices({ limit });",
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-PURGE-DELETES-A-PENDING-ROW",
+    defect: "the retention may delete a pending row",
+    file: MIGRATION,
+    find: "            n.status IN ('sent', 'skipped')\n",
+    replace: "            n.status IN ('sent', 'skipped', 'pending')\n",
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-PURGE-HAS-NO-FLOOR",
+    defect:
+      "the retention accepts a window of nothing, so a fresh row could be deleted and re-queued",
+    file: MIGRATION,
+    find: "_older_than < interval '1 day'",
+    replace: "_older_than < interval '0'",
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
+    id: "EN-NC-PURGE-OPEN-TO-A-CLIENT",
+    defect: "a client role may execute the retention",
+    file: MIGRATION,
+    find: "GRANT EXECUTE ON FUNCTION public.rec_purge_employer_notices(interval) TO service_role;",
+    replace:
+      "GRANT EXECUTE ON FUNCTION public.rec_purge_employer_notices(interval) TO service_role, authenticated;",
+    guard: GUARD,
+    expect: "FAILED",
+  },
 ];
 
 runControls("employer-application-notice", MUTATIONS);

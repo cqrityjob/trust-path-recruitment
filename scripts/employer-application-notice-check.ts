@@ -34,18 +34,21 @@
  * Run: bun run employer-application-notice:check
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import {
+  EMPLOYER_NOTICE_EMAIL_KINDS,
   employerApplicationLink,
   renderEmployerApplicationNotice,
   sendEmployerApplicationNoticeEmail,
 } from "../src/lib/email/send-employer-application-notice-email.server";
 import {
   EMPLOYER_NOTICE_BUDGET_MS,
+  EMPLOYER_NOTICE_RETENTION,
   dispatchEmployerNotices,
   enqueueEmployerNotices,
   isMissingNoticeObject,
   notifyEmployerOfNewApplication,
+  purgeEmployerNotices,
   sweepEmployerNotices,
   type EmployerNoticeRpc,
 } from "../src/lib/recruitment/employer-notice.server";
@@ -162,6 +165,7 @@ function stubFetch(mode: number | "throw" | "hang", jsonBody?: unknown) {
 }
 
 const base = {
+  noticeKind: "new_application" as const,
   language: "sv" as const,
   via: "owner",
   employerName: "Notis AB",
@@ -275,9 +279,10 @@ console.log("\n3. There is nowhere to put the candidate, and nothing of them in 
   const type = /export type EmployerApplicationNoticeParams = \{[\s\S]*?\n\};/.exec(src)?.[0] ?? "";
   const keys = [...type.matchAll(/^\s{2}(\w+)\??:/gm)].map((m) => m[1]);
   ck(
-    "the parameters are exactly: recipient, language, why, organisation, vacancy, application id, origin, key, timeout, fetch",
+    "the parameters are exactly: kind, recipient, language, why, organisation, vacancy, application id, origin, key, timeout, fetch",
     JSON.stringify(keys) ===
       JSON.stringify([
+        "noticeKind",
         "recipientEmail",
         "language",
         "via",
@@ -848,11 +853,12 @@ console.log("\n9. The SQL and the app agree");
   const server = code(SERVER);
   const calledRpcs = [...server.matchAll(/\)\("(rec_[a-z_]+)", \{/g)].map((m) => m[1]);
   ck(
-    "the app calls exactly enqueue, claim and settle",
+    "the app calls exactly enqueue, claim, settle and the retention",
     JSON.stringify([...new Set(calledRpcs)].sort()) ===
       JSON.stringify([
         "rec_claim_employer_notices",
         "rec_enqueue_employer_new_application_notices",
+        "rec_purge_employer_notices",
         "rec_settle_employer_notice",
       ]),
     calledRpcs.join(","),
@@ -865,13 +871,15 @@ console.log("\n9. The SQL and the app agree");
       ) &&
       /rec_settle_employer_notice\(\s*_attempt_id uuid,\s*_result text,\s*_http_status integer DEFAULT NULL\s*\)/.test(
         sql,
-      ),
+      ) &&
+      /rec_purge_employer_notices\(_older_than interval DEFAULT interval '90 days'\)/.test(sql),
   );
   for (const f of [
     "rec_employer_notice_recipients(uuid)",
     "rec_enqueue_employer_new_application_notices(uuid)",
     "rec_claim_employer_notices(uuid, integer, text[])",
     "rec_settle_employer_notice(uuid, text, integer)",
+    "rec_purge_employer_notices(interval)",
   ]) {
     ck(
       `${f}: SECURITY DEFINER, REVOKE from PUBLIC/anon/authenticated, GRANT to service_role only`,
@@ -897,25 +905,63 @@ console.log("\n9. The SQL and the app agree");
       /UNIQUE \(application_id, recipient_user_id, kind\)/.test(sql) &&
       /CHECK \(kind IN \('new_application'\)\)/.test(sql),
   );
+  // One function's own text (not the postflight, which quotes the others).
+  const fnBody = (name: string) => {
+    const from = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+    const to = sql.indexOf(`REVOKE ALL ON FUNCTION public.${name}(`, from);
+    return from >= 0 && to > from ? sql.slice(from, to) : "";
+  };
+  const claimFn = fnBody("rec_claim_employer_notices");
+  const settleFn = fnBody("rec_settle_employer_notice");
+  const recipientsFn = fnBody("rec_employer_notice_recipients");
+  const purgeFn = fnBody("rec_purge_employer_notices");
   ck(
     "the claim is atomic (FOR UPDATE OF n SKIP LOCKED), leased, capped and bounded",
-    /FOR UPDATE OF n SKIP LOCKED/.test(sql) &&
-      /n\.claimed_at < now\(\) - interval '3 minutes'/.test(sql) &&
-      /n\.attempts < 6/.test(sql) &&
-      /least\(coalesce\(_limit, 20\), 50\)/.test(sql) &&
-      /LIMIT 10\b/.test(sql),
+    /FOR UPDATE OF n SKIP LOCKED\s+LOOP/.test(claimFn) &&
+      /OR \(n\.status = 'claimed' AND n\.claimed_at < now\(\) - interval '3 minutes'\)/.test(
+        claimFn,
+      ) &&
+      /AND n\.attempts < 6/.test(claimFn) &&
+      /least\(coalesce\(_limit, 20\), 50\)/.test(claimFn) &&
+      /LIMIT 10\b/.test(recipientsFn),
   );
   ck(
     "a sent row is never claimed: only pending, expired-lease and retryable failed/not_configured rows are due",
-    /n\.status = 'pending' AND n\.next_attempt_at <= now\(\)/.test(sql) &&
-      /n\.status = 'claimed' AND n\.claimed_at/.test(sql) &&
-      /n\.status IN \('failed', 'not_configured'\)/.test(sql) &&
-      !/n\.status IN \([^)]*'sent'/.test(sql),
+    /\(n\.status = 'pending' AND n\.next_attempt_at <= now\(\)\)/.test(claimFn) &&
+      /n\.status = 'claimed' AND n\.claimed_at/.test(claimFn) &&
+      /n\.status IN \('failed', 'not_configured'\)/.test(claimFn) &&
+      !/n\.status IN \([^)]*'sent'/.test(claimFn),
   );
   ck(
     "settle takes only a claimed row, only for the attempt it names",
-    /WHERE n\.attempt_id = _attempt_id FOR UPDATE;/.test(sql) &&
-      /IF _n\.status <> 'claimed' THEN\s+RETURN _n\.status;/.test(sql),
+    /WHERE n\.attempt_id = _attempt_id FOR UPDATE;/.test(settleFn) &&
+      /IF _n\.status <> 'claimed' THEN\s+RETURN _n\.status;/.test(settleFn),
+  );
+  ck(
+    "the claim, settle and retention name no kind: a later migration widens the allow-list and nothing here is rewritten",
+    claimFn.length > 0 &&
+      settleFn.length > 0 &&
+      purgeFn.length > 0 &&
+      ![claimFn, settleFn, purgeFn].some((f) => /new_application/.test(f)) &&
+      /'employer-' \|\| replace\(_n\.kind, '_', '-'\) \|\| ':' \|\| _n\.id::text/.test(claimFn) &&
+      /_kinds IS NULL OR n\.kind = ANY \(_kinds\)/.test(claimFn),
+  );
+  ck(
+    "the retention: SECURITY DEFINER, service_role only, deletes only settled rows older than its window (never under a day), bounded",
+    /SECURITY DEFINER/.test(purgeFn) &&
+      /REVOKE ALL ON FUNCTION public\.rec_purge_employer_notices\(interval\) FROM PUBLIC, anon, authenticated;/.test(
+        sql,
+      ) &&
+      /GRANT EXECUTE ON FUNCTION public\.rec_purge_employer_notices\(interval\) TO service_role;/.test(
+        sql,
+      ) &&
+      /_older_than interval DEFAULT interval '90 days'/.test(purgeFn) &&
+      /_older_than < interval '1 day'/.test(purgeFn) &&
+      /WHERE n\.settled_at < now\(\) - _older_than/.test(purgeFn) &&
+      /n\.status IN \('sent', 'skipped'\)/.test(purgeFn) &&
+      /n\.status IN \('failed', 'not_configured'\)/.test(purgeFn) &&
+      !/'pending'|'claimed'/.test(purgeFn) &&
+      /LIMIT 1000/.test(purgeFn),
   );
   ck(
     "no trigger queues a notice: the apply request cannot be failed or slowed by mail",
@@ -955,6 +1001,172 @@ console.log("\n9. The SQL and the app agree");
     "the edge function knows the kind, with no Reply-To and no organisation sender",
     /employer_new_application: \{ to: "caller", replyTo: "none" \}/.test(read(EDGE)) &&
       !/ORGANISATION_SENDER_KINDS = new Set\(\[[^\]]*employer_new_application/.test(read(EDGE)),
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+console.log("\n10. Another kind is a table entry; the retention and its one caller");
+{
+  const sender = code(SENDER);
+  const server = code(SERVER);
+  const sqlKinds = new Set<string>();
+  for (const f of readdirSync("supabase/migrations")) {
+    const body = read(`supabase/migrations/${f}`);
+    if (!body.includes("recruitment_employer_notices")) continue;
+    for (const m of body.matchAll(/CHECK \(kind IN \(([^)]*)\)\)/g)) {
+      for (const k of m[1].matchAll(/'([a-z_]+)'/g)) sqlKinds.add(k[1]);
+    }
+  }
+  const edgeSrc = read(EDGE);
+  const edgeKinds = new Set(
+    [
+      ...(/const KINDS[^{]*\{([\s\S]*?)\n\};/.exec(edgeSrc)?.[1] ?? "").matchAll(
+        /^\s{2}(\w+): \{ to:/gm,
+      ),
+    ].map((m) => m[1]),
+  );
+  const table = Object.entries(EMPLOYER_NOTICE_EMAIL_KINDS) as [string, string][];
+  ck(
+    "there is ONE table from the outbox's kind to the e-mail kind, and every entry is a kind the database allows and the function knows",
+    table.length >= 1 && table.every(([k, edge]) => sqlKinds.has(k) && edgeKinds.has(edge)),
+    `${JSON.stringify(table)} / sql ${[...sqlKinds].join(",")} / edge ${edgeKinds.size}`,
+  );
+  const askedKinds: unknown[] = [];
+  {
+    const { rpc } = scriptedRpc({
+      rec_claim_employer_notices: (a) => {
+        askedKinds.push(a._kinds);
+        return { data: [] };
+      },
+    });
+    await dispatchEmployerNotices(APP_ID, { deadline: Date.now() + 1000 }, { rpc });
+    await sweepEmployerNotices({}, { rpc });
+  }
+  ck(
+    "the claim is asked for exactly the table's kinds, by the dispatch and by the sweep",
+    askedKinds.length >= 2 &&
+      askedKinds.every(
+        (k) => JSON.stringify(k) === JSON.stringify(Object.keys(EMPLOYER_NOTICE_EMAIL_KINDS)),
+      ),
+    JSON.stringify(askedKinds),
+  );
+  ck(
+    "no kind is written anywhere else in the worker or the sender",
+    !/["']new_application["']|["']employer_new_application["']/.test(server) &&
+      !/["']employer_new_application["']/.test(
+        sender.replace(/EMPLOYER_NOTICE_EMAIL_KINDS = \{[\s\S]*?\} as const/, ""),
+      ) &&
+      /kind: EMPLOYER_NOTICE_EMAIL_KINDS\[params\.noticeKind\]/.test(sender),
+  );
+  {
+    const provider = stubFetch(200);
+    const settle: Record<string, unknown>[] = [];
+    const summary = await dispatchEmployerNotices(
+      APP_ID,
+      { deadline: Date.now() + 3000 },
+      {
+        rpc: scriptedRpc({
+          rec_claim_employer_notices: () => ({ data: [claimRow({ kind: "candidate_replied" })] }),
+          rec_settle_employer_notice: (a) => {
+            settle.push(a);
+            return { data: "sent" };
+          },
+        }).rpc,
+        fetchImpl: provider.fn,
+      },
+    );
+    ck(
+      "a kind this worker has no table entry for is never sent and never settled: its lease runs out and a worker that knows it takes it",
+      provider.calls.length === 0 && settle.length === 0 && summary.unsettled === 1,
+      JSON.stringify(summary),
+    );
+  }
+
+  // ── retention ───────────────────────────────────────────────────────
+  ck("the retention window is 90 days", EMPLOYER_NOTICE_RETENTION === "90 days");
+  {
+    const { rpc, calls } = scriptedRpc({
+      rec_claim_employer_notices: () => ({ data: [] }),
+      rec_purge_employer_notices: () => ({ data: 7 }),
+    });
+    const swept = await sweepEmployerNotices({}, { rpc });
+    const names = calls.map((c) => c.fn);
+    ck(
+      "the sweep applies the retention AFTER its claim loop, with the 90-day window, and reports the count",
+      names.at(-1) === "rec_purge_employer_notices" &&
+        names.lastIndexOf("rec_claim_employer_notices") <
+          names.indexOf("rec_purge_employer_notices") &&
+        calls.at(-1)?.args._older_than === "90 days" &&
+        JSON.stringify(Object.keys(calls.at(-1)?.args ?? {})) === JSON.stringify(["_older_than"]) &&
+        swept.purged === 7,
+      names.join(","),
+    );
+    const none = await sweepEmployerNotices({}, { rpc: scriptedRpc({}).rpc });
+    ck(
+      "without the migration the sweep purges nothing and says so (available: false)",
+      none.available === false && none.purged === 0,
+    );
+    const refused = await purgeEmployerNotices({
+      rpc: scriptedRpc({
+        rec_purge_employer_notices: () => ({ error: { code: "42501", message: "denied" } }),
+      }).rpc,
+    });
+    const threw = await purgeEmployerNotices({
+      rpc: (async () => {
+        throw new Error("connection reset");
+      }) as unknown as EmployerNoticeRpc,
+    });
+    ck(
+      "a retention that fails or throws deletes nothing, reports zero and fails nothing",
+      refused === 0 && threw === 0,
+    );
+  }
+  const notifyFn =
+    /export async function notifyEmployerOfNewApplication[\s\S]*?\n\}\n/.exec(server)?.[0] ?? "";
+  const sweepFn =
+    /export async function sweepEmployerNotices[\s\S]*?\n\}\n/.exec(server)?.[0] ?? "";
+  ck(
+    "the retention runs from the sweep only, never from the apply request",
+    notifyFn.length > 0 &&
+      !/purge/i.test(notifyFn) &&
+      sweepFn.indexOf("purgeEmployerNotices(deps)") > sweepFn.indexOf("while (") &&
+      sweepFn.indexOf("purgeEmployerNotices(deps)") > -1,
+  );
+  const everySrc = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory()
+        ? everySrc(`${dir}/${e.name}`)
+        : /\.(ts|tsx)$/.test(e.name)
+          ? [`${dir}/${e.name}`]
+          : [],
+    );
+  const files = everySrc("src");
+  const enqueueCallers = files.filter((f) =>
+    /rec_enqueue_employer_new_application_notices/.test(strip(read(f))),
+  );
+  const notifyCallers = files.filter((f) =>
+    /notifyEmployerOfNewApplication\(/.test(strip(read(f))),
+  );
+  const enqueueUses = files.filter((f) => /\benqueueEmployerNotices\(/.test(strip(read(f))));
+  ck(
+    "enqueue is reached only when an application is created or replayed (the submission) and nowhere else: a purged row cannot cause a second mail",
+    JSON.stringify(enqueueCallers) === JSON.stringify([SERVER]) &&
+      JSON.stringify(enqueueUses) === JSON.stringify([SERVER]) &&
+      JSON.stringify(notifyCallers.sort()) === JSON.stringify([SERVER, SUBMIT].sort()) &&
+      (code(SUBMIT).match(/notifyEmployerOfNewApplication\(/g) ?? []).length === 2,
+    `${enqueueCallers} / ${enqueueUses} / ${notifyCallers}`,
+  );
+  ck(
+    "the sweep script prints how many were purged",
+    /purged \$\{notices\.purged\}/.test(read(SWEEP_SCRIPT)),
+  );
+  const doc = read(DOC);
+  ck(
+    "the release note says what the retention is, that a purged row no longer suppresses a re-enqueue, and why that cannot send a second mail",
+    /rec_purge_employer_notices/.test(doc) &&
+      /90 days/.test(doc) &&
+      /purged row/i.test(doc) &&
+      /older than an hour/.test(doc),
   );
 }
 

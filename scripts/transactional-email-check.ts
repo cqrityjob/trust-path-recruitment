@@ -226,11 +226,14 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
   // function treats it like the other "caller" kinds: shape-validated, one only.
   // The mail is CQrityjob's own: From fixed, no organisation name, no Reply-To.
   const fn = readFileSync(FN, "utf8");
+  // Only what reaches the PROVIDER counts here, so this block says the same
+  // whatever the function does to decide who may call it.
+  const toProvider = () => calls.filter((c) => c.url === "https://api.resend.com/emails");
   ck(
     "the kind is listed, to the caller's named address, with no Reply-To",
     /employer_new_application: \{ to: "caller", replyTo: "none" \}/.test(fn),
   );
-  calls.length = 0;
+  const sentBefore = toProvider().length;
   await post({
     kind: "employer_new_application",
     to: "owner@example.test",
@@ -241,7 +244,7 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
   });
   // Optional on purpose: with the kind refused nothing was sent, and the
   // assertions must FAIL by name rather than crash on a missing call.
-  const c = calls.at(-1);
+  const c = toProvider().length > sentBefore ? toProvider().at(-1) : undefined;
   ck(
     "it goes to the one address the request names",
     JSON.stringify(c?.body.to) === JSON.stringify(["owner@example.test"]),
@@ -257,7 +260,7 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
     c?.body.from === "CQrityjob <no-reply@cqrityjob.com>",
     String(c?.body.from),
   );
-  const before = calls.length;
+  const before = toProvider().length;
   const refused = await Promise.all(
     [
       { ...message },
@@ -269,7 +272,7 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
   );
   ck(
     "a missing, malformed, multiple or named recipient is refused, nothing sent",
-    refused.every((r) => r.status === 400) && calls.length === before,
+    refused.every((r) => r.status === 400) && toProvider().length === before,
     refused.map((r) => r.status).join(","),
   );
   await post(
@@ -278,7 +281,7 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
   );
   ck(
     "the Idempotency-Key is forwarded, so a retry is deduplicated by the provider",
-    calls.at(-1)?.headers["idempotency-key"] === "employer-new-application:guard-1",
+    toProvider().at(-1)?.headers["idempotency-key"] === "employer-new-application:guard-1",
   );
   const transport = readFileSync("src/lib/email/transport.server.ts", "utf8");
   ck("the app's transport knows the kind", /\|\s+"employer_new_application"/.test(transport));
