@@ -40,9 +40,34 @@ Den här sessionen skickar, Sonnet-sessionen kontrollerar loggarna och ägaren b
 | T1   | Registreringsbekräftelse (Auth/SMTP)       | Syntetisk adress utan konto (kontrollerat 14:40 UTC: 0 konton)          | **Godkänd.** Registrerad 14:40:46 UTC via www/signup med villkorsrutan (`terms_version` `2026-10-01-utkast`). Auth `user_confirmation_requested` 200. Ägaren öppnade mejlet. `/verify` 303 kl. 14:48:42 UTC med retur till `https://www.cqrityjob.com/login?redirect=/my-career`. Inloggning med lösenord 14:51:33 UTC landade på `/my-career` |
 | T2   | Lösenordsåterställning (Auth/SMTP)         | Befintligt konto; länken används inte                                   | Skickad 14:10:52 UTC. **Mottagning bekräftad av ägaren** från no-reply@cqrityjob.com. Lösenordet är oförändrat. Länkens måldomän är ej verifierad. Mejlet skickades före Auth-rättningen                                                                                                                                                       |
 | T3   | Kontakt: förfrågan till info@ och kvittens | Version 3 driftsatt och `RESEND_API_KEY` satt                           | **Godkänd.** Skickad 14:39:47 UTC via www/contact. `contact_enquiry` 200 och `contact_acknowledgement` 200, och Sonnets loggkontroll visar exakt två utskick. **Mottagning bekräftad av ägaren**: ämnet "Förfrågan: Rekrytering — CQrityjob lanseringstest", från CQrityjob <no-reply@cqrityjob.com>, kl. 14:39 UTC                            |
-| T4   | Ansökningskvitto                           | Öppen testannons i testorganisationen                                   | Blockerad: testannonsens sista ansökningsdag var 2026-09-19, och annonsen visas som "Jobbet är inte tillgängligt". Väntar på att ägaren förlänger den                                                                                                                                                                                          |
-| T5   | Rekryteringsmeddelande                     | Version 3 och en ansökan från T4                                        | Väntar på T4                                                                                                                                                                                                                                                                                                                                   |
-| T6   | `employer_new_application`                 | #392 applicerad och registrerad, #393 mergad, funktionen driftsatt igen | Väntar                                                                                                                                                                                                                                                                                                                                         |
+| T4   | Ansökningskvitto                           | Öppen testannons i testorganisationen                                   | **Godkänd i appen.** En ansökan via www kl. 20:59:30 UTC. Kvittot `application_receipt` gav 200 kl. 20:59:31 UTC, och Sonnets läsning visar ett kvitto. Statusvyn visar "Inskickad". Inget dubbelutskick. Mottagning i inkorgen ej bekräftad                                                                                                   |
+| T5   | Rekryteringsmeddelande                     | Version 3 och en ansökan från T4                                        | **Godkänd i appen.** Ägarkontot skickade ett meddelande från portalen kl. 21:01:53 UTC. `recruitment_message` gav 200 kl. 21:01:54 UTC. Mottagaren är den sökande kandidaten. Inget dubbelutskick. Mottagning i inkorgen ej bekräftad                                                                                                          |
+| T6   | `employer_new_application`                 | #392 applicerad och registrerad, #393 mergad, funktionen driftsatt igen | **Godkänd i appen.** En notis i utkorgen till organisationens enda aktiva ägare, skickad kl. 20:59:32 UTC med svaret 200. Länken går till www-ansökan efter inloggning. Inget dubbelutskick. Mottagning i inkorgen ej bekräftad                                                                                                                |
+
+**T4–T6 i produktion, 2026-10-03 20:59–21:02 UTC:**
+
+Main `1b4a4080` var publicerad. CI-körningen för main var grön och www serverade den versionen. Testannonsen är den märkta "TEST – CQrityjob lanseringstest (ej riktig tjänst)" i testorganisationen. Före testet hade annonsen 0 ansökningar och utkorgen `recruitment_employer_notices` 0 rader.
+
+- **T4: ansökan.** Testkandidaten ansökte en gång via www kl. 20:59:30 UTC och dubbelklickade på "Skicka ansökan".
+  - Webbläsaren gjorde ett enda anrop till servern.
+  - Precis en rad skapades i `job_applications`, med status `submitted`.
+  - Bekräftelsen "Ansökan skickad" visades. Annonsen visar inte längre knappen "Ansök om jobbet". "Mina ansökningar" visar ansökan som "Inskickad", med CQrityjob-CV:t.
+  - Kvittot är en rad i `recruitment_messages` av typen `receipt`, med ett försök. Mottagaren är den sökandes egen adress. Funktionsloggen visar `application_receipt 200` kl. 20:59:31.7 UTC.
+  - Unikt index `job_applications_active_unique_idx` på (annons, sökande) gäller aktiva ansökningar. En andra insert direkt mot API:t provades inte.
+- **T6: notis till arbetsgivaren.**
+  - Utkorgen har en rad av typen `new_application`, med status `sent`. Den skapades 20:59:32.06, hämtades 20:59:32.19 och var avräknad 20:59:32.97 UTC, efter ett försök med svaret 200.
+  - Funktionsloggen visar `employer_new_application 200` kl. 20:59:32.7 UTC.
+  - Mottagaren är organisationens enda aktiva ägare och finns på ägarens lista över godkända adresser. Mottagarregeln ger ingen annan adress.
+  - Länken byggs som `https://www.cqrityjob.com/employer/<slug>/applications/<id>`. Utan inloggning går den till `/login?redirect=` med samma sökväg.
+  - **Omförsök mot samma händelse.** Testet kördes i en transaktion som rullades tillbaka. Att köa notisen igen gav 0 rader, att hämta den igen gav 0 och utkorgen hade kvar en rad. Unika index finns på (ansökan, mottagare, typ) och på `attempt_id`.
+- **T5: rekryteringsmeddelande.**
+  - Ägarkontot skickade från arbetsgivarportalen kl. 21:01:53 UTC ett meddelande av typen `information`, med ämnet "Test att göra: Säkerhetschef – Recruitment Assessment". Meddelandet gällde T4-ansökan.
+  - Utskicket gjordes i ett försök, med `email_status` `sent`. Funktionsloggen visar `recruitment_message 200` kl. 21:01:54.6 UTC.
+  - Mottagaren är den sökande. Det följer av `rec_claim_message_send`, som hämtar adressen från ansökans `applicant_user_id`.
+  - Avsändare och svarsadress följer av policyn i den driftsatta funktionen: `cqrityjob via CQrityjob <no-reply@cqrityjob.com>` och Reply-To `job@cqrityjob.com`. Provider-id lagras inte, så de är inte avlästa i själva mejlet.
+  - **Omförsök.** I en transaktion som rullades tillbaka gav `rec_claim_message_send` som avsändaren svaret `already_sent`, utan adress. Antalet försök var fortfarande 1.
+- **Inte bekräftat ännu.** Att mejlen faktiskt kom fram i inkorgarna väntar på ägarens bekräftelse. Det gäller kvittot och T5 hos testkandidaten samt notisen hos ägaren.
+- **Iakttagelse.** `recruitment_messages.email_recipient` var tomt på T5-raden men ifyllt på kvittot. Mottagaren för T5 går därför inte att läsa ut från raden i efterhand, bara via regeln ovan.
 
 **Kandidatflöden i produktion med testkontot, 2026-10-03 14:51–15:05 UTC:**
 
