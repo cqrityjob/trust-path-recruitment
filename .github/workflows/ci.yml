@@ -265,6 +265,14 @@ jobs:
       - name: Security Passport Network statistics database test
         run: bun run passport-network-stats:db
 
+      # A Passport decision names the version its decider saw
+      # (20270125090000): the reviewer workspace and the employer page send
+      # the loaded submitted_at, never decide without it, and reload the entry
+      # on SP_REVIEW_STALE with copy that says what happened. Planted controls
+      # run in negative-controls:all.
+      - name: Security Passport stale review check
+        run: bun run passport-review-stale:check
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and

@@ -69,6 +69,11 @@ export const DECISION_ERROR_CODES = [
   "issuer_required",
   /** The entry moved (withdrawn, superseded, revoked) while the review was open. */
   "entry_not_active",
+  /** The candidate changed the entry (answering a clarification) after this
+   *  page loaded it. `SP_REVIEW_STALE` (20270125090000): a decision is bound
+   *  to the version the decider saw, so the decider must reload and look at
+   *  what the entry now says. Never retry as-is. */
+  "review_stale",
   /** Anything else. Fail closed: temporary, retryable, unexplained. */
   "unknown",
 ] as const;
@@ -109,6 +114,7 @@ const RULES: readonly { readonly needle: string; readonly code: DecisionErrorCod
   { needle: "SP_CREDENTIAL_REQUIRES_ISSUER", code: "issuer_required" },
   { needle: "SP_LIFECYCLE_TRANSITION_NOT_ALLOWED", code: "entry_not_active" },
   { needle: "SP_TRUST_FIELD_IMMUTABLE", code: "entry_not_active" },
+  { needle: "SP_REVIEW_STALE", code: "review_stale" },
 ];
 
 /** Raw database or server message in, safe code out. Never throws. */

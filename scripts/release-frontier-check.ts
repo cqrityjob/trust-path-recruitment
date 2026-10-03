@@ -345,24 +345,22 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // reopen after exposure and no identity change that stays approved.
 // release-state.json and hosted-ledger.json carry the evidence.
 // Evidence: docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md.
-// 20270124090000_bcp_conduct_exposure_is_durable (follow-up to P1-J: once a
-// BESKT position has been readable by the others it is never reopened, whoever
-// joins later) is pending BY DESIGN until its PR merges and the official
-// integration applies it. Its name comes off this list in the change that
-// records its hosted evidence. Evidence to come:
-// docs/release/2026-10-03-beskt-exposure-is-durable.md.
-// 20270125090000_sp_decision_bound_to_reviewed_content (a Passport review
-// decision is bound to the content the reviewer saw) is pending BY DESIGN
-// until its PR merges and the official integration applies it. Its name comes
-// off this list in the change that records its hosted evidence. Evidence to
-// come: docs/release/2026-10-03-passport-decision-bound-to-reviewed-content.md.
+// 2026-10-03 ~06:54 UTC: #384 (merge 7ff0cbe) verified applied read-only:
+// 20270124090000_bcp_conduct_exposure_is_durable and
+// 20270125090000_sp_decision_bound_to_reviewed_content are in the ledger
+// (359 rows, digest 52e21ce44d6964ae72605bdf2b67817a; the first 357
+// unchanged), every deployed function body equals a local replay of main,
+// triggers, the answered_at column and grants are exactly as merged. No
+// production write probe was run; behaviour is proven by the suites, negative
+// controls and races on the identical bodies.
+// Evidence: docs/release/2026-10-03-beskt-exposure-and-passport-review-hosted-verification.md.
+// Pending by design (written, replayed on the full chain, recorded `pending` in
+// release-state.json, none applied hosted): the job-board launch-readiness
+// migrations (docs/release/2026-10-03-jobs-not-editable-in-place.md,
+// 2026-10-03-jobs-publish-window-and-url-scheme.md,
+// 2026-10-03-job-cvs-no-client-writes.md). Each name comes OFF this list in the
+// change that records its production evidence.
 const expectedPending: string[] = [
-  "20270124090000_bcp_conduct_exposure_is_durable.sql",
-  "20270125090000_sp_decision_bound_to_reviewed_content.sql",
-  // Job-board launch-readiness (docs/release/2026-10-03-jobs-*.md,
-  // 2026-10-03-job-cvs-no-client-writes.md): written, tested on the full replay and
-  // recorded `pending` in release-state.json; none is applied hosted. Each name
-  // comes OFF this list in the change that records its production evidence.
   "20270130090000_jobs_not_editable_in_place.sql",
   "20270131090000_jobs_publish_window_and_url_scheme.sql",
   "20270201090000_job_cvs_no_client_writes.sql",
