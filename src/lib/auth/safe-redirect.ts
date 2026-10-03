@@ -45,6 +45,7 @@ const ENCODED_LINE_BREAK = /%(25)*0[ad]/i;
  *  one slash, is not '//'") and is then navigated to as "//evil.test" -- an
  *  open redirect. NUL and the rest of C0 have no business in a path either,
  *  and a header writer or a log line is not a place to find out. */
+// eslint-disable-next-line no-control-regex -- control characters are exactly what must be refused
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 
 /** Any depth of percent-encoded C0 control or DEL: %00-%1f and %7f, with any
