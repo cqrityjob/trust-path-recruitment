@@ -2961,6 +2961,14 @@
       "hostedVersion": "20270206090000",
       "hostedName": "interview_access_expand",
       "evidenceSource": "Supabase connector READ ONLY on wrygicdfxwjnrugduxnt at 2026-10-03T21:11:18.678365+00:00 after official integration applied #404 (merge dae5c004b9d2d4c1adb74df5a1173d7679c410b7). Ledger 368 rows, all 367 prior identities unchanged, md5 c086806d9fb5f0c92609678f037b73ba. Public invoker RPC md5 3022f4137f432fe0a44f3fc8eca4b060; private definer helper md5 bebbd9f70ccc4b9078fe25235979d5f7; both match local replay, empty pinned search_path, authenticated EXECUTE true and anon false. Scenario SELECT/ALL require scp_can_author(auth.uid()); RLS enabled and no anon SELECT/client writes. Config legacy SELECT retained for expand with no anon read/client writes. All five shared catalogue SELECT policies unchanged. No production fixture writes or real candidate reads. Full metadata: docs/security/interview-access/evidence/expand-hosted.json; assessment: docs/security/interview-access/expand-hosted-verification.md."
+    },
+    {
+      "file": "20270207090000_interview_ai_config_contract.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270207090000_interview_ai_config_contract_rollback.sql",
+      "verify": "SELECT policyname,cmd,roles,qual,with_check FROM pg_policies WHERE schemaname='public' AND tablename IN ('scp_interview_ai_config','scp_scenario_versions') ORDER BY tablename,policyname; SELECT has_any_column_privilege('anon','public.scp_interview_ai_config','SELECT'),has_any_column_privilege('authenticated','public.scp_interview_ai_config','UPDATE'),has_any_column_privilege('authenticated','public.scp_interview_ai_config','INSERT'),has_table_privilege('authenticated','public.scp_interview_ai_config','DELETE'); -- all false; see docs/security/interview-access/verify-production.sql",
+      "note": "Final contract only after expand and app PR #405 publication/verification, coordinated by Claude. Admin-only full configuration, no client writes. Scoped runtime RPC remains usable; five shared sp_ catalogue policies untouched. Pending, never mark applied without hosted evidence."
     }
   ], 
   "policyVersion": 2, 
