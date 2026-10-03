@@ -45,7 +45,7 @@ export const Route = createFileRoute(
 function TrainingParticipantsRoute() {
   const { employerSlug } = Route.useParams();
   return (
-    <TrainingPage employerSlug={employerSlug}>
+    <TrainingPage employerSlug={employerSlug} requires="workforce">
       {(ws) => <Participants employerId={ws.employerId} employerSlug={ws.employerSlug} />}
     </TrainingPage>
   );

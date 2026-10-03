@@ -37,6 +37,7 @@ import { Building2, Check } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { requestAccessToEmployer } from "@/lib/job-intelligence/employer-onboarding.functions";
+import { accessRequestRefusalOf } from "@/lib/job-intelligence/access-request-errors";
 
 const searchSchema = z.object({
   org: z.string().uuid().optional().catch(undefined),
@@ -134,7 +135,9 @@ function JoinOrganisationPage() {
 
         {request.isError && (
           <p role="alert" className="mt-3 text-sm text-destructive">
-            {t("employer.join.error")}
+            {accessRequestRefusalOf(request.error) === "membershipBlocked"
+              ? t("employer.join.blocked")
+              : t("employer.join.error")}
           </p>
         )}
 

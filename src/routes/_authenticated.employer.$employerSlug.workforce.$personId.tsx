@@ -49,6 +49,7 @@ import {
   type EmployeeDevelopmentRow,
 } from "@/lib/security-competency/employee-development.functions";
 import { listEmployerEmployees } from "@/lib/job-intelligence/employer-workforce.functions";
+import { ReportAccessNotice, useReportAccess } from "@/components/employer/ReportAccess";
 import { formatDate } from "@/lib/job-intelligence/date-format";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/workforce/$personId")({
@@ -118,6 +119,14 @@ function PersonDetail({
   });
 
   const rows = (assessments.data ?? []) as PersonAssessmentRow[];
+
+  // An ordinary member of the organisation is not entitled to read assessments
+  // or development activity, and the database returns them nothing. Saying "no
+  // assessments" or "no development yet" would be a claim about this colleague
+  // that nobody has checked. Only a CONFIRMED answer from the database changes
+  // the page; until it is known (or if the migration is not applied) it is what
+  // it always was.
+  const noWorkforceAccess = useReportAccess(employerId).stateFor("workforce") === "none";
 
   // The evidence this organisation actually holds about this person, counted
   // from the section below rather than from a second read -- so the two can
@@ -248,7 +257,7 @@ function PersonDetail({
             Outside the profession branch on purpose: this is a fact about the
             PERSON, and it is equally true when no role is recorded against
             their employment. */}
-        {!competence.isLoading && !competence.isError && (
+        {!competence.isLoading && !competence.isError && !noWorkforceAccess && (
           <p className="mt-4 flex flex-wrap items-start gap-2 rounded-lg border border-border bg-[color:var(--surface-subtle)] p-3 text-sm text-foreground">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
             <span>
@@ -274,7 +283,11 @@ function PersonDetail({
           {t("employer.person.development.lede")}
         </p>
 
-        {development.isLoading ? (
+        {noWorkforceAccess ? (
+          <div className="mt-4">
+            <ReportAccessNotice need="workforce" />
+          </div>
+        ) : development.isLoading ? (
           <p className="mt-4 text-sm text-muted-foreground">{t("employer.loading")}</p>
         ) : development.isError ? (
           <p className="mt-4 text-sm text-destructive">
@@ -310,7 +323,11 @@ function PersonDetail({
           {t("employer.person.assessments.lede")}
         </p>
 
-        {assessments.isLoading ? (
+        {noWorkforceAccess ? (
+          <div className="mt-6">
+            <ReportAccessNotice need="workforce" />
+          </div>
+        ) : assessments.isLoading ? (
           <p className="mt-6 text-sm text-muted-foreground">{t("employer.loading")}</p>
         ) : assessments.isError ? (
           <p className="mt-6 text-sm text-destructive">
