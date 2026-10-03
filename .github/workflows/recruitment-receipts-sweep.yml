@@ -9,6 +9,12 @@
 # bounded, one sweep at a time); this workflow only knocks. It reads no
 # database, holds no mail key and generates nothing retroactively.
 #
+# The same call also sends the EMPLOYER's new-application e-mails that are due
+# (a retry of one that did not go the first time, or one the apply request had
+# no time for): same token, same schedule, no second scheduler. The summary
+# says so on a second line, and says NOT AVAILABLE when the database does not
+# have the notice migration yet.
+#
 # ── TO ACTIVATE ───────────────────────────────────────────────────────
 #
 #   1. In the app's server environment (Lovable): RECRUITMENT_SWEEP_TOKEN, a
