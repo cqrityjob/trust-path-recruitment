@@ -151,8 +151,10 @@ env.set("RESEND_API_KEY", RESEND_KEY);
   // The production failure of 2026-10-03: the app holds the project's
   // service key in a form the function's env does not (byte-unequal), and
   // every call was refused. The project itself now decides.
-  env.set("SUPABASE_URL", "https://project.example");
-  const appForm = "eyJhbGciOiJIUzI1NiJ9.service-role-legacy-form-of-the-key";
+  env.set("SUPABASE_URL", "https://guardproject.supabase.co");
+  const jwt = (claims: Record<string, unknown>) =>
+    `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.signature-part`;
+  const appForm = jwt({ iss: "supabase", ref: "guardproject", role: "service_role" });
   projectServiceKeys.add(appForm);
   const before = calls.length;
   const legacy = await post(
@@ -190,6 +192,42 @@ env.set("RESEND_API_KEY", RESEND_KEY);
     "a key the project refuses, or a bearer paired with someone else's apikey, is 401 and nothing is sent",
     userJwt.status === 401 && mixed.status === 401 && calls.length === sentBefore,
   );
+  // Never even asked about: keys that cannot be this project's service key.
+  const forged = jwt({ iss: "supabase", ref: "guardproject", role: "service_role", n: 2 });
+  const notService: [string, string][] = [
+    ["the anon key", jwt({ iss: "supabase", ref: "guardproject", role: "anon" })],
+    ["a user's session token", jwt({ sub: "u", role: "authenticated", aud: "authenticated" })],
+    ["the publishable key", "sb_publishable_guard_0123456789abcdef"],
+    [
+      "another project's service key",
+      jwt({ iss: "supabase", ref: "otherproject", role: "service_role" }),
+    ],
+    ["a malformed JWT", "eyJhbGciOiJIUzI1NiJ9.!!not-base64!!.signature-part"],
+    ["garbage", "not-a-key-but-long-enough-0123456789"],
+  ];
+  for (const [name, key] of notService) {
+    const asked = authChecks.length;
+    const sent = calls.length;
+    const res = await post(
+      { kind: "application_receipt", to: "a@example.test", ...message },
+      { authorization: `Bearer ${key}`, apikey: key },
+    );
+    ck(
+      `${name}: 401, nothing sent, and the project is not asked`,
+      res.status === 401 && calls.length === sent && authChecks.length === asked,
+    );
+  }
+  {
+    const asked = authChecks.length;
+    const res = await post(
+      { kind: "application_receipt", to: "a@example.test", ...message },
+      { authorization: `Bearer ${forged}`, apikey: forged },
+    );
+    ck(
+      "a service_role-shaped token the project does not confirm (forged signature) is asked about and refused",
+      res.status === 401 && authChecks.length === asked + 1,
+    );
+  }
   env.delete("SUPABASE_URL");
 }
 

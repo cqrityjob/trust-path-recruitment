@@ -147,9 +147,29 @@ async function keyDigest(key: string): Promise<string> {
   return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Only something shaped like this project's service key is worth asking
+ *  about: a new-format secret key, or a JWT whose payload claims the
+ *  service_role (and, where the token names one, this project). The anon
+ *  and publishable keys, a user's session token, another project's key and
+ *  garbage are refused here, without a network call. The signature is not
+ *  checked here; the project's answer is what checks it. */
+function couldBeServiceKey(key: string, base: string): boolean {
+  if (key.startsWith("sb_secret_")) return true;
+  const parts = key.split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload || payload.role !== "service_role") return false;
+    const ref = /^https:\/\/([a-z0-9]+)\.supabase\.co$/.exec(base)?.[1];
+    return !ref || payload.ref === undefined || payload.ref === ref;
+  } catch {
+    return false;
+  }
+}
+
 async function projectAcceptsServiceKey(key: string): Promise<boolean> {
   const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
-  if (!base || key.length < 20) return false;
+  if (!base || key.length < 20 || !couldBeServiceKey(key, base)) return false;
   const digest = await keyDigest(key);
   const until = verified.get(digest);
   if (until && until > Date.now()) return true;
