@@ -4,6 +4,9 @@ import { professions } from "@/lib/career-center";
 import { publishedProfessions } from "@/lib/career-center/publishability";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
+import { analysisIndexable } from "@/lib/career-discovery/analysis-access";
+import { CANONICAL_ASSESSMENT_PATH } from "@/lib/career-discovery/routes";
+import { getV31Availability } from "@/lib/career-discovery/v31-public.functions";
 import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
 
 const BASE_URL = PRODUCTION_ORIGIN;
@@ -36,13 +39,37 @@ export const Route = createFileRoute("/sitemap.xml")({
           jobRows = [];
         }
 
+        // The career analysis is listed ONLY while the release control says
+        // `public` — the same answer that decides the route's own robots rule
+        // (src/routes/security-career-assessment.tsx), read per request. Any
+        // failure, a timeout included, leaves it out: a sitemap never invites
+        // a crawler to a page that is noindex or closed.
+        let analysisListed = false;
+        {
+          let timer: ReturnType<typeof setTimeout> | undefined;
+          try {
+            const answer = await Promise.race([
+              getV31Availability(),
+              new Promise<never>((_, reject) => {
+                timer = setTimeout(() => reject(new Error("timeout")), 2_000);
+              }),
+            ]);
+            analysisListed = analysisIndexable(answer);
+          } catch {
+            analysisListed = false;
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
+        }
+
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
           { path: "/assessment", changefreq: "monthly", priority: "0.9" },
           // A sitemap invites a crawler to index. It lists only pages that may
-          // be indexed: NOT /security-career-assessment (noindex) and NOT
-          // /career-center/start (a redirect to /career-center). The guard is
-          // scripts/site-origin-check.ts, which reads each route.
+          // be indexed: /security-career-assessment only while it is public
+          // (below), and NOT /career-center/start (a redirect to
+          // /career-center). The guard is scripts/site-origin-check.ts, which
+          // reads each route.
           { path: "/career-center", changefreq: "weekly", priority: "0.9" },
           { path: "/jobs", changefreq: "daily", priority: "0.9" },
           { path: "/employers", changefreq: "monthly", priority: "0.8" },
@@ -52,6 +79,10 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/plattformen", changefreq: "monthly", priority: "0.7" },
           { path: "/about", changefreq: "monthly", priority: "0.6" },
           { path: "/contact", changefreq: "yearly", priority: "0.4" },
+          // The career analysis follows the release control (see above).
+          ...(analysisListed
+            ? [{ path: CANONICAL_ASSESSMENT_PATH, changefreq: "monthly" as const, priority: "0.8" }]
+            : []),
           // Published guides only: an unpublished profession either redirects
           // to its catalogue page or renders a noindex "not published yet" page.
           ...publishedProfessions.map((p) => ({
@@ -107,7 +138,9 @@ export const Route = createFileRoute("/sitemap.xml")({
         return new Response(xml, {
           headers: {
             "Content-Type": "application/xml",
-            "Cache-Control": "public, max-age=3600",
+            // Ten minutes, not an hour: the analysis's membership follows the
+            // release control, and a pause should leave the list promptly.
+            "Cache-Control": "public, max-age=600",
           },
         });
       },
