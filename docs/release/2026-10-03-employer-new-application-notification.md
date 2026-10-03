@@ -211,6 +211,23 @@ candidate sees nothing: the apply result never mentions the employer mail.
 
 ## 7. Release order, rollback, verification
 
+### Two releases: the repository's schema-first contract
+
+`bun run schema-first-release:check` refuses application code that calls a
+database object whose migration is not recorded `applied` in
+`supabase/release-state.json`. **On this branch it therefore fails, by design**:
+the application calls the new functions. It passes on the schema-only subset,
+which is the first release:
+
+| Release | Files | Merge when |
+|---|---|---|
+| 1. **Schema** | `supabase/migrations/20270205090000_*`, its rollback, its SQL suite, `scripts/db-test.sh`, `supabase/release-state.json`, `scripts/release-frontier-check.ts` (every one of them a schema-safe path) | now: it adds a table and functions nothing calls |
+| 2. **Application** | the sender, `employer-notice.server.ts`, `applications.functions.ts`, the sweep route and script, the edge function line, the guards, the release note | after release 1 is applied hosted, verified, and `hostedState` is `applied` **with evidence** (and the migration is off `expectedPending` in `release-frontier-check.ts`) |
+
+Checked by cherry-picking the schema commits onto the merge base in a throwaway
+detached head: `schema-first-release:check` and `release-parity:check` both pass
+there, and the files are byte-identical to this branch's.
+
 ### Order: migration, then edge function, then application
 
 1. **Apply `20270205090000_employer_new_application_notices.sql` hosted**
