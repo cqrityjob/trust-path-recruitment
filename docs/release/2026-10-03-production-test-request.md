@@ -72,6 +72,41 @@ Leverantörens "accepterad" räknas inte som mottagning: varje mejl kontrolleras
 (avsändare, Reply-To, språk, länkens värd, att länken öppnas). Spara rubrikerna (From, Reply-To,
 Message-ID) och ett skärmklipp per mejl.
 
+### Mottagarregeln och ett enda utskickstillfälle (ersätter tabellen ovan när ägaren bekräftat den)
+
+Ägaren har enligt Claude-sessionen som äger Passport, juridik, kontaktadresser och Auth meddelat
+att testmejl för slutproven bara får gå till **en** godkänd testmottagare, att ingen kund eller
+annan får något mejl, och att ägarens medarbetare bevakar brevlådan. Det är en vidarebefordrad
+uppgift: **ägaren ska själv namnge adressen i godkännandet A6** (adressen skrivs inte in i
+repot). Tills dess gäller att inget mejl skickas.
+
+Då gäller:
+
+- Varje konto som provet skapar och som får ett mejl använder den godkända adressen (en adress
+  kan bara höra till ett Auth-konto; kör därför kedjan med **ett** testkonto per roll i tur och
+  ordning, och radera eller anonymisera det mellan rollerna enligt avsnitt 6, eller låt
+  ägaren ange fler adresser som uttryckligen godkänns). Plus-adressering används bara om
+  ägaren uttryckligen godkänner den.
+- Inga inbjudningar (`assessment_invitation`, `academy_invitation`) och inga
+  `employer_registration_*`-mejl skickas, om inte ett provsteg kräver det, och då bara till den
+  godkända adressen.
+- **En utförare, en körning, varje utskick exakt en gång.** Utföraren är ägarens medarbetare eller
+  en session med produktionsåtkomst, inte den session som skrev detta (den når inte
+  `supabase.co` eller www från sin sandlåda och har inte fått produktionsgodkännande).
+  Verifieringen efteråt görs skrivskyddat av Claude-sessionen som äger Auth och maillogg:
+  `function_logs` per sändning (kind och status), Auth-loggens `mail_from`/status och att ingen
+  annan mottagare använts (bara antal, inga adresser). Utföraren anger **UTC-fönstret** för
+  körningen när den är klar.
+
+| Steg | Utskick | Förutsättning |
+|---|---|---|
+| T1 | Auth: bekräftelse vid registrering (godkänd adress) | Auth-konfiguration A3; beror inte på #386 |
+| T2 | Auth: lösenordsåterställning, en gång, samma konto | som T1; Supabases frekvensgräns (429 sågs 2026-09-30): vänta och försök inte om i ett svep |
+| T3 | `/contact`: förfrågan till `info@` med Reply-To = godkänd adress, samt kvittensen till den godkända adressen | #386 mergad och `transactional-email` omdistribuerad |
+| T4 | Ansökningskvitto: testkandidaten ansöker en gång på ett testjobb | som T3 |
+| T5 | Rekryteringsmeddelande: en arbetsgivare till testkandidaten (avsändarnamn "<Arbetsgivare> via CQrityjob", knappen "Läs i CQrityjob", sidfoten om `job@`) | som T3 |
+| T6 | `employer_new_application`: testföretagets notifierade ägare/administratör **är** den godkända adressen, så ingen riktig arbetsgivare får mejlet; tryck inte två gånger, kontrollera att ett andra försök inte ger dubblett | notisgrenen mergad, `20270205090000` applicerad, funktionen omdistribuerad |
+
 ## 2. Direktlänkar och omladdning (utloggad, sv och en, dator och 375 px)
 
 För varje adress: öppna direkt i ett nytt fönster, ladda om (F5), kontrollera 200, att sidan
