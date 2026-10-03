@@ -89,6 +89,11 @@ INSERT INTO public.employer_memberships (user_id, employer_id, role, status) VAL
   ('8a000000-0000-4000-8000-0000000000a2','8b000000-0000-4000-8000-0000000000a1','member','active'),
   ('8a000000-0000-4000-8000-0000000000b1','8b000000-0000-4000-8000-0000000000b1','owner','active')
 ON CONFLICT DO NOTHING;
+-- A's member previews the report: their BASIS is a recruitment reviewer grant (membership alone gives
+-- none since 20270203090000/20270204090000). Finalising stays the owner's and admin's.
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+VALUES ('8b000000-0000-4000-8000-0000000000a1', '8a000000-0000-4000-8000-0000000000a2', ARRAY['recruitment']::text[],
+        '8a000000-0000-4000-8000-0000000000a1');
 
 ALTER TABLE public.jobs DISABLE TRIGGER USER;
 INSERT INTO public.jobs (id, employer_id, slug, short_id, title_sv, title_en, status,

@@ -39,7 +39,10 @@ const REQUIRED_CAPTURES: readonly (readonly [string, string])[] = [
   ["05-sv-1440-immutable-final-v1", "sv · 1440 · the immutable report, version 1"],
   ["06-sv-1440-two-versions", "sv · 1440 · a correction made version 2"],
   ["07-sv-1440-historical-version-opened", "sv · 1440 · version 1 still readable"],
-  ["08-sv-1440-member-not-offered-finalisation", "sv · 1440 · a member may read, not finalise"],
+  [
+    "08-sv-1440-member-not-offered-finalisation",
+    "sv · 1440 · an authorised reviewer may read, not finalise",
+  ],
   ["09-sv-1440-candidate-denied", "sv · 1440 · the candidate is denied"],
   ["10-en-375-preview-first", "en · 375 · before a preview"],
   ["11-en-375-exact-preview", "en · 375 · the exact preview"],
