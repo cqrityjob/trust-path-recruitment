@@ -1449,11 +1449,16 @@ export const dictionaries = {
     "careerDiscovery.history.lead": "Dina sparade rapporter, senaste först. Bara du kan se dem.",
     "careerDiscovery.history.loading": "Hämtar…",
     "careerDiscovery.history.empty": "Du har inga rapporter ännu.",
+    // A failed read is not an empty history, and must never read like one.
+    "careerDiscovery.history.error":
+      "Vi kunde inte hämta dina rapporter just nu. Det betyder inte att de saknas – försök igen.",
+    "careerDiscovery.history.retry": "Försök igen",
     "careerDiscovery.history.startCta": "Gör din Discovery",
     "careerDiscovery.history.report": "Discovery-rapport",
     "careerDiscovery.history.type.discovery": "Security Career Discovery",
     "careerDiscovery.history.type.legacy": "Karriärtest (tidigare version)",
-    "careerDiscovery.history.internalTest": "Intern testversion",
+    "careerDiscovery.history.internalTest":
+      "Testversion – innehållet är ännu inte granskat av sakkunniga",
     "careerDiscovery.history.open": "Öppna rapport",
     "careerDiscovery.dashboard.directionTitle": "Din karriärriktning",
     "careerDiscovery.dashboard.dnaTitle": "Ditt Security Career DNA",
@@ -1751,6 +1756,11 @@ export const dictionaries = {
     "sca.scp.saving": "Sparar…",
     "sca.scp.savedNote": "Sparat.",
     "sca.scp.errorNote": "Kunde inte spara just nu. Försök igen.",
+    // The READ failed. This is not "nothing filled in": offering to fill it in
+    // over a profile that exists but could not be read would invite an overwrite.
+    "sca.scp.loadFailed":
+      "Vi kunde inte hämta din profil just nu. Det betyder inte att den är tom – försök igen.",
+    "sca.scp.retry": "Försök igen",
     // The dashboard card is a summary; the editor opens from it.
     "sca.scp.summary.status": "Nuläge",
     "sca.scp.summary.profession": "Nuvarande yrke",
@@ -10129,11 +10139,16 @@ export const dictionaries = {
     "careerDiscovery.history.lead": "Your saved reports, newest first. Only you can see them.",
     "careerDiscovery.history.loading": "Loading…",
     "careerDiscovery.history.empty": "You do not have any reports yet.",
+    // A failed read is not an empty history, and must never read like one.
+    "careerDiscovery.history.error":
+      "We could not load your reports right now. That does not mean they are gone – please try again.",
+    "careerDiscovery.history.retry": "Try again",
     "careerDiscovery.history.startCta": "Take your Discovery",
     "careerDiscovery.history.report": "Discovery report",
     "careerDiscovery.history.type.discovery": "Security Career Discovery",
     "careerDiscovery.history.type.legacy": "Career assessment (earlier version)",
-    "careerDiscovery.history.internalTest": "Internal test version",
+    "careerDiscovery.history.internalTest":
+      "Test version – content not yet reviewed by specialists",
     "careerDiscovery.history.open": "Open report",
     "careerDiscovery.dashboard.directionTitle": "Your career direction",
     "careerDiscovery.dashboard.dnaTitle": "Your Security Career DNA",
@@ -10383,6 +10398,11 @@ export const dictionaries = {
     "sca.scp.saving": "Saving…",
     "sca.scp.savedNote": "Saved.",
     "sca.scp.errorNote": "Couldn't save right now. Please try again.",
+    // The READ failed. This is not "nothing filled in": offering to fill it in
+    // over a profile that exists but could not be read would invite an overwrite.
+    "sca.scp.loadFailed":
+      "We could not load your profile right now. That does not mean it is empty – please try again.",
+    "sca.scp.retry": "Try again",
     "sca.scp.summary.status": "Current situation",
     "sca.scp.summary.profession": "Current profession",
     "sca.scp.summary.experience": "Experience",

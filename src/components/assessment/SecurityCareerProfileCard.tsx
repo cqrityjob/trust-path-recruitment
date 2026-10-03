@@ -91,6 +91,11 @@ export function SecurityCareerProfileCard({
   );
   const [open, setOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // The read did not answer. Kept apart from `loaded` and from an empty draft:
+  // "we could not read it" and "there is nothing in it" lead to different
+  // screens, and only the second may offer to fill the profile in.
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [professions, setProfessions] = useState<CurrentProfessionOption[]>([]);
   const [editIntent] = useState(readEditIntent);
@@ -101,8 +106,10 @@ export function SecurityCareerProfileCard({
   const queryClient = useQueryClient();
 
   useEffect(() => {
+    let alive = true;
     getProfile()
       .then((existing) => {
+        if (!alive) return;
         if (existing) {
           setDraft({
             currentStatus: existing.currentStatus,
@@ -113,11 +120,21 @@ export function SecurityCareerProfileCard({
         }
       })
       .catch((err) => {
+        // This used to be logged and then fall through to the same screen as
+        // an empty profile -- "not filled in", with a button inviting the
+        // person to fill it in, which on a profile that exists is an
+        // invitation to overwrite it. Now it is a state of its own.
         console.error("[SecurityCareerProfile] failed to load existing profile", err);
+        if (alive) setLoadFailed(true);
       })
-      .finally(() => setLoaded(true));
+      .finally(() => {
+        if (alive) setLoaded(true);
+      });
+    return () => {
+      alive = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     if (!draft.currentProfessionSlug || professions.length > 0) return;
@@ -138,7 +155,9 @@ export function SecurityCareerProfileCard({
   // only after the holder's saved profile has loaded. A normal /my-career visit
   // remains unchanged.
   useEffect(() => {
-    if (!loaded || !editIntent || autoOpened.current) return;
+    // Never on a failed read: the draft is the empty one, and opening the
+    // editor on it is exactly the overwrite the failed state exists to prevent.
+    if (!loaded || loadFailed || !editIntent || autoOpened.current) return;
     autoOpened.current = true;
     setEditDraft(draft);
     setStatus("idle");
@@ -146,7 +165,7 @@ export function SecurityCareerProfileCard({
     requestAnimationFrame(() => {
       document.getElementById("career-profile")?.scrollIntoView({ block: "start" });
     });
-  }, [draft, loaded, editIntent]);
+  }, [draft, loaded, loadFailed, editIntent]);
 
   // Once the dialog has mounted, put keyboard focus on the profession picker
   // when it exists. If current status does not expose profession yet, the
@@ -206,6 +225,33 @@ export function SecurityCareerProfileCard({
     return <p className="text-sm text-muted-foreground">{t("sca.scp.loading")}</p>;
   }
 
+  // A read that failed is shown as that, with a way to try again -- and with
+  // NO way to fill the profile in, because the empty summary below would be a
+  // claim about a profile this page could not read.
+  //
+  // Rendered INSIDE the card's one #career-profile wrapper below rather than
+  // as an early return of its own: that id is a deep-link target
+  // (profile-section-navigation:check requires it exactly once), and a second
+  // copy would also leave the anchor dead on a failed read.
+  const loadFailedView = loadFailed ? (
+    <div data-profile-load-failed>
+      <p role="alert" className="text-sm text-muted-foreground">
+        {t("sca.scp.loadFailed")}
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          setLoadFailed(false);
+          setLoaded(false);
+          setLoadAttempt((n) => n + 1);
+        }}
+        className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        {t("sca.scp.retry")}
+      </button>
+    </div>
+  ) : null;
+
   const statusLabel = draft.currentStatus
     ? pickText(currentStatusOptions.find((o) => o.id === draft.currentStatus)!.label, lang)
     : null;
@@ -234,88 +280,96 @@ export function SecurityCareerProfileCard({
 
   return (
     <div id="career-profile" className="scroll-mt-28">
-      {rows.length > 0 ? (
-        <dl className="space-y-3">
-          {rows.map((r) => (
-            <div key={r.label}>
-              <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                {r.label}
-              </dt>
-              <dd className="mt-0.5 text-sm font-medium text-balance text-foreground">{r.value}</dd>
+      {loadFailedView ?? (
+        <>
+          {rows.length > 0 ? (
+            <dl className="space-y-3">
+              {rows.map((r) => (
+                <div key={r.label}>
+                  <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    {r.label}
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-medium text-balance text-foreground">
+                    {r.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("sca.scp.summary.empty")}</p>
+          )}
+
+          {returnToPassport && status === "saved" ? (
+            <div className="mt-4 rounded-md border border-border bg-secondary/40 p-3">
+              <p role="status" className="text-sm text-foreground">
+                {lang === "sv"
+                  ? "Ditt yrke är sparat i din profil."
+                  : "Your profession is saved in your profile."}
+              </p>
+              <a
+                id="scp-return-passport"
+                href="/passport/information"
+                className="mt-3 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {lang === "sv" ? "Tillbaka till Security Passport" : "Back to Security Passport"}
+              </a>
             </div>
-          ))}
-        </dl>
-      ) : (
-        <p className="text-sm text-muted-foreground">{t("sca.scp.summary.empty")}</p>
-      )}
+          ) : null}
 
-      {returnToPassport && status === "saved" ? (
-        <div className="mt-4 rounded-md border border-border bg-secondary/40 p-3">
-          <p role="status" className="text-sm text-foreground">
-            {lang === "sv"
-              ? "Ditt yrke är sparat i din profil."
-              : "Your profession is saved in your profile."}
-          </p>
-          <a
-            id="scp-return-passport"
-            href="/passport/information"
-            className="mt-3 inline-flex h-10 items-center rounded-md border border-input px-3.5 text-sm font-medium text-foreground no-underline transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          <button
+            type="button"
+            onClick={openEditor}
+            className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            {lang === "sv" ? "Tillbaka till Security Passport" : "Back to Security Passport"}
-          </a>
-        </div>
-      ) : null}
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+            {rows.length > 0
+              ? (editLabel ?? t("sca.scp.summary.edit"))
+              : t("sca.scp.summary.fillIn")}
+          </button>
 
-      <button
-        type="button"
-        onClick={openEditor}
-        className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-md border border-input px-3.5 text-sm font-medium text-foreground transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-        {rows.length > 0 ? (editLabel ?? t("sca.scp.summary.edit")) : t("sca.scp.summary.fillIn")}
-      </button>
+          <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
+            {t("sca.scp.notPassport")}
+          </p>
 
-      <p className="mt-4 border-t border-border pt-3 text-xs leading-relaxed text-muted-foreground">
-        {t("sca.scp.notPassport")}
-      </p>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-y-hidden">
+              <DialogHeader className="shrink-0">
+                <DialogTitle>{t("sca.scp.summary.dialogTitle")}</DialogTitle>
+                <DialogDescription>{t("sca.scp.notPassport")}</DialogDescription>
+              </DialogHeader>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-y-hidden">
-          <DialogHeader className="shrink-0">
-            <DialogTitle>{t("sca.scp.summary.dialogTitle")}</DialogTitle>
-            <DialogDescription>{t("sca.scp.notPassport")}</DialogDescription>
-          </DialogHeader>
+              <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
+                <SecurityCareerProfileForm
+                  value={editDraft}
+                  onChange={setEditDraft}
+                  statesBoundary={false}
+                />
+              </div>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-1">
-            <SecurityCareerProfileForm
-              value={editDraft}
-              onChange={setEditDraft}
-              statesBoundary={false}
-            />
-          </div>
-
-          <DialogFooter className="mt-4 shrink-0 flex-row items-center gap-3 border-t border-border pt-4 sm:justify-end">
-            {status === "error" && (
-              <span className="mr-auto text-sm text-destructive">{t("sca.scp.errorNote")}</span>
-            )}
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="inline-flex h-10 items-center justify-center rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-accent"
-            >
-              {t("sca.scp.summary.cancel")}
-            </button>
-            <button
-              type="button"
-              onClick={save}
-              disabled={status === "saving"}
-              className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {status === "saving" ? t("sca.scp.saving") : t("sca.scp.save")}
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <DialogFooter className="mt-4 shrink-0 flex-row items-center gap-3 border-t border-border pt-4 sm:justify-end">
+                {status === "error" && (
+                  <span className="mr-auto text-sm text-destructive">{t("sca.scp.errorNote")}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex h-10 items-center justify-center rounded-md border border-input px-4 text-sm font-medium text-foreground hover:bg-accent"
+                >
+                  {t("sca.scp.summary.cancel")}
+                </button>
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={status === "saving"}
+                  className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {status === "saving" ? t("sca.scp.saving") : t("sca.scp.save")}
+                </button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }
