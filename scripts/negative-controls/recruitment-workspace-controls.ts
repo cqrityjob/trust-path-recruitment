@@ -632,6 +632,37 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "server's credentials",
   },
   {
+    id: "RW-RECEIPT-ORDER-ANCHOR-RENAMED",
+    defect:
+      "the branch that turns a failed submission into an error is rewritten, so the receipt-after-commit ordering assertion would have compared against a missing anchor and passed for any position",
+    file: SUBMIT,
+    find: "      if (insertErr && !committed) {",
+    replace: "      if (insertErr && !committed && true) {",
+    guard: G,
+    expect: "the e-mail goes after the submission succeeded",
+  },
+  {
+    id: "RW-RECEIPT-DISPATCHED-BEFORE-THE-ERROR-BRANCH",
+    defect:
+      "the receipt is dispatched before the branch that turns a failed submission into an error, so a refused application could still send its receipt (the wrong order the old assertion could not see)",
+    file: SUBMIT,
+    find: "      if (insertErr && !committed) {",
+    replace:
+      "      void dispatchApplicationReceipt(result.id);\n      if (insertErr && !committed) {",
+    guard: G,
+    expect: "the e-mail goes after the submission succeeded",
+  },
+  {
+    id: "RW-RECEIPT-DISPATCH-REMOVED",
+    defect:
+      "the submission no longer dispatches the receipt at all, so there is nothing to order after the commit",
+    file: SUBMIT,
+    find: "      await dispatchApplicationReceipt(result.id);\n",
+    replace: "      void 0;\n",
+    guard: G,
+    expect: "the e-mail goes after the submission succeeded",
+  },
+  {
     id: "RW-CASE-LOADS-WHOLE-LIST",
     defect: "the case page fetches every candidate and pages in the browser",
     file: HUB,

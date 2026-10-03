@@ -97,8 +97,19 @@ ok(
   "aiAvailable must be the governed flag, never OR'd with true",
 );
 ok(
-  /aiAvailable:\s*Boolean\(configRes\.data\?\.ai_enabled\)\s*,/.test(runtimeFns),
-  "aiAvailable must read scp_interview_ai_config.ai_enabled directly",
+  /aiAvailable:\s*capabilities\.ai_enabled\s*,/.test(runtimeFns) &&
+    runtimeFns.includes("readInterviewCaseCapabilities(db, caseId)"),
+  "aiAvailable must use the governed flag from this case's capability reader",
+);
+
+// The read path changed to close raw administrative metadata access. Keep the
+// UI flag contract and forbid restoring the old direct-table fallback.
+const capabilityReader = codeOnly(read("src/lib/interview-intelligence/case-capabilities.ts"));
+ok(
+  capabilityReader.includes('db.rpc("scp_iv_case_capabilities", { _case_id: caseId })') &&
+    /ai_enabled:\s*data\.ai_enabled\s*,/.test(capabilityReader) &&
+    !/\.from\(["']scp_interview_ai_config/.test(runtimeFns + capabilityReader),
+  "AI availability must remain case-scoped, preserve false, and have no raw config fallback",
 );
 
 // The screen that offers the AI control must gate it on that flag.

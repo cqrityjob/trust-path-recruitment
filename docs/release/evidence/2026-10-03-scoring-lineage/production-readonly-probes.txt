@@ -1,0 +1,86 @@
+# scp_scoring_version_lineage: read-only probes on owner production (project wrygicdfxwjnrugduxnt)
+# Taken 2026-10-03 between ~20:45 and ~20:51 UTC through the Supabase management connector (read-only use).
+# Nothing was written. The two role probes ran inside BEGIN ... ROLLBACK as a synthetic user id that
+# belongs to no person, membership or role. No candidate record was read; the only row involved is one
+# scoring-version metadata row (no weights, no hash). Results are copied as returned.
+
+## 1. Object, owner, options, definition
+
+SELECT c.relkind, pg_get_userbyid(c.relowner), c.reloptions, pg_get_viewdef(c.oid, true)
+  FROM pg_class c WHERE c.oid = 'public.scp_scoring_version_lineage'::regclass;
+
+relkind  = v
+owner    = postgres
+reloptions = {security_invoker=false, security_barrier=true}
+viewdef  =  SELECT id, slug, version_number, content_status, validation_status, published_at,
+             retired_at, core_summary_is_indicative, norm_comparison_permitted
+            FROM scp_scoring_versions sv;          -- no WHERE clause: every row of the base table
+md5(pg_get_viewdef(..., true)) = 091c83623382868635a1edfbeb2197c0
+  (the same md5 and the same reloptions come out of a strict local replay of main 1b4a4080)
+
+The view's COMMENT (read as returned) states: nine metadata columns, "Deliberately omits sjt_weight,
+biq_weight and content_hash", "DELIBERATELY security_invoker = false", "Do NOT flip this to security_invoker
+in response to a generic 'security definer view' linter warning", see migration 20260801100000.
+
+## 2. Columns (exactly nine)
+
+id uuid, slug text, version_number integer, content_status text, validation_status text,
+published_at timestamptz, retired_at timestamptz, core_summary_is_indicative boolean,
+norm_comparison_permitted boolean.
+No scoring weight, no content hash, no tenant or person column.
+
+## 3. Effective privileges on the view (has_table_privilege)
+
+role           SELECT INSERT UPDATE DELETE TRUNCATE REFERENCES TRIGGER
+anon           false  false  false  false  false    false      false
+authenticated  true   false  false  false  false    false      false
+service_role   true   false  false  false  true     true       true
+
+Observation: service_role holds TRUNCATE, REFERENCES and TRIGGER on the view in addition to the SELECT
+documented in supabase-production-hardening.md section 3. It holds no INSERT, UPDATE or DELETE, and
+service_role is not reachable from a browser. Recorded as observed; not changed here.
+
+## 4. Rows reachable
+
+SELECT content_status, validation_status, count(*) FROM public.scp_scoring_version_lineage GROUP BY 1,2;
+  draft | design | 1
+SELECT content_status, validation_status, count(*) FROM public.scp_scoring_versions GROUP BY 1,2;
+  draft | design | 1
+
+## 5. Role probe, authenticated, synthetic uid (BEGIN; SET LOCAL ROLE authenticated; ...; ROLLBACK)
+
+SELECT (SELECT count(*) FROM public.scp_scoring_version_lineage),
+       (SELECT count(*) FROM public.scp_scoring_version_lineage WHERE content_status = 'draft'),
+       (SELECT count(*) FROM public.scp_scoring_versions);
+  view_rows = 1, view_draft_rows = 1, base_rows = 0
+
+=> A signed-in user with no role and no membership reads the draft metadata row through the view and
+   zero rows from the base table.
+
+## 6. Role probe, anon (BEGIN; SET LOCAL ROLE anon; SELECT count(*) FROM public.scp_scoring_version_lineage; ROLLBACK)
+
+ERROR: 42501: permission denied for view scp_scoring_version_lineage
+
+## 7. Underlying table
+
+scp_scoring_versions: relrowsecurity = true, relforcerowsecurity = false, one policy:
+  scp_scoring_versions_author_write, cmd ALL, roles {authenticated}, qual scp_can_author(auth.uid())
+authenticated has table-level SELECT on the base table; the policy limits what it returns to authoring roles.
+anon has no SELECT.
+
+## 8. Dependants and consumers
+
+Functions in schema public whose body mentions scp_scoring_version_lineage: none (0 rows).
+Views or materialised views that depend on it: none (0 rows).
+Application source: grep over src/ finds only the generated src/integrations/supabase/types.ts (the view's
+type entry and one relationship reference); no query, no server function and no component reads it.
+=> Which report, if any, reads the view at runtime was NOT verified.
+
+## 9. Security advisors (get_advisors, type security), number of lint entries by name
+(each entry lists several objects; only security_definer_view concerns this view)
+
+security_definer_view                              ERROR  1   (this view; unchanged)
+anon_security_definer_function_executable          WARN   1
+authenticated_security_definer_function_executable WARN   1
+extension_in_public                                WARN   1
+rls_enabled_no_policy                              INFO   1

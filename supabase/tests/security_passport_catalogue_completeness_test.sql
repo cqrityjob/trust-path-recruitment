@@ -59,7 +59,7 @@ CREATE TEMP TABLE seen(code text PRIMARY KEY, principal text, claim_id uuid);
 GRANT SELECT,INSERT ON seen TO authenticated;
 
 SELECT pg_temp.ok((SELECT count(*)=70 FROM expected),'the pinned expectation is 70 definitions: 14 international, 8 Sweden, 4 India, 13 GB, 1 NI, 30 Dubai');
--- 20270207090000 (the certification research import) ADDED 140 definitions, all
+-- 20270213090000 (the certification research import) ADDED 140 definitions, all
 -- inactive: they are accounted for here by name of their record, never folded
 -- into the 70 that are selectable. Their own suite pins them one by one.
 CREATE TEMP TABLE research_added AS

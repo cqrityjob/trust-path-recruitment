@@ -320,6 +320,17 @@ export const submitJobApplication = createServerFn({ method: "POST" })
             .select("id")
             .eq("application_id", prior.id)
             .limit(1);
+          // The first request may have died after the commit and before it
+          // queued the employer's notice. Queue it now if so: set-once in the
+          // database, so a notice that exists is never queued a second time,
+          // and nothing is SENT from here -- the sweep does that. Bounded,
+          // never throws, and nothing of it reaches the answer below.
+          const { notifyEmployerOfNewApplication } =
+            await import("@/lib/recruitment/employer-notice.server");
+          await notifyEmployerOfNewApplication(prior.id as string, {
+            dispatch: false,
+            budgetMs: 1000,
+          });
           return {
             id: prior.id as string,
             status: prior.status as ApplicationStatus,
@@ -523,6 +534,21 @@ export const submitJobApplication = createServerFn({ method: "POST" })
       // in_progress by itself.
       const { dispatchApplicationReceipt } = await import("@/lib/recruitment/receipt.server");
       await dispatchApplicationReceipt(result.id);
+
+      // ── THE EMPLOYER IS TOLD TOO, WITHOUT THIS REQUEST PAYING FOR IT ────
+      //
+      // An e-mail to the people who may act on the application (the
+      // responsible recruiter, else the organisation's owners and admins --
+      // chosen by the database, never by anything in this request). The
+      // application id is the only thing handed over. Queued once (a replay,
+      // `result.replayed`, queues no second set), then ONE attempt inside a
+      // hard three-second budget; whatever does not finish stays in the
+      // outbox for the sweep. A migration that is not applied yet is a logged
+      // no-op, and nothing here can fail the application or reach the
+      // candidate's answer: the candidate is never told about this mail.
+      const { notifyEmployerOfNewApplication } =
+        await import("@/lib/recruitment/employer-notice.server");
+      await notifyEmployerOfNewApplication(result.id, { dispatch: result.replayed !== true });
 
       return {
         id: result.id,

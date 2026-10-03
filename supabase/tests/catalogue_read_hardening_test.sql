@@ -16,7 +16,7 @@
 --        scp_form_blocks or scp_interview_guide_prompts -- not even a content
 --        author -- and real statements are refused; SELECT is kept. (The
 --        service role is not touched by the migration and not asserted here.)
---   CH5  nothing else moved: author-write policies and the 41 remaining
+--   CH5  nothing else moved: author-write policies and the 40 remaining
 --        USING (true) catalogue reads are as before.
 --   CH6  negative controls: each pre-hardening state is planted back inside a
 --        savepoint and the SAME probes must observe the leak, so a probe that
@@ -288,8 +288,8 @@ DO $$ BEGIN RAISE NOTICE 'GROUP CH5 — nothing else moved'; END $$;
 -- =========================================================================
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND cmd = 'SELECT'
-     AND qual = 'true' AND ('anon' = ANY(roles) OR 'authenticated' = ANY(roles))) = 41,
-  'CH5.1 exactly 41 USING (true) catalogue reads remain (45 minus the four hardened)');
+     AND qual = 'true' AND ('anon' = ANY(roles) OR 'authenticated' = ANY(roles))) = 40,
+  'CH5.1 exactly 40 USING (true) catalogue reads remain (45 minus four catalogue reads and the raw scenario bank)');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_policies WHERE schemaname = 'public'
      AND policyname IN ('scp_behaviour_versions_author_write', 'scp_role_versions_author_write',

@@ -9,6 +9,7 @@
 // The AI work happens SERVER-SIDE, in `runAiTask`. No browser ever reaches a
 // provider, and no key is ever shipped to one.
 
+import { readInterviewCaseCapabilities } from "./case-capabilities";
 import { createServerFn } from "@tanstack/react-start";
 import { parseReportPayload, type FinalReportReadback, type ReportPreview } from "./final-report";
 import { caseIsInStage, type CaseStage } from "./case-stage";
@@ -753,7 +754,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       blockersRes,
       eventsRes,
       practicesRes,
-      configRes,
+      capabilities,
       conductRes,
       conductProhibitionsRes,
       guidanceRes,
@@ -847,7 +848,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
         .from("scp_interview_method_practices")
         .select("id, peace_stage, practice_kind, statement_sv, statement_en, rationale, claim_id")
         .order("display_order"),
-      db.from("scp_interview_ai_config").select("ai_enabled, transcript_enabled").maybeSingle(),
+      readInterviewCaseCapabilities(db, caseId),
       db
         .from("scp_interview_conduct_steps")
         .select("id, step_key, ordinal, label_sv, label_en, guidance_sv, guidance_en")
@@ -1247,7 +1248,7 @@ export const getInterviewCase = createServerFn({ method: "GET" })
       // The governed flag, and nothing else. This read `|| true` -- so the
       // screen reported AI as available whatever the configuration said, and
       // offered a control whose only possible outcome was a runtime failure.
-      aiAvailable: Boolean(configRes.data?.ai_enabled),
+      aiAvailable: capabilities.ai_enabled,
     };
   });
 
