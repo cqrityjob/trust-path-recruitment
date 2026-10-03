@@ -30,9 +30,6 @@ export type LegalDocument = {
   }[];
 };
 
-/** The terms version a new account accepts: the date the terms apply from. */
-export const TERMS_VERSION = "2026-10-01";
-
 export const TERMS_PATH = "/villkor";
 export const PRIVACY_PATH = "/integritetspolicy";
 

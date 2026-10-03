@@ -1059,6 +1059,14 @@ export const dictionaries = {
     "auth.terms.link": "användarvillkoren",
     "auth.privacy.link": "integritetspolicy",
     "auth.error.termsRequired": "Godkänn användarvillkoren för att skapa ett konto.",
+    "terms.gate.title": "Godkänn användarvillkoren",
+    "terms.gate.body":
+      "För att använda CQrityjob behöver du godkänna användarvillkoren. Läs hur vi behandlar dina personuppgifter i integritetspolicyn.",
+    "terms.gate.accept": "Jag har läst och godkänner {terms}.",
+    "terms.gate.continue": "Fortsätt",
+    "terms.gate.signOut": "Logga ut",
+    "terms.gate.failed": "Godkännandet kunde inte sparas. Försök igen.",
+    "legal.draft": "Utkast – inte fastställt. De markerade punkterna beslutas innan texten gäller.",
     // The sign-in page is not the moment anyone accepts anything -- they
     // accepted it when they registered. Telling somebody who is logging in
     // that doing so constitutes consent is both wrong and the kind of small
@@ -9783,6 +9791,14 @@ export const dictionaries = {
     "auth.terms.link": "terms of use",
     "auth.privacy.link": "privacy policy",
     "auth.error.termsRequired": "Accept the terms of use to create an account.",
+    "terms.gate.title": "Accept the terms of use",
+    "terms.gate.body":
+      "To use CQrityjob you need to accept the terms of use. Read how we process your personal data in the privacy policy.",
+    "terms.gate.accept": "I have read and accept the {terms}.",
+    "terms.gate.continue": "Continue",
+    "terms.gate.signOut": "Sign out",
+    "terms.gate.failed": "Your acceptance could not be saved. Try again.",
+    "legal.draft": "Draft – not final. The marked points are decided before the text applies.",
     "auth.privacy_note.signin": "You may request export or deletion of your data at any time.",
     "auth.signout": "Sign out",
     "auth.redirecting": "Redirecting…",

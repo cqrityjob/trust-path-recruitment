@@ -48,7 +48,22 @@ const calls: Call[] = [];
 let providerStatus = 200;
 let providerReadBody = false;
 const realFetch = globalThis.fetch;
+// The project's own Auth admin endpoint, as the function's caller check
+// asks it: 200 only for a key the "project" holds as a service key.
+const projectServiceKeys = new Set<string>();
+const authChecks: string[] = [];
 globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
+  if (String(url).includes("/auth/v1/admin/users")) {
+    const h = new Headers(init?.headers);
+    const bearer = (h.get("authorization") ?? "").replace(/^Bearer /, "");
+    authChecks.push(bearer);
+    const okKey = projectServiceKeys.has(bearer) && h.get("apikey") === bearer;
+    return {
+      status: okKey ? 200 : 401,
+      ok: okKey,
+      body: { cancel: async () => {} },
+    } as unknown as Response;
+  }
   calls.push({
     url: String(url),
     headers: Object.fromEntries(new Headers(init?.headers).entries()),
@@ -132,6 +147,48 @@ env.set("RESEND_API_KEY", RESEND_KEY);
   );
   ck("a new-format secret key of this project is accepted", newKey.status === 200);
   env.delete("SUPABASE_SECRET_KEYS");
+
+  // The production failure of 2026-10-03: the app holds the project's
+  // service key in a form the function's env does not (byte-unequal), and
+  // every call was refused. The project itself now decides.
+  env.set("SUPABASE_URL", "https://project.example");
+  const appForm = "eyJhbGciOiJIUzI1NiJ9.service-role-legacy-form-of-the-key";
+  projectServiceKeys.add(appForm);
+  const before = calls.length;
+  const legacy = await post(
+    { kind: "application_receipt", to: "a@example.test", ...message },
+    { authorization: `Bearer ${appForm}`, apikey: appForm },
+  );
+  ck(
+    "the project's service key in another form is accepted after the project confirms it",
+    legacy.status === 200 && calls.length === before + 1 && authChecks.includes(appForm),
+  );
+  const checksBefore = authChecks.length;
+  await post(
+    { kind: "application_receipt", to: "a@example.test", ...message },
+    { authorization: `Bearer ${appForm}`, apikey: appForm },
+  );
+  ck(
+    "a confirmed key is remembered, not re-checked on every call",
+    authChecks.length === checksBefore,
+  );
+  const sentBefore = calls.length;
+  const userJwt = await post(
+    { kind: "application_receipt", to: "a@example.test", ...message },
+    {
+      authorization: "Bearer eyJ.a-user-or-anon-jwt-the-project-refuses",
+      apikey: "eyJ.a-user-or-anon-jwt-the-project-refuses",
+    },
+  );
+  const mixed = await post(
+    { kind: "application_receipt", to: "a@example.test", ...message },
+    { authorization: "Bearer eyJ.a-user-or-anon-jwt-the-project-refuses", apikey: appForm },
+  );
+  ck(
+    "a key the project refuses, or a bearer paired with someone else's apikey, is 401 and nothing is sent",
+    userJwt.status === 401 && mixed.status === 401 && calls.length === sentBefore,
+  );
+  env.delete("SUPABASE_URL");
 }
 
 console.log("\n2. Only the named kinds; the function decides From, the admin inbox and Reply-To");
@@ -409,7 +466,9 @@ console.log("\n5. The application holds no Resend key and never calls Resend dir
   const fn = readFileSync(FN, "utf8");
   ck(
     "the function authenticates before anything else",
-    /Deno\.serve\(async \(req\) => \{\s*if \(!callerIsServer\(req\)\) return json\(401/.test(fn),
+    /Deno\.serve\(async \(req\) => \{\s*if \(!\(await callerIsServer\(req\)\)\) return json\(401/.test(
+      fn,
+    ),
   );
   const config = readFileSync("supabase/config.toml", "utf8");
   ck(

@@ -55,7 +55,7 @@ Auth, configured in the Supabase dashboard. See §5.
 
 - **Pages.** `/villkor` (Användarvillkor) and `/integritetspolicy`
   (Integritetspolicy). They are linked from the footer on every public page
-  and from registration, and both are in the sitemap.
+  and from registration. Each enters the sitemap once it is final.
 - **Wording.** The owner's text is used verbatim, with the two substitutions
   the owner asked for:
   - "Cqrityjob AB" becomes **Cqrityjob LLC**;
@@ -89,50 +89,38 @@ Auth, configured in the Supabase dashboard. See §5.
   integritetspolicy" and links the policy. It is information, not consent.
 - **Organisation toggle.** It is still the form's first checkbox.
 
-**Known limits.**
-- **Google from the sign-in page.** It can create an account for a new
-  person without the checkbox. The panel cannot tell a new Google account
-  from an existing one beforehand, so acceptance for such accounts would
-  have to be asked after sign-in.
-- **Where acceptance is stored.** It sits in the account's auth metadata,
-  written by the client at signup. A server-side record would need a
-  migration. It is not added here.
+**Google sign-in and drafts (added 2026-10-03).**
+- **Google from the sign-in page.** An account created through a provider
+  with no recorded acceptance is stopped by `TermsAcceptanceGate`, on every
+  page, until it accepts or signs out.
+- **Google from the signup page.** The ticked box is carried across the
+  round trip and written to the account on return.
+- **Version changes.** An account whose recorded version is not the current
+  one is asked again.
+- **Drafts.** While either document has open points it is a draft: a banner,
+  `noindex`, no sitemap entry, and acceptance recorded as `2026-10-01-utkast`.
+- **Where acceptance is stored.** It is in the account's auth metadata,
+  written by the client. A server-side record would need a migration.
 
 ## 5. What the owner must do
 
-1. **Fill in the policy gaps.** Before relying on the pages, replace each
-   placeholder:
-   - **Terms §2:** the age limit and any rules for minors.
-   - **Terms §13:** how a person closes their account. Today the product
-     has no self-service deletion. Only a platform superadmin can delete an
-     account, and the Passport privacy page sends the person to `/contact`.
-     A true statement is something like "by writing to
-     info@cqrityjob.com". This is for you to decide.
-   - **Privacy policy:**
-     - *Senast uppdaterad:* the publication date.
-     - *§5:* the active AI providers, the data they receive, retention,
-       model training and processing outside the EU/EEA.
-     - *§6:* a link to the vendor list.
-     - *§8:* the receiving countries and transfer mechanisms.
-     - *§9:* retention for accounts, profiles and Passports.
-     - *§11:* a link to the cookie policy and a link to cookie settings.
-       The product has no cookie banner and no cookie policy today.
-2. **Confirm retention.** Check "7 dagar" for support tickets and for
-   security and access logs (privacy policy §9).
-3. **Deploy the mail function.** After merge, deploy the
-   `transactional-email` edge function. Until then, live mail keeps the
-   plain "CQrityjob" sender.
-4. **Check the domain in Resend.** `cqrityjob.com` must be verified (SPF,
-   DKIM and DMARC) for `no-reply@`. `info@` and `job@` must be real
-   mailboxes that someone reads.
-5. **Supabase Auth.** In the dashboard:
-   - Set custom SMTP to send from `no-reply@cqrityjob.com`, with sender name
-     "CQrityjob". The 2026-10-01 checklist still listed this as unproven:
-     the last auth mail came from Supabase's default address.
-   - Review the confirmation and reset templates.
-   - Check that Site URL and the Redirect URLs include the production
-     domain.
-6. **Production domain.** Canonical and og:url point at
-   `trust-path-recruitment.lovable.app`, as on every other page. Moving to
-   `www.cqrityjob.com`, the domain the documents name, is a separate change.
-7. **English versions.** If wanted, supply approved English texts.
+Every open point, with verified facts and a recommended text, is in
+`docs/release/2026-10-03-launch-legal-decisions.md`. In short:
+
+1. **Decide the placeholders (A1–B7).** These are the age limit, account
+   closure, AI providers, vendor list, transfers, retention and cookies.
+   The documents stay drafts until then.
+2. **Retention ("7 dagar").** Verified as not true today, for both support
+   enquiries and logs (B6). Choose between writing the actual periods and
+   building purging first.
+3. **Deploy the mail function** after merge. The deployed function refuses
+   the app's key, so no product mail has been sent through it; #386 fixes
+   that in the function.
+4. **Resend, SMTP and mailboxes.** Already in place. Auth mail via custom SMTP
+   is verified working since 2026-09-30 14:27 UTC. No change proposed.
+5. **Candidate replies (E).** Decide who handles job@, and whether to build
+   the in-app reply.
+6. **Production domain.** Canonical and og:url still point at
+   `trust-path-recruitment.lovable.app`. The launch session (#387) moves them
+   to `www.cqrityjob.com`.
+7. **English versions** of the documents, if wanted.

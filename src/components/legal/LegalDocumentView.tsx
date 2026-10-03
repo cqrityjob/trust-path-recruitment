@@ -128,7 +128,16 @@ function Block({ block, id }: { block: LegalBlock; id: string }) {
   }
 }
 
-export function LegalDocumentView({ doc, testId }: { doc: LegalDocument; testId: string }) {
+export function LegalDocumentView({
+  doc,
+  testId,
+  final,
+}: {
+  doc: LegalDocument;
+  testId: string;
+  /** False while the document still has open points (src/lib/legal/status.ts). */
+  final: boolean;
+}) {
   const { t } = useT();
   const swedishOnly = t("legal.swedishOnly");
   return (
@@ -146,6 +155,16 @@ export function LegalDocumentView({ doc, testId }: { doc: LegalDocument; testId:
             {" · "}
             {t("legal.provider")}
           </p>
+          {!final && (
+            // A draft says so first, before a single clause is read.
+            <p
+              data-testid="legal-draft-banner"
+              role="note"
+              className="mt-4 rounded-md border border-amber-500/70 bg-amber-500/10 p-3 text-sm font-medium text-foreground"
+            >
+              {t("legal.draft")}
+            </p>
+          )}
           {swedishOnly && (
             <p lang="en" className="mt-3 text-sm text-muted-foreground">
               {swedishOnly}

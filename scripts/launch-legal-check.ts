@@ -15,11 +15,21 @@
 //      acceptance is recorded with the terms version; Google signup is held
 //      to the same box;
 //   4  the privacy policy is offered as information, never as something the
-//      person "accepts".
+//      person "accepts";
+//   5  a document with open points is a draft (banner, noindex, no sitemap,
+//      draft version accepted), and every account, Google sign-in included,
+//      accepts before it can use the product.
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { PRIVACY, TERMS, TERMS_VERSION, type LegalDocument } from "../src/lib/legal/documents";
+import { PRIVACY, TERMS, type LegalDocument } from "../src/lib/legal/documents";
+import {
+  ACCEPTED_TERMS_VERSION,
+  PRIVACY_FINAL,
+  TERMS_FINAL,
+  openPoints,
+} from "../src/lib/legal/status";
+import { needsTermsAcceptance } from "../src/lib/legal/terms-acceptance";
 import { dictionaries } from "../src/i18n/dictionaries";
 
 const fails: string[] = [];
@@ -79,8 +89,9 @@ group("GROUP 1 — the owner's documents, as given");
     TERMS.sections.length === 16 && PRIVACY.sections.length === 12,
   );
   ck(
-    "1.5 the terms apply from 2026-10-01, which is the version accepted",
-    TERMS.date === "2026-10-01" && TERMS_VERSION === "2026-10-01",
+    "1.5 the terms apply from 2026-10-01; while open points remain the accepted version is the draft's",
+    TERMS.date === "2026-10-01" &&
+      ACCEPTED_TERMS_VERSION === (TERMS_FINAL ? "2026-10-01" : "2026-10-01-utkast"),
   );
   const gaps = (t: string) =>
     (t.match(/\[(?:Ange|ange|Länk|länk|publiceringsdatum)[^\]]*\]/g) ?? []).length;
@@ -162,8 +173,7 @@ group("GROUP 3 — acceptance at signup");
   );
   ck(
     "3.5 the signup records which terms were accepted, and when",
-    panel.includes("terms_version: TERMS_VERSION,") &&
-      panel.includes("terms_accepted_at: new Date().toISOString(),"),
+    panel.includes("...acceptanceMetadata(),"),
   );
   ck(
     "3.6 nothing else rides on the box: no marketing or newsletter consent",
@@ -194,6 +204,71 @@ group("GROUP 4 — the privacy policy is information, not consent");
       en["auth.privacy_note"].includes("{privacy}") &&
       sv["auth.privacy_note"].includes("info@cqrityjob.com") &&
       code("src/components/auth/UnifiedAuthPanel.tsx").includes("href={PRIVACY_PATH}"),
+  );
+}
+
+/* ================================================================== */
+group("GROUP 5 — drafts are drafts, and every account accepts");
+/* ================================================================== */
+{
+  ck(
+    "5.1 a document with open points is not final",
+    TERMS_FINAL === (openPoints(TERMS).length === 0) &&
+      PRIVACY_FINAL === (openPoints(PRIVACY).length === 0) &&
+      !TERMS_FINAL &&
+      !PRIVACY_FINAL,
+  );
+  const view = code("src/components/legal/LegalDocumentView.tsx");
+  ck(
+    "5.2 a draft shows the draft banner before any clause",
+    /\{!final && \([\s\S]{0,200}data-testid="legal-draft-banner"/.test(view),
+  );
+  for (const [route, flag] of [
+    ["src/routes/villkor.tsx", "TERMS_FINAL"],
+    ["src/routes/integritetspolicy.tsx", "PRIVACY_FINAL"],
+  ] as const) {
+    const src = code(route);
+    ck(
+      `5.3 ${route}: a draft is noindex and rendered as a draft`,
+      src.includes(`...(${flag} ? [] : [{ name: "robots", content: "noindex" }])`) &&
+        src.includes(`final={${flag}}`),
+    );
+  }
+  const sitemap = code("src/routes/sitemap[.]xml.ts");
+  ck(
+    "5.4 a draft is not in the sitemap",
+    /\.\.\.\(TERMS_FINAL\s*\?\s*\[\{ path: "\/villkor"/.test(sitemap) &&
+      /\.\.\.\(PRIVACY_FINAL\s*\?\s*\[\{ path: "\/integritetspolicy"/.test(sitemap),
+  );
+  const root = code("src/routes/__root.tsx");
+  ck("5.5 the acceptance gate is mounted on every page", root.includes("<TermsAcceptanceGate />"));
+  const google = { app_metadata: { provider: "google" }, user_metadata: {} };
+  const email = { app_metadata: { provider: "email" }, user_metadata: {} };
+  ck("5.6 a Google account with no recorded acceptance is asked", needsTermsAcceptance(google));
+  ck(
+    "5.7 an account that accepted the current version is not asked again",
+    !needsTermsAcceptance({ ...google, user_metadata: { terms_version: ACCEPTED_TERMS_VERSION } }),
+  );
+  ck(
+    "5.8 an account that accepted another version is asked again",
+    needsTermsAcceptance({ ...email, user_metadata: { terms_version: "2025-01-01" } }),
+  );
+  ck(
+    "5.9 an email account from before the terms is not gated (owner decision)",
+    !needsTermsAcceptance(email) && !needsTermsAcceptance(null),
+  );
+  const gateSrc = code("src/components/legal/TermsAcceptanceGate.tsx");
+  ck(
+    "5.10 the gate cannot be dismissed: accept (box ticked) or sign out",
+    gateSrc.includes('aria-modal="true"') &&
+      gateSrc.includes("disabled={!ticked || busy}") &&
+      gateSrc.includes("supabase.auth.signOut()") &&
+      gateSrc.includes("const [ticked, setTicked] = useState(false);"),
+  );
+  const panel = code("src/components/auth/UnifiedAuthPanel.tsx");
+  ck(
+    "5.11 Google from the signup page carries the ticked box across the round trip",
+    panel.includes("if (isSignup) rememberTermsAcceptance();"),
   );
 }
 

@@ -129,11 +129,58 @@ function serviceKeys(): string[] {
   return keys.filter((k) => k.length >= 20);
 }
 
-function callerIsServer(req: Request): boolean {
+/** A presented key that is not byte-equal to the function's own copy may
+ *  still be this project's service key: the app host and the function can
+ *  hold different representations of it (the legacy JWT and a newer secret
+ *  key), which is exactly how every call from the app was refused in
+ *  production while PostgREST accepted the same key (2026-10-03). So the
+ *  project itself is asked: only a service key may list Auth users. A 200
+ *  is the answer; anything else, an error or a timeout, is a refusal. A
+ *  positive answer is remembered for five minutes by the key's SHA-256,
+ *  never by the key. */
+const VERIFIED_TTL_MS = 5 * 60 * 1000;
+const VERIFY_TIMEOUT_MS = 5_000;
+const verified = new Map<string, number>();
+
+async function keyDigest(key: string): Promise<string> {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
+  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function projectAcceptsServiceKey(key: string): Promise<boolean> {
+  const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
+  if (!base || key.length < 20) return false;
+  const digest = await keyDigest(key);
+  const until = verified.get(digest);
+  if (until && until > Date.now()) return true;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${base}/auth/v1/admin/users?page=1&per_page=1`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      signal: controller.signal,
+    });
+    await res.body?.cancel().catch(() => {});
+    if (res.status !== 200) return false;
+    verified.set(digest, Date.now() + VERIFIED_TTL_MS);
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function callerIsServer(req: Request): Promise<boolean> {
   const auth = req.headers.get("authorization") ?? "";
   const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
   const apikey = (req.headers.get("apikey") ?? "").trim();
-  return serviceKeys().some((k) => sameSecret(bearer, k) || sameSecret(apikey, k));
+  if (serviceKeys().some((k) => sameSecret(bearer, k) || sameSecret(apikey, k))) return true;
+  // Both headers must carry the same key for the project check: a caller
+  // cannot pair someone else's apikey with its own bearer.
+  const presented = bearer || apikey;
+  if (!presented || (bearer && apikey && !sameSecret(bearer, apikey))) return false;
+  return projectAcceptsServiceKey(presented);
 }
 
 function address(value: unknown): string | null {
@@ -150,7 +197,7 @@ function party(p: Party, caller: string | null): string | null {
 }
 
 Deno.serve(async (req) => {
-  if (!callerIsServer(req)) return json(401, { outcome: "unauthorized" });
+  if (!(await callerIsServer(req))) return json(401, { outcome: "unauthorized" });
 
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
 

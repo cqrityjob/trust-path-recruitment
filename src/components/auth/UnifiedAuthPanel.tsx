@@ -47,7 +47,8 @@ import { hasEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-
 // script can prove it over hand-written inputs without mounting this panel —
 // same reason, and same shape, as employer-signup-intent.ts.
 import { registrationTargetsOrganisation } from "@/lib/auth/organisation-entrance";
-import { PRIVACY_PATH, TERMS_PATH, TERMS_VERSION } from "@/lib/legal/documents";
+import { PRIVACY_PATH, TERMS_PATH } from "@/lib/legal/documents";
+import { acceptanceMetadata, rememberTermsAcceptance } from "@/lib/legal/terms-acceptance";
 import { ensureMyEmployerCompanyFromSignup } from "@/lib/job-intelligence/employer-onboarding.functions";
 import { EMPLOYER_SIGNUP_PROVISION_KEY } from "@/lib/job-intelligence/use-employer-signup-provisioning";
 import { EMPLOYER_REGISTRATION_NOTICE_KEY } from "@/lib/job-intelligence/registration-notice-cache";
@@ -480,8 +481,7 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
               display_name: displayName.trim() || undefined,
               locale: lang,
               // Which terms were accepted, and when, on the account itself.
-              terms_version: TERMS_VERSION,
-              terms_accepted_at: new Date().toISOString(),
+              ...acceptanceMetadata(),
               ...(forOrganisation
                 ? {
                     company_name: companyName.trim(),
@@ -678,8 +678,8 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
 
   async function onGoogle() {
     // Creating an account with Google is still creating an account: the same
-    // terms checkbox applies. (Google from the sign-in page is an existing
-    // account's way in and carries no acceptance.)
+    // terms checkbox applies. Google from the sign-in page can create one
+    // too; that account is asked by TermsAcceptanceGate on return.
     if (isSignup && !termsAccepted) {
       setInfo(null);
       reportErrors([t("auth.error.termsRequired")]);
@@ -688,6 +688,9 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
     setErrors([]);
     setInfo(null);
     setBusy(true);
+    // The box was ticked: carry that acceptance across the provider round
+    // trip; TermsAcceptanceGate writes it to the account on return.
+    if (isSignup) rememberTermsAcceptance();
     // The browser is about to leave the app, so the destination has to
     // survive outside React state. Stored AND carried in redirectTo: a
     // return that normalises the path away is exactly the failure that was
