@@ -1535,6 +1535,16 @@ jobs:
       - name: Transactional e-mail function check
         run: bun run transactional-email:check
 
+      # The employer is e-mailed when a candidate submits a NEW application:
+      # the recipient is chosen in SQL and never by the request, the mail goes
+      # once (the provider key is the outbox row), carries no personal data,
+      # stays out of the apply request's time (a three-second ceiling) and is a
+      # logged no-op until its migration is applied. Executed against a scripted
+      # database and a stub provider. Planted controls run in
+      # negative-controls:all.
+      - name: Employer new-application notice check
+        run: bun run employer-application-notice:check
+
       # Baseline security headers on every application response, without
       # overriding the /p share entry's own strict policy.
       - name: Security headers check
