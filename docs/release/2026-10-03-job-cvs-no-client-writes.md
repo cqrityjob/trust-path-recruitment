@@ -88,7 +88,7 @@ Negative controls (`scripts/db-test.sh`):
 |---|---|---|
 | CV NC1 | The real rollback | CV1.1 |
 | CV NC2 | Only the applicant INSERT policy back | CV1.1 |
-| CV NC3 | Only the applicant DELETE policy back | CV1.4 |
+| CV NC3 | Applicant SELECT and DELETE policies back (a DELETE policy alone cannot act on a row its role cannot SELECT) | CV1.4 |
 
 ## 5. Release order
 
