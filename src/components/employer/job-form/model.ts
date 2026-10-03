@@ -558,6 +558,14 @@ export const SERVER_ERROR_MESSAGE_KEYS: Record<string, TranslationKey> = {
   ARCHIVE_JOB_FAILED: "employer.jobs.form.error.archiveFailed",
   RESTORE_JOB_FAILED: "employer.jobs.form.error.restoreFailed",
   INVALID_JOB_DATA: "employer.jobs.form.error.invalidData",
+  // The publication rules the employer can act on, each with its own sentence.
+  // Before these, a restored advert with an old deadline was told to check its
+  // workplace type and employment form (INVALID_JOB_DATA), and one whose
+  // expires_at had passed was "published" without a word.
+  EXPIRES_AT_IN_PAST: "employer.jobs.form.error.expiresInPast",
+  EXPIRES_AT_TOO_FAR: "employer.jobs.form.error.expiresTooFar",
+  DEADLINE_IN_PAST: "employer.jobs.form.error.deadlineInPast",
+  APPLICATION_URL_INVALID: "employer.jobs.form.error.applicationUrlInvalid",
   SAVE_DRAFT_FAILED: "employer.jobs.form.error.saveDraftFailed",
   SUBMIT_FOR_REVIEW_FAILED: "employer.jobs.form.error.submitForReviewFailed",
   CLOSE_JOB_FAILED: "employer.jobs.form.error.closeJobFailed",

@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isHttpApplicationUrl } from "@/lib/job-intelligence/application-url";
 
 // -----------------------------------------------------------------------------
 // Job Intelligence — Admin Moderation server functions (Phase B).
@@ -202,7 +203,18 @@ const jobPayloadSchema = z.object({
   employment_type: z.string().max(32).optional().nullable(),
   experience_level: z.string().max(32).optional().nullable(),
   application_method: z.enum(["external", "email", "internal", "unavailable"]),
-  application_url: z.string().url().max(500).optional().nullable(),
+  // A web address only (see application-url.ts): the database refuses any
+  // other scheme for every caller, an administrator included.
+  application_url: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .refine((v) => isHttpApplicationUrl(v), {
+      message: "application_url must be an http(s) address",
+    })
+    .optional()
+    .nullable(),
   application_email: z.string().email().max(200).optional().nullable(),
   deadline_at: z.string().datetime().optional().nullable(),
   expires_at: z.string().datetime().optional().nullable(),

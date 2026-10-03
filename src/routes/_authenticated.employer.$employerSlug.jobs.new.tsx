@@ -3,7 +3,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useT } from "@/i18n/context";
 import { EmployerAppShell } from "@/components/employer/EmployerAppShell";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
@@ -58,6 +58,35 @@ function EmployerJobNewPage() {
    *  instead of navigating away in silence. */
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
 
+  // ── ONE DRAFT PER PAGE, NO MATTER HOW MANY ATTEMPTS ───────────────────
+  //
+  // Both mutations below save first and then do something that can fail: the
+  // vacancy structure, and for Publicera the publication itself. The first save
+  // INSERTS the draft, so a failure after it left a draft behind -- and because
+  // neither mutation remembered the id it had been given, the next Spara or
+  // Publicera inserted ANOTHER one. A double click did the same. Two drafts with
+  // one title, and one of them an orphan the employer never saw.
+  //
+  // The id is therefore kept the moment the first save returns, before anything
+  // else can fail, and every later save UPDATES that draft. Saves are also run
+  // one at a time: a second click while the first is still in flight waits for
+  // it and then updates, instead of racing it into a second insert.
+  const draftIdRef = useRef<string | null>(null);
+  const saveQueueRef = useRef<Promise<unknown>>(Promise.resolve());
+  function saveDraftOnce(employerId: string, values: EmployerJobFormValues) {
+    const run = async () => {
+      const id = draftIdRef.current;
+      const saved = await saveFn({
+        data: { employerId, ...(id ? { id } : {}), ...toServerPayload(values) },
+      });
+      draftIdRef.current = saved.id;
+      return saved;
+    };
+    const next = saveQueueRef.current.then(run, run);
+    saveQueueRef.current = next.catch(() => undefined);
+    return next;
+  }
+
   // The first save creates the draft; its requirements and questions are then
   // saved onto it. From here on the employer is on /edit, where every later
   // save updates the same draft, so a reload or a new sign-in resumes it.
@@ -67,9 +96,7 @@ function EmployerJobNewPage() {
       structure: VacancyStructureDraft;
     }) => {
       if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
-      const saved = await saveFn({
-        data: { employerId: workspace.employerId, ...toServerPayload(vars.values) },
-      });
+      const saved = await saveDraftOnce(workspace.employerId, vars.values);
       await structureFn({ data: { jobId: saved.id, ...structurePayload(vars.structure) } });
       return saved;
     },
@@ -82,6 +109,9 @@ function EmployerJobNewPage() {
       }
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", workspace.employerId, "dashboard-stats"] });
+      qc.invalidateQueries({
+        queryKey: ["employer", workspace.employerId, "recruitment-overview"],
+      });
       navigate({
         to: "/employer/$employerSlug/jobs/$jobId/edit",
         params: { employerSlug, jobId: result.id },
@@ -99,9 +129,7 @@ function EmployerJobNewPage() {
       structure: VacancyStructureDraft;
     }) => {
       if (!workspace) throw new Error("ACCESS_NOT_AVAILABLE");
-      const saved = await saveFn({
-        data: { employerId: workspace.employerId, ...toServerPayload(vars.values) },
-      });
+      const saved = await saveDraftOnce(workspace.employerId, vars.values);
       await structureFn({ data: { jobId: saved.id, ...structurePayload(vars.structure) } });
       if (PUBLICATION_MODEL === "moderated") {
         await submitFn({ data: { employerId: workspace.employerId, jobId: saved.id } });

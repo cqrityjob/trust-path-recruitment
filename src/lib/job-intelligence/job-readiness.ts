@@ -47,6 +47,7 @@ export interface JobReadinessInput {
   application_url?: string | null;
   application_email?: string | null;
   expires_at?: string | null;
+  deadline_at?: string | null;
   location_text?: string | null;
   city?: string | null;
 }
@@ -57,6 +58,8 @@ export type JobReadinessCheckId =
   | "applicationMethod"
   | "applicationTarget"
   | "expiresAt"
+  | "expiresWindow"
+  | "deadline"
   | "location"
   | "bothLanguages"
   | "descriptionDepth";
@@ -84,6 +87,8 @@ const LABEL_KEY: Record<JobReadinessCheckId, TranslationKey> = {
   applicationMethod: "employer.jobs.readiness.applicationMethod",
   applicationTarget: "employer.jobs.readiness.applicationTarget",
   expiresAt: "employer.jobs.readiness.expiresAt",
+  expiresWindow: "employer.jobs.readiness.expiresWindow",
+  deadline: "employer.jobs.readiness.deadline",
   location: "employer.jobs.readiness.location",
   bothLanguages: "employer.jobs.readiness.bothLanguages",
   descriptionDepth: "employer.jobs.readiness.descriptionDepth",
@@ -97,8 +102,45 @@ function filled(value: string | null | undefined): boolean {
  *  a low bar on purpose: this is a nudge, not an editorial standard. */
 const MIN_USEFUL_DESCRIPTION = 160;
 
-export function checkJobReadiness(job: JobReadinessInput): JobReadiness {
+/** The longest a publication may run. jobs_validate_before_write() refuses an
+ *  expires_at more than 90 days after published_at, and published_at is the
+ *  moment of publication. */
+export const MAX_PUBLICATION_DAYS = 90;
+
+/** Why an advert's dates stop it being published NOW. The codes are the ones
+ *  publishEmployerJob() throws, so the hub's checklist and the server's refusal
+ *  name the same problem. */
+export type PublishDateProblem = "EXPIRES_AT_IN_PAST" | "EXPIRES_AT_TOO_FAR" | "DEADLINE_IN_PAST";
+
+/** The date rules the database applies at the moment of publication, as a pure
+ *  function of the row and the clock (published_at is stamped with now(), so
+ *  `now` stands in for it):
+ *    expires_at must be after now        -- else the advert is "published" and
+ *                                           never visible (job_is_active)
+ *    expires_at at most 90 days after now
+ *    deadline_at not before now
+ *  Restoring an old advert keeps its dates, so a date that was fine when it
+ *  was written is exactly what can be wrong here. An empty or unreadable date
+ *  is not judged: a missing expires_at is the "expiresAt" check's business. */
+export function publishDateProblems(
+  job: Pick<JobReadinessInput, "expires_at" | "deadline_at">,
+  now: Date,
+): PublishDateProblem[] {
+  const out: PublishDateProblem[] = [];
+  const t = now.getTime();
+  const expires = job.expires_at ? Date.parse(job.expires_at) : Number.NaN;
+  if (!Number.isNaN(expires)) {
+    if (expires <= t) out.push("EXPIRES_AT_IN_PAST");
+    else if (expires > t + MAX_PUBLICATION_DAYS * 86_400_000) out.push("EXPIRES_AT_TOO_FAR");
+  }
+  const deadline = job.deadline_at ? Date.parse(job.deadline_at) : Number.NaN;
+  if (!Number.isNaN(deadline) && deadline < t) out.push("DEADLINE_IN_PAST");
+  return out;
+}
+
+export function checkJobReadiness(job: JobReadinessInput, now: Date = new Date()): JobReadiness {
   const method = job.application_method ?? "unavailable";
+  const dateProblems = publishDateProblems(job, now);
 
   // The application target is only a requirement for the methods that have
   // one. `internal` (apply through CQrityjob) needs nothing further, which is
@@ -151,6 +193,32 @@ export function checkJobReadiness(job: JobReadinessInput): JobReadiness {
       blocking: true,
       labelKey: LABEL_KEY.expiresAt,
     },
+    // Only offered once there is a date to judge, so an advert with no date is
+    // told one thing ("set it"), not two. Restoring an old advert keeps its
+    // dates: this is what tells the employer THEIR date is the problem, rather
+    // than Publicera succeeding on an advert nobody can see.
+    ...(filled(job.expires_at)
+      ? [
+          {
+            id: "expiresWindow" as const,
+            ok:
+              !dateProblems.includes("EXPIRES_AT_IN_PAST") &&
+              !dateProblems.includes("EXPIRES_AT_TOO_FAR"),
+            blocking: true,
+            labelKey: LABEL_KEY.expiresWindow,
+          },
+        ]
+      : []),
+    ...(filled(job.deadline_at)
+      ? [
+          {
+            id: "deadline" as const,
+            ok: !dateProblems.includes("DEADLINE_IN_PAST"),
+            blocking: true,
+            labelKey: LABEL_KEY.deadline,
+          },
+        ]
+      : []),
     {
       id: "location",
       ok: filled(job.location_text) || filled(job.city),

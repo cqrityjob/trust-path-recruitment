@@ -6,6 +6,7 @@ import {
   applicationCvSnapshotSchema,
 } from "@/lib/professional-identity/cv/application-source";
 import type { CvDocument } from "@/lib/professional-identity/cv/document";
+import { isAmbiguousSubmissionFailure } from "@/lib/job-intelligence/submission-failure";
 
 // -----------------------------------------------------------------------------
 // Jobs MVP v1 H1 + H3.4A: server functions for job applications.
@@ -25,11 +26,14 @@ import type { CvDocument } from "@/lib/professional-identity/cv/document";
 //
 // - submitJobApplication: candidate applies to a published, on-platform
 //   ("internal") job. Uploads the CV (service-role only -- the storage
-//   bucket has zero client-facing policies, unchanged) THEN inserts the
+//   bucket has no client write policy, 20270201090000) THEN inserts the
 //   job_applications row through the caller's own RLS-scoped client (owner
 //   INSERT policy + the job-eligibility/duplicate checks enforced by the
-//   database itself). If the insert fails for any reason, the just-
-//   uploaded CV is deleted before the error is surfaced.
+//   database itself). If the database refuses the insert, the just-uploaded
+//   CV is deleted before the error is surfaced. If the failure carries no
+//   database verdict (a timeout, a dropped connection) the application is
+//   read back first: committed -> the CV is kept and the submission is
+//   answered from the row; cannot be told -> the CV is kept too.
 // - listMyApplications: candidate's own application history.
 // - withdrawMyApplication: candidate withdraws their own eligible
 //   application, via set_application_status().
@@ -94,6 +98,73 @@ function isOwnApplicationCvPath(path: string, applicantUserId: string, applicati
     /^[A-Za-z0-9._-]{1,120}$/.test(parts[2]) &&
     !/^\.+$/.test(parts[2])
   );
+}
+
+// ── WHAT A FAILED SUBMISSION TELLS US ABOUT THE COMMIT ──────────────────────
+//
+// See submission-failure.ts: a failure with no SQLSTATE is not the database
+// saying "nothing committed". Before the uploaded CV is removed, the
+// application is read back by id.
+type CommittedApplication = {
+  id: string;
+  status: ApplicationStatus;
+  cv_source: ApplicationCvSource;
+  passport_requested: boolean;
+  passport_shared: boolean;
+};
+
+type CommitRead =
+  | { state: "found"; row: CommittedApplication }
+  | { state: "absent" }
+  | { state: "unknown" };
+
+/** Read the caller's own application by id: the answer to "did it commit?".
+ *  Under the caller's RLS, exactly as the replay shortcut reads it. */
+async function readCommittedApplication(
+  ctx: Ctx,
+  applicationId: string,
+  includePassport: boolean,
+): Promise<CommitRead> {
+  const { data: row, error } = await ctx.supabase
+    .from("job_applications")
+    .select("id, status, cv_source")
+    .eq("id", applicationId)
+    .eq("applicant_user_id", ctx.userId)
+    .maybeSingle();
+  if (error) return { state: "unknown" };
+  if (!row) return { state: "absent" };
+  const { data: disclosed } = await ctx.supabase
+    .from("sp_disclosures")
+    .select("id")
+    .eq("application_id", row.id)
+    .limit(1);
+  return {
+    state: "found",
+    row: {
+      id: row.id as string,
+      status: row.status as ApplicationStatus,
+      cv_source: (row.cv_source as ApplicationCvSource) ?? "upload",
+      passport_requested: includePassport,
+      passport_shared: (disclosed ?? []).length > 0,
+    },
+  };
+}
+
+/** After an ambiguous failure: ask again a few times before concluding that
+ *  nothing committed. A commit that was still in flight when the request gave up
+ *  lands within moments, and the first read can precede it. */
+async function confirmCommitAfterAmbiguousFailure(
+  ctx: Ctx,
+  applicationId: string,
+  includePassport: boolean,
+): Promise<CommitRead> {
+  let last: CommitRead = { state: "unknown" };
+  for (const delayMs of [0, 1000, 3000]) {
+    if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+    last = await readCommittedApplication(ctx, applicationId, includePassport);
+    if (last.state === "found") return last;
+  }
+  return last;
 }
 
 async function loadApplication(ctx: Ctx, applicationId: string) {
@@ -371,7 +442,36 @@ export const submitJobApplication = createServerFn({ method: "POST" })
         },
       );
 
-      if (insertErr) {
+      let committed: CommittedApplication | null = null;
+      if (insertErr && isAmbiguousSubmissionFailure(insertErr)) {
+        // No SQLSTATE: the database has not said the transaction failed. Find
+        // out whether it committed BEFORE touching the CV. Committed -> the
+        // application is real and keeps its file; the submission is answered
+        // from the row, as the retry's replay shortcut would. Not found, after
+        // asking again -> nothing committed, and the clean-up below is right.
+        // Cannot tell -> keep the file and say so; a retry is recognised as the
+        // same application (or fails to upload, never silently loses the CV).
+        const read = await confirmCommitAfterAmbiguousFailure(
+          ctx,
+          applicationId,
+          data.includePassport,
+        );
+        if (read.state === "found") {
+          console.error(
+            "[applications] submitJobApplication: the answer was lost but the application committed; its CV is kept",
+            insertErr,
+          );
+          committed = read.row;
+        } else if (read.state === "unknown") {
+          console.error(
+            "[applications] submitJobApplication: could not confirm whether the application committed; its CV is kept",
+            insertErr,
+          );
+          throw new Error("SUBMISSION_UNCONFIRMED");
+        }
+      }
+
+      if (insertErr && !committed) {
         // Failed submission cleans up the uploaded CV -- never leave an
         // orphaned file for an application that doesn't exist. Because the
         // write was one transaction, there is also no half-submitted
@@ -403,7 +503,7 @@ export const submitJobApplication = createServerFn({ method: "POST" })
         throw new Error("SUBMISSION_FAILED");
       }
 
-      const result = submitted as unknown as {
+      const result = (committed ?? submitted) as unknown as {
         id: string;
         status: ApplicationStatus;
         cv_source: ApplicationCvSource;
@@ -688,7 +788,15 @@ export type EmployerApplicationRow = {
   phone: string | null;
   coverNote: string | null;
   status: ApplicationStatus;
+  /** Is there a submitted CV on this application at all -- of either kind.
+   *  Reading only cv_storage_path reported "no CV" for an application submitted
+   *  with a CQrityjob CV, which is stored as a snapshot on the row and has no
+   *  file: the same expression the recruitment table and the candidate's own
+   *  list use. */
   hasCv: boolean;
+  /** Which door it came through. A file is downloaded through a signed link; a
+   *  CQrityjob CV has no file and is read on the application itself. */
+  cvSource: ApplicationCvSource;
   createdAt: string;
 };
 
@@ -704,7 +812,7 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
     let query = ctx.supabase
       .from("job_applications")
       .select(
-        "id, job_id, applicant_user_id, phone, cover_note, status, cv_storage_path, created_at, jobs(title_sv, title_en)",
+        "id, job_id, applicant_user_id, phone, cover_note, status, cv_storage_path, cv_source, created_at, jobs(title_sv, title_en)",
       )
       .eq("employer_id", data.employerId)
       .order("created_at", { ascending: false })
@@ -765,7 +873,8 @@ export const listApplicationsForEmployer = createServerFn({ method: "POST" })
         phone: r.phone as string | null,
         coverNote: r.cover_note as string | null,
         status: r.status as ApplicationStatus,
-        hasCv: Boolean(r.cv_storage_path),
+        hasCv: Boolean(r.cv_storage_path) || r.cv_source === "cqrityjob_cv",
+        cvSource: (r.cv_source as ApplicationCvSource) ?? "upload",
         createdAt: r.created_at as string,
       };
     });

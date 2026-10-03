@@ -42,7 +42,14 @@ import { MoreHorizontal, Plus, Search } from "lucide-react";
 import { z } from "zod";
 import { PhaseBadge } from "@/components/recruitment/RecruitmentStatus";
 import { getRecruitmentOverview } from "@/lib/recruitment/recruitment.functions";
-import { matchesPhaseFilter, PHASE_FILTERS, type PhaseFilter } from "@/lib/recruitment/definitions";
+import {
+  matchesDefaultListView,
+  matchesPhaseFilter,
+  phaseOf,
+  PHASE_FILTERS,
+  type PhaseFilter,
+  type RecruitmentPhase,
+} from "@/lib/recruitment/definitions";
 import { formatDay } from "@/lib/recruitment/format";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
@@ -168,7 +175,10 @@ function JobsList({
   const view = Route.useSearch();
   const navigate = Route.useNavigate();
   const [search, setSearch] = useState(view.q ?? "");
-  const phaseFilter: PhaseFilter = view.phase ?? "active";
+  // No `phase` in the URL is the DEFAULT view -- active recruitments and drafts
+  // (matchesDefaultListView) -- not "active". The overview links to phase=active
+  // explicitly, so its count still lands on exactly the rows it counted.
+  const phaseFilter: PhaseFilter | undefined = view.phase;
   const loadOverview = useServerFn(getRecruitmentOverview);
   // Phase, responsible person and counts come from the same overview read the
   // dashboard uses, so a count there and a row here are computed once.
@@ -180,6 +190,16 @@ function JobsList({
   function setView(next: Partial<z.infer<typeof searchSchema>>) {
     void navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
   }
+  // Every action here changes what the list SHOWS, and the list is built from
+  // two reads: the jobs, and the recruitment overview. The phase badge, the
+  // status filter and its counts come from the OVERVIEW, so refreshing only the
+  // jobs left the row saying 'Publicerad' after Close, and kept a duplicated
+  // draft out of the (then 'active') view until a reload.
+  function refreshAfterAction() {
+    qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
+    qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
+    qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment-overview"] });
+  }
   const [pending, setPending] = usePendingConfirm<"delete" | "close" | "duplicate">();
   // Advertisements the database refused to delete. The list cannot see whether
   // a draft has assessment assignments or invitations hanging off it -- only
@@ -190,28 +210,19 @@ function JobsList({
 
   const closeMutation = useMutation({
     mutationFn: (jobId: string) => closeFn({ data: { employerId, jobId } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
-    },
+    onSuccess: refreshAfterAction,
     onError: (e: any) => setActionError(e?.message ?? "CLOSE_JOB_FAILED"),
   });
 
   const dupMutation = useMutation({
     mutationFn: (jobId: string) => dupFn({ data: { employerId, jobId } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
-    },
+    onSuccess: refreshAfterAction,
     onError: (e: any) => setActionError(e?.message ?? "DUPLICATE_JOB_FAILED"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (jobId: string) => deleteFn({ data: { employerId, jobId } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
-    },
+    onSuccess: refreshAfterAction,
     onError: (e: any, jobId: string) => {
       const code = e?.message ?? "DELETE_JOB_FAILED";
       setActionError(code);
@@ -223,22 +234,46 @@ function JobsList({
 
   const restoreMutation = useMutation({
     mutationFn: (jobId: string) => restoreFn({ data: { employerId, jobId } }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
-      qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
-    },
+    onSuccess: refreshAfterAction,
     onError: (e: any) => setActionError(e?.message ?? "RESTORE_JOB_FAILED"),
   });
 
   const allRows: EmployerJobRow[] = jobsQuery.data ?? [];
   const needle = (view.q ?? "").trim().toLowerCase();
+  // The phase of a row: the overview's, which knows about completed and
+  // cancelled recruitments; and, for a row the overview does not carry (just
+  // created or duplicated, with the overview still on its way), the one the
+  // advert's own status and dates give. Without that fallback such a row was
+  // hidden by every filter but "Alla".
+  const rowPhase = (r: EmployerJobRow): { phase: RecruitmentPhase; unresolved: number } => {
+    const s = summaryByJob.get(r.id);
+    if (s) return { phase: s.phase, unresolved: s.unresolved };
+    return {
+      phase: phaseOf(
+        {
+          jobStatus: r.status,
+          publishedAt: r.published_at,
+          deadlineAt: r.deadline_at,
+          expiresAt: r.expires_at,
+          completionState: null,
+        },
+        new Date(),
+      ),
+      unresolved: 0,
+    };
+  };
+  const matchesView = (filter: PhaseFilter | undefined, r: EmployerJobRow) => {
+    const { phase, unresolved } = rowPhase(r);
+    return filter === undefined
+      ? matchesDefaultListView(phase, unresolved)
+      : matchesPhaseFilter(filter, phase, unresolved);
+  };
   const rows = allRows
     .filter((r) => {
-      const summary = summaryByJob.get(r.id);
       // Until the overview has answered, the phase of a row is unknown, and a
       // row whose phase is unknown is shown rather than silently hidden.
-      if (!summary) return overviewQuery.isSuccess ? phaseFilter === "all" : true;
-      return matchesPhaseFilter(phaseFilter, summary.phase, summary.unresolved);
+      if (!overviewQuery.isSuccess && !summaryByJob.has(r.id)) return true;
+      return matchesView(phaseFilter, r);
     })
     .filter((r) => {
       if (!view.owner) return true;
@@ -253,14 +288,9 @@ function JobsList({
         (r.short_id ?? "").toLowerCase().includes(needle),
     );
   const phaseCounts = new Map<PhaseFilter, number>(
-    PHASE_FILTERS.map((f) => [
-      f,
-      allRows.filter((r) => {
-        const s = summaryByJob.get(r.id);
-        return s ? matchesPhaseFilter(f, s.phase, s.unresolved) : false;
-      }).length,
-    ]),
+    PHASE_FILTERS.map((f) => [f, allRows.filter((r) => matchesView(f, r)).length]),
   );
+  const defaultViewCount = allRows.filter((r) => matchesView(undefined, r)).length;
 
   return (
     <EmployerAppShell
@@ -330,14 +360,18 @@ function JobsList({
         <label className="flex flex-col gap-1 text-xs text-muted-foreground">
           {t("rec.list.filterStatus")}
           <select
-            value={phaseFilter}
+            value={phaseFilter ?? ""}
             onChange={(e) =>
               setView({
-                phase: e.target.value === "active" ? undefined : (e.target.value as PhaseFilter),
+                phase: e.target.value === "" ? undefined : (e.target.value as PhaseFilter),
               })
             }
             className="h-10 rounded-md border border-border bg-card px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
+            <option value="">
+              {t("rec.list.phase.default")}
+              {overviewQuery.isSuccess ? ` (${defaultViewCount})` : ""}
+            </option>
             {PHASE_FILTERS.map((f) => (
               <option key={f} value={f}>
                 {t(`rec.list.phase.${f}` as TranslationKey)}
@@ -423,7 +457,9 @@ function JobsList({
               ? t("employer.jobs.list.emptySearch")
               : allRows.length === 0
                 ? t("employer.jobs.list.empty")
-                : t("rec.list.emptyPhase")}
+                : phaseFilter === undefined
+                  ? t("rec.list.emptyDefault")
+                  : t("rec.list.emptyPhase")}
           </div>
         ) : (
           // Five columns and a row of actions do not fit a phone. The wrapper

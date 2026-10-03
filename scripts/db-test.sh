@@ -445,6 +445,106 @@ JA_OUT="$(run_ja_suite)"; JA_RC=$?
 set -e
 [ "$JA_RC" -eq 0 ] || { echo "$JA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: application insert-boundary suite does not pass after rollback and re-apply" >&2; exit 1; }
 echo "    ok  application insert-boundary migration re-applied after rollback (postflight proved); suite passes again"
+# The job-board suites below need the FINAL schema -- in particular the insert
+# boundary (20261230090000) the CV suite's CV4.x assertions rely on -- so they
+# run here, straight after it. Further down this script walks the CV state back
+# to phase 1 for the historical suites.
+# ---------------------------------------------------------------------------
+# 20270130090000 / 20270131090000 / 20270201090000: the job-board launch-readiness
+# database corrections. Each suite reproduces its defect on the pre-fix state
+# ITSELF (the real rollback, inside a savepoint: NE0 / PW0 / CV0), then proves
+# the fix and every legitimate path. Negative controls, each of which MUST make
+# its suite fail on an assertion:
+#   PW NC1  the real rollback of 20270131090000        -> PW1.1
+#   PW NC2  only the expires_at rule disabled          -> PW1.1
+#   PW NC3  only the address rules disabled            -> PW3.1
+#   NE NC1  the real rollback of 20270130090000        -> NE1.1
+#   NE NC2  the refusal narrowed to one column         -> NE1.2
+#   NE NC3  the refusal applied to every role          -> NE5.1
+#   CV NC1  the real rollback of 20270201090000        -> CV1.1
+#   CV NC2  only the applicant INSERT policy back      -> CV1.1
+#   CV NC3  applicant SELECT + DELETE policies back    -> CV1.4
+# The two jobs migrations re-declare ONE function, in order: rolling the first
+# back also takes the second's rules with it, so the second is re-applied after
+# every control of the first and the chain ends exactly as it was replayed.
+jb_run_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/$1" 2>&1
+}
+jb_nc_expect_fail() {
+  local label="$1" suite="$2" prefix="$3"
+  set +e
+  local out; out="$(jb_run_suite "$suite")"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: job-board negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o "ASSERTION FAILED: ${prefix}[0-9.]*" | head -1))"
+}
+jb_expect_pass() {
+  local label="$1" suite="$2" floor="$3"
+  set +e
+  local out; out="$(jb_run_suite "$suite")"; local rc=$?
+  set -e
+  local passed; passed="$(echo "$out" | grep -c "NOTICE:  ok  " || true)"
+  if [ "$rc" -ne 0 ]; then
+    echo "$out" | grep -E "ERROR|FAILED" >&2 || true
+    echo "FAIL: the ${label} suite exited with code ${rc}." >&2
+    exit 1
+  fi
+  [ "$passed" -ge "$floor" ] || { echo "$out"; echo "FAIL: ${label} assertion shortfall: $passed (floor $floor)" >&2; exit 1; }
+  echo "    ok  $passed ${label} assertions passed (defect reproduced pre-fix, refused post-fix)"
+}
+JB_NE_MIG=supabase/migrations/20270130090000_jobs_not_editable_in_place.sql
+JB_NE_RB=supabase/rollback/20270130090000_jobs_not_editable_in_place_rollback.sql
+JB_PW_MIG=supabase/migrations/20270131090000_jobs_publish_window_and_url_scheme.sql
+JB_PW_RB=supabase/rollback/20270131090000_jobs_publish_window_and_url_scheme_rollback.sql
+JB_CV_MIG=supabase/migrations/20270201090000_job_cvs_no_client_writes.sql
+JB_CV_RB=supabase/rollback/20270201090000_job_cvs_no_client_writes_rollback.sql
+
+echo "==> Running job-board launch-readiness assertions (in-place edits, publication window, CV bucket)"
+jb_expect_pass "jobs not editable in place" jobs_not_editable_in_place_test.sql 42
+jb_expect_pass "publication window and address" jobs_publish_window_and_url_scheme_test.sql 40
+jb_expect_pass "CV bucket client writes" job_cvs_no_client_writes_test.sql 22
+
+# 20270131090000 first (it sits on top of 20270130090000).
+psql_q -d "$TEST_DB" -f "$JB_PW_RB" >/dev/null
+jb_nc_expect_fail "PW NC1 full rollback" jobs_publish_window_and_url_scheme_test.sql PW
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "$(sed 's/AND NEW.expires_at <= now() THEN/AND false THEN/' "$JB_PW_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "PW NC2 expires_at rule disabled" jobs_publish_window_and_url_scheme_test.sql PW
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "$(sed "s/'\^https?:\/\/\[\^\/?#\[:space:\]\]+'/'^'/g" "$JB_PW_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "PW NC3 address rules disabled" jobs_publish_window_and_url_scheme_test.sql PW
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+
+# 20270130090000: its rollback restores the 20260906100000 body, which has no
+# rule of the second migration either -- so the second is applied again below.
+psql_q -d "$TEST_DB" -f "$JB_NE_RB" >/dev/null
+jb_nc_expect_fail "NE NC1 full rollback" jobs_not_editable_in_place_test.sql NE
+psql_q -d "$TEST_DB" -f "$JB_NE_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "$(sed "s/(to_jsonb(NEW) - 'updated_at') IS DISTINCT FROM (to_jsonb(OLD) - 'updated_at')/NEW.title_sv IS DISTINCT FROM OLD.title_sv/" "$JB_NE_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "NE NC2 refusal narrowed to one column" jobs_not_editable_in_place_test.sql NE
+psql_q -d "$TEST_DB" -c "$(sed "s/current_user IN ('authenticated', 'anon')/true/" "$JB_NE_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "NE NC3 refusal applied to every role" jobs_not_editable_in_place_test.sql NE
+psql_q -d "$TEST_DB" -f "$JB_NE_MIG" >/dev/null
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+
+psql_q -d "$TEST_DB" -f "$JB_CV_RB" >/dev/null
+jb_nc_expect_fail "CV NC1 full rollback" job_cvs_no_client_writes_test.sql CV
+psql_q -d "$TEST_DB" -f "$JB_CV_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "CREATE POLICY job_cvs_applicant_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'job-application-cvs' AND auth.uid()::text = (storage.foldername(name))[1]);" >/dev/null
+jb_nc_expect_fail "CV NC2 applicant INSERT policy back" job_cvs_no_client_writes_test.sql CV
+# A DELETE (or UPDATE) policy alone cannot act on a row its role cannot SELECT, so the
+# control restores the pair that makes a stored CV deletable.
+psql_q -d "$TEST_DB" -c "DROP POLICY job_cvs_applicant_insert ON storage.objects; CREATE POLICY job_cvs_applicant_select ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'job-application-cvs' AND auth.uid()::text = (storage.foldername(name))[1]); CREATE POLICY job_cvs_applicant_delete ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'job-application-cvs' AND auth.uid()::text = (storage.foldername(name))[1]);" >/dev/null
+jb_nc_expect_fail "CV NC3 applicant SELECT + DELETE policies back" job_cvs_no_client_writes_test.sql CV
+psql_q -d "$TEST_DB" -f "$JB_CV_MIG" >/dev/null
+
+jb_expect_pass "jobs not editable in place (after re-apply)" jobs_not_editable_in_place_test.sql 42
+jb_expect_pass "publication window and address (after re-apply)" jobs_publish_window_and_url_scheme_test.sql 40
+jb_expect_pass "CV bucket client writes (after re-apply)" job_cvs_no_client_writes_test.sql 22
+echo "    ok  the three job-board migrations re-applied after every control (postflights proved); suites pass again"
 # 20261231090000: only the assignment path may bind an employment record to a
 # person (P1-3). The suite reproduces a non-member binding another employer's
 # employee on the pre-fix grant itself (RB0). Negative controls, each of which

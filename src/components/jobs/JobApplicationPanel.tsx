@@ -5,6 +5,7 @@ import { formatJobDate as formatDate } from "./JobAdContent";
 import { Button } from "@/components/ui/button";
 import { ExternalApplyDialog } from "./ExternalApplyDialog";
 import { ApplyInternalDialog } from "./ApplyInternalDialog";
+import { safeApplicationHref } from "@/lib/job-intelligence/application-url";
 
 export function JobApplicationPanel({
   job,
@@ -17,6 +18,10 @@ export function JobApplicationPanel({
   returnTo: string;
 }) {
   const { t, lang } = useT();
+  // A web address or nothing: a row stored before the address rule existed
+  // (20270131090000) can hold `javascript:` or another scheme, and an anchor
+  // must never be built from it. Such an ad reads as "apply unavailable".
+  const externalUrl = safeApplicationHref(job.application_url);
 
   const applyBlock = () => {
     if (expired) {
@@ -38,10 +43,10 @@ export function JobApplicationPanel({
         />
       );
     }
-    if (job.application_method === "external" && job.application_url) {
+    if (job.application_method === "external" && externalUrl) {
       return (
         <ExternalApplyDialog
-          url={job.application_url}
+          url={externalUrl}
           employerName={job.employer?.name ?? null}
           label={t("jobs.detail.apply_external")}
         />

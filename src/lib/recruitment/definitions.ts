@@ -107,6 +107,17 @@ export function isReadyToComplete(phase: RecruitmentPhase, unresolved: number): 
   return phase === "closed" && unresolved === 0;
 }
 
+/** What the recruitments LIST shows when no status has been chosen: everything
+ *  somebody is still working on -- the active recruitments AND the drafts that
+ *  are not yet published. The overview's "active recruitments" count is NOT this
+ *  (it links to phase=active, which excludes drafts); the list's default is wider
+ *  because a draft is work in progress, and a list that opened without them hid
+ *  a freshly created or duplicated advert and told an employer with nothing but
+ *  drafts that they had no recruitments. */
+export function matchesDefaultListView(phase: RecruitmentPhase, unresolved: number): boolean {
+  return phase === "draft" || isActiveRecruitment(phase, unresolved);
+}
+
 export const PHASE_FILTERS = [
   "active",
   "draft",

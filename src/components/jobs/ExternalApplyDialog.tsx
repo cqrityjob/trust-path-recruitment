@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/i18n/context";
+import { safeApplicationHref } from "@/lib/job-intelligence/application-url";
 
 /** Interstitial that warns the user before leaving CQrityjob for an
  * employer's external site. Renders an accessible confirm dialog. */
@@ -25,6 +26,10 @@ export function ExternalApplyDialog({
   label: string;
 }) {
   const { t } = useT();
+  // Defence in depth: never build an anchor from anything but a web address
+  // (the caller already checks; a stored `javascript:` value must not become
+  // a link whoever calls this).
+  if (!safeApplicationHref(url)) return null;
   let host = url;
   try {
     host = new URL(url).host;

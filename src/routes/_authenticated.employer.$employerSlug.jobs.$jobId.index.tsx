@@ -286,6 +286,9 @@ function JobHub({
       setActionError(null);
       qc.invalidateQueries({ queryKey: ["employer", employerId, "jobs"] });
       qc.invalidateQueries({ queryKey: ["employer", employerId, "dashboard-stats"] });
+      // The dashboard's counts and the list's phase filter read the overview,
+      // which still carries the deleted advert until it is read again.
+      qc.invalidateQueries({ queryKey: ["employer", employerId, "recruitment-overview"] });
       void navigate({ to: "/employer/$employerSlug/jobs", params: { employerSlug } });
     },
     onError: (e: unknown) => {
