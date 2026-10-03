@@ -265,6 +265,14 @@ jobs:
       - name: Security Passport Network statistics database test
         run: bun run passport-network-stats:db
 
+      # A Passport decision names the version its decider saw
+      # (20270125090000): the reviewer workspace and the employer page send
+      # the loaded submitted_at, never decide without it, and reload the entry
+      # on SP_REVIEW_STALE with copy that says what happened. Planted controls
+      # run in negative-controls:all.
+      - name: Security Passport stale review check
+        run: bun run passport-review-stale:check
+
       # Launch (owner, 2026-10-03): the published terms of use and privacy
       # policy, their links, and terms acceptance at signup kept separate
       # from any other consent. Planted controls run in negative-controls:all.

@@ -24545,6 +24545,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      sp_verifier_decide_reviewed: {
+        Args: {
+          _decision: string
+          _decision_note: string
+          _holder_message: string
+          _method: string
+          _request_id: string
+          _reviewed_submitted_at: string
+          _valid_from: string
+          _valid_until: string
+        }
+        Returns: undefined
+      }
       sp_verifier_queue: { Args: { _status?: string }; Returns: Json }
       sp_verifier_request_detail: {
         Args: { _request_id: string }

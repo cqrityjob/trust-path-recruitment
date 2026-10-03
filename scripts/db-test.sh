@@ -630,6 +630,9 @@ SQL
 sv_nc_expect_fail "NC3 write grants back, policies SELECT-only"
 psql_q -d "$TEST_DB" -f supabase/migrations/20270106090000_sp_evidence_and_request_writes_rpc_only.sql >/dev/null
 psql_q -d "$TEST_DB" -f supabase/migrations/20270114090000_sp_passport_target_holder.sql >/dev/null
+# 20270114's re-apply restores its own sp_attach_evidence body; 20270126
+# builds on it, so it goes back on top.
+psql_q -d "$TEST_DB" -f supabase/migrations/20270126090000_sp_evidence_change_under_review.sql >/dev/null
 set +e
 SV_OUT="$(run_sv_suite)"; SV_RC=$?
 set -e
@@ -826,6 +829,8 @@ psql_q -d "$TEST_DB" -c "$TH_NC3_SQL" >/dev/null
 th_nc_expect_fail "NC3 constraints dropped, functions kept"
 psql_q -d "$TEST_DB" -f "$TH_RB" >/dev/null
 psql_q -d "$TEST_DB" -f "$TH_MIG" >/dev/null
+# As above: 20270126 goes back on top of 20270114's sp_attach_evidence.
+psql_q -d "$TEST_DB" -f supabase/migrations/20270126090000_sp_evidence_change_under_review.sql >/dev/null
 set +e
 TH_OUT="$(run_th_suite)"; TH_RC=$?
 set -e
@@ -1758,7 +1763,7 @@ if [ "$SR_RC" -ne 0 ] || ! echo "$SR_OUT" | grep -q "ok  SR0.1 REPRODUCTION"; th
   echo "FAIL: the reviewed-content suite exited with code ${SR_RC}." >&2
   exit 1
 fi
-[ "$SR_PASSED" -ge 20 ] || { echo "$SR_OUT"; echo "FAIL: reviewed-content assertion shortfall: $SR_PASSED (floor 20)" >&2; exit 1; }
+[ "$SR_PASSED" -ge 25 ] || { echo "$SR_OUT"; echo "FAIL: reviewed-content assertion shortfall: $SR_PASSED (floor 25)" >&2; exit 1; }
 echo "    ok  $SR_PASSED reviewed-content assertions passed (stale approval reproduced pre-fix, refused post-fix)"
 psql_q -d "$TEST_DB" -f "$SR_RB" >/dev/null
 sr_nc_expect_fail "SR NC1 full rollback"
@@ -1840,6 +1845,44 @@ SR_OUT="$(run_sr_suite)"; SR_RC=$?
 set -e
 [ "$SR_RC" -eq 0 ] || { echo "$SR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: reviewed-content suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  reviewed-content migration re-applied (postflight proved); suite passes again"
+
+# 20270126090000: evidence attached while a review is open binds the decision
+# too (SR6 of the same suite). Negative controls, each of which MUST make the
+# suite fail on an assertion:
+#   EV NC1  the real rollback                                      -> SR6.1
+#   EV NC2  the attachment no longer moves the request's version    -> SR6.1
+EV_MIG=supabase/migrations/20270126090000_sp_evidence_change_under_review.sql
+EV_RB=supabase/rollback/20270126090000_sp_evidence_change_under_review_rollback.sql
+ev_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_sr_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: SR6"; then
+    echo "FAIL: evidence-under-review negative control '${label}': the suite did not fail at SR6 -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: SR[0-9a-z.]*' | head -1))"
+}
+echo "==> Running Passport evidence-under-review assertions"
+SR_OUT="$(run_sr_suite)"
+echo "$SR_OUT" | grep -q "ok  SR6.3 " || { echo "$SR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: SR6 did not pass with 20270126090000 applied" >&2; exit 1; }
+echo "    ok  SR6 passes: a page loaded before a new document is refused, the reload approves"
+psql_q -d "$TEST_DB" -f "$EV_RB" >/dev/null
+ev_nc_expect_fail "EV NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$EV_MIG" >/dev/null
+EV_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.sp_attach_evidence/,/^END; \$function\$$/p' "$EV_MIG" \
+  | sed 's/^   WHERE r\.status IN (/   WHERE false AND r.status IN (/')"
+grep -q "WHERE false AND r.status IN" <<<"$EV_NC2_SQL" \
+  || { echo "FAIL: evidence-under-review NC2 could not plant its defect" >&2; exit 1; }
+psql_q -d "$TEST_DB" -c "$EV_NC2_SQL" >/dev/null
+ev_nc_expect_fail "EV NC2 attachment leaves the version"
+psql_q -d "$TEST_DB" -f "$EV_MIG" >/dev/null
+set +e
+SR_OUT="$(run_sr_suite)"; SR_RC=$?
+set -e
+[ "$SR_RC" -eq 0 ] || { echo "$SR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: evidence-under-review suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  evidence-under-review migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback

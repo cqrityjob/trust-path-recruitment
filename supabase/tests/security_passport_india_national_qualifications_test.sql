@@ -270,7 +270,11 @@ SELECT set_config('request.jwt.claim.sub','fd140000-0000-4000-8000-000000000003'
 SELECT pg_temp.ok(position(:'req' IN public.sp_verifier_queue('clarification_requested')::text)>0
    AND jsonb_array_length(public.sp_verifier_request_detail(:'req'::uuid)->'evidence')=2,
  '5.5 the reviewer finds the answered request and the added document');
-SELECT public.sp_verifier_decide(:'req'::uuid,'approved','document_review','Checked against certificate','',NULL,NULL);
+-- The reviewer decides on the version the page shows, the one with the added
+-- document (20270126090000: the answer moved the request's version).
+SELECT public.sp_verifier_decide_reviewed(:'req'::uuid,
+  (public.sp_verifier_request_detail(:'req'::uuid)->>'submitted_at')::timestamptz,
+  'approved','document_review','Checked against certificate','',NULL,NULL);
 RESET ROLE;
 SELECT pg_temp.ok((SELECT assertion_level='verified' FROM public.sp_claims WHERE id=:'g2'),
  '5.6 only the reviewer''s recorded decision moves the credential to verified');

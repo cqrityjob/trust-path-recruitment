@@ -71,6 +71,7 @@ const DECLINE_KEY: Record<DecisionErrorCode, PassportCopyKey> = {
   invalid_validity: "vq.decline.invalid_validity",
   issuer_required: "vq.decline.issuer_required",
   entry_not_active: "vq.decline.entry_not_active",
+  review_stale: "vq.decline.review_stale",
   unknown: "vq.decline.unknown",
 };
 
@@ -136,6 +137,15 @@ function Detail({ employerId, employerSlug }: { employerId: string; employerSlug
   );
 
   async function onDecide(decision: EmployerDecision, holderMessage: string | null) {
+    // The decision names the version this page shows. Without it there is
+    // nothing to decide on yet (20270125090000).
+    if (!item?.submittedAt) {
+      setNotice(null);
+      setError(pt(DECLINE_KEY.review_stale));
+      void query.refetch();
+      return;
+    }
+    const reviewedSubmittedAt = item.submittedAt;
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -156,6 +166,8 @@ function Detail({ employerId, employerSlug }: { employerId: string; employerSlug
           holderMessage,
           validFrom: null,
           validUntil: null,
+          // The version this page shows; a change since then is refused.
+          reviewedSubmittedAt,
         },
       });
       setNotice(pt("emp.done"));
@@ -166,7 +178,11 @@ function Detail({ employerId, employerSlug }: { employerId: string; employerSlug
       await router.invalidate();
     } catch (err) {
       console.error("[passport] employment verification decision failed", err);
-      setError(pt(DECLINE_KEY[decisionErrorCodeFrom(err)]));
+      const code = decisionErrorCodeFrom(err);
+      setError(pt(DECLINE_KEY[code]));
+      // The candidate changed the entry after this page loaded it: show the
+      // new version before the employer decides again.
+      if (code === "review_stale") void query.refetch();
     } finally {
       setBusy(false);
     }

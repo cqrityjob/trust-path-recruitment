@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-02T22:38:00+00:00",
-  "readBy": "Read-only production verification after the six 2026-10-02 final-audit P1 fixes merged (#377, #378, #379, #380, #381, #382). All 351 previous ledger identities preserved (their digest is still d51e277eb053ef50833765ebb9f751b0); the six new rows are 20270118090000 through 20270123090000, applied by the official integration. md5 of version:name joined by newline over all 357 rows f4f87e56322142f2ac03b5eda5c1cfae, equal on the connector read and on this file. See docs/release/2026-10-02-final-audit-p1-fixes-hosted-verification.md.",
+  "readAt": "2026-10-03T06:53:55+00:00",
+  "readBy": "Read-only production verification after #384 merged (BESKT exposure durability and Passport decision bound to reviewed content). All 357 previous ledger identities preserved (their digest is still f4f87e56322142f2ac03b5eda5c1cfae); the two new rows are 20270124090000 and 20270125090000, applied by the official integration. md5 of version:name joined by newline over all 359 rows 52e21ce44d6964ae72605bdf2b67817a, equal on the connector read and on this file. See docs/release/2026-10-03-beskt-exposure-and-passport-review-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1443,6 +1443,14 @@
     {
       "version": "20270123090000",
       "name": "employer_identity_rereview"
+    },
+    {
+      "version": "20270124090000",
+      "name": "bcp_conduct_exposure_is_durable"
+    },
+    {
+      "version": "20270125090000",
+      "name": "sp_decision_bound_to_reviewed_content"
     }
   ]
 }
