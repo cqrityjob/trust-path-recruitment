@@ -1,6 +1,7 @@
 /** Routed browser integration with stubbed server responses; database enforcement
  * is independently exercised by the local PostgreSQL/RLS suites. */
 import { test, expect, type Page } from "@playwright/test";
+import { chooseCredential, searchBox } from "./support/credential-picker";
 import { personaById } from "../src/lib/security-passport/fixtures/personas";
 import {
   installBoundary,
@@ -378,14 +379,13 @@ for (const lang of ["en", "sv"] as const) {
         .getByRole("button", { name: lang === "sv" ? "Fortsätt" : "Continue", exact: true })
         .click();
     await expect(page.locator("[data-international-credential-form]")).toBeVisible();
-    await capture("add-scope");
-    await next();
-    await capture("add-filters");
-    await next();
-    await page
-      .getByLabel(lang === "sv" ? "Godkänd merit" : "Approved credential")
-      .selectOption("INTL_ASIS_CPP");
-    await capture("add-catalogue");
+    // One screen finds the credential: search, scope, filters, ranked results.
+    await capture("add-find");
+    await searchBox(page).fill("cpp");
+    await expect(page.locator("[data-result]").first()).toBeVisible();
+    await capture("add-results");
+    await chooseCredential(page, "INTL_ASIS_CPP", { lang, proceed: false });
+    await capture("add-selected");
     await next();
     await page
       .getByLabel(

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { IndexedDefinition } from "@/lib/security-passport/credential-catalogue-filters";
 import {
   bylineOf,
@@ -31,6 +32,7 @@ export function CredentialResultList({
   placeName,
   onSelect,
   onMore,
+  renderDetail,
 }: {
   lang: PickerLang;
   results: readonly IndexedDefinition[];
@@ -40,6 +42,8 @@ export function CredentialResultList({
   placeName: (code: string | null) => string;
   onSelect: (code: string) => void;
   onMore: () => void;
+  /** What sits under a row once it is chosen: the catalogue's own facts for it. */
+  renderDetail?: (d: IndexedDefinition) => ReactNode;
 }) {
   const copy = (sv: string, en: string) => (lang === "sv" ? sv : en);
   const shown = results.slice(0, limit);
@@ -78,6 +82,7 @@ export function CredentialResultList({
                   </span>
                 </span>
               </label>
+              {checked && renderDetail && <div className="mt-2">{renderDetail(d)}</div>}
             </li>
           );
         })}

@@ -730,6 +730,8 @@ export function InternationalCredentialForm({
       )}
     </div>
   );
+  const selectedIsListed =
+    !!selected && visible.slice(0, limit).some((d) => d.code === selected.code);
   const filterPanelActive = !!filters.domain || !!filters.category || !!filters.organisation;
   const summary = (
     <FilterSummary
@@ -809,7 +811,7 @@ export function InternationalCredentialForm({
               )}
             </p>
           )}
-          {!selected ? (
+          {
             <div className="space-y-5" data-credential-filters>
               <label className="block">
                 {copy(
@@ -985,6 +987,7 @@ export function InternationalCredentialForm({
                 placeName={locationName}
                 onSelect={chooseDefinition}
                 onMore={() => setLimit((n) => n + RESULT_PAGE)}
+                renderDetail={(d) => (d.code === draft.definition_code ? facts : null)}
               />
               {!visible.length && (
                 <>
@@ -1028,28 +1031,38 @@ export function InternationalCredentialForm({
                 />
               )}
             </div>
-          ) : (
-            <>
-              {facts}
-              <button
-                type="button"
-                data-change-credential
-                className="min-h-11 rounded-md border border-input bg-background px-4 text-sm"
-                onClick={() => chooseDefinition("")}
-              >
-                {copy("Välj en annan merit", "Choose a different credential")}
-              </button>
-            </>
+          }
+          {selected && (
+            <div className="space-y-3" data-selected-credential>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent bg-accent/5 p-3">
+                <p className="min-w-0 break-words text-sm">
+                  <span className="text-muted-foreground">{copy("Vald merit", "Selected")}: </span>
+                  <span className="font-medium">
+                    {headlineOf(selected, lang as PickerLang).text}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  data-change-credential
+                  className="min-h-11 rounded-md border border-input bg-background px-4 text-sm"
+                  onClick={() => chooseDefinition("")}
+                >
+                  {copy("Rensa valet", "Clear selection")}
+                </button>
+              </div>
+              {/* The facts sit under the chosen row; when that row is filtered out
+                  of the list (or not drawn yet) they are shown here instead, so the
+                  holder always sees what they are about to register. */}
+              {!selectedIsListed && facts}
+            </div>
           )}
-          {!selected && (
-            <CatalogueRequestPanel
-              lang={lang}
-              suggestedName={filters.search}
-              seed={requestSeed}
-              onRequest={onRequestDefinition}
-              onList={onListRequests}
-            />
-          )}
+          <CatalogueRequestPanel
+            lang={lang}
+            suggestedName={filters.search}
+            seed={requestSeed}
+            onRequest={onRequestDefinition}
+            onList={onListRequests}
+          />
           <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-5">
             <button
               type="button"
