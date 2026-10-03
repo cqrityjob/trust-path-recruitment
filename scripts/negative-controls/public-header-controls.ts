@@ -236,8 +236,9 @@ const MUTATIONS: readonly Mutation[] = [
     defect:
       "the desktop navigation landmark is named in English on the Swedish site again (and loses the attribute the e2e specs find it by)",
     file: HEADER,
-    find: '              aria-label={t("nav.primary")}\n              data-site-nav="primary"\n            >\n              {nav.map((item) =>',
-    replace: '              aria-label="Primary"\n            >\n              {nav.map((item) =>',
+    find: '              className="hidden min-w-0 items-center gap-0.5 lg:flex xl:gap-1"\n              aria-label={t("nav.primary")}\n              data-site-nav="primary"\n',
+    replace:
+      '              className="hidden min-w-0 items-center gap-0.5 lg:flex xl:gap-1"\n              aria-label="Primary"\n',
     guard: GUARD,
     expect: 'must be named by t("nav.primary")',
   },
