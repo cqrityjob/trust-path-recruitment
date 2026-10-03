@@ -239,21 +239,23 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
     from: "ceo@cqrityjob.com",
     ...message,
   });
-  const c = calls.at(-1)!;
+  // Optional on purpose: with the kind refused nothing was sent, and the
+  // assertions must FAIL by name rather than crash on a missing call.
+  const c = calls.at(-1);
   ck(
     "it goes to the one address the request names",
-    JSON.stringify(c.body.to) === JSON.stringify(["owner@example.test"]),
-    JSON.stringify(c.body.to),
+    JSON.stringify(c?.body.to) === JSON.stringify(["owner@example.test"]),
+    JSON.stringify(c?.body.to),
   );
   ck(
     "and carries no Reply-To, whatever the request names",
-    !("reply_to" in c.body),
-    String(c.body.reply_to),
+    c !== undefined && !("reply_to" in c.body),
+    String(c?.body.reply_to),
   );
   ck(
     "From is CQrityjob's own: no organisation name, whatever sender name the request names",
-    c.body.from === "CQrityjob <no-reply@cqrityjob.com>",
-    String(c.body.from),
+    c?.body.from === "CQrityjob <no-reply@cqrityjob.com>",
+    String(c?.body.from),
   );
   const before = calls.length;
   const refused = await Promise.all(
@@ -276,7 +278,7 @@ console.log("\n2c. employer_new_application: CQrityjob writes to an organisation
   );
   ck(
     "the Idempotency-Key is forwarded, so a retry is deduplicated by the provider",
-    calls.at(-1)!.headers["idempotency-key"] === "employer-new-application:guard-1",
+    calls.at(-1)?.headers["idempotency-key"] === "employer-new-application:guard-1",
   );
   const transport = readFileSync("src/lib/email/transport.server.ts", "utf8");
   ck("the app's transport knows the kind", /\|\s+"employer_new_application"/.test(transport));
