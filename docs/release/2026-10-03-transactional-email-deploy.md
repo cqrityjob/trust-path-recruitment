@@ -35,16 +35,29 @@ Körplanen finns i `docs/release/2026-10-03-production-test-request.md` (#387). 
 
 Den här sessionen skickar, Sonnet-sessionen kontrollerar loggarna och ägaren bekräftar mottagningen.
 
-| Test | Mejltyp                                    | Förutsättning                                                           | Status                                                                                                                                                |
-| ---- | ------------------------------------------ | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| T1   | Registreringsbekräftelse (Auth/SMTP)       | Syntetisk adress utan konto (kontrollerat 14:05 UTC: 0 konton)          | Hålls inne: den publicerade sajten saknar #386, och Auth-omdirigeringen till www är inte rättad                                                       |
-| T2   | Lösenordsåterställning (Auth/SMTP)         | Befintligt konto; länken används inte                                   | Skickad 14:10:52 UTC via www/login. Appen: "skickas en återställningslänk". Auth `user_recovery_requested` 200 (1,65 s). Mottagning: väntar på ägaren |
-| T3   | Kontakt: förfrågan till info@ och kvittens | Version 3 driftsatt och `RESEND_API_KEY` satt                           | Blockerad: funktionen svarar 503 `not_configured` (14:08:35 och 14:09:17 UTC), och formuläret visar "inte öppet"                                      |
-| T4   | Ansökningskvitto                           | Version 3 och det syntetiska kandidatkontot                             | Väntar på T1                                                                                                                                          |
-| T5   | Rekryteringsmeddelande                     | Version 3 och en ansökan från T4                                        | Väntar på T4                                                                                                                                          |
-| T6   | `employer_new_application`                 | #392 applicerad och registrerad, #393 mergad, funktionen driftsatt igen | Väntar                                                                                                                                                |
+| Test | Mejltyp                                    | Förutsättning                                                           | Status                                                                                                                                                                                                                                                                         |
+| ---- | ------------------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| T1   | Registreringsbekräftelse (Auth/SMTP)       | Syntetisk adress utan konto (kontrollerat 14:40 UTC: 0 konton)          | Registrerad 14:40:46 UTC via www/signup med villkorsrutan (`terms_version` `2026-10-01-utkast`). Auth `user_confirmation_requested` 200 (1,26 s), retur till `https://www.cqrityjob.com/login?redirect=/my-career`. Kontot väntar på bekräftelse. Mottagning: väntar på ägaren |
+| T2   | Lösenordsåterställning (Auth/SMTP)         | Befintligt konto; länken används inte                                   | Skickad 14:10:52 UTC. Ägaren bekräftar mottagning från no-reply@cqrityjob.com. Länken skickades före Auth-rättningen, så dess retur pekar troligen på lovable.app. Måldomänen läses från länkens `redirect_to` utan att länken öppnas                                          |
+| T3   | Kontakt: förfrågan till info@ och kvittens | Version 3 driftsatt och `RESEND_API_KEY` satt                           | Skickad 14:39:47 UTC via www/contact, märkt TEST T3. Appen: "Tack – er förfrågan är skickad". Funktionen: `contact_enquiry` 200 (14:39:48) och `contact_acknowledgement` 200 (14:39:49), båda accepterade av Resend. Mottagning: väntar på ägaren                              |
+| T4   | Ansökningskvitto                           | Version 3 och det syntetiska kandidatkontot                             | Väntar på T1                                                                                                                                                                                                                                                                   |
+| T5   | Rekryteringsmeddelande                     | Version 3 och en ansökan från T4                                        | Väntar på T4                                                                                                                                                                                                                                                                   |
+| T6   | `employer_new_application`                 | #392 applicerad och registrerad, #393 mergad, funktionen driftsatt igen | Väntar                                                                                                                                                                                                                                                                         |
 
-**Kontroller i produktion 2026-10-03:**
+**Kontroller i produktion 2026-10-03, 14:36–14:41 UTC:**
+
+- **Publicerad version.** Den publicerade sajten kör main `071f69e` (asset `index-owmCS86F.js`).
+  - `/villkor` och `/integritetspolicy` visar utkastbanner och har `noindex`.
+  - Registreringen har villkorsrutan, och kontaktformuläret är öppet.
+  - Canonical och `og:url` pekar fortfarande på lovable.app. #387 rättar det.
+- **Beredskap.** Readiness-anropet (GET) gav 200 kl. 14:37:19 UTC. Funktionen är version 4 med samma `ezbr_sha256` och samma källa som version 3.
+- **Auth-omdirigering.**
+  - `redirect_to=https://www.cqrityjob.com/...` godtas.
+  - En främmande adress faller tillbaka till `https://www.cqrityjob.com`, som alltså är Site URL. Det visar Googles start-URL, utan att något mejl skickas.
+- **AAAA-posten** för domänen utan www är borttagen. Där återstår bara A-posten 185.158.133.1.
+  - HTTPS mot domänen utan www ger fortfarande TLS-fel, och HTTP ger 421. Lovable visar domänen som Stalled.
+
+**Tidigare kontroller 2026-10-03:**
 
 - **Obehöriga anrop till funktionen.** Anrop med anon- eller publishable-nyckel, förfalskade token, andra projekts nycklar, skräpvärden eller utan nyckel gav 401, både för GET och POST.
   - Undantag: en enstaka POST gav 504 efter 160 s, utan "booted" i loggen. Det upprepades inte; tre nya försök gav 401.
