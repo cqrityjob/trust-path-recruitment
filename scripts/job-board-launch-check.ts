@@ -437,7 +437,13 @@ console.log("a closed job's public URL");
 console.log("the database half");
 {
   const state = JSON.parse(read("supabase/release-state.json")) as {
-    frontier: { file: string; hostedState: string; rollback?: string }[];
+    frontier: {
+      file: string;
+      hostedState: string;
+      hostedVersion?: string;
+      evidenceSource?: string;
+      rollback?: string;
+    }[];
   };
   const dbtest = read("scripts/db-test.sh");
   for (const [file, suite] of [
@@ -449,9 +455,18 @@ console.log("the database half");
     ["20270201090000_job_cvs_no_client_writes.sql", "job_cvs_no_client_writes_test.sql"],
   ] as const) {
     const entry = state.frontier.find((e) => e.file === file);
+    // Pending until the integration applied it; afterwards "applied", and then
+    // the record must carry the hosted version and the evidence it rests on.
+    // Either way the rollback stays on file.
+    const recorded =
+      entry?.hostedState === "pending" ||
+      (entry?.hostedState === "applied" &&
+        entry.hostedVersion === file.slice(0, 14) &&
+        typeof entry.evidenceSource === "string" &&
+        entry.evidenceSource.length > 0);
     ck(
-      `${file} is recorded as pending in release-state.json, with its rollback`,
-      entry?.hostedState === "pending" && Boolean(entry?.rollback),
+      `${file} is recorded in release-state.json (pending, or applied with its hosted evidence), with its rollback`,
+      recorded && Boolean(entry?.rollback),
     );
     ck(
       `scripts/db-test.sh runs ${suite} and proves it fails without the migration`,
