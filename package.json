@@ -290,6 +290,8 @@
     "passport-review-stale:check": "bun run scripts/passport-review-stale-check.tsx",
     "negative-controls:passport-network-stats": "bun run scripts/negative-controls/passport-network-stats-controls.ts",
     "negative-controls:passport-review-stale": "bun run scripts/negative-controls/passport-review-stale-controls.ts",
+    "launch-legal:check": "bun run scripts/launch-legal-check.ts",
+    "negative-controls:launch-legal": "bun run scripts/negative-controls/launch-legal-controls.ts",
     "passport-network-stats:db": "bash tests/database/sp-network-stats/run.sh",
     "india-entry:check": "bun run scripts/india-entry-check.ts",
     "negative-controls:india-entry": "bun run scripts/negative-controls/india-entry-controls.ts",

@@ -6,6 +6,11 @@ import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { footerExtraNav, publicNav } from "./public-nav";
+import { CONTACT_EMAIL } from "@/lib/site-contact";
+import { PRIVACY_PATH, TERMS_PATH } from "@/lib/legal/documents";
+
+const LEGAL_LINK =
+  "inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md underline-offset-4 transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
 
 /** ── THE SITE FOOTER ─────────────────────────────────────────────────────
  *
@@ -25,13 +30,12 @@ import { footerExtraNav, publicNav } from "./public-nav";
  *  to CQrityjob through the product's existing mail transport, and the page
  *  says so honestly while that transport is not configured.
  *
- *  ── WHAT IS DELIBERATELY NOT A LINK ──────────────────────────────────
+ *  ── THE LEGAL ROW ────────────────────────────────────────────────────
  *
- *  The privacy policy and the terms of use have no approved pages yet. The
- *  footer says exactly that, as plain text in the muted colour, with no
- *  hover and no cursor change: somebody looking for the privacy policy learns
- *  something true from "not published yet" and nothing at all from a dead
- *  anchor. They become links the day approved documents and routes exist. */
+ *  The terms of use (/villkor) and the privacy policy (/integritetspolicy)
+ *  are published, so the bottom row links them, with the contact address
+ *  the policy itself names: info@cqrityjob.com, for contact, support and
+ *  privacy questions. Every one is a 44 x 44 target, like the row above. */
 export function SiteFooter() {
   const { t } = useT();
   const signedIn = useSignedIn();
@@ -107,13 +111,24 @@ export function SiteFooter() {
           <p>
             © {year} {t("brand.name")}. {t("footer.rights")} · {t("footer.built")}
           </p>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            {/* Not anchors, and not two document names either: one plain
-                statement that the documents are not published yet. See the
-                header comment: they get links the day they get routes. */}
-            <span>{t("footer.legal.notice")}</span>
+          <nav
+            aria-label={t("footer.legal")}
+            className="flex flex-wrap items-center gap-x-5 gap-y-1"
+          >
+            <Link to={TERMS_PATH} className={LEGAL_LINK}>
+              {t("footer.terms")}
+            </Link>
+            <Link to={PRIVACY_PATH} className={LEGAL_LINK}>
+              {t("footer.privacy")}
+            </Link>
+            <span className="inline-flex items-center gap-1.5">
+              <span>{t("footer.contactEmail")}</span>
+              <a href={`mailto:${CONTACT_EMAIL}`} className={LEGAL_LINK}>
+                {CONTACT_EMAIL}
+              </a>
+            </span>
             <LanguageSwitcher />
-          </div>
+          </nav>
         </div>
       </Container>
     </footer>

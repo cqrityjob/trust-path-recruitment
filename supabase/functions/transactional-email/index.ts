@@ -12,13 +12,15 @@
 //
 // ── NOT A RELAY ────────────────────────────────────────────────────────
 //
-//   * Only the application server can call it: the caller must present the
-//     project's service-role key (Authorization: Bearer, or apikey), the key
-//     the app server already holds and a browser never does. Anything else is
-//     a 401 with no detail.
+//   * Only the application server can call it: the caller must present a
+//     service key of this project (Authorization: Bearer, or apikey), the key
+//     the app server already holds and a browser never does, and the project
+//     confirms it on every call. Anything else is a 401 with no detail.
 //   * Only the named kinds below are accepted. Each kind fixes where the
 //     message may go and where a reply lands. The admin inbox, the From
 //     address and every Reply-To are decided HERE, never by the request.
+//     An organisation's message may name the organisation, which is shown
+//     as the sender's display name in front of the fixed address.
 //   * One recipient per message, size-capped subject/body, no attachments,
 //     no headers, no CC/BCC.
 //
@@ -34,7 +36,8 @@
 //
 // Kind and status only. Never an address, a subject, a body or a key.
 
-const FROM = "CQrityjob <no-reply@cqrityjob.com>";
+const FROM_ADDRESS = "no-reply@cqrityjob.com"; // automated mail only
+const FROM = `CQrityjob <${FROM_ADDRESS}>`;
 const ADMIN_INBOX = "info@cqrityjob.com"; // general / employer / contact
 const JOB_INBOX = "job@cqrityjob.com"; // job / candidate replies
 
@@ -58,6 +61,39 @@ const KINDS: Record<string, { to: "admin" | "caller"; replyTo: Party }> = {
   employer_new_application: { to: "caller", replyTo: "none" }, // CQrityjob to an organisation's own people; no Reply-To, no organisation name
 };
 
+/** Messages an organisation sends through CQrityjob: the reader sees the
+ *  organisation's name as the sender ("Acme AB via CQrityjob"). The ADDRESS
+ *  stays no-reply@cqrityjob.com and the Reply-To stays the kind's own (above):
+ *  the request supplies a name, never an address. */
+const ORGANISATION_SENDER_KINDS = new Set([
+  "application_receipt",
+  "recruitment_message",
+  "assessment_invitation",
+  "academy_invitation",
+]);
+const MAX_SENDER_NAME = 60;
+
+/** A display name that cannot become an address, a second header or a
+ *  quoted-string escape: letters, digits, spaces and . & ' - only. */
+function senderDisplayName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value
+    .normalize("NFC")
+    .replace(/[^\p{L}\p{N} .&'\u2019-]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SENDER_NAME)
+    .trim();
+  return /[\p{L}\p{N}]/u.test(name) ? name : null;
+}
+
+/** The From header: always FROM_ADDRESS; the organisation's name in front of
+ *  it only for an organisation's own message. */
+function fromFor(kind: string, senderName: unknown): string {
+  const name = ORGANISATION_SENDER_KINDS.has(kind) ? senderDisplayName(senderName) : null;
+  return name ? `${name} via CQrityjob <${FROM_ADDRESS}>` : FROM;
+}
+
 const MAX_BODY_BYTES = 300_000;
 const MAX_SUBJECT = 300;
 const MAX_HTML = 200_000;
@@ -79,26 +115,74 @@ function sameSecret(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** The service-role keys this project accepts: the legacy JWT and, where the
- *  platform provides them, the newer secret keys. */
-function serviceKeys(): string[] {
-  const keys = [Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""];
+/** Only something shaped like this project's service key is worth asking
+ *  about: a new-format secret key, or a JWT whose payload claims the
+ *  service_role (and, where the token names one, this project). The anon
+ *  and publishable keys, a user's session token, another project's key and
+ *  garbage are refused here, without a network call. The signature, expiry
+ *  and revocation are not judged here; the project's answer judges them. */
+function couldBeServiceKey(key: string, base: string): boolean {
+  if (key.startsWith("sb_secret_")) return true;
+  const parts = key.split(".");
+  if (parts.length !== 3) return false;
   try {
-    const extra = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
-    if (extra && typeof extra === "object") {
-      for (const v of Object.values(extra)) if (typeof v === "string") keys.push(v);
-    }
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (!payload || payload.role !== "service_role") return false;
+    const ref = /^https:\/\/([a-z0-9]+)\.supabase\.co$/.exec(base)?.[1];
+    return !ref || payload.ref === undefined || payload.ref === ref;
   } catch {
-    // Not present or not JSON: the legacy key alone.
+    return false;
   }
-  return keys.filter((k) => k.length >= 20);
 }
 
-function callerIsServer(req: Request): boolean {
-  const auth = req.headers.get("authorization") ?? "";
-  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  const apikey = (req.headers.get("apikey") ?? "").trim();
-  return serviceKeys().some((k) => sameSecret(bearer, k) || sameSecret(apikey, k));
+/** Is this key a service key the project accepts RIGHT NOW? The project
+ *  itself is asked on every call: only a service key may list Auth users,
+ *  and Auth judges the signature, the expiry and whether the key has been
+ *  revoked or rotated. A 200 is the only yes. Nothing is remembered between
+ *  calls, so a key that expires or is revoked is refused from the next call
+ *  on, also in a warm instance. Not even the function's own copy of the
+ *  service key is trusted without asking: it may have been rotated since
+ *  the instance started (2026-10-03 review). An HTTP error, a network error,
+ *  a timeout or any internal error is a refusal. */
+const VERIFY_TIMEOUT_MS = 5_000;
+
+async function projectAcceptsServiceKey(key: string): Promise<boolean> {
+  const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
+  if (!base || key.length < 20 || !couldBeServiceKey(key, base)) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${base}/auth/v1/admin/users?page=1&per_page=1`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+      signal: controller.signal,
+    });
+    // The answer lists a user: it is never read.
+    await res.body?.cancel().catch(() => {});
+    return res.status === 200;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** The caller must present one key, in Authorization: Bearer, in apikey, or
+ *  the same key in both, and the project must accept it as a service key.
+ *  Two different keys, or an Authorization header that is not a Bearer
+ *  token, are refused before anything else is considered. */
+async function callerIsServer(req: Request): Promise<boolean> {
+  try {
+    const auth = req.headers.get("authorization");
+    const apikey = (req.headers.get("apikey") ?? "").trim();
+    if (auth !== null && !auth.startsWith("Bearer ")) return false;
+    const bearer = auth === null ? "" : auth.slice(7).trim();
+    if (bearer && apikey && !sameSecret(bearer, apikey)) return false;
+    const presented = bearer || apikey;
+    if (!presented) return false;
+    return await projectAcceptsServiceKey(presented);
+  } catch {
+    return false;
+  }
 }
 
 function address(value: unknown): string | null {
@@ -115,7 +199,7 @@ function party(p: Party, caller: string | null): string | null {
 }
 
 Deno.serve(async (req) => {
-  if (!callerIsServer(req)) return json(401, { outcome: "unauthorized" });
+  if (!(await callerIsServer(req))) return json(401, { outcome: "unauthorized" });
 
   const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
 
@@ -179,7 +263,7 @@ Deno.serve(async (req) => {
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: JSON.stringify({
-        from: FROM,
+        from: fromFor(kind, input.senderName),
         to: [to],
         ...(replyTo ? { reply_to: replyTo } : {}),
         subject,

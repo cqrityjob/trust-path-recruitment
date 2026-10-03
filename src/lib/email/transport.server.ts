@@ -54,6 +54,11 @@ export type TransactionalEmail = {
   to?: string;
   /** Only for contact_enquiry: the enquirer's own, validated address. */
   replyTo?: string;
+  /** An organisation's own message (receipt, recruitment message, invitation):
+   *  the organisation's name, shown as the sender's display name in front of
+   *  no-reply@cqrityjob.com. A name only; the function cleans it and decides
+   *  the address and the Reply-To itself. */
+  senderName?: string;
   subject: string;
   html: string;
   text?: string;
@@ -113,6 +118,7 @@ export async function sendTransactionalEmail(email: TransactionalEmail): Promise
       kind: email.kind,
       to: email.to,
       replyTo: email.replyTo,
+      senderName: email.senderName,
       subject: email.subject,
       html: email.html,
       text: email.text,

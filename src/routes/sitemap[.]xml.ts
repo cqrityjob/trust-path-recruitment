@@ -3,6 +3,7 @@ import type {} from "@tanstack/react-start";
 import { professions } from "@/lib/career-center";
 import { publishedProfessions } from "@/lib/career-center/publishability";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
+import { PRIVACY_FINAL, TERMS_FINAL } from "@/lib/legal/status";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
 import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
 
@@ -52,6 +53,13 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/plattformen", changefreq: "monthly", priority: "0.7" },
           { path: "/about", changefreq: "monthly", priority: "0.6" },
           { path: "/contact", changefreq: "yearly", priority: "0.4" },
+          // Listed once final; a draft is not offered as the published text.
+          ...(TERMS_FINAL
+            ? [{ path: "/villkor", changefreq: "yearly" as const, priority: "0.3" }]
+            : []),
+          ...(PRIVACY_FINAL
+            ? [{ path: "/integritetspolicy", changefreq: "yearly" as const, priority: "0.3" }]
+            : []),
           // Published guides only: an unpublished profession either redirects
           // to its catalogue page or renders a noindex "not published yet" page.
           ...publishedProfessions.map((p) => ({
