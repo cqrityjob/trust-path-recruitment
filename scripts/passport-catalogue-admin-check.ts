@@ -249,9 +249,14 @@ console.log("\n4 · the definitions tab tells research-awaiting, selectable and 
     "4.7 the page counts and filters the retired state",
   );
   check(
-    /effective_to/.test(read("src/lib/job-intelligence/admin-passport-catalogue.functions.ts")) &&
-      /retired_on/.test(read("src/lib/job-intelligence/admin-passport-catalogue.functions.ts")),
-    "4.8 retirement is read from the definition's own end dates",
+    /retired_on/.test(read("src/lib/job-intelligence/admin-passport-catalogue.functions.ts")) &&
+      /deprecated_at/.test(
+        read("src/lib/job-intelligence/admin-passport-catalogue.functions.ts"),
+      ) &&
+      // `effective_to` is a column of sp_certification_issuers only: selecting it from
+      // sp_credential_types took the whole page down against a real database.
+      !/effective_to/.test(read("src/lib/job-intelligence/admin-passport-catalogue.functions.ts")),
+    "4.8 retirement is read from the definition's own retired_on and deprecated_at, and from no column that does not exist",
   );
 }
 

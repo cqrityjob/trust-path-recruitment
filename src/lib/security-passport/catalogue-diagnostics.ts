@@ -47,8 +47,8 @@ export type DiagnosticReason =
   /** No governed issuer and no document-stated issuer under a governed regulator. */
   | "issuer_unresolved"
   | "deprecated"
-  /** The definition's own end date has passed (`sp_credential_types.effective_to`
-   *  or `sp_certification_definitions.retired_on`). Existing claims keep it. */
+  /** The definition's own retirement date has passed
+   *  (`sp_certification_definitions.retired_on`). Existing claims keep it. */
   | "retired"
   | "jurisdiction_inactive"
   /** No source-backed review row: no professional area, no recorded source. */

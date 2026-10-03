@@ -103,6 +103,15 @@ END $$;
 
 GRANT USAGE ON SCHEMA public TO authenticator;
 
+-- The server tier's service role READS the catalogue tables for the administrator's
+-- definitions diagnosis (src/lib/job-intelligence/admin-passport-catalogue.functions.ts,
+-- after its own is_platform_admin check). The migration history enumerates and
+-- narrows service_role's table grants, so a bare local replay leaves it unable to
+-- read sp_credential_types and friends -- which took that page down here. READ
+-- access only, local stack only; whether the hosted project grants the same is a
+-- hosted fact this file does not claim.
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO service_role;
+
 COMMIT;
 
 SELECT 'harness applied: auth.uid() reads request.jwt.claims, '
