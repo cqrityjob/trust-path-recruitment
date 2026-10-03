@@ -670,6 +670,11 @@ BEGIN
   INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
   VALUES ('c3000000-1111-0000-0000-000000000001',
           'c3000000-0000-0000-0000-000000000004','member','active');
+  -- Still unable to assign (J7.6); and holding a reviewer grant, the basis for reading released
+  -- progress (J7.15b): membership alone gives none since 20270203090000/20270204090000.
+  INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+  VALUES ('c3000000-1111-0000-0000-000000000001', 'c3000000-0000-0000-0000-000000000004',
+          ARRAY['workforce','recruitment']::text[], 'c3000000-0000-0000-0000-000000000001');
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub','c3000000-0000-0000-0000-000000000004', true);
   PERFORM pg_temp.must_fail(

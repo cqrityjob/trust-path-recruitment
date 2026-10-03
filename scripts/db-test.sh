@@ -229,6 +229,7 @@ ac_expect_pass() {
     suite_failed "${label} (assertion shortfall: floor $floor)"
     return 0
   fi
+  AC_LAST_PASSED="$passed"
   echo "    ok  $passed ${label} assertions passed (defect reproduced pre-fix, refused post-fix)"
 }
 ac_nc_expect_fail() {
@@ -254,6 +255,7 @@ AC_RB_B=supabase/rollback/20270204090000_interview_case_access_model_rollback.sq
 
 echo "==> Running employer membership standing assertions (suspension cannot be circumvented)"
 ac_expect_pass "employer membership standing" employer_membership_standing_test.sql 43
+MS_PASSED="$AC_LAST_PASSED"
 ac_nc_expect_fail "MS NC1 full rollback of 20270202090000" employer_membership_standing_test.sql "MS0.5" "$(cat supabase/rollback/20270202090000_employer_membership_standing_not_bypassable_rollback.sql)"
 ac_nc_expect_fail "MS NC2 the request insert is not guarded" employer_membership_standing_test.sql "MS1.1" "DROP TRIGGER employer_access_requests_standing_guard ON public.employer_access_requests;"
 ac_nc_expect_fail "MS NC3 the request guard only knows 'removed'" employer_membership_standing_test.sql "MS1.1" "$(cat <<'SQL'
@@ -287,6 +289,7 @@ SQL
 
 echo "==> Running employer report access matrix assertions"
 ac_expect_pass "employer report access matrix" employer_report_access_matrix_test.sql 63
+RM_PASSED="$AC_LAST_PASSED"
 ac_nc_expect_fail "RM NC1 a suspended or removed membership still counts" employer_report_access_matrix_test.sql "RM6.1" "$(cat <<'SQL'
 CREATE OR REPLACE FUNCTION public.has_employer_role(_user_id uuid, _employer_id uuid, _roles text[] DEFAULT NULL::text[])
  RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
@@ -322,6 +325,7 @@ ac_nc_expect_fail "RM NC8 the case basis is open to every member" employer_repor
 
 echo "==> Running employer report access model assertions"
 ac_expect_pass "employer report access model" employer_report_access_model_test.sql 66
+RA_PASSED="$AC_LAST_PASSED"
 ac_nc_expect_fail "RA NC1 a reviewer grant is never consulted" employer_report_access_model_test.sql "RA1.3" \
   "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed 's/public.scp_can_review_for(auth.uid(), _employer_id, _use_case)/false/')"
 ac_nc_expect_fail "RA NC2 an unknown use case is reachable through a grant" employer_report_access_model_test.sql "RA1.4" \
@@ -344,6 +348,7 @@ ac_nc_expect_fail "RA NC9 the screen is told every member is an owner or adminis
 
 echo "==> Running interview case access model assertions"
 ac_expect_pass "interview case access model" interview_case_access_model_test.sql 43
+IC_PASSED="$AC_LAST_PASSED"
 ac_nc_expect_fail "IC NC1 full rollback of 20270204090000" interview_case_access_model_test.sql "IC0.5" "$(cat "$AC_RB_B")"
 ac_nc_expect_fail "IC NC2 the write gate admits every member again" interview_case_access_model_test.sql "IC2.2" \
   "$(ac_fn "$AC_RB_B" scp_iv_can_write_case)"
@@ -364,6 +369,38 @@ ac_nc_expect_fail "IC NC5 the read gate forgets the vetting restriction" intervi
   "$(ac_fn "$AC_MIG_B" scp_iv_can_read_case | sed '/Additive, and unchanged/d' | sed '/AND public.bcp_case_access_ok(_case_id)/d' | sed 's/c.id)))$/c.id));/')"
 ac_nc_expect_fail "IC NC6 the candidate is no longer excluded from the case" interview_case_access_model_test.sql "IC3.1" \
   "$(ac_fn "$AC_MIG_B" scp_iv_can_read_case | sed 's/ARRAY\[c.candidate_user_id, a.applicant_user_id\]/NULL::uuid[]/')"
+
+# ── THE OLDER MIGRATIONS THAT ARE RE-APPLIED BELOW REDEFINE WHAT THE MODEL REDEFINES ──────────────
+#
+# Many of the sections below prove an older migration the same way: roll it back, require its suite to
+# fail, then RE-APPLY the migration and require the suite to pass again. A re-applied older migration
+# puts its OLD function bodies and policies back (20270102 scp_subject_progress, 20270104 recommendations,
+# 20270105 scp_application_assessments, 20270108 the employer reads, 20270109 the interview notes, 20270111
+# the interview case gates, 20270120 approve_access_request, 20261107 / 20261130 / 20260904174903 ...), which
+# silently replaces 20270202090000, 20270203090000 and 20270204090000 for every suite that follows. In
+# production the older migrations never run again; here they do. So after every FULL re-apply of one of
+# them (a rollback file is not) the three migrations are applied again, in order: the state a later suite
+# sees is the one the migration chain defines, and the suites proved above are proved once more after the
+# last of those cycles. (The BESKT stand-down cycles pin function bodies and are left alone.)
+AC_OLD_OVERLAP='20260904174903|20261107090000|20261130090000|20270102090000|20270104090000|20270105090000|20270108090000|20270109090000|20270111090000|20270120090000'
+ac_restore_model() {
+  local f
+  for f in supabase/migrations/20270202090000_employer_membership_standing_not_bypassable.sql "$AC_MIG_A" "$AC_MIG_B"; do
+    PGOPTIONS='-c client_min_messages=warning' psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -f "$f" >/dev/null \
+      || { echo "FAIL: the access model could not be re-applied from $f after an older migration was re-applied" >&2; exit 1; }
+  done
+}
+psql_q() {
+  psql -v ON_ERROR_STOP=1 -q "$@" || return $?
+  local a prev=""
+  for a in "$@"; do
+    if [ "$prev" = "-f" ] && [[ "$a" =~ ($AC_OLD_OVERLAP) ]] && [[ "$a" != *rollback* ]]; then
+      ac_restore_model
+      break
+    fi
+    prev="$a"
+  done
+}
 
 # 20270101090000: four catalogue reads narrowed (drafts and unapproved
 # professions to authors/admins, the interviewer guide to authors) and three
@@ -1054,7 +1091,13 @@ psql_q -d "$TEST_DB" -c "$(ar_primitive)" >/dev/null
 psql_q -d "$TEST_DB" -c "REVOKE ALL ON FUNCTION public.has_active_employer_role(uuid,uuid,text[]) FROM PUBLIC, anon; GRANT EXECUTE ON FUNCTION public.has_active_employer_role(uuid,uuid,text[]) TO authenticated, service_role" >/dev/null
 ar_nc_expect_fail "NC1 full rollback"
 psql_q -d "$TEST_DB" -f "$AR_MIG" >/dev/null
-AR_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable/,/^\$function\$/p' "$AR_RB")"
+# The audience predicate has a second overload since 20270203090000 (it knows the attempt), and the policy
+# and the functions call THAT one. The pre-fix body is planted as the four-argument overload (it ignores the
+# attempt, as it always did), so the planted defect is on the path the suite reads.
+AR_NC2_SQL="$(sed -n '/^CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable/,/^\$function\$/p' "$AR_RB" \
+  | sed 's/^\(CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(.*_issuer_organization_id uuid\))$/\1, _attempt_id uuid)/')"
+grep -q "_issuer_organization_id uuid, _attempt_id uuid)" <<<"$AR_NC2_SQL" \
+  || { echo "FAIL: employer-active-reads NC2 could not plant its defect on the four-argument overload" >&2; exit 1; }
 grep -q "employer_memberships" <<<"$AR_NC2_SQL" && ! grep -q "has_active_employer_role" <<<"$AR_NC2_SQL" \
   || { echo "FAIL: employer-active-reads NC2 could not plant its defect" >&2; exit 1; }
 psql_q -d "$TEST_DB" -c "$AR_NC2_SQL" >/dev/null
@@ -2189,6 +2232,23 @@ SR_OUT="$(run_sr_suite)"; SR_RC=$?
 set -e
 [ "$SR_RC" -eq 0 ] || { echo "$SR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: evidence-under-review suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  evidence-under-review migration re-applied (postflight proved); suite passes again"
+# ---------------------------------------------------------------------------
+# The access model, proved once more on the state the older migrations' cycles left behind
+#
+# The suites at the top ran on the freshly replayed chain. Since then dozens of older migrations were
+# rolled back and re-applied, and the three access migrations re-applied after each of those that
+# overlaps them. The same four suites must still pass, unchanged, on what is left: this is the last
+# point before the Passport, Security Work and BESKT rollback blocks tear parts of the schema down (which
+# is also why it cannot run at the very end). The BESKT stand-down cycles further down are deliberately
+# NOT restored: their migrations pin function bodies, so the model is not applied inside them, and the
+# suites that run there hold on both sides of the model.
+# ---------------------------------------------------------------------------
+echo "==> Re-running the access model suites on the state the older migrations left behind"
+ac_restore_model
+ac_expect_pass "employer membership standing (after the cycles)" employer_membership_standing_test.sql 43
+ac_expect_pass "employer report access matrix (after the cycles)" employer_report_access_matrix_test.sql 63
+ac_expect_pass "employer report access model (after the cycles)" employer_report_access_model_test.sql 66
+ac_expect_pass "interview case access model (after the cycles)" interview_case_access_model_test.sql 43
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
@@ -5157,6 +5217,7 @@ if [ "$R2A3_FWD_RC" -ne 0 ]; then
 else
   echo "    ok  R2A-3 contract re-applied -- a corrected sequencing mistake rolls forward cleanly"
 fi
+ac_restore_model # the contract migration re-creates the snapshot policies the access model replaced
 R2A3_LEFT="$(psql -tAq -d "$TEST_DB" -c "
   SELECT count(*) FROM information_schema.table_privileges
    WHERE table_schema = 'public' AND table_name = 'scp_report_snapshots'
@@ -5891,6 +5952,7 @@ if [ "$BI_RE_RC" -ne 0 ] || ! echo "$BI_RE" | grep -q "SCP_IV_REPORT_BASIS_PROOF
 else
   echo "    ok  and the basis migration re-applies cleanly over the rolled-back state"
 fi
+ac_restore_model # 20261107090000 re-creates scp_employer_report_identity
 
 if [ "$BI_FAILED" -ne 0 ]; then
   suite_failed "employer final-report basis"
@@ -11099,7 +11161,10 @@ fi
 echo ""
 echo "===================================================="
 echo " DB suite OK: ${PASSED} domain assertions,"
+echo "              ${MS_PASSED} employer membership standing assertions,"
 echo "              ${RM_PASSED} employer report access matrix assertions,"
+echo "              ${RA_PASSED} employer report access model assertions,"
+echo "              ${IC_PASSED} interview case access model assertions,"
 echo "              ${SW_PASSED} Security Work assertions in each rollback round,"
 echo "              ${SW_NC_PASSED} Security Work planted-defect controls,"
 echo "              ${CD_PASSED} Career Discovery assertions,"

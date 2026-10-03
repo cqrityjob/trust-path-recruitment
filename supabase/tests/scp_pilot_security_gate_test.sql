@@ -216,14 +216,22 @@ SELECT pg_temp.must_not_change(format(
   'SG1.6 an ordinary member cannot insert through the LEGACY assignment path either');
 RESET ROLE; RESET request.jwt.claim.sub;
 
--- …and the same member can still READ, so SG1.6 is a permission result and not
--- an invisible-row artefact.
+-- …the owner reads the list (so SG1.6 is a permission result and not an invisible-row
+-- artefact: the rows exist and are readable), and the ordinary member no longer does since
+-- 20270203090000: membership alone is not a basis.
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub = 'ac000000-0000-0000-0000-000000000002';
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.assessment_assignments
+    WHERE employer_id = (SELECT employer FROM sg)) >= 1,
+  'SG1.7 the owner CAN read the assignment list — the member''s denial above is about writing');
+RESET ROLE; RESET request.jwt.claim.sub;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'ac000000-0000-0000-0000-000000000005';
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.assessment_assignments
-    WHERE employer_id = (SELECT employer FROM sg)) >= 1,
-  'SG1.7 the member CAN read the assignment list — the denial above is about writing');
+    WHERE employer_id = (SELECT employer FROM sg)) = 0,
+  'SG1.7b and the ordinary member reads none of it: membership alone is no basis');
 RESET ROLE; RESET request.jwt.claim.sub;
 
 -- Governance still fails closed for OPERATIONAL selection. A recruitment

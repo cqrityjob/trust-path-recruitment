@@ -839,6 +839,20 @@ DROP FUNCTION IF EXISTS public.scp_participant_report_for_issuer(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_report_issuer_admin(uuid) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_audience_brief(jsonb) CASCADE;
 DROP FUNCTION IF EXISTS public.scp_report_snapshot_readable(text, uuid, uuid) CASCADE;
+-- 20270203090000: the legacy assignments table SURVIVES this rollback, so its employer read goes back to its
+-- legacy predicate before the function it asks is dropped (a CASCADE would remove the policy altogether).
+ALTER POLICY "assignments_employer_select" ON public.assessment_assignments
+  USING ((has_employer_role(auth.uid(), employer_id, NULL::text[]) AND employer_members_can_edit(employer_id)));
+-- 20270202090000: the trigger that ends a reviewer grant with its membership belongs to the reviewer table that
+-- this rollback drops; left behind, every later delete of a membership would fail on the missing table.
+DROP FUNCTION IF EXISTS public.employer_membership_revoke_reviewer_grants() CASCADE;
+-- 20270203090000: the attempt-aware overload, the attempt adapter, the one definition of who reads, and the
+-- read-only facts function the application asks. Only the first two carry the scp_ prefix; the others read the
+-- SCP model and are removed with it.
+DROP FUNCTION IF EXISTS public.scp_report_snapshot_readable(text, uuid, uuid, uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.scp_attempt_reports_readable(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.employer_report_access(uuid) CASCADE;
+DROP FUNCTION IF EXISTS public.employer_reports_readable(uuid, text, uuid, uuid, uuid[], uuid) CASCADE;
 -- Part F (20260820120000). The decision table references scp_attempts, so it
 -- has to go before the Phase 2 unwind reaches them.
 DROP FUNCTION IF EXISTS public.scp_record_employer_decision(uuid, text, text, text, text, text, uuid) CASCADE;

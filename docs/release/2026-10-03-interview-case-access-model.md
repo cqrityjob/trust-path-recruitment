@@ -49,12 +49,14 @@ stay owner/admin only.
 ## Proof
 
 `interview_case_access_model_test.sql` reproduces the defect on the pre-fix state inside the suite
-(IC0: the real rollback in a savepoint: a plain member reads and writes a case, a candidate's
-corrections on a vetting-restricted case are read), then proves the fix (IC1 to IC6), including the
+(IC0: the real rollback in a savepoint: a plain member reads and writes a case and reads a candidate's
+corrections; IC0.6 measures that on a vetting-restricted case the corrections were already hidden), then proves the fix (IC1 to IC6), including the
 creator and panel member reading and writing only their own case, the candidate who is a member
 excluded, a case on another vacancy, suspension and the vetting restriction in both directions. Six
 planted controls in `scripts/db-test.sh` each fail on a named assertion. The legacy suites that
-assumed a plain member reads a case were given a basis in their fixture and nothing else.
+assumed a plain member reads or works a case were given a basis in their own fixture, and the real vetting
+suite gained group CV5 (reviewer, panel member and a candidate's corrections on a real BESKT vetting): see
+the report-access release note.
 
 ## Application
 

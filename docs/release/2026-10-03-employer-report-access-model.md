@@ -70,6 +70,38 @@ The matrix suite (`MEMBER-WIDE-MODEL` tags) and `employer_active_reads_test.sql`
 the narrower model. Eight planted controls in `scripts/db-test.sh` for the matrix and nine for the
 model each fail on a named assertion.
 
+## Older suites, and the db-test cycles
+
+Sixteen older suites assumed that a plain member reads or works what the organisation holds. None of them
+was weakened: where the member is an ACTOR of the suite (the second assessor, the colleague who reaches the
+owner's case, the member who previews a report) the fixture now gives them the existing basis, a reviewer
+grant made by the owner (`candidate_identity_active_employer`, `bcp_interview_conduct`,
+`interview_beskt_active_employer`, `scp_interview_evidence_reliability`, `scp_interview_starts`,
+`scp_iv_findings_review_writes`, `scp_iv_panel_reveal_boundary`, `scp_iv_report_basis_integrity`,
+`scp_phase2_journey`, `suspended_employer_applicant_reads`, `scp_subject_progress_scope`;
+`bcp_beskt_complete` probes with the owner, who has a basis). Where the assertion IS the old model it was
+flipped: `scp_development_recommendations_scope` DR1.3 (a plain member gets nothing; the member of both
+employers is an admin of both, because that suite writes attempts with no assignment),
+`scp_participant_report_issuer_preview` P3.2 (the ordinary member has no employer read; P3.2b keeps the
+reviewer's) and P5.6 (two overloads now), `scp_pilot_security_gate` SG1.7 (the owner reads the assignment
+list, the ordinary member no longer does). The real vetting suite `scp_interview_case_vetting_read_test.sql`
+keeps its assertions (its member and its security officer hold a recruitment grant) and gains CV5: on a
+real BESKT vetting, a recruitment reviewer, a panel member of the vetting case and a candidate's corrections
+are all refused without the appointment, and a reviewer who is ALSO appointed reads it. It holds on both
+sides of the model, which matters because of the next paragraph.
+
+`scripts/db-test.sh` rolls older migrations back and re-applies them to prove them. A re-applied older
+migration puts its old function bodies back, which silently replaced this model for every later suite.
+After every full re-apply of an older migration that redefines an object of this model (and after the
+direct re-applies of 20260904174903 and 20261107090000), `ac_restore_model` applies 20270202090000,
+20270203090000 and 20270204090000 again, and the four access suites are run once more after the last of
+those cycles. The BESKT stand-down cycles (20261130 to 20270111) pin function bodies and are deliberately
+not restored; the suites inside them hold on both sides of the model. The planted control NC2 of the
+active-reads section plants the pre-fix helper on the overload the policies now call, and the documented
+SCP rollback procedure (`scp_a_rollback_test.sql`) drops the new `scp_` functions, the trigger that ends a
+reviewer grant with its membership (it would otherwise fail every later delete of a membership), and
+re-points the legacy assignments policy, which survives that rollback, to its legacy predicate.
+
 ## Application
 
 A second release, safe in either order. The application asks `employer_report_access`; if the
