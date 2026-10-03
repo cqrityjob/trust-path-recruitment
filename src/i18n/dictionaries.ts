@@ -224,7 +224,7 @@ export const dictionaries = {
     "home.hero.title": "Din karriär, din kompetens, ditt säkerhetsarbete.",
     "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Hitta nästa jobb, bygg ditt Security Passport och utveckla din kompetens. Här samlar vi också AI-agenter för ditt säkerhetsarbete och verktyg för arbetsgivare att hitta, bedöma och rekrytera rätt kompetens.",
+      "Jobb, kompetens, Security Passport och AI-stöd för ditt säkerhetsarbete. Rekryteringsverktyg för arbetsgivare – på samma plats.",
     "home.hero.audience.label": "Välj var du vill börja",
     "home.hero.individual.title": "För dig i säkerhetsbranschen",
     "home.hero.individual.body":
@@ -9250,7 +9250,7 @@ export const dictionaries = {
     "home.hero.title": "Your career, your expertise, your security work.",
     "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Find your next job, build your Security Passport and develop your expertise. Discover AI agents for your security work and tools for employers to find, assess and recruit the right talent.",
+      "Jobs, expertise, Security Passport and AI support for your security work. Recruitment tools for employers – all in one place.",
     "home.hero.audience.label": "Choose where to start",
     "home.hero.individual.title": "For security professionals",
     "home.hero.individual.body":

@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
-import { useT } from "@/i18n/context";
+import { useTolerantT } from "@/i18n/context";
 import { TERMS_PATH } from "@/lib/legal/documents";
 import {
   acceptanceMetadata,
@@ -23,7 +23,7 @@ import {
 type Phase = "checking" | "clear" | "ask";
 
 export function TermsAcceptanceGate() {
-  const { t } = useT();
+  const { t } = useTolerantT();
   const ids = useId();
   const [phase, setPhase] = useState<Phase>("checking");
   const [ticked, setTicked] = useState(false);

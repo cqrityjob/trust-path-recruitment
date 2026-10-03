@@ -408,6 +408,38 @@ check(
   "the passport-share function ignores a platform-assigned PUBLIC_SITE_URL too",
 );
 
+// The site's share image: a real 1200x630 PNG, referenced absolutely on the
+// production domain, and not inherited by the shared Passport on X.
+const ogImage = readFileSync(join(ROOT, "public", "og-cqrityjob.png"));
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+check(
+  ogImage.subarray(0, 8).equals(PNG_SIGNATURE) &&
+    ogImage.readUInt32BE(16) === 1200 &&
+    ogImage.readUInt32BE(20) === 630,
+  "public/og-cqrityjob.png is a PNG of exactly 1200x630",
+);
+check(ogImage.length < 400 * 1024, "public/og-cqrityjob.png is small enough for every crawler");
+const rootRoute = read("src/routes/__root.tsx");
+check(
+  rootRoute.includes(
+    '{ property: "og:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` }',
+  ) &&
+    rootRoute.includes(
+      '{ name: "twitter:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` }',
+    ),
+  "the root route points og:image and twitter:image at the picture on the production domain",
+);
+check(
+  !/og:image:(width|height|alt)/.test(rootRoute),
+  "the root route sets no og:image dimensions or alt a route with its own image would inherit",
+);
+check(
+  /name: "twitter:image", content: `\$\{publicShareOrigin\(\)\}\/og-security-passport\.png`/.test(
+    read("src/routes/p.$token.tsx"),
+  ),
+  "the shared Passport page sets its own twitter:image",
+);
+
 if (failures > 0) {
   console.error(`\nsite-origin:check — ${failures} failure(s)`);
   process.exit(1);

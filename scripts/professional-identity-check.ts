@@ -3765,6 +3765,47 @@ console.log("\n14 · career journey background");
 }
 
 /* ------------------------------------------------------------------ */
+console.log("\ncatalogue credential names follow the CV language");
+{
+  // The wallet RPC stores `name_en` as the title of every catalogue
+  // credential, so a Swedish CV used to say "Security Guard Training 1 (VU1)".
+  const vu1 = claim({
+    id: "c-vu1",
+    title: "Security Guard Training 1 (VU1)",
+    catalogueNameSv: "Väktarutbildning 1 (VU1)",
+    catalogueNameEn: "Security Guard Training 1 (VU1)",
+  });
+  const holderWritten = claim({ id: "c-own", title: "Brandskydd grund" });
+  const build = (locale: "sv" | "en") =>
+    buildCvSourceBundle({
+      identity: identity({ claims: [vu1, holderWritten] }),
+      locale,
+      includeCareerInsight: false,
+      targetJobText: null,
+    });
+  const titleOf = (b: ReturnType<typeof buildCvSourceBundle>, id: string) =>
+    b.credentials.find((c) => c.id === id)?.title;
+  ck(
+    "a Swedish CV names VU1 by its Swedish catalogue name, whatever was stored",
+    titleOf(build("sv"), "c-vu1") === "Väktarutbildning 1 (VU1)",
+  );
+  ck(
+    "an English CV names it by its English catalogue name",
+    titleOf(build("en"), "c-vu1") === "Security Guard Training 1 (VU1)",
+  );
+  ck(
+    "a holder-written title is shown exactly as written in both languages",
+    titleOf(build("sv"), "c-own") === "Brandskydd grund" &&
+      titleOf(build("en"), "c-own") === "Brandskydd grund",
+  );
+  const identityCode = read("src/lib/professional-identity/identity.functions.ts");
+  ck(
+    "the identity read carries the catalogue names through the credential-code FK",
+    identityCode.includes("sp_credential_types!sp_claims_credential_code_fkey(name_sv, name_en"),
+  );
+}
+
+/* ------------------------------------------------------------------ */
 
 if (fails.length > 0) {
   console.error(`\nFAIL (${fails.length}) — professional-identity-check`);
