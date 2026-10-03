@@ -31,7 +31,17 @@ const MUTATIONS: readonly Mutation[] = [
     find: 'text: "[Länk till aktuell leverantörsförteckning.]"',
     replace: 'text: "Se våra leverantörer."',
     guard: GUARD,
-    expect: "1.7 the privacy policy's 7 undecided points are still open",
+    expect: "1.7 the privacy policy's 6 undecided points are still open",
+  },
+  {
+    id: "LEGAL-NC-SEVEN-DAYS-BACK",
+    defect: "the untrue 7-day retention promise returns",
+    file: DOCS,
+    find: '["Supportärenden", "[Ange lagringstid enligt beslutad lagringsplan]"],',
+    replace: '["Supportärenden", "7 dagar"],',
+    guard: GUARD,
+    expect:
+      "1.8 no retention time is promised that nothing enforces: no 7-day line, both rows open",
   },
   {
     id: "LEGAL-NC-PRETICKED",

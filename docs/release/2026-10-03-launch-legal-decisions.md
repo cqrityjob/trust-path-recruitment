@@ -14,14 +14,25 @@ Uppgifterna är verifierade den 2026-10-03 mot koden och med enbart läsfrågor
 mot produktion (`wrygicdfxwjnrugduxnt`, Supabase Pro). Inga personuppgifter
 har lästs ut.
 
-**Det här kräver din uppgift.** Allt annat är verifierat eller förberett.
-1. **Leverantörsavtal och regioner.** Region och avtal för Resend, Lovables
-   drift och Google (B3). Inget av det syns i inställningarna som är
-   tillgängliga här.
-2. **Lagringsplanen.** Godkänn planen i C, eller ändra tiderna.
-3. **job@.** Vem som bevakar job@, och svarstiden (D).
-4. **Publicering.** Godkänn varje text för publicering (`OWNER_APPROVED`)
-   när den är klar.
+**Beslut som redan är fattade och införda:**
+- Leverantören är Cqrityjob LLC.
+- Åldersgränsen är 18 år.
+- Konton avslutas via info@cqrityjob.com.
+- Ägarens anställde bevakar inkorgarna info@ och job@.
+- Sluttesternas mejl går bara till ägarens godkända testadress. Adressen
+  skrivs inte in i repot.
+
+**Öppna ägarfrågor, med rekommenderat svar.** Allt annat är verifierat
+eller förberett.
+
+| # | Fråga | Rekommenderat svar |
+|---|---|---|
+| 1 | Lagringsplanen (C) | Godkänn tiderna som de står. Rensningen byggs sedan som egen PR, och §9 fylls i med samma tider |
+| 2 | Svarstid för job@ (D) | En arbetsdag |
+| 3 | Resend: sändningsregion och DPA | Acceptera Resends DPA i kontot och uppge regionen som visas där. Om ett EU-alternativ finns, välj det |
+| 4 | SMTP-leverantören för inloggningsmejl och brevlådor: namn, region, DPA | Uppge leverantören. Den syns inte i Supabase-loggarna |
+| 5 | Lovable: driftregion och DPA. Google: att DPA:n för inloggningen är accepterad | Bekräfta i respektive konto. Lovables projektinställningar visar ingen region |
+| 6 | Publicering | Godkänn texterna (`OWNER_APPROVED`) först när punkt 1 och 3–5 är besvarade. Policyns datum sätts samma dag |
 
 ---
 
@@ -67,9 +78,9 @@ Sätt datumet när texten godkänns.
   rader. `sw_ai_activations` har 0 rader.
 - I koden är Anthropic (`api.anthropic.com`) den enda AI-leverantören.
 
-**Föreslagen text:** *"Vi använder i dag inga AI-leverantörer. Om vi inför
+**Införd i utkastet:** *"Vi använder i dag inga AI-leverantörer. Om vi inför
 AI-stöd uppdaterar vi policyn innan funktionen tas i bruk."* Det behövs
-ingen uppgift från dig nu.
+ingen uppgift från dig.
 
 ### B3. §6 Leverantörsförteckning och §8 överföring utanför EU/EES
 
@@ -87,7 +98,9 @@ EU–US Data Privacy Framework eller standardavtalsklausuler". Behåll bara de
 leverantörer du bekräftar.
 
 ### B4. §9 Lagringstider
-Ersätts av planen i C. Varken "7 dagar" eller obegränsad lagring.
+De två raderna med "7 dagar" stämde inte och är nu öppna punkter i utkastet.
+De fylls i med tiderna från planen i C när du har godkänt den. Policyn
+lovar varken "7 dagar" eller obegränsad lagring.
 
 ### B5. §11 Kakor
 **Verifierat:**
@@ -96,10 +109,11 @@ Ersätts av planen i C. Varken "7 dagar" eller obegränsad lagring.
 - Inga analys- eller spårningsskript finns.
 - Typsnitten ligger på den egna domänen.
 
-**Föreslagen text:** *"Vi använder bara kakor och lagring i webbläsaren som
-behövs för att tjänsten ska fungera. Vi använder inga kakor för analys eller
-marknadsföring, och därför behövs inget samtycke."* Ta bort raden om
-kakinställningar.
+**Införd i utkastet:** *"Vi använder bara kakor och lagring i webbläsaren som
+behövs för att tjänsten ska fungera, till exempel för inloggning, språkval
+och sidopanelens läge. Vi använder inga kakor för analys eller
+marknadsföring, och därför behövs inget samtycke."* Länkarna till kakpolicy
+och kakinställningar är borttagna.
 
 ---
 
@@ -152,11 +166,10 @@ att varje schemalagd rensning införs senast ett angivet datum. Alternativet
   arbetsgivare har ingen lagrad e-postadress.
 
 **Vart svar går och vem som bevakar:**
-- Svar går till job@. Någon på CQrityjob måste bevaka brevlådan och
-  vidarebefordra svaret till arbetsgivarens ansvariga person, som
-  administratören hittar via organisationens medlemmar.
-- **Din uppgift:** vem som bevakar job@, och svarstiden. Förslag: en
-  arbetsdag.
+- Svar går till job@. Ägarens anställde bevakar brevlådan och
+  vidarebefordrar svaret till arbetsgivarens ansvariga person, som hittas
+  via organisationens medlemmar.
+- **Öppet:** svarstiden. Förslag: en arbetsdag.
 
 **Vad mejlet säger (i #386):**
 - Avsändaren visas som "Arbetsgivare via CQrityjob".

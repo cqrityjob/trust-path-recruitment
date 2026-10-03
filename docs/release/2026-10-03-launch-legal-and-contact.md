@@ -110,16 +110,18 @@ Every open point, with verified facts and a recommended text, is in
 1. **Terms (A).** The age limit (18) and account closure (via info@) are
    filled in, as decided. The terms stay a draft until the owner sets
    `OWNER_APPROVED.terms`. Every existing account then accepts them once.
-2. **Retention ("7 dagar").** Verified as not true today, for both support
-   enquiries and logs (C). Choose between writing the actual periods and
-   building purging first.
+2. **Retention ("7 dagar").** Verified as not true, for both support
+   enquiries and logs. Both rows are open points in the draft again, to be
+   filled with the periods of the plan (C) once the owner approves it.
+   Privacy §5 (no AI provider) and §11 (functional cookies only) are filled
+   with verified facts; six open points remain, so the policy stays a draft.
 3. **Deploy the mail function** after merge. The deployed function refuses
    the app's key, so no product mail has been sent through it; #386 fixes
    that in the function.
 4. **Resend, SMTP and mailboxes.** Already in place. Auth mail via custom SMTP
    is verified working since 2026-09-30 14:27 UTC. No change proposed.
-5. **Candidate replies (D).** Decide who handles job@, and whether to build
-   the in-app reply.
+5. **Candidate replies (D).** The owner's employee watches info@ and job@.
+   Open: the response time, and whether to build the in-app reply.
 6. **Production domain.** Canonical and og:url still point at
    `trust-path-recruitment.lovable.app`. The launch session (#387) moves them
    to `www.cqrityjob.com`.

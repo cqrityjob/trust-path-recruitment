@@ -106,14 +106,23 @@ group("GROUP 1 — the owner's documents, as given");
     String(gaps(terms)),
   );
   ck(
-    "1.7 the privacy policy's 7 undecided points are still open",
-    gaps(privacy) === 7,
+    "1.7 the privacy policy's 6 undecided points are still open",
+    gaps(privacy) === 6,
     String(gaps(privacy)),
   );
   ck(
-    "1.8 the 7-day retention lines are the owner's, unchanged",
-    privacy.includes("Supportärenden\n7 dagar") &&
-      privacy.includes("Säkerhets- och åtkomstloggar\n7 dagar"),
+    "1.8 no retention time is promised that nothing enforces: no 7-day line, both rows open",
+    !privacy.includes("7 dagar") &&
+      privacy.includes("Supportärenden\n[Ange lagringstid enligt beslutad lagringsplan]") &&
+      privacy.includes(
+        "Säkerhets- och åtkomstloggar\n[Ange lagringstid enligt beslutad lagringsplan]",
+      ),
+  );
+  ck(
+    "1.10 the verified facts: no AI provider, functional cookies only, no cookie-settings link",
+    privacy.includes("Vi använder i dag inga AI-leverantörer.") &&
+      privacy.includes("Vi använder inga kakor för analys eller marknadsföring") &&
+      !/kakpolicy|kakinställningar/.test(privacy),
   );
   ck(
     "1.9 acceptance of the terms is not consent to processing (terms §9)",

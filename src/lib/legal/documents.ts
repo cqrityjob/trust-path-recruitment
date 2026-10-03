@@ -5,7 +5,10 @@
 // "[kontaktadress]"). A bracketed "[Ange …]" / "[Länk …]" is a decision the
 // owner has not made yet. It is rendered as a visible placeholder, never
 // filled in here. Filled since, by owner decision of 2026-10-03: terms §2
-// (18 years) and terms §13 (closing an account through info@). See docs/release/2026-10-03-launch-legal-and-contact.md.
+// (18 years) and terms §13 (closing an account through info@); privacy §5
+// (no AI provider) and §11 (functional cookies only), both verified in
+// production; privacy §9's two "7 dagar" rows, which were not true, are open
+// points again. See docs/release/2026-10-03-launch-legal-and-contact.md.
 //
 // Inline markup in the strings: **bold** only.
 
@@ -510,9 +513,11 @@ export const PRIVACY: LegalDocument = {
           type: "p",
           text: "Vid användning av generativ AI kan relevanta uppgifter behandlas av en AI-leverantör.",
         },
+        // Verified 2026-10-03 (was "[Ange aktiva AI-leverantörer …]"): no AI
+        // provider is enabled in production and no AI run has ever happened.
         {
-          type: "placeholder",
-          text: "[Ange aktiva AI-leverantörer, vilka uppgifter de får, lagringstider, eventuell modellträning och behandling utanför EU/EES. Länka till den fullständiga informationen.]",
+          type: "p",
+          text: "Vi använder i dag inga AI-leverantörer. Om vi inför AI-stöd uppdaterar vi policyn innan funktionen tas i bruk.",
         },
         {
           type: "p",
@@ -604,8 +609,11 @@ export const PRIVACY: LegalDocument = {
               "Rekryteringsmaterial som hanteras för arbetsgivare",
               "Enligt arbetsgivarens dokumenterade regler och biträdesavtalet",
             ],
-            ["Supportärenden", "7 dagar"],
-            ["Säkerhets- och åtkomstloggar", "7 dagar"],
+            // "7 dagar" was not true (nothing is purged; logs reach back to
+            // the project's start), so both are open points until the owner
+            // approves the retention plan.
+            ["Supportärenden", "[Ange lagringstid enligt beslutad lagringsplan]"],
+            ["Säkerhets- och åtkomstloggar", "[Ange lagringstid enligt beslutad lagringsplan]"],
           ],
         },
         {
@@ -638,17 +646,15 @@ export const PRIVACY: LegalDocument = {
     {
       heading: "11. Kakor och liknande teknik",
       blocks: [
+        // Verified 2026-10-03 (was a link to a cookie policy and to cookie
+        // settings): one functional cookie, no analytics or tracking.
         {
           type: "p",
-          text: "Information om kakor och liknande teknik, deras ändamål och lagringstider finns i **[länk till kakpolicy]**.",
+          text: "Vi använder bara kakor och lagring i webbläsaren som behövs för att tjänsten ska fungera, till exempel för inloggning, språkval och sidopanelens läge. Vi använder inga kakor för analys eller marknadsföring, och därför behövs inget samtycke.",
         },
         {
           type: "p",
           text: "Teknik som kräver samtycke får användas först efter ditt aktiva val. Du ska kunna neka och återkalla samtycke lika enkelt som du lämnar det.",
-        },
-        {
-          type: "placeholder",
-          text: "[Länk till kakinställningar.]",
         },
       ],
     },
