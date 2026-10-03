@@ -1,7 +1,7 @@
 # Interview configuration and scenario access
 
-Status: expand implemented and tested locally; application and contract are separate
-releases. No production mutation, merge or deployment. Owner requested implementation
+Status: expand (#404), application (#405) and contract (#406) implemented as
+separate draft releases; validation is recorded below and in the PRs. No production mutation, merge or deployment. Owner requested implementation
 and a separate worktree; Claude coordinates releases through the owner.
 
 Baseline: origin/main d2c02b8a963f512747a45b8add5b7a7ae754d76e (PR #392).
@@ -50,7 +50,8 @@ screen across the transition. Do not merge or deploy this draft.
   contract and item bank, not direct scenario-table reads. Test that contract
   and its answer-key boundary with synthetic assignments.
 - The five `sp_` tables are shared definition/source/issuer/scope/recognition
-  catalogues. Keep their policies unchanged; content review is still pending.
+  catalogues. Their policies remain unchanged; the completed point-in-time
+  content review is recorded below.
 
 ## Required evidence and release gates
 
@@ -126,4 +127,31 @@ contract and read-only hosted verification.
   Unmodified main d2c02b8 reproduced the same failure. The BSD sed command used
   by `pa_plant_fn` captures the rollback postflight after the desired function
   instead of stopping at `END; $function$`. This is not a passing full suite;
-  Linux CI / a GNU-sed run remains required. No assertion has been removed.
+  The subsequent GNU-BRE-compatible local run passed in full; see the final
+  validation below. No assertion has been removed.
+
+## Review and reproduction
+
+PRs: [expand #404](https://github.com/cqrityjob/trust-path-recruitment/pull/404),
+[application #405](https://github.com/cqrityjob/trust-path-recruitment/pull/405),
+[contract #406](https://github.com/cqrityjob/trust-path-recruitment/pull/406).
+See [reproduce.md](reproduce.md) for local SQL, HTTP and application checks.
+The application PR intentionally remains blocked by schema-first while expand
+is pending; neither a green schema check nor an app merge proves publication.
+
+## Final local validation, 2026-10-03
+
+Full `scripts/db-test.sh` passed with exit 0 on PostgreSQL 17 at source commit
+`f9579d82fe057bb7038a1a94775f7d0c43065cf0`: all 369 migrations replayed strictly,
+both new access suites passed, existing interview runtime (85) and integrity
+(99) assertions passed, and full historical rollback verification passed.
+See [the saved summary](evidence/full-db-summary.txt). CI status is recorded on
+the PRs for each head SHA; local success is not labelled as CI success.
+
+HTTP: 224 assertions passed before and after contract. Actual app reader: 8 actor
+cases passed in each stage; deterministic reader: 30 assertions passed. Typecheck,
+production build, SQL-security, migration policy and affected interview checks
+passed. Recruiter workflow: 1,438; finalisation capability: 91; method tenant-read:
+117; interview start: 16 assertions. No full browser recruiter journey was run
+for this task. Production verification remains pending Claude's ordered rollout
+and Astra's independent check.

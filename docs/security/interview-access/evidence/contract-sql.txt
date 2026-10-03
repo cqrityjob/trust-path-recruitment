@@ -1,0 +1,104 @@
+BEGIN
+CREATE FUNCTION
+GRANT
+CREATE FUNCTION
+SELECT 1
+GRANT
+INSERT 0 22
+INSERT 0 1
+INSERT 0 2
+INSERT 0 16
+INSERT 0 4
+INSERT 0 3
+INSERT 0 1
+SELECT 1
+GRANT
+SELECT 1
+GRANT
+INSERT 0 2
+CREATE FUNCTION
+DO
+INSERT 0 4
+INSERT 0 2
+CREATE FUNCTION
+SELECT 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+UPDATE 1
+GRANT
+SELECT 1
+GRANT
+DO
+INSERT 0 3
+DO
+CREATE TABLE
+DO
+GRANT
+SELECT 1
+GRANT
+GRANT
+CREATE FUNCTION
+ set_status
+------------
+ removed
+(1 row)
+
+UPDATE 1
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF1 non-admin cannot read full config or metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF2 explicit metadata column hidden
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF1 non-admin cannot read full config or metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF2 explicit metadata column hidden
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF1 non-admin cannot read full config or metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF2 explicit metadata column hidden
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF1 non-admin cannot read full config or metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF2 explicit metadata column hidden
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF1 non-admin cannot read full config or metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF2 explicit metadata column hidden
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF1 non-admin cannot read full config or metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF2 explicit metadata column hidden
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF1 non-admin cannot read full config or metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF2 explicit metadata column hidden
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF3 platform admin reads administrative metadata
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF4 authorised runtime path works without direct config read
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF5 no client UPDATE including admin
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF6 no client DELETE
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF7 no client INSERT
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF5 no client UPDATE including admin
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF6 no client DELETE
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF7 no client INSERT
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF5 no client UPDATE including admin
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF6 no client DELETE
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF7 no client INSERT
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF5 no client UPDATE including admin
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF6 no client DELETE
+psql:supabase/tests/interview_ai_config_contract_test.sql:29: NOTICE:  ok  ICF7 no client INSERT
+DO
+SAVEPOINT
+ALTER POLICY
+psql:supabase/tests/interview_ai_config_contract_test.sql:33: NOTICE:  ok  ICF8 pre-fix candidate can read administrative actor ID
+ ok
+----
+
+(1 row)
+
+ROLLBACK
+psql:supabase/tests/interview_ai_config_contract_test.sql:35: NOTICE:  ok  ICF9 negative control undone
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/interview_ai_config_contract_test.sql:37: NOTICE:  ok  ICF10 internal AI enforcement is not a public capability oracle
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/interview_ai_config_contract_test.sql:38: NOTICE:  interview_ai_config_contract_test: ALL ASSERTIONS PASSED
+DO
+ROLLBACK

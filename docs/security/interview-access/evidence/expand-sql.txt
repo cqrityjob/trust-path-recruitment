@@ -44,12 +44,12 @@ GRANT
 GRANT
 CREATE FUNCTION
 CREATE FUNCTION
- set_status 
+ set_status
 ------------
  removed
 (1 row)
 
- set_status 
+ set_status
 ------------
  suspended
 (1 row)
@@ -72,65 +72,90 @@ psql:supabase/tests/interview_access_expand_test.sql:38: NOTICE:  ok  IA2 anon/c
 psql:supabase/tests/interview_access_expand_test.sql:38: NOTICE:  ok  IA3 null and nonexistent case denied identically
 psql:supabase/tests/interview_access_expand_test.sql:38: NOTICE:  ok  IA4 employer admin who is the subject is denied
 DO
- set_status 
+ set_status
 ------------
  removed
 (1 row)
 
 psql:supabase/tests/interview_access_expand_test.sql:41: NOTICE:  ok  IA5 removed panel member loses access immediately
- ok 
+ ok
 ----
- 
+
 (1 row)
 
 SAVEPOINT
 DELETE 1
 psql:supabase/tests/interview_access_expand_test.sql:46: NOTICE:  ok  IA6 missing singleton fails closed
- ok 
+ ok
 ----
- 
+
 (1 row)
 
 ROLLBACK
 INSERT 0 1
 INSERT 0 4
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA8 platform admin/content author can read raw bank
-psql:supabase/tests/interview_access_expand_test.sql:62: NOTICE:  ok  IA8 platform admin/content author can read raw bank
+DO
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA7 raw scenario bank denied across modes/statuses
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA8 platform admin/content author can read raw bank
+psql:supabase/tests/interview_access_expand_test.sql:76: NOTICE:  ok  IA8 platform admin/content author can read raw bank
 DO
 SAVEPOINT
 ALTER POLICY
-psql:supabase/tests/interview_access_expand_test.sql:68: NOTICE:  ok  IA9 pre-fix candidate reads all four internal draft/published scenarios
- ok 
+psql:supabase/tests/interview_access_expand_test.sql:82: NOTICE:  ok  IA9 pre-fix candidate reads all four internal draft/published scenarios
+ ok
 ----
- 
+
 (1 row)
 
 ROLLBACK
-psql:supabase/tests/interview_access_expand_test.sql:70: NOTICE:  ok  IA10 negative control restored
- ok 
+psql:supabase/tests/interview_access_expand_test.sql:84: NOTICE:  ok  IA10 negative control restored
+ ok
 ----
- 
+
 (1 row)
 
-psql:supabase/tests/interview_access_expand_test.sql:75: NOTICE:  ok  IA11 anon refused, public RPC is invoker, private implementation gated
- ok 
+psql:supabase/tests/interview_access_expand_test.sql:89: NOTICE:  ok  IA11 anon refused, public RPC is invoker, private implementation gated
+ ok
 ----
- 
+
 (1 row)
 
-psql:supabase/tests/interview_access_expand_test.sql:78: NOTICE:  ok  IA12 five shared catalogue policies preserved
- ok 
+psql:supabase/tests/interview_access_expand_test.sql:92: NOTICE:  ok  IA12 five shared catalogue policies preserved
+ ok
 ----
- 
+
 (1 row)
 
-psql:supabase/tests/interview_access_expand_test.sql:79: NOTICE:  interview_access_expand_test: ALL ASSERTIONS PASSED
+SAVEPOINT
+CREATE FUNCTION
+psql:supabase/tests/interview_access_expand_test.sql:99: NOTICE:  ok  IA13 vetting restriction narrows owner capability access
+ ok
+----
+
+(1 row)
+
+ROLLBACK
+SAVEPOINT
+CREATE FUNCTION
+psql:supabase/tests/interview_access_expand_test.sql:109: NOTICE:  ok  IA14 missing case guard mutant exposes flags to candidate
+ ok
+----
+
+(1 row)
+
+ROLLBACK
+psql:supabase/tests/interview_access_expand_test.sql:111: NOTICE:  ok  IA15 case guard restored
+ ok
+----
+
+(1 row)
+
+psql:supabase/tests/interview_access_expand_test.sql:112: NOTICE:  interview_access_expand_test: ALL ASSERTIONS PASSED
 DO
 ROLLBACK
