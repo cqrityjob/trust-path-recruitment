@@ -130,9 +130,20 @@ Förklaring: **R** rättad i kod (redo för merge) · **P** kräver produktions�
 | Playwright (systemets Chromium, stubbad backend), efter merge | se avsnitt 5a |
 | GitHub Actions på PR-toppen `5d396c4` | 12 av 13 jobb gröna när rapporten skrevs (lint/typecheck/guards, migrationsreplay/RLS/rollback, CV, Passport, E4, recruitment workspace, Career Center, bakåtnavigering, browser); "Public entry browser" pågick |
 
-### 5a. Webbläsartester lokalt (merge-trädet)
+### 5a. Webbläsartester lokalt (systemets Chromium, stubbad backend, merge-trädet `5d396c4`)
 
-Fylls i av sista körningen nedan (`e2e-summary`): se PR-kommentaren.
+| Svit | Projekt | Resultat |
+|---|---|---|
+| Hemsida, arbetsgivarlandning, ingång, hydrering, India-landning | dator | **111 godkända** |
+| Åtkomstlivscykel för företag (medlemskontroller, väntesida, borttagen medlem, omgranskning) | dator | **8 godkända** |
+| Inloggad header på dator (alla bredder) | dator | **27 godkända** |
+| Jobbupplevelse + bakåtnavigation | dator + 375 px | **40 godkända**, 10 hoppas över med flit |
+| Career Center-resa + utforska-länk i karriäranalysen | dator + 375 px | **38 godkända** |
+| Säkerhetsarbete (programmet) | dator + 375 px | **2 godkända** |
+
+Allt körs mot en stubbad backend; ingen skrivning nådde något riktigt system. Efter integrationen med
+Claude-sessionens #385 (main `f5eb230`) kördes de statiska kontrollerna om (typecheck, frontier,
+parity, migrations, jobbguards, Passport-guards); webbläsarsviterna körs om i sista omgången.
 
 ## 6. Leverans — vad som ändrats och varför
 
@@ -146,9 +157,12 @@ Fylls i av sista körningen nedan (`e2e-summary`): se PR-kommentaren.
 | Jobbboard | tre migrationer (**pending**, schema först), appändringar, 404 på stängd annons | Rollback-skript för varje migration (`supabase/rollback/20270130090000…`, `20270131090000…`, `20270201090000…`); appen fungerar före migration |
 | Dokument | dependency-audit, domän/inställningar, säkerhetsmemo, produktionstestbegäran, denna rapport | — |
 
-Migrationernas ordning vid release (schema först, kontrollera hostat md5 före):
-`20270124`, `20270125` (Claude, #384) → `20270130090000` → `20270131090000` (kräver föregående) →
-`20270201090000`. Därefter publicering.
+**Migrationsordning — PROVISORISK.** Får inte användas som slutlig releaseordning förrän Claude-sessionen
+(som äger Passport-/evidensarbetet) har bekräftat sina planerade migrationer. Beroenden jag känner till:
+`20270124`/`20270125` är **applicerade** (rekordförda i main, #385) → `20270126090000` (#388, Claude, öppen)
+→ `20270130090000` → `20270131090000` (kräver `20270130090000`) → `20270201090000`. Varje migration är
+skriven för att kunna appliceras före appändringen. Schema först, hostat md5 kontrolleras före, därefter
+publicering.
 
 ## 7. Beslut och hinder (det som inte är mitt att avgöra)
 
