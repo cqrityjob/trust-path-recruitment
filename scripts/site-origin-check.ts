@@ -208,6 +208,67 @@ check(
   "the sitemap is built on PRODUCTION_ORIGIN",
 );
 
+// A sitemap is an invitation to index, so it lists no page a crawler may not
+// index. Each static entry is resolved to its route file and refused if that
+// route is noindex (it names a robots rule containing "noindex") or is nothing
+// but a redirect (it throws `redirect(` and renders no component). The two
+// that were listed -- /security-career-assessment (noindex) and
+// /career-center/start (a redirect to /career-center) -- are the planted
+// controls; the profession guides are held to the same rule through the
+// publishability list, because an unpublished profession either redirects to
+// its catalogue page or renders a noindex "not published yet" page.
+{
+  const staticPaths = [...sitemap.matchAll(/\{ path: "(\/[^"]*)"/g)].map((m) => m[1]);
+  check(
+    staticPaths.length >= 10,
+    `the sitemap's static entries were found (${staticPaths.length})`,
+  );
+  const routeSourceFor = (urlPath: string): { file: string; source: string } | null => {
+    if (urlPath === "/")
+      return { file: "src/routes/index.tsx", source: read("src/routes/index.tsx") };
+    const dotted = urlPath.slice(1).replace(/\//g, ".");
+    for (const candidate of [`${dotted}.tsx`, `${dotted}.index.tsx`]) {
+      try {
+        return { file: `src/routes/${candidate}`, source: read(`src/routes/${candidate}`) };
+      } catch {
+        /* try the next spelling */
+      }
+    }
+    return null;
+  };
+  const notIndexable: string[] = [];
+  const unresolved: string[] = [];
+  for (const urlPath of staticPaths) {
+    const route = routeSourceFor(urlPath);
+    if (!route) {
+      unresolved.push(urlPath);
+      continue;
+    }
+    const noindex = /name:\s*"robots",\s*content:\s*"[^"]*noindex/.test(route.source);
+    const onlyARedirect = /\bredirect\(/.test(route.source) && !/\bcomponent:/.test(route.source);
+    if (noindex) notIndexable.push(`${urlPath} (${route.file} is noindex)`);
+    if (onlyARedirect) notIndexable.push(`${urlPath} (${route.file} only redirects)`);
+  }
+  check(
+    unresolved.length === 0,
+    unresolved.length === 0
+      ? "every static sitemap entry is backed by a route file"
+      : `a sitemap entry has no route file:\n         ${unresolved.join("\n         ")}`,
+  );
+  check(
+    notIndexable.length === 0,
+    notIndexable.length === 0
+      ? "the sitemap lists no noindex route and no redirect route"
+      : `the sitemap lists a page a crawler may not index:\n         ${notIndexable.join("\n         ")}`,
+  );
+  check(
+    /\.\.\.publishedProfessions\.map\(\(p\) => \(\{\s*path: `\/career-center\/\$\{p\.slug\}`/.test(
+      sitemap,
+    ) && !/\.\.\.professions\.map\(/.test(sitemap),
+    "the sitemap lists only PUBLISHED profession guides (an unpublished one redirects or is noindex)",
+  );
+}
+
 const seo = read("src/lib/job-intelligence/seo.ts");
 check(
   /export const SITE_ORIGIN = PRODUCTION_ORIGIN;/.test(seo),

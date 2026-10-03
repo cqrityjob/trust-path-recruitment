@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { professions } from "@/lib/career-center";
+import { publishedProfessions } from "@/lib/career-center/publishability";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
 import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
@@ -38,9 +39,11 @@ export const Route = createFileRoute("/sitemap.xml")({
         const entries: SitemapEntry[] = [
           { path: "/", changefreq: "weekly", priority: "1.0" },
           { path: "/assessment", changefreq: "monthly", priority: "0.9" },
-          { path: "/security-career-assessment", changefreq: "monthly", priority: "0.9" },
+          // A sitemap invites a crawler to index. It lists only pages that may
+          // be indexed: NOT /security-career-assessment (noindex) and NOT
+          // /career-center/start (a redirect to /career-center). The guard is
+          // scripts/site-origin-check.ts, which reads each route.
           { path: "/career-center", changefreq: "weekly", priority: "0.9" },
-          { path: "/career-center/start", changefreq: "monthly", priority: "0.7" },
           { path: "/jobs", changefreq: "daily", priority: "0.9" },
           { path: "/employers", changefreq: "monthly", priority: "0.8" },
           { path: "/security-passport", changefreq: "monthly", priority: "0.8" },
@@ -49,7 +52,9 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/plattformen", changefreq: "monthly", priority: "0.7" },
           { path: "/about", changefreq: "monthly", priority: "0.6" },
           { path: "/contact", changefreq: "yearly", priority: "0.4" },
-          ...professions.map((p) => ({
+          // Published guides only: an unpublished profession either redirects
+          // to its catalogue page or renders a noindex "not published yet" page.
+          ...publishedProfessions.map((p) => ({
             path: `/career-center/${p.slug}`,
             changefreq: "monthly" as const,
             priority: p.status === "researched" ? "0.7" : "0.5",
