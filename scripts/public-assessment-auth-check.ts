@@ -662,8 +662,15 @@ ok(
   "5.4 questions come from the v3.1 modules",
 );
 // An unavailable instrument must say so, not degrade into another assessment.
+// The closed state moved out of the flow into ClosedAnalysisPanel when the
+// refusal gained three honest reasons (paused / not open to this account /
+// instrument unavailable); the unavailable instrument keeps its own words
+// there, and the flow renders the panel.
 ok(
-  flow.includes("cd.public.unavailableTitle"),
+  flow.includes("<ClosedAnalysisPanel") &&
+    read("src/components/career-discovery/v31/ClosedAnalysisPanel.tsx").includes(
+      "cd.public.unavailableTitle",
+    ),
   "5.5 an unavailable v3.1 shows an explicit v3.1 state",
 );
 

@@ -236,6 +236,28 @@ jobs:
       - name: Public assessment auth and buffer check
         run: bun run public-assessment-auth:check
 
+      # THE CAREER ANALYSIS IS AVAILABLE THE SAME WAY EVERYWHERE, IN EVERY STATE.
+      #
+      # The owner opens Karriäranalysen with ONE call (cd_set_access_state), a
+      # path never exercised in production, so each state (internal_test /
+      # public / paused) must already be coherent for an anonymous visitor, a
+      # signed-in non-tester, an internal tester, an admin and a person
+      # claiming a run finished anonymously. The first check runs the state
+      # matrix over the one resolver and the server's save gate, holds the SQL
+      # suite's expected table to the same one, and fails if any surface keeps
+      # a private copy of the rule or links into the entrance ungated; the
+      # second renders every surface in every state, in both languages. Their
+      # planted controls run in negative-controls:all; the database half is
+      # supabase/tests/cd_availability_matrix_test.sql in the db-test job.
+      - name: Career analysis availability check
+        run: bun run career-analysis-availability:check
+
+      - name: Career analysis surfaces check
+        run: bun run career-analysis-surfaces:check
+
+      - name: My Career assessment gate check
+        run: bun run my-career-gate:check
+
       # THE SHARE-TOKEN TRANSPORT, WHICH WAS NOT RUNNING IN CI AT ALL.
       #
       # `passport-share-transport:check` has existed since the token was moved

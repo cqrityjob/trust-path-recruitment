@@ -20,7 +20,7 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Download } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { CareerJourneySection } from "@/components/career-journey/CareerJourneySection";
 import type { CareerJourney } from "@/lib/career-journey/types";
@@ -509,6 +509,24 @@ export function V31ReportView({
           >
             {t("careerDiscovery.report.actions.allReports")}
           </Link>
+          {/* DOWNLOAD — the saved report offers the same control the
+              anonymous result screen does ("Ladda ner resultat"): the
+              browser's own print-to-PDF over the existing print stylesheet
+              (styles.css `@media print`, `.no-print` on everything that is
+              not the report), so it needs no server round-trip and no new
+              renderer. A report kept for a decision should be keepable on
+              paper too; it was only ever offered before the account existed.
+              Part of the .no-print action bar, so the button is never in the
+              printout it makes. */}
+          <button
+            type="button"
+            onClick={() => window.print()}
+            data-print-report
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {t("cd.public.downloadResult")}
+          </button>
           {/* Quiet, and only when the gate would admit them. A retake is a
               decision made after reading a result, so it lives here rather
               than on the personal home. */}

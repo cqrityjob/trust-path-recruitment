@@ -257,11 +257,37 @@ check(
       !!flag && new RegExp(`\\.\\.\\.\\(${flag}\\s*\\?\\s*\\[\\{ path: "${urlPath}"`).test(sitemap);
     const noindex =
       /name:\s*"robots",\s*content:\s*"[^"]*noindex/.test(route.source) && !listedUnderSameFlag;
+    // A route whose robots rule FOLLOWS the release control (it is derived
+    // through analysisRobots(), not written as a string) is indexable only
+    // while that control says `public`, so a STATIC sitemap entry for it is
+    // exactly the defect: it would invite a crawler to a page that is noindex
+    // under internal_test and paused. It may be listed only through the
+    // conditional entry checked below.
+    const followsAccessState = /analysisRobots\(/.test(route.source);
     const onlyARedirect =
       /beforeLoad:\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*throw redirect\(/.test(route.source) ||
       (/\bredirect\(/.test(route.source) && !/\bcomponent:/.test(route.source));
     if (noindex) notIndexable.push(`${urlPath} (${route.file} is noindex)`);
+    if (followsAccessState)
+      notIndexable.push(
+        `${urlPath} (${route.file} is indexable only while the release control says public, so it may not be a static entry)`,
+      );
     if (onlyARedirect) notIndexable.push(`${urlPath} (${route.file} only redirects)`);
+  }
+  // The career analysis is listed ONLY through an entry gated on the release
+  // control, and its route derives its robots rule from the same answer.
+  check(
+    /analysisListed = analysisIndexable\(answer\);/.test(sitemap) &&
+      /\.\.\.\(analysisListed\s*\?\s*\[\{ path: CANONICAL_ASSESSMENT_PATH,/.test(sitemap),
+    "the career analysis is in the sitemap only while the release control says public",
+  );
+  {
+    const analysisRoute = read("src/routes/security-career-assessment.tsx");
+    check(
+      /analysisRobots\(indexable\)/.test(analysisRoute) &&
+        !/name:\s*"robots",\s*content:\s*"/.test(analysisRoute),
+      "the career analysis route derives its robots rule from the release control, never a literal",
+    );
   }
   check(
     unresolved.length === 0,
