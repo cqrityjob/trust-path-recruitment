@@ -2955,6 +2955,14 @@
       "rollback": "supabase/rollback/20270206090000_interview_access_expand_rollback.sql",
       "verify": "SELECT policyname,qual FROM pg_policies WHERE schemaname='public' AND tablename='scp_scenario_versions'; SELECT p.oid::regprocedure,p.prosecdef,p.proconfig,md5(p.prosrc) FROM pg_proc p WHERE p.oid IN ('public.scp_iv_case_capabilities(uuid)'::regprocedure,'scp_private.case_capabilities(uuid)'::regprocedure); SELECT has_function_privilege('anon','public.scp_iv_case_capabilities(uuid)','EXECUTE'); -- false; compare fingerprints in docs/security/interview-access before recording applied.",
       "note": "PR #404. Case-scoped flags and author-only raw scenarios. Separate app release then 20270207090000 contract. Old configuration access remains during expand. Not applied or production-verified."
+    },
+    {
+      "file": "20270207090000_interview_ai_config_contract.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270207090000_interview_ai_config_contract_rollback.sql",
+      "verify": "SELECT policyname,cmd,roles,qual,with_check FROM pg_policies WHERE schemaname='public' AND tablename IN ('scp_interview_ai_config','scp_scenario_versions') ORDER BY tablename,policyname; SELECT has_any_column_privilege('anon','public.scp_interview_ai_config','SELECT'),has_any_column_privilege('authenticated','public.scp_interview_ai_config','UPDATE'),has_any_column_privilege('authenticated','public.scp_interview_ai_config','INSERT'),has_table_privilege('authenticated','public.scp_interview_ai_config','DELETE'); -- all false; see docs/security/interview-access/verify-production.sql",
+      "note": "Final contract only after expand and app PR #405 publication/verification, coordinated by Claude. Admin-only full configuration, no client writes. Scoped runtime RPC remains usable; five shared sp_ catalogue policies untouched. Pending, never mark applied without hosted evidence."
     }
   ], 
   "policyVersion": 2, 
