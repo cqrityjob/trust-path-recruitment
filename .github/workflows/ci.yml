@@ -9,6 +9,10 @@ on:
   pull_request:
     branches:
       - main
+      # A pull request stacked on another claude/* branch (a follow-up that
+      # depends on a PR that is not merged yet) is checked too. Without this its
+      # head had no CI at all, because its base is not main.
+      - "claude/**"
 
 permissions:
   contents: read
