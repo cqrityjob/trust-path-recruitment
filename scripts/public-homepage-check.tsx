@@ -384,15 +384,15 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
 {
   const SPEC: Record<Lang, Record<string, string>> = {
     sv: {
-      // Locked owner decision, 2026-10-01: the English brand statement is
-      // the hero in BOTH languages, never translated.
-      "home.hero.title": "Security careers, without limits.",
+      // Locked owner decision, 2026-10-03: the visitor's own headline is the
+      // H1; the English brand statement sits below the entrances as a slogan.
+      "home.hero.title": "Din karriär, din kompetens, ditt säkerhetsarbete.",
       "home.hero.individual.title": "För dig i säkerhetsbranschen",
       "home.hero.employer.title": "För arbetsgivare",
     },
     en: {
-      "home.hero.title": "Security careers, without limits.",
-      "home.hero.individual.title": "For people in security",
+      "home.hero.title": "Your career, your expertise, your security work.",
+      "home.hero.individual.title": "For security professionals",
       "home.hero.employer.title": "For employers",
     },
   };
@@ -407,8 +407,8 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
       headings(hero, "h1")[0] === SPEC[lang]["home.hero.title"],
     );
     ck(
-      `${lang}: the h1 is marked lang="en" — an English brand statement on every page`,
-      /<h1[^>]*lang="en"/.test(hero),
+      `${lang}: the slogan is the English brand statement, marked lang="en"`,
+      /<p[^>]*lang="en"[^>]*>\s*Security careers, without limits\.\s*<\/p>/.test(hero),
     );
     ck(`${lang}: the hero is centred`, /<section id="hero"[\s\S]*?text-center/.test(hero));
     // The positioning is two sentences, one per audience (brand story,
@@ -424,14 +424,10 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
     ck(
       `${lang}: the positioning addresses individuals and employers, locally or internationally`,
       lang === "sv"
-        ? /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /din karriär inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
-            /För arbetsgivare/.test(d(lang)["home.hero.subtitle"]) &&
-            /lokalt eller internationellt/.test(d(lang)["home.hero.subtitle"])
-        : /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /develop your security career/.test(d(lang)["home.hero.subtitle"]) &&
-            /For employers/.test(d(lang)["home.hero.subtitle"]) &&
-            /locally or internationally/.test(d(lang)["home.hero.subtitle"]),
+        ? /Jobb, kompetens, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /Rekryteringsverktyg för arbetsgivare/.test(d(lang)["home.hero.subtitle"])
+        : /Jobs, expertise, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /Recruitment tools for employers/.test(d(lang)["home.hero.subtitle"]),
       d(lang)["home.hero.subtitle"],
     );
     const entrances = anchorsOf(hero);
@@ -1071,11 +1067,13 @@ group("T13 · sv and en say the same thing, with the same structure");
     "home.individual.passport.title": "nav.securityPassport",
     "home.services.executive.title": "nav.forEmployers.recruitment",
   };
-  // The locked brand statements (owner decision, 2026-10-01) are English in
-  // both languages, like "brand.slogan". Each is PROVEN by its exact,
-  // approved wording, so no other sentence can join it untranslated.
+  // The locked brand statement (owner decision, 2026-10-03: the H1 is the
+  // visitor's own headline; the English statement is the slogan below the
+  // entrances) is English in both languages, like "brand.slogan". It is
+  // PROVEN by its exact, approved wording, so no other sentence can join it
+  // untranslated.
   const BRAND_STATEMENTS: Record<string, string> = {
-    "home.hero.title": "Security careers, without limits.",
+    "home.hero.slogan": "Security careers, without limits.",
   };
   for (const [key, locked] of Object.entries(BRAND_STATEMENTS)) {
     for (const lang of LANGS) {

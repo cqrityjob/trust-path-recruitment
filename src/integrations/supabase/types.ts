@@ -21266,8 +21266,8 @@ export type Database = {
       }
       bcp_conduct_record_resolution: {
         Args: {
-          _agreed_statement: string | null
-          _divergent_statement: string | null
+          _agreed_statement: string
+          _divergent_statement: string
           _expected_revision: number
           _item_key: string
           _operation_id: string
@@ -23682,7 +23682,7 @@ export type Database = {
       scp_iv_finalise_previewed_report: {
         Args: {
           _case_id: string
-          _draft_run_id: string | null
+          _draft_run_id: string
           _expected_basis_hash: string
         }
         Returns: string
