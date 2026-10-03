@@ -194,122 +194,23 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 
-# Employer report ACCESS MATRIX. Tests only: it documents and pins the CURRENT
-# behaviour of every read path to an employer report and of the release and
-# finalise gates -- logged out, the candidate, another candidate, owner, admin,
-# a reviewer-granted member, a plain member, a suspended and a removed member, a
-# member of another company and a platform admin who is not a member. It runs
-# here, straight after the replay, so it reads the final state of the chain and
-# not what a later rollback block leaves behind.
-#
-# The member-wide read model it records (every active member of an active
-# organisation reads the employer report, the case and its notes) is under owner
-# review; the assertions tagged MEMBER-WIDE-MODEL are exactly the ones that
-# decision changes. Negative controls, each of which MUST make the suite fail on
-# an assertion (each runs inside a transaction the suite's own ROLLBACK ends, so
-# nothing is left behind):
-#   NC1  a suspended or removed membership still counts as a membership   -> RM6.1
-#   NC2  a platform admin reads every organisation's employer report      -> RM8.1
-#   NC3  the interview case read is open to any authenticated user        -> RM2.1
-#   NC4  the employer report is narrowed to owner/admin (the decision)    -> RM5.1
-run_rm_suite() {
-  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_report_access_matrix_test.sql 2>&1
-}
-rm_nc_expect_fail() {
-  local label="$1" expect="$2" mutation="$3"
-  set +e
-  local out
-  out="$(printf 'BEGIN;\n%s\n\\i supabase/tests/employer_report_access_matrix_test.sql\n' "$mutation" \
-    | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
-  local rc=$?
-  set -e
-  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect}"; then
-    echo "FAIL: employer report access matrix negative control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
-    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
-    exit 1
-  fi
-  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o "ASSERTION FAILED: RM[0-9A-Za-z.]*" | head -1))"
-}
-echo "==> Running employer report access matrix assertions"
-set +e
-RM_OUT="$(run_rm_suite)"; RM_RC=$?
-set -e
-RM_PASSED="$(echo "$RM_OUT" | grep -c "NOTICE:  ok  " || true)"
-if [ "$RM_RC" -ne 0 ]; then
-  echo "$RM_OUT" | grep -E "ERROR|FAILED" >&2 || true
-  echo "FAIL: the employer report access matrix suite exited with code ${RM_RC}." >&2
-  suite_failed "Employer report access matrix"
-elif [ "$RM_PASSED" -lt 45 ]; then
-  echo "$RM_OUT" | grep -E "ERROR|FAILED" >&2 || true
-  echo "FAIL: employer report access matrix assertion shortfall: $RM_PASSED (floor 45)" >&2
-  suite_failed "Employer report access matrix (assertion shortfall: floor 45)"
-else
-  echo "    ok  $RM_PASSED employer report access matrix assertions passed (current behaviour pinned; the member-wide read model is tagged MEMBER-WIDE-MODEL)"
-  rm_nc_expect_fail "NC1 a removed or suspended membership still counts" "RM6.1" "$(cat <<'SQL'
-CREATE OR REPLACE FUNCTION public.has_employer_role(_user_id uuid, _employer_id uuid, _roles text[] DEFAULT NULL::text[])
- RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
-AS $function$
-  SELECT EXISTS (
-    SELECT 1 FROM public.employer_memberships em
-    WHERE em.user_id = _user_id AND em.employer_id = _employer_id
-      AND (_roles IS NULL OR em.role = ANY(_roles))
-  );
-$function$;
-SQL
-)"
-  rm_nc_expect_fail "NC2 a platform admin reads every employer report" "RM8.1" "$(cat <<'SQL'
-CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(_audience text, _subject_id uuid, _issuer_organization_id uuid)
- RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
-AS $function$
-  SELECT CASE _audience
-    WHEN 'participant' THEN EXISTS (
-      SELECT 1 FROM public.scp_subject_identities si
-       WHERE si.subject_id = _subject_id AND si.user_id = auth.uid())
-    WHEN 'employer' THEN
-      _issuer_organization_id IS NOT NULL
-      AND (public.has_active_employer_role(auth.uid(), _issuer_organization_id)
-           OR public.is_platform_admin(auth.uid()))
-    ELSE false
-  END;
-$function$;
-SQL
-)"
-  rm_nc_expect_fail "NC3 the interview case read is open to any authenticated user" "RM2.1" "$(cat <<'SQL'
-CREATE OR REPLACE FUNCTION public.scp_iv_can_read_case(_case_id uuid)
- RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
-AS $function$
-  SELECT auth.uid() IS NOT NULL;
-$function$;
-SQL
-)"
-  rm_nc_expect_fail "NC4 the employer report narrowed to owner/admin (what the member-wide decision would change)" "RM5.1" "$(cat <<'SQL'
-CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(_audience text, _subject_id uuid, _issuer_organization_id uuid)
- RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
-AS $function$
-  SELECT CASE _audience
-    WHEN 'participant' THEN EXISTS (
-      SELECT 1 FROM public.scp_subject_identities si
-       WHERE si.subject_id = _subject_id AND si.user_id = auth.uid())
-    WHEN 'employer' THEN
-      _issuer_organization_id IS NOT NULL
-      AND public.has_active_employer_role(auth.uid(), _issuer_organization_id, ARRAY['owner','admin'])
-    ELSE false
-  END;
-$function$;
-SQL
-)"
-fi
-
 # ---------------------------------------------------------------------------
 # 20270202090000 / 20270203090000 / 20270204090000: who may read what an
 # organisation learned about a person, and the circumvention of a suspension.
-# Design: docs/release/2026-10-03-employer-report-access-design.md. They run
-# here, straight after the replay, so they read the final state of the chain.
+# Design: docs/release/2026-10-03-employer-report-access-design.md. The suites
+# run here, straight after the replay, so they read the final state of the
+# chain and not what a later rollback block leaves behind.
+#
+#   employer_membership_standing_test    suspension cannot be circumvented (MS)
+#   employer_report_access_matrix_test   actor x read, release, finalise, offboarding (RM)
+#   employer_report_access_model_test    the single definition and its resolvers (RA)
+#   interview_case_access_model_test     Interview Intelligence (IC)
+#
 # Each suite reproduces its defect on the PRE-FIX state ITSELF (the real
-# rollback, inside a savepoint), then proves the fix. Every planted control
-# below mutates the schema INSIDE the suite's own transaction (the suite's
-# ROLLBACK ends it, nothing is left behind) and MUST make the suite fail on
-# the NAMED assertion.
+# rollback, inside a savepoint: MS0, RM0, RA0, IC0), then proves the fix. Every
+# planted control below mutates the schema INSIDE the suite's own transaction
+# (the suite's ROLLBACK ends it, nothing is left behind) and MUST make the suite
+# fail on the NAMED assertion.
 ac_run_suite() { psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/$1" 2>&1; }
 ac_expect_pass() {
   local label="$1" suite="$2" floor="$3"
@@ -344,6 +245,12 @@ ac_nc_expect_fail() {
   fi
   echo "    ok  NC ${label}: the suite fails on ${expect}"
 }
+# One function of a migration or rollback file, by name (each body ends with a line holding ';').
+ac_fn() { sed -n "/^CREATE OR REPLACE FUNCTION public.$2(/,/^;\$/p" "$1"; }
+AC_MIG_A=supabase/migrations/20270203090000_employer_report_access_model.sql
+AC_MIG_B=supabase/migrations/20270204090000_interview_case_access_model.sql
+AC_RB_A=supabase/rollback/20270203090000_employer_report_access_model_rollback.sql
+AC_RB_B=supabase/rollback/20270204090000_interview_case_access_model_rollback.sql
 
 echo "==> Running employer membership standing assertions (suspension cannot be circumvented)"
 ac_expect_pass "employer membership standing" employer_membership_standing_test.sql 43
@@ -377,6 +284,86 @@ BEGIN
 END; $function$;
 SQL
 )"
+
+echo "==> Running employer report access matrix assertions"
+ac_expect_pass "employer report access matrix" employer_report_access_matrix_test.sql 63
+ac_nc_expect_fail "RM NC1 a suspended or removed membership still counts" employer_report_access_matrix_test.sql "RM6.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.has_employer_role(_user_id uuid, _employer_id uuid, _roles text[] DEFAULT NULL::text[])
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.employer_memberships em
+    WHERE em.user_id = _user_id AND em.employer_id = _employer_id
+      AND (_roles IS NULL OR em.role = ANY(_roles))
+  );
+$function$;
+SQL
+)"
+ac_nc_expect_fail "RM NC2 a platform admin reads every employer report" employer_report_access_matrix_test.sql "RM8.1" \
+  "$(ac_fn "$AC_MIG_A" scp_report_snapshot_readable | sed 's/AND public.scp_attempt_reports_readable(_attempt_id)/AND (public.scp_attempt_reports_readable(_attempt_id) OR public.is_platform_admin(auth.uid()))/')"
+ac_nc_expect_fail "RM NC3 the interview case read is open to any authenticated user" employer_report_access_matrix_test.sql "RM2.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.scp_iv_can_read_case(_case_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  SELECT auth.uid() IS NOT NULL;
+$function$;
+SQL
+)"
+ac_nc_expect_fail "RM NC4 every active member reads again (R1 widened to membership)" employer_report_access_matrix_test.sql "RM5.1" \
+  "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed "s/public.has_active_employer_role(auth.uid(), _employer_id, ARRAY\['owner', 'admin'\])/true/")"
+ac_nc_expect_fail "RM NC5 the subject is no longer excluded" employer_report_access_matrix_test.sql "RM5s.1" \
+  "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed 's/AND NOT coalesce(auth.uid() = ANY (_subject_users), false)/AND true/')"
+ac_nc_expect_fail "RM NC6 a reviewer grant ignores the use case" employer_report_access_matrix_test.sql "RM5.3" \
+  "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed 's/public.scp_can_review_for(auth.uid(), _employer_id, _use_case)/public.scp_can_review_for(auth.uid(), _employer_id, NULL)/')"
+ac_nc_expect_fail "RM NC7 the responsible recruiter reads every vacancy" employer_report_access_matrix_test.sql "RM5.5" \
+  "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed 's/JOIN public.recruitment_settings s ON s.job_id = v.job_id AND s.employer_id = _employer_id/JOIN public.recruitment_settings s ON s.employer_id = _employer_id/')"
+ac_nc_expect_fail "RM NC8 the case basis is open to every member" employer_report_access_matrix_test.sql "RM5.1" \
+  "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed 's/AND (c.created_by = auth.uid()/AND (true OR c.created_by = auth.uid()/')"
+
+echo "==> Running employer report access model assertions"
+ac_expect_pass "employer report access model" employer_report_access_model_test.sql 66
+ac_nc_expect_fail "RA NC1 a reviewer grant is never consulted" employer_report_access_model_test.sql "RA1.3" \
+  "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed 's/public.scp_can_review_for(auth.uid(), _employer_id, _use_case)/false/')"
+ac_nc_expect_fail "RA NC2 an unknown use case is reachable through a grant" employer_report_access_model_test.sql "RA1.4" \
+  "$(ac_fn "$AC_MIG_A" employer_reports_readable | sed "s/_use_case IN ('workforce', 'recruitment')/true/")"
+ac_nc_expect_fail "RA NC3 an attempt with no assignment is treated as workforce" employer_report_access_model_test.sql "RA2.1" \
+  "$(ac_fn "$AC_MIG_A" scp_attempt_reports_readable | sed "s/a.issuer_organization_id, aa.use_case, aa.job_id/a.issuer_organization_id, coalesce(aa.use_case, 'workforce'), aa.job_id/")"
+ac_nc_expect_fail "RA NC4 recommendations on a partly readable subject" employer_report_access_model_test.sql "RA2.7" \
+  "$(ac_fn "$AC_RB_A" scp_development_recommendations | sed 's/AND public.has_active_employer_role(auth.uid(), a.issuer_organization_id);/AND public.scp_attempt_reports_readable(a.id);/')"
+ac_nc_expect_fail "RA NC5 the snapshot gate without an attempt falls back to membership" employer_report_access_model_test.sql "RA3.1" \
+  "$(ac_fn "$AC_MIG_A" scp_report_snapshot_readable | sed 's/THEN public.employer_reports_readable(/THEN public.has_active_employer_role(auth.uid(), _issuer_organization_id) OR public.employer_reports_readable(/')"
+ac_nc_expect_fail "RA NC6 the pipeline lists every attempt again" employer_report_access_model_test.sql "RA4.2" \
+  "$(ac_fn "$AC_MIG_A" scp_employer_assessment_pipeline | sed '/AND public.scp_attempt_reports_readable(at.id)/d')"
+ac_nc_expect_fail "RA NC7 the review-pressure counts are not filtered per attempt" employer_report_access_model_test.sql "RA4.9" \
+  "$(ac_fn "$AC_MIG_A" scp_employer_review_pressure | sed '/AND public.scp_attempt_reports_readable(at.id)/d' | sed 's/AND at.issuer_organization_id = _employer_id$/AND at.issuer_organization_id = _employer_id;/')"
+ac_nc_expect_fail "RA NC8 a member with nothing to read gets a row of zeros, which says how much is waiting" employer_report_access_model_test.sql "RA4.8" \
+  "$(ac_fn "$AC_MIG_A" scp_employer_review_pressure | sed '/IF NOT (public.employer_reports_readable(_employer_id)$/,/END IF;/d')"
+
+ac_nc_expect_fail "RA NC9 the screen is told every member is an owner or administrator" employer_report_access_model_test.sql "RA9.2" \
+  "$(ac_fn "$AC_MIG_A" employer_report_access | sed 's/public.employer_reports_readable(_employer_id),$/true,/')"
+
+echo "==> Running interview case access model assertions"
+ac_expect_pass "interview case access model" interview_case_access_model_test.sql 43
+ac_nc_expect_fail "IC NC1 full rollback of 20270204090000" interview_case_access_model_test.sql "IC0.5" "$(cat "$AC_RB_B")"
+ac_nc_expect_fail "IC NC2 the write gate admits every member again" interview_case_access_model_test.sql "IC2.2" \
+  "$(ac_fn "$AC_RB_B" scp_iv_can_write_case)"
+ac_nc_expect_fail "IC NC3 the case row policy admits every member again" interview_case_access_model_test.sql "IC1.2" \
+  "$(ac_fn "$AC_RB_B" scp_iv_case_row_visible)"
+ac_nc_expect_fail "IC NC4 the corrections policy no longer asks the vetting restriction (finding a, as defence in depth)" interview_case_access_model_test.sql "IC5.5" "$(cat <<'SQL'
+CREATE FUNCTION public.zz_corrections_member_only(_case_id uuid) RETURNS boolean
+ LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (SELECT 1 FROM public.scp_interview_cases c
+                  WHERE c.id = _case_id AND public.has_active_employer_role(auth.uid(), c.employer_id));
+$function$;
+GRANT EXECUTE ON FUNCTION public.zz_corrections_member_only(uuid) TO authenticated;
+ALTER POLICY scp_iv_corrections_employer ON public.scp_interview_candidate_corrections USING (public.zz_corrections_member_only(case_id));
+SQL
+)"
+ac_nc_expect_fail "IC NC5 the read gate forgets the vetting restriction" interview_case_access_model_test.sql "IC5.2" \
+  "$(ac_fn "$AC_MIG_B" scp_iv_can_read_case | sed '/Additive, and unchanged/d' | sed '/AND public.bcp_case_access_ok(_case_id)/d' | sed 's/c.id)))$/c.id));/')"
+ac_nc_expect_fail "IC NC6 the candidate is no longer excluded from the case" interview_case_access_model_test.sql "IC3.1" \
+  "$(ac_fn "$AC_MIG_B" scp_iv_can_read_case | sed 's/ARRAY\[c.candidate_user_id, a.applicant_user_id\]/NULL::uuid[]/')"
 
 # 20270101090000: four catalogue reads narrowed (drafts and unapproved
 # professions to authors/admins, the interviewer guide to authors) and three
