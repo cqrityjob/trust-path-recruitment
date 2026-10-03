@@ -110,6 +110,18 @@ export const dictionaries = {
     "nav.primary": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
     "nav.menu.close": "Stäng menyn",
+    // The root's two fallback screens (components/site/RootFallbacks.tsx): the
+    // 404 and the error boundary. They can render outside the I18nProvider
+    // after a hard crash, so they read the dictionary through useTolerantT().
+    // "Sidan kunde inte laddas" / "Försök igen" are what the e2e specs already
+    // look for beside their English forms.
+    "root.notFound.title": "Sidan hittades inte",
+    "root.notFound.body": "Sidan du söker finns inte eller har flyttats.",
+    "root.goHome": "Till startsidan",
+    "root.error.title": "Sidan kunde inte laddas",
+    "root.error.body":
+      "Något gick fel hos oss. Du kan försöka igen eller gå tillbaka till startsidan.",
+    "root.error.retry": "Försök igen",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
@@ -8959,6 +8971,12 @@ export const dictionaries = {
     "nav.primary": "Primary navigation",
     "nav.menu.open": "Open menu",
     "nav.menu.close": "Close menu",
+    "root.notFound.title": "Page not found",
+    "root.notFound.body": "The page you're looking for doesn't exist or has been moved.",
+    "root.goHome": "Go home",
+    "root.error.title": "This page didn't load",
+    "root.error.body": "Something went wrong on our end. You can try again or head back home.",
+    "root.error.retry": "Try again",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",

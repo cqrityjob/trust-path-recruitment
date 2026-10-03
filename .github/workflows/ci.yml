@@ -1580,6 +1580,14 @@ jobs:
       - name: Employer landing page check
         run: bun run employer-landing:check
 
+      # The root's 404 and error screens: translated through the dictionaries
+      # (they were English-only on a Swedish-default site), and rendered with
+      # and without the providers a hard crash takes away -- a screen that
+      # throws inside the error boundary is no screen. Read-only over committed
+      # code, nothing hosted. Its planted controls run in negative-controls:all.
+      - name: Root fallback screens check
+        run: bun run root-fallback:check
+
 
       - name: Production build
         run: bun run build
