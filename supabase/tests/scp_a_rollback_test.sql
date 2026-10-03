@@ -22,6 +22,10 @@
 
 \set ON_ERROR_STOP on
 
+-- Unwind the new capability wrapper before removing its interview domain.
+-- Keep the historical assertion that every scp_iv_* function is removed.
+\ir ../rollback/20270206090000_interview_access_expand_rollback.sql
+
 -- Unwind the newer authoring extension before the historical SCP domain.
 -- Its own rollback refuses authored data rather than removing release holds.
 \ir ../rollback/20261219090000_assessment_draft_authoring_rollback.sql
