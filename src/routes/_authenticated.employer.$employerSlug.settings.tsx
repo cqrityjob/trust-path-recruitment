@@ -26,6 +26,31 @@ import {
   updateEmployerOrganisation,
 } from "@/lib/job-intelligence/employer-settings.functions";
 import { EmployerTeamPanel } from "@/components/employer/EmployerTeamPanel";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { TranslationKey } from "@/i18n/dictionaries";
+import {
+  EMPLOYER_IDENTITY_REREVIEW_KEY,
+  identityChanges,
+  type EmployerIdentityRereview,
+  type IdentityChange,
+  type IdentityField,
+} from "@/lib/job-intelligence/identity-rereview";
+
+const IDENTITY_FIELD_LABEL: Record<IdentityField, TranslationKey> = {
+  name: "employer.settings.field.name",
+  country: "employer.settings.field.country",
+  registrationNumber: "employer.settings.field.registrationNumber",
+  website: "employer.settings.field.website",
+};
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/settings")({
   ssr: false,
@@ -114,6 +139,8 @@ function SettingsForm({
   const [descriptionSv, setDescriptionSv] = useState("");
   const [descriptionEn, setDescriptionEn] = useState("");
   const [saved, setSaved] = useState(false);
+  // The identity fields about to change, while the owner is being asked.
+  const [confirmChanges, setConfirmChanges] = useState<IdentityChange[] | null>(null);
 
   useEffect(() => {
     if (!query.data) return;
@@ -138,12 +165,48 @@ function SettingsForm({
           descriptionEn: descriptionEn || null,
         },
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setSaved(true);
+      // The database -- not the comparison made before the save -- says whether
+      // this save sent an approved organisation back to review. Recorded BEFORE
+      // the workspace list is refetched: that refetch is what makes the
+      // workspace gate redirect to /employer/pending, and the page it lands on
+      // reads this to say "reviewed again" instead of thanking the owner for
+      // registering.
+      if (status === "active" && result.status === "pending") {
+        qc.setQueryData<EmployerIdentityRereview>(EMPLOYER_IDENTITY_REREVIEW_KEY, { employerId });
+      }
       void qc.invalidateQueries({ queryKey: ["employer", employerId, "settings"] });
       void qc.invalidateQueries({ queryKey: ["employer", "my-workspaces"] });
     },
   });
+
+  // The warning the owner did not get: changing any of these four fields takes an
+  // approved organisation back to review, which closes the workspace for the whole
+  // team and takes live ads offline (employers_validate_before_write, 20270123090000).
+  // Only an ACTIVE organisation is affected -- one that is already under review
+  // has nothing further to lose -- and only a change that survives the trigger's
+  // own trimmed, case-insensitive comparison counts.
+  function submit() {
+    setSaved(false);
+    const changes =
+      status === "active" && query.data
+        ? identityChanges(
+            {
+              name: query.data.name,
+              country: query.data.country,
+              registrationNumber: query.data.registrationNumber,
+              website: query.data.website,
+            },
+            { name, country, registrationNumber, website },
+          )
+        : [];
+    if (changes.length > 0) {
+      setConfirmChanges(changes);
+      return;
+    }
+    mutation.mutate();
+  }
 
   return (
     <EmployerAppShell
@@ -172,8 +235,7 @@ function SettingsForm({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            setSaved(false);
-            mutation.mutate();
+            submit();
           }}
           className="mt-6 max-w-xl space-y-4"
         >
@@ -279,6 +341,54 @@ function SettingsForm({
           navigation entry because the employer navigation is locked, and
           "who belongs to this account" is an organisation question. */}
       <EmployerTeamPanel employerId={employerId} canManage={canEdit} />
+
+      <Dialog open={confirmChanges !== null} onOpenChange={(o) => !o && setConfirmChanges(null)}>
+        <DialogContent data-testid="identity-rereview-confirm">
+          <DialogHeader>
+            <DialogTitle>{t("employer.settings.identityConfirm.title")}</DialogTitle>
+            <DialogDescription>{t("employer.settings.identityConfirm.body")}</DialogDescription>
+          </DialogHeader>
+          <p className="text-sm leading-relaxed text-foreground">
+            {t("employer.settings.identityConfirm.consequence")}
+          </p>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {t("employer.settings.identityConfirm.changes")}
+            </p>
+            <ul className="mt-2 space-y-1.5 text-sm text-foreground">
+              {(confirmChanges ?? []).map((c) => (
+                <li key={c.field}>
+                  <span className="font-medium">{t(IDENTITY_FIELD_LABEL[c.field])}:</span>{" "}
+                  <span className="text-muted-foreground">
+                    {c.from || t("employer.settings.identityConfirm.empty")}
+                  </span>{" "}
+                  → <span>{c.to || t("employer.settings.identityConfirm.empty")}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t("employer.settings.identityConfirm.noReview")}
+          </p>
+          <DialogFooter className="mt-2">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                {t("employer.settings.identityConfirm.cancel")}
+              </Button>
+            </DialogClose>
+            <Button
+              type="button"
+              disabled={mutation.isPending}
+              onClick={() => {
+                setConfirmChanges(null);
+                mutation.mutate();
+              }}
+            >
+              {t("employer.settings.identityConfirm.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </EmployerAppShell>
   );
 }

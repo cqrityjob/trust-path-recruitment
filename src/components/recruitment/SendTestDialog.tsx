@@ -52,6 +52,7 @@ import {
   sendTestFromSetup,
   type SendTestResult,
 } from "@/lib/library/start.functions";
+import { type TestAssignmentRefusal } from "@/lib/library/test-assignment-access";
 import { resolveLevelOffers, type LevelOffer } from "@/lib/library/levels";
 import type { RoleGroup } from "@/lib/library/catalogue";
 
@@ -67,6 +68,15 @@ const SEND_ERROR: Record<string, TranslationKey> = {
   SCP_START_NO_TEST: "sendTest.error.noTest",
   SCP_APPLICATION_NOT_OPEN: "journey.assignApplicationNotOpen",
   SCP_RECRUITMENT_COMPLETED: "journey.assignRecruitmentCompleted",
+};
+
+/** Why a person who may not send a test is told so. The two organisation
+ *  reasons name the organisation's status, not the person's permission: an
+ *  owner whose organisation is under review again IS an owner, and used to be
+ *  told they needed to be one. */
+const REFUSAL_ORGANISATION_KEY: Partial<Record<TestAssignmentRefusal, TranslationKey>> = {
+  organisation_under_review: "sendTest.refusal.underReview",
+  organisation_not_active: "sendTest.refusal.notActive",
 };
 
 function retryNotification(result: SendTestResult) {
@@ -186,7 +196,7 @@ export function SendTestDialog({
   }, [availableLanguages.join(","), languageAllowed, confirming]);
   const canSend =
     chosen?.state === "sendable" &&
-    access.data === true &&
+    access.data?.allowed === true &&
     recipients.length > 0 &&
     languageAllowed &&
     !busy &&
@@ -199,7 +209,7 @@ export function SendTestDialog({
   }, [library.isSuccess]);
 
   async function send() {
-    if (!chosen || chosen.state !== "sendable" || !access.data || inFlight.current) return;
+    if (!chosen || chosen.state !== "sendable" || !access.data?.allowed || inFlight.current) return;
     inFlight.current = true;
     setBusy(true);
     setFailed(null);
@@ -242,6 +252,14 @@ export function SendTestDialog({
           const key = errorKey(`${err.code ?? ""} ${err.message ?? ""}`);
           setOutcomes((prev) => ({ ...prev, [recipient.applicationId]: { error: key } }));
           if (!candidates) setFailed(key);
+          // A refusal of the person's right to send is re-read, so the panel can
+          // say which reason applies now (the organisation may have gone back
+          // to review since this dialog opened) rather than leave a bare no.
+          if (key === "journey.assignNotAuthorised") {
+            void qc.invalidateQueries({
+              queryKey: ["employer", employerId, "test-assignment-access"],
+            });
+          }
         }
       }
     } finally {
@@ -390,11 +408,13 @@ export function SendTestDialog({
           <p role="alert" className="text-sm text-foreground">
             {t("sendTest.error.unavailable")}
           </p>
-        ) : !access.data ? (
-          <p role="alert" className="rounded border p-4 text-sm">
-            {sv
-              ? "Skicka test kräver aktiv ägar- eller administratörsbehörighet i denna organisation. Kontrollera vald organisation eller be organisationens ägare om rätt åtkomst. Att vara rekryteringsansvarig ger inte denna behörighet."
-              : "Sending tests requires active owner or administrator access in this organisation. Check the selected organisation or ask its owner for access. Recruitment responsibility does not grant this permission."}
+        ) : !access.data.allowed ? (
+          <p role="alert" className="rounded border p-4 text-sm" data-refusal={access.data.reason}>
+            {REFUSAL_ORGANISATION_KEY[access.data.reason]
+              ? t(REFUSAL_ORGANISATION_KEY[access.data.reason]!)
+              : sv
+                ? "Skicka test kräver aktiv ägar- eller administratörsbehörighet i denna organisation. Kontrollera vald organisation eller be organisationens ägare om rätt åtkomst. Att vara rekryteringsansvarig ger inte denna behörighet."
+                : "Sending tests requires active owner or administrator access in this organisation. Check the selected organisation or ask its owner for access. Recruitment responsibility does not grant this permission."}
           </p>
         ) : (
           <form

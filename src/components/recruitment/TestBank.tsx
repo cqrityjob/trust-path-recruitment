@@ -80,7 +80,7 @@ function TestRecipients({
   const jobs = useQuery({
     queryKey: ["employer", employerId, "test-recruitments"],
     queryFn: () => jobsFn({ data: { employerId } }),
-    enabled: access.data === true,
+    enabled: access.data?.allowed === true,
   });
   const apps = useQuery({
     queryKey: ["employer", employerId, "test-recipients", job, page, search],
@@ -88,7 +88,7 @@ function TestRecipients({
       appsFn({
         data: { employerId, jobId: job, view: { stage: "open", page, q: search || undefined } },
       }),
-    enabled: access.data === true && !!job,
+    enabled: access.data?.allowed === true && !!job,
   });
   const chosenJob = jobs.data?.find((j) => j.id === job);
   const jobTitle = (sv ? chosenJob?.title_sv : (chosenJob?.title_en ?? chosenJob?.title_sv)) ?? "—";
@@ -120,11 +120,15 @@ function TestRecipients({
           <p>{t("employer.loading")}</p>
         ) : access.isError ? (
           <p role="alert">{t("sendTest.error.unavailable")}</p>
-        ) : !access.data ? (
-          <p role="alert">
-            {sv
-              ? "Skicka test kräver aktiv ägar- eller administratörsbehörighet. Kontrollera vald organisation eller kontakta dess ägare för rätt åtkomst."
-              : "Sending tests requires active owner or administrator access. Check the selected organisation or contact its owner for access."}
+        ) : !access.data.allowed ? (
+          <p role="alert" data-refusal={access.data.reason}>
+            {access.data.reason === "organisation_under_review"
+              ? t("sendTest.refusal.underReview")
+              : access.data.reason === "organisation_not_active"
+                ? t("sendTest.refusal.notActive")
+                : sv
+                  ? "Skicka test kräver aktiv ägar- eller administratörsbehörighet. Kontrollera vald organisation eller kontakta dess ägare för rätt åtkomst."
+                  : "Sending tests requires active owner or administrator access. Check the selected organisation or contact its owner for access."}
           </p>
         ) : (
           <>

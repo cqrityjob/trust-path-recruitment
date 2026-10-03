@@ -320,6 +320,10 @@ test.describe("the employer journey", () => {
       // assertion below is about THIS journey and not about the destination
       // having its own reads.
       listMyAccessRequests: [],
+      // ...and it asks for the caller's own memberships, to tell a person who
+      // never had one from somebody who was removed (they are shown an
+      // explanation instead of the company form).
+      listMyEmployerMemberships: [],
     });
     const key = await observeSupabaseStorageKey(page);
     await plantSession(page, key, {

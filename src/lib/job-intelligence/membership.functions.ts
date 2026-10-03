@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { AdminMutationError } from "@/lib/admin/admin-error";
+import { membershipRpcFailure } from "@/lib/job-intelligence/membership-admin";
 
 // -----------------------------------------------------------------------------
 // Job Intelligence — Employer Membership server functions (Phase G1).
@@ -55,8 +57,14 @@ async function assertPlatformAdmin(ctx: Ctx): Promise<void> {
   const { data, error } = await ctx.supabase.rpc("is_platform_admin", {
     _user_id: ctx.userId,
   });
-  if (error) throw new Error(`Role check failed: ${error.message}`);
-  if (!data) throw new Error("Forbidden: platform admin role required");
+  // Coded rather than worded: the two membership controls on the admin
+  // organisation page render these through <AdminActionError />, and a failed
+  // role check must not reach a browser as a database message.
+  if (error) {
+    console.error("[membership] role check failed", error.message);
+    throw new AdminMutationError("ROLE_CHECK_FAILED");
+  }
+  if (!data) throw new AdminMutationError("FORBIDDEN");
 }
 
 async function writeMembershipAudit(params: {
@@ -67,7 +75,7 @@ async function writeMembershipAudit(params: {
   metadata: Record<string, unknown>;
 }): Promise<void> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  await supabaseAdmin.from("audit_logs").insert({
+  const { error } = await supabaseAdmin.from("audit_logs").insert({
     actor_id: params.actorId,
     actor_role: "platform_admin",
     action: params.action,
@@ -76,6 +84,17 @@ async function writeMembershipAudit(params: {
     org_id: params.employerId,
     metadata: params.metadata as any,
   });
+  // The change has already been made by the time this runs, so a failed audit
+  // write cannot undo it. It used to vanish: the result was never read, and
+  // taking somebody's access away is exactly the change whose trail matters.
+  // Logged, so that the gap is findable in the server log.
+  if (error) {
+    console.error("[membership] audit write failed", {
+      action: params.action,
+      membershipId: params.membershipId,
+      message: error.message,
+    });
+  }
 }
 
 // Final active-owner protection (Phase G1 code-review fix): the
@@ -339,17 +358,19 @@ export const adminUpdateEmployerMembershipRole = createServerFn({ method: "POST"
       .select("id, role, status")
       .eq("id", data.membershipId)
       .maybeSingle();
-    if (exErr) throw new Error(exErr.message);
-    if (!existing) throw new Error("Membership not found");
+    if (exErr) throw membershipRpcFailure(exErr);
+    if (!existing) throw new AdminMutationError("ADMIN_MEMBERSHIP_NOT_FOUND");
 
     const { data: result, error } = await ctx.supabase.rpc("update_employer_membership", {
       _membership_id: data.membershipId,
       _new_role: data.role,
       _new_status: null,
     });
-    if (error) throw new Error(error.message);
+    // The RPC raises plain English (the final-owner refusal among it);
+    // membershipRpcFailure names each refusal and replaces anything else.
+    if (error) throw membershipRpcFailure(error);
     const row = (result as UpdateEmployerMembershipResult[] | null)?.[0];
-    if (!row) throw new Error("Membership not found");
+    if (!row) throw new AdminMutationError("ADMIN_MEMBERSHIP_NOT_FOUND");
 
     // Audit only a real state change (Phase G1 code-review fix) — the
     // RPC's own no-op detection (role/status both unchanged) is
@@ -390,17 +411,17 @@ export const adminUpdateEmployerMembershipStatus = createServerFn({ method: "POS
       .select("id, role, status")
       .eq("id", data.membershipId)
       .maybeSingle();
-    if (exErr) throw new Error(exErr.message);
-    if (!existing) throw new Error("Membership not found");
+    if (exErr) throw membershipRpcFailure(exErr);
+    if (!existing) throw new AdminMutationError("ADMIN_MEMBERSHIP_NOT_FOUND");
 
     const { data: result, error } = await ctx.supabase.rpc("update_employer_membership", {
       _membership_id: data.membershipId,
       _new_role: null,
       _new_status: data.status,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw membershipRpcFailure(error);
     const row = (result as UpdateEmployerMembershipResult[] | null)?.[0];
-    if (!row) throw new Error("Membership not found");
+    if (!row) throw new AdminMutationError("ADMIN_MEMBERSHIP_NOT_FOUND");
 
     if (row.changed) {
       await writeMembershipAudit({

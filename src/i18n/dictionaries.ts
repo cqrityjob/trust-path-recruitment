@@ -1041,6 +1041,47 @@ export const dictionaries = {
     "account.context.underReview": "Granskas",
     "account.context.unavailable": "Inte tillgänglig",
     "employer.pending.checking": "Kontrollerar din registrering …",
+    // ── MEDAN DU VÄNTAR, OCH VEM MAN SKRIVER TILL ─────────────────────────
+    //
+    // Ingen tidsfrist utlovas: ingen kan idag säga hur lång en granskning tar,
+    // och sidan påstår inte mer än vad som är sant. Adressen är den som alltid
+    // gäller, vad kontaktformuläret än gör (src/lib/contact/contact-address.ts).
+    "employer.pending.wait.heading": "Medan du väntar",
+    "employer.pending.wait.noTime":
+      "Vi kan inte säga hur lång tid granskningen tar. Sidan uppdateras av sig själv när statusen ändras, och du kan stänga den och logga in igen senare med samma inloggning.",
+    "employer.pending.wait.meanwhile":
+      "Din personliga profil fungerar som vanligt under tiden. Det är bara organisationens arbetsyta som väntar på godkännande.",
+    "employer.pending.wait.questions": "Frågor om granskningen?",
+    "employer.contact.writeTo": "Skriv till",
+    "employer.contact.subject": "Företagskonto",
+    // ── ÅTKOMSTEN TILL EN ORGANISATION ÄR AVSLUTAD ELLER AVSTÄNGD ────────
+    //
+    // Visas i stället för "Kom igång som arbetsgivare" för den som har en
+    // borttagen eller avstängd medlemskapsrad och ingen aktiv. Organisationen
+    // namnges inte: en person utan aktiv åtkomst får inte läsa dess uppgifter.
+    "employer.accessEnded.removed.heading": "Din åtkomst till organisationen har tagits bort",
+    "employer.accessEnded.removed.body":
+      "Du kan inte längre öppna organisationens arbetsyta. Det du har gjort i organisationen ligger kvar där.",
+    "employer.accessEnded.suspended.heading": "Din åtkomst till organisationen är avstängd",
+    "employer.accessEnded.suspended.body":
+      "Åtkomsten är pausad, inte borttagen. Du kan inte öppna organisationens arbetsyta förrän den har återaktiverats.",
+    "employer.accessEnded.next":
+      "Vill du ha tillbaka åtkomsten, tror du att det är ett misstag eller vill du registrera en annan organisation? Kontakta oss.",
+    // ── ORGANISATIONENS UPPGIFTER GRANSKAS IGEN ──────────────────────────
+    //
+    // En godkänd organisation som ändrar namn, land, organisationsnummer eller
+    // webbplats går tillbaka till granskning (20270123090000). Sidan säger att
+    // det är det som hänt, inte att organisationen precis har registrerats.
+    "employer.rereview.heading": "Organisationens uppgifter granskas igen",
+    "employer.rereview.body":
+      "Du ändrade organisationens namn, land, organisationsnummer eller webbplats. Ändringen granskas innan arbetsytan öppnas igen.",
+    "employer.rereview.access":
+      "Under tiden är arbetsytan stängd för hela teamet och era publicerade annonser visas inte för kandidater. Inget har raderats.",
+    "employer.rereview.step.saved": "Din ändring är sparad. Den försvinner inte om du loggar ut.",
+    "employer.rereview.step.review":
+      "En administratör på CQrityjob granskar de nya uppgifterna. De är ännu inte godkända.",
+    "employer.rereview.step.reopened":
+      "När ändringen godkänns öppnas arbetsytan igen med samma inloggning och annonserna visas igen.",
     "auth.google": "Fortsätt med Google",
     "auth.or": "eller",
     // Shown only when the return path is an organisation invitation. Says
@@ -2986,6 +3027,24 @@ export const dictionaries = {
     "employer.settings.saving": "Sparar…",
     "employer.settings.saved": "Ändringarna har sparats.",
     "employer.settings.saveError": "Kunde inte spara ändringarna.",
+    // ── ATT ÄNDRA ORGANISATIONENS IDENTITET ──────────────────────────────
+    //
+    // Namn, land, organisationsnummer och webbplats är det som granskades när
+    // organisationen godkändes. Ändras något av dem sätter databasen
+    // organisationen tillbaka till granskning (20270123090000), och då stängs
+    // arbetsytan och annonserna slutar visas. Det ska ägaren veta innan
+    // sparandet, inte upptäcka efteråt.
+    "employer.settings.identityConfirm.title": "Spara ändringen och skicka till granskning?",
+    "employer.settings.identityConfirm.body":
+      "Namn, land, organisationsnummer och webbplats är det vi granskade när organisationen godkändes. Ändrar du något av dem granskas organisationen på nytt.",
+    "employer.settings.identityConfirm.consequence":
+      "Så länge granskningen pågår är arbetsytan stängd för hela teamet och era publicerade annonser visas inte för kandidater. Vi kan inte säga hur lång tid granskningen tar. Inget raderas, och arbetsytan öppnas igen när ändringen har godkänts.",
+    "employer.settings.identityConfirm.changes": "Det här ändras",
+    "employer.settings.identityConfirm.empty": "(tomt)",
+    "employer.settings.identityConfirm.noReview":
+      "Beskrivningarna kan du ändra utan ny granskning.",
+    "employer.settings.identityConfirm.confirm": "Spara och skicka till granskning",
+    "employer.settings.identityConfirm.cancel": "Avbryt, ändra inget",
 
     "admin.auth.login.title": "Administratörsinloggning",
     "admin.auth.login.intro":
@@ -3370,6 +3429,46 @@ export const dictionaries = {
       "Åtgärden kunde inte genomföras eftersom arbetsgivarens status har ändrats. Läs in sidan igen.",
     "admin.employers.action.error.noteRequired": "En intern anteckning krävs för det här beslutet.",
     "admin.employers.action.error.forbidden": "Åtkomst nekad.",
+
+    // ── MEDLEMMARNAS ÅTKOMST (plattformsadministratör) ────────────────────
+    //
+    // Ta bort, stäng av, återaktivera och byt roll. Texten säger vad som
+    // faktiskt händer: åtkomsten upphör vid personens nästa åtgärd, medlemskapet
+    // raderas aldrig och det som personen redan gjort ligger kvar.
+    "admin.employers.members.intro":
+      "Här tar du bort, stänger av eller återaktiverar en persons åtkomst till organisationen, och ändrar roll. Ändringen gäller direkt och loggas.",
+    "admin.employers.members.col.actions": "Åtgärder",
+    "admin.employers.members.unnamed": "Namn saknas",
+    "admin.employers.members.onlyOwner": "Enda aktiva ägare",
+    "admin.employers.members.action.suspend": "Stäng av åtkomst",
+    "admin.employers.members.action.remove": "Ta bort",
+    "admin.employers.members.action.reactivate": "Återaktivera",
+    "admin.employers.members.action.role": "Ändra roll",
+    "admin.employers.members.dialog.suspend.title": "Stänga av {name}?",
+    "admin.employers.members.dialog.suspend.body":
+      "{name} förlorar åtkomsten till organisationens arbetsyta vid nästa åtgärd: ansökningar, tester, intervjuer och rapporter. Medlemskapet finns kvar och kan återaktiveras. Det personen redan har gjort i organisationen tas inte bort.",
+    "admin.employers.members.dialog.remove.title": "Ta bort {name} från organisationen?",
+    "admin.employers.members.dialog.remove.body":
+      "{name} förlorar åtkomsten till organisationens arbetsyta vid nästa åtgärd. Medlemskapet markeras som borttaget och sparas som spår, det raderas inte. Det personen redan har gjort i organisationen tas inte bort, och personen kan återaktiveras senare.",
+    "admin.employers.members.dialog.reactivate.title": "Återaktivera {name}?",
+    "admin.employers.members.dialog.reactivate.body":
+      "{name} får tillbaka åtkomsten till organisationen med rollen {role}.",
+    "admin.employers.members.dialog.role.title": "Ändra roll för {name}",
+    "admin.employers.members.dialog.role.body":
+      "Rollen avgör vad personen får göra i organisationens arbetsyta. Ägare och administratör kan hantera teamet och skicka tester. En medlem kan inte det.",
+    "admin.employers.members.dialog.role.label": "Ny roll",
+    "admin.employers.members.dialog.role.ownerWarning":
+      "Ägare är organisationens högsta roll. Ge den bara till någon som organisationen har utsett.",
+    "admin.employers.members.dialog.finalOwner":
+      "{name} är organisationens enda aktiva ägare. Utse en annan ägare först, annars kan åtgärden inte genomföras.",
+    "admin.employers.members.result.suspend": "{name}: åtkomsten är avstängd.",
+    "admin.employers.members.result.remove": "{name} har tagits bort från organisationen.",
+    "admin.employers.members.result.reactivate": "{name}: åtkomsten är återställd.",
+    "admin.employers.members.result.role": "{name}: rollen är nu {role}.",
+    "admin.employers.members.result.unchanged":
+      "Ingen ändring behövdes. {name} hade redan det läget.",
+    "admin.actionError.membershipFinalOwner":
+      "Personen är organisationens enda aktiva ägare. Utse en annan ägare först, så kan åtgärden genomföras.",
 
     "admin.jobs.status.draft": "Utkast",
     "admin.jobs.status.pending_review": "Väntar på granskning",
@@ -6932,7 +7031,7 @@ export const dictionaries = {
       "Kandidaten har ännu inget konto på CQrityjob. Bjud in personen från Testbibliotek — inbjudan kopplas automatiskt när kontot skapas.",
     "journey.assignNoApplication": "Ansökan gick inte att hitta i er organisation.",
     "journey.assignNotAuthorised":
-      "Du behöver vara ägare eller administratör för att skicka en bedömning.",
+      "Du kan inte skicka en bedömning just nu. Det kräver aktiv ägar- eller administratörsbehörighet i en organisation som är godkänd och aktiv.",
     "journey.assignNotForRecruitment": "Den här bedömningen är inte öppen för rekrytering.",
     "journey.assignNoBasis": "Er organisation har inte tillgång till den här bedömningen.",
     "journey.assignApplicationNotOpen":
@@ -7018,6 +7117,12 @@ export const dictionaries = {
     "sendTest.sent.openOverview": "Tester & bedömningar",
     "sendTest.error.noTest": "Det finns inget test att skicka för den valda nivån.",
     "sendTest.error.unavailable": "Testbiblioteket kunde inte läsas just nu. Försök igen.",
+    // Orsaken, inte bara att det blev nej. En ägare vars organisation granskas
+    // på nytt hade fått höra att hen "behöver vara ägare" — vilket hen är.
+    "sendTest.refusal.underReview":
+      "Det går inte att skicka tester just nu eftersom organisationen granskas. Det beror på organisationens status, inte på din behörighet. Du kan skicka tester igen när granskningen är klar.",
+    "sendTest.refusal.notActive":
+      "Det går inte att skicka tester just nu eftersom organisationens arbetsyta inte är öppen. Det beror på organisationens status, inte på din behörighet.",
     "sendTest.close": "Stäng",
     "sendTest.cancel": "Avbryt",
     "journey.stage.started": "Pågår",
@@ -9792,6 +9897,48 @@ export const dictionaries = {
     "account.context.underReview": "Under review",
     "account.context.unavailable": "Unavailable",
     "employer.pending.checking": "Checking your registration …",
+    // ── WHILE YOU WAIT, AND WHO TO WRITE TO ───────────────────────────────
+    //
+    // No turnaround is promised: nobody can say today how long a review takes,
+    // and the page claims nothing it cannot support. The address is the one
+    // that always works, whatever the contact form is doing
+    // (src/lib/contact/contact-address.ts).
+    "employer.pending.wait.heading": "While you wait",
+    "employer.pending.wait.noTime":
+      "We cannot say how long the review takes. This page updates by itself when the status changes, and you can close it and sign in again later with the same login.",
+    "employer.pending.wait.meanwhile":
+      "Your personal profile works as usual in the meantime. Only the organisation's workspace is waiting for approval.",
+    "employer.pending.wait.questions": "Questions about the review?",
+    "employer.contact.writeTo": "Write to",
+    "employer.contact.subject": "Company account",
+    // ── ACCESS TO AN ORGANISATION HAS ENDED OR IS SUSPENDED ───────────────
+    //
+    // Shown instead of "Get started as an employer" to somebody who holds a
+    // removed or suspended membership and no active one. The organisation is
+    // not named: a person without active access may not read its details.
+    "employer.accessEnded.removed.heading": "Your access to the organisation has been removed",
+    "employer.accessEnded.removed.body":
+      "You can no longer open the organisation's workspace. What you have done in the organisation stays there.",
+    "employer.accessEnded.suspended.heading": "Your access to the organisation is suspended",
+    "employer.accessEnded.suspended.body":
+      "Your access is paused, not removed. You cannot open the organisation's workspace until it has been reactivated.",
+    "employer.accessEnded.next":
+      "Do you want your access back, do you think this is a mistake, or do you want to register a different organisation? Contact us.",
+    // ── THE ORGANISATION'S DETAILS ARE BEING REVIEWED AGAIN ──────────────
+    //
+    // An approved organisation that changes its name, country, registration
+    // number or website goes back to review (20270123090000). The page says
+    // that is what happened, not that the organisation was just registered.
+    "employer.rereview.heading": "The organisation's details are being reviewed again",
+    "employer.rereview.body":
+      "You changed the organisation's name, country, registration number or website. The change is reviewed before the workspace opens again.",
+    "employer.rereview.access":
+      "Meanwhile the workspace is closed for the whole team and your published ads are not shown to candidates. Nothing has been deleted.",
+    "employer.rereview.step.saved": "Your change is saved. It does not disappear if you sign out.",
+    "employer.rereview.step.review":
+      "A CQrityjob administrator reviews the new details. They are not approved yet.",
+    "employer.rereview.step.reopened":
+      "Once the change is approved, the workspace opens again with the same sign-in and the ads are shown again.",
     "auth.google": "Continue with Google",
     "auth.or": "or",
     "auth.invite.organisationContext":
@@ -11587,6 +11734,24 @@ export const dictionaries = {
     "employer.settings.saving": "Saving…",
     "employer.settings.saved": "Your changes have been saved.",
     "employer.settings.saveError": "Could not save your changes.",
+    // ── CHANGING THE ORGANISATION'S IDENTITY ──────────────────────────────
+    //
+    // Name, country, registration number and website are what was reviewed when
+    // the organisation was approved. Change any of them and the database puts
+    // the organisation back in review (20270123090000): the workspace closes
+    // and the ads stop being shown. The owner should know that before saving,
+    // not find out afterwards.
+    "employer.settings.identityConfirm.title": "Save the change and send it for review?",
+    "employer.settings.identityConfirm.body":
+      "Name, country, registration number and website are what we reviewed when the organisation was approved. If you change any of them, the organisation is reviewed again.",
+    "employer.settings.identityConfirm.consequence":
+      "While the review is under way the workspace is closed for the whole team and your published ads are not shown to candidates. We cannot say how long the review takes. Nothing is deleted, and the workspace opens again once the change is approved.",
+    "employer.settings.identityConfirm.changes": "What you are changing",
+    "employer.settings.identityConfirm.empty": "(empty)",
+    "employer.settings.identityConfirm.noReview":
+      "You can change the descriptions without a new review.",
+    "employer.settings.identityConfirm.confirm": "Save and send for review",
+    "employer.settings.identityConfirm.cancel": "Cancel, change nothing",
 
     "admin.auth.login.title": "Administrator sign in",
     "admin.auth.login.intro":
@@ -11957,6 +12122,46 @@ export const dictionaries = {
       "This action could not be completed because the employer's status has changed. Reload the page.",
     "admin.employers.action.error.noteRequired": "An internal note is required for this decision.",
     "admin.employers.action.error.forbidden": "Access denied.",
+
+    // ── MEMBERS' ACCESS (platform administrator) ──────────────────────────
+    //
+    // Remove, suspend, reactivate and change role. The copy says what actually
+    // happens: access ends at the person's next action, the membership is never
+    // deleted and what the person already did stays where it is.
+    "admin.employers.members.intro":
+      "Remove, suspend or reactivate a person's access to the organisation here, and change their role. The change applies immediately and is logged.",
+    "admin.employers.members.col.actions": "Actions",
+    "admin.employers.members.unnamed": "No name on file",
+    "admin.employers.members.onlyOwner": "Only active owner",
+    "admin.employers.members.action.suspend": "Suspend access",
+    "admin.employers.members.action.remove": "Remove",
+    "admin.employers.members.action.reactivate": "Reactivate",
+    "admin.employers.members.action.role": "Change role",
+    "admin.employers.members.dialog.suspend.title": "Suspend {name}?",
+    "admin.employers.members.dialog.suspend.body":
+      "{name} loses access to the organisation's workspace on their next action: applications, tests, interviews and reports. The membership is kept and can be reactivated. Nothing the person has already done in the organisation is deleted.",
+    "admin.employers.members.dialog.remove.title": "Remove {name} from the organisation?",
+    "admin.employers.members.dialog.remove.body":
+      "{name} loses access to the organisation's workspace on their next action. The membership is marked as removed and kept as a record; it is not deleted. Nothing the person has already done in the organisation is deleted, and the person can be reactivated later.",
+    "admin.employers.members.dialog.reactivate.title": "Reactivate {name}?",
+    "admin.employers.members.dialog.reactivate.body":
+      "{name} regains access to the organisation with the role {role}.",
+    "admin.employers.members.dialog.role.title": "Change the role of {name}",
+    "admin.employers.members.dialog.role.body":
+      "The role decides what the person may do in the organisation's workspace. Owners and administrators can manage the team and send tests. A member cannot.",
+    "admin.employers.members.dialog.role.label": "New role",
+    "admin.employers.members.dialog.role.ownerWarning":
+      "Owner is the organisation's highest role. Only give it to someone the organisation has designated.",
+    "admin.employers.members.dialog.finalOwner":
+      "{name} is the organisation's only active owner. Appoint another owner first, otherwise this cannot be done.",
+    "admin.employers.members.result.suspend": "{name}: access is suspended.",
+    "admin.employers.members.result.remove": "{name} has been removed from the organisation.",
+    "admin.employers.members.result.reactivate": "{name}: access is restored.",
+    "admin.employers.members.result.role": "{name}: the role is now {role}.",
+    "admin.employers.members.result.unchanged":
+      "No change was needed. {name} was already in that state.",
+    "admin.actionError.membershipFinalOwner":
+      "This person is the organisation's only active owner. Appoint another owner first, then try again.",
 
     "admin.jobs.status.draft": "Draft",
     "admin.jobs.status.pending_review": "Pending review",
@@ -15444,7 +15649,7 @@ export const dictionaries = {
     "journey.assignRecruitmentCompleted":
       "The recruitment is completed. No new tests can be sent in it.",
     "journey.assignNotAuthorised":
-      "You need to be an owner or an administrator to send an assessment.",
+      "You cannot send an assessment right now. It requires active owner or administrator access in an organisation that is approved and active.",
     "journey.assignNotForRecruitment": "This assessment is not open for recruitment.",
     "journey.assignNoBasis": "Your organisation does not have access to this assessment.",
     "journey.openBrief": "Open candidate brief",
@@ -15524,6 +15729,12 @@ export const dictionaries = {
     "sendTest.sent.openOverview": "Tests & assessments",
     "sendTest.error.noTest": "There is no test to send for the chosen level.",
     "sendTest.error.unavailable": "The test library could not be read right now. Try again.",
+    // The reason, not just the no. An owner whose organisation is under review
+    // again would otherwise be told they "need to be an owner" -- which they are.
+    "sendTest.refusal.underReview":
+      "Tests cannot be sent right now because the organisation is under review. That is about the organisation's status, not your permission. You can send tests again when the review is complete.",
+    "sendTest.refusal.notActive":
+      "Tests cannot be sent right now because the organisation's workspace is not open. That is about the organisation's status, not your permission.",
     "sendTest.close": "Close",
     "sendTest.cancel": "Cancel",
     "journey.stage.started": "In progress",

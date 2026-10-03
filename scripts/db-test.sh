@@ -159,6 +159,112 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 
+# Employer report ACCESS MATRIX. Tests only: it documents and pins the CURRENT
+# behaviour of every read path to an employer report and of the release and
+# finalise gates -- logged out, the candidate, another candidate, owner, admin,
+# a reviewer-granted member, a plain member, a suspended and a removed member, a
+# member of another company and a platform admin who is not a member. It runs
+# here, straight after the replay, so it reads the final state of the chain and
+# not what a later rollback block leaves behind.
+#
+# The member-wide read model it records (every active member of an active
+# organisation reads the employer report, the case and its notes) is under owner
+# review; the assertions tagged MEMBER-WIDE-MODEL are exactly the ones that
+# decision changes. Negative controls, each of which MUST make the suite fail on
+# an assertion (each runs inside a transaction the suite's own ROLLBACK ends, so
+# nothing is left behind):
+#   NC1  a suspended or removed membership still counts as a membership   -> RM6.1
+#   NC2  a platform admin reads every organisation's employer report      -> RM8.1
+#   NC3  the interview case read is open to any authenticated user        -> RM2.1
+#   NC4  the employer report is narrowed to owner/admin (the decision)    -> RM5.1
+run_rm_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_report_access_matrix_test.sql 2>&1
+}
+rm_nc_expect_fail() {
+  local label="$1" expect="$2" mutation="$3"
+  set +e
+  local out
+  out="$(printf 'BEGIN;\n%s\n\\i supabase/tests/employer_report_access_matrix_test.sql\n' "$mutation" \
+    | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+  local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect}"; then
+    echo "FAIL: employer report access matrix negative control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o "ASSERTION FAILED: RM[0-9A-Za-z.]*" | head -1))"
+}
+echo "==> Running employer report access matrix assertions"
+set +e
+RM_OUT="$(run_rm_suite)"; RM_RC=$?
+set -e
+RM_PASSED="$(echo "$RM_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$RM_RC" -ne 0 ]; then
+  echo "$RM_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the employer report access matrix suite exited with code ${RM_RC}." >&2
+  suite_failed "Employer report access matrix"
+elif [ "$RM_PASSED" -lt 45 ]; then
+  echo "$RM_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: employer report access matrix assertion shortfall: $RM_PASSED (floor 45)" >&2
+  suite_failed "Employer report access matrix (assertion shortfall: floor 45)"
+else
+  echo "    ok  $RM_PASSED employer report access matrix assertions passed (current behaviour pinned; the member-wide read model is tagged MEMBER-WIDE-MODEL)"
+  rm_nc_expect_fail "NC1 a removed or suspended membership still counts" "RM6.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.has_employer_role(_user_id uuid, _employer_id uuid, _roles text[] DEFAULT NULL::text[])
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.employer_memberships em
+    WHERE em.user_id = _user_id AND em.employer_id = _employer_id
+      AND (_roles IS NULL OR em.role = ANY(_roles))
+  );
+$function$;
+SQL
+)"
+  rm_nc_expect_fail "NC2 a platform admin reads every employer report" "RM8.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(_audience text, _subject_id uuid, _issuer_organization_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $function$
+  SELECT CASE _audience
+    WHEN 'participant' THEN EXISTS (
+      SELECT 1 FROM public.scp_subject_identities si
+       WHERE si.subject_id = _subject_id AND si.user_id = auth.uid())
+    WHEN 'employer' THEN
+      _issuer_organization_id IS NOT NULL
+      AND (public.has_active_employer_role(auth.uid(), _issuer_organization_id)
+           OR public.is_platform_admin(auth.uid()))
+    ELSE false
+  END;
+$function$;
+SQL
+)"
+  rm_nc_expect_fail "NC3 the interview case read is open to any authenticated user" "RM2.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.scp_iv_can_read_case(_case_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  SELECT auth.uid() IS NOT NULL;
+$function$;
+SQL
+)"
+  rm_nc_expect_fail "NC4 the employer report narrowed to owner/admin (what the member-wide decision would change)" "RM5.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(_audience text, _subject_id uuid, _issuer_organization_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $function$
+  SELECT CASE _audience
+    WHEN 'participant' THEN EXISTS (
+      SELECT 1 FROM public.scp_subject_identities si
+       WHERE si.subject_id = _subject_id AND si.user_id = auth.uid())
+    WHEN 'employer' THEN
+      _issuer_organization_id IS NOT NULL
+      AND public.has_active_employer_role(auth.uid(), _issuer_organization_id, ARRAY['owner','admin'])
+    ELSE false
+  END;
+$function$;
+SQL
+)"
+fi
+
 # 20270101090000: four catalogue reads narrowed (drafts and unapproved
 # professions to authors/admins, the interviewer guide to authors) and three
 # stray client write grants revoked. Run the suite, prove it cannot pass on the
@@ -10750,6 +10856,7 @@ fi
 echo ""
 echo "===================================================="
 echo " DB suite OK: ${PASSED} domain assertions,"
+echo "              ${RM_PASSED} employer report access matrix assertions,"
 echo "              ${SW_PASSED} Security Work assertions in each rollback round,"
 echo "              ${SW_NC_PASSED} Security Work planted-defect controls,"
 echo "              ${CD_PASSED} Career Discovery assertions,"

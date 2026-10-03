@@ -42,6 +42,7 @@ import {
 } from "@/lib/job-intelligence/admin-lifecycle.functions";
 import { adminWhoAmI } from "@/lib/job-intelligence/admin.functions";
 import { DangerZone, DeletionImpactPreview } from "@/components/admin/DangerZone";
+import { AdminEmployerMembers } from "@/components/admin/AdminEmployerMembers";
 import { blockerLabelKey, lifecycleErrorKey } from "@/lib/job-intelligence/admin-lifecycle-labels";
 import { formatDate, formatDateTime } from "@/lib/job-intelligence/date-format";
 
@@ -383,26 +384,7 @@ function AdminEmployerDetailPage() {
               {t("admin.employers.detail.noMembers")}
             </p>
           ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="py-1.5 pr-4">{t("admin.employers.list.column.owner")}</th>
-                    <th className="py-1.5 pr-4">{t("admin.employers.detail.field.role")}</th>
-                    <th className="py-1.5 pr-4">{t("admin.employers.list.column.status")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {employer.memberships.map((m) => (
-                    <tr key={m.id}>
-                      <td className="py-1.5 pr-4">{m.displayName ?? "—"}</td>
-                      <td className="py-1.5 pr-4">{m.role}</td>
-                      <td className="py-1.5 pr-4">{m.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <AdminEmployerMembers employerId={employerId} memberships={employer.memberships} />
           )}
         </section>
 

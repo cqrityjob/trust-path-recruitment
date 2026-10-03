@@ -29,6 +29,7 @@ import { useEffect } from "react";
 import { useT } from "@/i18n/context";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { decideEmployerGate } from "@/lib/job-intelligence/employer-access-state";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug")({
   ssr: false,
@@ -57,20 +58,35 @@ function EmployerWorkspaceGate() {
   // active but close enough": pending, draft, rejected, suspended and archived
   // all mean the workspace does not open, and each gets an honest account of
   // why on the status page.
-  const workspace = (query.data ?? []).find((w) => w.employerSlug === employerSlug);
-  const blocked = workspace !== undefined && workspace.employerStatus !== "active";
+  //
+  // ── AND NOTHING RENDERS UNTIL THIS HAS DECIDED ─────────────────────────
+  //
+  // The gate used to render <Outlet /> while the workspace list was still
+  // loading, because "no workspace found yet" and "not blocked" look the same.
+  // For an organisation under review that meant every child page mounted, fired
+  // the calls row-level security refuses and flashed their errors, and only
+  // then did the redirect to /employer/pending land. decideEmployerGate keeps
+  // "I do not know yet" apart from "open".
+  const decision = decideEmployerGate({
+    portalEnabled: employerPortalEnabled(),
+    loaded: query.status,
+    workspaces: query.data,
+    slug: employerSlug,
+  });
 
   useEffect(() => {
-    if (blocked) navigate({ to: "/employer/pending", replace: true });
-  }, [blocked, navigate]);
+    if (decision === "redirect") navigate({ to: "/employer/pending", replace: true });
+  }, [decision, navigate]);
 
   // A slug this person has no membership for falls through to the child page,
   // which renders the existing access-denied surface. Redirecting here would
   // tell a stranger which slugs exist.
-  if (blocked) {
+  if (decision !== "open") {
     return (
       <div className="mx-auto max-w-xl px-4 py-16">
-        <p className="text-sm text-muted-foreground">{t("employer.pending.checking")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t(decision === "wait" ? "employer.loading" : "employer.pending.checking")}
+        </p>
       </div>
     );
   }

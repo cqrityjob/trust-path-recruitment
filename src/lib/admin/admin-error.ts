@@ -57,6 +57,7 @@ export const ADMIN_ERROR_CODES = [
   "cancellation_reason_too_long",
   "assignment_not_cancellable",
   "assignment_state_inconsistent",
+  "membership_final_owner",
   "not_found",
   "permission_denied",
   "network_error",
@@ -73,6 +74,7 @@ export const ADMIN_ERROR_COPY: Record<AdminErrorCode, TranslationKey> = {
   cancellation_reason_too_long: "admin.actionError.cancellationReasonTooLong",
   assignment_not_cancellable: "admin.actionError.assignmentNotCancellable",
   assignment_state_inconsistent: "admin.actionError.assignmentStateInconsistent",
+  membership_final_owner: "admin.actionError.membershipFinalOwner",
   not_found: "admin.actionError.notFound",
   permission_denied: "admin.actionError.permissionDenied",
   network_error: "admin.actionError.networkError",
@@ -105,6 +107,13 @@ const CODE_MAP: Record<string, AdminErrorCode> = {
   ADMIN_CANCEL_NOT_FOUND: "not_found",
   ADMIN_CANCEL_FORBIDDEN: "permission_denied",
   ADMIN_CANCEL_NOT_AUTHENTICATED: "permission_denied",
+
+  // update_employer_membership(), as classified by membershipRpcFailure() in
+  // src/lib/job-intelligence/membership-admin.ts. The database raises English
+  // sentences for these, not identifiers, so the server function names them.
+  ADMIN_MEMBERSHIP_FINAL_OWNER: "membership_final_owner",
+  ADMIN_MEMBERSHIP_NOT_FOUND: "not_found",
+  ADMIN_MEMBERSHIP_FORBIDDEN: "permission_denied",
 
   // The server function wrapper's own vocabulary.
   ASSIGNMENT_NOT_FOUND: "not_found",

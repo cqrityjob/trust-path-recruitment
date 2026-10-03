@@ -7,7 +7,10 @@ import { Section } from "@/components/site/Section";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
+import { EmployerAccessEnded } from "@/components/employer/EmployerAccessEnded";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { accessEndedKind } from "@/lib/job-intelligence/employer-access-state";
+import { listMyEmployerMemberships } from "@/lib/job-intelligence/membership.functions";
 import {
   createMyEmployerCompany,
   listMyAccessRequests,
@@ -97,6 +100,60 @@ function OnboardingFlow() {
     queryKey: ["employer", "my-access-requests"],
     queryFn: () => listRequests(),
   });
+
+  // Somebody whose only standing is a REMOVED or SUSPENDED membership has no
+  // workspace, and used to land here -- on a form for creating a company, with
+  // no word about the organisation they had lost. employer_memberships_self_select
+  // returns a person's own rows in every status, so the answer is readable.
+  const listMemberships = useServerFn(listMyEmployerMemberships);
+  const membershipsQuery = useQuery({
+    queryKey: ["employer", "my-memberships"],
+    queryFn: () => listMemberships(),
+  });
+
+  // Unknown is not "none": until the memberships have answered, the create form
+  // is not shown. Rendering it for a frame is how a removed member is invited
+  // to register a second organisation, and a failed read must not be read as
+  // "you have never belonged to one".
+  if (membershipsQuery.isPending) {
+    return (
+      <SiteLayout>
+        <Section containerClassName="max-w-2xl">
+          <p className="text-sm text-muted-foreground">{t("employer.loading")}</p>
+        </Section>
+      </SiteLayout>
+    );
+  }
+  if (membershipsQuery.isError) {
+    return (
+      <SiteLayout>
+        <Section containerClassName="max-w-2xl">
+          <h1 className="text-2xl font-semibold text-foreground">
+            {t("employer.statusUnknown.heading")}
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">{t("employer.statusUnknown.body")}</p>
+          <button
+            type="button"
+            onClick={() => void membershipsQuery.refetch()}
+            disabled={membershipsQuery.isFetching}
+            className="mt-6 inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-60"
+          >
+            {t("employer.pending.checkStatus")}
+          </button>
+        </Section>
+      </SiteLayout>
+    );
+  }
+  const accessEnded = accessEndedKind(membershipsQuery.data);
+  if (accessEnded) {
+    return (
+      <SiteLayout>
+        <Section containerClassName="max-w-2xl">
+          <EmployerAccessEnded kind={accessEnded} />
+        </Section>
+      </SiteLayout>
+    );
+  }
 
   return (
     <SiteLayout>

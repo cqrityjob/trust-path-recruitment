@@ -1071,6 +1071,20 @@ jobs:
       - name: Employer lifecycle check (phases 2 and 3)
         run: bun run employer-lifecycle:check
 
+      # Employer ACCESS, from the 2026-10 launch-readiness audit: a platform
+      # administrator can end, pause, restore and re-role a membership (the two
+      # server functions existed and nothing called them); the final-owner
+      # refusal is said as a sentence and never in the database's words; a
+      # rejected organisation has an address to write to, a removed member is
+      # told rather than offered a company form, and the workspace layout
+      # decides before it renders; changing an approved organisation's identity
+      # asks first and the review page says it is a re-review; an owner whose
+      # organisation is under review is told that, not that they "need to be an
+      # owner". It reads the permission model and changes none of it; its
+      # planted controls run in `negative-controls:all` above.
+      - name: Employer access lifecycle check
+        run: bun run employer-access-lifecycle:check
+
       # The recruitment workspace (20261207090000): one vocabulary for what the
       # overview counts and the lists open, no contact with a candidate except
       # an explicit reviewed send, decisions withheld from seats the database
