@@ -325,17 +325,33 @@ export function buildSavedCvDocument(
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
+  const hasDraftedProse =
+    stored.authorship.headline === "ai" ||
+    stored.authorship.summary === "ai" ||
+    Object.values(stored.authorship.bullets).some((a) => a === "ai");
+
+  // Only a model's draft may leave an employment out (tailoring), and the
+  // screen then reports it as omitted. A document nobody drafted has no such
+  // decision in it: what is on it is decided by the selection alone, which
+  // is the bundle. So every employment in the bundle that the stored order
+  // does not list is shown, after the listed ones, in the bundle's order.
+  // This is also what heals a factual CV saved with an empty order (every CV
+  // saved before 2026-10-03 lost its employments that way) and a factual CV
+  // whose selection later gained an employment.
+  if (!hasDraftedProse) {
+    const listed = new Set(ordered.map((o) => o.fact.id));
+    for (const fact of bundle.employment) {
+      if (listed.has(fact.id)) continue;
+      ordered.push({ fact, bullets: [], bulletsAreAiWritten: false });
+    }
+  }
+
   const used = new Set(ordered.map((o) => o.fact.id));
   const emphasised = new Set(stored.emphasisedClaimIds);
   const reorder = <T extends { id: string }>(claims: readonly T[]): readonly T[] => [
     ...claims.filter((c) => emphasised.has(c.id)),
     ...claims.filter((c) => !emphasised.has(c.id)),
   ];
-
-  const hasDraftedProse =
-    stored.authorship.headline === "ai" ||
-    stored.authorship.summary === "ai" ||
-    Object.values(stored.authorship.bullets).some((a) => a === "ai");
 
   return {
     ...base,

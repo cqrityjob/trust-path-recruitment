@@ -1,8 +1,10 @@
 # Gemensam releaseordning (2026-10-03)
 
-**Status: förberedd för ägarens godkännande. Ingenting här är genomfört.** Ingen merge, ingen
-publicering, ingen produktionsskrivning, ingen Auth-, DNS- eller Lovable-ändring och inga mejl
-har gjorts av den som skrev dokumentet. Det ersätter den "provisoriska" migrationslistan i
+**Status 2026-10-03 ~15:50 UTC.** Mergade i main: #395 (`97b5112`), #386 (`071f69e`) och #387 (`b18e5e5`, 15:42 UTC, alla
+obligatoriska CI-jobb gröna på `082752c`). #387:s tre migrationer är applicerade av integrationen och verifierade
+skrivskyddat (steg 2, punkt 3). **Kvar är allt annat: Lovable-publicering, funktionen `transactional-email`s
+hemlighet, Auth-/DNS-inställningar och steg 3–6.** Den som skrev dokumentet har inte publicerat, driftsatt
+någon funktion, ändrat Auth, DNS eller Lovable, och inga mejl har skickats. Det ersätter den "provisoriska" migrationslistan i
 `2026-10-03-launch-completion-report.md`: ordningen nedan är beroendebaserad. Claude-sessionen som
 äger Passport, juridik, kontaktadresser och Auth har bekräftat sin del: #386 är **mergad** (main
 `071f69e`) och funktionen `transactional-email` version 3 är driftsatt 2026-10-03 13:47:03 UTC
@@ -38,8 +40,12 @@ verifieras skrivskyddat innan nästa steg.
    migration med lägre version än den senast applicerade avvisas av migreringsverktyget eller
    kräver `--include-all`. Det är skälet till att behörighetsschemat (`0202–0204`) går före
    notisschemat (`0205`).
-3. **Merge publicerar inte.** Koden synkas till Lovable direkt, men www ändras först när ägaren
-   publicerar (L5 i `2026-10-03-www-domain-cutover.md`). Edge-funktioner driftsätts separat.
+3. **Merge publicerar inte, men den kan driftsätta edge-funktioner.** Koden synkas till Lovable direkt, men www ändras
+   först när ägaren publicerar (L5 i `2026-10-03-www-domain-cutover.md`). Lovable driftsätter däremot en ändrad
+   edge-funktion automatiskt vid synk: observerat 2026-10-03 att `transactional-email` blev v7 15:32:21 UTC efter
+   #395 (koden byte-identisk med main) och `passport-share` blev v7 15:43:01 UTC efter #387 (`verify_jwt=false`).
+   Det som ligger i en merge går alltså inte att tidsätta separat: kontrollera funktionens version och beteende
+   direkt efter merge i stället för att planera en driftsättning före publiceringen.
 4. **Staplade PR:er får CI först med #395.** CI lyssnar bara på PR:er mot `main`; #391–#393 och
    behörighets-PR:erna har #387 som bas. Deras grenar innehåller #395:s fyra rader, så CI körs på dem.
 
@@ -88,9 +94,31 @@ Förutsättning: ägarens godkännande. (#386 ligger redan i main, så C bär in
    Appen i C fungerar både före och efter migrationerna (expand/contract) och passerar schema-first-guarden.
 3. Verifiera varje migration med dess `verify`-fråga, kontrollera att inga nya funktioner saknar
    `REVOKE` för `anon` (steg 7 i release-sequence), registrera.
+   **Utfall 2026-10-03:** #387 mergad 15:42 UTC (`b18e5e5`). Integrationen applicerade exakt de tre versionerna.
+   Skrivskyddat verifierat av två läsare oberoende av varandra (Claude-sessionen 15:43–15:47, denna session
+   15:45–15:46): ledgern har 363 rader, sista versionen `20270201090000`, digest `fbfc766e1fd85a3d19fc82b8f4fbc8c7`
+   (de första 360 oförändrade, `dcb7e4bcb694e2afece115a18a595383`); `jobs_validate_before_write` har md5
+   `bc292d28d31dd973c81f1cffc145b5bf` (efter 0131), är inte SECURITY DEFINER och saknar EXECUTE för `anon` och
+   `authenticated`; bucketen `job-application-cvs` har exakt en policy, `job_cvs_employer_select`. Bara
+   Claude-sessionen läste loggar och rådgivare: inga ERROR/FATAL/PANIC i Postgres-loggen från 15:40 och inga nya
+   fynd för jobb eller CV-bucketen (fyndet `security_definer_view` på `scp_scoring_version_lineage` fanns redan).
+   Evidens och registrering: `docs/release/2026-10-03-job-board-hosted-verification.md`.
 4. **Publicera i Lovable (L5)**, gör Auth-delen (S1, S2, Claudes konfiguration) och kör sedan
    produktionstestet från www: avsnitt 2 (direktlänkar, omladdning), avsnitt 3 steg 1–10 och
    avsnitt 4 (migrationsberoende prov).
+
+### Steg 2b — edge-funktionen `passport-share` (kom med #387)
+
+#387 ändrar `supabase/functions/passport-share/index.ts` med sex rader: reservoriginen är
+`https://www.cqrityjob.com`, och en `PUBLIC_SITE_URL` som pekar på `*.lovable.app`, `lovableproject.com` eller
+`lovableproject-dev.com` ignoreras. Inget databasobjekt berörs, så ordningen mot migrationerna spelar ingen roll.
+
+- **Observerat:** Lovable driftsatte funktionen automatiskt, v7 15:43:01 UTC, `verify_jwt=false`. Anonym GET svarar 503,
+  alltså är `PASSPORT_SHARE_ENTRY_PUBLISHED` inte satt och 503 är skyddet. `https://www.cqrityjob.com/p` svarar 200.
+- **Villkor som gäller i alla fall:** `verify_jwt` förblir `false` (annars 401 för anonyma länkar); flaggan
+  (`S7` i `2026-10-03-www-domain-cutover.md`) sätts först när `https://www.cqrityjob.com/p` visar entry-sidan efter
+  publiceringen, och `PUBLIC_SITE_URL` (S5) ska vara `https://www.cqrityjob.com` eller osatt.
+- En **manuell** driftsättning av funktionen är en produktionsskrivning och kräver ägarens uttryckliga godkännande.
 
 ### Steg 3 — behörighetsrättningen (F1 → F2)
 
