@@ -14,9 +14,10 @@ migration recorded in `2026-10-03-employer-notice-hosted-verification.md`:
 |---|---|
 | `20270206090000` | `interview_access_expand` |
 
-This is release 1 of 3 of the interview access fix (expand, application, contract). The application half (#405) and the
-contract (`20270207090000`, #406) are separate releases; the order is in `docs/security/interview-access/README.md`
-and in `2026-10-03-release-order.md`. Nothing in this record says they are applied or published.
+This is release 1 of 3 of the interview access fix (expand, application, contract). The application half (#405, merged
+21:34 UTC as `4736e310`) and the contract (`20270207090000`, #406) are separate releases; the order is in
+`docs/security/interview-access/README.md` and in `2026-10-03-release-order.md`. Nothing in this record says #405 is
+published or verified, or that #406 is applied.
 
 ## After (read ~21:18-21:21 UTC, project `wrygicdfxwjnrugduxnt`; the production session independently read the ledger count and last version, the existence of the capability function and the
   policy qualifier; the function bodies, privileges and probes below are this author's read)
@@ -51,7 +52,18 @@ No probe as a real authorised case reader was run (the connector reads only, and
 negative behaviour is proven on the identical bodies by `interview_access_expand_test` IA1-IA12 and the saved PostgREST/JWT
 assertions in `docs/security/interview-access`; the hosted application path is verified only after #405 is published.
 
-## Recorded in
+## Recorded in, and how this record relates to the one in `main`
 
-`supabase/release-state.json` (`hostedState: applied`), `supabase/hosted-ledger.json` (368 rows) and
-`scripts/release-frontier-check.ts` (`expectedPending` is empty).
+The registration itself (`supabase/release-state.json` `hostedState: applied`, `supabase/hosted-ledger.json` with 368 rows,
+`expectedPending` empty) was made in `main` by #405 (merge `4736e310`, 21:34 UTC), from Astra's own read-only snapshot taken
+at `2026-10-03T21:11:18Z` (`docs/security/interview-access/expand-hosted-verification.md` and `evidence/expand-hosted.json`).
+This record is a **second, independent read** of the same production state (~21:18-21:21 UTC) made by a different reader with
+different queries, and every value it shares with the first agrees with it: ledger 368 rows with digest
+`c086806d9fb5f0c92609678f037b73ba`, both function md5s, the invoker/definer split, `anon` without EXECUTE and the scenario policy.
+This record adds what the first does not list: `PUBLIC` and `service_role` without EXECUTE, the `scp_private` schema grants,
+the 40 remaining `USING (true)` reads, the empty scenario table, and the rolled-back fail-closed probes. It changes no
+registration.
+
+What is still open after this record: #405 (the application that reads the flags through `scp_iv_case_capabilities`) is
+merged but **not published and not verified in production**, and the contract `20270207090000` (#406) is **not applied**,
+so the full `scp_interview_ai_config` row stays readable by every signed-in user until it is.

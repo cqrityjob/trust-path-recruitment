@@ -66,6 +66,9 @@ jobs:
       - name: Nullable RPC argument contract check
         run: bun run nullable-rpc-contract:check
 
+      - name: Interview case capability reader
+        run: bun run scripts/interview-case-capabilities-check.ts
+
       - name: Type-check
         run: bunx tsc --noEmit
 

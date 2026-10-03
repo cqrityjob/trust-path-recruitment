@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-03T21:20:00+00:00",
-  "readBy": "Read-only production verification after #404 merged (interview access, expand: case-scoped capability flags and the raw scenario bank restricted to content authors). All 367 previous ledger identities preserved (their digest is still 77e07c074bb73aac9ac11a569b5ca214); the new row is 20270206090000, applied by the official integration. md5 of version:name joined by newline over all 368 rows c086806d9fb5f0c92609678f037b73ba, equal on the connector read and on this file. See docs/release/2026-10-03-interview-access-expand-hosted-verification.md.",
+  "readAt": "2026-10-03T21:11:18.678365+00:00",
+  "readBy": "Read-only verification after #404 merged as dae5c004b9d2d4c1adb74df5a1173d7679c410b7. Official Supabase integration applied 20270206090000; all 367 prior ledger identities unchanged. Both new function bodies match strict local replay; client execution and table/policy checks verified. Ledger digest c086806d9fb5f0c92609678f037b73ba. See docs/security/interview-access/expand-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",

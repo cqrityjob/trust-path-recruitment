@@ -220,15 +220,17 @@ omdirigera den gamla värden (L1) **sist** (se `2026-10-03-www-domain-cutover.md
 ### Steg 4b — Astras åtkomstfixar för intervjuer (#404 → #405 → #406)
 
 Tre separata releaser i fast ordning (se `docs/security/interview-access/README.md`): **expand** (#404,
-`20270206090000`), **appen** (#405, ska läsa flaggorna via `scp_iv_case_capabilities`; mergas, **publiceras och
+`20270206090000`), **appen** (#405, läser flaggorna via `scp_iv_case_capabilities`; ska mergas, **publiceras och
 verifieras**, inte bara mergas) och först därefter **kontraktet** (#406, `20270207090000`, begränsar hela
-konfigurationsraden till plattformsadministratörer).
-**Utfall 2026-10-03:** #404 mergad (`dae5c004`) och `20270206090000` applicerad; verifierat skrivskyddat av två läsare:
+konfigurationsraden till plattformsadministratörer; att merga det applicerar det automatiskt).
+**Utfall 2026-10-03:** #404 mergad (`dae5c004`, 21:10 UTC) och `20270206090000` applicerad. Verifierat skrivskyddat av två
+oberoende läsare (Astra 21:11 UTC, registrerat i `main` av #405; en andra läsning ~21:20 UTC med samma värden):
 ledgern har 368 rader, digest `c086806d9fb5f0c92609678f037b73ba` (de första 367 oförändrade); båda funktionskropparna lika
 med en strikt lokal replay; `anon` saknar `EXECUTE`; `scp_scenario_versions_read` är begränsad till `scp_can_author`.
-Den gamla konfigurationsläsningen är medvetet kvar tills kontraktet. Evidens och registrering:
-`2026-10-03-interview-access-expand-hosted-verification.md`. #405 och #406 är inte mergade, inte publicerade och inte
-verifierade i produktion.
+Den gamla konfigurationsläsningen är medvetet kvar tills kontraktet. #405 är mergad (`4736e310`, 21:34 UTC) men **inte
+publicerad och inte verifierad** i produktion; #406 är inte mergad och inte applicerad. Evidens:
+`2026-10-03-interview-access-expand-hosted-verification.md` (andra läsningen) och
+`../security/interview-access/expand-hosted-verification.md` (första).
 
 ## 5. Vad som återstår som blockerar publik lansering
 
