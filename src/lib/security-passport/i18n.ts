@@ -2093,6 +2093,8 @@ const sv = {
     "Den här behörigheten måste ange vilken myndighet som utfärdat den.",
   "vq.decline.entry_not_active":
     "Uppgiften har ändrats sedan granskningen öppnades och går inte längre att besluta om. Ladda om sidan.",
+  "vq.decline.review_stale":
+    "Kandidaten har ändrat uppgiften sedan du öppnade den. Den nya versionen visas nu – läs den och besluta igen.",
   "vq.decline.unknown": "Beslutet kunde inte sparas. Dina val är kvar — försök igen.",
 
   // ── The dispute queue (pilot fix #1) ─────────────────────────────────
@@ -4256,6 +4258,8 @@ const en: Record<PassportCopyKey, string> = {
   "vq.decline.issuer_required": "This credential must name the authority that issued it.",
   "vq.decline.entry_not_active":
     "The entry changed after this review was opened and can no longer be decided. Reload the page.",
+  "vq.decline.review_stale":
+    "The candidate changed this entry after you opened it. The new version is shown now – read it and decide again.",
   "vq.decline.unknown": "The decision could not be saved. Your entries are still here — try again.",
 
   "vq.dispute.title": "Disputed entries",

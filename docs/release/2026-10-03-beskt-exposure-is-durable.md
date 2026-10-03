@@ -1,7 +1,8 @@
 # BESKT: an exposed position stays as recorded, whoever joins later
 
-**Status: PENDING.** Follow-up to P1-J (20270122090000). It is not merged, and
-nothing was written to the hosted database.
+**Status: APPLIED.** Follow-up to P1-J (20270122090000). Merged (#384, 7ff0cbe)
+and verified read-only on production on 2026-10-03. See
+`docs/release/2026-10-03-beskt-exposure-and-passport-review-hosted-verification.md`.
 
 | Part | File |
 |---|---|

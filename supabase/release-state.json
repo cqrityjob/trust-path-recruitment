@@ -2756,7 +2756,10 @@
     },
     {
       "file": "20270124090000_bcp_conduct_exposure_is_durable.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270124090000",
+      "hostedName": "bcp_conduct_exposure_is_durable",
+      "evidenceSource": "Read-only verification 2026-10-03 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #384 merged to main (7ff0cbe, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270124090000 / name bcp_conduct_exposure_is_durable; 359 rows, md5 of version:name joined by newline 52e21ce44d6964ae72605bdf2b67817a, equal to hosted-ledger.json; the first 357 rows unchanged (f4f87e56322142f2ac03b5eda5c1cfae). Triggers bcp_conduct_positions_exposure_guard, bcp_conduct_positions_exposure_record and bcp_conduct_position_exposures_append_only enabled; bcp_conduct_position_exposure_guard md5 8bd6263d2596cfc26e79ae536f2d221e, bcp_conduct_position_exposure_record md5 d84a409a2655741165cb2d9f3529112f, bcp_guard_conduct_exposure_append_only md5 d7eb741717cbaba30d779e6578d48069 = local replay of main; no EXECUTE for authenticated or anon; bcp_conduct_position_exposures RLS on, no grant to anon or authenticated (service_role keeps only the platform's Dxtm, as on sp_verification_requests). Production holds 0 conduct positions and 0 exposure rows. No production write probe was run (owner instruction); the behaviour is proven on the identical bodies by the conduct suite C7.13-C7.21, BX NC1-NC3 and the two-connection race in scripts/db-test.sh.",
       "introduces": [
         {
           "kind": "table",
@@ -2776,12 +2779,15 @@
         }
       ],
       "rollback": "supabase/rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql",
-      "verify": "SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgrelid = 'public.bcp_conduct_positions'::regclass AND tgname IN ('bcp_conduct_positions_exposure_guard','bcp_conduct_positions_exposure_record'); -- 2. SELECT relrowsecurity FROM pg_class WHERE oid = 'public.bcp_conduct_position_exposures'::regclass; -- true. has_table_privilege('authenticated','public.bcp_conduct_position_exposures','SELECT'); -- false. Rolled-back probe: a third assessor joining after two positions were locked and read leaves both refused on reopen with BCP_CONDUCT_POSITIONS_ALREADY_SEEN.",
+      "verify": "SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgrelid = 'public.bcp_conduct_positions'::regclass AND tgname IN ('bcp_conduct_positions_exposure_guard','bcp_conduct_positions_exposure_record'); -- 2. SELECT relrowsecurity FROM pg_class WHERE oid = 'public.bcp_conduct_position_exposures'::regclass; -- true. has_table_privilege('authenticated','public.bcp_conduct_position_exposures','SELECT'); -- false. Behaviour: conduct suite C7.13-C7.21 (a third assessor joining after two positions were locked and read leaves both refused on reopen with BCP_CONDUCT_POSITIONS_ALREADY_SEEN).",
       "note": "Follow-up to P1-J (20270122090000). P1-J refused a reopen only while every OTHER position was locked NOW, so a later join with an open position made an already-read position reopenable. Exposure is now recorded per position (bcp_conduct_position_exposures, append-only, RLS on, no client grant) by an AFTER trigger at the moment every position in the session is locked (two or more); a BEFORE trigger refuses reopening an exposed position (BCP_CONDUCT_POSITIONS_ALREADY_SEEN) on every path, and every insert or state change of a position takes the session's transaction advisory lock (the key bcp_conduct_join_session takes), so join, lock and reopen serialise per session. No row changes beyond the backfill of exposures for sessions already fully locked (0 on production). Rollback drops the triggers, functions and table."
     },
     {
       "file": "20270125090000_sp_decision_bound_to_reviewed_content.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270125090000",
+      "hostedName": "sp_decision_bound_to_reviewed_content",
+      "evidenceSource": "Read-only verification 2026-10-03 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #384 merged to main (7ff0cbe, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270125090000 / name sp_decision_bound_to_reviewed_content; 359 rows, md5 of version:name joined by newline 52e21ce44d6964ae72605bdf2b67817a, equal to hosted-ledger.json; the first 357 rows unchanged (f4f87e56322142f2ac03b5eda5c1cfae). sp_verifier_decide md5 4b282cc027549c5905313b0e46571904 (was 7078c44c98d2d48e13849ff0037abda9), sp_entry_review_on_holder_edit md5 304678aa2c32bbd93f0b1418e04ab588 (was 926a3a7913652e482b28ab7c93732872), sp_verifier_decide_reviewed md5 e03d0a4d49f2881d37007d38135c1ead = local replay of main; sp_verifier_decide_reviewed EXECUTE for authenticated, not anon; sp_verification_requests.answered_at timestamptz present. Production holds 0 open requests and 0 rows with answered_at. No production write probe was run (owner instruction); the behaviour is proven on the identical bodies by sp_decision_bound_to_reviewed_content_test (SR-F, SR0-SR5), SR NC1-NC3 and the answer/decision race in scripts/db-test.sh.",
       "introduces": [
         {
           "kind": "column",
@@ -2794,7 +2800,7 @@
         }
       ],
       "rollback": "supabase/rollback/20270125090000_sp_decision_bound_to_reviewed_content_rollback.sql",
-      "verify": "SELECT position('SP_REVIEW_STALE' IN prosrc) > 0 FROM pg_proc WHERE oid = 'public.sp_verifier_decide(uuid,text,text,text,text,date,date)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.sp_verifier_decide_reviewed(uuid,timestamptz,text,text,text,text,date,date)','EXECUTE'); -- false. answered_at present on sp_verification_requests. Rolled-back probe: a verifier approving an answered request with the submitted_at from before the answer is refused SP_REVIEW_STALE and the entry stays unverified.",
+      "verify": "SELECT position('SP_REVIEW_STALE' IN prosrc) > 0 FROM pg_proc WHERE oid = 'public.sp_verifier_decide(uuid,text,text,text,text,date,date)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.sp_verifier_decide_reviewed(uuid,timestamptz,text,text,text,text,date,date)','EXECUTE'); -- false. answered_at present on sp_verification_requests. Behaviour: sp_decision_bound_to_reviewed_content_test SR1-SR2 (a verifier approving an answered request with the submitted_at from before the answer is refused SP_REVIEW_STALE and the entry stays unverified).",
       "note": "A Passport decision is bound to the content its decider loaded. sp_verifier_decide_reviewed(request, reviewed submitted_at, ...) is the entry point the application calls; sp_verifier_decide (hosted 20270112090000 body plus one block) refuses SP_REVIEW_STALE when the named submitted_at is not current, and refuses a bare call on a request whose holder answered a clarification by editing (sp_verification_requests.answered_at, set by sp_entry_review_on_holder_edit, which now stamps submitted_at with clock_timestamp()). Requests never answered decide exactly as before. Both checks run under the existing SELECT ... FOR UPDATE on the request, the row the holder's answer updates. Rollback restores both hosted bodies (md5 pinned), drops the reviewed entry point and the column."
     }
   ], 

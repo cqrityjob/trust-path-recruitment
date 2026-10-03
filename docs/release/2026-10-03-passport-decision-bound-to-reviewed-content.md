@@ -1,13 +1,15 @@
 # Passport: a review decision is bound to the content the reviewer saw
 
-**Status: PENDING.** It is not merged, and nothing was written to the hosted
-database.
+**Status: APPLIED.** Merged (#384, 7ff0cbe) and verified read-only on production
+on 2026-10-03. See
+`docs/release/2026-10-03-beskt-exposure-and-passport-review-hosted-verification.md`.
+The application change of step 3 below ships with that record.
 
 | Part | File |
 |---|---|
 | Migration | `supabase/migrations/20270125090000_sp_decision_bound_to_reviewed_content.sql` |
 | Rollback | `supabase/rollback/20270125090000_sp_decision_bound_to_reviewed_content_rollback.sql` |
-| Suite | `supabase/tests/sp_decision_bound_to_reviewed_content_test.sql` (20 assertions) |
+| Suite | `supabase/tests/sp_decision_bound_to_reviewed_content_test.sql` (25 assertions) |
 | Race | `scripts/db-test.sh`, "Passport answer/decision race" |
 
 ## 1. Finding (confirmed)
@@ -81,6 +83,7 @@ as it was.
 | SR4.4 | The holder can still withdraw an answered request. |
 | SR4.5 | After reloading, the reviewer can reject an answer. |
 | SR5.1 | The binding never stands in for authority: a non-verifier is refused as before. |
+| SR7.1–7.5 | The review page's own flow through `sp_verifier_request_detail`: the version the page sends back is the detail's `submitted_at` text, the stale page is refused, the reload shows the new content and version, and deciding again verifies what is shown. |
 | Employer suite 7.1–7.7 | An employer representative decides an answered employment request with the version they reviewed. |
 
 Older suites that decide after an answered clarification now name the
