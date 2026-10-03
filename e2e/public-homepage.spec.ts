@@ -69,8 +69,8 @@ const SECTION_ORDER = [
 /** The locked hero (owner decision, 2026-10-01): one English brand
  *  statement, the same in both languages. */
 const H1 = {
-  sv: "Security careers, without limits.",
-  en: "Security careers, without limits.",
+  sv: "Din karriär, din kompetens, ditt säkerhetsarbete.",
+  en: "Your career, your expertise, your security work.",
 } as const;
 
 /** The four "För dig" entries: card, action label, destination. */
