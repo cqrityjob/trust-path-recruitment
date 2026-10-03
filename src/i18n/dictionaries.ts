@@ -3321,6 +3321,46 @@ export const dictionaries = {
     "admin.employers.action.error.noteRequired": "En intern anteckning krävs för det här beslutet.",
     "admin.employers.action.error.forbidden": "Åtkomst nekad.",
 
+    // ── MEDLEMMARNAS ÅTKOMST (plattformsadministratör) ────────────────────
+    //
+    // Ta bort, stäng av, återaktivera och byt roll. Texten säger vad som
+    // faktiskt händer: åtkomsten upphör vid personens nästa åtgärd, medlemskapet
+    // raderas aldrig och det som personen redan gjort ligger kvar.
+    "admin.employers.members.intro":
+      "Här tar du bort, stänger av eller återaktiverar en persons åtkomst till organisationen, och ändrar roll. Ändringen gäller direkt och loggas.",
+    "admin.employers.members.col.actions": "Åtgärder",
+    "admin.employers.members.unnamed": "Namn saknas",
+    "admin.employers.members.onlyOwner": "Enda aktiva ägare",
+    "admin.employers.members.action.suspend": "Stäng av åtkomst",
+    "admin.employers.members.action.remove": "Ta bort",
+    "admin.employers.members.action.reactivate": "Återaktivera",
+    "admin.employers.members.action.role": "Ändra roll",
+    "admin.employers.members.dialog.suspend.title": "Stänga av {name}?",
+    "admin.employers.members.dialog.suspend.body":
+      "{name} förlorar åtkomsten till organisationens arbetsyta vid nästa åtgärd: ansökningar, tester, intervjuer och rapporter. Medlemskapet finns kvar och kan återaktiveras. Det personen redan har gjort i organisationen tas inte bort.",
+    "admin.employers.members.dialog.remove.title": "Ta bort {name} från organisationen?",
+    "admin.employers.members.dialog.remove.body":
+      "{name} förlorar åtkomsten till organisationens arbetsyta vid nästa åtgärd. Medlemskapet markeras som borttaget och sparas som spår, det raderas inte. Det personen redan har gjort i organisationen tas inte bort, och personen kan återaktiveras senare.",
+    "admin.employers.members.dialog.reactivate.title": "Återaktivera {name}?",
+    "admin.employers.members.dialog.reactivate.body":
+      "{name} får tillbaka åtkomsten till organisationen med rollen {role}.",
+    "admin.employers.members.dialog.role.title": "Ändra roll för {name}",
+    "admin.employers.members.dialog.role.body":
+      "Rollen avgör vad personen får göra i organisationens arbetsyta. Ägare och administratör kan hantera teamet och skicka tester. En medlem kan inte det.",
+    "admin.employers.members.dialog.role.label": "Ny roll",
+    "admin.employers.members.dialog.role.ownerWarning":
+      "Ägare är organisationens högsta roll. Ge den bara till någon som organisationen har utsett.",
+    "admin.employers.members.dialog.finalOwner":
+      "{name} är organisationens enda aktiva ägare. Utse en annan ägare först, annars kan åtgärden inte genomföras.",
+    "admin.employers.members.result.suspend": "{name}: åtkomsten är avstängd.",
+    "admin.employers.members.result.remove": "{name} har tagits bort från organisationen.",
+    "admin.employers.members.result.reactivate": "{name}: åtkomsten är återställd.",
+    "admin.employers.members.result.role": "{name}: rollen är nu {role}.",
+    "admin.employers.members.result.unchanged":
+      "Ingen ändring behövdes. {name} hade redan det läget.",
+    "admin.actionError.membershipFinalOwner":
+      "Personen är organisationens enda aktiva ägare. Utse en annan ägare först, så kan åtgärden genomföras.",
+
     "admin.jobs.status.draft": "Utkast",
     "admin.jobs.status.pending_review": "Väntar på granskning",
     "admin.jobs.status.published": "Publicerad",
@@ -11871,6 +11911,46 @@ export const dictionaries = {
       "This action could not be completed because the employer's status has changed. Reload the page.",
     "admin.employers.action.error.noteRequired": "An internal note is required for this decision.",
     "admin.employers.action.error.forbidden": "Access denied.",
+
+    // ── MEMBERS' ACCESS (platform administrator) ──────────────────────────
+    //
+    // Remove, suspend, reactivate and change role. The copy says what actually
+    // happens: access ends at the person's next action, the membership is never
+    // deleted and what the person already did stays where it is.
+    "admin.employers.members.intro":
+      "Remove, suspend or reactivate a person's access to the organisation here, and change their role. The change applies immediately and is logged.",
+    "admin.employers.members.col.actions": "Actions",
+    "admin.employers.members.unnamed": "No name on file",
+    "admin.employers.members.onlyOwner": "Only active owner",
+    "admin.employers.members.action.suspend": "Suspend access",
+    "admin.employers.members.action.remove": "Remove",
+    "admin.employers.members.action.reactivate": "Reactivate",
+    "admin.employers.members.action.role": "Change role",
+    "admin.employers.members.dialog.suspend.title": "Suspend {name}?",
+    "admin.employers.members.dialog.suspend.body":
+      "{name} loses access to the organisation's workspace on their next action: applications, tests, interviews and reports. The membership is kept and can be reactivated. Nothing the person has already done in the organisation is deleted.",
+    "admin.employers.members.dialog.remove.title": "Remove {name} from the organisation?",
+    "admin.employers.members.dialog.remove.body":
+      "{name} loses access to the organisation's workspace on their next action. The membership is marked as removed and kept as a record; it is not deleted. Nothing the person has already done in the organisation is deleted, and the person can be reactivated later.",
+    "admin.employers.members.dialog.reactivate.title": "Reactivate {name}?",
+    "admin.employers.members.dialog.reactivate.body":
+      "{name} regains access to the organisation with the role {role}.",
+    "admin.employers.members.dialog.role.title": "Change the role of {name}",
+    "admin.employers.members.dialog.role.body":
+      "The role decides what the person may do in the organisation's workspace. Owners and administrators can manage the team and send tests. A member cannot.",
+    "admin.employers.members.dialog.role.label": "New role",
+    "admin.employers.members.dialog.role.ownerWarning":
+      "Owner is the organisation's highest role. Only give it to someone the organisation has designated.",
+    "admin.employers.members.dialog.finalOwner":
+      "{name} is the organisation's only active owner. Appoint another owner first, otherwise this cannot be done.",
+    "admin.employers.members.result.suspend": "{name}: access is suspended.",
+    "admin.employers.members.result.remove": "{name} has been removed from the organisation.",
+    "admin.employers.members.result.reactivate": "{name}: access is restored.",
+    "admin.employers.members.result.role": "{name}: the role is now {role}.",
+    "admin.employers.members.result.unchanged":
+      "No change was needed. {name} was already in that state.",
+    "admin.actionError.membershipFinalOwner":
+      "This person is the organisation's only active owner. Appoint another owner first, then try again.",
 
     "admin.jobs.status.draft": "Draft",
     "admin.jobs.status.pending_review": "Pending review",
