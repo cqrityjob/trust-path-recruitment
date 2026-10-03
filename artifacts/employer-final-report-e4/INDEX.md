@@ -152,9 +152,21 @@ ersatt", with its own finaliser and date, and "Visar version 1" in the list.
 
 ### 08 · `08-sv-1440-member-not-offered-finalisation.png`
 
-Signed in as the ordinary member: the whole report screen, the sequence
-naming finalisation as "Görs av ägare eller administratör", and **no**
-finalise control.
+Signed in as the member who holds a recruitment reviewer grant: the whole
+report screen, the sequence naming finalisation as "Görs av ägare eller
+administratör", and **no** finalise control.
+
+> **Amendment, after the accepted run (not part of the accepted evidence).**
+> The accepted capture above was taken when any active member read every
+> report. Since the report-access change (migrations `20270203090000` and
+> `20270204090000`, design `docs/release/2026-10-03-employer-report-access-design.md`)
+> membership alone is not access: the walk's member now holds the recruitment
+> reviewer grant that gives them the basis to read, and the new test
+> `08b · an ordinary member` asserts, without a capture, that an ordinary member
+> with no basis is shown no report document, no finalise control and none of the
+> report's text. The capture list is unchanged (17). The accepted run above is
+> not a run of this walk, and a new capture run is required before this record is
+> cited for the new behaviour.
 
 ### 09 · `09-sv-1440-candidate-denied.png`
 

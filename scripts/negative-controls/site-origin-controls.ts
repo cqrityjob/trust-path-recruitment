@@ -127,6 +127,35 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "the sitemap lists a page a crawler may not index",
   },
+  {
+    id: "SO-NC-OG-IMAGE-LOST",
+    defect: "the root route drops its og:image, so the host's Lovable preview is shared again",
+    file: "src/routes/__root.tsx",
+    find: '      { property: "og:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` },\n',
+    replace: "",
+    guard: GUARD,
+    expect:
+      "the root route points og:image and twitter:image at the picture on the production domain",
+  },
+  {
+    id: "SO-NC-TWITTER-IMAGE-OLD",
+    defect: "the root route's twitter:image goes back to the Lovable editor preview",
+    file: "src/routes/__root.tsx",
+    find: '{ name: "twitter:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` }',
+    replace: `{ name: "twitter:image", content: "${OLD_HOST}/og-cqrityjob.png" }`,
+    guard: GUARD,
+    expect:
+      "the root route points og:image and twitter:image at the picture on the production domain",
+  },
+  {
+    id: "SO-NC-SHARE-TWITTER-IMAGE",
+    defect: "the shared Passport page loses its twitter:image and inherits the site's image on X",
+    file: "src/routes/p.$token.tsx",
+    find: '      { name: "twitter:image", content: `${publicShareOrigin()}/og-security-passport.png` },\n',
+    replace: "",
+    guard: GUARD,
+    expect: "the shared Passport page sets its own twitter:image",
+  },
 ];
 
 runControls("site-origin", MUTATIONS);

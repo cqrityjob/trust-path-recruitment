@@ -24,6 +24,7 @@ import {
   interviewErrorMessage,
 } from "@/components/employer/interview/InterviewUi";
 import { listInterviewCases } from "@/lib/interview-intelligence/runtime.functions";
+import { ReportAccessNotice, useReportAccess } from "@/components/employer/ReportAccess";
 import {
   CASE_STAGES,
   caseIsInStage,
@@ -84,6 +85,14 @@ function Page() {
     enabled: Boolean(ws.workspace?.employerId),
   });
 
+  // A member who is not on any interview, and who has no basis to read the
+  // organisation's, is returned no cases. Three zeros and "no interviews" would
+  // be a statement about the organisation that nobody checked, so only a
+  // CONFIRMED answer from the database replaces them with the truth: there is no
+  // interview this person may open. Unknown (or no migration yet) leaves the
+  // page exactly as it was.
+  const noCases = useReportAccess(ws.workspace?.employerId).stateFor("interviews") === "none";
+
   if (ws.isLoading)
     return (
       <div className="mx-auto max-w-2xl px-4 py-16">
@@ -134,7 +143,7 @@ function Page() {
         </p>
       </header>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+      <div className={noCases ? "hidden" : "mt-6 grid gap-3 sm:grid-cols-3"}>
         <Stat
           label={t("iiu.ix.active")}
           value={countsKnown ? active.length : null}
@@ -183,17 +192,25 @@ function Page() {
           {t("iiu.new.title")}
         </Link>
         {/* The reports in these same cases, under the same access rules. */}
-        <Link
-          to="/employer/$employerSlug/reports"
-          params={{ employerSlug }}
-          className="ml-4 inline-flex min-h-11 items-center text-sm font-medium text-accent underline-offset-2 hover:underline"
-          data-testid="ii-reports-link"
-        >
-          {t("reports.title")}
-        </Link>
+        {noCases ? null : (
+          <Link
+            to="/employer/$employerSlug/reports"
+            params={{ employerSlug }}
+            className="ml-4 inline-flex min-h-11 items-center text-sm font-medium text-accent underline-offset-2 hover:underline"
+            data-testid="ii-reports-link"
+          >
+            {t("reports.title")}
+          </Link>
+        )}
       </div>
 
-      <section className="mt-8" aria-labelledby="ii-cases-heading">
+      {noCases ? (
+        <div className="mt-8">
+          <ReportAccessNotice need="interviews" />
+        </div>
+      ) : null}
+
+      <section className="mt-8" aria-labelledby="ii-cases-heading" hidden={noCases}>
         <h2 id="ii-cases-heading" className="text-lg font-semibold text-foreground">
           {t("iiu.ix.heading")}
         </h2>

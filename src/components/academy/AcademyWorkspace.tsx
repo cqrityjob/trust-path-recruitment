@@ -38,6 +38,8 @@ import {
 import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { ReportsRequired, useReportAccess } from "@/components/employer/ReportAccess";
+import type { ReportNeed } from "@/lib/security-competency/report-access";
 import { cn } from "@/lib/utils";
 
 export type AcademyWorkspace = {
@@ -56,36 +58,59 @@ type Tab = {
    *  reviewing one submission lives at .../reviews/$attemptId, and the tab
    *  going dark there told the reviewer they had left the workspace. */
   matchesChildren?: boolean;
+  /** The tab leads only to results the caller may not be entitled to read. It is
+   *  hidden once the database has CONFIRMED the caller has no basis to read them
+   *  (an ordinary member); it is shown while that is unknown, as before. */
+  needs?: ReportNeed;
 };
 
 const ASSESSMENT_TABS: Tab[] = [
   { to: "/employer/$employerSlug/assessments", label: "academy.nav.overview" },
   { to: "/employer/$employerSlug/assessments/library", label: "academy.nav.library" },
-  { to: "/employer/$employerSlug/assessments/participants", label: "academy.nav.candidates" },
+  {
+    to: "/employer/$employerSlug/assessments/participants",
+    label: "academy.nav.candidates",
+    needs: "recruitment",
+  },
   {
     to: "/employer/$employerSlug/assessments/reviews",
     label: "academy.nav.reviews",
     matchesChildren: true,
+    needs: "reports",
   },
 ];
 
 const TRAINING_TABS: Tab[] = [
   { to: "/employer/$employerSlug/training", label: "academy.nav.overview" },
   { to: "/employer/$employerSlug/training/programmes", label: "training.nav.programmes" },
-  { to: "/employer/$employerSlug/training/participants", label: "training.nav.participants" },
+  {
+    to: "/employer/$employerSlug/training/participants",
+    label: "training.nav.participants",
+    needs: "workforce",
+  },
 ];
 
 /** Resolves the workspace, renders the shell and the assessment tabs, and
  *  hands the verified workspace to the page. */
 export function AcademyPage({
   employerSlug,
+  requires,
   children,
 }: {
   employerSlug: string;
+  /** The page shows results, lists or counts that only an owner, an admin, a
+   *  reviewer for the use case or a vacancy's recruiter may read. An ordinary
+   *  member gets the honest "no access" state instead of an empty page. */
+  requires?: ReportNeed;
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {
   return (
-    <WorkspaceFrame employerSlug={employerSlug} section="assessments" tabs={ASSESSMENT_TABS}>
+    <WorkspaceFrame
+      employerSlug={employerSlug}
+      section="assessments"
+      tabs={ASSESSMENT_TABS}
+      requires={requires}
+    >
       {children}
     </WorkspaceFrame>
   );
@@ -161,13 +186,21 @@ export function JobsPage({
  *  and activeSection="training" so the sidebar highlights the right entry. */
 export function TrainingPage({
   employerSlug,
+  requires,
   children,
 }: {
   employerSlug: string;
+  /** See AcademyPage. */
+  requires?: ReportNeed;
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {
   return (
-    <WorkspaceFrame employerSlug={employerSlug} section="training" tabs={TRAINING_TABS}>
+    <WorkspaceFrame
+      employerSlug={employerSlug}
+      section="training"
+      tabs={TRAINING_TABS}
+      requires={requires}
+    >
       {children}
     </WorkspaceFrame>
   );
@@ -178,12 +211,14 @@ function WorkspaceFrame({
   section,
   tabs,
   wide = false,
+  requires,
   children,
 }: {
   employerSlug: string;
   section: EmployerNavSection;
   tabs: Tab[];
   wide?: boolean;
+  requires?: ReportNeed;
   children: (ws: AcademyWorkspace) => ReactNode;
 }) {
   const { t } = useT();
@@ -237,28 +272,50 @@ function WorkspaceFrame({
       hasMultipleWorkspaces={workspace.hasMultipleWorkspaces}
       wide={wide}
     >
-      {tabs.length > 0 && <AcademyTabs employerSlug={workspace.employerSlug} tabs={tabs} />}
-      {children(workspace)}
+      {tabs.length > 0 && (
+        <AcademyTabs
+          employerSlug={workspace.employerSlug}
+          employerId={workspace.employerId}
+          tabs={tabs}
+        />
+      )}
+      {requires ? (
+        <ReportsRequired employerId={workspace.employerId} need={requires}>
+          {children(workspace)}
+        </ReportsRequired>
+      ) : (
+        children(workspace)
+      )}
     </EmployerAppShell>
   );
 }
 
 export function AcademyTabs({
   employerSlug,
+  employerId,
   tabs = ASSESSMENT_TABS,
 }: {
   employerSlug: string;
+  employerId?: string;
   tabs?: Tab[];
 }) {
   const { t } = useT();
   const matchRoute = useMatchRoute();
+  // A tab that leads only to results is offered unless the database has
+  // confirmed the caller may not read them. While that is unknown -- loading, a
+  // failed call, a migration not yet applied -- every tab is shown, as before.
+  const access = useReportAccess(
+    employerId,
+    tabs.some((tab) => tab.needs !== undefined),
+  );
+  const visible = tabs.filter((tab) => !tab.needs || access.stateFor(tab.needs) !== "none");
   return (
     <nav
       aria-label={t("academy.nav.aria")}
       className="no-print mb-8 -mx-1 overflow-x-auto border-b border-border"
     >
       <ul className="flex min-w-max gap-1 px-1">
-        {tabs.map((tab) => {
+        {visible.map((tab) => {
           const active = Boolean(
             matchRoute({
               to: tab.to,

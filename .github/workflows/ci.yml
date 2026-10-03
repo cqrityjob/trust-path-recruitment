@@ -236,6 +236,28 @@ jobs:
       - name: Public assessment auth and buffer check
         run: bun run public-assessment-auth:check
 
+      # THE CAREER ANALYSIS IS AVAILABLE THE SAME WAY EVERYWHERE, IN EVERY STATE.
+      #
+      # The owner opens Karriäranalysen with ONE call (cd_set_access_state), a
+      # path never exercised in production, so each state (internal_test /
+      # public / paused) must already be coherent for an anonymous visitor, a
+      # signed-in non-tester, an internal tester, an admin and a person
+      # claiming a run finished anonymously. The first check runs the state
+      # matrix over the one resolver and the server's save gate, holds the SQL
+      # suite's expected table to the same one, and fails if any surface keeps
+      # a private copy of the rule or links into the entrance ungated; the
+      # second renders every surface in every state, in both languages. Their
+      # planted controls run in negative-controls:all; the database half is
+      # supabase/tests/cd_availability_matrix_test.sql in the db-test job.
+      - name: Career analysis availability check
+        run: bun run career-analysis-availability:check
+
+      - name: Career analysis surfaces check
+        run: bun run career-analysis-surfaces:check
+
+      - name: My Career assessment gate check
+        run: bun run my-career-gate:check
+
       # THE SHARE-TOKEN TRANSPORT, WHICH WAS NOT RUNNING IN CI AT ALL.
       #
       # `passport-share-transport:check` has existed since the token was moved
@@ -1102,6 +1124,19 @@ jobs:
       # planted controls run in `negative-controls:all` above.
       - name: Employer access lifecycle check
         run: bun run employer-access-lifecycle:check
+
+      # Who may read what an organisation learned about a person -- the
+      # application's half (20270203090000, 20270204090000). The database
+      # decides and proves it in the database job; this pins that the screens
+      # TELL THE TRUTH about it: an ordinary member is told "you do not have
+      # access to results", never shown an empty list that reads as "no
+      # candidates" or four tiles that read "0"; only a CONFIRMED answer from
+      # the database withholds anything, so the application works before the
+      # migration is applied; the browser holds no copy of "owner or admin"; and
+      # a suspended or removed person who files or is approved gets a sentence
+      # they can act on. Its planted controls run in `negative-controls:all`.
+      - name: Employer report access check
+        run: bun run employer-report-access:check
 
       # The recruitment workspace (20261207090000): one vocabulary for what the
       # overview counts and the lists open, no contact with a candidate except

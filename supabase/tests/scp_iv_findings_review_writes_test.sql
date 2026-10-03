@@ -86,6 +86,12 @@ INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VAL
   ('0f110000-1111-4000-8000-000000000001', '0f110000-0000-4000-8000-000000000002', 'admin', 'active'),
   ('0f110000-1111-4000-8000-000000000001', '0f110000-0000-4000-8000-000000000003', 'member', 'active'),
   ('0f110000-1111-4000-8000-000000000009', '0f110000-0000-4000-8000-000000000009', 'owner', 'active');
+-- The member's BASIS for working the case: a recruitment reviewer grant (membership alone gives none
+-- since 20270203090000/20270204090000). What this suite proves is that, with a basis, writing
+-- the review of a finding is still the owner's and the admin's.
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+VALUES ('0f110000-1111-4000-8000-000000000001', '0f110000-0000-4000-8000-000000000003', ARRAY['recruitment']::text[],
+        '0f110000-0000-4000-8000-000000000001');
 
 -- The case, created by the owner on the openly available Vaktare pack. The two
 -- findings are written as the table owner, as scp_iv_record_findings (a

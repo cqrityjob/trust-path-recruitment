@@ -22,19 +22,30 @@ import { ArrowRight, BarChart3, Compass, TrendingUp } from "lucide-react";
 import type { ReactNode } from "react";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 
 export function CareerEntryCards({
   pathAnchor,
   personalAnchor,
   listAnchor,
   personalised = false,
+  signedIn = null,
 }: {
   readonly pathAnchor: string;
   readonly personalAnchor: string;
   readonly listAnchor: string;
   /** The reader's own assessment result is in hand. */
   readonly personalised?: boolean;
+  /** Whether there is a session: true, false, or null while it is not yet
+   *  known. The analysis link asks the one availability hook with it. */
+  readonly signedIn?: boolean | null;
 }) {
+  // The second door is a direct link to the analysis, so it asks the same
+  // question the canonical route asks and is WITHDRAWN on a definite "closed"
+  // (paused, or a signed-in account the test group does not include) rather
+  // than leading to a page that says no. "Not answered yet" keeps it: the
+  // route asks again and shows its own honest state.
+  const analysisOpen = useCareerAnalysisOpen(signedIn);
   return (
     <div className="space-y-4" data-career-entry-cards>
       <EntryCard
@@ -62,11 +73,15 @@ export function CareerEntryCards({
           ctaKey="cc.entry.explore.cta"
           hash={listAnchor}
           cta="career-entry-explore"
-          secondary={{
-            key: "cc.entry.explore.analysis",
-            to: "/security-career-assessment",
-            cta: "career-entry-assessment",
-          }}
+          secondary={
+            analysisOpen === false
+              ? undefined
+              : {
+                  key: "cc.entry.explore.analysis",
+                  to: "/security-career-assessment",
+                  cta: "career-entry-assessment",
+                }
+          }
         />
       )}
     </div>

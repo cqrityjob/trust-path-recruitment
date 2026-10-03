@@ -13,6 +13,7 @@ import { I18nProvider, useAdoptLangIntent } from "../i18n/context";
 import { RootError, RootNotFound } from "@/components/site/RootFallbacks";
 import { TermsAcceptanceGate } from "../components/legal/TermsAcceptanceGate";
 import { supabase } from "@/integrations/supabase/client";
+import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -29,6 +30,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "CQrityjob" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      // The site's own share image, absolute on the production domain:
+      // crawlers resolve a relative og:image poorly, and without one the
+      // host injected a Lovable editor preview. A route with its own image
+      // (a job, a shared Passport) overrides these by name. No width, height
+      // or alt here: a route that replaces only the image (a job with its
+      // employer's logo) would inherit them and describe the wrong picture.
+      { property: "og:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` },
+      { name: "twitter:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` },
     ],
     links: [
       {

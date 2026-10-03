@@ -384,15 +384,20 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
 {
   const SPEC: Record<Lang, Record<string, string>> = {
     sv: {
-      // Locked owner decision, 2026-10-01: the English brand statement is
-      // the hero in BOTH languages, never translated.
-      "home.hero.title": "Security careers, without limits.",
+      // Owner decision, 2026-10-03 (made in Lovable, replacing the
+      // 2026-10-01 lock): the H1 names the whole offer in the visitor's
+      // language. The English brand line "Security careers, without limits."
+      // moved below the two entrances as the slogan, the same in both
+      // languages and never translated.
+      "home.hero.title": "Din karriär, din kompetens, ditt säkerhetsarbete.",
+      "home.hero.slogan": "Security careers, without limits.",
       "home.hero.individual.title": "För dig i säkerhetsbranschen",
       "home.hero.employer.title": "För arbetsgivare",
     },
     en: {
-      "home.hero.title": "Security careers, without limits.",
-      "home.hero.individual.title": "For people in security",
+      "home.hero.title": "Your career, your expertise, your security work.",
+      "home.hero.slogan": "Security careers, without limits.",
+      "home.hero.individual.title": "For security professionals",
       "home.hero.employer.title": "For employers",
     },
   };
@@ -406,9 +411,18 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
       `${lang}: the h1 is the locked headline`,
       headings(hero, "h1")[0] === SPEC[lang]["home.hero.title"],
     );
+    // The H1 is in the visitor's language, so it must NOT claim to be English;
+    // the English slogan is its own paragraph, marked lang="en" and rendered
+    // verbatim.
     ck(
-      `${lang}: the h1 is marked lang="en" — an English brand statement on every page`,
-      /<h1[^>]*lang="en"/.test(hero),
+      `${lang}: the h1 is in the visitor's language — it is not marked lang="en"`,
+      !/<h1[^>]*lang="en"/.test(hero),
+    );
+    ck(
+      `${lang}: the slogan is rendered verbatim in a paragraph marked lang="en"`,
+      new RegExp(
+        `<p[^>]*lang="en"[^>]*>${SPEC[lang]["home.hero.slogan"].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}</p>`,
+      ).test(hero),
     );
     ck(`${lang}: the hero is centred`, /<section id="hero"[\s\S]*?text-center/.test(hero));
     // The positioning is two sentences, one per audience (brand story,
@@ -419,20 +433,28 @@ group("T2 · the hero: the locked headline, the positioning, two equal entrances
         (d(lang)["home.hero.subtitle"].match(/[.!?](\s|$)/g) ?? []).length <= 2,
       d(lang)["home.hero.subtitle"],
     );
-    // It speaks to BOTH audiences (owner review, point 3), and says the
-    // ambition is local OR international without claiming current scale.
+    // It speaks to BOTH audiences (owner review, point 3): the individual
+    // (a job, the Security Passport, their own expertise) and the employer.
+    // Owner decision 2026-10-03: the subtitle no longer says "locally or
+    // internationally"; the employer entrance still does, and is asserted
+    // right below. The "AI-stöd" / "AI support" phrase in the copy is NOT locked
+    // here: AI functions are off in production and the privacy policy says no
+    // AI provider is used, so it is an open owner item, not a verified claim.
     ck(
-      `${lang}: the positioning addresses individuals and employers, locally or internationally`,
+      `${lang}: the positioning addresses individuals and employers`,
       lang === "sv"
-        ? /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /din karriär inom säkerhet/.test(d(lang)["home.hero.subtitle"]) &&
-            /För arbetsgivare/.test(d(lang)["home.hero.subtitle"]) &&
-            /lokalt eller internationellt/.test(d(lang)["home.hero.subtitle"])
-        : /Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
-            /develop your security career/.test(d(lang)["home.hero.subtitle"]) &&
-            /For employers/.test(d(lang)["home.hero.subtitle"]) &&
-            /locally or internationally/.test(d(lang)["home.hero.subtitle"]),
+        ? /^Jobb, kompetens, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /Rekryteringsverktyg för arbetsgivare/.test(d(lang)["home.hero.subtitle"])
+        : /^Jobs, expertise, Security Passport/.test(d(lang)["home.hero.subtitle"]) &&
+            /Recruitment tools for employers/.test(d(lang)["home.hero.subtitle"]),
       d(lang)["home.hero.subtitle"],
+    );
+    ck(
+      `${lang}: the employer entrance still says the ambition is local or international`,
+      lang === "sv"
+        ? /lokalt eller internationellt/.test(d(lang)["home.hero.employer.body"])
+        : /locally or internationally/.test(d(lang)["home.hero.employer.body"]),
+      d(lang)["home.hero.employer.body"],
     );
     const entrances = anchorsOf(hero);
     ck(
@@ -1071,11 +1093,12 @@ group("T13 · sv and en say the same thing, with the same structure");
     "home.individual.passport.title": "nav.securityPassport",
     "home.services.executive.title": "nav.forEmployers.recruitment",
   };
-  // The locked brand statements (owner decision, 2026-10-01) are English in
+  // The locked brand statements (owner decision, 2026-10-01; the hero slogan
+  // since 2026-10-03, when the H1 became a translated sentence) are English in
   // both languages, like "brand.slogan". Each is PROVEN by its exact,
   // approved wording, so no other sentence can join it untranslated.
   const BRAND_STATEMENTS: Record<string, string> = {
-    "home.hero.title": "Security careers, without limits.",
+    "home.hero.slogan": "Security careers, without limits.",
   };
   for (const [key, locked] of Object.entries(BRAND_STATEMENTS)) {
     for (const lang of LANGS) {

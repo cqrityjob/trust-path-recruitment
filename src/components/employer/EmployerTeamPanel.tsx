@@ -59,6 +59,7 @@ import {
   type IncomingAccessRequest,
 } from "@/lib/job-intelligence/employer-onboarding.functions";
 import { shareableUrl } from "@/lib/site-origin";
+import { accessRequestRefusalOf } from "@/lib/job-intelligence/access-request-errors";
 
 /** The roles an owner actually assigns, in the words an employer uses.
  *
@@ -412,7 +413,9 @@ export function EmployerTeamPanel({
 
       {(grant.isError || revoke.isError || decide.isError) && (
         <p role="alert" className="mt-4 text-sm text-destructive">
-          {t("employer.team.actionError")}
+          {decide.isError && accessRequestRefusalOf(decide.error) === "reactivationRefused"
+            ? t("employer.team.requests.reactivationRefused")
+            : t("employer.team.actionError")}
         </p>
       )}
     </section>

@@ -167,6 +167,10 @@ BEGIN
     (_emp_a, 'b7000000-0000-4000-8000-0000000000a1', 'member', 'active'),
     (_emp_b, _owner_b, 'owner', 'active')
   ON CONFLICT DO NOTHING;
+  -- The colleague who reaches the owner's case holds a recruitment reviewer grant (the basis for
+  -- reading and working it: membership alone gives none since 20270203090000/20270204090000).
+  INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+  VALUES (_emp_a, _member_a, ARRAY['recruitment']::text[], _owner_a);
 
   PERFORM pg_temp.become(_admin);
   INSERT INTO public.jobs (slug, short_id, employer_id, application_method, title_sv, title_en,

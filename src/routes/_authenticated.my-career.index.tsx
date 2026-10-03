@@ -12,10 +12,7 @@ import { getStoredDiscoveryReport } from "@/lib/career-discovery/stored-report.f
 import { listMyDiscoveryReports } from "@/lib/career-discovery/discovery.functions";
 import { ReportHistoryList } from "@/components/career-discovery/ReportHistoryList";
 import { listAssessmentRuns } from "@/lib/journey/journey.functions";
-import {
-  getV31Availability,
-  getV31TesterStatus,
-} from "@/lib/career-discovery/v31-public.functions";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 import { useT } from "@/i18n/context";
 import { CareerPageHeader } from "@/components/professional-identity/CareerPageHeader";
 import { NextBestAction } from "@/components/professional-identity/NextBestAction";
@@ -240,20 +237,14 @@ function MyCareerPage() {
   });
 
   // ── Can THIS candidate actually open the career analysis? ───────────
-  const checkAvailability = useServerFn(getV31Availability);
-  const checkTesterStatus = useServerFn(getV31TesterStatus);
-  const assessmentOpenQ = useQuery({
-    queryKey: ["my-career", "assessment-open"],
-    queryFn: async () => {
-      const availability = await checkAvailability({});
-      if (!availability.available) return false;
-      const status = await checkTesterStatus({});
-      return status.allowed;
-    },
-    staleTime: 60_000,
-  });
-  const assessmentOpen = assessmentOpenQ.data;
-  const assessmentClosed = assessmentOpenQ.data === false;
+  //
+  // The one hook every surface reads (use-career-analysis-open.ts), which asks
+  // the same two questions the canonical route asks and turns them into a
+  // decision through the one resolver. This page used to carry its own copy of
+  // that query; a copy is a door the product can come to refuse. This is an
+  // authenticated route, so the reader is signed in.
+  const assessmentOpen = useCareerAnalysisOpen(true);
+  const assessmentClosed = assessmentOpen === false;
 
   // ── THE CAREER PICTURE, FROM THE FROZEN REPORT ──────────────────────
   const activeFn = useServerFn(getActiveCareerReport);

@@ -360,20 +360,34 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // sp_attach_evidence equals a local replay of main, grants unchanged. No
 // production write probe was run.
 // Evidence: docs/release/2026-10-03-passport-evidence-change-under-review.md.
+// 2026-10-03 ~15:45 UTC: #387 (merge b18e5e5, every mandatory CI job green on
+// 082752c) verified applied read-only: 20270130090000_jobs_not_editable_in_place,
+// 20270131090000_jobs_publish_window_and_url_scheme and
+// 20270201090000_job_cvs_no_client_writes are in the ledger (363 rows, digest
+// fbfc766e1fd85a3d19fc82b8f4fbc8c7; the first 360 unchanged),
+// jobs_validate_before_write is md5 bc292d28d31dd973c81f1cffc145b5bf with no
+// EXECUTE for anon or authenticated, and the job-application-cvs bucket has
+// exactly one policy, job_cvs_employer_select. No production write probe was
+// run.
+// Evidence: docs/release/2026-10-03-job-board-hosted-verification.md.
+// 2026-10-03 ~16:50 UTC: #396 (merge 2b5015d, every mandatory CI job green on
+// e7b5a3d) verified applied read-only: 20270202090000_employer_membership_
+// standing_not_bypassable, 20270203090000_employer_report_access_model and
+// 20270204090000_interview_case_access_model are in the ledger (366 rows,
+// digest ae6f49cb25fa072932ae6aaf8d2b4ddc; the first 363 unchanged); all 25
+// function bodies equal a strict local replay, no function is executable by
+// anon, the two triggers are enabled, the seven policies name the new gate and
+// the interview-case policy names scp_iv_can_read_case. No production write
+// probe was run.
+// Evidence: docs/release/2026-10-03-report-access-hosted-verification.md.
 // Pending by design (written, replayed on the full chain, recorded `pending` in
-// release-state.json, none applied hosted): the job-board launch-readiness
-// migrations (docs/release/2026-10-03-jobs-not-editable-in-place.md,
-// 2026-10-03-jobs-publish-window-and-url-scheme.md,
-// 2026-10-03-job-cvs-no-client-writes.md), and the employer e-mail on a new
+// release-state.json, none applied hosted): the employer e-mail on a new
 // application (docs/release/2026-10-03-employer-new-application-notification.md:
 // the outbox, the recipient rules, claim and settle; apply it BEFORE the
 // transactional-email function is redeployed and before the application is
-// published). Each name comes OFF this list in the change that records its
-// production evidence.
+// published; docs/release/2026-10-03-release-order.md, step 4). Its name comes
+// OFF this list in the change that records its production evidence.
 const expectedPending: string[] = [
-  "20270130090000_jobs_not_editable_in_place.sql",
-  "20270131090000_jobs_publish_window_and_url_scheme.sql",
-  "20270201090000_job_cvs_no_client_writes.sql",
   "20270205090000_employer_new_application_notices.sql",
 ];
 const hostedIdentities = [

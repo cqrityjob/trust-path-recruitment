@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Compass } from "lucide-react";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
+import { useSignedIn } from "@/hooks/useSignedIn";
 import { useT } from "@/i18n/context";
 
 /**
@@ -7,12 +9,22 @@ import { useT } from "@/i18n/context";
  * saved Career Profile to complete the Security Career Assessment. Job
  * browsing itself is never blocked — this card is purely optional
  * guidance.
+ *
+ * The invitation is a door into the canonical route, so it asks the one
+ * availability hook the route asks, and renders NOTHING on a definite "closed"
+ * (paused, or a signed-in account the test group does not include): an
+ * optional card that leads to "not open" is worse than no card. Not answered
+ * yet keeps it. (No page mounts this card today; it is gated so mounting it
+ * can never create a dead end.)
  */
 export function AssessmentInvite({ variant = "banner" }: { variant?: "banner" | "sidebar" }) {
   const { t } = useT();
+  const analysisOpen = useCareerAnalysisOpen(useSignedIn());
   const body = t("jobs.relevance.invite.body");
   const cta = t("jobs.relevance.invite.cta");
   const title = t("jobs.relevance.invite.title");
+
+  if (analysisOpen === false) return null;
 
   return (
     <aside

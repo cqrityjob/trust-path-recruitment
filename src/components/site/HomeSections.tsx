@@ -110,21 +110,22 @@ export function HomeHero() {
       {/* The background film (decorative, pausable): see HeroVideoBackground. */}
       <HeroVideoBackground />
       <div className="relative mx-auto w-full max-w-6xl px-6 pb-20 pt-16 text-center sm:pt-20 md:px-8 md:pb-24 md:pt-24">
-        {/* The locked hero, "Security careers, without limits.", is the same
-            English brand statement in both languages, so it carries
-            lang="en" like the brand line in §6. No hyphenation: an English
-            brand line breaks between words, never inside one, so the shared
-            dark headline's `[hyphens:auto]` is overridden here. */}
+        {/* The H1 names the whole offer (career, expertise, security work) in
+            the visitor's language. The English brand line "Security careers,
+            without limits." sits below the two entrances as a quieter slogan. */}
         <h1
-          lang="en"
-          className={cn("mx-auto max-w-[20ch]", DARK_H1, "[hyphens:none]")}
+          className={cn(
+            "mx-auto max-w-[20ch] sm:max-w-[22ch] lg:max-w-[24ch]",
+            DARK_H1,
+            "text-[2rem] leading-[1.12] [hyphens:none] sm:text-[2.6rem] sm:leading-[1.1] lg:text-[3.5rem]",
+          )}
           style={DISPLAY}
         >
           {t("home.hero.title")}
         </h1>
         <p
           className={cn(
-            "mx-auto mt-6 max-w-[62ch] text-base leading-relaxed md:text-lg",
+            "mx-auto mt-5 max-w-[58ch] text-base leading-relaxed md:mt-6 md:text-lg",
             ON_DARK.lead,
           )}
         >
@@ -166,6 +167,16 @@ export function HomeHero() {
             ))}
           </ul>
         </nav>
+        {/* 32–40px to the slogan on desktop, 24–32px on mobile (locked). */}
+        <p
+          lang="en"
+          className={cn(
+            "mx-auto mt-8 text-sm font-medium tracking-wide md:mt-10 md:text-base",
+            ON_DARK.lead,
+          )}
+        >
+          {t("home.hero.slogan")}
+        </p>
       </div>
     </section>
   );

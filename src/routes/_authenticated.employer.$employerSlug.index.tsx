@@ -23,6 +23,7 @@ import { createFileRoute, Link, type LinkComponentProps } from "@tanstack/react-
 import { useQuery } from "@tanstack/react-query";
 import { getEmployerAssessmentPipeline } from "@/lib/security-competency/assessment-lifecycle.functions";
 import { getEmployerReviewBoard } from "@/lib/security-competency/academy-employer.functions";
+import { useReportAccess } from "@/components/employer/ReportAccess";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -342,6 +343,17 @@ function EmployerOverview({
     queryKey: ["passport", "employment-verification-counts", employerId],
     queryFn: () => loadEmploymentVerifications({ data: { employerId } }),
   });
+
+  // The three cards below count results, assessments and interviews. An
+  // ordinary member of the organisation is not entitled to read those and the
+  // database returns them nothing, so a "0" there would say "nothing is
+  // happening" when the true answer is "you may not see it". Only a CONFIRMED
+  // answer from the database replaces the numbers; unknown (or no migration
+  // yet) leaves the cards exactly as they were.
+  const reportAccess = useReportAccess(employerId);
+  const testsWithheld = reportAccess.stateFor("recruitment") === "none";
+  const trainingWithheld = reportAccess.stateFor("workforce") === "none";
+  const interviewsWithheld = reportAccess.stateFor("interviews") === "none";
 
   const data: EmployerDashboardStats = stats.data ?? {
     activeJobs: 0,
@@ -1134,6 +1146,7 @@ function EmployerOverview({
           title={t("employer.overview.card.tests.title")}
           body={t("employer.overview.card.tests.body")}
           linkProps={{ to: "/employer/$employerSlug/assessments", params: { employerSlug } }}
+          withheld={testsWithheld ? t("reportAccess.card.results") : undefined}
           stats={[
             {
               label: t("employer.overview.card.tests.stat.active"),
@@ -1192,6 +1205,7 @@ function EmployerOverview({
           title={t("employer.overview.card.development.title")}
           body={t("employer.overview.card.development.body")}
           linkProps={{ to: "/employer/$employerSlug/training", params: { employerSlug } }}
+          withheld={trainingWithheld ? t("reportAccess.card.results") : undefined}
           stats={[
             {
               label: t("employer.overview.card.development.stat.active"),
@@ -1235,6 +1249,7 @@ function EmployerOverview({
             to: "/employer/$employerSlug/interview-intelligence",
             params: { employerSlug },
           }}
+          withheld={interviewsWithheld ? t("reportAccess.card.interviews") : undefined}
           stats={[
             {
               label: t("employer.overview.card.interviews.stat.preparation"),
@@ -1329,6 +1344,7 @@ function PrimaryCard({
   stats,
   actions,
   badge,
+  withheld,
 }: {
   icon: ReactNode;
   title: string;
@@ -1337,6 +1353,9 @@ function PrimaryCard({
   stats?: { label: string; value: number; loading: boolean; linkProps?: LinkComponentProps }[];
   actions?: { label: string; linkProps: LinkComponentProps }[];
   badge?: string;
+  /** The numbers on this card are results the reader may not see. They are
+   *  replaced by this sentence rather than drawn as zeros. */
+  withheld?: string;
 }) {
   return (
     <section className="flex h-full flex-col rounded-xl border border-border bg-background p-5 shadow-sm transition-colors hover:border-accent/60">
@@ -1368,7 +1387,18 @@ function PrimaryCard({
         </div>
       </Link>
 
-      {stats && (
+      {withheld ? (
+        <p
+          role="status"
+          data-testid="report-access-none"
+          data-need="card"
+          className="mt-4 text-sm text-muted-foreground"
+        >
+          {withheld}
+        </p>
+      ) : null}
+
+      {stats && !withheld && (
         <dl className="mt-4 grid grid-cols-3 gap-3">
           {stats.map((stat) => (
             <div key={stat.label} className="min-w-0">

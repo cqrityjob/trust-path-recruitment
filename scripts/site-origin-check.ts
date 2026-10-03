@@ -257,11 +257,37 @@ check(
       !!flag && new RegExp(`\\.\\.\\.\\(${flag}\\s*\\?\\s*\\[\\{ path: "${urlPath}"`).test(sitemap);
     const noindex =
       /name:\s*"robots",\s*content:\s*"[^"]*noindex/.test(route.source) && !listedUnderSameFlag;
+    // A route whose robots rule FOLLOWS the release control (it is derived
+    // through analysisRobots(), not written as a string) is indexable only
+    // while that control says `public`, so a STATIC sitemap entry for it is
+    // exactly the defect: it would invite a crawler to a page that is noindex
+    // under internal_test and paused. It may be listed only through the
+    // conditional entry checked below.
+    const followsAccessState = /analysisRobots\(/.test(route.source);
     const onlyARedirect =
       /beforeLoad:\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*throw redirect\(/.test(route.source) ||
       (/\bredirect\(/.test(route.source) && !/\bcomponent:/.test(route.source));
     if (noindex) notIndexable.push(`${urlPath} (${route.file} is noindex)`);
+    if (followsAccessState)
+      notIndexable.push(
+        `${urlPath} (${route.file} is indexable only while the release control says public, so it may not be a static entry)`,
+      );
     if (onlyARedirect) notIndexable.push(`${urlPath} (${route.file} only redirects)`);
+  }
+  // The career analysis is listed ONLY through an entry gated on the release
+  // control, and its route derives its robots rule from the same answer.
+  check(
+    /analysisListed = analysisIndexable\(answer\);/.test(sitemap) &&
+      /\.\.\.\(analysisListed\s*\?\s*\[\{ path: CANONICAL_ASSESSMENT_PATH,/.test(sitemap),
+    "the career analysis is in the sitemap only while the release control says public",
+  );
+  {
+    const analysisRoute = read("src/routes/security-career-assessment.tsx");
+    check(
+      /analysisRobots\(indexable\)/.test(analysisRoute) &&
+        !/name:\s*"robots",\s*content:\s*"/.test(analysisRoute),
+      "the career analysis route derives its robots rule from the release control, never a literal",
+    );
   }
   check(
     unresolved.length === 0,
@@ -380,6 +406,38 @@ for (const [file, what] of emailBaseSites) {
 check(
   /lovable\\\.app\|lovableproject\\\.com/.test(shareFn),
   "the passport-share function ignores a platform-assigned PUBLIC_SITE_URL too",
+);
+
+// The site's share image: a real 1200x630 PNG, referenced absolutely on the
+// production domain, and not inherited by the shared Passport on X.
+const ogImage = readFileSync(join(ROOT, "public", "og-cqrityjob.png"));
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+check(
+  ogImage.subarray(0, 8).equals(PNG_SIGNATURE) &&
+    ogImage.readUInt32BE(16) === 1200 &&
+    ogImage.readUInt32BE(20) === 630,
+  "public/og-cqrityjob.png is a PNG of exactly 1200x630",
+);
+check(ogImage.length < 400 * 1024, "public/og-cqrityjob.png is small enough for every crawler");
+const rootRoute = read("src/routes/__root.tsx");
+check(
+  rootRoute.includes(
+    '{ property: "og:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` }',
+  ) &&
+    rootRoute.includes(
+      '{ name: "twitter:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` }',
+    ),
+  "the root route points og:image and twitter:image at the picture on the production domain",
+);
+check(
+  !/og:image:(width|height|alt)/.test(rootRoute),
+  "the root route sets no og:image dimensions or alt a route with its own image would inherit",
+);
+check(
+  /name: "twitter:image", content: `\$\{publicShareOrigin\(\)\}\/og-security-passport\.png`/.test(
+    read("src/routes/p.$token.tsx"),
+  ),
+  "the shared Passport page sets its own twitter:image",
 );
 
 if (failures > 0) {

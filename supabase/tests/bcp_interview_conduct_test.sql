@@ -788,6 +788,10 @@ BEGIN
   INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
   VALUES (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d3', 'member', 'active')
   ON CONFLICT DO NOTHING;
+  -- The second assessor's BASIS for working the case: a recruitment reviewer grant
+  -- (membership alone gives none since 20270203090000/20270204090000).
+  INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+  VALUES (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d3', ARRAY['recruitment']::text[], _r.rec_a);
 
   PERFORM pg_temp.become('b5000000-0000-4000-8000-0000000000d3');
   SET LOCAL ROLE authenticated;
@@ -1005,6 +1009,11 @@ BEGIN
     (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d4', 'member', 'active'),
     (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d5', 'member', 'active')
   ON CONFLICT DO NOTHING;
+  -- Their BASIS for working the case: a recruitment reviewer grant (membership alone
+  -- gives none since 20270203090000/20270204090000).
+  INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by) VALUES
+    (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d4', ARRAY['recruitment']::text[], _r.rec_a),
+    (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d5', ARRAY['recruitment']::text[], _r.rec_a);
   PERFORM pg_temp.become('b5000000-0000-4000-8000-0000000000d4');
   SET LOCAL ROLE authenticated;
   _res := public.bcp_conduct_join_session(gen_random_uuid(), _k.session, 'assessor');
@@ -1128,6 +1137,8 @@ BEGIN
   ON CONFLICT (id) DO NOTHING;
   INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
   VALUES (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d6', 'member', 'active') ON CONFLICT DO NOTHING;
+  INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+  VALUES (_r.emp_a, 'b5000000-0000-4000-8000-0000000000d6', ARRAY['recruitment']::text[], _r.rec_a);
   PERFORM pg_temp.become('b5000000-0000-4000-8000-0000000000d6');
   SET LOCAL ROLE authenticated;
   PERFORM public.bcp_conduct_join_session(gen_random_uuid(), _k.session, 'assessor');

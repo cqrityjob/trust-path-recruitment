@@ -95,6 +95,11 @@ BEGIN
     (_emp, _owner, 'owner', 'active'), (_emp, _admin_u, 'admin', 'active'),
     (_emp, _member, 'member', 'active'), (_emp, _officer, 'member', 'active'),
     (_emp_b, _other, 'owner', 'active');
+  -- The member and the security officer hold a recruitment reviewer grant: their BASIS for the ordinary
+  -- TRUST case (membership alone gives none since 20270203090000/20270204090000). The vetting case needs
+  -- the appointment on top of a basis, in every state of the chain, which is what this suite proves.
+  INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by) VALUES
+    (_emp, _member, ARRAY['recruitment']::text[], _owner), (_emp, _officer, ARRAY['recruitment']::text[], _owner);
 
   PERFORM pg_temp.become(_admin);
   INSERT INTO public.jobs (slug, short_id, employer_id, application_method, title_sv, title_en, status, published_at, expires_at)
@@ -202,6 +207,9 @@ DECLARE r cv%ROWTYPE; _all bigint;
 BEGIN
   SELECT * INTO r FROM cv;
   _all := (SELECT count(*) FROM public.scp_interview_cases WHERE employer_id = r.emp);
+  -- The member and the officer hold a recruitment reviewer grant (see the setup): the basis for reading
+  -- the TRUST case since 20270203090000/20270204090000. This suite runs on both sides of that change (the
+  -- BESKT stand-down cycles of db-test.sh sit on the older gates), so its assertions hold on both.
   PERFORM pg_temp.ok(
     pg_temp.n_as(r.member, format('SELECT count(*) FROM public.scp_interview_cases WHERE employer_id = %L', r.emp)) = _all - 1
     AND pg_temp.n_as(r.officer, format('SELECT count(*) FROM public.scp_interview_cases WHERE employer_id = %L', r.emp)) = _all,
@@ -250,7 +258,7 @@ BEGIN
   _sql := format('SELECT count(*) FROM public.scp_interview_cases WHERE id = %L', r.trust_case);
   PERFORM pg_temp.ok(pg_temp.n_as(r.member, _sql) = 1 AND pg_temp.n_as(r.owner, _sql) = 1
                      AND pg_temp.n_as(r.admin_u, _sql) = 1 AND pg_temp.n_as(r.officer, _sql) = 1,
-    'CV3.1 an ordinary TRUST case is read by every member, as before');
+    'CV3.1 an ordinary TRUST case is read by every member who has a basis for it, as before');
   PERFORM pg_temp.ok(pg_temp.n_as(r.cand_t, _sql) = 0 AND pg_temp.n_as(r.other, _sql) = 0,
     'CV3.2 and by nobody outside the employer, as before');
   PERFORM pg_temp.as_user('authenticated', r.owner,
@@ -267,6 +275,54 @@ BEGIN
     'CV3.4 the candidate''s own preparation and interview-status views still answer');
   PERFORM pg_temp.ok(pg_temp.n_as(r.cand, format('SELECT count(*) FROM public.scp_interview_reports WHERE case_id = %L', r.vet_case)) = 0,
     'CV3.5 without giving the candidate the employer''s case or report');
+END $$;
+
+
+DO $$ BEGIN RAISE NOTICE 'GROUP CV5 — the vetting restriction only narrows: a reviewer, a panel member, a creator and a candidate''s corrections'; END $$;
+
+DO $$
+DECLARE r cv%ROWTYPE;
+  _rev uuid := 'b7300000-0000-4000-8000-0000000000e1';
+  _pnl uuid := 'b7300000-0000-4000-8000-0000000000e2';
+  _rev_off uuid := 'b7300000-0000-4000-8000-0000000000e3';
+  _panel uuid; _corr_sql text; _case_sql text;
+BEGIN
+  SELECT * INTO r FROM cv;
+  INSERT INTO auth.users (id, email) VALUES
+    (_rev, 'cv-reviewer@synthetic.test'), (_pnl, 'cv-panel@synthetic.test'), (_rev_off, 'cv-reviewer-officer@synthetic.test')
+  ON CONFLICT (id) DO NOTHING;
+  INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VALUES
+    (r.emp, _rev, 'member', 'active'), (r.emp, _pnl, 'member', 'active'), (r.emp, _rev_off, 'member', 'active');
+  -- A recruitment reviewer who is not an officer, a panel member of the vetting case who is not an officer,
+  -- and a reviewer who IS appointed as an officer. (Fixture plumbing: the panel is written directly.)
+  INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by) VALUES
+    (r.emp, _rev, ARRAY['recruitment']::text[], r.owner), (r.emp, _rev_off, ARRAY['recruitment']::text[], r.owner);
+  INSERT INTO public.scp_interview_panels (case_id, opened_by) VALUES (r.vet_case, r.officer) RETURNING id INTO _panel;
+  INSERT INTO public.scp_interview_panel_members (panel_id, user_id, added_by) VALUES (_panel, _pnl, r.officer);
+  PERFORM pg_temp.as_user('authenticated', r.owner,
+    format('SELECT public.bcp_appoint_security_officer(gen_random_uuid(), %L, %L, %L)', r.emp, _rev_off, 'SYNTETISK andra säkerhetsfunktionen'));
+  -- A candidate's correction on the vetting case (fixture plumbing).
+  INSERT INTO public.scp_interview_candidate_corrections (case_id, candidate_user_id, what_is_wrong, what_is_correct)
+  VALUES (r.vet_case, r.cand, 'Fel uppgift.', 'Rätt uppgift.');
+
+  _case_sql := format('SELECT count(*) FROM public.scp_interview_cases WHERE id = %L', r.vet_case);
+  _corr_sql := format('SELECT count(*) FROM public.scp_interview_candidate_corrections WHERE case_id = %L', r.vet_case);
+
+  PERFORM pg_temp.ok(pg_temp.n_as(_rev, _case_sql) = 0 AND pg_temp.n_as(_rev, format('SELECT count(*) FROM public.scp_interview_cases WHERE id = %L', r.trust_case)) = 1,
+    'CV5.1 a recruitment reviewer reads the TRUST case and NOT the vetting: a basis does not widen the restriction');
+  PERFORM pg_temp.ok(pg_temp.n_as(_pnl, _case_sql) = 0,
+    'CV5.2 nor does a member of the vetting case''s panel who is not appointed to the security function');
+  PERFORM pg_temp.become(_pnl); SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.ok(NOT public.scp_iv_can_read_case(r.vet_case) AND NOT public.scp_iv_can_write_case(r.vet_case),
+    'CV5.3 the read and write predicates agree for the panel member');
+  RESET ROLE; PERFORM pg_temp.nobody();
+  PERFORM pg_temp.ok(pg_temp.n_as(_rev_off, _case_sql) = 1,
+    'CV5.4 a reviewer who is ALSO appointed to the security function reads the vetting case: a basis AND the appointment');
+  PERFORM pg_temp.ok(pg_temp.n_as(r.owner, _corr_sql) = 0 AND pg_temp.n_as(_rev, _corr_sql) = 0 AND pg_temp.n_as(_pnl, _corr_sql) = 0
+                     AND pg_temp.n_as(r.member, _corr_sql) = 0,
+    'CV5.5 the candidate''s corrections on the vetting case are read by none of the owner, a reviewer, a panel member or a plain member');
+  PERFORM pg_temp.ok(pg_temp.n_as(r.officer, _corr_sql) = 1 AND pg_temp.n_as(_rev_off, _corr_sql) = 1 AND pg_temp.n_as(r.cand, _corr_sql) = 1,
+    'CV5.6 and are read by the security function that opened the case, the reviewer-officer, and the candidate who wrote them');
 END $$;
 
 

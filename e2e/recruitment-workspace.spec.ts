@@ -547,6 +547,14 @@ test.describe("recruitment case", () => {
     await open(kim, "/jobs/nordvakt-vaktare-uppsala-uat4");
     await kim.getByRole("button", { name: "Ansök om jobbet" }).click({ timeout: 60_000 });
     const dialog = kim.getByRole("dialog");
+    // The vacancy's questions load AFTER the dialog opens, and `evaluateAll`
+    // does not wait: enumerated while they were still loading, it found no
+    // radio group, answered nothing, and the dialog rightly refused the
+    // submission ("Frågan måste besvaras"). Wait for the loaded state first:
+    // the legend renders only once the questions have arrived, and a visible
+    // radio group means an empty list can never pass as "nothing to answer".
+    await expect(dialog.getByText("Frågor från arbetsgivaren")).toBeVisible({ timeout: 60_000 });
+    await expect(dialog.getByRole("radiogroup").first()).toBeVisible();
     for (const group of await dialog
       .locator("input[type=radio][name^=apply-q-]")
       .evaluateAll((els) => [...new Set(els.map((e) => (e as HTMLInputElement).name))])) {

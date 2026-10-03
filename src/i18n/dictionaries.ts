@@ -221,13 +221,14 @@ export const dictionaries = {
     // translated. "Where trust comes first." stays the brand promise and
     // closes the page (§6), not the hero. scripts/brand-messaging-check.ts
     // guards both.
-    "home.hero.title": "Security careers, without limits.",
+    "home.hero.title": "Din karriär, din kompetens, ditt säkerhetsarbete.",
+    "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Upptäck din riktning, bygg ditt Security Passport, hitta nästa möjlighet och utveckla din karriär inom säkerhet – lokalt eller internationellt. För arbetsgivare samlar CQrityjob verktygen för att hitta, bedöma och rekrytera säkerhetskompetens på samma plats.",
+      "Jobb, kompetens, Security Passport och AI-stöd för ditt säkerhetsarbete. Rekryteringsverktyg för arbetsgivare – på samma plats.",
     "home.hero.audience.label": "Välj var du vill börja",
     "home.hero.individual.title": "För dig i säkerhetsbranschen",
     "home.hero.individual.body":
-      "Utveckla din karriär, hitta jobb, bygg ditt Security Passport och få stöd i säkerhetsarbetet.",
+      "Hitta jobb, utveckla din kompetens, bygg ditt Security Passport och utforska AI-stöd för ditt säkerhetsarbete.",
     "home.hero.employer.title": "För arbetsgivare",
     "home.hero.employer.body":
       "Hitta, bedöm och rekrytera säkerhetskompetens – lokalt eller internationellt.",
@@ -1585,6 +1586,23 @@ export const dictionaries = {
     "cd.public.checkFailedBody":
       "Vi kunde inte kontrollera om karriäranalysen är öppen just nu. Det kan bero på din uppkoppling eller på ett tillfälligt fel hos oss. Försök igen.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
+    // ── STÄNGD, OCH VARFÖR ──────────────────────────────────────────
+    // Tre olika sanna meningar i stället för en som inte stämmer på någon:
+    // pausad för alla, inte öppen för just det här kontot (testgruppen), och
+    // instrumentet självt otillgängligt. Se ClosedAnalysisPanel.
+    "cd.public.paused.title": "Karriäranalysen är pausad just nu",
+    "cd.public.paused.body":
+      "Vi har pausat karriäranalysen en stund. Just nu kan ingen starta den, få ett resultat sammanställt eller spara ett. Du kan fortfarande utforska yrken och jobb.",
+    "cd.public.account.title": "Karriäranalysen är inte öppen för ditt konto än",
+    "cd.public.account.body":
+      "Just nu är karriäranalysen öppen för en begränsad testgrupp bland inloggade konton, och ditt konto ingår inte. Det du redan har sparat ligger kvar, och du kan fortsätta utforska yrken, jobb och ditt Security Passport.",
+    // Var ett färdigt resultat finns kvar medan det är stängt.
+    "cd.public.keep.claim":
+      "Ditt färdiga resultat ligger kvar i den här webbläsaren till och med {date}. Det sparas till ditt konto när karriäranalysen har öppnat igen: spara den här sidans adress, eller öppna länken i ditt bekräftelsemejl en gång till.",
+    "cd.public.keep.tab":
+      "Dina svar finns kvar i den här fliken så länge du låter den vara öppen. Kom tillbaka hit när karriäranalysen har öppnat igen.",
+    "cd.public.next.jobs": "Se lediga jobb",
+    "cd.public.next.passport": "Öppna Security Passport",
     "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
       "Svara på frågor om hur du vill arbeta och vad som motiverar dig. Du får en karriäranalys med förklarade yrkesförslag att utforska vidare.",
@@ -3024,6 +3042,8 @@ export const dictionaries = {
     "employer.join.submit": "Skicka begäran",
     "employer.join.sending": "Skickar…",
     "employer.join.error": "Begäran kunde inte skickas. Försök igen.",
+    "employer.join.blocked":
+      "Din åtkomst till den här organisationen har pausats eller avslutats av en plattformsadministratör, så du kan inte begära åtkomst på nytt. Kontakta supporten om du tror att det är ett misstag.",
     "employer.join.sentHeading": "Begäran skickad",
     "employer.join.sentBody":
       "En ägare eller administratör i organisationen får se din begäran och väljer roll när den godkänns. Du ser organisationen i din arbetsyta så snart den är godkänd.",
@@ -3031,7 +3051,7 @@ export const dictionaries = {
     "employer.join.noOrgBody":
       "Länken är ofullständig. Be den som bjöd in dig att skicka den igen från Organisation → Team & behörigheter.",
     "employer.team.lede":
-      "Vilka som tillhör organisationen, och vilka av dem som får granska inlämnade svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
+      "Vilka som tillhör organisationen, och vilka av dem som får granska inlämnade svar. Granskningsbehörighet ger tillgång till fritextsvar och till resultat och rapporter för användningsområdet, och beviljas per person. Den som bara är medlem ser inga resultat, om hen inte också är ansvarig rekryterare för en tjänst.",
     "employer.team.separationNotice":
       "Den som tilldelade en bedömning får aldrig granska samma bedömning, och ingen granskar sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
     "employer.team.loadError": "Teamet kunde inte hämtas.",
@@ -3054,6 +3074,8 @@ export const dictionaries = {
     "employer.team.grantBoth": "Ge behörighet – båda",
     "employer.team.revoke": "Återkalla",
     "employer.team.actionError": "Behörigheten kunde inte ändras.",
+    "employer.team.requests.reactivationRefused":
+      "Den här personens åtkomst har pausats eller avslutats av en plattformsadministratör och kan inte återställas genom att godkänna en begäran. Neka begäran. Bara en plattformsadministratör kan återställa åtkomsten.",
     "employer.settings.loadError": "Kunde inte läsa in organisationsuppgifter.",
     "employer.settings.field.name": "Företagsnamn",
     "employer.settings.field.website": "Webbplats",
@@ -4241,6 +4263,26 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Något gick fel när uppgifterna skulle hämtas. Inga uppgifter har ändrats. Försök igen — om det upprepas, hör av dig till oss.",
     "academy.error.retry": "Försök igen",
+    // Who may read results: the honest state for an ordinary member of an
+    // organisation, in place of an empty list that reads as "no candidates".
+    "reportAccess.results.title": "Du har inte tillgång till resultat i den här organisationen",
+    "reportAccess.results.body":
+      "Resultat, kandidatunderlag och listor över testade personer visas för ägare och administratörer, för den som har fått behörighet att granska för användningsområdet och för den som är ansvarig rekryterare för en tjänst. Listan är inte tom — du har bara inte rätt att se den. Inget är fel på ditt konto.",
+    "reportAccess.workforce.title": "Du har inte tillgång till medarbetarnas utvecklingsresultat",
+    "reportAccess.workforce.body":
+      "Medarbetarnas utbildningsstatus och bedömningar visas för ägare och administratörer och för den som har fått behörighet att granska medarbetarbedömningar. Listan är inte tom — du har bara inte rätt att se den. Inget är fel på ditt konto.",
+    "reportAccess.interviews.title": "Du har inte tillgång till organisationens intervjuer",
+    "reportAccess.interviews.body":
+      "Du ser de intervjuer du själv har skapat eller är med i panelen för, och alla intervjuer om du är ägare eller administratör, har granskarbehörighet för rekrytering eller är ansvarig rekryterare för tjänsten. Just nu finns ingen intervju du har rätt att öppna.",
+    "reportAccess.ask":
+      "Be en ägare eller administratör i organisationen om åtkomst om du behöver den.",
+    "reportAccess.card.results":
+      "Du har inte tillgång till resultaten här. Be en ägare eller administratör om åtkomst.",
+    "reportAccess.card.interviews":
+      "Det finns ingen intervju du har rätt att öppna. Be en ägare eller administratör om åtkomst.",
+    "reportAccess.application.title": "Resultat visas inte för dig",
+    "reportAccess.application.body":
+      "Du har inte tillgång till resultat i den här organisationen, så vi kan inte säga om ett test har skickats eller besvarats. Be en ägare eller administratör om åtkomst.",
     // Purpose-NEUTRAL. The old copy hardcoded "för kompetensutveckling", which
     // was simply untrue for a recruitment assessment — and the card can hold
     // both kinds at once. Each row names its own governed purpose instead.
@@ -9205,16 +9247,17 @@ export const dictionaries = {
     //
     // The public homepage: see the Swedish block for its six sections.
     // The locked hero: the same English sentence in both languages.
-    "home.hero.title": "Security careers, without limits.",
+    "home.hero.title": "Your career, your expertise, your security work.",
+    "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Discover your direction, build your Security Passport, find your next opportunity and develop your security career – locally or internationally. For employers, CQrityjob brings together the tools to find, assess and recruit security professionals in one place.",
+      "Jobs, expertise, Security Passport and AI support for your security work. Recruitment tools for employers – all in one place.",
     "home.hero.audience.label": "Choose where to start",
-    "home.hero.individual.title": "For people in security",
+    "home.hero.individual.title": "For security professionals",
     "home.hero.individual.body":
-      "Develop your career, find jobs, build your Security Passport and get support in your security work.",
+      "Find jobs, develop your expertise, build your Security Passport and explore AI support for your security work.",
     "home.hero.employer.title": "For employers",
     "home.hero.employer.body":
-      "Find, assess and recruit security professionals – locally or internationally.",
+      "Find, assess and recruit security talent – locally or internationally.",
     "home.hero.video.pause": "Pause the background film",
     "home.hero.video.play": "Play the background film",
 
@@ -10435,6 +10478,23 @@ export const dictionaries = {
     "cd.public.checkFailedBody":
       "We could not check whether the career analysis is open right now. It may be your connection or a temporary fault on our side. Please try again.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
+    // ── CLOSED, AND WHY ─────────────────────────────────────────────
+    // Three different true sentences instead of one that fits none: paused
+    // for everyone, not open to this particular account (the test group), and
+    // the instrument itself unavailable. See ClosedAnalysisPanel.
+    "cd.public.paused.title": "The career analysis is paused right now",
+    "cd.public.paused.body":
+      "We have paused the career analysis for a while. Right now nobody can start it, have a result built or save one. You can still explore professions and jobs.",
+    "cd.public.account.title": "The career analysis is not open to your account yet",
+    "cd.public.account.body":
+      "Right now the career analysis is open to a limited test group among signed-in accounts, and your account is not in it. What you have already saved is still there, and you can keep exploring professions, jobs and your Security Passport.",
+    // Where a finished result is still held while it is closed.
+    "cd.public.keep.claim":
+      "Your finished result is kept in this browser until {date}. It is saved to your account once the career analysis has opened again: keep this page's address, or open the link in your confirmation e-mail once more.",
+    "cd.public.keep.tab":
+      "Your answers are kept in this tab for as long as you leave it open. Come back here once the career analysis has opened again.",
+    "cd.public.next.jobs": "See open jobs",
+    "cd.public.next.passport": "Open Security Passport",
     "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
       "Answer questions about how you prefer to work and what motivates you. Get a career analysis with explained role suggestions to explore further.",
@@ -11766,6 +11826,8 @@ export const dictionaries = {
     "employer.join.submit": "Send request",
     "employer.join.sending": "Sending…",
     "employer.join.error": "The request could not be sent. Please try again.",
+    "employer.join.blocked":
+      "Your access to this organisation was suspended or ended by a platform administrator, so you cannot request access again. Contact support if you think this is a mistake.",
     "employer.join.sentHeading": "Request sent",
     "employer.join.sentBody":
       "An owner or administrator in the organisation will see your request and chooses your role when approving it. The organisation appears in your workspace as soon as it is approved.",
@@ -11773,7 +11835,7 @@ export const dictionaries = {
     "employer.join.noOrgBody":
       "This link is incomplete. Ask whoever invited you to send it again from Organisation → Team & permissions.",
     "employer.team.lede":
-      "Who belongs to the organisation, and which of them may review submitted responses. Review authorisation grants access to free-text answers and is granted per person.",
+      "Who belongs to the organisation, and which of them may review submitted responses. Review authorisation grants access to free-text answers and to the results and reports for the use case, and is granted per person. A plain member sees no results unless they are also the responsible recruiter of a vacancy.",
     "employer.team.separationNotice":
       "Whoever assigned an assessment may never review that same assessment, and nobody reviews their own response. For recruitment the reviewer must also sit outside the hiring chain for that candidate.",
     "employer.team.loadError": "The team could not be loaded.",
@@ -11796,6 +11858,8 @@ export const dictionaries = {
     "employer.team.grantBoth": "Authorise – both",
     "employer.team.revoke": "Revoke",
     "employer.team.actionError": "The authorisation could not be changed.",
+    "employer.team.requests.reactivationRefused":
+      "This person's access was suspended or ended by a platform administrator and cannot be restored by approving a request. Deny the request. Only a platform administrator can restore access.",
     "employer.settings.loadError": "Could not load organisation details.",
     "employer.settings.field.name": "Company name",
     "employer.settings.field.website": "Website",
@@ -12935,6 +12999,26 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Something went wrong while loading. Nothing has been changed. Please try again — if it keeps happening, contact us.",
     "academy.error.retry": "Try again",
+    // Who may read results: the honest state for an ordinary member of an
+    // organisation, in place of an empty list that reads as "no candidates".
+    "reportAccess.results.title": "You do not have access to results in this organisation",
+    "reportAccess.results.body":
+      "Results, candidate briefs and lists of tested people are shown to owners and administrators, to people who have been given reviewer access for the use case, and to the responsible recruiter of a vacancy. The list is not empty — you are just not entitled to see it. Nothing is wrong with your account.",
+    "reportAccess.workforce.title": "You do not have access to employees' development results",
+    "reportAccess.workforce.body":
+      "Employees' training status and assessments are shown to owners and administrators and to people who have been given reviewer access for workforce assessments. The list is not empty — you are just not entitled to see it. Nothing is wrong with your account.",
+    "reportAccess.interviews.title": "You do not have access to this organisation's interviews",
+    "reportAccess.interviews.body":
+      "You see the interviews you created or are on the panel of, and every interview if you are an owner or administrator, hold reviewer access for recruitment, or are the responsible recruiter of the vacancy. There is no interview you are entitled to open right now.",
+    "reportAccess.ask":
+      "Ask an owner or administrator of the organisation for access if you need it.",
+    "reportAccess.card.results":
+      "You do not have access to the results here. Ask an owner or administrator for access.",
+    "reportAccess.card.interviews":
+      "There is no interview you are entitled to open. Ask an owner or administrator for access.",
+    "reportAccess.application.title": "Results are not shown to you",
+    "reportAccess.application.body":
+      "You do not have access to results in this organisation, so we cannot tell whether a test has been sent or answered. Ask an owner or administrator for access.",
     "academy.myWork.title": "Your assessments",
     "academy.myWork.lede":
       "An organisation has asked you to complete the following. It is not an exam and gives no pass or fail.",

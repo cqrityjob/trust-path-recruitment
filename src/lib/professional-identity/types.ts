@@ -96,7 +96,16 @@ export interface IdentityClaim {
   /** education | training | certification | licence | specialisation |
    *  professional_membership | language | practical_skill */
   readonly claimType: string;
+  /** As stored. For a catalogue credential this is ONE language form of the
+   *  definition's name, and which one depends on the write path (the wallet
+   *  RPC stores `name_en`, the form stores `name_sv`). Render through
+   *  `claimTitleFor`, never directly, on any surface that has a language. */
   readonly title: string;
+  /** The catalogue's own name in each language, when the definition owns the
+   *  title. Null for a holder-written title and for a claim with no
+   *  credential code: then `title` is the only name there is. */
+  readonly catalogueNameSv?: string | null;
+  readonly catalogueNameEn?: string | null;
   readonly issuerName: string | null;
   readonly issuedOn: string | null;
   readonly validUntil: string | null;
@@ -364,4 +373,17 @@ export function claimsOfType(
   types: readonly string[],
 ): readonly IdentityClaim[] {
   return claims.filter((c) => types.includes(c.claimType) && c.lifecycleState === "active");
+}
+
+/** A claim's name in the reader's language.
+ *
+ *  A catalogue credential is named by its definition, so a Swedish CV says
+ *  "Väktarutbildning 1 (VU1)" whatever language form the write path stored.
+ *  Anything the holder named themselves is shown exactly as they wrote it. */
+export function claimTitleFor(
+  claim: Pick<IdentityClaim, "title" | "catalogueNameSv" | "catalogueNameEn">,
+  locale: "sv" | "en",
+): string {
+  const governed = locale === "sv" ? claim.catalogueNameSv : claim.catalogueNameEn;
+  return governed && governed.trim() !== "" ? governed : claim.title;
 }

@@ -18,6 +18,7 @@ import { EmployerAccessDenied } from "@/components/employer/EmployerAccessDenied
 import { useEmployerWorkspace } from "@/lib/job-intelligence/use-employer-workspace";
 import { listInterviewCases } from "@/lib/interview-intelligence/runtime.functions";
 import { listBesktAssignments } from "@/lib/beskt/complete.functions";
+import { ReportAccessNotice, useReportAccess } from "@/components/employer/ReportAccess";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/reports")({
   ssr: false,
@@ -52,6 +53,9 @@ function EmployerReportsPage() {
     enabled: Boolean(employerId),
     retry: false,
   });
+  // See the interview overview: only a CONFIRMED "no case to open" replaces the
+  // empty list, which would otherwise read as "no reports".
+  const noCases = useReportAccess(employerId).stateFor("interviews") === "none";
 
   if (ws.isLoading) {
     return (
@@ -81,7 +85,11 @@ function EmployerReportsPage() {
       </h1>
       <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{t("reports.lede")}</p>
 
-      {cases.isError ? (
+      {noCases ? (
+        <div className="mt-6">
+          <ReportAccessNotice need="interviews" />
+        </div>
+      ) : cases.isError ? (
         <p role="alert" className="mt-6 rounded-md border border-border px-4 py-3 text-sm">
           {t("reports.readFailed")}
         </p>

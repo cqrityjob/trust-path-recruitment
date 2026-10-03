@@ -76,6 +76,7 @@ import { cvApplicationBlock, type CvApplicationBlock } from "./application-sourc
 import {
   applyPersonEdit,
   buildSavedCvDocument,
+  factualStoredPresentation,
   storedContactSchema,
   storedPresentationSchema,
   type StoredPresentation,
@@ -551,6 +552,25 @@ export const createMyCv = createServerFn({ method: "POST" })
       return { cvId: "", savedAt: "", replayed: false, violations };
     }
 
+    // A factual CV (no draft accepted) is stored with its employments in
+    // the bundle's order. Storing `{}` left the order empty, and every saved
+    // CV then showed no employment at all (production, 2026-10-03). The
+    // bundle is built from the same allowlist the database derives the facts
+    // from; the database still drops any id it does not recognise.
+    // The headline stays empty, so it keeps following the profile as before.
+    const presentation = data.presentation ?? {
+      ...factualStoredPresentation(
+        buildCvSourceBundle({
+          identity: await readProfessionalIdentity(supabase, userId),
+          locale: data.locale,
+          includeCareerInsight: data.includeCareerInsight,
+          targetJobText: data.purpose === "targeted" ? data.targetJobText : null,
+          includedIds: data.includedIds,
+        }),
+      ),
+      headline: "",
+    };
+
     const { data: result, error } = await supabase.rpc("cv_create", {
       _operation_id: data.operationId,
       _title: data.title.trim(),
@@ -560,7 +580,7 @@ export const createMyCv = createServerFn({ method: "POST" })
       _include_career_insight: data.includeCareerInsight,
       _included_ids: [...data.includedIds],
       _contact: data.contact,
-      _presentation: data.presentation ?? {},
+      _presentation: presentation,
       _provider_mode: data.providerMode,
       _model_id: data.modelId,
     });

@@ -14,6 +14,7 @@ import {
   type Profession,
 } from "@/lib/career-center";
 import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
+import { useCareerAnalysisOpen } from "@/components/career-discovery/use-career-analysis-open";
 import { ProfessionInfoAction } from "./ProfessionInfoAction";
 import { NextProfessionCard } from "./NextProfessionCard";
 import { ProfessionCard } from "./ProfessionCard";
@@ -502,6 +503,11 @@ function UnsupportedRole({
   onProfessionOpen?: (href: string) => void;
 }) {
   const { t, lang } = useT();
+  // An unsupported role is one the reader SAVED in their profile, so they are
+  // signed in. The analysis link below is a door into the canonical route and
+  // asks the one availability hook the route asks: withdrawn on a definite
+  // "closed", kept while the answer is unknown.
+  const analysisOpen = useCareerAnalysisOpen(true);
   const label =
     (lang === "sv" ? origin.labelSv : origin.labelEn) ?? t("cc.path.unsupported.unnamed");
   const inCatalogue = origin.info.kind !== "none";
@@ -533,12 +539,14 @@ function UnsupportedRole({
           />
         ) : (
           <>
-            <Link
-              to="/security-career-assessment"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              {t("cc.me.invite.cta")}
-            </Link>
+            {analysisOpen !== false && (
+              <Link
+                to="/security-career-assessment"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-primary px-5 text-sm font-semibold text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("cc.me.invite.cta")}
+              </Link>
+            )}
             <a
               href={`#${listAnchor}`}
               className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
