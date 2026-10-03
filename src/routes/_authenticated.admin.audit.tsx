@@ -45,6 +45,10 @@ const FILTERABLE_ACTIONS = [
   "platform_role_revoked",
   "assignment_cancelled",
   "job_deleted",
+  // The certification catalogue: a research decision and the answer to a
+  // holder's request for a missing certification (20270206090000).
+  "catalogue_research_decided",
+  "catalogue_request_resolved",
 ] as const;
 
 function AdminAuditPage() {

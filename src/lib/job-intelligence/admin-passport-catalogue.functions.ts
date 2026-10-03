@@ -94,7 +94,7 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
       db
         .from("sp_credential_types")
         .select(
-          "code,name_sv,name_en,claim_type,category,scope_code,market_pack_code,jurisdiction_code,sub_jurisdiction_code,is_active,pilot_state,legal_review_state,requires_scope,authority_id,sort_order",
+          "code,name_sv,name_en,claim_type,category,scope_code,market_pack_code,jurisdiction_code,sub_jurisdiction_code,is_active,pilot_state,legal_review_state,requires_scope,authority_id,sort_order,effective_to",
         )
         .order("sort_order", { ascending: true }),
       db
@@ -130,6 +130,12 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
       ((issuers.data ?? []) as Row[])
         .filter((i) => i.is_active)
         .map((i) => [i.id as string, i.display_name as string]),
+    );
+    const today = new Date().toISOString().slice(0, 10);
+    const retiredByDefinition = new Set(
+      ((definitions.data ?? []) as Row[])
+        .filter((d) => typeof d.retired_on === "string" && (d.retired_on as string) <= today)
+        .map((d) => d.credential_code as string),
     );
     const definitionIssuer = new Map(
       ((definitions.data ?? []) as Row[]).map((d) => [
@@ -193,6 +199,9 @@ export const adminListPassportCatalogue = createServerFn({ method: "POST" })
         legalReviewState: (t.legal_review_state as string | null) ?? null,
         requiresScope: t.requires_scope === true,
         deprecated: deprecated.has(code),
+        retired:
+          retiredByDefinition.has(code) ||
+          (typeof t.effective_to === "string" && (t.effective_to as string) <= today),
         governedAuthority: t.authority_id
           ? (authorityName.get(t.authority_id as string) ?? null)
           : null,

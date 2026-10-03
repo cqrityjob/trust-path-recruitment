@@ -39,6 +39,7 @@ const STATE: Record<string, string> = {
   selectable_public_pilot: "public pilot (not approved) · every signed-in holder, no grant",
   awaiting_definition_approval: "NOT approved · pilot market",
   market_closed: "market CLOSED",
+  retired: "RETIRED · cannot be registered again",
   blocked: "BLOCKED",
 };
 // The legal review, beside availability and never inside it: a public pilot
