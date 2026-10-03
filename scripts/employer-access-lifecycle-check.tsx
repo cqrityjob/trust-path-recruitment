@@ -336,6 +336,18 @@ for (const lang of ["sv", "en"] as const) {
   );
   ck(`${lang}: a removed member offers only reactivate`, actionsOf("m4") === "reactivate");
   ck(
+    `${lang}: every action button names the person it acts on (a column of identical 'Remove' buttons is not usable by a screen reader)`,
+    rowOf("m2").includes(
+      `aria-label="${esc(d["admin.employers.members.action.suspend"])}: Maja Medlem"`,
+    ) &&
+      rowOf("m2").includes(
+        `aria-label="${esc(d["admin.employers.members.action.role"])}: Maja Medlem"`,
+      ) &&
+      rowOf("m4").includes(
+        `aria-label="${esc(d["admin.employers.members.action.reactivate"])}: Rut Borttagen"`,
+      ),
+  );
+  ck(
     `${lang}: the only active owner is labelled as such`,
     rowOf("m1").includes(esc(d["admin.employers.members.onlyOwner"])) &&
       !rowOf("m2").includes(esc(d["admin.employers.members.onlyOwner"])),

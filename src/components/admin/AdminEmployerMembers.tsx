@@ -241,6 +241,7 @@ export function AdminEmployerMembers({
                           size="sm"
                           variant={action === "reactivate" ? "outline" : "destructive"}
                           data-action={action}
+                          aria-label={`${t(ACTION_LABEL[action])}: ${nameOf(m)}`}
                           onClick={() => open({ kind: "status", action, member: m })}
                         >
                           {t(ACTION_LABEL[action])}
@@ -252,6 +253,7 @@ export function AdminEmployerMembers({
                           size="sm"
                           variant="outline"
                           data-action="role"
+                          aria-label={`${t("admin.employers.members.action.role")}: ${nameOf(m)}`}
                           onClick={() => open({ kind: "role", member: m })}
                         >
                           {t("admin.employers.members.action.role")}
