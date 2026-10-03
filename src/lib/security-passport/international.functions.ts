@@ -75,7 +75,7 @@ export interface InternationalPassportMetadata {
     maintenance_policy_type?: string | null;
     maintenance_cycle_months?: number | null;
   }[];
-  /** `sp_certification_definition_aliases` (20270206090000): a former or alternative
+  /** `sp_certification_definition_aliases` (20270212090000): a former or alternative
    *  name of a definition. Search only, never rendered. Read tolerantly. */
   definitionAliases?: readonly { credential_code: string; alias: string }[];
   /** Approved issuer aliases — search only, never rendered ("(ISC)²"). */

@@ -46,7 +46,7 @@ const FILTERABLE_ACTIONS = [
   "assignment_cancelled",
   "job_deleted",
   // The certification catalogue: a research decision and the answer to a
-  // holder's request for a missing certification (20270206090000).
+  // holder's request for a missing certification (20270212090000).
   "catalogue_research_decided",
   "catalogue_request_resolved",
 ] as const;

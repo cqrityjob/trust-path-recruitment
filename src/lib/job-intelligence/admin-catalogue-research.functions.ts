@@ -19,7 +19,7 @@
 // no service role is involved. The local assertAdmin below is a second,
 // earlier refusal, not the only one.
 //
-// Schema-first: 20270206090000 creates every object used here. Without it the
+// Schema-first: 20270212090000 creates every object used here. Without it the
 // reads answer "unavailable" and nothing is written.
 
 import { createServerFn } from "@tanstack/react-start";

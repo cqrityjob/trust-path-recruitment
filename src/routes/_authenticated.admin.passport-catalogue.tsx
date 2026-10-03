@@ -210,7 +210,7 @@ function PassportCatalogueRoute() {
     };
   }, [load]);
   // The research queue and the requests are read tolerantly: a database that has
-  // not received 20270206090000 yet leaves these two tabs saying so, and the
+  // not received 20270212090000 yet leaves these two tabs saying so, and the
   // definitions tab untouched.
   const refreshResearch = () =>
     loadResearch()

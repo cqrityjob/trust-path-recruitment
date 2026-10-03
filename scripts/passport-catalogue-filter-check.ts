@@ -579,7 +579,7 @@ console.log("\nwhy a definition is, or is not, selectable (the administrator's d
     diagnoseDefinition({ ...publicPilot, governedAuthority: null }).availability === "blocked",
     "D a public pilot does not unblock a structural gap",
   );
-  // A deprecated or end-dated definition is RETIRED (20270206090000 era): not a
+  // A deprecated or end-dated definition is RETIRED (20270212090000 era): not a
   // gap approval could close, and never selectable again whatever the pilot says.
   check(
     diagnoseDefinition({ ...publicPilot, deprecated: true }).availability === "retired" &&

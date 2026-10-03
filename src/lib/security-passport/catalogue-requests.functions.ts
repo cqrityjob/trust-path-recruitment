@@ -1,7 +1,7 @@
 // Security Passport — the holder's side of "I cannot find my certification".
 //
 // Three small server functions over three database functions
-// (20270206090000_sp_catalogue_research_foundation):
+// (20270212090000_sp_catalogue_research_foundation):
 //
 //   searchUnavailableDefinitions   what the research knows of but the catalogue
 //                                  has not approved yet, with a controlled reason

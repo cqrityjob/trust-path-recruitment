@@ -75,7 +75,7 @@ const DOMAIN_LABELS: Record<string, { sv: string; en: string }> = {
   information_security: { sv: "Informationssäkerhet", en: "Information security" },
   investigation: { sv: "Utredning", en: "Investigation" },
   financial_crime: { sv: "Finansiell brottslighet", en: "Financial crime" },
-  // 20270206090000: the research integration's areas.
+  // 20270212090000: the research integration's areas.
   insurance: { sv: "Försäkring", en: "Insurance" },
   risk_compliance: { sv: "Risk och regelefterlevnad", en: "Risk and compliance" },
   resilience_safety: { sv: "Resiliens och säkerhet", en: "Resilience and safety" },

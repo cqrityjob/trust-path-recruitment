@@ -12,7 +12,7 @@
 // scripts/negative-controls/passport-catalogue-admin-controls.ts proves each
 // assertion fails when its rule is broken.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -34,6 +34,16 @@ import { CREDENTIAL_CLASSES } from "../src/lib/security-passport/international";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
+
+/** The research foundation migration, found by name: its version is a release-order
+ *  fact (it was renumbered once when main took the version before it), not a constant. */
+function foundationMigration(): string {
+  const name = readdirSync(path.join(root, "supabase/migrations")).find((f) =>
+    f.endsWith("_sp_catalogue_research_foundation.sql"),
+  );
+  if (!name) throw new Error("the research foundation migration is missing");
+  return `supabase/migrations/${name}`;
+}
 const failures: string[] = [];
 let passed = 0;
 function check(condition: boolean, label: string) {
@@ -48,7 +58,7 @@ function check(condition: boolean, label: string) {
 
 const FNS = "src/lib/job-intelligence/admin-catalogue-research.functions.ts";
 const fns = read(FNS);
-const sql = read("supabase/migrations/20270206090000_sp_catalogue_research_foundation.sql");
+const sql = read(foundationMigration());
 
 console.log(
   "\n1 · the server functions are administrator-only and use the administrator's own session",

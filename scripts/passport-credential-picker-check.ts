@@ -68,6 +68,16 @@ function check(condition: boolean, label: string) {
 }
 const read = (rel: string) => readFileSync(path.join(root, rel), "utf8");
 
+/** The research foundation migration, found by name: its version is a release-order
+ *  fact (it was renumbered once when main took the version before it), not a constant. */
+function foundationMigration(): string {
+  const name = readdirSync(path.join(root, "supabase/migrations")).find((f) =>
+    f.endsWith("_sp_catalogue_research_foundation.sql"),
+  );
+  if (!name) throw new Error("the research foundation migration is missing");
+  return `supabase/migrations/${name}`;
+}
+
 // ── The fixture ──────────────────────────────────────────────────────────
 
 const ISSUERS = {
@@ -575,7 +585,7 @@ console.log(
 
 console.log("\n5 · a missing certification is explained, and can be asked for — nothing more");
 {
-  const sql = read("supabase/migrations/20270206090000_sp_catalogue_research_foundation.sql");
+  const sql = read(foundationMigration());
   const vocabulary =
     /holder_reason\s+text CHECK \(holder_reason IN\s*\(([^)]*)\)/.exec(sql)?.[1] ?? "";
   const inSql = [...vocabulary.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();

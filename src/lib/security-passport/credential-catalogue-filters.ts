@@ -87,7 +87,7 @@ export interface CatalogueFilterSource {
   }[];
   /**
    * `sp_certification_definition_aliases`: former and alternative names of a
-   * DEFINITION (20270206090000). Search only, never rendered: whatever matched,
+   * DEFINITION (20270212090000). Search only, never rendered: whatever matched,
    * the holder is shown the governed name.
    */
   readonly definitionAliases?: readonly {
