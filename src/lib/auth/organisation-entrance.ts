@@ -38,6 +38,20 @@
 import { safeReturnPath } from "./safe-redirect";
 
 /**
+ * The ONE spelling of "register a company": `/signup` carrying `/employer` as
+ * its return destination. The homepage's employer band, the public header's
+ * "För arbetsgivare" menu and compact sheet, the footer and the legacy
+ * `/employer/register` URL all hand this to the same one door, so none of them
+ * can drift into a bare `/signup` that silently drops the intent (the
+ * defect the header entry guard now pins).
+ *
+ * It selects a destination and, through `registrationTargetsOrganisation`
+ * below, a form default. It is an intent, never a role: `/employer` resolves
+ * real organisation membership server-side on every load.
+ */
+export const EMPLOYER_INTENT = { redirect: "/employer" } as const;
+
+/**
  * True when this registration should open the organisation section.
  *
  * Reads the ALREADY VALIDATED return path rather than a second, unvalidated

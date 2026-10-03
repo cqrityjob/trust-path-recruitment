@@ -105,8 +105,23 @@ export const dictionaries = {
     "nav.testsAndDevelopment": "Tester och utveckling",
     "nav.reviews": "Granskningar",
     "appnav.aria": "Primär navigering",
+    // The public header's navigation landmark (desktop bar and compact menu).
+    // e2e finds it by `data-site-nav="primary"`, never by this text.
+    "nav.primary": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
     "nav.menu.close": "Stäng menyn",
+    // The root's two fallback screens (components/site/RootFallbacks.tsx): the
+    // 404 and the error boundary. They can render outside the I18nProvider
+    // after a hard crash, so they read the dictionary through useTolerantT().
+    // "Sidan kunde inte laddas" / "Försök igen" are what the e2e specs already
+    // look for beside their English forms.
+    "root.notFound.title": "Sidan hittades inte",
+    "root.notFound.body": "Sidan du söker finns inte eller har flyttats.",
+    "root.goHome": "Till startsidan",
+    "root.error.title": "Sidan kunde inte laddas",
+    "root.error.body":
+      "Något gick fel hos oss. Du kan försöka igen eller gå tillbaka till startsidan.",
+    "root.error.retry": "Försök igen",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
@@ -148,6 +163,18 @@ export const dictionaries = {
     "meta.contact.title": "Kontakta oss om rekrytering – CQrityjob",
     "meta.passportPage.title": "Security Passport – dina meriter inom säkerhet – CQrityjob",
     "meta.securityWorkPage.title": "Säkerhetsarbete – stöd för ditt säkerhetsarbete – CQrityjob",
+    // The auth surfaces and the profession guide. The server renders the
+    // Swedish pair; useLocalizedHead() (or the guide's own effect) swaps in
+    // English on the client, so the tab says what the page says.
+    "meta.login.title": "Logga in – CQrityjob",
+    "meta.login.description":
+      "Logga in på CQrityjob – din professionella identitet, karriärutveckling och verifierade meriter på ett ställe.",
+    "meta.signup.title": "Skapa konto – CQrityjob",
+    "meta.signup.description":
+      "Skapa ett CQrityjob-konto – ett konto för din professionella profil, Security Passport, bedömningar och jobbansökningar.",
+    "meta.resetPassword.title": "Återställ ditt lösenord – CQrityjob",
+    "meta.profession.title": "{profession} — yrkesguide | CQrityjob",
+    "meta.profession.unavailable.title": "Yrkesguide — CQrityjob",
 
     // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
     //
@@ -537,6 +564,8 @@ export const dictionaries = {
     "jobs.card.today": "Idag",
     "jobs.card.posted_days_ago": "Publicerad för {n} dagar sedan",
     "jobs.detail.back": "← Tillbaka till jobben",
+    // The tab title of an ad that carries no title of its own in either language.
+    "jobs.detail.titleFallback": "Säkerhetsjobb",
     "jobs.detail.backToResults": "← Tillbaka till jobben",
     "jobs.detail.apply_external": "Ansök på arbetsgivarens webbplats",
     "jobs.detail.apply_email": "Ansök via e-post",
@@ -694,6 +723,11 @@ export const dictionaries = {
     "employers.cta.how": "Så fungerar det",
     "employers.cta.loginLead": "Har ni redan ett konto?",
     "employers.cta.login": "Logga in",
+    // Said next to "Registrera företag", because registering is not the same
+    // as being able to use the platform: an administrator approves the
+    // organisation first. Same facts as auth.unified.organisation.note.
+    "employers.cta.registerNote":
+      "En administratör granskar företaget innan arbetsgivarytan öppnas.",
 
     "employers.platform.eyebrow": "Arbetsgivarplattformen",
     "employers.path.title": "Hela rekryteringen på ett ställe",
@@ -848,7 +882,7 @@ export const dictionaries = {
     "contact.checking": "Kontrollerar formuläret …",
     "contact.closed.title": "Formuläret är tillfälligt stängt",
     "contact.closed.body":
-      "Vi kan inte ta emot förfrågningar via formuläret just nu. Mejla oss i stället, så svarar vi. Vill ni komma igång direkt kan ni också registrera företaget och använda plattformen själva.",
+      "Vi kan inte ta emot förfrågningar via formuläret just nu. Mejla oss i stället, så svarar vi. Vill ni komma igång direkt kan ni också registrera företaget. Arbetsgivarytan öppnas först när en administratör har godkänt det.",
     "contact.direct.lead": "Ni kan också mejla oss direkt:",
     "contact.platform.lead": "Vill ni hellre använda plattformen själva?",
 
@@ -8948,8 +8982,15 @@ export const dictionaries = {
     "nav.testsAndDevelopment": "Assessments and development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
+    "nav.primary": "Primary navigation",
     "nav.menu.open": "Open menu",
     "nav.menu.close": "Close menu",
+    "root.notFound.title": "Page not found",
+    "root.notFound.body": "The page you're looking for doesn't exist or has been moved.",
+    "root.goHome": "Go home",
+    "root.error.title": "This page didn't load",
+    "root.error.body": "Something went wrong on our end. You can try again or head back home.",
+    "root.error.retry": "Try again",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
@@ -8979,6 +9020,15 @@ export const dictionaries = {
     "meta.contact.title": "Contact us about recruitment – CQrityjob",
     "meta.passportPage.title": "Security Passport – your credentials in security – CQrityjob",
     "meta.securityWorkPage.title": "Security work – support for your security work – CQrityjob",
+    "meta.login.title": "Sign in – CQrityjob",
+    "meta.login.description":
+      "Log in to CQrityjob – your professional identity, career development and verified credentials in one place.",
+    "meta.signup.title": "Create account – CQrityjob",
+    "meta.signup.description":
+      "Create a CQrityjob account – one account for your professional profile, Security Passport, assessments and job applications.",
+    "meta.resetPassword.title": "Reset your password – CQrityjob",
+    "meta.profession.title": "{profession} — career guide | CQrityjob",
+    "meta.profession.unavailable.title": "Career guide — CQrityjob",
 
     "cta.passport": "Create my Security Passport",
     "cta.assessment": "Start the Career Analysis",
@@ -9298,6 +9348,7 @@ export const dictionaries = {
     "jobs.card.today": "Today",
     "jobs.card.posted_days_ago": "Posted {n} days ago",
     "jobs.detail.back": "← Back to jobs",
+    "jobs.detail.titleFallback": "Security job",
     "jobs.detail.backToResults": "← Back to jobs",
     "jobs.detail.apply_external": "Apply on the employer's website",
     "jobs.detail.apply_email": "Apply by email",
@@ -9446,6 +9497,8 @@ export const dictionaries = {
     "employers.cta.how": "How it works",
     "employers.cta.loginLead": "Already have an account?",
     "employers.cta.login": "Sign in",
+    "employers.cta.registerNote":
+      "An administrator reviews the organisation before the employer workspace opens.",
 
     "employers.platform.eyebrow": "The employer platform",
     "employers.path.title": "The whole recruitment in one place",
@@ -9591,7 +9644,7 @@ export const dictionaries = {
     "contact.checking": "Checking the form …",
     "contact.closed.title": "The form is temporarily closed",
     "contact.closed.body":
-      "We cannot receive enquiries through the form right now. Email us instead and we will reply. If you want to get started straight away, you can also register your organisation and use the platform yourselves.",
+      "We cannot receive enquiries through the form right now. Email us instead and we will reply. If you want to get started straight away, you can also register your organisation. The employer workspace opens only once an administrator has approved it.",
     "contact.direct.lead": "You can also email us directly:",
     "contact.platform.lead": "Would you rather use the platform yourselves?",
 

@@ -14,12 +14,18 @@
 // `redirect` cannot bounce a visitor between them.
 
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { dictionaries } from "@/i18n/dictionaries";
 import { unifiedAuthHref } from "@/lib/auth/legacy-entry";
 
 export const Route = createFileRoute("/auth")({
   // Resolve this URL-only redirect on the server before client hydration.
+  // It renders nothing, so its head is never read by a person; it takes the
+  // same words as /login instead of a copy of them.
   head: () => ({
-    meta: [{ title: "Logga in — CQrityjob" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [
+      { title: dictionaries.sv["meta.login.title"] },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
   }),
   beforeLoad: ({ location }) => {
     const searchStr = location.searchStr ?? "";

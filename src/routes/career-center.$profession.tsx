@@ -1,7 +1,9 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
+import { dictionaries } from "@/i18n/dictionaries";
 import { getPublishedProfession, professionInfoDestination } from "@/lib/career-center";
 import { ProfessionTemplate } from "@/components/career-center/ProfessionTemplate";
 import { siteUrl } from "@/lib/site-origin";
@@ -60,13 +62,18 @@ export const Route = createFileRoute("/career-center/$profession")({
     const p = getPublishedProfession(params.profession);
     if (!p) {
       return {
-        meta: [{ title: "Yrkesguide — CQrityjob" }, { name: "robots", content: "noindex" }],
+        meta: [
+          { title: dictionaries.sv["meta.profession.unavailable.title"] },
+          { name: "robots", content: "noindex" },
+        ],
       };
     }
     // Swedish metadata, for the same reason as the hub: the indexed language
     // is the one this content describes a market for, and the head cannot see
-    // the client-side language toggle. The page body is fully bilingual.
-    const title = `${p.titleSv} — yrkesguide | CQrityjob`;
+    // the client-side language toggle. The page body is fully bilingual, and
+    // ProfessionPage below swaps the tab's title and description to the
+    // reader's language once the page is on the client.
+    const title = dictionaries.sv["meta.profession.title"].replace("{profession}", p.titleSv);
     const url = siteUrl(`/career-center/${p.slug}`);
     return {
       meta: [
@@ -86,8 +93,26 @@ export const Route = createFileRoute("/career-center/$profession")({
 
 function ProfessionPage() {
   const { profession } = Route.useParams();
-  const { t } = useT();
+  const { t, lang } = useT();
   const data = getPublishedProfession(profession);
+
+  // The server's head is Swedish (see `head` above). The tab follows the
+  // reader's language: title always, description when there is a guide. Same
+  // document writes useLocalizedHead() makes, but the strings here depend on
+  // the profession, so they cannot be dictionary keys of their own.
+  useEffect(() => {
+    document.title = data
+      ? t("meta.profession.title").replace(
+          "{profession}",
+          lang === "sv" ? data.titleSv : data.titleEn,
+        )
+      : t("meta.profession.unavailable.title");
+    if (data) {
+      document
+        .querySelector('meta[name="description"]')
+        ?.setAttribute("content", data.description[lang]);
+    }
+  }, [t, lang, data]);
 
   if (!data) {
     return (

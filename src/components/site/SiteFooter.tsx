@@ -2,9 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useSignedIn } from "@/hooks/useSignedIn";
+import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { publicNav } from "./public-nav";
+import { footerExtraNav, publicNav } from "./public-nav";
 
 /** ── THE SITE FOOTER ─────────────────────────────────────────────────────
  *
@@ -37,16 +38,24 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   // The same six destinations as the header, in the same order, then the
-  // recruitment contact page and beta feedback.
+  // contact page and what depends on the reader: footerExtraNav() (public-nav.ts)
+  // offers "Registrera företag" to a signed-out visitor while the employer
+  // portal is released, and Betafeedback to a signed-in reader only (/feedback
+  // is behind the login).
   const links = [
     ...publicNav(signedIn === true).map((item) => ({
       key: item.key,
       to: item.to,
+      search: undefined,
       label: t(item.labelKey),
     })),
-    { key: "contact", to: "/contact", label: t("nav.contact") },
-    { key: "feedback", to: "/feedback", label: t("footer.betaFeedback") },
-  ] as const;
+    ...footerExtraNav({ signedIn, employerPortal: employerPortalEnabled() }).map((item) => ({
+      key: item.key,
+      to: item.to,
+      search: item.search,
+      label: t(item.labelKey),
+    })),
+  ];
 
   return (
     <footer className="no-print border-t border-border bg-background">
@@ -77,6 +86,7 @@ export function SiteFooter() {
                 <li key={l.key}>
                   <Link
                     to={l.to}
+                    search={l.search as never}
                     // 44 x 44, BOTH dimensions. The height was already here;
                     // the width was not, and "Jobb" is a 33px word -- a
                     // 33 x 44 target that the suite used to exempt by

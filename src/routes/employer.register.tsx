@@ -6,16 +6,20 @@
 // authentication implementation living on behind a redirect.
 //
 // The validated `redirect` parameter travels with it; `intent` does not,
-// because there is one door now and intent was never a permission. See
+// because there is one door now and intent was never a permission. What this
+// URL DOES carry is the employer intent every "Registrera företag" entry
+// carries (`/signup?redirect=/employer`): it used to forward to a bare
+// /signup, which turned "register your company" into a personal account with
+// no company in it. See
 // docs/architecture/adr-unified-account-and-professional-identity.md and
 // src/lib/auth/legacy-entry.ts.
 
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { unifiedAuthHref } from "@/lib/auth/legacy-entry";
+import { employerRegisterHref } from "@/lib/auth/legacy-entry";
 
 export const Route = createFileRoute("/employer/register")({
   // Resolve this URL-only redirect on the server before client hydration.
   beforeLoad: ({ location }) => {
-    throw redirect({ href: unifiedAuthHref("signup", location.searchStr ?? ""), replace: true });
+    throw redirect({ href: employerRegisterHref(location.searchStr ?? ""), replace: true });
   },
 });

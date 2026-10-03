@@ -61,7 +61,7 @@ function JobDetailPage() {
   // uses ssr: false and reads data via TanStack Query. Update
   // document.title once the job is loaded so tabs and history reflect it.
   const dynamicTitle = q.data
-    ? `${pickLocalized(q.data.title_sv, q.data.title_en, lang) || "Security job"} — CQrityjob`
+    ? `${pickLocalized(q.data.title_sv, q.data.title_en, lang) || t("jobs.detail.titleFallback")} — CQrityjob`
     : null;
   useEffect(() => {
     if (!dynamicTitle) return;

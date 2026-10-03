@@ -1,5 +1,5 @@
 /**
- * PR-P0a negative controls — six mutations.
+ * PR-P0a negative controls — six mutations, plus five for the control-character layers (2026-10-03).
  *
  * Two prove the token-entry response headers are actually asserted. Four prove
  * that each of the four CR/LF rejection layers in `safeReturnPath` is
@@ -86,6 +86,62 @@ const MUTATIONS: readonly Mutation[] = [
       "export function hasEncodedLineBreak(raw: string): boolean {\n  return raw.length < 0;\n}",
     guard: REDIRECT_GUARD,
     expect: "encoded CR/LF pattern accepted: case 15",
+  },
+  // ── TAB, NUL and the rest of C0, and DEL (2026-10-03) ───────────────────
+  //
+  // "/\t/evil.test" is accepted by every structural check and becomes
+  // "//evil.test" once a URL parser has deleted the TAB. The same four layers
+  // exist for control characters; each is disabled on its own here.
+  {
+    id: "SAFE-REDIRECT-CTRL-RAW",
+    defect:
+      "layer 5 stops seeing a TAB or NUL in the raw value, so '/<TAB>/evil.test' is a return path",
+    file: REDIRECT,
+    find: "export function rawHasControlChar(raw: string): boolean {\n  return CONTROL_CHARS.test(raw);\n}",
+    replace:
+      "export function rawHasControlChar(raw: string): boolean {\n  return raw.length < 0;\n}",
+    guard: REDIRECT_GUARD,
+    expect: "raw TAB accepted",
+  },
+  {
+    id: "SAFE-REDIRECT-CTRL-1",
+    defect: "layer 6 stops inspecting the once-decoded value for a control character",
+    file: REDIRECT,
+    find: "export function decodedOnceHasControlChar(raw: string): boolean {\n  const once = decodeOnceForInspection(raw);\n  if (once === null) return true;\n  return CONTROL_CHARS.test(once);\n}",
+    replace:
+      "export function decodedOnceHasControlChar(raw: string): boolean {\n  return raw.length < 0;\n}",
+    guard: REDIRECT_GUARD,
+    expect: "single-encoded TAB accepted",
+  },
+  {
+    id: "SAFE-REDIRECT-CTRL-2",
+    defect: "layer 7 stops inspecting the twice-decoded value for a control character",
+    file: REDIRECT,
+    find: "export function decodedTwiceHasControlChar(raw: string): boolean {\n  const once = decodeOnceForInspection(raw);\n  if (once === null) return true;\n  const twice = decodeOnceForInspection(once);\n  if (twice === null) return true;\n  return CONTROL_CHARS.test(twice);\n}",
+    replace:
+      "export function decodedTwiceHasControlChar(raw: string): boolean {\n  return raw.length < 0;\n}",
+    guard: REDIRECT_GUARD,
+    expect: "double-encoded TAB accepted",
+  },
+  {
+    id: "SAFE-REDIRECT-CTRL-PATTERN",
+    defect: "layer 8 stops refusing an encoded control character at any depth",
+    file: REDIRECT,
+    find: "export function hasEncodedControlChar(raw: string): boolean {\n  return ENCODED_CONTROL_CHAR.test(raw);\n}",
+    replace:
+      "export function hasEncodedControlChar(raw: string): boolean {\n  return raw.length < 0;\n}",
+    guard: REDIRECT_GUARD,
+    expect: "deeply encoded control pattern accepted",
+  },
+  {
+    id: "SAFE-REDIRECT-CTRL-NOT-CALLED",
+    defect:
+      "safeReturnPath stops consulting the control-character layers, so the predicates exist and nothing uses them",
+    file: REDIRECT,
+    find: "  if (rawHasControlChar(raw)) return fallback;\n  if (decodedOnceHasControlChar(raw)) return fallback;\n  if (decodedTwiceHasControlChar(raw)) return fallback;\n  if (hasEncodedControlChar(raw)) return fallback;\n",
+    replace: "",
+    guard: REDIRECT_GUARD,
+    expect: "control character falls back: a raw TAB makes",
   },
 ];
 

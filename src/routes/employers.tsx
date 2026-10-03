@@ -18,6 +18,7 @@ import { SiteLayout } from "@/components/site/SiteLayout";
 import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
+import { EMPLOYER_INTENT } from "@/lib/auth/organisation-entrance";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
 import { siteUrl } from "@/lib/site-origin";
@@ -154,7 +155,7 @@ function EmployersPage() {
               way in is a plain link under them. */}
           <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             {portalOpen && (
-              <PrimaryLink to="/signup" search={{ redirect: "/employer" }}>
+              <PrimaryLink to="/signup" search={EMPLOYER_INTENT}>
                 {t("employers.cta.register")}
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </PrimaryLink>
@@ -163,8 +164,17 @@ function EmployersPage() {
               {t("employers.cta.how")}
             </a>
           </div>
+          {/* What registering does and does not open, said where it is
+              offered: the workspace opens only after an administrator has
+              approved the organisation (same wording as the sign-up form's
+              organisation note). */}
           {portalOpen && (
-            <p className="mt-4 text-sm text-muted-foreground">
+            <p data-employer-register-note className="mt-4 max-w-xl text-sm text-muted-foreground">
+              {t("employers.cta.registerNote")}
+            </p>
+          )}
+          {portalOpen && (
+            <p className="mt-2 text-sm text-muted-foreground">
               {t("employers.cta.loginLead")}{" "}
               <Link
                 to="/login"
@@ -344,7 +354,7 @@ function EmployersPage() {
             </p>
             <div className="mt-6">
               {portalOpen ? (
-                <PrimaryLink to="/signup" search={{ redirect: "/employer" }} variant="ghost">
+                <PrimaryLink to="/signup" search={EMPLOYER_INTENT} variant="ghost">
                   {t("employers.cta.register")}
                 </PrimaryLink>
               ) : (

@@ -84,6 +84,39 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "a Lovable host is written into user-facing code",
   },
+  // ---- A sitemap invites indexing: it lists nothing a crawler may not index ----
+  {
+    id: "SO-NC-SITEMAP-NOINDEX",
+    defect:
+      "the sitemap lists /security-career-assessment again, a route that carries noindex, so the crawler is invited to a page that tells it to leave",
+    file: "src/routes/sitemap[.]xml.ts",
+    find: '          { path: "/jobs", changefreq: "daily", priority: "0.9" },',
+    replace:
+      '          { path: "/security-career-assessment", changefreq: "monthly", priority: "0.9" },\n          { path: "/jobs", changefreq: "daily", priority: "0.9" },',
+    guard: GUARD,
+    expect: "the sitemap lists a page a crawler may not index",
+  },
+  {
+    id: "SO-NC-SITEMAP-REDIRECT",
+    defect:
+      "the sitemap lists /career-center/start again, a retired route that only redirects to /career-center",
+    file: "src/routes/sitemap[.]xml.ts",
+    find: '          { path: "/jobs", changefreq: "daily", priority: "0.9" },',
+    replace:
+      '          { path: "/career-center/start", changefreq: "monthly", priority: "0.7" },\n          { path: "/jobs", changefreq: "daily", priority: "0.9" },',
+    guard: GUARD,
+    expect: "the sitemap lists a page a crawler may not index",
+  },
+  {
+    id: "SO-NC-SITEMAP-UNPUBLISHED-GUIDES",
+    defect:
+      "the sitemap lists every profession again, including the nine unpublished ones that redirect or render a noindex page",
+    file: "src/routes/sitemap[.]xml.ts",
+    find: "          ...publishedProfessions.map((p) => ({",
+    replace: "          ...professions.map((p) => ({",
+    guard: GUARD,
+    expect: "the sitemap lists only PUBLISHED profession guides",
+  },
 ];
 
 runControls("site-origin", MUTATIONS);
