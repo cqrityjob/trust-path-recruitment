@@ -176,6 +176,16 @@ const MUTATIONS: Mutation[] = [
     expect: "FAILED",
   },
   {
+    id: "TE-NC-EMPLOYER-NOTICE-ORGANISATION-SENDER",
+    defect:
+      "the employer's new-application mail may carry an organisation's name as the sender, though it is CQrityjob writing",
+    file: FN,
+    find: '  "academy_invitation",\n]);',
+    replace: '  "academy_invitation",\n  "employer_new_application",\n]);',
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
     id: "TE-NC-EMPLOYER-NOTICE-TO-ADMIN-INBOX",
     defect:
       "the employer's new-application mail goes to the admin inbox instead of the person the database chose",

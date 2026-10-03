@@ -48,6 +48,17 @@ const MUTATIONS: Mutation[] = [
     expect: "FAILED",
   },
   {
+    id: "EN-NC-ORGANISATION-SENDER-NAME",
+    defect:
+      "the mail asks to be sent under the organisation's name, though it is CQrityjob writing",
+    file: SENDER,
+    find: "      kind: EMPLOYER_NOTICE_EMAIL_KINDS[params.noticeKind],\n      to: params.recipientEmail,",
+    replace:
+      "      kind: EMPLOYER_NOTICE_EMAIL_KINDS[params.noticeKind],\n      senderName: params.employerName,\n      to: params.recipientEmail,",
+    guard: GUARD,
+    expect: "FAILED",
+  },
+  {
     id: "EN-NC-REPLY-TO",
     defect: "the mail asks for a Reply-To",
     file: SENDER,
