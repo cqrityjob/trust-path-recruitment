@@ -1243,6 +1243,27 @@ export type Database = {
           },
         ]
       }
+      bcp_conduct_position_exposures: {
+        Row: {
+          basis: string
+          exposed_at: string
+          position_id: string
+          session_id: string
+        }
+        Insert: {
+          basis: string
+          exposed_at?: string
+          position_id: string
+          session_id: string
+        }
+        Update: {
+          basis?: string
+          exposed_at?: string
+          position_id?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
       bcp_conduct_positions: {
         Row: {
           assessor_id: string
@@ -8447,6 +8468,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "scp_candidate_responses_best_option_on_item_fkey"
+            columns: ["item_version_id", "best_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["item_version_id", "id"]
+          },
+          {
             foreignKeyName: "scp_candidate_responses_item_version_id_fkey"
             columns: ["item_version_id"]
             isOneToOne: false
@@ -8461,11 +8489,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "scp_candidate_responses_selected_option_on_item_fkey"
+            columns: ["item_version_id", "selected_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["item_version_id", "id"]
+          },
+          {
             foreignKeyName: "scp_candidate_responses_worst_option_id_fkey"
             columns: ["worst_option_id"]
             isOneToOne: false
             referencedRelation: "scp_item_options"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scp_candidate_responses_worst_option_on_item_fkey"
+            columns: ["item_version_id", "worst_option_id"]
+            isOneToOne: false
+            referencedRelation: "scp_item_options"
+            referencedColumns: ["item_version_id", "id"]
           },
         ]
       }
@@ -16558,11 +16600,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sp_evidence_claim_same_holder"
+            columns: ["claim_id", "holder_user_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id", "holder_user_id"]
+          },
+          {
             foreignKeyName: "sp_evidence_period_id_fkey"
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "sp_experience_periods"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_evidence_period_same_holder"
+            columns: ["period_id", "holder_user_id"]
+            isOneToOne: false
+            referencedRelation: "sp_experience_periods"
+            referencedColumns: ["id", "holder_user_id"]
           },
         ]
       }
@@ -16908,6 +16964,33 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      sp_network_stats_policy: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          display: string
+          min_group_size: number
+          note: string | null
+          singleton: boolean
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          display?: string
+          min_group_size?: number
+          note?: string | null
+          singleton?: boolean
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          display?: string
+          min_group_size?: number
+          note?: string | null
+          singleton?: boolean
+        }
+        Relationships: []
       }
       sp_passport_events: {
         Row: {
@@ -17548,6 +17631,24 @@ export type Database = {
           },
         ]
       }
+      sp_statistics_exclusions: {
+        Row: {
+          created_at: string
+          holder_user_id: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          holder_user_id: string
+          reason: string
+        }
+        Update: {
+          created_at?: string
+          holder_user_id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       sp_sub_jurisdictions: {
         Row: {
           code: string
@@ -17638,6 +17739,7 @@ export type Database = {
       }
       sp_verification_requests: {
         Row: {
+          answered_at: string | null
           claim_id: string | null
           decided_at: string | null
           decided_by: string | null
@@ -17655,6 +17757,7 @@ export type Database = {
           verification_method: string | null
         }
         Insert: {
+          answered_at?: string | null
           claim_id?: string | null
           decided_at?: string | null
           decided_by?: string | null
@@ -17672,6 +17775,7 @@ export type Database = {
           verification_method?: string | null
         }
         Update: {
+          answered_at?: string | null
           claim_id?: string | null
           decided_at?: string | null
           decided_by?: string | null
@@ -17709,6 +17813,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "employers"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sp_vr_claim_same_holder"
+            columns: ["claim_id", "holder_user_id"]
+            isOneToOne: false
+            referencedRelation: "sp_claims"
+            referencedColumns: ["id", "holder_user_id"]
+          },
+          {
+            foreignKeyName: "sp_vr_period_same_holder"
+            columns: ["period_id", "holder_user_id"]
+            isOneToOne: false
+            referencedRelation: "sp_experience_periods"
+            referencedColumns: ["id", "holder_user_id"]
           },
         ]
       }
@@ -17756,12 +17874,10 @@ export type Database = {
       }
       sw_actions: {
         Row: {
-          gap_id: string | null
-          asset_id: string | null
-          source_kind: string
-          approval_required: boolean
           approval_note: string
+          approval_required: boolean
           assessment_id: string | null
+          asset_id: string | null
           assignee_user_id: string | null
           closed_at: string | null
           closed_by: string | null
@@ -17771,9 +17887,11 @@ export type Database = {
           decision_rationale: string
           description: string
           due_date: string | null
+          gap_id: string | null
           id: string
           priority: string
           risk_id: string | null
+          source_kind: string
           status: string
           title: string
           updated_at: string
@@ -17781,12 +17899,10 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
-          gap_id?: string | null
-          asset_id?: string | null
-          source_kind?: string
-          approval_required?: boolean
           approval_note?: string
-          assessment_id: string | null
+          approval_required?: boolean
+          assessment_id?: string | null
+          asset_id?: string | null
           assignee_user_id?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -17796,9 +17912,11 @@ export type Database = {
           decision_rationale?: string
           description?: string
           due_date?: string | null
+          gap_id?: string | null
           id?: string
           priority?: string
           risk_id?: string | null
+          source_kind?: string
           status?: string
           title: string
           updated_at?: string
@@ -17806,12 +17924,10 @@ export type Database = {
           workspace_id: string
         }
         Update: {
-          gap_id?: string | null
-          asset_id?: string | null
-          source_kind?: string
-          approval_required?: boolean
           approval_note?: string
+          approval_required?: boolean
           assessment_id?: string | null
+          asset_id?: string | null
           assignee_user_id?: string | null
           closed_at?: string | null
           closed_by?: string | null
@@ -17821,9 +17937,11 @@ export type Database = {
           decision_rationale?: string
           description?: string
           due_date?: string | null
+          gap_id?: string | null
           id?: string
           priority?: string
           risk_id?: string | null
+          source_kind?: string
           status?: string
           title?: string
           updated_at?: string
@@ -17831,6 +17949,20 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sw_actions_asset_fk"
+            columns: ["workspace_id", "asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_protected_assets"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_actions_gap_fk"
+            columns: ["workspace_id", "gap_id"]
+            isOneToOne: false
+            referencedRelation: "sw_gaps"
+            referencedColumns: ["workspace_id", "id"]
+          },
           {
             foreignKeyName: "sw_actions_workspace_id_assessment_id_fkey"
             columns: ["workspace_id", "assessment_id"]
@@ -18131,6 +18263,86 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sw_source_items"
             referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_ai_suggestions: {
+        Row: {
+          applied_target: Json
+          content: Json
+          context_id: string | null
+          context_kind: string | null
+          created_at: string
+          created_by: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string
+          decision_required: boolean
+          id: string
+          kind: string
+          model: string
+          prompt_version: string
+          provider: string
+          request_text: string
+          source_records: Json
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          applied_target?: Json
+          content: Json
+          context_id?: string | null
+          context_kind?: string | null
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string
+          decision_required?: boolean
+          id?: string
+          kind: string
+          model: string
+          prompt_version: string
+          provider: string
+          request_text?: string
+          source_records?: Json
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          applied_target?: Json
+          content?: Json
+          context_id?: string | null
+          context_kind?: string | null
+          created_at?: string
+          created_by?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string
+          decision_required?: boolean
+          id?: string
+          kind?: string
+          model?: string
+          prompt_version?: string
+          provider?: string
+          request_text?: string
+          source_records?: Json
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_ai_suggestions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -18439,6 +18651,113 @@ export type Database = {
           },
         ]
       }
+      sw_baseline_answers: {
+        Row: {
+          answer: string
+          baseline_id: string
+          created_at: string
+          created_by: string
+          id: string
+          note: string
+          question_id: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          answer: string
+          baseline_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          question_id: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          answer?: string
+          baseline_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          question_id?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_baseline_answers_workspace_id_baseline_id_fkey"
+            columns: ["workspace_id", "baseline_id"]
+            isOneToOne: false
+            referencedRelation: "sw_baseline_assessments"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_baseline_answers_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sw_baseline_assessments: {
+        Row: {
+          assessment_date: string
+          completed_at: string | null
+          content_version: string
+          created_at: string
+          created_by: string
+          id: string
+          market: string
+          mode: string
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          assessment_date?: string
+          completed_at?: string | null
+          content_version: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          market?: string
+          mode?: string
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          assessment_date?: string
+          completed_at?: string | null
+          content_version?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          market?: string
+          mode?: string
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_baseline_assessments_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sw_citations: {
         Row: {
           assessment_id: string | null
@@ -18638,6 +18957,54 @@ export type Database = {
           },
         ]
       }
+      sw_evidence_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          note: string
+          source_id: string
+          target_id: string
+          target_kind: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          source_id: string
+          target_id: string
+          target_kind: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string
+          source_id?: string
+          target_id?: string
+          target_kind?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_evidence_links_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_evidence_links_workspace_id_source_id_fkey"
+            columns: ["workspace_id", "source_id"]
+            isOneToOne: false
+            referencedRelation: "sw_sources"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
       sw_extraction_segments: {
         Row: {
           created_at: string
@@ -18698,6 +19065,121 @@ export type Database = {
             columns: ["workspace_id", "job_id"]
             isOneToOne: false
             referencedRelation: "sw_processing_jobs"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
+      sw_gaps: {
+        Row: {
+          baseline_id: string | null
+          baseline_question_id: string | null
+          business_impact: string
+          created_at: string
+          created_by: string
+          description: string
+          domain: string | null
+          evidence_note: string
+          id: string
+          owner_id: string | null
+          related_assessment_id: string | null
+          related_asset_id: string | null
+          related_risk_id: string | null
+          resolution_note: string
+          source_kind: string
+          status: string
+          suggested_action: string
+          title: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          baseline_id?: string | null
+          baseline_question_id?: string | null
+          business_impact?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          domain?: string | null
+          evidence_note?: string
+          id?: string
+          owner_id?: string | null
+          related_assessment_id?: string | null
+          related_asset_id?: string | null
+          related_risk_id?: string | null
+          resolution_note?: string
+          source_kind: string
+          status?: string
+          suggested_action?: string
+          title: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          baseline_id?: string | null
+          baseline_question_id?: string | null
+          business_impact?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          domain?: string | null
+          evidence_note?: string
+          id?: string
+          owner_id?: string | null
+          related_assessment_id?: string | null
+          related_asset_id?: string | null
+          related_risk_id?: string | null
+          resolution_note?: string
+          source_kind?: string
+          status?: string
+          suggested_action?: string
+          title?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_gaps_workspace_id_baseline_id_fkey"
+            columns: ["workspace_id", "baseline_id"]
+            isOneToOne: false
+            referencedRelation: "sw_baseline_assessments"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_gaps_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_gaps_workspace_id_owner_id_fkey"
+            columns: ["workspace_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
+          {
+            foreignKeyName: "sw_gaps_workspace_id_related_assessment_id_fkey"
+            columns: ["workspace_id", "related_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "sw_assessments"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_gaps_workspace_id_related_asset_id_fkey"
+            columns: ["workspace_id", "related_asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_protected_assets"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_gaps_workspace_id_related_risk_id_fkey"
+            columns: ["workspace_id", "related_risk_id"]
+            isOneToOne: false
+            referencedRelation: "sw_risks"
             referencedColumns: ["workspace_id", "id"]
           },
         ]
@@ -18828,6 +19310,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sw_intelligence_requirements_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sw_management_reports: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          computed: Json
+          content_version: string
+          created_at: string
+          created_by: string
+          decisions_required: Json
+          facts: Json
+          id: string
+          language: string
+          narrative: Json
+          period_end: string | null
+          period_start: string | null
+          status: string
+          title: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          computed?: Json
+          content_version?: string
+          created_at?: string
+          created_by?: string
+          decisions_required?: Json
+          facts?: Json
+          id?: string
+          language?: string
+          narrative?: Json
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          computed?: Json
+          content_version?: string
+          created_at?: string
+          created_by?: string
+          decisions_required?: Json
+          facts?: Json
+          id?: string
+          language?: string
+          narrative?: Json
+          period_end?: string | null
+          period_start?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_management_reports_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "sw_workspaces"
@@ -19019,6 +19572,125 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sw_workspaces"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      sw_programme_plans: {
+        Row: {
+          checklist_version: string
+          completed_task_ids: string[]
+          created_at: string
+          created_by: string
+          id: string
+          started_on: string
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          checklist_version: string
+          completed_task_ids?: string[]
+          created_at?: string
+          created_by?: string
+          id?: string
+          started_on?: string
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          checklist_version?: string
+          completed_task_ids?: string[]
+          created_at?: string
+          created_by?: string
+          id?: string
+          started_on?: string
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_programme_plans_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sw_protected_assets: {
+        Row: {
+          business_importance: string
+          category: string
+          consequence_description: string
+          consequence_level: number | null
+          created_at: string
+          created_by: string
+          description: string
+          id: string
+          name: string
+          owner_id: string | null
+          owner_label: string
+          review_date: string | null
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          business_importance?: string
+          category: string
+          consequence_description?: string
+          consequence_level?: number | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          name: string
+          owner_id?: string | null
+          owner_label?: string
+          review_date?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          business_importance?: string
+          category?: string
+          consequence_description?: string
+          consequence_level?: number | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          id?: string
+          name?: string
+          owner_id?: string | null
+          owner_label?: string
+          review_date?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_protected_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_protected_assets_workspace_id_owner_id_fkey"
+            columns: ["workspace_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
           },
         ]
       }
@@ -19358,11 +20030,57 @@ export type Database = {
         }
         Relationships: []
       }
+      sw_risk_assets: {
+        Row: {
+          asset_id: string
+          created_at: string
+          created_by: string
+          id: string
+          risk_id: string
+          workspace_id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          risk_id: string
+          workspace_id: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          risk_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sw_risk_assets_workspace_id_asset_id_fkey"
+            columns: ["workspace_id", "asset_id"]
+            isOneToOne: false
+            referencedRelation: "sw_protected_assets"
+            referencedColumns: ["workspace_id", "id"]
+          },
+          {
+            foreignKeyName: "sw_risk_assets_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sw_risk_assets_workspace_id_risk_id_fkey"
+            columns: ["workspace_id", "risk_id"]
+            isOneToOne: false
+            referencedRelation: "sw_risks"
+            referencedColumns: ["workspace_id", "id"]
+          },
+        ]
+      }
       sw_risks: {
         Row: {
-          owner_id: string | null
-          threat_scenario: string
-          source_kind: string
           accepted_at: string | null
           accepted_by: string | null
           affected_assets: string
@@ -19374,7 +20092,10 @@ export type Database = {
           description: string
           id: string
           likelihood: number | null
+          owner_id: string | null
+          source_kind: string
           status: string
+          threat_scenario: string
           title: string
           uncertainty: string
           updated_at: string
@@ -19382,31 +20103,6 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
-          owner_id?: string | null
-          threat_scenario?: string
-          source_kind?: string
-          accepted_at?: string | null
-          accepted_by?: string | null
-          affected_assets?: string
-          assessment_id: string | null
-          consequence?: number | null
-          created_at?: string
-          created_by?: string
-          decision_rationale?: string
-          description?: string
-          id?: string
-          likelihood?: number | null
-          status?: string
-          title: string
-          uncertainty?: string
-          updated_at?: string
-          version?: number
-          workspace_id: string
-        }
-        Update: {
-          owner_id?: string | null
-          threat_scenario?: string
-          source_kind?: string
           accepted_at?: string | null
           accepted_by?: string | null
           affected_assets?: string
@@ -19418,7 +20114,32 @@ export type Database = {
           description?: string
           id?: string
           likelihood?: number | null
+          owner_id?: string | null
+          source_kind?: string
           status?: string
+          threat_scenario?: string
+          title: string
+          uncertainty?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          affected_assets?: string
+          assessment_id?: string | null
+          consequence?: number | null
+          created_at?: string
+          created_by?: string
+          decision_rationale?: string
+          description?: string
+          id?: string
+          likelihood?: number | null
+          owner_id?: string | null
+          source_kind?: string
+          status?: string
+          threat_scenario?: string
           title?: string
           uncertainty?: string
           updated_at?: string
@@ -19426,6 +20147,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "sw_risks_owner_fk"
+            columns: ["workspace_id", "owner_id"]
+            isOneToOne: false
+            referencedRelation: "sw_workspace_memberships"
+            referencedColumns: ["workspace_id", "user_id"]
+          },
           {
             foreignKeyName: "sw_risks_workspace_id_assessment_id_fkey"
             columns: ["workspace_id", "assessment_id"]
@@ -19444,662 +20172,73 @@ export type Database = {
       }
       sw_security_mandates: {
         Row: {
-          id: string
-          workspace_id: string
-          organisation_description: string
-          security_mission: string
-          reporting_line: string
-          key_stakeholders: string
-          decision_authority: string
-          risk_acceptance_authority: string
-          geographic_scope: string
-          key_requirements: string
-          review_date: string | null
-          mandate_document: string
-          document_provenance: Json
-          status: string
           created_at: string
           created_by: string
+          decision_authority: string
+          document_provenance: Json
+          geographic_scope: string
+          id: string
+          key_requirements: string
+          key_stakeholders: string
+          mandate_document: string
+          organisation_description: string
+          reporting_line: string
+          review_date: string | null
+          risk_acceptance_authority: string
+          security_mission: string
+          status: string
           updated_at: string
           version: number
+          workspace_id: string
         }
         Insert: {
-          id?: string
-          workspace_id: string
-          organisation_description?: string
-          security_mission?: string
-          reporting_line?: string
-          key_stakeholders?: string
-          decision_authority?: string
-          risk_acceptance_authority?: string
-          geographic_scope?: string
-          key_requirements?: string
-          review_date?: string | null
-          mandate_document?: string
-          document_provenance?: Json
-          status?: string
           created_at?: string
           created_by?: string
+          decision_authority?: string
+          document_provenance?: Json
+          geographic_scope?: string
+          id?: string
+          key_requirements?: string
+          key_stakeholders?: string
+          mandate_document?: string
+          organisation_description?: string
+          reporting_line?: string
+          review_date?: string | null
+          risk_acceptance_authority?: string
+          security_mission?: string
+          status?: string
           updated_at?: string
           version?: number
+          workspace_id: string
         }
         Update: {
-          id?: string
-          workspace_id?: string
-          organisation_description?: string
-          security_mission?: string
-          reporting_line?: string
-          key_stakeholders?: string
-          decision_authority?: string
-          risk_acceptance_authority?: string
-          geographic_scope?: string
-          key_requirements?: string
-          review_date?: string | null
-          mandate_document?: string
-          document_provenance?: Json
-          status?: string
           created_at?: string
           created_by?: string
+          decision_authority?: string
+          document_provenance?: Json
+          geographic_scope?: string
+          id?: string
+          key_requirements?: string
+          key_stakeholders?: string
+          mandate_document?: string
+          organisation_description?: string
+          reporting_line?: string
+          review_date?: string | null
+          risk_acceptance_authority?: string
+          security_mission?: string
+          status?: string
           updated_at?: string
           version?: number
+          workspace_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "sw_security_mandates_workspace_id_fkey"
             columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      sw_protected_assets: {
-        Row: {
-          id: string
-          workspace_id: string
-          name: string
-          description: string
-          category: string
-          owner_id: string | null
-          owner_label: string
-          business_importance: string
-          consequence_level: number | null
-          consequence_description: string
-          status: string
-          review_date: string | null
-          created_at: string
-          created_by: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          name: string
-          description?: string
-          category: string
-          owner_id?: string | null
-          owner_label?: string
-          business_importance?: string
-          consequence_level?: number | null
-          consequence_description?: string
-          status?: string
-          review_date?: string | null
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          name?: string
-          description?: string
-          category?: string
-          owner_id?: string | null
-          owner_label?: string
-          business_importance?: string
-          consequence_level?: number | null
-          consequence_description?: string
-          status?: string
-          review_date?: string | null
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_protected_assets_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "sw_workspaces"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "sw_protected_assets_workspace_id_owner_id_fkey"
-            columns: ["workspace_id", "owner_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspace_memberships"
-            referencedColumns: ["workspace_id", "user_id"]
-          }
-        ]
-      }
-      sw_risk_assets: {
-        Row: {
-          id: string
-          workspace_id: string
-          risk_id: string
-          asset_id: string
-          created_at: string
-          created_by: string
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          risk_id: string
-          asset_id: string
-          created_at?: string
-          created_by?: string
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          risk_id?: string
-          asset_id?: string
-          created_at?: string
-          created_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_risk_assets_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sw_risk_assets_workspace_id_risk_id_fkey"
-            columns: ["workspace_id", "risk_id"]
-            isOneToOne: false
-            referencedRelation: "sw_risks"
-            referencedColumns: ["workspace_id", "id"]
-          },
-          {
-            foreignKeyName: "sw_risk_assets_workspace_id_asset_id_fkey"
-            columns: ["workspace_id", "asset_id"]
-            isOneToOne: false
-            referencedRelation: "sw_protected_assets"
-            referencedColumns: ["workspace_id", "id"]
-          }
-        ]
-      }
-      sw_baseline_assessments: {
-        Row: {
-          id: string
-          workspace_id: string
-          content_version: string
-          market: string
-          mode: string
-          assessment_date: string
-          status: string
-          completed_at: string | null
-          created_at: string
-          created_by: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          content_version: string
-          market?: string
-          mode?: string
-          assessment_date?: string
-          status?: string
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          content_version?: string
-          market?: string
-          mode?: string
-          assessment_date?: string
-          status?: string
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_baseline_assessments_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      sw_baseline_answers: {
-        Row: {
-          id: string
-          workspace_id: string
-          baseline_id: string
-          question_id: string
-          answer: string
-          note: string
-          created_at: string
-          created_by: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          baseline_id: string
-          question_id: string
-          answer: string
-          note?: string
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          baseline_id?: string
-          question_id?: string
-          answer?: string
-          note?: string
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_baseline_answers_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sw_baseline_answers_workspace_id_baseline_id_fkey"
-            columns: ["workspace_id", "baseline_id"]
-            isOneToOne: false
-            referencedRelation: "sw_baseline_assessments"
-            referencedColumns: ["workspace_id", "id"]
-          }
-        ]
-      }
-      sw_gaps: {
-        Row: {
-          id: string
-          workspace_id: string
-          source_kind: string
-          domain: string | null
-          title: string
-          description: string
-          evidence_note: string
-          business_impact: string
-          related_asset_id: string | null
-          related_risk_id: string | null
-          related_assessment_id: string | null
-          baseline_id: string | null
-          baseline_question_id: string | null
-          suggested_action: string
-          owner_id: string | null
-          status: string
-          resolution_note: string
-          created_at: string
-          created_by: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          source_kind: string
-          domain?: string | null
-          title: string
-          description?: string
-          evidence_note?: string
-          business_impact?: string
-          related_asset_id?: string | null
-          related_risk_id?: string | null
-          related_assessment_id?: string | null
-          baseline_id?: string | null
-          baseline_question_id?: string | null
-          suggested_action?: string
-          owner_id?: string | null
-          status?: string
-          resolution_note?: string
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          source_kind?: string
-          domain?: string | null
-          title?: string
-          description?: string
-          evidence_note?: string
-          business_impact?: string
-          related_asset_id?: string | null
-          related_risk_id?: string | null
-          related_assessment_id?: string | null
-          baseline_id?: string | null
-          baseline_question_id?: string | null
-          suggested_action?: string
-          owner_id?: string | null
-          status?: string
-          resolution_note?: string
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_gaps_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sw_gaps_workspace_id_related_asset_id_fkey"
-            columns: ["workspace_id", "related_asset_id"]
-            isOneToOne: false
-            referencedRelation: "sw_protected_assets"
-            referencedColumns: ["workspace_id", "id"]
-          },
-          {
-            foreignKeyName: "sw_gaps_workspace_id_related_risk_id_fkey"
-            columns: ["workspace_id", "related_risk_id"]
-            isOneToOne: false
-            referencedRelation: "sw_risks"
-            referencedColumns: ["workspace_id", "id"]
-          },
-          {
-            foreignKeyName: "sw_gaps_workspace_id_related_assessment_id_fkey"
-            columns: ["workspace_id", "related_assessment_id"]
-            isOneToOne: false
-            referencedRelation: "sw_assessments"
-            referencedColumns: ["workspace_id", "id"]
-          },
-          {
-            foreignKeyName: "sw_gaps_workspace_id_baseline_id_fkey"
-            columns: ["workspace_id", "baseline_id"]
-            isOneToOne: false
-            referencedRelation: "sw_baseline_assessments"
-            referencedColumns: ["workspace_id", "id"]
-          },
-          {
-            foreignKeyName: "sw_gaps_workspace_id_owner_id_fkey"
-            columns: ["workspace_id", "owner_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspace_memberships"
-            referencedColumns: ["workspace_id", "user_id"]
-          }
-        ]
-      }
-      sw_evidence_links: {
-        Row: {
-          id: string
-          workspace_id: string
-          source_id: string
-          target_kind: string
-          target_id: string
-          note: string
-          created_at: string
-          created_by: string
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          source_id: string
-          target_kind: string
-          target_id: string
-          note?: string
-          created_at?: string
-          created_by?: string
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          source_id?: string
-          target_kind?: string
-          target_id?: string
-          note?: string
-          created_at?: string
-          created_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_evidence_links_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sw_evidence_links_workspace_id_source_id_fkey"
-            columns: ["workspace_id", "source_id"]
-            isOneToOne: false
-            referencedRelation: "sw_sources"
-            referencedColumns: ["workspace_id", "id"]
-          }
-        ]
-      }
-      sw_ai_suggestions: {
-        Row: {
-          id: string
-          workspace_id: string
-          kind: string
-          context_kind: string | null
-          context_id: string | null
-          request_text: string
-          content: Json
-          source_records: Json
-          provider: string
-          model: string
-          prompt_version: string
-          decision_required: boolean
-          status: string
-          decided_by: string | null
-          decided_at: string | null
-          decision_note: string
-          applied_target: Json
-          created_at: string
-          created_by: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          kind: string
-          context_kind?: string | null
-          context_id?: string | null
-          request_text?: string
-          content: Json
-          source_records?: Json
-          provider: string
-          model: string
-          prompt_version: string
-          decision_required?: boolean
-          status?: string
-          decided_by?: string | null
-          decided_at?: string | null
-          decision_note?: string
-          applied_target?: Json
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          kind?: string
-          context_kind?: string | null
-          context_id?: string | null
-          request_text?: string
-          content?: Json
-          source_records?: Json
-          provider?: string
-          model?: string
-          prompt_version?: string
-          decision_required?: boolean
-          status?: string
-          decided_by?: string | null
-          decided_at?: string | null
-          decision_note?: string
-          applied_target?: Json
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_ai_suggestions_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      sw_programme_plans: {
-        Row: {
-          id: string
-          workspace_id: string
-          checklist_version: string
-          started_on: string
-          status: string
-          completed_task_ids: string[]
-          created_at: string
-          created_by: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          checklist_version: string
-          started_on?: string
-          status?: string
-          completed_task_ids?: string[]
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          checklist_version?: string
-          started_on?: string
-          status?: string
-          completed_task_ids?: string[]
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_programme_plans_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-      sw_management_reports: {
-        Row: {
-          id: string
-          workspace_id: string
-          title: string
-          language: string
-          content_version: string
-          period_start: string | null
-          period_end: string | null
-          facts: Json
-          computed: Json
-          narrative: Json
-          decisions_required: Json
-          status: string
-          approved_by: string | null
-          approved_at: string | null
-          created_at: string
-          created_by: string
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          id?: string
-          workspace_id: string
-          title: string
-          language?: string
-          content_version?: string
-          period_start?: string | null
-          period_end?: string | null
-          facts?: Json
-          computed?: Json
-          narrative?: Json
-          decisions_required?: Json
-          status?: string
-          approved_by?: string | null
-          approved_at?: string | null
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          id?: string
-          workspace_id?: string
-          title?: string
-          language?: string
-          content_version?: string
-          period_start?: string | null
-          period_end?: string | null
-          facts?: Json
-          computed?: Json
-          narrative?: Json
-          decisions_required?: Json
-          status?: string
-          approved_by?: string | null
-          approved_at?: string | null
-          created_at?: string
-          created_by?: string
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sw_management_reports_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "sw_workspaces"
-            referencedColumns: ["id"]
-          }
         ]
       }
       sw_source_items: {
@@ -22158,6 +22297,31 @@ export type Database = {
         Args: { _employer_id: string }
         Returns: boolean
       }
+      employer_report_access: {
+        Args: { _employer_id: string }
+        Returns: {
+          case_access: boolean
+          is_member: boolean
+          owner_or_admin: boolean
+          readable_use_cases: string[]
+          responsible_job_ids: string[]
+        }[]
+      }
+      employer_reports_readable: {
+        Args: {
+          _application_id?: string
+          _case_id?: string
+          _employer_id: string
+          _job_id?: string
+          _subject_users?: string[]
+          _use_case?: string
+        }
+        Returns: boolean
+      }
+      has_active_employer_role: {
+        Args: { _employer_id: string; _roles?: string[]; _user_id: string }
+        Returns: boolean
+      }
       has_employer_role: {
         Args: { _employer_id: string; _roles?: string[]; _user_id: string }
         Returns: boolean
@@ -22719,6 +22883,10 @@ export type Database = {
         }
         Returns: string
       }
+      scp_attempt_reports_readable: {
+        Args: { _attempt_id: string }
+        Returns: boolean
+      }
       scp_attempt_self_report_pattern: {
         Args: {
           _attempt_id: string
@@ -22807,6 +22975,16 @@ export type Database = {
           _competency_version_id: string
           _subject_id: string
           _threshold_version?: string
+        }
+        Returns: string
+      }
+      scp_compute_maturity_for_issuers: {
+        Args: {
+          _at: string
+          _competency_version_id: string
+          _issuers: string[]
+          _subject_id: string
+          _threshold_version: string
         }
         Returns: string
       }
@@ -23531,6 +23709,10 @@ export type Database = {
         Args: { _case_id: string; _conclusion: string }
         Returns: undefined
       }
+      scp_iv_panel_hides_others: {
+        Args: { _case_id: string }
+        Returns: boolean
+      }
       scp_iv_panel_open: {
         Args: { _case_id: string; _member_ids: string[] }
         Returns: string
@@ -23957,14 +24139,24 @@ export type Database = {
           step: string
         }[]
       }
-      scp_report_snapshot_readable: {
-        Args: {
-          _audience: string
-          _issuer_organization_id: string
-          _subject_id: string
-        }
-        Returns: boolean
-      }
+      scp_report_snapshot_readable:
+        | {
+            Args: {
+              _audience: string
+              _issuer_organization_id: string
+              _subject_id: string
+            }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              _attempt_id: string
+              _audience: string
+              _issuer_organization_id: string
+              _subject_id: string
+            }
+            Returns: boolean
+          }
       scp_required_purpose_code:
         | {
             Args: { _purpose_intent?: string; _use_case: string }
@@ -24052,6 +24244,7 @@ export type Database = {
           attempt_id: string
         }[]
       }
+      scp_seed_unanswered_legacy_attempts: { Args: never; Returns: number }
       scp_start_learning_attempt: {
         Args: { _form_id: string }
         Returns: string
@@ -24268,6 +24461,10 @@ export type Database = {
         Args: { _employer_id: string }
         Returns: Json
       }
+      sp_entry_review_on_holder_edit: {
+        Args: { _claim_id: string; _period_id: string }
+        Returns: string
+      }
       sp_first_merit_fingerprint: {
         Args: {
           _country: string
@@ -24345,11 +24542,6 @@ export type Database = {
         Args: { _market_pack_code: string; _user_id: string }
         Returns: string
       }
-      sp_network_stats: { Args: never; Returns: Json }
-      sp_set_network_stats_display: {
-        Args: { _display: string; _note?: string }
-        Returns: string
-      }
       sp_my_application_disclosures: {
         Args: never
         Returns: {
@@ -24366,6 +24558,7 @@ export type Database = {
           revoked_at: string
         }[]
       }
+      sp_network_stats: { Args: never; Returns: Json }
       sp_passport_complete_first_merit: {
         Args: {
           _country: string
@@ -24460,6 +24653,10 @@ export type Database = {
           _purpose: string
         }
         Returns: Json
+      }
+      sp_set_network_stats_display: {
+        Args: { _display: string; _note?: string }
+        Returns: string
       }
       sp_share_gateway_consume: {
         Args: { _handoff: string; _session_hash: string }
