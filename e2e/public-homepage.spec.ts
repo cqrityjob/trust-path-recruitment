@@ -186,8 +186,15 @@ test.describe("the public homepage", () => {
     });
     expect(h1.align).toBe("center");
     expect(Math.abs(h1.centre - h1.viewport), "the headline is off centre").toBeLessThanOrEqual(24);
+    // The positioning's first sentence (owner copy, 2026-10-03). The sentence
+    // about AI agents that follows it is deliberately not asserted here: AI
+    // functions are off in production, so it is an open owner item.
     await expect(page.locator("#hero")).toContainText(
-      "Upptäck din riktning, bygg ditt Security Passport, hitta nästa möjlighet och utveckla din karriär inom säkerhet – lokalt eller internationellt.",
+      "Hitta nästa jobb, bygg ditt Security Passport och utveckla din kompetens.",
+    );
+    // The English brand line sits below the two entrances as the slogan.
+    await expect(page.locator('#hero p[lang="en"]')).toHaveText(
+      "Security careers, without limits.",
     );
   });
 
@@ -673,8 +680,9 @@ test.describe("the homepage at every required width", () => {
     });
   }
 
-  // The locked hero is an English brand statement on both pages: marked
-  // lang="en", never hyphenated, and at most three intentional lines on a
+  // The hero H1 (owner copy, 2026-10-03) is a sentence in the visitor's
+  // language: so it is NOT marked lang="en" (the English slogan below the
+  // entrances is), never hyphenated, and at most three intentional lines on a
   // phone -- not shrunk onto one.
   for (const width of [390, 1440] as const) {
     test(`the hero h1 breaks between words at ${width}px, sv and en`, async ({ page }) => {
@@ -684,7 +692,10 @@ test.describe("the homepage at every required width", () => {
         await setLang(page, lang);
         const h1 = page.locator("main h1");
         await expect(h1).toHaveText(H1[lang]);
-        await expect(h1).toHaveAttribute("lang", "en");
+        expect(
+          await h1.getAttribute("lang"),
+          `${lang}: the h1 is in the visitor's language`,
+        ).toBeNull();
         const box = await h1.evaluate((el) => {
           const cs = getComputedStyle(el);
           return {
