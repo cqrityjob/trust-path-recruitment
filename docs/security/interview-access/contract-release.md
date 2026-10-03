@@ -1,7 +1,8 @@
 # Interview configuration contract release
 
-Depends on #404 (20270206090000) and #405 **published and verified**. Claude owns
-merge/deployment. This draft must not be merged merely because the app PR merged.
+Depends on #404 (20270206090000, now applied and verified) and #405 **published
+and verified**. The owner authorised merges; application publication remains
+separately pending. This draft must not be merged merely because the app PR merged.
 The old deployed app would no longer see AI availability after this migration.
 
 20270207090000 makes the full configuration row, including `updated_by`, readable
