@@ -217,6 +217,19 @@ omdirigera den gamla värden (L1) **sist** (se `2026-10-03-www-domain-cutover.md
    vilken svarstid (så länge svar går dit).
 6. **Merge-godkännande per steg.** Inget här är godkänt; ingen merge eller produktionsändring har gjorts.
 
+### Steg 4b — Astras åtkomstfixar för intervjuer (#404 → #405 → #406)
+
+Tre separata releaser i fast ordning (se `docs/security/interview-access/README.md`): **expand** (#404,
+`20270206090000`), **appen** (#405, ska läsa flaggorna via `scp_iv_case_capabilities`; mergas, **publiceras och
+verifieras**, inte bara mergas) och först därefter **kontraktet** (#406, `20270207090000`, begränsar hela
+konfigurationsraden till plattformsadministratörer).
+**Utfall 2026-10-03:** #404 mergad (`dae5c004`) och `20270206090000` applicerad; verifierat skrivskyddat av två läsare:
+ledgern har 368 rader, digest `c086806d9fb5f0c92609678f037b73ba` (de första 367 oförändrade); båda funktionskropparna lika
+med en strikt lokal replay; `anon` saknar `EXECUTE`; `scp_scenario_versions_read` är begränsad till `scp_can_author`.
+Den gamla konfigurationsläsningen är medvetet kvar tills kontraktet. Evidens och registrering:
+`2026-10-03-interview-access-expand-hosted-verification.md`. #405 och #406 är inte mergade, inte publicerade och inte
+verifierade i produktion.
+
 ## 5. Vad som återstår som blockerar publik lansering
 
 1. `RESEND_API_KEY` saknas på den driftsatta funktionen (503 `not_configured` enligt #394), så alla produktmejl

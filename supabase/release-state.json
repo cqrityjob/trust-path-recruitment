@@ -2948,7 +2948,10 @@
     },
     {
       "file": "20270206090000_interview_access_expand.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270206090000",
+      "hostedName": "interview_access_expand",
+      "evidenceSource": "Read-only verification 2026-10-03 ~21:2x UTC through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #404 merged to main (dae5c004, 21:10 UTC; head 333d3d1a, every mandatory CI job green) and the official integration applied it. supabase_migrations.schema_migrations holds 20270206090000 interview_access_expand as the last row: 368 rows, md5 of version:name joined by newline c086806d9fb5f0c92609678f037b73ba, equal to hosted-ledger.json; the first 367 rows unchanged (77e07c074bb73aac9ac11a569b5ca214). Both function bodies equal a strict local replay of 368 migrations: public.scp_iv_case_capabilities(uuid) 3022f4137f432fe0a44f3fc8eca4b060 (SECURITY INVOKER, search_path pinned empty) and scp_private.case_capabilities(uuid) bebbd9f70ccc4b9078fe25235979d5f7 (SECURITY DEFINER, search_path pinned empty). EXECUTE: anon false, PUBLIC false, service_role false, authenticated true on both; anon has no USAGE on schema scp_private, authenticated has. The policy scp_scenario_versions_read is SELECT to authenticated with qual scp_can_author(auth.uid()); scp_scenario_versions_author_write is unchanged; the USING (true) client catalogue reads are 40 (was 41) and the five sp_ catalogue policies are preserved. The legacy scp_interview_ai_config_read policy (SELECT true) is still there by design until the contract release. Rolled-back probes as a synthetic signed-in user with no role: scp_iv_case_capabilities on a nonexistent case raises INTERVIEW_CASE_NOT_FOUND (42501); as anon: permission denied for function. scp_scenario_versions holds 0 rows in production. No production write probe was run and no candidate data was read; behaviour is proven by interview_access_expand_test IA1-IA12 and the saved PostgREST/JWT assertions in docs/security/interview-access.",
       "introduces": [
         {
           "kind": "function",
@@ -2957,7 +2960,7 @@
       ],
       "rollback": "supabase/rollback/20270206090000_interview_access_expand_rollback.sql",
       "verify": "SELECT policyname,qual FROM pg_policies WHERE schemaname='public' AND tablename='scp_scenario_versions'; SELECT p.oid::regprocedure,p.prosecdef,p.proconfig,md5(p.prosrc) FROM pg_proc p WHERE p.oid IN ('public.scp_iv_case_capabilities(uuid)'::regprocedure,'scp_private.case_capabilities(uuid)'::regprocedure); SELECT has_function_privilege('anon','public.scp_iv_case_capabilities(uuid)','EXECUTE'); -- false; compare fingerprints in docs/security/interview-access before recording applied.",
-      "note": "PR #404. Case-scoped flags and author-only raw scenarios. Separate app release then 20270207090000 contract. Old configuration access remains during expand. Not applied or production-verified."
+      "note": "PR #404. Case-scoped flags and author-only raw scenarios. Separate app release then 20270207090000 contract. Old configuration access remains during expand. Applied to production and verified read-only 2026-10-03; see evidenceSource."
     }
   ], 
   "policyVersion": 2, 

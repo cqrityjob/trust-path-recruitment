@@ -391,8 +391,17 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (#393) is published AFTER this, and the transactional-email function
 // (employer_new_application) is verified in production before that publication.
 // Evidence: docs/release/2026-10-03-employer-notice-hosted-verification.md.
-// Interview access expand remains pending until its own hosted verification.
-const expectedPending: string[] = ["20270206090000_interview_access_expand.sql"];
+// 2026-10-03 ~21:2x UTC: #404 (merge dae5c004) verified applied read-only:
+// 20270206090000_interview_access_expand is the last ledger row (368 rows, digest
+// c086806d9fb5f0c92609678f037b73ba; the first 367 unchanged, digest
+// 77e07c074bb73aac9ac11a569b5ca214); both function bodies equal a strict local
+// replay, neither is executable by anon, scp_scenario_versions_read is limited to
+// scp_can_author(auth.uid()) and the legacy configuration read is intentionally
+// still open until the contract release. No production write probe was run.
+// Nothing is pending by design now. The application (#405) is merged, published
+// and verified BEFORE the contract migration (20270207090000, #406) is applied.
+// Evidence: docs/release/2026-10-03-interview-access-expand-hosted-verification.md.
+const expectedPending: string[] = [];
 
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
