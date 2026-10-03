@@ -156,15 +156,10 @@ console.log("\n3 · the research tab keeps the separations the brief names");
   );
   check(
     Object.keys(RESEARCH_KIND).length === 5 &&
-      (
-        [
-          "person_certification",
-          "professional_qualification",
-          "designation",
-          "assessed_certificate",
-          "course_certificate",
-        ] as const
-      ).every((k) => researchKindLabel(k, "en") !== researchKindLabel("anything_else", "en")),
+      (["en", "sv"] as const).every(
+        (lang) =>
+          new Set(Object.keys(RESEARCH_KIND).map((k) => researchKindLabel(k, lang))).size === 5,
+      ),
     "3.4 the five kinds are five different labels: a course certificate is never a professional certification",
   );
   check(
