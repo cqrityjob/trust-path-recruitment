@@ -105,6 +105,9 @@ export const dictionaries = {
     "nav.testsAndDevelopment": "Tester och utveckling",
     "nav.reviews": "Granskningar",
     "appnav.aria": "Primär navigering",
+    // The public header's navigation landmark (desktop bar and compact menu).
+    // e2e finds it by `data-site-nav="primary"`, never by this text.
+    "nav.primary": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
     "nav.menu.close": "Stäng menyn",
 
@@ -694,6 +697,11 @@ export const dictionaries = {
     "employers.cta.how": "Så fungerar det",
     "employers.cta.loginLead": "Har ni redan ett konto?",
     "employers.cta.login": "Logga in",
+    // Said next to "Registrera företag", because registering is not the same
+    // as being able to use the platform: an administrator approves the
+    // organisation first. Same facts as auth.unified.organisation.note.
+    "employers.cta.registerNote":
+      "En administratör granskar företaget innan arbetsgivarytan öppnas.",
 
     "employers.platform.eyebrow": "Arbetsgivarplattformen",
     "employers.path.title": "Hela rekryteringen på ett ställe",
@@ -848,7 +856,7 @@ export const dictionaries = {
     "contact.checking": "Kontrollerar formuläret …",
     "contact.closed.title": "Formuläret är tillfälligt stängt",
     "contact.closed.body":
-      "Vi kan inte ta emot förfrågningar via formuläret just nu. Mejla oss i stället, så svarar vi. Vill ni komma igång direkt kan ni också registrera företaget och använda plattformen själva.",
+      "Vi kan inte ta emot förfrågningar via formuläret just nu. Mejla oss i stället, så svarar vi. Vill ni komma igång direkt kan ni också registrera företaget. Arbetsgivarytan öppnas först när en administratör har godkänt det.",
     "contact.direct.lead": "Ni kan också mejla oss direkt:",
     "contact.platform.lead": "Vill ni hellre använda plattformen själva?",
 
@@ -8948,6 +8956,7 @@ export const dictionaries = {
     "nav.testsAndDevelopment": "Assessments and development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
+    "nav.primary": "Primary navigation",
     "nav.menu.open": "Open menu",
     "nav.menu.close": "Close menu",
 
@@ -9446,6 +9455,8 @@ export const dictionaries = {
     "employers.cta.how": "How it works",
     "employers.cta.loginLead": "Already have an account?",
     "employers.cta.login": "Sign in",
+    "employers.cta.registerNote":
+      "An administrator reviews the organisation before the employer workspace opens.",
 
     "employers.platform.eyebrow": "The employer platform",
     "employers.path.title": "The whole recruitment in one place",
@@ -9591,7 +9602,7 @@ export const dictionaries = {
     "contact.checking": "Checking the form …",
     "contact.closed.title": "The form is temporarily closed",
     "contact.closed.body":
-      "We cannot receive enquiries through the form right now. Email us instead and we will reply. If you want to get started straight away, you can also register your organisation and use the platform yourselves.",
+      "We cannot receive enquiries through the form right now. Email us instead and we will reply. If you want to get started straight away, you can also register your organisation. The employer workspace opens only once an administrator has approved it.",
     "contact.direct.lead": "You can also email us directly:",
     "contact.platform.lead": "Would you rather use the platform yourselves?",
 

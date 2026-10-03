@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { resolveCandidateNav, type CandidateNavKey } from "./candidate-app-nav";
-import { EMPLOYER_NAV, publicNav } from "./public-nav";
+import { EMPLOYER_NAV, EMPLOYER_REGISTER_NAV, publicNav } from "./public-nav";
 import { CandidateAppNav } from "./CandidateAppNav";
 import { supabase } from "@/integrations/supabase/client";
 import { countMyAcademyWork } from "@/lib/security-competency/academy-learning.functions";
@@ -305,7 +305,8 @@ export function SiteHeader() {
           ) : (
             <nav
               className="hidden min-w-0 items-center gap-0.5 lg:flex xl:gap-1"
-              aria-label="Primary"
+              aria-label={t("nav.primary")}
+              data-site-nav="primary"
             >
               {nav.map((item) =>
                 item.key === "employers" ? (
@@ -430,7 +431,11 @@ export function SiteHeader() {
               onNavigate={() => setOpen(false)}
             />
           ) : (
-            <nav className="flex flex-col gap-0.5" aria-label="Primary">
+            <nav
+              className="flex flex-col gap-0.5"
+              aria-label={t("nav.primary")}
+              data-site-nav="primary"
+            >
               {nav.map((item) =>
                 item.key === "employers" ? (
                   <MobileEmployerGroup
@@ -519,12 +524,30 @@ export function SiteHeader() {
                 {t("nav.createAccount")}
               </Link>
             )}
-            {/* ── THE EMPLOYER DOOR, AT THIS WIDTH ────────────────────────
-                The same door the desktop menu carries: /login — the one door —
-                with /employer as its validated `?redirect=`. Signed-out only,
-                gated on the release flag, visible text, 44px, the shared
-                focus ring. It grants nothing: /employer resolves membership
-                server-side on every load. */}
+            {/* ── THE EMPLOYER DOORS, AT THIS WIDTH ───────────────────────
+                The same two the desktop menu carries. REGISTER a company:
+                /signup with /employer (EMPLOYER_REGISTER_NAV, the one
+                definition the homepage band, /employers and the footer share).
+                SIGN IN to one: /login — the one door — with /employer as its
+                validated `?redirect=`. Both signed-out only, both gated on the
+                release flag, visible text, 44px, the shared focus ring. They
+                grant nothing: /employer resolves membership server-side on
+                every load. */}
+            {signedIn !== true && employerPortalEnabled() && (
+              <Link
+                to={EMPLOYER_REGISTER_NAV.to}
+                search={EMPLOYER_REGISTER_NAV.search as never}
+                data-employer-register
+                onClick={() => setOpen(false)}
+                className={cn(
+                  "flex min-h-[44px] min-w-[44px] items-center justify-center gap-2 rounded-md border border-border px-4 text-center text-sm font-medium text-foreground transition-colors hover:bg-secondary",
+                  focusRing,
+                )}
+              >
+                <Building2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {t(EMPLOYER_REGISTER_NAV.labelKey)}
+              </Link>
+            )}
             {signedIn !== true && employerPortalEnabled() && (
               <Link
                 to="/login"
@@ -685,8 +708,10 @@ export function SiteHeader() {
  *
  * The five entries are sections of /employers (EMPLOYER_NAV) — every one an
  * existing destination. Beneath them, for a signed-out visitor only and only
- * while the employer portal is released, the existing customer's way back in:
- * the SAME one door, /login, carrying /employer as a validated `?redirect=`.
+ * while the employer portal is released: a new company's way in ("Registrera
+ * företag", EMPLOYER_REGISTER_NAV: /signup carrying /employer) and the existing
+ * customer's way back in: the SAME one door, /login, carrying /employer as a
+ * validated `?redirect=`.
  */
 function EmployerMenu({
   label,
@@ -783,7 +808,27 @@ function EmployerMenu({
           ))}
         </ul>
         {signedIn !== true && employerPortalEnabled() && (
-          <p className="mt-1 flex flex-wrap items-center gap-x-1 border-t border-border px-3 pt-2 text-xs text-muted-foreground">
+          <div className="mt-1 border-t border-border pt-1">
+            {/* A NEW company's way in, from every page: the one definition in
+                public-nav.ts (/signup carrying /employer), the same label and
+                destination as the homepage band and /employers. */}
+            <Link
+              to={EMPLOYER_REGISTER_NAV.to}
+              search={EMPLOYER_REGISTER_NAV.search as never}
+              data-employer-register
+              onClick={() => setOpen(false)}
+              className={cn(
+                "flex min-h-[44px] items-center gap-2 rounded-lg px-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary",
+                focusRing,
+              )}
+            >
+              <Building2 className="h-4 w-4 shrink-0 text-accent" aria-hidden="true" />
+              {t(EMPLOYER_REGISTER_NAV.labelKey)}
+            </Link>
+          </div>
+        )}
+        {signedIn !== true && employerPortalEnabled() && (
+          <p className="flex flex-wrap items-center gap-x-1 px-3 text-xs text-muted-foreground">
             {t("nav.forEmployers.customerLead")}
             <Link
               to="/login"

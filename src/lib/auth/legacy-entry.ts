@@ -19,7 +19,20 @@
 // `intent` is deliberately NOT carried. It selected a door, and there is
 // one door now. It was never a permission (the portal-separation ADR's
 // decision 7), so dropping it grants and forecloses nothing.
+//
+// ── THE ONE EXCEPTION: /employer/register ──────────────────────────────
+//
+// "Register a company" is not a form default that `intent` used to select;
+// it is the destination the registration hands the person to afterwards, and
+// every current "Registrera företag" entry says so with
+// `/signup?redirect=/employer` (EMPLOYER_INTENT). The legacy URL used to
+// forward to a bare /signup, so somebody who followed a bookmarked or printed
+// /employer/register link created a PERSONAL account and was never asked for
+// a company. It now forwards with the same intent — as a DEFAULT: a validated
+// `redirect` the link itself carries (an organisation invitation) still wins,
+// and a hostile one is dropped in favour of the employer intent, not forwarded.
 
+import { EMPLOYER_INTENT } from "./organisation-entrance";
 import { safeReturnPath } from "./safe-redirect";
 
 /**
@@ -28,10 +41,24 @@ import { safeReturnPath } from "./safe-redirect";
  * Takes the raw query string rather than a parsed object so a route can
  * call it from `beforeLoad` without declaring a search schema for a page
  * that renders nothing.
+ *
+ * `defaultRedirect` is what a URL carrying no usable return path of its own
+ * resolves to. It is validated like any other value, never trusted.
  */
-export function unifiedAuthHref(mode: "signin" | "signup", searchStr: string): string {
+export function unifiedAuthHref(
+  mode: "signin" | "signup",
+  searchStr: string,
+  defaultRedirect = "",
+): string {
   const base = mode === "signup" ? "/signup" : "/login";
   const params = new URLSearchParams(searchStr.startsWith("?") ? searchStr.slice(1) : searchStr);
-  const validated = safeReturnPath(params.get("redirect"), "");
+  const validated = safeReturnPath(params.get("redirect"), safeReturnPath(defaultRedirect, ""));
   return validated ? `${base}?redirect=${encodeURIComponent(validated)}` : base;
+}
+
+/** The unified destination for the legacy /employer/register URL: the
+ *  sign-up door carrying the employer intent unless the link brought a
+ *  validated return path of its own. */
+export function employerRegisterHref(searchStr: string): string {
+  return unifiedAuthHref("signup", searchStr, EMPLOYER_INTENT.redirect);
 }

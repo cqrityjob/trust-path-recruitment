@@ -138,6 +138,119 @@ const MUTATIONS: readonly Mutation[] = [
     guard: GUARD,
     expect: "the seven-destination candidate nav must appear at lg (1024px), never wait for xl",
   },
+
+  // ---- "Registrera företag": one entry, every surface (2026-10-03) --------
+  {
+    id: "PH-NC-REGISTER-LOSES-INTENT",
+    defect:
+      "the shared registration entry stops carrying the employer intent, so every surface that renders it creates a personal account with no company in it",
+    file: NAV,
+    find: '  search: EMPLOYER_INTENT,\n  labelKey: "employers.cta.register",',
+    replace:
+      '  search: { redirect: "/my-career" } as never,\n  labelKey: "employers.cta.register",',
+    guard: GUARD,
+    expect: "EMPLOYER_REGISTER_NAV must point at /signup carrying the shared EMPLOYER_INTENT",
+  },
+  {
+    id: "PH-NC-REGISTER-DESKTOP-HAND-WRITTEN",
+    defect:
+      'the desktop "För arbetsgivare" panel hand-writes its own bare /signup link instead of rendering the shared entry, so the two viewports can drift',
+    file: HEADER,
+    find: "            <Link\n              to={EMPLOYER_REGISTER_NAV.to}\n              search={EMPLOYER_REGISTER_NAV.search as never}\n",
+    replace: '            <Link\n              to="/signup"\n',
+    guard: GUARD,
+    expect: "the header must render EMPLOYER_REGISTER_NAV exactly twice",
+  },
+  {
+    id: "PH-NC-REGISTER-UNGATED-IN-SHEET",
+    defect:
+      "the compact menu offers company registration to somebody who is already signed in (and while the employer portal is closed)",
+    file: HEADER,
+    find: "            {signedIn !== true && employerPortalEnabled() && (\n              <Link\n                to={EMPLOYER_REGISTER_NAV.to}",
+    replace: "            {(\n              <Link\n                to={EMPLOYER_REGISTER_NAV.to}",
+    guard: GUARD,
+    expect: "must be gated on",
+  },
+  {
+    id: "PH-NC-FOOTER-REGISTER-FOR-SIGNED-IN",
+    defect:
+      "the footer offers company registration to a signed-in reader, who has an account (and their organisations in the account menu)",
+    file: NAV,
+    find: "  if (state.signedIn !== true && state.employerPortal) items.push(EMPLOYER_REGISTER_NAV);",
+    replace: "  if (state.employerPortal) items.push(EMPLOYER_REGISTER_NAV);",
+    guard: GUARD,
+    expect: "the footer's entries after the shared six for",
+  },
+  {
+    id: "PH-NC-FOOTER-FEEDBACK-FOR-EVERYONE",
+    defect:
+      "Betafeedback is offered to a signed-out visitor again, who is bounced to a sign-in form by a login-gated route",
+    file: NAV,
+    find: '  if (state.signedIn === true) {\n    items.push({ key: "feedback"',
+    replace: '  if (state.signedIn !== undefined) {\n    items.push({ key: "feedback"',
+    guard: GUARD,
+    expect: "the footer's entries after the shared six for",
+  },
+  {
+    id: "PH-NC-FOOTER-SEARCH-DROPPED",
+    defect:
+      "the footer link stops passing the entry's search, so its registration entry is a bare /signup",
+    file: FOOTER,
+    find: "                    search={l.search as never}\n",
+    replace: "",
+    guard: GUARD,
+    expect: "the footer must pass an entry's search to its link",
+  },
+  {
+    id: "PH-NC-FOOTER-NO-CONTACT-ADDRESS",
+    defect:
+      "the footer's contact address stops being a mailto, so the only visible address on the site is behind /contact again",
+    file: FOOTER,
+    find: "              href={`mailto:${CONTACT_EMAIL}`}",
+    replace: '              href="/contact"',
+    guard: GUARD,
+    expect: "the footer must show CONTACT_EMAIL as a visible mailto link",
+  },
+  {
+    id: "PH-NC-LEGACY-REGISTER-BARE",
+    defect:
+      "/employer/register forwards to a bare /signup again, so a bookmarked 'register your company' link creates a personal account",
+    file: "src/lib/auth/legacy-entry.ts",
+    find: '  return unifiedAuthHref("signup", searchStr, EMPLOYER_INTENT.redirect);',
+    replace: '  return unifiedAuthHref("signup", searchStr);',
+    guard: GUARD,
+    expect: "must resolve to /signup?redirect=%2Femployer",
+  },
+  {
+    id: "PH-NC-HOME-OWN-INTENT-COPY",
+    defect:
+      "the homepage band keeps a private copy of the employer intent instead of the shared one, which is how the entries drift apart",
+    file: SECTIONS,
+    find: 'import { EMPLOYER_INTENT } from "@/lib/auth/organisation-entrance";',
+    replace: 'const EMPLOYER_INTENT = { redirect: "/employer" } as const;',
+    guard: GUARD,
+    expect: "the homepage employer band must register through the shared EMPLOYER_INTENT",
+  },
+  {
+    id: "PH-NC-NAV-LANDMARK-ENGLISH-ONLY",
+    defect:
+      "the desktop navigation landmark is named in English on the Swedish site again (and loses the attribute the e2e specs find it by)",
+    file: HEADER,
+    find: '              aria-label={t("nav.primary")}\n              data-site-nav="primary"\n            >\n              {nav.map((item) =>',
+    replace: '              aria-label="Primary"\n            >\n              {nav.map((item) =>',
+    guard: GUARD,
+    expect: 'must be named by t("nav.primary")',
+  },
+  {
+    id: "PH-NC-CONTACT-CLOSED-PROMISES-INSTANT-USE",
+    defect:
+      "the closed contact form invites a visitor to register and use the platform themselves again, without saying an administrator must approve the organisation first",
+    file: "src/i18n/dictionaries.ts",
+    find: "Arbetsgivarytan öppnas först när en administratör har godkänt det.",
+    replace: "Då kan ni använda plattformen själva direkt.",
+    guard: GUARD,
+    expect: '"contact.closed.body" must not invite a visitor to start using the platform',
+  },
 ];
 
 runControls("public-header", MUTATIONS);

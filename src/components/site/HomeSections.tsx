@@ -54,6 +54,12 @@ import { EmployerLogo } from "@/components/jobs/EmployerPresentation";
 import { formatJobDate, pickLocalized } from "@/components/jobs/JobAdContent";
 import { useT } from "@/i18n/context";
 import type { TranslationKey } from "@/i18n/dictionaries";
+// The sign-up door, carrying the employer intent: /employer resolves real
+// organisation membership server-side on arrival. Nothing here grants
+// anything; signing up "as an employer" is an intent, never a role. The one
+// spelling lives with the rest of the organisation entrance, shared with the
+// header, the footer and the legacy /employer/register URL.
+import { EMPLOYER_INTENT } from "@/lib/auth/organisation-entrance";
 import { jobsEnabled } from "@/lib/job-intelligence/feature-flag";
 import { listPublicJobs, type PublicJobCard } from "@/lib/job-intelligence/public-queries";
 import { cn } from "@/lib/utils";
@@ -64,11 +70,6 @@ const H2 =
 const EYEBROW = "text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground";
 const TEXT_LINK =
   "inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-
-/** The sign-up door, carrying the employer intent: /employer resolves real
- *  organisation membership server-side on arrival. Nothing here grants
- *  anything; signing up "as an employer" is an intent, never a role. */
-export const EMPLOYER_INTENT = { redirect: "/employer" } as const;
 
 // ── 1 · HERO ────────────────────────────────────────────────────────────
 //

@@ -199,7 +199,7 @@ for (const lang of ["sv", "en"] as const) {
         await answerPublicJobs(page);
         await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
 
-        const nav = page.locator('header nav[aria-label="Primary"]').first();
+        const nav = page.locator('header nav[data-site-nav="primary"]').first();
         await expect(nav).toBeVisible();
         const items = nav.locator(":scope > a, :scope > div > button");
         expect((await items.allInnerTexts()).map((x) => x.trim())).toEqual([...PUBLIC_SIX[lang]]);

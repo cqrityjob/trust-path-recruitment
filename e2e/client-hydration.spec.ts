@@ -61,7 +61,34 @@ test("legacy auth URLs redirect before hydration and preserve only safe return p
       expect(destination.pathname).toBe(target);
       if (returnPath === "/passport")
         expect(destination.searchParams.get("redirect")).toBe(returnPath);
-      else expect(destination.href).not.toContain("attacker.invalid");
+      else {
+        expect(destination.href).not.toContain("attacker.invalid");
+        // A hostile return path is dropped, not forwarded. The employer
+        // registration door falls back to the employer intent every
+        // "Registrera företag" entry carries; no other door has a default.
+        expect(destination.searchParams.get("redirect")).toBe(
+          entry === "/employer/register" ? "/employer" : null,
+        );
+      }
     }
   }
+});
+
+test("the legacy employer registration URL keeps the employer intent", async ({ request }) => {
+  // Bare, and with an irrelevant parameter: the destination is the sign-up
+  // door carrying /employer, exactly what the "Registrera företag" buttons
+  // link to. It used to be a bare /signup, which created a personal account.
+  for (const query of ["", "?intent=employer"]) {
+    const response = await request.get(`${BASE}/employer/register${query}`, { maxRedirects: 0 });
+    expect([301, 302, 303, 307, 308]).toContain(response.status());
+    const destination = new URL(response.headers().location, BASE);
+    expect(destination.origin).toBe(new URL(BASE).origin);
+    expect(destination.pathname).toBe("/signup");
+    expect(destination.searchParams.get("redirect")).toBe("/employer");
+  }
+  // The candidate door has no such default.
+  const candidate = await request.get(`${BASE}/candidate/register`, { maxRedirects: 0 });
+  const candidateDestination = new URL(candidate.headers().location, BASE);
+  expect(candidateDestination.pathname).toBe("/signup");
+  expect(candidateDestination.searchParams.get("redirect")).toBeNull();
 });

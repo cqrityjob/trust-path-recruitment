@@ -798,10 +798,13 @@ expect(
 
 // ── 9c. It is offered to a signed-out visitor and to nobody else ──────
 {
+  // Two entries per viewport since 2026-10-03 -- register a company, and sign
+  // in to one -- each behind its own gate, so each sits next to its own
+  // condition rather than a reader having to trust a wrapper far above it.
   const gates = header.split(EMPLOYER_GATE).length - 1;
   expect(
-    gates === 2,
-    `both employer entrances must be gated on "${EMPLOYER_GATE}" (found ${gates}) -- a signed-in person reaches their organisations from the account menu, by name`,
+    gates === 4,
+    `both employer entrances (register and sign in) must be gated on "${EMPLOYER_GATE}" on the desktop menu and the compact menu (found ${gates}) -- a signed-in person reaches their organisations from the account menu, by name`,
   );
   let cursor = 0;
   let guarded = 0;
@@ -890,6 +893,44 @@ expect(
   unifiedAuthHref("signin", "?intent=employer") === "/login",
   "intent must not survive the legacy employer door -- it selected a form, and was never a permission",
 );
+expect(
+  unifiedAuthHref("signup", "") === "/signup",
+  "the candidate registration door has no default destination -- only /employer/register carries an intent",
+);
+
+// ── /employer/register keeps the EMPLOYER INTENT (2026-10-03) ─────────
+//
+// It forwarded to a bare /signup, so a bookmarked or printed "register your
+// company" link created a personal account with no company in it. The ONLY
+// legacy door with a default; a validated return path of the link's own still
+// wins (an organisation invitation), and a hostile one is dropped in favour of
+// the default, never forwarded.
+{
+  const { employerRegisterHref } = await import("../src/lib/auth/legacy-entry");
+  const DEST = "/signup?redirect=%2Femployer";
+  for (const [query, expected, why] of [
+    ["", DEST, "a bare /employer/register"],
+    ["?intent=employer", DEST, "an `intent` parameter (never carried, and not needed)"],
+    ["?redirect=https://evil.test", DEST, "an absolute return path"],
+    ["?redirect=//evil.test", DEST, "a protocol-relative return path"],
+    ["?redirect=/employer/register", DEST, "a return path back into an auth surface"],
+    ["?redirect=/passport", "/signup?redirect=%2Fpassport", "a validated return path of its own"],
+    [
+      "?redirect=/employer/join/abc",
+      "/signup?redirect=%2Femployer%2Fjoin%2Fabc",
+      "an organisation invitation",
+    ],
+  ] as const) {
+    expect(
+      employerRegisterHref(query) === expected,
+      `/employer/register with ${why} must resolve to ${expected} (found ${employerRegisterHref(query)}) -- it is the employer registration door and must keep the employer intent`,
+    );
+  }
+  expect(
+    read("src/routes/employer.register.tsx").includes("employerRegisterHref(location.searchStr"),
+    'src/routes/employer.register.tsx must forward through employerRegisterHref -- a bare unifiedAuthHref("signup", ...) drops the employer intent again',
+  );
+}
 
 // ── 9g. /employers offers its actions, in the settled order ───────────
 //
@@ -903,7 +944,7 @@ expect(
 // what somebody typed.
 const employersPage = read("src/routes/employers.tsx");
 expect(
-  employersPage.includes('<PrimaryLink to="/signup" search={{ redirect: "/employer" }}>') &&
+  employersPage.includes('<PrimaryLink to="/signup" search={EMPLOYER_INTENT}>') &&
     employersPage.includes('{t("employers.cta.register")}'),
   '/employers must offer "employers.cta.register" pointing at /signup with the /employer return path',
 );
@@ -965,6 +1006,237 @@ for (const door of ['to="/signup"', 'to="/login"']) {
     );
     at = employersPage.indexOf(door, at + door.length);
   }
+}
+
+// -----------------------------------------------------------------------
+// 9i. "REGISTRERA FÖRETAG" -- the entry every surface shares (2026-10-03).
+//
+//    Registering a company existed only on / and on /employers: a visitor on
+//    any other page could sign an existing company in (section 9) and never
+//    register a new one. EMPLOYER_REGISTER_NAV (public-nav.ts) is the ONE
+//    definition -- destination, intent and label -- and the "För arbetsgivare"
+//    panel, the compact menu and the footer all render it.
+//
+//      * the SAME destination as the homepage band and /employers:
+//        /signup carrying the shared EMPLOYER_INTENT, never a bare /signup and
+//        never a second spelling;
+//      * the SAME label as /employers ("employers.cta.register"), so one
+//        action is never called two things;
+//      * signed-out only, gated on the release flag, on desktop AND in the
+//        compact menu, 44px, visible text, the shared focus ring.
+// -----------------------------------------------------------------------
+{
+  const { EMPLOYER_REGISTER_NAV, footerExtraNav } =
+    await import("../src/components/site/public-nav");
+  const { EMPLOYER_INTENT: SHARED_INTENT } = await import("../src/lib/auth/organisation-entrance");
+
+  // ── The one definition ────────────────────────────────────────────────
+  expect(
+    EMPLOYER_REGISTER_NAV.to === "/signup" &&
+      JSON.stringify(EMPLOYER_REGISTER_NAV.search) === JSON.stringify({ redirect: "/employer" }) &&
+      (EMPLOYER_REGISTER_NAV.search as unknown) === (SHARED_INTENT as unknown),
+    'EMPLOYER_REGISTER_NAV must point at /signup carrying the shared EMPLOYER_INTENT ({ redirect: "/employer" }) -- a bare /signup turns "register your company" into a personal account',
+  );
+  expect(
+    EMPLOYER_REGISTER_NAV.labelKey === "employers.cta.register",
+    'EMPLOYER_REGISTER_NAV must be labelled "employers.cta.register" -- the owner-approved label /employers and the homepage band already use',
+  );
+  expect(
+    !AUTH_SURFACES.includes("/employer") && safeReturnPath("/employer", "") === "/employer",
+    "the registration intent's destination must survive safeReturnPath",
+  );
+  // The homepage band and /employers draw from the SAME constant, so there is
+  // no second spelling to drift.
+  {
+    const sections = read("src/components/site/HomeSections.tsx");
+    const importLine = 'import { EMPLOYER_INTENT } from "@/lib/auth/organisation-entrance";';
+    expect(
+      sections.includes(importLine) &&
+        /to="\/signup"\s+search=\{EMPLOYER_INTENT\}/.test(sections) &&
+        !/const EMPLOYER_INTENT\b/.test(sections),
+      "the homepage employer band must register through the shared EMPLOYER_INTENT, not a copy of it",
+    );
+    const flat = employersPage.replace(/\s+/g, " ");
+    expect(
+      employersPage.includes(importLine) &&
+        (flat.match(/to="\/signup"/g) ?? []).length ===
+          (flat.match(/to="\/signup" search=\{EMPLOYER_INTENT\}/g) ?? []).length,
+      "every /employers sign-up button must carry the shared EMPLOYER_INTENT, not a hand-written copy",
+    );
+  }
+  for (const lang of ["sv", "en"] as const) {
+    const d = dictionaries[lang] as Record<string, string>;
+    expect(
+      d["employers.cta.register"] === employerCopy["employers.cta.register"][lang],
+      `${lang} "employers.cta.register" is the registration entry's label everywhere`,
+    );
+    // The truth about what registering opens, said next to the button.
+    expect(
+      typeof d["employers.cta.registerNote"] === "string" &&
+        /administrat/i.test(d["employers.cta.registerNote"]) &&
+        /(arbetsgivarytan|employer workspace)/i.test(d["employers.cta.registerNote"]),
+      `${lang} "employers.cta.registerNote" must say that an administrator reviews the organisation before the employer workspace opens`,
+    );
+    expect(
+      /administrat/i.test(d["contact.closed.body"]) &&
+        /(arbetsgivarytan|employer workspace)/i.test(d["contact.closed.body"]) &&
+        !/(använda plattformen själva|use the platform yourselves)/i.test(d["contact.closed.body"]),
+      `${lang} "contact.closed.body" must not invite a visitor to start using the platform straight away -- the workspace opens only after an administrator approves the organisation`,
+    );
+  }
+  expect(
+    /\{portalOpen && \(\s*<p data-employer-register-note[^>]*>\s*\{t\("employers\.cta\.registerNote"\)\}/.test(
+      employersPage,
+    ),
+    "/employers must show employers.cta.registerNote beside the register button, behind the same portalOpen gate",
+  );
+
+  // ── The header renders it twice: the desktop panel and the compact menu ──
+  const sheetOnly = header.slice(
+    header.indexOf(menuMarker),
+    header.indexOf("function EmployerMenu("),
+  );
+  const registerTo = "to={EMPLOYER_REGISTER_NAV.to}";
+  const registerUses = header.split(registerTo).length - 1;
+  expect(
+    registerUses === 2 &&
+      header.split("search={EMPLOYER_REGISTER_NAV.search as never}").length - 1 === 2 &&
+      header.split("{t(EMPLOYER_REGISTER_NAV.labelKey)}").length - 1 === 2,
+    `the header must render EMPLOYER_REGISTER_NAV exactly twice -- desktop panel and compact menu (found ${registerUses}); an entrance that exists only on a laptop is not an entrance`,
+  );
+  expect(
+    desktopBar.includes(registerTo) && sheetOnly.includes(registerTo),
+    'both the desktop "För arbetsgivare" panel and the compact menu must render the registration entry',
+  );
+  {
+    let at = header.indexOf(registerTo);
+    let guarded = 0;
+    while (at !== -1) {
+      if (header.slice(Math.max(0, at - 400), at).includes(EMPLOYER_GATE)) guarded += 1;
+      at = header.indexOf(registerTo, at + registerTo.length);
+    }
+    expect(
+      guarded === registerUses,
+      `every registration entry must sit inside the signed-out, release-flag gate (${guarded} of ${registerUses} do) -- a company registration offered to somebody already signed in, or while the portal is closed, is a door onto a product that is not open`,
+    );
+  }
+  const sheetRegisterRow = sheetOnly.slice(
+    sheetOnly.indexOf(registerTo),
+    sheetOnly.indexOf(registerTo) + 900,
+  );
+  expect(
+    sheetRegisterRow.includes("min-h-[44px]") &&
+      sheetRegisterRow.includes("focusRing") &&
+      /<Building2[^>]*aria-hidden="true"/.test(sheetRegisterRow),
+    "the compact menu's registration entry must be a 44px target with the shared focus ring and a decorative icon beside visible text",
+  );
+  const desktopRegisterRow = desktopBar.slice(
+    desktopBar.indexOf(registerTo),
+    desktopBar.indexOf(registerTo) + 900,
+  );
+  expect(
+    desktopRegisterRow.includes("min-h-[44px]") && desktopRegisterRow.includes("focusRing"),
+    "the desktop panel's registration entry must be a 44px target with the shared focus ring",
+  );
+  expect(
+    !/to="\/signup"\s+search=/.test(header),
+    'SiteHeader must not hand-write a /signup link carrying a search -- registration comes from EMPLOYER_REGISTER_NAV, and the chrome\'s own "Skapa konto" carries none',
+  );
+
+  // ── The footer renders it too, and decides who sees what in ONE place ──
+  const footerCode = footerSrc
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  expect(
+    footerCode.includes("footerExtraNav({ signedIn, employerPortal: employerPortalEnabled() })"),
+    "the footer must take its contact, registration and feedback entries from footerExtraNav() -- a hand-written entry beside the shared definition is how the surfaces drift",
+  );
+  expect(
+    !footerCode.includes('"/feedback"') &&
+      !footerCode.includes("footer.betaFeedback") &&
+      !footerCode.includes("/signup"),
+    "the footer must not hand-write /feedback, Betafeedback or /signup -- they come from footerExtraNav(), which decides who is offered them",
+  );
+  const keysFor = (signedIn: boolean | null, employerPortal: boolean) =>
+    footerExtraNav({ signedIn, employerPortal })
+      .map((i) => i.key)
+      .join(",");
+  for (const [signedIn, portal, expected, why] of [
+    [false, true, "contact,employer-register", "a signed-out visitor, portal open"],
+    [null, true, "contact,employer-register", "a visitor whose session is not known yet"],
+    [false, false, "contact", "a signed-out visitor while the portal is closed"],
+    [true, true, "contact,feedback", "a signed-in reader"],
+    [true, false, "contact,feedback", "a signed-in reader while the portal is closed"],
+  ] as const) {
+    expect(
+      keysFor(signedIn, portal) === expected,
+      `the footer's entries after the shared six for ${why} must be ${expected} (found ${keysFor(signedIn, portal)}) -- Betafeedback sits behind the login, so it is offered to a signed-in reader only; registration to a signed-out visitor only`,
+    );
+  }
+  for (const item of footerExtraNav({ signedIn: false, employerPortal: true })) {
+    if (item.key === "employer-register") {
+      expect(
+        item.to === EMPLOYER_REGISTER_NAV.to && item.search === EMPLOYER_REGISTER_NAV.search,
+        "the footer's registration entry must be EMPLOYER_REGISTER_NAV itself",
+      );
+    }
+  }
+  expect(
+    existsSync(path.join(root, "src/routes/_authenticated.feedback.tsx")),
+    "the footer's Betafeedback entry must be backed by the existing /feedback route",
+  );
+  expect(
+    /<Link\s+to=\{l\.to\}\s+search=\{l\.search as never\}/.test(footerSrc),
+    "the footer must pass an entry's search to its link -- without it the registration entry is a bare /signup",
+  );
+
+  // ── The footer's contact address: a visible mailto, from the one constant ──
+  const { CONTACT_EMAIL } = await import("../src/lib/contact/contact-address");
+  expect(
+    footerSrc.includes('import { CONTACT_EMAIL } from "@/lib/contact/contact-address";') &&
+      footerSrc.includes("href={`mailto:${CONTACT_EMAIL}`}") &&
+      footerSrc.includes("{CONTACT_EMAIL}") &&
+      !footerSrc.includes(CONTACT_EMAIL.split("@")[1] ?? "@"),
+    "the footer must show CONTACT_EMAIL as a visible mailto link, imported from contact-address.ts -- the one place the address is written down",
+  );
+  {
+    const at = footerSrc.indexOf("href={`mailto:");
+    const anchor = footerSrc.slice(Math.max(0, at - 60), at + 700);
+    expect(
+      at !== -1 &&
+        anchor.includes("min-h-[44px]") &&
+        anchor.includes("min-w-[44px]") &&
+        anchor.includes("focus-visible:ring-2"),
+      "the footer's contact address must be a 44 x 44 target with the shared focus ring",
+    );
+  }
+  expect(
+    footerSrc.includes('<span>{t("footer.legal.notice")}</span>'),
+    "the footer's legal notice is plain text and keeps its handling exactly as it was",
+  );
+}
+
+// -----------------------------------------------------------------------
+// 9j. The navigation landmark is named in the reader's language, and found
+//     by a stable attribute, never by its (translated) label.
+// -----------------------------------------------------------------------
+{
+  expect(
+    !/aria-label="Primary"/.test(header) &&
+      (header.match(/aria-label=\{t\("nav\.primary"\)\}/g) ?? []).length === 2 &&
+      (header.match(/data-site-nav="primary"/g) ?? []).length === 2,
+    'both public navigation landmarks (desktop bar and compact menu) must be named by t("nav.primary") and carry data-site-nav="primary" for the e2e specs',
+  );
+  for (const lang of ["sv", "en"] as const) {
+    const label = (dictionaries[lang] as Record<string, string>)["nav.primary"];
+    expect(typeof label === "string" && label.length > 0, `${lang} must define "nav.primary"`);
+  }
+  expect(
+    (dictionaries.sv as Record<string, string>)["nav.primary"] !==
+      (dictionaries.en as Record<string, string>)["nav.primary"],
+    '"nav.primary" must be translated -- an English landmark name on the Swedish site is the defect this key replaces',
+  );
 }
 
 // -----------------------------------------------------------------------
