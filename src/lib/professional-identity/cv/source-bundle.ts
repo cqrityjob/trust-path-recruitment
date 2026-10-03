@@ -53,6 +53,7 @@ import {
   EDUCATION_CLAIM_TYPES,
   LANGUAGE_CLAIM_TYPES,
   SKILL_CLAIM_TYPES,
+  claimTitleFor,
   claimsOfType,
   professionLabel,
   type ProfessionalIdentityV1,
@@ -158,21 +159,27 @@ export interface CvSourceBundle {
   readonly targetJobText: string | null;
 }
 
-function toFactClaim(claim: {
-  id: string;
-  claimType: string;
-  title: string;
-  issuerName: string | null;
-  issuedOn: string | null;
-  validUntil: string | null;
-  skillLevel: string | null;
-  assertionLevel: string;
-  lifecycleState: string;
-}): CvFactClaim {
+function toFactClaim(
+  claim: {
+    id: string;
+    claimType: string;
+    title: string;
+    catalogueNameSv?: string | null;
+    catalogueNameEn?: string | null;
+    issuerName: string | null;
+    issuedOn: string | null;
+    validUntil: string | null;
+    skillLevel: string | null;
+    assertionLevel: string;
+    lifecycleState: string;
+  },
+  locale: "sv" | "en",
+): CvFactClaim {
   return {
     id: claim.id,
     claimType: claim.claimType,
-    title: claim.title,
+    // The document's language, not whichever form the write path stored.
+    title: claimTitleFor(claim, locale),
     issuerName: claim.issuerName,
     issuedOn: claim.issuedOn,
     validUntil: claim.validUntil,
@@ -277,16 +284,19 @@ export function buildCvSourceBundle(input: BuildCvSourceBundleInput): CvSourceBu
       included,
     ),
     education: keepOnly(
-      claimsOfType(identity.claims, EDUCATION_CLAIM_TYPES).map(toFactClaim),
+      claimsOfType(identity.claims, EDUCATION_CLAIM_TYPES).map((c) => toFactClaim(c, locale)),
       included,
     ),
     credentials: keepOnly(
-      claimsOfType(identity.claims, CREDENTIAL_CLAIM_TYPES).map(toFactClaim),
+      claimsOfType(identity.claims, CREDENTIAL_CLAIM_TYPES).map((c) => toFactClaim(c, locale)),
       included,
     ),
-    skills: keepOnly(claimsOfType(identity.claims, SKILL_CLAIM_TYPES).map(toFactClaim), included),
+    skills: keepOnly(
+      claimsOfType(identity.claims, SKILL_CLAIM_TYPES).map((c) => toFactClaim(c, locale)),
+      included,
+    ),
     languages: keepOnly(
-      claimsOfType(identity.claims, LANGUAGE_CLAIM_TYPES).map(toFactClaim),
+      claimsOfType(identity.claims, LANGUAGE_CLAIM_TYPES).map((c) => toFactClaim(c, locale)),
       included,
     ),
     careerInsight:

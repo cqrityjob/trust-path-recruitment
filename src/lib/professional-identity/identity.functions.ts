@@ -55,6 +55,28 @@ type ScopedClient = any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
 
+interface CatalogueNameRow {
+  readonly name_sv: string | null;
+  readonly name_en: string | null;
+  readonly title_is_holder_written: boolean | null;
+  readonly narrow_result_only: boolean | null;
+}
+
+/** The definition's own names, when the definition owns the title — the same
+ *  rule as the Passport's `titleIsControlled`. A holder-written title keeps
+ *  both null, so `claimTitleFor` shows what the holder wrote. */
+function catalogueNames(row: CatalogueNameRow | null): {
+  catalogueNameSv: string | null;
+  catalogueNameEn: string | null;
+} {
+  const controlled =
+    !!row && (row.narrow_result_only === true || row.title_is_holder_written !== true);
+  return {
+    catalogueNameSv: controlled ? (row?.name_sv ?? null) : null,
+    catalogueNameEn: controlled ? (row?.name_en ?? null) : null,
+  };
+}
+
 /**
  * Read the whole identity.
  *
@@ -131,7 +153,7 @@ export async function readProfessionalIdentity(
     supabase
       .from("sp_claims")
       .select(
-        "id, claim_type, title, claimed_issuer_name, issued_on, valid_until, skill_level, assertion_level, lifecycle_state",
+        "id, claim_type, title, claimed_issuer_name, issued_on, valid_until, skill_level, assertion_level, lifecycle_state, sp_credential_types!sp_claims_credential_code_fkey(name_sv, name_en, title_is_holder_written, narrow_result_only)",
       )
       .eq("holder_user_id", userId)
       .eq("lifecycle_state", "active"),
@@ -306,6 +328,7 @@ export async function readProfessionalIdentity(
     id: String(r.id),
     claimType: String(r.claim_type ?? ""),
     title: String(r.title ?? ""),
+    ...catalogueNames(r.sp_credential_types as CatalogueNameRow | null),
     issuerName: (r.claimed_issuer_name as string | null) ?? null,
     issuedOn: (r.issued_on as string | null) ?? null,
     validUntil: (r.valid_until as string | null) ?? null,
