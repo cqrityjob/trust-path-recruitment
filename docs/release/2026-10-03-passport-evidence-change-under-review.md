@@ -1,8 +1,13 @@
 # Passport: evidence added under review binds the decision too
 
-**Status: PENDING.** It is not merged, and nothing was written to the hosted
-database. It follows 20270125090000. The application has called
-`sp_verifier_decide_reviewed` since #385 (merged, f5eb230), so it can ship next.
+**Status: APPLIED.** Merged (#388, d26e656) and verified read-only on
+production on 2026-10-03:
+- **Ledger.** 360 rows, digest `dcb7e4bc…`; the first 359 are unchanged.
+- **Function body.** `sp_attach_evidence` md5 `e5c65b31…` equals a local
+  replay of main.
+- **Grants.** Unchanged.
+- **Open requests.** 0.
+- **No production write probe** was run.
 
 | Part | File |
 |---|---|
