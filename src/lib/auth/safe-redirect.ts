@@ -34,6 +34,23 @@ const LINE_BREAKING = /[\r\n\u2028\u2029]/;
  *  forms, in either case. */
 const ENCODED_LINE_BREAK = /%(25)*0[ad]/i;
 
+/** Every C0 control character (U+0000-U+001F: NUL, TAB, CR, LF, ESC, ...) and
+ *  DEL (U+007F).
+ *
+ *  CR and LF are covered twice on purpose (above, and here): the line-break
+ *  layers are the response-splitting defence and are asserted on their own.
+ *  What the line-break layers could not see is TAB and NUL. A URL parser
+ *  strips TAB (and CR and LF) from anywhere in the input BEFORE it reads the
+ *  host, so "/\t/evil.test" passes every structural check below ("starts with
+ *  one slash, is not '//'") and is then navigated to as "//evil.test" -- an
+ *  open redirect. NUL and the rest of C0 have no business in a path either,
+ *  and a header writer or a log line is not a place to find out. */
+const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
+
+/** Any depth of percent-encoded C0 control or DEL: %00-%1f and %7f, with any
+ *  number of further "%25" prefixes, in either case. */
+const ENCODED_CONTROL_CHAR = /%(25)*(?:[01][0-9a-f]|7f)/i;
+
 /**
  * Percent-decode once, for INSPECTION only.
  *
@@ -99,6 +116,39 @@ export function hasEncodedLineBreak(raw: string): boolean {
   return ENCODED_LINE_BREAK.test(raw);
 }
 
+// ── THE SAME FOUR LAYERS FOR EVERY OTHER CONTROL CHARACTER ────────────────
+//
+// TAB and NUL (and the rest of C0, and DEL) get the shape CR and LF have, for
+// the same reason: each depth is its own exported predicate, so a guard can
+// prove each one is load-bearing instead of finding an input only one of them
+// catches. See CONTROL_CHARS above for what they are for.
+
+/** Layer 5 — a C0 control or DEL in the value exactly as supplied. */
+export function rawHasControlChar(raw: string): boolean {
+  return CONTROL_CHARS.test(raw);
+}
+
+/** Layer 6 — what one downstream decoder would see. Undecodable is a hit. */
+export function decodedOnceHasControlChar(raw: string): boolean {
+  const once = decodeOnceForInspection(raw);
+  if (once === null) return true;
+  return CONTROL_CHARS.test(once);
+}
+
+/** Layer 7 — what two decoders in series would see. */
+export function decodedTwiceHasControlChar(raw: string): boolean {
+  const once = decodeOnceForInspection(raw);
+  if (once === null) return true;
+  const twice = decodeOnceForInspection(once);
+  if (twice === null) return true;
+  return CONTROL_CHARS.test(twice);
+}
+
+/** Layer 8 — any remaining encoding depth, read off the raw string. */
+export function hasEncodedControlChar(raw: string): boolean {
+  return ENCODED_CONTROL_CHAR.test(raw);
+}
+
 export function safeReturnPath(raw: string | null | undefined, fallback: string): string {
   if (!raw) return fallback;
   if (raw.length > 500) return fallback;
@@ -110,6 +160,13 @@ export function safeReturnPath(raw: string | null | undefined, fallback: string)
   if (decodedOnceHasLineBreak(raw)) return fallback;
   if (decodedTwiceHasLineBreak(raw)) return fallback;
   if (hasEncodedLineBreak(raw)) return fallback;
+  // TAB, NUL and every other C0 control, and DEL: a URL parser deletes TAB
+  // from anywhere in a value, so "/\t/evil.test" would become "//evil.test"
+  // after every check below had approved it.
+  if (rawHasControlChar(raw)) return fallback;
+  if (decodedOnceHasControlChar(raw)) return fallback;
+  if (decodedTwiceHasControlChar(raw)) return fallback;
+  if (hasEncodedControlChar(raw)) return fallback;
 
   // Must start with a single "/" — rejects protocol-relative ("//evil.com"),
   // absolute URLs ("https://..."), and anything not path-shaped.
