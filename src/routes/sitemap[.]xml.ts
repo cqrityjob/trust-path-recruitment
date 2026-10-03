@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { professions } from "@/lib/career-center";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
+import { PRIVACY_FINAL, TERMS_FINAL } from "@/lib/legal/status";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
 
 const BASE_URL = "https://trust-path-recruitment.lovable.app";
@@ -48,6 +49,13 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/plattformen", changefreq: "monthly", priority: "0.7" },
           { path: "/about", changefreq: "monthly", priority: "0.6" },
           { path: "/contact", changefreq: "yearly", priority: "0.4" },
+          // Listed once final; a draft is not offered as the published text.
+          ...(TERMS_FINAL
+            ? [{ path: "/villkor", changefreq: "yearly" as const, priority: "0.3" }]
+            : []),
+          ...(PRIVACY_FINAL
+            ? [{ path: "/integritetspolicy", changefreq: "yearly" as const, priority: "0.3" }]
+            : []),
           ...professions.map((p) => ({
             path: `/career-center/${p.slug}`,
             changefreq: "monthly" as const,

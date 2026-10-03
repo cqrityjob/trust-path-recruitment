@@ -14,6 +14,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { I18nProvider, useAdoptLangIntent } from "../i18n/context";
+import { TermsAcceptanceGate } from "../components/legal/TermsAcceptanceGate";
 import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
@@ -172,6 +173,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <LangIntentFromUrl />
+        {/* Every signed-in page: an account without accepted terms is asked
+            before it can use the product (Google sign-in included). */}
+        <TermsAcceptanceGate />
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </I18nProvider>

@@ -1303,7 +1303,11 @@ const sql = read(F.migration);
       ) &&
         receipt.html.includes(">Öppna din ansökan</a>") &&
         ordinary.html.includes('href="https://cqrityjob.example/my-career/applications"') &&
-        ordinary.html.includes(">Läs och svara i CQrityjob</a>") &&
+        ordinary.html.includes(">Läs i CQrityjob</a>") &&
+        // The footer says where an e-mail reply goes; nothing promises an
+        // in-product reply that does not exist.
+        ordinary.html.includes("går svaret till CQrityjob (job@cqrityjob.com)") &&
+        !ordinary.html.includes("svara i CQrityjob") &&
         hostile.html.includes('href="https://cqrityjob.example/my-career/applications"') &&
         !hostile.html.includes("<script") &&
         hostile.html.includes("&lt;script&gt;"),

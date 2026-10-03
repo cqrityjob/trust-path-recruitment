@@ -823,6 +823,8 @@ export const dictionaries = {
     // a message as sent that no provider accepted.
     "contact.title": "Kontakta oss om rekrytering",
     "contact.lead": "Berätta kort vad ni behöver, så återkommer vi.",
+    "contact.address.general": "Kontakt, support och integritetsfrågor:",
+    "contact.address.job": "Rekrytering och kandidatfrågor:",
     "contact.service.legend": "Vad gäller förfrågan?",
     "contact.service.recruitment": "Rekrytering",
     "contact.service.executive": "Executive Search",
@@ -1049,8 +1051,22 @@ export const dictionaries = {
     "feedback.error": "Kunde inte skicka feedback. Försök igen.",
     "feedback.sendAnother": "Skicka ytterligare feedback",
     "footer.betaFeedback": "Betafeedback",
+    // Information, not consent: the privacy policy describes processing;
+    // nobody "accepts" it. Acceptance is the terms checkbox, and only that.
     "auth.privacy_note":
-      "Genom att skapa ett konto godkänner du vår integritetspolicy. Du kan när som helst begära export eller radering av dina uppgifter.",
+      "Läs hur vi behandlar dina personuppgifter i vår {privacy}. Du kan när som helst begära export eller radering av dina uppgifter via info@cqrityjob.com.",
+    "auth.terms.accept": "Jag har läst och godkänner {terms}.",
+    "auth.terms.link": "användarvillkoren",
+    "auth.privacy.link": "integritetspolicy",
+    "auth.error.termsRequired": "Godkänn användarvillkoren för att skapa ett konto.",
+    "terms.gate.title": "Godkänn användarvillkoren",
+    "terms.gate.body":
+      "För att använda CQrityjob behöver du godkänna användarvillkoren. Läs hur vi behandlar dina personuppgifter i integritetspolicyn.",
+    "terms.gate.accept": "Jag har läst och godkänner {terms}.",
+    "terms.gate.continue": "Fortsätt",
+    "terms.gate.signOut": "Logga ut",
+    "terms.gate.failed": "Godkännandet kunde inte sparas. Försök igen.",
+    "legal.draft": "Utkast – inte fastställt. De markerade punkterna beslutas innan texten gäller.",
     // The sign-in page is not the moment anyone accepts anything -- they
     // accepted it when they registered. Telling somebody who is logging in
     // that doing so constitutes consent is both wrong and the kind of small
@@ -1192,7 +1208,18 @@ export const dictionaries = {
     // site yet. Said plainly rather than printed as two document names a
     // visitor would go looking for; they become links the day approved
     // documents and their routes exist, and not before.
-    "footer.legal.notice": "Integritetspolicy och användarvillkor är inte publicerade ännu.",
+    "footer.terms": "Användarvillkor",
+    "footer.privacy": "Integritetspolicy",
+    "footer.contactEmail": "Kontakt och support:",
+    "meta.terms.title": "Användarvillkor – CQrityjob",
+    "meta.terms.description":
+      "Villkoren för att använda CQrityjob och de tjänster som omfattas av plattformen.",
+    "meta.privacy.title": "Integritetspolicy – CQrityjob",
+    "meta.privacy.description":
+      "Hur Cqrityjob LLC behandlar dina personuppgifter när du använder CQrityjob.",
+    "legal.swedishOnly": "",
+    "legal.provider": "Cqrityjob LLC · info@cqrityjob.com",
+    "legal.contents": "Innehåll",
     "footer.rights": "Alla rättigheter förbehållna.",
     "footer.built": "Baserat i Sverige. Byggd för säkerhetsbranschen.",
 
@@ -9564,6 +9591,8 @@ export const dictionaries = {
     // the English refinement pass.
     "contact.title": "Contact us about recruitment",
     "contact.lead": "Tell us briefly what you need and we will get back to you.",
+    "contact.address.general": "Contact, support and privacy questions:",
+    "contact.address.job": "Recruitment and candidate questions:",
     "contact.service.legend": "What is your enquiry about?",
     "contact.service.recruitment": "Recruitment",
     "contact.service.executive": "Executive Search",
@@ -9757,7 +9786,19 @@ export const dictionaries = {
     "feedback.sendAnother": "Send more feedback",
     "footer.betaFeedback": "Beta feedback",
     "auth.privacy_note":
-      "By creating an account you accept our privacy policy. You may request export or deletion of your data at any time.",
+      "Read how we process your personal data in our {privacy}. You may request export or deletion of your data at any time via info@cqrityjob.com.",
+    "auth.terms.accept": "I have read and accept the {terms}.",
+    "auth.terms.link": "terms of use",
+    "auth.privacy.link": "privacy policy",
+    "auth.error.termsRequired": "Accept the terms of use to create an account.",
+    "terms.gate.title": "Accept the terms of use",
+    "terms.gate.body":
+      "To use CQrityjob you need to accept the terms of use. Read how we process your personal data in the privacy policy.",
+    "terms.gate.accept": "I have read and accept the {terms}.",
+    "terms.gate.continue": "Continue",
+    "terms.gate.signOut": "Sign out",
+    "terms.gate.failed": "Your acceptance could not be saved. Try again.",
+    "legal.draft": "Draft – not final. The marked points are decided before the text applies.",
     "auth.privacy_note.signin": "You may request export or deletion of your data at any time.",
     "auth.signout": "Sign out",
     "auth.redirecting": "Redirecting…",
@@ -9881,7 +9922,17 @@ export const dictionaries = {
     "footer.for_orgs": "For organizations",
     "footer.company": "Company",
     "footer.legal": "Legal",
-    "footer.legal.notice": "The privacy policy and terms of use have not been published yet.",
+    "footer.terms": "Terms of use",
+    "footer.privacy": "Privacy policy",
+    "footer.contactEmail": "Contact and support:",
+    "meta.terms.title": "Terms of use – CQrityjob",
+    "meta.terms.description": "The terms for using CQrityjob and the services the platform covers.",
+    "meta.privacy.title": "Privacy policy – CQrityjob",
+    "meta.privacy.description":
+      "How Cqrityjob LLC processes your personal data when you use CQrityjob.",
+    "legal.swedishOnly": "This document is currently published in Swedish only.",
+    "legal.provider": "Cqrityjob LLC · info@cqrityjob.com",
+    "legal.contents": "Contents",
     "footer.rights": "All rights reserved.",
     "footer.built": "Based in Sweden. Built for the security industry.",
 

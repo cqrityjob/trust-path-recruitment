@@ -125,6 +125,8 @@ test("1 · the desktop registers an organisation and is told to read the inbox",
   await page.locator('input[type="password"]').fill(PASSWORD);
   await page.locator('input[name="organization"]').fill(COMPANY);
   await page.locator('input[name="country"]').fill("Sverige");
+  // Registration requires accepting the terms of use (2026-10-03).
+  await page.getByTestId("signup-terms").check();
   await page.getByRole("button", { name: /^(skapa konto|create account)$/i }).click();
 
   const panel = page.getByTestId("auth-awaiting-confirmation");
@@ -273,6 +275,8 @@ test("8 · a second registration with the same address is told the account exist
   await page.locator('input[type="password"]').fill("AnotherPassword!2026");
   await page.locator('input[name="organization"]').fill("Dubblett AB");
   await page.locator('input[name="country"]').fill("Sverige");
+  // Registration requires accepting the terms of use (2026-10-03).
+  await page.getByTestId("signup-terms").check();
   await page.getByRole("button", { name: /^(skapa konto|create account)$/i }).click();
   const existing = page.getByTestId("auth-existing-account");
   await expect(existing).toBeVisible({ timeout: 30_000 });
