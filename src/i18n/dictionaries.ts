@@ -1473,6 +1473,10 @@ export const dictionaries = {
     "cd.public.loading": "Förbereder karriäranalysen…",
     "cd.public.unavailableTitle": "Karriäranalysen är inte öppen just nu",
     "cd.public.unavailableBody": "Karriäranalysen är inte öppen för nya deltagare just nu.",
+    // The check itself failed: neither "open" nor "closed" is known.
+    "cd.public.checkFailedTitle": "Karriäranalysen kunde inte förberedas",
+    "cd.public.checkFailedBody":
+      "Vi kunde inte kontrollera om karriäranalysen är öppen just nu. Det kan bero på din uppkoppling eller på ett tillfälligt fel hos oss. Försök igen.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
     "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
@@ -10149,6 +10153,10 @@ export const dictionaries = {
     "cd.public.loading": "Preparing the career analysis…",
     "cd.public.unavailableTitle": "The career analysis is not open right now",
     "cd.public.unavailableBody": "The career analysis is not open to new participants right now.",
+    // The check itself failed: neither "open" nor "closed" is known.
+    "cd.public.checkFailedTitle": "The career analysis could not be prepared",
+    "cd.public.checkFailedBody":
+      "We could not check whether the career analysis is open right now. It may be your connection or a temporary fault on our side. Please try again.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
     "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
