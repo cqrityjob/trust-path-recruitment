@@ -93,6 +93,9 @@ export const Route = createFileRoute("/p/$token")({
         property: "og:image:alt",
         content: "CQrityjob Security Passport",
       },
+      // X reads twitter:image before og:image, so without this a shared
+      // Passport would inherit the site's own image from the root route.
+      { name: "twitter:image", content: `${publicShareOrigin()}/og-security-passport.png` },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),

@@ -33,11 +33,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // The site's own share image, absolute on the production domain:
       // crawlers resolve a relative og:image poorly, and without one the
       // host injected a Lovable editor preview. A route with its own image
-      // (a job, a shared Passport) overrides these by name.
+      // (a job, a shared Passport) overrides these by name. No width, height
+      // or alt here: a route that replaces only the image (a job with its
+      // employer's logo) would inherit them and describe the wrong picture.
       { property: "og:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` },
-      { property: "og:image:width", content: "1200" },
-      { property: "og:image:height", content: "630" },
-      { property: "og:image:alt", content: "CQrityjob — Where trust comes first." },
       { name: "twitter:image", content: `${PRODUCTION_ORIGIN}/og-cqrityjob.png` },
     ],
     links: [
