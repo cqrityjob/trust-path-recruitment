@@ -80,7 +80,11 @@ test.describe.configure({ timeout: 240_000 });
 const OUT = process.env.E4_EVIDENCE_DIR ?? "artifacts/employer-final-report-e4";
 const PASSWORD = "LocalJourney!2026";
 const OWNER = "journey@local.test";
+// A member who holds a recruitment reviewer grant: authorised to read the
+// report (employer_reports_readable), and not to finalise it.
 const MEMBER = "interviewer@local.test";
+// An ordinary member: membership alone is NOT access to a report.
+const ORDINARY = "ordinary@local.test";
 const CANDIDATE = "kandidat@local.test";
 const OWNER_ID = "9e000000-0000-4000-8000-000000000001";
 const SLUG = "journey-ab";
@@ -514,10 +518,10 @@ test("01-07 · SWEDISH DESKTOP 1440 · preview, stale preview, finalise, history
   mark("07 · version 1 still readable");
 });
 
-test("08 · a member: the whole report, and not the act", async ({ page }) => {
+test("08 · an authorised reviewer: the whole report, and not the act", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   const caseEn = caseIdFor(TITLE_EN);
-  await phase("sign in as a member", () => signIn(page, MEMBER));
+  await phase("sign in as a member with a recruitment reviewer grant", () => signIn(page, MEMBER));
   await phase("the act is not offered", async () => {
     await page.goto(reportUrl(caseEn));
     await expect(main(page)).toContainText(/Görs av ägare eller administratör/, {
@@ -525,6 +529,27 @@ test("08 · a member: the whole report, and not the act", async ({ page }) => {
     });
     await expect(main(page).getByRole("button", { name: /^Slutför rapporten$/ })).toHaveCount(0);
     await shot(page, "08-sv-1440-member-not-offered-finalisation");
+  });
+});
+
+test("08b · an ordinary member: membership alone is not access to the report", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const caseEn = caseIdFor(TITLE_EN);
+  await phase("sign in as an ordinary member", () => signIn(page, ORDINARY));
+  // Reading what an organisation learned about a person needs a basis: owner or
+  // admin, a reviewer grant for the use case, the vacancy's responsible
+  // recruiter, or (for an interview case) its creator or panel. Membership is
+  // none of them, so the case is not readable: no document in any mode, no act,
+  // none of the report's text, and the page says "denied", not "empty".
+  await phase("no report is on the page, and none of its text", async () => {
+    await page.goto(reportUrl(caseEn));
+    await page.waitForLoadState("networkidle");
+    await expect(page.locator("article[data-report-mode]")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: /Slutför rapporten|Complete the report/ }),
+    ).toHaveCount(0);
+    await expect(page.locator("body")).not.toContainText(/Journey Testare/);
+    await expect(page.locator("body")).not.toContainText(/Konkret handlande i rätt ordning/);
   });
 });
 
