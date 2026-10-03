@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-03T10:00:00+00:00",
-  "readBy": "Read-only production verification after #388 merged (Passport evidence added under review binds the decision). All 359 previous ledger identities preserved (their digest is still 52e21ce44d6964ae72605bdf2b67817a); the one new row is 20270126090000 sp_evidence_change_under_review, applied by the official integration. md5 of version:name joined by newline over all 360 rows dcb7e4bcb694e2afece115a18a595383, equal on the connector read and on this file. See docs/release/2026-10-03-passport-evidence-change-under-review.md.",
+  "readAt": "2026-10-03T15:46:00+00:00",
+  "readBy": "Read-only production verification after #387 merged (job board: edit lock, publish window and URL scheme, no client writes to the CV bucket). All 360 previous ledger identities preserved (their digest is still dcb7e4bcb694e2afece115a18a595383); the three new rows are 20270130090000, 20270131090000 and 20270201090000, applied by the official integration. md5 of version:name joined by newline over all 363 rows fbfc766e1fd85a3d19fc82b8f4fbc8c7, equal on the connector read and on this file. See docs/release/2026-10-03-job-board-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1455,6 +1455,18 @@
     {
       "version": "20270126090000",
       "name": "sp_evidence_change_under_review"
+    },
+    {
+      "version": "20270130090000",
+      "name": "jobs_not_editable_in_place"
+    },
+    {
+      "version": "20270131090000",
+      "name": "jobs_publish_window_and_url_scheme"
+    },
+    {
+      "version": "20270201090000",
+      "name": "job_cvs_no_client_writes"
     }
   ]
 }
