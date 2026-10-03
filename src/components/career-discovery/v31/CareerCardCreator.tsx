@@ -74,6 +74,7 @@ import {
   type CardShareCapabilities,
 } from "@/lib/career-discovery/v31/career-card-export";
 import type { RankedProfession } from "@/lib/career-discovery/v31/professions";
+import { shareableOrigin, shareableUrl } from "@/lib/site-origin";
 
 const FORMAT_ORDER: readonly CareerCardFormat[] = ["story", "square", "linkedin"];
 
@@ -160,13 +161,13 @@ export function CareerCardCreator({
   useEffect(() => {
     if (!open || typeof window === "undefined") return;
     setCapabilities(detectCardShareCapabilities());
-    setShareUrl(`${window.location.origin}${DISCOVER_URL_PATH}`);
+    setShareUrl(shareableUrl(DISCOVER_URL_PATH, window.location.origin));
   }, [open]);
 
   useEffect(() => {
     if (!open || typeof window === "undefined") return;
     let alive = true;
-    void generateDiscoverQrDataUrl(window.location.origin).then((url) => {
+    void generateDiscoverQrDataUrl(shareableOrigin(window.location.origin)).then((url) => {
       if (alive) setQrDataUrl(url);
     });
     return () => {

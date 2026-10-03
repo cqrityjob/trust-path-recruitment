@@ -20,6 +20,8 @@ import {
   getRecruitmentEnquiryAvailability,
   sendRecruitmentEnquiry,
 } from "@/lib/contact/recruitment-enquiry.functions";
+import { siteUrl } from "@/lib/site-origin";
+import { CONTACT_EMAIL } from "@/lib/contact/contact-address";
 
 // ── CONTACT: A RECRUITMENT ENQUIRY THAT ACTUALLY ARRIVES (2026-09-30) ────
 //
@@ -47,9 +49,9 @@ export const Route = createFileRoute("/contact")({
       { name: "description", content: SV["contact.lead"] },
       { property: "og:title", content: SV["meta.contact.title"] },
       { property: "og:description", content: SV["contact.lead"] },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/contact" },
+      { property: "og:url", content: siteUrl("/contact") },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/contact" }],
+    links: [{ rel: "canonical", href: siteUrl("/contact") }],
   }),
   validateSearch: (raw: Record<string, unknown>): { service?: EnquiryService } =>
     isEnquiryService(raw.service) ? { service: raw.service } : {},
@@ -165,6 +167,7 @@ function ContactPage() {
                 {t("contact.closed.body")}
               </p>
               <div className="mt-4 pl-7">
+                <DirectContact lead={t("contact.direct.lead")} />
                 <Link
                   to="/employers"
                   className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline"
@@ -292,7 +295,7 @@ function ContactPage() {
 
               {phase.kind === "error" && (
                 <p id={ids.error} role="alert" className="text-sm font-medium text-destructive">
-                  {t(phase.key)}
+                  {t(phase.key).replace("{email}", CONTACT_EMAIL)}
                 </p>
               )}
 
@@ -305,6 +308,12 @@ function ContactPage() {
               </Button>
             </form>
           ) : null}
+
+          {!closed && !availability.isLoading && (
+            <p className="mt-8 text-sm text-muted-foreground">
+              <DirectContact lead={t("contact.direct.lead")} />
+            </p>
+          )}
 
           <p className="mt-8 text-sm text-muted-foreground">
             {t("contact.platform.lead")}{" "}
@@ -319,6 +328,22 @@ function ContactPage() {
         </div>
       </Section>
     </SiteLayout>
+  );
+}
+
+/** The always-working way in: plain mail to CQrityjob's inbox. */
+function DirectContact({ lead }: { lead: string }) {
+  return (
+    <span className="block text-sm text-muted-foreground">
+      {lead}{" "}
+      <a
+        href={`mailto:${CONTACT_EMAIL}`}
+        data-contact-direct
+        className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-4 hover:underline"
+      >
+        {CONTACT_EMAIL}
+      </a>
+    </span>
   );
 }
 

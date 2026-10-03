@@ -484,7 +484,7 @@ async function inviteCandidate(
         "",
     );
     if (!employerName || !assessmentName) return null;
-    const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
+    const { serverSiteOrigin } = await import("@/lib/site-origin");
     const { testInvitationMessage } = await import("@/lib/recruitment/message-templates");
     const message = testInvitationMessage({
       language: p.language,
@@ -492,7 +492,7 @@ async function inviteCandidate(
       employerName,
       jobTitle: jobTitle || (p.language === "en" ? "the position" : "tjänsten"),
       assessmentName,
-      academyUrl: `${process.env.PUBLIC_SITE_URL || SITE_ORIGIN}/academy`,
+      academyUrl: `${serverSiteOrigin(process.env.PUBLIC_SITE_URL)}/academy`,
       deadline: p.deadline ?? null,
     });
     const draft = await sb.rpc("rec_save_message_draft", {

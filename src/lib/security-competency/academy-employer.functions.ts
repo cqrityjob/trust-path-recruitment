@@ -549,8 +549,8 @@ export type NotificationOutcome = "sent" | "not_configured" | "failed";
  *  weaker credential for a door they can already open. Nothing about the
  *  assessment travels in the URL. */
 async function academyDestination(): Promise<{ siteOrigin: string; academyUrl: string }> {
-  const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
-  const siteOrigin = process.env.PUBLIC_SITE_URL || SITE_ORIGIN;
+  const { serverSiteOrigin } = await import("@/lib/site-origin");
+  const siteOrigin = serverSiteOrigin(process.env.PUBLIC_SITE_URL);
   return { siteOrigin, academyUrl: `${siteOrigin}/academy` };
 }
 

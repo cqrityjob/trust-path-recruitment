@@ -6,6 +6,7 @@ import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
+import { siteUrl } from "@/lib/site-origin";
 
 // ── ABOUT: THE ORIGIN STORY (brand story, 2026-09-30) ────────────────────
 //
@@ -36,9 +37,9 @@ export const Route = createFileRoute("/about")({
       { name: "description", content: SV["about.lead"] },
       { property: "og:title", content: SV["meta.about.title"] },
       { property: "og:description", content: SV["about.lead"] },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/about" },
+      { property: "og:url", content: siteUrl("/about") },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/about" }],
+    links: [{ rel: "canonical", href: siteUrl("/about") }],
   }),
   component: AboutPage,
 });

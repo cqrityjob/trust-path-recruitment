@@ -25,6 +25,7 @@ import {
   validateJobSearch,
   type JobSearch,
 } from "@/lib/job-intelligence/job-search";
+import { siteUrl } from "@/lib/site-origin";
 
 const SV = dictionaries.sv;
 export const Route = createFileRoute("/jobs/")({
@@ -36,10 +37,10 @@ export const Route = createFileRoute("/jobs/")({
       { property: "og:title", content: SV["meta.jobs.title"] },
       { property: "og:description", content: SV["jobs.discover.lead"] },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/jobs" },
+      { property: "og:url", content: siteUrl("/jobs") },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/jobs" }],
+    links: [{ rel: "canonical", href: siteUrl("/jobs") }],
   }),
   validateSearch: validateJobSearch,
   component: JobsDiscoveryPage,

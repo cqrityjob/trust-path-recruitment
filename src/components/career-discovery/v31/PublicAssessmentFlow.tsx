@@ -146,6 +146,7 @@ import {
   trackV31FunnelEvent,
   type FunnelEventName,
 } from "@/lib/career-discovery/v31-feedback.functions";
+import { shareableUrl } from "@/lib/site-origin";
 
 // "result" is the terminal state for BOTH an anonymous and a signed-in
 // visitor while they are still looking at it: the full canonical report,
@@ -668,7 +669,7 @@ export function PublicAssessmentFlow() {
    *  as the fallback everywhere it's unavailable (most desktop browsers). */
   async function onShareResult() {
     track("share_initiated");
-    const shareUrl = `${window.location.origin}${DISCOVER_URL_PATH}`;
+    const shareUrl = shareableUrl(DISCOVER_URL_PATH, window.location.origin);
     const shareText = t("cd.public.shareText");
     const outcome = await shareResultText(t("cd.public.shareTitle"), shareText, shareUrl);
     if (outcome === "shared") {

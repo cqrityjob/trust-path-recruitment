@@ -19,6 +19,7 @@ import { HomePassportPreview } from "@/components/site/HomePassportPreview";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
+import { siteUrl } from "@/lib/site-origin";
 
 /** ── THE PUBLIC SECURITY PASSPORT PAGE (2026-09-30) ────────────────────
  *
@@ -51,7 +52,7 @@ import { cn } from "@/lib/utils";
  *  way everywhere a visitor reads them. */
 
 const SV = dictionaries.sv;
-const CANONICAL = "https://trust-path-recruitment.lovable.app/security-passport";
+const CANONICAL = siteUrl("/security-passport");
 
 /** "Skapa mitt Security Passport" goes through the one validated sign-up
  *  door, carrying the intent: /passport answers a brand-new account with its

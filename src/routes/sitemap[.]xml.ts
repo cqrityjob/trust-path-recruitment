@@ -3,8 +3,9 @@ import type {} from "@tanstack/react-start";
 import { professions } from "@/lib/career-center";
 import { careerAreaLabels } from "@/lib/job-intelligence/career-area-labels";
 import { serverPublicClient } from "@/integrations/supabase/public-server";
+import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
 
-const BASE_URL = "https://trust-path-recruitment.lovable.app";
+const BASE_URL = PRODUCTION_ORIGIN;
 
 interface SitemapEntry {
   path: string;

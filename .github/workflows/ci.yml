@@ -1354,6 +1354,23 @@ jobs:
       - name: India entry journey
         run: bun run india-entry:check
 
+      # The site's outward name is https://www.cqrityjob.com, from ONE module
+      # (src/lib/site-origin.ts): no Lovable host in a canonical, og:url, the
+      # sitemap, robots.txt, the Passport share fallback, the e-mail link base
+      # or an invitation link, and loopback test hosts still keep their own
+      # address. Read-only over committed code, nothing hosted. Its planted
+      # controls run in negative-controls:all.
+      - name: Public address guard
+        run: bun run site-origin:check
+
+      # Product e-mail says WHY it is not ready (key rejected / function not
+      # deployed / Resend secret missing / unreachable), so /contact and the
+      # admin page no longer send the owner to store a key that is already
+      # there. Stubbed answers, nothing hosted. Its planted controls run in
+      # negative-controls:all.
+      - name: E-mail transport diagnosis
+        run: bun run email-transport-diagnosis:check
+
       # The Passport card's ONE ground (owner addendum, pilot finish): the CSS
       # mirror matches PASSPORT_CARD_SURFACE, no stripes, grid or engraving sits
       # behind any card, and the homepage panel draws the real shield system

@@ -841,13 +841,15 @@ export const dictionaries = {
     "contact.sent.body": "Vi svarar till {email}.",
     "contact.error.required": "Fyll i namn, organisation och e-postadress.",
     "contact.error.email": "Ange en giltig e-postadress.",
-    "contact.error.failed": "Förfrågan kunde inte skickas. Försök igen om en stund.",
+    "contact.error.failed":
+      "Förfrågan kunde inte skickas. Försök igen om en stund eller mejla oss på {email}.",
     "contact.error.rateLimited":
       "Många förfrågningar har skickats på kort tid. Försök igen om en stund.",
     "contact.checking": "Kontrollerar formuläret …",
-    "contact.closed.title": "Formuläret är inte öppet ännu",
+    "contact.closed.title": "Formuläret är tillfälligt stängt",
     "contact.closed.body":
-      "Vi kan inte ta emot förfrågningar här just nu. Vill ni komma igång direkt kan ni registrera företaget och använda plattformen själva.",
+      "Vi kan inte ta emot förfrågningar via formuläret just nu. Mejla oss i stället, så svarar vi. Vill ni komma igång direkt kan ni också registrera företaget och använda plattformen själva.",
+    "contact.direct.lead": "Ni kan också mejla oss direkt:",
     "contact.platform.lead": "Vill ni hellre använda plattformen själva?",
 
     "profession.police.title": "Polis",
@@ -9582,13 +9584,15 @@ export const dictionaries = {
     "contact.sent.body": "We will reply to {email}.",
     "contact.error.required": "Fill in your name, organisation and email address.",
     "contact.error.email": "Enter a valid email address.",
-    "contact.error.failed": "The enquiry could not be sent. Please try again shortly.",
+    "contact.error.failed":
+      "The enquiry could not be sent. Please try again shortly or email us at {email}.",
     "contact.error.rateLimited":
       "Many enquiries have been sent in a short time. Please try again shortly.",
     "contact.checking": "Checking the form …",
-    "contact.closed.title": "The form is not open yet",
+    "contact.closed.title": "The form is temporarily closed",
     "contact.closed.body":
-      "We cannot receive enquiries here right now. If you want to get started straight away, you can register your organisation and use the platform yourselves.",
+      "We cannot receive enquiries through the form right now. Email us instead and we will reply. If you want to get started straight away, you can also register your organisation and use the platform yourselves.",
+    "contact.direct.lead": "You can also email us directly:",
     "contact.platform.lead": "Would you rather use the platform yourselves?",
 
     "profession.police.title": "Police Officer",

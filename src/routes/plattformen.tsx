@@ -6,6 +6,7 @@ import { DARK_H1, ON_DARK } from "@/components/site/dark-surface";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
+import { siteUrl } from "@/lib/site-origin";
 
 // ── THE PLATFORM (2026-09-30) ───────────────────────────────────────────
 //
@@ -27,9 +28,9 @@ export const Route = createFileRoute("/plattformen")({
       { name: "description", content: SV["meta.platform.description"] },
       { property: "og:title", content: SV["meta.platform.title"] },
       { property: "og:description", content: SV["meta.platform.description"] },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/plattformen" },
+      { property: "og:url", content: siteUrl("/plattformen") },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/plattformen" }],
+    links: [{ rel: "canonical", href: siteUrl("/plattformen") }],
   }),
   component: PlatformPage,
 });

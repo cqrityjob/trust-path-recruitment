@@ -5,4 +5,4 @@ Disallow: /admin/
 Disallow: /journey
 Disallow: /auth
 
-Sitemap: https://trust-path-recruitment.lovable.app/sitemap.xml
+Sitemap: https://www.cqrityjob.com/sitemap.xml

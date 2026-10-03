@@ -140,9 +140,9 @@ expect(
 );
 
 // 5b. Invitation link must be able to point at an environment-specific
-//     base URL, not only the hardcoded SITE_ORIGIN constant.
+//     base URL (through serverSiteOrigin, which refuses a Lovable host).
 expect(
-  assignmentFns.includes("process.env.PUBLIC_SITE_URL || SITE_ORIGIN"),
+  assignmentFns.includes("serverSiteOrigin(process.env.PUBLIC_SITE_URL)"),
   "createAssessmentAssignment must allow PUBLIC_SITE_URL to override the invitation link's base URL",
 );
 

@@ -4,6 +4,7 @@ import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useT } from "@/i18n/context";
 import { getPublishedProfession, professionInfoDestination } from "@/lib/career-center";
 import { ProfessionTemplate } from "@/components/career-center/ProfessionTemplate";
+import { siteUrl } from "@/lib/site-origin";
 
 // One profession guide.
 //
@@ -66,7 +67,7 @@ export const Route = createFileRoute("/career-center/$profession")({
     // is the one this content describes a market for, and the head cannot see
     // the client-side language toggle. The page body is fully bilingual.
     const title = `${p.titleSv} — yrkesguide | CQrityjob`;
-    const url = `https://trust-path-recruitment.lovable.app/career-center/${p.slug}`;
+    const url = siteUrl(`/career-center/${p.slug}`);
     return {
       meta: [
         { title },

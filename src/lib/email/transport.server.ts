@@ -126,30 +126,95 @@ export async function sendTransactionalEmail(email: TransactionalEmail): Promise
   return { status: res.status, ok: res.ok, notConfigured: false };
 }
 
-let readiness: { at: number; ready: boolean } | null = null;
+/** Why product e-mail can or cannot be sent right now. Reasons only: no value
+ *  of any setting, no key and no response body is ever part of this. */
+export type TransportReadiness =
+  | { readonly ready: true; readonly reason: "ready" }
+  | {
+      readonly ready: false;
+      readonly reason: /** SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is absent on the app host. */
+        | "settings_missing"
+        /** The function answered 404: it is not deployed. */
+        | "function_not_deployed"
+        /** The function answered 401/403: it does not accept the key this server holds. */
+        | "key_rejected"
+        /** The function answered 503 not_configured: it holds no RESEND_API_KEY. */
+        | "provider_key_missing"
+        /** No answer: network failure or the five-second timeout. */
+        | "unreachable"
+        /** Any other answer. */
+        | "unexpected";
+      readonly status?: number;
+    };
+
+let readiness: { at: number; answer: TransportReadiness } | null = null;
 const READINESS_TTL_MS = 60_000;
 
 /**
- * Whether product e-mail can be sent at all: the function is deployed,
- * accepts this server, and holds RESEND_API_KEY. Cached for a minute per
- * server instance; never throws.
+ * Why product e-mail can or cannot be sent: the function is deployed, accepts
+ * this server, and holds RESEND_API_KEY. Cached for a minute per server
+ * instance; never throws.
+ *
+ * "Not ready" used to be one bit, and /contact and the admin page both read
+ * it as "the Resend key is missing". A function that rejects the app's key
+ * (HTTP 401) looks exactly the same from the page, so the owner was sent to
+ * store a key that was already there. The reason is now kept, and the first
+ * time a given reason is seen by this instance it is written to the server
+ * log (reason and HTTP status only) so the hosting logs say which of the
+ * three real causes it is.
  */
-export async function emailTransportReady(fetchImpl?: typeof fetch): Promise<boolean> {
-  if (missingEmailTransportSettings().length > 0) return false;
+export async function emailTransportDiagnosis(
+  fetchImpl?: typeof fetch,
+): Promise<TransportReadiness> {
+  if (missingEmailTransportSettings().length > 0) {
+    return { ready: false, reason: "settings_missing" };
+  }
   const now = Date.now();
-  if (readiness && now - readiness.at < READINESS_TTL_MS) return readiness.ready;
-  let ready = false;
+  if (readiness && now - readiness.at < READINESS_TTL_MS) return readiness.answer;
+
+  let answer: TransportReadiness;
   try {
     const res = await (fetchImpl ?? fetch)(functionUrl(), {
       method: "GET",
       headers: authHeaders(),
       signal: AbortSignal.timeout(5_000),
     });
-    ready = res.ok;
+    const status = res.status;
+    let outcome: unknown;
+    if (status === 503) {
+      try {
+        outcome = ((await res.clone().json()) as { outcome?: unknown })?.outcome;
+      } catch {
+        outcome = undefined;
+      }
+    }
     await res.body?.cancel().catch(() => {});
+    if (res.ok) answer = { ready: true, reason: "ready" };
+    else if (status === 404) answer = { ready: false, reason: "function_not_deployed", status };
+    else if (status === 401 || status === 403)
+      answer = { ready: false, reason: "key_rejected", status };
+    else if (status === 503 && outcome === "not_configured") {
+      answer = { ready: false, reason: "provider_key_missing", status };
+    } else answer = { ready: false, reason: "unexpected", status };
   } catch {
-    ready = false;
+    answer = { ready: false, reason: "unreachable" };
   }
-  readiness = { at: now, ready };
-  return ready;
+
+  if (!answer.ready && readiness?.answer.reason !== answer.reason) {
+    console.error(
+      `[email-transport] not ready: ${answer.reason}${answer.status ? ` (HTTP ${answer.status})` : ""}`,
+    );
+  }
+  readiness = { at: now, answer };
+  return answer;
+}
+
+/** Whether product e-mail can be sent at all. Never throws. */
+export async function emailTransportReady(fetchImpl?: typeof fetch): Promise<boolean> {
+  return (await emailTransportDiagnosis(fetchImpl)).ready;
+}
+
+/** Test seam: forget the cached answer. */
+export function resetEmailTransportReadinessForTests(): void {
+  readiness = null;
 }

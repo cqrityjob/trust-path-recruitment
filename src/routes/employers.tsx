@@ -20,6 +20,7 @@ import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
+import { siteUrl } from "@/lib/site-origin";
 
 /** ── /employers — FOR EMPLOYERS (owner review, 2026-09-30) ────────────
  *
@@ -76,10 +77,10 @@ export const Route = createFileRoute("/employers")({
       { property: "og:title", content: SV["meta.employers.title"] },
       { property: "og:description", content: SV["employers.lead"] },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/employers" },
+      { property: "og:url", content: siteUrl("/employers") },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/employers" }],
+    links: [{ rel: "canonical", href: siteUrl("/employers") }],
   }),
   component: EmployersPage,
 });

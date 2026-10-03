@@ -7,6 +7,7 @@ import { resolveProfessionRef } from "@/lib/career-center/profession-links";
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobResults } from "@/components/jobs/JobResults";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
+import { siteUrl } from "@/lib/site-origin";
 
 export const Route = createFileRoute("/jobs/profession/$professionSlug")({
   ssr: false,
@@ -17,7 +18,7 @@ export const Route = createFileRoute("/jobs/profession/$professionSlug")({
     // spelled the same in both namespaces, and printed the raw slug —
     // "vaktare", "sakerhetschef" — as the page title for the rest.
     const profession = resolveProfessionRef(params.professionSlug)?.profession;
-    const url = `https://trust-path-recruitment.lovable.app/jobs/profession/${params.professionSlug}`;
+    const url = siteUrl(`/jobs/profession/${params.professionSlug}`);
     const name = profession ? profession.titleEn : params.professionSlug;
     const title = `${name} jobs — CQrityjob`;
     const desc = `Active openings for ${name} in the security industry.`;

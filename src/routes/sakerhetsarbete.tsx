@@ -19,6 +19,7 @@ import { Section } from "@/components/site/Section";
 import { PrimaryLink } from "@/components/site/PrimaryButton";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
+import { siteUrl } from "@/lib/site-origin";
 
 /** ── THE PUBLIC SÄKERHETSARBETE PAGE (2026-09-30) ───────────────────────
  *
@@ -44,7 +45,7 @@ import { dictionaries, type TranslationKey } from "@/i18n/dictionaries";
  *  veta", and never as the hero. */
 
 const SV = dictionaries.sv;
-const CANONICAL = "https://trust-path-recruitment.lovable.app/sakerhetsarbete";
+const CANONICAL = siteUrl("/sakerhetsarbete");
 
 /** The one validated sign-up door, landing in the workspace itself. */
 const SECURITY_WORK_INTENT = { redirect: "/security-work" } as const;

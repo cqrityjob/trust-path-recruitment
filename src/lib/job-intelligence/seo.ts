@@ -5,13 +5,15 @@
 // the tags are present in the initial HTML response.
 
 import type { PublicJobSsrDetail } from "./public-queries.functions";
+import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
 
-// Public site canonical origin — matches the sitemap.xml BASE_URL.
+// Public site canonical origin (https://www.cqrityjob.com) — one definition in
+// src/lib/site-origin.ts, matching the sitemap.xml BASE_URL.
 // Exported so any server-side code that must build an absolute URL
 // outside the browser (e.g. an email invitation link, which has no
 // window.location) reuses this single source of truth instead of a
 // second hardcoded copy.
-export const SITE_ORIGIN = "https://trust-path-recruitment.lovable.app";
+export const SITE_ORIGIN = PRODUCTION_ORIGIN;
 
 function pickLocalized(sv: string | null, en: string | null): string {
   return sv || en || "";

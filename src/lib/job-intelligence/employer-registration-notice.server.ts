@@ -115,8 +115,8 @@ export type AnnounceEmployerRegistrationParams = {
  *  Never a hard-coded address in this file — the same resolution every other
  *  sender in this codebase performs. */
 async function resolveSiteOrigin(): Promise<string> {
-  const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
-  return process.env.PUBLIC_SITE_URL || SITE_ORIGIN;
+  const { serverSiteOrigin } = await import("@/lib/site-origin");
+  return serverSiteOrigin(process.env.PUBLIC_SITE_URL);
 }
 
 /**

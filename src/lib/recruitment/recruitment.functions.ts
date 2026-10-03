@@ -1564,7 +1564,7 @@ async function sendOne(ctx: Ctx, messageId: string): Promise<SendOutcome> {
 
   const { sendRecruitmentMessageEmail } =
     await import("@/lib/email/send-recruitment-message-email.server");
-  const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
+  const { serverSiteOrigin } = await import("@/lib/site-origin");
   // One logical e-mail per message: the provider deduplicates a repeat
   // under the same key for 24 hours, so a retry after a lost answer cannot
   // reach the candidate twice inside that window.
@@ -1576,7 +1576,7 @@ async function sendOne(ctx: Ctx, messageId: string): Promise<SendOutcome> {
         body: String(claim.body),
         employerName: String(claim.employer_name ?? ""),
         jobTitle: String(claim.job_title ?? ""),
-        siteOrigin: process.env.PUBLIC_SITE_URL || SITE_ORIGIN,
+        siteOrigin: serverSiteOrigin(process.env.PUBLIC_SITE_URL),
         idempotencyKey: `msg:${messageId}`,
         timeoutMs: 15_000,
       })

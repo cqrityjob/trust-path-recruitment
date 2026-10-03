@@ -251,8 +251,8 @@ console.log("\n7. The link goes where the rest of the product goes");
   const caller = read("src/lib/recruitment/recruitment.functions.ts");
   ck(
     "the origin comes from the shared resolution",
-    /siteOrigin: process\.env\.PUBLIC_SITE_URL \|\| SITE_ORIGIN/.test(caller),
-    "PUBLIC_SITE_URL when the deployment sets it, and the SITE_ORIGIN constant otherwise",
+    /siteOrigin: serverSiteOrigin\(process\.env\.PUBLIC_SITE_URL\)/.test(caller),
+    "PUBLIC_SITE_URL when it is a clean production-class origin, the production domain otherwise (serverSiteOrigin)",
   );
   ck(
     "no second origin convention",

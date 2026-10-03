@@ -289,7 +289,7 @@ console.log("\n2. The transport is inert without configuration, and says so");
   );
   ck(
     "the site origin is configuration with the shared constant as a fallback",
-    /process\.env\.PUBLIC_SITE_URL \|\| SITE_ORIGIN/.test(
+    /serverSiteOrigin\(process\.env\.PUBLIC_SITE_URL\)/.test(
       read("src/lib/job-intelligence/employer-registration-notice.server.ts"),
     ),
   );
