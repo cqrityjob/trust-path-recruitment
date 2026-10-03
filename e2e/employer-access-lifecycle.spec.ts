@@ -20,7 +20,7 @@
 
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../src/i18n/dictionaries";
-import { CONTACT_EMAIL } from "../src/lib/contact/contact-address";
+import { CONTACT_EMAIL } from "../src/lib/site-contact";
 import {
   assertNoRefusals,
   BASE,
