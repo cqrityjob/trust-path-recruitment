@@ -975,27 +975,45 @@ console.log("\n9. The SQL and the app agree");
       read(DOC).length > 2000,
   );
   const state = JSON.parse(read("supabase/release-state.json")) as {
-    frontier: { file: string; hostedState: string; verify?: string; rollback?: string }[];
+    frontier: {
+      file: string;
+      hostedState: string;
+      hostedVersion?: string;
+      evidenceSource?: string;
+      verify?: string;
+      rollback?: string;
+    }[];
   };
-  const entry = state.frontier.find(
-    (e) => e.file === "20270205090000_employer_new_application_notices.sql",
-  );
+  const FILE = "20270205090000_employer_new_application_notices.sql";
+  const entry = state.frontier.find((e) => e.file === FILE);
+  // The migration is recorded `pending` until the production ledger holds it and
+  // `applied` (with the version and the read-only evidence) once it does. Either
+  // way the read-only verify and the rollback stay named.
+  const recorded =
+    entry?.hostedState === "pending" ||
+    (entry?.hostedState === "applied" &&
+      entry.hostedVersion === FILE.slice(0, 14) &&
+      (entry.evidenceSource ?? "").trim().length > 0);
   ck(
-    "release-state.json: pending, with a read-only verify and the rollback named",
-    entry?.hostedState === "pending" &&
-      /has_function_privilege/.test(entry.verify ?? "") &&
+    "release-state.json: pending, or applied with its read-only evidence, with a read-only verify and the rollback named",
+    recorded &&
+      /has_function_privilege/.test(entry?.verify ?? "") &&
       !/\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE)\b/.test(
         // Privilege names inside quotes (has_table_privilege(..., 'INSERT')) are not statements.
-        (entry.verify ?? "").replace(/'[^']*'/g, "''"),
+        (entry?.verify ?? "").replace(/'[^']*'/g, "''"),
       ) &&
-      entry.rollback ===
+      entry?.rollback ===
         "supabase/rollback/20270205090000_employer_new_application_notices_rollback.sql",
   );
+  const ledger = JSON.parse(read("supabase/hosted-ledger.json")) as {
+    versions: { version: string; name: string }[];
+  };
+  const inLedger = ledger.versions.some((v) => v.version === FILE.slice(0, 14));
   ck(
-    "release-frontier-check expects it pending",
-    read("scripts/release-frontier-check.ts").includes(
-      '"20270205090000_employer_new_application_notices.sql"',
-    ),
+    "release-frontier-check and the hosted ledger agree with the recorded state",
+    entry?.hostedState === "applied"
+      ? inLedger && !read("scripts/release-frontier-check.ts").includes(`"${FILE}"`)
+      : !inLedger && read("scripts/release-frontier-check.ts").includes(`"${FILE}"`),
   );
   ck(
     "the edge function knows the kind, with no Reply-To and no organisation sender",
