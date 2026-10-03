@@ -134,29 +134,29 @@ Förklaring: **R** rättad i kod (redo för merge) · **P** kräver produktions�
 
 ## 5. Tester och obligatorisk CI
 
+Lokalt, per gren (PostgreSQL 16, systemets Chromium, stubbad backend; ingen skrivning nådde något riktigt system):
+
 | Kontroll | Resultat |
 |---|---|
-| `bunx tsc --noEmit` | rent |
-| CI:s verify-jobb (175 steg inklusive `bun run build` och `scripts:typecheck`) lokalt | 174 gröna vid körning; det enda röda (`release-frontier:check`) krävde att de tre nya pending-migrationerna lades i dess förväntade lista och är grönt därefter |
-| Hela migrationskedjan + alla SQL-sviter (`scripts/db-test.sh`, PG16) på merge-trädet | **"DB suite OK"**, 362 migrationer, inkl. åtkomstmatris (45) och jobbsviter (42 + 40 + 22) |
-| Alla 60 negativa kontrollsviter (`negative-controls:all`) | alla **1 658** planterade fel upptäckta; filer återställda byte för byte |
-| Playwright (systemets Chromium, stubbad backend), efter merge | se avsnitt 5a |
-| GitHub Actions på PR-toppen `5d396c4` | 12 av 13 jobb gröna när rapporten skrevs (lint/typecheck/guards, migrationsreplay/RLS/rollback, CV, Passport, E4, recruitment workspace, Career Center, bakåtnavigering, browser); "Public entry browser" pågick |
+| `tsc --noEmit`, `bun run build` | rent / grönt på #387, #391, #393 och behörighetsappen |
+| CI:s verify-jobb (181 kommandon inklusive `build`) lokalt på #387 efter integrationen med #386 | 181 av 181 gröna (ett rött, `site-origin:check`, rättades och fick en planterad kontroll) |
+| Hela migrationskedjan + alla SQL-sviter (`scripts/db-test.sh`) | "DB suite OK" på #387, #390, #391 och notis- och behörighetsschemat |
+| Planterade fel | #387: 60 sviter, 1 658 fel upptäckta (före integrationen) + ny kontroll; #391: 14 + 24; #393: 34 (notis) och 22 (transactional-email) och 63 (recruitment-workspace); behörighetsappen: 26. Alla upptäckta, filer återställda byte för byte |
+| Playwright public-entry (dator) på integrerade trädet | 166 gröna, 2 föll på en lastrelaterad timeout och är gröna när de körs ensamma; behörighetsagenten och karriäragenten körde sina egna specar (se respektive PR) |
+| `schema-first-release:check` | grön på #387, #391, #392 och behörighetsschemat; **röd med flit** på #393 och behörighetsappen tills deras migrationer är applicerade och registrerade |
+| GitHub Actions | körs på varje PR:s slutcommit (staplade PR:er fick CI genom #395); resultatet står på respektive PR:s checkflik när detta läses |
 
-### 5a. Webbläsartester lokalt (systemets Chromium, stubbad backend, merge-trädet `5d396c4`)
+### 5a. Webbläsartester lokalt
 
 | Svit | Projekt | Resultat |
 |---|---|---|
-| Hemsida, arbetsgivarlandning, ingång, hydrering, India-landning | dator | **111 godkända** |
-| Åtkomstlivscykel för företag (medlemskontroller, väntesida, borttagen medlem, omgranskning) | dator | **8 godkända** |
-| Inloggad header på dator (alla bredder) | dator | **27 godkända** |
-| Jobbupplevelse + bakåtnavigation | dator + 375 px | **40 godkända**, 10 hoppas över med flit |
-| Career Center-resa + utforska-länk i karriäranalysen | dator + 375 px | **38 godkända** |
-| Säkerhetsarbete (programmet) | dator + 375 px | **2 godkända** |
+| Hemsida, arbetsgivarlandning, åtkomstlivscykel, ingång, hydrering, India-landning, Passport-nätverk | dator | **166 godkända** + 2 som godkänns i isolering |
+| Jobbupplevelse + bakåtnavigation, Career Center-resa, utforska-länk | dator + 375 px | gröna före integrationen (40 + 38) |
+| Karriäranalysens tillgänglighet (ny) | dator + 375 px | 29 × 2 godkända (karriäragentens körning) |
+| Rapportåtkomst (ny: ordinär medlem nekas, granskare läser) | — | **uppdaterad men inte körd**: kräver den lokala Supabase-stacken som sandlådan saknar |
 
-Allt körs mot en stubbad backend; ingen skrivning nådde något riktigt system. Efter integrationen med
-Claude-sessionens #385 (main `f5eb230`) kördes de statiska kontrollerna om (typecheck, frontier,
-parity, migrations, jobbguards, Passport-guards); webbläsarsviterna körs om i sista omgången.
+**Ej körbart lokalt:** allt som kräver GoTrue, Resend, Lovables värd eller DNS, och e2e-specar som kräver
+den lokala Supabase-stacken. De täcks av CI:s isolerade stackar och av produktionstestet.
 
 ## 6. Leverans — vad som ändrats och varför
 
