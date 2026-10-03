@@ -1120,19 +1120,20 @@ test.describe("three markets — the write path", () => {
     await mount(page, { availability: AVAIL.se }, "en", "/passport/credentials/new?code=OV");
     await page.getByLabel("Valid until", { exact: true }).fill("2030-01-01");
     await page.getByRole("button", { name: "Back", exact: true }).click();
-    await expect(page.getByLabel("Approved credential")).toHaveValue("OV");
-    await page.getByRole("button", { name: "Back", exact: true }).click();
+    // The chosen credential is still chosen, in the list and in the selection bar.
+    await expect(page.locator('[data-result][data-credential-code="OV"] input')).toBeChecked();
+    // Asking for another market lets go of a Swedish credential: it can no longer be saved
+    // under a place it does not belong to, and nothing is sent.
     await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("GB");
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(page.getByLabel("Approved credential")).toHaveValue("");
+    await expect(page.locator("[data-selected-credential]")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeDisabled();
     expect(savedPayloads).toEqual([]);
-    await page.getByRole("button", { name: "Back", exact: true }).click();
     await page.getByRole("combobox", { name: "Country", exact: true }).selectOption("SE");
+    await page.locator('[data-result][data-credential-code="OV"]').click();
     await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await page.getByLabel("Approved credential").selectOption("OV");
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
-    await expect(page.getByLabel("Valid until", { exact: true })).toHaveValue("");
+    // What the holder typed about their own certificate is kept; nothing the market governed is.
+    await expect(page.getByLabel("Valid until", { exact: true })).toHaveValue("2030-01-01");
+    await expect(page.locator('[data-field="issuer-name"]')).toHaveValue("");
   });
 
   test("E · Swedish approved definition sends only personal fields and governed market", async ({

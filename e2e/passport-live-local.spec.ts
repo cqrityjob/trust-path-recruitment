@@ -4,6 +4,7 @@
  * https://127.0.0.1:3120.
  */
 import { readFileSync } from "node:fs";
+import { chooseCredential } from "./support/credential-picker";
 import { test, expect } from "@playwright/test";
 import { createClient, type Session } from "@supabase/supabase-js";
 import QRCode from "qrcode";
@@ -74,12 +75,11 @@ test("real owner adds and selectively shares a credential, recipient loses acces
     .locator("[data-credential-wallet]")
     .getByRole("link", { name: "Add a credential", exact: true })
     .click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
-  const selector = page.getByLabel("Approved credential");
-  await selector.selectOption(code);
-  const title = (await selector.locator(`option[value="${code}"]`).textContent())!.split(" — ")[0];
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  // One screen finds it; the row names the credential before it is chosen.
+  const row = page.locator(`[data-result][data-credential-code="${code}"]`);
+  await expect(row).toBeVisible();
+  const title = (await row.locator("[data-result-headline]").innerText()).split(" — ").pop()!;
+  await chooseCredential(page, code);
   await expect(page.getByLabel("Original credential name", { exact: true })).toHaveCount(0);
   await page.getByLabel("Credential identifier (optional)").fill("BROWSER-OPTIONAL");
   await page.getByRole("button", { name: "Continue", exact: true }).click();

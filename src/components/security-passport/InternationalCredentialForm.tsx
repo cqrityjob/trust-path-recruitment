@@ -61,6 +61,7 @@ import {
   buildCatalogueIndex,
   changeFilter,
   clearOptionalFilters,
+  definitionFitsPlace,
   EMPTY_FILTERS,
   filterCatalogue,
   type CatalogueFilterState,
@@ -291,6 +292,16 @@ export function InternationalCredentialForm({
   const change = (patch: Partial<CatalogueFilterState>) => {
     setFilters((current) => changeFilter(index, current, patch));
     setLimit(RESULT_PAGE);
+    // The PLACE is the one filter that can contradict a chosen credential: asking for
+    // Great Britain while a Swedish credential is selected. That selection is let go
+    // (with what depended on it); a search, an area, a type or an organisation only
+    // narrows the list around it and leaves the choice alone.
+    if (
+      selected &&
+      (patch.scope !== undefined || patch.country !== undefined) &&
+      !definitionFitsPlace(selected, changeFilter(index, filters, patch))
+    )
+      chooseDefinition("");
   };
   const scopeLabel =
     selected?.country === "AE"

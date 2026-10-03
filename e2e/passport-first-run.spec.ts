@@ -778,9 +778,9 @@ test.describe("Security Passport — closed catalogue first run", () => {
     expect(db.calls.ensureFirstRunPassport).toBe(1);
     expect(db.events.filter((e) => e.type === "passport_created")).toHaveLength(1);
     expect(db.merits).toHaveLength(0);
-    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await page.getByRole("button", { name: "Fortsätt", exact: true }).click();
-    await expect(page.getByRole("combobox", { name: "Godkänd merit" })).toBeVisible();
+    // The first step of the wizard IS the picker: a search and the approved credentials.
+    await expect(page.locator('[data-filter="search"]')).toBeVisible();
+    await expect(page.locator("[data-credential-results]")).toBeVisible();
     expect(db.calls.completeFirstMerit ?? 0).toBe(0);
   });
   test("existing profile with legacy draft cannot resume free-text capture", async ({ page }) => {

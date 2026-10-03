@@ -24,6 +24,7 @@ import {
   buildCatalogueIndex,
   changeFilter,
   clearOptionalFilters,
+  definitionFitsPlace,
   EMPTY_FILTERS,
   filterCatalogue,
   searchScore,
@@ -51,6 +52,10 @@ import { buildPassportWorkspace } from "../src/lib/security-passport/workspace";
 import { passportCopy } from "../src/lib/security-passport/i18n";
 import { credentialMark } from "../src/lib/security-passport/credentials";
 import { RESEARCH_CREDENTIAL_MARKS } from "../src/lib/security-passport/catalogue-research-marks";
+import {
+  resolveCredentialScope,
+  shieldMarkText,
+} from "../src/lib/security-passport/credential-shield";
 import { credentialSymbolMarkup } from "../src/lib/security-passport/design/credential-symbols";
 import type { InternationalCredentialInput } from "../src/lib/security-passport/international.functions";
 
@@ -497,6 +502,19 @@ console.log("\n3 · scope starts at all; the filters narrow, and clear exactly w
     "3.8 every kind and area offered by the catalogue is a filter option with its count",
   );
   check(
+    definitionFitsPlace(byCode("VU1"), { ...EMPTY_FILTERS, scope: "national", country: "SE" }) &&
+      !definitionFitsPlace(byCode("VU1"), { ...EMPTY_FILTERS, scope: "national", country: "GB" }) &&
+      !definitionFitsPlace(byCode("VU1"), { ...EMPTY_FILTERS, scope: "international" }) &&
+      definitionFitsPlace(byCode("INTL_ASIS_CPP"), { ...EMPTY_FILTERS, scope: "international" }) &&
+      !definitionFitsPlace(byCode("INTL_ASIS_CPP"), {
+        ...EMPTY_FILTERS,
+        scope: "national",
+        country: "SE",
+      }) &&
+      definitionFitsPlace(byCode("INTL_ASIS_CPP"), EMPTY_FILTERS),
+    "3.10 a chosen credential belongs to a place or contradicts it: Sweden fits VU1, Great Britain does not",
+  );
+  check(
     credentialClassLabel("kind_from_the_future", "en") === "Other professional credential" &&
       find({ search: "has not met" }).join() === "INTL_ICA_FUTURE_KIND",
     "3.9 a definition of a kind this build has not met is still listed and still findable",
@@ -731,6 +749,12 @@ console.log("\n6 · structure: a request is not a definition, and a filter is no
     "6.7 the scope and country are set once, as a starting state, and only ever changed by the holder",
   );
   check(
+    /!definitionFitsPlace\(selected, changeFilter\(index, filters, patch\)\)\s*\)\s*chooseDefinition\(""\)/.test(
+      form,
+    ) && /patch\.scope !== undefined \|\| patch\.country !== undefined/.test(form),
+    "6.7b changing the place lets go of a credential that contradicts it; a search or a filter never does",
+  );
+  check(
     (form.match(/preselectCountry/g) ?? []).length === 3 &&
       /startCountry = initial\?\.market_country \|\| preselected\?\.country \|\| preselectCountry/.test(
         form,
@@ -803,6 +827,22 @@ console.log("\n7 · a credential's plate prints its whole governed mark");
       'font-size="8.6" font-weight="700" letter-spacing="1.1"',
     ),
     "7.4 a mark that already shipped is byte-for-byte the same plate",
+  );
+  check(
+    shieldMarkText({ code: "INTL_OFFSEC_OSCP", name: "OffSec Certified Professional" }) ===
+      "OSCP" &&
+      shieldMarkText({ code: "INTL_ANZIIF_EXEC_CERT_INSURANCE", name: "Executive Certificate" }) ===
+        "ANZIIF" &&
+      shieldMarkText({ code: "INTL_NOT_A_REAL_DEFINITION", name: "Some certificate" }) === null &&
+      resolveCredentialScope(
+        { global: true, jurisdictionCode: null, subJurisdictionCode: null },
+        "en",
+      ).kind === "global" &&
+      resolveCredentialScope(
+        { global: true, jurisdictionCode: null, subJurisdictionCode: null },
+        "sv",
+      ).kind === "global",
+    "7.6 a researched credential's compact shield wears its governed mark and sits in the international group, never under a country",
   );
   check(
     credentialMark("INTL_NOT_A_REAL_DEFINITION") === null &&

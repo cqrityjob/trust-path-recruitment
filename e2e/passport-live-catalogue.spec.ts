@@ -19,6 +19,7 @@ import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
+import { chooseCredential, openFilters } from "./support/credential-picker";
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 
 test.skip(
@@ -133,17 +134,17 @@ test("1 · international: found by abbreviation, saved with no country, survives
   test.setTimeout(120_000);
   const who = await holder("intl", "SE", null, null);
   await openWizard(page, who);
-  await next(page); // scope: international is the default
+  // Scope starts at ALL; the holder narrows it. International, then the abbreviation.
+  await page.locator('[data-filter="scope"] input[value="international"]').check();
   await expect(page.locator("[data-filter-count]")).toContainText("of 14 credentials");
   // No optional filter is pre-selected.
+  await openFilters(page);
   for (const f of ["domain", "category", "organisation"])
     await expect(page.locator(`[data-filter="${f}"]`)).toHaveValue("");
   await expect(page.locator('[data-filter="region"]')).toHaveCount(0);
-  await next(page);
   await page.locator('[data-filter="search"]').fill("cpp");
-  await expect(page.locator("[data-filter-count]").last()).toContainText("Showing 1 of 14");
-  await page.getByLabel("Approved credential").selectOption("INTL_ASIS_CPP");
-  await next(page);
+  await expect(page.locator("[data-filter-count]")).toContainText("Showing 1 of 14");
+  await chooseCredential(page, "INTL_ASIS_CPP");
   await expect(page.locator("[data-credential-territory]")).toContainText("no country");
   await expect(page.locator('[data-field="authorisation-scope"]')).toHaveCount(0);
   await expect(page.locator('[data-field="issuer-name"]')).toHaveCount(0);
@@ -162,14 +163,14 @@ test("2 · Swedish training: filters work together, the provider on the certific
   test.setTimeout(150_000);
   const who = await holder("se-training", "SE", null, null);
   await openWizard(page, who);
-  await page.getByText("National or regional").click();
-  await next(page);
+  await page.locator('[data-filter="scope"] input[value="national"]').check();
   const country = page.locator('[data-filter="country"]');
   await country.selectOption("SE");
   await expect(page.locator("[data-filter-count]")).toContainText("Showing 8 of 8");
   // Sweden has no regional credential: the region control is not offered.
   await expect(page.locator('[data-filter="region"]')).toHaveCount(0);
   // An organisation narrows, with a count, and can be cleared again.
+  await openFilters(page);
   const organisation = page.locator('[data-filter="organisation"]');
   await organisation.selectOption({ label: "Länsstyrelsen (2)" });
   await expect(page.locator("[data-filter-count]")).toContainText("Showing 2 of 8");
@@ -179,14 +180,12 @@ test("2 · Swedish training: filters work together, the provider on the certific
   // A stale organisation cannot survive a change of country: Sweden's
   // Länsstyrelsen does not exist in the international catalogue.
   await organisation.selectOption({ label: "Länsstyrelsen (2)" });
-  await next(page);
   await page.locator('[data-filter="search"]').fill("vu1");
-  await expect(page.locator("[data-filter-count]").last()).toContainText("Showing 0 of 8");
-  await page.locator("[data-clear-filters]").last().click();
+  await expect(page.locator("[data-filter-count]")).toContainText("Showing 0 of 8");
+  await page.locator("[data-clear-filters]").click();
   await page.locator('[data-filter="search"]').fill("vu1");
-  await expect(page.locator("[data-filter-count]").last()).toContainText("Showing 1 of 8");
-  await page.getByLabel("Approved credential").selectOption("VU1");
-  await next(page);
+  await expect(page.locator("[data-filter-count]")).toContainText("Showing 1 of 8");
+  await chooseCredential(page, "VU1");
   // The regulator is named as the regulator, and nobody as the trainer.
   const roles = page.locator("[data-credential-roles]");
   await expect(roles).toContainText("Regulator");
@@ -213,13 +212,9 @@ test("3 · regulated authorisation (SV): the scope is required, saved and shown 
   test.setTimeout(150_000);
   const who = await holder("se-sv", "SE", null, null);
   await openWizard(page, who);
-  await page.getByText("National or regional").click();
-  await next(page);
+  await page.locator('[data-filter="scope"] input[value="national"]').check();
   await page.locator('[data-filter="country"]').selectOption("SE");
-  await next(page);
-  await page.locator('[data-filter="search"]').fill("skyddsvakt");
-  await page.getByLabel("Approved credential").selectOption("SV");
-  await next(page);
+  await chooseCredential(page, "SV", { search: "skyddsvakt" });
   const scope = page.locator('[data-field="authorisation-scope"]');
   await expect(scope).toBeVisible();
   await expect(scope).toHaveAttribute("required", "");
@@ -255,16 +250,13 @@ test("4 · UK licence (pilot): the Northern Ireland filter keeps the GB-wide lic
   const who = await holder("gb", "GB", null, "GB");
   // A GB member is not a GB-NI member: they see the GB-wide licence only.
   await openWizard(page, who);
-  await page.getByText("National or regional").click();
-  await next(page);
+  await page.locator('[data-filter="scope"] input[value="national"]').check();
   await page.locator('[data-filter="country"]').selectOption("GB");
   // All 13 GB pilot definitions, none of them approved for the public; the one
   // Northern Ireland licence belongs to its own pack and is not offered here.
   await expect(page.locator("[data-filter-count]")).toContainText("Showing 13 of 13");
   await expect(page.locator('[data-filter="region"]')).toHaveCount(0);
-  await next(page);
-  await page.getByLabel("Approved credential").selectOption("UK_SIA_LICENCE_DS");
-  await next(page);
+  await chooseCredential(page, "UK_SIA_LICENCE_DS");
   await expect(page.locator("[data-credential-territory]")).toContainText("United Kingdom");
   await page.getByLabel("Valid until").fill("2028-06-30");
   await next(page);
@@ -289,17 +281,14 @@ test("5 · scoped Dubai card (pilot): region filter, required company, Dubai kep
   test.setTimeout(150_000);
   const who = await holder("du", "AE", "AE-DU", "AE-DU");
   await openWizard(page, who);
-  await page.getByText("National or regional").click();
-  await next(page);
+  await page.locator('[data-filter="scope"] input[value="national"]').check();
   await page.locator('[data-filter="country"]').selectOption("AE");
   const region = page.locator('[data-filter="region"]');
   await expect(region).toBeVisible();
   await expect(region).toHaveValue(""); // an optional SEARCH filter, not pre-selected
   await region.selectOption("AE-DU");
   await expect(page.locator("[data-filter-count]")).toContainText("Showing 30 of 30");
-  await next(page);
-  await page.getByLabel("Approved credential").selectOption("AE_DU_SIRA_CARD_GUARD");
-  await next(page);
+  await chooseCredential(page, "AE_DU_SIRA_CARD_GUARD");
   // The credential's OWN territory is fixed by the definition, not by the filter.
   await expect(page.locator("[data-credential-territory]")).toContainText("Dubai");
   const scope = page.locator('[data-field="authorisation-scope"]');
@@ -341,7 +330,10 @@ test("6 · admin: the catalogue page says WHY each researched definition is or i
     // Dubai definitions by their own market's pilot members; Abu Dhabi is closed.
     await expect(root.locator('[data-count="selectable"]')).toHaveText("22");
     await expect(root.locator('[data-count="selectable_pilot_members"]')).toHaveText("44");
-    await expect(root.locator('[data-count="awaiting_definition_approval"]')).toHaveText("0");
+    // The 140 definitions the certification research import added are inactive: they await
+    // the publication migration, and nothing about them is selectable.
+    await expect(root.locator('[data-count="awaiting_definition_approval"]')).toHaveText("140");
+    await expect(root.locator('[data-count="retired"]')).toHaveText("0");
     await expect(root.locator('[data-count="market_closed"]')).toHaveText("7");
     await expect(root.locator('[data-count="blocked"]')).toHaveText("0");
     const vu1 = root.locator('[data-catalogue-row="VU1"]');

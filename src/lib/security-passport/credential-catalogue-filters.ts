@@ -319,6 +319,16 @@ function matchesScope(d: IndexedDefinition, state: CatalogueFilterState): boolea
   return !state.country || d.country === state.country;
 }
 
+/**
+ * Whether a definition belongs to the place a filter state names: the scope and,
+ * for national credentials, the country. The one filter that can CONTRADICT a
+ * chosen credential — "Great Britain" while a Swedish credential is selected —
+ * as opposed to merely narrowing the list around it.
+ */
+export function definitionFitsPlace(d: IndexedDefinition, state: CatalogueFilterState): boolean {
+  return matchesScope(d, state);
+}
+
 function matchesOptional(
   d: IndexedDefinition,
   state: CatalogueFilterState,
