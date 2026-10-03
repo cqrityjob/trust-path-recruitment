@@ -2805,7 +2805,10 @@
     },
     {
       "file": "20270126090000_sp_evidence_change_under_review.sql",
-      "hostedState": "pending",
+      "hostedState": "applied",
+      "hostedVersion": "20270126090000",
+      "hostedName": "sp_evidence_change_under_review",
+      "evidenceSource": "Read-only verification 2026-10-03 through the Supabase management connector on owner production wrygicdfxwjnrugduxnt, after PR #388 merged to main (d26e656, CI fully green) and the official integration applied it. supabase_migrations.schema_migrations holds version 20270126090000 / name sp_evidence_change_under_review; 360 rows, md5 of version:name joined by newline dcb7e4bcb694e2afece115a18a595383, equal to hosted-ledger.json; the first 359 rows unchanged (52e21ce44d6964ae72605bdf2b67817a). sp_attach_evidence md5 e5c65b3134c4f4dcc274666cf6e97b45 (was 37e34877d69efb7e6a057c288df5c625) = local replay of main; SECURITY DEFINER, search_path=public, EXECUTE for authenticated only, as before. Production holds 0 open verification requests. No production write probe was run; the behaviour is proven on the identical body by sp_decision_bound_to_reviewed_content_test SR6 and EV NC1-NC2 in scripts/db-test.sh.",
       "introduces": [],
       "rollback": "supabase/rollback/20270126090000_sp_evidence_change_under_review_rollback.sql",
       "verify": "SELECT position('answered_at' IN prosrc) > 0 FROM pg_proc WHERE oid = 'public.sp_attach_evidence(uuid,uuid,text,text,text,integer,text)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.sp_attach_evidence(uuid,uuid,text,text,text,integer,text)','EXECUTE'); -- false. Behaviour: sp_decision_bound_to_reviewed_content_test SR6 (a reviewer approving from a page loaded before the holder attached a document is refused SP_REVIEW_STALE; after reloading, the approval goes through).",

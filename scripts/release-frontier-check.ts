@@ -354,14 +354,14 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // production write probe was run; behaviour is proven by the suites, negative
 // controls and races on the identical bodies.
 // Evidence: docs/release/2026-10-03-beskt-exposure-and-passport-review-hosted-verification.md.
-// 20270126090000_sp_evidence_change_under_review (evidence attached while a
-// Passport review is open moves the request's version, so a page loaded
-// before the new document cannot decide) is pending BY DESIGN until its PR
-// merges and the official integration applies it. It ships AFTER the
-// application passes the reviewed version (#385, merged). Its name comes off
-// this list in the change that records its hosted evidence. Evidence to come:
-// docs/release/2026-10-03-passport-evidence-change-under-review.md.
-const expectedPending: string[] = ["20270126090000_sp_evidence_change_under_review.sql"];
+// 2026-10-03 ~10:00 UTC: #388 (merge d26e656) verified applied read-only:
+// 20270126090000_sp_evidence_change_under_review is in the ledger (360 rows,
+// digest dcb7e4bcb694e2afece115a18a595383; the first 359 unchanged) and
+// sp_attach_evidence equals a local replay of main, grants unchanged. No
+// production write probe was run.
+// Evidence: docs/release/2026-10-03-passport-evidence-change-under-review.md.
+// Nothing is pending.
+const expectedPending: string[] = [];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
