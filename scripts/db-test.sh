@@ -300,6 +300,84 @@ SQL
 )"
 fi
 
+# ---------------------------------------------------------------------------
+# 20270202090000 / 20270203090000 / 20270204090000: who may read what an
+# organisation learned about a person, and the circumvention of a suspension.
+# Design: docs/release/2026-10-03-employer-report-access-design.md. They run
+# here, straight after the replay, so they read the final state of the chain.
+# Each suite reproduces its defect on the PRE-FIX state ITSELF (the real
+# rollback, inside a savepoint), then proves the fix. Every planted control
+# below mutates the schema INSIDE the suite's own transaction (the suite's
+# ROLLBACK ends it, nothing is left behind) and MUST make the suite fail on
+# the NAMED assertion.
+ac_run_suite() { psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/$1" 2>&1; }
+ac_expect_pass() {
+  local label="$1" suite="$2" floor="$3"
+  set +e
+  local out; out="$(ac_run_suite "$suite")"; local rc=$?
+  set -e
+  local passed; passed="$(echo "$out" | grep -c "NOTICE:  ok  " || true)"
+  if [ "$rc" -ne 0 ]; then
+    echo "$out" | grep -E "ERROR|FAILED" >&2 || true
+    echo "FAIL: the ${label} suite exited with code ${rc}." >&2
+    suite_failed "${label}"
+    return 0
+  fi
+  if [ "$passed" -lt "$floor" ]; then
+    echo "FAIL: ${label} assertion shortfall: $passed (floor $floor)" >&2
+    suite_failed "${label} (assertion shortfall: floor $floor)"
+    return 0
+  fi
+  echo "    ok  $passed ${label} assertions passed (defect reproduced pre-fix, refused post-fix)"
+}
+ac_nc_expect_fail() {
+  local label="$1" suite="$2" expect="$3" mutation="$4"
+  set +e
+  local out
+  out="$(printf 'BEGIN;\n%s\n\\i supabase/tests/%s\n' "$mutation" "$suite" | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+  local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect}"; then
+    echo "FAIL: planted control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails on ${expect}"
+}
+
+echo "==> Running employer membership standing assertions (suspension cannot be circumvented)"
+ac_expect_pass "employer membership standing" employer_membership_standing_test.sql 43
+ac_nc_expect_fail "MS NC1 full rollback of 20270202090000" employer_membership_standing_test.sql "MS0.5" "$(cat supabase/rollback/20270202090000_employer_membership_standing_not_bypassable_rollback.sql)"
+ac_nc_expect_fail "MS NC2 the request insert is not guarded" employer_membership_standing_test.sql "MS1.1" "DROP TRIGGER employer_access_requests_standing_guard ON public.employer_access_requests;"
+ac_nc_expect_fail "MS NC3 the request guard only knows 'removed'" employer_membership_standing_test.sql "MS1.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.employer_access_request_standing_guard() RETURNS trigger
+ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $function$
+BEGIN
+  IF EXISTS (SELECT 1 FROM public.employer_memberships m WHERE m.employer_id = NEW.employer_id
+              AND m.user_id = NEW.requester_user_id AND m.status IN ('removed')) THEN
+    RAISE EXCEPTION 'ACCESS_REQUEST_MEMBERSHIP_BLOCKED: x' USING ERRCODE = 'insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END; $function$;
+SQL
+)"
+ac_nc_expect_fail "MS NC4 approve_access_request reactivates again" employer_membership_standing_test.sql "MS2.1" "$(sed -n '/^CREATE OR REPLACE FUNCTION public.approve_access_request/,/^;$/p' supabase/rollback/20270202090000_employer_membership_standing_not_bypassable_rollback.sql)"
+ac_nc_expect_fail "MS NC5 reviewer grants survive suspension" employer_membership_standing_test.sql "MS4.1" "DROP TRIGGER employer_memberships_revoke_reviewer_grants ON public.employer_memberships;"
+ac_nc_expect_fail "MS NC6 reviewer grants survive removal but not suspension" employer_membership_standing_test.sql "MS4.5" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.employer_membership_revoke_reviewer_grants() RETURNS trigger
+ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $function$
+BEGIN
+  IF TG_OP = 'UPDATE' AND NEW.status = 'suspended' THEN
+    UPDATE public.scp_employer_reviewers r SET revoked_at = now(), revoked_by = auth.uid()
+     WHERE r.employer_id = NEW.employer_id AND r.user_id = NEW.user_id AND r.revoked_at IS NULL;
+  END IF;
+  RETURN NULL;
+END; $function$;
+SQL
+)"
+
 # 20270101090000: four catalogue reads narrowed (drafts and unapproved
 # professions to authors/admins, the interviewer guide to authors) and three
 # stray client write grants revoked. Run the suite, prove it cannot pass on the

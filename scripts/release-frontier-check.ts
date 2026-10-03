@@ -370,6 +370,7 @@ const expectedPending: string[] = [
   "20270130090000_jobs_not_editable_in_place.sql",
   "20270131090000_jobs_publish_window_and_url_scheme.sql",
   "20270201090000_job_cvs_no_client_writes.sql",
+  "20270202090000_employer_membership_standing_not_bypassable.sql",
 ];
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
