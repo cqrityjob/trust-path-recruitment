@@ -15276,9 +15276,251 @@ export type Database = {
           },
         ]
       }
+      sp_catalogue_requests: {
+        Row: {
+          answered_credential_code: string | null
+          created_at: string
+          holder_user_id: string
+          id: string
+          note: string | null
+          requested_abbreviation: string | null
+          requested_issuer: string
+          requested_name: string
+          research_record_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          source_url: string | null
+          status: string
+        }
+        Insert: {
+          answered_credential_code?: string | null
+          created_at?: string
+          holder_user_id: string
+          id?: string
+          note?: string | null
+          requested_abbreviation?: string | null
+          requested_issuer: string
+          requested_name: string
+          research_record_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          source_url?: string | null
+          status?: string
+        }
+        Update: {
+          answered_credential_code?: string | null
+          created_at?: string
+          holder_user_id?: string
+          id?: string
+          note?: string | null
+          requested_abbreviation?: string | null
+          requested_issuer?: string
+          requested_name?: string
+          research_record_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          source_url?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_catalogue_requests_answered_credential_code_fkey"
+            columns: ["answered_credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_catalogue_requests_research_record_id_fkey"
+            columns: ["research_record_id"]
+            isOneToOne: false
+            referencedRelation: "sp_catalogue_research_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sp_catalogue_research_records: {
+        Row: {
+          acronym: string | null
+          catalogue_decision: string
+          created_at: string
+          credential_code: string | null
+          credential_kind: string
+          decision_note: string | null
+          evidence_level: string
+          evidence_note: string | null
+          evidence_supported_fields: string | null
+          holder_reason: string | null
+          holder_verification_policy: string
+          id: string
+          issuer_name: string
+          issuer_research_id: string
+          jurisdiction_context: string | null
+          legal_recognition_status: string
+          limitations: string | null
+          mapped_credential_class: string | null
+          mapped_professional_domain: string | null
+          official_name: string
+          reconciliation_outcome: string
+          recheck_checked_on: string | null
+          recheck_note: string | null
+          recommended_priority: string
+          renewal_note: string | null
+          required_action: string | null
+          research_area: string
+          research_domain: string
+          research_id: string
+          research_scope: string
+          research_status: string
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          reviewer: string | null
+          snapshot_date: string
+          source_checked_on: string
+          source_id: string
+          source_title: string | null
+          source_url: string
+          unresolved_issue: string | null
+          updated_at: string
+        }
+        Insert: {
+          acronym?: string | null
+          catalogue_decision?: string
+          created_at?: string
+          credential_code?: string | null
+          credential_kind: string
+          decision_note?: string | null
+          evidence_level: string
+          evidence_note?: string | null
+          evidence_supported_fields?: string | null
+          holder_reason?: string | null
+          holder_verification_policy?: string
+          id?: string
+          issuer_name: string
+          issuer_research_id: string
+          jurisdiction_context?: string | null
+          legal_recognition_status?: string
+          limitations?: string | null
+          mapped_credential_class?: string | null
+          mapped_professional_domain?: string | null
+          official_name: string
+          reconciliation_outcome?: string
+          recheck_checked_on?: string | null
+          recheck_note?: string | null
+          recommended_priority: string
+          renewal_note?: string | null
+          required_action?: string | null
+          research_area: string
+          research_domain: string
+          research_id: string
+          research_scope: string
+          research_status: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          reviewer?: string | null
+          snapshot_date: string
+          source_checked_on: string
+          source_id: string
+          source_title?: string | null
+          source_url: string
+          unresolved_issue?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acronym?: string | null
+          catalogue_decision?: string
+          created_at?: string
+          credential_code?: string | null
+          credential_kind?: string
+          decision_note?: string | null
+          evidence_level?: string
+          evidence_note?: string | null
+          evidence_supported_fields?: string | null
+          holder_reason?: string | null
+          holder_verification_policy?: string
+          id?: string
+          issuer_name?: string
+          issuer_research_id?: string
+          jurisdiction_context?: string | null
+          legal_recognition_status?: string
+          limitations?: string | null
+          mapped_credential_class?: string | null
+          mapped_professional_domain?: string | null
+          official_name?: string
+          reconciliation_outcome?: string
+          recheck_checked_on?: string | null
+          recheck_note?: string | null
+          recommended_priority?: string
+          renewal_note?: string | null
+          required_action?: string | null
+          research_area?: string
+          research_domain?: string
+          research_id?: string
+          research_scope?: string
+          research_status?: string
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          reviewer?: string | null
+          snapshot_date?: string
+          source_checked_on?: string
+          source_id?: string
+          source_title?: string | null
+          source_url?: string
+          unresolved_issue?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_catalogue_research_records_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "sp_catalogue_research_records_mapped_credential_class_fkey"
+            columns: ["mapped_credential_class"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_classes"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      sp_certification_definition_aliases: {
+        Row: {
+          alias: string
+          alias_kind: string
+          created_at: string
+          credential_code: string
+        }
+        Insert: {
+          alias: string
+          alias_kind: string
+          created_at?: string
+          credential_code: string
+        }
+        Update: {
+          alias?: string
+          alias_kind?: string
+          created_at?: string
+          credential_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sp_certification_definition_aliases_credential_code_fkey"
+            columns: ["credential_code"]
+            isOneToOne: false
+            referencedRelation: "sp_credential_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       sp_certification_definitions: {
         Row: {
-          abbreviation: string
+          abbreviation: string | null
           canonical_name_en: string
           created_at: string
           credential_code: string
@@ -15298,7 +15540,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          abbreviation: string
+          abbreviation: string | null
           canonical_name_en: string
           created_at?: string
           credential_code: string
@@ -15318,7 +15560,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          abbreviation?: string
+          abbreviation?: string | null
           canonical_name_en?: string
           created_at?: string
           credential_code?: string
@@ -24337,6 +24579,27 @@ export type Database = {
           updated_at: string
         }[]
       }
+      sp_admin_resolve_catalogue_request: {
+        Args: {
+          _credential_code?: string
+          _note?: string
+          _request_id: string
+          _research_record_id?: string
+          _status: string
+        }
+        Returns: undefined
+      }
+      sp_admin_review_research_record: {
+        Args: {
+          _decision: string
+          _holder_reason?: string
+          _note: string
+          _record_id: string
+          _required_action?: string
+          _unresolved_issue?: string
+        }
+        Returns: undefined
+      }
       sp_application_disclosure: {
         Args: { _application_id: string }
         Returns: Json
@@ -24369,6 +24632,16 @@ export type Database = {
           _storage_path: string
         }
         Returns: string
+      }
+      sp_catalogue_unavailable_matches: {
+        Args: { _limit?: number; _search: string }
+        Returns: {
+          acronym: string
+          holder_reason: string
+          issuer_name: string
+          official_name: string
+          research_id: string
+        }[]
       }
       sp_certification_lifecycle_declare: {
         Args: {
@@ -24542,6 +24815,19 @@ export type Database = {
         Returns: boolean
       }
       sp_is_verifier: { Args: { _user_id: string }; Returns: boolean }
+      sp_list_my_catalogue_requests: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          requested_abbreviation: string
+          requested_issuer: string
+          requested_name: string
+          resolution_note: string
+          resolved_at: string
+          status: string
+        }[]
+      }
       sp_market_access: {
         Args: { _market_pack_code: string; _user_id: string }
         Returns: string
@@ -24627,6 +24913,10 @@ export type Database = {
           _revoke_previous: boolean
         }
         Returns: Json
+      }
+      sp_request_catalogue_definition: {
+        Args: { _input: Json }
+        Returns: string
       }
       sp_resolve_dispute: {
         Args: {

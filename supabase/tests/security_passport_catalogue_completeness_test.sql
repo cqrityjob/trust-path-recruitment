@@ -59,11 +59,20 @@ CREATE TEMP TABLE seen(code text PRIMARY KEY, principal text, claim_id uuid);
 GRANT SELECT,INSERT ON seen TO authenticated;
 
 SELECT pg_temp.ok((SELECT count(*)=70 FROM expected),'the pinned expectation is 70 definitions: 14 international, 8 Sweden, 4 India, 13 GB, 1 NI, 30 Dubai');
-SELECT pg_temp.ok((SELECT count(*)=77 FROM public.sp_credential_types),'the taxonomy holds 77 definitions: the 70 in scope and 7 Abu Dhabi rows');
+-- 20270213090000 (the certification research import) ADDED 140 definitions, all
+-- inactive: they are accounted for here by name of their record, never folded
+-- into the 70 that are selectable. Their own suite pins them one by one.
+CREATE TEMP TABLE research_added AS
+  SELECT credential_code AS code FROM public.sp_catalogue_research_records
+   WHERE reconciliation_outcome='added_approved' AND credential_code IS NOT NULL;
+SELECT pg_temp.ok((SELECT count(*)=77 FROM public.sp_credential_types t WHERE NOT EXISTS(SELECT 1 FROM research_added a WHERE a.code=t.code)),'the taxonomy holds 77 definitions outside the research import: the 70 in scope and 7 Abu Dhabi rows');
+SELECT pg_temp.ok((SELECT count(*)=140 FROM research_added)
+ AND NOT EXISTS(SELECT 1 FROM research_added a JOIN public.sp_credential_types t ON t.code=a.code WHERE t.is_active),
+ 'the research import added 140 definitions and none of them is active: they are not part of the 70 until a publication migration says so');
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM expected e WHERE NOT EXISTS(SELECT 1 FROM public.sp_credential_types t WHERE t.code=e.code)),
  'every pinned code is a real taxonomy row');
-SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_credential_types t WHERE t.market_pack_code IS DISTINCT FROM 'AE-AZ' AND NOT EXISTS(SELECT 1 FROM expected e WHERE e.code=t.code)),
- 'and no taxonomy row outside Abu Dhabi is missing from the expectation');
+SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM public.sp_credential_types t WHERE t.market_pack_code IS DISTINCT FROM 'AE-AZ' AND NOT EXISTS(SELECT 1 FROM expected e WHERE e.code=t.code) AND NOT EXISTS(SELECT 1 FROM research_added a WHERE a.code=t.code)),
+ 'and no taxonomy row outside Abu Dhabi and the research import is missing from the expectation');
 -- Organisation roles: every definition in scope names a regulator OR a governed issuer.
 SELECT pg_temp.ok(NOT EXISTS(SELECT 1 FROM expected e WHERE NOT EXISTS(
    SELECT 1 FROM public.sp_credential_organisation_roles r WHERE r.credential_code=e.code AND r.role='issuer')),
