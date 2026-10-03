@@ -354,6 +354,13 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // production write probe was run; behaviour is proven by the suites, negative
 // controls and races on the identical bodies.
 // Evidence: docs/release/2026-10-03-beskt-exposure-and-passport-review-hosted-verification.md.
+// 20270126090000_sp_evidence_change_under_review (evidence attached while a
+// Passport review is open moves the request's version, so a page loaded
+// before the new document cannot decide) is pending BY DESIGN until its PR
+// merges and the official integration applies it. It ships AFTER the
+// application passes the reviewed version (#385, merged). Its name comes off
+// this list in the change that records its hosted evidence. Evidence to come:
+// docs/release/2026-10-03-passport-evidence-change-under-review.md.
 // Pending by design (written, replayed on the full chain, recorded `pending` in
 // release-state.json, none applied hosted): the job-board launch-readiness
 // migrations (docs/release/2026-10-03-jobs-not-editable-in-place.md,
@@ -361,6 +368,7 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // 2026-10-03-job-cvs-no-client-writes.md). Each name comes OFF this list in the
 // change that records its production evidence.
 const expectedPending: string[] = [
+  "20270126090000_sp_evidence_change_under_review.sql",
   "20270130090000_jobs_not_editable_in_place.sql",
   "20270131090000_jobs_publish_window_and_url_scheme.sql",
   "20270201090000_job_cvs_no_client_writes.sql",
