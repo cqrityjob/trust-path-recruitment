@@ -1,6 +1,7 @@
 -- Rollback of 20270205090000_employer_new_application_notices.
 --
--- Drops the four entry points, the backoff helper and the outbox with every
+-- Drops the five entry points (recipients, enqueue, claim, settle, retention),
+-- the backoff helper and the outbox with every
 -- notice it holds. After it the application's employer-notification step finds
 -- no function (PGRST202 / 42883) and is a logged no-op: applications are still
 -- accepted, candidates still get their receipt, and the employer simply is not
@@ -14,10 +15,12 @@
 -- has already left. Idempotent.
 --
 -- The drops are by exact signature, so a function of another signature with
--- the same name is never touched. (Nothing is restored: all five functions and
--- the table are new in this migration. Their md5(prosrc) is recorded in the
--- release note, for comparing the hosted bodies with the reviewed ones.)
+-- the same name is never touched. (Nothing is restored: all six functions, the
+-- retention function included, and the table are new in this migration. Their
+-- md5(prosrc) is recorded in the release note, for comparing the hosted bodies
+-- with the reviewed ones.)
 
+DROP FUNCTION IF EXISTS public.rec_purge_employer_notices(interval);
 DROP FUNCTION IF EXISTS public.rec_settle_employer_notice(uuid, text, integer);
 DROP FUNCTION IF EXISTS public.rec_claim_employer_notices(uuid, integer, text[]);
 DROP FUNCTION IF EXISTS public.rec_enqueue_employer_new_application_notices(uuid);
@@ -29,11 +32,12 @@ DO $$
 BEGIN
   IF to_regclass('public.recruitment_employer_notices') IS NOT NULL
      OR to_regprocedure('public.rec_settle_employer_notice(uuid,text,integer)') IS NOT NULL
+     OR to_regprocedure('public.rec_purge_employer_notices(interval)') IS NOT NULL
      OR to_regprocedure('public.rec_claim_employer_notices(uuid,integer,text[])') IS NOT NULL
      OR to_regprocedure('public.rec_enqueue_employer_new_application_notices(uuid)') IS NOT NULL
      OR to_regprocedure('public.rec_employer_notice_recipients(uuid)') IS NOT NULL
      OR to_regprocedure('public.rec_employer_notice_backoff(integer)') IS NOT NULL THEN
     RAISE EXCEPTION 'EMPLOYER_NOTICES_ROLLBACK: an outbox object is still in place';
   END IF;
-  RAISE NOTICE 'EMPLOYER_NOTICES_ROLLBACK ok: the outbox and its five functions are removed';
+  RAISE NOTICE 'EMPLOYER_NOTICES_ROLLBACK ok: the outbox and its six functions are removed';
 END $$;

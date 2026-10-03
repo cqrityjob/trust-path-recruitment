@@ -76,6 +76,16 @@
 --     and not_configured (the transport may be configured later). Every other
 --     4xx is final.
 --
+-- RETENTION: rec_purge_employer_notices (service_role only) deletes SETTLED rows
+-- (sent, skipped, and failed / not_configured rows that will not be tried again)
+-- whose settled_at is older than the window (default 90 days, never under one
+-- day), at most 1000 per call, and never a pending, claimed or still-retryable
+-- row. The receipts sweep calls it after its claim loop. A purged row can no
+-- longer suppress a re-enqueue for its application -- which cannot cause a
+-- second mail: enqueue is called only when an application is created (and on a
+-- replay of that same request) and refuses any application older than an hour,
+-- while a purged row is at least a day old.
+--
 -- ENQUEUE is called by the server once the application has COMMITTED. It is
 -- SET-ONCE per (application, kind): when any row exists the call does nothing,
 -- so a replayed submission can never produce a second set, whoever the
@@ -116,6 +126,9 @@ CREATE TABLE IF NOT EXISTS public.recruitment_employer_notices (
   -- The provider's HTTP status of the last settled attempt; 0 = no answer.
   last_status       integer CHECK (last_status IS NULL OR last_status BETWEEN 0 AND 599),
   sent_at           timestamptz,
+  -- When the last outcome was recorded (a settle, or the database ending the
+  -- row): the clock the retention window runs on.
+  settled_at        timestamptz,
   -- Our own code, never free text: why a notice was not sent at all.
   skip_reason       text CHECK (skip_reason IS NULL
                                 OR skip_reason IN ('EXPIRED', 'RECIPIENT_NOT_ELIGIBLE', 'APPLICATION_WITHDRAWN')),
@@ -126,6 +139,7 @@ CREATE TABLE IF NOT EXISTS public.recruitment_employer_notices (
     (status = 'sent') = (sent_at IS NOT NULL)
     AND (status <> 'claimed' OR (claimed_at IS NOT NULL AND attempt_id IS NOT NULL))
     AND (status = 'skipped') = (skip_reason IS NOT NULL)
+    AND (status NOT IN ('sent', 'skipped') OR settled_at IS NOT NULL)
     AND (status <> 'pending' OR attempts = 0)
   )
 );
@@ -139,6 +153,10 @@ COMMENT ON TABLE public.recruitment_employer_notices IS
 CREATE INDEX IF NOT EXISTS recruitment_employer_notices_due_idx
   ON public.recruitment_employer_notices (status, next_attempt_at)
   WHERE status IN ('pending', 'claimed', 'failed', 'not_configured');
+-- What the retention scans.
+CREATE INDEX IF NOT EXISTS recruitment_employer_notices_settled_idx
+  ON public.recruitment_employer_notices (settled_at)
+  WHERE settled_at IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS recruitment_employer_notices_attempt_idx
   ON public.recruitment_employer_notices (attempt_id) WHERE attempt_id IS NOT NULL;
 
@@ -318,7 +336,7 @@ BEGIN
   -- window) will not be tried again. Its outcome was never reported, so it is
   -- 'failed' with no answer -- not "sent" and not hidden.
   UPDATE public.recruitment_employer_notices n
-     SET status = 'failed', last_status = 0, updated_at = now()
+     SET status = 'failed', last_status = 0, settled_at = now(), updated_at = now()
    WHERE n.status = 'claimed'
      AND n.claimed_at < now() - interval '3 minutes'
      AND (n.attempts >= 6 OR n.created_at <= now() - interval '23 hours')
@@ -326,7 +344,7 @@ BEGIN
      AND (_kinds IS NULL OR n.kind = ANY (_kinds));
   -- Never tried, and too old to be worth announcing.
   UPDATE public.recruitment_employer_notices n
-     SET status = 'skipped', skip_reason = 'EXPIRED', updated_at = now()
+     SET status = 'skipped', skip_reason = 'EXPIRED', settled_at = now(), updated_at = now()
    WHERE n.status = 'pending'
      AND n.created_at <= now() - interval '23 hours'
      AND (_application_id IS NULL OR n.application_id = _application_id)
@@ -353,7 +371,7 @@ BEGIN
     SELECT a.status INTO _app_status FROM public.job_applications a WHERE a.id = _n.application_id;
     IF _app_status IS NULL OR _app_status = 'withdrawn' THEN
       UPDATE public.recruitment_employer_notices n
-         SET status = 'skipped', skip_reason = 'APPLICATION_WITHDRAWN', updated_at = now()
+         SET status = 'skipped', skip_reason = 'APPLICATION_WITHDRAWN', settled_at = now(), updated_at = now()
        WHERE n.id = _n.id;
       CONTINUE;
     END IF;
@@ -365,7 +383,7 @@ BEGIN
      WHERE r.recipient_user_id = _n.recipient_user_id;
     IF NOT FOUND THEN
       UPDATE public.recruitment_employer_notices n
-         SET status = 'skipped', skip_reason = 'RECIPIENT_NOT_ELIGIBLE', updated_at = now()
+         SET status = 'skipped', skip_reason = 'RECIPIENT_NOT_ELIGIBLE', settled_at = now(), updated_at = now()
        WHERE n.id = _n.id;
       CONTINUE;
     END IF;
@@ -444,6 +462,7 @@ BEGIN
      SET status = _result,
          last_status = CASE WHEN _http_status BETWEEN 0 AND 599 THEN _http_status END,
          sent_at = CASE WHEN _result = 'sent' THEN now() END,
+         settled_at = now(),
          next_attempt_at = CASE WHEN _result = 'sent' THEN n.next_attempt_at
                                 ELSE now() + public.rec_employer_notice_backoff(n.attempts) END,
          updated_at = now()
@@ -454,7 +473,62 @@ REVOKE ALL ON FUNCTION public.rec_settle_employer_notice(uuid, text, integer) FR
 GRANT EXECUTE ON FUNCTION public.rec_settle_employer_notice(uuid, text, integer) TO service_role;
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- 7. Postflight: the migration fails, and rolls back, unless this holds
+-- 7. Retention: settled rows go after 90 days
+-- ═══════════════════════════════════════════════════════════════════════════
+
+-- Returns the number of rows deleted. Deletes only rows that are SETTLED and
+-- will not be tried again:
+--   sent, skipped                      always final
+--   failed, not_configured             final once six attempts are made, the
+--                                      23-hour window has closed, or the status
+--                                      is a definite refusal
+-- and only when settled_at is older than _older_than. A pending or claimed row,
+-- and a failed row that can still be retried, is never touched, whatever its
+-- timestamps say. _older_than may not be under one day: a row that is a day old
+-- cannot be the one that stops enqueue from queueing an application a second time
+-- (enqueue refuses an application older than an hour).
+CREATE OR REPLACE FUNCTION public.rec_purge_employer_notices(_older_than interval DEFAULT interval '90 days')
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE _n integer;
+BEGIN
+  IF _older_than IS NULL OR _older_than < interval '1 day' THEN
+    RAISE EXCEPTION 'NOTICE_RETENTION_TOO_SHORT' USING ERRCODE = 'check_violation';
+  END IF;
+  WITH doomed AS (
+    SELECT n.id
+      FROM public.recruitment_employer_notices n
+     WHERE n.settled_at < now() - _older_than
+       AND (
+            n.status IN ('sent', 'skipped')
+         OR (n.status IN ('failed', 'not_configured')
+             AND (n.attempts >= 6
+                  OR n.created_at <= now() - interval '23 hours'
+                  OR (n.status = 'failed'
+                      AND NOT (n.last_status IS NULL OR n.last_status = 0
+                               OR n.last_status IN (408, 409, 425, 429) OR n.last_status >= 500))))
+       )
+     ORDER BY n.settled_at
+     LIMIT 1000
+     FOR UPDATE OF n SKIP LOCKED
+  )
+  DELETE FROM public.recruitment_employer_notices n USING doomed d WHERE n.id = d.id;
+  GET DIAGNOSTICS _n = ROW_COUNT;
+  RETURN _n;
+END; $$;
+COMMENT ON FUNCTION public.rec_purge_employer_notices(interval) IS
+  'Retention: deletes settled employer notices (sent, skipped, failed or '
+  'not_configured past their retries) whose settled_at is older than the window '
+  '(default 90 days, at least one day), at most 1000 per call. Never a pending, '
+  'claimed or retryable row. service_role only.';
+REVOKE ALL ON FUNCTION public.rec_purge_employer_notices(interval) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.rec_purge_employer_notices(interval) TO service_role;
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- 8. Postflight: the migration fails, and rolls back, unless this holds
 -- ═══════════════════════════════════════════════════════════════════════════
 
 DO $$
@@ -479,7 +553,8 @@ BEGIN
     'public.rec_employer_notice_recipients(uuid)',
     'public.rec_enqueue_employer_new_application_notices(uuid)',
     'public.rec_claim_employer_notices(uuid,integer,text[])',
-    'public.rec_settle_employer_notice(uuid,text,integer)'
+    'public.rec_settle_employer_notice(uuid,text,integer)',
+    'public.rec_purge_employer_notices(interval)'
   ] LOOP
     IF has_function_privilege('anon', _f, 'EXECUTE') OR has_function_privilege('authenticated', _f, 'EXECUTE') THEN
       RAISE EXCEPTION 'EMPLOYER_NOTICES_PROOF: a client role can execute %', _f;

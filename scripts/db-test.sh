@@ -567,6 +567,11 @@ echo "    ok  the three job-board migrations re-applied after every control (pos
 #   EN NC10  a sent row is claimed again                             -> EN4.11
 #   EN NC11  settle takes a row that is not claimed                  -> EN5.2
 #   EN NC12  no cap on attempts                                      -> EN6.4
+#   EN NC13  the retention deletes a claimed row                     -> EN8.1
+#   EN NC14  the retention ignores its window                        -> EN8.1
+#   EN NC15  the retention deletes rows that can still be retried    -> EN8.1
+#   EN NC16  a client role may execute the retention                 -> EN2.1
+#   EN NC17  the retention accepts a window under a day              -> EN8.6
 # ---------------------------------------------------------------------------
 EN_MIG=supabase/migrations/20270205090000_employer_new_application_notices.sql
 EN_RB=supabase/rollback/20270205090000_employer_new_application_notices_rollback.sql
@@ -611,7 +616,7 @@ if [ "$EN_RC" -ne 0 ]; then
   echo "FAIL: the employer-notice suite exited with code ${EN_RC}." >&2
   exit 1
 fi
-[ "$EN_PASSED" -ge 85 ] || { echo "$EN_OUT"; echo "FAIL: employer-notice assertion shortfall: $EN_PASSED (floor 85)" >&2; exit 1; }
+[ "$EN_PASSED" -ge 105 ] || { echo "$EN_OUT"; echo "FAIL: employer-notice assertion shortfall: $EN_PASSED (floor 105)" >&2; exit 1; }
 echo "    ok  $EN_PASSED employer-notice assertions passed"
 
 en_plant 's/^GRANT EXECUTE ON FUNCTION public.rec_claim_employer_notices(uuid, integer, text\[\]) TO service_role;/GRANT EXECUTE ON FUNCTION public.rec_claim_employer_notices(uuid, integer, text[]) TO service_role, authenticated;/'
@@ -653,10 +658,26 @@ en_nc_expect_fail "NC11 settle takes a row that is not claimed" EN5.2
 en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
 en_plant 's/^       AND n.attempts < 6$/       AND n.attempts < 600/'
 en_nc_expect_fail "NC12 no cap on attempts" EN6.4
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant "s/^            n.status IN ('sent', 'skipped')\$/            n.status IN ('sent', 'skipped', 'claimed')/"
+en_nc_expect_fail "NC13 the retention deletes a claimed row" EN8.1
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/WHERE n.settled_at < now() - _older_than/WHERE n.settled_at < now()/'
+en_nc_expect_fail "NC14 the retention ignores its window" EN8.1
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/AND (n.attempts >= 6$/AND (true OR n.attempts >= 6/'
+en_nc_expect_fail "NC15 the retention deletes rows that can still be retried" EN8.1
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/^GRANT EXECUTE ON FUNCTION public.rec_purge_employer_notices(interval) TO service_role;/GRANT EXECUTE ON FUNCTION public.rec_purge_employer_notices(interval) TO service_role, anon;/'
+en_nc_expect_fail "NC16 a client role may execute the retention" EN2.1
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant "s/_older_than < interval '1 day'/_older_than < interval '0'/"
+en_nc_expect_fail "NC17 the retention accepts a window under a day" EN8.6
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
 # The real rollback, then the migration again from nothing, then the suite.
 en_psql -d "$TEST_DB" -f "$EN_RB" >/dev/null
 en_psql -d "$TEST_DB" -f "$EN_RB" >/dev/null
-EN_LEFT="$(psql -tAq -d "$TEST_DB" -c "SELECT (to_regclass('public.recruitment_employer_notices') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE proname IN ('rec_employer_notice_recipients','rec_enqueue_employer_new_application_notices','rec_claim_employer_notices','rec_settle_employer_notice','rec_employer_notice_backoff'))")"
+EN_LEFT="$(psql -tAq -d "$TEST_DB" -c "SELECT (to_regclass('public.recruitment_employer_notices') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE proname IN ('rec_employer_notice_recipients','rec_enqueue_employer_new_application_notices','rec_claim_employer_notices','rec_settle_employer_notice','rec_employer_notice_backoff','rec_purge_employer_notices'))")"
 [ "$EN_LEFT" = "0" ] || { echo "FAIL: the employer-notice rollback left $EN_LEFT object(s) behind" >&2; exit 1; }
 en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
 en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null

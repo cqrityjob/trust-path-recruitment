@@ -21,6 +21,13 @@
 --   EN6 · retry         retryable statuses, the attempt cap, the backoff, the
 --                       23-hour window, the sweep across applications
 --   EN7 · shape         constraints, cascade, nothing about the candidate
+--   EN9 · another kind  a later migration widens the kind allow-list and the
+--                       claim, settle and retention serve the new kind without
+--                       being rewritten
+--   EN8 · retention     settled rows older than 90 days go; a 89-day row and
+--                       every pending, claimed or still-retryable row stay;
+--                       no client role can call it; a purged row cannot cause
+--                       a second notice
 --
 -- Everything is synthetic. The suite runs as the migration owner in ONE
 -- transaction that ends in ROLLBACK, and moves the clock by writing the
@@ -298,13 +305,16 @@ SELECT pg_temp.ok(
   AND NOT has_function_privilege('anon', 'public.rec_settle_employer_notice(uuid,text,integer)', 'EXECUTE')
   AND NOT has_function_privilege('authenticated', 'public.rec_settle_employer_notice(uuid,text,integer)', 'EXECUTE')
   AND NOT has_function_privilege('anon', 'public.rec_employer_notice_backoff(integer)', 'EXECUTE')
-  AND NOT has_function_privilege('authenticated', 'public.rec_employer_notice_backoff(integer)', 'EXECUTE'),
-  'EN2.1 neither anon nor authenticated can execute any of the five functions');
+  AND NOT has_function_privilege('authenticated', 'public.rec_employer_notice_backoff(integer)', 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.rec_purge_employer_notices(interval)', 'EXECUTE')
+  AND NOT has_function_privilege('authenticated', 'public.rec_purge_employer_notices(interval)', 'EXECUTE'),
+  'EN2.1 neither anon nor authenticated can execute any of the six functions');
 SELECT pg_temp.ok(
   NOT EXISTS (SELECT 1 FROM pg_proc p, aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
                WHERE p.pronamespace = 'public'::regnamespace
                  AND p.proname IN ('rec_employer_notice_recipients', 'rec_enqueue_employer_new_application_notices',
-                                   'rec_claim_employer_notices', 'rec_settle_employer_notice', 'rec_employer_notice_backoff')
+                                   'rec_claim_employer_notices', 'rec_settle_employer_notice', 'rec_employer_notice_backoff',
+                                   'rec_purge_employer_notices')
                  AND a.grantee = 0 AND a.privilege_type = 'EXECUTE'),
   'EN2.2 PUBLIC holds no EXECUTE on any of them');
 SELECT pg_temp.ok(
@@ -312,14 +322,15 @@ SELECT pg_temp.ok(
   AND has_function_privilege('service_role', 'public.rec_enqueue_employer_new_application_notices(uuid)', 'EXECUTE')
   AND has_function_privilege('service_role', 'public.rec_claim_employer_notices(uuid,integer,text[])', 'EXECUTE')
   AND has_function_privilege('service_role', 'public.rec_settle_employer_notice(uuid,text,integer)', 'EXECUTE')
+  AND has_function_privilege('service_role', 'public.rec_purge_employer_notices(interval)', 'EXECUTE')
   AND NOT has_function_privilege('service_role', 'public.rec_employer_notice_backoff(integer)', 'EXECUTE'),
-  'EN2.3 the server can execute the four entry points, and not the internal helper');
+  'EN2.3 the server can execute the five entry points, and not the internal helper');
 SELECT pg_temp.ok(
   (SELECT bool_and(p.prosecdef AND p.proconfig::text LIKE '%search_path=public, pg_temp%')
      FROM pg_proc p
     WHERE p.pronamespace = 'public'::regnamespace
       AND p.proname IN ('rec_employer_notice_recipients', 'rec_enqueue_employer_new_application_notices',
-                        'rec_claim_employer_notices', 'rec_settle_employer_notice')),
+                        'rec_claim_employer_notices', 'rec_settle_employer_notice', 'rec_purge_employer_notices')),
   'EN2.4 each entry point is SECURITY DEFINER with a pinned search_path');
 SELECT pg_temp.ok(
   NOT has_table_privilege('anon', 'public.recruitment_employer_notices', 'SELECT')
@@ -355,6 +366,8 @@ SELECT pg_temp.must_fail('SELECT * FROM public.rec_claim_employer_notices()', 'p
   'EN2.11 nor claim one');
 SELECT pg_temp.must_fail('SELECT public.rec_settle_employer_notice(gen_random_uuid(), ''sent'', 200)', 'permission denied',
   'EN2.12 nor settle one as sent');
+SELECT pg_temp.must_fail('SELECT public.rec_purge_employer_notices()', 'permission denied',
+  'EN2.19 nor purge the outbox');
 RESET ROLE; RESET request.jwt.claim.sub;
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub = 'e7000000-0000-0000-0000-000000000010';   -- the CANDIDATE
@@ -368,6 +381,8 @@ SELECT pg_temp.must_fail('SELECT count(*) FROM public.recruitment_employer_notic
   'EN2.15 anon cannot read the outbox');
 SELECT pg_temp.must_fail('SELECT * FROM public.rec_employer_notice_recipients(''e7000000-3333-0000-0000-000000000001'')', 'permission denied',
   'EN2.16 anon cannot ask for recipients');
+SELECT pg_temp.must_fail('SELECT public.rec_purge_employer_notices()', 'permission denied',
+  'EN2.20 anon cannot purge the outbox');
 RESET ROLE;
 SET LOCAL ROLE service_role;
 SELECT pg_temp.must_fail('INSERT INTO public.recruitment_employer_notices (application_id, employer_id, recipient_user_id) VALUES (gen_random_uuid(), gen_random_uuid(), gen_random_uuid())', 'permission denied',
@@ -899,6 +914,191 @@ SELECT pg_temp.ok(
   'EN6.10 whatever limit is asked for a claim takes at most 50; the next takes the remaining ten, and no notice is handed over twice');
 
 -- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP EN8 — retention'; END $$;
+
+-- One row per case, all for recipient adm1 on applications 0x15..0x1e (which
+-- already hold an unrelated row for another recipient). Timestamps are the
+-- ones a row of that age would have; the suite cannot move the clock.
+CREATE TEMP TABLE r8 (case_name text PRIMARY KEY, nid uuid, app uuid, purged boolean);
+GRANT SELECT ON r8 TO PUBLIC;
+INSERT INTO r8 (case_name, nid, app, purged)
+SELECT c, gen_random_uuid(), ('e7000000-3333-0000-0000-0000000000' || lpad(to_hex(20 + ord::int), 2, '0'))::uuid, p
+  FROM unnest(ARRAY['sent_91', 'sent_89', 'skipped_91', 'refused_91', 'exhausted_91', 'window_91',
+                    'retryable_100', 'unconfigured_100', 'pending_100', 'claimed_100'],
+               ARRAY[true, false, true, true, true, true, false, false, false, false]) WITH ORDINALITY AS t(c, p, ord);
+INSERT INTO public.recruitment_employer_notices
+  (id, application_id, employer_id, recipient_user_id, status, attempts, attempt_id, claimed_at,
+   last_status, sent_at, skip_reason, settled_at, created_at)
+SELECT r.nid, r.app, 'e7000000-1111-0000-0000-00000000000a', 'e7000000-0000-0000-0000-000000000003',
+       CASE r.case_name
+         WHEN 'sent_91' THEN 'sent' WHEN 'sent_89' THEN 'sent' WHEN 'skipped_91' THEN 'skipped'
+         WHEN 'unconfigured_100' THEN 'not_configured' WHEN 'pending_100' THEN 'pending'
+         WHEN 'claimed_100' THEN 'claimed' ELSE 'failed' END,
+       CASE r.case_name WHEN 'pending_100' THEN 0 WHEN 'exhausted_91' THEN 6 WHEN 'window_91' THEN 2 ELSE 1 END,
+       CASE WHEN r.case_name = 'claimed_100' THEN gen_random_uuid() END,
+       CASE WHEN r.case_name = 'claimed_100' THEN now() - interval '100 days' END,
+       CASE r.case_name WHEN 'sent_91' THEN 202 WHEN 'sent_89' THEN 202 WHEN 'refused_91' THEN 422
+         WHEN 'exhausted_91' THEN 503 WHEN 'window_91' THEN 503 WHEN 'retryable_100' THEN 503 END,
+       CASE WHEN r.case_name IN ('sent_91', 'sent_89') THEN now() - interval '100 days' END,
+       CASE WHEN r.case_name = 'skipped_91' THEN 'RECIPIENT_NOT_ELIGIBLE' END,
+       CASE r.case_name
+         WHEN 'sent_91' THEN now() - interval '91 days' WHEN 'sent_89' THEN now() - interval '89 days'
+         WHEN 'skipped_91' THEN now() - interval '91 days' WHEN 'refused_91' THEN now() - interval '91 days'
+         WHEN 'exhausted_91' THEN now() - interval '91 days' WHEN 'window_91' THEN now() - interval '91 days'
+         WHEN 'pending_100' THEN NULL ELSE now() - interval '100 days' END,
+       -- Terminal by status or by exhaustion, or old enough that the window closed; the
+       -- rows that must stay are recent (so they could still be retried) or never tried.
+       CASE r.case_name WHEN 'retryable_100' THEN now() WHEN 'unconfigured_100' THEN now()
+         WHEN 'refused_91' THEN now() WHEN 'exhausted_91' THEN now() ELSE now() - interval '200 days' END
+  FROM r8 r;
+
+SET LOCAL ROLE service_role;
+CREATE TEMP TABLE pg1 ON COMMIT DROP AS SELECT public.rec_purge_employer_notices() AS n;
+RESET ROLE;
+GRANT SELECT ON pg1 TO PUBLIC;
+SELECT pg_temp.ok(
+  (SELECT n FROM pg1) = 5
+  AND NOT EXISTS (SELECT 1 FROM public.recruitment_employer_notices n JOIN r8 ON r8.nid = n.id WHERE r8.purged)
+  AND (SELECT count(*) FROM public.recruitment_employer_notices n JOIN r8 ON r8.nid = n.id WHERE NOT r8.purged) = 5,
+  'EN8.1 the purge returns five: a sent, a skipped and three final failed rows older than 90 days are deleted');
+SELECT pg_temp.ok(
+  EXISTS (SELECT 1 FROM public.recruitment_employer_notices n JOIN r8 ON r8.nid = n.id
+           WHERE r8.case_name = 'sent_89' AND n.status = 'sent'),
+  'EN8.2 a sent row settled 89 days ago stays');
+SELECT pg_temp.ok(
+  (SELECT string_agg(r8.case_name || ':' || n.status, ',' ORDER BY r8.case_name)
+     FROM public.recruitment_employer_notices n JOIN r8 ON r8.nid = n.id)
+    = 'claimed_100:claimed,pending_100:pending,retryable_100:failed,sent_89:sent,unconfigured_100:not_configured',
+  'EN8.3 a pending, a claimed and a still-retryable failed or not_configured row stay, whatever their timestamps say');
+SET LOCAL ROLE service_role;
+CREATE TEMP TABLE pg2 ON COMMIT DROP AS SELECT public.rec_purge_employer_notices() AS n;
+RESET ROLE;
+GRANT SELECT ON pg2 TO PUBLIC;
+SELECT pg_temp.ok((SELECT n FROM pg2) = 0, 'EN8.4 a second purge finds nothing: it returns zero');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.recruitment_employer_notices n
+    WHERE n.settled_at >= now() - interval '1 minute' OR n.settled_at IS NULL) > 0
+  AND EXISTS (SELECT 1 FROM public.recruitment_employer_notices n WHERE n.status = 'sent' AND n.settled_at >= now() - interval '1 minute'),
+  'EN8.5 rows settled today, sent among them, are untouched');
+SET LOCAL ROLE service_role;
+SELECT pg_temp.must_fail($$SELECT public.rec_purge_employer_notices(interval '0')$$, 'NOTICE_RETENTION_TOO_SHORT',
+  'EN8.6 a window of nothing is refused');
+SELECT pg_temp.must_fail($$SELECT public.rec_purge_employer_notices(interval '12 hours')$$, 'NOTICE_RETENTION_TOO_SHORT',
+  'EN8.7 so is anything under a day');
+SELECT pg_temp.must_fail($$SELECT public.rec_purge_employer_notices(NULL)$$, 'NOTICE_RETENTION_TOO_SHORT',
+  'EN8.8 and no window at all');
+RESET ROLE;
+-- A shorter window, still at least a day, takes the 89-day row.
+SET LOCAL ROLE service_role;
+CREATE TEMP TABLE pg3 ON COMMIT DROP AS SELECT public.rec_purge_employer_notices(interval '30 days') AS n;
+RESET ROLE;
+GRANT SELECT ON pg3 TO PUBLIC;
+SELECT pg_temp.ok(
+  (SELECT n FROM pg3) >= 1
+  AND NOT EXISTS (SELECT 1 FROM public.recruitment_employer_notices n JOIN r8 ON r8.nid = n.id WHERE r8.case_name = 'sent_89')
+  AND (SELECT count(*) FROM public.recruitment_employer_notices n JOIN r8 ON r8.nid = n.id) = 4,
+  'EN8.9 the window is a parameter: 30 days takes the 89-day row and still not the four live ones');
+SELECT pg_temp.ok(
+  position('LIMIT 1000' IN pg_get_functiondef('public.rec_purge_employer_notices(interval)'::regprocedure)) > 0,
+  'EN8.10 a purge is bounded: at most 1000 rows per call');
+-- A purged row cannot cause a second notice. Application 0x11 is 100 days old
+-- and its only row is a sent one settled 91 days ago.
+UPDATE public.job_applications SET created_at = now() - interval '100 days', status = 'submitted'
+ WHERE id = 'e7000000-3333-0000-0000-000000000011';
+INSERT INTO public.recruitment_employer_notices
+  (application_id, employer_id, recipient_user_id, status, attempts, attempt_id, sent_at, settled_at, last_status, created_at)
+VALUES ('e7000000-3333-0000-0000-000000000011', 'e7000000-1111-0000-0000-00000000000a',
+        'e7000000-0000-0000-0000-000000000003', 'sent', 1, gen_random_uuid(),
+        now() - interval '100 days', now() - interval '91 days', 200, now() - interval '100 days');
+SET LOCAL ROLE service_role;
+CREATE TEMP TABLE pg4 ON COMMIT DROP AS SELECT public.rec_purge_employer_notices() AS n;
+CREATE TEMP TABLE pg5 ON COMMIT DROP AS SELECT public.rec_enqueue_employer_new_application_notices('e7000000-3333-0000-0000-000000000011') AS n;
+RESET ROLE;
+GRANT SELECT ON pg4, pg5 TO PUBLIC;
+SELECT pg_temp.ok(
+  (SELECT n FROM pg4) >= 1
+  AND NOT EXISTS (SELECT 1 FROM public.recruitment_employer_notices n WHERE n.application_id = 'e7000000-3333-0000-0000-000000000011')
+  AND (SELECT n FROM pg5) = 0
+  AND NOT EXISTS (SELECT 1 FROM public.recruitment_employer_notices n WHERE n.application_id = 'e7000000-3333-0000-0000-000000000011'),
+  'EN8.11 the purged row is gone, and a re-enqueue for its (old) application still queues nothing: no second mail');
+
+-- ===========================================================================
+DO $$ BEGIN RAISE NOTICE 'GROUP EN9 — a second kind needs no new functions'; END $$;
+
+-- None of the claim, settle, retention or backoff functions names a kind.
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace
+      AND p.proname IN ('rec_claim_employer_notices', 'rec_settle_employer_notice',
+                        'rec_purge_employer_notices', 'rec_employer_notice_backoff', 'rec_employer_notice_recipients')
+      AND position('new_application' IN p.prosrc) > 0) = 0,
+  'EN9.1 no function but the enqueue of a NEW application names that kind');
+CREATE TEMP TABLE bodies_before AS
+SELECT p.proname, md5(p.prosrc) AS h FROM pg_proc p
+ WHERE p.pronamespace = 'public'::regnamespace
+   AND p.proname IN ('rec_claim_employer_notices', 'rec_settle_employer_notice', 'rec_purge_employer_notices',
+                     'rec_employer_notice_recipients', 'rec_employer_notice_backoff', 'rec_enqueue_employer_new_application_notices');
+GRANT SELECT ON bodies_before TO PUBLIC;
+
+-- What a later migration would do: widen the allow-list. Nothing else.
+ALTER TABLE public.recruitment_employer_notices DROP CONSTRAINT recruitment_employer_notices_kind_check;
+ALTER TABLE public.recruitment_employer_notices ADD CONSTRAINT recruitment_employer_notices_kind_check
+  CHECK (kind IN ('new_application', 'candidate_replied'));
+INSERT INTO public.recruitment_employer_notices (id, application_id, employer_id, recipient_user_id, kind) VALUES
+  ('e7090000-0000-0000-0000-000000000001', 'e7000000-3333-0000-0000-000000000015', 'e7000000-1111-0000-0000-00000000000a',
+   'e7000000-0000-0000-0000-000000000004', 'candidate_replied'),
+  ('e7090000-0000-0000-0000-000000000002', 'e7000000-3333-0000-0000-000000000015', 'e7000000-1111-0000-0000-00000000000a',
+   'e7000000-0000-0000-0000-000000000004', 'new_application');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.recruitment_employer_notices n
+    WHERE n.application_id = 'e7000000-3333-0000-0000-000000000015'
+      AND n.recipient_user_id = 'e7000000-0000-0000-0000-000000000004') = 2,
+  'EN9.2 the same person can hold two notices about one application, one per kind');
+
+SET LOCAL ROLE service_role;
+CREATE TEMP TABLE k1 ON COMMIT DROP AS
+SELECT * FROM public.rec_claim_employer_notices('e7000000-3333-0000-0000-000000000015', 10, ARRAY['new_application']);
+CREATE TEMP TABLE k2 ON COMMIT DROP AS
+SELECT * FROM public.rec_claim_employer_notices('e7000000-3333-0000-0000-000000000015', 10, ARRAY['candidate_replied']);
+RESET ROLE;
+GRANT SELECT ON k1, k2 TO PUBLIC;
+SELECT pg_temp.ok(
+  NOT EXISTS (SELECT 1 FROM k1 WHERE kind <> 'new_application')
+  AND (SELECT count(*) FROM k2) = 1
+  AND (SELECT kind || '/' || recipient_email FROM k2) = 'candidate_replied/adm2@en.test',
+  'EN9.3 a claim for one kind hands over only that kind, and the new kind is claimed by the same function');
+SELECT pg_temp.ok(
+  (SELECT provider_key FROM k2) = 'employer-candidate-replied:e7090000-0000-0000-0000-000000000001'
+  AND (SELECT provider_key FROM k1 WHERE notice_id = 'e7090000-0000-0000-0000-000000000002')
+      = 'employer-new-application:e7090000-0000-0000-0000-000000000002',
+  'EN9.4 the provider key is built from the kind and the row id, so each kind has its own keys');
+SET LOCAL ROLE service_role;
+CREATE TEMP TABLE k3 ON COMMIT DROP AS
+SELECT public.rec_settle_employer_notice((SELECT attempt_id FROM k2), 'sent', 200) AS r;
+RESET ROLE;
+GRANT SELECT ON k3 TO PUBLIC;
+SELECT pg_temp.ok(
+  (SELECT r FROM k3) = 'sent'
+  AND (SELECT n.status FROM public.recruitment_employer_notices n WHERE n.id = 'e7090000-0000-0000-0000-000000000001') = 'sent'
+  AND (SELECT n.status FROM public.recruitment_employer_notices n WHERE n.id = 'e7090000-0000-0000-0000-000000000002') = 'claimed',
+  'EN9.5 settle serves the new kind, and settling one kind leaves the other row of the same pair alone');
+UPDATE public.recruitment_employer_notices SET settled_at = now() - interval '91 days'
+ WHERE id = 'e7090000-0000-0000-0000-000000000001';
+SET LOCAL ROLE service_role;
+CREATE TEMP TABLE k4 ON COMMIT DROP AS SELECT public.rec_purge_employer_notices() AS n;
+RESET ROLE;
+GRANT SELECT ON k4 TO PUBLIC;
+SELECT pg_temp.ok(
+  (SELECT n FROM k4) >= 1
+  AND NOT EXISTS (SELECT 1 FROM public.recruitment_employer_notices n WHERE n.id = 'e7090000-0000-0000-0000-000000000001')
+  AND EXISTS (SELECT 1 FROM public.recruitment_employer_notices n WHERE n.id = 'e7090000-0000-0000-0000-000000000002'),
+  'EN9.6 the retention serves the new kind too, and takes only the settled row');
+SELECT pg_temp.ok(
+  (SELECT bool_and(md5(p.prosrc) = b.h) FROM pg_proc p JOIN bodies_before b ON b.proname = p.proname
+    WHERE p.pronamespace = 'public'::regnamespace),
+  'EN9.7 and no function body changed: widening the allow-list was the whole change');
+
+-- ===========================================================================
 DO $$ BEGIN RAISE NOTICE 'GROUP EN7 — shape and cascade'; END $$;
 
 SELECT pg_temp.must_fail(
@@ -913,6 +1113,10 @@ SELECT pg_temp.must_fail(
   $$INSERT INTO public.recruitment_employer_notices (application_id, employer_id, recipient_user_id, status, skip_reason)
     VALUES ('e7000000-3333-0000-0000-00000000001f', 'e7000000-1111-0000-0000-00000000000a', 'e7000000-0000-0000-0000-000000000003', 'pending', 'EXPIRED')$$,
   'recruitment_employer_notices_shape', 'EN7.3 a skip reason belongs to a skipped row only');
+SELECT pg_temp.must_fail(
+  $$INSERT INTO public.recruitment_employer_notices (application_id, employer_id, recipient_user_id, status, sent_at)
+    VALUES ('e7000000-3333-0000-0000-00000000001f', 'e7000000-1111-0000-0000-00000000000a', 'e7000000-0000-0000-0000-000000000003', 'sent', now())$$,
+  'recruitment_employer_notices_shape', 'EN7.8 a sent row has a settled time, the clock the retention runs on');
 SELECT pg_temp.must_fail(
   $$INSERT INTO public.recruitment_employer_notices (application_id, employer_id, recipient_user_id, last_status)
     VALUES ('e7000000-3333-0000-0000-00000000001f', 'e7000000-1111-0000-0000-00000000000a', 'e7000000-0000-0000-0000-000000000003', 700)$$,
