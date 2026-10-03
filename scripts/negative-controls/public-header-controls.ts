@@ -202,16 +202,6 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "the footer must pass an entry's search to its link",
   },
   {
-    id: "PH-NC-FOOTER-NO-CONTACT-ADDRESS",
-    defect:
-      "the footer's contact address stops being a mailto, so the only visible address on the site is behind /contact again",
-    file: FOOTER,
-    find: "              href={`mailto:${CONTACT_EMAIL}`}",
-    replace: '              href="/contact"',
-    guard: GUARD,
-    expect: "the footer must show CONTACT_EMAIL as a visible mailto link",
-  },
-  {
     id: "PH-NC-LEGACY-REGISTER-BARE",
     defect:
       "/employer/register forwards to a bare /signup again, so a bookmarked 'register your company' link creates a personal account",

@@ -157,8 +157,7 @@ export type FooterExtraItem = {
  *  registration that is what the server renders, so the first client render
  *  matches it. For Betafeedback it is the safe side: /feedback sits behind the
  *  login, so offering it to somebody who is not signed in is a link that
- *  bounces them to a sign-in form. A signed-out visitor has the footer's
- *  mailto instead.
+ *  bounces them to a sign-in form.
  *
  *  Presentation only: every destination re-verifies access on its own. */
 export function footerExtraNav(state: {

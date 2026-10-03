@@ -1190,31 +1190,6 @@ for (const door of ['to="/signup"', 'to="/login"']) {
     /<Link\s+to=\{l\.to\}\s+search=\{l\.search as never\}/.test(footerSrc),
     "the footer must pass an entry's search to its link -- without it the registration entry is a bare /signup",
   );
-
-  // ── The footer's contact address: a visible mailto, from the one constant ──
-  const { CONTACT_EMAIL } = await import("../src/lib/contact/contact-address");
-  expect(
-    footerSrc.includes('import { CONTACT_EMAIL } from "@/lib/contact/contact-address";') &&
-      footerSrc.includes("href={`mailto:${CONTACT_EMAIL}`}") &&
-      footerSrc.includes("{CONTACT_EMAIL}") &&
-      !footerSrc.includes(CONTACT_EMAIL.split("@")[1] ?? "@"),
-    "the footer must show CONTACT_EMAIL as a visible mailto link, imported from contact-address.ts -- the one place the address is written down",
-  );
-  {
-    const at = footerSrc.indexOf("href={`mailto:");
-    const anchor = footerSrc.slice(Math.max(0, at - 60), at + 700);
-    expect(
-      at !== -1 &&
-        anchor.includes("min-h-[44px]") &&
-        anchor.includes("min-w-[44px]") &&
-        anchor.includes("focus-visible:ring-2"),
-      "the footer's contact address must be a 44 x 44 target with the shared focus ring",
-    );
-  }
-  expect(
-    footerSrc.includes('<span>{t("footer.legal.notice")}</span>'),
-    "the footer's legal notice is plain text and keeps its handling exactly as it was",
-  );
 }
 
 // -----------------------------------------------------------------------

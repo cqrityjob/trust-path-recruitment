@@ -3,7 +3,6 @@ import { ShieldCheck } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { useSignedIn } from "@/hooks/useSignedIn";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
-import { CONTACT_EMAIL } from "@/lib/contact/contact-address";
 import { Container } from "./Container";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { footerExtraNav, publicNav } from "./public-nav";
@@ -12,18 +11,10 @@ import { footerExtraNav, publicNav } from "./public-nav";
  *
  *  ONE row of links, and every one of them goes somewhere that works: the
  *  header's six, from the same definition (public-nav.ts), then the
- *  recruitment contact page, and what depends on who is reading
- *  (footerExtraNav, also public-nav.ts).
+ *  recruitment contact page and beta feedback.
  *
  *    Karriär · Jobb · Security Passport · Säkerhetsarbete ·
- *    För arbetsgivare · Om oss · Kontakt · Registrera företag | Betafeedback
- *
- *  "Registrera företag" is for a signed-out visitor while the employer portal
- *  is released: the same /signup?redirect=/employer the homepage band, the
- *  header and /employers hand to the one door. "Betafeedback" is for a
- *  signed-in reader only -- /feedback is behind the login, so a signed-out
- *  visitor would be bounced to a sign-in form. They have the contact address
- *  in the bottom row instead, as a plain mailto.
+ *    För arbetsgivare · Om oss · Kontakt · Betafeedback
  *
  *  "Security Passport" and "Säkerhetsarbete" open their PUBLIC pages for a
  *  signed-out reader (/security-passport, /sakerhetsarbete) and the product
@@ -47,7 +38,10 @@ export function SiteFooter() {
   const year = new Date().getFullYear();
 
   // The same six destinations as the header, in the same order, then the
-  // contact page and what depends on the reader (registration or feedback).
+  // contact page and what depends on the reader: footerExtraNav() (public-nav.ts)
+  // offers "Registrera företag" to a signed-out visitor while the employer
+  // portal is released, and Betafeedback to a signed-in reader only (/feedback
+  // is behind the login).
   const links = [
     ...publicNav(signedIn === true).map((item) => ({
       key: item.key,
@@ -114,17 +108,6 @@ export function SiteFooter() {
             © {year} {t("brand.name")}. {t("footer.rights")} · {t("footer.built")}
           </p>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            {/* The address a visitor can always write to, whatever the contact
-                form is doing: the one visible contact address outside /contact.
-                A real mailto, and a 44 x 44 target like every other control in
-                the footer. */}
-            <a
-              href={`mailto:${CONTACT_EMAIL}`}
-              data-footer-contact
-              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              {CONTACT_EMAIL}
-            </a>
             {/* Not anchors, and not two document names either: one plain
                 statement that the documents are not published yet. See the
                 header comment: they get links the day they get routes. */}

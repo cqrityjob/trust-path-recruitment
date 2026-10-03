@@ -634,17 +634,15 @@ test.describe("the locked navigation", () => {
     await expect(sheet).toBeVisible();
     await expect(sheet).toHaveAttribute("href", REGISTER);
 
-    // The footer: the same entry, the contact address as a mailto, and no
-    // Betafeedback for a visitor who is not signed in (it sits behind the login).
+    // The footer: the same entry, and no Betafeedback for a visitor who is
+    // not signed in (it sits behind the login).
     const footer = page.locator("footer");
     await footer.scrollIntoViewIfNeeded();
     const hrefs = await footer.evaluate((el) =>
       [...el.querySelectorAll("a")].map((a) => a.getAttribute("href")),
     );
     expect(hrefs).toContain(REGISTER);
-    expect(hrefs).toContain("mailto:info@cqrityjob.com");
     expect(hrefs).not.toContain("/feedback");
-    await expect(footer.locator("[data-footer-contact]")).toHaveText("info@cqrityjob.com");
   });
 });
 
