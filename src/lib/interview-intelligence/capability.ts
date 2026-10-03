@@ -43,7 +43,9 @@
 //
 // What it deliberately does NOT infer permission from:
 //
-//   * being able to see the page — every interviewer can, and should
+//   * being able to see the page — everyone who may open the case can (its
+//     creator, a member of its panel, an owner or admin, a recruitment
+//     reviewer, the vacancy's responsible recruiter; see report-access.ts)
 //   * having created the case — authorship is not authority
 //   * having done the assessments — the person who did the work is often
 //     precisely the person who may not sign it off, which is the point of

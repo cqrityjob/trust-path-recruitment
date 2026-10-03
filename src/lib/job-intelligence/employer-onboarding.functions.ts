@@ -2,6 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { readEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-intent";
+import {
+  ACCESS_REQUEST_MEMBERSHIP_BLOCKED,
+  ACCESS_REQUEST_REACTIVATION_REFUSED,
+} from "@/lib/job-intelligence/access-request-errors";
 // Type only — erased at build time. This file ships to the client bundle, so
 // the module itself is loaded with await import() inside the handlers, the
 // same way client.server.ts requires.
@@ -312,6 +316,12 @@ export const requestAccessToEmployer = createServerFn({ method: "POST" })
       .single();
 
     if (error) {
+      // A person a platform administrator suspended or removed may not file a
+      // request (migration 20270202090000). The code is carried through so the
+      // screen can say what is true instead of "try again", which cannot help.
+      if (String(error.message).includes(ACCESS_REQUEST_MEMBERSHIP_BLOCKED)) {
+        throw new Error(ACCESS_REQUEST_MEMBERSHIP_BLOCKED);
+      }
       if (String(error.code) === "23505" || /duplicate|unique/i.test(String(error.message))) {
         throw new Error("You already have a pending request for this company.");
       }
@@ -469,6 +479,12 @@ export const decideAccessRequest = createServerFn({ method: "POST" })
         _granted_role: data.grantedRole,
       });
       if (error) {
+        // Approving is never the way back for a suspended or removed person
+        // (migration 20270202090000): only a platform administrator reactivates,
+        // through update_employer_membership. Said as what it is.
+        if (String(error.message).includes(ACCESS_REQUEST_REACTIVATION_REFUSED)) {
+          throw new Error(ACCESS_REQUEST_REACTIVATION_REFUSED);
+        }
         throw new Error("Could not process this request. Please try again.");
       }
       const row = (rows as any[] | null)?.[0];

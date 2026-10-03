@@ -3025,6 +3025,8 @@ export const dictionaries = {
     "employer.join.submit": "Skicka begäran",
     "employer.join.sending": "Skickar…",
     "employer.join.error": "Begäran kunde inte skickas. Försök igen.",
+    "employer.join.blocked":
+      "Din åtkomst till den här organisationen har pausats eller avslutats av en plattformsadministratör, så du kan inte begära åtkomst på nytt. Kontakta supporten om du tror att det är ett misstag.",
     "employer.join.sentHeading": "Begäran skickad",
     "employer.join.sentBody":
       "En ägare eller administratör i organisationen får se din begäran och väljer roll när den godkänns. Du ser organisationen i din arbetsyta så snart den är godkänd.",
@@ -3032,7 +3034,7 @@ export const dictionaries = {
     "employer.join.noOrgBody":
       "Länken är ofullständig. Be den som bjöd in dig att skicka den igen från Organisation → Team & behörigheter.",
     "employer.team.lede":
-      "Vilka som tillhör organisationen, och vilka av dem som får granska inlämnade svar. Granskningsbehörighet ger tillgång till fritextsvar och beviljas per person.",
+      "Vilka som tillhör organisationen, och vilka av dem som får granska inlämnade svar. Granskningsbehörighet ger tillgång till fritextsvar och till resultat och rapporter för användningsområdet, och beviljas per person. Den som bara är medlem ser inga resultat, om hen inte också är ansvarig rekryterare för en tjänst.",
     "employer.team.separationNotice":
       "Den som tilldelade en bedömning får aldrig granska samma bedömning, och ingen granskar sitt eget svar. För rekrytering måste granskaren dessutom stå utanför rekryteringskedjan för kandidaten.",
     "employer.team.loadError": "Teamet kunde inte hämtas.",
@@ -3055,6 +3057,8 @@ export const dictionaries = {
     "employer.team.grantBoth": "Ge behörighet – båda",
     "employer.team.revoke": "Återkalla",
     "employer.team.actionError": "Behörigheten kunde inte ändras.",
+    "employer.team.requests.reactivationRefused":
+      "Den här personens åtkomst har pausats eller avslutats av en plattformsadministratör och kan inte återställas genom att godkänna en begäran. Neka begäran. Bara en plattformsadministratör kan återställa åtkomsten.",
     "employer.settings.loadError": "Kunde inte läsa in organisationsuppgifter.",
     "employer.settings.field.name": "Företagsnamn",
     "employer.settings.field.website": "Webbplats",
@@ -4242,6 +4246,26 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Något gick fel när uppgifterna skulle hämtas. Inga uppgifter har ändrats. Försök igen — om det upprepas, hör av dig till oss.",
     "academy.error.retry": "Försök igen",
+    // Who may read results: the honest state for an ordinary member of an
+    // organisation, in place of an empty list that reads as "no candidates".
+    "reportAccess.results.title": "Du har inte tillgång till resultat i den här organisationen",
+    "reportAccess.results.body":
+      "Resultat, kandidatunderlag och listor över testade personer visas för ägare och administratörer, för den som har fått behörighet att granska för användningsområdet och för den som är ansvarig rekryterare för en tjänst. Listan är inte tom — du har bara inte rätt att se den. Inget är fel på ditt konto.",
+    "reportAccess.workforce.title": "Du har inte tillgång till medarbetarnas utvecklingsresultat",
+    "reportAccess.workforce.body":
+      "Medarbetarnas utbildningsstatus och bedömningar visas för ägare och administratörer och för den som har fått behörighet att granska medarbetarbedömningar. Listan är inte tom — du har bara inte rätt att se den. Inget är fel på ditt konto.",
+    "reportAccess.interviews.title": "Du har inte tillgång till organisationens intervjuer",
+    "reportAccess.interviews.body":
+      "Du ser de intervjuer du själv har skapat eller är med i panelen för, och alla intervjuer om du är ägare eller administratör, har granskarbehörighet för rekrytering eller är ansvarig rekryterare för tjänsten. Just nu finns ingen intervju du har rätt att öppna.",
+    "reportAccess.ask":
+      "Be en ägare eller administratör i organisationen om åtkomst om du behöver den.",
+    "reportAccess.card.results":
+      "Du har inte tillgång till resultaten här. Be en ägare eller administratör om åtkomst.",
+    "reportAccess.card.interviews":
+      "Det finns ingen intervju du har rätt att öppna. Be en ägare eller administratör om åtkomst.",
+    "reportAccess.application.title": "Resultat visas inte för dig",
+    "reportAccess.application.body":
+      "Du har inte tillgång till resultat i den här organisationen, så vi kan inte säga om ett test har skickats eller besvarats. Be en ägare eller administratör om åtkomst.",
     // Purpose-NEUTRAL. The old copy hardcoded "för kompetensutveckling", which
     // was simply untrue for a recruitment assessment — and the card can hold
     // both kinds at once. Each row names its own governed purpose instead.
@@ -11768,6 +11792,8 @@ export const dictionaries = {
     "employer.join.submit": "Send request",
     "employer.join.sending": "Sending…",
     "employer.join.error": "The request could not be sent. Please try again.",
+    "employer.join.blocked":
+      "Your access to this organisation was suspended or ended by a platform administrator, so you cannot request access again. Contact support if you think this is a mistake.",
     "employer.join.sentHeading": "Request sent",
     "employer.join.sentBody":
       "An owner or administrator in the organisation will see your request and chooses your role when approving it. The organisation appears in your workspace as soon as it is approved.",
@@ -11775,7 +11801,7 @@ export const dictionaries = {
     "employer.join.noOrgBody":
       "This link is incomplete. Ask whoever invited you to send it again from Organisation → Team & permissions.",
     "employer.team.lede":
-      "Who belongs to the organisation, and which of them may review submitted responses. Review authorisation grants access to free-text answers and is granted per person.",
+      "Who belongs to the organisation, and which of them may review submitted responses. Review authorisation grants access to free-text answers and to the results and reports for the use case, and is granted per person. A plain member sees no results unless they are also the responsible recruiter of a vacancy.",
     "employer.team.separationNotice":
       "Whoever assigned an assessment may never review that same assessment, and nobody reviews their own response. For recruitment the reviewer must also sit outside the hiring chain for that candidate.",
     "employer.team.loadError": "The team could not be loaded.",
@@ -11798,6 +11824,8 @@ export const dictionaries = {
     "employer.team.grantBoth": "Authorise – both",
     "employer.team.revoke": "Revoke",
     "employer.team.actionError": "The authorisation could not be changed.",
+    "employer.team.requests.reactivationRefused":
+      "This person's access was suspended or ended by a platform administrator and cannot be restored by approving a request. Deny the request. Only a platform administrator can restore access.",
     "employer.settings.loadError": "Could not load organisation details.",
     "employer.settings.field.name": "Company name",
     "employer.settings.field.website": "Website",
@@ -12937,6 +12965,26 @@ export const dictionaries = {
     "academy.error.failedBody":
       "Something went wrong while loading. Nothing has been changed. Please try again — if it keeps happening, contact us.",
     "academy.error.retry": "Try again",
+    // Who may read results: the honest state for an ordinary member of an
+    // organisation, in place of an empty list that reads as "no candidates".
+    "reportAccess.results.title": "You do not have access to results in this organisation",
+    "reportAccess.results.body":
+      "Results, candidate briefs and lists of tested people are shown to owners and administrators, to people who have been given reviewer access for the use case, and to the responsible recruiter of a vacancy. The list is not empty — you are just not entitled to see it. Nothing is wrong with your account.",
+    "reportAccess.workforce.title": "You do not have access to employees' development results",
+    "reportAccess.workforce.body":
+      "Employees' training status and assessments are shown to owners and administrators and to people who have been given reviewer access for workforce assessments. The list is not empty — you are just not entitled to see it. Nothing is wrong with your account.",
+    "reportAccess.interviews.title": "You do not have access to this organisation's interviews",
+    "reportAccess.interviews.body":
+      "You see the interviews you created or are on the panel of, and every interview if you are an owner or administrator, hold reviewer access for recruitment, or are the responsible recruiter of the vacancy. There is no interview you are entitled to open right now.",
+    "reportAccess.ask":
+      "Ask an owner or administrator of the organisation for access if you need it.",
+    "reportAccess.card.results":
+      "You do not have access to the results here. Ask an owner or administrator for access.",
+    "reportAccess.card.interviews":
+      "There is no interview you are entitled to open. Ask an owner or administrator for access.",
+    "reportAccess.application.title": "Results are not shown to you",
+    "reportAccess.application.body":
+      "You do not have access to results in this organisation, so we cannot tell whether a test has been sent or answered. Ask an owner or administrator for access.",
     "academy.myWork.title": "Your assessments",
     "academy.myWork.lede":
       "An organisation has asked you to complete the following. It is not an exam and gives no pass or fail.",

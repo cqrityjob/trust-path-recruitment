@@ -220,7 +220,7 @@ export const Route = createFileRoute(
 function ParticipantsRoute() {
   const { employerSlug } = Route.useParams();
   return (
-    <AcademyPage employerSlug={employerSlug}>
+    <AcademyPage employerSlug={employerSlug} requires="recruitment">
       {(ws) => (
         <Candidates
           employerId={ws.employerId}
