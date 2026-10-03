@@ -1,5 +1,7 @@
 /**
- * Calls the receipt recovery endpoint once and reports what it did.
+ * Calls the receipt recovery endpoint once and reports what it did. The same
+ * call also sends the employer's new-application e-mails that are due (and
+ * says so on a second line); there is no second scheduler.
  *
  *   RECRUITMENT_SWEEP_URL    https://<the deployed app>/api/recruitment/receipts-sweep
  *   RECRUITMENT_SWEEP_TOKEN  the same value the app server holds in
@@ -43,6 +45,15 @@ try {
   console.log(
     `receipts-sweep: claimed ${summary.claimed} · sent ${summary.sent} · failed ${summary.failed} · not configured ${summary.notConfigured} · unknown ${summary.unknown} (${summary.at})`,
   );
+  // The employer's new-application notices, swept in the same call. Counts only.
+  const notices = summary.employerNotices as Record<string, unknown> | undefined;
+  if (notices) {
+    console.log(
+      notices.available === false
+        ? "employer-notice-sweep: NOT AVAILABLE -- the notice migration is not applied; nothing was swept."
+        : `employer-notice-sweep: claimed ${notices.claimed} · sent ${notices.sent} · failed ${notices.failed} · not configured ${notices.notConfigured} · unsettled ${notices.unsettled}`,
+    );
+  }
 } catch (e) {
   console.error(
     "receipts-sweep: the endpoint could not be reached.",
