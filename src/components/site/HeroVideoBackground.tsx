@@ -10,10 +10,10 @@
 // element itself because React does not reliably reflect the attribute, and
 // mobile browsers refuse to autoplay a video that is not muted.
 //
-// Files live in public/videos (8.5 s seamless loop, no audio track):
-//   hero-1920.webm / hero-1920.mp4   ≥ 768 px
-//   hero-1080.mp4                    smaller screens, and the fallback
-//   hero-poster.jpg                  first frame, shown before playback and
+// Files live in public/videos (16 s loop, no audio track):
+//   hero-earth-1920.webm / hero-earth-1920.mp4   ≥ 768 px
+//   hero-earth-1080.mp4                    smaller screens, and the fallback
+//   hero-earth-poster.jpg                  first frame, shown before playback and
 //                                    to reduced-motion visitors
 
 import { useEffect, useRef, useState } from "react";
@@ -58,16 +58,16 @@ export function HeroVideoBackground() {
         <video
           ref={ref}
           className="h-full w-full object-cover object-[50%_40%]"
-          poster="/videos/hero-poster.jpg"
+          poster="/videos/hero-earth-poster.jpg"
           muted
           loop
           playsInline
           preload="metadata"
           tabIndex={-1}
         >
-          <source src="/videos/hero-1920.webm" type="video/webm" media="(min-width: 768px)" />
-          <source src="/videos/hero-1920.mp4" type="video/mp4" media="(min-width: 768px)" />
-          <source src="/videos/hero-1080.mp4" type="video/mp4" />
+          <source src="/videos/hero-earth-1920.webm" type="video/webm" media="(min-width: 768px)" />
+          <source src="/videos/hero-earth-1920.mp4" type="video/mp4" media="(min-width: 768px)" />
+          <source src="/videos/hero-earth-1080.mp4" type="video/mp4" />
         </video>
         {/* Legibility: one even dim, then a deeper fall-off where the copy
             and the two entrances sit. */}
