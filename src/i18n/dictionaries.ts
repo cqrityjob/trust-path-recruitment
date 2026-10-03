@@ -221,13 +221,14 @@ export const dictionaries = {
     // translated. "Where trust comes first." stays the brand promise and
     // closes the page (§6), not the hero. scripts/brand-messaging-check.ts
     // guards both.
-    "home.hero.title": "Security careers, without limits.",
+    "home.hero.title": "Din karriär, din kompetens, ditt säkerhetsarbete.",
+    "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Upptäck din riktning, bygg ditt Security Passport, hitta nästa möjlighet och utveckla din karriär inom säkerhet – lokalt eller internationellt. För arbetsgivare samlar CQrityjob verktygen för att hitta, bedöma och rekrytera säkerhetskompetens på samma plats.",
+      "Hitta nästa jobb, bygg ditt Security Passport och utveckla din kompetens. Här samlar vi också AI-agenter för ditt säkerhetsarbete och verktyg för arbetsgivare att hitta, bedöma och rekrytera rätt kompetens.",
     "home.hero.audience.label": "Välj var du vill börja",
     "home.hero.individual.title": "För dig i säkerhetsbranschen",
     "home.hero.individual.body":
-      "Utveckla din karriär, hitta jobb, bygg ditt Security Passport och få stöd i säkerhetsarbetet.",
+      "Hitta jobb, utveckla din kompetens, bygg ditt Security Passport och utforska AI-stöd för ditt säkerhetsarbete.",
     "home.hero.employer.title": "För arbetsgivare",
     "home.hero.employer.body":
       "Hitta, bedöm och rekrytera säkerhetskompetens – lokalt eller internationellt.",
@@ -9222,16 +9223,17 @@ export const dictionaries = {
     //
     // The public homepage: see the Swedish block for its six sections.
     // The locked hero: the same English sentence in both languages.
-    "home.hero.title": "Security careers, without limits.",
+    "home.hero.title": "Your career, your expertise, your security work.",
+    "home.hero.slogan": "Security careers, without limits.",
     "home.hero.subtitle":
-      "Discover your direction, build your Security Passport, find your next opportunity and develop your security career – locally or internationally. For employers, CQrityjob brings together the tools to find, assess and recruit security professionals in one place.",
+      "Find your next job, build your Security Passport and develop your expertise. Discover AI agents for your security work and tools for employers to find, assess and recruit the right talent.",
     "home.hero.audience.label": "Choose where to start",
-    "home.hero.individual.title": "For people in security",
+    "home.hero.individual.title": "For security professionals",
     "home.hero.individual.body":
-      "Develop your career, find jobs, build your Security Passport and get support in your security work.",
+      "Find jobs, develop your expertise, build your Security Passport and explore AI support for your security work.",
     "home.hero.employer.title": "For employers",
     "home.hero.employer.body":
-      "Find, assess and recruit security professionals – locally or internationally.",
+      "Find, assess and recruit security talent – locally or internationally.",
     "home.hero.video.pause": "Pause the background film",
     "home.hero.video.play": "Play the background film",
 
