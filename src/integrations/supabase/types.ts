@@ -23575,6 +23575,10 @@ export type Database = {
         Returns: undefined
       }
       scp_iv_build_report_basis: { Args: { _case_id: string }; Returns: Json }
+      scp_iv_case_capabilities: {
+        Args: { _case_id: string }
+        Returns: { ai_enabled: boolean; transcript_enabled: boolean }[]
+      }
       scp_iv_can_read_case: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_can_write_case: { Args: { _case_id: string }; Returns: boolean }
       scp_iv_candidate_interview_detail: {

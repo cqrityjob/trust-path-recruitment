@@ -214,6 +214,8 @@ for f in supabase/migrations/*.sql; do
 done
 echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 # STRICT-REPLAY-CONTRACT END
+echo "==> Interview access expand regression"
+psql_q -d "$TEST_DB" -f supabase/tests/interview_access_expand_test.sql
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 
@@ -445,8 +447,8 @@ fi
 echo "    ok  $CRH_PASSED catalogue read hardening assertions passed"
 psql_q -d "$TEST_DB" -f supabase/rollback/20270101090000_catalogue_read_hardening_rollback.sql >/dev/null
 crh_back="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_policies WHERE schemaname='public' AND cmd='SELECT' AND qual='true' AND ('anon'=ANY(roles) OR 'authenticated'=ANY(roles))")"
-[ "$crh_back" = "45" ] || { echo "FAIL: 20270101090000 rollback left $crh_back USING (true) catalogue reads (expected the pre-hardening 45)"; exit 1; }
-echo "    ok  rollback restores the pre-hardening state (45 USING (true) catalogue reads, write grants back)"
+[ "$crh_back" = "44" ] || { echo "FAIL: 20270101090000 rollback left $crh_back USING (true) catalogue reads (expected 44; scenario hardening remains)"; exit 1; }
+echo "    ok  rollback restores the catalogue state with scenario hardening retained (44 USING (true) catalogue reads, write grants back)"
 set +e
 CRH_NC="$(psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/catalogue_read_hardening_test.sql 2>&1)"
 CRH_NC_RC=$?

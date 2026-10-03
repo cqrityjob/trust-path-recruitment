@@ -13,6 +13,8 @@ on:
       # depends on a PR that is not merged yet) is checked too. Without this its
       # head had no CI at all, because its base is not main.
       - "claude/**"
+      # Schema/app/contract PRs for interview access are stacked on codex branches.
+      - "codex/**"
 
 permissions:
   contents: read

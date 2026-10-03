@@ -391,7 +391,9 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // (#393) is published AFTER this, and the transactional-email function
 // (employer_new_application) is verified in production before that publication.
 // Evidence: docs/release/2026-10-03-employer-notice-hosted-verification.md.
-const expectedPending: string[] = [];
+// Interview access expand remains pending until its own hosted verification.
+const expectedPending: string[] = ["20270206090000_interview_access_expand.sql"];
+
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
