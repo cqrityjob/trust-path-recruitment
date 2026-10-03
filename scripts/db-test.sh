@@ -4050,6 +4050,24 @@ if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/candidate_application
 fi
 echo "    ok  and the suite refuses to pass without the migration (negative control)"
 
+# 20270205090000 (the employer's e-mail on a new application) adds a table named
+# recruitment_* and six rec_* functions on top of the workspace. Stood down ALONE
+# here, like the two above, so 5l-ter's own rollback count still sees zero;
+# reapplied after the chain below, with its suite run again. (Its own planted
+# controls, its rollback cycle and its races ran earlier, where the schema is
+# final: "employer new-application notice".)
+en_psql -d "$TEST_DB" -f "$EN_RB" >/dev/null
+en_left="$(psql_q -d "$TEST_DB" -Atc "SELECT (SELECT count(*) FROM pg_class WHERE relnamespace='public'::regnamespace AND relname='recruitment_employer_notices') + (SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ('rec_employer_notice_recipients','rec_enqueue_employer_new_application_notices','rec_claim_employer_notices','rec_settle_employer_notice','rec_employer_notice_backoff','rec_purge_employer_notices'))")"
+[ "$en_left" = "0" ] || { echo "FAIL: 20270205090000 rollback left $en_left employer-notice object(s) behind"; exit 1; }
+en_rest="$(psql_q -d "$TEST_DB" -Atc "SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname LIKE 'rec\_%'")"
+[ "$en_rest" != "0" ] || { echo "FAIL: 20270205090000 rollback took the workspace's own rec_* functions with it"; exit 1; }
+echo "    ok  employer new-application notices stood down alone; the workspace functions are intact"
+if psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "$EN_SUITE" >/dev/null 2>&1; then
+  echo "FAIL: the employer-notice suite passed WITHOUT its migration -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  and the suite refuses to pass without the migration (negative control)"
+
 # ---------------------------------------------------------------------------
 # 5l-ter. The recruitment workspace: EXPAND (20261207090000) and CONTRACT
 # (20261208090000, the job_applications backstops)
@@ -4156,6 +4174,14 @@ echo "    ok  candidate application context migration reapplied"
 # And the column boundary on top of the reads.
 psql_q -d "$TEST_DB" -f supabase/migrations/20261226090000_application_notes_column_privileges.sql >/dev/null
 echo "    ok  application note column privileges (JB-02 CONTRACT) migration reapplied"
+# And the employer's new-application e-mail, on top of all of it.
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+echo "    ok  employer new-application notices migration reapplied"
+set +e
+EN_OUT="$(en_run_suite)"; EN_RC=$?
+set -e
+[ "$EN_RC" -eq 0 ] || { echo "$EN_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: the employer-notice suite does not pass after the workspace rollback cycle" >&2; exit 1; }
+echo "    ok  employer-notice suite passes on the reapplied workspace ($(echo "$EN_OUT" | grep -c "NOTICE:  ok  " || true) assertions)"
 
 # ---------------------------------------------------------------------------
 # 5l-bis-4. The receipt e-mail under a REAL race: two sessions, two processes
