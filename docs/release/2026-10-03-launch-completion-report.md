@@ -22,7 +22,7 @@ gjorts. Inga mejl har skickats.** Sandboxen når varken `supabase.co` eller `www
 | Flöde | Status | Bevis | Kvarstående fel |
 |---|---|---|---|
 | **1. Landning och navigation** | **Godkänt** (redo för merge) · produktion ej verifierat | Granskning av alla länkar (396 filer, inga döda); företagsregistrering tillagd i header, mobilmeny och sidfot via en delad nav-definition; `/employer/register` behåller företagsintentionen; översatta 404/felsidor; skärpt `safeReturnPath`; sitemap utan noindex/omdirigeringar; 111 + 40 webbläsartester (dator, 375 px, sv/en) gröna (se avsnitt 5) | Mobilmenyn staplar nu tre knappar (granska skärmbild i produktion); hero-korten är bara ankare; Passports nivå "Källbekräftad" (Claude) |
-| **2. Kontaktflöde** | **Underkänt i produktion** · koden **Godkänd** (redo för merge) | Rotorsak med bevis i avsnitt 3: edge-funktionen `transactional-email` avvisar appens readiness-anrop med 401 från plattformen; aldrig ett POST-anrop; servicenyckeln fungerar mot databasen. Koden skiljer nu orsakerna, loggar dem, adminsidan pekar inte längre på fel orsak, `info@cqrityjob.com` syns alltid (även i stängt läge och vid fel); ingen falsk bekräftelse (bekräftelse bara när leverantören accepterat) | **Produktionsåtgärd krävs (S8 i `www-domain-cutover.md`)**: diagnostiskt anrop med servicenyckeln, därefter omdeploy/omkonfiguration. Oklart varför plattformen svarar 401 |
+| **2. Kontaktflöde** | **Underkänt i produktion** · koden **Godkänd** (redo för merge) | Rotorsak med bevis i avsnitt 3: edge-funktionens egen kod avvisar appens readiness-anrop med 401 (nyckeln matchar inte); aldrig ett POST-anrop; servicenyckeln fungerar mot databasen. Koden skiljer nu orsakerna, loggar dem, adminsidan pekar inte längre på fel orsak, `info@cqrityjob.com` syns alltid (även i stängt läge och vid fel); ingen falsk bekräftelse (bekräftelse bara när leverantören accepterat) | **Produktionsåtgärd krävs (S8 i `www-domain-cutover.md`)**: diagnostiskt anrop med servicenyckeln, därefter omdeploy/omkonfiguration. Exakt varför nyckeln inte matchar är ej verifierat |
 | **3. Domän och metadata** | **Godkänt** (redo för merge) · produktion ej verifierat | 33 hårdkodade Lovable-adresser ersatta via `src/lib/site-origin.ts`; byggd SSR-HTML visar `https://www.cqrityjob.com` i canonical, `og:url`, `sitemap.xml`, `robots.txt`; mejllänkar ignorerar en `PUBLIC_SITE_URL` på Lovable-värd; delningslänkar via `shareableUrl()`; `site-origin:check` + 10 planterade fel | Auth-returer och mejllänkar från www ej verifierade (ingen Auth-trafik från www under senaste dygnet); inställningar i `www-domain-cutover.md` (Lovable, Supabase, Resend, DNS, GitHub) kräver godkännande |
 | **4. Jobbboard — hela flödet** | **Godkänt lokalt** (kod + SQL) · migrationer **pending** · produktion ej verifierat | Tre migrationer med rollback, SQL-sviter (42 + 40 + 22 påståenden) som reproducerar felet före rättning; stängd annons ger nu 404 (var 200); dubbla utkast vid retry, inaktuell lista, CV-chip, tvetydigt RPC-fel, `application_url`-schema rättade; lagrat XSS i annonssidans JSON-LD rättat (`job-jsonld-escaping:check`); jobb-specar gröna | Migrationerna är inte applicerade; arbetsgivaren får **inget mejl** vid ny ansökan (beslutsmemo i avsnitt 7); `sweep_expired_jobs` kan aldrig lyckas (observerat); drafts saknar optimistisk låsning; rolltyrning är bara UI |
 | **5. Företagskonto** | **Godkänt** för det som ändrats · **Underkänt mot kravet** på rapportbehörighet (beslut) | Admin kan stänga av/ta bort/återaktivera/byta roll på medlem; ärliga sidor för pending/avvisad/borttagen; bekräftelse före identitetsändring som ger ny granskning; testutskick förklarar sitt skäl; **åtkomstmatris i SQL (45 påståenden, 11 aktörer) som låser nuvarande beteende** | **Alla aktiva medlemmar läser rapporter och intervjufynd; det finns ingen bedömarroll** (säkerhetsmemo, beslut krävs). Återaktivering via åtkomstförfrågan kringgår plattformsadminens beslut (F1). Ingen self-service för ägarens borttagning av medlem. Testutskick når bara sökande, inte godtyckliga mottagare |
@@ -41,13 +41,19 @@ gjorts. Inga mejl har skickats.** Sandboxen når varken `supabase.co` eller `www
    (2026-10-02 05:30, 2026-10-03 06:27 och 06:33), **alla 401**, aldrig ett POST.
 3. Anropen bär en `service_role`-JWT med samma utfärdandetid som projektets anon-nyckel. Samma
    nyckel får 200 mot PostgREST (`/rest/v1/assessment_assignments`, Cloudflare-källa, 2026-10-02).
-4. Svaret är 46 byte från `supabase-edge-runtime`; funktionens egna 401 är `{"outcome":"unauthorized"}`
-   (26 byte). Den driftsatta koden är identisk med repot. Avvisningen ser alltså ut att komma från
-   plattformen, före funktionens kod, och **inte** från en saknad `RESEND_API_KEY`.
+4. Funktionens egna loggar visar `booted` 13 ms **före** varje 401-anrop (06:27:47.567 start, .580 anrop;
+   06:33:49.390 / .405): funktionens egen kod körde och avvisade anroparen i `callerIsServer()`. (Svaret är
+   46 byte medan funktionens 401-text är 26 byte; skillnaden är oförklarad och bevisar inget.) Den
+   driftsatta koden är identisk med repot. En saknad `RESEND_API_KEY` ger 503 först *efter* att anroparen
+   godkänts och är alltså inte orsaken. Mest sannolikt: nyckeln i funktionens miljö
+   (`SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_SECRET_KEYS`) skiljer sig från den äldre `service_role`-JWT som
+   appen håller (och som PostgREST accepterar); detta är en hypotes, inte verifierat.
 5. Ej avgjort härifrån: varför. Diagnos som behöver servicenyckeln:
    `curl -i -H "apikey: $SVC" -H "Authorization: Bearer $SVC" https://wrygicdfxwjnrugduxnt.supabase.co/functions/v1/transactional-email`.
-   Svar `{"outcome":"unauthorized"}` = nyckeln skiljer sig i funktionen; annan JSON = plattformens
-   grind (kontrollera `verify_jwt` och status för äldre API-nycklar, omdeploya med `--no-verify-jwt`).
+   Svar `{"outcome":"unauthorized"}` = nyckeln skiljer sig i funktionen (förväntat); annan JSON =
+   plattformens grind (kontrollera `verify_jwt` och status för äldre API-nycklar). Robust kodrättning:
+   `callerIsServer()` verifierar den presenterade nyckeln mot projektets Auth-adminändpunkt i stället för
+   att jämföra miljövärden (ligger hos Claude-sessionen som äger mejlkonfigurationen; kräver omdeploy).
 6. Kodändringen gör att nästa gång någon tittar står orsaken i serverloggen
    (`[email-transport] not ready: key_rejected (HTTP 401)`) och på adminsidan.
 

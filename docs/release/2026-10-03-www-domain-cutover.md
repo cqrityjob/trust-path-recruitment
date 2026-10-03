@@ -45,8 +45,10 @@ robots/sitemap/SEO/share/mail bases; every share link goes through `shareableUrl
 - A Lovable preview of commit `7ff0cbe` exists (`id-preview-7ff0cbef--…`), so the editor is on the
   merged `main`. Whether the **published** site is on that commit is still unverified.
 - `transactional-email` has only ever been called three times (GET readiness probes), every one
-  answered 401 with a 46-byte platform-style body. See `docs/release/2026-10-03-launch-completion-report.md`
-  (Contact) for the evidence and the diagnostic.
+  answered 401. Its function log shows `booted` 13 ms before each request, so the function's own code
+  ran and rejected the caller (key mismatch inside the function; the 46-byte response body is
+  unexplained). See `docs/release/2026-10-03-launch-completion-report.md` (Contact) for the evidence
+  and the diagnostic.
 
 ## 3. Settings that must change — by system
 
