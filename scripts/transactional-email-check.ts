@@ -219,6 +219,69 @@ console.log("\n2. Only the named kinds; the function decides From, the admin inb
   );
 }
 
+console.log("\n2c. employer_new_application: CQrityjob writes to an organisation's own people");
+{
+  // The employer's e-mail on a new application. The RECIPIENT is chosen by the
+  // database (rec_employer_notice_recipients) and handed over by the app, so the
+  // function treats it like the other "caller" kinds: shape-validated, one only.
+  // The mail is CQrityjob's own: From fixed, no organisation name, no Reply-To.
+  const fn = readFileSync(FN, "utf8");
+  ck(
+    "the kind is listed, to the caller's named address, with no Reply-To",
+    /employer_new_application: \{ to: "caller", replyTo: "none" \}/.test(fn),
+  );
+  calls.length = 0;
+  await post({
+    kind: "employer_new_application",
+    to: "owner@example.test",
+    replyTo: "attacker@evil.example",
+    senderName: "Somebody Else AB",
+    from: "ceo@cqrityjob.com",
+    ...message,
+  });
+  const c = calls.at(-1)!;
+  ck(
+    "it goes to the one address the request names",
+    JSON.stringify(c.body.to) === JSON.stringify(["owner@example.test"]),
+    JSON.stringify(c.body.to),
+  );
+  ck(
+    "and carries no Reply-To, whatever the request names",
+    !("reply_to" in c.body),
+    String(c.body.reply_to),
+  );
+  ck(
+    "From is CQrityjob's own: no organisation name, whatever sender name the request names",
+    c.body.from === "CQrityjob <no-reply@cqrityjob.com>",
+    String(c.body.from),
+  );
+  const before = calls.length;
+  const refused = await Promise.all(
+    [
+      { ...message },
+      { ...message, to: "not-an-address" },
+      { ...message, to: "a@x.test,b@y.test" },
+      { ...message, to: "Owner <owner@example.test>" },
+      { ...message, to: ["owner@example.test"] },
+    ].map((m) => post({ kind: "employer_new_application", ...m })),
+  );
+  ck(
+    "a missing, malformed, multiple or named recipient is refused, nothing sent",
+    refused.every((r) => r.status === 400) && calls.length === before,
+    refused.map((r) => r.status).join(","),
+  );
+  await post(
+    { kind: "employer_new_application", to: "owner@example.test", ...message },
+    { "idempotency-key": "employer-new-application:guard-1" },
+  );
+  ck(
+    "the Idempotency-Key is forwarded, so a retry is deduplicated by the provider",
+    calls.at(-1)!.headers["idempotency-key"] === "employer-new-application:guard-1",
+  );
+  const transport = readFileSync("src/lib/email/transport.server.ts", "utf8");
+  ck("the app's transport knows the kind", /\|\s+"employer_new_application"/.test(transport));
+}
+
 console.log("\n3. Status passthrough, idempotency, no provider body, minimal logs");
 {
   calls.length = 0;
