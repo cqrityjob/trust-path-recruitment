@@ -2,8 +2,15 @@
 
 **Startcommit:** `main` `7ff0cbe` (efter #384). Astras granskning gällde `ff2a5b3`; varje fynd är
 kontrollerat mot `7ff0cbe` innan det rättades. **Arbetsgren:** `claude/busy-clarke-42da1t`, utkast-PR
-[#387](https://github.com/cqrityjob/trust-path-recruitment/pull/387). **Slutcommit:** den som PR:en
-visar som huvud när den granskas (rapporten skrevs på `5d396c4`; senare commits rör bara denna rapport).
+[#387](https://github.com/cqrityjob/trust-path-recruitment/pull/387), som nu har main (#386, #388, #389)
+inmergad; #386 (med den av Astra godkända autentiseringen `43180b8`) är mergad som `071f69e`. Resten av arbetet ligger i
+staplade utkast-PR:er mot #387: [#390](https://github.com/cqrityjob/trust-path-recruitment/pull/390)
+(testskriptets flake, mot main), [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391)
+(karriäranalys), [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) och
+[#393](https://github.com/cqrityjob/trust-path-recruitment/pull/393) (mejl till arbetsgivaren, schema
+och app) samt PR_ACCESS_SCHEMA_REF och PR_ACCESS_APP_REF (rapportbehörighet, schema och app).
+**Slutcommit** per PR är den som PR:en visar som huvud; CI-resultat per slutcommit står i avsnitt 5.
+**Releaseordning för alla:** `2026-10-03-release-order.md` (ersätter den tidigare provisoriska listan).
 
 **Ingen merge, publicering, produktionsskrivning, DNS-ändring eller Auth-konfigurationsändring har
 gjorts. Inga mejl har skickats.** Sandboxen når varken `supabase.co` eller `www.cqrityjob.com`
@@ -14,7 +21,7 @@ gjorts. Inga mejl har skickats.** Sandboxen når varken `supabase.co` eller `www
 | Nivå | Betyder | Läge |
 |---|---|---|
 | **Redo för merge** | Koden är granskad, testad lokalt och i CI | Ja för det som rapporteras som Godkänt nedan; PR #387 är utkast tills du säger till |
-| **Publicerat** | Mergat och publicerat i Lovable; migrationer applicerade hostat | **Nej.** Inget är publicerat. Tre migrationer är skrivna men oapplicerade (`pending`) |
+| **Publicerat** | Mergat och publicerat i Lovable; migrationer applicerade hostat | **Nej.** Inget är publicerat. Sju migrationer är skrivna men oapplicerade (`pending`): jobbtavlan `20270130`, `20270131`, `20270201`; behörighet `20270202`, `20270203`, `20270204`; mejl till arbetsgivaren `20270205` |
 | **Verifierat i produktion** | Kundresan körd mot www med riktiga mejl | **Nej.** Begäran förberedd i `2026-10-03-production-test-request.md` |
 
 ## 2. Slutrapport per flöde
@@ -24,14 +31,14 @@ gjorts. Inga mejl har skickats.** Sandboxen når varken `supabase.co` eller `www
 | **1. Landning och navigation** | **Godkänt** (redo för merge) · produktion ej verifierat | Granskning av alla länkar (396 filer, inga döda); företagsregistrering tillagd i header, mobilmeny och sidfot via en delad nav-definition; `/employer/register` behåller företagsintentionen; översatta 404/felsidor; skärpt `safeReturnPath`; sitemap utan noindex/omdirigeringar; 111 + 40 webbläsartester (dator, 375 px, sv/en) gröna (se avsnitt 5) | Mobilmenyn staplar nu tre knappar (granska skärmbild i produktion); hero-korten är bara ankare; Passports nivå "Källbekräftad" (Claude) |
 | **2. Kontaktflöde** | **Underkänt i produktion** · koden **Godkänd** (redo för merge) | Rotorsak med bevis i avsnitt 3: edge-funktionens egen kod avvisar appens readiness-anrop med 401 (nyckeln matchar inte); aldrig ett POST-anrop; servicenyckeln fungerar mot databasen. Koden skiljer nu orsakerna, loggar dem, adminsidan pekar inte längre på fel orsak, `info@cqrityjob.com` syns alltid (även i stängt läge och vid fel); ingen falsk bekräftelse (bekräftelse bara när leverantören accepterat) | **Produktionsåtgärd krävs (S8 i `www-domain-cutover.md`)**: diagnostiskt anrop med servicenyckeln, därefter omdeploy/omkonfiguration. Exakt varför nyckeln inte matchar är ej verifierat |
 | **3. Domän och metadata** | **Godkänt** (redo för merge) · produktion ej verifierat | 33 hårdkodade Lovable-adresser ersatta via `src/lib/site-origin.ts`; byggd SSR-HTML visar `https://www.cqrityjob.com` i canonical, `og:url`, `sitemap.xml`, `robots.txt`; mejllänkar ignorerar en `PUBLIC_SITE_URL` på Lovable-värd; delningslänkar via `shareableUrl()`; `site-origin:check` + 10 planterade fel | Auth-returer och mejllänkar från www ej verifierade (ingen Auth-trafik från www under senaste dygnet); inställningar i `www-domain-cutover.md` (Lovable, Supabase, Resend, DNS, GitHub) kräver godkännande |
-| **4. Jobbboard — hela flödet** | **Godkänt lokalt** (kod + SQL) · migrationer **pending** · produktion ej verifierat | Tre migrationer med rollback, SQL-sviter (42 + 40 + 22 påståenden) som reproducerar felet före rättning; stängd annons ger nu 404 (var 200); dubbla utkast vid retry, inaktuell lista, CV-chip, tvetydigt RPC-fel, `application_url`-schema rättade; lagrat XSS i annonssidans JSON-LD rättat (`job-jsonld-escaping:check`); jobb-specar gröna | Migrationerna är inte applicerade; arbetsgivaren får **inget mejl** vid ny ansökan (beslutsmemo i avsnitt 7); `sweep_expired_jobs` kan aldrig lyckas (observerat); drafts saknar optimistisk låsning; rolltyrning är bara UI |
-| **5. Företagskonto** | **Godkänt** för det som ändrats · **Underkänt mot kravet** på rapportbehörighet (beslut) | Admin kan stänga av/ta bort/återaktivera/byta roll på medlem; ärliga sidor för pending/avvisad/borttagen; bekräftelse före identitetsändring som ger ny granskning; testutskick förklarar sitt skäl; **åtkomstmatris i SQL (45 påståenden, 11 aktörer) som låser nuvarande beteende** | **Alla aktiva medlemmar läser rapporter och intervjufynd; det finns ingen bedömarroll** (säkerhetsmemo, beslut krävs). Återaktivering via åtkomstförfrågan kringgår plattformsadminens beslut (F1). Ingen self-service för ägarens borttagning av medlem. Testutskick når bara sökande, inte godtyckliga mottagare |
+| **4. Jobbboard — hela flödet** | **Godkänt lokalt** (kod + SQL) · migrationer **pending** · produktion ej verifierat | Tre migrationer med rollback, SQL-sviter (42 + 40 + 22 påståenden) som reproducerar felet före rättning; stängd annons ger nu 404 (var 200); dubbla utkast vid retry, inaktuell lista, CV-chip, tvetydigt RPC-fel, `application_url`-schema rättade; lagrat XSS i annonssidans JSON-LD rättat (`job-jsonld-escaping:check`); jobb-specar gröna | Migrationerna är inte applicerade; **mejl till arbetsgivaren vid ny ansökan är byggt** (#392 schema, #393 app) men varken mergat eller applicerat; `sweep_expired_jobs` kan aldrig lyckas (observerat); drafts saknar optimistisk låsning; rolltyrning är bara UI |
+| **5. Företagskonto** | **Godkänt** för det som ändrats · behörighetsrättningen är **byggd och lokalt verifierad** (schema- och app-PR) men inte mergad eller applicerad; **underkänt mot kravet tills den är det** | Admin kan stänga av/ta bort/återaktivera/byta roll på medlem; ärliga sidor för pending/avvisad/borttagen; bekräftelse före identitetsändring som ger ny granskning; testutskick förklarar sitt skäl; **åtkomstmatris i SQL (45 påståenden, 11 aktörer) som låser nuvarande beteende** | **I produktion läser fortfarande alla aktiva medlemmar rapporter och intervjufynd** tills `20270203`/`20270204` är applicerade (då: ägare/administratör, granskare per användningsfall, ansvarig rekryterare, ärendets skapare/panel; vanlig medlem läser ingenting). Avstängningskringgåendet (F1) är rättat i `20270202`, ej applicerat. Ingen self-service för ägarens borttagning av medlem. Testutskick når bara sökande, inte godtyckliga mottagare |
 | **6. Registrering och e-post** | **Ej verifierat** | Kodgranskning av alla resor (receptmottagare, länkar, idempotens, felhantering); Auth-returer härleds från besökarens origin; Supabase-loggar visar att Google-inloggning fungerade från den gamla värden 2026-10-02 | Inget bekräftelsemejl, ingen återställning, inget kvitto och ingen inbjudan har provats mot www. F4 (dubbel provisionering vid "fortsätt" på annan enhet) och F7 (Google-registrering tappar företagsnamn) rapporterade till Claude-sessionen |
-| **7. Resten** (Career Center, yrkeskatalog, karriärtest, sparad rapport, profil, CV-export, Säkerhetsarbete, inställningar, feedback, support) | **Godkänt** i kod/guards · live **ej verifierat** | Granskning; evig spinner i karriäranalysens ingång, CV-utskrift som blev tom under redigering, förlorade CV-ändringar vid navigering, läsfel som visades som "inga rapporter", feedbackens felaktiga sida, "Fråga Security AI" utan AI, orphan-sidan `/journey` — alla rättade | **Inget kandidatflöde för kontoinställningar, dataexport eller radering**; ingen support-ingång utanför `/contact` (Claude, tillsammans med juridiska sidor); ingen utskrift på sparad rapport |
-| **"Intern testversion"** | **Utrett och korrigerat** | Faktisk status: Career Discovery v3.1 är öppen för anonyma besökare; inloggade starter är begränsade till testare/admin tills `cd_access_policy = public` (idag `internal_test`, 0 testare); alla sju granskningsflaggor är falska; innehåll "draft". Alltså inte "intern", men **ogranskad**. Ny text: "under utveckling … ännu inte granskat av sakkunniga"; taggen i historiken är nu datadriven; Academy-sidor har inte längre karriärtextens sidfot. BESKT-etiketterna är korrekta och orörda | Döda v3.0-komponenter ligger kvar (listade); analys-CTA på yrkesguider dras inte tillbaka när analysen är stängd |
-| **8. Testmiljö** | **Godkänt** (databas) · app-nivå **ej möjlig** | Lokal PostgreSQL 16.14; hela migrationskedjan (362 migrationer) återspelad i färsk databas och alla SQL-sviter grönt ("DB suite OK") på merge-trädet; testad commit angiven ovan | **Docker finns inte** i sandboxen → ingen lokal GoTrue/PostgREST-kedja; registrering→ansökan→kommunikation→test→rapport är därför inte körd som en sammanhängande webbläsarresa lokalt. Täcks av SQL-sviter per länk, åtkomstmatrisen och stubbade browserspecar |
+| **7. Resten** (Career Center, yrkeskatalog, karriärtest, sparad rapport, profil, CV-export, Säkerhetsarbete, inställningar, feedback, support) | **Godkänt** i kod/guards · live **ej verifierat** | Granskning; evig spinner i karriäranalysens ingång, CV-utskrift som blev tom under redigering, förlorade CV-ändringar vid navigering, läsfel som visades som "inga rapporter", feedbackens felaktiga sida, "Fråga Security AI" utan AI, orphan-sidan `/journey` — alla rättade | **Inget kandidatflöde för kontoinställningar, dataexport eller radering**; ingen support-ingång utanför `/contact` (Claude, tillsammans med juridiska sidor). Utskrift på sparad rapport är åtgärdad i #391 |
+| **"Intern testversion"** | **Utrett och korrigerat** | Faktisk status: Career Discovery v3.1 är öppen för anonyma besökare; inloggade starter är begränsade till testare/admin tills `cd_access_policy = public` (idag `internal_test`, 0 testare); alla sju granskningsflaggor är falska; innehåll "draft". Alltså inte "intern", men **ogranskad**. Ny text: "under utveckling … ännu inte granskat av sakkunniga"; taggen i historiken är nu datadriven; Academy-sidor har inte längre karriärtextens sidfot. BESKT-etiketterna är korrekta och orörda | **Tillgängligheten är nu rättad i kod (#391), inte bara i etiketten**: en källa för alla ytor, sann stängd panel, indexering följer läget, analys-CTA:erna dras tillbaka där dörren är stängd; sanningstabell per läge × aktör i `2026-10-03-career-analysis-availability.md`. **Att öppna analysen är ägarens beslut** (alla sju granskningsflaggor är `false`). Döda v3.0-komponenter ligger kvar (listade) |
+| **8. Testmiljö** | **Godkänt** (databas, med en rättad flake i testskriptet, #390) · app-nivå **ej möjlig** | Lokal PostgreSQL 16.14; hela migrationskedjan återspelad i färsk databas och alla SQL-sviter grönt ("DB suite OK") per gren; `scripts/db-test.sh` hade en latent flake (`grep -q` under `pipefail` rapporterade funna rader som saknade, 20/20 på stor utdata; observerat två gånger) som är rättad och bevisad i #390 | **Docker finns inte** i sandboxen → ingen lokal GoTrue/PostgREST-kedja; registrering→ansökan→kommunikation→test→rapport är därför inte körd som en sammanhängande webbläsarresa lokalt. Täcks av SQL-sviter per länk, åtkomstmatrisen och stubbade browserspecar |
 | **9. Dependencies** | **Godkänt** (ej tillämpligt, med bevis) | 13 flaggade paket i `bun.lock`; endast `fast-uri` finns i produktionsbundeln, bakom den stängda `/mcp`-routen och används på schema-URI:er, aldrig på indata; resten är byggverktyg eller ingår inte i bundeln. Se `2026-10-03-dependency-audit.md` | Lockfile-uppdatering kräver Lovables paketcache och ditt godkännande; `package-lock.json` är föråldrad |
-| **10. Leverans** | **Delvis** | En samlad PR (utkast) med logiska commits; kan delas i flera efter tillstånd (min tilldelade gren är en) | Ingen merge/publicering gjord |
+| **10. Leverans** | **Klar för granskning** · ingen merge, ingen publicering | Åtta utkast-PR:er i beroendeordning (avsnitt 6) med en gemensam releaseordning (`2026-10-03-release-order.md`); schema och app är åtskilda där releaseprocessen kräver det (notis, behörighet) | Inget är mergat eller publicerat; ordningen och varje steg kräver ditt godkännande |
 
 ## 3. Kontaktflödet — rotorsak (för Astra att upprepa)
 
@@ -127,76 +134,85 @@ Förklaring: **R** rättad i kod (redo för merge) · **P** kräver produktions�
 
 ## 5. Tester och obligatorisk CI
 
+Lokalt, per gren (PostgreSQL 16, systemets Chromium, stubbad backend; ingen skrivning nådde något riktigt system):
+
 | Kontroll | Resultat |
 |---|---|
-| `bunx tsc --noEmit` | rent |
-| CI:s verify-jobb (175 steg inklusive `bun run build` och `scripts:typecheck`) lokalt | 174 gröna vid körning; det enda röda (`release-frontier:check`) krävde att de tre nya pending-migrationerna lades i dess förväntade lista och är grönt därefter |
-| Hela migrationskedjan + alla SQL-sviter (`scripts/db-test.sh`, PG16) på merge-trädet | **"DB suite OK"**, 362 migrationer, inkl. åtkomstmatris (45) och jobbsviter (42 + 40 + 22) |
-| Alla 60 negativa kontrollsviter (`negative-controls:all`) | alla **1 658** planterade fel upptäckta; filer återställda byte för byte |
-| Playwright (systemets Chromium, stubbad backend), efter merge | se avsnitt 5a |
-| GitHub Actions på PR-toppen `5d396c4` | 12 av 13 jobb gröna när rapporten skrevs (lint/typecheck/guards, migrationsreplay/RLS/rollback, CV, Passport, E4, recruitment workspace, Career Center, bakåtnavigering, browser); "Public entry browser" pågick |
+| `tsc --noEmit`, `bun run build` | rent / grönt på #387, #391, #393 och behörighetsappen |
+| CI:s verify-jobb (181 kommandon inklusive `build`) lokalt på #387 efter integrationen med #386 | 181 av 181 gröna (ett rött, `site-origin:check`, rättades och fick en planterad kontroll) |
+| Hela migrationskedjan + alla SQL-sviter (`scripts/db-test.sh`) | "DB suite OK" på #387, #390, #391 och notis- och behörighetsschemat |
+| Planterade fel | #387: 60 sviter, 1 658 fel upptäckta (före integrationen) + ny kontroll; #391: 14 + 24; #393: 34 (notis) och 22 (transactional-email) och 63 (recruitment-workspace); behörighetsappen: 26. Alla upptäckta, filer återställda byte för byte |
+| Playwright public-entry (dator) på integrerade trädet | 166 gröna, 2 föll på en lastrelaterad timeout och är gröna när de körs ensamma; behörighetsagenten och karriäragenten körde sina egna specar (se respektive PR) |
+| `schema-first-release:check` | grön på #387, #391, #392 och behörighetsschemat; **röd med flit** på #393 och behörighetsappen tills deras migrationer är applicerade och registrerade |
+| GitHub Actions | körs på varje PR:s slutcommit (staplade PR:er fick CI genom #395); resultatet står på respektive PR:s checkflik när detta läses |
 
-### 5a. Webbläsartester lokalt (systemets Chromium, stubbad backend, merge-trädet `5d396c4`)
+### 5a. Webbläsartester lokalt
 
 | Svit | Projekt | Resultat |
 |---|---|---|
-| Hemsida, arbetsgivarlandning, ingång, hydrering, India-landning | dator | **111 godkända** |
-| Åtkomstlivscykel för företag (medlemskontroller, väntesida, borttagen medlem, omgranskning) | dator | **8 godkända** |
-| Inloggad header på dator (alla bredder) | dator | **27 godkända** |
-| Jobbupplevelse + bakåtnavigation | dator + 375 px | **40 godkända**, 10 hoppas över med flit |
-| Career Center-resa + utforska-länk i karriäranalysen | dator + 375 px | **38 godkända** |
-| Säkerhetsarbete (programmet) | dator + 375 px | **2 godkända** |
+| Hemsida, arbetsgivarlandning, åtkomstlivscykel, ingång, hydrering, India-landning, Passport-nätverk | dator | **166 godkända** + 2 som godkänns i isolering |
+| Jobbupplevelse + bakåtnavigation, Career Center-resa, utforska-länk | dator + 375 px | gröna före integrationen (40 + 38) |
+| Karriäranalysens tillgänglighet (ny) | dator + 375 px | 29 × 2 godkända (karriäragentens körning) |
+| Rapportåtkomst (ny: ordinär medlem nekas, granskare läser) | — | **uppdaterad men inte körd**: kräver den lokala Supabase-stacken som sandlådan saknar |
 
-Allt körs mot en stubbad backend; ingen skrivning nådde något riktigt system. Efter integrationen med
-Claude-sessionens #385 (main `f5eb230`) kördes de statiska kontrollerna om (typecheck, frontier,
-parity, migrations, jobbguards, Passport-guards); webbläsarsviterna körs om i sista omgången.
+**Ej körbart lokalt:** allt som kräver GoTrue, Resend, Lovables värd eller DNS, och e2e-specar som kräver
+den lokala Supabase-stacken. De täcks av CI:s isolerade stackar och av produktionstestet.
 
 ## 6. Leverans — vad som ändrats och varför
 
-| Del | Innehåll | Återställning |
-|---|---|---|
-| Adresser och kontakt | `site-origin.ts`, `serverSiteOrigin`, `shareableUrl`, transportdiagnos, kontaktväg | Revertera PR; additivt |
-| Säkerhet | XSS-åtgärd (`jsonLdScript`) | Revertera commit `c88856c` |
-| Landning/navigation | delad nav, registreringsingång, `employerRegisterHref`, rotsidor, `safeReturnPath`, sitemap, språkhuvuden | Revertera mergecommit `db9cb93` |
-| Kandidatresa | sanningsenliga etiketter, retry-tillstånd, CV, feedback, `/journey` | Revertera `a250a5b` |
-| Företagskonto | medlemskontroller, ärliga sidor, bekräftelse, testrefusal, åtkomstmatris (test) | Revertera `1a9d7ed` |
-| Jobbboard | tre migrationer (**pending**, schema först), appändringar, 404 på stängd annons | Rollback-skript för varje migration (`supabase/rollback/20270130090000…`, `20270131090000…`, `20270201090000…`); appen fungerar före migration |
-| Dokument | dependency-audit, domän/inställningar, säkerhetsmemo, produktionstestbegäran, denna rapport | — |
+| PR | Del | Innehåll | Återställning |
+|---|---|---|---|
+| [#387](https://github.com/cqrityjob/trust-path-recruitment/pull/387) | Adresser och kontakt | `site-origin.ts`, `serverSiteOrigin`, `shareableUrl`, transportdiagnos, kontaktväg | Revertera PR; additivt |
+| #387 | Säkerhet | XSS-åtgärd (`jsonLdScript`) | Revertera commit `c88856c` |
+| #387 | Landning/navigation, kandidatresa, företagskonto | delad nav, registreringsingång, sanningsenliga etiketter, retry-tillstånd, CV, feedback, medlemskontroller, ärliga sidor | Revertera respektive mergecommit |
+| #387 | Jobbtavla | tre migrationer (**pending**, schema först), appändringar, 404 på stängd annons | Rollback-skript för varje migration (`supabase/rollback/20270130090000…`, `…31…`, `20270201090000…`); appen fungerar före migration |
+| #387 | Integration | main (#386, #388, #389) inmergad; #386:s juridiska rutter tar sin canonical från `siteUrl()`; kontaktadressen kommer från #386:s `src/lib/site-contact.ts`; edge-funktionen är #386:s egen, oförändrad (frågar projektets Auth vid varje anrop, ingen cache, ingen nyckelgenväg från miljön); sitemap-guarden godtar en utkast-noindex bara när sitemap listar sidan under samma `*_FINAL`-flagga | Revertera mergecommit `472bc55` |
+| [#390](https://github.com/cqrityjob/trust-path-recruitment/pull/390) | Testmiljö | `db-test.sh`: `grep -q` får inte fälla en pipeline som hittade sin rad | Revertera commit |
+| [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391) | Karriäranalys | en tillgänglighetskälla, sann stängd panel, indexering följer läget, CTA:er bakom samma svar, utskrift på sparad rapport. **Ingen migration** | Revertera PR; läge byts med `cd_set_access_state` |
+| [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) | Mejl till arbetsgivaren, schema | utkorg, mottagarregler i SQL, claim/settle med lease, 90 dagars retention, `20270205090000` (**pending**) | Rollback-skript; appen tål att funktionen saknas |
+| [#393](https://github.com/cqrityjob/trust-path-recruitment/pull/393) | Mejl till arbetsgivaren, app | kind `employer_new_application`, avsändare utan kandidatuppgifter, kö-hantering, sweep, 34 planterade fel (inkl. de två som kräver #386), rättad ordningskontroll i `recruitment-workspace:check` | Revertera PR |
+| PR_ACCESS_SCHEMA_REF | Rapportbehörighet, schema | `20270202090000` (avstängning kan inte kringgås, granskargrants följer medlemskapet), `20270203090000` (en definition av vem som läser; 14 funktioner och 7 policyer), `20270204090000` (intervjuärenden), 16 äldre sviter anpassade, 4 nya sviter | Rollback-skript i omvänd ordning, md5-pinnade |
+| PR_ACCESS_APP_REF | Rapportbehörighet, app | ärlig "ingen åtkomst"-vy, avstängningskoder som riktiga meningar, `employer-report-access:check` med 26 planterade fel | Revertera PR |
+| Dokument | | dependency-audit, domän/inställningar, säkerhetsmemo, produktionstestbegäran, releaseordning, denna rapport | — |
 
-**Migrationsordning — PROVISORISK.** Får inte användas som slutlig releaseordning förrän Claude-sessionen
-(som äger Passport-/evidensarbetet) har bekräftat sina planerade migrationer. Beroenden jag känner till:
-`20270124`/`20270125` är **applicerade** (rekordförda i main, #385) → `20270126090000` (#388, Claude, öppen)
-→ `20270130090000` → `20270131090000` (kräver `20270130090000`) → `20270201090000`. Varje migration är
-skriven för att kunna appliceras före appändringen. Schema först, hostat md5 kontrolleras före, därefter
-publicering.
+**Releaseordning.** Beroendebaserad och för alla PR:er: `2026-10-03-release-order.md`. Kortfattat:
+#390 när som helst → #386 (efter Astra) och funktionsdriftsättning → #387 (jobbtavlans tre migrationer)
+→ behörighetsschema (`0202–0204`) → behörighetsapp → notisschema (`0205`) → funktionsdriftsättning
+→ notisapp → karriär (#391, ingen migration). Versionerna hålls stigande eftersom migrationsverktyget
+annars avvisar eller kräver `--include-all`. `20270126090000` (#388) är applicerad och registrerad (#389).
 
 ## 7. Beslut och hinder (det som inte är mitt att avgöra)
 
-1. **Rapportbehörighet** (S1–S5): får en vanlig medlem läsa kandidaters resultat och intervjufynd?
-   Förslag och påverkan i `2026-10-03-report-access-security-finding.md`. Rapporterat till
-   Claude-sessionen; ingen ändring gjord.
-2. **Arbetsgivarmejl vid ny ansökan** (D1): saknas helt. Alternativ A: ny transaktionell typ
-   `employer_new_application` + ändring och omdeploy av edge-funktionen, ej väntad i ansökningsanropet,
-   endast jobbtitel, antal och länk (ingen persondata), mottagare = ansvarig, annars ägare/admin.
-   Alternativ B: sammanfattning via befintligt sweep-flöde (senare, tyst). Rekommendation: A nu med
-   avstängning, B senare.
-3. **Ägarens egen borttagning av medlem**: kräver en ny funktion (nuvarande är endast plattformsadmin).
-4. **Testliknande publika annonser** (D2) och data som hygienunderlaget märkt "REMOVE BEFORE LAUNCH".
-5. **Dependencies**: godkänn en lockfile-uppdatering i miljö som når Lovables cache.
-6. **Delning i flera PR:er**: kräver tillstånd att skapa fler grenar.
-7. **Produktion**: inställningarna i `2026-10-03-www-domain-cutover.md` (L1–L5, S1–S8, R1–R3, D1–D3, G1–G2)
-   och själva testet i `2026-10-03-production-test-request.md`.
-8. **Claude-sessionens PR #386** (juridik, kontaktadresser, avsändarnamn) rör samma filer. Provmerge mot
-   min gren: allt går ihop automatiskt utom en `package.json`-rad. Jag mergar `main` in i min gren
-   (ingen rebase, eftersom grenen är pushad) när #386 ligger där, byter min kontaktkonstant mot
-   `src/lib/site-contact.ts` och kör om kontrollen. **Sluttesterna ska köras efter den mergen.**
+1. **Rapportbehörighet:** rättningen är byggd (steg 3 i releaseordningen). Beslutet är ägarens: vanligt
+   medlemskap ger inte läsrätt; ägare/administratör, granskare per användningsfall, ansvarig rekryterare och
+   ärendets skapare/panel gör det. Beteendet ändras för befintliga organisationer samma dag
+   `20270203` appliceras, så de bör meddelas och tilldela granskaråtkomst först. En utsedd
+   säkerhetsansvarig som är vanlig medlem utan grund kan inte läsa ett prövningsärende (snävare, aldrig vidare).
+2. **Karriäranalysens öppnande:** att öppna för konton som inte är testare, med alla sju granskningsflaggor
+   `false` och utkastetiketter, är ägarens beslut; det gör också sidan indexerbar. Se #391.
+3. **Arbetsgivarmejl:** byggt som alternativ A. Ingen avanmälan i första versionen; mottagare är ansvarig
+   rekryterare, annars ägare/administratörer (högst 10). Anropet väntar högst 3 s på leverantören.
+4. **Ägarens egen borttagning av medlem:** kräver en ny funktion (nuvarande är endast plattformsadmin).
+5. **Testliknande publika annonser** (D2) och data som hygienunderlaget märkt "REMOVE BEFORE LAUNCH".
+6. **Dependencies:** godkänn en lockfile-uppdatering i miljö som når Lovables cache.
+7. **Produktion:** inställningarna i `2026-10-03-www-domain-cutover.md` (L1–L5, S1–S8, R1–R3, D1–D3, G1–G2)
+   och själva testet i `2026-10-03-production-test-request.md`. Testmejl bara till den av ägaren namngivna adressen.
+8. **Svar till kandidater:** svar går till `job@cqrityjob.com` tills ett svar i produkten finns. Ägaren
+   behöver namnge vem som bevakar `job@` och en svarstid (Claude-sessionen har föreslagit en minimal
+   svarsfunktion som kan ta samma utkorg).
 
 ## 8. Kvarstående hinder för lansering
 
-1. Kontaktformuläret är stängt i produktion tills S8 är gjort.
-2. Auth från www är ej verifierat (S1/S2 + test).
-3. Rapportbehörigheten matchar inte kravet förrän beslut tagits.
-4. Juridiska sidor och kandidatens rättigheter (Claude, #386).
-5. De tre job-migrationerna är inte applicerade.
-6. Mejl, registrering, bekräftelse, ansökan, test och rapport saknar produktionsbevis.
-7. Publicerad commit är okänd.
+1. **Produktmejlen är fortfarande stängda.** #386 är mergad och `transactional-email` v3 driftsatt (13:47 UTC,
+   enligt #394), men funktionen svarar 503 `not_configured`: `RESEND_API_KEY` saknas på den. Den publicerade
+   sajten saknar dessutom #386 tills ägaren publicerar.
+2. Auth från www är ej verifierat (S1/S2 och test; Claude-sessionens konfiguration).
+3. Sju migrationer är inte applicerade; rapportbehörigheten i produktion matchar inte kravet förrän `0203`/`0204`.
+4. Juridiska sidor: öppna platshållare (Claude-sessionen) och vem som bevakar `job@`.
+5. Karriäranalysen är stängd för icke-testare tills ägaren öppnar den.
+6. Mejl, registrering, bekräftelse, ansökan, test, rapport och arbetsgivarmejl saknar produktionsbevis; Claude-sessionen
+   skickar T1–T5 till en enda testadress och jag kontrollerar loggarna; T6 väntar på `20270205` och appen.
+7. Publicerad commit är okänd. Ingen merge och ingen produktionsändring har gjorts.
+8. **Kvarstår medvetet utanför dessa PR:er:** innehållsrollernas `*_author_read`-policyer (läser alla
+   hyresgästers kandidatsvar; antalet innehavare okänt), BESKT:s `bcp_employer_*`-medlemsläsningar,
+   den pensionerade v3.0-karriäranalysen som fortfarande kontrollerar testarlistan oavsett läge, `sweep_expired_jobs`.

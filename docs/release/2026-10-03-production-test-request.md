@@ -19,9 +19,10 @@ kontaktformuläret är då kända som ej fungerande från www.
 | A2 | Publicering i Lovable | gör ändringarna synliga på www |
 | A3 | Auth: Site URL och Redirect URLs (S1, S2) | bekräftelse, återställning, Google |
 | A4 | Diagnos och rättning av `transactional-email` (S8) | kontaktformulär, kvitton, inbjudningar |
-| A5 | De tre migrationerna `20270130090000`, `20270131090000`, `20270201090000` (schema först, i den ordningen, med hostat md5 kontrollerat före) | jobbens redigeringslås, publiceringsfönster, CV-bucket |
+| A5 | De sju migrationerna i `2026-10-03-release-order.md`, ett steg i taget i stigande versionsordning med hostat md5 kontrollerat före: jobbtavlan `20270130`, `20270131`, `20270201`; behörighet `20270202`, `20270203`, `20270204`; mejl till arbetsgivaren `20270205` | jobbens redigeringslås, publiceringsfönster, CV-bucket; vem som läser rapporter; utkorgen för arbetsgivarmejl |
 | A6 | Testkonton och mottagaradresser enligt avsnitt 1 | alla mejl |
 | A7 | Städning enligt avsnitt 6 | efter provet |
+| A8 | Behörighetsmodellen (vanligt medlemskap ger inte rapportåtkomst) och att organisationerna meddelats före `20270203`; karriäranalysens öppnande är ett eget beslut | steg 3 och 5 i releaseordningen |
 
 Migrationerna ska vara applicerade **före** jobbtesterna i avsnitt 4; appens ändringar fungerar
 även utan dem (de är skrivna för att tåla gammalt schema), men då är redigeringslåset och
@@ -137,22 +138,31 @@ Skyddade adresser utloggade (`/my-career`, `/passport`, `/employer`, `/feedback`
 | 8 | **Ansökan** (K1): sök med CV; dubbelklicka "Skicka"; ladda om och försök igen | exakt en ansökan, rätt jobb och företag, M16; "Mina ansökningar" visar den; återta och sök igen fungerar |
 | 9 | A-OWN öppnar ansökan, läser CV, byter status, skickar meddelande | M17; K1 ser meddelandet i inkorgen |
 | 10 | **Test** (A-OWN): skicka ett test till K1 och K2 samtidigt (utan intervjuärende); skicka om till K2 | M18–M20; ingen dubblett; K1 genomför och lämnar in; resultatet syns för A-OWN |
-| 11 | **Rapport**: A-OWN frisläpper; A-OWN, A-REV, A-MEM läser (nuvarande modell: alla tre får läsa, se säkerhetsmemot); intervju/bedömning/rapport enligt befintlig modell | |
+| 11 | **Rapport** (efter `20270202–204`): A-OWN frisläpper; A-OWN och A-REV (med granskaråtkomst för användningsfallet) läser; **A-MEM (vanlig medlem) läser ingenting och ser "ingen åtkomst", inte en tom lista**; intervjuärendets skapare/panelmedlem läser bara sitt ärende; en säkerhetsprövning kräver utsedd säkerhetsansvarig *och* grund | tillåtna läser, vanlig medlem nekas |
 | 12 | **Negativa åtkomstprov:** K2 öppnar K1:s resultat/ansökan (nekas); B-OWN öppnar A:s resultat och ansökningar (nekas); utloggad öppnar resultat-URL direkt (leder till inloggning); ADMIN tar bort A-REM, A-REM laddar om och försöker öppna A:s resultat (nekas) | alla nekas utan datavisning |
 | 13 | **Passport-delning:** K1 skapar ett självdeklarerat meriter, delar, öppnar `https://www.cqrityjob.com/p#<token>` i ett privat fönster/annan webbläsare; kontrollera `curl -sI https://www.cqrityjob.com/p` (nonce-CSP utan `'self'`); återkalla | delningen visar vad mottagaren får se; efter återkallning "inte tillgänglig" |
 | 14 | Mobil (375 och 390 px) för steg 2, 8, 10 | inga avskurna knappar, ingen horisontell scroll |
+| 15 | **Avstängning** (efter `20270202`): ADMIN stänger av A-REM; A-REM ansöker om åtkomst via `/employer/join?org=…`; A-OWN försöker godkänna | ansökan nekas med `ACCESS_REQUEST_MEMBERSHIP_BLOCKED`, godkännande med `ACCESS_REQUEST_REACTIVATION_REFUSED`; bara ADMIN kan återaktivera, och en gammal granskarrättighet har upphört |
+| 16 | **Mejl till arbetsgivaren** (efter `20270205` och app): K1 ansöker på ett testjobb vars notifierade ägare/administratör är den godkända testadressen (T6) | exakt ett mejl, inget om kandidaten, länk till ansökan; ett andra försök och sweepen ger ingen dubblett; en person som stängts av under tiden får inget |
+| 17 | **Karriäranalys** (läge `internal_test`): konto som inte är testare möter en sann stängd panel och inga inbjudande knappar; anonym kan fortfarande göra analysen och spara via konto; sidan är `noindex` och finns inte i `sitemap.xml`. Efter ett ägarbeslut om öppnande (`public`): samma konto kan starta, spara, se rapport och historik, sidan är indexerbar och listad inom 10 minuter | tillstånd och verkan stämmer med sanningstabellen i `2026-10-03-career-analysis-availability.md` |
 
 Spara per steg: tid, adress, skärmklipp, ev. mejlrubriker.
 
-## 4. Det som kräver att migrationerna är applicerade (steg 7 och 8)
+## 4. Det som kräver att migrationerna är applicerade (steg 7, 8, 11, 15 och 16)
+
+Ordningen och förutsättningarna för varje steg står i `2026-10-03-release-order.md`.
 
 - Direkt PATCH mot en publicerad annons som vanlig medlem ska nekas (kräver `20270130090000`).
 - Återställning + publicering med passerat slutdatum ska nekas av databasen, och en
   `javascript:`-länk som ansökningsadress ska nekas (kräver `20270131090000`).
 - En kandidat ska inte kunna skriva eller ta bort filer i CV-bucketen direkt (kräver
   `20270201090000`).
+- Vanlig medlem läser ingen rapport, ingen rad och ingen räknare; granskare, ansvarig rekryterare och
+  ärendets skapare/panel läser det de ska (kräver `20270203` och `20270204`).
+- Ett avstängt eller borttaget medlemskap kan inte återaktiveras via en åtkomstförfrågan (kräver `20270202`).
+- Arbetsgivarens notis köas, skickas och återförsöks utan dubbletter (kräver `20270205`).
 Verifieringsfrågorna (skrivskyddade) finns i respektive migrations post i
-`supabase/release-state.json`.
+`supabase/release-state.json` (`jq -r '.frontier[] | select(.hostedState=="pending") | .verify'`).
 
 ## 5. Skickas ingenting utan godkännande
 
