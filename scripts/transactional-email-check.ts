@@ -5,7 +5,9 @@
  * The function's own code is EXECUTED here, under a minimal Deno stand-in
  * (env + serve), against a stub provider. No network, no key, no account.
  *
- *   1. Only the service-role key may call it; everything else is a bare 401.
+ *   1. Only a service key the project accepts at the time of the call may
+ *      call it (asked on every call, no cache); everything else, and every
+ *      failure of the check, is a bare 401.
  *   2. Only the named kinds are accepted; From, the admin inbox and every
  *      Reply-To are decided by the function, never by the request.
  *   3. The provider status is passed back unchanged, the Idempotency-Key is
@@ -30,7 +32,11 @@ function ck(name: string, ok: boolean, detail?: unknown): void {
 }
 
 const FN = "supabase/functions/transactional-email/index.ts";
-const SERVICE_KEY = "guard-service-role-key-0123456789abcdef";
+// Test-only keys, assembled at run time so no key-shaped literal sits in the
+// source (push protection would rightly refuse one).
+const fakeKey = (kind: "secret" | "publishable", tail: string) => ["sb", kind, tail].join("_");
+const PROJECT_URL = "https://guardproject.supabase.co";
+const SERVICE_KEY = fakeKey("secret", "guard_service_key_0123456789abcdef");
 const RESEND_KEY = "re_guard_only_not_a_key";
 
 // ── A Deno stand-in: env from a map, serve() captures the handler ─────
@@ -43,25 +49,62 @@ let handler: ((req: Request) => Promise<Response>) | null = null;
   },
 };
 
+const jwt = (claims: Record<string, unknown>) =>
+  `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.signature-part`;
+const nowSec = () => Math.floor(Date.now() / 1000);
+
 type Call = { url: string; headers: Record<string, string>; body: Record<string, unknown> };
 const calls: Call[] = [];
 let providerStatus = 200;
 let providerReadBody = false;
 const realFetch = globalThis.fetch;
-// The project's own Auth admin endpoint, as the function's caller check
-// asks it: 200 only for a key the "project" holds as a service key.
+// The project's own Auth admin endpoint, as the function's caller check asks
+// it. Like Supabase Auth: 200 only for a key the project currently holds as a
+// service key (revocable: delete it from the set) and, for a JWT, only before
+// its `exp`; 403 otherwise. `authMode` plants the failures.
 const projectServiceKeys = new Set<string>();
 const authChecks: string[] = [];
+let authMode: "normal" | "500" | "throw" | "hang" = "normal";
+let authBodyRead = false;
+function jwtExpired(key: string): boolean {
+  const part = key.split(".")[1];
+  if (!part) return false;
+  try {
+    const exp = JSON.parse(Buffer.from(part, "base64url").toString()).exp;
+    return typeof exp === "number" && exp <= nowSec();
+  } catch {
+    return false;
+  }
+}
 globalThis.fetch = (async (url: unknown, init?: RequestInit) => {
   if (String(url).includes("/auth/v1/admin/users")) {
     const h = new Headers(init?.headers);
     const bearer = (h.get("authorization") ?? "").replace(/^Bearer /, "");
     authChecks.push(bearer);
-    const okKey = projectServiceKeys.has(bearer) && h.get("apikey") === bearer;
+    if (authMode === "throw") throw new TypeError("network down");
+    if (authMode === "hang") {
+      return await new Promise<Response>((_, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        );
+      });
+    }
+    const okKey =
+      authMode === "normal" &&
+      projectServiceKeys.has(bearer) &&
+      h.get("apikey") === bearer &&
+      !jwtExpired(bearer);
+    const status = authMode === "500" ? 500 : okKey ? 200 : 403;
+    const read = async () => {
+      authBodyRead = true;
+      return "{}";
+    };
     return {
-      status: okKey ? 200 : 401,
-      ok: okKey,
+      status,
+      ok: status === 200,
       body: { cancel: async () => {} },
+      text: read,
+      json: read,
     } as unknown as Response;
   }
   calls.push({
@@ -119,116 +162,234 @@ const outcome = async (res: Response) => ((await res.json()) as { outcome?: stri
 
 const message = { subject: "Ämne\r\nBcc: x@evil.example", html: "<p>Hej</p>" };
 
-console.log("\n1. Only the application server may call it");
-env.set("SUPABASE_SERVICE_ROLE_KEY", SERVICE_KEY);
+env.set("SUPABASE_URL", PROJECT_URL);
 env.set("RESEND_API_KEY", RESEND_KEY);
+projectServiceKeys.add(SERVICE_KEY);
+
+console.log("\n1. Only a service key the project accepts right now may call it");
 {
-  const none = await serve(
-    new Request("https://fn.example/", { method: "POST", body: JSON.stringify({}) }),
+  const receipt = { kind: "application_receipt", to: "a@example.test", ...message };
+  /** One call with these headers: its status, whether a message went out,
+   *  and how many times the project was asked. */
+  async function attempt(headers: Record<string, string>, method = "POST") {
+    const sent = calls.length;
+    const asked = authChecks.length;
+    const res = await serve(
+      new Request("https://fn.example/functions/v1/transactional-email", {
+        method,
+        headers,
+        ...(method === "POST" ? { body: JSON.stringify(receipt) } : {}),
+      }),
+    );
+    await res.body?.cancel();
+    return { status: res.status, sent: calls.length - sent, asked: authChecks.length - asked };
+  }
+  const both = (key: string) => ({ authorization: `Bearer ${key}`, apikey: key });
+
+  const none = await attempt({});
+  ck(
+    "no credentials: 401, nothing sent, the project not asked",
+    none.status === 401 && none.sent === 0 && none.asked === 0,
   );
-  const anon = await post(
-    { kind: "application_receipt", to: "a@example.test", ...message },
-    { authorization: "Bearer some-anon-or-user-jwt-that-is-long-enough" },
+
+  // Both key formats, in either header or both.
+  const legacy = jwt({
+    iss: "supabase",
+    ref: "guardproject",
+    role: "service_role",
+    exp: nowSec() + 3600,
+  });
+  projectServiceKeys.add(legacy);
+  const asBearer = await attempt({ authorization: `Bearer ${SERVICE_KEY}` });
+  const asApikey = await attempt({ apikey: SERVICE_KEY });
+  const asBoth = await attempt(both(SERVICE_KEY));
+  const legacyBoth = await attempt(both(legacy));
+  ck(
+    "a new-format secret key the project accepts: 200 as Bearer",
+    asBearer.status === 200 && asBearer.sent === 1,
   );
-  const viaApikey = await serve(
-    new Request("https://fn.example/", {
-      method: "POST",
-      headers: { apikey: SERVICE_KEY },
-      body: JSON.stringify({ kind: "application_receipt", to: "a@example.test", ...message }),
-    }),
+  ck("the same key as apikey only: 200", asApikey.status === 200 && asApikey.sent === 1);
+  ck("the same key in both headers: 200", asBoth.status === 200 && asBoth.sent === 1);
+  ck(
+    "a legacy service_role JWT the project accepts: 200",
+    legacyBoth.status === 200 && legacyBoth.sent === 1,
   );
-  ck("no credentials: 401", none.status === 401);
-  ck("a non-service key: 401, and nothing sent", anon.status === 401 && calls.length === 1);
-  ck("the service key as apikey is accepted", viaApikey.status === 200);
-  env.set("SUPABASE_SECRET_KEYS", JSON.stringify({ default: "sb_secret_guard_0123456789abcdef" }));
-  const newKey = await post(
-    { kind: "application_receipt", to: "a@example.test", ...message },
-    { authorization: "Bearer sb_secret_guard_0123456789abcdef" },
+  ck(
+    "every call asks the project; nothing is remembered between calls",
+    [asBearer, asApikey, asBoth, legacyBoth].every((a) => a.asked === 1),
   );
-  ck("a new-format secret key of this project is accepted", newKey.status === 200);
+
+  // The review's reproduction (2026-10-03): a short-lived, valid service
+  // token is accepted; once it has expired the SAME warm instance refuses it.
+  const shortLived = jwt({
+    iss: "supabase",
+    ref: "guardproject",
+    role: "service_role",
+    exp: nowSec() + 2,
+  });
+  projectServiceKeys.add(shortLived);
+  const beforeExpiry = await attempt(both(shortLived));
+  await new Promise((r) => setTimeout(r, 2_500));
+  const afterExpiry = await attempt(both(shortLived));
+  ck(
+    "a short-lived service token: 200 while valid",
+    beforeExpiry.status === 200 && beforeExpiry.sent === 1,
+  );
+  ck(
+    "the same token after expiry: 401 in the same instance, nothing sent",
+    afterExpiry.status === 401 && afterExpiry.sent === 0 && afterExpiry.asked === 1,
+  );
+
+  // Revocation and rotation: the project stops accepting a key it accepted.
+  const revocable = fakeKey("secret", "guard_revocable_0123456789abcdef");
+  projectServiceKeys.add(revocable);
+  const beforeRevoke = await attempt(both(revocable));
+  const legacyBefore = await attempt(both(legacy));
+  projectServiceKeys.delete(revocable);
+  projectServiceKeys.delete(legacy);
+  const afterRevoke = await attempt(both(revocable));
+  const legacyAfter = await attempt(both(legacy));
+  ck(
+    "a secret key, then revoked: 200 before",
+    beforeRevoke.status === 200 && legacyBefore.status === 200,
+  );
+  ck(
+    "the same keys after revocation: 401 in the same instance, nothing sent (both formats)",
+    afterRevoke.status === 401 &&
+      afterRevoke.sent === 0 &&
+      legacyAfter.status === 401 &&
+      legacyAfter.sent === 0,
+  );
+
+  // The function's own copy of the service key is not a way round the check:
+  // rotated away, it is refused like any other key.
+  const envCopy = fakeKey("secret", "guard_env_copy_0123456789abcdef");
+  env.set("SUPABASE_SERVICE_ROLE_KEY", envCopy);
+  env.set("SUPABASE_SECRET_KEYS", JSON.stringify({ default: envCopy }));
+  const rotated = await attempt(both(envCopy));
+  ck(
+    "the function's own env copy of a key the project no longer accepts: 401, and it was asked",
+    rotated.status === 401 && rotated.sent === 0 && rotated.asked === 1,
+  );
+  projectServiceKeys.add(envCopy);
+  const envAccepted = await attempt(both(envCopy));
+  ck("and the same env key while the project accepts it: 200", envAccepted.status === 200);
   env.delete("SUPABASE_SECRET_KEYS");
 
-  // The production failure of 2026-10-03: the app holds the project's
-  // service key in a form the function's env does not (byte-unequal), and
-  // every call was refused. The project itself now decides.
-  env.set("SUPABASE_URL", "https://guardproject.supabase.co");
-  const jwt = (claims: Record<string, unknown>) =>
-    `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.signature-part`;
-  const appForm = jwt({ iss: "supabase", ref: "guardproject", role: "service_role" });
-  projectServiceKeys.add(appForm);
-  const before = calls.length;
-  const legacy = await post(
-    { kind: "application_receipt", to: "a@example.test", ...message },
-    { authorization: `Bearer ${appForm}`, apikey: appForm },
-  );
-  ck(
-    "the project's service key in another form is accepted after the project confirms it",
-    legacy.status === 200 && calls.length === before + 1 && authChecks.includes(appForm),
-  );
-  const checksBefore = authChecks.length;
-  await post(
-    { kind: "application_receipt", to: "a@example.test", ...message },
-    { authorization: `Bearer ${appForm}`, apikey: appForm },
-  );
-  ck(
-    "a confirmed key is remembered, not re-checked on every call",
-    authChecks.length === checksBefore,
-  );
-  const sentBefore = calls.length;
-  const userJwt = await post(
-    { kind: "application_receipt", to: "a@example.test", ...message },
-    {
-      authorization: "Bearer eyJ.a-user-or-anon-jwt-the-project-refuses",
-      apikey: "eyJ.a-user-or-anon-jwt-the-project-refuses",
-    },
-  );
-  const mixed = await post(
-    { kind: "application_receipt", to: "a@example.test", ...message },
-    // A confirmed service key as bearer, paired with a different apikey:
-    // refused, so one header can never vouch for the other.
-    { authorization: `Bearer ${appForm}`, apikey: "eyJ.a-user-or-anon-jwt-the-project-refuses" },
-  );
-  ck(
-    "a key the project refuses, or a bearer paired with someone else's apikey, is 401 and nothing is sent",
-    userJwt.status === 401 && mixed.status === 401 && calls.length === sentBefore,
-  );
-  // Never even asked about: keys that cannot be this project's service key.
-  const forged = jwt({ iss: "supabase", ref: "guardproject", role: "service_role", n: 2 });
+  // Conflicting headers are refused before any way in, valid key or not.
+  const anonKey = jwt({ iss: "supabase", ref: "guardproject", role: "anon" });
+  const conflicts: [string, Record<string, string>][] = [
+    [
+      "a valid service Bearer with the anon apikey",
+      { authorization: `Bearer ${SERVICE_KEY}`, apikey: anonKey },
+    ],
+    [
+      "the anon Bearer with a valid service apikey",
+      { authorization: `Bearer ${anonKey}`, apikey: SERVICE_KEY },
+    ],
+    [
+      "two different valid service keys",
+      { authorization: `Bearer ${SERVICE_KEY}`, apikey: envCopy },
+    ],
+    [
+      "the env copy as Bearer with another apikey",
+      { authorization: `Bearer ${envCopy}`, apikey: anonKey },
+    ],
+    [
+      "a bare scheme Authorization with a valid apikey",
+      { authorization: "Basic", apikey: SERVICE_KEY },
+    ],
+    [
+      "a lower-case bearer with a valid key",
+      { authorization: `bearer ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+    ],
+    [
+      "a non-Bearer Authorization with a valid apikey",
+      { authorization: `Basic ${SERVICE_KEY}`, apikey: SERVICE_KEY },
+    ],
+  ];
+  for (const [name, headers] of conflicts) {
+    const a = await attempt(headers);
+    ck(
+      `${name}: 401, nothing sent, the project not asked`,
+      a.status === 401 && a.sent === 0 && a.asked === 0,
+    );
+  }
+
+  // Keys that cannot be this project's service key: refused without asking.
   const notService: [string, string][] = [
-    ["the anon key", jwt({ iss: "supabase", ref: "guardproject", role: "anon" })],
-    ["a user's session token", jwt({ sub: "u", role: "authenticated", aud: "authenticated" })],
-    ["the publishable key", "sb_publishable_guard_0123456789abcdef"],
+    ["the anon key", anonKey],
+    [
+      "a user's session token",
+      jwt({ sub: "u", role: "authenticated", aud: "authenticated", exp: nowSec() + 3600 }),
+    ],
+    ["the publishable key", fakeKey("publishable", "guard_0123456789abcdef")],
     [
       "another project's service key",
       jwt({ iss: "supabase", ref: "otherproject", role: "service_role" }),
     ],
     ["a malformed JWT", "eyJhbGciOiJIUzI1NiJ9.!!not-base64!!.signature-part"],
     ["garbage", "not-a-key-but-long-enough-0123456789"],
+    ["a short value", fakeKey("secret", "x")],
   ];
   for (const [name, key] of notService) {
-    const asked = authChecks.length;
-    const sent = calls.length;
-    const res = await post(
-      { kind: "application_receipt", to: "a@example.test", ...message },
-      { authorization: `Bearer ${key}`, apikey: key },
-    );
+    const a = await attempt(both(key));
     ck(
-      `${name}: 401, nothing sent, and the project is not asked`,
-      res.status === 401 && calls.length === sent && authChecks.length === asked,
+      `${name}: 401, nothing sent, the project not asked`,
+      a.status === 401 && a.sent === 0 && a.asked === 0,
     );
   }
+  const forged = jwt({ iss: "supabase", ref: "guardproject", role: "service_role", n: 2 });
+  const forgedTry = await attempt(both(forged));
+  ck(
+    "a service_role-shaped token the project does not confirm (forged signature): asked, 401",
+    forgedTry.status === 401 && forgedTry.sent === 0 && forgedTry.asked === 1,
+  );
+
+  // Every failure of the check is a refusal, never an exception or a yes.
+  for (const mode of ["500", "throw", "hang"] as const) {
+    authMode = mode;
+    const started = Date.now();
+    const a = await attempt(both(SERVICE_KEY));
+    const ready = await attempt(both(SERVICE_KEY), "GET");
+    authMode = "normal";
+    const label = { "500": "an HTTP 500 from Auth", throw: "a network error", hang: "a timeout" }[
+      mode
+    ];
+    ck(
+      `${label}: 401 for a send and for readiness, nothing sent${mode === "hang" ? " (gives up after ~5 s)" : ""}`,
+      a.status === 401 &&
+        a.sent === 0 &&
+        ready.status === 401 &&
+        (mode !== "hang" || Date.now() - started < 12_000),
+    );
+  }
+  const afterFailures = await attempt(both(SERVICE_KEY));
+  ck("and the key works again once Auth answers", afterFailures.status === 200);
   {
-    const asked = authChecks.length;
-    const res = await post(
-      { kind: "application_receipt", to: "a@example.test", ...message },
-      { authorization: `Bearer ${forged}`, apikey: forged },
-    );
-    ck(
-      "a service_role-shaped token the project does not confirm (forged signature) is asked about and refused",
-      res.status === 401 && authChecks.length === asked + 1,
-    );
+    // An internal error in the check itself: a controlled 401, not a crash.
+    const broken = {
+      method: "POST",
+      headers: {
+        get: () => {
+          throw new Error("boom");
+        },
+      },
+      text: async () => "{}",
+    } as unknown as Request;
+    let status = 0;
+    try {
+      status = (await serve(broken)).status;
+    } catch {
+      status = -1;
+    }
+    ck("an internal error while checking the caller: a controlled 401", status === 401);
   }
-  env.delete("SUPABASE_URL");
+  ck("the Auth answer (which lists a user) is never read", !authBodyRead);
+  ck(
+    "no key ever reaches a log line",
+    logs.every((l) => !/sb_secret|eyJ/.test(l)),
+  );
 }
 
 console.log("\n2. Only the named kinds; the function decides From, the admin inbox and Reply-To");

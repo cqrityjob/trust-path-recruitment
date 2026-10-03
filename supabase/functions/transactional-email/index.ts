@@ -12,10 +12,10 @@
 //
 // ── NOT A RELAY ────────────────────────────────────────────────────────
 //
-//   * Only the application server can call it: the caller must present the
-//     project's service-role key (Authorization: Bearer, or apikey), the key
-//     the app server already holds and a browser never does. Anything else is
-//     a 401 with no detail.
+//   * Only the application server can call it: the caller must present a
+//     service key of this project (Authorization: Bearer, or apikey), the key
+//     the app server already holds and a browser never does, and the project
+//     confirms it on every call. Anything else is a 401 with no detail.
 //   * Only the named kinds below are accepted. Each kind fixes where the
 //     message may go and where a reply lands. The admin inbox, the From
 //     address and every Reply-To are decided HERE, never by the request.
@@ -114,45 +114,12 @@ function sameSecret(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** The service-role keys this project accepts: the legacy JWT and, where the
- *  platform provides them, the newer secret keys. */
-function serviceKeys(): string[] {
-  const keys = [Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""];
-  try {
-    const extra = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
-    if (extra && typeof extra === "object") {
-      for (const v of Object.values(extra)) if (typeof v === "string") keys.push(v);
-    }
-  } catch {
-    // Not present or not JSON: the legacy key alone.
-  }
-  return keys.filter((k) => k.length >= 20);
-}
-
-/** A presented key that is not byte-equal to the function's own copy may
- *  still be this project's service key: the app host and the function can
- *  hold different representations of it (the legacy JWT and a newer secret
- *  key), which is exactly how every call from the app was refused in
- *  production while PostgREST accepted the same key (2026-10-03). So the
- *  project itself is asked: only a service key may list Auth users. A 200
- *  is the answer; anything else, an error or a timeout, is a refusal. A
- *  positive answer is remembered for five minutes by the key's SHA-256,
- *  never by the key. */
-const VERIFIED_TTL_MS = 5 * 60 * 1000;
-const VERIFY_TIMEOUT_MS = 5_000;
-const verified = new Map<string, number>();
-
-async function keyDigest(key: string): Promise<string> {
-  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
-  return Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 /** Only something shaped like this project's service key is worth asking
  *  about: a new-format secret key, or a JWT whose payload claims the
  *  service_role (and, where the token names one, this project). The anon
  *  and publishable keys, a user's session token, another project's key and
- *  garbage are refused here, without a network call. The signature is not
- *  checked here; the project's answer is what checks it. */
+ *  garbage are refused here, without a network call. The signature, expiry
+ *  and revocation are not judged here; the project's answer judges them. */
 function couldBeServiceKey(key: string, base: string): boolean {
   if (key.startsWith("sb_secret_")) return true;
   const parts = key.split(".");
@@ -167,12 +134,20 @@ function couldBeServiceKey(key: string, base: string): boolean {
   }
 }
 
+/** Is this key a service key the project accepts RIGHT NOW? The project
+ *  itself is asked on every call: only a service key may list Auth users,
+ *  and Auth judges the signature, the expiry and whether the key has been
+ *  revoked or rotated. A 200 is the only yes. Nothing is remembered between
+ *  calls, so a key that expires or is revoked is refused from the next call
+ *  on, also in a warm instance. Not even the function's own copy of the
+ *  service key is trusted without asking: it may have been rotated since
+ *  the instance started (2026-10-03 review). An HTTP error, a network error,
+ *  a timeout or any internal error is a refusal. */
+const VERIFY_TIMEOUT_MS = 5_000;
+
 async function projectAcceptsServiceKey(key: string): Promise<boolean> {
   const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
   if (!base || key.length < 20 || !couldBeServiceKey(key, base)) return false;
-  const digest = await keyDigest(key);
-  const until = verified.get(digest);
-  if (until && until > Date.now()) return true;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), VERIFY_TIMEOUT_MS);
   try {
@@ -180,10 +155,9 @@ async function projectAcceptsServiceKey(key: string): Promise<boolean> {
       headers: { apikey: key, Authorization: `Bearer ${key}` },
       signal: controller.signal,
     });
+    // The answer lists a user: it is never read.
     await res.body?.cancel().catch(() => {});
-    if (res.status !== 200) return false;
-    verified.set(digest, Date.now() + VERIFIED_TTL_MS);
-    return true;
+    return res.status === 200;
   } catch {
     return false;
   } finally {
@@ -191,16 +165,23 @@ async function projectAcceptsServiceKey(key: string): Promise<boolean> {
   }
 }
 
+/** The caller must present one key, in Authorization: Bearer, in apikey, or
+ *  the same key in both, and the project must accept it as a service key.
+ *  Two different keys, or an Authorization header that is not a Bearer
+ *  token, are refused before anything else is considered. */
 async function callerIsServer(req: Request): Promise<boolean> {
-  const auth = req.headers.get("authorization") ?? "";
-  const bearer = auth.startsWith("Bearer ") ? auth.slice(7).trim() : "";
-  const apikey = (req.headers.get("apikey") ?? "").trim();
-  if (serviceKeys().some((k) => sameSecret(bearer, k) || sameSecret(apikey, k))) return true;
-  // Both headers must carry the same key for the project check: a caller
-  // cannot pair someone else's apikey with its own bearer.
-  const presented = bearer || apikey;
-  if (!presented || (bearer && apikey && !sameSecret(bearer, apikey))) return false;
-  return projectAcceptsServiceKey(presented);
+  try {
+    const auth = req.headers.get("authorization");
+    const apikey = (req.headers.get("apikey") ?? "").trim();
+    if (auth !== null && !auth.startsWith("Bearer ")) return false;
+    const bearer = auth === null ? "" : auth.slice(7).trim();
+    if (bearer && apikey && !sameSecret(bearer, apikey)) return false;
+    const presented = bearer || apikey;
+    if (!presented) return false;
+    return await projectAcceptsServiceKey(presented);
+  } catch {
+    return false;
+  }
 }
 
 function address(value: unknown): string | null {
