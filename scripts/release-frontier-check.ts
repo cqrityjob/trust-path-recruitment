@@ -380,17 +380,20 @@ const state = JSON.parse(readFileSync(path.join(root, "supabase/release-state.js
 // the interview-case policy names scp_iv_can_read_case. No production write
 // probe was run.
 // Evidence: docs/release/2026-10-03-report-access-hosted-verification.md.
-// Pending by design (written, replayed on the full chain, recorded `pending` in
-// release-state.json, none applied hosted): the employer e-mail on a new
-// application (docs/release/2026-10-03-employer-new-application-notification.md:
-// the outbox, the recipient rules, claim and settle; apply it BEFORE the
-// transactional-email function is redeployed and before the application is
-// published; docs/release/2026-10-03-release-order.md, step 4). Its name comes
-// OFF this list in the change that records its production evidence.
-const expectedPending: string[] = [
-  "20270206090000_interview_access_expand.sql",
-  "20270205090000_employer_new_application_notices.sql",
-];
+// 2026-10-03 ~19:55 UTC: #392 (merge d2c02b8, every mandatory CI job green on
+// aa8e7a5) verified applied read-only: 20270205090000_employer_new_application_
+// notices is the last ledger row (367 rows, digest 77e07c074bb73aac9ac11a569b5ca214;
+// the first 366 unchanged, digest ae6f49cb25fa072932ae6aaf8d2b4ddc); all six
+// function bodies equal a strict local replay, none is executable by anon or
+// authenticated, the outbox has RLS enabled and forced, no policy, no trigger,
+// no client privilege (service_role SELECT only) and 0 rows. No production write
+// probe was run. Nothing is pending by design any more: the application half
+// (#393) is published AFTER this, and the transactional-email function
+// (employer_new_application) is verified in production before that publication.
+// Evidence: docs/release/2026-10-03-employer-notice-hosted-verification.md.
+// Interview access expand remains pending until its own hosted verification.
+const expectedPending: string[] = ["20270206090000_interview_access_expand.sql"];
+
 const hostedIdentities = [
   "20260904134520_scp_trust_evidence_report_r2a_audience_reads.sql",
   "20260904171840_scp_trust_evidence_report_r2a_report_version_continuity.sql",
