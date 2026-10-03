@@ -3,8 +3,11 @@
 **Status: förberedd för ägarens godkännande. Ingenting här är genomfört.** Ingen merge, ingen
 publicering, ingen produktionsskrivning, ingen Auth-, DNS- eller Lovable-ändring och inga mejl
 har gjorts av den som skrev dokumentet. Det ersätter den "provisoriska" migrationslistan i
-`2026-10-03-launch-completion-report.md`: ordningen nedan är beroendebaserad, och Claude-sessionen
-som äger Passport, juridik, kontaktadresser och Auth har bekräftat sin del (#386, se steg 1).
+`2026-10-03-launch-completion-report.md`: ordningen nedan är beroendebaserad. Claude-sessionen som
+äger Passport, juridik, kontaktadresser och Auth har bekräftat sin del: #386 är **mergad** (main
+`071f69e`) och funktionen `transactional-email` version 3 är driftsatt 2026-10-03 13:47:03 UTC
+(enligt dess PR [#394](https://github.com/cqrityjob/trust-path-recruitment/pull/394); jag har inte
+verifierat det i produktion).
 
 Det gäller sju migrationer, åtta PR:er och en edge-funktion. Varje steg nedan är ett eget
 godkännande: ägaren godkänner det, någon med produktionsåtkomst gör det, och resultatet
@@ -15,8 +18,9 @@ verifieras skrivskyddat innan nästa steg.
 | # | PR (utkast om inte annat anges) | Gren | Bas | Innehåll | Migration | Hänger på |
 |---|---|---|---|---|---|---|
 | A | [#390](https://github.com/cqrityjob/trust-path-recruitment/pull/390) | `claude/db-test-grep-q-pipefail` | main | Testskriptet `db-test.sh` fick falska fel när `grep -q` lämnade en pipe tidigt (observerat två gånger) | – | inget |
-| B | [#386](https://github.com/cqrityjob/trust-path-recruitment/pull/386) (Claudes) | `claude/launch-legal-contact` | main | Villkor, integritetspolicy, kontaktadresser, avsändarnamn "<Organisation> via CQrityjob", rättad anropskontroll i `transactional-email` | – | **pausad**: ingen merge eller driftsättning förrän Astra godkänt omkontrollen av autentiseringen |
-| C | [#387](https://github.com/cqrityjob/trust-path-recruitment/pull/387) | `claude/busy-clarke-42da1t` | main | Domän och metadata, kontaktflödet, XSS-rättning, landning och navigation, kandidatflödet, jobbtavlan, arbetsgivarkontot; **innehåller #386 och main (#389) inmergade** | `20270130090000`, `20270131090000`, `20270201090000` | **B först** (annars bär C in B:s commits) |
+| B | [#386](https://github.com/cqrityjob/trust-path-recruitment/pull/386) (Claudes) | `claude/launch-legal-contact` | main | **Mergad** (main `071f69e`). Villkor, integritetspolicy, kontaktadresser, avsändarnamn "<Organisation> via CQrityjob", rättad anropskontroll i `transactional-email` (godkänd av Astra på `43180b8`) | – | klar; ligger i main och i C |
+| C | [#387](https://github.com/cqrityjob/trust-path-recruitment/pull/387) | `claude/busy-clarke-42da1t` | main | Domän och metadata, kontaktflödet, XSS-rättning, landning och navigation, kandidatflödet, jobbtavlan, arbetsgivarkontot; main (#386, #388, #389) inmergad | `20270130090000`, `20270131090000`, `20270201090000` | inget annat än ägarens godkännande |
+| G | [#395](https://github.com/cqrityjob/trust-path-recruitment/pull/395) | `claude/ci-stacked-prs` | main | CI körs även på PR:er som är staplade på en `claude/**`-gren (annars saknar de CI helt) | – | mergas före eller tillsammans med C; ligger redan i de staplade grenarna |
 | D | [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391) | `claude/career-analysis-availability` | C | Karriäranalysens tillgänglighet, en källa för alla ytor, indexering följer tillståndet | – | C |
 | E1 | [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) | `claude/employer-notice-schema` | C | Utkorg för mejl till arbetsgivaren vid ny ansökan (schema) | `20270205090000` | C, och F1 applicerad (versionsordning, se regel 2) |
 | E2 | [#393](https://github.com/cqrityjob/trust-path-recruitment/pull/393) | `claude/employer-notice-app` | E1 | Avsändare, kö-hantering, sweep, kind `employer_new_application` i edge-funktionen | – | E1 applicerad och verifierad; funktionen omdriftsatt |
@@ -36,9 +40,8 @@ verifieras skrivskyddat innan nästa steg.
    notisschemat (`0205`).
 3. **Merge publicerar inte.** Koden synkas till Lovable direkt, men www ändras först när ägaren
    publicerar (L5 i `2026-10-03-www-domain-cutover.md`). Edge-funktioner driftsätts separat.
-4. **#387 bär #386.** De är samma commits. Mergar ägaren #386 först krymper #387:s diff till resten;
-   mergar ägaren #387 först följer #386:s kod, inklusive den ogranskade autentiseringsändringen,
-   med. **Merga inte #387 innan Astra godkänt #386.**
+4. **Staplade PR:er får CI först med #395.** CI lyssnar bara på PR:er mot `main`; #391–#393 och
+   behörighets-PR:erna har #387 som bas. Deras grenar innehåller #395:s fyra rader, så CI körs på dem.
 
 ## 2. Ordningen
 
@@ -61,17 +64,23 @@ jq -r '.frontier[] | select(.hostedState=="pending") | "\(.file)\n\(.verify)\n"'
 
 ### Steg 1 — #386 och funktionen (Claudes del)
 
-1. Astra godkänner den riktade omkontrollen av autentiseringen i `transactional-email`
-   (`callerIsServer` frågar projektets Auth vid varje anrop; ingen cache, ingen nyckelgenväg från miljön).
-2. Merge #386, **driftsätt `transactional-email`** (ägaren har godkänt driftsättningen enligt Claude-sessionen).
-3. Skrivskyddat: kontaktformuläret öppnas (readiness), loggen visar 200 i stället för 401.
-4. **Testutskick T1–T5** (`2026-10-03-production-test-request.md`, "Mottagarregeln och ett enda
-   utskickstillfälle"): en utförare, varje utskick en gång, bara till den av ägaren namngivna testadressen.
-   Claude-sessionen skickar; jag (eller den) kontrollerar loggarna skrivskyddat efteråt.
+Gjort enligt #394: Astra godkände `43180b8` (anroparkontrollen frågar projektets Auth vid varje anrop; ingen
+cache, ingen nyckelgenväg från miljön); #386 mergad som `071f69e`; `transactional-email` version 3 driftsatt
+13:47:03 UTC. Kvar:
+
+1. **Funktionen svarar 503 `not_configured`** (enligt #394, 14:08–14:09 UTC): hemligheten `RESEND_API_KEY` saknas
+   eller är fel satt på funktionen. Tills den är satt är kontakt, kvitto, meddelanden och arbetsgivarmejl stängda.
+   Det är en ägar-/konfigurationsåtgärd (R2 i `2026-10-03-www-domain-cutover.md`).
+2. **Den publicerade sajten saknar #386** (villkor och integritetspolicy ger 404 där). Lovable har synkat
+   men inte publicerat; publicering görs i steg 2.
+3. **Testutskick T1–T5** (`2026-10-03-production-test-request.md`): en utförare (Claude-sessionen), varje
+   utskick en gång, bara till de adresser ägaren godkänt. T2 är skickad enligt #394; T3 blockerad av punkt 1;
+   T4–T5 väntar på T1. Jag kontrollerar loggarna skrivskyddat efteråt.
+4. Skrivskyddat efter punkt 1: kontaktformuläret öppnas (readiness), loggen visar 200 i stället för 503/401.
 
 ### Steg 2 — #387 (C): jobbtavlans tre migrationer och appen
 
-Förutsättning: steg 1 klart (så att C inte bär ogranskad kod).
+Förutsättning: ägarens godkännande. (#386 ligger redan i main, så C bär ingen ogranskad kod.)
 
 1. Jämför hostade md5 (se `verify`) för `jobs_validate_before_write()` (förväntat `7e7477c391e41071f01e599e90c8e1a5`)
    och att inga andra policys än de listade rör bucketen `job-application-cvs`.
@@ -164,7 +173,8 @@ omdirigera den gamla värden (L1) **sist** (se `2026-10-03-www-domain-cutover.md
 
 ## 5. Vad som återstår som blockerar publik lansering
 
-1. Astras omkontroll av `transactional-email` (#386) är inte godkänd; alla produktmejl är stängda tills dess.
+1. `RESEND_API_KEY` saknas på den driftsatta funktionen (503 `not_configured` enligt #394), så alla produktmejl
+   är fortfarande stängda trots att Astra godkänt och funktionen är driftsatt. Sajten som är publicerad saknar #386.
 2. Alla produktionssteg ovan är ogjorda och ogodkända. Inget är verifierat i produktion: sandlådan
    når inte `supabase.co` eller www.
 3. Auth-konfigurationen från www (Site URL, Redirect URLs) är Claude-sessionens och ogjord.

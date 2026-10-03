@@ -2,8 +2,8 @@
 
 **Startcommit:** `main` `7ff0cbe` (efter #384). Astras granskning gällde `ff2a5b3`; varje fynd är
 kontrollerat mot `7ff0cbe` innan det rättades. **Arbetsgren:** `claude/busy-clarke-42da1t`, utkast-PR
-[#387](https://github.com/cqrityjob/trust-path-recruitment/pull/387), som nu har main (#388, #389) och
-Claude-sessionens #386 (med den rättade autentiseringen `43180b8`) inmergade. Resten av arbetet ligger i
+[#387](https://github.com/cqrityjob/trust-path-recruitment/pull/387), som nu har main (#386, #388, #389)
+inmergad; #386 (med den av Astra godkända autentiseringen `43180b8`) är mergad som `071f69e`. Resten av arbetet ligger i
 staplade utkast-PR:er mot #387: [#390](https://github.com/cqrityjob/trust-path-recruitment/pull/390)
 (testskriptets flake, mot main), [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391)
 (karriäranalys), [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) och
@@ -166,7 +166,7 @@ parity, migrations, jobbguards, Passport-guards); webbläsarsviterna körs om i 
 | #387 | Säkerhet | XSS-åtgärd (`jsonLdScript`) | Revertera commit `c88856c` |
 | #387 | Landning/navigation, kandidatresa, företagskonto | delad nav, registreringsingång, sanningsenliga etiketter, retry-tillstånd, CV, feedback, medlemskontroller, ärliga sidor | Revertera respektive mergecommit |
 | #387 | Jobbtavla | tre migrationer (**pending**, schema först), appändringar, 404 på stängd annons | Rollback-skript för varje migration (`supabase/rollback/20270130090000…`, `…31…`, `20270201090000…`); appen fungerar före migration |
-| #387 | Integration | main (#388, #389) och Claude-sessionens #386 inmergade; #386:s juridiska rutter tar sin canonical från `siteUrl()`; kontaktadressen kommer från #386:s `src/lib/site-contact.ts`; edge-funktionen är #386:s egen, oförändrad (frågar projektets Auth vid varje anrop, ingen cache, ingen nyckelgenväg från miljön); sitemap-guarden godtar en utkast-noindex bara när sitemap listar sidan under samma `*_FINAL`-flagga | Revertera mergecommit `472bc55` |
+| #387 | Integration | main (#386, #388, #389) inmergad; #386:s juridiska rutter tar sin canonical från `siteUrl()`; kontaktadressen kommer från #386:s `src/lib/site-contact.ts`; edge-funktionen är #386:s egen, oförändrad (frågar projektets Auth vid varje anrop, ingen cache, ingen nyckelgenväg från miljön); sitemap-guarden godtar en utkast-noindex bara när sitemap listar sidan under samma `*_FINAL`-flagga | Revertera mergecommit `472bc55` |
 | [#390](https://github.com/cqrityjob/trust-path-recruitment/pull/390) | Testmiljö | `db-test.sh`: `grep -q` får inte fälla en pipeline som hittade sin rad | Revertera commit |
 | [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391) | Karriäranalys | en tillgänglighetskälla, sann stängd panel, indexering följer läget, CTA:er bakom samma svar, utskrift på sparad rapport. **Ingen migration** | Revertera PR; läge byts med `cd_set_access_state` |
 | [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) | Mejl till arbetsgivaren, schema | utkorg, mottagarregler i SQL, claim/settle med lease, 90 dagars retention, `20270205090000` (**pending**) | Rollback-skript; appen tål att funktionen saknas |
@@ -203,8 +203,9 @@ annars avvisar eller kräver `--include-all`. `20270126090000` (#388) är applic
 
 ## 8. Kvarstående hinder för lansering
 
-1. **#386 är pausad** tills Astra godkänt omkontrollen av `transactional-email`; alla produktmejl
-   (kontakt, kvitto, meddelande, arbetsgivarmejl) är stängda tills funktionen är omdriftsatt.
+1. **Produktmejlen är fortfarande stängda.** #386 är mergad och `transactional-email` v3 driftsatt (13:47 UTC,
+   enligt #394), men funktionen svarar 503 `not_configured`: `RESEND_API_KEY` saknas på den. Den publicerade
+   sajten saknar dessutom #386 tills ägaren publicerar.
 2. Auth från www är ej verifierat (S1/S2 och test; Claude-sessionens konfiguration).
 3. Sju migrationer är inte applicerade; rapportbehörigheten i produktion matchar inte kravet förrän `0203`/`0204`.
 4. Juridiska sidor: öppna platshållare (Claude-sessionen) och vem som bevakar `job@`.
