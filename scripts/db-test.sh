@@ -38,6 +38,41 @@ cd "$ROOT"
 
 psql_q() { psql -v ON_ERROR_STOP=1 -q "$@"; }
 
+# grep -q under pipefail. `echo "$OUT" | grep -q PATTERN` is used throughout
+# this script on large outputs. grep -q leaves at its first match; the writer
+# then dies of SIGPIPE, the pipeline reports failure under `pipefail`, and a
+# line that WAS found is reported as missing (observed 2026-10-03: "a mandatory
+# first-merit assertion did not run: 2.8" with `ok 2.8` in the very output, and
+# a negative control that did fail reported as "the suite PASSED"). Whether it
+# happens depends on output size and timing, so it came and went between runs.
+# Inside this script, -q therefore reads its whole input and discards the
+# matches: same exit status (0 found, 1 not found, 2 error), no early exit.
+grep() {
+  local -a args=()
+  local quiet=0 arg
+  while [ "$#" -gt 0 ]; do
+    arg="$1"; shift
+    if [ "$arg" = "--" ]; then args+=("$arg" "$@"); break; fi
+    if [[ "$arg" =~ ^-[A-Za-z]*q[A-Za-z]*$ ]]; then
+      quiet=1
+      arg="${arg//q/}"
+      [ "$arg" = "-" ] && continue
+    fi
+    args+=("$arg")
+  done
+  if [ "$quiet" = 1 ]; then command grep "${args[@]}" >/dev/null; else command grep "${args[@]}"; fi
+}
+# The proof, before anything else depends on it: a match on the first line of
+# an output far larger than a pipe buffer must still be a match.
+GREP_Q_BIG="$(seq 1 40000 | sed 's/^/x marker line /')"
+for _i in 1 2 3 4 5; do
+  echo "$GREP_Q_BIG" | grep -q '^x marker' \
+    || { echo "FAIL: grep -q under pipefail reports a match as missing (SIGPIPE)" >&2; exit 1; }
+  echo "$GREP_Q_BIG" | grep -qF 'no such text' \
+    && { echo "FAIL: grep -q reports a match that is not there" >&2; exit 1; }
+done
+unset GREP_Q_BIG _i
+
 # ---------------------------------------------------------------------------
 # Suite failure policy.
 #
