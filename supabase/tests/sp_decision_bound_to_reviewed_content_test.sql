@@ -21,6 +21,9 @@
 --   SR5  the binding never stands in for authority: a non-verifier calling the
 --        reviewed entry point is refused as before; a NULL version is refused;
 --        anon cannot execute it; a wrong version on a fresh request is refused.
+--   SR6  20270126090000: evidence attached while a review is open binds the
+--        decision too -- a page loaded before the new document is refused, as
+--        is a bare call; after reloading, the reviewer approves.
 --   SR7  the review page's own flow, end to end through the read model it
 --        uses: the version comes from sp_verifier_request_detail exactly as
 --        the page receives it (the JSON string), the stale page is refused,
@@ -113,6 +116,15 @@ CREATE OR REPLACE FUNCTION pg_temp.decisions(_id uuid) RETURNS bigint LANGUAGE s
   SELECT count(*) FROM public.sp_verification_decisions WHERE request_id = _id;
 $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.attach(_period uuid, _name text) RETURNS text LANGUAGE sql AS $$
+  SELECT pg_temp.try_as('0f190000-0000-4000-8000-00000000000a',
+    format('SELECT public.sp_attach_evidence(NULL, %L, %L, %L, ''application/pdf'', 1000, NULL)',
+           _period, '0f190000-0000-4000-8000-00000000000a/' || _name, _name));
+$$;
+CREATE OR REPLACE FUNCTION pg_temp.evidence(_period uuid) RETURNS bigint LANGUAGE sql AS $$
+  SELECT count(*) FROM public.sp_evidence WHERE period_id = _period AND lifecycle_state = 'active';
+$$;
+
 -- ── Cast ────────────────────────────────────────────────────────────────
 INSERT INTO auth.users (id, email) VALUES
   ('0f190000-0000-4000-8000-00000000000a', 'sr-holder-a@test.invalid'),
@@ -130,7 +142,8 @@ SELECT p.id, '0f190000-0000-4000-8000-00000000000a', 'SR Bevakning AB', 'Väktar
        current_date - 400, 'self_declared', 'active'
   FROM (VALUES ('0f190000-4444-4000-8000-0000000000a1'::uuid), ('0f190000-4444-4000-8000-0000000000a2'),
                ('0f190000-4444-4000-8000-0000000000a3'), ('0f190000-4444-4000-8000-0000000000a4'),
-               ('0f190000-4444-4000-8000-0000000000a5'), ('0f190000-4444-4000-8000-0000000000a6')) p(id);
+               ('0f190000-4444-4000-8000-0000000000a5'), ('0f190000-4444-4000-8000-0000000000a6'),
+               ('0f190000-4444-4000-8000-0000000000a7'), ('0f190000-4444-4000-8000-0000000000a8')) p(id);
 SELECT pg_temp.ok(pg_temp.period('0f190000-4444-4000-8000-0000000000a1') = 'self_declared|400|Väktare',
   'SR-F A''s periods are self-declared Väktare, started 400 days ago');
 
@@ -249,6 +262,40 @@ SELECT pg_temp.ok(
   NOT has_function_privilege('anon', 'public.sp_verifier_decide_reviewed(uuid,timestamptz,text,text,text,text,date,date)', 'EXECUTE')
   AND has_function_privilege('authenticated', 'public.sp_verifier_decide_reviewed(uuid,timestamptz,text,text,text,text,date,date)', 'EXECUTE'),
   'SR5.3 anon cannot execute the reviewed entry point; signed-in users can, and the database decides who may decide');
+
+-- ── SR6 evidence added under review binds the decision too ───────────────
+SELECT pg_temp.ok(pg_temp.attach('0f190000-4444-4000-8000-0000000000a7', 'intyg.pdf') = 'ok',
+  'SR6.a A attaches a document to the period');
+CREATE TEMP TABLE sr6 AS SELECT pg_temp.submit('0f190000-4444-4000-8000-0000000000a7') AS req;
+CREATE TEMP TABLE sr6seen AS SELECT pg_temp.seen((SELECT req FROM sr6)) AS at;      -- V's page: 1 document
+SELECT pg_temp.ok(pg_temp.attach('0f190000-4444-4000-8000-0000000000a7', 'annat-intyg.pdf') = 'ok'
+  AND pg_temp.evidence('0f190000-4444-4000-8000-0000000000a7') = 2
+  AND pg_temp.req((SELECT req FROM sr6)) = 'pending',
+  'SR6.b while the request is pending A attaches a second document; the request stays in review');
+SELECT pg_temp.ok(pg_temp.try_as('0f190000-0000-4000-8000-00000000000c',
+  pg_temp.approve_sql((SELECT req FROM sr6), (SELECT at FROM sr6seen))) = 'err:SP_REVIEW_STALE'
+  AND pg_temp.try_as('0f190000-0000-4000-8000-00000000000c',
+  pg_temp.bare_approve_sql((SELECT req FROM sr6))) = 'err:SP_REVIEW_STALE'
+  AND pg_temp.period('0f190000-4444-4000-8000-0000000000a7') LIKE 'document_provided|%',
+  'SR6.1 the approval from the page that showed one document is refused, and so is a bare call');
+CREATE TEMP TABLE sr6b AS SELECT pg_temp.submit('0f190000-4444-4000-8000-0000000000a8') AS req;
+CREATE TEMP TABLE sr6bseen AS SELECT pg_temp.seen((SELECT req FROM sr6b)) AS at;
+SELECT pg_temp.ok(pg_temp.try_as('0f190000-0000-4000-8000-00000000000c',
+  pg_temp.clarify_sql((SELECT req FROM sr6b), (SELECT at FROM sr6bseen))) = 'ok'
+  AND pg_temp.attach('0f190000-4444-4000-8000-0000000000a8', 'svar.pdf') = 'ok'
+  AND pg_temp.req((SELECT req FROM sr6b)) = 'clarification_requested'
+  AND pg_temp.try_as('0f190000-0000-4000-8000-00000000000c',
+  pg_temp.approve_sql((SELECT req FROM sr6b), (SELECT at FROM sr6bseen))) = 'err:SP_REVIEW_STALE',
+  'SR6.2 a clarification answered with a document: the status is unchanged and the stale approval is refused');
+SELECT pg_temp.ok(pg_temp.try_as('0f190000-0000-4000-8000-00000000000c',
+  pg_temp.approve_sql((SELECT req FROM sr6), pg_temp.seen((SELECT req FROM sr6)))) = 'ok'
+  AND pg_temp.period('0f190000-4444-4000-8000-0000000000a7') LIKE 'verified|%'
+  AND pg_temp.try_as('0f190000-0000-4000-8000-00000000000c',
+  pg_temp.approve_sql((SELECT req FROM sr6b), pg_temp.seen((SELECT req FROM sr6b)))) = 'ok',
+  'SR6.3 after reloading -- the page now shows every document -- V approves both');
+SELECT pg_temp.ok(pg_temp.attach('0f190000-4444-4000-8000-0000000000a2', 'efter-beslut.pdf') = 'ok'
+  AND pg_temp.req((SELECT req FROM sr4a)) = 'approved',
+  'SR6.4 a document added after the decision touches no decided request');
 
 -- ── SR7 the review page's flow through its read model ────────────────────
 -- What the page holds is the detail JSON; the version it sends back is that

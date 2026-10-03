@@ -25,7 +25,8 @@
 // The verifier role is granted with a direct local INSERT, NOT through
 // `admin_set_platform_role`: that RPC needs a platform admin, and creating one
 // is out of scope for a disposable fixture. Everything the verifier then DOES
-// goes through the real authorised RPCs (sp_verifier_queue, sp_verifier_decide).
+// goes through the real authorised RPCs (sp_verifier_queue, sp_verifier_decide,
+// sp_verifier_decide_reviewed).
 //
 // Run: node scripts/passport-live-local-journey-check.mjs
 
@@ -428,6 +429,14 @@ async function main() {
     const row = await reread(holder, "sp_claims", vu1);
     ok(row.assertion_level === "document_provided", "clarification changed the trust level");
   });
+  // The reviewer's page as it was before the holder's reply: one document.
+  let pageBeforeReply = null;
+  await check("Reviewer's page before the reply shows the version it was loaded at", async () => {
+    pageBeforeReply = good(
+      await verifier.client.rpc("sp_verifier_request_detail", { _request_id: request }),
+    );
+    ok(typeof pageBeforeReply?.submitted_at === "string", "no version on the detail");
+  });
   await check("Holder replies by attaching new evidence while the request stays open", async () => {
     await attach(vu1);
     const rows = good(
@@ -442,19 +451,49 @@ async function main() {
     );
     ok((n ?? []).length >= 2, "second evidence not recorded");
   });
-  await check("Verifier approves after the reply (document review)", async () => {
-    good(
-      await verifier.client.rpc("sp_verifier_decide", {
+  await check(
+    "Approving from the page loaded before the reply is refused (SP_REVIEW_STALE)",
+    async () => {
+      const r = await verifier.client.rpc("sp_verifier_decide_reviewed", {
         _request_id: request,
+        _reviewed_submitted_at: pageBeforeReply?.submitted_at,
         _decision: "approved",
         _method: "document_review",
         _decision_note: "ok",
         _holder_message: null,
         _valid_from: null,
         _valid_until: null,
-      }),
-    );
-  });
+      });
+      ok(r.error && /SP_REVIEW_STALE/.test(r.error.message), "stale page approved");
+      const row = await reread(holder, "sp_claims", vu1);
+      ok(row.assertion_level !== "verified", "stale approval verified the credential");
+    },
+  );
+  await check(
+    "Verifier reloads, sees the added document, and approves (document review)",
+    async () => {
+      const page = good(
+        await verifier.client.rpc("sp_verifier_request_detail", { _request_id: request }),
+      );
+      ok((page?.evidence ?? []).length >= 2, "the reloaded page does not show the reply");
+      ok(
+        page?.submitted_at !== pageBeforeReply?.submitted_at,
+        "the reply did not move the version",
+      );
+      good(
+        await verifier.client.rpc("sp_verifier_decide_reviewed", {
+          _request_id: request,
+          _reviewed_submitted_at: page.submitted_at,
+          _decision: "approved",
+          _method: "document_review",
+          _decision_note: "ok",
+          _holder_message: null,
+          _valid_from: null,
+          _valid_until: null,
+        }),
+      );
+    },
+  );
   await check(
     "Holder sees the outcome: decided, attributed to the reviewing organisation",
     async () => {

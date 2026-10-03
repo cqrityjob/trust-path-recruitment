@@ -2802,6 +2802,14 @@
       "rollback": "supabase/rollback/20270125090000_sp_decision_bound_to_reviewed_content_rollback.sql",
       "verify": "SELECT position('SP_REVIEW_STALE' IN prosrc) > 0 FROM pg_proc WHERE oid = 'public.sp_verifier_decide(uuid,text,text,text,text,date,date)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.sp_verifier_decide_reviewed(uuid,timestamptz,text,text,text,text,date,date)','EXECUTE'); -- false. answered_at present on sp_verification_requests. Behaviour: sp_decision_bound_to_reviewed_content_test SR1-SR2 (a verifier approving an answered request with the submitted_at from before the answer is refused SP_REVIEW_STALE and the entry stays unverified).",
       "note": "A Passport decision is bound to the content its decider loaded. sp_verifier_decide_reviewed(request, reviewed submitted_at, ...) is the entry point the application calls; sp_verifier_decide (hosted 20270112090000 body plus one block) refuses SP_REVIEW_STALE when the named submitted_at is not current, and refuses a bare call on a request whose holder answered a clarification by editing (sp_verification_requests.answered_at, set by sp_entry_review_on_holder_edit, which now stamps submitted_at with clock_timestamp()). Requests never answered decide exactly as before. Both checks run under the existing SELECT ... FOR UPDATE on the request, the row the holder's answer updates. Rollback restores both hosted bodies (md5 pinned), drops the reviewed entry point and the column."
+    },
+    {
+      "file": "20270126090000_sp_evidence_change_under_review.sql",
+      "hostedState": "pending",
+      "introduces": [],
+      "rollback": "supabase/rollback/20270126090000_sp_evidence_change_under_review_rollback.sql",
+      "verify": "SELECT position('answered_at' IN prosrc) > 0 FROM pg_proc WHERE oid = 'public.sp_attach_evidence(uuid,uuid,text,text,text,integer,text)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.sp_attach_evidence(uuid,uuid,text,text,text,integer,text)','EXECUTE'); -- false. Behaviour: sp_decision_bound_to_reviewed_content_test SR6 (a reviewer approving from a page loaded before the holder attached a document is refused SP_REVIEW_STALE; after reloading, the approval goes through).",
+      "note": "sp_attach_evidence (hosted 20270114090000 body, md5 pinned by the rollback) also moves submitted_at (clock_timestamp()) and sets answered_at on an open request (pending or clarification_requested) for the same claim or period, so 20270125090000's binding refuses a decision from a page loaded before the new document and a bare call. The request's status is unchanged. Release order: after the application calls sp_verifier_decide_reviewed. Rollback restores the hosted body."
     }
   ], 
   "policyVersion": 2, 
