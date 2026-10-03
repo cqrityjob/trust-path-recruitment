@@ -29,6 +29,8 @@ on:
   pull_request:
     branches:
       - main
+      # Pull requests stacked on another claude/* branch are checked too (see ci.yml).
+      - "claude/**"
     paths:
       - "src/**"
       - "e2e/recruitment-workspace.spec.ts"
