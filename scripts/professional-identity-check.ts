@@ -1778,6 +1778,23 @@ console.log("\n9 . saved CV documents");
     tailored.experience.length === 1 &&
       tailored.omittedEmployment.length === bundle.employment.length - 1,
   );
+  // The healing reads the CV's OWN selection, never the live profile: an
+  // employment recorded after the CV was saved is not in its bundle, so it
+  // cannot appear on it.
+  const selectedOnly = buildCvSourceBundle({
+    identity: ESTABLISHED,
+    locale: "sv",
+    includeCareerInsight: false,
+    targetJobText: null,
+    includedIds: [bundle.employment[0]!.id],
+  });
+  const narrowed = buildSavedCvDocument(selectedOnly, { ...factual, experience: [] });
+  ck(
+    "a factual CV shows only the employments its own selection carries, not later profile entries",
+    bundle.employment.length > 1 &&
+      narrowed.experience.length === 1 &&
+      narrowed.experience[0]?.fact.id === bundle.employment[0]?.id,
+  );
   const storeSrc = read("src/lib/professional-identity/cv/cv-store.functions.ts");
   ck(
     "creating a factual CV stores its employments, not an empty presentation",
