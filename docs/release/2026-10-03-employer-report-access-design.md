@@ -192,12 +192,12 @@ for the helper), never `anon`, with an explicit `REVOKE ALL … FROM PUBLIC, ano
 
 ### 3.3 `20270204090000_interview_case_access_model.sql` (Interview Intelligence)
 
-| Object                               | Kind     | Source of the latest definition                      | Change                                                                                                                                                                                                  |
-| ------------------------------------ | -------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `scp_iv_can_read_case(uuid)`         | function | `20270111090000_interview_beskt_active_employer.sql` | the one definition (R1–R4) **and** `bcp_case_access_ok`                                                                                                                                                 |
-| `scp_iv_can_write_case(uuid)`        | function | `20270111090000`                                     | same predicate, plus the existing `cancelled` / `retention_state = 'active'` conditions and `bcp_case_access_ok`. A plain member is refused for write as well as read                                   |
-| `scp_iv_case_row_visible(uuid,uuid)` | function | `20270111090000`                                     | the one definition, and the vetting expression it already has                                                                                                                                           |
-| policy `scp_iv_corrections_employer` | policy   | `20270111090000`                                     | `scp_iv_can_read_case(case_id)`. This is finding **a**: the corrections of a candidate on a vetting-restricted case were readable by any member because the policy did not include `bcp_case_access_ok` |
+| Object                               | Kind     | Source of the latest definition                      | Change                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------ | -------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `scp_iv_can_read_case(uuid)`         | function | `20270111090000_interview_beskt_active_employer.sql` | the one definition (R1–R4) **and** `bcp_case_access_ok`                                                                                                                                                                                                                                                                                                                                                                |
+| `scp_iv_can_write_case(uuid)`        | function | `20270111090000`                                     | same predicate, plus the existing `cancelled` / `retention_state = 'active'` conditions and `bcp_case_access_ok`. A plain member is refused for write as well as read                                                                                                                                                                                                                                                  |
+| `scp_iv_case_row_visible(uuid,uuid)` | function | `20270111090000`                                     | the one definition, and the vetting expression it already has                                                                                                                                                                                                                                                                                                                                                          |
+| policy `scp_iv_corrections_employer` | policy   | `20270111090000`                                     | `scp_iv_can_read_case(case_id)`. This is finding **a**: the policy omitted `bcp_case_access_ok`. **Measured on the replayed chain (IC0.6) it was not an observable leak**: the policy's sub-select reads `scp_interview_cases` under RLS, and the case row policy already hides a vetting-restricted case from non-officers. It is closed as defence in depth, so the restriction no longer depends on that sub-select |
 
 Every child-table policy of Interview Intelligence reads through `scp_iv_can_read_case` or
 `scp_iv_can_write_case` and follows without being edited.
@@ -212,14 +212,14 @@ added is the one that already sits inside the three gates and the new one in the
 
 ## 4. Findings a–f
 
-| #   | Finding                                                           | Handling                                               |
-| --- | ----------------------------------------------------------------- | ------------------------------------------------------ |
-| a   | corrections policy lacks `bcp_case_access_ok`                     | closed in `20270204090000`                             |
-| b   | the subject who is a member reads reports about themselves        | closed by rule 2 in the helper, for attempts and cases |
-| c   | content-role holders read every tenant through `*_author_read`    | **not in scope**, unchanged                            |
-| d   | release is owner/admin only                                       | unchanged, asserted                                    |
-| e   | `approve_access_request` and the request insert bypass suspension | closed in `20270202090000`                             |
-| f   | reviewer grants survive suspension and removal                    | closed in `20270202090000`, with a backfill            |
+| #   | Finding                                                           | Handling                                                                                                                       |
+| --- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| a   | corrections policy lacks `bcp_case_access_ok`                     | closed in `20270204090000` as defence in depth (measured: the pre-fix policy was already hidden by the case row policy, IC0.6) |
+| b   | the subject who is a member reads reports about themselves        | closed by rule 2 in the helper, for attempts and cases                                                                         |
+| c   | content-role holders read every tenant through `*_author_read`    | **not in scope**, unchanged                                                                                                    |
+| d   | release is owner/admin only                                       | unchanged, asserted                                                                                                            |
+| e   | `approve_access_request` and the request insert bypass suspension | closed in `20270202090000`                                                                                                     |
+| f   | reviewer grants survive suspension and removal                    | closed in `20270202090000`, with a backfill                                                                                    |
 
 ## 5. Compatibility: EXPAND, then the application
 
@@ -276,12 +276,49 @@ reproduce the defect before it proves the fix.
 
 - Each suite reproduces the defect on the **pre-fix state inside the suite** (a savepoint, then the
   real rollback file, then a rollback to the savepoint), then proves the fix:
-  `employer_membership_standing_test.sql`, `employer_report_access_model_test.sql`,
-  `interview_case_access_model_test.sql`.
+  `employer_membership_standing_test.sql` (MS0 to MS6), `employer_report_access_model_test.sql`
+  (RA0 to RA9; RA9 asserts exactly what `employer_report_access` tells each principal) and
+  `interview_case_access_model_test.sql` (IC0 to IC6). The matrix suite
+  `employer_report_access_matrix_test.sql` and the model and interview suites share one fixture,
+  `employer_report_access_fixture.sql` (nine attempts, two vacancies, three cases, offboarded members).
 - The two existing suites that encode the old model are flipped, and every `MEMBER-WIDE-MODEL` tag is
   replaced: `employer_report_access_matrix_test.sql` and `employer_active_reads_test.sql` (AR-F.2).
-- Planted controls in `scripts/db-test.sh` fail on named assertions.
-- `scripts/employer-report-access-check.ts` pins the application half (the access state, the
-  gating, the copy) and has a negative-control pair.
-- The stubbed-backend browser specs that can run locally are kept consistent;
-  `e2e/employer-final-report-evidence.spec.ts` needs the local stack and is updated, not run.
+  `access_request_no_role_escalation_test.sql` (AR4.3) asserted that an approval **reactivated** a
+  removed member; it now asserts the opposite. Older suites that assumed a plain member reads a case,
+  a candidate's data or a progress series were given a basis in their own fixture and nothing else
+  (listed in the release notes).
+- Planted controls in `scripts/db-test.sh` fail on named assertions: six for the standing suite, eight
+  for the matrix, nine for the model, six for the interview suite.
+- `scripts/employer-report-access-check.ts` (`bun run employer-report-access:check`) pins the
+  application half (the access state, the gating, the copy, the two suspension refusals, the contract
+  with the database function) and has 26 negative controls in
+  `scripts/negative-controls/employer-report-access-controls.ts`, in `negative-controls:all`.
+- The stubbed-backend browser specs have no screen of this change in them; the local-stack specs that
+  sign in as the journey's interviewer were given that person's basis in their fixture
+  (`interview-context-bridge-fixture.sql`, `employer-final-report-fixture.sql`), and
+  `e2e/employer-final-report-evidence.spec.ts` now has `08` (an authorised reviewer reads, and is not
+  offered the act) and `08b` (an ordinary member is denied). None of the local-stack specs can run
+  without the local Supabase stack; they are updated, not run.
+
+## 9. Measured during implementation (deviations from the first draft of this document)
+
+- **Finding a is defence in depth, not an observable leak.** The corrections policy omitted
+  `bcp_case_access_ok`, but its sub-select reads `scp_interview_cases` under row-level security and the
+  case row policy already hides a vetting-restricted case from non-officers. Measured on the replayed
+  chain (`interview_case_access_model_test.sql` IC0.6): the owner and a plain member got no corrections
+  rows pre-fix. The policy still now asks the case gate itself, so the restriction no longer depends on
+  the sub-select.
+- **`employer_report_access` covers the training objects too.** Workforce training status and the two
+  training policies are gated as `workforce`, and the screen says so ("employees' development
+  results"). A responsible recruiter, a recruitment reviewer and a case creator read none of it.
+- **The three-argument `scp_report_snapshot_readable` delegates with no attempt**, so a caller that does
+  not name an attempt gets the strict (owner/admin only) answer. The four-argument overload is the one
+  the policy and the functions call.
+- **What the application does when it cannot be sure.** Loading, a failed call, a missing function and a
+  caller the database does not know as a member all leave a screen exactly as it was. Only a confirmed
+  "active member with no basis" changes anything, so the application works before and after the
+  migrations; `scripts/schema-first-release-check.ts` nevertheless blocks it from merging before
+  `20270203090000` is applied, which is the two-release order in section 7.
+- **Not decided per application.** An interview case a person may open is a fact about the person and the
+  organisation (`case_access`), not about one candidate. A member who is on the panel of one case and has
+  no basis for another sees the "no interview" state on the other candidate's page rather than "refused".
