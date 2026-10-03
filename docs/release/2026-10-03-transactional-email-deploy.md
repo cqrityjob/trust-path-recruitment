@@ -12,7 +12,7 @@
 | Före          | Version 1 (2026-09-30 18:47 UTC) nekade varje anrop från appen med 401. Version 2 driftsattes av något annat än den här sessionen efter merge, troligen Lovables synk, och ersattes av version 3 |
 | Återställning | Version 1 finns sparad lokalt, men att gå tillbaka ger samma 401 som tidigare. Att återställa betyder i praktiken att stänga produktens mejl. Det görs genom att driftsätta om version 1         |
 
-**Likvärdig representation.** I den driftsatta källan står tecknet ’ (U+2019) bokstavligt i teckenklassen för avsändarnamn. I repot står escape-sekvensen `’`, så raden lyder `/[^\p{L}\p{N} .&'’-]+/gu` i repot och `/[^\p{L}\p{N} .&'’-]+/gu` i driftsatt källa.
+**Likvärdig representation.** I den driftsatta källan står tecknet ’ (U+2019) bokstavligt i teckenklassen för avsändarnamn. I repot står escape-sekvensen `\u2019`, så raden lyder `/[^\p{L}\p{N} .&'\u2019-]+/gu` i repot och `/[^\p{L}\p{N} .&'’-]+/gu` i driftsatt källa.
 
 - Skillnaden uppstår när källan överförs vid driftsättningen.
 - I ett reguljärt uttryck med flaggan `u` betecknar båda samma kodpunkt, så de matchar exakt samma tecken.
