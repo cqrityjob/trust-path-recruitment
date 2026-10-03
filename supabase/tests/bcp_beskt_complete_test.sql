@@ -255,7 +255,9 @@ BEGIN
      pack_version_id, role_version_id, title, created_by)
   VALUES (r.emp_a, r.job, r.app, r.cand, 'SYNTETISK Kandidat', r.pack_v, r.role_v, 'SYNTETISK säkerhetsprövning', r.officer)
   RETURNING id INTO _c;
-  PERFORM pg_temp.become(r.member); SET LOCAL ROLE authenticated;
+  -- The owner is the reader that has a basis (owner/admin): a plain member has
+  -- none since 20270203090000/20270204090000 and would read nothing before the link either.
+  PERFORM pg_temp.become(r.owner_a); SET LOCAL ROLE authenticated;
   _before := public.scp_iv_can_read_case(_c);
   RESET ROLE; PERFORM pg_temp.nobody();
 
@@ -267,7 +269,7 @@ BEGIN
     (SELECT revision FROM public.bcp_assignments WHERE id = r.vet));
   _off := public.scp_iv_can_read_case(_c);
   RESET ROLE; PERFORM pg_temp.nobody();
-  PERFORM pg_temp.become(r.member); SET LOCAL ROLE authenticated;
+  PERFORM pg_temp.become(r.owner_a); SET LOCAL ROLE authenticated;
   _after := public.scp_iv_can_read_case(_c);
   RESET ROLE; PERFORM pg_temp.nobody();
   UPDATE bc SET vet_case = _c, vet_link = (_res ->> 'link_id')::uuid;

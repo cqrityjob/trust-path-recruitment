@@ -112,6 +112,11 @@ INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VAL
   ('0f0d0000-1111-4000-8000-000000000001', '0f0d0000-0000-4000-8000-000000000003', 'member', 'active'),
   ('0f0d0000-1111-4000-8000-000000000001', '0f0d0000-0000-4000-8000-000000000004', 'member', 'suspended'),
   ('0f0d0000-1111-4000-8000-000000000002', '0f0d0000-0000-4000-8000-000000000005', 'owner', 'active');
+-- The member's BASIS for reading the applicant's assessments: a reviewer grant (membership alone gives
+-- none since 20270203090000/20270204090000).
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+VALUES ('0f0d0000-1111-4000-8000-000000000001', '0f0d0000-0000-4000-8000-000000000003',
+        ARRAY['workforce','recruitment']::text[], '0f0d0000-0000-4000-8000-000000000002');
 INSERT INTO public.profiles (id, display_name) VALUES ('0f0d0000-0000-4000-8000-000000000001', 'SE Kandidat')
 ON CONFLICT (id) DO UPDATE SET display_name = EXCLUDED.display_name;
 
@@ -163,7 +168,7 @@ SELECT pg_temp.ok((SELECT val FROM seen WHERE label = 'owner_active') LIKE 'cand
                   AND (SELECT val FROM seen WHERE label = 'owner_active') NOT LIKE '%disclosure:none',
   'SE-F.1 E''s owner reads the applicant, their assessment and their disclosure (' || (SELECT val FROM seen WHERE label = 'owner_active') || ')');
 SELECT pg_temp.ok(pg_temp.reads_as('0f0d0000-0000-4000-8000-000000000003') = (SELECT val FROM seen WHERE label = 'owner_active'),
-  'SE-F.2 a plain member reads the same');
+  'SE-F.2 a member with a reviewer grant reads the same');
 SELECT pg_temp.ok(pg_temp.rls_rows_as('0f0d0000-0000-4000-8000-000000000002') = 1,
   'SE-F.3 row-level security shows the owner the application');
 

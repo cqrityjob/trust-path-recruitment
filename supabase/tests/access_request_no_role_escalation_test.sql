@@ -10,8 +10,8 @@
 --   AR2  A cannot make the outsider U an owner.
 --   AR3  O cannot change a live member's role through a request: not A to
 --        owner, not M to admin; the owner count is unchanged.
---   AR4  A still admits U as member and W as admin; R's removed membership is
---        reactivated as before.
+--   AR4  A still admits U as member and W as admin. R's removed membership is
+--        no longer reactivated by a request (20270202090000, AR4.3).
 --   AR5  a platform admin still grants owner.
 --
 -- Synthetic principals; everything rolls back.
@@ -126,9 +126,21 @@ SELECT pg_temp.ok(pg_temp.approve((SELECT a FROM ar), pg_temp.req((SELECT u FROM
 SELECT pg_temp.ok(pg_temp.approve((SELECT a FROM ar), pg_temp.req((SELECT w FROM ar)), 'admin') = 'ok'
   AND pg_temp.role_of((SELECT w FROM ar)) = 'admin/active',
   'AR4.2 A admits W as an admin');
-SELECT pg_temp.ok(pg_temp.approve((SELECT o FROM ar), pg_temp.req((SELECT r FROM ar)), 'member') = 'ok'
-  AND pg_temp.role_of((SELECT r FROM ar)) = 'member/active',
-  'AR4.3 a removed former member is reactivated, as before');
+-- 20270202090000: a removed (or suspended) person is NOT reactivated by an
+-- approval, and cannot even file the request: only a platform admin's
+-- update_employer_membership can. This used to be "reactivated, as before" and was
+-- the circumvention of a platform admin's suspension; the full proof is
+-- employer_membership_standing_test.sql.
+CREATE OR REPLACE FUNCTION pg_temp.removed_files_request() RETURNS text LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO public.employer_access_requests (employer_id, requester_user_id, status)
+  VALUES ((SELECT e FROM ar), (SELECT r FROM ar), 'pending');
+  RETURN 'filed';
+EXCEPTION WHEN OTHERS THEN RETURN split_part(SQLERRM, ':', 1);
+END $$;
+SELECT pg_temp.ok(pg_temp.removed_files_request() = 'ACCESS_REQUEST_MEMBERSHIP_BLOCKED'
+  AND pg_temp.role_of((SELECT r FROM ar)) = 'member/removed',
+  'AR4.3 a removed former member can no longer file a request, and stays removed (was: reactivated by the approval)');
 
 -- ── AR5 the platform path is unchanged ──────────────────────────────────
 SELECT pg_temp.ok(pg_temp.approve((SELECT p FROM ar), pg_temp.req((SELECT p FROM ar)), 'owner') = 'ok'

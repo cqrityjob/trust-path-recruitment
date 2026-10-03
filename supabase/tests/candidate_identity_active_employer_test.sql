@@ -45,7 +45,8 @@ $fn$;
 
 -- ── Cast ────────────────────────────────────────────────────────────────
 --   e    the employer under test;  x  an unrelated active employer
---   o    owner of e;  m  plain member of e;  r  authorised reviewer of e
+--   o    owner of e;  m  member of e with a reviewer grant (the basis for reading, since
+--        20270203090000);  r  authorised reviewer of e
 --   p    the participant;  xo  owner of x;  adm  a platform admin
 CREATE TEMP TABLE ci AS SELECT
   'c1d00000-1111-4000-8000-000000000001'::uuid AS e,
@@ -76,7 +77,8 @@ SELECT e, m, 'member', 'active' FROM ci UNION ALL
 SELECT e, r, 'member', 'active' FROM ci UNION ALL
 SELECT x, xo, 'owner', 'active' FROM ci;
 INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
-SELECT e, r, ARRAY['workforce','recruitment']::text[], o FROM ci;
+SELECT e, r, ARRAY['workforce','recruitment']::text[], o FROM ci UNION ALL
+SELECT e, m, ARRAY['workforce','recruitment']::text[], o FROM ci;
 INSERT INTO public.employees (id, employer_id, first_name, last_name, email, employment_status, created_by)
 SELECT emp, e, 'CI', 'Deltagare', 'ci-participant@test.invalid', 'active', o FROM ci;
 INSERT INTO public.scp_fixture_access (employer_id, reason, granted_by)
@@ -238,7 +240,7 @@ DO $$ BEGIN RAISE NOTICE 'GROUP CI-F -- while E is active its members read and w
 SELECT pg_temp.ok((SELECT owner_reads FROM ci_base) = 'identity:1,t|payload:1,t|notes:1|rls_notes:1',
   'CI-F.1 E''s owner resolves the participant, gets the notification payload with the address, and reads the note: ' || (SELECT owner_reads FROM ci_base));
 SELECT pg_temp.ok((SELECT member_reads FROM ci_base) = 'identity:0,f|payload:1,t|notes:1|rls_notes:1',
-  'CI-F.2 a plain member reads the payload and the note, but may not resolve identity (owner/admin only): ' || (SELECT member_reads FROM ci_base));
+  'CI-F.2 a member with a reviewer grant reads the payload and the note, but may not resolve identity (owner/admin only): ' || (SELECT member_reads FROM ci_base));
 SELECT pg_temp.ok((SELECT outsider_reads FROM ci_base) = 'identity:0,f|payload:0,f|notes:0|rls_notes:0',
   'CI-F.3 an unrelated employer''s owner reads nothing');
 SELECT pg_temp.ok(pg_temp.write_as((SELECT o FROM ci), 'note') = 'ok' AND pg_temp.write_as((SELECT o FROM ci), 'delivery') = 'ok',

@@ -65,8 +65,10 @@ INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VAL
   ('0f0c0000-1111-4000-8000-000000000002', '0f0c0000-0000-4000-8000-000000000003', 'owner', 'active'),
   ('0f0c0000-1111-4000-8000-000000000001', '0f0c0000-0000-4000-8000-000000000004', 'member', 'active'),
   ('0f0c0000-1111-4000-8000-000000000001', '0f0c0000-0000-4000-8000-000000000005', 'member', 'suspended'),
-  ('0f0c0000-1111-4000-8000-000000000001', '0f0c0000-0000-4000-8000-000000000006', 'member', 'active'),
-  ('0f0c0000-1111-4000-8000-000000000002', '0f0c0000-0000-4000-8000-000000000006', 'member', 'active'),
+  -- Admin of BOTH employers: this suite writes its attempts without an assignment, so their use case is
+  -- unknown and, since 20270203090000, only an owner or an admin reads them. The plain member (…04) reads nothing.
+  ('0f0c0000-1111-4000-8000-000000000001', '0f0c0000-0000-4000-8000-000000000006', 'admin', 'active'),
+  ('0f0c0000-1111-4000-8000-000000000002', '0f0c0000-0000-4000-8000-000000000006', 'admin', 'active'),
   ('0f0c0000-1111-4000-8000-000000000003', '0f0c0000-0000-4000-8000-000000000007', 'owner', 'active');
 INSERT INTO public.scp_subjects (id) VALUES ('0f0c0000-2222-4000-8000-000000000001');
 INSERT INTO public.scp_subject_identities (subject_id, user_id) VALUES
@@ -149,9 +151,8 @@ SELECT pg_temp.ok((SELECT array_agg(r.module_version_id ORDER BY r.module_versio
                     = (SELECT array_agg(x ORDER BY x) FROM comp, unnest(modules) x WHERE tag = 'A')
                   AND (SELECT bool_and(r.maturity_level = 'limited_evidence') FROM pg_temp.recs_as('0f0c0000-0000-4000-8000-000000000002') r),
   'DR1.2 employer 1 receives every A module, levelled from its own single observation (limited)');
-SELECT pg_temp.ok((SELECT array_agg(r ORDER BY r) FROM pg_temp.recs_as('0f0c0000-0000-4000-8000-000000000004') r)
-                    = (SELECT array_agg(r ORDER BY r) FROM pg_temp.recs_as('0f0c0000-0000-4000-8000-000000000002') r),
-  'DR1.3 a plain member of employer 1 receives exactly what its owner does');
+SELECT pg_temp.ok(NOT EXISTS (SELECT 1 FROM pg_temp.recs_as('0f0c0000-0000-4000-8000-000000000004')),
+  'DR1.3 a plain member of employer 1 (no basis) receives nothing, since 20270203090000; the admin of both employers is asserted in DR3');
 
 -- =========================================================================
 DO $$ BEGIN RAISE NOTICE 'GROUP DR2 — employer 2 sees its own evidence'; END $$;
@@ -180,7 +181,7 @@ SELECT pg_temp.ok((SELECT count(*) FROM pg_temp.recs_as('0f0c0000-0000-4000-8000
   'DR3.1 the participant receives every module, levelled exactly as scp_compute_maturity levels it');
 SELECT pg_temp.ok((SELECT array_agg(r ORDER BY r) FROM pg_temp.recs_as('0f0c0000-0000-4000-8000-000000000006') r)
                     = (SELECT array_agg(r ORDER BY r) FROM pg_temp.recs_as('0f0c0000-0000-4000-8000-000000000001') r),
-  'DR3.2 a member of both employers receives what both employers'' evidence supports');
+  'DR3.2 an admin of both employers receives what both employers'' evidence supports');
 SELECT pg_temp.ok(public.scp_compute_maturity_for_issuers('0f0c0000-2222-4000-8000-000000000001', c.cv, 'v1', now(),
                     ARRAY['0f0c0000-1111-4000-8000-000000000001', '0f0c0000-1111-4000-8000-000000000002']::uuid[])
                   = public.scp_compute_maturity('0f0c0000-2222-4000-8000-000000000001', c.cv, 'v1', now()),

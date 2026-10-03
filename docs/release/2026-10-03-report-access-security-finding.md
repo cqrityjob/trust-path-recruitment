@@ -1,9 +1,13 @@
 # Security finding — who may read assessment reports and interview findings inside an organisation
 
-Status: **reported for decision; no change made.** The shared report-permission logic is
-coordinated with the engineer who owns #384 (sent 2026-10-03). This document is the finding, the
-access matrix as the migration chain defines it today, and a proposed fix for the owner to choose
-from. Evidence is from the migration chain through `20270125090000` and the SQL tests; it was not
+Status: **implemented locally and awaiting the hosted apply (2026-10-03).** The owner chose the
+authorised-readers model; it is specified in `2026-10-03-employer-report-access-design.md` and shipped as
+migrations `20270202090000`, `20270203090000` and `20270204090000` (release notes beside it), all
+`pending` in `supabase/release-state.json`. The text below is the original finding, unchanged: it
+describes the chain BEFORE that change. Original status: reported for decision; no change made. The
+shared report-permission logic is coordinated with the engineer who owns #384 (sent 2026-10-03). This
+document is the finding, the access matrix as the migration chain defined it then, and a proposed fix
+for the owner to choose from. Evidence is from the migration chain through `20270125090000` and the SQL tests; it was not
 exercised against production.
 
 ## 1. Finding

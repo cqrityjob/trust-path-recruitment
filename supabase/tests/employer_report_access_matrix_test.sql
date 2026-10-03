@@ -1,292 +1,65 @@
 -- Employer report ACCESS MATRIX: who can read, release and finalise what, as the
--- database answers it today.
+-- database answers it. Migrations 20270202090000, 20270203090000 and 20270204090000.
 --
--- THIS SUITE DOCUMENTS AND PINS THE CURRENT BEHAVIOUR. It changes nothing and
--- decides nothing. Every assertion below is a fact about the hosted functions and
--- policies as they are on the full migration chain; none of it is a requirement
--- this suite imposes. If one of them is changed on purpose, this is the file
--- that must change with it -- and the assertions tagged MEMBER-WIDE-MODEL are the
--- ones a decision on the security finding below would change.
+-- This suite used to PIN the member-wide model (every active member of an
+-- organisation read every report, case and note; the assertions were tagged
+-- MEMBER-WIDE-MODEL). The owner decided otherwise, and this is the file that
+-- changed with it. Every tag is gone; what is asserted now is the model of
+-- docs/release/2026-10-03-employer-report-access-design.md:
 --
--- ── THE FINDING THIS SUITE IS WRITTEN AROUND ────────────────────────────────
---
--- The employer report is readable by EVERY active member of the commissioning
--- organisation, whatever their role: scp_report_snapshot_readable('employer', ..)
--- is has_active_employer_role(auth.uid(), organisation) with no role list, and
--- scp_employer_report / _v3 / _identity, the scp_report_snapshots_employer policy
--- and the interview-case reads built on scp_iv_can_read_case /
--- has_active_employer_role(.., NULL) all inherit it. A plain member -- and a
--- member who merely holds a reviewer grant -- therefore reads what the owner
--- reads. Whether that is intended is a decision for the owner, who has been sent
--- a separate security finding on member-wide report reads and has not yet decided.
--- Releasing and finalising are different: those are owner/admin only, and are
--- asserted as such.
---
--- If the decision narrows reads to owner/admin (or owner/admin/reviewer), the
--- assertions marked  -- MEMBER-WIDE-MODEL  (RM5.x, and the plain-member and
--- reviewer columns of the matrices in RM4/RM5) change and nothing else does.
+--   an ACTIVE member of an ACTIVE organisation reads the employer-audience material
+--   about a person only if they are NOT its subject and are
+--     R1  owner or admin, or
+--     R2  holders of an active reviewer grant for the USE CASE of the item, or
+--     R3  for a recruitment item, the named responsible recruiter of its VACANCY, or
+--     R4  (an interview case only) its creator or a member of its panel;
+--   an ordinary member with none of these reads NOTHING: no row, no count.
+--   The security-vetting restriction is additive. Release and finalise stay owner/admin.
 --
 -- ── THE MATRIX ──────────────────────────────────────────────────────────────
+--   anon       logged out                                  refused: no execute, no grant
+--   ow / ad    owner and admin of A                        everything; the participant document
+--   gr         member, grant workforce + recruitment       both use cases, every vacancy
+--   gw         member, grant workforce                     workforce items only
+--   gc         member, grant recruitment                   recruitment items only (both vacancies)
+--   r1 / r2    plain members, responsible for V1 / V2      that vacancy's recruitment items only
+--   sm         ADMIN, and the subject of the V1 assessment everything except what is about them
+--   sg         member with both grants, subject of the workforce assessment  likewise
+--   pm         plain member                                NOTHING
+--   cr / pn    plain members: creator / panel of case A    case A only; no report, no list, no count
+--   su, rv, rmm  suspended admin, removed admin, removed member   refused
+--   xo         owner of an unrelated company B             refused
+--   pa         platform admin, NOT a member of A           refused (through the app-level functions)
+--   p, p2      the candidates                              their OWN participant document only
 --
---   anon      logged out                              refused: no execute, no grant
---   ow / ad   owner and admin of A (active org)       read; ow/ad alone read the participant document
---   gr        member of A holding a reviewer grant    reads like a plain member   [MEMBER-WIDE-MODEL]
---   pm        plain member of A                       reads                       [MEMBER-WIDE-MODEL]
---   su        admin of A, SUSPENDED                   refused
---   rv        admin of A, REMOVED                     refused
---   rm        member of A, REMOVED                    refused
---   xo        owner of an unrelated company B         refused
---   pa        platform admin, NOT a member of A       refused (through the app-level report functions)
---   p         the candidate the report is about       reads own participant document only
---   p2        another candidate                       reads own participant document only, nothing of p's
+-- The expectations are explicit lists per principal (who reads which attempt, which
+-- invitation, which case), not a recomputation of the rule, so a regression in the rule
+-- cannot move the expectation with it.
 --
--- Read paths per principal: scp_employer_report, scp_employer_report_v3,
--- scp_employer_report_identity, scp_participant_report, scp_participant_report_for_issuer,
--- scp_report_snapshot_readable (both audiences), the scp_report_snapshots row
--- policies (read through a grant that exists only inside this transaction),
--- scp_iv_can_read_case, scp_interview_cases, scp_interview_case_events,
--- scp_interview_session_notes and scp_interview_notes. Actions: the release
--- (scp_release_attempt_report) and the finalisation of an interview report
--- (scp_iv_finalise_report, scp_iv_finalise_previewed_report).
+-- RM0 reproduces the member-wide model on the PRE-FIX state inside this suite: the real
+-- rollbacks of 20270204090000 and 20270203090000 inside a savepoint.
 --
--- ── HOW AN ACTION IS PROBED ─────────────────────────────────────────────────
---
--- Releasing and finalising check the role FIRST and readiness after. The probes
--- use a sitting still waiting for review and a case that is not ready, so a
--- principal the gate admits is stopped by readiness (SCP_RELEASE_BEFORE_SCORED,
--- SCP_IV_REPORT_BLOCKED) and one it refuses is stopped by the role
--- (SCP_NOT_AUTHORISED_TO_RELEASE, SCP_IV_FINALISE_ROLE). Nothing is written, and
--- one real release by an admin is performed in the fixture to show that the gate
--- admits one.
---
--- ── OFFBOARDING, THE WAY THE ADMIN SCREEN DOES IT ───────────────────────────
---
--- RM10 removes, suspends and restores a member through update_employer_membership
--- as a platform administrator -- the function behind the member controls on
--- /admin/employers/$employerId -- and shows that access follows the status at
--- once, that an owner cannot call it, and that the final-owner refusal still
--- says what the page's error mapping looks for.
---
--- Synthetic principals and data; everything rolls back. auth.uid() resolves from
--- request.jwt.claim.sub.
+-- Synthetic principals and data; everything rolls back.
 
 \set ON_ERROR_STOP on
 SET client_min_messages TO NOTICE;
 
 BEGIN;
 
-CREATE OR REPLACE FUNCTION pg_temp.ok(cond boolean, label text) RETURNS void
-LANGUAGE plpgsql AS $$
-BEGIN
-  IF cond IS DISTINCT FROM true THEN RAISE EXCEPTION 'ASSERTION FAILED: %', label; END IF;
-  RAISE NOTICE 'ok  %', label;
-END $$;
-GRANT EXECUTE ON FUNCTION pg_temp.ok(boolean, text) TO PUBLIC;
+\ir employer_report_access_fixture.sql
 
-CREATE OR REPLACE FUNCTION pg_temp.fixture_rubric_levels(_ivid uuid, _fmt text)
-RETURNS jsonb LANGUAGE sql AS $fn$
-  SELECT CASE WHEN _fmt <> 'constructed_response' THEN NULL ELSE (
-    SELECT jsonb_object_agg(d.dimension_key, CASE WHEN d.assesses_writing_quality THEN 0 ELSE 4 END)
-      FROM public.scp_rubric_dimensions d
-      JOIN public.scp_rubric_versions rv ON rv.id = d.rubric_version_id
-     WHERE rv.item_version_id = _ivid) END;
-$fn$;
-
--- ── Cast ────────────────────────────────────────────────────────────────
-CREATE TEMP TABLE rm AS SELECT
-  'e5a00000-1111-4000-8000-000000000001'::uuid AS e,    -- company A
-  'e5a00000-1111-4000-8000-000000000002'::uuid AS x,    -- company B
-  'e5a00000-0000-4000-8000-000000000001'::uuid AS ow,   -- owner of A
-  'e5a00000-0000-4000-8000-000000000002'::uuid AS ad,   -- admin of A
-  'e5a00000-0000-4000-8000-000000000003'::uuid AS gr,   -- member of A with a reviewer grant
-  'e5a00000-0000-4000-8000-000000000004'::uuid AS pm,   -- plain member of A
-  'e5a00000-0000-4000-8000-000000000005'::uuid AS su,   -- admin of A, suspended
-  'e5a00000-0000-4000-8000-000000000006'::uuid AS rv,   -- admin of A, removed
-  'e5a00000-0000-4000-8000-000000000007'::uuid AS rmm,  -- member of A, removed
-  'e5a00000-0000-4000-8000-000000000008'::uuid AS xo,   -- owner of B
-  'e5a00000-0000-4000-8000-000000000009'::uuid AS pa,   -- platform admin, no membership
-  'e5a00000-0000-4000-8000-00000000000a'::uuid AS p,    -- the candidate
-  'e5a00000-0000-4000-8000-00000000000b'::uuid AS p2,   -- another candidate
-  'e5a00000-2222-4000-8000-000000000001'::uuid AS emp,
-  'e5a00000-2222-4000-8000-000000000002'::uuid AS emp2;
-GRANT SELECT ON rm TO PUBLIC;
-
-INSERT INTO auth.users (id, email)
-SELECT ow,  'rm-owner@test.invalid' FROM rm UNION ALL
-SELECT ad,  'rm-admin@test.invalid' FROM rm UNION ALL
-SELECT gr,  'rm-reviewer@test.invalid' FROM rm UNION ALL
-SELECT pm,  'rm-member@test.invalid' FROM rm UNION ALL
-SELECT su,  'rm-suspended@test.invalid' FROM rm UNION ALL
-SELECT rv,  'rm-removed-admin@test.invalid' FROM rm UNION ALL
-SELECT rmm, 'rm-removed-member@test.invalid' FROM rm UNION ALL
-SELECT xo,  'rm-other-owner@test.invalid' FROM rm UNION ALL
-SELECT pa,  'rm-platform-admin@test.invalid' FROM rm UNION ALL
-SELECT p,   'rm-candidate@test.invalid' FROM rm UNION ALL
-SELECT p2,  'rm-candidate-two@test.invalid' FROM rm;
-INSERT INTO public.user_roles (user_id, role) SELECT pa, 'admin' FROM rm;
-INSERT INTO public.employers (id, name, slug, status)
-SELECT e, 'RM Company A', 'rm-company-a', 'active' FROM rm UNION ALL
-SELECT x, 'RM Company B', 'rm-company-b', 'active' FROM rm;
-INSERT INTO public.employer_memberships (employer_id, user_id, role, status)
-SELECT e, ow,  'owner',  'active' FROM rm UNION ALL
-SELECT e, ad,  'admin',  'active' FROM rm UNION ALL
-SELECT e, gr,  'member', 'active' FROM rm UNION ALL
-SELECT e, pm,  'member', 'active' FROM rm UNION ALL
-SELECT e, su,  'admin',  'active' FROM rm UNION ALL
-SELECT e, rv,  'admin',  'active' FROM rm UNION ALL
-SELECT e, rmm, 'member', 'active' FROM rm UNION ALL
-SELECT x, xo,  'owner',  'active' FROM rm;
-INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
-SELECT e, gr, ARRAY['workforce','recruitment']::text[], ow FROM rm;
-INSERT INTO public.employees (id, employer_id, first_name, last_name, email, employment_status, created_by)
-SELECT emp,  e, 'RM', 'Deltagare', 'rm-candidate@test.invalid', 'active', ow FROM rm UNION ALL
-SELECT emp2, e, 'RM', 'Deltagare Två', 'rm-candidate-two@test.invalid', 'active', ow FROM rm;
-INSERT INTO public.scp_fixture_access (employer_id, reason, granted_by)
-SELECT e, 'Employer report access matrix suite', ow FROM rm;
-
-CREATE TEMP TABLE rmv AS
-SELECT av.id AS version_id, av.definition_id
-  FROM public.scp_assessment_versions av
-  JOIN public.scp_assessment_definitions d ON d.id = av.definition_id
- WHERE d.slug = 'sg-operational-baseline'
- ORDER BY av.version_number DESC LIMIT 1;
-GRANT SELECT ON rmv TO PUBLIC;
-INSERT INTO public.scp_test_grants (employer_id, purpose, definition_id, reason, authorised_by, expires_at)
-SELECT e, 'closed_test'::public.scp_governance_mode, (SELECT definition_id FROM rmv),
-       'Employer report access matrix suite', ow, now() + interval '30 days' FROM rm;
-
--- Offboarding goes through the real function, as a platform administrator: the
--- one the member controls on the admin organisation page call. Used for the
--- fixture here (su, rv, rmm are made what they are by it) and again in RM10.
-CREATE OR REPLACE FUNCTION pg_temp.set_status(_uid uuid, _status text) RETURNS text
-LANGUAGE plpgsql AS $$
-DECLARE _r text;
-BEGIN
-  PERFORM set_config('request.jwt.claim.sub', (SELECT pa FROM rm)::text, true);
-  EXECUTE 'SET LOCAL ROLE authenticated';
-  SELECT u.status INTO _r FROM public.update_employer_membership(
-    (SELECT m.id FROM public.employer_memberships m
-      WHERE m.employer_id = (SELECT e FROM rm) AND m.user_id = _uid), NULL, _status) u;
-  EXECUTE 'RESET ROLE';
-  PERFORM set_config('request.jwt.claim.sub', '', true);
-  RETURN _r;
-END $$;
-
--- One sitting: assigned by the owner to a participant, answered and submitted by
--- them; when _releaser is given, reviewed by the reviewer and released by them.
-CREATE OR REPLACE FUNCTION pg_temp.run_attempt(_pid uuid, _email text, _emp uuid, _releaser uuid) RETURNS uuid
-LANGUAGE plpgsql AS $$
-DECLARE _att uuid; _it record; _rv record;
-BEGIN
-  PERFORM set_config('request.jwt.claim.sub', (SELECT ow FROM rm)::text, true);
-  SELECT attempt_id INTO _att FROM public.scp_employer_assign(
-    (SELECT e FROM rm), (SELECT version_id FROM rmv), _email,
-    NULL, 'sv', 'workforce', _emp, NULL);
-  PERFORM set_config('request.jwt.claim.sub', _pid::text, true);
-  FOR _it IN
-    SELECT iv.id AS ivid, iv.item_format,
-           (SELECT o.id FROM public.scp_item_options o WHERE o.item_version_id = iv.id ORDER BY o.display_order LIMIT 1) AS a,
-           (SELECT o.id FROM public.scp_item_options o WHERE o.item_version_id = iv.id ORDER BY o.display_order DESC LIMIT 1) AS z
-      FROM public.scp_form_items fi
-      JOIN public.scp_item_versions iv ON iv.id = fi.item_version_id
-      JOIN public.scp_attempts at ON at.id = _att AND at.form_id = fi.form_id
-     ORDER BY fi.display_order
-  LOOP
-    IF _it.item_format = 'constructed_response' THEN
-      PERFORM public.scp_save_response(_att, _it.ivid, NULL, NULL, NULL, 'Svar.');
-    ELSIF _it.item_format = 'sjt_best_worst' THEN
-      PERFORM public.scp_save_response(_att, _it.ivid, NULL, _it.a, _it.z, NULL);
-    ELSE
-      PERFORM public.scp_save_response(_att, _it.ivid, _it.a, NULL, NULL, NULL);
-    END IF;
-  END LOOP;
-  PERFORM public.scp_submit_attempt(_att);
-  IF _releaser IS NOT NULL THEN
-    PERFORM set_config('request.jwt.claim.sub', (SELECT gr FROM rm)::text, true);
-    FOR _rv IN
-      SELECT hr.id, iv.is_safety_critical, iv.id AS item_version_id, iv.item_format
-        FROM public.scp_human_reviews hr
-        JOIN public.scp_candidate_responses r ON r.id = hr.response_id
-        JOIN public.scp_item_versions iv ON iv.id = r.item_version_id
-       WHERE r.attempt_id = _att AND hr.review_status = 'pending'
-    LOOP
-      PERFORM public.scp_complete_human_review(_rv.id, 'upheld', 'Inom mandatet.',
-        CASE WHEN _rv.is_safety_critical THEN 'no_concern' END,
-        pg_temp.fixture_rubric_levels(_rv.item_version_id, _rv.item_format));
-    END LOOP;
-    PERFORM set_config('request.jwt.claim.sub', _releaser::text, true);
-    PERFORM public.scp_release_attempt_report(_att);
-  END IF;
-  PERFORM set_config('request.jwt.claim.sub', '', true);
-  RETURN _att;
-END $$;
-
--- R1  p's sitting, released by the OWNER.        W   p's sitting, waiting for review.
--- R2  p's sitting, released by an ADMIN.         R3  p2's own sitting, released by the owner.
-CREATE TEMP TABLE rma AS SELECT
-  pg_temp.run_attempt((SELECT p FROM rm), 'rm-candidate@test.invalid', (SELECT emp FROM rm), (SELECT ow FROM rm)) AS r1,
-  NULL::uuid AS w, NULL::uuid AS r2, NULL::uuid AS r3;
-UPDATE rma SET w  = pg_temp.run_attempt((SELECT p FROM rm), 'rm-candidate@test.invalid', (SELECT emp FROM rm), NULL);
-UPDATE rma SET r2 = pg_temp.run_attempt((SELECT p FROM rm), 'rm-candidate@test.invalid', (SELECT emp FROM rm), (SELECT ad FROM rm));
-UPDATE rma SET r3 = pg_temp.run_attempt((SELECT p2 FROM rm), 'rm-candidate-two@test.invalid', (SELECT emp2 FROM rm), (SELECT ow FROM rm));
-GRANT SELECT ON rma TO PUBLIC;
-CREATE TEMP TABLE rms AS SELECT
-  (SELECT subject_id FROM public.scp_attempts WHERE id = (SELECT r1 FROM rma)) AS s1;
-GRANT SELECT ON rms TO PUBLIC;
-
--- An interview case on the openly available pack, built through the governed
--- functions as the product builds one, with a session note written under row
--- level security as the owner. Plus an attempt-level interview note.
-CREATE TEMP TABLE rmc (kase uuid, sess uuid);
-DO $$
-DECLARE _packv uuid; _case uuid; _plan uuid; _sess uuid; _q uuid;
-  _o uuid := (SELECT ow FROM rm); _e uuid := (SELECT e FROM rm);
-BEGIN
-  SELECT ver.id INTO _packv FROM public.scp_interview_pack_versions ver
-    JOIN public.scp_interview_packs pk ON pk.id = ver.pack_id
-   WHERE pk.slug = 'vaktare-se' AND ver.pilot_availability = 'open' LIMIT 1;
-  SET LOCAL ROLE authenticated;
-  PERFORM set_config('request.jwt.claim.sub', _o::text, true);
-  _case := public.scp_iv_create_case(_e, 'RM-fall', _packv, 'Kandidat RM.', NULL, 'EXT-RM-1');
-  PERFORM public.scp_iv_add_source(_case, 'job_description', 'Annons',
-    E'Väktare, stationär bevakning.', 'recruitment_interview', 'Berättigat intresse.');
-  PERFORM public.scp_iv_mark_sources_ready(_case);
-  _plan := public.scp_iv_record_manual_prep_plan(_case, '60 min', 'Inledning', 'Avslut');
-  PERFORM public.scp_iv_approve_prep_plan(_plan, 'Godkänd.');
-  _sess := public.scp_iv_start_session(_case, 'Intervju 1');
-  SELECT id INTO _q FROM public.scp_interview_core_questions
-   WHERE pack_version_id = _packv ORDER BY display_order LIMIT 1;
-  INSERT INTO public.scp_interview_session_notes (session_id, question_id, note_kind, body, author_id)
-  VALUES (_sess, _q, 'observation', 'RM:s konfidentiella anteckning.', _o);
-  RESET ROLE;
-  PERFORM set_config('request.jwt.claim.sub', '', true);
-  INSERT INTO rmc VALUES (_case, _sess);
-  INSERT INTO public.scp_interview_notes (attempt_id, employer_id, area_code, outcome, note, recorded_by)
-  VALUES ((SELECT r1 FROM rma), _e, 'situational_judgement', 'additional_context', 'RM-anteckning.', _o);
-END $$;
-GRANT SELECT ON rmc TO PUBLIC;
-
--- The snapshot table has no client grant -- its policies are reached through
--- scp_report_snapshot_readable and the report functions. To exercise the POLICIES
--- themselves as each principal, authenticated is given SELECT here, inside this
--- transaction; the final ROLLBACK takes it back. The first assertion in RM11
--- proves it was absent before.
-CREATE TEMP TABLE rm_before AS SELECT
-  has_table_privilege('authenticated', 'public.scp_report_snapshots', 'SELECT') AS auth_select,
-  has_table_privilege('anon', 'public.scp_report_snapshots', 'SELECT') AS anon_select;
-GRANT SELECT ON rm_before TO PUBLIC;
-GRANT SELECT ON public.scp_report_snapshots TO authenticated;
-
--- A read that raises insufficient_privilege (no EXECUTE, no table grant) is -1;
--- anything else is 0 or 1 (a count is "any row").
+-- ── What a principal reads ───────────────────────────────────────────────
+-- A read that raises insufficient_privilege (no EXECUTE, no table grant) is -1,
+-- a function that does not exist is -2, anything else is the number of rows.
 CREATE OR REPLACE FUNCTION pg_temp.cnt(_sql text) RETURNS int
 LANGUAGE plpgsql AS $$
 DECLARE _n int;
 BEGIN
   EXECUTE _sql INTO _n;
-  RETURN CASE WHEN _n > 0 THEN 1 ELSE 0 END;
-EXCEPTION WHEN insufficient_privilege THEN
-  RETURN -1;
+  RETURN coalesce(_n, 0);
+EXCEPTION
+  WHEN insufficient_privilege THEN RETURN -1;
+  WHEN undefined_function THEN RETURN -2;
 END $$;
 GRANT EXECUTE ON FUNCTION pg_temp.cnt(text) TO PUBLIC;
 
@@ -296,31 +69,86 @@ CREATE OR REPLACE FUNCTION pg_temp.reads_as(_uid uuid) RETURNS jsonb
 LANGUAGE plpgsql AS $$
 DECLARE
   _e uuid := (SELECT e FROM rm);
-  _r1 uuid := (SELECT r1 FROM rma);
-  _r3 uuid := (SELECT r3 FROM rma);
-  _s1 uuid := (SELECT s1 FROM rms);
-  _case uuid := (SELECT kase FROM rmc);
-  _sess uuid := (SELECT sess FROM rmc);
+  _a record; _s record; _c record;
   _q jsonb := '{}'::jsonb;
 BEGIN
+  SELECT * INTO _a FROM rma; SELECT * INTO _s FROM rms; SELECT * INTO _c FROM rmc;
   PERFORM set_config('request.jwt.claim.sub', coalesce(_uid::text, ''), true);
   EXECUTE CASE WHEN _uid IS NULL THEN 'SET LOCAL ROLE anon' ELSE 'SET LOCAL ROLE authenticated' END;
   _q := jsonb_build_object(
-    'employer_report',               pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report(%L)', _r1)),
-    'employer_report_v3',            pg_temp.cnt(format('SELECT (public.scp_employer_report_v3(%L) IS NOT NULL)::int', _r1)),
-    'report_identity',               pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report_identity(%L)', _r1)),
-    'participant_report_for_issuer', pg_temp.cnt(format('SELECT count(*) FROM public.scp_participant_report_for_issuer(%L)', _r1)),
-    'participant_report_own',        pg_temp.cnt(format('SELECT count(*) FROM public.scp_participant_report(%L)', _r1)),
-    'participant_report_other',      pg_temp.cnt(format('SELECT count(*) FROM public.scp_participant_report(%L)', _r3)),
-    'readable_employer',             pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L)::int', 'employer', _s1, _e)),
-    'readable_participant',          pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L)::int', 'participant', _s1, _e)),
-    'snapshot_policy_employer',      pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _r1, 'employer')),
-    'snapshot_policy_participant',   pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _r1, 'participant')),
-    'case_readable',                 pg_temp.cnt(format('SELECT public.scp_iv_can_read_case(%L)::int', _case)),
-    'case_row',                      pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_cases WHERE id = %L', _case)),
-    'case_events',                   pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_case_events WHERE case_id = %L', _case)),
-    'session_notes',                 pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_session_notes WHERE session_id = %L', _sess)),
-    'attempt_notes',                 pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_notes WHERE attempt_id = %L', _r1)));
+    -- the document, through the audience contract (one key per attempt)
+    'report_r1',  pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report(%L)', _a.r1)),
+    'report_ws',  pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report(%L)', _a.ws)),
+    'report_v1',  pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report(%L)', _a.v1)),
+    'report_vs',  pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report(%L)', _a.vs)),
+    'report_v2',  pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report(%L)', _a.v2)),
+    'v3_r1',      pg_temp.cnt(format('SELECT (public.scp_employer_report_v3(%L) IS NOT NULL)::int', _a.r1)),
+    'v3_v1',      pg_temp.cnt(format('SELECT (public.scp_employer_report_v3(%L) IS NOT NULL)::int', _a.v1)),
+    'identity_r1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report_identity(%L)', _a.r1)),
+    'identity_v1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report_identity(%L)', _a.v1)),
+    'participant_for_issuer_r1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_participant_report_for_issuer(%L)', _a.r1)),
+    'participant_own_r1',   pg_temp.cnt(format('SELECT count(*) FROM public.scp_participant_report(%L)', _a.r1)),
+    'participant_other_r3', pg_temp.cnt(format('SELECT count(*) FROM public.scp_participant_report(%L)', _a.r3)),
+    -- the audience rule and the snapshot row policies
+    'readable_r1', pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L, %L)::int', 'employer', _s.s1, _e, _a.r1)),
+    'readable_ws', pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L, %L)::int', 'employer', _s.sws, _e, _a.ws)),
+    'readable_v1', pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L, %L)::int', 'employer', _s.sv1, _e, _a.v1)),
+    'readable_vs', pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L, %L)::int', 'employer', _s.svs, _e, _a.vs)),
+    'readable_v2', pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L, %L)::int', 'employer', _s.sv2, _e, _a.v2)),
+    'readable_unscoped_r1', pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L)::int', 'employer', _s.s1, _e)),
+    'readable_participant_r1', pg_temp.cnt(format('SELECT public.scp_report_snapshot_readable(%L, %L, %L)::int', 'participant', _s.s1, _e)),
+    'policy_r1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _a.r1, 'employer')),
+    'policy_ws', pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _a.ws, 'employer')),
+    'policy_v1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _a.v1, 'employer')),
+    'policy_vs', pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _a.vs, 'employer')),
+    'policy_v2', pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _a.v2, 'employer')),
+    'policy_participant_r1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = %L AND audience = %L', _a.r1, 'participant')));
+  _q := _q || jsonb_build_object(
+    -- decisions and attempt-level notes: functions and tables
+    'decisions_r1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_decisions(%L)', _a.r1)),
+    'decisions_v1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_decisions(%L)', _a.v1)),
+    'decisions_v2', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_decisions(%L)', _a.v2)),
+    'rls_decisions', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_report_decisions WHERE employer_id = %L', _e)),
+    'notes_r1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_notes(%L)', _a.r1)),
+    'notes_v1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_notes(%L)', _a.v1)),
+    'notes_v2', pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_notes(%L)', _a.v2)),
+    'rls_notes', pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_notes WHERE employer_id = %L', _e)),
+    -- the lists
+    'participants', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_participants(%L)', _e)),
+    'pipeline', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_assessment_pipeline(%L)', _e)),
+    'person_assessments_v1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_person_overview(%L, %L) WHERE row_kind = %L', _e, _s.sv1, 'assessment')),
+    'person_notes_v1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_person_overview(%L, %L) WHERE row_kind = %L', _e, _s.sv1, 'interview_note')),
+    'person_applications_v1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_person_overview(%L, %L) WHERE row_kind = %L', _e, _s.sv1, 'application')),
+    'application_assessments_ap1', pg_temp.cnt(format('SELECT count(*) FROM public.scp_application_assessments(%L)', (SELECT ap1 FROM rm))),
+    'invitations', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_invitations(%L)', _e)),
+    'rls_invitations', pg_temp.cnt(format('SELECT count(*) FROM public.scp_assessment_invitations WHERE employer_id = %L', _e)),
+    'rls_assignments', pg_temp.cnt(format('SELECT count(*) FROM public.assessment_assignments WHERE employer_id = %L', _e)),
+    -- the counts
+    'review_blocked', pg_temp.cnt(format('SELECT coalesce(max(attempts_blocked), 0) FROM public.scp_employer_review_pressure(%L)', _e)),
+    'review_awaiting_any', pg_temp.cnt(format('SELECT (coalesce(max(awaiting_review), 0) > 0)::int FROM public.scp_employer_review_pressure(%L)', _e)),
+    'review_board', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_review_board(%L)', _e)),
+    -- progress and recommendations of a person
+    'progress_r1', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_subject_progress(%L)', _s.s1)),
+    'progress_v1', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_subject_progress(%L)', _s.sv1)),
+    'progress_vs', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_subject_progress(%L)', _s.svs)),
+    'progress_ws', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_subject_progress(%L)', _s.sws)),
+    'recommendations_r1', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_development_recommendations(%L)', _s.s1)),
+    -- workforce training
+    'training', pg_temp.cnt(format('SELECT count(*) FROM public.scp_employer_training_status(%L)', _e)),
+    'rls_training', pg_temp.cnt(format('SELECT count(*) FROM public.scp_training_assignments WHERE employer_id = %L', _e)),
+    'rls_training_progress', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_training_module_progress tp JOIN public.scp_training_assignments ta ON ta.id = tp.assignment_id WHERE ta.employer_id = %L', _e)),
+    -- interview cases
+    'case_readable_c0', pg_temp.cnt(format('SELECT public.scp_iv_can_read_case(%L)::int', _c.kase)),
+    'case_readable_cA', pg_temp.cnt(format('SELECT public.scp_iv_can_read_case(%L)::int', _c.case_a)),
+    'case_readable_cB', pg_temp.cnt(format('SELECT public.scp_iv_can_read_case(%L)::int', _c.case_b)),
+    'case_writable_c0', pg_temp.cnt(format('SELECT public.scp_iv_can_write_case(%L)::int', _c.kase)),
+    'case_writable_cA', pg_temp.cnt(format('SELECT public.scp_iv_can_write_case(%L)::int', _c.case_a)),
+    'case_writable_cB', pg_temp.cnt(format('SELECT public.scp_iv_can_write_case(%L)::int', _c.case_b)),
+    'case_rows', pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_cases WHERE employer_id = %L', _e)),
+    'case_events_cA', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_interview_case_events WHERE case_id = %L', _c.case_a)),
+    'case_events_c0', pg_temp.cnt(format('SELECT (count(*) > 0)::int FROM public.scp_interview_case_events WHERE case_id = %L', _c.kase)),
+    'session_notes_cA', pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_session_notes WHERE session_id = %L', _c.sess_a)),
+    'session_notes_c0', pg_temp.cnt(format('SELECT count(*) FROM public.scp_interview_session_notes WHERE session_id = %L', _c.sess)));
   EXECUTE 'RESET ROLE';
   PERFORM set_config('request.jwt.claim.sub', '', true);
   RETURN _q;
@@ -354,51 +182,151 @@ BEGIN
   RETURN _r;
 END $$;
 
--- ── The expected answers, as data ────────────────────────────────────────
--- 1 = reads / allowed, 0 = reads nothing, -1 = refused outright (no execute / no grant).
-CREATE TEMP TABLE rmx AS SELECT
-  -- ow, ad: everything of A's, and the participant document through the issuer-admin read
-  jsonb_build_object('employer_report',1,'employer_report_v3',1,'report_identity',1,
-    'participant_report_for_issuer',1,'participant_report_own',0,'participant_report_other',0,
-    'readable_employer',1,'readable_participant',0,'snapshot_policy_employer',1,'snapshot_policy_participant',0,
-    'case_readable',1,'case_row',1,'case_events',1,'session_notes',1,'attempt_notes',1) AS owner_admin,
-  -- gr, pm: the same, except the issuer-admin participant document.   MEMBER-WIDE-MODEL
-  jsonb_build_object('employer_report',1,'employer_report_v3',1,'report_identity',1,
-    'participant_report_for_issuer',0,'participant_report_own',0,'participant_report_other',0,
-    'readable_employer',1,'readable_participant',0,'snapshot_policy_employer',1,'snapshot_policy_participant',0,
-    'case_readable',1,'case_row',1,'case_events',1,'session_notes',1,'attempt_notes',1) AS member_wide,
-  -- su, rv, rmm, xo, pa, p2 (about p's report), anyone who is not on the case: nothing
-  jsonb_build_object('employer_report',0,'employer_report_v3',0,'report_identity',0,
-    'participant_report_for_issuer',0,'participant_report_own',0,'participant_report_other',0,
-    'readable_employer',0,'readable_participant',0,'snapshot_policy_employer',0,'snapshot_policy_participant',0,
-    'case_readable',0,'case_row',0,'case_events',0,'session_notes',0,'attempt_notes',0) AS nothing,
-  -- logged out: refused before any row is looked at
-  jsonb_build_object('employer_report',-1,'employer_report_v3',-1,'report_identity',-1,
-    'participant_report_for_issuer',-1,'participant_report_own',-1,'participant_report_other',-1,
-    'readable_employer',-1,'readable_participant',-1,'snapshot_policy_employer',-1,'snapshot_policy_participant',-1,
-    'case_readable',-1,'case_row',-1,'case_events',-1,'session_notes',-1,'attempt_notes',-1) AS anon_refused;
-GRANT SELECT ON rmx TO PUBLIC;
+-- ── The expected answers, as explicit lists per principal ────────────────
+-- atts: the attempts whose material they may read.  invs: the invitations (wf = the
+-- workforce one, v1, v2).  train: workforce training.  cases: c0, cA, cB.
+-- iss: owner or admin (the issuer-admin reads).  member: an active member of A.
+-- own: the attempts the person is THE SUBJECT/RECIPIENT of (their participant branch).
+CREATE TEMP TABLE rmscope (who text PRIMARY KEY, uid uuid, atts text[], invs text[], train boolean,
+                           cases text[], iss boolean, member boolean, own text[] DEFAULT ARRAY[]::text[]);
+INSERT INTO rmscope
+SELECT 'ow', ow, ARRAY['r1','w','r2','r3','ws','v1','vs','v2','v2w'], ARRAY['wf','v1','v2'], true, ARRAY['c0','cA','cB'], true, true FROM rm UNION ALL
+SELECT 'ad', ad, ARRAY['r1','w','r2','r3','ws','v1','vs','v2','v2w'], ARRAY['wf','v1','v2'], true, ARRAY['c0','cA','cB'], true, true FROM rm UNION ALL
+SELECT 'gr', gr, ARRAY['r1','w','r2','r3','ws','v1','vs','v2','v2w'], ARRAY['wf','v1','v2'], true, ARRAY['c0','cA','cB'], false, true FROM rm UNION ALL
+SELECT 'gw', gw, ARRAY['r1','w','r2','r3','ws'], ARRAY['wf'], true, ARRAY[]::text[], false, true FROM rm UNION ALL
+SELECT 'gc', gc, ARRAY['v1','vs','v2','v2w'], ARRAY['v1','v2'], false, ARRAY['c0','cA','cB'], false, true FROM rm UNION ALL
+SELECT 'r1', r1, ARRAY['v1','vs'], ARRAY['v1'], false, ARRAY['cA','cB'], false, true FROM rm UNION ALL
+SELECT 'r2', r2, ARRAY['v2','v2w'], ARRAY['v2'], false, ARRAY[]::text[], false, true FROM rm UNION ALL
+SELECT 'sm', sm, ARRAY['r1','w','r2','r3','ws','v1','v2','v2w'], ARRAY['wf','v1','v2'], true, ARRAY['c0','cA'], true, true FROM rm UNION ALL
+SELECT 'sg', sg, ARRAY['r1','w','r2','r3','v1','vs','v2','v2w'], ARRAY['wf','v1','v2'], true, ARRAY['c0','cA','cB'], false, true FROM rm UNION ALL
+SELECT 'pm', pm, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, true FROM rm UNION ALL
+SELECT 'cr', cr, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY['cA'], false, true FROM rm UNION ALL
+SELECT 'pn', pn, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY['cA'], false, true FROM rm UNION ALL
+SELECT 'su', su, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm UNION ALL
+SELECT 'rv', rv, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm UNION ALL
+SELECT 'rmm', rmm, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm UNION ALL
+SELECT 'xo', xo, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm UNION ALL
+SELECT 'pa', pa, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm UNION ALL
+SELECT 'p', p, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm UNION ALL
+SELECT 'p2', p2, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm UNION ALL
+SELECT 'c1', c1, ARRAY[]::text[], ARRAY[]::text[], false, ARRAY[]::text[], false, false FROM rm;
+UPDATE rmscope SET own = ARRAY['r1','w','r2'] WHERE who = 'p';
+UPDATE rmscope SET own = ARRAY['r3'] WHERE who = 'p2';
+UPDATE rmscope SET own = ARRAY['ws'] WHERE who = 'sg';
+UPDATE rmscope SET own = ARRAY['vs'] WHERE who = 'sm';
+UPDATE rmscope SET own = ARRAY['v1'] WHERE who = 'c1';
+GRANT SELECT ON rmscope TO PUBLIC;
 
--- The two principals who are not employer staff but ARE in the report.
--- p: the subject of R1 -> own participant document only. p2: subject of R3.
-CREATE TEMP TABLE rmx_p AS SELECT
-  (SELECT nothing FROM rmx) || jsonb_build_object('participant_report_own',1,'readable_participant',1,'snapshot_policy_participant',1) AS subject_of_r1_reads_own,
-  (SELECT nothing FROM rmx) || jsonb_build_object('participant_report_other',1) AS subject_of_r3_reads_own;
-GRANT SELECT ON rmx_p TO PUBLIC;
+-- The reads the model predicts for one principal. The owner's own value is used only for
+-- the three "is there anything to read at all" reads whose size depends on the content.
+CREATE OR REPLACE FUNCTION pg_temp.expected(_who text) RETURNS jsonb
+LANGUAGE plpgsql AS $$
+DECLARE _x rmscope%ROWTYPE; _q jsonb;
+BEGIN
+  SELECT * INTO _x FROM rmscope WHERE who = _who;
+  _q := jsonb_build_object(
+    'report_r1', (_x.atts @> ARRAY['r1'])::int, 'report_ws', (_x.atts @> ARRAY['ws'])::int,
+    'report_v1', (_x.atts @> ARRAY['v1'])::int, 'report_vs', (_x.atts @> ARRAY['vs'])::int,
+    'report_v2', (_x.atts @> ARRAY['v2'])::int,
+    'v3_r1', (_x.atts @> ARRAY['r1'])::int, 'v3_v1', (_x.atts @> ARRAY['v1'])::int,
+    'identity_r1', (_x.atts @> ARRAY['r1'])::int, 'identity_v1', (_x.atts @> ARRAY['v1'])::int,
+    'participant_for_issuer_r1', _x.iss::int,
+    'participant_own_r1', (_who = 'p')::int, 'participant_other_r3', (_who = 'p2')::int,
+    'readable_r1', (_x.atts @> ARRAY['r1'])::int, 'readable_ws', (_x.atts @> ARRAY['ws'])::int,
+    'readable_v1', (_x.atts @> ARRAY['v1'])::int, 'readable_vs', (_x.atts @> ARRAY['vs'])::int,
+    'readable_v2', (_x.atts @> ARRAY['v2'])::int,
+    -- no attempt named: the use case is unknown, so owner/admin only (and never the subject)
+    'readable_unscoped_r1', _x.iss::int,
+    'readable_participant_r1', (_who = 'p')::int,
+    'policy_r1', (_x.atts @> ARRAY['r1'])::int, 'policy_ws', (_x.atts @> ARRAY['ws'])::int,
+    'policy_v1', (_x.atts @> ARRAY['v1'])::int, 'policy_vs', (_x.atts @> ARRAY['vs'])::int,
+    'policy_v2', (_x.atts @> ARRAY['v2'])::int,
+    'policy_participant_r1', (_who = 'p')::int);
+  _q := _q || jsonb_build_object(
+    'decisions_r1', (_x.atts @> ARRAY['r1'])::int, 'decisions_v1', (_x.atts @> ARRAY['v1'])::int,
+    'decisions_v2', (_x.atts @> ARRAY['v2'])::int,
+    'rls_decisions', (SELECT count(*) FROM unnest(_x.atts) a WHERE a IN ('r1','v1','v2')),
+    'notes_r1', (_x.atts @> ARRAY['r1'])::int, 'notes_v1', (_x.atts @> ARRAY['v1'])::int,
+    'notes_v2', (_x.atts @> ARRAY['v2'])::int,
+    'rls_notes', (SELECT count(*) FROM unnest(_x.atts) a WHERE a IN ('r1','v1','v2')),
+    'participants', cardinality(_x.atts), 'pipeline', cardinality(_x.atts),
+    'person_assessments_v1', (_x.atts @> ARRAY['v1'])::int,
+    'person_notes_v1', (_x.atts @> ARRAY['v1'])::int,
+    -- the application rows belong to the recruitment pipeline (rec_* model): any active member
+    'person_applications_v1', _x.member::int,
+    'application_assessments_ap1', (_x.atts @> ARRAY['v1'])::int,
+    'invitations', cardinality(_x.invs), 'rls_invitations', cardinality(_x.invs),
+    -- the recipient of an assignment also reads their own row (assignments_recipient_select_own)
+    -- (and a platform admin reads the table through assignments_admin_select, unchanged)
+    'rls_assignments', CASE WHEN _who = 'pa' THEN 9 ELSE (SELECT count(DISTINCT a) FROM unnest(_x.atts || _x.own) a) END,
+    'review_blocked', (SELECT count(*) FROM unnest(_x.atts) a WHERE a IN ('w','v2w')),
+    'review_awaiting_any', (SELECT (count(*) > 0)::int FROM unnest(_x.atts) a WHERE a IN ('w','v2w')),
+    'review_board', (SELECT count(*) FROM unnest(_x.atts) a WHERE a IN ('w','v2w')),
+    -- the released attempts of a subject: every one of them must be readable
+    -- (a subject keeps their participant branch: their own progress and recommendations)
+    'progress_r1', ((_x.atts @> ARRAY['r1']) OR (_x.own @> ARRAY['r1']))::int,
+    'progress_v1', ((_x.atts @> ARRAY['v1']) OR (_x.own @> ARRAY['v1']))::int,
+    'progress_vs', ((_x.atts @> ARRAY['vs']) OR (_x.own @> ARRAY['vs']))::int,
+    'progress_ws', ((_x.atts @> ARRAY['ws']) OR (_x.own @> ARRAY['ws']))::int,
+    'recommendations_r1', CASE WHEN _x.atts @> ARRAY['r1','r2'] OR _x.own @> ARRAY['r1'] THEN
+        (SELECT (pg_temp.reads_as_cached('ow') ->> 'recommendations_r1')::int) ELSE 0 END,
+    'training', _x.train::int, 'rls_training', (_x.train OR _who = 'p')::int,
+    'rls_training_progress', CASE WHEN _x.train OR _who = 'p'
+        THEN (SELECT (pg_temp.reads_as_cached('ow') ->> 'rls_training_progress')::int) ELSE 0 END,
+    'case_readable_c0', (_x.cases @> ARRAY['c0'])::int, 'case_readable_cA', (_x.cases @> ARRAY['cA'])::int,
+    'case_readable_cB', (_x.cases @> ARRAY['cB'])::int,
+    'case_writable_c0', (_x.cases @> ARRAY['c0'])::int, 'case_writable_cA', (_x.cases @> ARRAY['cA'])::int,
+    'case_writable_cB', (_x.cases @> ARRAY['cB'])::int,
+    'case_rows', cardinality(_x.cases),
+    'case_events_cA', (_x.cases @> ARRAY['cA'])::int, 'case_events_c0', (_x.cases @> ARRAY['c0'])::int,
+    'session_notes_cA', (_x.cases @> ARRAY['cA'])::int, 'session_notes_c0', (_x.cases @> ARRAY['c0'])::int);
+  RETURN _q;
+END $$;
+GRANT EXECUTE ON FUNCTION pg_temp.expected(text) TO PUBLIC;
+
+-- The owner's reads, computed once (the size of recommendations and training progress depends on content).
+CREATE TEMP TABLE rm_cache (who text PRIMARY KEY, reads jsonb);
+CREATE OR REPLACE FUNCTION pg_temp.reads_as_cached(_who text) RETURNS jsonb LANGUAGE sql AS $$
+  SELECT reads FROM rm_cache WHERE who = _who;
+$$;
+INSERT INTO rm_cache SELECT 'ow', pg_temp.reads_as((SELECT ow FROM rm));
+
+-- What differs, as text, so a failure names the read that leaked.
+CREATE OR REPLACE FUNCTION pg_temp.diff(_got jsonb, _want jsonb) RETURNS text
+LANGUAGE sql AS $$
+  SELECT coalesce(string_agg(k || ' got ' || coalesce(g.value::text, '-') || ' want ' || coalesce(w.value::text, '-'), '; ' ORDER BY k), '')
+    FROM (SELECT jsonb_object_keys(_got) AS k UNION SELECT jsonb_object_keys(_want)) keys
+    LEFT JOIN LATERAL (SELECT value FROM jsonb_each(_got) WHERE key = k) g ON true
+    LEFT JOIN LATERAL (SELECT value FROM jsonb_each(_want) WHERE key = k) w ON true
+   WHERE g.value IS DISTINCT FROM w.value;
+$$;
+CREATE OR REPLACE FUNCTION pg_temp.reads_ok(_who text) RETURNS boolean LANGUAGE sql AS $$
+  SELECT pg_temp.reads_as((SELECT uid FROM rmscope WHERE who = _who)) = pg_temp.expected(_who);
+$$;
+CREATE OR REPLACE FUNCTION pg_temp.reads_diff(_who text) RETURNS text LANGUAGE sql AS $$
+  SELECT pg_temp.diff(pg_temp.reads_as((SELECT uid FROM rmscope WHERE who = _who)), pg_temp.expected(_who));
+$$;
+-- Zero everywhere. An active MEMBER still sees the application rows of a person in the
+-- person overview: they belong to the recruitment pipeline (rec_* model), not to the
+-- report model, and are deliberately unchanged.
+CREATE OR REPLACE FUNCTION pg_temp.nothing(_member boolean DEFAULT false) RETURNS jsonb LANGUAGE sql AS $$
+  SELECT jsonb_object_agg(k, CASE WHEN _member AND k = 'person_applications_v1' THEN 1 ELSE 0 END)
+    FROM jsonb_object_keys(pg_temp.reads_as_cached('ow')) k;
+$$;
 
 -- ── Offboard through the real function (as the admin screen does) ─────────
 SELECT pg_temp.set_status((SELECT su  FROM rm), 'suspended');
 SELECT pg_temp.set_status((SELECT rv  FROM rm), 'removed');
 SELECT pg_temp.set_status((SELECT rmm FROM rm), 'removed');
 
-DO $$ BEGIN RAISE NOTICE 'GROUP RM-F -- the fixture: three released reports, one waiting, one case, offboarded members'; END $$;
+DO $$ BEGIN RAISE NOTICE 'GROUP RM-F -- the fixture: released reports for two use cases and two vacancies, three cases, offboarded members'; END $$;
 SELECT pg_temp.ok(
-  (SELECT count(*) FROM public.scp_attempts WHERE id IN (SELECT r1 FROM rma UNION SELECT r2 FROM rma UNION SELECT r3 FROM rma) AND released_at IS NOT NULL) = 3
-  AND (SELECT released_at IS NULL FROM public.scp_attempts WHERE id = (SELECT w FROM rma)),
-  'RM-F.1 R1 (owner), R2 (admin) and R3 are released; W is still waiting for review');
+  (SELECT count(*) FROM public.scp_attempts WHERE released_at IS NOT NULL AND issuer_organization_id = (SELECT e FROM rm)) = 7
+  AND (SELECT count(*) FROM public.scp_attempts WHERE issuer_organization_id = (SELECT e FROM rm) AND released_at IS NULL) = 2,
+  'RM-F.1 seven attempts are released (workforce r1 r2 r3 ws, recruitment v1 vs v2); two are waiting for review (w, v2w)');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM public.scp_report_snapshots WHERE attempt_id = (SELECT r2 FROM rma) AND audience = 'employer') = 1,
-  'RM-F.2 an ADMIN released R2: the release gate admits an admin (the employer document exists)');
+  'RM-F.2 an ADMIN released r2: the release gate admits an admin (the employer document exists)');
 SELECT pg_temp.ok(
   (SELECT string_agg(user_id::text || ':' || status, ',' ORDER BY user_id) FROM public.employer_memberships
     WHERE employer_id = (SELECT e FROM rm) AND user_id IN (SELECT su FROM rm UNION SELECT rv FROM rm UNION SELECT rmm FROM rm))
@@ -406,11 +334,57 @@ SELECT pg_temp.ok(
   'RM-F.3 su is suspended, rv and rmm are removed -- by update_employer_membership, as a platform administrator');
 SELECT pg_temp.ok((SELECT NOT auth_select AND NOT anon_select FROM rm_before),
   'RM-F.4 before this suite granted it, neither authenticated nor anon could SELECT scp_report_snapshots');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_interview_cases WHERE employer_id = (SELECT e FROM rm)) = 3
+  AND (SELECT created_by FROM public.scp_interview_cases WHERE id = (SELECT case_a FROM rmc)) = (SELECT cr FROM rm)
+  AND EXISTS (SELECT 1 FROM public.scp_interview_panels p JOIN public.scp_interview_panel_members pm ON pm.panel_id = p.id
+               WHERE p.case_id = (SELECT case_a FROM rmc) AND pm.user_id = (SELECT pn FROM rm)),
+  'RM-F.5 three cases; case A was opened by a plain member (cr) and has a panel with pn on it');
+SELECT pg_temp.ok(
+  (SELECT (reads ->> 'participants')::int = 9 AND (reads ->> 'invitations')::int = 3
+          AND (reads ->> 'recommendations_r1')::int = 1 AND (reads ->> 'rls_training_progress')::int = 1
+          AND (reads ->> 'case_rows')::int = 3
+     FROM rm_cache WHERE who = 'ow'),
+  'RM-F.6 the owner reads nine attempts, three invitations, three cases, recommendations and training progress: the fixture has something to withhold');
+
+-- ── RM0 · reproduction on the pre-fix state ──────────────────────────────
+DO $$ BEGIN RAISE NOTICE 'GROUP RM0 -- reproduction: on the pre-fix state a plain member reads everything'; END $$;
+SAVEPOINT before_fix;
+\ir ../rollback/20270204090000_interview_case_access_model_rollback.sql
+\ir ../rollback/20270203090000_employer_report_access_model_rollback.sql
+CREATE TEMP TABLE rm0 AS SELECT pg_temp.reads_as((SELECT pm FROM rm)) AS pm_reads, pg_temp.reads_as((SELECT sm FROM rm)) AS sm_reads;
+SELECT pg_temp.ok(
+  (SELECT (pm_reads ->> 'report_r1')::int = 1 AND (pm_reads ->> 'report_v2')::int = 1 AND (pm_reads ->> 'v3_v1')::int = 1
+          AND (pm_reads ->> 'identity_r1')::int = 1 AND (pm_reads ->> 'policy_vs')::int = 1
+          AND (pm_reads ->> 'decisions_v1')::int = 1 AND (pm_reads ->> 'notes_v2')::int = 1
+     FROM rm0),
+  'RM0.1 PRE-FIX: a PLAIN MEMBER reads every released report of either use case and either vacancy, their identity, decisions and notes');
+SELECT pg_temp.ok(
+  (SELECT (pm_reads ->> 'participants')::int = 9 AND (pm_reads ->> 'pipeline')::int = 9
+          AND (pm_reads ->> 'invitations')::int = 3 AND (pm_reads ->> 'rls_assignments')::int = 9
+          AND (pm_reads ->> 'review_blocked')::int = 2 AND (pm_reads ->> 'training')::int = 1
+     FROM rm0),
+  'RM0.2 PRE-FIX: and every list and count: nine participants, nine pipeline rows, three invitations, nine assignments, two attempts waiting, one training assignment');
+SELECT pg_temp.ok(
+  (SELECT (pm_reads ->> 'case_readable_c0')::int = 1 AND (pm_reads ->> 'case_readable_cA')::int = 1
+          AND (pm_reads ->> 'case_writable_cB')::int = 1 AND (pm_reads ->> 'case_rows')::int = 3
+          AND (pm_reads ->> 'session_notes_cA')::int = 1
+     FROM rm0),
+  'RM0.3 PRE-FIX: and reads AND WRITES every interview case, with its session notes');
+SELECT pg_temp.ok(
+  (SELECT (sm_reads ->> 'report_vs')::int = 1 AND (sm_reads ->> 'case_readable_cB')::int = 1 FROM rm0),
+  'RM0.4 PRE-FIX: the admin who is the SUBJECT of the V1 assessment and of case B reads the employer document and the case about themselves');
+ROLLBACK TO SAVEPOINT before_fix;
+SELECT pg_temp.ok(to_regprocedure('public.employer_reports_readable(uuid,text,uuid,uuid,uuid[],uuid)') IS NOT NULL
+  AND to_regprocedure('public.scp_attempt_reports_readable(uuid)') IS NOT NULL
+  AND to_regprocedure('public.scp_report_snapshot_readable(text,uuid,uuid,uuid)') IS NOT NULL,
+  'RM0.5 the savepoint was undone: the single definition and its resolvers are back in place');
 
 -- ── RM1 · logged out ─────────────────────────────────────────────────────
 DO $$ BEGIN RAISE NOTICE 'GROUP RM1 -- logged out: refused'; END $$;
-SELECT pg_temp.ok(pg_temp.reads_as(NULL) = (SELECT anon_refused FROM rmx),
-  'RM1.1 anon: every one of the 15 reads is refused outright: ' || pg_temp.reads_as(NULL)::text);
+SELECT pg_temp.ok(
+  (SELECT bool_and(v = '-1'::jsonb) FROM jsonb_each(pg_temp.reads_as(NULL)) t(k, v)),
+  'RM1.1 anon: every read is refused outright (no EXECUTE, no table grant): ' || pg_temp.reads_as(NULL)::text);
 SELECT pg_temp.ok(pg_temp.act_as(NULL, 'release') = 'PERMISSION_DENIED'
   AND pg_temp.act_as(NULL, 'finalise') = 'PERMISSION_DENIED'
   AND pg_temp.act_as(NULL, 'finalise_previewed') = 'PERMISSION_DENIED',
@@ -418,35 +392,37 @@ SELECT pg_temp.ok(pg_temp.act_as(NULL, 'release') = 'PERMISSION_DENIED'
 SELECT pg_temp.ok(NOT EXISTS (
   SELECT 1 FROM unnest(ARRAY[
     'public.scp_employer_report(uuid)', 'public.scp_employer_report_v3(uuid)', 'public.scp_employer_report_identity(uuid)',
-    'public.scp_report_snapshot_readable(text,uuid,uuid)', 'public.scp_iv_can_read_case(uuid)',
+    'public.scp_report_snapshot_readable(text,uuid,uuid)', 'public.scp_report_snapshot_readable(text,uuid,uuid,uuid)',
+    'public.scp_iv_can_read_case(uuid)', 'public.scp_iv_can_write_case(uuid)',
+    'public.employer_reports_readable(uuid,text,uuid,uuid,uuid[],uuid)', 'public.scp_attempt_reports_readable(uuid)',
     'public.scp_release_attempt_report(uuid)', 'public.scp_iv_finalise_report(uuid,uuid)',
     'public.scp_iv_finalise_previewed_report(uuid,text,uuid)', 'public.scp_participant_report(uuid)',
-    'public.scp_participant_report_for_issuer(uuid)', 'public.has_active_employer_role(uuid,uuid,text[])']) f
+    'public.scp_participant_report_for_issuer(uuid)', 'public.has_active_employer_role(uuid,uuid,text[])',
+    'public.scp_employer_participants(uuid)', 'public.scp_employer_assessment_pipeline(uuid)',
+    'public.scp_employer_invitations(uuid)', 'public.scp_employer_review_pressure(uuid)',
+    'public.scp_employer_decisions(uuid)', 'public.scp_interview_notes(uuid)']) f
    WHERE has_function_privilege('anon', f::regprocedure, 'EXECUTE')),
-  'RM1.3 none of the eleven report/gate functions is executable by anon');
+  'RM1.3 none of the report, case, list, count and gate functions is executable by anon');
 
--- ── RM2 · the candidate the report is about ──────────────────────────────
-DO $$ BEGIN RAISE NOTICE 'GROUP RM2 -- the candidate: own participant document only'; END $$;
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT p FROM rm)) = (SELECT subject_of_r1_reads_own FROM rmx_p),
-  'RM2.1 the subject reads their OWN participant document (function, helper and row policy) and nothing of the employer''s: ' || pg_temp.reads_as((SELECT p FROM rm))::text);
+-- ── RM2 / RM3 · the candidates ───────────────────────────────────────────
+DO $$ BEGIN RAISE NOTICE 'GROUP RM2 -- the candidates: their own participant document only'; END $$;
+SELECT pg_temp.ok(pg_temp.reads_ok('p'),
+  'RM2.1 the subject p reads their OWN participant document (function, helper and row policy), their own training row, and nothing of the employer''s: ' || pg_temp.reads_diff('p'));
 SELECT pg_temp.ok(pg_temp.act_as((SELECT p FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
   AND pg_temp.act_as((SELECT p FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE',
   'RM2.2 the subject cannot release their own report or finalise a case');
-
--- ── RM3 · another candidate ──────────────────────────────────────────────
-DO $$ BEGIN RAISE NOTICE 'GROUP RM3 -- another candidate: refused'; END $$;
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT p2 FROM rm)) = (SELECT subject_of_r3_reads_own FROM rmx_p),
-  'RM3.1 the other candidate reads their own R3 document and nothing of p''s (participant_report_own is 0 for R1): ' || pg_temp.reads_as((SELECT p2 FROM rm))::text);
+SELECT pg_temp.ok(pg_temp.reads_ok('p2'),
+  'RM3.1 the other candidate reads their own R3 document and nothing of p''s: ' || pg_temp.reads_diff('p2'));
 SELECT pg_temp.ok(pg_temp.act_as((SELECT p2 FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
   AND pg_temp.act_as((SELECT p2 FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE',
   'RM3.2 neither can the other candidate');
+SELECT pg_temp.ok(pg_temp.reads_ok('c1'),
+  'RM3.3 an applicant (not a member) reads nothing as an employer: ' || pg_temp.reads_diff('c1'));
 
 -- ── RM4 · owner and admin of company A ───────────────────────────────────
-DO $$ BEGIN RAISE NOTICE 'GROUP RM4 -- owner and admin of A: read, release, finalise'; END $$;
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT ow FROM rm)) = (SELECT owner_admin FROM rmx),
-  'RM4.1 the owner reads all 15 (the issuer-admin participant document included): ' || pg_temp.reads_as((SELECT ow FROM rm))::text);
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT ad FROM rm)) = (SELECT owner_admin FROM rmx),
-  'RM4.2 the admin reads exactly what the owner reads');
+DO $$ BEGIN RAISE NOTICE 'GROUP RM4 -- owner and admin of A: read everything, release, finalise'; END $$;
+SELECT pg_temp.ok(pg_temp.reads_ok('ow'), 'RM4.1 the owner reads every attempt, list, count and case, the issuer-admin participant document included: ' || pg_temp.reads_diff('ow'));
+SELECT pg_temp.ok(pg_temp.reads_ok('ad'), 'RM4.2 the admin reads exactly what the owner reads: ' || pg_temp.reads_diff('ad'));
 SELECT pg_temp.ok(
   pg_temp.act_as((SELECT ow FROM rm), 'release') = 'SCP_RELEASE_BEFORE_SCORED'
   AND pg_temp.act_as((SELECT ad FROM rm), 'release') = 'SCP_RELEASE_BEFORE_SCORED',
@@ -458,44 +434,56 @@ SELECT pg_temp.ok(
   AND pg_temp.act_as((SELECT ad FROM rm), 'finalise_previewed') = 'SCP_IV_REPORT_BLOCKED',
   'RM4.4 owner and admin pass the finalise gate, both variants (stopped only by the case not being ready)');
 
--- ── RM5 · the CURRENT member-wide model ──────────────────────────────────
-DO $$ BEGIN RAISE NOTICE 'GROUP RM5 -- MEMBER-WIDE-MODEL: the current behaviour under owner review'; END $$;
--- MEMBER-WIDE-MODEL ----------------------------------------------------------
--- The two assertions below are the CURRENT member-wide model and nothing else:
--- a plain member, and a member who holds a reviewer grant, read the employer
--- report, its identity, the snapshot row, the interview case, its events, its
--- session notes and the attempt notes -- the same as the owner, short only of the
--- issuer-admin participant document. A decision on the security finding on
--- member-wide report reads changes these, and exactly these (and the
--- member_wide expectation row above).
--- ---------------------------------------------------------------------------
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT pm FROM rm)) = (SELECT member_wide FROM rmx),
-  'RM5.1 MEMBER-WIDE-MODEL a PLAIN MEMBER reads the employer report, the case and its notes: ' || pg_temp.reads_as((SELECT pm FROM rm))::text);
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT gr FROM rm)) = (SELECT member_wide FROM rmx),
-  'RM5.2 MEMBER-WIDE-MODEL a REVIEWER-GRANTED MEMBER reads exactly what a plain member reads (the grant is about reviewing, not reading)');
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT pm FROM rm)) = pg_temp.reads_as((SELECT ow FROM rm)) - 'participant_report_for_issuer' || '{"participant_report_for_issuer":0}'::jsonb,
-  'RM5.3 MEMBER-WIDE-MODEL the plain member differs from the owner in ONE read only: the issuer-admin participant document');
--- Releasing and finalising are NOT member-wide: they are owner/admin only, and
--- that stays true under every outcome of the decision above.
+-- ── RM5 · the ordinary member, and the authorised ones ───────────────────
+DO $$ BEGIN RAISE NOTICE 'GROUP RM5 -- an ordinary member reads nothing; a use-case reviewer and the vacancy''s recruiter read their scope'; END $$;
+SELECT pg_temp.ok(pg_temp.reads_ok('pm'),
+  'RM5.1 a PLAIN MEMBER reads no report, identity, decision, note, list, count, invitation, assignment, training row or case -- every read is empty: ' || pg_temp.reads_diff('pm'));
+SELECT pg_temp.ok(pg_temp.reads_as((SELECT pm FROM rm)) = pg_temp.nothing(true),
+  'RM5.1b and the plain member''s answer is exactly an outsider''s -- zero everywhere -- except the application rows of the recruitment pipeline, which are not part of this model');
+SELECT pg_temp.ok(pg_temp.reads_ok('gr'),
+  'RM5.2 a reviewer with BOTH grants reads every workforce and recruitment attempt and invitation, and every case, but not the issuer-admin participant document: ' || pg_temp.reads_diff('gr'));
+SELECT pg_temp.ok(pg_temp.reads_ok('gw'),
+  'RM5.3 a WORKFORCE reviewer reads the workforce attempts, the workforce invitation and training -- and not one recruitment attempt, invitation or case: ' || pg_temp.reads_diff('gw'));
+SELECT pg_temp.ok(pg_temp.reads_ok('gc'),
+  'RM5.4 a RECRUITMENT reviewer reads both vacancies'' recruitment attempts, invitations and the cases -- and nothing workforce, no training: ' || pg_temp.reads_diff('gc'));
+SELECT pg_temp.ok(pg_temp.reads_ok('r1'),
+  'RM5.5 the plain member who is the named responsible recruiter of V1 reads V1''s recruitment attempts (v1, vs), its invitation and its cases -- not V2''s, not a workforce one, not a case without that vacancy: ' || pg_temp.reads_diff('r1'));
+SELECT pg_temp.ok(pg_temp.reads_ok('r2'),
+  'RM5.6 and the responsible recruiter of V2 reads V2''s (v2, v2w) and nothing of V1: ' || pg_temp.reads_diff('r2'));
+SELECT pg_temp.ok(pg_temp.reads_ok('cr') AND pg_temp.reads_ok('pn'),
+  'RM5.7 the creator of case A and a member of its panel read and write that case only: no report, no list, no count, no other case: cr ' || pg_temp.reads_diff('cr') || ' pn ' || pg_temp.reads_diff('pn'));
+-- Releasing and finalising are not widened by any basis: owner/admin only.
 SELECT pg_temp.ok(
   pg_temp.act_as((SELECT pm FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
-  AND pg_temp.act_as((SELECT gr FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE',
-  'RM5.4 a plain member and a reviewer-granted member cannot RELEASE a report (owner/admin only)');
+  AND pg_temp.act_as((SELECT gr FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
+  AND pg_temp.act_as((SELECT gw FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
+  AND pg_temp.act_as((SELECT r1 FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
+  AND pg_temp.act_as((SELECT cr FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE',
+  'RM5.8 a plain member, a reviewer, a responsible recruiter and a case creator cannot RELEASE a report (owner/admin only)');
 SELECT pg_temp.ok(
   pg_temp.act_as((SELECT pm FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE'
   AND pg_temp.act_as((SELECT gr FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE'
-  AND pg_temp.act_as((SELECT pm FROM rm), 'finalise_previewed') = 'SCP_IV_FINALISE_ROLE'
-  AND pg_temp.act_as((SELECT gr FROM rm), 'finalise_previewed') = 'SCP_IV_FINALISE_ROLE',
-  'RM5.5 a plain member and a reviewer-granted member cannot FINALISE an interview report, either variant (owner/admin only)');
+  AND pg_temp.act_as((SELECT r1 FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE'
+  AND pg_temp.act_as((SELECT cr FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE'
+  AND pg_temp.act_as((SELECT pn FROM rm), 'finalise_previewed') = 'SCP_IV_FINALISE_ROLE'
+  AND pg_temp.act_as((SELECT gc FROM rm), 'finalise_previewed') = 'SCP_IV_FINALISE_ROLE',
+  'RM5.9 nor FINALISE an interview report, either variant, whatever their basis (owner/admin only)');
+
+-- ── RM5s · the subject who is a member ───────────────────────────────────
+DO $$ BEGIN RAISE NOTICE 'GROUP RM5s -- a member who is the SUBJECT never reads the employer document about themselves'; END $$;
+SELECT pg_temp.ok(pg_temp.reads_ok('sm'),
+  'RM5s.1 an ADMIN who is the subject of the V1 assessment and of case B reads everything of the organisation''s EXCEPT what is about them (attempt vs, its decisions-free progress, case B): ' || pg_temp.reads_diff('sm'));
+SELECT pg_temp.ok(pg_temp.reads_ok('sg'),
+  'RM5s.2 a reviewer with both grants who is the subject of a workforce assessment reads the rest, but not the one about them (attempt ws): ' || pg_temp.reads_diff('sg'));
+SELECT pg_temp.ok(
+  (SELECT (reads ->> 'report_vs')::int = 0 AND (reads ->> 'identity_r1')::int = 1 AND (reads ->> 'readable_vs')::int = 0 AND (reads ->> 'policy_vs')::int = 0 FROM (SELECT pg_temp.reads_as((SELECT sm FROM rm)) AS reads) x),
+  'RM5s.3 the exclusion cuts through R1: the owner-level admin sm reads r1 and not vs, by function, helper and row policy alike');
 
 -- ── RM6 · suspended and removed members ──────────────────────────────────
 DO $$ BEGIN RAISE NOTICE 'GROUP RM6 -- a suspended or removed member of A: refused'; END $$;
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT su FROM rm)) = (SELECT nothing FROM rmx),
-  'RM6.1 a SUSPENDED admin of A reads nothing: ' || pg_temp.reads_as((SELECT su FROM rm))::text);
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT rv FROM rm)) = (SELECT nothing FROM rmx),
-  'RM6.2 a REMOVED admin of A reads nothing: ' || pg_temp.reads_as((SELECT rv FROM rm))::text);
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT rmm FROM rm)) = (SELECT nothing FROM rmx),
-  'RM6.3 a REMOVED member of A reads nothing');
+SELECT pg_temp.ok(pg_temp.reads_ok('su'), 'RM6.1 a SUSPENDED admin of A reads nothing: ' || pg_temp.reads_diff('su'));
+SELECT pg_temp.ok(pg_temp.reads_ok('rv'), 'RM6.2 a REMOVED admin of A reads nothing: ' || pg_temp.reads_diff('rv'));
+SELECT pg_temp.ok(pg_temp.reads_ok('rmm'), 'RM6.3 a REMOVED member of A reads nothing: ' || pg_temp.reads_diff('rmm'));
 SELECT pg_temp.ok(
   pg_temp.act_as((SELECT su FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
   AND pg_temp.act_as((SELECT rv FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
@@ -517,8 +505,7 @@ SELECT pg_temp.ok(
 
 -- ── RM7 · a member of another company ────────────────────────────────────
 DO $$ BEGIN RAISE NOTICE 'GROUP RM7 -- the owner of an unrelated company B: refused'; END $$;
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT xo FROM rm)) = (SELECT nothing FROM rmx),
-  'RM7.1 the owner of company B reads nothing of A''s: ' || pg_temp.reads_as((SELECT xo FROM rm))::text);
+SELECT pg_temp.ok(pg_temp.reads_ok('xo'), 'RM7.1 the owner of company B reads nothing of A''s: ' || pg_temp.reads_diff('xo'));
 SELECT pg_temp.ok(
   pg_temp.act_as((SELECT xo FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
   AND pg_temp.act_as((SELECT xo FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE'
@@ -527,59 +514,73 @@ SELECT pg_temp.ok(
 
 -- ── RM8 · a platform administrator who is not a member ───────────────────
 DO $$ BEGIN RAISE NOTICE 'GROUP RM8 -- a platform admin who is not a member: refused through the app-level report functions'; END $$;
-SELECT pg_temp.ok(public.is_platform_admin((SELECT pa FROM rm)),
-  'RM8.0 the principal really is a platform administrator');
-SELECT pg_temp.ok(pg_temp.reads_as((SELECT pa FROM rm)) = (SELECT nothing FROM rmx),
-  'RM8.1 through scp_employer_report*, the snapshot policies and the interview reads a platform admin who is not a member reads nothing: ' || pg_temp.reads_as((SELECT pa FROM rm))::text);
+SELECT pg_temp.ok(public.is_platform_admin((SELECT pa FROM rm)), 'RM8.0 the principal really is a platform administrator');
+SELECT pg_temp.ok(pg_temp.reads_ok('pa'),
+  'RM8.1 through the report functions, the snapshot policies, the lists and the interview reads a platform admin who is not a member reads nothing -- bar the raw assignment table, which the platform-admin policy still admits (unchanged): ' || pg_temp.reads_diff('pa'));
 SELECT pg_temp.ok(
   pg_temp.act_as((SELECT pa FROM rm), 'release') = 'SCP_NOT_AUTHORISED_TO_RELEASE'
   AND pg_temp.act_as((SELECT pa FROM rm), 'finalise') = 'SCP_IV_FINALISE_ROLE'
   AND pg_temp.act_as((SELECT pa FROM rm), 'finalise_previewed') = 'SCP_IV_FINALISE_ROLE',
   'RM8.2 and releases and finalises nothing: platform administration is not an employer role');
 
--- ── RM9 · the helper and the policy, stated directly ─────────────────────
-DO $$ BEGIN RAISE NOTICE 'GROUP RM9 -- scp_report_snapshot_readable and the snapshot policies, by definition'; END $$;
+-- ── RM9 · the definitions, stated directly ───────────────────────────────
+DO $$ BEGIN RAISE NOTICE 'GROUP RM9 -- the helper, the gates and the snapshot policies, by definition'; END $$;
 SELECT pg_temp.ok(
-  (SELECT prosrc FROM pg_proc WHERE oid = 'public.scp_report_snapshot_readable(text,uuid,uuid)'::regprocedure)
-    ~ 'has_active_employer_role\(auth\.uid\(\), _issuer_organization_id\)'
+  (SELECT prosrc FROM pg_proc WHERE oid = 'public.scp_report_snapshot_readable(text,uuid,uuid,uuid)'::regprocedure)
+    ~ 'employer_reports_readable'
+  AND (SELECT prosrc FROM pg_proc WHERE oid = 'public.scp_report_snapshot_readable(text,uuid,uuid,uuid)'::regprocedure)
+    !~ 'has_active_employer_role'
   AND (SELECT prosrc FROM pg_proc WHERE oid = 'public.scp_report_snapshot_readable(text,uuid,uuid)'::regprocedure)
-    !~ 'ARRAY\[',
-  'RM9.1 MEMBER-WIDE-MODEL the employer branch of scp_report_snapshot_readable names NO role list: any active member of an active organisation');
+    !~ 'has_active_employer_role',
+  'RM9.1 neither snapshot gate decides on membership any more: the employer branch asks employer_reports_readable');
 SELECT pg_temp.ok(
   (SELECT count(*) FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_report_snapshots') = 2
   AND (SELECT qual FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_report_snapshots' AND policyname = 'scp_report_snapshots_employer')
-    ~ 'scp_report_snapshot_readable\(audience, subject_id, issuer_organization_id\)'
+    ~ 'scp_report_snapshot_readable\(audience, subject_id, issuer_organization_id, attempt_id\)'
   AND (SELECT roles FROM pg_policies WHERE schemaname = 'public' AND tablename = 'scp_report_snapshots' AND policyname = 'scp_report_snapshots_employer') = '{authenticated}',
-  'RM9.2 scp_report_snapshots has exactly two policies, both authenticated, the employer one routed through the helper');
+  'RM9.2 scp_report_snapshots has exactly two policies, both authenticated, the employer one routed through the attempt-aware gate');
 SELECT pg_temp.ok(
-  public.scp_report_snapshot_readable('nonsense', (SELECT s1 FROM rms), (SELECT e FROM rm)) IS NOT TRUE,
+  public.scp_report_snapshot_readable('nonsense', (SELECT s1 FROM rms), (SELECT e FROM rm)) IS NOT TRUE
+  AND public.scp_report_snapshot_readable('nonsense', (SELECT s1 FROM rms), (SELECT e FROM rm), (SELECT r1 FROM rma)) IS NOT TRUE,
   'RM9.3 an unknown audience is never readable');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace
+     AND p.proname IN ('scp_iv_can_read_case', 'scp_iv_can_write_case', 'scp_iv_case_row_visible')
+     AND p.prosrc ~ 'employer_reports_readable' AND p.prosrc !~ 'has_active_employer_role') = 3,
+  'RM9.4 the three interview-case gates ask employer_reports_readable and do not decide on membership');
 
 -- ── RM10 · offboarding, as the admin screen does it ──────────────────────
-DO $$ BEGIN RAISE NOTICE 'GROUP RM10 -- access follows the membership status at once, through update_employer_membership'; END $$;
--- A plain member loses every read the moment a platform admin suspends them, and gets exactly them back on reactivation.
-SELECT pg_temp.ok(pg_temp.set_status((SELECT pm FROM rm), 'suspended') = 'suspended'
-  AND pg_temp.reads_as((SELECT pm FROM rm)) = (SELECT nothing FROM rmx),
-  'RM10.1 a plain member SUSPENDED by a platform admin reads nothing at once');
-SELECT pg_temp.ok(pg_temp.set_status((SELECT pm FROM rm), 'active') = 'active'
-  AND pg_temp.reads_as((SELECT pm FROM rm)) = (SELECT member_wide FROM rmx),
-  'RM10.2 and REACTIVATED reads exactly what they read before');
-SELECT pg_temp.ok(pg_temp.set_status((SELECT pm FROM rm), 'removed') = 'removed'
-  AND pg_temp.reads_as((SELECT pm FROM rm)) = (SELECT nothing FROM rmx),
-  'RM10.3 a plain member REMOVED by a platform admin reads nothing at once');
--- A separate statement: a subquery in the statement that makes the change would
--- read the snapshot taken before it.
+DO $$ BEGIN RAISE NOTICE 'GROUP RM10 -- access follows the membership at once; a reviewer grant does not come back'; END $$;
+SELECT pg_temp.ok(pg_temp.set_status((SELECT gr FROM rm), 'suspended') = 'suspended'
+  AND pg_temp.reads_as((SELECT gr FROM rm)) = pg_temp.reads_as((SELECT xo FROM rm)),
+  'RM10.1 a reviewer SUSPENDED by a platform admin reads exactly what an outsider reads, at once');
+SELECT pg_temp.ok(pg_temp.set_status((SELECT gr FROM rm), 'active') = 'active'
+  AND pg_temp.reads_as((SELECT gr FROM rm)) = pg_temp.nothing(true),
+  'RM10.2 and REACTIVATED, reads nothing: the grant was revoked with the suspension and did not return');
+SELECT pg_temp.ok(
+  (SELECT count(*) FROM public.scp_employer_reviewers WHERE user_id = (SELECT gr FROM rm) AND revoked_at IS NULL) = 0
+  AND (SELECT count(*) FROM public.scp_employer_reviewers WHERE user_id = (SELECT gr FROM rm) AND revoked_at IS NOT NULL) = 1,
+  'RM10.2b the grant row is kept as history, revoked');
+DO $$
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', (SELECT ow FROM rm)::text, true);
+  EXECUTE 'SET LOCAL ROLE authenticated';
+  PERFORM public.scp_grant_employer_reviewer((SELECT e FROM rm), (SELECT gr FROM rm), ARRAY['workforce', 'recruitment']);
+  EXECUTE 'RESET ROLE';
+  PERFORM set_config('request.jwt.claim.sub', '', true);
+END $$;
+SELECT pg_temp.ok(pg_temp.reads_ok('gr'),
+  'RM10.3 a fresh grant by the owner restores exactly the reviewer''s reads: ' || pg_temp.reads_diff('gr'));
+SELECT pg_temp.ok(pg_temp.set_status((SELECT ad FROM rm), 'removed') = 'removed'
+  AND pg_temp.reads_as((SELECT ad FROM rm)) = pg_temp.nothing(),
+  'RM10.4 an admin REMOVED by a platform admin reads nothing at once');
 SELECT pg_temp.ok(
   (SELECT removed_at IS NOT NULL AND status = 'removed' FROM public.employer_memberships
-    WHERE employer_id = (SELECT e FROM rm) AND user_id = (SELECT pm FROM rm)),
-  'RM10.3b and the row is kept, with removed_at set (removed is a status, never a delete)');
-SELECT pg_temp.ok(pg_temp.set_status((SELECT pm FROM rm), 'active') = 'active'
-  AND pg_temp.reads_as((SELECT pm FROM rm)) = (SELECT member_wide FROM rmx),
-  'RM10.4 and reactivating a removed member restores exactly their reads');
-SELECT pg_temp.ok(
-  (SELECT removed_at IS NULL AND status = 'active' FROM public.employer_memberships
-    WHERE employer_id = (SELECT e FROM rm) AND user_id = (SELECT pm FROM rm)),
-  'RM10.4b and clears removed_at');
+    WHERE employer_id = (SELECT e FROM rm) AND user_id = (SELECT ad FROM rm)),
+  'RM10.4b and the row is kept, with removed_at set (removed is a status, never a delete)');
+SELECT pg_temp.ok(pg_temp.set_status((SELECT ad FROM rm), 'active') = 'active'
+  AND pg_temp.reads_ok('ad'),
+  'RM10.5 reactivating the admin restores exactly their reads (the role, not a grant, is what made them an admin): ' || pg_temp.reads_diff('ad'));
 -- An owner is not a platform administrator: no self-service removal exists.
 CREATE OR REPLACE FUNCTION pg_temp.rpc_as(_uid uuid, _target uuid, _role text, _status text) RETURNS text
 LANGUAGE plpgsql AS $$
@@ -600,24 +601,23 @@ END $$;
 SELECT pg_temp.ok(
   pg_temp.rpc_as((SELECT ow FROM rm), (SELECT pm FROM rm), NULL, 'removed') ~ 'platform admin role required'
   AND pg_temp.rpc_as((SELECT ad FROM rm), (SELECT pm FROM rm), NULL, 'removed') ~ 'platform admin role required',
-  'RM10.5 an OWNER and an ADMIN cannot call update_employer_membership: only a platform admin can end a membership today');
+  'RM10.6 an OWNER and an ADMIN cannot call update_employer_membership: only a platform admin can end a membership today');
 SELECT pg_temp.ok(
   (SELECT status FROM public.employer_memberships WHERE employer_id = (SELECT e FROM rm) AND user_id = (SELECT pm FROM rm)) = 'active',
-  'RM10.5b and nothing changed');
+  'RM10.6b and nothing changed');
 -- The final-owner rule, with the wording the admin screen's error mapping recognises.
 SELECT pg_temp.ok(
   pg_temp.rpc_as((SELECT pa FROM rm), (SELECT ow FROM rm), NULL, 'removed') ~ 'it is the only active owner'
   AND pg_temp.rpc_as((SELECT pa FROM rm), (SELECT ow FROM rm), 'admin', NULL) ~ 'it is the only active owner'
   AND pg_temp.rpc_as((SELECT pa FROM rm), (SELECT ow FROM rm), NULL, 'suspended') ~ 'it is the only active owner',
-  'RM10.6 the ONLY active owner cannot be removed, suspended or demoted -- and the refusal says "it is the only active owner" (what membershipRpcFailure recognises)');
+  'RM10.7 the ONLY active owner cannot be removed, suspended or demoted -- and the refusal says "it is the only active owner" (what membershipRpcFailure recognises)');
 SELECT pg_temp.ok(
   (SELECT status || '/' || role FROM public.employer_memberships WHERE employer_id = (SELECT e FROM rm) AND user_id = (SELECT ow FROM rm)) = 'active/owner',
-  'RM10.6b and the owner is unchanged');
+  'RM10.7b and the owner is unchanged');
 SELECT pg_temp.ok(
-  pg_temp.rpc_as((SELECT pa FROM rm), (SELECT ad FROM rm), 'owner', NULL) = 'ok'
+  pg_temp.rpc_as((SELECT pa FROM rm), (SELECT sm FROM rm), 'owner', NULL) = 'ok'
   AND pg_temp.rpc_as((SELECT pa FROM rm), (SELECT ow FROM rm), NULL, 'removed') = 'ok'
-  AND pg_temp.reads_as((SELECT ow FROM rm)) = (SELECT nothing FROM rmx)
-  AND pg_temp.reads_as((SELECT ad FROM rm)) = (SELECT owner_admin FROM rmx),
-  'RM10.7 with a second ACTIVE owner appointed, the first can be removed; they then read nothing and the new owner reads everything');
+  AND pg_temp.reads_as((SELECT ow FROM rm)) = pg_temp.nothing(),
+  'RM10.8 with a second ACTIVE owner appointed, the first can be removed; they then read nothing');
 
 ROLLBACK;

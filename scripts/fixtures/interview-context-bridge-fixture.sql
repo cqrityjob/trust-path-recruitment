@@ -106,6 +106,12 @@ ON CONFLICT DO NOTHING;
 --
 -- So: a third person, an active member of the journey employer, who may
 -- conduct the whole interview and may not lock the report.
+--
+-- "May conduct the interview" is no longer a property of membership: reading
+-- or writing an interview case needs a BASIS (employer_reports_readable,
+-- 20270203090000 and 20270204090000) -- owner or admin, a recruitment reviewer
+-- grant, the vacancy's responsible recruiter, or the case's creator or panel.
+-- The interviewer's basis is the existing per-use-case reviewer grant below.
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
@@ -129,6 +135,16 @@ VALUES ('9e000000-0000-4000-8000-000000000003',
         '9e000000-0000-4000-8000-00000000000a', 'member', 'active')
 ON CONFLICT (user_id, employer_id) DO UPDATE
   SET role = 'member', status = 'active';
+
+-- The interviewer's basis: a recruitment reviewer grant made by the owner.
+-- Superuser plumbing; idempotent (a second run adds nothing).
+INSERT INTO public.scp_employer_reviewers (employer_id, user_id, allowed_use_cases, granted_by)
+SELECT '9e000000-0000-4000-8000-00000000000a', '9e000000-0000-4000-8000-000000000003',
+       ARRAY['recruitment']::text[], '9e000000-0000-4000-8000-000000000001'
+ WHERE NOT EXISTS (
+   SELECT 1 FROM public.scp_employer_reviewers r
+    WHERE r.employer_id = '9e000000-0000-4000-8000-00000000000a'
+      AND r.user_id = '9e000000-0000-4000-8000-000000000003' AND r.revoked_at IS NULL);
 
 -- ---------------------------------------------------------------------------
 -- 5. One case walked to REPORT-READY.
