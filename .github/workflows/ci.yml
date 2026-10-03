@@ -265,6 +265,12 @@ jobs:
       - name: Security Passport Network statistics database test
         run: bun run passport-network-stats:db
 
+      # Launch (owner, 2026-10-03): the published terms of use and privacy
+      # policy, their links, and terms acceptance at signup kept separate
+      # from any other consent. Planted controls run in negative-controls:all.
+      - name: Launch legal pages and signup acceptance check
+        run: bun run launch-legal:check
+
       # NEGATIVE CONTROLS -- proof that the guards above would notice.
       #
       # Each mutation introduces the exact defect a guard exists to catch and

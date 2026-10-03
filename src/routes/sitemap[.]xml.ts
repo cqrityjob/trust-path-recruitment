@@ -48,6 +48,8 @@ export const Route = createFileRoute("/sitemap.xml")({
           { path: "/plattformen", changefreq: "monthly", priority: "0.7" },
           { path: "/about", changefreq: "monthly", priority: "0.6" },
           { path: "/contact", changefreq: "yearly", priority: "0.4" },
+          { path: "/villkor", changefreq: "yearly", priority: "0.3" },
+          { path: "/integritetspolicy", changefreq: "yearly", priority: "0.3" },
           ...professions.map((p) => ({
             path: `/career-center/${p.slug}`,
             changefreq: "monthly" as const,

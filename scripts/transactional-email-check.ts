@@ -183,6 +183,69 @@ console.log("\n2. Only the named kinds; the function decides From, the admin inb
       `${JSON.stringify(c.body.to)} / ${String(c.body.reply_to)}`,
     );
   }
+  // An organisation's message shows the organisation as the sender's name;
+  // the address and the Reply-To stay the function's own.
+  for (const kind of [
+    "application_receipt",
+    "recruitment_message",
+    "assessment_invitation",
+    "academy_invitation",
+  ]) {
+    await post({
+      kind,
+      to: "person@example.test",
+      senderName: "Nordic Säkerhet AB",
+      replyTo: "attacker@evil.example",
+      ...message,
+    });
+    const c = calls.at(-1)!;
+    ck(
+      `${kind}: From names the organisation in front of no-reply@cqrityjob.com`,
+      c.body.from === "Nordic Säkerhet AB via CQrityjob <no-reply@cqrityjob.com>",
+      String(c.body.from),
+    );
+  }
+  await post({
+    kind: "recruitment_message",
+    to: "person@example.test",
+    senderName: 'Evil" <ceo@evil.example>,\r\nBcc: x@evil.example',
+    ...message,
+  });
+  const injected = String(calls.at(-1)!.body.from);
+  ck(
+    "a sender name cannot carry an address, a quote or a header line",
+    !/[<>"@\r\n,:;]/.test(injected.replace(" <no-reply@cqrityjob.com>", "")) &&
+      injected.endsWith(" via CQrityjob <no-reply@cqrityjob.com>"),
+    injected,
+  );
+  await post({
+    kind: "recruitment_message",
+    to: "person@example.test",
+    senderName: "<>@,",
+    ...message,
+  });
+  ck(
+    "a sender name with nothing readable left falls back to CQrityjob",
+    calls.at(-1)!.body.from === "CQrityjob <no-reply@cqrityjob.com>",
+  );
+  await post({
+    kind: "recruitment_message",
+    to: "person@example.test",
+    senderName: "A".repeat(200),
+    ...message,
+  });
+  ck(
+    "a sender name is capped at 60 characters",
+    calls.at(-1)!.body.from === `${"A".repeat(60)} via CQrityjob <no-reply@cqrityjob.com>`,
+  );
+  for (const kind of ["contact_acknowledgement", "employer_registration_received"]) {
+    await post({ kind, to: "person@example.test", senderName: "Somebody Else AB", ...message });
+    ck(
+      `${kind}: CQrityjob's own mail ignores a sender name`,
+      calls.at(-1)!.body.from === "CQrityjob <no-reply@cqrityjob.com>",
+    );
+  }
+
   await post({ kind: "employer_registration_admin", to: "attacker@evil.example", ...message });
   const adminMail = calls.at(-1)!;
   ck(
@@ -217,6 +280,25 @@ console.log("\n2. Only the named kinds; the function decides From, the admin inb
         !("headers" in c.body),
     ),
   );
+}
+
+console.log("\n2b. The function's addresses are the site's published ones");
+{
+  const site = readFileSync("src/lib/site-contact.ts", "utf8");
+  const fn = readFileSync(FN, "utf8");
+  for (const [name, fnConst] of [
+    ["CONTACT_EMAIL", "ADMIN_INBOX"],
+    ["JOB_EMAIL", "JOB_INBOX"],
+    ["NO_REPLY_EMAIL", "FROM_ADDRESS"],
+  ] as const) {
+    const siteValue = new RegExp(`export const ${name} = "([^"]+)";`).exec(site)?.[1];
+    const fnValue = new RegExp(`const ${fnConst} = "([^"]+)";`).exec(fn)?.[1];
+    ck(
+      `${fnConst} equals the site's ${name}`,
+      !!siteValue && siteValue === fnValue,
+      `${fnValue} / ${siteValue}`,
+    );
+  }
 }
 
 console.log("\n3. Status passthrough, idempotency, no provider body, minimal logs");

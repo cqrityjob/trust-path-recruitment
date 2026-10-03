@@ -94,6 +94,8 @@ test.describe(
       const response = page.waitForResponse(
         (r) => r.url().includes("/auth/v1/signup") && r.request().method() === "POST",
       );
+      // Registration requires accepting the terms of use (2026-10-03).
+      await page.getByTestId("signup-terms").check();
       await page.getByRole("button", { name: /^Skapa konto$|^Create account$/ }).click();
       expect((await response).ok(), "Real Auth must accept the registration").toBe(true);
       await expect

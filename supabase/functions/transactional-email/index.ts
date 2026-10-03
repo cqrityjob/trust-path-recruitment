@@ -19,6 +19,8 @@
 //   * Only the named kinds below are accepted. Each kind fixes where the
 //     message may go and where a reply lands. The admin inbox, the From
 //     address and every Reply-To are decided HERE, never by the request.
+//     An organisation's message may name the organisation, which is shown
+//     as the sender's display name in front of the fixed address.
 //   * One recipient per message, size-capped subject/body, no attachments,
 //     no headers, no CC/BCC.
 //
@@ -34,7 +36,8 @@
 //
 // Kind and status only. Never an address, a subject, a body or a key.
 
-const FROM = "CQrityjob <no-reply@cqrityjob.com>";
+const FROM_ADDRESS = "no-reply@cqrityjob.com"; // automated mail only
+const FROM = `CQrityjob <${FROM_ADDRESS}>`;
 const ADMIN_INBOX = "info@cqrityjob.com"; // general / employer / contact
 const JOB_INBOX = "job@cqrityjob.com"; // job / candidate replies
 
@@ -56,6 +59,39 @@ const KINDS: Record<string, { to: "admin" | "caller"; replyTo: Party }> = {
   // Academy training invitations go to an employer's staff.
   academy_invitation: { to: "caller", replyTo: "admin" },
 };
+
+/** Messages an organisation sends through CQrityjob: the reader sees the
+ *  organisation's name as the sender ("Acme AB via CQrityjob"). The ADDRESS
+ *  stays no-reply@cqrityjob.com and the Reply-To stays the kind's own (above):
+ *  the request supplies a name, never an address. */
+const ORGANISATION_SENDER_KINDS = new Set([
+  "application_receipt",
+  "recruitment_message",
+  "assessment_invitation",
+  "academy_invitation",
+]);
+const MAX_SENDER_NAME = 60;
+
+/** A display name that cannot become an address, a second header or a
+ *  quoted-string escape: letters, digits, spaces and . & ' - only. */
+function senderDisplayName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value
+    .normalize("NFC")
+    .replace(/[^\p{L}\p{N} .&'\u2019-]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_SENDER_NAME)
+    .trim();
+  return /[\p{L}\p{N}]/u.test(name) ? name : null;
+}
+
+/** The From header: always FROM_ADDRESS; the organisation's name in front of
+ *  it only for an organisation's own message. */
+function fromFor(kind: string, senderName: unknown): string {
+  const name = ORGANISATION_SENDER_KINDS.has(kind) ? senderDisplayName(senderName) : null;
+  return name ? `${name} via CQrityjob <${FROM_ADDRESS}>` : FROM;
+}
 
 const MAX_BODY_BYTES = 300_000;
 const MAX_SUBJECT = 300;
@@ -178,7 +214,7 @@ Deno.serve(async (req) => {
         ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: JSON.stringify({
-        from: FROM,
+        from: fromFor(kind, input.senderName),
         to: [to],
         ...(replyTo ? { reply_to: replyTo } : {}),
         subject,

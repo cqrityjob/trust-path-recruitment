@@ -121,6 +121,8 @@ export async function sendInvitationEmail(params: InvitationEmailParams): Promis
     const res = await sendTransactionalEmail({
       kind: params.kind ?? "assessment_invitation",
       to: params.recipientEmail,
+      // The recipient sees who invited them: "<employer> via CQrityjob".
+      senderName: params.employerName,
       subject: SUBJECT[params.language](
         params.language === "sv" ? params.assessmentNameSv : params.assessmentNameEn,
       ),

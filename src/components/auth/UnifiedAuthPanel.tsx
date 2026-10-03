@@ -47,6 +47,7 @@ import { hasEmployerSignupIntent } from "@/lib/job-intelligence/employer-signup-
 // script can prove it over hand-written inputs without mounting this panel —
 // same reason, and same shape, as employer-signup-intent.ts.
 import { registrationTargetsOrganisation } from "@/lib/auth/organisation-entrance";
+import { PRIVACY_PATH, TERMS_PATH, TERMS_VERSION } from "@/lib/legal/documents";
 import { ensureMyEmployerCompanyFromSignup } from "@/lib/job-intelligence/employer-onboarding.functions";
 import { EMPLOYER_SIGNUP_PROVISION_KEY } from "@/lib/job-intelligence/use-employer-signup-provisioning";
 import { EMPLOYER_REGISTRATION_NOTICE_KEY } from "@/lib/job-intelligence/registration-notice-cache";
@@ -142,6 +143,9 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
   );
   const [companyName, setCompanyName] = useState("");
   const [companyCountry, setCompanyCountry] = useState("");
+  // Acceptance of the terms of use, and nothing else: never pre-ticked, never
+  // bundled with marketing or any other consent (owner, 2026-10-03).
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<readonly string[]>([]);
@@ -434,6 +438,7 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
     if (!email.trim()) found.push(t("auth.error.emailRequired"));
     else if (!email.includes("@")) found.push(t("auth.error.emailInvalid"));
     if (password.length < MIN_PASSWORD_LENGTH) found.push(t("auth.error.passwordShort"));
+    if (isSignup && !termsAccepted) found.push(t("auth.error.termsRequired"));
     if (isSignup && forOrganisation) {
       if (!companyName.trim()) found.push(t("auth.error.companyNameRequired"));
       if (!companyCountry.trim()) found.push(t("auth.error.companyCountryRequired"));
@@ -474,6 +479,9 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
             data: {
               display_name: displayName.trim() || undefined,
               locale: lang,
+              // Which terms were accepted, and when, on the account itself.
+              terms_version: TERMS_VERSION,
+              terms_accepted_at: new Date().toISOString(),
               ...(forOrganisation
                 ? {
                     company_name: companyName.trim(),
@@ -669,6 +677,14 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
   }
 
   async function onGoogle() {
+    // Creating an account with Google is still creating an account: the same
+    // terms checkbox applies. (Google from the sign-in page is an existing
+    // account's way in and carries no acceptance.)
+    if (isSignup && !termsAccepted) {
+      setInfo(null);
+      reportErrors([t("auth.error.termsRequired")]);
+      return;
+    }
     setErrors([]);
     setInfo(null);
     setBusy(true);
@@ -1156,6 +1172,40 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
               </div>
             )}
 
+            {isSignup && (
+              // Its own box, after the organisation section (whose toggle
+              // stays the form's first checkbox), required, and about the
+              // terms only. The documents open in a new tab so the form keeps
+              // what was typed.
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  name="terms"
+                  data-testid="signup-terms"
+                  required
+                  aria-required="true"
+                  checked={termsAccepted}
+                  disabled={busy}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-input accent-[color:var(--accent)]"
+                />
+                <span>
+                  {withLink(
+                    t("auth.terms.accept"),
+                    "{terms}",
+                    <a
+                      href={TERMS_PATH}
+                      target="_blank"
+                      rel="noopener"
+                      className="font-medium text-accent underline underline-offset-4"
+                    >
+                      {t("auth.terms.link")}
+                    </a>,
+                  )}
+                </span>
+              </label>
+            )}
+
             <PrimaryButton type="submit" disabled={busy} className="w-full justify-center gap-2">
               {busy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
               {busy
@@ -1197,10 +1247,36 @@ export function UnifiedAuthPanel({ mode }: { mode: UnifiedAuthMode }) {
               telling them that logging in constitutes acceptance is a
               small untruth a trust product cannot afford. */}
           <p className="mt-6 border-t border-border pt-4 text-xs leading-relaxed text-muted-foreground">
-            {t(isSignup ? "auth.privacy_note" : "auth.privacy_note.signin")}
+            {isSignup
+              ? withLink(
+                  t("auth.privacy_note"),
+                  "{privacy}",
+                  <a
+                    href={PRIVACY_PATH}
+                    target="_blank"
+                    rel="noopener"
+                    className="font-medium text-accent underline underline-offset-4"
+                  >
+                    {t("auth.privacy.link")}
+                  </a>,
+                )
+              : t("auth.privacy_note.signin")}
           </p>
         </>
       )}
     </div>
+  );
+}
+
+/** A sentence with one linked phrase, e.g. "I accept the {terms}." */
+function withLink(sentence: string, token: string, link: React.ReactNode): React.ReactNode {
+  const at = sentence.indexOf(token);
+  if (at === -1) return sentence;
+  return (
+    <>
+      {sentence.slice(0, at)}
+      {link}
+      {sentence.slice(at + token.length)}
+    </>
   );
 }

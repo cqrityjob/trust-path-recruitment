@@ -176,6 +176,8 @@ export async function sendRecruitmentMessageEmail(
     const res = await sendTransactionalEmail({
       kind: params.kind ?? "recruitment_message",
       to: params.recipientEmail,
+      // The candidate sees who wrote: "<employer> via CQrityjob".
+      senderName: params.employerName,
       subject,
       html,
       idempotencyKey: params.idempotencyKey,
