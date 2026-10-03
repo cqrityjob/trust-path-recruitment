@@ -13,8 +13,8 @@
   ],
   "source": "Supabase connector read-only SQL, explicit project wrygicdfxwjnrugduxnt",
   "projectRef": "wrygicdfxwjnrugduxnt",
-  "readAt": "2026-10-03T16:50:00+00:00",
-  "readBy": "Read-only production verification after #396 merged (report access: suspension cannot be bypassed, ordinary membership alone reads no report, interview cases read by those who work them). All 363 previous ledger identities preserved (their digest is still fbfc766e1fd85a3d19fc82b8f4fbc8c7); the three new rows are 20270202090000, 20270203090000 and 20270204090000, applied by the official integration. md5 of version:name joined by newline over all 366 rows ae6f49cb25fa072932ae6aaf8d2b4ddc, equal on the connector read and on this file. See docs/release/2026-10-03-report-access-hosted-verification.md.",
+  "readAt": "2026-10-03T19:55:00+00:00",
+  "readBy": "Read-only production verification after #392 merged (employer e-mail on a new application: the outbox and its six functions). All 366 previous ledger identities preserved (their digest is still ae6f49cb25fa072932ae6aaf8d2b4ddc); the new row is 20270205090000, applied by the official integration. md5 of version:name joined by newline over all 367 rows 77e07c074bb73aac9ac11a569b5ca214, equal on the connector read and on this file. See docs/release/2026-10-03-employer-notice-hosted-verification.md.",
   "versions": [
     {
       "version": "20260716153446",
@@ -1479,6 +1479,10 @@
     {
       "version": "20270204090000",
       "name": "interview_case_access_model"
+    },
+    {
+      "version": "20270205090000",
+      "name": "employer_new_application_notices"
     }
   ]
 }
