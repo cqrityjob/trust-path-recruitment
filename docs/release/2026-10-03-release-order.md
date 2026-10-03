@@ -24,8 +24,8 @@ verifieras skrivskyddat innan nästa steg.
 | D | [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391) | `claude/career-analysis-availability` | C | Karriäranalysens tillgänglighet, en källa för alla ytor, indexering följer tillståndet | – | C |
 | E1 | [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) | `claude/employer-notice-schema` | C | Utkorg för mejl till arbetsgivaren vid ny ansökan (schema) | `20270205090000` | C, och F1 applicerad (versionsordning, se regel 2) |
 | E2 | [#393](https://github.com/cqrityjob/trust-path-recruitment/pull/393) | `claude/employer-notice-app` | E1 | Avsändare, kö-hantering, sweep, kind `employer_new_application` i edge-funktionen | – | E1 applicerad och verifierad; funktionen omdriftsatt |
-| F1 | PR_ACCESS_SCHEMA | `claude/employer-report-access-schema` | C | Behörighetsrättning, schema | `20270202090000`, `20270203090000`, `20270204090000` | C |
-| F2 | PR_ACCESS_APP | `claude/employer-report-access-app` | F1 | Behörighetsrättning, app | – | F1 applicerad och verifierad |
+| F1 | [#396](https://github.com/cqrityjob/trust-path-recruitment/pull/396) | `claude/employer-report-access-schema` | C | Behörighetsrättning, schema | `20270202090000`, `20270203090000`, `20270204090000` | C |
+| F2 | [#397](https://github.com/cqrityjob/trust-path-recruitment/pull/397) | `claude/employer-report-access-app` | F1 | Behörighetsrättning, app | – | F1 applicerad och verifierad |
 
 ### Fyra regler som avgör ordningen
 

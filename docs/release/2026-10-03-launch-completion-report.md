@@ -8,7 +8,7 @@ staplade utkast-PR:er mot #387: [#390](https://github.com/cqrityjob/trust-path-r
 (testskriptets flake, mot main), [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391)
 (karriäranalys), [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) och
 [#393](https://github.com/cqrityjob/trust-path-recruitment/pull/393) (mejl till arbetsgivaren, schema
-och app) samt PR_ACCESS_SCHEMA_REF och PR_ACCESS_APP_REF (rapportbehörighet, schema och app).
+och app) samt [#396](https://github.com/cqrityjob/trust-path-recruitment/pull/396) och [#397](https://github.com/cqrityjob/trust-path-recruitment/pull/397) (rapportbehörighet, schema och app).
 **Slutcommit** per PR är den som PR:en visar som huvud; CI-resultat per slutcommit står i avsnitt 5.
 **Releaseordning för alla:** `2026-10-03-release-order.md` (ersätter den tidigare provisoriska listan).
 
@@ -75,10 +75,10 @@ Förklaring: **R** rättad i kod (redo för merge) · **P** kräver produktions�
 |---|---|---|
 | A1 | `/jobs` har Lovable-domänen som canonical och `og:url` | **R** (+ publicering krävs) |
 | A2 | Registrering hänvisar till integritetspolicy som inte publicerats | **C** (#386) |
-| A3 | `/contact` visar "Formuläret är inte öppet ännu" (sv och en) | Orsak funnen, **R** (kod) + **P** (S8) |
-| A4 | Rapportbehörighet bredare än ärendevillkoret (alla medlemmar) | **B** — memo + 45 testpåståenden; ingen ändring |
+| A3 | `/contact` visar "Formuläret är inte öppet ännu" (sv och en) | Orsak funnen, **R** (kod). Funktionen är rättad och driftsatt (v3, 13:47 UTC), men svarar nu **503 `not_configured`**: `RESEND_API_KEY` saknas (**P**) |
+| A4 | Rapportbehörighet bredare än ärendevillkoret (alla medlemmar) | **R** i #396/#397 (byggd, lokalt verifierad, **ej applicerad**; kräver ägarbeslut) |
 | A5 | Exakt publicerad commit ej verifierad | **O** — ej möjlig härifrån |
-| A6 | BESKT-exponering och Passport-beslutsbindning (PR #384) | **C** — migrationerna 20270124/25 är `pending` |
+| A6 | BESKT-exponering och Passport-beslutsbindning (PR #384) | **C** — `20270124/25/26` är applicerade och registrerade (#385, #388, #389) |
 | A7 | Testmiljö på fel version | **R** — lokal PG16, full kedja, grön |
 | A8 | Centrala resor ej verifierade (registrering, mejl, företagsregistrering, ansökan, test, rapport) | **P** — begäran förberedd |
 | A9 | Märkningen "intern testversion" | **R** |
@@ -116,21 +116,38 @@ Förklaring: **R** rättad i kod (redo för merge) · **P** kräver produktions�
 | N27 | "Fråga Security AI" visades fast AI är stängt | P3 | **R** |
 | N28 | Karriärtextens sidfot låg på Academy-sidor | P2 | **R** |
 | N29 | `/journey` föräldralös engelsk sida | P3 | **R** |
-| S1 | Rapportbehörighet: alla medlemmar läser (ingen bedömarroll) | P1 | **B** (se `report-access-security-finding.md`) |
-| S2 | Vetting-begränsat ärende: kandidatens rättelser läses av alla medlemmar | P2 | **B/C** |
-| S3 | Subjekt som själv är medlem läser sin egen arbetsgivarrapport | P2 | **B/C** |
+| S1 | Rapportbehörighet: alla medlemmar läser (ingen bedömarroll) | P1 | **R** (#396/#397, `20270203`; ej applicerad; **B** ägarbeslut + meddelande till organisationer) |
+| S2 | Vetting-begränsat ärende: kandidatens rättelser läses av alla medlemmar | P2 | **R** (#396, `20270204`). Uppmätt: inget observerbart läckage (radpolicyn dolde redan ärendet); stängt som skyddsdjup |
+| S3 | Subjekt som själv är medlem läser sin egen arbetsgivarrapport | P2 | **R** (#396, `20270203`: subjektet utesluts) |
 | S4 | Globala innehållsroller läser alla klienters kandidatsvar | P2 | **B/C** |
-| S5 | `approve_access_request` återaktiverar borttagen/avstängd medlem | P2 | **B/C** |
-| S6 | Bedömarbehörigheter återkommer tyst vid återaktivering | P3 | **O** |
-| D1 | Arbetsgivaren mejlas inte om ny ansökan | P2 | **B** (memo) |
+| S5 | `approve_access_request` återaktiverar borttagen/avstängd medlem | P2 | **R** (#396, `20270202`; ej applicerad) |
+| S6 | Bedömarbehörigheter återkommer tyst vid återaktivering | P3 | **R** (#396, `20270202`: grants upphör med medlemskapet) |
+| D1 | Arbetsgivaren mejlas inte om ny ansökan | P2 | **R** i #392/#393 (byggd, ej applicerad; kräver `20270205`, funktionsdriftsättning och sweep-hemligheter) |
 | D2 | Testliknande publika annonser (3 synliga: "Säkerhet AB (h31-test-co)", "Buller o bång", "cqrityjob") | P2 | **B** (ägare) |
 | D3 | `sweep_expired_jobs()` kan aldrig lyckas | P3 | **O** |
 | D4 | Reply-To `job@` på arbetsgivarmeddelanden: kandidatsvar når CQrityjob, inte arbetsgivaren | P3 | **C** |
 | D5 | Ingen kandidatväg för kontoinställningar, export, radering, support | P1 | **C** |
-| D6 | ~20 `:check`-skript ligger utanför CI, två misslyckas redan på main (`employer-journey`, `employer-library-purpose`) | P3 | **O** |
+| D6 | ~20 `:check`-skript ligger utanför CI, två misslyckas redan på main (`employer-journey`, `employer-library-purpose`; samma fel på `7884182`, orörda) | P3 | **O** |
 | D7 | Produktionens säkerhetsrådgivare: 1 ERROR (`scp_scoring_version_lineage` är SECURITY DEFINER) | — | **E** — medveten, dokumenterad design (`20260801100000`) |
 | D8 | Dependencies (13 paket) | — | **E** med bevis; uppdatering vid nästa refresh |
-| D9 | Edge-funktionens 401, Auth Site URL/Redirect URLs, `PUBLIC_SITE_URL` | P1 | **P** |
+| D9 | Edge-funktionens 401, Auth Site URL/Redirect URLs, `PUBLIC_SITE_URL` | P1 | 401: **rättad och driftsatt** (v3). Kvar: Auth Site URL/Redirect URLs och `PUBLIC_SITE_URL` (**P**, Claude-sessionen) |
+
+### Tillkommit under slutarbetet
+
+| ID | Fynd | Allvar | Läge |
+|---|---|---|---|
+| AUTH-CACHE | `transactional-email` godtog en utgången/återkallad servertoken via positiv cache | P1 | **C** — stängd i `43180b8`, omkontrollerad av Astra, driftsatt som v3 |
+| PROD-MAIL-401 | Produktmejl nekades med 401 | P1 | **C** — rättningen driftsatt; verklig trafik visar nu 503 (nästa rad), alltså inte längre 401 |
+| PROD-MAIL-503 | Funktionen svarar 503 `not_configured` på appens GET (14:08–14:09 UTC) | P1 | **P** — `RESEND_API_KEY` saknas som secret; kontakt, kvitto, meddelanden och arbetsgivarmejl stängda tills den är satt |
+| PUB-OLD | Den publicerade sajten är äldre än main: `/villkor` och `/integritetspolicy` ger 404, villkorsrutan saknas, canonical pekar på lovable.app, mejllänkar går via `SITE_ORIGIN` | P1 | **P** — Lovable har synkat `071f69e` men inte publicerat |
+| APEX-TLS | `cqrityjob.com` (apex) har A- och AAAA-post men HTTPS ger TLS-fel och HTTP 421 | P2 | **P** — DNS/Lovable (L1, D1) |
+| AUTH-REF | Auth-anropet vid T2 (`/recover`, 200, 1,65 s) hade Referer `https://trust-path-recruitment.lovable.app`; www/login svarar 200 utan omdirigering och den publicerade koden omdirigerar inte | P2 | **O** — oförklarat; kontrollera sidans `origin` vid testet och Auths Site URL/Redirect URLs före T1 |
+| N30 | `db-test.sh`: `grep -q` under `pipefail` gav falska fel (observerat två gånger; 20/20 på stor utdata) | P3 | **R** (#390) |
+| N31 | Staplade PR:er hade ingen CI (workflow lyssnade bara på PR:er mot main) | P3 | **R** (#395) |
+| N32 | `recruitment-workspace:check`: ordningskontrollen jämförde mot en sträng som inte längre finns (`indexOf` gav −1, alltid sant) | P3 | **R** (#393, med två planterade kontroller) |
+| N33 | Karriäranalysens CTA:er, stängda läge, indexering och utskrift på sparad rapport | P2 | **R** (#391; ägarbeslut om öppnande kvarstår) |
+| N34 | Arbetsgivarens notis: ingen avanmälan; svar på kandidatmejl går till `job@` | P3 | **B** — beskrivet i beslut 3 och 8 |
+| N35 | `useMyCareerDirection.ts:277` länkar ett äldre v2.1-resultat till `/security-career-assessment/report/<id>` (svarar "hittas inte") | P3 | **O** |
 
 ## 5. Tester och obligatorisk CI
 
@@ -171,8 +188,8 @@ den lokala Supabase-stacken. De täcks av CI:s isolerade stackar och av produkti
 | [#391](https://github.com/cqrityjob/trust-path-recruitment/pull/391) | Karriäranalys | en tillgänglighetskälla, sann stängd panel, indexering följer läget, CTA:er bakom samma svar, utskrift på sparad rapport. **Ingen migration** | Revertera PR; läge byts med `cd_set_access_state` |
 | [#392](https://github.com/cqrityjob/trust-path-recruitment/pull/392) | Mejl till arbetsgivaren, schema | utkorg, mottagarregler i SQL, claim/settle med lease, 90 dagars retention, `20270205090000` (**pending**) | Rollback-skript; appen tål att funktionen saknas |
 | [#393](https://github.com/cqrityjob/trust-path-recruitment/pull/393) | Mejl till arbetsgivaren, app | kind `employer_new_application`, avsändare utan kandidatuppgifter, kö-hantering, sweep, 34 planterade fel (inkl. de två som kräver #386), rättad ordningskontroll i `recruitment-workspace:check` | Revertera PR |
-| PR_ACCESS_SCHEMA_REF | Rapportbehörighet, schema | `20270202090000` (avstängning kan inte kringgås, granskargrants följer medlemskapet), `20270203090000` (en definition av vem som läser; 14 funktioner och 7 policyer), `20270204090000` (intervjuärenden), 16 äldre sviter anpassade, 4 nya sviter | Rollback-skript i omvänd ordning, md5-pinnade |
-| PR_ACCESS_APP_REF | Rapportbehörighet, app | ärlig "ingen åtkomst"-vy, avstängningskoder som riktiga meningar, `employer-report-access:check` med 26 planterade fel | Revertera PR |
+| [#396](https://github.com/cqrityjob/trust-path-recruitment/pull/396) | Rapportbehörighet, schema | `20270202090000` (avstängning kan inte kringgås, granskargrants följer medlemskapet), `20270203090000` (en definition av vem som läser; 14 funktioner och 7 policyer), `20270204090000` (intervjuärenden), 16 äldre sviter anpassade, 4 nya sviter | Rollback-skript i omvänd ordning, md5-pinnade |
+| [#397](https://github.com/cqrityjob/trust-path-recruitment/pull/397) | Rapportbehörighet, app | ärlig "ingen åtkomst"-vy, avstängningskoder som riktiga meningar, `employer-report-access:check` med 26 planterade fel | Revertera PR |
 | Dokument | | dependency-audit, domän/inställningar, säkerhetsmemo, produktionstestbegäran, releaseordning, denna rapport | — |
 
 **Releaseordning.** Beroendebaserad och för alla PR:er: `2026-10-03-release-order.md`. Kortfattat:
