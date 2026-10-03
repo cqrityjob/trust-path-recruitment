@@ -194,6 +194,112 @@ echo "    ok  ${REPLAYED} migrations applied cleanly, in filename order"
 echo "==> Running complete client catalogue and privilege audit"
 psql_q -d "$TEST_DB" -f supabase/tests/client_table_privilege_hardening_test.sql
 
+# Employer report ACCESS MATRIX. Tests only: it documents and pins the CURRENT
+# behaviour of every read path to an employer report and of the release and
+# finalise gates -- logged out, the candidate, another candidate, owner, admin,
+# a reviewer-granted member, a plain member, a suspended and a removed member, a
+# member of another company and a platform admin who is not a member. It runs
+# here, straight after the replay, so it reads the final state of the chain and
+# not what a later rollback block leaves behind.
+#
+# The member-wide read model it records (every active member of an active
+# organisation reads the employer report, the case and its notes) is under owner
+# review; the assertions tagged MEMBER-WIDE-MODEL are exactly the ones that
+# decision changes. Negative controls, each of which MUST make the suite fail on
+# an assertion (each runs inside a transaction the suite's own ROLLBACK ends, so
+# nothing is left behind):
+#   NC1  a suspended or removed membership still counts as a membership   -> RM6.1
+#   NC2  a platform admin reads every organisation's employer report      -> RM8.1
+#   NC3  the interview case read is open to any authenticated user        -> RM2.1
+#   NC4  the employer report is narrowed to owner/admin (the decision)    -> RM5.1
+run_rm_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/employer_report_access_matrix_test.sql 2>&1
+}
+rm_nc_expect_fail() {
+  local label="$1" expect="$2" mutation="$3"
+  set +e
+  local out
+  out="$(printf 'BEGIN;\n%s\n\\i supabase/tests/employer_report_access_matrix_test.sql\n' "$mutation" \
+    | psql -v ON_ERROR_STOP=1 -d "$TEST_DB" 2>&1)"
+  local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect}"; then
+    echo "FAIL: employer report access matrix negative control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o "ASSERTION FAILED: RM[0-9A-Za-z.]*" | head -1))"
+}
+echo "==> Running employer report access matrix assertions"
+set +e
+RM_OUT="$(run_rm_suite)"; RM_RC=$?
+set -e
+RM_PASSED="$(echo "$RM_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$RM_RC" -ne 0 ]; then
+  echo "$RM_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the employer report access matrix suite exited with code ${RM_RC}." >&2
+  suite_failed "Employer report access matrix"
+elif [ "$RM_PASSED" -lt 45 ]; then
+  echo "$RM_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: employer report access matrix assertion shortfall: $RM_PASSED (floor 45)" >&2
+  suite_failed "Employer report access matrix (assertion shortfall: floor 45)"
+else
+  echo "    ok  $RM_PASSED employer report access matrix assertions passed (current behaviour pinned; the member-wide read model is tagged MEMBER-WIDE-MODEL)"
+  rm_nc_expect_fail "NC1 a removed or suspended membership still counts" "RM6.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.has_employer_role(_user_id uuid, _employer_id uuid, _roles text[] DEFAULT NULL::text[])
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.employer_memberships em
+    WHERE em.user_id = _user_id AND em.employer_id = _employer_id
+      AND (_roles IS NULL OR em.role = ANY(_roles))
+  );
+$function$;
+SQL
+)"
+  rm_nc_expect_fail "NC2 a platform admin reads every employer report" "RM8.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(_audience text, _subject_id uuid, _issuer_organization_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $function$
+  SELECT CASE _audience
+    WHEN 'participant' THEN EXISTS (
+      SELECT 1 FROM public.scp_subject_identities si
+       WHERE si.subject_id = _subject_id AND si.user_id = auth.uid())
+    WHEN 'employer' THEN
+      _issuer_organization_id IS NOT NULL
+      AND (public.has_active_employer_role(auth.uid(), _issuer_organization_id)
+           OR public.is_platform_admin(auth.uid()))
+    ELSE false
+  END;
+$function$;
+SQL
+)"
+  rm_nc_expect_fail "NC3 the interview case read is open to any authenticated user" "RM2.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.scp_iv_can_read_case(_case_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public'
+AS $function$
+  SELECT auth.uid() IS NOT NULL;
+$function$;
+SQL
+)"
+  rm_nc_expect_fail "NC4 the employer report narrowed to owner/admin (what the member-wide decision would change)" "RM5.1" "$(cat <<'SQL'
+CREATE OR REPLACE FUNCTION public.scp_report_snapshot_readable(_audience text, _subject_id uuid, _issuer_organization_id uuid)
+ RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO 'public', 'pg_temp'
+AS $function$
+  SELECT CASE _audience
+    WHEN 'participant' THEN EXISTS (
+      SELECT 1 FROM public.scp_subject_identities si
+       WHERE si.subject_id = _subject_id AND si.user_id = auth.uid())
+    WHEN 'employer' THEN
+      _issuer_organization_id IS NOT NULL
+      AND public.has_active_employer_role(auth.uid(), _issuer_organization_id, ARRAY['owner','admin'])
+    ELSE false
+  END;
+$function$;
+SQL
+)"
+fi
+
 # 20270101090000: four catalogue reads narrowed (drafts and unapproved
 # professions to authors/admins, the interviewer guide to authors) and three
 # stray client write grants revoked. Run the suite, prove it cannot pass on the
@@ -374,6 +480,106 @@ JA_OUT="$(run_ja_suite)"; JA_RC=$?
 set -e
 [ "$JA_RC" -eq 0 ] || { echo "$JA_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: application insert-boundary suite does not pass after rollback and re-apply" >&2; exit 1; }
 echo "    ok  application insert-boundary migration re-applied after rollback (postflight proved); suite passes again"
+# The job-board suites below need the FINAL schema -- in particular the insert
+# boundary (20261230090000) the CV suite's CV4.x assertions rely on -- so they
+# run here, straight after it. Further down this script walks the CV state back
+# to phase 1 for the historical suites.
+# ---------------------------------------------------------------------------
+# 20270130090000 / 20270131090000 / 20270201090000: the job-board launch-readiness
+# database corrections. Each suite reproduces its defect on the pre-fix state
+# ITSELF (the real rollback, inside a savepoint: NE0 / PW0 / CV0), then proves
+# the fix and every legitimate path. Negative controls, each of which MUST make
+# its suite fail on an assertion:
+#   PW NC1  the real rollback of 20270131090000        -> PW1.1
+#   PW NC2  only the expires_at rule disabled          -> PW1.1
+#   PW NC3  only the address rules disabled            -> PW3.1
+#   NE NC1  the real rollback of 20270130090000        -> NE1.1
+#   NE NC2  the refusal narrowed to one column         -> NE1.2
+#   NE NC3  the refusal applied to every role          -> NE5.1
+#   CV NC1  the real rollback of 20270201090000        -> CV1.1
+#   CV NC2  only the applicant INSERT policy back      -> CV1.1
+#   CV NC3  applicant SELECT + DELETE policies back    -> CV1.4
+# The two jobs migrations re-declare ONE function, in order: rolling the first
+# back also takes the second's rules with it, so the second is re-applied after
+# every control of the first and the chain ends exactly as it was replayed.
+jb_run_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "supabase/tests/$1" 2>&1
+}
+jb_nc_expect_fail() {
+  local label="$1" suite="$2" prefix="$3"
+  set +e
+  local out; out="$(jb_run_suite "$suite")"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: job-board negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o "ASSERTION FAILED: ${prefix}[0-9.]*" | head -1))"
+}
+jb_expect_pass() {
+  local label="$1" suite="$2" floor="$3"
+  set +e
+  local out; out="$(jb_run_suite "$suite")"; local rc=$?
+  set -e
+  local passed; passed="$(echo "$out" | grep -c "NOTICE:  ok  " || true)"
+  if [ "$rc" -ne 0 ]; then
+    echo "$out" | grep -E "ERROR|FAILED" >&2 || true
+    echo "FAIL: the ${label} suite exited with code ${rc}." >&2
+    exit 1
+  fi
+  [ "$passed" -ge "$floor" ] || { echo "$out"; echo "FAIL: ${label} assertion shortfall: $passed (floor $floor)" >&2; exit 1; }
+  echo "    ok  $passed ${label} assertions passed (defect reproduced pre-fix, refused post-fix)"
+}
+JB_NE_MIG=supabase/migrations/20270130090000_jobs_not_editable_in_place.sql
+JB_NE_RB=supabase/rollback/20270130090000_jobs_not_editable_in_place_rollback.sql
+JB_PW_MIG=supabase/migrations/20270131090000_jobs_publish_window_and_url_scheme.sql
+JB_PW_RB=supabase/rollback/20270131090000_jobs_publish_window_and_url_scheme_rollback.sql
+JB_CV_MIG=supabase/migrations/20270201090000_job_cvs_no_client_writes.sql
+JB_CV_RB=supabase/rollback/20270201090000_job_cvs_no_client_writes_rollback.sql
+
+echo "==> Running job-board launch-readiness assertions (in-place edits, publication window, CV bucket)"
+jb_expect_pass "jobs not editable in place" jobs_not_editable_in_place_test.sql 42
+jb_expect_pass "publication window and address" jobs_publish_window_and_url_scheme_test.sql 40
+jb_expect_pass "CV bucket client writes" job_cvs_no_client_writes_test.sql 22
+
+# 20270131090000 first (it sits on top of 20270130090000).
+psql_q -d "$TEST_DB" -f "$JB_PW_RB" >/dev/null
+jb_nc_expect_fail "PW NC1 full rollback" jobs_publish_window_and_url_scheme_test.sql PW
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "$(sed 's/AND NEW.expires_at <= now() THEN/AND false THEN/' "$JB_PW_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "PW NC2 expires_at rule disabled" jobs_publish_window_and_url_scheme_test.sql PW
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "$(sed "s/'\^https?:\/\/\[\^\/?#\[:space:\]\]+'/'^'/g" "$JB_PW_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "PW NC3 address rules disabled" jobs_publish_window_and_url_scheme_test.sql PW
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+
+# 20270130090000: its rollback restores the 20260906100000 body, which has no
+# rule of the second migration either -- so the second is applied again below.
+psql_q -d "$TEST_DB" -f "$JB_NE_RB" >/dev/null
+jb_nc_expect_fail "NE NC1 full rollback" jobs_not_editable_in_place_test.sql NE
+psql_q -d "$TEST_DB" -f "$JB_NE_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "$(sed "s/(to_jsonb(NEW) - 'updated_at') IS DISTINCT FROM (to_jsonb(OLD) - 'updated_at')/NEW.title_sv IS DISTINCT FROM OLD.title_sv/" "$JB_NE_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "NE NC2 refusal narrowed to one column" jobs_not_editable_in_place_test.sql NE
+psql_q -d "$TEST_DB" -c "$(sed "s/current_user IN ('authenticated', 'anon')/true/" "$JB_NE_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
+jb_nc_expect_fail "NE NC3 refusal applied to every role" jobs_not_editable_in_place_test.sql NE
+psql_q -d "$TEST_DB" -f "$JB_NE_MIG" >/dev/null
+psql_q -d "$TEST_DB" -f "$JB_PW_MIG" >/dev/null
+
+psql_q -d "$TEST_DB" -f "$JB_CV_RB" >/dev/null
+jb_nc_expect_fail "CV NC1 full rollback" job_cvs_no_client_writes_test.sql CV
+psql_q -d "$TEST_DB" -f "$JB_CV_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "CREATE POLICY job_cvs_applicant_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'job-application-cvs' AND auth.uid()::text = (storage.foldername(name))[1]);" >/dev/null
+jb_nc_expect_fail "CV NC2 applicant INSERT policy back" job_cvs_no_client_writes_test.sql CV
+# A DELETE (or UPDATE) policy alone cannot act on a row its role cannot SELECT, so the
+# control restores the pair that makes a stored CV deletable.
+psql_q -d "$TEST_DB" -c "DROP POLICY job_cvs_applicant_insert ON storage.objects; CREATE POLICY job_cvs_applicant_select ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'job-application-cvs' AND auth.uid()::text = (storage.foldername(name))[1]); CREATE POLICY job_cvs_applicant_delete ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'job-application-cvs' AND auth.uid()::text = (storage.foldername(name))[1]);" >/dev/null
+jb_nc_expect_fail "CV NC3 applicant SELECT + DELETE policies back" job_cvs_no_client_writes_test.sql CV
+psql_q -d "$TEST_DB" -f "$JB_CV_MIG" >/dev/null
+
+jb_expect_pass "jobs not editable in place (after re-apply)" jobs_not_editable_in_place_test.sql 42
+jb_expect_pass "publication window and address (after re-apply)" jobs_publish_window_and_url_scheme_test.sql 40
+jb_expect_pass "CV bucket client writes (after re-apply)" job_cvs_no_client_writes_test.sql 22
+echo "    ok  the three job-board migrations re-applied after every control (postflights proved); suites pass again"
 # 20261231090000: only the assignment path may bind an employment record to a
 # person (P1-3). The suite reproduces a non-member binding another employer's
 # employee on the pre-fix grant itself (RB0). Negative controls, each of which
@@ -10828,6 +11034,7 @@ fi
 echo ""
 echo "===================================================="
 echo " DB suite OK: ${PASSED} domain assertions,"
+echo "              ${RM_PASSED} employer report access matrix assertions,"
 echo "              ${SW_PASSED} Security Work assertions in each rollback round,"
 echo "              ${SW_NC_PASSED} Security Work planted-defect controls,"
 echo "              ${CD_PASSED} Career Discovery assertions,"

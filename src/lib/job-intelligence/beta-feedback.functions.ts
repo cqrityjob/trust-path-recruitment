@@ -10,10 +10,16 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type Ctx = { supabase: any; userId: string };
 
+/** The longest page path the schema accepts. Exported so the form cuts to the
+ *  same number the server refuses above: a path that is one character over
+ *  rejects the WHOLE submission, message included, and the person is told only
+ *  that sending failed. */
+export const BETA_FEEDBACK_PAGE_PATH_MAX = 300;
+
 const submitSchema = z.object({
   category: z.enum(["bug", "idea", "other"]),
   message: z.string().trim().min(1).max(4000),
-  pagePath: z.string().trim().max(300).optional().nullable(),
+  pagePath: z.string().trim().max(BETA_FEEDBACK_PAGE_PATH_MAX).optional().nullable(),
 });
 
 export const submitBetaFeedback = createServerFn({ method: "POST" })

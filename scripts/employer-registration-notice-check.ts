@@ -62,16 +62,28 @@ console.log("\n1. The employer entrance collects a company");
   // The homepage's sections live in HomeSections.tsx since 2026-09-30.
   const home = read("src/components/site/HomeSections.tsx");
   const employers = read("src/routes/employers.tsx");
+  // The ONE spelling of the intent lives with the organisation entrance
+  // (2026-10-03); the homepage band, /employers, the header, the footer and
+  // the legacy /employer/register URL all use it.
+  const entrance = read("src/lib/auth/organisation-entrance.ts");
+  ck(
+    "the one employer intent is /employer",
+    /export const EMPLOYER_INTENT = \{ redirect: "\/employer" \} as const;/.test(entrance),
+    "EMPLOYER_INTENT is not defined in organisation-entrance.ts",
+  );
   ck(
     "the homepage employer CTA targets /employer",
-    /const EMPLOYER_INTENT = \{ redirect: "\/employer" \}/.test(home) &&
+    /import \{ EMPLOYER_INTENT \} from "@\/lib\/auth\/organisation-entrance";/.test(home) &&
+      !/const EMPLOYER_INTENT\b/.test(home) &&
       /to="\/signup"\s+search=\{EMPLOYER_INTENT\}/.test(home),
-    "the CTA this guard reasons about is not in HomeSections.tsx",
+    "the CTA this guard reasons about is not in HomeSections.tsx, or it spells the intent itself",
   );
   ck(
     "/employers offers the same entrance",
-    /to="\/signup" search=\{\{ redirect: "\/employer" \}\}/.test(employers.replace(/\s+/g, " ")),
-    "the /employers register button no longer carries redirect=/employer",
+    /import \{ EMPLOYER_INTENT \} from "@\/lib\/auth\/organisation-entrance";/.test(employers) &&
+      /to="\/signup" search=\{EMPLOYER_INTENT\}/.test(employers.replace(/\s+/g, " ")) &&
+      !/to="\/signup" search=\{\{/.test(employers.replace(/\s+/g, " ")),
+    "the /employers register button no longer carries the shared employer intent",
   );
 
   ck(
@@ -289,7 +301,7 @@ console.log("\n2. The transport is inert without configuration, and says so");
   );
   ck(
     "the site origin is configuration with the shared constant as a fallback",
-    /process\.env\.PUBLIC_SITE_URL \|\| SITE_ORIGIN/.test(
+    /serverSiteOrigin\(process\.env\.PUBLIC_SITE_URL\)/.test(
       read("src/lib/job-intelligence/employer-registration-notice.server.ts"),
     ),
   );

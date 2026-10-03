@@ -30,8 +30,18 @@ export const Route = createFileRoute("/jobs/$slug")({
   // `from`: the /jobs search this ad was opened from, normalised through the
   // /jobs validator on arrival (job-search.ts). Nothing else is accepted.
   validateSearch: validateJobAdSearch,
-  loader: ({ params, context }) =>
-    context.queryClient.ensureQueryData(jobDetailQueryOptions(params.slug)),
+  // A closed, expired or unknown advertisement has no row for the public to
+  // read, and the loader says so. notFound() thrown from the COMPONENT (which
+  // still guards a client-side navigation) is thrown during render, after the
+  // router has already decided the response is a 200: the crawler got "200 OK"
+  // and an empty shell for every ad that had ever been closed -- a soft 404.
+  // From the loader the router answers 404, and head() below still emits the
+  // noindex tags for the unavailable page.
+  loader: async ({ params, context }) => {
+    const job = await context.queryClient.ensureQueryData(jobDetailQueryOptions(params.slug));
+    if (!job) throw notFound();
+    return job;
+  },
   head: ({ params, loaderData }) => {
     const job = loaderData as PublicJobSsrDetail | null | undefined;
     return buildJobHeadMeta(params.slug, job ?? null);
@@ -61,7 +71,7 @@ function JobDetailPage() {
   // uses ssr: false and reads data via TanStack Query. Update
   // document.title once the job is loaded so tabs and history reflect it.
   const dynamicTitle = q.data
-    ? `${pickLocalized(q.data.title_sv, q.data.title_en, lang) || "Security job"} — CQrityjob`
+    ? `${pickLocalized(q.data.title_sv, q.data.title_en, lang) || t("jobs.detail.titleFallback")} — CQrityjob`
     : null;
   useEffect(() => {
     if (!dynamicTitle) return;

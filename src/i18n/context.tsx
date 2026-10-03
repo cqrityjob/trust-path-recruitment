@@ -138,6 +138,40 @@ export function useT() {
   return ctx;
 }
 
+/** Is there an I18nProvider above this component? For the few components that
+ *  can render with or without one (the root's 404 and error screens) and must
+ *  not throw either way. Everything else uses useT(). */
+export function useHasI18n(): boolean {
+  return useContext(I18nContext) !== null;
+}
+
+/** A translator that NEVER throws, for the screens that can render when the
+ *  rest of the app could not: the root's 404 and its error boundary.
+ *
+ *  A hard crash unwinds the root component, and the I18nProvider with it, so
+ *  the error screen renders outside the provider and `useT()` would throw
+ *  inside the boundary meant to catch the first failure. Inside the provider
+ *  this is exactly `useT()`. Outside it, the reader still gets their own
+ *  language: Swedish on the server and on the first client render (what the
+ *  server wrote, so hydration matches), then the stored choice from
+ *  `readStoredLang()`; and Swedish when nothing is stored or storage cannot be
+ *  read, the site's default. */
+export function useTolerantT(): { lang: Lang; t: (key: TranslationKey) => string } {
+  const ctx = useContext(I18nContext);
+  const [stored, setStored] = useState<Lang>("sv");
+  useEffect(() => {
+    if (ctx) return;
+    const choice = readStoredLang();
+    if (choice) setStored(choice);
+  }, [ctx]);
+  const lang = ctx ? ctx.lang : stored;
+  const t = useCallback(
+    (key: TranslationKey) => (ctx ? ctx.t(key) : translateFor(stored)(key)),
+    [ctx, stored],
+  );
+  return { lang, t };
+}
+
 /** A page's <title> and description in the language the reader chose.
  *
  *  The server always renders the Swedish page (see I18nProvider), so every

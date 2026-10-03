@@ -86,8 +86,8 @@ export function receiptLink(siteOrigin: string, applicationId: string): string {
 }
 
 async function siteOrigin(): Promise<string> {
-  const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
-  return process.env.PUBLIC_SITE_URL || SITE_ORIGIN;
+  const { serverSiteOrigin } = await import("@/lib/site-origin");
+  return serverSiteOrigin(process.env.PUBLIC_SITE_URL);
 }
 
 function codeOf(error: { message?: string } | null | undefined): string {

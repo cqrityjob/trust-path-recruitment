@@ -744,6 +744,18 @@ jobs:
       - name: Assessment language contract check
         run: bun run assessment-language-contract:check
 
+      # What the candidate journey SAYS is true, and a failed read is never shown
+      # as an empty one: the shell is product-neutral (no Career Discovery
+      # footer or exit under an employer's assessment), the open career analysis
+      # is not called an internal test, the funnel's front door cannot hang, the
+      # CV editor does not print a blank page or lose unsaved wording, a failed
+      # history / profile read is a failure with a retry, feedback names the
+      # page within the schema's limit, "Ask Security AI" is offered only when
+      # AI is approved, and /journey is retired. Renders the shell and reads the
+      # sources; its planted controls run in negative-controls:all.
+      - name: Candidate journey launch check
+        run: bun run candidate-journey-launch:check
+
       # What the candidate is told is what is true: the reviewer is an
       # authorised person at the employer (never "a person at CQrityjob"),
       # the employer's reviewer does read free-text answers, 5 parts and 8
@@ -1077,6 +1089,20 @@ jobs:
       - name: Employer lifecycle check (phases 2 and 3)
         run: bun run employer-lifecycle:check
 
+      # Employer ACCESS, from the 2026-10 launch-readiness audit: a platform
+      # administrator can end, pause, restore and re-role a membership (the two
+      # server functions existed and nothing called them); the final-owner
+      # refusal is said as a sentence and never in the database's words; a
+      # rejected organisation has an address to write to, a removed member is
+      # told rather than offered a company form, and the workspace layout
+      # decides before it renders; changing an approved organisation's identity
+      # asks first and the review page says it is a re-review; an owner whose
+      # organisation is under review is told that, not that they "need to be an
+      # owner". It reads the permission model and changes none of it; its
+      # planted controls run in `negative-controls:all` above.
+      - name: Employer access lifecycle check
+        run: bun run employer-access-lifecycle:check
+
       # The recruitment workspace (20261207090000): one vocabulary for what the
       # overview counts and the lists open, no contact with a candidate except
       # an explicit reviewed send, decisions withheld from seats the database
@@ -1372,6 +1398,45 @@ jobs:
       - name: India entry journey
         run: bun run india-entry:check
 
+      # The site's outward name is https://www.cqrityjob.com, from ONE module
+      # (src/lib/site-origin.ts): no Lovable host in a canonical, og:url, the
+      # sitemap, robots.txt, the Passport share fallback, the e-mail link base
+      # or an invitation link, and loopback test hosts still keep their own
+      # address. Read-only over committed code, nothing hosted. Its planted
+      # controls run in negative-controls:all.
+      - name: Public address guard
+        run: bun run site-origin:check
+
+      # Product e-mail says WHY it is not ready (key rejected / function not
+      # deployed / Resend secret missing / unreachable), so /contact and the
+      # admin page no longer send the owner to store a key that is already
+      # there. Stubbed answers, nothing hosted. Its planted controls run in
+      # negative-controls:all.
+      - name: E-mail transport diagnosis
+        run: bun run email-transport-diagnosis:check
+
+      # Employer-written ad text cannot close the page's JSON-LD script element
+      # (stored XSS on every public ad URL): hostile title, description, location
+      # and employer fields leave as \u escapes and parse back unchanged, and no
+      # ld+json head script is built from a bare JSON.stringify. Its planted
+      # controls run in negative-controls:all.
+      - name: Job ad JSON-LD escaping
+        run: bun run job-jsonld-escaping:check
+
+      # The job board's launch-readiness corrections, application half: an advert
+      # whose dates have passed is refused by name (restore -> publish used to
+      # publish an ad nobody could see), application_url is a web address at every
+      # layer, /jobs/new keeps the draft it created, the employer's list refreshes
+      # the overview its badges come from and shows drafts, the all-applications
+      # list counts a CQrityjob CV, a failed submission reads the application back
+      # before it removes the CV it may already point at, and a closed job's URL
+      # answers 404 from the loader. The database half is in db-test.sh (the
+      # jobs_not_editable_in_place, jobs_publish_window_and_url_scheme and
+      # job_cvs_no_client_writes suites). Its planted controls run in
+      # negative-controls:all.
+      - name: Job board launch readiness
+        run: bun run job-board-launch:check
+
       # The Passport card's ONE ground (owner addendum, pilot finish): the CSS
       # mirror matches PASSPORT_CARD_SURFACE, no stripes, grid or engraving sits
       # behind any card, and the homepage panel draws the real shield system
@@ -1572,6 +1637,23 @@ jobs:
       # Its layout half is e2e/employer-landing.spec.ts.
       - name: Employer landing page check
         run: bun run employer-landing:check
+
+      # The root's 404 and error screens: translated through the dictionaries
+      # (they were English-only on a Swedish-default site), and rendered with
+      # and without the providers a hard crash takes away -- a screen that
+      # throws inside the error boundary is no screen. Read-only over committed
+      # code, nothing hosted. Its planted controls run in negative-controls:all.
+      - name: Root fallback screens check
+        run: bun run root-fallback:check
+
+      # Page titles and descriptions follow the reader's language: /login and
+      # /signup carried a Swedish title over an English description,
+      # /reset-password an English title on the Swedish site, the profession
+      # guide a Swedish-only tab, and an untitled ad fell back to "Security
+      # job". Read-only over committed code, nothing hosted. Its planted
+      # controls run in negative-controls:all.
+      - name: Page head language check
+        run: bun run head-language:check
 
 
       - name: Production build

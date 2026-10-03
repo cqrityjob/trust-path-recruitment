@@ -675,16 +675,32 @@ function ApplicationsList({
                       scripts/passport-separation-check.ts -- the applications
                       list is named there as staying closed. */}
                   <div className="flex flex-none flex-wrap items-center gap-1.5">
-                    {r.hasCv && (
-                      <button
-                        type="button"
-                        onClick={() => onDownloadCv(r.id)}
-                        className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:border-accent/50 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                      >
-                        <FileText className="h-3 w-3" aria-hidden="true" />
-                        {t("employer.applications.evidence.cv")}
-                      </button>
-                    )}
+                    {r.hasCv &&
+                      (r.cvSource === "cqrityjob_cv" ? (
+                        // A CQrityjob CV is not a file: there is nothing to sign
+                        // or download, so the chip opens the application, where it
+                        // is shown. (The download button below would only ever
+                        // answer CV_IS_NOT_A_FILE.)
+                        <Link
+                          to="/employer/$employerSlug/applications/$applicationId"
+                          params={{ employerSlug, applicationId: r.id }}
+                          search={{ list: listKey }}
+                          onClick={rememberList}
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:border-accent/50 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          <FileText className="h-3 w-3" aria-hidden="true" />
+                          {t("employer.applications.evidence.cv")}
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onDownloadCv(r.id)}
+                          className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:border-accent/50 hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                        >
+                          <FileText className="h-3 w-3" aria-hidden="true" />
+                          {t("employer.applications.evidence.cv")}
+                        </button>
+                      ))}
                     <ApplicationAssessmentChip employerId={employerId} applicationId={r.id} />
                   </div>
 

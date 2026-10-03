@@ -585,7 +585,7 @@ async function readNoticeState(employerId: string): Promise<AdminEmployerNoticeS
   const [
     { EMPLOYER_REGISTRATION_NOTICE_ACTION },
     { missingEmployerRegistrationEmailSettings, RESEND_SECRET_NAME },
-    { emailTransportReady },
+    { emailTransportDiagnosis },
   ] = await Promise.all([
     import("@/lib/job-intelligence/employer-registration-notice.server"),
     import("@/lib/email/send-employer-registration-email.server"),
@@ -595,8 +595,25 @@ async function readNoticeState(employerId: string): Promise<AdminEmployerNoticeS
   // Names only. With the app-side settings present, the remaining question is
   // whether the e-mail function is deployed and holds its key.
   const missingSettings = missingEmployerRegistrationEmailSettings();
-  if (missingSettings.length === 0 && !(await emailTransportReady())) {
-    missingSettings.push(RESEND_SECRET_NAME);
+  if (missingSettings.length === 0) {
+    // The reason, not just "not ready": a function that rejects this server's
+    // key is not a missing Resend secret, and storing the secret again would
+    // change nothing.
+    const diagnosis = await emailTransportDiagnosis();
+    if (!diagnosis.ready) {
+      const status = diagnosis.status ? ` (HTTP ${diagnosis.status})` : "";
+      missingSettings.push(
+        diagnosis.reason === "provider_key_missing"
+          ? RESEND_SECRET_NAME
+          : diagnosis.reason === "key_rejected"
+            ? `transactional-email rejects this server's service-role key${status}`
+            : diagnosis.reason === "function_not_deployed"
+              ? `transactional-email is not deployed${status}`
+              : diagnosis.reason === "unreachable"
+                ? "transactional-email could not be reached"
+                : `transactional-email answered unexpectedly${status}`,
+      );
+    }
   }
 
   let history: AdminEmployerRegistrationNotice[] = [];

@@ -11,19 +11,27 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { UnifiedAuthForm } from "@/components/auth/UnifiedAuthForm";
+import { useLocalizedHead } from "@/i18n/context";
+import { dictionaries } from "@/i18n/dictionaries";
+
+/** The head is the Swedish pair (the site's default, and what a crawler or a
+ *  first paint sees); useLocalizedHead() swaps in the English one on the
+ *  client, so the tab and the page agree. */
+const SV = dictionaries.sv;
 
 export const Route = createFileRoute("/login")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Logga in — CQrityjob" },
-      {
-        name: "description",
-        content:
-          "Log in to CQrityjob — your professional identity, career development and verified credentials in one place.",
-      },
+      { title: SV["meta.login.title"] },
+      { name: "description", content: SV["meta.login.description"] },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  component: () => <UnifiedAuthForm mode="signin" />,
+  component: LoginPage,
 });
+
+function LoginPage() {
+  useLocalizedHead("meta.login.title", "meta.login.description");
+  return <UnifiedAuthForm mode="signin" />;
+}

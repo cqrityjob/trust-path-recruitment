@@ -760,6 +760,107 @@ for (const hostile of [
 ok(srp("a".repeat(501), CRLF_FALLBACK) === CRLF_FALLBACK, "6.7 an over-long value falls back");
 
 // =========================================================================
+group("6b · safeReturnPath refuses TAB, NUL and every other C0 control, and DEL");
+// =========================================================================
+//
+// A URL parser deletes TAB (and CR and LF) from anywhere in its input before
+// it reads the host, so "/\t/evil.test" is a path to every structural check
+// ("starts with one slash, is not //") and an authority once it is navigated
+// to: "//evil.test". NUL and the rest of C0 have no place in a return path
+// either. The CR/LF layers could not see them, so the same four layers exist
+// for control characters (rawHasControlChar, decodedOnceHasControlChar,
+// decodedTwiceHasControlChar, hasEncodedControlChar), each asserted DIRECTLY
+// for the same reason the line-break layers are: end to end they overlap, and
+// only a direct assertion proves that each one is load-bearing
+// (scripts/negative-controls/p0a-controls.ts disables them one at a time).
+//
+// The cases that carry a real TAB, NUL, ESC or DEL character are written with
+// escapes so this file stays readable and diffable.
+
+const {
+  rawHasControlChar,
+  decodedOnceHasControlChar,
+  decodedTwiceHasControlChar,
+  hasEncodedControlChar,
+} = await import("../src/lib/auth/safe-redirect");
+
+const CTRL_CASES: ReadonlyArray<readonly [string, string]> = [
+  ["a raw TAB makes '/' + TAB + '/evil' into '//evil'", "/\t/evil.com"],
+  ["a raw NUL between the slashes", "/\u0000/evil.com"],
+  ["a raw TAB inside a path segment", "/my-career\t/cv"],
+  ["a raw NUL inside a path segment", "/my-career\u0000/cv"],
+  ["a raw TAB in the query", "/jobs?q=a\tb"],
+  ["a raw SOH, the next C0 character", "/a\u0001b"],
+  ["a raw ESC", "/a\u001bb"],
+  ["a raw unit separator, the last C0 character", "/a\u001fb"],
+  ["a raw DEL", "/a\u007fb"],
+  ["a percent-encoded TAB", "/%09/evil.com"],
+  ["a percent-encoded NUL", "/%00/evil.com"],
+  ["a percent-encoded unit separator, in upper-case hex", "/a%1Fb"],
+  ["a percent-encoded DEL", "/a%7fb"],
+  ["a percent-encoded DEL, upper case", "/a%7Fb"],
+  ["a double-encoded TAB", "/%2509/evil.com"],
+  ["a double-encoded NUL", "/%2500/evil.com"],
+  ["a triple-encoded TAB", "/%252509/evil.com"],
+  ["a quadruple-encoded NUL", "/%25252500/evil.com"],
+  ["a TAB hidden after a legitimate-looking prefix", "/employer%09/join"],
+];
+for (const [what, input] of CTRL_CASES) {
+  ok(srp(input, CRLF_FALLBACK) === CRLF_FALLBACK, `6b.1 control character falls back: ${what}`);
+}
+
+// Layer attribution, written as the defect a reviewer would see.
+ok(rawHasControlChar("/\t/evil.com"), "raw TAB accepted");
+ok(rawHasControlChar("/\u0000/evil.com"), "raw NUL accepted");
+ok(rawHasControlChar("/a\u001fb"), "raw last-C0 character accepted");
+ok(rawHasControlChar("/a\u007fb"), "raw DEL accepted");
+ok(decodedOnceHasControlChar("/%09/evil.com"), "single-encoded TAB accepted");
+ok(decodedOnceHasControlChar("/%00/evil.com"), "single-encoded NUL accepted");
+ok(decodedOnceHasControlChar("/a%7fb"), "single-encoded DEL accepted");
+ok(decodedTwiceHasControlChar("/%2509/evil.com"), "double-encoded TAB accepted");
+ok(decodedTwiceHasControlChar("/%2500/evil.com"), "double-encoded NUL accepted");
+ok(hasEncodedControlChar("/%252509/evil.com"), "deeply encoded control pattern accepted");
+ok(hasEncodedControlChar("/%25252500/evil.com"), "deeply encoded NUL pattern accepted");
+
+// And they do not start refusing what is not a control character: space and
+// the printable range, UTF-8 sequences (their bytes are 0x80 and up), an
+// encoded slash, and the ordinary returns every sign-in carries.
+for (const fine of [
+  "/my-career",
+  "/passport",
+  "/employer",
+  "/jobs?q=v%C3%A4ktare",
+  "/jobs?q=a%20b",
+  "/jobs?q=a%2Fb",
+  "/my-career/cv/new#section",
+  "/security-career-assessment?session=0b9c2e4a-1f3d-4a67-9c1e-2d5f7a8b9c0d",
+]) {
+  ok(
+    srp(fine, CRLF_FALLBACK) === fine,
+    `6b.2 an ordinary destination is still returned unchanged: ${fine}`,
+  );
+  ok(
+    !rawHasControlChar(fine) && !hasEncodedControlChar(fine),
+    `6b.3 no control layer fires on: ${fine}`,
+  );
+}
+
+// The legacy doors and the entrance read the parameter through
+// URLSearchParams, which decodes it: a TAB arriving as %09 in the query string
+// reaches safeReturnPath as a raw TAB and must be refused there too.
+{
+  const { unifiedAuthHref, employerRegisterHref } = await import("../src/lib/auth/legacy-entry");
+  ok(
+    unifiedAuthHref("signin", "?redirect=/%09/evil.com") === "/login",
+    "6b.4 a %09 smuggled through the query string is dropped by the legacy sign-in door",
+  );
+  ok(
+    employerRegisterHref("?redirect=/%00/evil.com") === "/signup?redirect=%2Femployer",
+    "6b.5 a %00 smuggled through the query string is replaced by the employer intent, not forwarded",
+  );
+}
+
+// =========================================================================
 console.log("");
 if (failures > 0) {
   console.error(`FAILED: ${failures} of ${checks} checks failed.`);

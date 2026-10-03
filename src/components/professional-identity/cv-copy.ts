@@ -276,6 +276,10 @@ export const CV = {
     "Delete this CV? The information in your profile is not affected.",
   ),
   deleting: c("Tar bort…", "Deleting…"),
+  deleteFailed: c(
+    "CV:t kunde inte tas bort. Ingenting ändrades. Försök igen.",
+    "This CV could not be deleted. Nothing changed. Try again.",
+  ),
 
   editPresentation: c("Redigera texten", "Edit the wording"),
   editDone: c("Klar", "Done"),
@@ -301,6 +305,16 @@ export const CV = {
   ),
   proposalAccept: c("Använd förslaget", "Use this suggestion"),
   proposalDiscard: c("Behåll mitt sparade CV", "Keep my saved CV"),
+  // Both failures were silent: the button stopped spinning and nothing else
+  // happened, which reads as "it worked and changed nothing".
+  proposeFailed: c(
+    "Det gick inte att ta fram ett nytt utkast just nu. Ditt sparade CV är oförändrat. Försök igen.",
+    "A new draft could not be prepared right now. Your saved CV is unchanged. Try again.",
+  ),
+  proposalSaveFailed: c(
+    "Förslaget kunde inte sparas. Ditt sparade CV är oförändrat. Försök igen.",
+    "The suggestion could not be saved. Your saved CV is unchanged. Try again.",
+  ),
 
   /* -- profile drift ------------------------------------------------ */
   driftTitle: c(
@@ -389,6 +403,8 @@ export const CV = {
     "Om du lämnar sidan nu försvinner det du skrivit. Spara först, eller stäng redigeringen om du vill kasta ändringarna.",
     "If you leave now, what you have written is lost. Save first, or close the editor if you want to discard your changes.",
   ),
+  leaveStay: c("Stanna kvar", "Stay on this page"),
+  leaveAnyway: c("Lämna utan att spara", "Leave without saving"),
   editCloseUnsaved: c("Stäng utan att spara", "Close without saving"),
   deleteCancel: c("Behåll CV:t", "Keep this CV"),
   deleteKeepsApplications: c(
@@ -402,6 +418,14 @@ export const CV = {
   exportHelp: c(
     "Öppnar webbläsarens utskriftsdialog, där du väljer skrivare eller “Spara som PDF”.",
     "Opens your browser's print dialog, where you choose a printer or “Save as PDF”.",
+  ),
+  // The reason the print button is disabled while the editor is open. The page
+  // prints the SAVED document, and with the editor open that document is not
+  // on the page: the form is, and the form does not print. The result was a
+  // blank sheet that nothing explained.
+  exportCloseEditor: c(
+    "Stäng redigeringen först. Utskriften visar det sparade CV:t, inte formuläret du redigerar i.",
+    "Close the editor first. Printing shows the saved CV, not the form you are editing in.",
   ),
 } as const;
 

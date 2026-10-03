@@ -33,8 +33,11 @@
 // exist. Vite inlines `VITE_`-prefixed values at build time, which is what
 // makes the same constant available on both tiers.
 
-/** The canonical public origin, matching sitemap[.]xml.ts and seo.ts. */
-const FALLBACK_ORIGIN = "https://trust-path-recruitment.lovable.app";
+import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
+
+/** The canonical public origin, the one in src/lib/site-origin.ts that
+ *  sitemap[.]xml.ts and seo.ts use too. */
+const FALLBACK_ORIGIN = PRODUCTION_ORIGIN;
 const FALLBACK_GATEWAY_ORIGIN = "https://wrygicdfxwjnrugduxnt.supabase.co";
 
 /** Hosts that must never appear in a link handed to a third party. A share

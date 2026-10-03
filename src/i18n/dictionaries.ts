@@ -105,8 +105,23 @@ export const dictionaries = {
     "nav.testsAndDevelopment": "Tester och utveckling",
     "nav.reviews": "Granskningar",
     "appnav.aria": "Primär navigering",
+    // The public header's navigation landmark (desktop bar and compact menu).
+    // e2e finds it by `data-site-nav="primary"`, never by this text.
+    "nav.primary": "Primär navigering",
     "nav.menu.open": "Öppna menyn",
     "nav.menu.close": "Stäng menyn",
+    // The root's two fallback screens (components/site/RootFallbacks.tsx): the
+    // 404 and the error boundary. They can render outside the I18nProvider
+    // after a hard crash, so they read the dictionary through useTolerantT().
+    // "Sidan kunde inte laddas" / "Försök igen" are what the e2e specs already
+    // look for beside their English forms.
+    "root.notFound.title": "Sidan hittades inte",
+    "root.notFound.body": "Sidan du söker finns inte eller har flyttats.",
+    "root.goHome": "Till startsidan",
+    "root.error.title": "Sidan kunde inte laddas",
+    "root.error.body":
+      "Något gick fel hos oss. Du kan försöka igen eller gå tillbaka till startsidan.",
+    "root.error.retry": "Försök igen",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
@@ -148,6 +163,18 @@ export const dictionaries = {
     "meta.contact.title": "Kontakta oss om rekrytering – CQrityjob",
     "meta.passportPage.title": "Security Passport – dina meriter inom säkerhet – CQrityjob",
     "meta.securityWorkPage.title": "Säkerhetsarbete – stöd för ditt säkerhetsarbete – CQrityjob",
+    // The auth surfaces and the profession guide. The server renders the
+    // Swedish pair; useLocalizedHead() (or the guide's own effect) swaps in
+    // English on the client, so the tab says what the page says.
+    "meta.login.title": "Logga in – CQrityjob",
+    "meta.login.description":
+      "Logga in på CQrityjob – din professionella identitet, karriärutveckling och verifierade meriter på ett ställe.",
+    "meta.signup.title": "Skapa konto – CQrityjob",
+    "meta.signup.description":
+      "Skapa ett CQrityjob-konto – ett konto för din professionella profil, Security Passport, bedömningar och jobbansökningar.",
+    "meta.resetPassword.title": "Återställ ditt lösenord – CQrityjob",
+    "meta.profession.title": "{profession} — yrkesguide | CQrityjob",
+    "meta.profession.unavailable.title": "Yrkesguide — CQrityjob",
 
     // ── THE TWO INDIVIDUAL ENTRY ACTIONS ────────────────────────────
     //
@@ -537,6 +564,8 @@ export const dictionaries = {
     "jobs.card.today": "Idag",
     "jobs.card.posted_days_ago": "Publicerad för {n} dagar sedan",
     "jobs.detail.back": "← Tillbaka till jobben",
+    // The tab title of an ad that carries no title of its own in either language.
+    "jobs.detail.titleFallback": "Säkerhetsjobb",
     "jobs.detail.backToResults": "← Tillbaka till jobben",
     "jobs.detail.apply_external": "Ansök på arbetsgivarens webbplats",
     "jobs.detail.apply_email": "Ansök via e-post",
@@ -694,6 +723,11 @@ export const dictionaries = {
     "employers.cta.how": "Så fungerar det",
     "employers.cta.loginLead": "Har ni redan ett konto?",
     "employers.cta.login": "Logga in",
+    // Said next to "Registrera företag", because registering is not the same
+    // as being able to use the platform: an administrator approves the
+    // organisation first. Same facts as auth.unified.organisation.note.
+    "employers.cta.registerNote":
+      "En administratör granskar företaget innan arbetsgivarytan öppnas.",
 
     "employers.platform.eyebrow": "Arbetsgivarplattformen",
     "employers.path.title": "Hela rekryteringen på ett ställe",
@@ -843,13 +877,15 @@ export const dictionaries = {
     "contact.sent.body": "Vi svarar till {email}.",
     "contact.error.required": "Fyll i namn, organisation och e-postadress.",
     "contact.error.email": "Ange en giltig e-postadress.",
-    "contact.error.failed": "Förfrågan kunde inte skickas. Försök igen om en stund.",
+    "contact.error.failed":
+      "Förfrågan kunde inte skickas. Försök igen om en stund eller mejla oss på {email}.",
     "contact.error.rateLimited":
       "Många förfrågningar har skickats på kort tid. Försök igen om en stund.",
     "contact.checking": "Kontrollerar formuläret …",
-    "contact.closed.title": "Formuläret är inte öppet ännu",
+    "contact.closed.title": "Formuläret är tillfälligt stängt",
     "contact.closed.body":
-      "Vi kan inte ta emot förfrågningar här just nu. Vill ni komma igång direkt kan ni registrera företaget och använda plattformen själva.",
+      "Vi kan inte ta emot förfrågningar via formuläret just nu. Mejla oss i stället, så svarar vi. Vill ni komma igång direkt kan ni också registrera företaget. Arbetsgivarytan öppnas först när en administratör har godkänt det.",
+    "contact.direct.lead": "Ni kan också mejla oss direkt:",
     "contact.platform.lead": "Vill ni hellre använda plattformen själva?",
 
     "profession.police.title": "Polis",
@@ -1007,6 +1043,47 @@ export const dictionaries = {
     "account.context.underReview": "Granskas",
     "account.context.unavailable": "Inte tillgänglig",
     "employer.pending.checking": "Kontrollerar din registrering …",
+    // ── MEDAN DU VÄNTAR, OCH VEM MAN SKRIVER TILL ─────────────────────────
+    //
+    // Ingen tidsfrist utlovas: ingen kan idag säga hur lång en granskning tar,
+    // och sidan påstår inte mer än vad som är sant. Adressen är den som alltid
+    // gäller, vad kontaktformuläret än gör (src/lib/site-contact.ts).
+    "employer.pending.wait.heading": "Medan du väntar",
+    "employer.pending.wait.noTime":
+      "Vi kan inte säga hur lång tid granskningen tar. Sidan uppdateras av sig själv när statusen ändras, och du kan stänga den och logga in igen senare med samma inloggning.",
+    "employer.pending.wait.meanwhile":
+      "Din personliga profil fungerar som vanligt under tiden. Det är bara organisationens arbetsyta som väntar på godkännande.",
+    "employer.pending.wait.questions": "Frågor om granskningen?",
+    "employer.contact.writeTo": "Skriv till",
+    "employer.contact.subject": "Företagskonto",
+    // ── ÅTKOMSTEN TILL EN ORGANISATION ÄR AVSLUTAD ELLER AVSTÄNGD ────────
+    //
+    // Visas i stället för "Kom igång som arbetsgivare" för den som har en
+    // borttagen eller avstängd medlemskapsrad och ingen aktiv. Organisationen
+    // namnges inte: en person utan aktiv åtkomst får inte läsa dess uppgifter.
+    "employer.accessEnded.removed.heading": "Din åtkomst till organisationen har tagits bort",
+    "employer.accessEnded.removed.body":
+      "Du kan inte längre öppna organisationens arbetsyta. Det du har gjort i organisationen ligger kvar där.",
+    "employer.accessEnded.suspended.heading": "Din åtkomst till organisationen är avstängd",
+    "employer.accessEnded.suspended.body":
+      "Åtkomsten är pausad, inte borttagen. Du kan inte öppna organisationens arbetsyta förrän den har återaktiverats.",
+    "employer.accessEnded.next":
+      "Vill du ha tillbaka åtkomsten, tror du att det är ett misstag eller vill du registrera en annan organisation? Kontakta oss.",
+    // ── ORGANISATIONENS UPPGIFTER GRANSKAS IGEN ──────────────────────────
+    //
+    // En godkänd organisation som ändrar namn, land, organisationsnummer eller
+    // webbplats går tillbaka till granskning (20270123090000). Sidan säger att
+    // det är det som hänt, inte att organisationen precis har registrerats.
+    "employer.rereview.heading": "Organisationens uppgifter granskas igen",
+    "employer.rereview.body":
+      "Du ändrade organisationens namn, land, organisationsnummer eller webbplats. Ändringen granskas innan arbetsytan öppnas igen.",
+    "employer.rereview.access":
+      "Under tiden är arbetsytan stängd för hela teamet och era publicerade annonser visas inte för kandidater. Inget har raderats.",
+    "employer.rereview.step.saved": "Din ändring är sparad. Den försvinner inte om du loggar ut.",
+    "employer.rereview.step.review":
+      "En administratör på CQrityjob granskar de nya uppgifterna. De är ännu inte godkända.",
+    "employer.rereview.step.reopened":
+      "När ändringen godkänns öppnas arbetsytan igen med samma inloggning och annonserna visas igen.",
     "auth.google": "Fortsätt med Google",
     "auth.or": "eller",
     // Shown only when the return path is an organisation invitation. Says
@@ -1474,11 +1551,16 @@ export const dictionaries = {
     "careerDiscovery.history.lead": "Dina sparade rapporter, senaste först. Bara du kan se dem.",
     "careerDiscovery.history.loading": "Hämtar…",
     "careerDiscovery.history.empty": "Du har inga rapporter ännu.",
+    // A failed read is not an empty history, and must never read like one.
+    "careerDiscovery.history.error":
+      "Vi kunde inte hämta dina rapporter just nu. Det betyder inte att de saknas – försök igen.",
+    "careerDiscovery.history.retry": "Försök igen",
     "careerDiscovery.history.startCta": "Gör din Discovery",
     "careerDiscovery.history.report": "Discovery-rapport",
     "careerDiscovery.history.type.discovery": "Security Career Discovery",
     "careerDiscovery.history.type.legacy": "Karriärtest (tidigare version)",
-    "careerDiscovery.history.internalTest": "Intern testversion",
+    "careerDiscovery.history.internalTest":
+      "Testversion – innehållet är ännu inte granskat av sakkunniga",
     "careerDiscovery.history.open": "Öppna rapport",
     "careerDiscovery.dashboard.directionTitle": "Din karriärriktning",
     "careerDiscovery.dashboard.dnaTitle": "Ditt Security Career DNA",
@@ -1488,14 +1570,20 @@ export const dictionaries = {
     "careerDiscovery.dashboard.allReports": "Alla mina rapporter",
     "careerDiscovery.dashboard.nextStepFallback":
       "Läs mer om de säkerhetsområden som stämmer bäst med din profil.",
+    // The key name predates the wording: the analysis is open to the public, so
+    // it is no longer an "internal test". What is true is that the content has
+    // not been reviewed by specialists, and that is what this says.
     "careerDiscovery.dashboard.internalTestNote":
-      "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
+      "Karriäranalysen är under utveckling. Innehållet är framtaget men ännu inte granskat av sakkunniga. Det är vägledning som stöd för samtal och egna beslut – inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
     "cd.public.loading": "Förbereder karriäranalysen…",
     "cd.public.unavailableTitle": "Karriäranalysen är inte öppen just nu",
-    "cd.public.unavailableBody":
-      "Den uppdaterade karriäranalysen granskas innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
+    "cd.public.unavailableBody": "Karriäranalysen är inte öppen för nya deltagare just nu.",
+    // The check itself failed: neither "open" nor "closed" is known.
+    "cd.public.checkFailedTitle": "Karriäranalysen kunde inte förberedas",
+    "cd.public.checkFailedBody":
+      "Vi kunde inte kontrollera om karriäranalysen är öppen just nu. Det kan bero på din uppkoppling eller på ett tillfälligt fel hos oss. Försök igen.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
     "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
@@ -1770,6 +1858,11 @@ export const dictionaries = {
     "sca.scp.saving": "Sparar…",
     "sca.scp.savedNote": "Sparat.",
     "sca.scp.errorNote": "Kunde inte spara just nu. Försök igen.",
+    // The READ failed. This is not "nothing filled in": offering to fill it in
+    // over a profile that exists but could not be read would invite an overwrite.
+    "sca.scp.loadFailed":
+      "Vi kunde inte hämta din profil just nu. Det betyder inte att den är tom – försök igen.",
+    "sca.scp.retry": "Försök igen",
     // The dashboard card is a summary; the editor opens from it.
     "sca.scp.summary.status": "Nuläge",
     "sca.scp.summary.profession": "Nuvarande yrke",
@@ -1991,6 +2084,14 @@ export const dictionaries = {
     "employer.jobs.form.error.jobNotCloseable": "Endast en publicerad annons kan stängas.",
     "employer.jobs.form.error.invalidData":
       "Ogiltiga uppgifter. Kontrollera de obligatoriska fälten, inklusive arbetsplatstyp, anställningsform och yrkesområde, och försök igen.",
+    "employer.jobs.form.error.expiresInPast":
+      "Annonsen kan inte publiceras: sista visningsdag har redan passerat. Välj en ny dag i annonsen och försök igen.",
+    "employer.jobs.form.error.expiresTooFar":
+      "Annonsen kan inte publiceras: sista visningsdag får ligga högst 90 dagar fram. Välj en tidigare dag och försök igen.",
+    "employer.jobs.form.error.deadlineInPast":
+      "Annonsen kan inte publiceras: sista ansökningsdag har redan passerat. Välj en ny dag, eller ta bort datumet, och försök igen.",
+    "employer.jobs.form.error.applicationUrlInvalid":
+      "Ansökningslänken måste börja med http:// eller https://. Rätta länken i annonsen och försök igen.",
     "employer.jobs.form.error.saveDraftFailed": "Utkastet kunde inte sparas.",
     "employer.jobs.form.error.submitForReviewFailed":
       "Jobbannonsen kunde inte skickas till granskning.",
@@ -2406,6 +2507,9 @@ export const dictionaries = {
     "employer.jobs.readiness.applicationMethod": "Så här söker man",
     "employer.jobs.readiness.applicationTarget": "Länk eller e-postadress för ansökan",
     "employer.jobs.readiness.expiresAt": "Sista visningsdag",
+    "employer.jobs.readiness.expiresWindow":
+      "Sista visningsdag ligger framåt i tiden, högst 90 dagar bort",
+    "employer.jobs.readiness.deadline": "Sista ansökningsdag har inte passerat",
     "employer.jobs.readiness.location": "Plats eller ort",
     "employer.jobs.readiness.bothLanguages": "Både svenska och engelska",
     "employer.jobs.readiness.descriptionDepth": "En beskrivning som säger något om tjänsten",
@@ -2961,6 +3065,24 @@ export const dictionaries = {
     "employer.settings.saving": "Sparar…",
     "employer.settings.saved": "Ändringarna har sparats.",
     "employer.settings.saveError": "Kunde inte spara ändringarna.",
+    // ── ATT ÄNDRA ORGANISATIONENS IDENTITET ──────────────────────────────
+    //
+    // Namn, land, organisationsnummer och webbplats är det som granskades när
+    // organisationen godkändes. Ändras något av dem sätter databasen
+    // organisationen tillbaka till granskning (20270123090000), och då stängs
+    // arbetsytan och annonserna slutar visas. Det ska ägaren veta innan
+    // sparandet, inte upptäcka efteråt.
+    "employer.settings.identityConfirm.title": "Spara ändringen och skicka till granskning?",
+    "employer.settings.identityConfirm.body":
+      "Namn, land, organisationsnummer och webbplats är det vi granskade när organisationen godkändes. Ändrar du något av dem granskas organisationen på nytt.",
+    "employer.settings.identityConfirm.consequence":
+      "Så länge granskningen pågår är arbetsytan stängd för hela teamet och era publicerade annonser visas inte för kandidater. Vi kan inte säga hur lång tid granskningen tar. Inget raderas, och arbetsytan öppnas igen när ändringen har godkänts.",
+    "employer.settings.identityConfirm.changes": "Det här ändras",
+    "employer.settings.identityConfirm.empty": "(tomt)",
+    "employer.settings.identityConfirm.noReview":
+      "Beskrivningarna kan du ändra utan ny granskning.",
+    "employer.settings.identityConfirm.confirm": "Spara och skicka till granskning",
+    "employer.settings.identityConfirm.cancel": "Avbryt, ändra inget",
 
     "admin.auth.login.title": "Administratörsinloggning",
     "admin.auth.login.intro":
@@ -3345,6 +3467,46 @@ export const dictionaries = {
       "Åtgärden kunde inte genomföras eftersom arbetsgivarens status har ändrats. Läs in sidan igen.",
     "admin.employers.action.error.noteRequired": "En intern anteckning krävs för det här beslutet.",
     "admin.employers.action.error.forbidden": "Åtkomst nekad.",
+
+    // ── MEDLEMMARNAS ÅTKOMST (plattformsadministratör) ────────────────────
+    //
+    // Ta bort, stäng av, återaktivera och byt roll. Texten säger vad som
+    // faktiskt händer: åtkomsten upphör vid personens nästa åtgärd, medlemskapet
+    // raderas aldrig och det som personen redan gjort ligger kvar.
+    "admin.employers.members.intro":
+      "Här tar du bort, stänger av eller återaktiverar en persons åtkomst till organisationen, och ändrar roll. Ändringen gäller direkt och loggas.",
+    "admin.employers.members.col.actions": "Åtgärder",
+    "admin.employers.members.unnamed": "Namn saknas",
+    "admin.employers.members.onlyOwner": "Enda aktiva ägare",
+    "admin.employers.members.action.suspend": "Stäng av åtkomst",
+    "admin.employers.members.action.remove": "Ta bort",
+    "admin.employers.members.action.reactivate": "Återaktivera",
+    "admin.employers.members.action.role": "Ändra roll",
+    "admin.employers.members.dialog.suspend.title": "Stänga av {name}?",
+    "admin.employers.members.dialog.suspend.body":
+      "{name} förlorar åtkomsten till organisationens arbetsyta vid nästa åtgärd: ansökningar, tester, intervjuer och rapporter. Medlemskapet finns kvar och kan återaktiveras. Det personen redan har gjort i organisationen tas inte bort.",
+    "admin.employers.members.dialog.remove.title": "Ta bort {name} från organisationen?",
+    "admin.employers.members.dialog.remove.body":
+      "{name} förlorar åtkomsten till organisationens arbetsyta vid nästa åtgärd. Medlemskapet markeras som borttaget och sparas som spår, det raderas inte. Det personen redan har gjort i organisationen tas inte bort, och personen kan återaktiveras senare.",
+    "admin.employers.members.dialog.reactivate.title": "Återaktivera {name}?",
+    "admin.employers.members.dialog.reactivate.body":
+      "{name} får tillbaka åtkomsten till organisationen med rollen {role}.",
+    "admin.employers.members.dialog.role.title": "Ändra roll för {name}",
+    "admin.employers.members.dialog.role.body":
+      "Rollen avgör vad personen får göra i organisationens arbetsyta. Ägare och administratör kan hantera teamet och skicka tester. En medlem kan inte det.",
+    "admin.employers.members.dialog.role.label": "Ny roll",
+    "admin.employers.members.dialog.role.ownerWarning":
+      "Ägare är organisationens högsta roll. Ge den bara till någon som organisationen har utsett.",
+    "admin.employers.members.dialog.finalOwner":
+      "{name} är organisationens enda aktiva ägare. Utse en annan ägare först, annars kan åtgärden inte genomföras.",
+    "admin.employers.members.result.suspend": "{name}: åtkomsten är avstängd.",
+    "admin.employers.members.result.remove": "{name} har tagits bort från organisationen.",
+    "admin.employers.members.result.reactivate": "{name}: åtkomsten är återställd.",
+    "admin.employers.members.result.role": "{name}: rollen är nu {role}.",
+    "admin.employers.members.result.unchanged":
+      "Ingen ändring behövdes. {name} hade redan det läget.",
+    "admin.actionError.membershipFinalOwner":
+      "Personen är organisationens enda aktiva ägare. Utse en annan ägare först, så kan åtgärden genomföras.",
 
     "admin.jobs.status.draft": "Utkast",
     "admin.jobs.status.pending_review": "Väntar på granskning",
@@ -6296,6 +6458,7 @@ export const dictionaries = {
     "academy.attempt.scored": "Bedömd",
     "academy.attempt.released": "Frisläppt",
     "academy.attempt.other": "Annan status",
+    "academy.attempt.exit": "Till Tester och utveckling",
     "academy.reviews.title": "Granskning",
     "academy.reviews.lede":
       "Här finns kandidatsvar som behöver mänsklig bedömning innan underlaget kan färdigställas. Den som tilldelade testet får aldrig granska det själv.",
@@ -6906,7 +7069,7 @@ export const dictionaries = {
       "Kandidaten har ännu inget konto på CQrityjob. Bjud in personen från Testbibliotek — inbjudan kopplas automatiskt när kontot skapas.",
     "journey.assignNoApplication": "Ansökan gick inte att hitta i er organisation.",
     "journey.assignNotAuthorised":
-      "Du behöver vara ägare eller administratör för att skicka en bedömning.",
+      "Du kan inte skicka en bedömning just nu. Det kräver aktiv ägar- eller administratörsbehörighet i en organisation som är godkänd och aktiv.",
     "journey.assignNotForRecruitment": "Den här bedömningen är inte öppen för rekrytering.",
     "journey.assignNoBasis": "Er organisation har inte tillgång till den här bedömningen.",
     "journey.assignApplicationNotOpen":
@@ -6992,6 +7155,12 @@ export const dictionaries = {
     "sendTest.sent.openOverview": "Tester & bedömningar",
     "sendTest.error.noTest": "Det finns inget test att skicka för den valda nivån.",
     "sendTest.error.unavailable": "Testbiblioteket kunde inte läsas just nu. Försök igen.",
+    // Orsaken, inte bara att det blev nej. En ägare vars organisation granskas
+    // på nytt hade fått höra att hen "behöver vara ägare" — vilket hen är.
+    "sendTest.refusal.underReview":
+      "Det går inte att skicka tester just nu eftersom organisationen granskas. Det beror på organisationens status, inte på din behörighet. Du kan skicka tester igen när granskningen är klar.",
+    "sendTest.refusal.notActive":
+      "Det går inte att skicka tester just nu eftersom organisationens arbetsyta inte är öppen. Det beror på organisationens status, inte på din behörighet.",
     "sendTest.close": "Stäng",
     "sendTest.cancel": "Avbryt",
     "journey.stage.started": "Pågår",
@@ -8973,8 +9142,15 @@ export const dictionaries = {
     "nav.testsAndDevelopment": "Assessments and development",
     "nav.reviews": "Reviews",
     "appnav.aria": "Primary navigation",
+    "nav.primary": "Primary navigation",
     "nav.menu.open": "Open menu",
     "nav.menu.close": "Close menu",
+    "root.notFound.title": "Page not found",
+    "root.notFound.body": "The page you're looking for doesn't exist or has been moved.",
+    "root.goHome": "Go home",
+    "root.error.title": "This page didn't load",
+    "root.error.body": "Something went wrong on our end. You can try again or head back home.",
+    "root.error.retry": "Try again",
 
     "brand.name": "CQrityjob",
     "brand.slogan": "Where trust comes first.",
@@ -9004,6 +9180,15 @@ export const dictionaries = {
     "meta.contact.title": "Contact us about recruitment – CQrityjob",
     "meta.passportPage.title": "Security Passport – your credentials in security – CQrityjob",
     "meta.securityWorkPage.title": "Security work – support for your security work – CQrityjob",
+    "meta.login.title": "Sign in – CQrityjob",
+    "meta.login.description":
+      "Log in to CQrityjob – your professional identity, career development and verified credentials in one place.",
+    "meta.signup.title": "Create account – CQrityjob",
+    "meta.signup.description":
+      "Create a CQrityjob account – one account for your professional profile, Security Passport, assessments and job applications.",
+    "meta.resetPassword.title": "Reset your password – CQrityjob",
+    "meta.profession.title": "{profession} — career guide | CQrityjob",
+    "meta.profession.unavailable.title": "Career guide — CQrityjob",
 
     "cta.passport": "Create my Security Passport",
     "cta.assessment": "Start the Career Analysis",
@@ -9323,6 +9508,7 @@ export const dictionaries = {
     "jobs.card.today": "Today",
     "jobs.card.posted_days_ago": "Posted {n} days ago",
     "jobs.detail.back": "← Back to jobs",
+    "jobs.detail.titleFallback": "Security job",
     "jobs.detail.backToResults": "← Back to jobs",
     "jobs.detail.apply_external": "Apply on the employer's website",
     "jobs.detail.apply_email": "Apply by email",
@@ -9471,6 +9657,8 @@ export const dictionaries = {
     "employers.cta.how": "How it works",
     "employers.cta.loginLead": "Already have an account?",
     "employers.cta.login": "Sign in",
+    "employers.cta.registerNote":
+      "An administrator reviews the organisation before the employer workspace opens.",
 
     "employers.platform.eyebrow": "The employer platform",
     "employers.path.title": "The whole recruitment in one place",
@@ -9611,13 +9799,15 @@ export const dictionaries = {
     "contact.sent.body": "We will reply to {email}.",
     "contact.error.required": "Fill in your name, organisation and email address.",
     "contact.error.email": "Enter a valid email address.",
-    "contact.error.failed": "The enquiry could not be sent. Please try again shortly.",
+    "contact.error.failed":
+      "The enquiry could not be sent. Please try again shortly or email us at {email}.",
     "contact.error.rateLimited":
       "Many enquiries have been sent in a short time. Please try again shortly.",
     "contact.checking": "Checking the form …",
-    "contact.closed.title": "The form is not open yet",
+    "contact.closed.title": "The form is temporarily closed",
     "contact.closed.body":
-      "We cannot receive enquiries here right now. If you want to get started straight away, you can register your organisation and use the platform yourselves.",
+      "We cannot receive enquiries through the form right now. Email us instead and we will reply. If you want to get started straight away, you can also register your organisation. The employer workspace opens only once an administrator has approved it.",
+    "contact.direct.lead": "You can also email us directly:",
     "contact.platform.lead": "Would you rather use the platform yourselves?",
 
     "profession.police.title": "Police Officer",
@@ -9747,6 +9937,48 @@ export const dictionaries = {
     "account.context.underReview": "Under review",
     "account.context.unavailable": "Unavailable",
     "employer.pending.checking": "Checking your registration …",
+    // ── WHILE YOU WAIT, AND WHO TO WRITE TO ───────────────────────────────
+    //
+    // No turnaround is promised: nobody can say today how long a review takes,
+    // and the page claims nothing it cannot support. The address is the one
+    // that always works, whatever the contact form is doing
+    // (src/lib/site-contact.ts).
+    "employer.pending.wait.heading": "While you wait",
+    "employer.pending.wait.noTime":
+      "We cannot say how long the review takes. This page updates by itself when the status changes, and you can close it and sign in again later with the same login.",
+    "employer.pending.wait.meanwhile":
+      "Your personal profile works as usual in the meantime. Only the organisation's workspace is waiting for approval.",
+    "employer.pending.wait.questions": "Questions about the review?",
+    "employer.contact.writeTo": "Write to",
+    "employer.contact.subject": "Company account",
+    // ── ACCESS TO AN ORGANISATION HAS ENDED OR IS SUSPENDED ───────────────
+    //
+    // Shown instead of "Get started as an employer" to somebody who holds a
+    // removed or suspended membership and no active one. The organisation is
+    // not named: a person without active access may not read its details.
+    "employer.accessEnded.removed.heading": "Your access to the organisation has been removed",
+    "employer.accessEnded.removed.body":
+      "You can no longer open the organisation's workspace. What you have done in the organisation stays there.",
+    "employer.accessEnded.suspended.heading": "Your access to the organisation is suspended",
+    "employer.accessEnded.suspended.body":
+      "Your access is paused, not removed. You cannot open the organisation's workspace until it has been reactivated.",
+    "employer.accessEnded.next":
+      "Do you want your access back, do you think this is a mistake, or do you want to register a different organisation? Contact us.",
+    // ── THE ORGANISATION'S DETAILS ARE BEING REVIEWED AGAIN ──────────────
+    //
+    // An approved organisation that changes its name, country, registration
+    // number or website goes back to review (20270123090000). The page says
+    // that is what happened, not that the organisation was just registered.
+    "employer.rereview.heading": "The organisation's details are being reviewed again",
+    "employer.rereview.body":
+      "You changed the organisation's name, country, registration number or website. The change is reviewed before the workspace opens again.",
+    "employer.rereview.access":
+      "Meanwhile the workspace is closed for the whole team and your published ads are not shown to candidates. Nothing has been deleted.",
+    "employer.rereview.step.saved": "Your change is saved. It does not disappear if you sign out.",
+    "employer.rereview.step.review":
+      "A CQrityjob administrator reviews the new details. They are not approved yet.",
+    "employer.rereview.step.reopened":
+      "Once the change is approved, the workspace opens again with the same sign-in and the ads are shown again.",
     "auth.google": "Continue with Google",
     "auth.or": "or",
     "auth.invite.organisationContext":
@@ -10169,11 +10401,16 @@ export const dictionaries = {
     "careerDiscovery.history.lead": "Your saved reports, newest first. Only you can see them.",
     "careerDiscovery.history.loading": "Loading…",
     "careerDiscovery.history.empty": "You do not have any reports yet.",
+    // A failed read is not an empty history, and must never read like one.
+    "careerDiscovery.history.error":
+      "We could not load your reports right now. That does not mean they are gone – please try again.",
+    "careerDiscovery.history.retry": "Try again",
     "careerDiscovery.history.startCta": "Take your Discovery",
     "careerDiscovery.history.report": "Discovery report",
     "careerDiscovery.history.type.discovery": "Security Career Discovery",
     "careerDiscovery.history.type.legacy": "Career assessment (earlier version)",
-    "careerDiscovery.history.internalTest": "Internal test version",
+    "careerDiscovery.history.internalTest":
+      "Test version – content not yet reviewed by specialists",
     "careerDiscovery.history.open": "Open report",
     "careerDiscovery.dashboard.directionTitle": "Your career direction",
     "careerDiscovery.dashboard.dnaTitle": "Your Security Career DNA",
@@ -10183,14 +10420,20 @@ export const dictionaries = {
     "careerDiscovery.dashboard.allReports": "All my reports",
     "careerDiscovery.dashboard.nextStepFallback":
       "Read more about the Security Career Areas that best match your profile.",
+    // The key name predates the wording: the analysis is open to the public, so
+    // it is no longer an "internal test". What is true is that the content has
+    // not been reviewed by specialists, and that is what this says.
     "careerDiscovery.dashboard.internalTestNote":
-      "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
+      "The career analysis is still in development. Its content has not yet been reviewed by specialists. It is guidance to support conversation and your own decisions – not a test and not a judgement about employability.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "This report was saved in an earlier format. Open the full report to see its contents.",
     "cd.public.loading": "Preparing the career analysis…",
     "cd.public.unavailableTitle": "The career analysis is not open right now",
-    "cd.public.unavailableBody":
-      "The updated career analysis is being reviewed before it opens to everyone. We will open it as soon as that review is complete.",
+    "cd.public.unavailableBody": "The career analysis is not open to new participants right now.",
+    // The check itself failed: neither "open" nor "closed" is known.
+    "cd.public.checkFailedTitle": "The career analysis could not be prepared",
+    "cd.public.checkFailedBody":
+      "We could not check whether the career analysis is open right now. It may be your connection or a temporary fault on our side. Please try again.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
     "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
@@ -10417,6 +10660,11 @@ export const dictionaries = {
     "sca.scp.saving": "Saving…",
     "sca.scp.savedNote": "Saved.",
     "sca.scp.errorNote": "Couldn't save right now. Please try again.",
+    // The READ failed. This is not "nothing filled in": offering to fill it in
+    // over a profile that exists but could not be read would invite an overwrite.
+    "sca.scp.loadFailed":
+      "We could not load your profile right now. That does not mean it is empty – please try again.",
+    "sca.scp.retry": "Try again",
     "sca.scp.summary.status": "Current situation",
     "sca.scp.summary.profession": "Current profession",
     "sca.scp.summary.experience": "Experience",
@@ -10625,6 +10873,14 @@ export const dictionaries = {
     "employer.jobs.form.error.jobNotCloseable": "Only a published job can be closed.",
     "employer.jobs.form.error.invalidData":
       "Invalid job data. Please check the required fields, including workplace type, employment type and career area, and try again.",
+    "employer.jobs.form.error.expiresInPast":
+      "This ad cannot be published: its last display day has already passed. Choose a new day in the ad and try again.",
+    "employer.jobs.form.error.expiresTooFar":
+      "This ad cannot be published: the last display day can be at most 90 days ahead. Choose an earlier day and try again.",
+    "employer.jobs.form.error.deadlineInPast":
+      "This ad cannot be published: its application deadline has already passed. Choose a new day, or remove the date, and try again.",
+    "employer.jobs.form.error.applicationUrlInvalid":
+      "The application link must start with http:// or https://. Correct the link in the ad and try again.",
     "employer.jobs.form.error.saveDraftFailed": "This draft could not be saved.",
     "employer.jobs.form.error.submitForReviewFailed": "This job could not be submitted for review.",
     "employer.jobs.form.error.closeJobFailed": "This job could not be closed.",
@@ -11022,6 +11278,9 @@ export const dictionaries = {
     "employer.jobs.readiness.applicationMethod": "How to apply",
     "employer.jobs.readiness.applicationTarget": "Application link or email address",
     "employer.jobs.readiness.expiresAt": "Last day shown",
+    "employer.jobs.readiness.expiresWindow":
+      "Last day shown is in the future, at most 90 days ahead",
+    "employer.jobs.readiness.deadline": "Application deadline has not passed",
     "employer.jobs.readiness.location": "Location or city",
     "employer.jobs.readiness.bothLanguages": "Both Swedish and English",
     "employer.jobs.readiness.descriptionDepth": "A description that says something about the role",
@@ -11548,6 +11807,24 @@ export const dictionaries = {
     "employer.settings.saving": "Saving…",
     "employer.settings.saved": "Your changes have been saved.",
     "employer.settings.saveError": "Could not save your changes.",
+    // ── CHANGING THE ORGANISATION'S IDENTITY ──────────────────────────────
+    //
+    // Name, country, registration number and website are what was reviewed when
+    // the organisation was approved. Change any of them and the database puts
+    // the organisation back in review (20270123090000): the workspace closes
+    // and the ads stop being shown. The owner should know that before saving,
+    // not find out afterwards.
+    "employer.settings.identityConfirm.title": "Save the change and send it for review?",
+    "employer.settings.identityConfirm.body":
+      "Name, country, registration number and website are what we reviewed when the organisation was approved. If you change any of them, the organisation is reviewed again.",
+    "employer.settings.identityConfirm.consequence":
+      "While the review is under way the workspace is closed for the whole team and your published ads are not shown to candidates. We cannot say how long the review takes. Nothing is deleted, and the workspace opens again once the change is approved.",
+    "employer.settings.identityConfirm.changes": "What you are changing",
+    "employer.settings.identityConfirm.empty": "(empty)",
+    "employer.settings.identityConfirm.noReview":
+      "You can change the descriptions without a new review.",
+    "employer.settings.identityConfirm.confirm": "Save and send for review",
+    "employer.settings.identityConfirm.cancel": "Cancel, change nothing",
 
     "admin.auth.login.title": "Administrator sign in",
     "admin.auth.login.intro":
@@ -11918,6 +12195,46 @@ export const dictionaries = {
       "This action could not be completed because the employer's status has changed. Reload the page.",
     "admin.employers.action.error.noteRequired": "An internal note is required for this decision.",
     "admin.employers.action.error.forbidden": "Access denied.",
+
+    // ── MEMBERS' ACCESS (platform administrator) ──────────────────────────
+    //
+    // Remove, suspend, reactivate and change role. The copy says what actually
+    // happens: access ends at the person's next action, the membership is never
+    // deleted and what the person already did stays where it is.
+    "admin.employers.members.intro":
+      "Remove, suspend or reactivate a person's access to the organisation here, and change their role. The change applies immediately and is logged.",
+    "admin.employers.members.col.actions": "Actions",
+    "admin.employers.members.unnamed": "No name on file",
+    "admin.employers.members.onlyOwner": "Only active owner",
+    "admin.employers.members.action.suspend": "Suspend access",
+    "admin.employers.members.action.remove": "Remove",
+    "admin.employers.members.action.reactivate": "Reactivate",
+    "admin.employers.members.action.role": "Change role",
+    "admin.employers.members.dialog.suspend.title": "Suspend {name}?",
+    "admin.employers.members.dialog.suspend.body":
+      "{name} loses access to the organisation's workspace on their next action: applications, tests, interviews and reports. The membership is kept and can be reactivated. Nothing the person has already done in the organisation is deleted.",
+    "admin.employers.members.dialog.remove.title": "Remove {name} from the organisation?",
+    "admin.employers.members.dialog.remove.body":
+      "{name} loses access to the organisation's workspace on their next action. The membership is marked as removed and kept as a record; it is not deleted. Nothing the person has already done in the organisation is deleted, and the person can be reactivated later.",
+    "admin.employers.members.dialog.reactivate.title": "Reactivate {name}?",
+    "admin.employers.members.dialog.reactivate.body":
+      "{name} regains access to the organisation with the role {role}.",
+    "admin.employers.members.dialog.role.title": "Change the role of {name}",
+    "admin.employers.members.dialog.role.body":
+      "The role decides what the person may do in the organisation's workspace. Owners and administrators can manage the team and send tests. A member cannot.",
+    "admin.employers.members.dialog.role.label": "New role",
+    "admin.employers.members.dialog.role.ownerWarning":
+      "Owner is the organisation's highest role. Only give it to someone the organisation has designated.",
+    "admin.employers.members.dialog.finalOwner":
+      "{name} is the organisation's only active owner. Appoint another owner first, otherwise this cannot be done.",
+    "admin.employers.members.result.suspend": "{name}: access is suspended.",
+    "admin.employers.members.result.remove": "{name} has been removed from the organisation.",
+    "admin.employers.members.result.reactivate": "{name}: access is restored.",
+    "admin.employers.members.result.role": "{name}: the role is now {role}.",
+    "admin.employers.members.result.unchanged":
+      "No change was needed. {name} was already in that state.",
+    "admin.actionError.membershipFinalOwner":
+      "This person is the organisation's only active owner. Appoint another owner first, then try again.",
 
     "admin.jobs.status.draft": "Draft",
     "admin.jobs.status.pending_review": "Pending review",
@@ -14805,6 +15122,7 @@ export const dictionaries = {
     "academy.attempt.scored": "Assessed",
     "academy.attempt.released": "Released",
     "academy.attempt.other": "Other status",
+    "academy.attempt.exit": "To Assessments and development",
     "academy.reviews.title": "Review",
     "academy.reviews.lede":
       "These are the candidate responses that need a human assessment before the brief can be completed. Whoever assigned the test may never review it themselves.",
@@ -15404,7 +15722,7 @@ export const dictionaries = {
     "journey.assignRecruitmentCompleted":
       "The recruitment is completed. No new tests can be sent in it.",
     "journey.assignNotAuthorised":
-      "You need to be an owner or an administrator to send an assessment.",
+      "You cannot send an assessment right now. It requires active owner or administrator access in an organisation that is approved and active.",
     "journey.assignNotForRecruitment": "This assessment is not open for recruitment.",
     "journey.assignNoBasis": "Your organisation does not have access to this assessment.",
     "journey.openBrief": "Open candidate brief",
@@ -15484,6 +15802,12 @@ export const dictionaries = {
     "sendTest.sent.openOverview": "Tests & assessments",
     "sendTest.error.noTest": "There is no test to send for the chosen level.",
     "sendTest.error.unavailable": "The test library could not be read right now. Try again.",
+    // The reason, not just the no. An owner whose organisation is under review
+    // again would otherwise be told they "need to be an owner" -- which they are.
+    "sendTest.refusal.underReview":
+      "Tests cannot be sent right now because the organisation is under review. That is about the organisation's status, not your permission. You can send tests again when the review is complete.",
+    "sendTest.refusal.notActive":
+      "Tests cannot be sent right now because the organisation's workspace is not open. That is about the organisation's status, not your permission.",
     "sendTest.close": "Close",
     "sendTest.cancel": "Cancel",
     "journey.stage.started": "In progress",

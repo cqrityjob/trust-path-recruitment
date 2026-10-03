@@ -269,15 +269,12 @@ export const createAssessmentAssignment = createServerFn({ method: "POST" })
       // best-effort-side-effect convention (audit writes elsewhere in
       // this codebase follow the same rule).
       const { sendInvitationEmail } = await import("@/lib/email/send-invitation-email.server");
-      const { SITE_ORIGIN } = await import("@/lib/job-intelligence/seo");
-      // Pre-merge review fix (checklist item 5): PUBLIC_SITE_URL lets
-      // Mostafa point invitation links at the correct environment
-      // (Lovable Preview during testing, the real production domain once
-      // live) without a code change. Falls back to the existing
-      // SITE_ORIGIN constant (already used for every canonical/sitemap
-      // URL elsewhere in this app) so behaviour is unchanged until it's
-      // explicitly set.
-      const siteOrigin = process.env.PUBLIC_SITE_URL || SITE_ORIGIN;
+      const { serverSiteOrigin } = await import("@/lib/site-origin");
+      // PUBLIC_SITE_URL lets a staging host or an isolated test stack name
+      // itself. A platform-assigned (*.lovable.app) or malformed value is
+      // ignored and the production domain is used, so an invitation never
+      // carries a link that cannot be corrected once it has been sent.
+      const siteOrigin = serverSiteOrigin(process.env.PUBLIC_SITE_URL);
       const invitationUrl = `${siteOrigin}/invite/${token}`;
       const sendResult = await sendInvitationEmail({
         recipientEmail: data.recipientEmail,

@@ -71,7 +71,6 @@ export function V31ReportView({
   snapshot,
   generatedAt,
   versions,
-  isInternalTest = false,
   /** "authenticated" (default): a stored report reached by its owner, with
    *  links into their saved history. "anonymous": a result computed
    *  client-side, straight after completion, before any account exists —
@@ -106,7 +105,6 @@ export function V31ReportView({
   snapshot: ReportSnapshot;
   generatedAt: string;
   versions: StoredReportVersions;
-  isInternalTest?: boolean;
   mode?: "authenticated" | "anonymous";
   /** Privacy-safe funnel events (Execution Mandate §34) — forwarded from
    *  CareerCardCreator; the host decides how/whether to record them. */
@@ -187,15 +185,22 @@ export function V31ReportView({
         {t("careerDiscovery.report.header.product")} · {date}
       </p>
 
-      {isInternalTest && (
-        <p
-          role="note"
-          className="mt-3 flex gap-2 rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
-        >
-          <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
-          {t("careerDiscovery.report.header.internalTest")}
-        </p>
-      )}
+      {/* Said on every v3.1 report, signed in or not. It used to be gated on an
+          `isInternalTest` prop that no caller passed, so neither the anonymous
+          result nor the saved report carried any caveat at all, while the
+          content behind them has not been reviewed by specialists. It is
+          about the instrument, not about who is reading it, so there is no
+          condition to get wrong. The same sentence is the Career Discovery
+          shell's footer; the result screen drops the footer so it appears
+          once. */}
+      <p
+        role="note"
+        data-testid="cd-report-caveat"
+        className="mt-3 flex gap-2 rounded-md border border-border bg-muted/40 p-4 text-sm leading-relaxed text-muted-foreground"
+      >
+        <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+        {t("careerDiscovery.dashboard.internalTestNote")}
+      </p>
 
       {/* 1 · YOUR SECURITY CAREER DNA — short, immediately understandable.
           Execution Mandate §26: "do not begin with long profile prose." The

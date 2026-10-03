@@ -34,9 +34,14 @@ function entryPublished(): boolean {
 }
 
 function siteOrigin(): string {
-  const fallback = "https://trust-path-recruitment.lovable.app";
+  const fallback = "https://www.cqrityjob.com";
   try {
     const parsed = new URL(Deno.env.get("PUBLIC_SITE_URL") ?? fallback);
+    // A platform-assigned host (the old *.lovable.app address, a preview) is
+    // never where a share link may send a stranger, whatever the setting says.
+    if (/(^|\.)(lovable\.app|lovableproject\.com|lovableproject-dev\.com)$/i.test(parsed.hostname)) {
+      return fallback;
+    }
     return parsed.protocol === "https:" ? parsed.origin : fallback;
   } catch {
     return fallback;

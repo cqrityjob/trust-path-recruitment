@@ -26,6 +26,7 @@ import {
   type IndiaLang,
 } from "@/lib/india-entry/copy";
 import { trackFunnelOnce } from "@/lib/india-entry/analytics";
+import { shareableUrl, siteUrl } from "@/lib/site-origin";
 
 /** ── THE INDIA ENTRY PAGE ─────────────────────────────────────────────
  *
@@ -66,7 +67,7 @@ function indiaIntent(lang: IndiaLang) {
   return { redirect: `${INDIA_SETUP_REDIRECT}&lang=${lang}`, lang } as const;
 }
 const PAGE_PATH = "/security-passport/india";
-const CANONICAL = `https://trust-path-recruitment.lovable.app${PAGE_PATH}`;
+const CANONICAL = siteUrl(PAGE_PATH);
 
 export const Route = createFileRoute("/security-passport/india")({
   head: () => ({
@@ -444,7 +445,7 @@ function InviteCard({ lang }: { lang: IndiaLang }) {
   useEffect(() => {
     setCanShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
   }, []);
-  const url = () => `${window.location.origin}${PAGE_PATH}`;
+  const url = () => shareableUrl(PAGE_PATH, window.location.origin);
   const share = async () => {
     try {
       await navigator.share({ title: t("landing.meta.title"), url: url() });

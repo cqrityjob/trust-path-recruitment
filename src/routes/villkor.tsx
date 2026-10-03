@@ -4,12 +4,13 @@ import { useLocalizedHead } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
 import { TERMS } from "@/lib/legal/documents";
 import { TERMS_FINAL } from "@/lib/legal/status";
+import { siteUrl } from "@/lib/site-origin";
 
 // The owner's terms of use, as published. Linked from the footer and from
 // registration. Content: src/lib/legal/documents.ts.
 
 const SV = dictionaries.sv;
-const URL = "https://trust-path-recruitment.lovable.app/villkor";
+const URL = siteUrl("/villkor");
 
 export const Route = createFileRoute("/villkor")({
   head: () => ({

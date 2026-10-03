@@ -15,6 +15,8 @@ import { useRetiredHomeAnchors } from "@/components/site/legacy-home-anchors";
 import { employerPortalEnabled } from "@/lib/job-intelligence/feature-flag";
 import { useLocalizedHead } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
+import { PRODUCTION_ORIGIN, siteUrl } from "@/lib/site-origin";
+import { jsonLdScript } from "@/lib/job-intelligence/seo";
 
 /** ── THE PUBLIC HOMEPAGE (locked decisions, 2026-09-30) ────────────────
  *
@@ -78,20 +80,20 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: SV["meta.home.title"] },
       { property: "og:description", content: SV["meta.home.description"] },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/" },
+      { property: "og:url", content: siteUrl("/") },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/" }],
+    links: [{ rel: "canonical", href: siteUrl("/") }],
     scripts: [
       {
         type: "application/ld+json",
-        children: JSON.stringify({
+        children: jsonLdScript({
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "CQrityjob",
           slogan: "Where trust comes first.",
           description: SV["brand.description"],
-          url: "https://www.cqrityjob.com",
+          url: PRODUCTION_ORIGIN,
         }),
       },
     ],

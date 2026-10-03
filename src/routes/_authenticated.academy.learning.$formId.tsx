@@ -175,7 +175,7 @@ function LearningRoute() {
   const isLast = index === items.length - 1;
 
   return (
-    <AssessmentShell showExit>
+    <AssessmentShell exit={{ to: "/academy", label: t("academy.learning.backHome") }}>
       <AssessmentCard>
         <AssessmentProgressBar
           stageLabel={t("academy.learning.stage")}

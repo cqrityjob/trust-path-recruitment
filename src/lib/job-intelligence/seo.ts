@@ -5,13 +5,15 @@
 // the tags are present in the initial HTML response.
 
 import type { PublicJobSsrDetail } from "./public-queries.functions";
+import { PRODUCTION_ORIGIN } from "@/lib/site-origin";
 
-// Public site canonical origin — matches the sitemap.xml BASE_URL.
+// Public site canonical origin (https://www.cqrityjob.com) — one definition in
+// src/lib/site-origin.ts, matching the sitemap.xml BASE_URL.
 // Exported so any server-side code that must build an absolute URL
 // outside the browser (e.g. an email invitation link, which has no
 // window.location) reuses this single source of truth instead of a
 // second hardcoded copy.
-export const SITE_ORIGIN = "https://trust-path-recruitment.lovable.app";
+export const SITE_ORIGIN = PRODUCTION_ORIGIN;
 
 function pickLocalized(sv: string | null, en: string | null): string {
   return sv || en || "";
@@ -55,6 +57,26 @@ function salaryUnitText(period: string | null): string | null {
     default:
       return null;
   }
+}
+
+/**
+ * JSON for the body of a `<script type="application/ld+json">` element.
+ *
+ * The router writes a head script's string straight into the page. Plain
+ * `JSON.stringify` leaves `<` as it is, so an ad title such as
+ * `x</script><img src=x onerror=…>` ends the script element early and the rest
+ * runs as page HTML for every visitor who opens the ad URL. Employer text is
+ * written by any member of an approved organisation, so every `<`, `>` and `&`
+ * (and the two line separators JavaScript treats as line ends) leaves here as a
+ * \u escape. The result is still valid JSON that parses back to the same value.
+ */
+export function jsonLdScript(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
 }
 
 /** Build the JSON-LD JobPosting object. */
@@ -210,7 +232,7 @@ export function buildJobHeadMeta(
     scripts: [
       {
         type: "application/ld+json",
-        children: JSON.stringify(buildJobPostingJsonLd(slug, job)),
+        children: jsonLdScript(buildJobPostingJsonLd(slug, job)),
       },
     ],
   };

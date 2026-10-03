@@ -34,6 +34,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isHttpApplicationUrl } from "@/lib/job-intelligence/application-url";
+import { publishDateProblems } from "@/lib/job-intelligence/job-readiness";
 
 type Ctx = { supabase: any; userId: string };
 
@@ -82,6 +84,23 @@ async function assertActiveMembership(
 // submitted is invalid" without needing to parse or forward the trigger's
 // own wording. Nothing else about the write, the RLS policies, or the
 // trigger logic itself is changed.
+//
+// One narrow exception to "never read the trigger's wording": a 23514 whose
+// message is one of the fixed sentences jobs_validate_before_write() raises for
+// a rule the employer can act on is mapped to that rule's OWN code. Everything
+// else stays INVALID_JOB_DATA, whose text (workplace type, employment form,
+// career area) described a different problem and is exactly what a restored
+// advert with an old deadline used to be told. The matched text is only ever
+// compared against, never forwarded.
+const TRIGGER_RULE_CODES: ReadonlyArray<readonly [needle: string, code: string]> = [
+  ["not in an employer-editable state", "JOB_NOT_EDITABLE"],
+  ["expires_at must be in the future", "EXPIRES_AT_IN_PAST"],
+  ["expires_at cannot be more than 90 days", "EXPIRES_AT_TOO_FAR"],
+  ["deadline_at must be on or after published_at", "DEADLINE_IN_PAST"],
+  ["application_url must be an http", "APPLICATION_URL_INVALID"],
+  ["requires an http or https application_url", "APPLICATION_URL_INVALID"],
+];
+
 function sanitizeJobWriteError(
   error: { message?: string; code?: string } | null | undefined,
   context: string,
@@ -89,6 +108,10 @@ function sanitizeJobWriteError(
 ): Error {
   console.error(`[employer-jobs] ${context} failed`, error);
   if (error?.code === "23514") {
+    const message = String(error.message ?? "");
+    for (const [needle, code] of TRIGGER_RULE_CODES) {
+      if (message.includes(needle)) return new Error(code);
+    }
     return new Error("INVALID_JOB_DATA");
   }
   return new Error(fallbackCode);
@@ -243,10 +266,15 @@ const draftPayloadSchema = z.object({
   employment_type: z.string().max(32).optional().nullable(),
   experience_level: z.string().max(32).optional().nullable(),
   application_method: z.enum(["external", "email", "internal", "unavailable"]),
+  // A web address only. zod's .url() accepts any scheme that parses
+  // (`javascript:`, `data:`, `file:`) and the public ad puts the value in an
+  // href. The database refuses the same thing (20270131090000).
   application_url: z
     .string()
+    .trim()
     .url()
     .max(500)
+    .refine((v) => isHttpApplicationUrl(v), { message: "APPLICATION_URL_INVALID" })
     .optional()
     .nullable()
     .or(z.literal("").transform(() => null)),
@@ -520,6 +548,21 @@ export const publishEmployerJob = createServerFn({ method: "POST" })
     if (missing.length > 0) {
       throw new Error("MISSING_REQUIRED_FIELDS");
     }
+
+    // The date rules the database applies at the moment of publication, named
+    // here so the employer is told WHICH date is wrong. Restoring an old advert
+    // keeps its dates, so this is where a restore -> publish used to go wrong:
+    //   * an expires_at already in the past was accepted and the advert was
+    //     "published" but never visible (job_is_active is false) -- no error;
+    //   * a deadline_at in the past reached the trigger, which refused it with
+    //     a message about workplace type and employment form.
+    // The code is the first problem found; the database re-checks every one.
+    const dateProblems = publishDateProblems(before, new Date());
+    if (dateProblems.length > 0) throw new Error(dateProblems[0]);
+    // A row stored before the address rule existed can still hold a non-http(s)
+    // value; the database refuses to publish it, and so do we, by name.
+    if (before.application_method === "external" && !isHttpApplicationUrl(before.application_url))
+      throw new Error("APPLICATION_URL_INVALID");
 
     const { error: uErr } = await ctx.supabase
       .from("jobs")
@@ -802,7 +845,10 @@ export const duplicateEmployerJob = createServerFn({ method: "POST" })
       experience_level: src.experience_level,
       application_method:
         src.application_method === "unavailable" ? "external" : src.application_method,
-      application_url: src.application_url,
+      // A source stored before the address rule existed may hold a value the
+      // database now refuses to write; the copy starts without it, and the
+      // employer enters a web address in the new draft.
+      application_url: isHttpApplicationUrl(src.application_url) ? src.application_url : null,
       application_email: src.application_email,
       deadline_at: null,
       expires_at: null,

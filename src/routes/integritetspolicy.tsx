@@ -4,12 +4,13 @@ import { useLocalizedHead } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
 import { PRIVACY } from "@/lib/legal/documents";
 import { PRIVACY_FINAL } from "@/lib/legal/status";
+import { siteUrl } from "@/lib/site-origin";
 
 // The owner's privacy policy, as published. Linked from the footer and from
 // registration. Content: src/lib/legal/documents.ts.
 
 const SV = dictionaries.sv;
-const URL = "https://trust-path-recruitment.lovable.app/integritetspolicy";
+const URL = siteUrl("/integritetspolicy");
 
 export const Route = createFileRoute("/integritetspolicy")({
   head: () => ({

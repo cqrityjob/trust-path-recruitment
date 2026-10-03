@@ -58,6 +58,7 @@ import {
   decideAccessRequest,
   type IncomingAccessRequest,
 } from "@/lib/job-intelligence/employer-onboarding.functions";
+import { shareableUrl } from "@/lib/site-origin";
 
 /** The roles an owner actually assigns, in the words an employer uses.
  *
@@ -155,7 +156,7 @@ export function EmployerTeamPanel({
   const joinLink =
     typeof window === "undefined"
       ? ""
-      : `${window.location.origin}/employer/join?org=${employerId}`;
+      : shareableUrl(`/employer/join?org=${employerId}`, window.location.origin);
 
   async function copyLink() {
     try {

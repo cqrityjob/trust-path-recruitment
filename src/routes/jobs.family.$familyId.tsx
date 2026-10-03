@@ -7,12 +7,13 @@ import { getCareerAreaLabel, careerAreaLabels } from "@/lib/job-intelligence/car
 import { listPublicJobs } from "@/lib/job-intelligence/public-queries";
 import { JobResults } from "@/components/jobs/JobResults";
 import { useCareerProfileForJobs } from "@/hooks/useCareerProfileForJobs";
+import { siteUrl } from "@/lib/site-origin";
 
 export const Route = createFileRoute("/jobs/family/$familyId")({
   ssr: false,
   head: ({ params }) => {
     const area = careerAreaLabels.find((f) => f.id === params.familyId);
-    const url = `https://trust-path-recruitment.lovable.app/jobs/family/${params.familyId}`;
+    const url = siteUrl(`/jobs/family/${params.familyId}`);
     const title = area
       ? `${area.name.en} jobs — CQrityjob`
       : "Security jobs by career area — CQrityjob";

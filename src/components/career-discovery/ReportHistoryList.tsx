@@ -19,6 +19,20 @@
 // runs the dashboard already loaded. v3 rows link to the canonical report
 // route. Neither source is mutated, merged or converted — they are two
 // independent histories presented in one chronological list.
+//
+// ── A FAILED READ IS NOT AN EMPTY HISTORY ──────────────────────────────
+//
+// When this component reads the v3 list itself, a failure used to be
+// swallowed so that it would not hide the legacy rows, and the result was
+// "Du har inga rapporter ännu" for somebody whose reports exist. The legacy
+// rows are still shown, and the failure is now said, with a retry. The empty
+// sentence is reserved for a read that answered and found nothing.
+//
+// ── THE "TEST VERSION" TAG IS DATA, NOT A DEFAULT ──────────────────────
+//
+// It used to be hard-coded onto every row. It is now the session's own
+// is_internal_test flag, so it appears only on a report taken against an
+// instrument version that really was an internal test.
 
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
@@ -43,6 +57,8 @@ export interface DiscoveryReportRow {
   snapshotId: string;
   generatedAt: string;
   definitionVersion: string;
+  /** The session's own marker. Absent is "not marked", never "marked". */
+  isInternalTest?: boolean;
 }
 
 export function ReportHistoryList({
@@ -65,11 +81,15 @@ export function ReportHistoryList({
           id: r.snapshotId,
           at: r.generatedAt,
           version: r.definitionVersion,
-          internalTest: true,
+          internalTest: r.isInternalTest === true,
         }))
       : [],
   );
-  const [loaded, setLoaded] = useState(Boolean(discoveryReports));
+  const [status, setStatus] = useState<"loading" | "ready" | "error">(
+    discoveryReports ? "ready" : "loading",
+  );
+  // Bumped by the retry button; the effect re-reads when it changes.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     if (discoveryReports) return;
@@ -83,19 +103,20 @@ export function ReportHistoryList({
             id: r.snapshotId,
             at: r.generatedAt,
             version: r.definitionVersion,
-            // Surfaced so a tester always knows which reports came from the
-            // unreviewed internal-test instrument.
-            internalTest: true,
+            // The session's own flag: true only for a run taken against an
+            // internal_test instrument version.
+            internalTest: r.isInternalTest,
           })),
         );
-        setLoaded(true);
+        setStatus("ready");
       })
-      // A failure to load v3 must never hide the legacy history.
-      .catch(() => alive && setLoaded(true));
+      // The legacy rows below still render. What this must not do is let a
+      // failed read look like a history with nothing in it.
+      .catch(() => alive && setStatus("error"));
     return () => {
       alive = false;
     };
-  }, [load, discoveryReports]);
+  }, [load, discoveryReports, attempt]);
 
   const rows: Row[] = [
     ...discovery,
@@ -114,68 +135,92 @@ export function ReportHistoryList({
     day: "numeric",
   });
 
-  if (loaded && rows.length === 0) {
+  if (status === "ready" && rows.length === 0) {
     return (
       <p className="py-3 text-sm text-muted-foreground">{t("careerDiscovery.history.empty")}</p>
     );
   }
 
   return (
-    <ul className="divide-y divide-border">
-      {rows.map((row) => (
-        <li key={`${row.kind}-${row.id}`} className="flex items-center justify-between gap-3 py-3">
-          <div className="flex min-w-0 items-start gap-3">
-            {row.kind === "discovery" ? (
-              <Compass className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
-            ) : (
-              <ClipboardCheck
-                className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground"
-                aria-hidden="true"
-              />
-            )}
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">
-                {row.kind === "discovery"
-                  ? t("careerDiscovery.history.type.discovery")
-                  : t("careerDiscovery.history.type.legacy")}
-              </p>
-              {/* Date and internal-test marker only. The definition version
+    <>
+      {status === "error" && (
+        <div
+          role="alert"
+          data-history-read-failed
+          className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-sm text-muted-foreground"
+        >
+          <p>{t("careerDiscovery.history.error")}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setStatus("loading");
+              setAttempt((n) => n + 1);
+            }}
+            className="inline-flex min-h-11 items-center text-sm font-semibold text-accent underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {t("careerDiscovery.history.retry")}
+          </button>
+        </div>
+      )}
+      <ul className="divide-y divide-border">
+        {rows.map((row) => (
+          <li
+            key={`${row.kind}-${row.id}`}
+            className="flex items-center justify-between gap-3 py-3"
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              {row.kind === "discovery" ? (
+                <Compass className="mt-0.5 h-4 w-4 flex-shrink-0 text-accent" aria-hidden="true" />
+              ) : (
+                <ClipboardCheck
+                  className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              )}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-foreground">
+                  {row.kind === "discovery"
+                    ? t("careerDiscovery.history.type.discovery")
+                    : t("careerDiscovery.history.type.legacy")}
+                </p>
+                {/* Date and internal-test marker only. The definition version
                   used to sit between them in a monospace face, which made a
                   list of the candidate's own reports read like a build log.
                   It is kept as a data attribute for diagnostics. */}
-              <p
-                className="mt-0.5 text-xs text-muted-foreground"
-                data-definition-version={row.kind === "discovery" ? row.version : undefined}
-              >
-                {fmt.format(new Date(row.at))}
-                {row.kind === "discovery" &&
-                  row.internalTest &&
-                  ` · ${t("careerDiscovery.history.internalTest")}`}
-              </p>
+                <p
+                  className="mt-0.5 text-xs text-muted-foreground"
+                  data-definition-version={row.kind === "discovery" ? row.version : undefined}
+                >
+                  {fmt.format(new Date(row.at))}
+                  {row.kind === "discovery" &&
+                    row.internalTest &&
+                    ` · ${t("careerDiscovery.history.internalTest")}`}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {row.kind === "discovery" ? (
-            <Link
-              to="/security-career-assessment/report/$snapshotId"
-              params={{ snapshotId: row.id }}
-              className="inline-flex min-h-11 flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {t("careerDiscovery.history.open")}
-              <ArrowRight className="h-3 w-3" aria-hidden="true" />
-            </Link>
-          ) : (
-            <Link
-              to="/my-career/reports/$runId"
-              params={{ runId: row.id }}
-              className="inline-flex min-h-11 flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {t("careerDiscovery.history.open")}
-              <ArrowRight className="h-3 w-3" aria-hidden="true" />
-            </Link>
-          )}
-        </li>
-      ))}
-    </ul>
+            {row.kind === "discovery" ? (
+              <Link
+                to="/security-career-assessment/report/$snapshotId"
+                params={{ snapshotId: row.id }}
+                className="inline-flex min-h-11 flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("careerDiscovery.history.open")}
+                <ArrowRight className="h-3 w-3" aria-hidden="true" />
+              </Link>
+            ) : (
+              <Link
+                to="/my-career/reports/$runId"
+                params={{ runId: row.id }}
+                className="inline-flex min-h-11 flex-shrink-0 items-center gap-1 text-xs font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("careerDiscovery.history.open")}
+                <ArrowRight className="h-3 w-3" aria-hidden="true" />
+              </Link>
+            )}
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

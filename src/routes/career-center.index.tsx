@@ -36,6 +36,7 @@ import { CareerRoutes } from "@/components/career-center/CareerRoutes";
 import { PathFromSection } from "@/components/career-center/PathFromSection";
 import { PersonalDirectionSection } from "@/components/career-center/PersonalDirection";
 import { ProfessionCard } from "@/components/career-center/ProfessionCard";
+import { siteUrl } from "@/lib/site-origin";
 
 // The Career Center hub, built around the four questions a reader has, in
 // the order they have them:
@@ -129,12 +130,10 @@ export const Route = createFileRoute("/career-center/")({
         { property: "og:title", content: SV["meta.careerCenter.title"] },
         { property: "og:description", content: SV["cc.hero.lead"] },
         { property: "og:type", content: "website" },
-        { property: "og:url", content: "https://trust-path-recruitment.lovable.app/career-center" },
+        { property: "og:url", content: siteUrl("/career-center") },
         { name: "twitter:card", content: "summary_large_image" },
       ],
-      links: [
-        { rel: "canonical", href: "https://trust-path-recruitment.lovable.app/career-center" },
-      ],
+      links: [{ rel: "canonical", href: siteUrl("/career-center") }],
     };
   },
   validateSearch: parseHubSearch,

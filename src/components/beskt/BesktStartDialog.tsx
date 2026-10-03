@@ -44,6 +44,7 @@ import {
 } from "@/lib/beskt/complete.functions";
 import { listApplicationsForEmployer } from "@/lib/job-intelligence/applications.functions";
 import { BesktQuestionPreview } from "@/components/beskt/BesktPreviewDialog";
+import { shareableUrl } from "@/lib/site-origin";
 
 const FIELD =
   "mt-1 min-h-[44px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
@@ -193,7 +194,7 @@ export function BesktStartDialog({
     },
     onSuccess: async (r) => {
       if (r.kind === "invited") {
-        setInvitationLink(`${window.location.origin}/beskt/inbjudan/${r.token}`);
+        setInvitationLink(shareableUrl(`/beskt/inbjudan/${r.token}`, window.location.origin));
         return;
       }
       if (onStarted) {

@@ -512,11 +512,11 @@ test.describe("the locked navigation", () => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
       await setLang(page, lang);
-      // The desktop bar only: the compact sheet carries a second "Primary"
+      // The desktop bar only: the compact sheet carries a second primary
       // nav in the DOM.
       const labels = (
         await page
-          .locator('header nav[aria-label="Primary"]')
+          .locator('header nav[data-site-nav="primary"]')
           .first()
           .locator(":scope > a, :scope > div > button")
           .allInnerTexts()
@@ -580,13 +580,13 @@ test.describe("the locked navigation", () => {
       ["Säkerhetsarbete", "/sakerhetsarbete", "Stöd för ditt säkerhetsarbete"],
     ] as const) {
       await page
-        .locator('header nav[aria-label="Primary"]')
+        .locator('header nav[data-site-nav="primary"]')
         .getByRole("link", { name: label, exact: true })
         .click();
       await page.waitForURL((u) => u.pathname === to && u.hash === "", { timeout: 15_000 });
       await expect(page.locator("main h1")).toHaveText(h1);
       await expect(
-        page.locator('header nav[aria-label="Primary"]').getByRole("link", { name: label }),
+        page.locator('header nav[data-site-nav="primary"]').getByRole("link", { name: label }),
       ).toHaveAttribute("aria-current", "page");
     }
   });
@@ -600,6 +600,49 @@ test.describe("the locked navigation", () => {
       await page.waitForURL((u) => u.pathname === to, { timeout: 15_000 });
       await expect(page.locator("main h1")).toBeVisible();
     }
+  });
+
+  // "Registrera företag" used to exist only on / and /employers. It is now
+  // one shared entry (public-nav.ts: EMPLOYER_REGISTER_NAV) in the employer
+  // panel, the compact menu and the footer, on every page, carrying the same
+  // intent as the homepage band: /signup?redirect=/employer.
+  test("company registration is offered from the header and the footer on every page", async ({
+    page,
+  }) => {
+    const REGISTER = "/signup?redirect=%2Femployer";
+    await page.setViewportSize({ width: 1440, height: 900 });
+    // A page that is neither / nor /employers.
+    await page.goto(`${BASE}/about`, { waitUntil: "networkidle" });
+    await page.locator("[data-employer-menu-trigger]").click();
+    const desktop = page.locator("[data-employer-menu] [data-employer-register]");
+    await expect(desktop).toBeVisible();
+    await expect(desktop).toHaveText("Registrera företag");
+    await expect(desktop).toHaveAttribute("href", REGISTER);
+    // Beside the existing customer's sign-in, which is unchanged.
+    await expect(
+      page.locator("[data-employer-menu]").getByRole("link", { name: "Företagsinloggning" }),
+    ).toHaveAttribute("href", "/login?redirect=%2Femployer");
+    await desktop.click();
+    await page.waitForURL("**/signup**", { timeout: 15_000 });
+    expect(new URL(page.url()).searchParams.get("redirect")).toBe("/employer");
+
+    // The compact menu.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(`${BASE}/about`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /meny/i }).first().click();
+    const sheet = page.locator("#site-menu [data-employer-register]");
+    await expect(sheet).toBeVisible();
+    await expect(sheet).toHaveAttribute("href", REGISTER);
+
+    // The footer: the same entry, and no Betafeedback for a visitor who is
+    // not signed in (it sits behind the login).
+    const footer = page.locator("footer");
+    await footer.scrollIntoViewIfNeeded();
+    const hrefs = await footer.evaluate((el) =>
+      [...el.querySelectorAll("a")].map((a) => a.getAttribute("href")),
+    );
+    expect(hrefs).toContain(REGISTER);
+    expect(hrefs).not.toContain("/feedback");
   });
 });
 

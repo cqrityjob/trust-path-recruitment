@@ -79,6 +79,7 @@ import {
   type ContentLibraryEntry,
 } from "@/lib/security-competency/academy-employer.functions";
 import { assignDevelopmentProgrammeToEmployee } from "@/lib/security-competency/employee-development.functions";
+import { shareableUrl } from "@/lib/site-origin";
 
 /** The four sections, in the order an employer cares about them.
  *
@@ -958,7 +959,7 @@ function AssignForm({
         });
         if (outcome.kind === "refused") throw new Error(`REFUSED:${outcome.reason}`);
         return {
-          academyUrl: `${window.location.origin}/academy`,
+          academyUrl: shareableUrl("/academy", window.location.origin),
           notification: "not_configured" as const,
         };
       }
@@ -979,7 +980,7 @@ function AssignForm({
         // their Academy. The link is still shown, because a link the employer
         // can pass on by hand always works.
         return {
-          academyUrl: `${window.location.origin}/academy`,
+          academyUrl: shareableUrl("/academy", window.location.origin),
           notification: "not_configured" as const,
         };
       }

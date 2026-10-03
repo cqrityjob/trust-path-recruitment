@@ -8,6 +8,7 @@ import { useSignedIn } from "@/hooks/useSignedIn";
 import { useLocalizedHead, useT } from "@/i18n/context";
 import { dictionaries } from "@/i18n/dictionaries";
 import { DURATION_CLAIM } from "@/lib/career-discovery/v31/duration";
+import { siteUrl } from "@/lib/site-origin";
 
 // ── /assessment: THREE PURPOSES (MVP text specification §12.2) ───────────
 //
@@ -37,10 +38,10 @@ export const Route = createFileRoute("/assessment")({
       { property: "og:title", content: SV["meta.assessment.title"] },
       { property: "og:description", content: SV["assessment.lead"] },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://trust-path-recruitment.lovable.app/assessment" },
+      { property: "og:url", content: siteUrl("/assessment") },
       { name: "twitter:card", content: "summary_large_image" },
     ],
-    links: [{ rel: "canonical", href: "https://trust-path-recruitment.lovable.app/assessment" }],
+    links: [{ rel: "canonical", href: siteUrl("/assessment") }],
   }),
   component: AssessmentPage,
 });
