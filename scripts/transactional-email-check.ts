@@ -182,7 +182,9 @@ env.set("RESEND_API_KEY", RESEND_KEY);
   );
   const mixed = await post(
     { kind: "application_receipt", to: "a@example.test", ...message },
-    { authorization: "Bearer eyJ.a-user-or-anon-jwt-the-project-refuses", apikey: appForm },
+    // A confirmed service key as bearer, paired with a different apikey:
+    // refused, so one header can never vouch for the other.
+    { authorization: `Bearer ${appForm}`, apikey: "eyJ.a-user-or-anon-jwt-the-project-refuses" },
   );
   ck(
     "a key the project refuses, or a bearer paired with someone else's apikey, is 401 and nothing is sent",
