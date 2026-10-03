@@ -81,7 +81,7 @@ export const Route = createFileRoute("/_authenticated/employer/$employerSlug/ass
 function ReviewsRoute() {
   const { employerSlug } = Route.useParams();
   return (
-    <AcademyPage employerSlug={employerSlug}>
+    <AcademyPage employerSlug={employerSlug} requires="reports">
       {(ws) => <Reviews employerId={ws.employerId} employerSlug={ws.employerSlug} />}
     </AcademyPage>
   );

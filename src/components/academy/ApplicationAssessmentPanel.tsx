@@ -33,6 +33,11 @@ import {
   type ApplicationAssessment,
 } from "@/lib/security-competency/academy-employer.functions";
 import { assessmentStageOf } from "@/lib/employer-continuity/process-projection";
+import { useReportAccess } from "@/components/employer/ReportAccess";
+import {
+  canReadVacancyResults,
+  reportAccessStateFor,
+} from "@/lib/security-competency/report-access";
 
 /** The five states an employer needs to tell apart, derived from the attempt
  *  rather than stored: a status column that can disagree with the attempt is a
@@ -70,6 +75,7 @@ export function ApplicationAssessmentPanel({
   canAssign,
   candidateName = null,
   jobTitle = null,
+  jobId = null,
   prepareInterview = false,
   sourceAssignmentId = null,
 }: {
@@ -81,6 +87,9 @@ export function ApplicationAssessmentPanel({
    *  the database resolves the candidate from the application. */
   candidateName?: string | null;
   jobTitle?: string | null;
+  /** The vacancy this application belongs to. Only used to tell, truthfully, a
+   *  reader who has no access to its results from one for whom nothing was sent. */
+  jobId?: string | null;
   /** Inside an interview case: the test the case was started from, marked
    *  so the interviewer sees which test the interview follows. */
   sourceAssignmentId?: string | null;
@@ -146,6 +155,21 @@ export function ApplicationAssessmentPanel({
 
   const rows = assessments.data ?? [];
   const options = library.data ?? [];
+
+  // A member who may not read this vacancy's results is returned no rows, and
+  // "no assessment has been sent for this application" would be a statement
+  // about the candidate that nobody checked. Only a CONFIRMED answer from the
+  // database changes the sentence; unknown (or no migration yet) leaves it.
+  const access = useReportAccess(employerId);
+  const cannotReadResults =
+    access.facts !== null &&
+    access.facts.isMember &&
+    (jobId
+      ? !canReadVacancyResults(access.facts, jobId)
+      : reportAccessStateFor(
+          { status: "success", known: true, facts: access.facts },
+          "recruitment",
+        ) === "none");
 
   // ── A READ THAT FAILED IS NOT AN ABSENCE ────────────────────────────
   //
@@ -238,6 +262,18 @@ export function ApplicationAssessmentPanel({
             </li>
           ))}
         </ul>
+      ) : cannotReadResults ? (
+        <p
+          role="status"
+          data-testid="report-access-none"
+          data-need="application"
+          className="mt-2 text-[13px] text-muted-foreground"
+        >
+          <span className="font-medium text-foreground">
+            {t("reportAccess.application.title")}.{" "}
+          </span>
+          {t("reportAccess.application.body")}
+        </p>
       ) : (
         <p className="mt-2 text-[13px] text-muted-foreground">{t("journey.noAssessmentYet")}</p>
       )}

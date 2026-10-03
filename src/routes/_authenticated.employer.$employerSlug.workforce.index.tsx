@@ -38,6 +38,7 @@ import {
   type EmployerEmployeeRow,
 } from "@/lib/job-intelligence/employer-workforce.functions";
 import { listAssignmentsForEmployer } from "@/lib/job-intelligence/assessment-assignments.functions";
+import { useReportAccess } from "@/components/employer/ReportAccess";
 import type { TranslationKey } from "@/i18n/dictionaries";
 
 export const Route = createFileRoute("/_authenticated/employer/$employerSlug/workforce/")({
@@ -168,6 +169,11 @@ function WorkforceDirectory({
     queryKey: ["employer", employerId, "assignments", "all"],
     queryFn: () => listAssignmentsFn({ data: { employerId, statusFilter: "all" } }),
   });
+  // A member who may not read assessments is returned no assignments, so every
+  // colleague would read "Assign": a claim that nothing is in flight which
+  // nobody checked. Only a CONFIRMED answer from the database hides the
+  // per-person assessment action; unknown (or no migration yet) leaves it.
+  const noAssessmentAccess = useReportAccess(employerId).stateFor("workforce") === "none";
   const assignmentByEmployee = new Map(
     (assignmentsQuery.data ?? [])
       .filter((a) => a.employeeId)
@@ -432,6 +438,7 @@ function WorkforceDirectory({
                       )}
                     </button>
                     {(() => {
+                      if (noAssessmentAccess) return null;
                       const assignment = assignmentByEmployee.get(row.id);
                       // A cancelled or expired assignment is finished business,
                       // not an assignment in flight. Treating it as one left the

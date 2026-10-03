@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/employer/$employerSlug/tra
 function TrainingOverviewRoute() {
   const { employerSlug } = Route.useParams();
   return (
-    <TrainingPage employerSlug={employerSlug}>
+    <TrainingPage employerSlug={employerSlug} requires="workforce">
       {(ws) => <Overview employerId={ws.employerId} employerSlug={ws.employerSlug} />}
     </TrainingPage>
   );
