@@ -1,0 +1,221 @@
+# Local run of supabase/tests/scp_a1_domain_model_test.sql (GROUP 20 and 20b cover scp_scoring_version_lineage)
+# Database: scratch PostgreSQL 16.14, strict replay of all 367 migrations of main 1b4a4080 (zero failures), supabase/tests/00_bootstrap.sql first.
+# Command: psql -v ON_ERROR_STOP=1 -d <scratch> -f supabase/tests/scp_a1_domain_model_test.sql   (exit 0, no ASSERTION FAILED)
+# Synthetic principals only. Raw output follows, NOTICE prefixes removed.
+
+BEGIN
+INSERT 0 1
+INSERT 0 1
+INSERT 0 5
+INSERT 0 3
+CREATE FUNCTION
+CREATE FUNCTION
+GROUP 1 -- product separation
+  ok  AC-1: career-guidance and security-competency-core families both exist
+  ok  AC-1: they have different family IDs
+  ok  AC-3: no Security Competency definition hangs off the career-guidance family
+  ok  AC-3: attaching a definition to the career-guidance family is blocked by trigger
+  ok  a profession_module purpose cannot sit in the core family
+DO
+GROUP 2 -- legacy retirement
+  ok  AC-4: legacy security-guard-foundation version carries retired_at
+  ok  legacy version records WHY it was retired, for the historical report label
+  ok  AC-4: legacy definition is no longer employer-visible
+  ok  AC-4 / T-002: a NEW legacy assignment is blocked with the stable code ASSESSMENT_RETIRED
+  ok  AC-5 / T-003: a historical completed legacy assignment still exists and is readable
+  ok  AC-6: the historical score is unchanged after retirement
+  ok  the retirement guard does NOT block assignments against non-retired versions
+DO
+GROUP 3 -- published-content immutability
+  ok  draft item content is freely editable
+  ok  AC-8 / T-004: a PUBLISHED item version cannot be edited in place
+  ok  AC-8: a published item cannot be re-pointed at a different competency
+  ok  AC-8: the SCORING KEY of a published item cannot be changed
+  ok  AC-8: the wording of a published item cannot be changed
+  ok  AC-9: an option cannot be added to a published item -- a new version is required
+  ok  AC-9: an option cannot be deleted from a published item
+  ok  a published version can still be RETIRED -- immutability does not freeze the lifecycle
+  ok  an assessment family can never be re-typed as career_guidance
+  ok  a definition's purpose can never change
+DO
+GROUP 4 -- bundle composition
+  ok  AC-7: a Core version + Module version bundle can be created
+  ok  a profession module cannot masquerade as the Core half of a bundle
+  ok  AC-7: a bundle cannot reference a form that belongs to a different version
+  ok  a bundle cannot pair a version with itself
+DO
+GROUP 5 -- item construct and review gates
+  ok  spec 7.2: an item's secondary construct cannot equal its primary construct
+  ok  spec 10.3: an item that depends on law cannot sit at legal_review_status = not_required
+  ok  a valid BIQ item version can be created
+  ok  spec Bilaga A: an option score outside 0-3 is rejected
+DO
+GROUP 6 -- RLS on item bank and scoring keys
+  ok  scp_item_options has RLS enabled
+  ok  AC-13: an employer member is not an authoring role
+  ok  AC-12: a candidate is not an authoring role
+  ok  an editor IS an authoring role
+  ok  AC-13: an employer account sees ZERO rows of the item bank
+  ok  AC-12: an employer account sees ZERO scoring keys
+  ok  AC-12: a candidate account sees ZERO scoring keys
+  ok  an editor CAN read the item bank
+DO
+GROUP 7 -- separation of duties and audit
+  ok  AC-16: a publication-approval record exists for the two-person principle
+  ok  the reviewer fixture holds the reviewer role
+  ok  T-013: an editor does NOT hold the reviewer role and cannot self-approve
+  ok  AC-20: no UPDATE grant on the content-event log (append-only)
+  ok  AC-20: no DELETE grant on the content-event log (append-only)
+  ok  AC-20: the legacy retirement itself is recorded in the audit log
+DO
+GROUP 8 -- validation status
+  ok  AC-18: new assessment versions default to validation_status = design
+  ok  every item version carries a valid validation status
+  ok  an invented validation status is rejected by the CHECK constraint
+DO
+GROUP 9 -- construct catalogue completeness
+  ok  exactly twelve Security Competency Core constructs are registered
+  ok  they are SCC-01 through SCC-12
+  ok  each construct has a published v1 definition
+  ok  all 48 facets (4 per construct) are registered
+  ok  every construct has exactly four facets
+  ok  Väktare, Ordningsvakt and Skyddsvakt are registered as Swedish regulated roles
+DO
+GROUP 10 -- versioned scoring (owner decision A)
+  ok  decision A: the provisional pilot scoring version is seeded
+  ok  decision A: the seeded weights are the spec 8.1 start model 70/30
+  ok  decision A: the weighting is NOT claimed to be validated
+  ok  spec 8.3: norm/percentile comparison is switched off until norm data exists
+  ok  decision A: SJT and BIQ weights must sum to 1
+  ok  decision A: a published scoring version cannot be re-weighted in place
+  ok  decision A: the free-text scoring_version label is gone -- bundles reference a real version
+  ok  decision A: bundles pin a scoring version by foreign key
+DO
+GROUP 11 -- legal review gate (owner decision C)
+  ok  decision C: legally dependent content may be DRAFTED
+  ok  decision C: a legally dependent item cannot be published while legal review is pending
+  ok  decision C: it cannot be approved either -- the gate is not just at publish
+  ok  decision C: a legal review must record source, reviewer and date -- a status flag alone is not evidence
+  ok  decision C: with a complete recorded legal review, publication proceeds
+  ok  decision C: behavioural items making no legal claim publish normally
+  ok  publication is a reviewed transition, never an initial value
+DO
+GROUP 12 -- assignability gate (owner decision B)
+  ok  decision B: an unpublished bundle is blocked
+  ok  decision B: a published bundle over draft content is still blocked
+  ok  decision B: an unpublished scoring version blocks assignment
+  ok  AC-15: a single draft item blocks the entire bundle from being assigned
+  ok  decision B: validation_status design can never reach a real candidate
+  ok  decision B: a pilot bundle is pilot_only -- never a selection decision
+  ok  decision B: an operational-development bundle is assignable as decision support
+  ok  decision B: a retired bundle is blocked
+  ok  decision B: an unknown bundle fails CLOSED -- the default is refusing to assign
+DO
+GROUP 13 -- explicit item reuse (owner decision D)
+  ok  decision D: Väktare and Ordningsvakt are separate profession identities, not one role under two names
+  ok  decision D: genuine cross-role reuse is modelled explicitly, not by duplicating the item
+  ok  decision D: each reuse carries its own job-analysis justification
+  ok  a profession cannot be declared twice for the same item version
+  ok  Core items are country- and role-neutral and need no profession declaration
+  ok  decision D: a published item's profession scope cannot be widened silently -- it needs a new version
+DO
+GROUP 14 -- HIGH-1: publication is always a reviewed transition
+  ok  HIGH-1: all six versioned tables carry the insert-status guard (found 6)
+  ok  HIGH-1: an assessment version cannot be created as published
+  ok  HIGH-1: an assessment version cannot be created as approved either
+  ok  HIGH-1: a scoring version cannot be created as published with arbitrary weights
+  ok  HIGH-1: an item version cannot be created as published
+  ok  HIGH-1: a role weight profile cannot be created as published
+  ok  HIGH-1: a competency version cannot be created as published
+  ok  HIGH-1: a bundle version cannot be created as published
+  ok  HIGH-1: the reviewed draft -> in_review -> approved -> published path still works
+DO
+GROUP 15 -- HIGH-2: assignability fails closed
+  ok  HIGH-2: an empty module form blocks the bundle
+  ok  HIGH-2: an item with no text in any language blocks the bundle
+  ok  HIGH-2: an unapproved adaptation does not count towards language coverage
+  ok  HIGH-2: with both forms populated and one language complete, the bundle IS assignable
+  ok  HIGH-2: a partially drafted second language does not block a fully adapted first one
+  ok  HIGH-2 fixture: the core form has exactly one item
+DO
+GROUP 16 -- HIGH-3: retired assessments cannot be reactivated
+  ok  HIGH-3: a CANCELLED legacy assignment cannot be revived to invited
+  ok  HIGH-3: an EXPIRED legacy assignment cannot be revived
+  ok  HIGH-3: a COMPLETED legacy assignment cannot be reopened
+  ok  HIGH-3: the completed historical assignment is still readable
+  ok  HIGH-3: the historical score is unchanged
+  ok  HIGH-3: an in-flight assignment on a retired version may still finish -- no candidate is stranded
+  ok  HIGH-3: a retired assignment can still move between terminal states
+  ok  HIGH-3: a NON-retired assignment can still be reactivated -- the guard is surgical
+  ok  HIGH-3: normal cancellation of an active non-retired assignment still works
+DO
+GROUP 17 -- MED-1: complete assignability branch coverage
+  ok  branch 1/16: unknown bundle -> blocked / BUNDLE_NOT_FOUND
+  ok  branch 2/16: draft bundle -> blocked / BUNDLE_NOT_PUBLISHED
+  ok  branch 3/16: draft core version -> blocked / CORE_VERSION_NOT_PUBLISHED
+  ok  branch 4/16: draft module version -> blocked / MODULE_VERSION_NOT_PUBLISHED
+  ok  branch 5/16: no scoring version -> blocked / NO_SCORING_VERSION
+  ok  branch 6/16: unpublished scoring version -> blocked / SCORING_VERSION_NOT_PUBLISHED
+  ok  branch 7/16: empty core form -> blocked / CORE_FORM_EMPTY
+  ok  branch 8/16: empty module form -> blocked / MODULE_FORM_EMPTY
+  ok  branch 9/16: draft item in a form -> blocked / FORM_CONTAINS_UNPUBLISHED_ITEMS
+  ok  branch 10/16: lapsed legal review -> blocked / LEGAL_REVIEW_PENDING (second, independent check)
+  ok  branch 11/16: incomplete language coverage -> blocked / NO_FULLY_ADAPTED_LANGUAGE
+  ok  branch 12/16: design -> blocked / VALIDATION_STATUS_DESIGN
+  ok  branch 13/16: pilot -> pilot_only / VALIDATION_STATUS_PILOT
+  ok  branch 14/16: retired validation status -> blocked / VALIDATION_STATUS_RETIRED
+  ok  branch 15/16: operational-development -> assignable / operational-development
+  ok  branch 15/16b: operational-selection -> assignable / operational-selection
+  ok  branch 16/16: retired bundle -> blocked / BUNDLE_RETIRED, overriding an otherwise valid bundle
+  ok  MED-1: the function still has exactly 16 return branches (found 16) -- add coverage above if this changed
+DO
+GROUP 18 -- LOW-1: pilot_stats exception is bounded
+  ok  LOW-1: pilot_stats can be recorded on a published item version
+  ok  LOW-1: content is still immutable alongside the pilot_stats exception
+  ok  LOW-1: item_format is still immutable
+  ok  LOW-1: review-evidence fields are still immutable
+  ok  LOW-1: a pilot_stats update carrying an unrelated content change is rejected
+  ok  LOW-1: the rejected statement left the content untouched
+  ok  LOW-1: ...and left the earlier pilot_stats value intact
+  ok  LOW-1: recording pilot_stats does not change publication or validation state
+  ok  LOW-1: an employer account cannot write pilot_stats (no authoring role)
+DO
+GROUP 19 -- LOW-2: protections hold against a BYPASSRLS caller
+  ok  LOW-2: RLS is enabled on every scp_ table
+  ok  LOW-2: FORCE RLS is deliberately NOT set -- decision B, documented trust boundary
+  ok  LOW-2: immutability holds against a BYPASSRLS caller (trigger, not policy)
+  ok  LOW-2: the publication workflow holds against a BYPASSRLS caller
+  ok  LOW-2: Career Guidance separation holds against a BYPASSRLS caller
+  ok  LOW-2: CHECK constraints hold against a BYPASSRLS caller
+  ok  LOW-2: trust boundary documented -- triggers/constraints for integrity, RLS for user visibility
+DO
+GROUP 20 -- LOW-4: scoring visibility per principal
+  ok  LOW-4: a CANDIDATE sees zero scoring versions
+  ok  LOW-4: a CANDIDATE sees zero role weights
+  ok  LOW-4: a CANDIDATE sees zero per-option scoring keys
+  ok  LOW-4: a CANDIDATE CAN read scoring lineage (no numbers)
+  ok  LOW-4: an EMPLOYER sees zero scoring versions
+  ok  LOW-4: an EMPLOYER sees zero role weights
+  ok  LOW-4: an EMPLOYER sees zero per-option scoring keys
+  ok  LOW-4: an EMPLOYER CAN read scoring lineage
+  ok  LOW-4: an AUTHOR can read scoring versions
+  ok  LOW-4: an AUTHOR can read per-option scoring keys
+  ok  LOW-4: anon has no grant on scoring internals or the lineage view
+  ok  LOW-4: the lineage read model exposes no weights and no content hash
+  ok  LOW-4: the lineage read model is exactly its nine authorised columns
+  ok  LOW-4: a CANDIDATE reads lineage rows with real identity and validation status
+DO
+GROUP 20b -- LOW-4: lineage read model mechanism
+  ok  LOW-4: lineage is a view, not a table or materialised copy
+  ok  LOW-4: the lineage view runs with definer rights (found security_invoker=false) -- invoker semantics make it unreadable for candidates and employers
+  ok  LOW-4: anon cannot read the lineage view
+  ok  LOW-4: anon cannot read scp_scoring_versions
+  ok  LOW-4: anon cannot read scp_role_weight_profile_weights
+  ok  LOW-4: anon cannot read scp_item_options
+  ok  LOW-4: no unconditional read policy exists on the scoring tables
+DO
+ROLLBACK
+
+====================================================
+ SCP PR-A database + RLS suite: ALL ASSERTIONS OK
+====================================================
