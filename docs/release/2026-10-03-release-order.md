@@ -1,10 +1,12 @@
 # Gemensam releaseordning (2026-10-03)
 
-**Status 2026-10-03 ~15:50 UTC.** Mergade i main: #395 (`97b5112`), #386 (`071f69e`) och #387 (`b18e5e5`, 15:42 UTC, alla
-obligatoriska CI-jobb gröna på `082752c`). #387:s tre migrationer är applicerade av integrationen och verifierade
-skrivskyddat (steg 2, punkt 3). **Kvar är allt annat: Lovable-publicering, funktionen `transactional-email`s
-hemlighet, Auth-/DNS-inställningar och steg 3–6.** Den som skrev dokumentet har inte publicerat, driftsatt
-någon funktion, ändrat Auth, DNS eller Lovable, och inga mejl har skickats. Det ersätter den "provisoriska" migrationslistan i
+**Status 2026-10-03 ~16:55 UTC.** Mergade i main: #395 (`97b5112`), #386 (`071f69e`), #387 (`b18e5e5`, 15:42 UTC), #398 (`65823f2`, 15:47),
+#399 (`55d1862`) och #396 (`2b5015d`). #387:s tre migrationer (steg 2) och #396:s tre (`20270202`–`20270204`, steg 3) är
+applicerade av integrationen och verifierade skrivskyddat. Publiceringspunkt 1 (Lovable, `65823f2`) är gjord av driftsessionen
+15:49–15:51 UTC och kontrollerad på www (canonical, villkorsruta, readiness 200, CV-rättningen). **Kvar:** #397 (appen för
+behörighetsrättningen), #392 → #393 (mejl till arbetsgivaren), #391 (karriäranalysen) och #400, nästa publicering, funktionen
+`transactional-email`s hemlighet, Auth-/DNS-inställningar och produktionsproven. Den som skrev dokumentet har inte publicerat,
+driftsatt någon funktion, ändrat Auth, DNS eller Lovable, och inga mejl har skickats av den. Det ersätter den "provisoriska" migrationslistan i
 `2026-10-03-launch-completion-report.md`: ordningen nedan är beroendebaserad. Claude-sessionen som
 äger Passport, juridik, kontaktadresser och Auth har bekräftat sin del: #386 är **mergad** (main
 `071f69e`) och funktionen `transactional-email` version 3 är driftsatt 2026-10-03 13:47:03 UTC
@@ -141,6 +143,14 @@ Därför:
 5. Verifiera nya md5, att `anon` saknar `EXECUTE` på `employer_reports_readable`,
    `scp_attempt_reports_readable`, den fyrargumentiga `scp_report_snapshot_readable` och
    `employer_report_access`, och att de sju policyerna namnger den nya funktionen. Registrera.
+   **Utfall 2026-10-03:** #396 mergad (`2b5015d`). Förarbetet gav: 11 aktiva organisationer, 5 owner, 1 admin, 3 member
+   (2 med granskargrant), alltså **1 person i 1 organisation** som förlorar generell rapportåtkomst; ägaren godkände det
+   och att ingen får granskarbehörighet automatiskt. Före: alla sex md5 enligt punkt 3. Efter, skrivskyddat av två läsare:
+   ledgern har 366 rader, sista versionen `20270204090000`, digest `ae6f49cb25fa072932ae6aaf8d2b4ddc` (de första 363
+   oförändrade); alla 25 funktionskroppar lika med en strikt lokal replay av `e7b5a3d`; `anon` saknar `EXECUTE` på alla
+   nya gate- och vaktfunktioner; `employer_report_access` är `false/true` för anon/authenticated; båda triggrarna är
+   `enabled O`; de sju policyerna namnger den nya funktionen; levande granskargrants hos icke-aktiva medlemmar: 0.
+   Evidens: `2026-10-03-report-access-hosted-verification.md`.
 6. Merge F2 (guarden släpper den nu), publicera. Produktionsprov: testkontona A-OWN (läser),
    A-REV med granskaråtkomst (läser), A-MEM vanlig medlem (nekas, ser "ingen åtkomst" och inte en
    tom lista), A-REM borttagen (nekas), och att en avstängd person som ansöker om åtkomst igen
