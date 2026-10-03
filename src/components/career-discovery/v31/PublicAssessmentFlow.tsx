@@ -67,10 +67,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowRight, Check, Download, Loader2, Share2 } from "lucide-react";
 import { useT } from "@/i18n/context";
-import {
-  AssessmentPanel,
-  AssessmentShell,
-} from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { AssessmentPanel } from "@/components/career-discovery/v31/shell/AssessmentShell";
+import { CareerDiscoveryShell } from "@/components/career-discovery/v31/shell/CareerDiscoveryShell";
 import { AssessmentIntro } from "@/components/career-discovery/v31/shell/AssessmentIntro";
 import {
   AssessmentCard,
@@ -157,6 +155,14 @@ import { shareableUrl } from "@/lib/site-origin";
 // effect below, same as before.
 type Phase =
   | "checking"
+  // The availability / session / tester reads did not answer — a network
+  // error, a 5xx, an expired session. Its own phase because "we could not
+  // find out" is neither "open" nor "closed": showing the intro would invite
+  // twenty-eight questions on a guess, showing "not open" would be a claim the
+  // product could not check, and showing neither (the old behaviour: the
+  // loading line for ever, and an unhandled rejection) leaves the main
+  // funnel's front door with no way forward.
+  | "check-failed"
   | "unavailable"
   // The signed-in candidate's one screen about their own profile, before the
   // intro. Its own phase rather than a banner ON the intro because the two
@@ -231,6 +237,9 @@ export function PublicAssessmentFlow() {
   );
 
   const [phase, setPhase] = useState<Phase>("checking");
+  // Bumped by the retry on the "check-failed" screen; the boot effect re-runs
+  // from the top when it changes.
+  const [bootAttempt, setBootAttempt] = useState(0);
   const [buffer, setBuffer] = useState<PublicBuffer | null>(null);
   const [index, setIndex] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
@@ -270,8 +279,8 @@ export function PublicAssessmentFlow() {
   // Availability and auth state, resolved together before anything renders.
   useEffect(() => {
     let alive = true;
-    void Promise.all([checkAvailability({}), supabase.auth.getSession()]).then(
-      async ([availability, session]) => {
+    void Promise.all([checkAvailability({}), supabase.auth.getSession()])
+      .then(async ([availability, session]) => {
         if (!alive) return;
         const isSignedIn = Boolean(session.data.session);
         setSignedIn(isSignedIn);
@@ -415,12 +424,28 @@ export function PublicAssessmentFlow() {
         // about them before they answer twenty-eight questions; an anonymous
         // one goes straight to the intro, with nothing in the way.
         setPhase(isSignedIn ? "profile-gate" : "intro");
-      },
-    );
+      })
+      // The reads above can reject: availability and the tester check are
+      // server calls, and getSession can fail. Without this the promise was
+      // dropped, the phase stayed "checking" for ever and the browser logged
+      // an unhandled rejection. The inner `await checkTesterStatus` is covered
+      // here too, because it is awaited inside the .then above.
+      .catch((err: unknown) => {
+        if (!alive) return;
+        console.error("[v31] availability check failed", err);
+        setPhase("check-failed");
+      });
     return () => {
       alive = false;
     };
-  }, [checkAvailability, checkTesterStatus, loadProfile, navigate, phaseAfterQuestions]);
+  }, [
+    checkAvailability,
+    checkTesterStatus,
+    loadProfile,
+    navigate,
+    phaseAfterQuestions,
+    bootAttempt,
+  ]);
 
   // The run's own question order: 2 context → 22 Career DNA → 4 Discovery
   // Path. Twenty-two ids until C1 is answered, because the Discovery Path —
@@ -781,7 +806,7 @@ export function PublicAssessmentFlow() {
 
   if (phase === "checking") {
     return (
-      <AssessmentShell>
+      <CareerDiscoveryShell>
         <AssessmentPanel role="status">
           <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
             <Loader2
@@ -791,13 +816,42 @@ export function PublicAssessmentFlow() {
             {t("cd.public.loading")}
           </p>
         </AssessmentPanel>
-      </AssessmentShell>
+      </CareerDiscoveryShell>
+    );
+  }
+
+  if (phase === "check-failed") {
+    return (
+      <CareerDiscoveryShell>
+        <AssessmentPanel role="alert" data-testid="cd-check-failed">
+          <h1
+            className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground"
+            style={{ fontFamily: "var(--font-display)" }}
+          >
+            <AlertTriangle className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+            {t("cd.public.checkFailedTitle")}
+          </h1>
+          <p className="mt-3 max-w-[56ch] text-sm leading-relaxed text-muted-foreground">
+            {t("cd.public.checkFailedBody")}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setPhase("checking");
+              setBootAttempt((n) => n + 1);
+            }}
+            className="mt-5 inline-flex h-11 items-center rounded-[10px] border border-border bg-card px-5 text-sm font-medium text-foreground transition-colors hover:bg-[color:var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            {t("cd.public.retry")}
+          </button>
+        </AssessmentPanel>
+      </CareerDiscoveryShell>
     );
   }
 
   if (phase === "unavailable") {
     return (
-      <AssessmentShell>
+      <CareerDiscoveryShell>
         <AssessmentPanel role="status">
           <h1
             className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground"
@@ -817,13 +871,13 @@ export function PublicAssessmentFlow() {
             <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </Link>
         </AssessmentPanel>
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
   if (phase === "profile-gate") {
     return (
-      <AssessmentShell wide>
+      <CareerDiscoveryShell wide>
         <ProfileConnectionGate
           profile={profile}
           // The picker's own titles are not loaded on this screen, and a raw
@@ -835,13 +889,13 @@ export function PublicAssessmentFlow() {
           onStart={() => setPhase("intro")}
           onOpenProfile={() => void navigate({ to: "/my-career" })}
         />
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
   if (phase === "intro") {
     return (
-      <AssessmentShell wide>
+      <CareerDiscoveryShell wide>
         <AssessmentIntro
           // The intro's "no account required" promise is true for a
           // signed-out visitor and false for everybody else. See its header.
@@ -853,7 +907,7 @@ export function PublicAssessmentFlow() {
             track("assessment_started");
           }}
         />
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
@@ -872,7 +926,7 @@ export function PublicAssessmentFlow() {
       : t("cd.public.stageCareerDna");
 
     return (
-      <AssessmentShell showExit>
+      <CareerDiscoveryShell showExit>
         <AssessmentCard>
           {/* Progress is stated as text as well as drawn — see AssessmentProgressBar. */}
           <AssessmentProgressBar
@@ -981,13 +1035,13 @@ export function PublicAssessmentFlow() {
             }
           />
         </AssessmentCard>
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
   if (phase === "career-context") {
     return (
-      <AssessmentShell showExit>
+      <CareerDiscoveryShell showExit>
         <CareerContextStep
           value={careerContext}
           onChange={(next) => {
@@ -1045,13 +1099,13 @@ export function PublicAssessmentFlow() {
           // anonymous candidate, who has no profile to prefill from.
           prefillProfessionSlug={profile?.currentProfessionSlug ?? null}
         />
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
   if (phase === "persisting") {
     return (
-      <AssessmentShell>
+      <CareerDiscoveryShell>
         <AssessmentPanel role="status">
           <p className="flex items-center gap-2.5 text-sm text-muted-foreground">
             <Loader2
@@ -1061,7 +1115,7 @@ export function PublicAssessmentFlow() {
             {t("cd.public.saving")}
           </p>
         </AssessmentPanel>
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
@@ -1080,7 +1134,7 @@ export function PublicAssessmentFlow() {
   if (phase === "claim-notice") {
     const notice = claimNotice ?? "notFound";
     return (
-      <AssessmentShell>
+      <CareerDiscoveryShell>
         <AssessmentPanel role="status">
           <h1
             className="flex items-center gap-2.5 text-lg font-semibold tracking-tight text-foreground"
@@ -1139,13 +1193,13 @@ export function PublicAssessmentFlow() {
             )}
           </div>
         </AssessmentPanel>
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
   if (phase === "failed") {
     return (
-      <AssessmentShell showExit>
+      <CareerDiscoveryShell showExit>
         <AssessmentPanel role="alert">
           <h1
             className="text-lg font-semibold tracking-tight text-foreground"
@@ -1164,7 +1218,7 @@ export function PublicAssessmentFlow() {
             {t("cd.public.retry")}
           </button>
         </AssessmentPanel>
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
@@ -1252,7 +1306,7 @@ export function PublicAssessmentFlow() {
   // defect this whole path exists to close.
   if (previewQuery.isPending) {
     return (
-      <AssessmentShell>
+      <CareerDiscoveryShell>
         <AssessmentPanel className="text-center sm:p-10">
           <Loader2
             className="mx-auto h-6 w-6 animate-spin text-muted-foreground motion-reduce:animate-none"
@@ -1262,7 +1316,7 @@ export function PublicAssessmentFlow() {
             {t("cd.public.buildingResult")}
           </p>
         </AssessmentPanel>
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
@@ -1277,7 +1331,7 @@ export function PublicAssessmentFlow() {
     // differently from the report this candidate gets on every other screen.
     // A visible retry is honest; a silently different Top 3 is not.
     return (
-      <AssessmentShell>
+      <CareerDiscoveryShell>
         <AssessmentPanel className="text-center sm:p-10">
           <h1
             className="text-xl font-semibold tracking-tight text-foreground"
@@ -1305,12 +1359,12 @@ export function PublicAssessmentFlow() {
           <p className="mt-4 text-xs text-muted-foreground">{t("cd.public.answersKept")}</p>
         </AssessmentPanel>
         {saveCta}
-      </AssessmentShell>
+      </CareerDiscoveryShell>
     );
   }
 
   return (
-    <AssessmentShell wide>
+    <CareerDiscoveryShell wide showNote={false}>
       <V31ReportView
         snapshot={canonicalSnapshot}
         generatedAt={canonicalSnapshot.completedAt}
@@ -1349,6 +1403,6 @@ export function PublicAssessmentFlow() {
         afterRanking={!signedIn ? saveCta : undefined}
       />
       {resultActions}
-    </AssessmentShell>
+    </CareerDiscoveryShell>
   );
 }

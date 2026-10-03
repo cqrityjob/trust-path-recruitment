@@ -7,6 +7,11 @@
 // no employer surface here and no sharing control: employer access to
 // Career Discovery results is out of scope, and candidate sharing does not
 // exist yet.
+//
+// A read that fails is shown as a failure with a retry. It used to have no
+// catch at all, so a network error or a 5xx left the loading line on screen
+// for ever, and a read that returned no rows was indistinguishable from a
+// history with nothing in it.
 
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -27,14 +32,23 @@ function DiscoveryHistoryRoute() {
   const { t, lang } = useT();
   const load = useServerFn(listMyDiscoveryReports);
   const [data, setData] = useState<Awaited<ReturnType<typeof listMyDiscoveryReports>> | null>(null);
+  const [failed, setFailed] = useState(false);
+  // Bumped by the retry button; the effect re-reads when it changes.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
-    load({}).then((d) => mounted && setData(d));
+    load({})
+      .then((d) => {
+        if (!mounted) return;
+        setData(d);
+        setFailed(false);
+      })
+      .catch(() => mounted && setFailed(true));
     return () => {
       mounted = false;
     };
-  }, [load]);
+  }, [load, attempt]);
 
   const dateFmt = new Intl.DateTimeFormat(lang === "sv" ? "sv-SE" : "en-GB", {
     dateStyle: "long",
@@ -53,10 +67,32 @@ function DiscoveryHistoryRoute() {
         {t("careerDiscovery.history.lead")}
       </p>
 
-      {!data && (
+      {!data && !failed && (
         <p className="mt-10 text-sm text-muted-foreground">
           {t("careerDiscovery.history.loading")}
         </p>
+      )}
+
+      {!data && failed && (
+        <div
+          role="alert"
+          data-history-read-failed
+          className="mt-10 rounded-lg border border-border bg-background p-8 text-center"
+        >
+          <p className="text-sm text-muted-foreground">{t("careerDiscovery.history.error")}</p>
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => {
+                setFailed(false);
+                setAttempt((n) => n + 1);
+              }}
+              className="inline-flex h-11 items-center justify-center rounded-md border border-border px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              {t("careerDiscovery.history.retry")}
+            </button>
+          </div>
+        </div>
       )}
 
       {data && data.reports.length === 0 && (

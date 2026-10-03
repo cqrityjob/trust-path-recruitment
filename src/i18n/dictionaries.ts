@@ -1483,11 +1483,16 @@ export const dictionaries = {
     "careerDiscovery.history.lead": "Dina sparade rapporter, senaste först. Bara du kan se dem.",
     "careerDiscovery.history.loading": "Hämtar…",
     "careerDiscovery.history.empty": "Du har inga rapporter ännu.",
+    // A failed read is not an empty history, and must never read like one.
+    "careerDiscovery.history.error":
+      "Vi kunde inte hämta dina rapporter just nu. Det betyder inte att de saknas – försök igen.",
+    "careerDiscovery.history.retry": "Försök igen",
     "careerDiscovery.history.startCta": "Gör din Discovery",
     "careerDiscovery.history.report": "Discovery-rapport",
     "careerDiscovery.history.type.discovery": "Security Career Discovery",
     "careerDiscovery.history.type.legacy": "Karriärtest (tidigare version)",
-    "careerDiscovery.history.internalTest": "Intern testversion",
+    "careerDiscovery.history.internalTest":
+      "Testversion – innehållet är ännu inte granskat av sakkunniga",
     "careerDiscovery.history.open": "Öppna rapport",
     "careerDiscovery.dashboard.directionTitle": "Din karriärriktning",
     "careerDiscovery.dashboard.dnaTitle": "Ditt Security Career DNA",
@@ -1497,14 +1502,20 @@ export const dictionaries = {
     "careerDiscovery.dashboard.allReports": "Alla mina rapporter",
     "careerDiscovery.dashboard.nextStepFallback":
       "Läs mer om de säkerhetsområden som stämmer bäst med din profil.",
+    // The key name predates the wording: the analysis is open to the public, so
+    // it is no longer an "internal test". What is true is that the content has
+    // not been reviewed by specialists, and that is what this says.
     "careerDiscovery.dashboard.internalTestNote":
-      "Intern testversion. Det här är vägledning som stöd för samtal och egna beslut — inte ett prov och inte ett besked om anställningsbarhet.",
+      "Karriäranalysen är under utveckling. Innehållet är framtaget men ännu inte granskat av sakkunniga. Det är vägledning som stöd för samtal och egna beslut – inte ett prov och inte ett besked om anställningsbarhet.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "Den här rapporten sparades i ett tidigare format. Öppna hela rapporten för att se innehållet.",
     "cd.public.loading": "Förbereder karriäranalysen…",
     "cd.public.unavailableTitle": "Karriäranalysen är inte öppen just nu",
-    "cd.public.unavailableBody":
-      "Den uppdaterade karriäranalysen granskas innan den öppnas för alla. Vi öppnar den så snart granskningen är klar.",
+    "cd.public.unavailableBody": "Karriäranalysen är inte öppen för nya deltagare just nu.",
+    // The check itself failed: neither "open" nor "closed" is known.
+    "cd.public.checkFailedTitle": "Karriäranalysen kunde inte förberedas",
+    "cd.public.checkFailedBody":
+      "Vi kunde inte kontrollera om karriäranalysen är öppen just nu. Det kan bero på din uppkoppling eller på ett tillfälligt fel hos oss. Försök igen.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
     "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
@@ -1779,6 +1790,11 @@ export const dictionaries = {
     "sca.scp.saving": "Sparar…",
     "sca.scp.savedNote": "Sparat.",
     "sca.scp.errorNote": "Kunde inte spara just nu. Försök igen.",
+    // The READ failed. This is not "nothing filled in": offering to fill it in
+    // over a profile that exists but could not be read would invite an overwrite.
+    "sca.scp.loadFailed":
+      "Vi kunde inte hämta din profil just nu. Det betyder inte att den är tom – försök igen.",
+    "sca.scp.retry": "Försök igen",
     // The dashboard card is a summary; the editor opens from it.
     "sca.scp.summary.status": "Nuläge",
     "sca.scp.summary.profession": "Nuvarande yrke",
@@ -6305,6 +6321,7 @@ export const dictionaries = {
     "academy.attempt.scored": "Bedömd",
     "academy.attempt.released": "Frisläppt",
     "academy.attempt.other": "Annan status",
+    "academy.attempt.exit": "Till Tester och utveckling",
     "academy.reviews.title": "Granskning",
     "academy.reviews.lede":
       "Här finns kandidatsvar som behöver mänsklig bedömning innan underlaget kan färdigställas. Den som tilldelade testet får aldrig granska det själv.",
@@ -10175,11 +10192,16 @@ export const dictionaries = {
     "careerDiscovery.history.lead": "Your saved reports, newest first. Only you can see them.",
     "careerDiscovery.history.loading": "Loading…",
     "careerDiscovery.history.empty": "You do not have any reports yet.",
+    // A failed read is not an empty history, and must never read like one.
+    "careerDiscovery.history.error":
+      "We could not load your reports right now. That does not mean they are gone – please try again.",
+    "careerDiscovery.history.retry": "Try again",
     "careerDiscovery.history.startCta": "Take your Discovery",
     "careerDiscovery.history.report": "Discovery report",
     "careerDiscovery.history.type.discovery": "Security Career Discovery",
     "careerDiscovery.history.type.legacy": "Career assessment (earlier version)",
-    "careerDiscovery.history.internalTest": "Internal test version",
+    "careerDiscovery.history.internalTest":
+      "Test version – content not yet reviewed by specialists",
     "careerDiscovery.history.open": "Open report",
     "careerDiscovery.dashboard.directionTitle": "Your career direction",
     "careerDiscovery.dashboard.dnaTitle": "Your Security Career DNA",
@@ -10189,14 +10211,20 @@ export const dictionaries = {
     "careerDiscovery.dashboard.allReports": "All my reports",
     "careerDiscovery.dashboard.nextStepFallback":
       "Read more about the Security Career Areas that best match your profile.",
+    // The key name predates the wording: the analysis is open to the public, so
+    // it is no longer an "internal test". What is true is that the content has
+    // not been reviewed by specialists, and that is what this says.
     "careerDiscovery.dashboard.internalTestNote":
-      "Internal test version. This is guidance to support a conversation and your own decisions — not a test and not a judgement about employability.",
+      "The career analysis is still in development. Its content has not yet been reviewed by specialists. It is guidance to support conversation and your own decisions – not a test and not a judgement about employability.",
     "careerDiscovery.dashboard.snapshotUnreadable":
       "This report was saved in an earlier format. Open the full report to see its contents.",
     "cd.public.loading": "Preparing the career analysis…",
     "cd.public.unavailableTitle": "The career analysis is not open right now",
-    "cd.public.unavailableBody":
-      "The updated career analysis is being reviewed before it opens to everyone. We will open it as soon as that review is complete.",
+    "cd.public.unavailableBody": "The career analysis is not open to new participants right now.",
+    // The check itself failed: neither "open" nor "closed" is known.
+    "cd.public.checkFailedTitle": "The career analysis could not be prepared",
+    "cd.public.checkFailedBody":
+      "We could not check whether the career analysis is open right now. It may be your connection or a temporary fault on our side. Please try again.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
     "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
@@ -10423,6 +10451,11 @@ export const dictionaries = {
     "sca.scp.saving": "Saving…",
     "sca.scp.savedNote": "Saved.",
     "sca.scp.errorNote": "Couldn't save right now. Please try again.",
+    // The READ failed. This is not "nothing filled in": offering to fill it in
+    // over a profile that exists but could not be read would invite an overwrite.
+    "sca.scp.loadFailed":
+      "We could not load your profile right now. That does not mean it is empty – please try again.",
+    "sca.scp.retry": "Try again",
     "sca.scp.summary.status": "Current situation",
     "sca.scp.summary.profession": "Current profession",
     "sca.scp.summary.experience": "Experience",
@@ -14811,6 +14844,7 @@ export const dictionaries = {
     "academy.attempt.scored": "Assessed",
     "academy.attempt.released": "Released",
     "academy.attempt.other": "Other status",
+    "academy.attempt.exit": "To Assessments and development",
     "academy.reviews.title": "Review",
     "academy.reviews.lede":
       "These are the candidate responses that need a human assessment before the brief can be completed. Whoever assigned the test may never review it themselves.",

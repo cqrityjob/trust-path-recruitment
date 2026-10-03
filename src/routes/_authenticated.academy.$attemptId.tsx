@@ -165,6 +165,11 @@ function AcademyAttemptRunner({
   // `lang` is the DELIVERY language, fixed by the LanguageScope above -- not
   // the site toggle. Every item, section and sentence in this run reads it.
   const { t, tp, lang } = useT();
+  // Leaving a run in progress goes to the person's own assessments, worded in
+  // the delivery language. The label is the product's neutral name for that
+  // page: an applicant sitting a recruitment assessment is not "developing
+  // their competence", which is what the page's own home title says.
+  const exit = { to: "/academy", label: t("academy.attempt.exit") } as const;
   const loadItems = useServerFn(getAcademyAttemptItems);
   const loadBlocks = useServerFn(getAcademyAttemptBlocks);
   const loadState = useServerFn(getAcademyAttemptState);
@@ -627,7 +632,7 @@ function AcademyAttemptRunner({
   // MissingAnswersPanel for why that distinction is the whole point.
   if (phase === "incomplete") {
     return (
-      <AssessmentShell showExit deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang}>
         <AssessmentPanel>
           <MissingAnswersPanel
             missing={missing.map((m) => ({
@@ -773,7 +778,7 @@ function AcademyAttemptRunner({
   if (phase === "section" && currentBlock) {
     const n = blocks.findIndex((b) => b.blockKey === currentBlock.blockKey) + 1;
     return (
-      <AssessmentShell showExit deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang}>
         <AssessmentPanel>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
             {t("academy.section.eyebrow")} {n} {t("cd.public.of")} {blocks.length}
@@ -810,7 +815,7 @@ function AcademyAttemptRunner({
 
   if (phase === "submitting") {
     return (
-      <AssessmentShell showExit deliveryLanguage={lang}>
+      <AssessmentShell exit={exit} deliveryLanguage={lang}>
         <AssessmentPanel>
           <p className="text-sm text-muted-foreground">{t("academy.submitting")}</p>
         </AssessmentPanel>
@@ -835,7 +840,7 @@ function AcademyAttemptRunner({
   if (!current) return null;
 
   return (
-    <AssessmentShell showExit deliveryLanguage={lang}>
+    <AssessmentShell exit={exit} deliveryLanguage={lang}>
       <AssessmentCard>
         <AssessmentProgressBar
           stageLabel={currentBlock ? currentBlock.name : t("academy.stage")}

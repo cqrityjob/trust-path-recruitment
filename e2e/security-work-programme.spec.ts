@@ -4,8 +4,9 @@
  * The real application shell, router, pages, Swedish/English copy and the
  * deterministic programme rules run in the browser; every server function is
  * answered from an in-memory workspace fixture here, so the proof covers the
- * routes, layouts (desktop and 375/390 mobile), language parity, the AI
- * panel's no-AI path and the end-to-end flow a new organisation walks
+ * routes, layouts (desktop and 375/390 mobile), language parity, the absence
+ * of any "Ask Security AI" control while AI is not approved, and the
+ * end-to-end flow a new organisation walks
  * (mandate → assets → baseline → gaps → risks & actions → report). RLS, the
  * assistant's provider path and persistence are proven elsewhere
  * (supabase/tests/security_work_programme_test.sql, the browser stack suite).
@@ -615,14 +616,16 @@ test("a new organisation walks the programme end to end, in Swedish, without AI"
     await shot(page, "08-management-report");
   });
 
-  await test.step("Security AI: one assistant, unavailable here, with deterministic help instead", async () => {
-    await go(page, "/mandate");
-    await page.getByTestId("sw-ai-open").filter({ visible: true }).first().click();
-    await expect(page.getByTestId("sw-ai-panel")).toContainText("CQrityjob Security AI");
-    await expect(page.getByTestId("sw-ai-unavailable")).toBeVisible();
-    await page.getByTestId("sw-ai-mandate_draft").click();
-    await expect(page.getByTestId("sw-ai-fallback")).toContainText("Skriv uppdraget själv");
-    await shot(page, "09-security-ai-fallback");
+  await test.step("Security AI: with no AI approval, no 'Ask Security AI' control is offered", async () => {
+    // The status read answers "not enabled" for this workspace (see handle()).
+    // The overview says so in words; wait for THAT, so the absence asserted
+    // below is the settled state and not merely a query that has not answered.
+    // The same read decides every Ask Security AI button, in the navigation
+    // and on each page, so none of them may promise an answer it cannot give.
+    await go(page);
+    await slow(page.locator('[data-sw-status="ai"]')).toContainText(/inte tillgängligt/);
+    await expect(page.getByTestId("sw-ai-open")).toHaveCount(0);
+    await shot(page, "09-security-ai-absent");
   });
 
   await test.step("90-day plan is optional and dismissable", async () => {

@@ -253,7 +253,13 @@ function TrainingModuleRoute() {
   const isLast = index === items.length - 1;
 
   return (
-    <AssessmentShell showExit>
+    <AssessmentShell
+      exit={{
+        to: "/academy/training/$assignmentId",
+        params: { assignmentId },
+        label: t("academy.training.backToProgramme"),
+      }}
+    >
       <AssessmentCard>
         <AssessmentProgressBar
           stageLabel={name}

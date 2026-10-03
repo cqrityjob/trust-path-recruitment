@@ -58,7 +58,8 @@ export type DiscoveryErrorCode =
   | "core_incomplete"
   | "already_completed"
   | "save_failed"
-  | "complete_failed";
+  | "complete_failed"
+  | "history_read_failed";
 
 export class DiscoveryError extends Error {
   constructor(public readonly code: DiscoveryErrorCode) {
@@ -420,12 +421,26 @@ export const listMyDiscoveryReports = createServerFn({ method: "GET" })
     const ctx = context as Ctx;
 
     // The view is security_invoker, so the caller's own RLS governs.
-    const { data: rows } = await ctx.supabase
+    //
+    // `error` is READ, not discarded. This used to be `const { data: rows }`,
+    // so a failed read (an RLS denial, a timeout, a dropped connection) left
+    // `rows` null, the `?? []` below turned it into an empty list, and every
+    // consumer told somebody with saved reports that they had none. A fault
+    // is a rejection: the callers already treat one as a failure with a
+    // retry (react-query's isError on the career home, a catch on the two
+    // lists), and none of them can mistake it for an empty history.
+    const { data: rows, error } = await ctx.supabase
       .from("cd_my_report_history")
       .select(
-        "snapshot_id, session_id, generated_at, definition_version, scoring_version, context_status, discovery_goal, locale, top_area_id",
+        "snapshot_id, session_id, generated_at, definition_version, scoring_version, context_status, discovery_goal, locale, top_area_id, is_internal_test",
       )
       .order("generated_at", { ascending: false });
+
+    if (error) {
+      // The database's message is for the log, never for the candidate.
+      console.error("[career] report history read failed", error.message);
+      throw new DiscoveryError("history_read_failed");
+    }
 
     return {
       reports: ((rows ?? []) as Array<Record<string, unknown>>).map((r) => ({
@@ -438,6 +453,10 @@ export const listMyDiscoveryReports = createServerFn({ method: "GET" })
         discoveryGoal: (r.discovery_goal as DiscoveryGoal | null) ?? null,
         locale: r.locale as "sv" | "en",
         topAreaId: (r.top_area_id as string | null) ?? null,
+        // From the session, not assumed: true only for a run taken against an
+        // internal_test instrument version (a trigger refuses the flag on any
+        // candidate session). Anything but an explicit true is "not marked".
+        isInternalTest: r.is_internal_test === true,
       })),
     };
   });

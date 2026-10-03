@@ -96,6 +96,9 @@ export interface DiscoveryReportRow {
   readonly snapshotId: string;
   readonly generatedAt: string;
   readonly definitionVersion: string;
+  /** The session's own is_internal_test flag, passed through to the earlier-
+   *  reports list so its "test version" tag is data and not a default. */
+  readonly isInternalTest?: boolean;
 }
 
 export interface HomePresentationInput {

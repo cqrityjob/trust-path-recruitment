@@ -38,10 +38,10 @@
 // rules the report template already established. It never triggers a
 // generation: exporting is not the moment to change what the document says.
 
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useBlocker, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -58,6 +58,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Container } from "@/components/site/Container";
+import { ConfirmAction } from "@/components/employer/ConfirmAction";
 import { PrimaryButton } from "@/components/site/PrimaryButton";
 import { CvDocumentView } from "@/components/professional-identity/CvDocumentView";
 import {
@@ -394,16 +395,33 @@ function CvDetailPage() {
 
   /* -- leaving with unsaved work -------------------------------------- */
   //
-  // A person who has rewritten three bullet points and clicks the browser's
-  // back button loses all of it, silently. `beforeunload` is the only hook a
-  // page has for that, and it costs nothing when there is nothing to lose:
-  // the listener is only attached while `dirty` is true.
-  useEffect(() => {
-    if (!dirty || !editing) return;
-    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty, editing]);
+  // A person who has rewritten three bullet points and clicks a link, the
+  // header or the browser's back button loses all of it, silently. There are
+  // two exits and each needs its own hook:
+  //
+  //   · closing the tab or reloading -- `beforeunload`, which only the browser
+  //     can answer. The router's blocker registers it itself and only while it
+  //     is enabled, so there is no second listener to keep in step.
+  //   · navigating inside the app -- which `beforeunload` never sees, because
+  //     nothing unloads. The blocker intercepts it and holds the navigation
+  //     until the person has chosen to stay or to leave.
+  //
+  // The blocker is ENABLED only while the editor is open with unsaved
+  // changes, and disabled the moment either stops being true. Saving, closing
+  // the editor and "Show my CV" all end the condition, so none of them can
+  // leave the person trapped behind a confirmation for work that is already
+  // safe. Moving within this same page (a hash, a search parameter) is not
+  // leaving it and is never held.
+  const leavesThisCv = useCallback(
+    ({ current, next }: { current: { pathname: string }; next: { pathname: string } }) =>
+      current.pathname !== next.pathname,
+    [],
+  );
+  const leaveBlocker = useBlocker({
+    shouldBlockFn: leavesThisCv,
+    disabled: !(dirty && editing),
+    withResolver: true,
+  });
 
   /* -- what to render -------------------------------------------------- */
 
@@ -498,13 +516,23 @@ function CvDetailPage() {
                       the saved CV -- and a person cannot tell that from the
                       paper afterwards. The control renders only inside
                       `cv.data`, so there is no loading or empty state to
-                      print from either. */}
+                      print from either.
+
+                      ── AND WHILE THE EDITOR IS OPEN ───────────────────
+                      The saved document is rendered only when the editor is
+                      closed, and the editor form is `no-print`. So printing
+                      with the editor open produced a BLANK page, with
+                      nothing on screen to explain it. The button is
+                      disabled instead, and the line beneath it (the same
+                      element the button is described by) says why. Closing
+                      the editor for the person would discard their unsaved
+                      wording, which is not this button's call to make. */}
                   <button
                     type="button"
                     aria-describedby="cv-export-help"
-                    disabled={busy}
+                    disabled={busy || editing}
                     onClick={() => window.print()}
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary"
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-border bg-background px-4 text-sm font-semibold text-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-background"
                   >
                     <Printer className="h-3.5 w-3.5" aria-hidden="true" />
                     {L(CV.print, l)}
@@ -526,7 +554,7 @@ function CvDetailPage() {
                     that the browser -- not this page -- decides whether to
                     offer would be a promise this code cannot keep. */}
                 <p id="cv-export-help" className="mt-1.5 max-w-xs text-xs text-muted-foreground">
-                  {L(CV.exportHelp, l)}
+                  {L(editing ? CV.exportCloseEditor : CV.exportHelp, l)}
                 </p>
               </div>
             </div>
@@ -973,7 +1001,10 @@ function CvDetailPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setConfirmDelete(false)}
+                      onClick={() => {
+                        setConfirmDelete(false);
+                        destroy.reset();
+                      }}
                       className="min-h-9 px-2 text-sm text-muted-foreground hover:text-foreground"
                     >
                       {/* "Keep this CV", not "Keep my saved CV" borrowed from
@@ -983,7 +1014,25 @@ function CvDetailPage() {
                     </button>
                   </span>
                 )}
+                {/* A refused or failed delete used to end in silence: the
+                    button stopped spinning and the CV was still there.
+                    A lost race has its own banner above, so this is for
+                    every other failure. */}
+                {destroy.isError && conflict !== "changed" && (
+                  <p role="alert" className="w-full text-sm text-destructive">
+                    {L(CV.deleteFailed, l)}
+                  </p>
+                )}
               </div>
+            )}
+
+            {/* A failed draft request is said, not swallowed. The saved CV is
+                untouched either way -- nothing here writes until the person
+                accepts a proposal -- and the line says so. */}
+            {propose.isError && (
+              <p role="alert" className="no-print mt-5 text-sm text-destructive">
+                {L(CV.proposeFailed, l)}
+              </p>
             )}
 
             {propose.data && propose.data.status !== "succeeded" && (
@@ -1034,6 +1083,15 @@ function CvDetailPage() {
                   </p>
                 )}
 
+                {/* The write itself failed (not the validation above, which
+                    answered). Nothing was saved and the suggestion is still
+                    here to accept again. */}
+                {acceptProposal.isError && conflict !== "changed" && (
+                  <p role="alert" className="mt-4 text-sm text-destructive">
+                    {L(CV.proposalSaveFailed, l)}
+                  </p>
+                )}
+
                 <div className="mt-5">
                   <CvDocumentView document={proposalDocument} />
                 </div>
@@ -1079,6 +1137,22 @@ function CvDetailPage() {
           </>
         )}
       </Container>
+
+      {/* The question the in-app navigation was held for. Staying is the
+          default (Escape and the cancel button both stay): the dangerous
+          answer is the one that has to be chosen. */}
+      <ConfirmAction
+        open={leaveBlocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open) leaveBlocker.reset?.();
+        }}
+        title={L(CV.leaveTitle, l)}
+        consequence={L(CV.leaveBody, l)}
+        confirmLabel={L(CV.leaveAnyway, l)}
+        cancelLabel={L(CV.leaveStay, l)}
+        tone="destructive"
+        onConfirm={() => leaveBlocker.proceed?.()}
+      />
     </>
   );
 }
