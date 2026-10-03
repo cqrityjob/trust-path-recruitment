@@ -119,6 +119,29 @@ echo "==> Creating a clean test database"
 psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB};" >/dev/null
 psql_q -d postgres -c "CREATE DATABASE ${TEST_DB};" >/dev/null
 
+# ── NO AUTOVACUUM WHILE THE SUITES ROLL MIGRATIONS BACK ─────────────────
+#
+# Several suites reproduce their defect by running the REAL rollback inside a
+# savepoint, and a rollback's ALTER POLICY takes an AccessExclusiveLock on a
+# table the suite has just written to. If autovacuum picks that table up in
+# between, the two can deadlock: on #397 (run 37139672945) the 0203 rollback's
+# ALTER POLICY on scp_report_snapshots and "autovacuum: VACUUM
+# public.scp_report_snapshots" each waited on the other, the planted control
+# RM NC6 failed on the deadlock instead of on its assertion, and the job went
+# red on a timing accident. Autovacuum has no part in what any suite proves,
+# so it is switched off for the run, server-wide because it is not settable
+# per database, and restored on exit. A server this role may not reconfigure
+# keeps running as before, with a warning.
+DB_TEST_AUTOVACUUM_OFF=0
+if psql_q -d postgres -c "ALTER SYSTEM SET autovacuum = off;" >/dev/null 2>&1 \
+  && psql_q -d postgres -c "SELECT pg_reload_conf();" >/dev/null 2>&1; then
+  DB_TEST_AUTOVACUUM_OFF=1
+  trap 'if [ "$DB_TEST_AUTOVACUUM_OFF" = "1" ]; then psql -q -d postgres -c "ALTER SYSTEM RESET autovacuum;" -c "SELECT pg_reload_conf();" >/dev/null 2>&1 || true; fi' EXIT
+  echo "    ok  autovacuum is off for this run (restored on exit)"
+else
+  echo "    !!  could not switch autovacuum off (needs superuser); a rollback inside a suite can still deadlock with it" >&2
+fi
+
 echo "==> Applying test-harness bootstrap"
 psql_q -d "$TEST_DB" -f supabase/tests/00_bootstrap.sql >/dev/null
 
