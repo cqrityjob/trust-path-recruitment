@@ -62,15 +62,18 @@ BEGIN
   PERFORM set_config('request.jwt.claim.sub', '', true);
   RETURN _r;
 END $$;
+-- V decides on the entry as V's page currently shows it: the decision names
+-- the request's submitted_at, as the application does (20270125090000).
 CREATE OR REPLACE FUNCTION pg_temp.decide(_req uuid, _decision text) RETURNS void
 LANGUAGE plpgsql AS $$
+DECLARE _seen timestamptz := (SELECT submitted_at FROM public.sp_verification_requests WHERE id = _req);
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', '0f180000-0000-4000-8000-00000000000c', true);
   SET LOCAL ROLE authenticated;
   IF _decision = 'approved' THEN
-    PERFORM public.sp_verifier_decide(_req, 'approved', 'document_review', 'Kontrollerat.', NULL, NULL, NULL);
+    PERFORM public.sp_verifier_decide_reviewed(_req, _seen, 'approved', 'document_review', 'Kontrollerat.', NULL, NULL, NULL);
   ELSE
-    PERFORM public.sp_verifier_decide(_req, 'clarification_requested', NULL, NULL, 'Ange korrekt startdatum.', NULL, NULL);
+    PERFORM public.sp_verifier_decide_reviewed(_req, _seen, 'clarification_requested', NULL, NULL, 'Ange korrekt startdatum.', NULL, NULL);
   END IF;
   RESET ROLE;
   PERFORM set_config('request.jwt.claim.sub', '', true);

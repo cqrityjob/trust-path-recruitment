@@ -651,26 +651,29 @@ END $$;
 DO $$
 DECLARE _amina uuid := 'e8000000-0000-0000-0000-000000000001';
         _xadmin uuid := 'e8000000-0000-0000-0000-000000000005';
-        _req uuid; _period uuid;
+        _req uuid; _period uuid; _seen timestamptz;
 BEGIN
   SELECT id, period_id INTO _req, _period FROM public.sp_verification_requests
    WHERE holder_user_id = _amina AND status = 'pending' LIMIT 1;  -- back in review since 6.9b (P1-H)
 
+  -- The request was answered after a clarification (6.9b), so a decision on
+  -- it names the version the employer reviewed (20270125090000).
+  _seen := (SELECT submitted_at FROM public.sp_verification_requests WHERE id = _req);
   SET LOCAL ROLE authenticated;
   PERFORM set_config('request.jwt.claim.sub', _xadmin::text, true);
 
   -- 7.1 An approval must say HOW. An employer has exactly one honest answer and
   --     the surface records it for them; a crafted call with none is refused.
   PERFORM pg_temp.must_fail(
-    format('SELECT public.sp_verifier_decide(%L, ''approved'', NULL, NULL, NULL, NULL, NULL)',
-           _req),
+    format('SELECT public.sp_verifier_decide_reviewed(%L, %L, ''approved'', NULL, NULL, NULL, NULL, NULL)',
+           _req, _seen),
     'SP_APPROVAL_REQUIRES_METHOD',
     '7.1 a confirmation with no recorded method is refused');
 
   -- 7.2 The happy path, decided by the ADMIN rather than the owner: both are
   --     authorised, and the record must name the organisation either way.
-  PERFORM public.sp_verifier_decide(
-    _req, 'approved', 'employer_confirmation', NULL, NULL, NULL, NULL);
+  PERFORM public.sp_verifier_decide_reviewed(
+    _req, _seen, 'approved', 'employer_confirmation', NULL, NULL, NULL, NULL);
   PERFORM pg_temp.ok(
     (SELECT status FROM public.sp_verification_requests WHERE id = _req) = 'approved',
     '7.2 an admin of the target employer can confirm the employment');

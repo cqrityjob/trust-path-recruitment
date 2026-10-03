@@ -1528,11 +1528,15 @@ if [ "$CR_RC" -ne 0 ] || ! echo "$CR_OUT" | grep -q "ok  C7.10 " || ! echo "$CR_
   exit 1
 fi
 echo "    ok  conduct suite passes with the reopen reproduced pre-fix (C7.9) and refused post-fix (C7.10-C7.12)"
+# 20270124090000 enforces the same refusal durably (an exposure record), so
+# each control takes it down first; it is re-applied with this migration.
+psql_q -d "$TEST_DB" -f supabase/rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql >/dev/null
 psql_q -d "$TEST_DB" -f "$CR_RB" >/dev/null
 cr_nc_expect_fail "NC1 full rollback"
 psql_q -d "$TEST_DB" -c "$(sed 's/  IF EXISTS (SELECT 1 FROM public.bcp_conduct_positions o$/  IF EXISTS (SELECT 1 FROM public.bcp_conduct_panels pp WHERE pp.session_id = _p.session_id) AND EXISTS (SELECT 1 FROM public.bcp_conduct_positions o/' "$CR_MIG" | sed '/^DO \$\$$/,$d')" >/dev/null
 cr_nc_expect_fail "NC2 guard only with a panel"
 psql_q -d "$TEST_DB" -f "$CR_MIG" >/dev/null
+psql_q -d "$TEST_DB" -f supabase/migrations/20270124090000_bcp_conduct_exposure_is_durable.sql >/dev/null
 set +e
 CR_OUT="$(run_cr_suite)"; CR_RC=$?
 set -e
@@ -1585,6 +1589,257 @@ EI_OUT="$(run_ei_suite)"; EI_RC=$?
 set -e
 [ "$EI_RC" -eq 0 ] || { echo "$EI_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: identity re-review suite does not pass after re-apply" >&2; exit 1; }
 echo "    ok  identity re-review migration re-applied (postflight proved); suite passes again"
+
+# 20270124090000: once a BESKT position has been readable by the others it is
+# never reopened, whoever joins later. The regression lives in the conduct
+# suite: C7.13 reproduces the bypass (a third assessor joins with an open
+# position, and A reopens the position B has read), C7.14-C7.21 refuse it,
+# keep the newcomer's independence and let an unread position be corrected.
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> C7.15
+#   NC2  the exposure is never recorded (AFTER trigger dropped)         -> C7.15
+#   NC3  the guard no longer consults the exposure record               -> C7.15
+# Then a real two-connection race (lock vs reopen, and lock vs join+reopen),
+# whose control removes the session lock from the guard.
+BX_MIG=supabase/migrations/20270124090000_bcp_conduct_exposure_is_durable.sql
+BX_RB=supabase/rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql
+echo "==> Running BESKT conduct durable-exposure assertions"
+psql_q -d "$TEST_DB" -f "$BX_MIG" >/dev/null
+set +e
+BX_OUT="$(run_cr_suite)"; BX_RC=$?
+set -e
+if [ "$BX_RC" -ne 0 ] || ! echo "$BX_OUT" | grep -q "ok  C7.13 REPRODUCTION" || ! echo "$BX_OUT" | grep -q "ok  C7.21 "; then
+  echo "$BX_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the conduct suite does not prove the durable exposure boundary (rc ${BX_RC})." >&2
+  exit 1
+fi
+echo "    ok  conduct suite passes with the late-join reopen reproduced (C7.13) and refused (C7.15-C7.21)"
+psql_q -d "$TEST_DB" -f "$BX_RB" >/dev/null
+cr_nc_expect_fail "BX NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$BX_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "DROP TRIGGER bcp_conduct_positions_exposure_record ON public.bcp_conduct_positions;" >/dev/null
+cr_nc_expect_fail "BX NC2 exposure never recorded"
+psql_q -d "$TEST_DB" -f "$BX_MIG" >/dev/null
+psql_q -d "$TEST_DB" -c "$(sed -n '/^CREATE OR REPLACE FUNCTION public.bcp_conduct_position_exposure_guard()/,/^\$\$;/p' "$BX_MIG" \
+  | sed 's/     AND EXISTS (SELECT 1 FROM public.bcp_conduct_position_exposures x/     AND false AND EXISTS (SELECT 1 FROM public.bcp_conduct_position_exposures x/')" >/dev/null
+cr_nc_expect_fail "BX NC3 guard ignores the exposure record"
+psql_q -d "$TEST_DB" -f "$BX_MIG" >/dev/null
+
+# The race: two real connections on committed synthetic rows in a clone.
+# Race 1: B's lock (the one that exposes A) holds its transaction open while A
+# reopens. Race 2: the same, while C's join and A's reopen run in one
+# transaction. A must be refused in both, after waiting on the session lock.
+bx_race() {
+  local db="$1" out1 out2 rc=0 t0 t1 a_state n
+  psql_q -d "$db" >/dev/null <<'SQL'
+SET session_replication_role = replica;
+DELETE FROM public.bcp_conduct_position_exposures;
+INSERT INTO auth.users (id, email) VALUES
+  ('b7000000-0000-4000-8000-0000000000f1', 'race-a@bx.test'),
+  ('b7000000-0000-4000-8000-0000000000f2', 'race-b@bx.test'),
+  ('b7000000-0000-4000-8000-0000000000f3', 'race-c@bx.test')
+ON CONFLICT (id) DO NOTHING;
+DELETE FROM public.bcp_conduct_positions WHERE session_id IN ('b7000000-0000-4000-8000-0000000000a1', 'b7000000-0000-4000-8000-0000000000a2');
+DELETE FROM public.bcp_conduct_sessions WHERE id IN ('b7000000-0000-4000-8000-0000000000a1', 'b7000000-0000-4000-8000-0000000000a2');
+INSERT INTO public.bcp_conduct_sessions (id, link_id, case_id, employer_id, assignment_id, bound_response_id,
+  bound_response_version, bound_method_version_id, bound_content_hash, bound_answers_content_hash, state,
+  opened_by, opened_at, open_operation_id, revision, created_at)
+SELECT s, gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 1,
+       gen_random_uuid(), repeat('a', 64), repeat('b', 64), 'open', 'b7000000-0000-4000-8000-0000000000f1', now(),
+       gen_random_uuid(), 1, now()
+  FROM unnest(ARRAY['b7000000-0000-4000-8000-0000000000a1', 'b7000000-0000-4000-8000-0000000000a2']::uuid[]) s;
+INSERT INTO public.bcp_conduct_positions (id, session_id, assessor_id, position_role, state, locked_at,
+  lock_operation_id, reopen_count, revision, created_by, created_at)
+VALUES
+ ('b7000000-0000-4000-8000-0000000001a1', 'b7000000-0000-4000-8000-0000000000a1', 'b7000000-0000-4000-8000-0000000000f1', 'assessor', 'locked', now(), gen_random_uuid(), 0, 2, 'b7000000-0000-4000-8000-0000000000f1', now()),
+ ('b7000000-0000-4000-8000-0000000001b1', 'b7000000-0000-4000-8000-0000000000a1', 'b7000000-0000-4000-8000-0000000000f2', 'assessor', 'open', NULL, NULL, 0, 1, 'b7000000-0000-4000-8000-0000000000f2', now()),
+ ('b7000000-0000-4000-8000-0000000001a2', 'b7000000-0000-4000-8000-0000000000a2', 'b7000000-0000-4000-8000-0000000000f1', 'assessor', 'locked', now(), gen_random_uuid(), 0, 2, 'b7000000-0000-4000-8000-0000000000f1', now()),
+ ('b7000000-0000-4000-8000-0000000001b2', 'b7000000-0000-4000-8000-0000000000a2', 'b7000000-0000-4000-8000-0000000000f2', 'assessor', 'open', NULL, NULL, 0, 1, 'b7000000-0000-4000-8000-0000000000f2', now());
+SQL
+  for sfx in 1 2; do
+    psql -v ON_ERROR_STOP=1 -tAq -d "$db" >/dev/null 2>&1 <<SQL &
+BEGIN;
+UPDATE public.bcp_conduct_positions SET state = 'locked', locked_at = now(), lock_operation_id = gen_random_uuid(),
+       revision = revision + 1 WHERE id = 'b7000000-0000-4000-8000-0000000001b${sfx}';
+SELECT pg_sleep(2);
+COMMIT;
+SQL
+    local pid=$!
+    sleep 0.5
+    local join_sql=""
+    [ "$sfx" = "2" ] && join_sql="INSERT INTO public.bcp_conduct_positions (session_id, assessor_id, position_role, created_by) VALUES ('b7000000-0000-4000-8000-0000000000a2', 'b7000000-0000-4000-8000-0000000000f3', 'assessor', 'b7000000-0000-4000-8000-0000000000f3');"
+    t0=$(date +%s%N)
+    set +e
+    out2="$(psql -v ON_ERROR_STOP=1 -tAq -d "$db" 2>&1 <<SQL
+BEGIN;
+SET LOCAL session_replication_role = origin;
+${join_sql}
+UPDATE public.bcp_conduct_positions SET state = 'open', locked_at = NULL, lock_operation_id = NULL,
+       reopened_at = now(), reopened_by = assessor_id, reopen_reason = 'race reopen',
+       reopen_count = reopen_count + 1, revision = revision + 1
+ WHERE id = 'b7000000-0000-4000-8000-0000000001a${sfx}';
+COMMIT;
+SQL
+)"
+    set -e
+    t1=$(date +%s%N)
+    wait "$pid" || true
+    a_state="$(psql -tAq -d "$db" -c "select state from public.bcp_conduct_positions where id = 'b7000000-0000-4000-8000-0000000001a${sfx}'")"
+    n="$(psql -tAq -d "$db" -c "select count(*) from public.bcp_conduct_position_exposures where session_id = 'b7000000-0000-4000-8000-0000000000a${sfx}'")"
+    if echo "$out2" | grep -q "BCP_CONDUCT_POSITIONS_ALREADY_SEEN" && [ "$a_state" = "locked" ] && [ "$n" = "2" ] \
+       && [ $(( (t1 - t0) / 1000000 )) -ge 1000 ]; then
+      echo "    ok  race ${sfx}: A's reopen waited $(( (t1 - t0) / 1000000 )) ms on the session lock and was refused; A stays locked, 2 exposures"
+    else
+      echo "    race ${sfx}: reopen='$(echo "$out2" | grep -oE 'BCP_[A-Z_]+' | head -1)' a_state=${a_state} exposures=${n} waited=$(( (t1 - t0) / 1000000 ))ms" >&2
+      rc=1
+    fi
+  done
+  return $rc
+}
+echo "==> Running BESKT conduct join/lock/reopen race"
+psql_q -d postgres -c "DROP DATABASE IF EXISTS ${TEST_DB}_bx_race;" >/dev/null
+psql_q -d postgres -c "CREATE DATABASE ${TEST_DB}_bx_race TEMPLATE ${TEST_DB};" >/dev/null
+if ! bx_race "${TEST_DB}_bx_race"; then
+  echo "FAIL: the durable-exposure race did not settle on the refusal." >&2
+  exit 1
+fi
+psql_q -d "${TEST_DB}_bx_race" -c "$(sed -n '/^CREATE OR REPLACE FUNCTION public.bcp_conduct_position_exposure_guard()/,/^\$\$;/p' "$BX_MIG" \
+  | sed '/pg_advisory_xact_lock/d')" >/dev/null
+# bx_race toggles set -e itself, so its status is read in a condition.
+if bx_race "${TEST_DB}_bx_race" >/dev/null 2>&1; then BX_RACE_NC=0; else BX_RACE_NC=1; fi
+if [ "$BX_RACE_NC" -eq 0 ]; then
+  echo "FAIL: race negative control (guard without the session lock): the race still passed -- it proves nothing" >&2
+  exit 1
+fi
+echo "    ok  NC BX-RACE guard without the session lock: the race lets the exposed position reopen"
+psql_q -d postgres -c "DROP DATABASE ${TEST_DB}_bx_race;" >/dev/null
+set +e
+BX_OUT="$(run_cr_suite)"; BX_RC=$?
+set -e
+[ "$BX_RC" -eq 0 ] || { echo "$BX_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: conduct suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  durable-exposure migration re-applied (postflight proved); suite passes again"
+
+# 20270125090000: a Security Passport review decision is bound to the content
+# the reviewer saw. SR0 reproduces a stale approval verifying content the
+# reviewer never saw; SR1-SR5 refuse it and keep the legitimate flows.
+# Negative controls, each of which MUST make the suite fail on an assertion:
+#   NC1  the real rollback                                              -> SR1.a
+#   NC2  the decision ignores the version it names                      -> SR1.1
+#   NC3  a bare call on an answered request is let through              -> SR2.1
+# Then a real two-connection race: the holder's clarification answer holds
+# the request row while the reviewer decides from the page loaded before it.
+SR_MIG=supabase/migrations/20270125090000_sp_decision_bound_to_reviewed_content.sql
+SR_RB=supabase/rollback/20270125090000_sp_decision_bound_to_reviewed_content_rollback.sql
+run_sr_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f supabase/tests/sp_decision_bound_to_reviewed_content_test.sql 2>&1
+}
+sr_nc_expect_fail() {
+  local label="$1"
+  set +e
+  local out; out="$(run_sr_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED"; then
+    echo "FAIL: reviewed-content negative control '${label}': the suite PASSED -- it proves nothing" >&2
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o 'ASSERTION FAILED: SR[0-9a-z.]*' | head -1))"
+}
+sr_plant_decide() {
+  psql_q -d "$TEST_DB" -c "$(sed -n '/^CREATE OR REPLACE FUNCTION public.sp_verifier_decide(_request_id uuid/,/^END; \$function\$$/p' "$SR_MIG" | sed "$1")" >/dev/null
+}
+echo "==> Running Passport reviewed-content decision assertions"
+psql_q -d "$TEST_DB" -f "$SR_MIG" >/dev/null
+set +e
+SR_OUT="$(run_sr_suite)"; SR_RC=$?
+set -e
+SR_PASSED="$(echo "$SR_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$SR_RC" -ne 0 ] || ! echo "$SR_OUT" | grep -q "ok  SR0.1 REPRODUCTION"; then
+  echo "$SR_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the reviewed-content suite exited with code ${SR_RC}." >&2
+  exit 1
+fi
+[ "$SR_PASSED" -ge 20 ] || { echo "$SR_OUT"; echo "FAIL: reviewed-content assertion shortfall: $SR_PASSED (floor 20)" >&2; exit 1; }
+echo "    ok  $SR_PASSED reviewed-content assertions passed (stale approval reproduced pre-fix, refused post-fix)"
+psql_q -d "$TEST_DB" -f "$SR_RB" >/dev/null
+sr_nc_expect_fail "SR NC1 full rollback"
+psql_q -d "$TEST_DB" -f "$SR_MIG" >/dev/null
+sr_plant_decide 's/    IF _seen::timestamptz IS DISTINCT FROM _r.submitted_at THEN/    IF false THEN/'
+sr_nc_expect_fail "SR NC2 version ignored"
+psql_q -d "$TEST_DB" -f "$SR_MIG" >/dev/null
+sr_plant_decide 's/  ELSIF _r.answered_at IS NOT NULL THEN/  ELSIF false THEN/'
+sr_nc_expect_fail "SR NC3 bare call let through"
+psql_q -d "$TEST_DB" -f "$SR_MIG" >/dev/null
+
+echo "==> Running Passport answer/decision race"
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+SET session_replication_role = replica;
+INSERT INTO auth.users (id, email) VALUES
+  ('b8000000-0000-4000-8000-0000000000a1', 'race-holder@sr.test'),
+  ('b8000000-0000-4000-8000-0000000000c1', 'race-verifier@sr.test')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.user_roles (user_id, role) VALUES ('b8000000-0000-4000-8000-0000000000c1', 'passport_verifier')
+ON CONFLICT DO NOTHING;
+INSERT INTO public.sp_passport_profiles (holder_user_id, display_name, jurisdiction_code)
+VALUES ('b8000000-0000-4000-8000-0000000000a1', 'SR Race Holder', 'SE') ON CONFLICT (holder_user_id) DO NOTHING;
+INSERT INTO public.sp_experience_periods (id, holder_user_id, employer_name, role_title, jurisdiction_code,
+  employment_type, started_on, assertion_level, lifecycle_state)
+VALUES ('b8000000-4444-4000-8000-0000000000a1', 'b8000000-0000-4000-8000-0000000000a1', 'SR Race AB', 'Väktare',
+  'SE', 'full_time', current_date - 400, 'self_declared', 'active');
+INSERT INTO public.sp_verification_requests (id, holder_user_id, period_id, request_kind, status, submitted_at,
+  decided_at, decided_by, holder_message)
+VALUES ('b8000000-5555-4000-8000-0000000000a1', 'b8000000-0000-4000-8000-0000000000a1',
+  'b8000000-4444-4000-8000-0000000000a1', 'cqrityjob_review', 'clarification_requested', now() - interval '1 hour',
+  now() - interval '30 minutes', 'b8000000-0000-4000-8000-0000000000c1', 'Ange korrekt roll.');
+SQL
+SR_SEEN="$(psql -tAq -d "$TEST_DB" -c "select submitted_at from public.sp_verification_requests where id = 'b8000000-5555-4000-8000-0000000000a1'")"
+psql -v ON_ERROR_STOP=1 -tAq -d "$TEST_DB" >/dev/null 2>&1 <<'SQL' &
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'b8000000-0000-4000-8000-0000000000a1', true);
+SET LOCAL ROLE authenticated;
+UPDATE public.sp_experience_periods SET role_title = 'Säkerhetschef', started_on = current_date - 3000
+ WHERE id = 'b8000000-4444-4000-8000-0000000000a1';
+SELECT pg_sleep(2);
+COMMIT;
+SQL
+SR_PID=$!
+sleep 0.5
+SR_T0=$(date +%s%N)
+set +e
+SR_RACE_OUT="$(psql -v ON_ERROR_STOP=1 -tAq -d "$TEST_DB" 2>&1 <<SQL
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'b8000000-0000-4000-8000-0000000000c1', true);
+SET LOCAL ROLE authenticated;
+SELECT public.sp_verifier_decide_reviewed('b8000000-5555-4000-8000-0000000000a1', '${SR_SEEN}',
+  'approved', 'document_review', 'race', NULL, NULL, NULL);
+COMMIT;
+SQL
+)"
+set -e
+SR_T1=$(date +%s%N)
+wait "$SR_PID" || true
+SR_AFTER="$(psql -tAq -d "$TEST_DB" -c "select p.assertion_level || '|' || r.status || '|' || (r.answered_at is not null) from public.sp_experience_periods p join public.sp_verification_requests r on r.period_id = p.id where r.id = 'b8000000-5555-4000-8000-0000000000a1'")"
+SR_WAIT=$(( (SR_T1 - SR_T0) / 1000000 ))
+psql_q -d "$TEST_DB" >/dev/null <<'SQL'
+SET session_replication_role = replica;
+DELETE FROM public.sp_verification_decisions WHERE request_id = 'b8000000-5555-4000-8000-0000000000a1';
+DELETE FROM public.sp_verification_requests WHERE id = 'b8000000-5555-4000-8000-0000000000a1';
+DELETE FROM public.sp_passport_events WHERE holder_user_id = 'b8000000-0000-4000-8000-0000000000a1';
+DELETE FROM public.sp_experience_periods WHERE id = 'b8000000-4444-4000-8000-0000000000a1';
+DELETE FROM public.sp_passport_profiles WHERE holder_user_id = 'b8000000-0000-4000-8000-0000000000a1';
+DELETE FROM public.user_roles WHERE user_id = 'b8000000-0000-4000-8000-0000000000c1';
+DELETE FROM auth.users WHERE id IN ('b8000000-0000-4000-8000-0000000000a1', 'b8000000-0000-4000-8000-0000000000c1');
+SQL
+if echo "$SR_RACE_OUT" | grep -q "SP_REVIEW_STALE" && [ "$SR_AFTER" = "self_declared|pending|true" ] && [ "$SR_WAIT" -ge 1000 ]; then
+  echo "    ok  the stale decision waited ${SR_WAIT} ms on the request row, then was refused; the answer stands unverified and in review"
+else
+  echo "FAIL: the answer/decision race did not settle on the refusal (out='$(echo "$SR_RACE_OUT" | grep -oE 'SP_[A-Z_]+' | head -1)' state=${SR_AFTER} waited=${SR_WAIT}ms)." >&2
+  exit 1
+fi
+set +e
+SR_OUT="$(run_sr_suite)"; SR_RC=$?
+set -e
+[ "$SR_RC" -eq 0 ] || { echo "$SR_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: reviewed-content suite does not pass after re-apply" >&2; exit 1; }
+echo "    ok  reviewed-content migration re-applied (postflight proved); suite passes again"
 
 # Preserve an empty, fully migrated database for destructive historical rollback
 # proofs. Later suites legitimately adopt international credentials; a rollback
@@ -6802,6 +7057,12 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
 # 20261202090000 comes down before them: it calls 20261201090000's functions.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/rollback/20261202090000_scp_interview_starts_rollback.sql >/dev/null
+# 20270124090000 comes down first: its exposure record and triggers carry the
+# bcp_conduct_ prefix, and PR 5A's rollback correctly proves that no conduct
+# object survives it.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql >/dev/null
+
 # 20261201090000, 20261130090000 and then 20261129090000 come down first: the activation table holds a foreign key
 # into beskt_method_versions and its functions call beskt_method_validate, so
 # the BESKT domain rollbacks below correctly refuse while it stands. It is not

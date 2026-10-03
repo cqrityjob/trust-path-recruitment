@@ -2753,6 +2753,49 @@
       "rollback": "supabase/rollback/20270123090000_employer_identity_rereview_rollback.sql",
       "verify": "SELECT position('20270123090000' IN prosrc) > 0 FROM pg_proc WHERE proname='employers_validate_before_write'; -- true. Rolled-back probe: an active owner who changes E's name and registration_number has the update saved and E's status becomes 'pending'; a description or logo edit keeps it 'active'.",
       "note": "P1-I of the 2026-10-02 final audit (owner decision: re-review). employers_validate_before_write returns an active organisation to 'pending' when a non-platform-admin changes name, country, registration_number or website outside moderation. Body otherwise identical to hosted. No row touched."
+    },
+    {
+      "file": "20270124090000_bcp_conduct_exposure_is_durable.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "bcp_conduct_position_exposures"
+        },
+        {
+          "kind": "function",
+          "object": "bcp_conduct_position_exposure_guard()"
+        },
+        {
+          "kind": "function",
+          "object": "bcp_conduct_position_exposure_record()"
+        },
+        {
+          "kind": "function",
+          "object": "bcp_guard_conduct_exposure_append_only()"
+        }
+      ],
+      "rollback": "supabase/rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql",
+      "verify": "SELECT count(*) FROM pg_trigger WHERE NOT tgisinternal AND tgrelid = 'public.bcp_conduct_positions'::regclass AND tgname IN ('bcp_conduct_positions_exposure_guard','bcp_conduct_positions_exposure_record'); -- 2. SELECT relrowsecurity FROM pg_class WHERE oid = 'public.bcp_conduct_position_exposures'::regclass; -- true. has_table_privilege('authenticated','public.bcp_conduct_position_exposures','SELECT'); -- false. Rolled-back probe: a third assessor joining after two positions were locked and read leaves both refused on reopen with BCP_CONDUCT_POSITIONS_ALREADY_SEEN.",
+      "note": "Follow-up to P1-J (20270122090000). P1-J refused a reopen only while every OTHER position was locked NOW, so a later join with an open position made an already-read position reopenable. Exposure is now recorded per position (bcp_conduct_position_exposures, append-only, RLS on, no client grant) by an AFTER trigger at the moment every position in the session is locked (two or more); a BEFORE trigger refuses reopening an exposed position (BCP_CONDUCT_POSITIONS_ALREADY_SEEN) on every path, and every insert or state change of a position takes the session's transaction advisory lock (the key bcp_conduct_join_session takes), so join, lock and reopen serialise per session. No row changes beyond the backfill of exposures for sessions already fully locked (0 on production). Rollback drops the triggers, functions and table."
+    },
+    {
+      "file": "20270125090000_sp_decision_bound_to_reviewed_content.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "column",
+          "object": "answered_at",
+          "table": "sp_verification_requests"
+        },
+        {
+          "kind": "function",
+          "object": "sp_verifier_decide_reviewed(uuid,timestamptz,text,text,text,text,date,date)"
+        }
+      ],
+      "rollback": "supabase/rollback/20270125090000_sp_decision_bound_to_reviewed_content_rollback.sql",
+      "verify": "SELECT position('SP_REVIEW_STALE' IN prosrc) > 0 FROM pg_proc WHERE oid = 'public.sp_verifier_decide(uuid,text,text,text,text,date,date)'::regprocedure; -- true. SELECT has_function_privilege('anon','public.sp_verifier_decide_reviewed(uuid,timestamptz,text,text,text,text,date,date)','EXECUTE'); -- false. answered_at present on sp_verification_requests. Rolled-back probe: a verifier approving an answered request with the submitted_at from before the answer is refused SP_REVIEW_STALE and the entry stays unverified.",
+      "note": "A Passport decision is bound to the content its decider loaded. sp_verifier_decide_reviewed(request, reviewed submitted_at, ...) is the entry point the application calls; sp_verifier_decide (hosted 20270112090000 body plus one block) refuses SP_REVIEW_STALE when the named submitted_at is not current, and refuses a bare call on a request whose holder answered a clarification by editing (sp_verification_requests.answered_at, set by sp_entry_review_on_holder_edit, which now stamps submitted_at with clock_timestamp()). Requests never answered decide exactly as before. Both checks run under the existing SELECT ... FOR UPDATE on the request, the row the holder's answer updates. Rollback restores both hosted bodies (md5 pinned), drops the reviewed entry point and the column."
     }
   ], 
   "policyVersion": 2, 
