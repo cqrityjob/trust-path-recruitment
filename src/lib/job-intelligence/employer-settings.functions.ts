@@ -77,10 +77,20 @@ const updateEmployerOrganisationSchema = z.object({
   descriptionEn: z.string().trim().max(2000).nullable().optional(),
 });
 
+/** `status` is the organisation's status as the database holds it AFTER the
+ *  write, or null when it could not be read back. It is how the caller learns
+ *  that employers_validate_before_write() sent an approved organisation back to
+ *  review (20270123090000) -- the database decides that, so the answer comes
+ *  from the database and not from a comparison the client made beforehand. */
+export type UpdateEmployerOrganisationResult = {
+  ok: true;
+  status: EmployerOrganisation["status"] | null;
+};
+
 export const updateEmployerOrganisation = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => updateEmployerOrganisationSchema.parse(d))
-  .handler(async ({ data, context }): Promise<{ ok: true }> => {
+  .handler(async ({ data, context }): Promise<UpdateEmployerOrganisationResult> => {
     const ctx = context as Ctx;
 
     // Only include fields the caller actually sent -- status/slug are
@@ -95,7 +105,7 @@ export const updateEmployerOrganisation = createServerFn({ method: "POST" })
     if (data.descriptionSv !== undefined) patch.description_sv = data.descriptionSv;
     if (data.descriptionEn !== undefined) patch.description_en = data.descriptionEn;
 
-    if (Object.keys(patch).length === 0) return { ok: true };
+    if (Object.keys(patch).length === 0) return { ok: true, status: null };
 
     const { error } = await ctx.supabase.from("employers").update(patch).eq("id", data.employerId);
     if (error) {
@@ -105,5 +115,17 @@ export const updateEmployerOrganisation = createServerFn({ method: "POST" })
         "Could not save organisation settings. You may not have permission to edit this organisation.",
       );
     }
-    return { ok: true };
+
+    // What the write did to the organisation's status. A failed read-back is
+    // not an error: the change is saved, and the caller falls back to what the
+    // workspace list says on its next read.
+    const { data: after } = await ctx.supabase
+      .from("employers")
+      .select("status")
+      .eq("id", data.employerId)
+      .maybeSingle();
+    return {
+      ok: true,
+      status: (after?.status as EmployerOrganisation["status"] | undefined) ?? null,
+    };
   });

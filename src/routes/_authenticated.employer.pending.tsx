@@ -11,16 +11,21 @@
 // It is not a gate: the gate is in the database, where it belongs. This is the
 // honest account of why the workspace is not open yet.
 
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect } from "react";
 import { Clock, RefreshCw, ShieldX } from "lucide-react";
 import { useT } from "@/i18n/context";
 import { supabase } from "@/integrations/supabase/client";
+import { ContactMailto } from "@/components/employer/ContactMailto";
 import { EmployerErrorState } from "@/components/employer/EmployerErrorState";
 import { SiteLayout } from "@/components/site/SiteLayout";
 import { listMyEmployerWorkspaces } from "@/lib/job-intelligence/membership.functions";
+import {
+  EMPLOYER_IDENTITY_REREVIEW_KEY,
+  type EmployerIdentityRereview,
+} from "@/lib/job-intelligence/identity-rereview";
 import {
   EMPLOYER_REGISTRATION_NOTICE_KEY,
   type EmployerRegistrationNotice,
@@ -42,6 +47,43 @@ const NEXT_STEP_KEYS = [
   "employer.pending.step.activated",
 ] as const;
 
+/** The same three beats for an APPROVED organisation whose identity changed and
+ *  went back to review: the change is saved, it is reviewed, the workspace
+ *  reopens. "Your registration was received" would be untrue of it. */
+const REREVIEW_STEP_KEYS = [
+  "employer.rereview.step.saved",
+  "employer.rereview.step.review",
+  "employer.rereview.step.reopened",
+] as const;
+
+/** What the visitor can do while the organisation waits -- and an honest "we
+ *  cannot say how long". The page used to offer a status button and a sign-out
+ *  button and nothing else, which reads as a dead end to somebody who has just
+ *  registered a company. */
+function WhileYouWait({ organisationName }: { organisationName?: string }) {
+  const { t } = useT();
+  return (
+    <div className="mt-6" data-testid="employer-pending-wait">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {t("employer.pending.wait.heading")}
+      </p>
+      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground">
+        <li>{t("employer.pending.wait.noTime")}</li>
+        <li>
+          {t("employer.pending.wait.meanwhile")}{" "}
+          <Link to="/my-career" className="font-medium text-accent hover:underline">
+            {t("sca.report.backToMyCareer")}
+          </Link>
+        </li>
+        <li>
+          {t("employer.pending.wait.questions")} {t("employer.contact.writeTo")}{" "}
+          <ContactMailto organisationName={organisationName} />.
+        </li>
+      </ul>
+    </div>
+  );
+}
+
 function EmployerPendingPage() {
   const { t, lang } = useT();
   const navigate = useNavigate();
@@ -58,6 +100,17 @@ function EmployerPendingPage() {
     staleTime: Infinity,
   });
   const notice = noticeQuery.data ?? null;
+
+  // Set by the settings page when saving a changed identity put an approved
+  // organisation back in review. Cache-only for the same reason as the notice
+  // above: a reload clears it, and the page then falls back to neutral wording
+  // instead of repeating a claim it can no longer support.
+  const rereviewQuery = useQuery<EmployerIdentityRereview | null>({
+    queryKey: EMPLOYER_IDENTITY_REREVIEW_KEY,
+    queryFn: async () => null,
+    enabled: false,
+    staleTime: Infinity,
+  });
 
   // Approval happens somewhere else, in someone else's browser. Without a
   // poll, the person sitting on this page would keep reading that they are
@@ -178,6 +231,10 @@ function EmployerPendingPage() {
     : unavailable
       ? "unavailable"
       : "waiting";
+  // This visit follows the owner's own save of a changed identity: the
+  // organisation is not newly registered, it is being reviewed again.
+  const rereview =
+    state === "waiting" && org !== null && rereviewQuery.data?.employerId === org.employerId;
 
   return (
     <SiteLayout>
@@ -195,7 +252,9 @@ function EmployerPendingPage() {
               ? "employer.rejected.heading"
               : state === "unavailable"
                 ? "employer.unavailable.heading"
-                : "employer.pending.heading",
+                : rereview
+                  ? "employer.rereview.heading"
+                  : "employer.pending.heading",
           )}
         </h1>
 
@@ -207,6 +266,11 @@ function EmployerPendingPage() {
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               {t("employer.rejected.contact")}
             </p>
+            {/* "Hör av dig till oss" with nowhere to write to was a dead end. */}
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.contact.writeTo")} <ContactMailto organisationName={org?.employerName} />
+              .
+            </p>
           </>
         ) : state === "unavailable" ? (
           <>
@@ -216,6 +280,30 @@ function EmployerPendingPage() {
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
               {t("employer.rejected.contact")}
             </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.contact.writeTo")} <ContactMailto organisationName={org?.employerName} />
+              .
+            </p>
+          </>
+        ) : rereview ? (
+          <>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.rereview.body")}
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("employer.rereview.access")}
+            </p>
+            <div className="mt-6" data-testid="employer-rereview-next-steps">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {t("employer.pending.nextSteps.heading")}
+              </p>
+              <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground">
+                {REREVIEW_STEP_KEYS.map((key) => (
+                  <li key={key}>{t(key)}</li>
+                ))}
+              </ol>
+            </div>
+            <WhileYouWait organisationName={org?.employerName} />
           </>
         ) : (
           <>
@@ -261,6 +349,8 @@ function EmployerPendingPage() {
                 )}
               </p>
             )}
+
+            <WhileYouWait organisationName={org?.employerName} />
           </>
         )}
 

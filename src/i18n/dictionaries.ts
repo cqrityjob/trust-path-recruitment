@@ -1007,6 +1007,47 @@ export const dictionaries = {
     "account.context.underReview": "Granskas",
     "account.context.unavailable": "Inte tillgänglig",
     "employer.pending.checking": "Kontrollerar din registrering …",
+    // ── MEDAN DU VÄNTAR, OCH VEM MAN SKRIVER TILL ─────────────────────────
+    //
+    // Ingen tidsfrist utlovas: ingen kan idag säga hur lång en granskning tar,
+    // och sidan påstår inte mer än vad som är sant. Adressen är den som alltid
+    // gäller, vad kontaktformuläret än gör (src/lib/contact/contact-address.ts).
+    "employer.pending.wait.heading": "Medan du väntar",
+    "employer.pending.wait.noTime":
+      "Vi kan inte säga hur lång tid granskningen tar. Sidan uppdateras av sig själv när statusen ändras, och du kan stänga den och logga in igen senare med samma inloggning.",
+    "employer.pending.wait.meanwhile":
+      "Din personliga profil fungerar som vanligt under tiden. Det är bara organisationens arbetsyta som väntar på godkännande.",
+    "employer.pending.wait.questions": "Frågor om granskningen?",
+    "employer.contact.writeTo": "Skriv till",
+    "employer.contact.subject": "Företagskonto",
+    // ── ÅTKOMSTEN TILL EN ORGANISATION ÄR AVSLUTAD ELLER AVSTÄNGD ────────
+    //
+    // Visas i stället för "Kom igång som arbetsgivare" för den som har en
+    // borttagen eller avstängd medlemskapsrad och ingen aktiv. Organisationen
+    // namnges inte: en person utan aktiv åtkomst får inte läsa dess uppgifter.
+    "employer.accessEnded.removed.heading": "Din åtkomst till organisationen har tagits bort",
+    "employer.accessEnded.removed.body":
+      "Du kan inte längre öppna organisationens arbetsyta. Det du har gjort i organisationen ligger kvar där.",
+    "employer.accessEnded.suspended.heading": "Din åtkomst till organisationen är avstängd",
+    "employer.accessEnded.suspended.body":
+      "Åtkomsten är pausad, inte borttagen. Du kan inte öppna organisationens arbetsyta förrän den har återaktiverats.",
+    "employer.accessEnded.next":
+      "Vill du ha tillbaka åtkomsten, tror du att det är ett misstag eller vill du registrera en annan organisation? Kontakta oss.",
+    // ── ORGANISATIONENS UPPGIFTER GRANSKAS IGEN ──────────────────────────
+    //
+    // En godkänd organisation som ändrar namn, land, organisationsnummer eller
+    // webbplats går tillbaka till granskning (20270123090000). Sidan säger att
+    // det är det som hänt, inte att organisationen precis har registrerats.
+    "employer.rereview.heading": "Organisationens uppgifter granskas igen",
+    "employer.rereview.body":
+      "Du ändrade organisationens namn, land, organisationsnummer eller webbplats. Ändringen granskas innan arbetsytan öppnas igen.",
+    "employer.rereview.access":
+      "Under tiden är arbetsytan stängd för hela teamet och era publicerade annonser visas inte för kandidater. Inget har raderats.",
+    "employer.rereview.step.saved": "Din ändring är sparad. Den försvinner inte om du loggar ut.",
+    "employer.rereview.step.review":
+      "En administratör på CQrityjob granskar de nya uppgifterna. De är ännu inte godkända.",
+    "employer.rereview.step.reopened":
+      "När ändringen godkänns öppnas arbetsytan igen med samma inloggning och annonserna visas igen.",
     "auth.google": "Fortsätt med Google",
     "auth.or": "eller",
     // Shown only when the return path is an organisation invitation. Says
@@ -2936,6 +2977,24 @@ export const dictionaries = {
     "employer.settings.saving": "Sparar…",
     "employer.settings.saved": "Ändringarna har sparats.",
     "employer.settings.saveError": "Kunde inte spara ändringarna.",
+    // ── ATT ÄNDRA ORGANISATIONENS IDENTITET ──────────────────────────────
+    //
+    // Namn, land, organisationsnummer och webbplats är det som granskades när
+    // organisationen godkändes. Ändras något av dem sätter databasen
+    // organisationen tillbaka till granskning (20270123090000), och då stängs
+    // arbetsytan och annonserna slutar visas. Det ska ägaren veta innan
+    // sparandet, inte upptäcka efteråt.
+    "employer.settings.identityConfirm.title": "Spara ändringen och skicka till granskning?",
+    "employer.settings.identityConfirm.body":
+      "Namn, land, organisationsnummer och webbplats är det vi granskade när organisationen godkändes. Ändrar du något av dem granskas organisationen på nytt.",
+    "employer.settings.identityConfirm.consequence":
+      "Så länge granskningen pågår är arbetsytan stängd för hela teamet och era publicerade annonser visas inte för kandidater. Vi kan inte säga hur lång tid granskningen tar. Inget raderas, och arbetsytan öppnas igen när ändringen har godkänts.",
+    "employer.settings.identityConfirm.changes": "Det här ändras",
+    "employer.settings.identityConfirm.empty": "(tomt)",
+    "employer.settings.identityConfirm.noReview":
+      "Beskrivningarna kan du ändra utan ny granskning.",
+    "employer.settings.identityConfirm.confirm": "Spara och skicka till granskning",
+    "employer.settings.identityConfirm.cancel": "Avbryt, ändra inget",
 
     "admin.auth.login.title": "Administratörsinloggning",
     "admin.auth.login.intro":
@@ -9762,6 +9821,48 @@ export const dictionaries = {
     "account.context.underReview": "Under review",
     "account.context.unavailable": "Unavailable",
     "employer.pending.checking": "Checking your registration …",
+    // ── WHILE YOU WAIT, AND WHO TO WRITE TO ───────────────────────────────
+    //
+    // No turnaround is promised: nobody can say today how long a review takes,
+    // and the page claims nothing it cannot support. The address is the one
+    // that always works, whatever the contact form is doing
+    // (src/lib/contact/contact-address.ts).
+    "employer.pending.wait.heading": "While you wait",
+    "employer.pending.wait.noTime":
+      "We cannot say how long the review takes. This page updates by itself when the status changes, and you can close it and sign in again later with the same login.",
+    "employer.pending.wait.meanwhile":
+      "Your personal profile works as usual in the meantime. Only the organisation's workspace is waiting for approval.",
+    "employer.pending.wait.questions": "Questions about the review?",
+    "employer.contact.writeTo": "Write to",
+    "employer.contact.subject": "Company account",
+    // ── ACCESS TO AN ORGANISATION HAS ENDED OR IS SUSPENDED ───────────────
+    //
+    // Shown instead of "Get started as an employer" to somebody who holds a
+    // removed or suspended membership and no active one. The organisation is
+    // not named: a person without active access may not read its details.
+    "employer.accessEnded.removed.heading": "Your access to the organisation has been removed",
+    "employer.accessEnded.removed.body":
+      "You can no longer open the organisation's workspace. What you have done in the organisation stays there.",
+    "employer.accessEnded.suspended.heading": "Your access to the organisation is suspended",
+    "employer.accessEnded.suspended.body":
+      "Your access is paused, not removed. You cannot open the organisation's workspace until it has been reactivated.",
+    "employer.accessEnded.next":
+      "Do you want your access back, do you think this is a mistake, or do you want to register a different organisation? Contact us.",
+    // ── THE ORGANISATION'S DETAILS ARE BEING REVIEWED AGAIN ──────────────
+    //
+    // An approved organisation that changes its name, country, registration
+    // number or website goes back to review (20270123090000). The page says
+    // that is what happened, not that the organisation was just registered.
+    "employer.rereview.heading": "The organisation's details are being reviewed again",
+    "employer.rereview.body":
+      "You changed the organisation's name, country, registration number or website. The change is reviewed before the workspace opens again.",
+    "employer.rereview.access":
+      "Meanwhile the workspace is closed for the whole team and your published ads are not shown to candidates. Nothing has been deleted.",
+    "employer.rereview.step.saved": "Your change is saved. It does not disappear if you sign out.",
+    "employer.rereview.step.review":
+      "A CQrityjob administrator reviews the new details. They are not approved yet.",
+    "employer.rereview.step.reopened":
+      "Once the change is approved, the workspace opens again with the same sign-in and the ads are shown again.",
     "auth.google": "Continue with Google",
     "auth.or": "or",
     "auth.invite.organisationContext":
@@ -11541,6 +11642,24 @@ export const dictionaries = {
     "employer.settings.saving": "Saving…",
     "employer.settings.saved": "Your changes have been saved.",
     "employer.settings.saveError": "Could not save your changes.",
+    // ── CHANGING THE ORGANISATION'S IDENTITY ──────────────────────────────
+    //
+    // Name, country, registration number and website are what was reviewed when
+    // the organisation was approved. Change any of them and the database puts
+    // the organisation back in review (20270123090000): the workspace closes
+    // and the ads stop being shown. The owner should know that before saving,
+    // not find out afterwards.
+    "employer.settings.identityConfirm.title": "Save the change and send it for review?",
+    "employer.settings.identityConfirm.body":
+      "Name, country, registration number and website are what we reviewed when the organisation was approved. If you change any of them, the organisation is reviewed again.",
+    "employer.settings.identityConfirm.consequence":
+      "While the review is under way the workspace is closed for the whole team and your published ads are not shown to candidates. We cannot say how long the review takes. Nothing is deleted, and the workspace opens again once the change is approved.",
+    "employer.settings.identityConfirm.changes": "What you are changing",
+    "employer.settings.identityConfirm.empty": "(empty)",
+    "employer.settings.identityConfirm.noReview":
+      "You can change the descriptions without a new review.",
+    "employer.settings.identityConfirm.confirm": "Save and send for review",
+    "employer.settings.identityConfirm.cancel": "Cancel, change nothing",
 
     "admin.auth.login.title": "Administrator sign in",
     "admin.auth.login.intro":
