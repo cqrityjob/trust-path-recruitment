@@ -545,6 +545,285 @@ jb_expect_pass "jobs not editable in place (after re-apply)" jobs_not_editable_i
 jb_expect_pass "publication window and address (after re-apply)" jobs_publish_window_and_url_scheme_test.sql 40
 jb_expect_pass "CV bucket client writes (after re-apply)" job_cvs_no_client_writes_test.sql 22
 echo "    ok  the three job-board migrations re-applied after every control (postflights proved); suites pass again"
+
+# ---------------------------------------------------------------------------
+# 20270205090000: e-mail to the employer on a NEW application (outbox, claim,
+# settle, recipients). The suite proves every rule in one transaction; the
+# negative controls below each plant ONE defect in the migration's own SQL and
+# require the suite to fail on a NAMED assertion; the races use two real
+# sessions. The migration is idempotent where the repository's style is, and
+# the controls end with the real rollback and a clean re-apply.
+#
+# Negative controls (each MUST make the suite fail on the named assertion):
+#   EN NC1   a client role may execute the claim                     -> EN2.1
+#   EN NC2   a client role may read the outbox                       -> EN2.5
+#   EN NC3   a plain member is a recipient                           -> EN1.3
+#   EN NC4   a suspended or removed member is a recipient            -> EN1.3
+#   EN NC5   no cap on the number of recipients                      -> EN1.10
+#   EN NC6   enqueue is not set-once (a replay adds the new admin)   -> EN3.4
+#   EN NC7   no lease: a held claim is handed to a second worker     -> EN4.6
+#   EN NC8   a takeover keeps the previous attempt id                -> EN4.9
+#   EN NC9   eligibility is not decided again at the claim           -> EN4.12
+#   EN NC10  a sent row is claimed again                             -> EN4.11
+#   EN NC11  settle takes a row that is not claimed                  -> EN5.2
+#   EN NC12  no cap on attempts                                      -> EN6.4
+# ---------------------------------------------------------------------------
+EN_MIG=supabase/migrations/20270205090000_employer_new_application_notices.sql
+EN_RB=supabase/rollback/20270205090000_employer_new_application_notices_rollback.sql
+EN_SUITE=supabase/tests/employer_new_application_notices_test.sql
+# Re-applying the migration over itself says "already exists, skipping" for each
+# IF NOT EXISTS; those notices are the point of idempotence, not news.
+en_psql() { PGOPTIONS='-c client_min_messages=warning' psql_q "$@"; }
+en_run_suite() {
+  psql -v ON_ERROR_STOP=1 -d "$TEST_DB" -f "$EN_SUITE" 2>&1
+}
+en_nc_expect_fail() {
+  local label="$1" expect="$2"
+  set +e
+  local out; out="$(en_run_suite)"; local rc=$?
+  set -e
+  if [ "$rc" -eq 0 ] || ! echo "$out" | grep -q "ASSERTION FAILED: ${expect} "; then
+    echo "FAIL: employer-notice negative control '${label}': the suite did not fail on ${expect} -- it proves nothing" >&2
+    echo "$out" | grep -E "ERROR|FAILED" | head -3 >&2 || true
+    exit 1
+  fi
+  echo "    ok  NC ${label}: the suite fails ($(echo "$out" | grep -o "ASSERTION FAILED: ${expect}" | head -1))"
+}
+# The migration's own SQL with ONE substitution, the postflight cut off. The
+# substitution must change the file, or the control proves nothing.
+en_plant() {
+  local sedexpr="$1" mutated
+  mutated="$(sed "$sedexpr" "$EN_MIG" | sed '/^DO \$\$$/,$d')"
+  if [ "$mutated" = "$(sed '/^DO \$\$$/,$d' "$EN_MIG")" ]; then
+    echo "FAIL: employer-notice negative control anchor not found in the migration: ${sedexpr}" >&2
+    exit 1
+  fi
+  en_psql -d "$TEST_DB" -c "$mutated" >/dev/null
+}
+
+echo "==> Running employer new-application notice assertions"
+set +e
+EN_OUT="$(en_run_suite)"; EN_RC=$?
+set -e
+EN_PASSED="$(echo "$EN_OUT" | grep -c "NOTICE:  ok  " || true)"
+if [ "$EN_RC" -ne 0 ]; then
+  echo "$EN_OUT" | grep -E "ERROR|FAILED" >&2 || true
+  echo "FAIL: the employer-notice suite exited with code ${EN_RC}." >&2
+  exit 1
+fi
+[ "$EN_PASSED" -ge 85 ] || { echo "$EN_OUT"; echo "FAIL: employer-notice assertion shortfall: $EN_PASSED (floor 85)" >&2; exit 1; }
+echo "    ok  $EN_PASSED employer-notice assertions passed"
+
+en_plant 's/^GRANT EXECUTE ON FUNCTION public.rec_claim_employer_notices(uuid, integer, text\[\]) TO service_role;/GRANT EXECUTE ON FUNCTION public.rec_claim_employer_notices(uuid, integer, text[]) TO service_role, authenticated;/'
+en_nc_expect_fail "NC1 a client role may execute the claim" EN2.1
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/^GRANT SELECT ON TABLE public.recruitment_employer_notices TO service_role;/GRANT SELECT ON TABLE public.recruitment_employer_notices TO service_role, authenticated;/'
+en_nc_expect_fail "NC2 a client role may read the outbox" EN2.5
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant "s/WHERE us.role IN ('owner', 'admin')/WHERE true/"
+en_nc_expect_fail "NC3 a plain member is a recipient" EN1.3
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant "s/ON m.employer_id = app.employer_id AND m.status = 'active'/ON m.employer_id = app.employer_id/"
+en_nc_expect_fail "NC4 a suspended or removed member is a recipient" EN1.3
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/^       LIMIT 10$/       LIMIT 100/'
+en_nc_expect_fail "NC5 no cap on recipients" EN1.10
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/IF EXISTS (SELECT 1 FROM public.recruitment_employer_notices n$/IF false AND EXISTS (SELECT 1 FROM public.recruitment_employer_notices n/'
+en_nc_expect_fail "NC6 enqueue is not set-once" EN3.4
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant "s/OR (n.status = 'claimed' AND n.claimed_at < now() - interval '3 minutes')/OR (n.status = 'claimed')/"
+en_nc_expect_fail "NC7 no lease" EN4.6
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/^           attempt_id = gen_random_uuid(),/           attempt_id = coalesce(n.attempt_id, gen_random_uuid()),/'
+en_nc_expect_fail "NC8 a takeover keeps the previous attempt id" EN4.9
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant "s/FROM public.rec_employer_notice_recipients(_n.application_id) r/FROM (SELECT u.id AS recipient_user_id, u.email::text AS recipient_email, 'owner'::text AS via FROM auth.users u) r/"
+en_nc_expect_fail "NC9 eligibility is not decided again at the claim" EN4.12
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+# A sent row claimed again: the shape constraint refuses it, so it is taken out
+# first -- the control is about the claim's own filter.
+en_psql -d "$TEST_DB" -c "ALTER TABLE public.recruitment_employer_notices DROP CONSTRAINT recruitment_employer_notices_shape;" >/dev/null
+en_plant "s/(n.status = 'pending' AND n.next_attempt_at <= now())/(n.status IN ('pending', 'sent') AND n.next_attempt_at <= now())/"
+en_nc_expect_fail "NC10 a sent row is claimed again" EN4.11
+en_psql -d "$TEST_DB" -f "$EN_RB" >/dev/null
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant "s/^  IF _n.status <> 'claimed' THEN$/  IF false THEN/"
+en_nc_expect_fail "NC11 settle takes a row that is not claimed" EN5.2
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_plant 's/^       AND n.attempts < 6$/       AND n.attempts < 600/'
+en_nc_expect_fail "NC12 no cap on attempts" EN6.4
+# The real rollback, then the migration again from nothing, then the suite.
+en_psql -d "$TEST_DB" -f "$EN_RB" >/dev/null
+en_psql -d "$TEST_DB" -f "$EN_RB" >/dev/null
+EN_LEFT="$(psql -tAq -d "$TEST_DB" -c "SELECT (to_regclass('public.recruitment_employer_notices') IS NOT NULL)::int + (SELECT count(*) FROM pg_proc WHERE proname IN ('rec_employer_notice_recipients','rec_enqueue_employer_new_application_notices','rec_claim_employer_notices','rec_settle_employer_notice','rec_employer_notice_backoff'))")"
+[ "$EN_LEFT" = "0" ] || { echo "FAIL: the employer-notice rollback left $EN_LEFT object(s) behind" >&2; exit 1; }
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+en_psql -d "$TEST_DB" -f "$EN_MIG" >/dev/null
+set +e
+EN_OUT="$(en_run_suite)"; EN_RC=$?
+set -e
+[ "$EN_RC" -eq 0 ] || { echo "$EN_OUT" | grep -E "ERROR|FAILED" >&2; echo "FAIL: the employer-notice suite does not pass after rollback and re-apply" >&2; exit 1; }
+echo "    ok  employer-notice migration rolled back clean, applied twice (idempotent), and the suite passes again"
+
+# ---------------------------------------------------------------------------
+# The same rules under a REAL race: two sessions, two processes. A holds its
+# transaction open (pg_sleep) and B arrives a second later:
+#   enqueue   the second waits on the advisory lock and then creates nothing
+#   claim     the second takes NOTHING and does not wait (SKIP LOCKED); once
+#             the first committed the lease keeps it out as well
+#   sweep     the same, across applications
+#   settle    the second waits on the row, then finds it already settled
+# Committed synthetic fixture, removed afterwards.
+# ---------------------------------------------------------------------------
+echo "==> Running employer new-application notice races"
+ENR_FAILED=0
+ENR_APP="ef000000-3333-0000-0000-000000000001"
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" >/dev/null <<'SQL'
+INSERT INTO auth.users (id, email, email_confirmed_at, raw_user_meta_data) VALUES
+  ('ef000000-0000-0000-0000-00000000000a', 'enr-owner@race.test',  now(), '{"display_name":"Race Owner"}'::jsonb),
+  ('ef000000-0000-0000-0000-0000000000a1', 'enr-admin1@race.test', now(), '{"display_name":"Race Admin 1"}'::jsonb),
+  ('ef000000-0000-0000-0000-0000000000a2', 'enr-admin2@race.test', now(), '{"display_name":"Race Admin 2"}'::jsonb),
+  ('ef000000-0000-0000-0000-0000000000ad', 'enr-mod@race.test',    now(), '{"display_name":"Race Mod"}'::jsonb),
+  ('ef000000-0000-0000-0000-000000000c01', 'enr-cand@race.test',   now(), '{"display_name":"Race Kandidat"}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.user_roles (user_id, role) VALUES ('ef000000-0000-0000-0000-0000000000ad', 'admin') ON CONFLICT DO NOTHING;
+INSERT INTO public.employers (id, name, slug, status)
+VALUES ('ef000000-1111-0000-0000-00000000000a', 'Race Notis AB', 'race-notis-ab', 'active') ON CONFLICT (id) DO NOTHING;
+INSERT INTO public.employer_memberships (employer_id, user_id, role, status) VALUES
+  ('ef000000-1111-0000-0000-00000000000a', 'ef000000-0000-0000-0000-00000000000a', 'owner', 'active'),
+  ('ef000000-1111-0000-0000-00000000000a', 'ef000000-0000-0000-0000-0000000000a1', 'admin', 'active'),
+  ('ef000000-1111-0000-0000-00000000000a', 'ef000000-0000-0000-0000-0000000000a2', 'admin', 'active')
+ON CONFLICT DO NOTHING;
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'ef000000-0000-0000-0000-00000000000a', true);
+SET LOCAL ROLE authenticated;
+INSERT INTO public.jobs (id, slug, short_id, employer_id, title_sv, title_en, application_method, status)
+VALUES ('ef000000-2222-0000-0000-000000000001', 'enr-race-job', 'ENR0001', 'ef000000-1111-0000-0000-00000000000a', 'Väktare, Race', 'Guard, Race', 'internal', 'draft');
+COMMIT;
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'ef000000-0000-0000-0000-0000000000ad', true);
+SET LOCAL ROLE authenticated;
+UPDATE public.jobs SET status = 'published', published_at = now() - interval '1 day', expires_at = now() + interval '30 days'
+ WHERE id = 'ef000000-2222-0000-0000-000000000001';
+COMMIT;
+BEGIN;
+SELECT set_config('request.jwt.claim.sub', 'ef000000-0000-0000-0000-000000000c01', true);
+SET LOCAL ROLE authenticated;
+SELECT public.rec_submit_application('ef000000-3333-0000-0000-000000000001', 'ef000000-2222-0000-0000-000000000001',
+  NULL, NULL, 'ef000000-0000-0000-0000-000000000c01/ef000000-3333-0000-0000-000000000001/cv.pdf', 'cv.pdf', 100, 'upload', NULL, false, '[]'::jsonb);
+COMMIT;
+SQL
+ENR_HAS="$(psql -tAq -d "$TEST_DB" -c "SELECT count(*) FROM public.job_applications WHERE id='${ENR_APP}'")"
+if [ "$ENR_HAS" != "1" ]; then
+  echo "FAIL: the notice race fixture did not get its application (got '${ENR_HAS}')." >&2
+  suite_failed "employer notice race fixture"
+fi
+
+ENR_A="$(mktemp)"; ENR_B="$(mktemp)"; ENR_AO="$(mktemp)"; ENR_BO="$(mktemp)"
+# Two sessions, A first; B starts a second later. Prints B's wait in ms.
+enr_race() {
+  local a_sql="$1" b_sql="$2"
+  printf 'BEGIN;\nSET LOCAL ROLE service_role;\n%s\nSELECT pg_sleep(2);\nCOMMIT;\n' "$a_sql" > "$ENR_A"
+  printf "SELECT 'T0=' || (extract(epoch from clock_timestamp()) * 1000)::bigint;\nBEGIN;\nSET LOCAL ROLE service_role;\n%s\nCOMMIT;\nSELECT 'T1=' || (extract(epoch from clock_timestamp()) * 1000)::bigint;\n" "$b_sql" > "$ENR_B"
+  psql -tAq -d "$TEST_DB" -f "$ENR_A" > "$ENR_AO" 2>&1 &
+  local pid=$!
+  sleep 1
+  psql -tAq -d "$TEST_DB" -f "$ENR_B" > "$ENR_BO" 2>&1
+  wait "$pid" || true
+  local t0 t1
+  t0="$(grep -oE 'T0=[0-9]+' "$ENR_BO" | cut -d= -f2 || true)"
+  t1="$(grep -oE 'T1=[0-9]+' "$ENR_BO" | cut -d= -f2 || true)"
+  ENR_B_MS=$(( ${t1:-0} - ${t0:-0} ))
+}
+
+# 1. enqueue under a race
+enr_race "SELECT 'N=' || public.rec_enqueue_employer_new_application_notices('${ENR_APP}');" \
+         "SELECT 'N=' || public.rec_enqueue_employer_new_application_notices('${ENR_APP}');"
+ENR_A_N="$(grep -oE 'N=[0-9]+' "$ENR_AO" | head -1 | cut -d= -f2 || true)"
+ENR_B_N="$(grep -oE 'N=[0-9]+' "$ENR_BO" | head -1 | cut -d= -f2 || true)"
+ENR_ROWS="$(psql -tAq -d "$TEST_DB" -c "SELECT count(*) FROM public.recruitment_employer_notices WHERE application_id='${ENR_APP}'")"
+if [ "$ENR_A_N" != "3" ] || [ "$ENR_B_N" != "0" ] || [ "$ENR_ROWS" != "3" ]; then
+  echo "FAIL: two concurrent enqueues created ${ENR_A_N:-?} and ${ENR_B_N:-?} notices (${ENR_ROWS} rows); expected 3, 0 and 3 rows." >&2
+  head -5 "$ENR_AO" "$ENR_BO" >&2
+  ENR_FAILED=1
+else
+  echo "    ok  two concurrent enqueues: the first queued three notices, the second none (three rows)"
+fi
+if [ "$ENR_B_MS" -lt 800 ]; then
+  echo "FAIL: the second enqueue answered after ${ENR_B_MS} ms; it did not wait on the first, so this was not a race." >&2
+  ENR_FAILED=1
+else
+  echo "    ok  the second enqueue WAITED for the first (${ENR_B_MS} ms) and then found its rows"
+fi
+
+# 2. claim under a race
+enr_race "SELECT 'C=' || count(*) FROM public.rec_claim_employer_notices('${ENR_APP}');" \
+         "SELECT 'C=' || count(*) FROM public.rec_claim_employer_notices('${ENR_APP}');"
+ENR_A_C="$(grep -oE 'C=[0-9]+' "$ENR_AO" | head -1 | cut -d= -f2 || true)"
+ENR_B_C="$(grep -oE 'C=[0-9]+' "$ENR_BO" | head -1 | cut -d= -f2 || true)"
+ENR_CLAIMED="$(psql -tAq -d "$TEST_DB" -c "SELECT count(*) || '/' || count(DISTINCT attempt_id) || '/' || coalesce(max(attempts), 0) FROM public.recruitment_employer_notices WHERE application_id='${ENR_APP}' AND status='claimed'")"
+if [ "$ENR_A_C" != "3" ] || [ "$ENR_B_C" != "0" ] || [ "$ENR_CLAIMED" != "3/3/1" ]; then
+  echo "FAIL: two concurrent claims took ${ENR_A_C:-?} and ${ENR_B_C:-?} notices (claimed/attempt ids/attempts ${ENR_CLAIMED}); expected 3 and 0, 3/3/1." >&2
+  head -5 "$ENR_AO" "$ENR_BO" >&2
+  ENR_FAILED=1
+else
+  echo "    ok  two concurrent claims: the first took all three, the second took none (one attempt each)"
+fi
+if [ "$ENR_B_MS" -ge 1500 ]; then
+  echo "FAIL: the second claim waited ${ENR_B_MS} ms on the first; SKIP LOCKED should have let it pass at once." >&2
+  ENR_FAILED=1
+else
+  echo "    ok  and the second claim did not wait for the first (${ENR_B_MS} ms)"
+fi
+ENR_LATER="$(psql -tAq -d "$TEST_DB" -c "BEGIN; SET LOCAL ROLE service_role; SELECT count(*) FROM public.rec_claim_employer_notices('${ENR_APP}'); COMMIT;" | grep -E '^[0-9]+$' | head -1)"
+if [ "$ENR_LATER" != "0" ]; then
+  echo "FAIL: a claim after the first committed took ${ENR_LATER} notice(s) that were already leased." >&2
+  ENR_FAILED=1
+else
+  echo "    ok  a claim after the first committed gets nothing: the lease holds"
+fi
+
+# 3. sweep under a race
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" -c "UPDATE public.recruitment_employer_notices SET status='pending', attempts=0, attempt_id=NULL, claimed_at=NULL WHERE application_id='${ENR_APP}'" >/dev/null
+enr_race "SELECT 'C=' || count(*) FROM public.rec_claim_employer_notices(NULL, 50);" \
+         "SELECT 'C=' || count(*) FROM public.rec_claim_employer_notices(NULL, 50);"
+ENR_A_C="$(grep -oE 'C=[0-9]+' "$ENR_AO" | head -1 | cut -d= -f2 || true)"
+ENR_B_C="$(grep -oE 'C=[0-9]+' "$ENR_BO" | head -1 | cut -d= -f2 || true)"
+if [ "$ENR_A_C" != "3" ] || [ "$ENR_B_C" != "0" ] || [ "$ENR_B_MS" -ge 1500 ]; then
+  echo "FAIL: two concurrent sweeps took ${ENR_A_C:-?} and ${ENR_B_C:-?} notices, the second after ${ENR_B_MS} ms; expected 3, 0 and no waiting." >&2
+  head -5 "$ENR_AO" "$ENR_BO" >&2
+  ENR_FAILED=1
+else
+  echo "    ok  two concurrent sweeps: the first took the three due notices, the second took nothing and did not wait (${ENR_B_MS} ms)"
+fi
+
+# 4. settle under a race: A settles "sent" and holds, B settles "failed"
+ENR_ATT="$(psql -tAq -d "$TEST_DB" -c "SELECT attempt_id FROM public.recruitment_employer_notices WHERE application_id='${ENR_APP}' AND status='claimed' ORDER BY id LIMIT 1")"
+enr_race "SELECT 'S=' || public.rec_settle_employer_notice('${ENR_ATT}', 'sent', 200);" \
+         "SELECT 'S=' || public.rec_settle_employer_notice('${ENR_ATT}', 'failed', 500);"
+ENR_A_S="$(grep -oE 'S=[a-z_]+' "$ENR_AO" | head -1 | cut -d= -f2 || true)"
+ENR_B_S="$(grep -oE 'S=[a-z_]+' "$ENR_BO" | head -1 | cut -d= -f2 || true)"
+ENR_SETTLED="$(psql -tAq -d "$TEST_DB" -c "SELECT status || '/' || last_status FROM public.recruitment_employer_notices WHERE attempt_id='${ENR_ATT}'")"
+if [ "$ENR_A_S" != "sent" ] || [ "$ENR_B_S" != "sent" ] || [ "$ENR_SETTLED" != "sent/200" ] || [ "$ENR_B_MS" -lt 800 ]; then
+  echo "FAIL: two concurrent settles answered '${ENR_A_S}' and '${ENR_B_S}' (row '${ENR_SETTLED}', second after ${ENR_B_MS} ms); expected sent, sent, sent/200 and a wait." >&2
+  head -5 "$ENR_AO" "$ENR_BO" >&2
+  ENR_FAILED=1
+else
+  echo "    ok  two concurrent settles: the second waited (${ENR_B_MS} ms), found the row already sent and changed nothing"
+fi
+rm -f "$ENR_A" "$ENR_B" "$ENR_AO" "$ENR_BO"
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" >/dev/null <<'SQL'
+DELETE FROM public.recruitment_employer_notices WHERE application_id = 'ef000000-3333-0000-0000-000000000001';
+DELETE FROM public.job_applications WHERE id = 'ef000000-3333-0000-0000-000000000001';
+DELETE FROM public.jobs WHERE id = 'ef000000-2222-0000-0000-000000000001';
+DELETE FROM public.employers WHERE id = 'ef000000-1111-0000-0000-00000000000a';
+DELETE FROM auth.users WHERE id IN ('ef000000-0000-0000-0000-000000000c01', 'ef000000-0000-0000-0000-0000000000ad',
+  'ef000000-0000-0000-0000-0000000000a2', 'ef000000-0000-0000-0000-0000000000a1', 'ef000000-0000-0000-0000-00000000000a');
+SQL
+if [ "$ENR_FAILED" -ne 0 ]; then
+  suite_failed "employer new-application notice races"
+fi
 # 20261231090000: only the assignment path may bind an employment record to a
 # person (P1-3). The suite reproduces a non-member binding another employer's
 # employee on the pre-fix grant itself (RB0). Negative controls, each of which

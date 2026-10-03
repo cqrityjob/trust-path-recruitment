@@ -2834,6 +2834,39 @@
       "rollback": "supabase/rollback/20270201090000_job_cvs_no_client_writes_rollback.sql",
       "verify": "SELECT policyname, cmd FROM pg_policies WHERE schemaname='storage' AND tablename='objects' AND (coalesce(qual,'') LIKE '%job-application-cvs%' OR coalesce(with_check,'') LIKE '%job-application-cvs%'); -- exactly one row: job_cvs_employer_select / SELECT. Before: job_cvs_applicant_delete, _insert, _select, _update and job_cvs_employer_select (docs/security/2026-09-27/production-metadata.json). READ-ONLY, BEFORE APPLYING: list every policy on storage.objects and confirm none OTHER than those admits a client write to this bucket without naming it (the postflight only sees policies that name it).",
       "note": "Launch-readiness audit of the job board, finding 8. 20260721085020 let an applicant INSERT, UPDATE, DELETE and SELECT any object under <their uid>/ in the private job-application-cvs bucket through the Storage API: overwrite or delete the CV of an application already submitted and seen by the employer, and plant bytes that never met the PDF-magic and 5 MB checks (then insert the row directly -- the row policy accepts that path shape). Nothing in the application used them: every Storage call on this bucket in src/, supabase/functions/, scripts/ and e2e/ is made with the service role (supabaseAdmin), which bypasses RLS. The four applicant policies are dropped; job_cvs_employer_select (read-only) is kept. job_applications_owner_insert needs no change: it already pins cv_storage_path to <own uid>/<this application id>/<file>, and with no client write path the only object that can exist there is one the server stored. No object introduced, no row touched; the application works identically before and after."
+    },
+    {
+      "file": "20270205090000_employer_new_application_notices.sql",
+      "hostedState": "pending",
+      "introduces": [
+        {
+          "kind": "table",
+          "object": "recruitment_employer_notices"
+        },
+        {
+          "kind": "function",
+          "object": "rec_employer_notice_recipients"
+        },
+        {
+          "kind": "function",
+          "object": "rec_enqueue_employer_new_application_notices"
+        },
+        {
+          "kind": "function",
+          "object": "rec_claim_employer_notices"
+        },
+        {
+          "kind": "function",
+          "object": "rec_settle_employer_notice"
+        },
+        {
+          "kind": "function",
+          "object": "rec_employer_notice_backoff"
+        }
+      ],
+      "rollback": "supabase/rollback/20270205090000_employer_new_application_notices_rollback.sql",
+      "verify": "SELECT c.relrowsecurity, c.relforcerowsecurity FROM pg_class c WHERE c.oid = 'public.recruitment_employer_notices'::regclass; -- true, true. SELECT count(*) FROM pg_policy WHERE polrelid = 'public.recruitment_employer_notices'::regclass; -- 0. SELECT has_table_privilege('anon','public.recruitment_employer_notices','SELECT,INSERT,UPDATE,DELETE'), has_table_privilege('authenticated','public.recruitment_employer_notices','SELECT,INSERT,UPDATE,DELETE'), has_table_privilege('service_role','public.recruitment_employer_notices','INSERT,UPDATE,DELETE'); -- false, false, false. SELECT p.proname, md5(p.prosrc), has_function_privilege('anon', p.oid, 'EXECUTE'), has_function_privilege('authenticated', p.oid, 'EXECUTE'), has_function_privilege('service_role', p.oid, 'EXECUTE') FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname IN ('rec_employer_notice_recipients','rec_enqueue_employer_new_application_notices','rec_claim_employer_notices','rec_settle_employer_notice','rec_employer_notice_backoff') ORDER BY 1; -- rec_claim_employer_notices 11e4cb275745cc8f1d08e395a097381c; rec_employer_notice_backoff 592882928f58355fb8bb465bd8035a70; rec_employer_notice_recipients 17528f0b956dedb7459e0a8099607a74; rec_enqueue_employer_new_application_notices 72f34824a4ac10db4b7e5e3c50494c59; rec_settle_employer_notice 94a875996cdd8a5d3e0a17ce2426f5e3; anon and authenticated false on all five; service_role true on all but rec_employer_notice_backoff. SELECT count(*) FROM public.recruitment_employer_notices; -- 0 before the application change is published (nothing queues until then). Behaviour: employer_new_application_notices_test (EN1-EN7, 87 assertions), the twelve planted controls and the four two-session races in scripts/db-test.sh.",
+      "note": "Employer e-mail on a NEW application (owner requirement, alternative A). Adds the outbox recruitment_employer_notices (one row per application, recipient and kind; RLS enabled and forced, no policy, no grant to anon/authenticated, service_role may only SELECT; holds the recipient's user id, never an address) and five functions, all SECURITY DEFINER with an explicit REVOKE from PUBLIC/anon/authenticated and a GRANT to service_role only (the backoff helper has no grant at all): rec_employer_notice_recipients (the responsible recruiter when an active member of an active organisation, else all active owners and admins, at most 10; the address from auth.users, confirmed and not disabled), rec_enqueue_employer_new_application_notices (set-once per application and kind, only for a 'submitted' application under an hour old), rec_claim_employer_notices (atomic: FOR UPDATE SKIP LOCKED plus a 3-minute lease; re-checks eligibility; attempt cap 6, backoff 5 min to 4 h, nothing after 23 hours), rec_settle_employer_notice (only a claimed row, only for the attempt it names). Kind-aware: kind is part of the unique key and of an allow-list CHECK (today 'new_application'). No trigger, nothing sends by itself: the application calls enqueue after the application committed and drives claim/settle. EXPAND/CONTRACT: the migration is safe before the application change (nothing calls it), and the application change is safe before the migration (a missing function or table is a logged no-op in the apply path and in the sweep). Apply this migration FIRST, then redeploy the transactional-email edge function (kind employer_new_application), then publish the application."
     }
   ], 
   "policyVersion": 2, 
