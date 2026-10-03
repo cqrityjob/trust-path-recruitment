@@ -58,6 +58,7 @@ const KINDS: Record<string, { to: "admin" | "caller"; replyTo: Party }> = {
   assessment_invitation: { to: "caller", replyTo: "job" },
   // Academy training invitations go to an employer's staff.
   academy_invitation: { to: "caller", replyTo: "admin" },
+  employer_new_application: { to: "caller", replyTo: "none" }, // CQrityjob to an organisation's own people; no Reply-To, no organisation name
 };
 
 /** Messages an organisation sends through CQrityjob: the reader sees the
