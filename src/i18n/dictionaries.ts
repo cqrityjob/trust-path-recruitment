@@ -1558,6 +1558,23 @@ export const dictionaries = {
     "cd.public.checkFailedBody":
       "Vi kunde inte kontrollera om karriäranalysen är öppen just nu. Det kan bero på din uppkoppling eller på ett tillfälligt fel hos oss. Försök igen.",
     "cd.public.exploreInstead": "Utforska säkerhetsområden i väntan på det",
+    // ── STÄNGD, OCH VARFÖR ──────────────────────────────────────────
+    // Tre olika sanna meningar i stället för en som inte stämmer på någon:
+    // pausad för alla, inte öppen för just det här kontot (testgruppen), och
+    // instrumentet självt otillgängligt. Se ClosedAnalysisPanel.
+    "cd.public.paused.title": "Karriäranalysen är pausad just nu",
+    "cd.public.paused.body":
+      "Vi har pausat karriäranalysen en stund. Just nu kan ingen starta den, få ett resultat sammanställt eller spara ett. Du kan fortfarande utforska yrken och jobb.",
+    "cd.public.account.title": "Karriäranalysen är inte öppen för ditt konto än",
+    "cd.public.account.body":
+      "Just nu är karriäranalysen öppen för en begränsad testgrupp bland inloggade konton, och ditt konto ingår inte. Det du redan har sparat ligger kvar, och du kan fortsätta utforska yrken, jobb och ditt Security Passport.",
+    // Var ett färdigt resultat finns kvar medan det är stängt.
+    "cd.public.keep.claim":
+      "Ditt färdiga resultat ligger kvar i den här webbläsaren till och med {date}. Det sparas till ditt konto när karriäranalysen har öppnat igen: spara den här sidans adress, eller öppna länken i ditt bekräftelsemejl en gång till.",
+    "cd.public.keep.tab":
+      "Dina svar finns kvar i den här fliken så länge du låter den vara öppen. Kom tillbaka hit när karriäranalysen har öppnat igen.",
+    "cd.public.next.jobs": "Se lediga jobb",
+    "cd.public.next.passport": "Öppna Security Passport",
     "cd.public.introTitle": "Upptäck möjliga yrkesvägar inom säkerhet",
     "cd.public.introBody":
       "Svara på frågor om hur du vill arbeta och vad som motiverar dig. Du får en karriäranalys med förklarade yrkesförslag att utforska vidare.",
@@ -10384,6 +10401,23 @@ export const dictionaries = {
     "cd.public.checkFailedBody":
       "We could not check whether the career analysis is open right now. It may be your connection or a temporary fault on our side. Please try again.",
     "cd.public.exploreInstead": "Explore Security Career Areas in the meantime",
+    // ── CLOSED, AND WHY ─────────────────────────────────────────────
+    // Three different true sentences instead of one that fits none: paused
+    // for everyone, not open to this particular account (the test group), and
+    // the instrument itself unavailable. See ClosedAnalysisPanel.
+    "cd.public.paused.title": "The career analysis is paused right now",
+    "cd.public.paused.body":
+      "We have paused the career analysis for a while. Right now nobody can start it, have a result built or save one. You can still explore professions and jobs.",
+    "cd.public.account.title": "The career analysis is not open to your account yet",
+    "cd.public.account.body":
+      "Right now the career analysis is open to a limited test group among signed-in accounts, and your account is not in it. What you have already saved is still there, and you can keep exploring professions, jobs and your Security Passport.",
+    // Where a finished result is still held while it is closed.
+    "cd.public.keep.claim":
+      "Your finished result is kept in this browser until {date}. It is saved to your account once the career analysis has opened again: keep this page's address, or open the link in your confirmation e-mail once more.",
+    "cd.public.keep.tab":
+      "Your answers are kept in this tab for as long as you leave it open. Come back here once the career analysis has opened again.",
+    "cd.public.next.jobs": "See open jobs",
+    "cd.public.next.passport": "Open Security Passport",
     "cd.public.introTitle": "Discover possible career paths in security",
     "cd.public.introBody":
       "Answer questions about how you prefer to work and what motivates you. Get a career analysis with explained role suggestions to explore further.",
