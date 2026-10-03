@@ -7057,6 +7057,12 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
 # 20261202090000 comes down before them: it calls 20261201090000's functions.
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/rollback/20261202090000_scp_interview_starts_rollback.sql >/dev/null
+# 20270124090000 comes down first: its exposure record and triggers carry the
+# bcp_conduct_ prefix, and PR 5A's rollback correctly proves that no conduct
+# object survives it.
+psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
+  -f supabase/rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql >/dev/null
+
 # 20261201090000, 20261130090000 and then 20261129090000 come down first: the activation table holds a foreign key
 # into beskt_method_versions and its functions call beskt_method_validate, so
 # the BESKT domain rollbacks below correctly refuse while it stands. It is not
@@ -7067,12 +7073,6 @@ psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/rollback/20261130090000_bcp_beskt_complete_rollback.sql >/dev/null
 psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
   -f supabase/rollback/20261129090000_bcp_internal_test_activation_rollback.sql >/dev/null
-
-# 20270124090000 comes down first: its exposure record and triggers carry the
-# bcp_conduct_ prefix, and PR 5A's rollback correctly proves that no conduct
-# object survives it.
-psql -v ON_ERROR_STOP=1 -q -d "$TEST_DB" \
-  -f supabase/rollback/20270124090000_bcp_conduct_exposure_is_durable_rollback.sql >/dev/null
 
 # Stand PR 6 down so PR 5A can be unwound below: bcp_conduct_reports holds a
 # foreign key into bcp_conduct_sessions.
