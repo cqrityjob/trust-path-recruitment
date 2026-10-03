@@ -364,7 +364,7 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "happens twice in Stockholm",
   },
   {
-    id: "RW-RECEIPT-BEFORE-COMMIT",
+    id: "RW-RECEIPT-DISPATCH-REMOVED",
     defect:
       "the receipt is written when the application row is inserted, before its answers exist and before the commit that may still be refused",
     file: RECEIPTS,
@@ -642,8 +642,9 @@ const MUTATIONS: readonly Mutation[] = [
     expect: "the e-mail goes after the submission succeeded",
   },
   {
-    id: "RW-RECEIPT-BEFORE-COMMIT",
-    defect: "the receipt is dispatched before the submission's error branch, not after the commit",
+    id: "RW-RECEIPT-DISPATCH-REMOVED",
+    defect:
+      "the submission no longer dispatches the receipt at all, so there is nothing to order after the commit",
     file: SUBMIT,
     find: "      await dispatchApplicationReceipt(result.id);\n",
     replace: "      void 0;\n",
