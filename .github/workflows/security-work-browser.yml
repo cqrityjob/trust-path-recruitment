@@ -5,7 +5,8 @@ on:
   push:
     branches: [codex/security-work-analysis-app]
   pull_request:
-    branches: [main]
+    # Pull requests stacked on another claude/* branch are checked too (see ci.yml).
+    branches: [main, "claude/**"]
     paths:
       - "src/**"
       - "e2e/security-work*.spec.ts"
